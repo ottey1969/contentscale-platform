@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agency Dashboard - ContentScale</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+
+  <!-- HEADER -->
+  <div class="bg-gray-800 border-b border-gray-700 px-6 py-4">
+    <div class="flex justify-between items-center">
+      <div>
+        <h1 id="agency-name" class="text-2xl font-bold text-blue-400">Agency Dashboard</h1>
+        <p class="text-gray-400 text-sm">ContentScale Platform</p>
+      </div>
+      <div class="text-right">
+        <div class="flex items-center gap-4">
+          <div>
+            <p class="text-gray-400 text-xs">V52 Score</p>
+            <p id="agency-score" class="text-2xl font-bold text-green-400">-</p>
+          </div>
+          <div>
+            <p class="text-gray-400 text-xs">Scans Used</p>
+            <p id="agency-scans" class="text-sm text-yellow-400">- / -</p>
+          </div>
+          <div>
+            <p class="text-gray-400 text-xs">Plan</p>
+            <p id="agency-plan" class="text-sm text-purple-400">-</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOADING -->
+  <div id="loading-screen" class="min-h-screen flex items-center justify-center">
+    <div class="text-center">
+      <div class="text-6xl mb-4 animate-pulse">⏳</div>
+      <p class="text-gray-400">Loading agency dashboard...</p>
+    </div>
+  </div>
+
+  <!-- ERROR -->
+  <div id="error-screen" class="hidden min-h-screen flex items-center justify-center px-4">
+    <div class="max-w-md w-full bg-gray-800 rounded-lg p-8 border border-red-700">
+      <div class="text-center">
+        <div class="text-6xl mb-4">❌</div>
+        <h2 class="text-2xl font-bold mb-4">Access Denied</h2>
+        <p id="error-message" class="text-gray-400 mb-6"></p>
+        <button onclick="window.location.reload()" class="bg-blue-600 px-6 py-3 rounded-lg font-bold hover:bg-blue-700">
+          Try Again
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN DASHBOARD -->
+  <div id="dashboard-screen" class="hidden">
+    
+    <!-- TABS -->
+    <div class="bg-gray-800 border-b border-gray-700">
+      <div class="container mx-auto px-6">
+        <div class="flex space-x-1">
+          <button onclick="switchTab('overview')" id="tab-overview" class="tab-button active">
+            📊 Overview
+          </button>
+          <button onclick="switchTab('clients')" id="tab-clients" class="tab-button">
+            👥 Clients
+          </button>
+          <button onclick="switchTab('scans')" id="tab-scans" class="tab-button">
+            🔍 Scan History
+          </button>
+          <button onclick="switchTab('leaderboard')" id="tab-leaderboard" class="tab-button">
+            🏆 Leaderboard
+          </button>
+          <button onclick="switchTab('settings')" id="tab-settings" class="tab-button">
+            ⚙️ Settings
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB CONTENT -->
+    <div class="container mx-auto px-6 py-8">
+
+      <!-- OVERVIEW TAB -->
+      <div id="content-overview" class="tab-content">
+        <h2 class="text-2xl font-bold mb-6">Agency Overview</h2>
+        
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-400 text-sm">Total Clients</p>
+                <p id="stat-total-clients" class="text-3xl font-bold text-blue-400">-</p>
+              </div>
+              <div class="text-4xl">👥</div>
+            </div>
+          </div>
+          
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-400 text-sm">Active Clients</p>
+                <p id="stat-active-clients" class="text-3xl font-bold text-green-400">-</p>
+              </div>
+              <div class="text-4xl">✅</div>
+            </div>
+          </div>
+          
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-400 text-sm">Total Scans</p>
+                <p id="stat-total-scans" class="text-3xl font-bold text-purple-400">-</p>
+              </div>
+              <div class="text-4xl">🔍</div>
+            </div>
+          </div>
+          
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-400 text-sm">Avg Score</p>
+                <p id="stat-avg-score" class="text-3xl font-bold text-yellow-400">-</p>
+              </div>
+              <div class="text-4xl">⭐</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-6">
+          <h3 class="text-xl font-bold mb-4">Quick Actions</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button onclick="switchTab('clients'); showAddClientModal()" class="bg-blue-600 hover:bg-blue-700 py-4 rounded-lg font-bold text-lg">
+              ➕ Add New Client
+            </button>
+            <button onclick="switchTab('scans')" class="bg-purple-600 hover:bg-purple-700 py-4 rounded-lg font-bold text-lg">
+              📊 View All Scans
+            </button>
+            <button onclick="switchTab('settings')" class="bg-gray-700 hover:bg-gray-600 py-4 rounded-lg font-bold text-lg">
+              ⚙️ Configure Settings
+            </button>
+          </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+          <h3 class="text-xl font-bold mb-4">Recent Activity</h3>
+          <div id="recent-activity" class="space-y-3">
+            <p class="text-gray-400 text-sm">Loading recent activity...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- CLIENTS TAB -->
+      <div id="content-clients" class="tab-content hidden">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold">Client Management</h2>
+          <button onclick="showAddClientModal()" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-bold">
+            ➕ Add Client
+          </button>
+        </div>
+
+        <div id="clients-loading" class="text-center py-12">
+          <div class="text-4xl mb-4 animate-pulse">⏳</div>
+          <p class="text-gray-400">Loading clients...</p>
+        </div>
+
+        <div id="clients-list" class="hidden">
+          <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+            <table class="w-full">
+              <thead class="bg-gray-900">
+                <tr>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Client Name</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Email</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Scans</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Last Scan</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Status</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="clients-tbody" class="divide-y divide-gray-700">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCANS TAB -->
+      <div id="content-scans" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">Scan History</h2>
+
+        <div id="scans-loading" class="text-center py-12">
+          <div class="text-4xl mb-4 animate-pulse">⏳</div>
+          <p class="text-gray-400">Loading scan history...</p>
+        </div>
+
+        <div id="scans-list" class="hidden">
+          <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+            <table class="w-full">
+              <thead class="bg-gray-900">
+                <tr>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Date</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Client</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">URL</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Score</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Quality</th>
+                </tr>
+              </thead>
+              <tbody id="scans-tbody" class="divide-y divide-gray-700">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEADERBOARD TAB -->
+      <div id="content-leaderboard" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">Leaderboard Rankings</h2>
+
+        <div class="mb-6">
+          <label class="block text-sm text-gray-400 mb-2">Select Country</label>
+          <select id="leaderboard-country" onchange="loadLeaderboard()" class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+            <option value="netherlands">Netherlands</option>
+            <option value="belgium">Belgium</option>
+            <option value="germany">Germany</option>
+            <option value="uk">United Kingdom</option>
+            <option value="usa">USA</option>
+          </select>
+        </div>
+
+        <div id="leaderboard-loading" class="text-center py-12">
+          <div class="text-4xl mb-4 animate-pulse">⏳</div>
+          <p class="text-gray-400">Loading leaderboard...</p>
+        </div>
+
+        <div id="leaderboard-list" class="hidden">
+          <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+            <table class="w-full">
+              <thead class="bg-gray-900">
+                <tr>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Rank</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Agency</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Domain</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Score</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Last Scanned</th>
+                </tr>
+              </thead>
+              <tbody id="leaderboard-tbody" class="divide-y divide-gray-700">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- SETTINGS TAB -->
+      <div id="content-settings" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">Agency Settings</h2>
+
+        <div class="space-y-6">
+          
+          <!-- Agency Info -->
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-xl font-bold mb-4">Agency Information</h3>
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p class="text-gray-400">Agency Name</p>
+                <p id="settings-name" class="font-bold">-</p>
+              </div>
+              <div>
+                <p class="text-gray-400">Domain</p>
+                <p id="settings-domain" class="font-bold">-</p>
+              </div>
+              <div>
+                <p class="text-gray-400">Country</p>
+                <p id="settings-country" class="font-bold">-</p>
+              </div>
+              <div>
+                <p class="text-gray-400">Plan</p>
+                <p id="settings-plan" class="font-bold">-</p>
+              </div>
+              <div>
+                <p class="text-gray-400">Admin Key</p>
+                <button onclick="copyAdminKey()" class="text-blue-400 hover:text-blue-300">
+                  📋 Copy Key
+                </button>
+              </div>
+              <div>
+                <p class="text-gray-400">Created</p>
+                <p id="settings-created" class="font-bold">-</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Whitelabel Settings -->
+          <div id="whitelabel-section" class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-xl font-bold mb-4">Whitelabel Settings</h3>
+            
+            <div id="whitelabel-disabled" class="text-center py-8">
+              <p class="text-gray-400">Whitelabel is not enabled for your plan.</p>
+              <p class="text-sm text-gray-500 mt-2">Upgrade to Professional or higher to enable custom branding.</p>
+            </div>
+
+            <div id="whitelabel-enabled" class="hidden space-y-4">
+              <div>
+                <label class="block text-sm text-gray-400 mb-2">Brand Name</label>
+                <input 
+                  type="text" 
+                  id="whitelabel-name" 
+                  class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+                  placeholder="Your Agency Name">
+              </div>
+
+              <div>
+                <label class="block text-sm text-gray-400 mb-2">Logo URL</label>
+                <input 
+                  type="url" 
+                  id="whitelabel-logo" 
+                  class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+                  placeholder="https://example.com/logo.png">
+              </div>
+
+              <div>
+                <label class="block text-sm text-gray-400 mb-2">Primary Color</label>
+                <input 
+                  type="color" 
+                  id="whitelabel-color" 
+                  class="w-32 h-10 bg-gray-700 border border-gray-600 rounded-lg"
+                  value="#4A9BFF">
+              </div>
+
+              <button onclick="saveWhitelabel()" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-bold">
+                💾 Save Whitelabel Settings
+              </button>
+
+              <div id="whitelabel-success" class="hidden p-4 bg-green-900 border border-green-700 rounded-lg text-sm">
+                ✅ Whitelabel settings saved successfully!
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ADD CLIENT MODAL -->
+  <div id="add-client-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-lg p-8 max-w-md w-full mx-4 border border-gray-700">
+      <h2 class="text-2xl font-bold mb-6">Add New Client</h2>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm text-gray-400 mb-2">Client Name *</label>
+          <input 
+            type="text" 
+            id="new-client-name" 
+            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+            placeholder="Acme Corporation">
+        </div>
+        
+        <div>
+          <label class="block text-sm text-gray-400 mb-2">Client Email</label>
+          <input 
+            type="email" 
+            id="new-client-email" 
+            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+            placeholder="contact@acme.com">
+        </div>
+        
+        <div>
+          <label class="block text-sm text-gray-400 mb-2">Scan Limit</label>
+          <input 
+            type="number" 
+            id="new-client-limit" 
+            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+            placeholder="30"
+            value="30">
+        </div>
+      </div>
+      
+      <div id="create-client-error" class="hidden mt-4 p-3 bg-red-900 border border-red-700 rounded text-sm"></div>
+      
+      <div class="flex gap-4 mt-6">
+        <button 
+          onclick="createClient()" 
+          class="flex-1 bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-bold">
+          Create Client
+        </button>
+        <button 
+          onclick="closeAddClientModal()" 
+          class="flex-1 bg-gray-700 hover:bg-gray-600 py-3 rounded-lg font-bold">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SHARE LINK MODAL -->
+  <div id="share-link-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-lg p-8 max-w-2xl w-full mx-4 border border-gray-700">
+      <h2 class="text-2xl font-bold mb-4">✅ Client Created Successfully!</h2>
+      
+      <div class="bg-gray-700 rounded-lg p-4 mb-6">
+        <p class="text-sm text-gray-400 mb-2">Share this link with your client:</p>
+        <div class="flex gap-2">
+          <input 
+            type="text" 
+            id="share-link-url" 
+            readonly
+            class="flex-1 px-4 py-2 bg-gray-900 border border-gray-600 rounded-lg text-sm font-mono"
+            value="">
+          <button onclick="copyShareLink()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-bold text-sm whitespace-nowrap">
+            📋 Copy
+          </button>
+        </div>
+      </div>
+
+      <div class="text-sm text-gray-400 mb-6">
+        <p class="mb-2"><strong>What your client can do:</strong></p>
+        <ul class="list-disc list-inside space-y-1 ml-4">
+          <li>Open the link in their browser (no login required)</li>
+          <li>Scan their content URLs</li>
+          <li>View scores and breakdowns</li>
+          <li>Track remaining scans</li>
+        </ul>
+      </div>
+
+      <button onclick="closeShareLinkModal()" class="w-full bg-green-600 hover:bg-green-700 py-3 rounded-lg font-bold">
+        Done
+      </button>
+    </div>
+  </div>
+
+  <style>
+    .tab-button {
+      padding: 1rem 1.5rem;
+      font-weight: 600;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+      color: #9CA3AF;
+    }
+    .tab-button:hover {
+      color: #E5E7EB;
+      background-color: rgba(255,255,255,0.05);
+    }
+    .tab-button.active {
+      color: #60A5FA;
+      border-bottom-color: #60A5FA;
+      background-color: rgba(96,165,250,0.1);
+    }
+  </style>
+
+  <script>
+    let agencyKey = null;
+    let agencyData = null;
+    let clientsData = [];
+
+    // Load agency on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      agencyKey = urlParams.get('key');
+      
+      if (!agencyKey) {
+        showError('No agency key provided. Please use the link provided by the super admin.');
+        return;
+      }
+      
+      loadAgency();
+    });
+
+    async function loadAgency() {
+      try {
+        const response = await fetch('/api/admin/agency/my-agency', {
+          headers: {
+            'x-agency-key': agencyKey
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Invalid agency key');
+        }
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to load agency');
+        }
+        
+        agencyData = data.agency;
+        clientsData = data.clients || [];
+        
+        displayAgency();
+        
+        document.getElementById('loading-screen').classList.add('hidden');
+        document.getElementById('dashboard-screen').classList.remove('hidden');
+        
+        // Load first tab
+        loadOverview();
+        
+      } catch (error) {
+        console.error('Error loading agency:', error);
+        showError(error.message);
+      }
+    }
+
+    function showError(message) {
+      document.getElementById('loading-screen').classList.add('hidden');
+      document.getElementById('error-screen').classList.remove('hidden');
+      document.getElementById('error-message').textContent = message;
+    }
+
+    function displayAgency() {
+      document.getElementById('agency-name').textContent = agencyData.name;
+      document.getElementById('agency-score').textContent = (agencyData.v52_score || 0) + '/100';
+      document.getElementById('agency-scans').textContent = agencyData.scans_used + ' / ' + (agencyData.scans_limit === -1 ? '∞' : agencyData.scans_limit);
+      document.getElementById('agency-plan').textContent = (agencyData.plan || 'starter').toUpperCase();
+    }
+
+    function switchTab(tabName) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.add('hidden');
+      });
+      
+      // Remove active from all buttons
+      document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      
+      // Show selected tab
+      document.getElementById('content-' + tabName).classList.remove('hidden');
+      document.getElementById('tab-' + tabName).classList.add('active');
+      
+      // Load tab data
+      if (tabName === 'overview') loadOverview();
+      else if (tabName === 'clients') loadClients();
+      else if (tabName === 'scans') loadScans();
+      else if (tabName === 'leaderboard') loadLeaderboard();
+      else if (tabName === 'settings') loadSettings();
+    }
+
+    function loadOverview() {
+      const activeClients = clientsData.filter(c => c.is_active).length;
+      const totalScans = clientsData.reduce((sum, c) => sum + (c.scans_used || 0), 0);
+      
+      document.getElementById('stat-total-clients').textContent = clientsData.length;
+      document.getElementById('stat-active-clients').textContent = activeClients;
+      document.getElementById('stat-total-scans').textContent = totalScans;
+      document.getElementById('stat-avg-score').textContent = agencyData.v52_score || '-';
+      
+      // Recent activity
+      const activityHtml = clientsData.slice(0, 5).map(client => `
+        <div class="flex justify-between items-center p-3 bg-gray-700 rounded">
+          <div>
+            <p class="font-bold">${client.client_name}</p>
+            <p class="text-xs text-gray-400">${client.scans_used} / ${client.scans_limit} scans used</p>
+          </div>
+          <span class="text-xs text-gray-500">${client.last_scan_at ? new Date(client.last_scan_at).toLocaleDateString() : 'Never'}</span>
+        </div>
+      `).join('');
+      
+      document.getElementById('recent-activity').innerHTML = activityHtml || '<p class="text-gray-400 text-sm">No recent activity</p>';
+    }
+
+    function loadClients() {
+      document.getElementById('clients-loading').classList.add('hidden');
+      document.getElementById('clients-list').classList.remove('hidden');
+      
+      const tbody = document.getElementById('clients-tbody');
+      tbody.innerHTML = '';
+      
+      if (clientsData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">No clients yet. Add your first one!</td></tr>';
+        return;
+      }
+      
+      clientsData.forEach(client => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-700';
+        
+        const shareUrl = `${window.location.origin}/seo-contentscore?key=${client.share_link_key}`;
+        
+        row.innerHTML = `
+          <td class="px-6 py-4">
+            <div class="font-bold">${client.client_name}</div>
+            <div class="text-xs text-gray-400">ID: ${client.id}</div>
+          </td>
+          <td class="px-6 py-4 text-sm">${client.client_email || '-'}</td>
+          <td class="px-6 py-4">
+            <div class="text-sm">${client.scans_used} / ${client.scans_limit}</div>
+            <div class="text-xs text-gray-400">${Math.round((client.scans_used / client.scans_limit) * 100)}% used</div>
+          </td>
+          <td class="px-6 py-4 text-sm">${client.last_scan_at ? new Date(client.last_scan_at).toLocaleDateString() : 'Never'}</td>
+          <td class="px-6 py-4">
+            <span class="px-2 py-1 rounded text-xs ${client.is_active ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}">
+              ${client.is_active ? 'Active' : 'Inactive'}
+            </span>
+          </td>
+          <td class="px-6 py-4">
+            <button onclick="viewShareLink('${shareUrl}')" class="text-blue-400 hover:text-blue-300 text-sm mr-2">
+              🔗 Share Link
+            </button>
+            <button onclick="deleteClient(${client.id})" class="text-red-400 hover:text-red-300 text-sm">
+              🗑️ Delete
+            </button>
+          </td>
+        `;
+        
+        tbody.appendChild(row);
+      });
+    }
+
+    function loadScans() {
+      document.getElementById('scans-loading').textContent = 'Scan history feature coming soon...';
+      document.getElementById('scans-list').classList.add('hidden');
+    }
+
+    async function loadLeaderboard() {
+      const country = document.getElementById('leaderboard-country').value;
+      
+      document.getElementById('leaderboard-loading').classList.remove('hidden');
+      document.getElementById('leaderboard-list').classList.add('hidden');
+      
+      try {
+        const response = await fetch(`/api/leaderboard/${country}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error('Failed to load leaderboard');
+        }
+        
+        const tbody = document.getElementById('leaderboard-tbody');
+        tbody.innerHTML = '';
+        
+        data.agencies.forEach(agency => {
+          const row = document.createElement('tr');
+          row.className = 'hover:bg-gray-700';
+          
+          // Highlight current agency
+          if (agency.id === agencyData.id) {
+            row.className += ' bg-blue-900 bg-opacity-20';
+          }
+          
+          row.innerHTML = `
+            <td class="px-6 py-4">
+              <div class="text-2xl font-bold">#${agency.rank}</div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="font-bold">${agency.name}</div>
+              ${agency.id === agencyData.id ? '<div class="text-xs text-blue-400">Your Agency</div>' : ''}
+            </td>
+            <td class="px-6 py-4">
+              <a href="https://${agency.domain}" target="_blank" class="text-blue-400 hover:text-blue-300 text-sm">
+                ${agency.domain}
+              </a>
+            </td>
+            <td class="px-6 py-4">
+              <div class="text-xl font-bold ${getScoreColor(agency.v52_score)}">
+                ${agency.v52_score}/100
+              </div>
+            </td>
+            <td class="px-6 py-4 text-sm">${agency.last_scanned ? new Date(agency.last_scanned).toLocaleDateString() : 'Never'}</td>
+          `;
+          
+          tbody.appendChild(row);
+        });
+        
+        document.getElementById('leaderboard-loading').classList.add('hidden');
+        document.getElementById('leaderboard-list').classList.remove('hidden');
+        
+      } catch (error) {
+        console.error('Error loading leaderboard:', error);
+        document.getElementById('leaderboard-loading').innerHTML = '<p class="text-red-400">Failed to load leaderboard</p>';
+      }
+    }
+
+    function loadSettings() {
+      document.getElementById('settings-name').textContent = agencyData.name;
+      document.getElementById('settings-domain').textContent = agencyData.domain;
+      document.getElementById('settings-country').textContent = agencyData.country || '-';
+      document.getElementById('settings-plan').textContent = (agencyData.plan || 'starter').toUpperCase();
+      document.getElementById('settings-created').textContent = new Date(agencyData.created_at).toLocaleDateString();
+      
+      // Whitelabel
+      if (agencyData.whitelabel_enabled) {
+        document.getElementById('whitelabel-disabled').classList.add('hidden');
+        document.getElementById('whitelabel-enabled').classList.remove('hidden');
+        document.getElementById('whitelabel-name').value = agencyData.whitelabel_name || '';
+        document.getElementById('whitelabel-logo').value = agencyData.whitelabel_logo || '';
+        document.getElementById('whitelabel-color').value = agencyData.whitelabel_primary_color || '#4A9BFF';
+      } else {
+        document.getElementById('whitelabel-disabled').classList.remove('hidden');
+        document.getElementById('whitelabel-enabled').classList.add('hidden');
+      }
+    }
+
+    function showAddClientModal() {
+      document.getElementById('add-client-modal').classList.remove('hidden');
+    }
+
+    function closeAddClientModal() {
+      document.getElementById('add-client-modal').classList.add('hidden');
+      document.getElementById('create-client-error').classList.add('hidden');
+      document.getElementById('new-client-name').value = '';
+      document.getElementById('new-client-email').value = '';
+      document.getElementById('new-client-limit').value = '30';
+    }
+
+    async function createClient() {
+      const name = document.getElementById('new-client-name').value.trim();
+      const email = document.getElementById('new-client-email').value.trim();
+      const limit = parseInt(document.getElementById('new-client-limit').value);
+      
+      const errorDiv = document.getElementById('create-client-error');
+      
+      if (!name) {
+        errorDiv.textContent = 'Client name is required';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/admin/agency/my-clients', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-agency-key': agencyKey
+          },
+          body: JSON.stringify({
+            client_name: name,
+            client_email: email || null,
+            scans_limit: limit
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to create client');
+        }
+        
+        clientsData.push(data.client);
+        
+        closeAddClientModal();
+        
+        // Show share link
+        const shareUrl = `${window.location.origin}/seo-contentscore?key=${data.client.share_link_key}`;
+        document.getElementById('share-link-url').value = shareUrl;
+        document.getElementById('share-link-modal').classList.remove('hidden');
+        
+        loadClients();
+        loadOverview();
+        
+      } catch (error) {
+        console.error('Error creating client:', error);
+        errorDiv.textContent = error.message;
+        errorDiv.classList.remove('hidden');
+      }
+    }
+
+    function viewShareLink(url) {
+      document.getElementById('share-link-url').value = url;
+      document.getElementById('share-link-modal').classList.remove('hidden');
+    }
+
+    function closeShareLinkModal() {
+      document.getElementById('share-link-modal').classList.add('hidden');
+    }
+
+    function copyShareLink() {
+      const input = document.getElementById('share-link-url');
+      input.select();
+      document.execCommand('copy');
+      alert('✅ Share link copied to clipboard!');
+    }
+
+    function copyAdminKey() {
+      navigator.clipboard.writeText(agencyKey).then(() => {
+        alert('✅ Admin key copied to clipboard!');
+      });
+    }
+
+    async function deleteClient(clientId) {
+      if (!confirm('Are you sure you want to delete this client? This cannot be undone.')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/admin/agency/my-clients/${clientId}`, {
+          method: 'DELETE',
+          headers: {
+            'x-agency-key': agencyKey
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to delete client');
+        }
+        
+        clientsData = clientsData.filter(c => c.id !== clientId);
+        loadClients();
+        loadOverview();
+        
+        alert('✅ Client deleted successfully');
+        
+      } catch (error) {
+        console.error('Error deleting client:', error);
+        alert('❌ Failed to delete client: ' + error.message);
+      }
+    }
+
+    async function saveWhitelabel() {
+      const name = document.getElementById('whitelabel-name').value.trim();
+      const logo = document.getElementById('whitelabel-logo').value.trim();
+      const color = document.getElementById('whitelabel-color').value;
+      
+      try {
+        const response = await fetch('/api/admin/agency/my-agency/whitelabel', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-agency-key': agencyKey
+          },
+          body: JSON.stringify({
+            name: name,
+            logo: logo,
+            primary_color: color
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to save whitelabel settings');
+        }
+        
+        agencyData = data.agency;
+        
+        document.getElementById('whitelabel-success').classList.remove('hidden');
+        setTimeout(() => {
+          document.getElementById('whitelabel-success').classList.add('hidden');
+        }, 3000);
+        
+      } catch (error) {
+        console.error('Error saving whitelabel:', error);
+        alert('❌ Failed to save: ' + error.message);
+      }
+    }
+
+    function getScoreColor(score) {
+      if (score >= 90) return 'text-green-400';
+      if (score >= 80) return 'text-blue-400';
+      if (score >= 70) return 'text-yellow-400';
+      if (score >= 60) return 'text-orange-400';
+      return 'text-red-400';
+    }
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SEO ContentScore - Your Scan Link</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+
+  <!-- HEADER -->
+  <div class="bg-gray-800 border-b border-gray-700 px-6 py-4">
+    <div class="container mx-auto">
+      <h1 class="text-3xl font-bold text-blue-400">📊 SEO ContentScore</h1>
+      <p class="text-gray-400 text-sm">Your Personal Scan Link</p>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="container mx-auto px-6 py-8 max-w-6xl">
+    
+    <!-- LOADING -->
+    <div id="loading" class="text-center py-12">
+      <div class="text-6xl mb-4 animate-pulse">⏳</div>
+      <p class="text-xl text-gray-400">Validating your scan link...</p>
+    </div>
+
+    <!-- ERROR / EXPIRED / LIMIT REACHED -->
+    <div id="error" class="hidden"></div>
+
+    <!-- SCAN FORM -->
+    <div id="scan-form-container" class="hidden">
+      
+      <!-- STATUS BANNER -->
+      <div id="status-banner" class="bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg p-6 border border-blue-700 mb-6">
+        <h2 class="text-2xl font-bold mb-4">✨ Welcome <span id="client-name"></span>!</h2>
+        <div class="grid md:grid-cols-3 gap-4 text-center">
+          <div class="bg-black/30 rounded-lg p-4">
+            <div class="text-gray-400 text-sm mb-1">Scans Remaining</div>
+            <div id="scans-remaining" class="text-4xl font-bold text-green-400">-</div>
+          </div>
+          <div class="bg-black/30 rounded-lg p-4">
+            <div class="text-gray-400 text-sm mb-1">Total Limit</div>
+            <div id="scans-limit" class="text-4xl font-bold text-blue-400">-</div>
+          </div>
+          <div class="bg-black/30 rounded-lg p-4">
+            <div class="text-gray-400 text-sm mb-1">Valid Until</div>
+            <div id="expires-at" class="text-lg font-bold text-purple-400">-</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCAN FORM -->
+      <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-6">
+        <h2 class="text-2xl font-bold mb-4">🔍 Analyze Your Website</h2>
+        
+        <form id="scan-form" onsubmit="submitScan(event)">
+          <div class="mb-4">
+            <label class="block text-sm text-gray-400 mb-2">Website URL *</label>
+            <input 
+              type="url" 
+              id="scan-url"
+              required
+              class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none text-lg"
+              placeholder="https://example.com">
+          </div>
+
+          <button 
+            type="submit"
+            id="scan-submit"
+            class="w-full bg-blue-600 hover:bg-blue-700 py-4 rounded-lg font-bold text-lg transition">
+            🔍 Analyze Website
+          </button>
+        </form>
+      </div>
+
+      <!-- RESULT AREA -->
+      <div id="scan-result" class="hidden"></div>
+
+    </div>
+
+  </div>
+
+  <script>
+    // ==========================================
+    // 📞 CONTACT INFO CONFIG - WIJZIG HIER! 🎯
+    // ==========================================
+    const CONTACT_CONFIG = {
+      phone: '+31628073996',           // ← JOUW TELEFOONNUMMER
+      whatsapp: '31628073996',         // ← ZONDER + EN SPATIES
+      email: 'info@contentscale.site', // ← JOUW EMAIL
+      website: 'https://contentscale.site/contact', // ← CONTACT URL
+      companyName: 'ContentScale'      // ← BEDRIJFSNAAM
+    };
+
+    // Auto-generate WhatsApp URL
+    CONTACT_CONFIG.whatsappUrl = `https://wa.me/${CONTACT_CONFIG.whatsapp}`;
+
+    // ==========================================
+    // REST OF CODE (don't change below)
+    // ==========================================
+
+    let shareCode = null;
+    let shareLinkData = null;
+    let currentScanData = null;
+
+    async function init() {
+      const pathParts = window.location.pathname.split('/');
+      shareCode = pathParts[pathParts.length - 1];
+      
+      if (!shareCode) {
+        showError('Invalid share link', 'error');
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/share-link/validate/${shareCode}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+          if (data.status === 'expired') {
+            showError('This scan link has expired', 'expired', data.expires_at);
+          } else if (data.status === 'limit_reached') {
+            showError('Scan limit reached', 'limit_reached', data);
+          } else if (data.status === 'inactive') {
+            showError('This scan link is no longer active', 'inactive');
+          } else {
+            showError(data.error || 'Invalid share link', 'error');
+          }
+          return;
+        }
+        
+        shareLinkData = data;
+        showScanForm();
+        
+      } catch (error) {
+        console.error('Validation error:', error);
+        showError('Failed to validate share link', 'error');
+      }
+    }
+
+    function showScanForm() {
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('scan-form-container').classList.remove('hidden');
+      
+      document.getElementById('scans-remaining').textContent = shareLinkData.scans_remaining;
+      document.getElementById('scans-limit').textContent = shareLinkData.scans_limit;
+      
+      if (shareLinkData.client_name) {
+        document.getElementById('client-name').textContent = shareLinkData.client_name;
+      } else {
+        document.getElementById('client-name').textContent = 'Client';
+      }
+      
+      const expiresDate = new Date(shareLinkData.expires_at);
+      const options = { year: 'numeric', month: 'short', day: 'numeric' };
+      document.getElementById('expires-at').textContent = expiresDate.toLocaleDateString('en-US', options);
+    }
+
+    function showError(message, status, data) {
+      document.getElementById('loading').classList.add('hidden');
+      const errorDiv = document.getElementById('error');
+      
+      let html = '';
+      
+      if (status === 'expired') {
+        const expiredDate = new Date(data);
+        html = `
+          <div class="bg-orange-900 border border-orange-700 rounded-lg p-8 text-center">
+            <div class="text-6xl mb-4">⏰</div>
+            <h3 class="text-2xl font-bold mb-2">Scan Link Expired</h3>
+            <p class="text-gray-300 mb-2">This scan link expired on ${expiredDate.toLocaleDateString()}.</p>
+            <p class="text-gray-400 text-sm mb-6">Contact us to get a new scan link!</p>
+            <div class="flex justify-center gap-4">
+              <a href="${CONTACT_CONFIG.website}" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-bold transition">
+                📞 Contact Us
+              </a>
+              <a href="${CONTACT_CONFIG.whatsappUrl}" class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold transition">
+                💬 WhatsApp
+              </a>
+            </div>
+          </div>
+        `;
+      } else if (status === 'limit_reached') {
+        html = `
+          <div class="bg-red-900 border border-red-700 rounded-lg p-8 text-center">
+            <div class="text-6xl mb-4">🚫</div>
+            <h3 class="text-2xl font-bold mb-2">Scan Limit Reached</h3>
+            <p class="text-gray-300 mb-2">You've used all ${data.scans_limit} scans from this link.</p>
+            <p class="text-gray-400 text-sm mb-6">Need more scans? Contact us for a custom package!</p>
+            <div class="flex justify-center gap-4">
+              <a href="${CONTACT_CONFIG.website}" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-bold transition">
+                📞 Contact Us
+              </a>
+              <a href="${CONTACT_CONFIG.whatsappUrl}" class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold transition">
+                💬 WhatsApp
+              </a>
+            </div>
+            
+            <div class="mt-8 p-4 bg-black/30 rounded-lg">
+              <h4 class="font-bold mb-2">💎 Upgrade Benefits:</h4>
+              <ul class="text-sm text-gray-300 space-y-1">
+                <li>✅ Unlimited scans</li>
+                <li>✅ Priority support</li>
+                <li>✅ Detailed recommendations</li>
+                <li>✅ Custom action plans</li>
+              </ul>
+            </div>
+          </div>
+        `;
+      } else {
+        html = `
+          <div class="bg-red-900 border border-red-700 rounded-lg p-8 text-center">
+            <div class="text-6xl mb-4">❌</div>
+            <h3 class="text-2xl font-bold mb-2">${message}</h3>
+            <p class="text-gray-400 text-sm mb-6">Please contact us if you believe this is an error.</p>
+            <div class="flex justify-center gap-4">
+              <a href="${CONTACT_CONFIG.website}" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-bold transition">
+                📞 Contact Us
+              </a>
+              <a href="/seo-contentscore" class="bg-gray-600 hover:bg-gray-700 px-6 py-3 rounded-lg font-bold transition">
+                Try Free Scan
+              </a>
+            </div>
+          </div>
+        `;
+      }
+      
+      errorDiv.innerHTML = html;
+      errorDiv.classList.remove('hidden');
+    }
+
+    async function submitScan(event) {
+      event.preventDefault();
+      
+      const submitBtn = document.getElementById('scan-submit');
+      const resultDiv = document.getElementById('scan-result');
+      const url = document.getElementById('scan-url').value.trim();
+      
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        alert('URL must start with https:// or http://');
+        return;
+      }
+      
+      submitBtn.disabled = true;
+      submitBtn.textContent = '⏳ Analyzing...';
+      resultDiv.classList.add('hidden');
+      
+      try {
+        const response = await fetch('/api/share-link/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            share_code: shareCode,
+            url: url
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          if (data.status === 'limit_reached') {
+            showError('Scan limit reached', 'limit_reached', {
+              scans_limit: shareLinkData.scans_limit
+            });
+          } else if (data.status === 'expired') {
+            showError('This scan link has expired', 'expired', shareLinkData.expires_at);
+          } else {
+            alert(data.error || 'Scan failed');
+          }
+          return;
+        }
+        
+        currentScanData = data;
+        
+        shareLinkData.scans_remaining = data.scans_remaining;
+        document.getElementById('scans-remaining').textContent = data.scans_remaining;
+        
+        if (data.scans_remaining === 0) {
+          document.getElementById('status-banner').className = 'bg-red-900 rounded-lg p-6 border border-red-700 mb-6';
+        } else if (data.scans_remaining <= 2) {
+          document.getElementById('status-banner').className = 'bg-yellow-900 rounded-lg p-6 border border-yellow-700 mb-6';
+        }
+        
+        showResult(data);
+        
+      } catch (error) {
+        console.error('Scan error:', error);
+        alert('Scan failed: ' + error.message);
+        
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '🔍 Analyze Website';
+      }
+    }
+
+    function showResult(data) {
+      const resultDiv = document.getElementById('scan-result');
+      const score = data.score || 0;
+      
+      let qualityColor = score >= 90 ? 'text-green-400' : score >= 80 ? 'text-blue-400' : score >= 70 ? 'text-yellow-400' : score >= 60 ? 'text-orange-400' : 'text-red-400';
+      let qualityLabel = score >= 90 ? 'Excellent' : score >= 80 ? 'Good' : score >= 70 ? 'Average' : score >= 60 ? 'Below Average' : 'Needs Improvement';
+      let qualityBg = score >= 90 ? 'bg-green-900' : score >= 80 ? 'bg-blue-900' : score >= 70 ? 'bg-yellow-900' : score >= 60 ? 'bg-orange-900' : 'bg-red-900';
+
+      let lowScansWarning = '';
+      if (shareLinkData.scans_remaining === 0) {
+        lowScansWarning = `
+          <div class="bg-red-900 border border-red-700 rounded-lg p-6 mb-6 text-center">
+            <h4 class="font-bold text-xl mb-2">⚠️ No Scans Remaining</h4>
+            <p class="text-sm text-gray-300 mb-4">You've used all your scans. Contact us for more!</p>
+            <div class="flex justify-center gap-3">
+              <a href="${CONTACT_CONFIG.website}" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-bold text-sm transition">📞 Contact Us</a>
+              <a href="${CONTACT_CONFIG.whatsappUrl}" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-bold text-sm transition">💬 WhatsApp</a>
+            </div>
+          </div>
+        `;
+      } else if (shareLinkData.scans_remaining <= 2) {
+        lowScansWarning = `
+          <div class="bg-yellow-900 border border-yellow-700 rounded-lg p-4 mb-6 text-center">
+            <p class="text-sm">⚠️ Only ${shareLinkData.scans_remaining} scan(s) remaining. <a href="${CONTACT_CONFIG.website}" class="underline">Contact us</a> for more scans.</p>
+          </div>
+        `;
+      }
+      
+      resultDiv.innerHTML = `
+        ${lowScansWarning}
+        
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+          <h3 class="text-2xl font-bold mb-6">✅ Analysis Complete!</h3>
+          
+          <div class="${qualityBg} rounded-lg p-8 mb-6 text-center border border-gray-600">
+            <div class="text-7xl font-bold ${qualityColor} mb-3">${score}<span class="text-4xl">/100</span></div>
+            <div class="text-2xl font-bold">${qualityLabel}</div>
+          </div>
+
+          <div class="grid md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-gray-700 rounded-lg p-4 text-center">
+              <div class="text-sm text-gray-400 mb-2">🎯 GRAAF</div>
+              <div class="text-3xl font-bold text-blue-400">${data.breakdown?.graaf?.total || 0}/50</div>
+            </div>
+            <div class="bg-gray-700 rounded-lg p-4 text-center">
+              <div class="text-sm text-gray-400 mb-2">⚡ CRAFT</div>
+              <div class="text-3xl font-bold text-purple-400">${data.breakdown?.craft?.total || 0}/30</div>
+            </div>
+            <div class="bg-gray-700 rounded-lg p-4 text-center">
+              <div class="text-sm text-gray-400 mb-2">🔧 Technical</div>
+              <div class="text-3xl font-bold text-green-400">${data.breakdown?.technical?.total || 0}/20</div>
+            </div>
+          </div>
+
+          <div class="p-6 bg-gradient-to-r from-green-900 to-blue-900 border border-green-700 rounded-lg text-center">
+            <h4 class="font-bold text-xl mb-2">🚀 Need Help Improving Your Score?</h4>
+            <p class="text-sm text-gray-300 mb-4">Get expert SEO optimization and reach 95+ score faster.</p>
+            <div class="flex justify-center flex-wrap gap-3">
+              <a href="${CONTACT_CONFIG.website}" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-bold transition">📞 Contact Us</a>
+              <a href="${CONTACT_CONFIG.whatsappUrl}" class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold transition">💬 WhatsApp</a>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      resultDiv.classList.remove('hidden');
+      resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+
+</body>
+</html>

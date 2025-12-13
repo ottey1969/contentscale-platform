@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SEO ContentScore - Scan Result</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+
+  <!-- HEADER -->
+  <div class="bg-gray-800 border-b border-gray-700 px-6 py-4">
+    <div class="container mx-auto">
+      <h1 class="text-3xl font-bold text-blue-400">📊 SEO ContentScore</h1>
+      <p class="text-gray-400 text-sm">Shared Scan Result</p>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="container mx-auto px-6 py-8 max-w-6xl">
+    
+    <!-- LOADING -->
+    <div id="loading" class="text-center py-12">
+      <div class="text-6xl mb-4 animate-pulse">⏳</div>
+      <p class="text-xl text-gray-400">Loading scan result...</p>
+    </div>
+
+    <!-- ERROR -->
+    <div id="error" class="hidden bg-red-900 border border-red-700 rounded-lg p-6 text-center">
+      <h3 class="text-2xl font-bold mb-2">❌ Scan Not Found</h3>
+      <p class="text-gray-400 mb-4">This scan result could not be found or has expired.</p>
+      <a href="/seo-contentscore" class="inline-block bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-bold transition">
+        🔍 Analyze Your Website
+      </a>
+    </div>
+
+    <!-- RESULT -->
+    <div id="result" class="hidden"></div>
+
+  </div>
+
+  <script>
+    let scanData = null;
+
+    // Load scan result
+    async function loadScanResult() {
+      const shareId = window.location.pathname.split('/').pop();
+      
+      try {
+        const response = await fetch(`/api/scan-result/${shareId}`);
+        
+        if (!response.ok) {
+          throw new Error('Scan not found');
+        }
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to load scan');
+        }
+        
+        scanData = data;
+        displayResult(data);
+        
+      } catch (error) {
+        console.error('Error loading scan:', error);
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('error').classList.remove('hidden');
+      }
+    }
+
+    function displayResult(data) {
+      const resultDiv = document.getElementById('result');
+      const score = data.score || 0;
+      
+      let qualityColor = 'text-red-400';
+      let qualityLabel = 'Needs Improvement';
+      let qualityBg = 'bg-red-900';
+      
+      if (score >= 90) {
+        qualityColor = 'text-green-400';
+        qualityLabel = 'Excellent';
+        qualityBg = 'bg-green-900';
+      } else if (score >= 80) {
+        qualityColor = 'text-blue-400';
+        qualityLabel = 'Good';
+        qualityBg = 'bg-blue-900';
+      } else if (score >= 70) {
+        qualityColor = 'text-yellow-400';
+        qualityLabel = 'Average';
+        qualityBg = 'bg-yellow-900';
+      } else if (score >= 60) {
+        qualityColor = 'text-orange-400';
+        qualityLabel = 'Below Average';
+        qualityBg = 'bg-orange-900';
+      }
+
+      const wordCount = data.validation?.parserCounts?.words || 
+                       data.validation?.validatedCounts?.words || 
+                       'Unknown';
+
+      resultDiv.innerHTML = `
+        <!-- Action Buttons -->
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-2xl font-bold">📊 Scan Result</h3>
+          <div class="flex gap-2">
+            <button onclick="window.print()" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg font-bold text-sm transition">
+              🖨️ Print
+            </button>
+            <a href="/seo-contentscore" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-bold text-sm transition">
+              🔍 New Scan
+            </a>
+          </div>
+        </div>
+        
+        <!-- Score Card -->
+        <div class="${qualityBg} rounded-lg p-8 mb-6 text-center border border-gray-600">
+          <div class="text-7xl font-bold ${qualityColor} mb-3">${score}<span class="text-4xl">/100</span></div>
+          <div class="text-2xl font-bold mb-2">${qualityLabel}</div>
+          <div class="text-sm text-gray-400">${data.quality || ''}</div>
+        </div>
+
+        <!-- Breakdown -->
+        <div class="grid md:grid-cols-3 gap-4 mb-6">
+          <div class="bg-gray-700 rounded-lg p-4">
+            <h4 class="text-sm text-gray-400 mb-2">🎯 GRAAF Score</h4>
+            <div class="text-3xl font-bold text-blue-400">${data.breakdown?.graaf?.total || 0}/50</div>
+            <div class="text-xs text-gray-500 mt-1">Credibility & Accuracy</div>
+          </div>
+          <div class="bg-gray-700 rounded-lg p-4">
+            <h4 class="text-sm text-gray-400 mb-2">⚡ CRAFT Score</h4>
+            <div class="text-3xl font-bold text-purple-400">${data.breakdown?.craft?.total || 0}/30</div>
+            <div class="text-xs text-gray-500 mt-1">Content Quality</div>
+          </div>
+          <div class="bg-gray-700 rounded-lg p-4">
+            <h4 class="text-sm text-gray-400 mb-2">🔧 Technical</h4>
+            <div class="text-3xl font-bold text-green-400">${data.breakdown?.technical?.total || 0}/20</div>
+            <div class="text-xs text-gray-500 mt-1">SEO Technical</div>
+          </div>
+        </div>
+
+        <!-- Details -->
+        <div class="grid md:grid-cols-2 gap-4 mb-6">
+          <div class="bg-gray-700 rounded-lg p-4">
+            <div class="text-sm text-gray-400 mb-1">Analyzed URL</div>
+            <a href="${data.url}" target="_blank" class="text-blue-400 hover:text-blue-300 text-sm break-all">
+              ${data.url}
+            </a>
+          </div>
+          
+          <div class="bg-gray-700 rounded-lg p-4">
+            <div class="text-sm text-gray-400 mb-1">Words Analyzed</div>
+            <div class="text-xl font-bold">${wordCount.toLocaleString()}</div>
+          </div>
+
+          <div class="bg-gray-700 rounded-lg p-4">
+            <div class="text-sm text-gray-400 mb-1">Analyzed at</div>
+            <div class="text-sm">${new Date(data.timestamp).toLocaleString()}</div>
+          </div>
+
+          <div class="bg-gray-700 rounded-lg p-4">
+            <div class="text-sm text-gray-400 mb-1">Share ID</div>
+            <div class="text-sm font-mono">${data.share_id || 'N/A'}</div>
+          </div>
+        </div>
+
+        <!-- CTA -->
+        <div class="p-6 bg-gradient-to-r from-blue-900 to-purple-900 border border-blue-700 rounded-lg text-center">
+          <h4 class="font-bold text-xl mb-2">🚀 Want to improve YOUR website?</h4>
+          <p class="text-sm text-gray-300 mb-4">Get a free analysis and expert recommendations.</p>
+          <div class="flex justify-center flex-wrap gap-3">
+            <a href="/seo-contentscore" class="inline-block bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-bold transition">
+              🔍 Analyze Your Site
+            </a>
+            <a href="https://contentscale.site/contact" target="_blank" class="inline-block bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold transition">
+              📞 Contact Expert
+            </a>
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('loading').classList.add('hidden');
+      resultDiv.classList.remove('hidden');
+    }
+
+    // Load on page load
+    document.addEventListener('DOMContentLoaded', loadScanResult);
+  </script>
+
+</body>
+</html>

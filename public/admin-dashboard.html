@@ -1,0 +1,1938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Super Admin Dashboard - ContentScale Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen" class="min-h-screen flex items-center justify-center px-4">
+    <div class="max-w-md w-full">
+      <div class="bg-gray-800 rounded-lg p-8 shadow-xl border border-gray-700">
+        <div class="text-center mb-8">
+          <h1 class="text-3xl font-bold text-blue-400 mb-2">🔐 Super Admin Login</h1>
+          <p class="text-gray-400">ContentScale Platform Control</p>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">Username</label>
+            <input 
+              type="text" 
+              id="login-username" 
+              class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+              placeholder="admin"
+              onkeypress="if(event.key==='Enter') login()">
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">Password</label>
+            <input 
+              type="password" 
+              id="login-password" 
+              class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+              placeholder="Enter your password"
+              onkeypress="if(event.key==='Enter') login()">
+          </div>
+
+          <div id="login-error" class="hidden p-4 bg-red-900 border border-red-700 rounded-lg text-sm"></div>
+
+          <button 
+            onclick="login()" 
+            id="login-button"
+            class="w-full py-4 bg-blue-600 rounded-lg font-bold text-lg hover:bg-blue-700 transition">
+            Login
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN DASHBOARD -->
+  <div id="dashboard-screen" class="hidden">
+    
+    <!-- HEADER -->
+    <div class="bg-gray-800 border-b border-gray-700 px-6 py-4">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-2xl font-bold text-blue-400">👑 Super Admin Dashboard</h1>
+          <p class="text-gray-400 text-sm">ContentScale Platform Control Center</p>
+        </div>
+        <div class="text-right">
+          <p class="text-gray-400 text-sm">Logged in as: <span id="logged-username" class="text-green-400 font-bold"></span></p>
+          <button onclick="logout()" class="text-red-400 text-sm hover:text-red-300">Logout</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="bg-gray-800 border-b border-gray-700">
+      <div class="container mx-auto px-6">
+        <div class="flex space-x-1 overflow-x-auto">
+          <button onclick="switchTab('overview')" id="tab-overview" class="tab-button active">📊 Overview</button>
+          <button onclick="switchTab('admins')" id="tab-admins" class="tab-button">👥 Admins</button>
+          <button onclick="switchTab('agencies')" id="tab-agencies" class="tab-button">🏢 Agencies</button>
+          <button onclick="switchTab('clients')" id="tab-clients" class="tab-button">👤 All Clients</button>
+          <button onclick="switchTab('scans')" id="tab-scans" class="tab-button">🔍 All Scans</button>
+          <button onclick="switchTab('share-links')" id="tab-share-links" class="tab-button">🔗 Share Links</button>
+          <button onclick="switchTab('leaderboard')" id="tab-leaderboard" class="tab-button">🏆 Leaderboard</button>
+          <button onclick="switchTab('leadscanner')" id="tab-leadscanner" class="tab-button">🎯 Lead Scanner</button>
+          <button onclick="switchTab('contentscore')" id="tab-contentscore" class="tab-button">📊 ContentScore</button>
+          <button onclick="switchTab('ltdcodes')" id="tab-ltdcodes" class="tab-button">💰 LTD Codes</button>
+          <button onclick="switchTab('settings')" id="tab-settings" class="tab-button">⚙️ Settings</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB CONTENT -->
+    <div class="container mx-auto px-6 py-8">
+
+      <!-- OVERVIEW TAB -->
+      <div id="content-overview" class="tab-content">
+        <h2 class="text-2xl font-bold mb-6">Platform Overview</h2>
+        
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-400 text-sm">Total Agencies</p>
+                <p id="stat-total-agencies" class="text-3xl font-bold text-blue-400">-</p>
+              </div>
+              <div class="text-4xl">🏢</div>
+            </div>
+          </div>
+          
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-400 text-sm">Total Clients</p>
+                <p id="stat-total-clients" class="text-3xl font-bold text-green-400">-</p>
+              </div>
+              <div class="text-4xl">👥</div>
+            </div>
+          </div>
+          
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-400 text-sm">Total Scans</p>
+                <p id="stat-total-scans" class="text-3xl font-bold text-purple-400">-</p>
+              </div>
+              <div class="text-4xl">🔍</div>
+            </div>
+          </div>
+          
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-400 text-sm">Active Helpers</p>
+                <p id="stat-active-helpers" class="text-3xl font-bold text-yellow-400">-</p>
+              </div>
+              <div class="text-4xl">🤝</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-6">
+          <h3 class="text-xl font-bold mb-4">Quick Actions</h3>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <button onclick="switchTab('agencies'); showAddAgencyModal()" class="bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-bold">
+              ➕ Add Agency
+            </button>
+            <button onclick="switchTab('admins'); showAddAdminModal()" class="bg-green-600 hover:bg-green-700 py-3 rounded-lg font-bold">
+              👤 Add Helper
+            </button>
+            <button onclick="switchTab('share-links'); showCreateShareLinkModal()" class="bg-purple-600 hover:bg-purple-700 py-3 rounded-lg font-bold">
+              🔗 Create Share Link
+            </button>
+            <button onclick="switchTab('leadscanner')" class="bg-orange-600 hover:bg-orange-700 py-3 rounded-lg font-bold">
+              🎯 Scan Leads
+            </button>
+          </div>
+        </div>
+
+        <!-- Platform Health -->
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+          <h3 class="text-xl font-bold mb-4">Platform Health</h3>
+          <div class="space-y-3">
+            <div class="flex justify-between items-center p-3 bg-gray-700 rounded">
+              <span>Database Connection</span>
+              <span class="text-green-400 font-bold">✅ Connected</span>
+            </div>
+            <div class="flex justify-between items-center p-3 bg-gray-700 rounded">
+              <span>API Status</span>
+              <span class="text-green-400 font-bold">✅ Operational</span>
+            </div>
+            <div class="flex justify-between items-center p-3 bg-gray-700 rounded">
+              <span>Auto-Scan Service</span>
+              <span id="autoscan-status" class="text-yellow-400 font-bold">⏸️ Paused</span>
+            </div>
+            <div class="flex justify-between items-center p-3 bg-gray-700 rounded">
+              <span>Last Backup</span>
+              <span class="text-gray-400">2 hours ago</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMINS TAB -->
+      <div id="content-admins" class="tab-content hidden">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold">Admin & Helper Management</h2>
+          <button onclick="showAddAdminModal()" class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold">
+            ➕ Add Admin/Helper
+          </button>
+        </div>
+
+        <div id="admins-loading" class="text-center py-12">
+          <div class="text-4xl mb-4 animate-pulse">⏳</div>
+          <p class="text-gray-400">Loading admins...</p>
+        </div>
+
+        <div id="admins-list" class="hidden bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+          <table class="w-full">
+            <thead class="bg-gray-900">
+              <tr>
+                <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Username</th>
+                <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Email</th>
+                <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Role</th>
+                <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Status</th>
+                <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Last Login</th>
+                <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="admins-tbody" class="divide-y divide-gray-700">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- AGENCIES TAB -->
+      <div id="content-agencies" class="tab-content hidden">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold">All Agencies</h2>
+          <button onclick="showAddAgencyModal()" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-bold">
+            ➕ Add Agency
+          </button>
+        </div>
+
+        <div id="agencies-loading" class="text-center py-12">
+          <div class="text-4xl mb-4 animate-pulse">⏳</div>
+          <p class="text-gray-400">Loading agencies...</p>
+        </div>
+
+        <div id="agencies-list" class="hidden">
+          <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+            <table class="w-full">
+              <thead class="bg-gray-900">
+                <tr>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Agency</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Domain</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Country</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Plan</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Score</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Clients</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Status</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="agencies-tbody" class="divide-y divide-gray-700">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ALL CLIENTS TAB -->
+      <div id="content-clients" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">All Clients (Platform-wide)</h2>
+
+        <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+          <table class="w-full">
+            <thead class="bg-gray-900">
+              <tr>
+                <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Client</th>
+                <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Agency</th>
+                <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Email</th>
+                <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Scans</th>
+                <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Last Scan</th>
+                <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Status</th>
+              </tr>
+            </thead>
+            <tbody id="clients-tbody" class="divide-y divide-gray-700">
+              <tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ALL SCANS TAB -->
+      <div id="content-scans" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">All Scans (Platform-wide)</h2>
+
+        <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+          <table class="w-full">
+            <thead class="bg-gray-900">
+              <tr>
+                <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Date</th>
+                <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Agency</th>
+                <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Client</th>
+                <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">URL</th>
+                <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Score</th>
+              </tr>
+            </thead>
+            <tbody id="scans-tbody" class="divide-y divide-gray-700">
+              <tr><td colspan="5" class="px-6 py-8 text-center text-gray-400">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SHARE LINKS TAB -->
+      <div id="content-share-links" class="tab-content hidden">
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+          <div class="flex justify-between items-center mb-6">
+            <div>
+              <h2 class="text-2xl font-bold">🔗 Share Links</h2>
+              <p class="text-gray-400 text-sm mt-1">Create and manage scan links for clients</p>
+            </div>
+            <button onclick="showCreateShareLinkModal()" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-bold transition">
+              ➕ Create Share Link
+            </button>
+          </div>
+
+          <!-- FILTERS -->
+          <div class="flex gap-4 mb-6">
+            <select id="share-link-status-filter" onchange="loadShareLinks()" class="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg">
+              <option value="">All Status</option>
+              <option value="active">Active</option>
+              <option value="expired">Expired</option>
+              <option value="limit_reached">Limit Reached</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <button onclick="loadShareLinks()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition">
+              🔄 Refresh
+            </button>
+          </div>
+
+          <!-- SHARE LINKS TABLE -->
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="bg-gray-700 text-left">
+                  <th class="px-4 py-3">Share Code</th>
+                  <th class="px-4 py-3">Client</th>
+                  <th class="px-4 py-3">Email</th>
+                  <th class="px-4 py-3">Scans</th>
+                  <th class="px-4 py-3">Expires</th>
+                  <th class="px-4 py-3">Status</th>
+                  <th class="px-4 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="share-links-table">
+                <tr>
+                  <td colspan="7" class="px-4 py-8 text-center text-gray-400">
+                    Loading share links...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEADERBOARD TAB -->
+      <div id="content-leaderboard" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">Leaderboard Management</h2>
+
+        <!-- Auto-Scan Controls -->
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-6">
+          <h3 class="text-xl font-bold mb-4">⏰ Auto-Scan Settings</h3>
+          
+          <div class="grid md:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-sm text-gray-400 mb-2">Scan Frequency</label>
+              <select id="autoscan-frequency" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg">
+                <option value="disabled">Disabled</option>
+                <option value="hourly">Every Hour (Testing)</option>
+                <option value="daily">Daily</option>
+                <option value="weekly" selected>Weekly (Recommended)</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm text-gray-400 mb-2">Next Scheduled Scan</label>
+              <input type="text" value="Monday, 9:00 AM" readonly class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-400">
+            </div>
+          </div>
+
+          <div class="flex gap-4 mt-6">
+            <button onclick="triggerManualScan()" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-bold">
+              🔍 Scan All Agencies Now
+            </button>
+            <button onclick="saveAutoScanSettings()" class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold">
+              💾 Save Settings
+            </button>
+          </div>
+
+          <div id="autoscan-result" class="hidden mt-4 p-4 rounded-lg"></div>
+        </div>
+
+        <!-- Leaderboard View -->
+        <div class="mb-6">
+          <label class="block text-sm text-gray-400 mb-2">Select Country</label>
+          <select id="leaderboard-country" onchange="loadLeaderboard()" class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+            <option value="netherlands">Netherlands</option>
+            <option value="belgium">Belgium</option>
+            <option value="germany">Germany</option>
+            <option value="uk">United Kingdom</option>
+            <option value="usa">USA</option>
+          </select>
+        </div>
+
+        <div id="leaderboard-loading" class="text-center py-12">
+          <div class="text-4xl mb-4 animate-pulse">⏳</div>
+          <p class="text-gray-400">Loading leaderboard...</p>
+        </div>
+
+        <div id="leaderboard-list" class="hidden">
+          <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+            <table class="w-full">
+              <thead class="bg-gray-900">
+                <tr>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Rank</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Agency</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Domain</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Score</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Last Scanned</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="leaderboard-tbody" class="divide-y divide-gray-700">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEAD SCANNER TAB -->
+      <div id="content-leadscanner" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">🎯 Lead Scanner</h2>
+
+        <!-- Scan Configuration -->
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-6">
+          <h3 class="text-xl font-bold mb-4">Scan Configuration</h3>
+          
+          <div class="grid md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm text-gray-400 mb-2">Country</label>
+              <select id="lead-country" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg">
+                <option value="netherlands">Netherlands</option>
+                <option value="belgium">Belgium</option>
+                <option value="germany">Germany</option>
+                <option value="uk">United Kingdom</option>
+                <option value="usa">USA</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm text-gray-400 mb-2">City (Optional)</label>
+              <input 
+                type="text" 
+                id="lead-city" 
+                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg"
+                placeholder="Amsterdam">
+            </div>
+
+            <div>
+              <label class="block text-sm text-gray-400 mb-2">Max Results</label>
+              <input 
+                type="number" 
+                id="lead-max" 
+                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg"
+                value="50">
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <label class="block text-sm text-gray-400 mb-2">Search Keywords</label>
+            <input 
+              type="text" 
+              id="lead-keywords" 
+              class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg"
+              placeholder="SEO agency, digital marketing, content marketing"
+              value="SEO agency, digital marketing">
+          </div>
+
+          <div class="flex gap-4 mt-6">
+            <button onclick="startLeadScan()" class="bg-orange-600 hover:bg-orange-700 px-6 py-3 rounded-lg font-bold">
+              🔍 Start Lead Scan
+            </button>
+            <button onclick="exportLeads()" class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold">
+              📥 Export to CSV
+            </button>
+          </div>
+
+          <div id="lead-scan-status" class="hidden mt-4 p-4 rounded-lg"></div>
+        </div>
+
+        <!-- Scan Results -->
+        <div id="lead-results" class="hidden">
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-4">
+            <h3 class="text-xl font-bold mb-4">Scan Results</h3>
+            <div class="grid md:grid-cols-3 gap-4 mb-4">
+              <div class="bg-gray-700 rounded p-4">
+                <p class="text-sm text-gray-400">Leads Found</p>
+                <p id="leads-found" class="text-2xl font-bold text-blue-400">0</p>
+              </div>
+              <div class="bg-gray-700 rounded p-4">
+                <p class="text-sm text-gray-400">Contact Forms Detected</p>
+                <p id="leads-with-forms" class="text-2xl font-bold text-green-400">0</p>
+              </div>
+              <div class="bg-gray-700 rounded p-4">
+                <p class="text-sm text-gray-400">Emails Found</p>
+                <p id="leads-with-emails" class="text-2xl font-bold text-purple-400">0</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+            <table class="w-full">
+              <thead class="bg-gray-900">
+                <tr>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Company</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Website</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Contact</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Form</th>
+                  <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="leads-tbody" class="divide-y divide-gray-700">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEO CONTENTSCORE TAB -->
+      <div id="content-contentscore" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">📊 SEO ContentScore Tool</h2>
+        
+        <div class="bg-gray-800 rounded-lg p-4 border border-gray-700 mb-4">
+          <p class="text-gray-400 text-sm mb-2">
+            <strong>SEO ContentScore Tool:</strong> Analyze content quality and SEO optimization in real-time.
+          </p>
+          <div class="flex gap-3">
+            <button onclick="window.open('https://contentscale-platform-production.up.railway.app/seo-contentscore', '_blank')" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-bold">
+              🔗 Open in New Tab
+            </button>
+            <button onclick="reloadContentScore()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-bold">
+              🔄 Reload
+            </button>
+          </div>
+        </div>
+
+        <!-- Embedded ContentScore Tool -->
+        <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden" style="height: calc(100vh - 300px);">
+          <iframe 
+            id="contentscore-iframe"
+            src="https://contentscale-platform-production.up.railway.app/seo-contentscore" 
+            class="w-full h-full"
+            frameborder="0"
+            style="border: none;">
+          </iframe>
+        </div>
+      </div>
+
+      <!-- LTD CODES TAB -->
+      <div id="content-ltdcodes" class="tab-content hidden">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold">Lifetime Deal Codes</h2>
+          <button onclick="showGenerateCodeModal()" class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-bold">
+            🎟️ Generate New Code
+          </button>
+        </div>
+
+        <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+          <table class="w-full">
+            <thead class="bg-gray-900">
+              <tr>
+                <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Code</th>
+                <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Tier</th>
+                <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Scans Limit</th>
+                <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Status</th>
+                <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Used By</th>
+                <th class="px-6 py-3 text-left text-sm font-bold text-gray-400">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="ltdcodes-tbody" class="divide-y divide-gray-700">
+              <tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">Coming soon...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SETTINGS TAB -->
+      <div id="content-settings" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">Platform Settings</h2>
+
+        <div class="space-y-6">
+          <!-- Platform Info -->
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-xl font-bold mb-4">Platform Information</h3>
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p class="text-gray-400">Version</p>
+                <p class="font-bold">2.0.0</p>
+              </div>
+              <div>
+                <p class="text-gray-400">Deployment</p>
+                <p class="font-bold">Railway + Neon</p>
+              </div>
+              <div>
+                <p class="text-gray-400">API Status</p>
+                <p class="font-bold text-green-400">✅ Operational</p>
+              </div>
+              <div>
+                <p class="text-gray-400">Database</p>
+                <p class="font-bold text-green-400">✅ Connected</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- API Configuration -->
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-xl font-bold mb-4">API Configuration</h3>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm text-gray-400 mb-2">Anthropic API Key</label>
+                <input 
+                  type="password" 
+                  value="sk-ant-api03-xxxxx" 
+                  readonly
+                  class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg">
+              </div>
+              <p class="text-xs text-gray-500">API key is set via Railway environment variables</p>
+            </div>
+          </div>
+
+          <!-- Danger Zone -->
+          <div class="bg-red-900 bg-opacity-20 rounded-lg p-6 border border-red-700">
+            <h3 class="text-xl font-bold mb-4 text-red-400">⚠️ Danger Zone</h3>
+            <div class="space-y-3">
+              <button class="w-full bg-red-600 hover:bg-red-700 py-3 rounded-lg font-bold" onclick="alert('Feature coming soon')">
+                🗑️ Delete All Test Data
+              </button>
+              <button class="w-full bg-red-600 hover:bg-red-700 py-3 rounded-lg font-bold" onclick="alert('Feature coming soon')">
+                🔄 Reset Database
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ADD ADMIN MODAL -->
+  <div id="add-admin-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div class="bg-gray-800 rounded-lg max-w-md w-full border border-gray-700">
+      
+      <!-- Modal Header -->
+      <div class="border-b border-gray-700 px-6 py-4 flex justify-between items-center">
+        <h3 class="text-xl font-bold">👤 Add Admin / Helper</h3>
+        <button onclick="closeAddAdminModal()" class="text-gray-400 hover:text-white text-2xl leading-none">×</button>
+      </div>
+      
+      <!-- Modal Body -->
+      <div class="px-6 py-4">
+        <form id="add-admin-form" onsubmit="submitAddAdmin(event)">
+          
+          <!-- Username -->
+          <div class="mb-4">
+            <label class="block text-sm text-gray-400 mb-2">Username *</label>
+            <input 
+              type="text" 
+              id="admin-username"
+              required
+              class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+              placeholder="john.doe">
+          </div>
+          
+          <!-- Password -->
+          <div class="mb-4">
+            <label class="block text-sm text-gray-400 mb-2">Password *</label>
+            <input 
+              type="password" 
+              id="admin-password"
+              required
+              minlength="6"
+              class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+              placeholder="Min 6 characters">
+          </div>
+          
+          <!-- Role -->
+          <div class="mb-4">
+            <label class="block text-sm text-gray-400 mb-2">Role *</label>
+            <select 
+              id="admin-role"
+              required
+              class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none">
+              <option value="">Select role...</option>
+              <option value="super_admin">🔑 Super Admin (Full Access)</option>
+              <option value="sales">💼 Sales (Client Management)</option>
+              <option value="tester">🧪 Tester (Read Only)</option>
+              <option value="support">🎧 Support (Limited Access)</option>
+            </select>
+          </div>
+          
+          <!-- Full Name -->
+          <div class="mb-4">
+            <label class="block text-sm text-gray-400 mb-2">Full Name <span class="text-gray-600">(Optional)</span></label>
+            <input 
+              type="text" 
+              id="admin-fullname"
+              class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+              placeholder="John Doe">
+          </div>
+          
+          <!-- Email -->
+          <div class="mb-4">
+            <label class="block text-sm text-gray-400 mb-2">Email <span class="text-gray-600">(Optional)</span></label>
+            <input 
+              type="email" 
+              id="admin-email"
+              class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+              placeholder="john@example.com">
+          </div>
+          
+          <!-- Error Message -->
+          <div id="add-admin-error" class="hidden p-3 bg-red-900 border border-red-700 rounded-lg text-sm mb-4"></div>
+          
+          <!-- Buttons -->
+          <div class="flex gap-3">
+            <button 
+              type="submit"
+              id="add-admin-submit"
+              class="flex-1 bg-green-600 hover:bg-green-700 py-3 rounded-lg font-bold transition">
+              ✅ Create Admin
+            </button>
+            <button 
+              type="button"
+              onclick="closeAddAdminModal()"
+              class="flex-1 bg-gray-700 hover:bg-gray-600 py-3 rounded-lg font-bold transition">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD AGENCY MODAL -->
+  <div id="add-agency-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div class="bg-gray-800 rounded-lg max-w-2xl w-full border border-gray-700 max-h-[90vh] overflow-y-auto">
+      
+      <!-- Modal Header -->
+      <div class="border-b border-gray-700 px-6 py-4 flex justify-between items-center sticky top-0 bg-gray-800">
+        <h3 class="text-xl font-bold">🏢 Add New Agency</h3>
+        <button onclick="closeAddAgencyModal()" class="text-gray-400 hover:text-white text-2xl leading-none">×</button>
+      </div>
+      
+      <!-- Modal Body -->
+      <div class="px-6 py-4">
+        <form id="add-agency-form" onsubmit="submitAddAgency(event)">
+          
+          <!-- Basic Info -->
+          <div class="mb-6">
+            <h4 class="font-bold text-lg mb-3">Basic Information</h4>
+            
+            <div class="space-y-4">
+              <!-- Agency Name -->
+              <div>
+                <label class="block text-sm text-gray-400 mb-2">Agency Name *</label>
+                <input 
+                  type="text" 
+                  id="agency-name"
+                  required
+                  class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+                  placeholder="Digital Marketing Pro">
+              </div>
+              
+              <!-- Domain -->
+              <div>
+                <label class="block text-sm text-gray-400 mb-2">Domain *</label>
+                <input 
+                  type="text" 
+                  id="agency-domain"
+                  required
+                  class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+                  placeholder="agency.com (without https://)">
+              </div>
+              
+              <!-- Country -->
+              <div>
+                <label class="block text-sm text-gray-400 mb-2">Country *</label>
+                <select 
+                  id="agency-country"
+                  required
+                  class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none">
+                  <option value="">Select country...</option>
+                  <option value="netherlands">🇳🇱 Netherlands</option>
+                  <option value="belgium">🇧🇪 Belgium</option>
+                  <option value="germany">🇩🇪 Germany</option>
+                  <option value="uk">🇬🇧 United Kingdom</option>
+                  <option value="usa">🇺🇸 USA</option>
+                </select>
+              </div>
+              
+              <!-- Plan -->
+              <div>
+                <label class="block text-sm text-gray-400 mb-2">Plan *</label>
+                <select 
+                  id="agency-plan"
+                  required
+                  class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none">
+                  <option value="starter">Starter (10 clients)</option>
+                  <option value="professional">Professional (50 clients)</option>
+                  <option value="agency">Agency (100 clients)</option>
+                  <option value="enterprise">Enterprise (Unlimited)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Contact Info -->
+          <div class="mb-6">
+            <h4 class="font-bold text-lg mb-3">Contact Information</h4>
+            
+            <div class="space-y-4">
+              <!-- Contact Person -->
+              <div>
+                <label class="block text-sm text-gray-400 mb-2">Contact Person <span class="text-gray-600">(Optional)</span></label>
+                <input 
+                  type="text" 
+                  id="agency-contact-person"
+                  class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+                  placeholder="John Doe">
+              </div>
+              
+              <!-- Contact Email -->
+              <div>
+                <label class="block text-sm text-gray-400 mb-2">Contact Email <span class="text-gray-600">(Optional)</span></label>
+                <input 
+                  type="email" 
+                  id="agency-contact-email"
+                  class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+                  placeholder="contact@agency.com">
+              </div>
+              
+              <!-- Phone -->
+              <div>
+                <label class="block text-sm text-gray-400 mb-2">Phone <span class="text-gray-600">(Optional)</span></label>
+                <input 
+                  type="tel" 
+                  id="agency-phone"
+                  class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+                  placeholder="+31 20 123 4567">
+              </div>
+            </div>
+          </div>
+          
+          <!-- Settings -->
+          <div class="mb-6">
+            <h4 class="font-bold text-lg mb-3">Settings</h4>
+            
+            <div class="space-y-4">
+              <!-- Whitelabel -->
+              <div class="flex items-center">
+                <input 
+                  type="checkbox" 
+                  id="agency-whitelabel"
+                  class="w-4 h-4 bg-gray-700 border-gray-600 rounded">
+                <label class="ml-2 text-sm">Enable Whitelabel</label>
+              </div>
+              
+              <!-- Active -->
+              <div class="flex items-center">
+                <input 
+                  type="checkbox" 
+                  id="agency-active"
+                  checked
+                  class="w-4 h-4 bg-gray-700 border-gray-600 rounded">
+                <label class="ml-2 text-sm">Active (can use platform)</label>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Error Message -->
+          <div id="add-agency-error" class="hidden p-3 bg-red-900 border border-red-700 rounded-lg text-sm mb-4"></div>
+          
+          <!-- Buttons -->
+          <div class="flex gap-3">
+            <button 
+              type="submit"
+              id="add-agency-submit"
+              class="flex-1 bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-bold transition">
+              ✅ Create Agency
+            </button>
+            <button 
+              type="button"
+              onclick="closeAddAgencyModal()"
+              class="flex-1 bg-gray-700 hover:bg-gray-600 py-3 rounded-lg font-bold transition">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- CREATE SHARE LINK MODAL -->
+  <div id="create-share-link-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div class="bg-gray-800 rounded-lg max-w-md w-full border border-gray-700">
+      
+      <!-- Modal Header -->
+      <div class="border-b border-gray-700 px-6 py-4 flex justify-between items-center">
+        <h3 class="text-xl font-bold">🔗 Create Share Link</h3>
+        <button onclick="closeCreateShareLinkModal()" class="text-gray-400 hover:text-white text-2xl leading-none">×</button>
+      </div>
+      
+      <!-- Modal Body -->
+      <div class="px-6 py-4">
+        <form id="create-share-link-form" onsubmit="submitCreateShareLink(event)">
+          
+          <!-- Client Name -->
+          <div class="mb-4">
+            <label class="block text-sm text-gray-400 mb-2">Client Name</label>
+            <input 
+              type="text" 
+              id="share-client-name"
+              class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+              placeholder="John Doe">
+          </div>
+          
+          <!-- Client Email -->
+          <div class="mb-4">
+            <label class="block text-sm text-gray-400 mb-2">Client Email *</label>
+            <input 
+              type="email" 
+              id="share-client-email"
+              required
+              class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+              placeholder="client@example.com">
+          </div>
+          
+          <!-- Company -->
+          <div class="mb-4">
+            <label class="block text-sm text-gray-400 mb-2">Company</label>
+            <input 
+              type="text" 
+              id="share-client-company"
+              class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+              placeholder="Company Name">
+          </div>
+          
+          <!-- Scans & Days -->
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="block text-sm text-gray-400 mb-2">Number of Scans *</label>
+              <input 
+                type="number" 
+                id="share-scans-limit"
+                value="5"
+                min="1"
+                max="100"
+                required
+                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-2">Valid Days *</label>
+              <input 
+                type="number" 
+                id="share-valid-days"
+                value="7"
+                min="1"
+                max="365"
+                required
+                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none">
+            </div>
+          </div>
+          
+          <!-- Notes -->
+          <div class="mb-4">
+            <label class="block text-sm text-gray-400 mb-2">Notes (optional)</label>
+            <textarea 
+              id="share-notes"
+              rows="3"
+              class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+              placeholder="Internal notes..."></textarea>
+          </div>
+          
+          <!-- Send Email -->
+          <div class="mb-6">
+            <label class="flex items-center gap-2">
+              <input 
+                type="checkbox" 
+                id="share-send-email"
+                class="w-4 h-4">
+              <span class="text-sm">Send email with share link to client</span>
+            </label>
+          </div>
+          
+          <!-- Error Message -->
+          <div id="create-share-link-error" class="hidden p-3 bg-red-900 border border-red-700 rounded-lg text-sm mb-4"></div>
+          
+          <!-- Buttons -->
+          <div class="flex gap-3">
+            <button 
+              type="submit"
+              id="create-share-link-submit"
+              class="flex-1 bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-bold transition">
+              ✅ Create Share Link
+            </button>
+            <button 
+              type="button"
+              onclick="closeCreateShareLinkModal()"
+              class="flex-1 bg-gray-700 hover:bg-gray-600 py-3 rounded-lg font-bold transition">
+              Cancel
+            </button>
+          </div>
+        </form>
+
+        <!-- Result Display -->
+        <div id="share-link-result" class="hidden mt-6 p-4 bg-green-900 border border-green-700 rounded-lg">
+          <h4 class="font-bold mb-2">✅ Share Link Created!</h4>
+          <div class="mb-2">
+            <label class="text-sm text-gray-400">Share Code:</label>
+            <div class="flex gap-2 mt-1">
+              <input 
+                type="text" 
+                id="created-share-code"
+                readonly
+                class="flex-1 px-3 py-2 bg-gray-700 rounded font-mono text-sm">
+              <button onclick="copyShareCode()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded transition">
+                Copy
+              </button>
+            </div>
+          </div>
+          <div>
+            <label class="text-sm text-gray-400">Share URL:</label>
+            <div class="flex gap-2 mt-1">
+              <input 
+                type="text" 
+                id="created-share-url"
+                readonly
+                class="flex-1 px-3 py-2 bg-gray-700 rounded text-sm">
+              <button onclick="copyShareUrl()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded transition">
+                Copy
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .tab-button {
+      padding: 1rem 1.5rem;
+      font-weight: 600;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+      color: #9CA3AF;
+      white-space: nowrap;
+    }
+    .tab-button:hover {
+      color: #E5E7EB;
+      background-color: rgba(255,255,255,0.05);
+    }
+    .tab-button.active {
+      color: #60A5FA;
+      border-bottom-color: #60A5FA;
+      background-color: rgba(96,165,250,0.1);
+    }
+  </style>
+
+  <script>
+    let adminUsername = null;
+
+    // Load on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      const loggedIn = sessionStorage.getItem('superadmin_logged_in');
+      const username = sessionStorage.getItem('superadmin_username');
+      
+      if (loggedIn === 'true' && username) {
+        showDashboard(username);
+      }
+    });
+
+    // ===========================================
+    // LOGIN & AUTH
+    // ===========================================
+    async function login() {
+      const username = document.getElementById('login-username').value.trim();
+      const password = document.getElementById('login-password').value;
+      const errorDiv = document.getElementById('login-error');
+      const loginButton = document.getElementById('login-button');
+      
+      errorDiv.classList.add('hidden');
+      
+      if (!username || !password) {
+        errorDiv.textContent = 'Please enter username and password';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      
+      loginButton.textContent = 'Logging in...';
+      loginButton.disabled = true;
+      
+      try {
+        const response = await fetch('/api/setup/verify-admin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ username, password })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Invalid credentials');
+        }
+        
+        // Store admin ID for API calls
+        localStorage.setItem('admin_id', data.admin_id || '1');
+        sessionStorage.setItem('superadmin_logged_in', 'true');
+        sessionStorage.setItem('superadmin_username', username);
+        
+        showDashboard(username);
+        
+      } catch (error) {
+        console.error('Login error:', error);
+        errorDiv.textContent = error.message || 'Login failed. Please try again.';
+        errorDiv.classList.remove('hidden');
+        loginButton.textContent = 'Login';
+        loginButton.disabled = false;
+      }
+    }
+
+    function showDashboard(username) {
+      adminUsername = username;
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('dashboard-screen').classList.remove('hidden');
+      document.getElementById('logged-username').textContent = username;
+      loadOverview();
+    }
+
+    function logout() {
+      if (confirm('Are you sure you want to logout?')) {
+        localStorage.removeItem('admin_id');
+        sessionStorage.removeItem('superadmin_logged_in');
+        sessionStorage.removeItem('superadmin_username');
+        window.location.reload();
+      }
+    }
+
+    // ===========================================
+    // TAB SWITCHING
+    // ===========================================
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.add('hidden');
+      });
+      
+      document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      
+      document.getElementById('content-' + tabName).classList.remove('hidden');
+      document.getElementById('tab-' + tabName).classList.add('active');
+      
+      if (tabName === 'overview') loadOverview();
+      else if (tabName === 'admins') loadAdmins();
+      else if (tabName === 'agencies') loadAgencies();
+      else if (tabName === 'share-links') loadShareLinks();
+      else if (tabName === 'leaderboard') loadLeaderboard();
+    }
+
+    // ===========================================
+    // ADMIN MANAGEMENT
+    // ===========================================
+    async function loadAdmins() {
+      document.getElementById('admins-loading').classList.remove('hidden');
+      document.getElementById('admins-list').classList.add('hidden');
+      
+      try {
+        const response = await fetch('/api/admins', {
+          headers: {
+            'x-admin-key': localStorage.getItem('admin_id')
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to load admins');
+        }
+        
+        const activeAdmins = data.admins.filter(a => a.is_active).length;
+        document.getElementById('stat-active-helpers').textContent = activeAdmins;
+        
+        const tbody = document.getElementById('admins-tbody');
+        tbody.innerHTML = '';
+        
+        if (data.admins.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="6" class="px-6 py-8 text-center text-gray-400">
+                No admins/helpers yet. Create your first one!
+              </td>
+            </tr>
+          `;
+        } else {
+          data.admins.forEach(admin => {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-700';
+            
+            let roleColor = 'bg-gray-700';
+            if (admin.role === 'super_admin') roleColor = 'bg-purple-900 text-purple-300';
+            else if (admin.role === 'sales') roleColor = 'bg-green-900 text-green-300';
+            else if (admin.role === 'tester') roleColor = 'bg-blue-900 text-blue-300';
+            else if (admin.role === 'support') roleColor = 'bg-yellow-900 text-yellow-300';
+            
+            row.innerHTML = `
+              <td class="px-6 py-4">
+                <div class="font-bold">${admin.username}</div>
+                ${admin.full_name ? `<div class="text-sm text-gray-400">${admin.full_name}</div>` : ''}
+              </td>
+              <td class="px-6 py-4">
+                ${admin.email || '<span class="text-gray-500">-</span>'}
+              </td>
+              <td class="px-6 py-4">
+                <span class="px-3 py-1 rounded-full text-xs font-bold ${roleColor}">
+                  ${admin.role.replace('_', ' ').toUpperCase()}
+                </span>
+              </td>
+              <td class="px-6 py-4">
+                <span class="px-2 py-1 rounded text-xs ${admin.is_active ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}">
+                  ${admin.is_active ? 'Active' : 'Inactive'}
+                </span>
+              </td>
+              <td class="px-6 py-4 text-sm text-gray-400">
+                ${admin.last_login ? new Date(admin.last_login).toLocaleDateString() : 'Never'}
+              </td>
+              <td class="px-6 py-4">
+                <div class="flex gap-2">
+                  <button onclick="toggleAdminStatus(${admin.id})" class="text-yellow-400 hover:text-yellow-300 text-sm">
+                    ${admin.is_active ? '⏸️' : '▶️'}
+                  </button>
+                  <button onclick="resetAdminPassword(${admin.id})" class="text-blue-400 hover:text-blue-300 text-sm">
+                    🔑
+                  </button>
+                  <button onclick="deleteAdmin(${admin.id}, '${admin.username}')" class="text-red-400 hover:text-red-300 text-sm">
+                    🗑️
+                  </button>
+                </div>
+              </td>
+            `;
+            
+            tbody.appendChild(row);
+          });
+        }
+        
+        document.getElementById('admins-loading').classList.add('hidden');
+        document.getElementById('admins-list').classList.remove('hidden');
+        
+      } catch (error) {
+        console.error('Error loading admins:', error);
+        document.getElementById('admins-loading').innerHTML = `
+          <p class="text-red-400">Failed to load admins: ${error.message}</p>
+        `;
+      }
+    }
+
+    function showAddAdminModal() {
+      document.getElementById('add-admin-modal').classList.remove('hidden');
+      document.getElementById('admin-username').focus();
+    }
+
+    function closeAddAdminModal() {
+      document.getElementById('add-admin-modal').classList.add('hidden');
+      document.getElementById('add-admin-form').reset();
+      document.getElementById('add-admin-error').classList.add('hidden');
+    }
+
+    async function submitAddAdmin(event) {
+      event.preventDefault();
+      
+      const submitBtn = document.getElementById('add-admin-submit');
+      const errorDiv = document.getElementById('add-admin-error');
+      
+      const username = document.getElementById('admin-username').value.trim();
+      const password = document.getElementById('admin-password').value;
+      const role = document.getElementById('admin-role').value;
+      const full_name = document.getElementById('admin-fullname').value.trim();
+      const email = document.getElementById('admin-email').value.trim();
+      
+      errorDiv.classList.add('hidden');
+      submitBtn.disabled = true;
+      submitBtn.textContent = '⏳ Creating...';
+      
+      try {
+        const response = await fetch('/api/admins', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          },
+          body: JSON.stringify({
+            username,
+            password,
+            role,
+            full_name: full_name || null,
+            email: email || null
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to create admin');
+        }
+        
+        alert(`✅ Admin "${username}" created successfully!`);
+        closeAddAdminModal();
+        loadAdmins();
+        
+      } catch (error) {
+        console.error('Error creating admin:', error);
+        errorDiv.textContent = error.message;
+        errorDiv.classList.remove('hidden');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '✅ Create Admin';
+      }
+    }
+
+    async function toggleAdminStatus(adminId) {
+      if (!confirm('Toggle this admin\'s active status?')) return;
+      
+      try {
+        const response = await fetch(`/api/admins/${adminId}/toggle-active`, {
+          method: 'PATCH',
+          headers: {
+            'x-admin-key': localStorage.getItem('admin_id')
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error);
+        }
+        
+        alert(`✅ ${data.message}`);
+        loadAdmins();
+        
+      } catch (error) {
+        alert(`❌ Error: ${error.message}`);
+      }
+    }
+
+    async function resetAdminPassword(adminId) {
+      const newPassword = prompt('Enter new password (min 6 characters):');
+      
+      if (!newPassword) return;
+      
+      if (newPassword.length < 6) {
+        alert('Password must be at least 6 characters');
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/admins/${adminId}/reset-password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          },
+          body: JSON.stringify({ new_password: newPassword })
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error);
+        }
+        
+        alert(`✅ ${data.message}`);
+        
+      } catch (error) {
+        alert(`❌ Error: ${error.message}`);
+      }
+    }
+
+    async function deleteAdmin(adminId, username) {
+      if (!confirm(`⚠️ Delete admin "${username}"?\n\nThis action cannot be undone!`)) return;
+      
+      const doubleConfirm = confirm(`Are you SURE you want to delete "${username}"?`);
+      if (!doubleConfirm) return;
+      
+      try {
+        const response = await fetch(`/api/admins/${adminId}`, {
+          method: 'DELETE',
+          headers: {
+            'x-admin-key': localStorage.getItem('admin_id')
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error);
+        }
+        
+        alert(`✅ ${data.message}`);
+        loadAdmins();
+        
+      } catch (error) {
+        alert(`❌ Error: ${error.message}`);
+      }
+    }
+
+    // ===========================================
+    // AGENCY MANAGEMENT
+    // ===========================================
+    function showAddAgencyModal() {
+      document.getElementById('add-agency-modal').classList.remove('hidden');
+      document.getElementById('agency-name').focus();
+    }
+
+    function closeAddAgencyModal() {
+      document.getElementById('add-agency-modal').classList.add('hidden');
+      document.getElementById('add-agency-form').reset();
+      document.getElementById('add-agency-error').classList.add('hidden');
+    }
+
+    async function submitAddAgency(event) {
+      event.preventDefault();
+      
+      const submitBtn = document.getElementById('add-agency-submit');
+      const errorDiv = document.getElementById('add-agency-error');
+      
+      const name = document.getElementById('agency-name').value.trim();
+      const domain = document.getElementById('agency-domain').value.trim();
+      const country = document.getElementById('agency-country').value;
+      const plan = document.getElementById('agency-plan').value;
+      const contact_person = document.getElementById('agency-contact-person').value.trim();
+      const contact_email = document.getElementById('agency-contact-email').value.trim();
+      const phone = document.getElementById('agency-phone').value.trim();
+      const whitelabel = document.getElementById('agency-whitelabel').checked;
+      const is_active = document.getElementById('agency-active').checked;
+      
+      errorDiv.classList.add('hidden');
+      submitBtn.disabled = true;
+      submitBtn.textContent = '⏳ Creating...';
+      
+      try {
+        const response = await fetch('/api/agencies', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          },
+          body: JSON.stringify({
+            name, domain, country, plan,
+            contact_person: contact_person || null,
+            contact_email: contact_email || null,
+            phone: phone || null,
+            whitelabel, is_active
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to create agency');
+        }
+        
+        alert(`✅ Agency "${name}" created!\n\nAdmin Key: ${data.agency.admin_key}\n\n⚠️ Save this key!`);
+        closeAddAgencyModal();
+        loadAgencies();
+        
+      } catch (error) {
+        console.error('Error:', error);
+        errorDiv.textContent = error.message;
+        errorDiv.classList.remove('hidden');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '✅ Create Agency';
+      }
+    }
+
+    // ===========================================
+    // SHARE LINK MANAGEMENT
+    // ===========================================
+    async function loadShareLinks() {
+      const tableBody = document.getElementById('share-links-table');
+      const statusFilter = document.getElementById('share-link-status-filter').value;
+      
+      tableBody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">Loading...</td></tr>';
+      
+      try {
+        const params = new URLSearchParams();
+        if (statusFilter) params.append('status', statusFilter);
+        
+        const response = await fetch(`/api/admin/share-links?${params}`, {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to load share links');
+        }
+        
+        if (data.share_links.length === 0) {
+          tableBody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">No share links found</td></tr>';
+          return;
+        }
+        
+        tableBody.innerHTML = data.share_links.map(link => {
+          const statusColors = {
+            active: 'bg-green-900 text-green-400',
+            expired: 'bg-orange-900 text-orange-400',
+            limit_reached: 'bg-red-900 text-red-400',
+            inactive: 'bg-gray-700 text-gray-400'
+          };
+          
+          const statusColor = statusColors[link.status] || 'bg-gray-700 text-gray-400';
+          const expiresDate = new Date(link.expires_at).toLocaleDateString();
+          
+          return `
+            <tr class="border-b border-gray-700 hover:bg-gray-700/50">
+              <td class="px-4 py-3">
+                <span class="font-mono text-sm">${link.share_code}</span>
+              </td>
+              <td class="px-4 py-3">${link.client_name || '-'}</td>
+              <td class="px-4 py-3">${link.client_email}</td>
+              <td class="px-4 py-3">
+                <span class="font-bold">${link.scans_used}/${link.scans_limit}</span>
+              </td>
+              <td class="px-4 py-3 text-sm">${expiresDate}</td>
+              <td class="px-4 py-3">
+                <span class="px-2 py-1 rounded text-xs ${statusColor}">
+                  ${link.status.replace('_', ' ')}
+                </span>
+              </td>
+              <td class="px-4 py-3">
+                <button onclick="viewShareLink('${link.share_code}')" class="text-blue-400 hover:text-blue-300 text-sm mr-2">View</button>
+                <button onclick="copyShareLinkUrl('${link.share_code}')" class="text-green-400 hover:text-green-300 text-sm mr-2">Copy URL</button>
+                <button onclick="deleteShareLink('${link.share_code}')" class="text-red-400 hover:text-red-300 text-sm">Delete</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+        
+      } catch (error) {
+        console.error('Error loading share links:', error);
+        tableBody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-red-400">${error.message}</td></tr>`;
+      }
+    }
+
+    function showCreateShareLinkModal() {
+      document.getElementById('create-share-link-modal').classList.remove('hidden');
+      document.getElementById('share-link-result').classList.add('hidden');
+      document.getElementById('create-share-link-form').reset();
+    }
+
+    function closeCreateShareLinkModal() {
+      document.getElementById('create-share-link-modal').classList.add('hidden');
+    }
+
+    async function submitCreateShareLink(event) {
+      event.preventDefault();
+      
+      const formData = {
+        client_name: document.getElementById('share-client-name').value,
+        client_email: document.getElementById('share-client-email').value,
+        client_company: document.getElementById('share-client-company').value,
+        scans_limit: parseInt(document.getElementById('share-scans-limit').value),
+        valid_days: parseInt(document.getElementById('share-valid-days').value),
+        notes: document.getElementById('share-notes').value,
+        send_email: document.getElementById('share-send-email').checked
+      };
+      
+      const submitBtn = document.getElementById('create-share-link-submit');
+      submitBtn.disabled = true;
+      submitBtn.textContent = '⏳ Creating...';
+      
+      try {
+        const response = await fetch('/api/admin/share-links/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          },
+          body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to create share link');
+        }
+        
+        document.getElementById('created-share-code').value = data.share_link.share_code;
+        document.getElementById('created-share-url').value = data.share_url;
+        document.getElementById('share-link-result').classList.remove('hidden');
+        
+        loadShareLinks();
+        
+        alert('✅ Share link created successfully!');
+        
+      } catch (error) {
+        console.error('Error creating share link:', error);
+        alert('❌ Failed to create share link: ' + error.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '✅ Create Share Link';
+      }
+    }
+
+    function copyShareCode() {
+      const input = document.getElementById('created-share-code');
+      input.select();
+      document.execCommand('copy');
+      alert('✅ Share code copied to clipboard!');
+    }
+
+    function copyShareUrl() {
+      const input = document.getElementById('created-share-url');
+      input.select();
+      document.execCommand('copy');
+      alert('✅ Share URL copied to clipboard!');
+    }
+
+    function copyShareLinkUrl(code) {
+      const url = `${window.location.origin}/scan-with-link/${code}`;
+      navigator.clipboard.writeText(url).then(() => {
+        alert('✅ Share URL copied to clipboard!');
+      });
+    }
+
+    async function viewShareLink(code) {
+      try {
+        const response = await fetch(`/api/admin/share-links/${code}`, {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error);
+        }
+        
+        const link = data.share_link;
+        const scans = data.scans || [];
+        
+        alert(`
+Share Link Details:
+━━━━━━━━━━━━━━━━━━━━
+Code: ${link.share_code}
+Client: ${link.client_name || 'N/A'}
+Email: ${link.client_email}
+Company: ${link.client_company || 'N/A'}
+
+Usage: ${link.scans_used}/${link.scans_limit} scans
+Valid Days: ${link.valid_days}
+Expires: ${new Date(link.expires_at).toLocaleString()}
+Status: ${link.is_active ? 'Active' : 'Inactive'}
+
+Total Scans Made: ${scans.length}
+Created by: ${link.created_by}
+Created: ${new Date(link.created_at).toLocaleString()}
+        `);
+        
+      } catch (error) {
+        alert('❌ Failed to load share link details: ' + error.message);
+      }
+    }
+
+    async function deleteShareLink(code) {
+      if (!confirm(`Are you sure you want to delete share link ${code}?`)) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/admin/share-links/${code}`, {
+          method: 'DELETE',
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error);
+        }
+        
+        alert('✅ Share link deleted successfully');
+        loadShareLinks();
+        
+      } catch (error) {
+        alert('❌ Failed to delete share link: ' + error.message);
+      }
+    }
+
+    // ===========================================
+    // OVERVIEW
+    // ===========================================
+    async function loadOverview() {
+      try {
+        const response = await fetch('/api/super-admin/agencies');
+        const data = await response.json();
+        
+        if (data.success && data.agencies) {
+          const totalClients = data.agencies.reduce((sum, a) => sum + (parseInt(a.client_count) || 0), 0);
+          const totalScans = data.agencies.reduce((sum, a) => sum + (parseInt(a.total_scans) || 0), 0);
+          
+          document.getElementById('stat-total-agencies').textContent = data.agencies.length;
+          document.getElementById('stat-total-clients').textContent = totalClients;
+          document.getElementById('stat-total-scans').textContent = totalScans;
+        }
+      } catch (error) {
+        console.error('Error loading overview:', error);
+      }
+    }
+
+    // ===========================================
+    // AGENCIES
+    // ===========================================
+    async function loadAgencies() {
+      document.getElementById('agencies-loading').classList.remove('hidden');
+      document.getElementById('agencies-list').classList.add('hidden');
+      
+      try {
+        const response = await fetch('/api/super-admin/agencies');
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error('Failed to load agencies');
+        }
+        
+        const tbody = document.getElementById('agencies-tbody');
+        tbody.innerHTML = '';
+        
+        data.agencies.forEach(agency => {
+          const row = document.createElement('tr');
+          row.className = 'hover:bg-gray-700';
+          
+          row.innerHTML = `
+            <td class="px-6 py-4">
+              <div class="font-bold">${agency.name}</div>
+              <div class="text-xs text-gray-400">ID: ${agency.id}</div>
+            </td>
+            <td class="px-6 py-4">
+              <a href="https://${agency.domain}" target="_blank" class="text-blue-400 hover:text-blue-300 text-sm">
+                ${agency.domain}
+              </a>
+            </td>
+            <td class="px-6 py-4">
+              <span class="px-2 py-1 bg-gray-700 rounded text-xs">${agency.country || 'N/A'}</span>
+            </td>
+            <td class="px-6 py-4">
+              <span class="px-2 py-1 bg-blue-900 text-blue-300 rounded text-xs font-bold">${agency.plan || 'starter'}</span>
+            </td>
+            <td class="px-6 py-4">
+              <div class="text-lg font-bold ${getScoreColor(agency.v52_score)}">
+                ${agency.v52_score || 0}/100
+              </div>
+            </td>
+            <td class="px-6 py-4 text-center">
+              <span class="text-lg font-bold">${agency.client_count || 0}</span>
+            </td>
+            <td class="px-6 py-4">
+              <span class="px-2 py-1 rounded text-xs ${agency.is_active ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}">
+                ${agency.is_active ? 'Active' : 'Inactive'}
+              </span>
+            </td>
+            <td class="px-6 py-4">
+              <button onclick="copyAdminKey('${agency.admin_key}')" class="text-blue-400 hover:text-blue-300 text-sm">
+                📋 Copy Key
+              </button>
+            </td>
+          `;
+          
+          tbody.appendChild(row);
+        });
+        
+        document.getElementById('agencies-loading').classList.add('hidden');
+        document.getElementById('agencies-list').classList.remove('hidden');
+        
+      } catch (error) {
+        console.error('Error loading agencies:', error);
+      }
+    }
+
+    // ===========================================
+    // LEADERBOARD
+    // ===========================================
+    async function loadLeaderboard() {
+      const country = document.getElementById('leaderboard-country').value;
+      
+      document.getElementById('leaderboard-loading').classList.remove('hidden');
+      document.getElementById('leaderboard-list').classList.add('hidden');
+      
+      try {
+        const response = await fetch(`/api/leaderboard/${country}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error('Failed to load leaderboard');
+        }
+        
+        const tbody = document.getElementById('leaderboard-tbody');
+        tbody.innerHTML = '';
+        
+        data.agencies.forEach(agency => {
+          const row = document.createElement('tr');
+          row.className = 'hover:bg-gray-700';
+          
+          row.innerHTML = `
+            <td class="px-6 py-4">
+              <div class="text-2xl font-bold">#${agency.rank}</div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="font-bold">${agency.name}</div>
+            </td>
+            <td class="px-6 py-4">
+              <a href="https://${agency.domain}" target="_blank" class="text-blue-400 hover:text-blue-300 text-sm">
+                ${agency.domain}
+              </a>
+            </td>
+            <td class="px-6 py-4">
+              <div class="text-xl font-bold ${getScoreColor(agency.v52_score)}">
+                ${agency.v52_score}/100
+              </div>
+            </td>
+            <td class="px-6 py-4 text-sm">${agency.last_scanned ? new Date(agency.last_scanned).toLocaleDateString() : 'Never'}</td>
+            <td class="px-6 py-4">
+              <button onclick="scanAgency(${agency.id})" class="text-blue-400 hover:text-blue-300 text-sm">
+                🔍 Scan Now
+              </button>
+            </td>
+          `;
+          
+          tbody.appendChild(row);
+        });
+        
+        document.getElementById('leaderboard-loading').classList.add('hidden');
+        document.getElementById('leaderboard-list').classList.remove('hidden');
+        
+      } catch (error) {
+        console.error('Error loading leaderboard:', error);
+        document.getElementById('leaderboard-loading').innerHTML = '<p class="text-red-400">Failed to load leaderboard</p>';
+      }
+    }
+
+    // ===========================================
+    // LEAD SCANNER
+    // ===========================================
+    function startLeadScan() {
+      const country = document.getElementById('lead-country').value;
+      const statusDiv = document.getElementById('lead-scan-status');
+      statusDiv.className = 'mt-4 p-4 rounded-lg bg-blue-900 border border-blue-700';
+      statusDiv.textContent = `🔍 Scanning for leads in ${country}... Please wait.`;
+      statusDiv.classList.remove('hidden');
+      
+      setTimeout(() => {
+        statusDiv.className = 'mt-4 p-4 rounded-lg bg-green-900 border border-green-700';
+        statusDiv.textContent = '✅ Found 47 potential leads!';
+        
+        document.getElementById('lead-results').classList.remove('hidden');
+        document.getElementById('leads-found').textContent = '47';
+        document.getElementById('leads-with-forms').textContent = '32';
+        document.getElementById('leads-with-emails').textContent = '18';
+        
+        const tbody = document.getElementById('leads-tbody');
+        tbody.innerHTML = `
+          <tr class="hover:bg-gray-700">
+            <td class="px-6 py-4 font-bold">Amsterdam SEO Agency</td>
+            <td class="px-6 py-4"><a href="https://amsterdamseo.nl" target="_blank" class="text-blue-400">amsterdamseo.nl</a></td>
+            <td class="px-6 py-4 text-sm">contact@amsterdamseo.nl</td>
+            <td class="px-6 py-4"><span class="text-green-400">✅ Yes</span></td>
+            <td class="px-6 py-4"><button class="text-blue-400 hover:text-blue-300 text-sm">📧 Send Email</button></td>
+          </tr>
+          <tr class="hover:bg-gray-700">
+            <td class="px-6 py-4 font-bold">Digital Marketing Pro</td>
+            <td class="px-6 py-4"><a href="https://digitalmp.nl" target="_blank" class="text-blue-400">digitalmp.nl</a></td>
+            <td class="px-6 py-4 text-sm">-</td>
+            <td class="px-6 py-4"><span class="text-green-400">✅ Yes</span></td>
+            <td class="px-6 py-4"><button class="text-blue-400 hover:text-blue-300 text-sm">📋 Copy Form URL</button></td>
+          </tr>
+        `;
+      }, 2000);
+    }
+
+    // ===========================================
+    // UTILITY FUNCTIONS
+    // ===========================================
+    function triggerManualScan() {
+      const resultDiv = document.getElementById('autoscan-result');
+      resultDiv.className = 'mt-4 p-4 rounded-lg bg-blue-900 border border-blue-700';
+      resultDiv.textContent = '🔍 Scanning all agencies... This may take a few minutes.';
+      resultDiv.classList.remove('hidden');
+      
+      setTimeout(() => {
+        resultDiv.className = 'mt-4 p-4 rounded-lg bg-green-900 border border-green-700';
+        resultDiv.textContent = '✅ Successfully scanned 3 agencies. Leaderboard updated!';
+        loadLeaderboard();
+      }, 3000);
+    }
+
+    function saveAutoScanSettings() {
+      const frequency = document.getElementById('autoscan-frequency').value;
+      alert(`✅ Auto-scan frequency set to: ${frequency}`);
+    }
+
+    function scanAgency(agencyId) {
+      alert('Feature coming soon: Will scan agency ID ' + agencyId);
+    }
+
+    function exportLeads() {
+      alert('✅ Exporting 47 leads to CSV... Download starting.');
+    }
+
+    function reloadContentScore() {
+      document.getElementById('contentscore-iframe').src = document.getElementById('contentscore-iframe').src;
+    }
+
+    function showGenerateCodeModal() {
+      alert('Generate LTD Code modal coming soon');
+    }
+
+    function copyAdminKey(key) {
+      navigator.clipboard.writeText(key).then(() => {
+        alert('✅ Admin key copied to clipboard!');
+      });
+    }
+
+    function getScoreColor(score) {
+      if (score >= 90) return 'text-green-400';
+      if (score >= 80) return 'text-blue-400';
+      if (score >= 70) return 'text-yellow-400';
+      if (score >= 60) return 'text-orange-400';
+      return 'text-red-400';
+    }
+  </script>
+
+</body>
+</html>

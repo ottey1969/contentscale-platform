@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact Us - Get Free Scan Link</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+
+  <!-- HEADER -->
+  <div class="bg-gray-800 border-b border-gray-700 px-6 py-4">
+    <div class="container mx-auto">
+      <h1 class="text-3xl font-bold text-blue-400">📞 Contact ContentScale</h1>
+      <p class="text-gray-400 text-sm">Get a free SEO analysis of your website</p>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="container mx-auto px-6 py-12 max-w-4xl">
+    
+    <!-- SUCCESS MESSAGE -->
+    <div id="success-message" class="hidden bg-green-900 border border-green-700 rounded-lg p-8 mb-8">
+      <div class="text-center">
+        <div class="text-6xl mb-4">✅</div>
+        <h2 class="text-3xl font-bold mb-4">Thank You!</h2>
+        <p class="text-xl text-gray-300 mb-6">We've sent you a free scan link to your email.</p>
+        
+        <div class="bg-black/30 rounded-lg p-6 mb-6">
+          <h3 class="font-bold mb-3">Your Free Scan Link:</h3>
+          <div class="flex gap-2 mb-4">
+            <input type="text" id="scan-link-display" readonly class="flex-1 px-4 py-3 bg-gray-700 rounded-lg font-mono text-sm">
+            <button onclick="copyLinkFromDisplay()" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold transition">
+              📋 Copy
+            </button>
+          </div>
+          <a id="scan-link-button" href="#" target="_blank" class="inline-block w-full bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold text-center transition">
+            🔍 Start Your Free Scan Now →
+          </a>
+        </div>
+        
+        <p class="text-sm text-gray-400">
+          Your scan link is valid for 7 days and includes 1 free website analysis.<br>
+          We'll also be in touch shortly to discuss your SEO needs.
+        </p>
+      </div>
+    </div>
+
+    <!-- CONTACT FORM -->
+    <div id="contact-form-container">
+      <div class="grid md:grid-cols-2 gap-8 mb-12">
+        <!-- LEFT: Benefits -->
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+          <h2 class="text-2xl font-bold mb-4">💎 What You Get:</h2>
+          <ul class="space-y-4">
+            <li class="flex items-start gap-3">
+              <span class="text-2xl">🎁</span>
+              <div>
+                <h3 class="font-bold">Free Website Analysis</h3>
+                <p class="text-sm text-gray-400">Instant scan link sent to your email</p>
+              </div>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="text-2xl">📊</span>
+              <div>
+                <h3 class="font-bold">Detailed SEO Score</h3>
+                <p class="text-sm text-gray-400">GRAAF, CRAFT & Technical breakdown</p>
+              </div>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="text-2xl">🎯</span>
+              <div>
+                <h3 class="font-bold">Action Plan</h3>
+                <p class="text-sm text-gray-400">Exact steps to reach 95+ score</p>
+              </div>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="text-2xl">💬</span>
+              <div>
+                <h3 class="font-bold">Expert Consultation</h3>
+                <p class="text-sm text-gray-400">Personalized recommendations</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- RIGHT: Form -->
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+          <h2 class="text-2xl font-bold mb-4">📝 Get Your Free Scan Link</h2>
+          
+          <form id="contact-form" onsubmit="submitContactForm(event)">
+            <div class="mb-4">
+              <label class="block text-sm text-gray-400 mb-2">Your Name *</label>
+              <input 
+                type="text" 
+                id="name" 
+                required
+                class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+                placeholder="John Doe">
+            </div>
+
+            <div class="mb-4">
+              <label class="block text-sm text-gray-400 mb-2">Email Address *</label>
+              <input 
+                type="email" 
+                id="email" 
+                required
+                class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+                placeholder="john@company.com">
+            </div>
+
+            <div class="mb-4">
+              <label class="block text-sm text-gray-400 mb-2">Company</label>
+              <input 
+                type="text" 
+                id="company"
+                class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+                placeholder="Your Company">
+            </div>
+
+            <div class="mb-4">
+              <label class="block text-sm text-gray-400 mb-2">Phone (optional)</label>
+              <input 
+                type="tel" 
+                id="phone"
+                class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+                placeholder="+31 6 12345678">
+            </div>
+
+            <div class="mb-6">
+              <label class="block text-sm text-gray-400 mb-2">Message (optional)</label>
+              <textarea 
+                id="message"
+                rows="3"
+                class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+                placeholder="Tell us about your SEO goals..."></textarea>
+            </div>
+
+            <button 
+              type="submit"
+              id="submit-button"
+              class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 py-4 rounded-lg font-bold text-lg transition">
+              🚀 Get My Free Scan Link
+            </button>
+
+            <p class="text-xs text-gray-500 mt-3 text-center">
+              By submitting, you agree to receive your free scan link and occasional SEO tips.
+            </p>
+          </form>
+        </div>
+      </div>
+
+      <!-- ADDITIONAL INFO -->
+      <div class="bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg p-8 border border-blue-700 text-center">
+        <h3 class="text-2xl font-bold mb-4">🎁 Limited Time Offer</h3>
+        <p class="text-lg mb-6">
+          Get a <span class="font-bold text-yellow-400">free website SEO analysis</span> immediately after submitting this form.
+          No credit card required, no strings attached.
+        </p>
+        <div class="flex justify-center gap-6 text-sm">
+          <div>
+            <div class="text-3xl font-bold text-green-400">1,247</div>
+            <div class="text-gray-400">Websites Analyzed</div>
+          </div>
+          <div>
+            <div class="text-3xl font-bold text-blue-400">78%</div>
+            <div class="text-gray-400">Avg. Recovery Rate</div>
+          </div>
+          <div>
+            <div class="text-3xl font-bold text-purple-400">90 Days</div>
+            <div class="text-gray-400">Avg. to 95+ Score</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="bg-gray-800 border-t border-gray-700 px-6 py-8 mt-12">
+    <div class="container mx-auto text-center">
+      <p class="text-gray-400 text-sm mb-4">
+        Questions? Reach out directly:
+      </p>
+      <div id="footer-contact-links" class="flex justify-center gap-4">
+        <!-- Links will be populated by JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // 📞 CONTACT INFO CONFIG - WIJZIG HIER! 🎯
+    // ==========================================
+    const CONTACT_CONFIG = {
+      phone: '+31628073996',           // ← JOUW TELEFOONNUMMER
+      whatsapp: '31628073996',         // ← ZONDER + EN SPATIES
+      email: 'info@contentscale.site', // ← JOUW EMAIL
+      website: 'https://contentscale.site/contact', // ← CONTACT URL
+      companyName: 'ContentScale'      // ← BEDRIJFSNAAM
+    };
+
+    // Auto-generate WhatsApp URL
+    CONTACT_CONFIG.whatsappUrl = `https://wa.me/${CONTACT_CONFIG.whatsapp}`;
+
+    // ==========================================
+    // POPULATE FOOTER LINKS
+    // ==========================================
+    function populateFooterLinks() {
+      const footerLinks = document.getElementById('footer-contact-links');
+      footerLinks.innerHTML = `
+        <a href="mailto:${CONTACT_CONFIG.email}" class="text-blue-400 hover:text-blue-300">
+          ✉️ Email Us
+        </a>
+        <a href="${CONTACT_CONFIG.whatsappUrl}" class="text-green-400 hover:text-green-300">
+          💬 WhatsApp
+        </a>
+        <a href="tel:${CONTACT_CONFIG.phone}" class="text-purple-400 hover:text-purple-300">
+          📞 Call Us
+        </a>
+      `;
+    }
+
+    // ==========================================
+    // SUBMIT FORM
+    // ==========================================
+    async function submitContactForm(event) {
+      event.preventDefault();
+      
+      const submitButton = document.getElementById('submit-button');
+      const originalText = submitButton.textContent;
+      
+      submitButton.disabled = true;
+      submitButton.textContent = '⏳ Sending...';
+      
+      const formData = {
+        name: document.getElementById('name').value,
+        email: document.getElementById('email').value,
+        company: document.getElementById('company').value,
+        phone: document.getElementById('phone').value,
+        message: document.getElementById('message').value,
+        source: 'contact_form'
+      };
+      
+      try {
+        const response = await fetch('/api/leads/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Submission failed');
+        }
+        
+        // Show success message
+        document.getElementById('contact-form-container').classList.add('hidden');
+        document.getElementById('success-message').classList.remove('hidden');
+        
+        // Display scan link
+        document.getElementById('scan-link-display').value = data.share_url;
+        document.getElementById('scan-link-button').href = data.share_url;
+        
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        console.log('✅ Lead submitted:', data);
+        
+      } catch (error) {
+        console.error('❌ Submission error:', error);
+        alert('Failed to submit form: ' + error.message);
+        
+        submitButton.disabled = false;
+        submitButton.textContent = originalText;
+      }
+    }
+
+    function copyLinkFromDisplay() {
+      const input = document.getElementById('scan-link-display');
+      input.select();
+      document.execCommand('copy');
+      
+      alert('✅ Scan link copied to clipboard!');
+    }
+
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', () => {
+      populateFooterLinks();
+    });
+  </script>
+
+</body>
+</html>

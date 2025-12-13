@@ -1,0 +1,27 @@
+{
+  "name": "contentscale-platform",
+  "version": "2.0.0",
+  "description": "Hybrid SEO scoring system",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node src/test-hybrid-system.js"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.0",
+    "axios": "^1.13.2",
+    "bcrypt": "^5.1.1",
+    "cheerio": "^1.0.0-rc.12",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.1",
+    "path": "^0.12.7",
+    "pg": "^8.16.3",
+    "puppeteer": "^24.33.0"
+  }
+}

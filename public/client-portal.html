@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SEO Content Score - ContentScale</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+
+  <!-- HEADER -->
+  <div class="bg-gray-800 border-b border-gray-700 px-6 py-4">
+    <div class="flex justify-between items-center">
+      <div>
+        <h1 id="brand-name" class="text-2xl font-bold text-blue-400">ContentScale</h1>
+        <p class="text-gray-400 text-sm">SEO Content Scoring</p>
+      </div>
+      <div class="text-right">
+        <p class="text-gray-400 text-sm">Client: <span id="client-name" class="text-green-400 font-bold">-</span></p>
+        <p class="text-gray-400 text-xs">Scans remaining: <span id="scans-remaining" class="text-yellow-400 font-bold">-</span></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="container mx-auto px-6 py-8 max-w-4xl">
+
+    <!-- LOADING CLIENT INFO -->
+    <div id="loading-client" class="text-center py-12">
+      <div class="text-4xl mb-4">🔍</div>
+      <p class="text-gray-400">Loading your scanner...</p>
+    </div>
+
+    <!-- ERROR LOADING CLIENT -->
+    <div id="error-client" class="hidden bg-red-900 border border-red-700 rounded-lg p-6 text-center">
+      <div class="text-4xl mb-4">❌</div>
+      <h2 class="text-xl font-bold mb-2">Invalid Access</h2>
+      <p id="error-client-message" class="text-gray-300"></p>
+    </div>
+
+    <!-- SCANNER (Hidden until client loaded) -->
+    <div id="scanner-section" class="hidden">
+
+      <!-- SCAN INPUT -->
+      <div class="bg-gray-800 rounded-lg p-8 border border-gray-700 mb-6">
+        <h2 class="text-xl font-bold mb-4">Scan Your Content</h2>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">Enter URL to scan</label>
+            <input 
+              type="url" 
+              id="scan-url" 
+              class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none text-lg"
+              placeholder="https://example.com/article"
+              onkeypress="if(event.key==='Enter') startScan()">
+          </div>
+
+          <button 
+            onclick="startScan()" 
+            id="scan-button"
+            class="w-full py-4 bg-blue-600 rounded-lg font-bold text-lg hover:bg-blue-700 transition">
+            🔍 Scan Content
+          </button>
+
+          <div id="scan-error" class="hidden p-4 bg-red-900 border border-red-700 rounded-lg text-sm"></div>
+        </div>
+      </div>
+
+      <!-- SCANNING PROGRESS -->
+      <div id="scanning-progress" class="hidden bg-gray-800 rounded-lg p-8 border border-gray-700 mb-6">
+        <div class="text-center">
+          <div class="text-6xl mb-4 animate-pulse">⏳</div>
+          <h2 class="text-2xl font-bold mb-2">Scanning Your Content...</h2>
+          <p class="text-gray-400 mb-6">This may take 5-10 seconds</p>
+          
+          <div class="space-y-2 text-left max-w-md mx-auto">
+            <div id="progress-1" class="p-3 bg-gray-700 rounded flex items-center">
+              <span class="mr-3">📥</span>
+              <span class="text-gray-400">Fetching content...</span>
+            </div>
+            <div id="progress-2" class="p-3 bg-gray-700 rounded flex items-center opacity-50">
+              <span class="mr-3">🔍</span>
+              <span class="text-gray-400">Analyzing structure...</span>
+            </div>
+            <div id="progress-3" class="p-3 bg-gray-700 rounded flex items-center opacity-50">
+              <span class="mr-3">🤖</span>
+              <span class="text-gray-400">AI validation...</span>
+            </div>
+            <div id="progress-4" class="p-3 bg-gray-700 rounded flex items-center opacity-50">
+              <span class="mr-3">🎯</span>
+              <span class="text-gray-400">Calculating score...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESULTS -->
+      <div id="results-section" class="hidden">
+        
+        <!-- SCORE CARD -->
+        <div class="bg-gray-800 rounded-lg p-8 border border-gray-700 mb-6 text-center">
+          <div class="text-sm text-gray-400 mb-2">Your Content Score</div>
+          <div id="result-score" class="text-7xl font-bold mb-2">-</div>
+          <div id="result-quality" class="text-xl text-gray-400 mb-4">-</div>
+          <div id="result-url" class="text-sm text-blue-400 break-all"></div>
+        </div>
+
+        <!-- BREAKDOWN -->
+        <div class="grid md:grid-cols-3 gap-4 mb-6">
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div class="text-sm text-gray-400 mb-2">GRAAF Score</div>
+            <div id="result-graaf" class="text-3xl font-bold text-green-400">-</div>
+            <div class="text-xs text-gray-500 mt-1">Genuineness, Relevance, Actionability, Accuracy, Freshness</div>
+          </div>
+          
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div class="text-sm text-gray-400 mb-2">CRAFT Score</div>
+            <div id="result-craft" class="text-3xl font-bold text-blue-400">-</div>
+            <div class="text-xs text-gray-500 mt-1">Content Readability & Flow</div>
+          </div>
+          
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div class="text-sm text-gray-400 mb-2">Technical Score</div>
+            <div id="result-technical" class="text-3xl font-bold text-purple-400">-</div>
+            <div class="text-xs text-gray-500 mt-1">SEO & Performance</div>
+          </div>
+        </div>
+
+        <!-- SCAN AGAIN -->
+        <div class="text-center">
+          <button 
+            onclick="resetScanner()" 
+            class="bg-gray-700 hover:bg-gray-600 px-8 py-3 rounded-lg font-bold">
+            🔄 Scan Another URL
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    let shareKey = null;
+    let clientInfo = null;
+
+    // Load client info on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      // Get share key from URL parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      shareKey = urlParams.get('key');
+      
+      if (!shareKey) {
+        showError('No access key provided. Please use the link provided by your agency.');
+        return;
+      }
+      
+      loadClientInfo();
+    });
+
+    async function loadClientInfo() {
+      try {
+        const response = await fetch(`/api/client/info?key=${shareKey}`);
+        
+        if (!response.ok) {
+          throw new Error('Invalid access key');
+        }
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to load client info');
+        }
+        
+        clientInfo = data.client;
+        
+        // Update UI with client info
+        document.getElementById('client-name').textContent = clientInfo.client_name;
+        document.getElementById('scans-remaining').textContent = 
+          (clientInfo.scans_limit - clientInfo.scans_used) + ' / ' + clientInfo.scans_limit;
+        
+        // Whitelabel support
+        if (clientInfo.whitelabel_name) {
+          document.getElementById('brand-name').textContent = clientInfo.whitelabel_name;
+        }
+        if (clientInfo.whitelabel_primary_color) {
+          // Could apply custom color here
+        }
+        
+        // Show scanner
+        document.getElementById('loading-client').classList.add('hidden');
+        document.getElementById('scanner-section').classList.remove('hidden');
+        
+      } catch (error) {
+        console.error('Error loading client:', error);
+        showError(error.message);
+      }
+    }
+
+    function showError(message) {
+      document.getElementById('loading-client').classList.add('hidden');
+      document.getElementById('error-client').classList.remove('hidden');
+      document.getElementById('error-client-message').textContent = message;
+    }
+
+    async function startScan() {
+      const url = document.getElementById('scan-url').value.trim();
+      const errorDiv = document.getElementById('scan-error');
+      const scanButton = document.getElementById('scan-button');
+      
+      errorDiv.classList.add('hidden');
+      
+      // Validation
+      if (!url) {
+        errorDiv.textContent = 'Please enter a URL';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        errorDiv.textContent = 'URL must start with http:// or https://';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      
+      // Check scan limit
+      if (clientInfo.scans_used >= clientInfo.scans_limit) {
+        errorDiv.textContent = 'You have reached your scan limit. Please contact your agency for more scans.';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      
+      // Hide input, show progress
+      scanButton.disabled = true;
+      document.querySelector('#scanner-section > div:first-child').classList.add('hidden');
+      document.getElementById('scanning-progress').classList.remove('hidden');
+      
+      // Animate progress
+      animateProgress();
+      
+      try {
+        const response = await fetch('/api/client/scan', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            key: shareKey,
+            url: url
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Scan failed');
+        }
+        
+        // Update scans remaining
+        clientInfo.scans_used++;
+        document.getElementById('scans-remaining').textContent = 
+          (clientInfo.scans_limit - clientInfo.scans_used) + ' / ' + clientInfo.scans_limit;
+        
+        // Show results
+        displayResults(data);
+        
+      } catch (error) {
+        console.error('Scan error:', error);
+        
+        // Hide progress
+        document.getElementById('scanning-progress').classList.add('hidden');
+        document.querySelector('#scanner-section > div:first-child').classList.remove('hidden');
+        
+        // Show error
+        errorDiv.textContent = error.message || 'Scan failed. Please try again.';
+        errorDiv.classList.remove('hidden');
+        
+        scanButton.disabled = false;
+      }
+    }
+
+    function animateProgress() {
+      const steps = [
+        { id: 'progress-1', delay: 0 },
+        { id: 'progress-2', delay: 1500 },
+        { id: 'progress-3', delay: 3000 },
+        { id: 'progress-4', delay: 5000 }
+      ];
+      
+      steps.forEach(step => {
+        setTimeout(() => {
+          document.getElementById(step.id).classList.remove('opacity-50');
+          document.getElementById(step.id).classList.add('bg-green-900');
+        }, step.delay);
+      });
+    }
+
+    function displayResults(data) {
+      // Hide progress
+      document.getElementById('scanning-progress').classList.add('hidden');
+      
+      // Fill results
+      const score = Math.round(data.score);
+      document.getElementById('result-score').textContent = score + '/100';
+      document.getElementById('result-quality').textContent = data.quality.toUpperCase();
+      document.getElementById('result-url').textContent = data.url;
+      
+      // Score color
+      const scoreElement = document.getElementById('result-score');
+      if (score >= 90) scoreElement.className = 'text-7xl font-bold mb-2 text-green-400';
+      else if (score >= 80) scoreElement.className = 'text-7xl font-bold mb-2 text-blue-400';
+      else if (score >= 70) scoreElement.className = 'text-7xl font-bold mb-2 text-yellow-400';
+      else if (score >= 60) scoreElement.className = 'text-7xl font-bold mb-2 text-orange-400';
+      else scoreElement.className = 'text-7xl font-bold mb-2 text-red-400';
+      
+      // Breakdown
+      if (data.breakdown) {
+        document.getElementById('result-graaf').textContent = 
+          Math.round(data.breakdown.graaf.total) + '/50';
+        document.getElementById('result-craft').textContent = 
+          Math.round(data.breakdown.craft.total) + '/30';
+        document.getElementById('result-technical').textContent = 
+          Math.round(data.breakdown.technical.total) + '/20';
+      }
+      
+      // Show results
+      document.getElementById('results-section').classList.remove('hidden');
+    }
+
+    function resetScanner() {
+      // Hide results
+      document.getElementById('results-section').classList.add('hidden');
+      
+      // Reset progress
+      ['progress-1', 'progress-2', 'progress-3', 'progress-4'].forEach(id => {
+        const el = document.getElementById(id);
+        el.classList.add('opacity-50');
+        el.classList.remove('bg-green-900');
+      });
+      
+      // Show input again
+      document.querySelector('#scanner-section > div:first-child').classList.remove('hidden');
+      document.getElementById('scan-button').disabled = false;
+      document.getElementById('scan-url').value = '';
+      document.getElementById('scan-url').focus();
+    }
+  </script>
+
+</body>
+</html>

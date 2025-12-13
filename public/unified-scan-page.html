@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SEO ContentScore - Free Analysis Tool</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+
+  <!-- HEADER -->
+  <div class="bg-gray-800 border-b border-gray-700 px-6 py-4">
+    <div class="container mx-auto">
+      <h1 class="text-3xl font-bold text-blue-400">📊 SEO ContentScore</h1>
+      <p class="text-gray-400 text-sm">Analyze your website for AI-era SEO optimization</p>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="container mx-auto px-6 py-8 max-w-6xl">
+    
+    <!-- SCAN FORM -->
+    <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-6">
+      <h2 class="text-2xl font-bold mb-4">🔍 Free Website Analysis</h2>
+      
+      <form id="scan-form" onsubmit="submitScan(event)">
+        <div class="mb-4">
+          <label class="block text-sm text-gray-400 mb-2">Website URL *</label>
+          <input 
+            type="url" 
+            id="scan-url"
+            required
+            class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none text-lg"
+            placeholder="https://example.com">
+          <p class="text-xs text-gray-500 mt-2">
+            💡 Enter your full website URL (including https://)
+          </p>
+        </div>
+
+        <button 
+          type="submit"
+          id="scan-submit"
+          class="w-full bg-blue-600 hover:bg-blue-700 py-4 rounded-lg font-bold text-lg transition">
+          🔍 Analyze Website
+        </button>
+
+        <div class="mt-4 p-3 bg-gray-700 rounded-lg">
+          <p class="text-xs text-gray-400">
+            ⚡ We'll automatically fetch and analyze your page HTML, including all schemas, meta tags, and content structure.
+          </p>
+        </div>
+      </form>
+    </div>
+
+    <!-- RESULT AREA -->
+    <div id="scan-result" class="hidden"></div>
+
+    <!-- FEATURES -->
+    <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+      <h3 class="text-xl font-bold mb-4">✨ What We Analyze</h3>
+      <div class="grid md:grid-cols-3 gap-4">
+        <div class="flex items-start gap-3">
+          <div class="text-2xl">📄</div>
+          <div>
+            <h4 class="font-bold">Content Quality</h4>
+            <p class="text-sm text-gray-400">Word count, readability, structure</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="text-2xl">🔍</div>
+          <div>
+            <h4 class="font-bold">Schema Markup</h4>
+            <p class="text-sm text-gray-400">JSON-LD, microdata validation</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="text-2xl">🤖</div>
+          <div>
+            <h4 class="font-bold">AI Overview Ready</h4>
+            <p class="text-sm text-gray-400">Google AI features optimization</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="text-2xl">📊</div>
+          <div>
+            <h4 class="font-bold">Technical SEO</h4>
+            <p class="text-sm text-gray-400">Meta tags, Open Graph</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="text-2xl">🎯</div>
+          <div>
+            <h4 class="font-bold">GRAAF Framework</h4>
+            <p class="text-sm text-gray-400">Credibility & accuracy</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="text-2xl">⚡</div>
+          <div>
+            <h4 class="font-bold">CRAFT Score</h4>
+            <p class="text-sm text-gray-400">Content quality metrics</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let currentScanData = null;
+    let currentShareId = null;
+
+    // ==========================================
+    // SCAN SUBMISSION
+    // ==========================================
+
+    async function submitScan(event) {
+      event.preventDefault();
+      
+      const submitBtn = document.getElementById('scan-submit');
+      const resultDiv = document.getElementById('scan-result');
+      
+      const url = document.getElementById('scan-url').value.trim();
+      
+      if (!url) {
+        showError('Please provide a valid URL');
+        return;
+      }
+
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        showError('URL must start with https:// or http://');
+        return;
+      }
+      
+      submitBtn.disabled = true;
+      submitBtn.textContent = '⏳ Fetching & Analyzing...';
+      resultDiv.classList.add('hidden');
+      
+      try {
+        console.log('🔍 Scanning URL:', url);
+        
+        const response = await fetch('/api/scan-free', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ url })
+        });
+        
+        console.log('📡 Response status:', response.status);
+        
+        const contentType = response.headers.get('content-type');
+        
+        if (!contentType || !contentType.includes('application/json')) {
+          const text = await response.text();
+          console.error('❌ Non-JSON response:', text.substring(0, 500));
+          throw new Error('Server error: Invalid response format');
+        }
+        
+        const data = await response.json();
+        console.log('✅ Scan result:', data);
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Scan failed');
+        }
+        
+        // Store scan data
+        currentScanData = data;
+        currentShareId = data.share_id || generateShareId();
+        
+        showSuccess(data);
+        incrementScanCounter();
+        
+      } catch (error) {
+        console.error('❌ Scan error:', error);
+        showError(error.message);
+        
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '🔍 Analyze Website';
+      }
+    }
+
+    // ==========================================
+    // DISPLAY SUCCESS
+    // ==========================================
+
+    function showSuccess(data) {
+      const resultDiv = document.getElementById('scan-result');
+      const score = data.score || 0;
+      
+      // Quality colors
+      let qualityColor = 'text-red-400';
+      let qualityLabel = 'Needs Improvement';
+      let qualityBg = 'bg-red-900';
+      
+      if (score >= 90) {
+        qualityColor = 'text-green-400';
+        qualityLabel = 'Excellent';
+        qualityBg = 'bg-green-900';
+      } else if (score >= 80) {
+        qualityColor = 'text-blue-400';
+        qualityLabel = 'Good';
+        qualityBg = 'bg-blue-900';
+      } else if (score >= 70) {
+        qualityColor = 'text-yellow-400';
+        qualityLabel = 'Average';
+        qualityBg = 'bg-yellow-900';
+      } else if (score >= 60) {
+        qualityColor = 'text-orange-400';
+        qualityLabel = 'Below Average';
+        qualityBg = 'bg-orange-900';
+      }
+
+      // Get recommendations
+      const recommendations = generateRecommendations(data);
+      
+      // Get word count
+      const wordCount = data.validation?.parserCounts?.words || 
+                       data.validation?.validatedCounts?.words || 
+                       'Unknown';
+      
+      resultDiv.className = 'bg-gray-800 rounded-lg p-6 border border-gray-700';
+      resultDiv.innerHTML = `
+        <!-- Action Buttons -->
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-2xl font-bold">✅ Analysis Complete!</h3>
+          <div class="flex gap-2">
+            <button onclick="exportToPDF()" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-bold text-sm transition">
+              📄 Export PDF
+            </button>
+            <button onclick="copyShareLink()" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-bold text-sm transition">
+              🔗 Share Link
+            </button>
+          </div>
+        </div>
+        
+        <!-- Score Card -->
+        <div class="${qualityBg} rounded-lg p-8 mb-6 text-center border border-gray-600">
+          <div class="text-7xl font-bold ${qualityColor} mb-3">${score}<span class="text-4xl">/100</span></div>
+          <div class="text-2xl font-bold mb-2">${qualityLabel}</div>
+          <div class="text-sm text-gray-400">${data.quality || ''}</div>
+        </div>
+
+        <!-- Breakdown -->
+        ${data.breakdown ? `
+          <div class="grid md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-gray-700 rounded-lg p-4">
+              <h4 class="text-sm text-gray-400 mb-2">🎯 GRAAF Score</h4>
+              <div class="text-3xl font-bold text-blue-400">${data.breakdown.graaf?.total || 0}/50</div>
+              <div class="text-xs text-gray-500 mt-1">Credibility & Accuracy</div>
+            </div>
+            <div class="bg-gray-700 rounded-lg p-4">
+              <h4 class="text-sm text-gray-400 mb-2">⚡ CRAFT Score</h4>
+              <div class="text-3xl font-bold text-purple-400">${data.breakdown.craft?.total || 0}/30</div>
+              <div class="text-xs text-gray-500 mt-1">Content Quality</div>
+            </div>
+            <div class="bg-gray-700 rounded-lg p-4">
+              <h4 class="text-sm text-gray-400 mb-2">🔧 Technical</h4>
+              <div class="text-3xl font-bold text-green-400">${data.breakdown.technical?.total || 0}/20</div>
+              <div class="text-xs text-gray-500 mt-1">SEO Technical</div>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Details -->
+        <div class="grid md:grid-cols-2 gap-4 mb-6">
+          <div class="bg-gray-700 rounded-lg p-4">
+            <div class="text-sm text-gray-400 mb-1">Analyzed URL</div>
+            <a href="${data.url}" target="_blank" class="text-blue-400 hover:text-blue-300 text-sm break-all">
+              ${data.url}
+            </a>
+          </div>
+          
+          <div class="bg-gray-700 rounded-lg p-4">
+            <div class="text-sm text-gray-400 mb-1">Words Analyzed</div>
+            <div class="text-xl font-bold">${wordCount.toLocaleString()}</div>
+          </div>
+
+          <div class="bg-gray-700 rounded-lg p-4">
+            <div class="text-sm text-gray-400 mb-1">Analyzed at</div>
+            <div class="text-sm">${new Date(data.timestamp).toLocaleString()}</div>
+          </div>
+
+          <div class="bg-gray-700 rounded-lg p-4">
+            <div class="text-sm text-gray-400 mb-1">Share ID</div>
+            <div class="text-sm font-mono">${currentShareId}</div>
+          </div>
+        </div>
+
+        <!-- RECOMMENDATIONS -->
+        <div class="bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg p-6 mb-6 border border-blue-700">
+          <h3 class="text-2xl font-bold mb-4">🎯 Recommendations to Reach 95+</h3>
+          <div class="space-y-4">
+            ${recommendations.critical.length > 0 ? `
+              <div>
+                <h4 class="font-bold text-red-400 mb-2">🔴 Critical Issues (Fix First)</h4>
+                <ul class="space-y-2">
+                  ${recommendations.critical.map(rec => `
+                    <li class="flex items-start gap-2">
+                      <span class="text-red-400 mt-1">▶</span>
+                      <span class="text-sm">${rec}</span>
+                    </li>
+                  `).join('')}
+                </ul>
+              </div>
+            ` : ''}
+            
+            ${recommendations.important.length > 0 ? `
+              <div>
+                <h4 class="font-bold text-yellow-400 mb-2">🟡 Important Improvements</h4>
+                <ul class="space-y-2">
+                  ${recommendations.important.map(rec => `
+                    <li class="flex items-start gap-2">
+                      <span class="text-yellow-400 mt-1">▶</span>
+                      <span class="text-sm">${rec}</span>
+                    </li>
+                  `).join('')}
+                </ul>
+              </div>
+            ` : ''}
+            
+            ${recommendations.nice_to_have.length > 0 ? `
+              <div>
+                <h4 class="font-bold text-green-400 mb-2">🟢 Nice to Have</h4>
+                <ul class="space-y-2">
+                  ${recommendations.nice_to_have.map(rec => `
+                    <li class="flex items-start gap-2">
+                      <span class="text-green-400 mt-1">▶</span>
+                      <span class="text-sm">${rec}</span>
+                    </li>
+                  `).join('')}
+                </ul>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- CTA -->
+        <div class="p-6 bg-gradient-to-r from-green-900 to-blue-900 border border-green-700 rounded-lg">
+          <h4 class="font-bold text-xl mb-2">🚀 Need Expert Help?</h4>
+          <p class="text-sm text-gray-300 mb-4">Get personalized SEO optimization and reach 95+ score faster.</p>
+          <div class="flex flex-wrap gap-3">
+            <a href="https://contentscale.site/contact" target="_blank" class="inline-block bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-bold transition">
+              📞 Contact Us
+            </a>
+            <a href="https://wa.me/31612345678" target="_blank" class="inline-block bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold transition">
+              💬 WhatsApp
+            </a>
+            <a href="mailto:info@contentscale.site" class="inline-block bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-bold transition">
+              ✉️ Email
+            </a>
+          </div>
+        </div>
+      `;
+      
+      resultDiv.classList.remove('hidden');
+      resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // ==========================================
+    // GENERATE RECOMMENDATIONS
+    // ==========================================
+
+    function generateRecommendations(data) {
+      const score = data.score || 0;
+      const breakdown = data.breakdown || {};
+      const validation = data.validation || {};
+      
+      const recommendations = {
+        critical: [],
+        important: [],
+        nice_to_have: []
+      };
+
+      // Score-based recommendations
+      if (score < 60) {
+        recommendations.critical.push('Your content needs significant improvement. Consider a complete content audit.');
+      }
+
+      // GRAAF Score recommendations
+      const graafScore = breakdown.graaf?.total || 0;
+      if (graafScore < 40) {
+        recommendations.critical.push('Add more credible sources and expert citations to boost GRAAF score.');
+        recommendations.critical.push('Include author credentials and publication dates for all content.');
+      } else if (graafScore < 45) {
+        recommendations.important.push('Strengthen your content credibility with more authoritative sources.');
+      }
+
+      // CRAFT Score recommendations
+      const craftScore = breakdown.craft?.total || 0;
+      if (craftScore < 24) {
+        recommendations.critical.push('Increase content depth - aim for 1500+ words with comprehensive coverage.');
+        recommendations.important.push('Improve content structure with clear H2 and H3 headings.');
+      } else if (craftScore < 27) {
+        recommendations.important.push('Add more examples, case studies, or data to enrich content quality.');
+      }
+
+      // Technical Score recommendations
+      const technicalScore = breakdown.technical?.total || 0;
+      if (technicalScore < 16) {
+        recommendations.critical.push('Add schema markup (JSON-LD) for better AI Overview visibility.');
+        recommendations.critical.push('Optimize meta description and title tags for target keywords.');
+      } else if (technicalScore < 18) {
+        recommendations.important.push('Add Open Graph and Twitter Card meta tags for better social sharing.');
+      }
+
+      // Word count recommendations
+      const words = validation.parserCounts?.words || 0;
+      if (words < 800) {
+        recommendations.critical.push(`Increase content length to 1200+ words (currently ${words} words).`);
+      } else if (words < 1200) {
+        recommendations.important.push('Consider expanding content to 1500+ words for better coverage.');
+      }
+
+      // Always add recommendations to reach 95+
+      if (score < 95) {
+        const pointsNeeded = 95 - score;
+        recommendations.important.push(`You need ${pointsNeeded} more points to reach 95+ score.`);
+        
+        if (graafScore < 48) {
+          recommendations.important.push('Add 3-5 expert quotes or statistics to maximize GRAAF score.');
+        }
+        if (craftScore < 29) {
+          recommendations.important.push('Enhance readability and add visual content (images, diagrams).');
+        }
+        if (technicalScore < 19) {
+          recommendations.important.push('Implement all technical SEO best practices (schema, meta tags, etc.).');
+        }
+      }
+
+      // Nice to have
+      recommendations.nice_to_have.push('Add FAQ schema for common questions in your content.');
+      recommendations.nice_to_have.push('Include internal links to related content on your site.');
+      recommendations.nice_to_have.push('Optimize images with descriptive alt text and proper compression.');
+      recommendations.nice_to_have.push('Add video content or rich media to increase engagement.');
+
+      return recommendations;
+    }
+
+    // ==========================================
+    // EXPORT TO PDF
+    // ==========================================
+
+    async function exportToPDF() {
+      if (!currentScanData) {
+        alert('No scan data available');
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      
+      const score = currentScanData.score || 0;
+      const url = currentScanData.url || '';
+      const timestamp = new Date(currentScanData.timestamp).toLocaleString();
+      
+      // Title
+      doc.setFontSize(20);
+      doc.setTextColor(66, 133, 244);
+      doc.text('SEO ContentScore Report', 20, 20);
+      
+      // Score
+      doc.setFontSize(40);
+      doc.setTextColor(score >= 90 ? 34 : score >= 70 ? 244 : 244, 
+                       score >= 90 ? 197 : score >= 70 ? 180 : 67, 
+                       score >= 90 ? 94 : score >= 70 ? 67 : 54);
+      doc.text(`${score}/100`, 20, 40);
+      
+      // URL
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`URL: ${url}`, 20, 50);
+      doc.text(`Analyzed: ${timestamp}`, 20, 55);
+      
+      // Breakdown
+      doc.setFontSize(14);
+      doc.setTextColor(0, 0, 0);
+      doc.text('Score Breakdown:', 20, 70);
+      
+      doc.setFontSize(10);
+      doc.text(`GRAAF Score: ${currentScanData.breakdown?.graaf?.total || 0}/50`, 30, 78);
+      doc.text(`CRAFT Score: ${currentScanData.breakdown?.craft?.total || 0}/30`, 30, 84);
+      doc.text(`Technical Score: ${currentScanData.breakdown?.technical?.total || 0}/20`, 30, 90);
+      
+      // Recommendations
+      const recommendations = generateRecommendations(currentScanData);
+      
+      doc.setFontSize(14);
+      doc.text('Recommendations:', 20, 105);
+      
+      let yPos = 113;
+      doc.setFontSize(10);
+      
+      if (recommendations.critical.length > 0) {
+        doc.setTextColor(239, 68, 68);
+        doc.text('Critical Issues:', 30, yPos);
+        yPos += 6;
+        doc.setTextColor(0, 0, 0);
+        recommendations.critical.forEach(rec => {
+          const lines = doc.splitTextToSize(rec, 160);
+          doc.text(lines, 35, yPos);
+          yPos += lines.length * 5 + 2;
+        });
+      }
+      
+      // Save
+      doc.save(`contentscale-report-${Date.now()}.pdf`);
+      
+      alert('✅ PDF exported successfully!');
+    }
+
+    // ==========================================
+    // COPY SHARE LINK
+    // ==========================================
+
+    function copyShareLink() {
+      if (!currentShareId) {
+        alert('No share ID available');
+        return;
+      }
+
+      const shareUrl = `${window.location.origin}/scan-result/${currentShareId}`;
+      
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        alert(`✅ Share link copied!\n\n${shareUrl}`);
+      }).catch(() => {
+        // Fallback
+        const textarea = document.createElement('textarea');
+        textarea.value = shareUrl;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        alert(`✅ Share link copied!\n\n${shareUrl}`);
+      });
+    }
+
+    // ==========================================
+    // UTILITIES
+    // ==========================================
+
+    function generateShareId() {
+      return 'scan-' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+    }
+
+    function showError(message) {
+      const resultDiv = document.getElementById('scan-result');
+      
+      resultDiv.className = 'bg-red-900 border border-red-700 rounded-lg p-6';
+      resultDiv.innerHTML = `
+        <h3 class="font-bold text-xl mb-2">❌ Analysis Failed</h3>
+        <p class="text-sm mb-3">${message}</p>
+        <div class="text-xs text-gray-400 space-y-1">
+          <p>💡 Common issues:</p>
+          <ul class="list-disc list-inside ml-2 space-y-1">
+            <li>URL must include https:// or http://</li>
+            <li>Website must be publicly accessible</li>
+            <li>Page must have sufficient content (300+ words)</li>
+            <li>Website must be online and responsive</li>
+          </ul>
+        </div>
+        <button onclick="document.getElementById('scan-result').classList.add('hidden')" class="mt-4 text-red-400 hover:text-red-300 text-sm font-bold">
+          ✕ Close
+        </button>
+      `;
+      
+      resultDiv.classList.remove('hidden');
+      resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function incrementScanCounter() {
+      const scansUsed = parseInt(localStorage.getItem('scans_used') || '0');
+      localStorage.setItem('scans_used', (scansUsed + 1).toString());
+      
+      if (scansUsed + 1 >= 5) {
+        showLimitMessage();
+      }
+    }
+
+    function showLimitMessage() {
+      const notice = document.createElement('div');
+      notice.className = 'bg-yellow-900 border border-yellow-700 rounded-lg p-4 mb-6 animate-pulse';
+      notice.innerHTML = `
+        <h4 class="font-bold mb-2">⚠️ Free Scan Limit Reached</h4>
+        <p class="text-sm mb-3">
+          You've used your 5 free scans today. For unlimited access and detailed reports:
+        </p>
+        <a href="https://contentscale.site/contact" class="inline-block bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded-lg font-bold text-sm transition">
+          🚀 Upgrade Now
+        </a>
+      `;
+      
+      const container = document.querySelector('.container');
+      const firstCard = container.querySelector('.bg-gray-800');
+      container.insertBefore(notice, firstCard);
+    }
+
+    // ==========================================
+    // INIT
+    // ==========================================
+
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('📊 ContentScore tool loaded');
+      
+      const lastReset = localStorage.getItem('last_reset');
+      const today = new Date().toDateString();
+      
+      if (lastReset !== today) {
+        localStorage.setItem('scans_used', '0');
+        localStorage.setItem('last_reset', today);
+        console.log('🔄 Daily scan counter reset');
+      }
+      
+      const scansUsed = parseInt(localStorage.getItem('scans_used') || '0');
+      console.log(`📈 Scans used today: ${scansUsed}/5`);
+      
+      if (scansUsed >= 5) {
+        showLimitMessage();
+      }
+    });
+  </script>
+
+</body>
+</html>

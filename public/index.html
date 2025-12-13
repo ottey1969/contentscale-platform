@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ContentScale Platform - SEO Agency Rankings</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+    
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .gradient-bg {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .gradient-text {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .score-gradient-excellent {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+    
+    .score-gradient-good {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    }
+    
+    .score-gradient-average {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    }
+    
+    .score-gradient-poor {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+    
+    .rank-badge {
+      position: relative;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 24px;
+      border-radius: 50%;
+      box-shadow: 0 4px 14px 0 rgba(0,0,0,0.3);
+    }
+    
+    .rank-1 {
+      background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+      color: #92400e;
+      box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+    }
+    
+    .rank-2 {
+      background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
+      color: #4b5563;
+      box-shadow: 0 0 20px rgba(192, 192, 192, 0.5);
+    }
+    
+    .rank-3 {
+      background: linear-gradient(135deg, #cd7f32 0%, #e5a663 100%);
+      color: #78350f;
+      box-shadow: 0 0 20px rgba(205, 127, 50, 0.5);
+    }
+    
+    .rank-other {
+      background: linear-gradient(135deg, #4b5563 0%, #6b7280 100%);
+      color: white;
+    }
+    
+    .pulse-animation {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: .7;
+      }
+    }
+    
+    .fade-in {
+      animation: fadeIn 0.6s ease-in;
+    }
+    
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .hover-lift {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .hover-lift:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+    }
+    
+    .score-circle {
+      position: relative;
+      width: 80px;
+      height: 80px;
+    }
+    
+    .score-circle-bg {
+      fill: none;
+      stroke: #374151;
+      stroke-width: 8;
+    }
+    
+    .score-circle-progress {
+      fill: none;
+      stroke-width: 8;
+      stroke-linecap: round;
+      transform: rotate(-90deg);
+      transform-origin: 50% 50%;
+      transition: stroke-dashoffset 1s ease;
+    }
+    
+    .country-flag {
+      font-size: 32px;
+      display: inline-block;
+      margin-right: 12px;
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+
+  <!-- HERO SECTION -->
+  <div class="gradient-bg relative overflow-hidden">
+    <!-- Animated Background Elements -->
+    <div class="absolute inset-0 opacity-20">
+      <div class="absolute top-20 left-20 w-64 h-64 bg-white rounded-full blur-3xl"></div>
+      <div class="absolute bottom-20 right-20 w-96 h-96 bg-blue-300 rounded-full blur-3xl"></div>
+    </div>
+    
+    <div class="container mx-auto px-6 py-20 relative z-10">
+      <div class="text-center mb-12">
+        <h1 class="text-6xl md:text-7xl font-black mb-6 text-white drop-shadow-lg">
+          🏆 SEO Agency Rankings
+        </h1>
+        <p class="text-2xl md:text-3xl text-white/90 font-semibold mb-8">
+          The World's First AI-Powered SEO Agency Leaderboard
+        </p>
+        <p class="text-lg md:text-xl text-white/80 max-w-3xl mx-auto mb-12">
+          Real-time content quality scores powered by our advanced GRAAF Framework™. 
+          See how top agencies rank and test your own content instantly.
+        </p>
+        
+        <!-- CTA Buttons -->
+        <div class="flex flex-col sm:flex-row gap-6 justify-center items-center">
+          <a href="/seo-contentscore" target="_blank" class="group relative px-10 py-5 bg-white text-purple-600 rounded-full font-bold text-lg shadow-2xl hover:shadow-white/50 transition-all duration-300 hover:scale-105">
+            <span class="relative z-10">🔍 Test Your Content Free</span>
+            <div class="absolute inset-0 rounded-full bg-gradient-to-r from-yellow-400 to-pink-500 opacity-0 group-hover:opacity-20 transition-opacity"></div>
+          </a>
+          
+          <a href="#leaderboard" class="px-10 py-5 bg-white/10 backdrop-blur-sm text-white border-2 border-white/30 rounded-full font-bold text-lg hover:bg-white/20 transition-all duration-300">
+            📊 View Rankings
+          </a>
+        </div>
+      </div>
+      
+      <!-- Live Stats -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+          <div class="text-4xl font-black text-white mb-2" id="total-agencies">-</div>
+          <div class="text-white/80">Agencies Ranked</div>
+        </div>
+        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+          <div class="text-4xl font-black text-white mb-2" id="countries-count">5</div>
+          <div class="text-white/80">Countries</div>
+        </div>
+        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+          <div class="text-4xl font-black text-white mb-2">100%</div>
+          <div class="text-white/80">AI-Powered</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEADERBOARD SECTION -->
+  <div id="leaderboard" class="container mx-auto px-6 py-16">
+    
+    <!-- Section Header -->
+    <div class="text-center mb-12">
+      <h2 class="text-5xl font-black mb-4">
+        <span class="gradient-text">Global Rankings</span>
+      </h2>
+      <p class="text-xl text-gray-400 max-w-2xl mx-auto">
+        Live rankings updated based on content quality, SEO optimization, and GRAAF Framework compliance
+      </p>
+    </div>
+    
+    <!-- Country Selector -->
+    <div class="max-w-4xl mx-auto mb-12">
+      <div class="bg-gray-800 rounded-2xl p-8 border border-gray-700">
+        <label class="block text-lg font-bold mb-4 text-gray-300">Select Country:</label>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <button onclick="loadLeaderboard('netherlands')" class="country-btn bg-gray-700 hover:bg-purple-600 px-6 py-4 rounded-xl font-bold transition-all duration-300 border-2 border-transparent hover:border-purple-400 hover:scale-105">
+            <span class="country-flag">🇳🇱</span>
+            <div class="text-sm">Netherlands</div>
+          </button>
+          <button onclick="loadLeaderboard('belgium')" class="country-btn bg-gray-700 hover:bg-purple-600 px-6 py-4 rounded-xl font-bold transition-all duration-300 border-2 border-transparent hover:border-purple-400 hover:scale-105">
+            <span class="country-flag">🇧🇪</span>
+            <div class="text-sm">Belgium</div>
+          </button>
+          <button onclick="loadLeaderboard('germany')" class="country-btn bg-gray-700 hover:bg-purple-600 px-6 py-4 rounded-xl font-bold transition-all duration-300 border-2 border-transparent hover:border-purple-400 hover:scale-105">
+            <span class="country-flag">🇩🇪</span>
+            <div class="text-sm">Germany</div>
+          </button>
+          <button onclick="loadLeaderboard('uk')" class="country-btn bg-gray-700 hover:bg-purple-600 px-6 py-4 rounded-xl font-bold transition-all duration-300 border-2 border-transparent hover:border-purple-400 hover:scale-105">
+            <span class="country-flag">🇬🇧</span>
+            <div class="text-sm">UK</div>
+          </button>
+          <button onclick="loadLeaderboard('usa')" class="country-btn bg-gray-700 hover:bg-purple-600 px-6 py-4 rounded-xl font-bold transition-all duration-300 border-2 border-transparent hover:border-purple-400 hover:scale-105">
+            <span class="country-flag">🇺🇸</span>
+            <div class="text-sm">USA</div>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Loading State -->
+    <div id="loading" class="text-center py-20">
+      <div class="inline-block">
+        <div class="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p class="text-xl text-gray-400 pulse-animation">Loading rankings...</p>
+      </div>
+    </div>
+    
+    <!-- Leaderboard Content -->
+    <div id="leaderboard-content" class="hidden">
+      <div class="mb-8">
+        <h3 class="text-3xl font-bold mb-2">
+          <span id="current-country-name">Netherlands</span> Rankings
+        </h3>
+        <p class="text-gray-400">
+          Showing <span id="showing-count">10</span> of <span id="total-results">0</span> agencies
+        </p>
+      </div>
+      
+      <!-- Top 3 Podium -->
+      <div id="podium" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <!-- Filled by JavaScript -->
+      </div>
+      
+      <!-- Full Rankings Table -->
+      <div class="bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden">
+        <table class="w-full">
+          <thead class="bg-gray-900">
+            <tr>
+              <th class="px-6 py-4 text-left text-sm font-bold text-gray-400 uppercase tracking-wider">Rank</th>
+              <th class="px-6 py-4 text-left text-sm font-bold text-gray-400 uppercase tracking-wider">Agency</th>
+              <th class="px-6 py-4 text-left text-sm font-bold text-gray-400 uppercase tracking-wider">Website</th>
+              <th class="px-6 py-4 text-left text-sm font-bold text-gray-400 uppercase tracking-wider">Score</th>
+              <th class="px-6 py-4 text-left text-sm font-bold text-gray-400 uppercase tracking-wider">Last Scanned</th>
+            </tr>
+          </thead>
+          <tbody id="rankings-table" class="divide-y divide-gray-700">
+            <!-- Filled by JavaScript -->
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- View All Button -->
+      <div id="view-all-container" class="mt-6">
+        <!-- Filled by JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA SECTION -->
+  <div class="bg-gradient-to-r from-purple-900 to-indigo-900 py-20">
+    <div class="container mx-auto px-6 text-center">
+      <h2 class="text-5xl font-black mb-6">Want to Rank Higher?</h2>
+      <p class="text-2xl mb-10 text-purple-200 max-w-3xl mx-auto">
+        Test your content with our AI-powered scanner and get instant recommendations to improve your score
+      </p>
+      <div class="flex flex-col sm:flex-row gap-6 justify-center">
+        <a href="/seo-contentscore" target="_blank" class="px-12 py-6 bg-white text-purple-600 rounded-full font-black text-xl shadow-2xl hover:shadow-white/50 transition-all duration-300 hover:scale-105">
+          🚀 Scan Your Content Now
+        </a>
+        <a href="/contact-form" target="_blank" class="px-12 py-6 bg-purple-700 text-white rounded-full font-black text-xl border-2 border-purple-400 hover:bg-purple-600 transition-all duration-300 hover:scale-105">
+          📧 Get Free Analysis
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="bg-gray-950 py-12 border-t border-gray-800">
+    <div class="container mx-auto px-6 text-center">
+      <div class="mb-6">
+        <h3 class="text-2xl font-bold gradient-text mb-2">ContentScale Platform</h3>
+        <p class="text-gray-400">AI-Powered SEO Agency Rankings</p>
+      </div>
+      <div class="flex justify-center gap-8 text-sm text-gray-500">
+        <a href="/admin" class="hover:text-purple-400 transition">Admin</a>
+        <a href="/seo-contentscore" target="_blank" class="hover:text-purple-400 transition">Scanner</a>
+        <a href="/contact-form" target="_blank" class="hover:text-purple-400 transition">Contact</a>
+      </div>
+      <div class="mt-6 text-gray-600 text-sm">
+        © 2024 ContentScale. Powered by GRAAF Framework™
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    let currentCountry = 'netherlands';
+    let allAgencies = [];
+    let showingAll = false;
+    const INITIAL_DISPLAY = 10; // Show top 10 initially
+    
+    // Country name mapping
+    const countryNames = {
+      'netherlands': 'Netherlands 🇳🇱',
+      'belgium': 'Belgium 🇧🇪',
+      'germany': 'Germany 🇩🇪',
+      'uk': 'United Kingdom 🇬🇧',
+      'usa': 'United States 🇺🇸'
+    };
+    
+    // Load leaderboard on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      loadLeaderboard('netherlands');
+    });
+    
+    async function loadLeaderboard(country) {
+      currentCountry = country;
+      showingAll = false;
+      
+      // Show loading
+      document.getElementById('loading').classList.remove('hidden');
+      document.getElementById('leaderboard-content').classList.add('hidden');
+      
+      // Update active country button
+      document.querySelectorAll('.country-btn').forEach(btn => {
+        btn.classList.remove('bg-purple-600', 'border-purple-400', 'scale-105');
+        btn.classList.add('bg-gray-700', 'border-transparent');
+      });
+      event?.target.closest('.country-btn')?.classList.add('bg-purple-600', 'border-purple-400', 'scale-105');
+      
+      try {
+        const response = await fetch(`/api/leaderboard/${country}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error('Failed to load leaderboard');
+        }
+        
+        allAgencies = data.agencies;
+        
+        // Update stats
+        document.getElementById('total-agencies').textContent = data.total || allAgencies.length;
+        document.getElementById('total-results').textContent = data.total || allAgencies.length;
+        document.getElementById('current-country-name').textContent = countryNames[country];
+        
+        // Render podium (top 3)
+        renderPodium(allAgencies.slice(0, 3));
+        
+        // Render initial table (top 10)
+        const displayCount = Math.min(INITIAL_DISPLAY, allAgencies.length);
+        renderTable(allAgencies.slice(0, displayCount));
+        document.getElementById('showing-count').textContent = displayCount;
+        
+        // Show "View All" button if there are more agencies
+        updateViewAllButton();
+        
+        // Hide loading, show content
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('leaderboard-content').classList.remove('hidden');
+        
+      } catch (error) {
+        console.error('Error loading leaderboard:', error);
+        document.getElementById('loading').innerHTML = `
+          <div class="text-center py-20">
+            <div class="text-red-400 text-xl mb-4">❌ Failed to load rankings</div>
+            <p class="text-gray-400">${error.message}</p>
+            <button onclick="loadLeaderboard('${country}')" class="mt-6 px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-bold">
+              Try Again
+            </button>
+          </div>
+        `;
+      }
+    }
+    
+    function toggleViewAll() {
+      showingAll = !showingAll;
+      
+      if (showingAll) {
+        renderTable(allAgencies);
+        document.getElementById('showing-count').textContent = allAgencies.length;
+      } else {
+        const displayCount = Math.min(INITIAL_DISPLAY, allAgencies.length);
+        renderTable(allAgencies.slice(0, displayCount));
+        document.getElementById('showing-count').textContent = displayCount;
+        
+        // Scroll to table
+        document.getElementById('leaderboard-content').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      
+      updateViewAllButton();
+    }
+    
+    function updateViewAllButton() {
+      const container = document.getElementById('view-all-container');
+      
+      if (allAgencies.length <= INITIAL_DISPLAY) {
+        container.innerHTML = '';
+        return;
+      }
+      
+      if (showingAll) {
+        container.innerHTML = `
+          <button onclick="toggleViewAll()" class="w-full px-6 py-4 bg-gray-700 hover:bg-gray-600 rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2">
+            <span>Show Less</span>
+            <span class="text-xl">↑</span>
+          </button>
+        `;
+      } else {
+        const remaining = allAgencies.length - INITIAL_DISPLAY;
+        container.innerHTML = `
+          <button onclick="toggleViewAll()" class="w-full px-6 py-4 bg-purple-600 hover:bg-purple-700 rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2">
+            <span>View All ${allAgencies.length} Agencies</span>
+            <span class="text-sm bg-white/20 px-3 py-1 rounded-full">+${remaining} more</span>
+            <span class="text-xl">↓</span>
+          </button>
+        `;
+      }
+    }
+    
+    function renderPodium(topThree) {
+      const podium = document.getElementById('podium');
+      
+      if (topThree.length === 0) {
+        podium.innerHTML = '<div class="col-span-3 text-center text-gray-400">No agencies ranked yet</div>';
+        return;
+      }
+      
+      // Reorder for podium: 2nd, 1st, 3rd
+      const podiumOrder = [topThree[1], topThree[0], topThree[2]].filter(a => a);
+      
+      podium.innerHTML = podiumOrder.map((agency, index) => {
+        if (!agency) return '';
+        
+        const actualRank = agency.rank;
+        const score = agency.v52_score || 0;
+        const scoreClass = getScoreClass(score);
+        const rankClass = actualRank === 1 ? 'rank-1' : actualRank === 2 ? 'rank-2' : 'rank-3';
+        
+        // Medal heights for visual podium effect
+        const heights = { 2: 'md:mt-12', 1: 'md:mt-0', 3: 'md:mt-16' };
+        const height = heights[actualRank] || '';
+        
+        return `
+          <div class="bg-gray-800 rounded-2xl p-8 border-2 ${actualRank === 1 ? 'border-yellow-400' : actualRank === 2 ? 'border-gray-400' : 'border-orange-400'} hover-lift fade-in ${height}">
+            <div class="text-center mb-6">
+              <div class="rank-badge ${rankClass} mx-auto mb-4">
+                ${actualRank === 1 ? '👑' : actualRank}
+              </div>
+              <h3 class="text-2xl font-bold mb-2">${agency.name}</h3>
+              <a href="https://${agency.domain}" target="_blank" class="text-purple-400 hover:text-purple-300 text-sm">
+                ${agency.domain}
+              </a>
+            </div>
+            
+            <div class="text-center mb-4">
+              <div class="inline-block">
+                ${renderScoreCircle(score)}
+              </div>
+            </div>
+            
+            <div class="text-center">
+              <div class="text-5xl font-black ${scoreClass} mb-2">${score}</div>
+              <div class="text-gray-400 text-sm">out of 100</div>
+            </div>
+            
+            ${actualRank === 1 ? `
+              <div class="mt-6 text-center">
+                <div class="inline-block px-4 py-2 bg-yellow-400/20 text-yellow-400 rounded-full text-sm font-bold">
+                  🏆 Top Ranked
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+    
+    function renderTable(agencies) {
+      const tbody = document.getElementById('rankings-table');
+      
+      if (agencies.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" class="px-6 py-12 text-center text-gray-400">
+              No agencies found for this country
+            </td>
+          </tr>
+        `;
+        return;
+      }
+      
+      tbody.innerHTML = agencies.map(agency => {
+        const score = agency.v52_score || 0;
+        const scoreClass = getScoreClass(score);
+        const rankClass = agency.rank <= 3 ? 'font-black text-2xl' : 'font-bold text-lg';
+        const lastScanned = agency.last_scanned 
+          ? new Date(agency.last_scanned).toLocaleDateString()
+          : 'Never';
+        
+        return `
+          <tr class="hover:bg-gray-700/50 transition-colors fade-in">
+            <td class="px-6 py-4">
+              <div class="${rankClass} ${agency.rank === 1 ? 'text-yellow-400' : agency.rank === 2 ? 'text-gray-300' : agency.rank === 3 ? 'text-orange-400' : 'text-gray-400'}">
+                ${agency.rank === 1 ? '🥇' : agency.rank === 2 ? '🥈' : agency.rank === 3 ? '🥉' : '#' + agency.rank}
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="font-bold text-lg">${agency.name}</div>
+            </td>
+            <td class="px-6 py-4">
+              <a href="https://${agency.domain}" target="_blank" class="text-purple-400 hover:text-purple-300 transition">
+                ${agency.domain} →
+              </a>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-3">
+                <div class="text-3xl font-black ${scoreClass}">${score}</div>
+                <div class="text-sm text-gray-400">/100</div>
+              </div>
+            </td>
+            <td class="px-6 py-4 text-gray-400">
+              ${lastScanned}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+    
+    function renderScoreCircle(score) {
+      const radius = 36;
+      const circumference = 2 * Math.PI * radius;
+      const offset = circumference - (score / 100) * circumference;
+      const strokeColor = score >= 90 ? '#10b981' : score >= 80 ? '#3b82f6' : score >= 70 ? '#f59e0b' : '#ef4444';
+      
+      return `
+        <svg class="score-circle" width="80" height="80">
+          <circle class="score-circle-bg" cx="40" cy="40" r="${radius}"></circle>
+          <circle class="score-circle-progress" 
+                  cx="40" cy="40" r="${radius}"
+                  stroke="${strokeColor}"
+                  stroke-dasharray="${circumference}"
+                  stroke-dashoffset="${offset}">
+          </circle>
+        </svg>
+      `;
+    }
+    
+    function getScoreClass(score) {
+      if (score >= 90) return 'text-green-400';
+      if (score >= 80) return 'text-blue-400';
+      if (score >= 70) return 'text-yellow-400';
+      if (score >= 60) return 'text-orange-400';
+      return 'text-red-400';
+    }
+    
+    // Smooth scroll to leaderboard
+    document.querySelectorAll('a[href="#leaderboard"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        document.querySelector('#leaderboard').scrollIntoView({
+          behavior: 'smooth'
+        });
+      });
+    });
+  </script>
+
+</body>
+</html>

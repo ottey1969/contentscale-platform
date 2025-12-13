@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEO Agency Leaderboard - ContentScale</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .rank-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .rank-1 { background: linear-gradient(135deg, #FFD700, #FFA500); color: #000; }
+        .rank-2 { background: linear-gradient(135deg, #C0C0C0, #A8A8A8); color: #000; }
+        .rank-3 { background: linear-gradient(135deg, #CD7F32, #B8860B); color: #fff; }
+        .rank-other { background: linear-gradient(135deg, #4F46E5, #7C3AED); color: #fff; }
+        
+        .progress-bar {
+            transition: width 0.5s ease;
+        }
+        
+        .page-url {
+            color: #4F46E5;
+            text-decoration: none;
+            border-bottom: 1px dashed #4F46E5;
+            transition: all 0.2s;
+        }
+        .page-url:hover {
+            color: #7C3AED;
+            border-bottom-style: solid;
+        }
+        
+        .rank-change-up {
+            color: #10B981;
+            font-weight: bold;
+        }
+        .rank-change-down {
+            color: #EF4444;
+            font-weight: bold;
+        }
+        
+        @keyframes pulse-green {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .scanning-pulse {
+            animation: pulse-green 2s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 min-h-screen">
+    
+    <!-- Header -->
+    <header class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-4xl font-bold text-gray-900">🏆 SEO Agency Rankings</h1>
+                    <p class="mt-2 text-gray-600">Ranked by v52score Content Quality · Updated Weekly</p>
+                </div>
+                <button onclick="showHowItWorks()" class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+                    How Rankings Work
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Country Tabs -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="bg-white rounded-lg shadow-md p-2 flex gap-2" id="countryTabs">
+            <button onclick="loadLeaderboard('Netherlands')" class="country-tab px-6 py-3 rounded-lg font-medium transition active">🇳🇱 Netherlands</button>
+            <button onclick="loadLeaderboard('USA')" class="country-tab px-6 py-3 rounded-lg font-medium transition">🇺🇸 USA</button>
+            <button onclick="loadLeaderboard('UK')" class="country-tab px-6 py-3 rounded-lg font-medium transition">🇬🇧 UK</button>
+            <button onclick="loadLeaderboard('Germany')" class="country-tab px-6 py-3 rounded-lg font-medium transition">🇩🇪 Germany</button>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="text-sm text-gray-600">Total Agencies</div>
+                <div class="text-3xl font-bold text-indigo-600" id="stat-total">-</div>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="text-sm text-gray-600">Average Score</div>
+                <div class="text-3xl font-bold text-purple-600" id="stat-avg">-</div>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="text-sm text-gray-600">Top Score</div>
+                <div class="text-3xl font-bold text-green-600" id="stat-top">-</div>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="text-sm text-gray-600">Pages Scanned</div>
+                <div class="text-3xl font-bold text-orange-600" id="stat-pages">-</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
+        <div class="bg-white rounded-lg shadow-md p-4">
+            <input 
+                type="text" 
+                id="searchInput" 
+                placeholder="🔍 Search agency by name or domain..." 
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                onkeyup="filterAgencies()"
+            >
+        </div>
+    </div>
+
+    <!-- Leaderboard Table -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+        <div class="bg-white rounded-lg shadow-xl overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-sm font-bold">Rank</th>
+                            <th class="px-6 py-4 text-left text-sm font-bold">Agency</th>
+                            <th class="px-6 py-4 text-left text-sm font-bold">📄 Page Scanned</th>
+                            <th class="px-6 py-4 text-center text-sm font-bold">Progress</th>
+                            <th class="px-6 py-4 text-center text-sm font-bold">Score</th>
+                            <th class="px-6 py-4 text-center text-sm font-bold">Trend</th>
+                            <th class="px-6 py-4 text-center text-sm font-bold">Next Scan</th>
+                            <th class="px-6 py-4 text-center text-sm font-bold">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboardBody" class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                                <div class="animate-pulse">Loading rankings...</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- How It Works Modal -->
+    <div id="howItWorksModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" onclick="closeModals(event)">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-3xl mx-4 p-8" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-3xl font-bold text-gray-900">🎯 How Progressive Scanning Works</h2>
+                <button onclick="closeModals()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            
+            <div class="space-y-6">
+                <div class="border-l-4 border-indigo-500 pl-4">
+                    <h3 class="font-bold text-lg mb-2">📊 Week 1: Initial Scan</h3>
+                    <p class="text-gray-600">We scan your BEST page (highest quality content found). This becomes your initial score and ranking.</p>
+                    <div class="mt-2 bg-indigo-50 p-3 rounded">
+                        <strong>Example:</strong> Your /blog/seo-guide scores <span class="text-green-600 font-bold">85/100</span> → Rank: <strong>#23</strong>
+                    </div>
+                </div>
+                
+                <div class="border-l-4 border-purple-500 pl-4">
+                    <h3 class="font-bold text-lg mb-2">🔄 Week 2: Progressive Rescan</h3>
+                    <p class="text-gray-600">We scan a DIFFERENT page from your site. Your ranking updates based on this new page's score.</p>
+                    <div class="mt-2 bg-purple-50 p-3 rounded">
+                        <strong>Example:</strong> Your /services/content-marketing scores <span class="text-green-600 font-bold">92/100</span> → Rank improved to <strong class="text-green-600">#15 ⬆️</strong>
+                    </div>
+                </div>
+                
+                <div class="border-l-4 border-orange-500 pl-4">
+                    <h3 class="font-bold text-lg mb-2">📈 Continuous Improvement</h3>
+                    <p class="text-gray-600">Each week we scan another page. Your ranking reflects your currently-scanned page's quality.</p>
+                    <ul class="mt-2 space-y-2 text-sm text-gray-600">
+                        <li>✅ <strong>High score page found?</strong> → Ranking improves!</li>
+                        <li>⚠️ <strong>Lower score page?</strong> → Time to optimize that page!</li>
+                        <li>🎯 <strong>Goal:</strong> Improve ALL your pages to stay on top!</li>
+                    </ul>
+                </div>
+                
+                <div class="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-lg">
+                    <h3 class="font-bold text-lg mb-2">💡 Why This Matters</h3>
+                    <p class="text-gray-700">Unlike one-time rankings, progressive scanning encourages you to maintain <strong>consistently high quality across your entire website</strong> - not just one "showcase" page!</p>
+                </div>
+                
+                <div class="border-t pt-4">
+                    <h3 class="font-bold mb-2">🔗 Transparency</h3>
+                    <p class="text-gray-600">Click any agency's <span class="text-indigo-600 font-semibold">"📄 Page Scanned"</span> link to see EXACTLY which page we analyzed. Full transparency!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Improve Rank Modal -->
+    <div id="improveRankModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" onclick="closeModals(event)">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md mx-4 p-8" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">🚀 Improve Your Ranking</h2>
+                <button onclick="closeModals()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            
+            <form id="leadForm" onsubmit="submitLead(event)">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Agency Name</label>
+                        <input type="text" id="lead-agency" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                        <input type="email" id="lead-email" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Phone (optional)</label>
+                        <input type="tel" id="lead-phone" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Current Rank</label>
+                        <input type="text" id="lead-rank" readonly class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Message (optional)</label>
+                        <textarea id="lead-message" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Tell us about your goals..."></textarea>
+                    </div>
+                </div>
+                
+                <button type="submit" class="w-full mt-6 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg hover:from-indigo-700 hover:to-purple-700 transition">
+                    Get Started →
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentCountry = 'Netherlands';
+        let allAgencies = [];
+        
+        // Load leaderboard
+        async function loadLeaderboard(country) {
+            currentCountry = country;
+            
+            // Update tabs
+            document.querySelectorAll('.country-tab').forEach(tab => {
+                tab.classList.remove('active', 'bg-indigo-600', 'text-white');
+                tab.classList.add('bg-gray-100', 'text-gray-700');
+            });
+            event.target.classList.remove('bg-gray-100', 'text-gray-700');
+            event.target.classList.add('active', 'bg-indigo-600', 'text-white');
+            
+            try {
+                const response = await fetch(`/api/leaderboard/${country}`);
+                const data = await response.json();
+                
+                allAgencies = data.agencies;
+                renderLeaderboard(allAgencies);
+                updateStats(data);
+            } catch (error) {
+                console.error('Error loading leaderboard:', error);
+                document.getElementById('leaderboardBody').innerHTML = `
+                    <tr><td colspan="8" class="px-6 py-12 text-center text-red-500">
+                        Error loading rankings. Please try again.
+                    </td></tr>
+                `;
+            }
+        }
+        
+        // Render leaderboard
+        function renderLeaderboard(agencies) {
+            const tbody = document.getElementById('leaderboardBody');
+            
+            if (agencies.length === 0) {
+                tbody.innerHTML = `
+                    <tr><td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                        No agencies found for this country yet.
+                    </td></tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = agencies.map(agency => {
+                const rankClass = agency.rank === 1 ? 'rank-1' : 
+                                 agency.rank === 2 ? 'rank-2' : 
+                                 agency.rank === 3 ? 'rank-3' : 'rank-other';
+                
+                const progressPct = agency.scan_progress_pct || 0;
+                const daysUntilScan = agency.days_until_next_scan || 0;
+                const scanStatus = daysUntilScan <= 0 ? 'Scanning soon...' : `In ${daysUntilScan}d`;
+                
+                // Trend indicator
+                let trendHTML = '<span class="text-gray-400">-</span>';
+                if (agency.recent_rotations && agency.recent_rotations.length > 0) {
+                    const lastRotation = agency.recent_rotations[0];
+                    if (lastRotation.rank_change > 0) {
+                        trendHTML = `<span class="rank-change-up">⬆️ +${lastRotation.rank_change}</span>`;
+                    } else if (lastRotation.rank_change < 0) {
+                        trendHTML = `<span class="rank-change-down">⬇️ ${lastRotation.rank_change}</span>`;
+                    }
+                }
+                
+                // Page scanned URL
+                const pageURL = agency.current_display_page || agency.domain;
+                const shortURL = pageURL.length > 40 ? pageURL.substring(0, 37) + '...' : pageURL;
+                
+                return `
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-6 py-4">
+                            <div class="rank-badge ${rankClass}">${agency.rank}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="font-bold text-gray-900">${escapeHtml(agency.name)}</div>
+                            <div class="text-sm text-gray-500">${agency.domain}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <a href="${pageURL}" target="_blank" rel="noopener" class="page-url text-sm" title="${pageURL}">
+                                📄 ${shortURL}
+                            </a>
+                            <div class="text-xs text-gray-400 mt-1">
+                                Scanned ${agency.times_scanned || 1}x
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-xs text-gray-600 mb-1">${agency.total_pages_scanned || 1}/${agency.total_pages_found || '?'} pages</div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="progress-bar bg-indigo-600 h-2 rounded-full" style="width: ${progressPct}%"></div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">${progressPct.toFixed(0)}%</div>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <div class="text-2xl font-bold text-indigo-600">${agency.v52_score.toFixed(1)}</div>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            ${trendHTML}
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <div class="text-sm ${daysUntilScan <= 0 ? 'text-green-600 scanning-pulse font-semibold' : 'text-gray-600'}">
+                                ${scanStatus}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <button onclick="openImproveModal('${escapeHtml(agency.name)}', ${agency.rank})" 
+                                    class="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition text-sm font-medium">
+                                Improve Rank
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // Update stats
+        function updateStats(data) {
+            const total = data.agencies.length;
+            const avgScore = total > 0 ? (data.agencies.reduce((sum, a) => sum + parseFloat(a.v52_score), 0) / total).toFixed(1) : 0;
+            const topScore = total > 0 ? Math.max(...data.agencies.map(a => parseFloat(a.v52_score))).toFixed(1) : 0;
+            const totalPages = data.agencies.reduce((sum, a) => sum + (a.total_pages_scanned || 0), 0);
+            
+            document.getElementById('stat-total').textContent = total;
+            document.getElementById('stat-avg').textContent = avgScore;
+            document.getElementById('stat-top').textContent = topScore;
+            document.getElementById('stat-pages').textContent = totalPages.toLocaleString();
+        }
+        
+        // Filter agencies
+        function filterAgencies() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allAgencies.filter(a => 
+                a.name.toLowerCase().includes(search) || 
+                a.domain.toLowerCase().includes(search)
+            );
+            renderLeaderboard(filtered);
+        }
+        
+        // Modals
+        function showHowItWorks() {
+            document.getElementById('howItWorksModal').classList.remove('hidden');
+            document.getElementById('howItWorksModal').classList.add('flex');
+        }
+        
+        function openImproveModal(agencyName, rank) {
+            document.getElementById('lead-agency').value = agencyName;
+            document.getElementById('lead-rank').value = `#${rank}`;
+            document.getElementById('improveRankModal').classList.remove('hidden');
+            document.getElementById('improveRankModal').classList.add('flex');
+        }
+        
+        function closeModals(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.querySelectorAll('[id$="Modal"]').forEach(modal => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            });
+        }
+        
+        // Submit lead
+        async function submitLead(event) {
+            event.preventDefault();
+            
+            const data = {
+                agency_name: document.getElementById('lead-agency').value,
+                email: document.getElementById('lead-email').value,
+                phone: document.getElementById('lead-phone').value,
+                current_rank: document.getElementById('lead-rank').value,
+                message: document.getElementById('lead-message').value
+            };
+            
+            try {
+                const response = await fetch('/api/leaderboard/lead', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    alert('✅ Thank you! We will contact you within 24 hours.');
+                    closeModals();
+                    document.getElementById('leadForm').reset();
+                } else {
+                    alert('❌ Something went wrong. Please try again.');
+                }
+            } catch (error) {
+                alert('❌ Error submitting form. Please try again.');
+            }
+        }
+        
+        // Helper
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Load initial data
+        window.addEventListener('DOMContentLoaded', () => {
+            loadLeaderboard('Netherlands');
+        });
+    </script>
+</body>
+</html>
