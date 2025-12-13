@@ -117,8 +117,11 @@ async function fetchWithPuppeteer(url, options = {}) {
     
     console.log(`⏳ Waiting ${waitDelay}ms for lazy-loaded content...`);
     
+    // FIXED: Use Promise instead of waitForTimeout for Puppeteer v24+ compatibility
     // Wait for lazy-loaded content
-    await page.waitForTimeout(waitDelay);
+    if (waitDelay > 0) {
+      await new Promise(resolve => setTimeout(resolve, waitDelay));
+    }
     
     // Extract full HTML (AFTER JavaScript execution)
     const html = await page.content();
