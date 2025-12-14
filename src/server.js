@@ -1,7 +1,7 @@
 // ==========================================
 // CONTENTSCALE COMPLETE PLATFORM
 // Hybrid AI Scoring System with Admin Management
-// + SHARE LINK SYSTEM + CALLBACK ENDPOINT
+// + SHARE LINK SYSTEM
 // ==========================================
 
 require('dotenv').config();
@@ -133,7 +133,7 @@ async function performHybridScan(url) {
     
     // STEP 2: Parser (Deterministic)
     console.log('🔍 STEP 2: Parser analysis...');
-    const parserOutput = parseContent(fetchResult.content, url);
+    const parserOutput = parseContent(fetchResult.html, url);
     
     // Add fetched metadata to parser output
     parserOutput.counts.wordCount = fetchResult.wordCount;
@@ -1146,151 +1146,6 @@ app.get('/api/share-link/validate/:code', async (req, res) => {
   }
 });
 
-// ==========================================
-// SHARE LINK CALLBACK ENDPOINT - NEW!
-// ==========================================
-
-app.post('/api/share-link/callback', async (req, res) => {
-  try {
-    const {
-      share_code,
-      scan_id,
-      client_email,
-      scan_result,
-      timestamp,
-      action = 'scan_completed',
-      metadata = {}
-    } = req.body;
-    
-    console.log(`📞 Share Link Callback: ${share_code} - ${action}`);
-    
-    // Validate required fields
-    if (!share_code) {
-      return res.status(400).json({
-        success: false,
-        error: 'Share code is required'
-      });
-    }
-    
-    // Verify the share link exists
-    const shareLinkResult = await pool.query(
-      'SELECT * FROM share_links WHERE share_code = $1',
-      [share_code]
-    );
-    
-    if (shareLinkResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'Share link not found'
-      });
-    }
-    
-    const shareLink = shareLinkResult.rows[0];
-    
-    // Log the callback for analytics
-    await pool.query(`
-      INSERT INTO share_link_callbacks (
-        share_link_id,
-        action,
-        client_email,
-        scan_id,
-        scan_result,
-        metadata,
-        ip_address,
-        user_agent
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-    `, [
-      shareLink.id,
-      action,
-      client_email || null,
-      scan_id || null,
-      scan_result ? JSON.stringify(scan_result) : null,
-      JSON.stringify(metadata),
-      req.ip,
-      req.headers['user-agent']
-    ]);
-    
-    console.log(`✅ Callback logged for ${share_code} - ${action}`);
-    
-    // Update share link usage stats
-    if (action === 'scan_completed') {
-      await pool.query(`
-        UPDATE share_links 
-        SET last_used_at = NOW(),
-            scans_used = scans_used + 1
-        WHERE id = $1
-      `, [shareLink.id]);
-    }
-    
-    // Send webhook notification if configured
-    if (process.env.WEBHOOK_URL) {
-      try {
-        await axios.post(process.env.WEBHOOK_URL, {
-          event: `share_link_${action}`,
-          share_code,
-          client_email,
-          scan_result,
-          timestamp: timestamp || new Date().toISOString(),
-          metadata
-        });
-        console.log(`✅ Webhook sent to ${process.env.WEBHOOK_URL}`);
-      } catch (webhookError) {
-        console.warn('⚠️ Webhook failed:', webhookError.message);
-      }
-    }
-    
-    // Check for automation triggers
-    if (action === 'scan_completed' && client_email) {
-      const scansUsed = shareLink.scans_used + 1;
-      const scansLimit = shareLink.scans_limit;
-      
-      // Trigger email notification if scans are running low
-      if (scansUsed >= Math.floor(scansLimit * 0.8)) {
-        console.log(`📧 Would send low scans notification to ${client_email}`);
-        // Email logic would go here
-      }
-    }
-    
-    res.json({
-      success: true,
-      message: 'Callback processed successfully',
-      callback_id: Date.now(),
-      processed_at: new Date().toISOString(),
-      share_code,
-      action,
-      scans_remaining: shareLink.scans_limit - shareLink.scans_used,
-      next_action: determineNextAction(action, shareLink)
-    });
-    
-  } catch (error) {
-    console.error('[SHARE LINK CALLBACK ERROR]', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-function determineNextAction(action, shareLink) {
-  const scansRemaining = shareLink.scans_limit - shareLink.scans_used;
-  
-  switch (action) {
-    case 'scan_completed':
-      if (scansRemaining <= 0) {
-        return 'link_expired';
-      } else if (scansRemaining <= 2) {
-        return 'low_scans_warning';
-      }
-      return 'scan_available';
-    
-    case 'link_accessed':
-      return 'ready_for_scan';
-    
-    default:
-      return 'continue';
-  }
-}
-
 app.post('/api/share-link/scan', async (req, res) => {
   try {
     const { share_code, url } = req.body;
@@ -1344,14 +1199,12 @@ app.post('/api/share-link/scan', async (req, res) => {
     
     const scanResult = await performHybridScan(url);
     
-    // Insert scan record
-    const scanInsertResult = await pool.query(`
+    await pool.query(`
       INSERT INTO scans (
         url, score, quality, url_hash, share_id, share_link_id,
         graaf_score, craft_score, technical_score,
         validation_data, scan_type, ip_address
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-      RETURNING id
     `, [
       url,
       scanResult.score,
@@ -1367,37 +1220,12 @@ app.post('/api/share-link/scan', async (req, res) => {
       req.ip
     ]);
     
-    const scanId = scanInsertResult.rows[0].id;
-    
-    // Update share link usage
     await pool.query(`
       UPDATE share_links
       SET scans_used = scans_used + 1,
           last_used_at = NOW()
       WHERE id = $1
     `, [link.id]);
-    
-    // Trigger callback for scan completion
-    try {
-      await axios.post(`${process.env.BASE_URL || 'http://localhost:' + PORT}/api/share-link/callback`, {
-        share_code,
-        scan_id: scanId,
-        client_email: link.client_email,
-        scan_result: {
-          url,
-          score: scanResult.score,
-          quality: scanResult.quality,
-          timestamp: new Date().toISOString()
-        },
-        action: 'scan_completed',
-        metadata: {
-          word_count: scanResult.wordCount,
-          duration: scanResult.fetchDuration
-        }
-      });
-    } catch (callbackError) {
-      console.warn('Callback failed:', callbackError.message);
-    }
     
     const scansRemaining = link.scans_limit - link.scans_used - 1;
     
@@ -1406,7 +1234,6 @@ app.post('/api/share-link/scan', async (req, res) => {
     res.json({
       success: true,
       ...scanResult,
-      scan_id: scanId,
       scans_remaining: scansRemaining,
       scans_limit: link.scans_limit
     });
@@ -1502,22 +1329,6 @@ app.post('/api/leads/submit', async (req, res) => {
     }
     
     const shareUrl = `${process.env.BASE_URL || 'https://contentscale-platform-production.up.railway.app'}/scan-with-link/${shareCode}`;
-    
-    // Trigger callback for lead creation
-    try {
-      await axios.post(`${process.env.BASE_URL || 'http://localhost:' + PORT}/api/share-link/callback`, {
-        share_code: shareCode,
-        client_email: email,
-        action: 'lead_created',
-        metadata: {
-          name,
-          company,
-          source
-        }
-      });
-    } catch (callbackError) {
-      console.warn('Lead callback failed:', callbackError.message);
-    }
     
     console.log(`✅ Lead: ${email} with scan link: ${shareCode}`);
     
@@ -2059,7 +1870,6 @@ app.listen(PORT, '0.0.0.0', () => {
 ║ ✅ Scan Caching & Consistency                             ║
 ║ ✅ Share Links for Scans                                  ║
 ║ ✅ Lead Generation System                                 ║
-║ ✅ Share Link Callback System                             ║
 ║                                                            ║
 ║ 📊 ALL ENDPOINTS OPERATIONAL!                             ║
 ╚═══════════════════════════════════════════════════════════╝
