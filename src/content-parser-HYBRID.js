@@ -1,11 +1,4 @@
-const cheerio = require('cheerio');
-
-/**
- * Parse HTML content and extract structured data
- * @param {string} html - HTML content to parse
- * @param {string} url - Source URL for reference
- * @returns {Object} - Parsed content analysis
- */
+// In content-parser-HYBRID.js, update the parseContent function:
 function parseContent(html, url) {
   console.log(`📝 Parser: Analyzing content from ${url}`);
   
@@ -20,7 +13,19 @@ function parseContent(html, url) {
         paragraphs: 0,
         images: 0,
         links: 0,
-        totalElements: 0
+        totalElements: 0,
+        // ADD THESE DEFAULT COUNTS:
+        expertQuotes: 0,
+        statistics: 0,
+        sources: 0,
+        caseStudies: 0,
+        faqCount: 0
+      },
+      snippets: { // ADD THIS EMPTY SNIPPETS OBJECT
+        expertQuotes: [],
+        statistics: [],
+        caseStudies: [],
+        faqQuestions: []
       },
       metadata: {
         url: url,
@@ -40,6 +45,86 @@ function parseContent(html, url) {
     // Calculate word count (basic)
     const words = text.split(/\s+/).filter(word => word.length > 0);
     const wordCount = words.length;
+    
+    // ==========================================
+    // EXTRACT EXPERT QUOTES (ADD THIS SECTION)
+    // ==========================================
+    const expertQuotes = [];
+    const quotePatterns = [
+      // Pattern 1: Text in quotes followed by name
+      /["'`]([^"'`]+)["'`]\s*[—-]\s*([A-Z][a-z]+ [A-Z][a-z]+(?:, [^,]+)?)/g,
+      // Pattern 2: Text with — Name format
+      /([^—]+)—\s*([A-Z][a-z]+ [A-Z][a-z]+)/g,
+      // Pattern 3: Quote text with strong/bold author
+      /<strong>([^<]+)<\/strong>\s*[—-]\s*([^<]+)/gi
+    ];
+    
+    // Check all text nodes for quote patterns
+    $('p, div, blockquote, li').each((i, elem) => {
+      const elemText = $(elem).text().trim();
+      
+      for (const pattern of quotePatterns) {
+        const matches = [...elemText.matchAll(pattern)];
+        matches.forEach(match => {
+          if (match[1] && match[2]) {
+            expertQuotes.push({
+              text: match[1].trim(),
+              author: match[2].trim(),
+              index: expertQuotes.length
+            });
+          }
+        });
+      }
+    });
+    
+    // ==========================================
+    // EXTRACT STATISTICS (ADD THIS SECTION)
+    // ==========================================
+    const statistics = [];
+    const statPatterns = [
+      /\d+(?:\.\d+)?%/g, // Percentages
+      /\d+(?:,\d+)*(?:\.\d+)?\s*(?:%|points|times|hours|days|weeks|months|years)/gi,
+      /(?:increased?|decreased?|improved?|grew|rose|fell|dropped)\s+by\s+\d+/gi
+    ];
+    
+    $('p, li, td').each((i, elem) => {
+      const elemText = $(elem).text().trim();
+      if (elemText.length < 200) { // Short text likely contains stats
+        for (const pattern of statPatterns) {
+          if (pattern.test(elemText)) {
+            statistics.push({
+              text: elemText,
+              index: statistics.length
+            });
+            break;
+          }
+        }
+      }
+    });
+    
+    // ==========================================
+    // EXTRACT FAQ QUESTIONS (ADD THIS SECTION)
+    // ==========================================
+    const faqQuestions = [];
+    $('h3, h4, dt, strong').each((i, elem) => {
+      const text = $(elem).text().trim();
+      if (text.includes('?') || text.toLowerCase().startsWith('what') || 
+          text.toLowerCase().startsWith('how') || text.toLowerCase().startsWith('why')) {
+        // Find the answer (next sibling paragraph)
+        const answer = $(elem).next('p').text() || 
+                       $(elem).next('div').text() || 
+                       '';
+        
+        if (answer.length > 10) {
+          faqQuestions.push({
+            question: text,
+            answer: answer.substring(0, 200), // First 200 chars
+            answerWords: answer.split(/\s+/).length,
+            index: faqQuestions.length
+          });
+        }
+      }
+    });
     
     // Count various elements
     const counts = {
@@ -66,6 +151,12 @@ function parseContent(html, url) {
       stylesheets: $('link[rel="stylesheet"]').length,
       divs: $('div').length,
       sections: $('section, article, main, header, footer, nav, aside').length,
+      // ADD THESE CRITICAL COUNTS:
+      expertQuotes: expertQuotes.length,
+      statistics: statistics.length,
+      sources: expertQuotes.length + statistics.length, // Approximation
+      caseStudies: $('p:contains("case study"), div:contains("case study")').length,
+      faqCount: faqQuestions.length,
       totalElements: 0 // Will be calculated
     };
     
@@ -101,39 +192,19 @@ function parseContent(html, url) {
       parsedAt: new Date().toISOString()
     };
     
-    // Check for SEO issues
-    const issues = {
-      noTitle: !metadata.title,
-      noDescription: !metadata.description,
-      noH1: counts.headings.h1 === 0,
-      multipleH1: counts.headings.h1 > 1,
-      noCanonical: !metadata.canonical,
-      noViewport: !metadata.viewport,
-      noLang: !metadata.language,
-      imagesWithoutAlt: $('img:not([alt])').length,
-      linksWithoutHref: $('a:not([href])').length,
-      wordCountLow: wordCount < 300
-    };
-    
-    // Structure analysis
-    const structure = {
-      hasHeader: $('header').length > 0,
-      hasFooter: $('footer').length > 0,
-      hasNav: $('nav').length > 0,
-      hasMain: $('main').length > 0,
-      hasArticle: $('article').length > 0,
-      hasSection: $('section').length > 0,
-      hasAside: $('aside').length > 0
-    };
-    
     console.log(`✅ Parser: Analyzed ${wordCount} words, ${counts.totalElements} elements`);
+    console.log(`✅ Parser: Found ${expertQuotes.length} quotes, ${statistics.length} stats, ${faqQuestions.length} FAQs`);
     
     return {
       success: true,
       counts: counts,
+      snippets: { // ADD THIS CRITICAL OBJECT
+        expertQuotes: expertQuotes,
+        statistics: statistics,
+        caseStudies: [], // You can add case study extraction logic here
+        faqQuestions: faqQuestions
+      },
       metadata: metadata,
-      issues: issues,
-      structure: structure,
       raw: {
         text: text.substring(0, 1000), // First 1000 chars
         elementCount: counts.totalElements
@@ -152,7 +223,18 @@ function parseContent(html, url) {
         paragraphs: 0,
         images: 0,
         links: 0,
+        expertQuotes: 0, // ADD DEFAULT
+        statistics: 0,    // ADD DEFAULT
+        sources: 0,       // ADD DEFAULT
+        caseStudies: 0,   // ADD DEFAULT
+        faqCount: 0,      // ADD DEFAULT
         totalElements: 0
+      },
+      snippets: { // ADD EMPTY SNIPPETS
+        expertQuotes: [],
+        statistics: [],
+        caseStudies: [],
+        faqQuestions: []
       },
       metadata: {
         url: url,
@@ -162,6 +244,3 @@ function parseContent(html, url) {
     };
   }
 }
-
-// Export the function
-module.exports = { parseContent };
