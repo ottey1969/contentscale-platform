@@ -2,6 +2,7 @@
 // CONTENTSCALE COMPLETE PLATFORM
 // Hybrid AI Scoring System with Admin Management
 // + SHARE LINK SYSTEM
+// + WORD COUNT FIX
 // ==========================================
 
 require('dotenv').config();
@@ -89,8 +90,8 @@ async function recordScan(scanData) {
       `INSERT INTO scans (
         agency_id, client_id, url, score, quality,
         graaf_score, craft_score, technical_score,
-        validation_data, scan_type, ip_address
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        validation_data, scan_type, ip_address, word_count
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
       [
         scanData.agencyId || null,
         scanData.clientId || null,
@@ -102,7 +103,8 @@ async function recordScan(scanData) {
         scanData.technicalScore || null,
         JSON.stringify(scanData.validation || {}),
         scanData.scanType || 'free',
-        scanData.ipAddress || null
+        scanData.ipAddress || null,
+        scanData.wordCount || 0
       ]
     );
   } catch (error) {
@@ -120,16 +122,20 @@ async function performHybridScan(url) {
   console.log(`${'='.repeat(60)}\n`);
   
   try {
-    // STEP 1: Fetch HTML with Puppeteer (JAVASCRIPT RENDERING!)
+    // STEP 1: Fetch HTML with Puppeteer
     console.log('📥 STEP 1: Fetching HTML with Puppeteer...');
     
     const fetchResult = await fetchWithPuppeteer(url, {
       timeout: 30000,
-      waitUntil: 'networkidle0',
+      waitUntil: 'networkidle2',
       waitDelay: 2000
     });
     
-    console.log(`✅ Fetched ${fetchResult.wordCount} words (${fetchResult.duration}s)`);
+    if (!fetchResult.success) {
+      throw new Error(fetchResult.error || 'Fetch failed');
+    }
+    
+    console.log(`✅ Fetched ${fetchResult.wordCount} words (${fetchResult.duration.toFixed(1)}s)`);
     
     // STEP 2: Parser (Deterministic)
     console.log('🔍 STEP 2: Parser analysis...');
@@ -394,6 +400,7 @@ app.post('/api/scan-free', async (req, res) => {
           : cached.validation_data,
         timestamp: cached.created_at,
         share_id: cached.share_id || shareId,
+        wordCount: cached.word_count || 0,
         cached: true
       };
       
@@ -403,13 +410,13 @@ app.post('/api/scan-free', async (req, res) => {
       result.share_id = shareId;
       result.cached = false;
       
-      // Record scan with share_id
+      // Record scan with share_id AND word_count
       await pool.query(
         `INSERT INTO scans (
           url, score, quality, url_hash, share_id,
           graaf_score, craft_score, technical_score,
-          validation_data, scan_type, ip_address
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+          validation_data, scan_type, ip_address, word_count
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
         [
           url,
           result.score,
@@ -421,7 +428,8 @@ app.post('/api/scan-free', async (req, res) => {
           result.breakdown.technical.total,
           JSON.stringify(result.validation || {}),
           'free',
-          req.ip
+          req.ip,
+          result.wordCount || 0
         ]
       );
     }
@@ -469,7 +477,8 @@ app.get('/api/scan-result/:shareId', async (req, res) => {
         ? JSON.parse(scan.validation_data) 
         : scan.validation_data,
       timestamp: scan.created_at,
-      share_id: scan.share_id
+      share_id: scan.share_id,
+      wordCount: scan.word_count || 0
     });
     
   } catch (error) {
@@ -503,6 +512,7 @@ app.post('/api/scan', async (req, res) => {
         v52_score: result.score,
         quality: result.quality,
         breakdown: result.breakdown,
+        wordCount: result.wordCount,
         scanned_at: result.timestamp
       }
     });
@@ -1007,7 +1017,7 @@ app.get('/api/admin/share-links/:code', authenticateSuperAdmin, async (req, res)
       SELECT 
         sl.*,
         a.username as created_by,
-        COUNT(s.id) as total_scans
+        COUNT(DISTINCT s.id) as total_scans
       FROM share_links sl
       LEFT JOIN admins a ON sl.admin_id = a.id
       LEFT JOIN scans s ON sl.id = s.share_link_id
@@ -1023,7 +1033,7 @@ app.get('/api/admin/share-links/:code', authenticateSuperAdmin, async (req, res)
     }
     
     const scans = await pool.query(`
-      SELECT url, score, quality, created_at
+      SELECT url, score, quality, word_count, created_at
       FROM scans
       WHERE share_link_id = $1
       ORDER BY created_at DESC
@@ -1203,8 +1213,8 @@ app.post('/api/share-link/scan', async (req, res) => {
       INSERT INTO scans (
         url, score, quality, url_hash, share_id, share_link_id,
         graaf_score, craft_score, technical_score,
-        validation_data, scan_type, ip_address
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        validation_data, scan_type, ip_address, word_count
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
     `, [
       url,
       scanResult.score,
@@ -1217,7 +1227,8 @@ app.post('/api/share-link/scan', async (req, res) => {
       scanResult.breakdown.technical.total,
       JSON.stringify(scanResult.validation || {}),
       'share_link',
-      req.ip
+      req.ip,
+      scanResult.wordCount || 0
     ]);
     
     await pool.query(`
@@ -1800,7 +1811,8 @@ app.post('/api/client/scan', async (req, res) => {
       technicalScore: result.breakdown.technical.total,
       validation: result.validation,
       scanType: 'client',
-      ipAddress: req.ip
+      ipAddress: req.ip,
+      wordCount: result.wordCount
     });
     
     console.log(`✅ Client scan complete: ${result.score}/100`);
@@ -1870,6 +1882,7 @@ app.listen(PORT, '0.0.0.0', () => {
 ║ ✅ Scan Caching & Consistency                             ║
 ║ ✅ Share Links for Scans                                  ║
 ║ ✅ Lead Generation System                                 ║
+║ ✅ Word Count Tracking                                    ║
 ║                                                            ║
 ║ 📊 ALL ENDPOINTS OPERATIONAL!                             ║
 ╚═══════════════════════════════════════════════════════════╝
@@ -1877,7 +1890,7 @@ app.listen(PORT, '0.0.0.0', () => {
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log('SIGTERM received, closing server...');
   pool.end(() => {
     console.log('Database pool closed');
