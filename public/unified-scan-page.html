@@ -271,7 +271,35 @@
 
         <!-- RECOMMENDATIONS WITH CALCULATIONS -->
         <div class="bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg p-6 mb-6 border border-blue-700">
-          <h3 class="text-2xl font-bold mb-4">🎯 Recommendations to Reach 95+ (with Calculations)</h3>
+          <h3 class="text-2xl font-bold mb-4">🎯 Priority Recommendations (with Calculations)</h3>
+          
+          <!-- Gap Analysis -->
+          <div class="bg-gray-800 rounded-lg p-4 mb-4 border border-gray-600">
+            <div class="grid md:grid-cols-3 gap-4 text-center">
+              <div>
+                <div class="text-sm text-gray-400 mb-1">Current Score</div>
+                <div class="text-3xl font-bold text-yellow-400">${score}</div>
+              </div>
+              <div>
+                <div class="text-sm text-gray-400 mb-1">Potential with Fixes</div>
+                <div class="text-3xl font-bold text-green-400">${calculatePotentialScore(data)}</div>
+              </div>
+              <div>
+                <div class="text-sm text-gray-400 mb-1">Points Possible</div>
+                <div class="text-3xl font-bold text-blue-400">+${calculatePotentialScore(data) - score}</div>
+              </div>
+            </div>
+            <div class="mt-3 pt-3 border-t border-gray-600">
+              <div class="text-xs text-gray-400 text-center">
+                ${calculatePotentialScore(data) >= 95 
+                  ? '✅ Target of 95+ is achievable with these fixes!' 
+                  : calculatePotentialScore(data) >= 90
+                  ? '⚠️ To reach 95+, you\'ll need additional content improvements beyond these quick fixes.'
+                  : '📊 Focus on these improvements first, then reassess for deeper content optimization.'}
+              </div>
+            </div>
+          </div>
+          
           <div class="space-y-4">
             ${recommendations.critical.length > 0 ? `
               <div>
@@ -484,6 +512,67 @@
       }
     }
 
+    function calculatePotentialScore(data) {
+      const currentScore = Math.round(data.score || 0);
+      const breakdown = data.breakdown || {};
+      
+      let potentialGain = 0;
+      
+      // Schema Markup (0-4 points possible)
+      const schemaScore = breakdown.technical?.schemaMarkup || 0;
+      potentialGain += (4 - schemaScore);
+      
+      // Meta Optimization (0-4 points possible)
+      const metaScore = breakdown.technical?.metaOptimization || 0;
+      if (metaScore < 4) {
+        potentialGain += 1; // Usually can gain 1-2 points here
+      }
+      
+      // Mobile Optimization (0-4 points possible)
+      const mobileScore = breakdown.technical?.mobileOptimization || 0;
+      if (mobileScore < 4) {
+        potentialGain += (4 - mobileScore);
+      }
+      
+      // CRAFT - Cut Fluff (0-8 points possible)
+      const cutFluffScore = breakdown.craft?.cutFluff || 0;
+      if (cutFluffScore < 8) {
+        potentialGain += Math.min(2, 8 - cutFluffScore); // Usually can gain 1-2 points
+      }
+      
+      // CRAFT - Review & Optimize (0-8 points possible)
+      const reviewScore = breakdown.craft?.reviewOptimize || 0;
+      if (reviewScore < 8) {
+        potentialGain += Math.min(2, 8 - reviewScore);
+      }
+      
+      // CRAFT - Add Visuals (0-6 points possible)
+      const visualsScore = breakdown.craft?.addVisuals || 0;
+      if (visualsScore < 6) {
+        potentialGain += Math.min(2, 6 - visualsScore);
+      }
+      
+      // CRAFT - FAQ Integration (0-4 points possible)
+      const faqScore = breakdown.craft?.faqIntegration || 0;
+      if (faqScore < 4) {
+        potentialGain += (4 - faqScore);
+      }
+      
+      // CRAFT - Trust Building (0-4 points possible)
+      const trustScore = breakdown.craft?.trustBuilding || 0;
+      if (trustScore < 4) {
+        potentialGain += (4 - trustScore);
+      }
+      
+      // GRAAF improvements (conservative estimate - only easy wins)
+      const graafScore = breakdown.graaf?.total || 0;
+      if (graafScore < 45) {
+        potentialGain += Math.min(3, 50 - graafScore); // Max 3 points easy gain
+      }
+      
+      return Math.min(100, currentScore + potentialGain);
+    }
+
     function generateRecommendations(data) {
       const score = data.score || 0;
       const breakdown = data.breakdown || {};
@@ -571,26 +660,59 @@ Formula: More authoritative citations = higher credibility`,
         });
       }
 
-      // Point Gap
+      // Point Gap Analysis
+      const potentialScore = calculatePotentialScore(data);
+      const possibleGain = potentialScore - score;
+      
       if (score < 95) {
-        const pointsNeeded = 95 - score;
-        recommendations.important.push({
-          id: recId++,
-          text: `You need ${pointsNeeded} more points to reach 95+ score`,
-          impact: `Target: +${pointsNeeded} points`,
-          calculation: `Current: ${score}/100
-Target: 95/100
-Gap: ${pointsNeeded} points
+        if (possibleGain >= 15) {
+          recommendations.important.push({
+            id: recId++,
+            text: `You can gain ${possibleGain} points with these fixes (${score} → ${potentialScore})`,
+            impact: `Target: +${possibleGain} points`,
+            calculation: `Current: ${score}/100
+Potential: ${potentialScore}/100
+Improvement: +${possibleGain} points
 
-Priority fixes for maximum impact:
-1. Schema markup → +4 points
-2. Word count expansion → +2-3 points
-3. Meta optimization → +1-2 points
-4. Visual content → +1-2 points
+Quick Wins Breakdown:
+• Schema markup → +4 points
+• Meta optimization → +1-2 points
+• Mobile/alt texts → +1-2 points
+• Visual content → +1-2 points
+• FAQ improvements → +1-2 points
+• Content refinement → +2-3 points
 
-Formula: Fix highest-impact items first`,
-          solution: 'Focus on Critical Issues first, then Important Improvements'
-        });
+${potentialScore >= 95 
+  ? 'Target of 95+ is achievable!' 
+  : `To reach 95 from ${potentialScore}, you'll need deeper content optimization:
+• Add more expert sources and citations
+• Improve keyword relevance and density
+• Expand actionable examples
+• Enhance content freshness with recent data`}
+
+Formula: Current + All Possible Fixes = Potential Score`,
+            solution: 'Focus on Critical Issues first for maximum impact per effort'
+          });
+        } else {
+          recommendations.important.push({
+            id: recId++,
+            text: `You can improve to ${potentialScore} points with quick fixes (+${possibleGain} points)`,
+            impact: `Realistic gain: +${possibleGain} points`,
+            calculation: `Current: ${score}/100
+Quick fixes potential: ${potentialScore}/100
+Gap to 95: ${95 - potentialScore} points
+
+Your content is already strong in most areas.
+To reach 95+, you'll need:
+• More authoritative sources (GRAAF Credibility)
+• Enhanced keyword optimization (GRAAF Relevance)
+• Additional case studies or data (GRAAF Accuracy)
+• Fresh content updates (GRAAF Freshness)
+
+These require content rewrites, not just technical fixes.`,
+            solution: 'Focus on the quick wins first, then plan a content refresh strategy'
+          });
+        }
       }
 
       // Nice to have
