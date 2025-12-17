@@ -188,7 +188,7 @@
 
     function showSuccess(data) {
       const resultDiv = document.getElementById('scan-result');
-      const score = data.score || 0;
+      const score = Math.round(data.score || 0);
       
       // Quality colors
       let qualityColor = 'text-red-400';
@@ -216,10 +216,8 @@
       // Get recommendations
       const recommendations = generateRecommendations(data);
       
-      // Get word count
-      const wordCount = data.validation?.parserCounts?.words || 
-                       data.validation?.validatedCounts?.words || 
-                       'Unknown';
+      // Get word count - FIXED!
+      const wordCount = data.wordCount || 0;
       
       resultDiv.className = 'bg-gray-800 rounded-lg p-6 border border-gray-700';
       resultDiv.innerHTML = `
@@ -248,17 +246,17 @@
           <div class="grid md:grid-cols-3 gap-4 mb-6">
             <div class="bg-gray-700 rounded-lg p-4">
               <h4 class="text-sm text-gray-400 mb-2">🎯 GRAAF Score</h4>
-              <div class="text-3xl font-bold text-blue-400">${data.breakdown.graaf?.total || 0}/50</div>
+              <div class="text-3xl font-bold text-blue-400">${Math.round(data.breakdown.graaf?.total || 0)}/50</div>
               <div class="text-xs text-gray-500 mt-1">Credibility & Accuracy</div>
             </div>
             <div class="bg-gray-700 rounded-lg p-4">
               <h4 class="text-sm text-gray-400 mb-2">⚡ CRAFT Score</h4>
-              <div class="text-3xl font-bold text-purple-400">${data.breakdown.craft?.total || 0}/30</div>
+              <div class="text-3xl font-bold text-purple-400">${Math.round(data.breakdown.craft?.total || 0)}/30</div>
               <div class="text-xs text-gray-500 mt-1">Content Quality</div>
             </div>
             <div class="bg-gray-700 rounded-lg p-4">
               <h4 class="text-sm text-gray-400 mb-2">🔧 Technical</h4>
-              <div class="text-3xl font-bold text-green-400">${data.breakdown.technical?.total || 0}/20</div>
+              <div class="text-3xl font-bold text-green-400">${Math.round(data.breakdown.technical?.total || 0)}/20</div>
               <div class="text-xs text-gray-500 mt-1">SEO Technical</div>
             </div>
           </div>
@@ -275,7 +273,7 @@
           
           <div class="bg-gray-700 rounded-lg p-4">
             <div class="text-sm text-gray-400 mb-1">Words Analyzed</div>
-            <div class="text-xl font-bold">${wordCount.toLocaleString()}</div>
+            <div class="text-xl font-bold text-blue-600">${wordCount.toLocaleString()}</div>
           </div>
 
           <div class="bg-gray-700 rounded-lg p-4">
@@ -366,7 +364,7 @@
     function generateRecommendations(data) {
       const score = data.score || 0;
       const breakdown = data.breakdown || {};
-      const validation = data.validation || {};
+      const wordCount = data.wordCount || 0;
       
       const recommendations = {
         critical: [],
@@ -390,7 +388,7 @@
 
       // CRAFT Score recommendations
       const craftScore = breakdown.craft?.total || 0;
-      if (craftScore < 24) {
+      if (craftScore < 24 && wordCount < 1500) {
         recommendations.critical.push('Increase content depth - aim for 1500+ words with comprehensive coverage.');
         recommendations.important.push('Improve content structure with clear H2 and H3 headings.');
       } else if (craftScore < 27) {
@@ -406,12 +404,11 @@
         recommendations.important.push('Add Open Graph and Twitter Card meta tags for better social sharing.');
       }
 
-      // Word count recommendations
-      const words = validation.parserCounts?.words || 0;
-      if (words < 800) {
-        recommendations.critical.push(`Increase content length to 1200+ words (currently ${words} words).`);
-      } else if (words < 1200) {
-        recommendations.important.push('Consider expanding content to 1500+ words for better coverage.');
+      // Word count recommendations - SMART LOGIC!
+      if (wordCount < 800) {
+        recommendations.critical.push(`Increase content length to 1200+ words (currently ${wordCount} words).`);
+      } else if (wordCount < 1200) {
+        recommendations.important.push(`Consider expanding content to 1500+ words for better coverage (currently ${wordCount} words).`);
       }
 
       // Always add recommendations to reach 95+
@@ -480,9 +477,9 @@
       doc.text('Score Breakdown:', 20, 70);
       
       doc.setFontSize(10);
-      doc.text(`GRAAF Score: ${currentScanData.breakdown?.graaf?.total || 0}/50`, 30, 78);
-      doc.text(`CRAFT Score: ${currentScanData.breakdown?.craft?.total || 0}/30`, 30, 84);
-      doc.text(`Technical Score: ${currentScanData.breakdown?.technical?.total || 0}/20`, 30, 90);
+      doc.text(`GRAAF Score: ${Math.round(currentScanData.breakdown?.graaf?.total || 0)}/50`, 30, 78);
+      doc.text(`CRAFT Score: ${Math.round(currentScanData.breakdown?.craft?.total || 0)}/30`, 30, 84);
+      doc.text(`Technical Score: ${Math.round(currentScanData.breakdown?.technical?.total || 0)}/20`, 30, 90);
       
       // Recommendations
       const recommendations = generateRecommendations(currentScanData);
