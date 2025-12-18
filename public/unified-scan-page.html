@@ -406,33 +406,65 @@
       let quickWins = 0;
       const gains = {};
       
-      // TECHNICAL SEO
-      const schemaScore = Math.round(breakdown.technical?.schemaMarkup || 0);
-      gains.schema = 4 - schemaScore;
-      quickWins += gains.schema;
+      // Check if we have detailed breakdown or just totals
+      const hasDetailedBreakdown = breakdown.technical?.schemaMarkup !== undefined;
       
-      const metaScore = Math.round(breakdown.technical?.metaOptimization || 0);
-      gains.meta = 4 - metaScore;
-      quickWins += gains.meta;
-      
-      const mobileScore = Math.round(breakdown.technical?.mobileOptimization || 0);
-      gains.mobile = 4 - mobileScore;
-      quickWins += gains.mobile;
-      
-      // CRAFT FRAMEWORK
-      const faqScore = Math.round(breakdown.craft?.faqIntegration || 0);
-      gains.faq = 4 - faqScore;
-      quickWins += gains.faq;
-      
-      const visualsScore = Math.round(breakdown.craft?.addVisuals || 0);
-      const visualsMissing = 6 - visualsScore;
-      gains.visuals = Math.min(2, visualsMissing);
-      quickWins += gains.visuals;
-      
-      const reviewScore = Math.round(breakdown.craft?.reviewOptimize || 0);
-      const reviewMissing = 8 - reviewScore;
-      gains.review = Math.min(2, Math.ceil(reviewMissing * 0.25));
-      quickWins += gains.review;
+      if (hasDetailedBreakdown) {
+        // DETAILED BREAKDOWN - Use sub-scores
+        
+        // TECHNICAL SEO (12 points max)
+        const schemaScore = Math.round(breakdown.technical?.schemaMarkup || 0);
+        gains.schema = Math.max(0, 4 - schemaScore);
+        quickWins += gains.schema;
+        
+        const metaScore = Math.round(breakdown.technical?.metaOptimization || 0);
+        gains.meta = Math.max(0, 4 - metaScore);
+        quickWins += gains.meta;
+        
+        const mobileScore = Math.round(breakdown.technical?.mobileOptimization || 0);
+        gains.mobile = Math.max(0, 4 - mobileScore);
+        quickWins += gains.mobile;
+        
+        // CRAFT FRAMEWORK (8 points max)
+        const faqScore = Math.round(breakdown.craft?.faqIntegration || 0);
+        gains.faq = Math.max(0, 4 - faqScore);
+        quickWins += gains.faq;
+        
+        const visualsScore = Math.round(breakdown.craft?.addVisuals || 0);
+        const visualsMissing = 6 - visualsScore;
+        gains.visuals = Math.min(2, Math.max(0, visualsMissing));
+        quickWins += gains.visuals;
+        
+        const reviewScore = Math.round(breakdown.craft?.reviewOptimize || 0);
+        const reviewMissing = 8 - reviewScore;
+        gains.review = Math.min(2, Math.max(0, Math.ceil(reviewMissing * 0.25)));
+        quickWins += gains.review;
+        
+      } else {
+        // SIMPLIFIED BREAKDOWN - Estimate based on totals
+        console.log('⚠️ Using simplified breakdown - estimating potential');
+        
+        // Technical SEO (max 20 points)
+        const technicalTotal = breakdown.technical?.total || 0;
+        const technicalMissing = Math.max(0, 20 - technicalTotal);
+        
+        // Estimate realistic gains (typically 60% of missing points are quick wins)
+        const technicalGains = Math.min(12, Math.ceil(technicalMissing * 0.6));
+        gains.technical = technicalGains;
+        quickWins += technicalGains;
+        
+        // CRAFT (max 30 points)
+        const craftTotal = breakdown.craft?.total || 0;
+        const craftMissing = Math.max(0, 30 - craftTotal);
+        
+        // Estimate realistic gains (typically 25% of missing points are quick wins)
+        const craftGains = Math.min(8, Math.ceil(craftMissing * 0.25));
+        gains.craft = craftGains;
+        quickWins += craftGains;
+        
+        // GRAAF is harder to improve quickly, skip for quick wins
+        gains.graaf = 0;
+      }
       
       return {
         current: current,
@@ -579,45 +611,118 @@ RETURN ONLY JSON:
 
     function generateDeterministicRecommendations(data) {
       const recs = [];
-      const breakdown = data.breakdown;
-      const audit = data.audit;
+      const breakdown = data.breakdown || {};
+      const audit = data.audit || {};
       
-      if (breakdown.technical?.schemaMarkup < 4) {
-        recs.push({
-          text: "Add Article + FAQPage schema markup (JSON-LD)",
-          why: "67% of searches show AI Overviews. Without schema, your content is invisible to AI.",
-          how: "1. Copy Article schema template\n2. Fill in your details\n3. Add FAQPage schema\n4. Paste into <head>\n5. Validate with schema.org",
-          impact: 4 - breakdown.technical.schemaMarkup,
-          realWorldBenefit: "Appear in AI Overviews, Featured Snippets",
-          priority: "critical",
-          effort: "low",
-          category: "technical"
-        });
+      // Check if we have detailed breakdown
+      const hasDetailedBreakdown = breakdown.technical?.schemaMarkup !== undefined;
+      
+      if (hasDetailedBreakdown) {
+        // DETAILED RECOMMENDATIONS
+        
+        // Schema markup
+        if ((breakdown.technical?.schemaMarkup || 0) < 4) {
+          recs.push({
+            text: "Add Article + FAQPage schema markup (JSON-LD)",
+            why: "67% of searches show AI Overviews. Without schema, your content is invisible to AI.",
+            how: "1. Copy Article schema template\n2. Fill in your details\n3. Add FAQPage schema\n4. Paste into <head>\n5. Validate with schema.org",
+            impact: 4 - (breakdown.technical?.schemaMarkup || 0),
+            realWorldBenefit: "Appear in AI Overviews, Featured Snippets",
+            priority: "critical",
+            effort: "low",
+            category: "technical"
+          });
+        }
+        
+        // FAQ quality
+        if ((breakdown.craft?.faqIntegration || 0) < 4 && (audit.faqCount || 0) > 0) {
+          recs.push({
+            text: `Expand FAQ answers to 100+ words (currently ${audit.faqAvgWords || 'unknown'} avg)`,
+            why: "AI Overviews prefer detailed answers. Short answers (<100 words) are rarely cited.",
+            how: "1. Review each FAQ\n2. Add examples\n3. Include statistics\n4. Link to sources\n5. Aim for 100-150 words",
+            impact: 4 - (breakdown.craft?.faqIntegration || 0),
+            realWorldBenefit: "Higher AI Overview citation rate",
+            priority: "high",
+            effort: "medium",
+            category: "craft"
+          });
+        }
+        
+        // Meta optimization
+        if ((breakdown.technical?.metaOptimization || 0) < 4) {
+          recs.push({
+            text: "Optimize meta title and description",
+            why: "Meta tags improve CTR by 20-30%.",
+            how: `Title: 50-60 chars (current: ${audit.metaTitleLength || 'unknown'})\nDescription: 150-160 chars (current: ${audit.metaDescLength || 'unknown'})`,
+            impact: 4 - (breakdown.technical?.metaOptimization || 0),
+            realWorldBenefit: "+20-30% click-through rate",
+            priority: "high",
+            effort: "low",
+            category: "technical"
+          });
+        }
+        
+      } else {
+        // SIMPLIFIED RECOMMENDATIONS (when only totals available)
+        
+        const technicalTotal = breakdown.technical?.total || 0;
+        const craftTotal = breakdown.craft?.total || 0;
+        const graafTotal = breakdown.graaf?.total || 0;
+        
+        // Technical SEO recommendations
+        if (technicalTotal < 16) {
+          recs.push({
+            text: "Improve Technical SEO (Schema, Meta, Mobile)",
+            why: "Technical SEO is the foundation. Without it, even great content won't rank well. Focus on schema markup for AI Overviews visibility.",
+            how: "1. Add Article + FAQPage schema markup (critical for AI Overviews)\n2. Optimize meta title (50-60 chars) and description (150-160 chars)\n3. Ensure mobile responsiveness and fast loading\n4. Add proper alt texts to all images",
+            impact: Math.min(12, Math.ceil((20 - technicalTotal) * 0.6)),
+            realWorldBenefit: "Appear in AI Overviews, Featured Snippets, and improve mobile rankings",
+            priority: "critical",
+            effort: "low",
+            category: "technical"
+          });
+        }
+        
+        // CRAFT recommendations
+        if (craftTotal < 24) {
+          recs.push({
+            text: "Enhance Content Quality (CRAFT Framework)",
+            why: "Quality content keeps users engaged and signals value to search engines. Well-structured content with visuals performs 40% better.",
+            how: "1. Add more visuals (images, infographics, tables)\n2. Create or expand FAQ section with detailed answers (100+ words each)\n3. Break up long paragraphs for better readability\n4. Add table of contents for longer articles",
+            impact: Math.min(8, Math.ceil((30 - craftTotal) * 0.25)),
+            realWorldBenefit: "Higher engagement, lower bounce rate, better rankings",
+            priority: "high",
+            effort: "medium",
+            category: "craft"
+          });
+        }
+        
+        // GRAAF recommendations
+        if (graafTotal < 40) {
+          recs.push({
+            text: "Strengthen Content Authority (GRAAF Framework)",
+            why: "E-E-A-T (Experience, Expertise, Authoritativeness, Trust) is critical for rankings. Content with expert quotes and citations ranks 2x better.",
+            how: "1. Add expert quotes with proper attribution\n2. Include recent statistics (2023-2025) with sources\n3. Add author bio with credentials\n4. Update content with recent developments\n5. Link to authoritative sources",
+            impact: Math.min(6, Math.ceil((50 - graafTotal) * 0.12)),
+            realWorldBenefit: "Build trust, improve E-E-A-T score, rank for competitive keywords",
+            priority: "medium",
+            effort: "high",
+            category: "graaf"
+          });
+        }
       }
       
-      if (breakdown.craft?.faqIntegration < 4 && audit.faqCount > 0) {
+      // If no recommendations yet, add generic one
+      if (recs.length === 0) {
         recs.push({
-          text: `Expand FAQ answers to 100+ words (currently ${audit.faqAvgWords} avg)`,
-          why: "AI Overviews prefer detailed answers. Short answers (<100 words) are rarely cited.",
-          how: "1. Review each FAQ\n2. Add examples\n3. Include statistics\n4. Link to sources\n5. Aim for 100-150 words",
-          impact: 4 - breakdown.craft.faqIntegration,
-          realWorldBenefit: "Higher AI Overview citation rate",
-          priority: "high",
-          effort: "medium",
-          category: "craft"
-        });
-      }
-      
-      if (breakdown.technical?.metaOptimization < 4) {
-        recs.push({
-          text: "Optimize meta title and description",
-          why: "Meta tags improve CTR by 20-30%.",
-          how: `Title: 50-60 chars (current: ${audit.metaTitleLength})\nDescription: 150-160 chars (current: ${audit.metaDescLength})`,
-          impact: 4 - breakdown.technical.metaOptimization,
-          realWorldBenefit: "+20-30% click-through rate",
-          priority: "high",
+          text: "Content is well-optimized! Focus on maintaining quality",
+          why: "Your content scores high across all frameworks. Continue monitoring and updating.",
+          how: "1. Update statistics quarterly\n2. Refresh content every 6 months\n3. Monitor search performance\n4. Keep FAQ answers current",
+          impact: 0,
+          realWorldBenefit: "Maintain rankings and stay ahead of competitors",
+          priority: "medium",
           effort: "low",
-          category: "technical"
+          category: "maintenance"
         });
       }
       
@@ -796,6 +901,65 @@ RETURN ONLY JSON:
 
     function displayScoreBreakdown(data) {
       const breakdown = data.breakdown;
+      
+      // Check if we have detailed breakdown
+      const hasDetailedBreakdown = breakdown.technical?.schemaMarkup !== undefined;
+      
+      if (!hasDetailedBreakdown) {
+        // Show simplified view with note
+        const html = `
+          <div class="bg-yellow-900 bg-opacity-30 border border-yellow-600 rounded-lg p-4 mb-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-yellow-400">ℹ️</span>
+              <span class="font-semibold text-yellow-300">Simplified Breakdown</span>
+            </div>
+            <div class="text-sm text-gray-300">
+              This scan shows total scores only. For detailed sub-scores, the scan needs fresh analysis data.
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <div class="flex justify-between items-center p-3 bg-gray-700 rounded-lg">
+              <div class="flex items-center gap-3">
+                <span class="text-lg">🎯 GRAAF Framework:</span>
+                <span class="font-bold text-xl">${breakdown.graaf?.total || 0}/50</span>
+              </div>
+            </div>
+            <div class="text-sm text-gray-400 mt-2 px-3">
+              Credibility, Relevance, Actionability, Accuracy, Freshness
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <div class="flex justify-between items-center p-3 bg-gray-700 rounded-lg">
+              <div class="flex items-center gap-3">
+                <span class="text-lg">✨ CRAFT Framework:</span>
+                <span class="font-bold text-xl">${breakdown.craft?.total || 0}/30</span>
+              </div>
+            </div>
+            <div class="text-sm text-gray-400 mt-2 px-3">
+              Cut Fluff, Review & Optimize, Add Visuals, FAQ Integration, Trust Building
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <div class="flex justify-between items-center p-3 bg-gray-700 rounded-lg">
+              <div class="flex items-center gap-3">
+                <span class="text-lg">⚙️ Technical SEO:</span>
+                <span class="font-bold text-xl">${breakdown.technical?.total || 0}/20</span>
+              </div>
+            </div>
+            <div class="text-sm text-gray-400 mt-2 px-3">
+              Meta Optimization, Schema Markup, Internal Linking, Page Structure, Mobile
+            </div>
+          </div>
+        `;
+        
+        document.getElementById('scoreBreakdown').innerHTML = html;
+        return;
+      }
+      
+      // Detailed breakdown
       const html = `
         <div class="mb-3">
           <div class="flex justify-between items-center p-3 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600" onclick="toggleCalc('graaf-breakdown')">
