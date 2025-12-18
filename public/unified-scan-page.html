@@ -1275,7 +1275,7 @@ RETURN ONLY JSON:
             <div class="flex justify-between items-center p-3 bg-gray-700 rounded-lg">
               <div class="flex items-center gap-3">
                 <span class="text-lg">🎯 GRAAF Framework:</span>
-                <span class="font-bold text-xl">${breakdown.graaf?.total || 0}/50</span>
+                <span class="font-bold text-xl">${Math.round(breakdown.graaf?.total || 0)}/50</span>
               </div>
             </div>
             <div class="text-sm text-gray-400 mt-2 px-3">
@@ -1287,7 +1287,7 @@ RETURN ONLY JSON:
             <div class="flex justify-between items-center p-3 bg-gray-700 rounded-lg">
               <div class="flex items-center gap-3">
                 <span class="text-lg">✨ CRAFT Framework:</span>
-                <span class="font-bold text-xl">${breakdown.craft?.total || 0}/30</span>
+                <span class="font-bold text-xl">${Math.round(breakdown.craft?.total || 0)}/30</span>
               </div>
             </div>
             <div class="text-sm text-gray-400 mt-2 px-3">
@@ -1299,7 +1299,7 @@ RETURN ONLY JSON:
             <div class="flex justify-between items-center p-3 bg-gray-700 rounded-lg">
               <div class="flex items-center gap-3">
                 <span class="text-lg">⚙️ Technical SEO:</span>
-                <span class="font-bold text-xl">${breakdown.technical?.total || 0}/20</span>
+                <span class="font-bold text-xl">${Math.round(breakdown.technical?.total || 0)}/20</span>
               </div>
             </div>
             <div class="text-sm text-gray-400 mt-2 px-3">
@@ -1318,17 +1318,17 @@ RETURN ONLY JSON:
           <div class="flex justify-between items-center p-3 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600" onclick="toggleCalc('graaf-breakdown')">
             <div class="flex items-center gap-3">
               <span class="text-lg">🎯 GRAAF Framework:</span>
-              <span class="font-bold text-xl">${breakdown.graaf.total}/50</span>
+              <span class="font-bold text-xl">${Math.round(breakdown.graaf.total)}/50</span>
             </div>
             <span class="text-gray-400 text-sm">Click to expand ▼</span>
           </div>
           <div id="graaf-breakdown" class="calc-breakdown">
             <div class="space-y-2">
-              <div>• Credibility: ${breakdown.graaf.credibility}/10</div>
-              <div>• Relevance: ${breakdown.graaf.relevance}/10</div>
-              <div>• Actionability: ${breakdown.graaf.actionability}/10</div>
-              <div>• Accuracy: ${breakdown.graaf.accuracy}/10</div>
-              <div>• Freshness: ${breakdown.graaf.freshness}/10</div>
+              <div>• Credibility: ${Math.round(breakdown.graaf.credibility)}/10</div>
+              <div>• Relevance: ${Math.round(breakdown.graaf.relevance)}/10</div>
+              <div>• Actionability: ${Math.round(breakdown.graaf.actionability)}/10</div>
+              <div>• Accuracy: ${Math.round(breakdown.graaf.accuracy)}/10</div>
+              <div>• Freshness: ${Math.round(breakdown.graaf.freshness)}/10</div>
             </div>
           </div>
         </div>
@@ -1337,17 +1337,17 @@ RETURN ONLY JSON:
           <div class="flex justify-between items-center p-3 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600" onclick="toggleCalc('craft-breakdown')">
             <div class="flex items-center gap-3">
               <span class="text-lg">✨ CRAFT Framework:</span>
-              <span class="font-bold text-xl">${breakdown.craft.total}/30</span>
+              <span class="font-bold text-xl">${Math.round(breakdown.craft.total)}/30</span>
             </div>
             <span class="text-gray-400 text-sm">Click to expand ▼</span>
           </div>
           <div id="craft-breakdown" class="calc-breakdown">
             <div class="space-y-2">
-              <div>• Cut Fluff: ${breakdown.craft.cutFluff}/8</div>
-              <div>• Review & Optimize: ${breakdown.craft.reviewOptimize}/8</div>
-              <div>• Add Visuals: ${breakdown.craft.addVisuals}/6</div>
-              <div>• FAQ Integration: ${breakdown.craft.faqIntegration}/4</div>
-              <div>• Trust Building: ${breakdown.craft.trustBuilding}/4</div>
+              <div>• Cut Fluff: ${Math.round(breakdown.craft.cutFluff)}/8</div>
+              <div>• Review & Optimize: ${Math.round(breakdown.craft.reviewOptimize)}/8</div>
+              <div>• Add Visuals: ${Math.round(breakdown.craft.addVisuals)}/6</div>
+              <div>• FAQ Integration: ${Math.round(breakdown.craft.faqIntegration)}/4</div>
+              <div>• Trust Building: ${Math.round(breakdown.craft.trustBuilding)}/4</div>
             </div>
           </div>
         </div>
@@ -1356,17 +1356,17 @@ RETURN ONLY JSON:
           <div class="flex justify-between items-center p-3 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600" onclick="toggleCalc('technical-breakdown')">
             <div class="flex items-center gap-3">
               <span class="text-lg">⚙️ Technical SEO:</span>
-              <span class="font-bold text-xl">${breakdown.technical.total}/20</span>
+              <span class="font-bold text-xl">${Math.round(breakdown.technical.total)}/20</span>
             </div>
             <span class="text-gray-400 text-sm">Click to expand ▼</span>
           </div>
           <div id="technical-breakdown" class="calc-breakdown">
             <div class="space-y-2">
-              <div>• Meta Optimization: ${breakdown.technical.metaOptimization}/4</div>
-              <div>• Schema Markup: ${breakdown.technical.schemaMarkup}/4</div>
-              <div>• Internal Linking: ${breakdown.technical.internalLinking}/4</div>
-              <div>• Page Structure: ${breakdown.technical.pageStructure}/4</div>
-              <div>• Mobile Optimization: ${breakdown.technical.mobileOptimization}/4</div>
+              <div>• Meta Optimization: ${Math.round(breakdown.technical.metaOptimization)}/4</div>
+              <div>• Schema Markup: ${Math.round(breakdown.technical.schemaMarkup)}/4</div>
+              <div>• Internal Linking: ${Math.round(breakdown.technical.internalLinking)}/4</div>
+              <div>• Page Structure: ${Math.round(breakdown.technical.pageStructure)}/4</div>
+              <div>• Mobile Optimization: ${Math.round(breakdown.technical.mobileOptimization)}/4</div>
             </div>
           </div>
         </div>
