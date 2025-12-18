@@ -368,7 +368,7 @@
     // ============================================================================
     
     const CONFIG = {
-      scanEndpoint: '/api/scan',  // UNIFIED ENDPOINT - SINGLE SOURCE OF TRUTH
+      scanEndpoint: '/api/scan-free',  // RECOMMENDED: Has caching for consistency
       claudeEnabled: true
     };
 
@@ -648,22 +648,65 @@ RETURN ONLY JSON:
       try {
         document.getElementById('loadingText').textContent = 'Analyzing content (Layer 1: Backend)...';
         
-        const response = await fetch(`${CONFIG.scanEndpoint}?url=${encodeURIComponent(url)}`);
+        // FIX: Use POST with JSON body (not GET with query params)
+        const response = await fetch(CONFIG.scanEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ url: url })
+        });
         
         if (!response.ok) {
-          throw new Error(`Scan failed: ${response.statusText}`);
+          let errorMessage = '';
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorData.message || response.statusText;
+          } catch (e) {
+            errorMessage = response.statusText || 'Unknown error';
+          }
+          
+          throw new Error(`Scan failed (${response.status}): ${errorMessage}`);
         }
         
         const data = await response.json();
-        window.lastScanData = data;
+        
+        // Handle both response structures
+        let scanData;
+        if (data.scan) {
+          // /api/scan returns: { success: true, scan: {...} }
+          scanData = {
+            url: data.scan.url,
+            score: data.scan.v52_score,
+            quality: data.scan.quality,
+            breakdown: data.scan.breakdown,
+            wordCount: data.scan.wordCount,
+            timestamp: data.scan.scanned_at
+          };
+        } else if (data.success && data.url) {
+          // /api/scan-free returns direct result (perfect format!)
+          scanData = data;
+          
+          // Show cache status
+          if (data.cached) {
+            console.log('✅ Using cached result for consistency');
+            document.getElementById('loadingText').textContent = 
+              '✅ Using cached result (consistent scoring)...';
+            await new Promise(r => setTimeout(r, 800)); // Brief pause to show message
+          }
+        } else {
+          throw new Error('Invalid response structure from backend');
+        }
+        
+        window.lastScanData = scanData;
         
         document.getElementById('loadingText').textContent = 'Calculating potential (Layer 2: Formulas)...';
-        const deterministicResult = calculateDeterministicPotential(data);
+        const deterministicResult = calculateDeterministicPotential(scanData);
         
         let validation;
         if (CONFIG.claudeEnabled) {
           document.getElementById('loadingText').textContent = 'Validating with AI (Layer 3: Claude)...';
-          validation = await validateWithClaude(deterministicResult, data);
+          validation = await validateWithClaude(deterministicResult, scanData);
         } else {
           validation = {
             validated: deterministicResult.potential,
@@ -676,16 +719,16 @@ RETURN ONLY JSON:
         let recommendations;
         if (CONFIG.claudeEnabled) {
           document.getElementById('loadingText').textContent = 'Generating recommendations (Layer 4: Claude)...';
-          recommendations = await generateRecommendationsWithClaude(data, validation);
+          recommendations = await generateRecommendationsWithClaude(scanData, validation);
         } else {
-          recommendations = generateDeterministicRecommendations(data);
+          recommendations = generateDeterministicRecommendations(scanData);
         }
         
-        displayResults({ ...data, deterministicResult, validation, recommendations });
+        displayResults({ ...scanData, deterministicResult, validation, recommendations });
         
       } catch (error) {
         console.error('Scan error:', error);
-        alert(`Scan failed: ${error.message}`);
+        alert(`Scan failed:\n\n${error.message}\n\nCheck browser console for details.`);
       } finally {
         document.getElementById('loadingIndicator').classList.add('hidden');
       }
