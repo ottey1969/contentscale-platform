@@ -69,64 +69,24 @@
         <div class="flex items-center justify-between">
           <div class="flex-1">
             <div class="flex items-center gap-2 mb-1">
-              <span class="text-sm font-bold" id="currentMode">🤖 AI Mode</span>
-              <span class="text-xs bg-purple-600 px-2 py-0.5 rounded-full font-semibold">RECOMMENDED</span>
+              <span class="text-sm font-bold text-green-400">⚡ Smart Scan Mode</span>
+              <span class="text-xs bg-green-600 px-2 py-0.5 rounded-full font-semibold">ACTIVE</span>
             </div>
-            <div class="text-xs text-gray-400" id="modeDescription">
-              Edge case detection • Educational WHY/HOW • AI-era SEO insights
+            <div class="text-xs text-gray-400">
+              Backend AI validation • Detailed audit • Specific recommendations
             </div>
           </div>
-          <label class="toggle-switch ml-4 flex-shrink-0">
-            <input type="checkbox" id="claudeToggle" checked>
-            <span class="toggle-slider"></span>
-          </label>
         </div>
         
-        <!-- Expandable Comparison -->
-        <details class="mt-3">
-          <summary class="text-xs text-purple-400 cursor-pointer hover:text-purple-300 select-none">
-            ▸ What's the difference between modes? (click to expand)
-          </summary>
-          <div class="mt-3 grid md:grid-cols-2 gap-3 text-xs">
-            <!-- Basic Mode -->
-            <div class="bg-gray-900 bg-opacity-70 rounded-lg p-3 border border-gray-700">
-              <div class="font-bold text-green-400 mb-2 flex items-center justify-between">
-                <span>⚡ Basic Mode</span>
-                <span class="text-green-300 text-xs">FREE</span>
-              </div>
-              <div class="space-y-1.5 text-gray-400">
-                <div>✓ Score calculation (0-100)</div>
-                <div>✓ Potential score (formulas)</div>
-                <div>✓ Basic recommendations</div>
-                <div class="text-gray-600">✗ Edge case detection</div>
-                <div class="text-gray-600">✗ Educational WHY/HOW</div>
-                <div class="text-gray-600">✗ AI-era SEO insights</div>
-              </div>
-              <div class="mt-3 pt-3 border-t border-gray-800 text-gray-500">
-                ⚡ ~3 seconds | Quick check
-              </div>
-            </div>
-            
-            <!-- AI Mode -->
-            <div class="bg-purple-900 bg-opacity-40 rounded-lg p-3 border-2 border-purple-500">
-              <div class="font-bold text-purple-400 mb-2 flex items-center justify-between">
-                <span>🤖 AI Mode</span>
-                <span class="text-purple-300 text-xs">BEST</span>
-              </div>
-              <div class="space-y-1.5 text-gray-300">
-                <div>✓ <strong>Everything from Basic</strong></div>
-                <div>✓ AI validation (edge cases)</div>
-                <div>✓ Educational explanations</div>
-                <div>✓ WHY, HOW, WHAT for each fix</div>
-                <div>✓ AI-era SEO insights</div>
-                <div>✓ Priority ranking</div>
-              </div>
-              <div class="mt-3 pt-3 border-t border-purple-800 text-gray-400">
-                ⚡ ~10 seconds | Deep analysis + learning
-              </div>
-            </div>
+        <div class="mt-3 bg-gray-900 bg-opacity-50 rounded p-3 text-xs text-gray-400">
+          <div class="font-semibold text-gray-300 mb-1">✅ What you get:</div>
+          <div class="space-y-1">
+            <div>• 100+ metrics analyzed (FAQ, images, schema, etc.)</div>
+            <div>• AI validation from backend (GRAAF+CRAFT scoring)</div>
+            <div>• Specific recommendations based on YOUR content</div>
+            <div>• Only suggests what's actually missing</div>
           </div>
-        </details>
+        </div>
       </div>
       
       <!-- Example & Speed Info -->
@@ -364,36 +324,21 @@
 
   <script>
     // ============================================================================
+    // VERSION IDENTIFIER - Check console to verify you have latest version!
+    // ============================================================================
+    console.log('%c🎯 ContentScale Scanner - VERSION: NO-CORS-v2.0', 'color: #10b981; font-size: 16px; font-weight: bold');
+    console.log('%cIf you see CORS errors, do HARD REFRESH: Ctrl+Shift+R (Windows) or Cmd+Shift+R (Mac)', 'color: #f59e0b; font-size: 12px');
+    
+    // ============================================================================
     // CONFIGURATION - SINGLE UNIFIED ENDPOINT
     // ============================================================================
     
     const CONFIG = {
-      scanEndpoint: '/api/scan-free',  // RECOMMENDED: Has caching for consistency
-      claudeEnabled: true
+      scanEndpoint: '/api/scan',  // Fresh scan with full audit data
+      claudeEnabled: false  // DISABLED: CORS blocks frontend Claude calls, backend handles AI
     };
 
-    // Toggle Claude features
-    document.getElementById('claudeToggle').addEventListener('change', (e) => {
-      CONFIG.claudeEnabled = e.target.checked;
-      
-      // Update mode display
-      const currentMode = document.getElementById('currentMode');
-      const modeDescription = document.getElementById('modeDescription');
-      
-      if (e.target.checked) {
-        currentMode.innerHTML = '🤖 AI Mode';
-        currentMode.className = 'text-sm font-bold text-purple-400';
-        modeDescription.textContent = 'Edge case detection • Educational WHY/HOW • AI-era SEO insights';
-      } else {
-        currentMode.innerHTML = '⚡ Basic Mode';
-        currentMode.className = 'text-sm font-bold text-green-400';
-        modeDescription.textContent = 'Quick analysis • Formulas and scores only • ~3 seconds';
-      }
-      
-      if (window.lastScanData) {
-        displayResults(window.lastScanData);
-      }
-    });
+    console.log('⚙️ CONFIG:', CONFIG);
 
     // ============================================================================
     // LAYER 1-2: DETERMINISTIC CORE
@@ -613,9 +558,258 @@ RETURN ONLY JSON:
       const recs = [];
       const breakdown = data.breakdown || {};
       const audit = data.audit || {};
+      const validation = data.validation || {};
       
-      // Check if we have detailed breakdown
+      // Check if we have detailed breakdown with audit data
       const hasDetailedBreakdown = breakdown.technical?.schemaMarkup !== undefined;
+      const hasAuditData = audit && Object.keys(audit).length > 5;
+      
+      console.log('Generating recommendations:', {
+        hasDetailedBreakdown,
+        hasAuditData,
+        auditKeys: Object.keys(audit).length
+      });
+      
+      if (hasDetailedBreakdown && hasAuditData) {
+        // DETAILED RECOMMENDATIONS based on ACTUAL audit data
+        
+        // 1. Schema markup - check actual schema
+        const schemaScore = breakdown.technical?.schemaMarkup || 0;
+        const hasSchema = audit.schemaTypes && audit.schemaTypes.length > 0;
+        if (schemaScore < 4 || !hasSchema) {
+          const missingSchemas = [];
+          if (!hasSchema || !audit.schemaTypes.includes('Article')) {
+            missingSchemas.push('Article');
+          }
+          if (!hasSchema || !audit.schemaTypes.includes('FAQPage')) {
+            missingSchemas.push('FAQPage');
+          }
+          
+          if (missingSchemas.length > 0) {
+            recs.push({
+              text: `Add ${missingSchemas.join(' + ')} schema markup (JSON-LD)`,
+              why: "67% of searches show AI Overviews. Without schema, your content is invisible to AI systems. This is THE most critical technical fix.",
+              how: `Missing: ${missingSchemas.join(', ')}\n\n1. Go to schema.org for templates\n2. Add Article schema with headline, author, datePublished\n3. Add FAQPage schema for Q&A sections\n4. Insert JSON-LD in <head> section\n5. Test with Google Rich Results Validator`,
+              impact: 4 - schemaScore,
+              realWorldBenefit: "Appear in AI Overviews, Featured Snippets, Knowledge Panels",
+              priority: "critical",
+              effort: "low",
+              category: "technical"
+            });
+          }
+        }
+        
+        // 2. FAQ - check actual FAQ quality
+        const faqScore = breakdown.craft?.faqIntegration || 0;
+        const faqCount = audit.faqCount || 0;
+        const faqAvgWords = audit.faqAvgWords || 0;
+        
+        if (faqCount === 0) {
+          // No FAQ at all
+          recs.push({
+            text: "Create FAQ section (currently missing)",
+            why: "FAQ sections are GOLD for AI Overviews. Articles with FAQ get 2x more featured snippets. You have NO FAQ section detected.",
+            how: "1. Research 'People Also Ask' for your topic\n2. Create 5-10 common questions\n3. Write 100-150 word answers with examples\n4. Add FAQPage schema markup\n5. Place FAQ near end of article",
+            impact: 4 - faqScore,
+            realWorldBenefit: "2x higher Featured Snippet chance + AI citations",
+            priority: "critical",
+            effort: "medium",
+            category: "craft"
+          });
+        } else if (faqAvgWords < 100 && faqScore < 4) {
+          // FAQ exists but answers too short
+          recs.push({
+            text: `Expand FAQ answers - currently ${faqCount} questions averaging ${faqAvgWords} words`,
+            why: `You have ${faqCount} FAQs but answers are too short (${faqAvgWords} words avg). AI Overviews prefer 100+ word answers with examples and sources.`,
+            how: "1. Review each FAQ answer\n2. Add specific examples\n3. Include statistics with sources\n4. Aim for 100-150 words per answer\n5. Add 'According to [source]...' citations",
+            impact: 4 - faqScore,
+            realWorldBenefit: "Higher AI Overview citation rate",
+            priority: "high",
+            effort: "medium",
+            category: "craft"
+          });
+        }
+        
+        // 3. Meta tags - check actual lengths
+        const metaScore = breakdown.technical?.metaOptimization || 0;
+        const titleLength = audit.metaTitleLength || 0;
+        const descLength = audit.metaDescLength || 0;
+        
+        if (metaScore < 4) {
+          const issues = [];
+          if (titleLength < 50 || titleLength > 60) {
+            issues.push(`Title: ${titleLength} chars (should be 50-60)`);
+          }
+          if (descLength < 150 || descLength > 160) {
+            issues.push(`Description: ${descLength} chars (should be 150-160)`);
+          }
+          
+          if (issues.length > 0) {
+            recs.push({
+              text: "Optimize meta tags",
+              why: "Meta tags improve CTR by 20-30%. Your current tags need adjustment:\n" + issues.join('\n'),
+              how: `Current:\n- Title: ${titleLength} chars\n- Description: ${descLength} chars\n\nFix:\n- Title: Keep 50-60 chars, keyword in first 30\n- Description: Write 150-160 chars with CTA`,
+              impact: 4 - metaScore,
+              realWorldBenefit: "+20-30% more clicks from search results",
+              priority: "high",
+              effort: "low",
+              category: "technical"
+            });
+          }
+        }
+        
+        // 4. Images & Alt texts - check actual counts
+        const mobileScore = breakdown.technical?.mobileOptimization || 0;
+        const imageCount = audit.images || 0;
+        const altTextCount = audit.altTexts || 0;
+        const missingAlts = Math.max(0, imageCount - altTextCount);
+        
+        if (missingAlts > 0 && mobileScore < 4) {
+          recs.push({
+            text: `Add alt texts to ${missingAlts} images (${imageCount} total, ${altTextCount} have alt)`,
+            why: `You have ${imageCount} images but ${missingAlts} are missing alt texts. This hurts accessibility, SEO, and mobile rankings.`,
+            how: "1. Review each image without alt text\n2. Describe what's in the image (10-15 words)\n3. Include target keyword naturally\n4. Be specific, not generic\n5. Skip alt for decorative images",
+            impact: Math.min(4, Math.ceil(missingAlts / 2)),
+            realWorldBenefit: "Better mobile rankings + image search visibility",
+            priority: "high",
+            effort: "low",
+            category: "technical"
+          });
+        }
+        
+        // 5. Visuals - check if enough
+        const visualsScore = breakdown.craft?.addVisuals || 0;
+        const wordCount = audit.wordCount || 0;
+        const expectedImages = Math.ceil(wordCount / 300); // 1 per 300 words
+        
+        if (imageCount < expectedImages && visualsScore < 6) {
+          recs.push({
+            text: `Add more visuals - ${imageCount} images for ${wordCount} words (recommend ${expectedImages})`,
+            why: `Your article has ${wordCount} words but only ${imageCount} images. Aim for 1 image per 300 words. Content with visuals gets 94% more views.`,
+            how: "1. Add images every 300-400 words\n2. Create data tables for statistics\n3. Add infographic for key concepts\n4. Include screenshots if tutorial\n5. Optimize all images (compress, add alt)",
+            impact: 6 - visualsScore,
+            realWorldBenefit: "+94% more views, better engagement",
+            priority: "high",
+            effort: "medium",
+            category: "craft"
+          });
+        }
+        
+        // 6. Expert quotes - check actual count
+        const credibilityScore = breakdown.graaf?.credibility || 0;
+        const expertQuotes = audit.expertQuotes || 0;
+        const statistics = audit.statistics || 0;
+        const sources = audit.sources || 0;
+        
+        if (expertQuotes < 3 && credibilityScore < 8) {
+          recs.push({
+            text: `Add expert quotes - currently ${expertQuotes} detected`,
+            why: `Only ${expertQuotes} expert quotes found. Articles with 3+ expert quotes rank 40% higher through E-E-A-T signals.`,
+            how: "1. Find 2-3 industry experts to quote\n2. Include: 'According to [Name], [Title] at [Org]...'\n3. Use recent quotes (2023-2025)\n4. Link to original source\n5. Add actual credentials (PhD, 20 years experience, etc.)",
+            impact: Math.min(3, 8 - credibilityScore),
+            realWorldBenefit: "+40% better rankings through E-E-A-T",
+            priority: "high",
+            effort: "medium",
+            category: "graaf"
+          });
+        }
+        
+        // 7. Statistics & sources
+        if (statistics < 5 || sources < 3) {
+          recs.push({
+            text: `Add more data: ${statistics} statistics, ${sources} cited sources`,
+            why: `Current: ${statistics} statistics, ${sources} sources. Articles with 5+ statistics and 3+ sources rank significantly better.`,
+            how: "1. Find recent industry reports (2023-2025)\n2. Add specific numbers: '47% of companies...'\n3. Cite source: 'According to [Report Name]...'\n4. Link to original research\n5. Prefer .edu, .gov, industry leaders",
+            impact: 2,
+            realWorldBenefit: "Build authority and trust signals",
+            priority: "medium",
+            effort: "medium",
+            category: "graaf"
+          });
+        }
+        
+        // 8. Table of contents - check if article is long enough
+        const tocPresent = audit.tocPresent || 0;
+        if (wordCount > 1500 && tocPresent === 0) {
+          recs.push({
+            text: "Add table of contents (article is long enough)",
+            why: `Your article has ${wordCount} words but no TOC. Articles over 1500 words need TOC for better UX and Google loves clear structure.`,
+            how: "1. Add TOC at the beginning (after intro)\n2. Link to each H2 heading\n3. Use jump links (#heading-name)\n4. Keep it simple and scannable\n5. Consider making it sticky on desktop",
+            impact: 1,
+            realWorldBenefit: "Better UX, lower bounce rate, clearer structure",
+            priority: "medium",
+            effort: "low",
+            category: "craft"
+          });
+        }
+        
+        // 9. Internal links
+        const linkingScore = breakdown.technical?.internalLinking || 0;
+        const internalLinks = audit.internalLinks || 0;
+        if (internalLinks < 3 && linkingScore < 4) {
+          recs.push({
+            text: `Add internal links - currently ${internalLinks} detected`,
+            why: `Only ${internalLinks} internal links found. Articles with 3-5 internal links rank 40% better through better site structure.`,
+            how: "1. Link to related articles\n2. Use descriptive anchor text\n3. Link to pillar content\n4. Aim for 3-5 contextual links\n5. Link naturally within content",
+            impact: 4 - linkingScore,
+            realWorldBenefit: "Better rankings + distribute page authority",
+            priority: "medium",
+            effort: "low",
+            category: "technical"
+          });
+        }
+        
+      } else {
+        // FALLBACK: Generic recommendations when no detailed data
+        console.warn('No detailed audit data - using generic recommendations');
+        
+        const technicalTotal = breakdown.technical?.total || 0;
+        const craftTotal = breakdown.craft?.total || 0;
+        const graafTotal = breakdown.graaf?.total || 0;
+        
+        if (technicalTotal < 16) {
+          recs.push({
+            text: "Improve Technical SEO (needs fresh scan for specifics)",
+            why: "Technical SEO score is low. Run a fresh scan (not cached) to see specific missing elements like schema, meta tags, mobile issues.",
+            how: "For detailed audit:\n1. Click scan again (forces fresh scan)\n2. System will analyze 100+ metrics\n3. You'll get specific recommendations\n4. Based on what's actually missing",
+            impact: Math.min(8, 20 - technicalTotal),
+            realWorldBenefit: "Get specific actionable fixes",
+            priority: "critical",
+            effort: "low",
+            category: "technical"
+          });
+        }
+        
+        if (craftTotal < 24) {
+          recs.push({
+            text: "Enhance Content Quality (needs fresh scan for specifics)",
+            why: "Content quality score is low. Fresh scan will show exact issues: FAQ quality, visual count, readability metrics.",
+            how: "Run fresh scan to see:\n- Exact FAQ count and quality\n- Image count vs word count\n- Actual readability metrics\n- Missing content elements",
+            impact: Math.min(6, 30 - craftTotal),
+            realWorldBenefit: "Know exactly what to fix",
+            priority: "high",
+            effort: "medium",
+            category: "craft"
+          });
+        }
+      }
+      
+      // If no recommendations, content is excellent
+      if (recs.length === 0) {
+        recs.push({
+          text: "Excellent! Content is well-optimized",
+          why: "Your content scores high across all frameworks. All major optimization opportunities have been addressed.",
+          how: "Maintenance:\n1. Update statistics quarterly\n2. Refresh content every 6 months\n3. Monitor search rankings\n4. Keep FAQ answers current\n5. Add new expert quotes periodically",
+          impact: 0,
+          realWorldBenefit: "Maintain top rankings",
+          priority: "medium",
+          effort: "low",
+          category: "maintenance"
+        });
+      }
+      
+      return recs;
+    }
       
       if (hasDetailedBreakdown) {
         // DETAILED RECOMMENDATIONS
@@ -664,51 +858,155 @@ RETURN ONLY JSON:
         
       } else {
         // SIMPLIFIED RECOMMENDATIONS (when only totals available)
+        // Generate 6-8 specific recommendations based on what's missing
         
         const technicalTotal = breakdown.technical?.total || 0;
         const craftTotal = breakdown.craft?.total || 0;
         const graafTotal = breakdown.graaf?.total || 0;
         
-        // Technical SEO recommendations
-        if (technicalTotal < 16) {
+        // TECHNICAL SEO - Break down into specific items
+        if (technicalTotal < 20) {
+          // Schema Markup (most impactful)
           recs.push({
-            text: "Improve Technical SEO (Schema, Meta, Mobile)",
-            why: "Technical SEO is the foundation. Without it, even great content won't rank well. Focus on schema markup for AI Overviews visibility.",
-            how: "1. Add Article + FAQPage schema markup (critical for AI Overviews)\n2. Optimize meta title (50-60 chars) and description (150-160 chars)\n3. Ensure mobile responsiveness and fast loading\n4. Add proper alt texts to all images",
-            impact: Math.min(12, Math.ceil((20 - technicalTotal) * 0.6)),
-            realWorldBenefit: "Appear in AI Overviews, Featured Snippets, and improve mobile rankings",
+            text: "Add Article + FAQPage schema markup (JSON-LD)",
+            why: "67% of searches now show AI Overviews. Without schema markup, your content is invisible to AI systems. This is THE most critical technical fix.",
+            how: "1. Go to schema.org/Article for template\n2. Fill in: headline, author, datePublished, description\n3. Add FAQPage schema for all Q&A content\n4. Insert JSON-LD in <head> section\n5. Test with Google Rich Results Validator",
+            impact: 4,
+            realWorldBenefit: "Appear in AI Overviews, Featured Snippets, Knowledge Panels",
             priority: "critical",
             effort: "low",
             category: "technical"
           });
+          
+          // Meta Tags
+          if (technicalTotal < 18) {
+            recs.push({
+              text: "Optimize meta title and description",
+              why: "Meta tags are your content's 'ad' in search results. Well-optimized tags can improve click-through rate by 20-30%.",
+              how: "Meta Title:\n- Keep 50-60 characters\n- Include main keyword in first 30 chars\n- Add brand at end (if space)\n\nMeta Description:\n- Write 150-160 characters\n- Include main keyword naturally\n- Add clear call-to-action\n- Make it compelling!",
+              impact: 2,
+              realWorldBenefit: "+20-30% more clicks from search results",
+              priority: "high",
+              effort: "low",
+              category: "technical"
+            });
+          }
+          
+          // Mobile Optimization
+          if (technicalTotal < 16) {
+            recs.push({
+              text: "Improve mobile optimization and image alt texts",
+              why: "60% of searches happen on mobile. Missing alt texts hurt accessibility, SEO, and mobile image search rankings.",
+              how: "Mobile:\n- Test with Google Mobile-Friendly Test\n- Ensure text is readable without zooming\n- Make buttons/links easy to tap (44px min)\n\nAlt Texts:\n- Describe what's actually in the image\n- Include target keyword naturally\n- Keep 10-15 words\n- Be specific, not generic",
+              impact: 2,
+              realWorldBenefit: "Better mobile rankings + image search visibility",
+              priority: "high",
+              effort: "low",
+              category: "technical"
+            });
+          }
+          
+          // Internal Linking
+          if (technicalTotal < 14) {
+            recs.push({
+              text: "Add contextual internal links",
+              why: "Internal links help Google understand your site structure and distribute ranking power. Pages with 3+ internal links rank 40% better.",
+              how: "1. Identify your pillar content (most important pages)\n2. Link to them from related articles\n3. Use descriptive anchor text (not 'click here')\n4. Aim for 3-5 internal links per article\n5. Link to both older and newer content",
+              impact: 2,
+              realWorldBenefit: "Better site structure + distribute ranking power",
+              priority: "medium",
+              effort: "low",
+              category: "technical"
+            });
+          }
         }
         
-        // CRAFT recommendations
-        if (craftTotal < 24) {
+        // CRAFT FRAMEWORK - Specific content improvements
+        if (craftTotal < 30) {
+          // FAQ Section
+          if (craftTotal < 26) {
+            recs.push({
+              text: "Create or expand FAQ section with detailed answers",
+              why: "FAQ sections are GOLD for AI Overviews. Google loves Q&A format. Articles with FAQ sections get 2x more featured snippet appearances.",
+              how: "1. Research 'People Also Ask' questions for your topic\n2. Write 100-150 word answers for each question\n3. Include statistics, examples, and sources\n4. Add FAQPage schema markup\n5. Place FAQ near the end of article",
+              impact: 4,
+              realWorldBenefit: "2x higher chance of Featured Snippets + AI Overview citations",
+              priority: "high",
+              effort: "medium",
+              category: "craft"
+            });
+          }
+          
+          // Visual Content
+          if (craftTotal < 24) {
+            recs.push({
+              text: "Add more visual content (images, infographics, tables)",
+              why: "Content with visuals gets 94% more views. Tables make data scannable. Infographics are shared 3x more than text.",
+              how: "1. Add 1 image per 300 words minimum\n2. Create data tables for statistics/comparisons\n3. Design simple infographic for key concepts\n4. Add screenshots for tutorials\n5. Use original images when possible\n6. Optimize all images (compress, add alt text)",
+              impact: 3,
+              realWorldBenefit: "+94% more views, better engagement, lower bounce rate",
+              priority: "high",
+              effort: "medium",
+              category: "craft"
+            });
+          }
+          
+          // Readability
+          if (craftTotal < 22) {
+            recs.push({
+              text: "Improve readability and content structure",
+              why: "Users scan, they don't read. Well-structured content keeps readers engaged 2x longer. Clear structure signals quality to Google.",
+              how: "1. Break paragraphs into 2-4 sentences max\n2. Add clear subheadings (H2, H3) every 200-300 words\n3. Use bullet points for lists\n4. Add table of contents for long articles\n5. Highlight key takeaways in callout boxes\n6. Use simple language (avoid jargon)",
+              impact: 2,
+              realWorldBenefit: "2x longer time on page, lower bounce rate",
+              priority: "medium",
+              effort: "low",
+              category: "craft"
+            });
+          }
+        }
+        
+        // GRAAF FRAMEWORK - Authority & Trust
+        if (graafTotal < 45) {
+          // Expert Quotes & Sources
           recs.push({
-            text: "Enhance Content Quality (CRAFT Framework)",
-            why: "Quality content keeps users engaged and signals value to search engines. Well-structured content with visuals performs 40% better.",
-            how: "1. Add more visuals (images, infographics, tables)\n2. Create or expand FAQ section with detailed answers (100+ words each)\n3. Break up long paragraphs for better readability\n4. Add table of contents for longer articles",
-            impact: Math.min(8, Math.ceil((30 - craftTotal) * 0.25)),
-            realWorldBenefit: "Higher engagement, lower bounce rate, better rankings",
+            text: "Add expert quotes and cite authoritative sources",
+            why: "E-E-A-T (Experience, Expertise, Authority, Trust) is Google's #1 quality signal. Content with expert quotes ranks 40% higher.",
+            how: "1. Find 2-3 industry experts to quote\n2. Include their full name, title, and organization\n3. Link to original source if quoting research\n4. Add 'According to [Expert Name], [Title]...'\n5. Include recent statistics (2023-2025) with sources\n6. Link to .edu, .gov, or reputable industry sites",
+            impact: 3,
+            realWorldBenefit: "40% better rankings + build E-E-A-T score",
             priority: "high",
             effort: "medium",
-            category: "craft"
-          });
-        }
-        
-        // GRAAF recommendations
-        if (graafTotal < 40) {
-          recs.push({
-            text: "Strengthen Content Authority (GRAAF Framework)",
-            why: "E-E-A-T (Experience, Expertise, Authoritativeness, Trust) is critical for rankings. Content with expert quotes and citations ranks 2x better.",
-            how: "1. Add expert quotes with proper attribution\n2. Include recent statistics (2023-2025) with sources\n3. Add author bio with credentials\n4. Update content with recent developments\n5. Link to authoritative sources",
-            impact: Math.min(6, Math.ceil((50 - graafTotal) * 0.12)),
-            realWorldBenefit: "Build trust, improve E-E-A-T score, rank for competitive keywords",
-            priority: "medium",
-            effort: "high",
             category: "graaf"
           });
+          
+          // Author Bio & Credentials
+          if (graafTotal < 42) {
+            recs.push({
+              text: "Add comprehensive author bio with credentials",
+              why: "Google wants to know WHO wrote the content. Author expertise directly impacts E-E-A-T. Articles with author bios rank 15% higher.",
+              how: "1. Add author name at top of article\n2. Include professional photo\n3. Write 100-word bio highlighting:\n   - Relevant experience/years in field\n   - Credentials, certifications, degrees\n   - Previous publications or achievements\n4. Link to author's LinkedIn or website\n5. Add Author schema markup",
+              impact: 2,
+              realWorldBenefit: "+15% better rankings through E-E-A-T",
+              priority: "medium",
+              effort: "low",
+              category: "graaf"
+          });
+          }
+          
+          // Content Freshness
+          if (graafTotal < 40) {
+            recs.push({
+              text: "Update content with recent data and current year mentions",
+              why: "Google favors fresh content. Adding recent statistics and updating the publish date can boost rankings by 25%.",
+              how: "1. Replace old statistics with 2024-2025 data\n2. Add 'Updated: [Current Month Year]' at top\n3. Mention current year in intro paragraph\n4. Update examples to recent events\n5. Remove outdated information\n6. Add section on latest trends/developments",
+              impact: 2,
+              realWorldBenefit: "+25% ranking boost through freshness signal",
+              priority: "medium",
+              effort: "low",
+              category: "graaf"
+            });
+          }
         }
       }
       
@@ -746,6 +1044,9 @@ RETURN ONLY JSON:
         return;
       }
       
+      console.log('🔍 Starting scan:', url);
+      console.log('📡 Endpoint:', CONFIG.scanEndpoint);
+      
       document.getElementById('loadingIndicator').classList.remove('hidden');
       document.getElementById('resultsContainer').classList.add('hidden');
       document.getElementById('loadingText').textContent = 'Scanning content...';
@@ -753,7 +1054,9 @@ RETURN ONLY JSON:
       try {
         document.getElementById('loadingText').textContent = 'Analyzing content (Layer 1: Backend)...';
         
-        // FIX: Use POST with JSON body (not GET with query params)
+        console.log('📤 Sending POST request...');
+        
+        // FIX: Use POST with JSON body
         const response = await fetch(CONFIG.scanEndpoint, {
           method: 'POST',
           headers: {
@@ -762,34 +1065,62 @@ RETURN ONLY JSON:
           body: JSON.stringify({ url: url })
         });
         
+        console.log('📥 Response status:', response.status);
+        console.log('📥 Response OK:', response.ok);
+        
         if (!response.ok) {
           let errorMessage = '';
           try {
             const errorData = await response.json();
             errorMessage = errorData.error || errorData.message || response.statusText;
+            console.error('❌ Backend error:', errorData);
           } catch (e) {
             errorMessage = response.statusText || 'Unknown error';
+            console.error('❌ Could not parse error response');
           }
           
           throw new Error(`Scan failed (${response.status}): ${errorMessage}`);
         }
         
         const data = await response.json();
+        console.log('✅ Response data:', data);
         
         // Handle both response structures
         let scanData;
         if (data.scan) {
-          // /api/scan returns: { success: true, scan: {...} }
+          // /api/scan returns: { success: true, scan: { v52_score: 72, ... } }
+          console.log('📊 Parsing /api/scan response structure');
+          
+          // Extract audit data from validation.parserCounts
+          let auditData = {};
+          if (data.scan.validation && data.scan.validation.parserCounts) {
+            auditData = data.scan.validation.parserCounts;
+            console.log('✅ Audit data from validation.parserCounts:', auditData);
+          } else if (data.validation && data.validation.parserCounts) {
+            auditData = data.validation.parserCounts;
+            console.log('✅ Audit data from validation.parserCounts:', auditData);
+          }
+          
           scanData = {
             url: data.scan.url,
             score: data.scan.v52_score,
             quality: data.scan.quality,
             breakdown: data.scan.breakdown,
             wordCount: data.scan.wordCount,
-            timestamp: data.scan.scanned_at
+            timestamp: data.scan.scanned_at,
+            validation: data.scan.validation || data.validation || {},
+            audit: auditData // Use validation.parserCounts as audit data
           };
+          
+          console.log('📊 Final scanData:', {
+            score: scanData.score,
+            hasBreakdown: !!scanData.breakdown,
+            hasAudit: !!scanData.audit && Object.keys(scanData.audit).length > 0,
+            auditKeys: Object.keys(scanData.audit)
+          });
         } else if (data.success && data.url) {
-          // /api/scan-free returns direct result (perfect format!)
+          // /api/scan-free returns direct result
+          console.log('📊 Parsing /api/scan-free response structure');
           scanData = data;
           
           // Show cache status
@@ -797,21 +1128,25 @@ RETURN ONLY JSON:
             console.log('✅ Using cached result for consistency');
             document.getElementById('loadingText').textContent = 
               '✅ Using cached result (consistent scoring)...';
-            await new Promise(r => setTimeout(r, 800)); // Brief pause to show message
+            await new Promise(r => setTimeout(r, 800));
           }
         } else {
-          throw new Error('Invalid response structure from backend');
+          console.error('❌ Invalid response structure:', data);
+          throw new Error('Invalid response structure from backend. Expected "scan" or "url" property.');
         }
         
+        console.log('✅ Scan data prepared:', scanData);
         window.lastScanData = scanData;
         
         document.getElementById('loadingText').textContent = 'Calculating potential (Layer 2: Formulas)...';
         const deterministicResult = calculateDeterministicPotential(scanData);
+        console.log('✅ Deterministic potential:', deterministicResult);
         
         let validation;
         if (CONFIG.claudeEnabled) {
           document.getElementById('loadingText').textContent = 'Validating with AI (Layer 3: Claude)...';
           validation = await validateWithClaude(deterministicResult, scanData);
+          console.log('✅ AI validation:', validation);
         } else {
           validation = {
             validated: deterministicResult.potential,
@@ -825,15 +1160,55 @@ RETURN ONLY JSON:
         if (CONFIG.claudeEnabled) {
           document.getElementById('loadingText').textContent = 'Generating recommendations (Layer 4: Claude)...';
           recommendations = await generateRecommendationsWithClaude(scanData, validation);
+          console.log('✅ Recommendations:', recommendations);
         } else {
           recommendations = generateDeterministicRecommendations(scanData);
+          console.log('✅ Deterministic recommendations:', recommendations);
         }
         
+        console.log('🎉 Displaying results...');
         displayResults({ ...scanData, deterministicResult, validation, recommendations });
         
       } catch (error) {
-        console.error('Scan error:', error);
-        alert(`Scan failed:\n\n${error.message}\n\nCheck browser console for details.`);
+        console.error('❌ SCAN ERROR:', error);
+        console.error('❌ Error stack:', error.stack);
+        
+        // User-friendly error messages
+        let userMessage = 'Scan failed:\n\n';
+        
+        if (error.message.includes('NetworkError') || error.message.includes('Failed to fetch')) {
+          userMessage += '🌐 Network Error\n\n';
+          userMessage += 'Cannot connect to backend.\n\n';
+          userMessage += 'Possible causes:\n';
+          userMessage += '• Railway app is down\n';
+          userMessage += '• Network connection issue\n';
+          userMessage += '• CORS not configured\n\n';
+          userMessage += 'Check Railway logs for details.';
+        } else if (error.message.includes('500')) {
+          userMessage += '⚙️ Backend Error (500)\n\n';
+          userMessage += 'The scan endpoint crashed.\n\n';
+          userMessage += 'Possible causes:\n';
+          userMessage += '• Puppeteer failed to fetch URL\n';
+          userMessage += '• Backend code error\n';
+          userMessage += '• Timeout during scan\n\n';
+          userMessage += 'Check Railway logs for stack trace.';
+        } else if (error.message.includes('404')) {
+          userMessage += '🔍 Endpoint Not Found (404)\n\n';
+          userMessage += 'The /api/scan endpoint doesn\'t exist.\n\n';
+          userMessage += 'Check that backend is deployed correctly.';
+        } else {
+          userMessage += error.message;
+        }
+        
+        alert(userMessage);
+        
+        // Also show in console for debugging
+        console.error('📋 Full error details:', {
+          message: error.message,
+          stack: error.stack,
+          endpoint: CONFIG.scanEndpoint,
+          url: url
+        });
       } finally {
         document.getElementById('loadingIndicator').classList.add('hidden');
       }
@@ -922,7 +1297,7 @@ RETURN ONLY JSON:
             <div class="flex justify-between items-center p-3 bg-gray-700 rounded-lg">
               <div class="flex items-center gap-3">
                 <span class="text-lg">🎯 GRAAF Framework:</span>
-                <span class="font-bold text-xl">${breakdown.graaf?.total || 0}/50</span>
+                <span class="font-bold text-xl">${Math.round(breakdown.graaf?.total || 0)}/50</span>
               </div>
             </div>
             <div class="text-sm text-gray-400 mt-2 px-3">
@@ -934,7 +1309,7 @@ RETURN ONLY JSON:
             <div class="flex justify-between items-center p-3 bg-gray-700 rounded-lg">
               <div class="flex items-center gap-3">
                 <span class="text-lg">✨ CRAFT Framework:</span>
-                <span class="font-bold text-xl">${breakdown.craft?.total || 0}/30</span>
+                <span class="font-bold text-xl">${Math.round(breakdown.craft?.total || 0)}/30</span>
               </div>
             </div>
             <div class="text-sm text-gray-400 mt-2 px-3">
@@ -946,7 +1321,7 @@ RETURN ONLY JSON:
             <div class="flex justify-between items-center p-3 bg-gray-700 rounded-lg">
               <div class="flex items-center gap-3">
                 <span class="text-lg">⚙️ Technical SEO:</span>
-                <span class="font-bold text-xl">${breakdown.technical?.total || 0}/20</span>
+                <span class="font-bold text-xl">${Math.round(breakdown.technical?.total || 0)}/20</span>
               </div>
             </div>
             <div class="text-sm text-gray-400 mt-2 px-3">
@@ -965,17 +1340,17 @@ RETURN ONLY JSON:
           <div class="flex justify-between items-center p-3 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600" onclick="toggleCalc('graaf-breakdown')">
             <div class="flex items-center gap-3">
               <span class="text-lg">🎯 GRAAF Framework:</span>
-              <span class="font-bold text-xl">${breakdown.graaf.total}/50</span>
+              <span class="font-bold text-xl">${Math.round(breakdown.graaf.total)}/50</span>
             </div>
             <span class="text-gray-400 text-sm">Click to expand ▼</span>
           </div>
           <div id="graaf-breakdown" class="calc-breakdown">
             <div class="space-y-2">
-              <div>• Credibility: ${breakdown.graaf.credibility}/10</div>
-              <div>• Relevance: ${breakdown.graaf.relevance}/10</div>
-              <div>• Actionability: ${breakdown.graaf.actionability}/10</div>
-              <div>• Accuracy: ${breakdown.graaf.accuracy}/10</div>
-              <div>• Freshness: ${breakdown.graaf.freshness}/10</div>
+              <div>• Credibility: ${Math.round(breakdown.graaf.credibility)}/10</div>
+              <div>• Relevance: ${Math.round(breakdown.graaf.relevance)}/10</div>
+              <div>• Actionability: ${Math.round(breakdown.graaf.actionability)}/10</div>
+              <div>• Accuracy: ${Math.round(breakdown.graaf.accuracy)}/10</div>
+              <div>• Freshness: ${Math.round(breakdown.graaf.freshness)}/10</div>
             </div>
           </div>
         </div>
@@ -984,17 +1359,17 @@ RETURN ONLY JSON:
           <div class="flex justify-between items-center p-3 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600" onclick="toggleCalc('craft-breakdown')">
             <div class="flex items-center gap-3">
               <span class="text-lg">✨ CRAFT Framework:</span>
-              <span class="font-bold text-xl">${breakdown.craft.total}/30</span>
+              <span class="font-bold text-xl">${Math.round(breakdown.craft.total)}/30</span>
             </div>
             <span class="text-gray-400 text-sm">Click to expand ▼</span>
           </div>
           <div id="craft-breakdown" class="calc-breakdown">
             <div class="space-y-2">
-              <div>• Cut Fluff: ${breakdown.craft.cutFluff}/8</div>
-              <div>• Review & Optimize: ${breakdown.craft.reviewOptimize}/8</div>
-              <div>• Add Visuals: ${breakdown.craft.addVisuals}/6</div>
-              <div>• FAQ Integration: ${breakdown.craft.faqIntegration}/4</div>
-              <div>• Trust Building: ${breakdown.craft.trustBuilding}/4</div>
+              <div>• Cut Fluff: ${Math.round(breakdown.craft.cutFluff)}/8</div>
+              <div>• Review & Optimize: ${Math.round(breakdown.craft.reviewOptimize)}/8</div>
+              <div>• Add Visuals: ${Math.round(breakdown.craft.addVisuals)}/6</div>
+              <div>• FAQ Integration: ${Math.round(breakdown.craft.faqIntegration)}/4</div>
+              <div>• Trust Building: ${Math.round(breakdown.craft.trustBuilding)}/4</div>
             </div>
           </div>
         </div>
@@ -1003,17 +1378,17 @@ RETURN ONLY JSON:
           <div class="flex justify-between items-center p-3 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600" onclick="toggleCalc('technical-breakdown')">
             <div class="flex items-center gap-3">
               <span class="text-lg">⚙️ Technical SEO:</span>
-              <span class="font-bold text-xl">${breakdown.technical.total}/20</span>
+              <span class="font-bold text-xl">${Math.round(breakdown.technical.total)}/20</span>
             </div>
             <span class="text-gray-400 text-sm">Click to expand ▼</span>
           </div>
           <div id="technical-breakdown" class="calc-breakdown">
             <div class="space-y-2">
-              <div>• Meta Optimization: ${breakdown.technical.metaOptimization}/4</div>
-              <div>• Schema Markup: ${breakdown.technical.schemaMarkup}/4</div>
-              <div>• Internal Linking: ${breakdown.technical.internalLinking}/4</div>
-              <div>• Page Structure: ${breakdown.technical.pageStructure}/4</div>
-              <div>• Mobile Optimization: ${breakdown.technical.mobileOptimization}/4</div>
+              <div>• Meta Optimization: ${Math.round(breakdown.technical.metaOptimization)}/4</div>
+              <div>• Schema Markup: ${Math.round(breakdown.technical.schemaMarkup)}/4</div>
+              <div>• Internal Linking: ${Math.round(breakdown.technical.internalLinking)}/4</div>
+              <div>• Page Structure: ${Math.round(breakdown.technical.pageStructure)}/4</div>
+              <div>• Mobile Optimization: ${Math.round(breakdown.technical.mobileOptimization)}/4</div>
             </div>
           </div>
         </div>
