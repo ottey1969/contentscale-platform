@@ -343,8 +343,13 @@
       let quickWins = 0;
       const gains = {};
       
-      // Check if we have detailed breakdown or just totals
-      const hasDetailedBreakdown = breakdown.technical?.schemaMarkup !== undefined;
+      // Check if we have detailed breakdown - need ALL frameworks to have sub-scores
+      const hasDetailedBreakdown = 
+        breakdown.technical?.schemaMarkup !== undefined &&
+        breakdown.craft?.faqIntegration !== undefined &&
+        breakdown.craft?.addVisuals !== undefined;
+      
+      console.log('calculateDeterministicPotential - hasDetailedBreakdown:', hasDetailedBreakdown);
       
       if (hasDetailedBreakdown) {
         // DETAILED BREAKDOWN - Use sub-scores
@@ -551,8 +556,13 @@ RETURN ONLY JSON:
       const breakdown = data.breakdown || {};
       const audit = data.audit || {};
       
-      // Check if we have detailed breakdown
-      const hasDetailedBreakdown = breakdown.technical?.schemaMarkup !== undefined;
+      // Check if we have detailed breakdown - need ALL frameworks to have sub-scores
+      const hasDetailedBreakdown = 
+        breakdown.technical?.schemaMarkup !== undefined &&
+        breakdown.craft?.faqIntegration !== undefined &&
+        breakdown.technical?.metaOptimization !== undefined;
+      
+      console.log('generateDeterministicRecommendations - hasDetailedBreakdown:', hasDetailedBreakdown);
       
       if (hasDetailedBreakdown) {
         // DETAILED RECOMMENDATIONS
@@ -839,8 +849,17 @@ RETURN ONLY JSON:
     function displayScoreBreakdown(data) {
       const breakdown = data.breakdown;
       
-      // Check if we have detailed breakdown
-      const hasDetailedBreakdown = breakdown.technical?.schemaMarkup !== undefined;
+      // Check if we have detailed breakdown - need to verify ALL frameworks have sub-scores
+      const hasDetailedBreakdown = 
+        breakdown.technical?.schemaMarkup !== undefined &&
+        breakdown.graaf?.credibility !== undefined &&
+        breakdown.craft?.cutFluff !== undefined;
+      
+      console.log('displayScoreBreakdown - hasDetailedBreakdown:', hasDetailedBreakdown, {
+        hasSchema: breakdown.technical?.schemaMarkup !== undefined,
+        hasGraafSubs: breakdown.graaf?.credibility !== undefined,
+        hasCraftSubs: breakdown.craft?.cutFluff !== undefined
+      });
       
       if (!hasDetailedBreakdown) {
         // Show simplified view with note
