@@ -235,7 +235,7 @@ function authenticateSuperAdmin(req, res, next) {
       console.log(`✅ Super admin authenticated: ${req.admin.username}`);
       return next();
     }
-    
+     
     return res.status(403).json({
       success: false,
       error: 'Super admin access required'
@@ -251,16 +251,6 @@ function authenticateSuperAdmin(req, res, next) {
 }
 ```
 
----
-
-## 🚀 DEPLOYMENT:
-```
-1. GitHub → server.js → Edit
-2. Vervang authenticateSuperAdmin functie
-3. Commit: "Fix auth - check both tables"
-4. Push
-5. Railway deploys (1-2 min)
-6. Test admin dashboard!
 
 // ==========================================
 // SUPER ADMIN SETUP ENDPOINTS
