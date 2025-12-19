@@ -205,20 +205,41 @@ function authenticateSuperAdmin(req, res, next) {
     });
   }
   
+  // Try super_admins table FIRST
   pool.query(
-    'SELECT id, username, role FROM admins WHERE id = $1 AND role = $2',
-    [adminKey, 'super_admin']
+    'SELECT id, username FROM super_admins WHERE id = $1',
+    [adminKey]
   )
-  .then(result => {
-    if (result.rows.length === 0) {
-      return res.status(403).json({
-        success: false,
-        error: 'Super admin access required'
-      });
+  .then(superAdminResult => {
+    if (superAdminResult.rows.length > 0) {
+      req.admin = {
+        id: superAdminResult.rows[0].id,
+        username: superAdminResult.rows[0].username,
+        role: 'super_admin'
+      };
+      console.log(`✅ Super admin authenticated: ${req.admin.username}`);
+      return next();
     }
     
-    req.admin = result.rows[0];
-    next();
+    // Try admins table
+    return pool.query(
+      'SELECT id, username, role FROM admins WHERE id = $1 AND role = $2',
+      [adminKey, 'super_admin']
+    );
+  })
+  .then(adminResult => {
+    if (!adminResult) return;
+    
+    if (adminResult.rows.length > 0) {
+      req.admin = adminResult.rows[0];
+      console.log(`✅ Super admin authenticated: ${req.admin.username}`);
+      return next();
+    }
+    
+    return res.status(403).json({
+      success: false,
+      error: 'Super admin access required'
+    });
   })
   .catch(error => {
     console.error('Auth error:', error);
@@ -228,6 +249,18 @@ function authenticateSuperAdmin(req, res, next) {
     });
   });
 }
+```
+
+---
+
+## 🚀 DEPLOYMENT:
+```
+1. GitHub → server.js → Edit
+2. Vervang authenticateSuperAdmin functie
+3. Commit: "Fix auth - check both tables"
+4. Push
+5. Railway deploys (1-2 min)
+6. Test admin dashboard!
 
 // ==========================================
 // SUPER ADMIN SETUP ENDPOINTS
