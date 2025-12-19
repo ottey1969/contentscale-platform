@@ -356,7 +356,7 @@
       });
       
       if (hasDetailedBreakdown) {
-        // DETAILED BREAKDOWN - Use sub-scores
+        // DETAILED BREAKDOWN - Use sub-scores with || 0 fallback
         
         // TECHNICAL SEO (12 points max)
         const schemaScore = Math.round(breakdown.technical?.schemaMarkup || 0);
@@ -385,6 +385,12 @@
         const reviewMissing = 8 - reviewScore;
         gains.review = Math.min(2, Math.max(0, Math.ceil(reviewMissing * 0.25)));
         quickWins += gains.review;
+        
+        console.log('Detailed breakdown calculations:', {
+          schema: schemaScore, meta: metaScore, mobile: mobileScore,
+          faq: faqScore, visuals: visualsScore, review: reviewScore,
+          quickWins: quickWins
+        });
         
       } else {
         // SIMPLIFIED BREAKDOWN - Estimate based on totals
@@ -573,15 +579,18 @@ RETURN ONLY JSON:
       });
       
       if (hasDetailedBreakdown) {
-        // DETAILED RECOMMENDATIONS
+        // DETAILED RECOMMENDATIONS - Generate comprehensive list
         
-        // Schema markup
-        if ((breakdown.technical?.schemaMarkup || 0) < 4) {
+        console.log('Generating detailed recommendations with breakdown:', breakdown);
+        
+        // 1. Schema markup - ALWAYS recommend if not perfect
+        const schemaScore = breakdown.technical?.schemaMarkup || 0;
+        if (schemaScore < 4) {
           recs.push({
             text: "Add Article + FAQPage schema markup (JSON-LD)",
             why: "67% of searches show AI Overviews. Without schema, your content is invisible to AI.",
             how: "1. Copy Article schema template\n2. Fill in your details\n3. Add FAQPage schema\n4. Paste into <head>\n5. Validate with schema.org",
-            impact: 4 - (breakdown.technical?.schemaMarkup || 0),
+            impact: 4 - schemaScore,
             realWorldBenefit: "Appear in AI Overviews, Featured Snippets",
             priority: "critical",
             effort: "low",
@@ -589,31 +598,110 @@ RETURN ONLY JSON:
           });
         }
         
-        // FAQ quality
-        if ((breakdown.craft?.faqIntegration || 0) < 4 && (audit.faqCount || 0) > 0) {
+        // 2. Meta optimization - ALWAYS recommend if not perfect
+        const metaScore = breakdown.technical?.metaOptimization || 0;
+        if (metaScore < 4) {
           recs.push({
-            text: `Expand FAQ answers to 100+ words (currently ${audit.faqAvgWords || 'unknown'} avg)`,
-            why: "AI Overviews prefer detailed answers. Short answers (<100 words) are rarely cited.",
-            how: "1. Review each FAQ\n2. Add examples\n3. Include statistics\n4. Link to sources\n5. Aim for 100-150 words",
-            impact: 4 - (breakdown.craft?.faqIntegration || 0),
-            realWorldBenefit: "Higher AI Overview citation rate",
+            text: "Optimize meta title and description",
+            why: "Meta tags improve CTR by 20-30%.",
+            how: `Title: 50-60 chars (current: ${audit.metaTitleLength || 'unknown'})\nDescription: 150-160 chars (current: ${audit.metaDescLength || 'unknown'})`,
+            impact: 4 - metaScore,
+            realWorldBenefit: "+20-30% click-through rate",
+            priority: "high",
+            effort: "low",
+            category: "technical"
+          });
+        }
+        
+        // 3. Mobile optimization
+        const mobileScore = breakdown.technical?.mobileOptimization || 0;
+        if (mobileScore < 4) {
+          recs.push({
+            text: "Improve mobile optimization and page speed",
+            why: "60% of searches happen on mobile. Mobile-first indexing means mobile performance directly impacts rankings.",
+            how: "1. Test with Google PageSpeed Insights\n2. Optimize images (WebP format)\n3. Ensure text readable without zoom\n4. Test with Google Mobile-Friendly tool",
+            impact: 4 - mobileScore,
+            realWorldBenefit: "Better mobile rankings + user experience",
+            priority: "high",
+            effort: "medium",
+            category: "technical"
+          });
+        }
+        
+        // 4. FAQ quality
+        const faqScore = breakdown.craft?.faqIntegration || 0;
+        if (faqScore < 4) {
+          recs.push({
+            text: `${(audit.faqCount || 0) > 0 ? 'Expand' : 'Add'} FAQ section`,
+            why: `FAQ sections are GOLD for AI Overviews. ${(audit.faqCount || 0) > 0 ? `You have ${audit.faqCount} FAQs but can improve quality.` : 'Articles with FAQ get 2x more featured snippets.'}`,
+            how: (audit.faqCount || 0) > 0 
+              ? `1. Expand answers to 100+ words (currently ${audit.faqAvgWords || 'unknown'} avg)\n2. Add examples and statistics\n3. Link to authoritative sources\n4. Add FAQPage schema`
+              : "1. Research 'People Also Ask' for your topic\n2. Create 5-10 questions\n3. Write 100-150 word answers\n4. Add FAQPage schema",
+            impact: 4 - faqScore,
+            realWorldBenefit: "Featured Snippets + AI Overview citations",
             priority: "high",
             effort: "medium",
             category: "craft"
           });
         }
         
-        // Meta optimization
-        if ((breakdown.technical?.metaOptimization || 0) < 4) {
+        // 5. Visual content
+        const visualsScore = breakdown.craft?.addVisuals || 0;
+        if (visualsScore < 6) {
           recs.push({
-            text: "Optimize meta title and description",
-            why: "Meta tags improve CTR by 20-30%.",
-            how: `Title: 50-60 chars (current: ${audit.metaTitleLength || 'unknown'})\nDescription: 150-160 chars (current: ${audit.metaDescLength || 'unknown'})`,
-            impact: 4 - (breakdown.technical?.metaOptimization || 0),
-            realWorldBenefit: "+20-30% click-through rate",
+            text: "Add more visual content",
+            why: "Content with visuals gets 94% more views. Tables, charts, and images improve engagement and rankings.",
+            how: "1. Add 1 image per 300 words\n2. Create comparison tables\n3. Add infographics for key concepts\n4. Include screenshots if tutorial\n5. Optimize all images + add alt texts",
+            impact: Math.min(2, 6 - visualsScore),
+            realWorldBenefit: "+94% more views, lower bounce rate",
             priority: "high",
+            effort: "medium",
+            category: "craft"
+          });
+        }
+        
+        // 6. Internal linking
+        const linkingScore = breakdown.technical?.internalLinking || 0;
+        if (linkingScore < 4) {
+          recs.push({
+            text: "Add contextual internal links",
+            why: "Internal links help Google understand site structure. Pages with 3+ internal links rank 40% better.",
+            how: "1. Identify pillar content\n2. Link from related articles\n3. Use descriptive anchor text\n4. Aim for 3-5 internal links per article",
+            impact: 4 - linkingScore,
+            realWorldBenefit: "Better site structure + distribute ranking power",
+            priority: "medium",
             effort: "low",
             category: "technical"
+          });
+        }
+        
+        // 7. GRAAF - Credibility
+        const credibilityScore = breakdown.graaf?.credibility || 0;
+        if (credibilityScore < 9) {
+          recs.push({
+            text: "Add expert quotes and authoritative sources",
+            why: "E-E-A-T requires expert validation. Content with expert quotes ranks 40% higher.",
+            how: "1. Find 2-3 industry experts\n2. Include proper attribution\n3. Link to original sources\n4. Add recent statistics (2023-2025)\n5. Link to .edu/.gov sites",
+            impact: Math.min(3, 10 - credibilityScore),
+            realWorldBenefit: "+40% better rankings through E-E-A-T",
+            priority: "high",
+            effort: "medium",
+            category: "graaf"
+          });
+        }
+        
+        // 8. Content freshness
+        const freshnessScore = breakdown.graaf?.freshness || 0;
+        if (freshnessScore < 9) {
+          recs.push({
+            text: "Update content with recent data",
+            why: "Google favors fresh content. Adding 2024-2025 statistics can boost rankings by 25%.",
+            how: "1. Replace old statistics\n2. Add 'Updated: [Current Month]'\n3. Mention current year in intro\n4. Update examples to recent events\n5. Add latest trends section",
+            impact: Math.min(2, 10 - freshnessScore),
+            realWorldBenefit: "+25% ranking boost from freshness signal",
+            priority: "medium",
+            effort: "low",
+            category: "graaf"
           });
         }
         
