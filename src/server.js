@@ -249,7 +249,6 @@ function authenticateSuperAdmin(req, res, next) {
     });
   });
 }
-```
 
 
 // ==========================================
