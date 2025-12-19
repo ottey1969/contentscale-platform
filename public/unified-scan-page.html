@@ -316,8 +316,8 @@
     // ============================================================================
     // VERSION: V3-WORKING - 2024-12-18
     // ============================================================================
-    console.log('%c🎯 ContentScale Scanner - VERSION: V3-WORKING', 'color: #10b981; font-size: 16px; font-weight: bold');
-    console.log('%c✅ CORS Fixed: claudeEnabled=false (backend handles AI)', 'color: #10b981; font-size: 12px');
+    console.log('%c🎯 ContentScale Scanner - VERSION: V4-REALISTIC', 'color: #10b981; font-size: 16px; font-weight: bold');
+    console.log('%c✅ Strict breakdown check + Full potential recommendations', 'color: #10b981; font-size: 12px');
     
     // ============================================================================
     // CONFIGURATION
@@ -343,16 +343,31 @@
       let quickWins = 0;
       const gains = {};
       
-      // CONSISTENT CHECK - Must match all 3 functions!
-      const hasDetailedBreakdown = 
+      // STRICT CHECK - Need multiple sub-scores from EACH framework
+      const technicalHasDetails = (
         breakdown.technical?.schemaMarkup !== undefined &&
+        breakdown.technical?.metaOptimization !== undefined &&
+        breakdown.technical?.mobileOptimization !== undefined
+      );
+      
+      const craftHasDetails = (
         breakdown.craft?.faqIntegration !== undefined &&
-        breakdown.graaf?.credibility !== undefined;
+        breakdown.craft?.addVisuals !== undefined &&
+        breakdown.craft?.cutFluff !== undefined
+      );
+      
+      const graafHasDetails = (
+        breakdown.graaf?.credibility !== undefined &&
+        breakdown.graaf?.relevance !== undefined &&
+        breakdown.graaf?.actionability !== undefined
+      );
+      
+      const hasDetailedBreakdown = technicalHasDetails && craftHasDetails && graafHasDetails;
       
       console.log('calculateDeterministicPotential - hasDetailedBreakdown:', hasDetailedBreakdown, {
-        schema: breakdown.technical?.schemaMarkup !== undefined,
-        faq: breakdown.craft?.faqIntegration !== undefined,
-        credibility: breakdown.graaf?.credibility !== undefined
+        technical: technicalHasDetails,
+        craft: craftHasDetails,
+        graaf: graafHasDetails
       });
       
       if (hasDetailedBreakdown) {
@@ -587,16 +602,31 @@ RETURN ONLY JSON:
       const breakdown = data.breakdown || {};
       const audit = data.audit || {};
       
-      // CONSISTENT CHECK - Must match all 3 functions!
-      const hasDetailedBreakdown = 
+      // STRICT CHECK - Need multiple sub-scores from EACH framework
+      const technicalHasDetails = (
         breakdown.technical?.schemaMarkup !== undefined &&
+        breakdown.technical?.metaOptimization !== undefined &&
+        breakdown.technical?.mobileOptimization !== undefined
+      );
+      
+      const craftHasDetails = (
         breakdown.craft?.faqIntegration !== undefined &&
-        breakdown.graaf?.credibility !== undefined;
+        breakdown.craft?.addVisuals !== undefined &&
+        breakdown.craft?.cutFluff !== undefined
+      );
+      
+      const graafHasDetails = (
+        breakdown.graaf?.credibility !== undefined &&
+        breakdown.graaf?.relevance !== undefined &&
+        breakdown.graaf?.actionability !== undefined
+      );
+      
+      const hasDetailedBreakdown = technicalHasDetails && craftHasDetails && graafHasDetails;
       
       console.log('generateDeterministicRecommendations - hasDetailedBreakdown:', hasDetailedBreakdown, {
-        schema: breakdown.technical?.schemaMarkup !== undefined,
-        faq: breakdown.craft?.faqIntegration !== undefined,
-        credibility: breakdown.graaf?.credibility !== undefined
+        technical: technicalHasDetails,
+        craft: craftHasDetails,
+        graaf: graafHasDetails
       });
       
       if (hasDetailedBreakdown) {
@@ -982,16 +1012,31 @@ RETURN ONLY JSON:
     function displayScoreBreakdown(data) {
       const breakdown = data.breakdown;
       
-      // CONSISTENT CHECK - Must match all 3 functions!
-      const hasDetailedBreakdown = 
+      // STRICT CHECK - Need multiple sub-scores from EACH framework
+      const technicalHasDetails = (
         breakdown.technical?.schemaMarkup !== undefined &&
+        breakdown.technical?.metaOptimization !== undefined &&
+        breakdown.technical?.mobileOptimization !== undefined
+      );
+      
+      const craftHasDetails = (
         breakdown.craft?.faqIntegration !== undefined &&
-        breakdown.graaf?.credibility !== undefined;
+        breakdown.craft?.addVisuals !== undefined &&
+        breakdown.craft?.cutFluff !== undefined
+      );
+      
+      const graafHasDetails = (
+        breakdown.graaf?.credibility !== undefined &&
+        breakdown.graaf?.relevance !== undefined &&
+        breakdown.graaf?.actionability !== undefined
+      );
+      
+      const hasDetailedBreakdown = technicalHasDetails && craftHasDetails && graafHasDetails;
       
       console.log('displayScoreBreakdown - hasDetailedBreakdown:', hasDetailedBreakdown, {
-        schema: breakdown.technical?.schemaMarkup !== undefined,
-        faq: breakdown.craft?.faqIntegration !== undefined,
-        credibility: breakdown.graaf?.credibility !== undefined
+        technical: technicalHasDetails,
+        craft: craftHasDetails,
+        graaf: graafHasDetails
       });
       
       if (!hasDetailedBreakdown) {
