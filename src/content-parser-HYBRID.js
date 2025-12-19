@@ -1,5 +1,5 @@
 // ==========================================
-// CONTENT PARSER - HYBRID SYSTEM
+// CONTENT PARSER - HYBRID SYSTEM (FIXED)
 // Deterministic parsing of HTML content
 // ==========================================
 
@@ -33,7 +33,7 @@ function parseContent(html, url) {
   // ==========================================
   
   // G - GENUINELY CREDIBLE
-  const expertQuotes = extractExpertQuotes(html, cleanText);
+  const expertQuotes = extractExpertQuotes($, html, cleanText);
   const statistics = extractStatistics(html, cleanText);
   const sourceCitations = extractSourceCitations($);
   
@@ -211,15 +211,28 @@ function parseContent(html, url) {
 }
 
 // ==========================================
-// EXTRACTION FUNCTIONS
+// EXTRACTION FUNCTIONS (FIXED)
 // ==========================================
 
-function extractExpertQuotes(html, text) {
+function extractExpertQuotes($, html, text) {
   const quotes = [];
   
-  // Pattern: "Quote text" - Name, Title/Company
-  const quoteRegex = /"([^"]{30,})"[\s\S]{0,150}?[-–—]\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/g;
+  // METHOD 1: Look for blockquote elements with citations
+  $('blockquote').each((i, el) => {
+    const quoteText = $(el).text().trim();
+    const citation = $(el).find('cite, .author, .attribution').text().trim() || 
+                     $(el).next('p, cite, .author').text().trim();
+    
+    if (quoteText.length > 30 && citation.length > 5) {
+      quotes.push({
+        text: quoteText,
+        attribution: citation
+      });
+    }
+  });
   
+  // METHOD 2: Regex pattern - "Quote text" - Name, Title
+  const quoteRegex = /"([^"]{30,})"[\s\S]{0,150}?[-–—]\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/g;
   let match;
   while ((match = quoteRegex.exec(text)) !== null) {
     quotes.push({
@@ -228,19 +241,73 @@ function extractExpertQuotes(html, text) {
     });
   }
   
-  return quotes;
+  // METHOD 3: Look for paragraphs with quotes followed by name/title
+  $('p').each((i, el) => {
+    const pText = $(el).text().trim();
+    
+    // Check if paragraph contains quoted text
+    if (/"[^"]{30,}"/.test(pText)) {
+      // Check next few siblings for name/title
+      let attribution = '';
+      const nextEl = $(el).next();
+      const nextText = nextEl.text().trim();
+      
+      // If next element looks like a name/title (capitalized, short)
+      if (nextText.length > 5 && nextText.length < 100 && /^[A-Z]/.test(nextText)) {
+        attribution = nextText;
+      }
+      
+      if (attribution) {
+        const quoteMatch = pText.match(/"([^"]{30,})"/);
+        if (quoteMatch) {
+          quotes.push({
+            text: quoteMatch[1],
+            attribution: attribution
+          });
+        }
+      }
+    }
+  });
+  
+  // METHOD 4: Look for testimonial/review/quote containers
+  $('.testimonial, .quote, .review, [class*="quote"], [class*="testimonial"]').each((i, el) => {
+    const quoteText = $(el).find('p, .text, .content').first().text().trim();
+    const attribution = $(el).find('.author, .name, cite, [class*="author"]').text().trim();
+    
+    if (quoteText.length > 30 && attribution.length > 3) {
+      quotes.push({
+        text: quoteText,
+        attribution: attribution
+      });
+    }
+  });
+  
+  // Remove duplicates
+  const uniqueQuotes = [];
+  const seen = new Set();
+  
+  for (const quote of quotes) {
+    const key = quote.text.substring(0, 50);
+    if (!seen.has(key)) {
+      seen.add(key);
+      uniqueQuotes.push(quote);
+    }
+  }
+  
+  console.log(`✅ Extracted ${uniqueQuotes.length} expert quotes`);
+  return uniqueQuotes;
 }
 
 function extractStatistics(html, text) {
   const stats = [];
   
   // Pattern: Numbers with % or large numbers
-  const statRegex = /(\d+(?:\.\d+)?%|\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?\s*(?:million|billion))/gi;
+  const statRegex = /(\d+(?:\.\d+)?%|\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?\s*(?:million|billion|thousand))/gi;
   
   let match;
   while ((match = statRegex.exec(text)) !== null) {
     const context = text.substring(Math.max(0, match.index - 100), match.index + 200);
-    const hasSource = /(?:according to|source:|study|research|survey)/i.test(context);
+    const hasSource = /(?:according to|source:|study|research|survey|report)/i.test(context);
     
     stats.push({
       value: match[1],
@@ -249,6 +316,7 @@ function extractStatistics(html, text) {
     });
   }
   
+  console.log(`✅ Extracted ${stats.length} statistics`);
   return stats;
 }
 
@@ -275,9 +343,14 @@ function extractStepByStep($, text) {
   const steps = [];
   
   // Look for numbered lists
-  $('ol li, h2, h3').each((i, el) => {
+  $('ol li').each((i, el) => {
+    steps.push($(el).text().trim());
+  });
+  
+  // Look for step headings
+  $('h2, h3, h4').each((i, el) => {
     const text = $(el).text().trim();
-    if (/step\s*\d|^\d+\.|first|second|third|finally/i.test(text)) {
+    if (/step\s*\d|^\d+\.|first|second|third|finally|next/i.test(text)) {
       steps.push(text);
     }
   });
@@ -300,12 +373,15 @@ function extractExamples(text) {
 function extractCTAs($, text) {
   const ctas = [];
   
-  $('button, a.button, .cta, [class*="cta"]').each((i, el) => {
-    ctas.push($(el).text().trim());
+  $('button, a.button, .cta, [class*="cta"], a[class*="btn"]').each((i, el) => {
+    const ctaText = $(el).text().trim();
+    if (ctaText.length > 0) {
+      ctas.push(ctaText);
+    }
   });
   
   // Also search text for CTA phrases
-  const ctaRegex = /(?:click here|download|get started|sign up|try now|learn more|contact us|buy now)/gi;
+  const ctaRegex = /(?:click here|download|get started|sign up|try now|learn more|contact us|buy now|subscribe|get free)/gi;
   let match;
   while ((match = ctaRegex.exec(text)) !== null) {
     ctas.push(match[0]);
@@ -317,7 +393,7 @@ function extractCTAs($, text) {
 function extractToolsResources($) {
   const tools = [];
   
-  $('a[href*="tool"], a[href*="resource"], a[href*="download"]').each((i, el) => {
+  $('a[href*="tool"], a[href*="resource"], a[href*="download"], a[href*="template"]').each((i, el) => {
     tools.push($(el).attr('href'));
   });
   
@@ -328,7 +404,7 @@ function extractDataCitations($, text) {
   const citations = [];
   
   // Look for citations with data
-  const citationRegex = /\(([^)]+(?:20\d{2}|study|research|source))\)/gi;
+  const citationRegex = /\(([^)]+(?:20\d{2}|study|research|source|report))\)/gi;
   
   let match;
   while ((match = citationRegex.exec(text)) !== null) {
@@ -340,7 +416,7 @@ function extractDataCitations($, text) {
 
 function extractCaseStudies(text) {
   const caseStudies = [];
-  const caseRegex = /case study|client success|customer story[^.]{50,300}/gi;
+  const caseRegex = /case study|client success|customer story|real result[^.]{50,300}/gi;
   
   let match;
   while ((match = caseRegex.exec(text)) !== null) {
@@ -355,7 +431,7 @@ function extractFactSources($) {
   
   $('a[href]').each((i, el) => {
     const href = $(el).attr('href');
-    if (/\.gov|\.edu|research|study|journal/i.test(href)) {
+    if (/\.gov|\.edu|research|study|journal|\.org/i.test(href)) {
       sources.push(href);
     }
   });
@@ -369,7 +445,8 @@ function extractPublicationDate($) {
     '.published',
     '.date',
     '[class*="date"]',
-    'meta[property="article:published_time"]'
+    'meta[property="article:published_time"]',
+    'meta[name="publish_date"]'
   ];
   
   for (const selector of dateSelectors) {
@@ -384,7 +461,8 @@ function extractLastModified($) {
   const modifiedSelectors = [
     'meta[property="article:modified_time"]',
     '.updated',
-    '.modified'
+    '.modified',
+    'time[class*="updated"]'
   ];
   
   for (const selector of modifiedSelectors) {
@@ -420,7 +498,7 @@ function extractDataRecency(text) {
 }
 
 function extractTrendingTopics(text) {
-  const trendingKeywords = ['AI', 'ChatGPT', 'machine learning', 'automation', 'cloud', 'sustainability'];
+  const trendingKeywords = ['AI', 'ChatGPT', 'machine learning', 'automation', 'cloud', 'sustainability', 'AI Overview'];
   const found = [];
   
   trendingKeywords.forEach(keyword => {
@@ -511,23 +589,31 @@ function extractImages($) {
   const images = [];
   
   $('img').each((i, el) => {
-    const alt = $(el).attr('alt') || '';
-    const src = $(el).attr('src') || '';
+    // Check multiple src attributes (lazy loading support)
+    const src = $(el).attr('src') || 
+                $(el).attr('data-src') || 
+                $(el).attr('data-lazy-src') || '';
     
-    images.push({
-      src,
-      alt,
-      hasAlt: alt.trim().length > 0
-    });
+    const alt = $(el).attr('alt') || '';
+    
+    // Only count real images (not placeholders)
+    if (src && !src.includes('placeholder') && !src.includes('data:image')) {
+      images.push({
+        src,
+        alt,
+        hasAlt: alt.trim().length > 5
+      });
+    }
   });
   
+  console.log(`✅ Extracted ${images.length} images (${images.filter(i => i.hasAlt).length} with alt)`);
   return images;
 }
 
 function extractVideos($) {
   const videos = [];
   
-  $('video, iframe[src*="youtube"], iframe[src*="vimeo"]').each((i, el) => {
+  $('video, iframe[src*="youtube"], iframe[src*="vimeo"], iframe[src*="wistia"]').each((i, el) => {
     videos.push($(el).attr('src') || 'embedded video');
   });
   
@@ -566,18 +652,56 @@ function extractComparisonTables($) {
 function extractFAQs($, text) {
   const faqs = [];
   
-  // Look for FAQ sections
-  $('h2, h3, h4, dt').each((i, el) => {
+  // METHOD 1: Look for FAQ sections with question/answer pairs
+  $('.faq, [class*="faq"], #faq').find('h2, h3, h4, dt, .question').each((i, el) => {
     const questionText = $(el).text().trim();
     if (questionText.includes('?') && questionText.length > 10) {
+      const answer = $(el).next('p, dd, .answer, div').text().trim().substring(0, 200);
       faqs.push({
         question: questionText,
-        answer: $(el).next().text().substring(0, 200)
+        answer: answer
       });
     }
   });
   
-  return faqs;
+  // METHOD 2: Look for all headings with questions
+  $('h2, h3, h4').each((i, el) => {
+    const questionText = $(el).text().trim();
+    if (questionText.includes('?') && questionText.length > 10 && questionText.length < 200) {
+      const answer = $(el).next('p, div').text().trim().substring(0, 200);
+      faqs.push({
+        question: questionText,
+        answer: answer
+      });
+    }
+  });
+  
+  // METHOD 3: Look for dt/dd pairs
+  $('dt').each((i, el) => {
+    const questionText = $(el).text().trim();
+    if (questionText.includes('?')) {
+      const answer = $(el).next('dd').text().trim().substring(0, 200);
+      faqs.push({
+        question: questionText,
+        answer: answer
+      });
+    }
+  });
+  
+  // Remove duplicates
+  const uniqueFAQs = [];
+  const seen = new Set();
+  
+  for (const faq of faqs) {
+    const key = faq.question.substring(0, 50);
+    if (!seen.has(key)) {
+      seen.add(key);
+      uniqueFAQs.push(faq);
+    }
+  }
+  
+  console.log(`✅ Extracted ${uniqueFAQs.length} FAQs`);
+  return uniqueFAQs;
 }
 
 function checkFAQSchema($) {
@@ -603,7 +727,8 @@ function extractAuthorBio($) {
     '.author-bio',
     '.author',
     '[class*="author"]',
-    '[rel="author"]'
+    '[rel="author"]',
+    '.about-author'
   ];
   
   for (const selector of authorSelectors) {
@@ -616,7 +741,7 @@ function extractAuthorBio($) {
 
 function extractCredentials(text) {
   const credentials = [];
-  const credentialRegex = /(?:certified|phd|mba|master|bachelor|degree|expert|specialist|consultant)/gi;
+  const credentialRegex = /(?:certified|certification|phd|mba|master|bachelor|degree|expert|specialist|consultant|google certified)/gi;
   
   let match;
   while ((match = credentialRegex.exec(text)) !== null) {
@@ -629,8 +754,11 @@ function extractCredentials(text) {
 function extractTestimonials($, text) {
   const testimonials = [];
   
-  $('.testimonial, .review, [class*="testimonial"], [class*="review"]').each((i, el) => {
-    testimonials.push($(el).text().substring(0, 200));
+  $('.testimonial, .review, [class*="testimonial"], [class*="review"], .client-review').each((i, el) => {
+    const testimony = $(el).text().trim();
+    if (testimony.length > 30) {
+      testimonials.push(testimony.substring(0, 200));
+    }
   });
   
   return testimonials;
@@ -641,7 +769,7 @@ function extractAuthorityLinks($) {
   
   $('a[href]').each((i, el) => {
     const href = $(el).attr('href');
-    if (/\.gov|\.edu|\.org|research|institute|university/i.test(href)) {
+    if (/\.gov|\.edu|\.org|research|institute|university|journal/i.test(href)) {
       authorityLinks.push(href);
     }
   });
@@ -712,7 +840,8 @@ function checkTableOfContents($) {
     '[class*="toc"]',
     '[id*="toc"]',
     '.table-of-contents',
-    '#table-of-contents'
+    '#table-of-contents',
+    '[class*="contents"]'
   ];
   
   for (const selector of tocSelectors) {
