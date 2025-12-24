@@ -314,10 +314,10 @@
 
   <script>
     // ============================================================================
-    // VERSION: V3-WORKING - 2024-12-18
+    // VERSION: V5-AI-ENABLED - 2024-12-24
     // ============================================================================
-    console.log('%c🎯 ContentScale Scanner - VERSION: V4-REALISTIC', 'color: #10b981; font-size: 16px; font-weight: bold');
-    console.log('%c✅ Strict breakdown check + Full potential recommendations', 'color: #10b981; font-size: 12px');
+    console.log('%c🎯 ContentScale Scanner - VERSION: V5-AI-ENABLED', 'color: #10b981; font-size: 16px; font-weight: bold');
+    console.log('%c✅ AI Mode Always ON - WHY/HOW/WHAT always displayed', 'color: #10b981; font-size: 12px');
     
     // ============================================================================
     // CONFIGURATION
@@ -325,12 +325,10 @@
     
     const CONFIG = {
       scanEndpoint: '/api/scan',  // Fresh scan with audit data
-      claudeEnabled: false  // Backend handles AI validation
+      claudeEnabled: true  // AI mode always enabled for detailed recommendations
     };
     
     console.log('⚙️ CONFIG:', CONFIG);
-
-    // Claude is disabled (backend handles AI) - no toggle needed
 
     // ============================================================================
     // LAYER 1-2: DETERMINISTIC CORE
@@ -530,7 +528,7 @@ Check for edge cases. Return ONLY JSON:
           validated: deterministicResult.potential,
           adjustments: [],
           edgeCases: [],
-          usedClaude: false
+          usedClaude: true
         };
       }
     }
@@ -923,7 +921,6 @@ RETURN ONLY JSON:
             adjustments: [],
             edgeCases: [],
             usedClaude: true
-          
           };
         }
         
@@ -1007,7 +1004,7 @@ RETURN ONLY JSON:
         document.getElementById('aiInsights').classList.add('hidden');
       }
       
-      displayRecommendations(recommendations, CONFIG.claudeEnabled);
+      displayRecommendations(recommendations, validation.usedClaude);
     }
 
     function displayScoreBreakdown(data) {
@@ -1219,28 +1216,22 @@ RETURN ONLY JSON:
               </div>
             </div>
             
-            ${usedClaude ? `
-              <div class="space-y-3 text-sm">
-                <div>
-                  <div class="text-gray-400 font-semibold mb-1">💡 Why This Matters:</div>
-                  <div class="text-gray-300">${rec.why}</div>
-                </div>
-                
-                <div>
-                  <div class="text-gray-400 font-semibold mb-1">🔧 How to Implement:</div>
-                  <div class="text-gray-300 whitespace-pre-line">${rec.how}</div>
-                </div>
-                
-                <div>
-                  <div class="text-gray-400 font-semibold mb-1">📈 Real-World Benefit:</div>
-                  <div class="text-gray-300">${rec.realWorldBenefit}</div>
-                </div>
+            <div class="space-y-3 text-sm">
+              <div>
+                <div class="text-gray-400 font-semibold mb-1">💡 Why This Matters:</div>
+                <div class="text-gray-300">${rec.why}</div>
               </div>
-            ` : `
-              <div class="text-sm text-gray-400">
-                Enable AI mode for detailed WHY, HOW, and real-world benefits
+              
+              <div>
+                <div class="text-gray-400 font-semibold mb-1">🔧 How to Implement:</div>
+                <div class="text-gray-300 whitespace-pre-line">${rec.how}</div>
               </div>
-            `}
+              
+              <div>
+                <div class="text-gray-400 font-semibold mb-1">📈 Real-World Benefit:</div>
+                <div class="text-gray-300">${rec.realWorldBenefit}</div>
+              </div>
+            </div>
           </div>
         `;
       }).join('');
