@@ -193,7 +193,9 @@
       </div>
     </div>
 
-    <!-- RESULTS SECTION -->
+    <!-- ========================================== -->
+    <!-- RESULTS SECTION (Shows after scan) -->
+    <!-- ========================================== -->
     <div id="resultsContainer" class="hidden">
       <!-- Interactive Score Display -->
       <div class="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-8 mb-6 shadow-2xl border-2 border-purple-500">
@@ -259,8 +261,11 @@
         <div id="recommendationsContainer"></div>
       </div>
     </div>
+    <!-- ========================================== -->
+    <!-- END RESULTS SECTION -->
+    <!-- ========================================== -->
 
-    <!-- Value Propositions -->
+    <!-- Value Propositions (ALWAYS VISIBLE) -->
     <div class="grid md:grid-cols-3 gap-4 mb-6">
       <div class="bg-gray-800 rounded-lg p-5 text-center border border-gray-700 hover:border-purple-500 transition">
         <div class="text-4xl mb-3">🎯</div>
@@ -279,7 +284,7 @@
       </div>
     </div>
 
-    <!-- How It Works -->
+    <!-- How It Works (ALWAYS VISIBLE) -->
     <div class="bg-gray-800 rounded-lg p-6 mb-8 border border-gray-700">
       <h3 class="font-bold text-white mb-5 text-center text-lg">⚡ How It Works (4 Layers)</h3>
       <div class="grid md:grid-cols-4 gap-4">
@@ -307,7 +312,7 @@
     </div>
   </div>
 
-  <!-- Footer -->
+  <!-- Footer with Trust Signals (ALWAYS VISIBLE) -->
   <div class="max-w-5xl mx-auto mt-12 pb-8">
     <div class="bg-gray-800 rounded-lg p-6 text-center">
       <div class="grid md:grid-cols-3 gap-6 mb-6">
@@ -357,11 +362,10 @@
   </div>
 
   <script>
-    console.log('%c🎯 ContentScale Scanner - FIXED VERSION', 'color: #10b981; font-size: 16px; font-weight: bold');
-    console.log('%c✅ Single AI-Era score circle', 'color: #10b981');
-    console.log('%c✅ Recommendations AUTO-GENERATED from breakdown', 'color: #10b981');
-    console.log('%c✅ Interactive progress bar', 'color: #10b981');
-    console.log('%c✅ Score breakdown ALWAYS OPEN', 'color: #10b981');
+    console.log('%c🎯 ContentScale Scanner - FIXED VERSION (Only JS)', 'color: #10b981; font-size: 16px; font-weight: bold');
+    console.log('%c✅ Auto-add https://', 'color: #10b981');
+    console.log('%c✅ No undefined subscores', 'color: #10b981');
+    console.log('%c✅ Recommendations generated', 'color: #10b981');
     
     let currentScanData = null;
     let currentScannedURL = '';
@@ -371,7 +375,9 @@
       claudeEnabled: true
     };
 
-    // Progress update function
+    // ============================================================================
+    // PROGRESS UPDATE
+    // ============================================================================
     function updateProgress(percent, message, activeStep) {
       document.getElementById('progress-bar').style.width = percent + '%';
       document.getElementById('progress-percent').textContent = percent + '%';
@@ -394,13 +400,9 @@
       });
     }
 
-    function animateCircle(elementId, percentage) {
-      const circle = document.getElementById(elementId);
-      const circumference = 2 * Math.PI * 90;
-      const offset = circumference - (percentage / 100) * circumference;
-      circle.style.strokeDashoffset = offset;
-    }
-
+    // ============================================================================
+    // SHARE FUNCTIONS
+    // ============================================================================
     function shareWhatsApp() {
       const text = getShareText();
       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
@@ -433,16 +435,25 @@
       alert('PDF export coming soon!');
     }
 
+    // ============================================================================
+    // SCAN FUNCTION - FIXED
+    // ============================================================================
     async function scanURL() {
-      const urlInput = document.getElementById('urlInput');
-      const url = urlInput.value.trim();
+      let url = document.getElementById('urlInput').value.trim();
       
       if (!url) {
-        alert('Please enter a URL');
+        alert('⚠️ Please enter a URL');
         return;
       }
       
+      // ✅ FIX 1: Auto-add https:// if missing
+      if (!url.match(/^https?:\/\//i)) {
+        url = 'https://' + url;
+        document.getElementById('urlInput').value = url;
+      }
+      
       currentScannedURL = url;
+      
       document.getElementById('scan-button').disabled = true;
       document.getElementById('scan-button').textContent = 'Scanning...';
       document.getElementById('loadingIndicator').classList.remove('hidden');
@@ -450,19 +461,16 @@
       updateProgress(0, 'Initializing scan...');
       
       try {
-        // Step 1: Fetching
         updateProgress(10, 'Fetching website content...', 'step-fetch');
         await sleep(500);
         updateProgress(25, 'Loading HTML and assets...', 'step-fetch');
         await sleep(500);
 
-        // Step 2: Parsing
         updateProgress(30, 'Parsing content structure...', 'step-parse');
         await sleep(500);
         updateProgress(45, 'Analyzing headings, paragraphs, links...', 'step-parse');
         await sleep(500);
 
-        // Step 3: AI Validation
         updateProgress(50, 'Validating with Claude AI...', 'step-validate');
         
         const response = await fetch(CONFIG.scanEndpoint, {
@@ -484,7 +492,6 @@
         updateProgress(70, 'AI validation complete...', 'step-validate');
         await sleep(500);
 
-        // Step 4: Scoring
         updateProgress(85, 'Calculating final scores...', 'step-score');
         await sleep(500);
         updateProgress(100, 'Analysis complete!', 'step-score');
@@ -522,227 +529,30 @@
       document.getElementById('mainScoreDisplay').textContent = score;
       
       // Animate circle
-      const circumference = 2 * Math.PI * 110; // r=110
+      const circumference = 2 * Math.PI * 110;
       const offset = circumference - (score / 100) * circumference;
       const circle = document.getElementById('mainScoreCircle');
       setTimeout(() => {
         circle.style.strokeDashoffset = offset;
         
         // Change color based on score
-        if (score >= 90) {
-          circle.setAttribute('stroke', '#10b981'); // green
-        } else if (score >= 80) {
-          circle.setAttribute('stroke', '#3b82f6'); // blue
-        } else if (score >= 70) {
-          circle.setAttribute('stroke', '#f59e0b'); // yellow
-        } else if (score >= 60) {
-          circle.setAttribute('stroke', '#f97316'); // orange
-        } else {
-          circle.setAttribute('stroke', '#ef4444'); // red
-        }
+        if (score >= 90) circle.setAttribute('stroke', '#10b981');
+        else if (score >= 80) circle.setAttribute('stroke', '#3b82f6');
+        else if (score >= 70) circle.setAttribute('stroke', '#f59e0b');
+        else if (score >= 60) circle.setAttribute('stroke', '#f97316');
+        else circle.setAttribute('stroke', '#ef4444');
       }, 100);
       
       displayBreakdown(data.breakdown);
       
-      // ALWAYS generate recommendations based on scores
+      // ✅ FIX 3: ALWAYS generate recommendations
       const generatedRecs = generateRecommendations(data.breakdown);
       displayRecommendations(generatedRecs);
     }
 
-    function generateRecommendations(breakdown) {
-      const recommendations = [];
-      
-      if (!breakdown) {
-        return [{
-          title: 'Scan Complete',
-          impact: 0,
-          estimatedTime: 'N/A',
-          why: 'Unable to generate recommendations - no breakdown data available',
-          how: 'Please try scanning again',
-          realWorldBenefit: 'N/A'
-        }];
-      }
-      
-      // GRAAF Framework recommendations
-      if (breakdown.graaf) {
-        const graaf = breakdown.graaf;
-        
-        if ((graaf.credibility || 0) < 8) {
-          recommendations.push({
-            title: 'Improve Content Credibility',
-            impact: Math.round((10 - (graaf.credibility || 0)) * 2),
-            estimatedTime: '2-3 hours',
-            why: 'Search engines prioritize trustworthy content. Low credibility signals can hurt your rankings and click-through rates.',
-            how: 'Add authoritative sources, expert quotes, case studies, and verifiable data. Include author credentials and link to reputable external sources.',
-            realWorldBenefit: 'Increased trust from both search engines and readers, leading to higher rankings and better conversion rates.'
-          });
-        }
-        
-        if ((graaf.freshness || 0) < 7) {
-          recommendations.push({
-            title: 'Update Content with Recent Information',
-            impact: Math.round((10 - (graaf.freshness || 0)) * 1.5),
-            estimatedTime: '1-2 hours',
-            why: 'Google favors fresh, up-to-date content. Outdated statistics and examples can signal that your content is stale.',
-            how: 'Add 2024/2025 data, recent developments, current statistics, and update any outdated references. Include publication/update dates.',
-            realWorldBenefit: 'Better visibility for time-sensitive queries and improved relevance signals to search engines.'
-          });
-        }
-        
-        if ((graaf.actionability || 0) < 7) {
-          recommendations.push({
-            title: 'Add More Actionable Steps',
-            impact: Math.round((10 - (graaf.actionability || 0)) * 1.8),
-            estimatedTime: '2-4 hours',
-            why: 'Users and AI Overviews prefer content that provides clear, practical next steps. Actionable content increases engagement and dwell time.',
-            how: 'Include step-by-step guides, how-to instructions, practical examples, templates, and specific implementation advice.',
-            realWorldBenefit: 'Higher engagement, longer time on page, and better chances of being featured in AI Overviews and featured snippets.'
-          });
-        }
-        
-        if ((graaf.relevance || 0) < 8) {
-          recommendations.push({
-            title: 'Improve Topic Relevance',
-            impact: Math.round((10 - (graaf.relevance || 0)) * 1.5),
-            estimatedTime: '1-2 hours',
-            why: 'Content must directly address user intent. Irrelevant tangents dilute your topic focus and confuse search engines.',
-            how: 'Focus on your primary topic, remove off-topic sections, add relevant subtopics, and ensure every paragraph serves the main theme.',
-            realWorldBenefit: 'Better keyword rankings and improved topical authority in your niche.'
-          });
-        }
-        
-        if ((graaf.accuracy || 0) < 8) {
-          recommendations.push({
-            title: 'Ensure Factual Accuracy',
-            impact: Math.round((10 - (graaf.accuracy || 0)) * 2),
-            estimatedTime: '2-3 hours',
-            why: 'Inaccurate information damages credibility and can lead to loss of rankings if reported or flagged.',
-            how: 'Fact-check all claims, cite original sources, remove speculation, verify statistics, and ensure technical accuracy.',
-            realWorldBenefit: 'Protected reputation, sustained rankings, and increased user trust.'
-          });
-        }
-      }
-      
-      // CRAFT Framework recommendations
-      if (breakdown.craft) {
-        const craft = breakdown.craft;
-        
-        if ((craft.cutFluff || 0) < 6) {
-          recommendations.push({
-            title: 'Cut Unnecessary Fluff and Filler',
-            impact: Math.round((8 - (craft.cutFluff || 0)) * 1.5),
-            estimatedTime: '1-2 hours',
-            why: 'Users have short attention spans. Verbose content increases bounce rate and reduces engagement.',
-            how: 'Remove redundant sentences, cut introductory fluff, eliminate unnecessary adverbs, and get to the point faster.',
-            realWorldBenefit: 'Lower bounce rate, higher engagement, and better user satisfaction scores.'
-          });
-        }
-        
-        if ((craft.addVisuals || 0) < 4) {
-          recommendations.push({
-            title: 'Add More Visual Elements',
-            impact: Math.round((6 - (craft.addVisuals || 0)) * 2),
-            estimatedTime: '2-4 hours',
-            why: 'Visual content increases engagement by 94%. Images, charts, and diagrams improve understanding and retention.',
-            how: 'Add relevant images, create infographics, include charts/graphs, add screenshots, and ensure all images have descriptive alt text.',
-            realWorldBenefit: 'Increased time on page, better user experience, and potential for image search traffic.'
-          });
-        }
-        
-        if ((craft.faqIntegration || 0) < 4) {
-          recommendations.push({
-            title: 'Add FAQ Section',
-            impact: Math.round((5 - (craft.faqIntegration || 0)) * 2.5),
-            estimatedTime: '1-2 hours',
-            why: 'FAQ sections directly answer user questions, target "People Also Ask" features, and improve AI Overview eligibility.',
-            how: 'Research common questions in your niche, provide concise answers, use FAQ schema markup, and structure with clear Q&A format.',
-            realWorldBenefit: 'Featured snippet opportunities, AI Overview features, and direct answers to user queries.'
-          });
-        }
-        
-        if ((craft.trustBuilding || 0) < 3) {
-          recommendations.push({
-            title: 'Build Trust Signals',
-            impact: Math.round((4 - (craft.trustBuilding || 0)) * 2),
-            estimatedTime: '1-2 hours',
-            why: 'Trust signals reassure users and search engines about your authority and credibility.',
-            how: 'Add author bios with credentials, include customer testimonials, show certifications, add social proof, and display trust badges.',
-            realWorldBenefit: 'Higher conversion rates, improved E-E-A-T signals, and better brand perception.'
-          });
-        }
-      }
-      
-      // Technical SEO recommendations
-      if (breakdown.technical) {
-        const tech = breakdown.technical;
-        
-        if ((tech.schemaMarkup || 0) < 3) {
-          recommendations.push({
-            title: 'Implement Schema Markup',
-            impact: Math.round((4 - (tech.schemaMarkup || 0)) * 2.5),
-            estimatedTime: '1-3 hours',
-            why: 'Schema markup helps search engines understand your content structure and increases rich snippet eligibility.',
-            how: 'Add Article schema, FAQ schema, BreadcrumbList schema, and relevant structured data. Test with Google Rich Results Test.',
-            realWorldBenefit: 'Rich snippets in search results, better CTR, and improved visibility in AI Overviews.'
-          });
-        }
-        
-        if ((tech.metaOptimization || 0) < 3) {
-          recommendations.push({
-            title: 'Optimize Meta Tags',
-            impact: Math.round((4 - (tech.metaOptimization || 0)) * 2),
-            estimatedTime: '30 minutes',
-            why: 'Meta tags are the first thing users see in search results. Poor meta tags reduce click-through rates.',
-            how: 'Write compelling title tags (50-60 chars), descriptive meta descriptions (150-160 chars), and add Open Graph tags.',
-            realWorldBenefit: 'Improved CTR from search results, better social sharing previews, and clearer search intent matching.'
-          });
-        }
-        
-        if ((tech.internalLinking || 0) < 3) {
-          recommendations.push({
-            title: 'Improve Internal Linking Structure',
-            impact: Math.round((4 - (tech.internalLinking || 0)) * 1.5),
-            estimatedTime: '1-2 hours',
-            why: 'Internal links distribute page authority, help search engines discover content, and keep users engaged longer.',
-            how: 'Add 3-5 contextual internal links to related content, use descriptive anchor text, and link to both newer and older articles.',
-            realWorldBenefit: 'Better crawlability, distributed page authority, increased pageviews per session.'
-          });
-        }
-        
-        if ((tech.pageStructure || 0) < 3) {
-          recommendations.push({
-            title: 'Improve Page Structure',
-            impact: Math.round((4 - (tech.pageStructure || 0)) * 1.8),
-            estimatedTime: '2-3 hours',
-            why: 'Clear page structure helps both users and search engines understand your content hierarchy and main topics.',
-            how: 'Use proper H1-H6 hierarchy, ensure single H1, break content into logical sections, and use descriptive headings with keywords.',
-            realWorldBenefit: 'Better featured snippet eligibility, improved readability, and clearer topic signals to search engines.'
-          });
-        }
-        
-        if ((tech.mobileOptimization || 0) < 3) {
-          recommendations.push({
-            title: 'Optimize for Mobile',
-            impact: Math.round((4 - (tech.mobileOptimization || 0)) * 2),
-            estimatedTime: '2-4 hours',
-            why: 'Over 60% of searches are on mobile. Poor mobile experience directly impacts rankings and user satisfaction.',
-            how: 'Use responsive design, ensure readable font sizes, make buttons touch-friendly, optimize images, and improve mobile page speed.',
-            realWorldBenefit: 'Better mobile rankings, reduced bounce rate, and improved Core Web Vitals scores.'
-          });
-        }
-      }
-      
-      // Sort by impact (highest first)
-      recommendations.sort((a, b) => b.impact - a.impact);
-      
-      // Return top 10 recommendations
-      return recommendations.slice(0, 10);
-    }
-
-    function calculateDeterministicPotential(data) {
-      return Math.min(100, Math.round(data.score || 0) + 20);
-    }
-
+    // ============================================================================
+    // FIX 2: BREAKDOWN WITHOUT UNDEFINED
+    // ============================================================================
     function displayBreakdown(breakdown) {
       const container = document.getElementById('scoreBreakdown');
       if (!breakdown) {
@@ -752,55 +562,52 @@
       
       let html = '';
       
+      // GRAAF - Show only total with progress bar
       if (breakdown.graaf) {
+        const graafTotal = breakdown.graaf.total || 0;
         html += `
           <div class="bg-gray-700 rounded-lg p-4">
             <div class="flex justify-between items-center mb-3">
               <h4 class="font-bold text-lg">🎯 GRAAF Framework</h4>
-              <span class="text-2xl font-bold">${breakdown.graaf.total}/50</span>
+              <span class="text-2xl font-bold text-green-400">${graafTotal}/50</span>
             </div>
-            <div class="space-y-2 text-sm">
-              <div class="flex justify-between"><span>• Credibility:</span><span class="font-bold">${breakdown.graaf.credibility}/10</span></div>
-              <div class="flex justify-between"><span>• Relevance:</span><span class="font-bold">${breakdown.graaf.relevance}/10</span></div>
-              <div class="flex justify-between"><span>• Actionability:</span><span class="font-bold">${breakdown.graaf.actionability}/10</span></div>
-              <div class="flex justify-between"><span>• Accuracy:</span><span class="font-bold">${breakdown.graaf.accuracy}/10</span></div>
-              <div class="flex justify-between"><span>• Freshness:</span><span class="font-bold">${breakdown.graaf.freshness}/10</span></div>
+            <div class="w-full bg-gray-600 rounded-full h-3">
+              <div class="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full transition-all duration-1000" 
+                   style="width: ${(graafTotal / 50 * 100)}%"></div>
             </div>
           </div>
         `;
       }
       
+      // CRAFT - Show only total with progress bar
       if (breakdown.craft) {
+        const craftTotal = breakdown.craft.total || 0;
         html += `
           <div class="bg-gray-700 rounded-lg p-4">
             <div class="flex justify-between items-center mb-3">
-              <h4 class="font-bold text-lg">✨ CRAFT Framework</h4>
-              <span class="text-2xl font-bold">${breakdown.craft.total}/30</span>
+              <h4 class="font-bold text-lg">✨ CRAFT Methodology</h4>
+              <span class="text-2xl font-bold text-blue-400">${craftTotal}/30</span>
             </div>
-            <div class="space-y-2 text-sm">
-              <div class="flex justify-between"><span>• Cut Fluff:</span><span class="font-bold">${breakdown.craft.cutFluff}/8</span></div>
-              <div class="flex justify-between"><span>• Review & Optimize:</span><span class="font-bold">${breakdown.craft.reviewOptimize}/8</span></div>
-              <div class="flex justify-between"><span>• Add Visuals:</span><span class="font-bold">${breakdown.craft.addVisuals}/6</span></div>
-              <div class="flex justify-between"><span>• FAQ Integration:</span><span class="font-bold">${breakdown.craft.faqIntegration}/5</span></div>
-              <div class="flex justify-between"><span>• Trust Building:</span><span class="font-bold">${breakdown.craft.trustBuilding}/4</span></div>
+            <div class="w-full bg-gray-600 rounded-full h-3">
+              <div class="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-1000" 
+                   style="width: ${(craftTotal / 30 * 100)}%"></div>
             </div>
           </div>
         `;
       }
       
+      // Technical - Show only total with progress bar
       if (breakdown.technical) {
+        const techTotal = breakdown.technical.total || 0;
         html += `
           <div class="bg-gray-700 rounded-lg p-4">
             <div class="flex justify-between items-center mb-3">
               <h4 class="font-bold text-lg">⚙️ Technical SEO</h4>
-              <span class="text-2xl font-bold">${breakdown.technical.total}/20</span>
+              <span class="text-2xl font-bold text-purple-400">${techTotal}/20</span>
             </div>
-            <div class="space-y-2 text-sm">
-              <div class="flex justify-between"><span>• Schema Markup:</span><span class="font-bold">${breakdown.technical.schemaMarkup}/4</span></div>
-              <div class="flex justify-between"><span>• Meta Optimization:</span><span class="font-bold">${breakdown.technical.metaOptimization}/4</span></div>
-              <div class="flex justify-between"><span>• Internal Linking:</span><span class="font-bold">${breakdown.technical.internalLinking}/4</span></div>
-              <div class="flex justify-between"><span>• Page Structure:</span><span class="font-bold">${breakdown.technical.pageStructure}/4</span></div>
-              <div class="flex justify-between"><span>• Mobile Optimization:</span><span class="font-bold">${breakdown.technical.mobileOptimization}/4</span></div>
+            <div class="w-full bg-gray-600 rounded-full h-3">
+              <div class="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-1000" 
+                   style="width: ${(techTotal / 20 * 100)}%"></div>
             </div>
           </div>
         `;
@@ -809,11 +616,59 @@
       container.innerHTML = html;
     }
 
+    // ============================================================================
+    // FIX 3: GENERATE RECOMMENDATIONS BASED ON TOTALS
+    // ============================================================================
+    function generateRecommendations(breakdown) {
+      const recs = [];
+      if (!breakdown) return recs;
+      
+      const graafTotal = breakdown.graaf?.total || 0;
+      const craftTotal = breakdown.craft?.total || 0;
+      const techTotal = breakdown.technical?.total || 0;
+      
+      if (graafTotal < 40) {
+        recs.push({
+          title: 'Improve GRAAF Framework Score',
+          impact: Math.round((50 - graafTotal) * 0.8),
+          time: '3-5 hours',
+          why: 'GRAAF (Genuinely Credible, Relevance, Actionability, Accuracy, Freshness) is critical for AI-era rankings.',
+          how: 'Add authoritative sources, ensure content directly answers search intent, provide actionable steps, fact-check claims, and update with 2024/2025 data.',
+          benefit: 'Higher trust signals, better AI Overview eligibility, improved rankings.'
+        });
+      }
+      
+      if (craftTotal < 24) {
+        recs.push({
+          title: 'Enhance CRAFT Methodology',
+          impact: Math.round((30 - craftTotal) * 0.8),
+          time: '2-4 hours',
+          why: 'CRAFT (Cut Fluff, Review & Optimize, Add Visuals, FAQ, Trust) improves user experience and engagement.',
+          how: 'Remove unnecessary words, optimize for readability, add images/charts, create FAQ section, and include trust signals.',
+          benefit: 'Lower bounce rate, higher engagement, better conversion rates.'
+        });
+      }
+      
+      if (techTotal < 16) {
+        recs.push({
+          title: 'Fix Technical SEO Issues',
+          impact: Math.round((20 - techTotal) * 0.8),
+          time: '1-3 hours',
+          why: 'Technical SEO ensures search engines can properly crawl, understand, and rank your content.',
+          how: 'Add schema markup, optimize meta tags, improve internal linking, fix page structure, ensure mobile optimization.',
+          benefit: 'Better crawlability, rich snippets, improved mobile rankings.'
+        });
+      }
+      
+      recs.sort((a, b) => b.impact - a.impact);
+      return recs.slice(0, 5);
+    }
+
     function displayRecommendations(recommendations) {
       const container = document.getElementById('recommendationsContainer');
       
       if (!recommendations || recommendations.length === 0) {
-        container.innerHTML = '<p class="text-gray-400">No recommendations available</p>';
+        container.innerHTML = '<p class="text-gray-400">Great job! No major issues found.</p>';
         return;
       }
       
@@ -822,16 +677,12 @@
       recommendations.forEach((rec, idx) => {
         html += `
           <div class="bg-gray-800 rounded-lg p-6 mb-4 border border-gray-700 hover:border-purple-500 transition">
-            <div class="flex items-start justify-between mb-3">
-              <div class="flex-1">
-                <h4 class="text-xl font-bold text-white mb-2">
-                  ${idx + 1}. ${rec.title}
-                </h4>
-                <div class="flex gap-3 text-sm">
-                  <span class="text-green-400 font-bold">⚡ ${rec.estimatedTime || 'N/A'}</span>
-                  <span class="text-blue-400 font-bold">+${rec.impact || 0} pts</span>
-                </div>
-              </div>
+            <h4 class="text-xl font-bold text-white mb-2">
+              ${idx + 1}. ${rec.title}
+            </h4>
+            <div class="flex gap-3 text-sm mb-3">
+              <span class="text-green-400 font-bold">⚡ ${rec.time}</span>
+              <span class="text-blue-400 font-bold">+${rec.impact} pts</span>
             </div>
             
             ${rec.why ? `
@@ -848,10 +699,10 @@
               </div>
             ` : ''}
             
-            ${rec.realWorldBenefit ? `
+            ${rec.benefit ? `
               <div>
                 <div class="font-semibold text-green-400 mb-1">📈 Real-World Benefit:</div>
-                <div class="text-gray-300">${rec.realWorldBenefit}</div>
+                <div class="text-gray-300">${rec.benefit}</div>
               </div>
             ` : ''}
           </div>
@@ -865,6 +716,7 @@
       return new Promise(resolve => setTimeout(resolve, ms));
     }
 
+    // Enter key support
     document.getElementById('urlInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') scanURL();
     });
