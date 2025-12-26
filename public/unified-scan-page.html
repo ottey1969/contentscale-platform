@@ -6,6 +6,7 @@
   <title>ContentScale - AI-Powered SEO Content Analyzer</title>
   <meta name="description" content="Advanced SEO content analysis with hybrid AI. Get deterministic scoring + Claude AI validation for the most accurate SEO recommendations.">
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- jsPDF for PDF Export -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     .calc-breakdown { display: block; padding: 12px; background: #1f2937; border-radius: 8px; margin-top: 8px; }
@@ -17,23 +18,11 @@
     .hybrid-badge.ai-validated { background: #8b5cf6; color: white; }
     .adjustment-card { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 4px; margin: 8px 0; }
     .edge-case-card { background: #dbeafe; border-left: 4px solid #3b82f6; padding: 12px; border-radius: 4px; margin: 8px 0; }
-    .toggle-switch { position: relative; width: 48px; height: 24px; }
-    .toggle-switch input { opacity: 0; width: 0; height: 0; }
-    .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #6b7280; transition: .4s; border-radius: 24px; }
-    .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-    input:checked + .toggle-slider { background-color: #8b5cf6; }
-    input:checked + .toggle-slider:before { transform: translateX(24px); }
     .loading-spinner { border: 3px solid #f3f4f6; border-top: 3px solid #8b5cf6; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     @keyframes scan-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     .scanning-pulse { animation: scan-pulse 2s ease-in-out infinite; }
     .progress-bar { transition: width 0.5s ease-out; }
-    
-    .score-circle { position: relative; width: 200px; height: 200px; margin: 0 auto; }
-    .score-circle svg { transform: rotate(-90deg); }
-    .score-circle-bg { fill: none; stroke: #374151; stroke-width: 20; }
-    .score-circle-progress { fill: none; stroke-width: 20; stroke-linecap: round; transition: stroke-dashoffset 1s ease-in-out; }
-    .score-circle-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
     
     .share-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 8px; font-weight: 600; transition: all 0.2s; cursor: pointer; font-size: 14px; }
     .share-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
@@ -133,7 +122,6 @@
       z-index: 9999;
       background: rgba(0, 0, 0, 0.8);
       backdrop-filter: blur(5px);
-      animation: fadeIn 0.3s;
     }
     
     .prompt-modal.active {
@@ -155,7 +143,6 @@
       animation: slideUp 0.3s;
     }
     
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     
     .modal-close {
@@ -199,7 +186,7 @@
       <h1 class="text-5xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
         ContentScale AI SEO Analyzer
       </h1>
-      <p class="text-xl text-gray-300">The Most Advanced SEO Scoring System</p>
+      <p class="text-xl text-gray-300">The Most Advanced SEO Scoring System< + Free AI SEO Prompt/p>
     </div>
 
     <!-- SCAN FORM -->
@@ -609,15 +596,14 @@
     
     <div class="mt-4 text-center text-xs text-gray-600">
       <p>Powered by: Puppeteer (JS Rendering) • Claude Sonnet 4 (AI Validation) • GRAAF+CRAFT Frameworks</p>
-      <p class="mt-1">Version 1.4 FIXED | Last Updated: December 2025</p>
+      <p class="mt-1">Version 1.5 with PDF Export | Last Updated: December 2025</p>
     </div>
   </div>
 
   <script>
-    console.log('%c🎯 ContentScale Scanner v1.4 - FIXED VERSION', 'color: #10b981; font-size: 16px; font-weight: bold');
-    console.log('%c✅ WhatsApp/Email links fixed', 'color: #10b981');
-    console.log('%c✅ Recommendations logic corrected', 'color: #10b981');
-    console.log('%c✅ High scores show proper message', 'color: #10b981');
+    console.log('%c🎯 ContentScale Scanner v1.5 - WITH PDF EXPORT', 'color: #10b981; font-size: 16px; font-weight: bold');
+    console.log('%c✅ PDF export working', 'color: #10b981');
+    console.log('%c✅ All fixes from v1.4 included', 'color: #10b981');
     
     let currentScanData = null;
     let currentScannedURL = '';
@@ -657,7 +643,7 @@
       }
       
       setTimeout(() => {
-        alert('✅ Prompt downloaded! Open the file and copy-paste to Claude.ai\n\nHow to use:\n1. Open downloaded file\n2. Ctrl+A (select all)\n3. Ctrl+C (copy)\n4. Go to Claude.ai\n5. Paste and write: "Write article about: [TOPIC]"');
+        alert('✅ Prompt downloaded! Open the file and copy-paste to Claude.ai');
       }, 500);
       
       closePromptModal();
@@ -681,7 +667,6 @@
       closePromptModal();
     }
 
-    // Close modal on Escape
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closePromptModal();
     });
@@ -738,8 +723,150 @@
       return `📊 My AI-Era SEO Content Score: ${score}/100\n\nScanned: ${currentScannedURL}\n\n✨ Analyzed with ContentScale AI Scanner\n🔗 Try it: https://contentscale.site/seo-contentscore/`;
     }
 
+    // PDF EXPORT FUNCTION
     function exportPDF() {
-      alert('PDF export coming soon!');
+      if (!currentScanData) {
+        alert('⚠️ No scan data available. Please scan a URL first.');
+        return;
+      }
+
+      try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        const score = Math.round(currentScanData.score || 0);
+        const breakdown = currentScanData.breakdown || {};
+        
+        // Title
+        doc.setFontSize(24);
+        doc.setTextColor(102, 126, 234);
+        doc.text('ContentScale SEO Report', 20, 25);
+        
+        // URL
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        doc.text(currentScannedURL, 20, 35);
+        
+        // Date
+        const dateStr = new Date().toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        });
+        doc.text(`Report Date: ${dateStr}`, 20, 42);
+        
+        // Score
+        doc.setFontSize(16);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Overall Score', 20, 55);
+        
+        doc.setFontSize(48);
+        if (score >= 90) doc.setTextColor(16, 185, 129);
+        else if (score >= 80) doc.setTextColor(59, 130, 246);
+        else if (score >= 70) doc.setTextColor(245, 158, 11);
+        else doc.setTextColor(239, 68, 68);
+        doc.text(`${score}/100`, 20, 75);
+        
+        // Breakdown
+        let yPos = 95;
+        doc.setFontSize(14);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Score Breakdown', 20, yPos);
+        
+        yPos += 10;
+        doc.setFontSize(11);
+        
+        if (breakdown.graaf) {
+          doc.setTextColor(16, 185, 129);
+          doc.text(`GRAAF Framework: ${breakdown.graaf.total || 0}/50`, 20, yPos);
+          yPos += 7;
+        }
+        
+        if (breakdown.craft) {
+          doc.setTextColor(59, 130, 246);
+          doc.text(`CRAFT Methodology: ${breakdown.craft.total || 0}/30`, 20, yPos);
+          yPos += 7;
+        }
+        
+        if (breakdown.technical) {
+          doc.setTextColor(168, 85, 247);
+          doc.text(`Technical SEO: ${breakdown.technical.total || 0}/20`, 20, yPos);
+          yPos += 7;
+        }
+        
+        // Recommendations
+        yPos += 10;
+        doc.setFontSize(14);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Priority Recommendations', 20, yPos);
+        
+        yPos += 10;
+        doc.setFontSize(10);
+        
+        let recommendations = [];
+        if (currentScanData.recommendations && currentScanData.recommendations.length > 0) {
+          recommendations = currentScanData.recommendations;
+        } else {
+          recommendations = generateRecommendations(breakdown, score);
+        }
+        
+        recommendations.slice(0, 5).forEach((rec, idx) => {
+          if (yPos > 270) {
+            doc.addPage();
+            yPos = 20;
+          }
+          
+          doc.setTextColor(102, 126, 234);
+          doc.setFont(undefined, 'bold');
+          doc.text(`${idx + 1}. ${rec.title}`, 20, yPos);
+          yPos += 7;
+          
+          doc.setFont(undefined, 'normal');
+          doc.setTextColor(100, 100, 100);
+          
+          if (rec.impact > 0) {
+            doc.text(`Impact: +${rec.impact} points | Time: ${rec.time}`, 20, yPos);
+            yPos += 7;
+          }
+          
+          if (rec.why) {
+            const whyLines = doc.splitTextToSize(rec.why, 170);
+            doc.text(whyLines, 20, yPos);
+            yPos += whyLines.length * 5 + 5;
+          }
+          
+          yPos += 3;
+        });
+        
+        // Footer
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+          doc.setPage(i);
+          doc.setFontSize(8);
+          doc.setTextColor(150, 150, 150);
+          doc.text('Generated by ContentScale AI SEO Analyzer', 20, 285);
+          doc.text(`Page ${i} of ${pageCount}`, 180, 285);
+        }
+        
+        // Save
+        const filename = `contentscale-seo-report-${score}.pdf`;
+        doc.save(filename);
+        
+        // Track
+        if (typeof gtag !== 'undefined') {
+          gtag('event', 'pdf_exported', {
+            'event_category': 'engagement',
+            'event_label': 'score_report',
+            'value': score
+          });
+        }
+        
+        alert('✅ PDF report downloaded!');
+        
+      } catch (error) {
+        console.error('PDF generation error:', error);
+        alert('❌ Error generating PDF. Please try again.');
+      }
     }
 
     // SCAN FUNCTION
@@ -846,14 +973,10 @@
       
       displayBreakdown(data.breakdown);
       
-      // FIXED: Use backend recommendations if available, otherwise generate
       let recommendations = [];
-      
       if (data.recommendations && data.recommendations.length > 0) {
-        // Use backend recommendations
         recommendations = data.recommendations;
       } else {
-        // Generate frontend recommendations
         recommendations = generateRecommendations(data.breakdown, score);
       }
       
@@ -920,12 +1043,10 @@
       container.innerHTML = html;
     }
 
-    // FIXED: Better recommendation logic
     function generateRecommendations(breakdown, totalScore) {
       const recs = [];
       if (!breakdown) return recs;
       
-      // If score is already high, show success message
       if (totalScore >= 90) {
         return [{
           title: 'Excellent Score!',
@@ -941,15 +1062,14 @@
       const craftTotal = breakdown.craft?.total || 0;
       const techTotal = breakdown.technical?.total || 0;
       
-      // Only add recommendations for areas scoring below 80% of maximum
       if (graafTotal < 40) {
         recs.push({
           title: 'Improve GRAAF Framework Score',
           impact: Math.round((50 - graafTotal) * 0.8),
           time: '3-5 hours',
-          why: 'GRAAF (Genuinely Credible, Relevance, Actionability, Accuracy, Freshness) is critical for AI-era rankings. Your current score suggests content may lack authoritative sources, clear actionability, or current data.',
+          why: 'GRAAF (Genuinely Credible, Relevance, Actionability, Accuracy, Freshness) is critical for AI-era rankings.',
           how: 'Add 5-7 authoritative sources with citations, ensure content directly answers search intent, provide step-by-step actionable guides, fact-check all claims, and update statistics to 2024/2025.',
-          benefit: 'Higher trust signals lead to better AI Overview eligibility, improved E-E-A-T scores, and significantly better rankings. Expected improvement: +' + Math.round((50 - graafTotal) * 0.8) + ' points.'
+          benefit: 'Higher trust signals lead to better AI Overview eligibility and improved rankings.'
         });
       }
       
@@ -958,9 +1078,9 @@
           title: 'Enhance CRAFT Methodology',
           impact: Math.round((30 - craftTotal) * 0.8),
           time: '2-4 hours',
-          why: 'CRAFT (Cut Fluff, Review, Add Visuals, FAQ, Trust) directly impacts user experience and engagement metrics that Google uses for rankings.',
-          how: 'Remove unnecessary filler words (aim for 20% reduction), run readability check (target 60-70 Flesch score), add 5-8 relevant images/charts, create comprehensive FAQ section with schema markup, and include trust signals (credentials, testimonials).',
-          benefit: 'Better engagement metrics (lower bounce rate, higher time on page) signal quality to Google. Visuals and FAQs increase chances of featured snippets. Expected improvement: +' + Math.round((30 - craftTotal) * 0.8) + ' points.'
+          why: 'CRAFT (Cut Fluff, Review, Add Visuals, FAQ, Trust) directly impacts user experience and engagement metrics.',
+          how: 'Remove unnecessary filler words, run readability check, add 5-8 relevant images/charts, create comprehensive FAQ section with schema markup, include trust signals.',
+          benefit: 'Better engagement metrics signal quality to Google. Visuals and FAQs increase chances of featured snippets.'
         });
       }
       
@@ -969,13 +1089,12 @@
           title: 'Fix Technical SEO Issues',
           impact: Math.round((20 - techTotal) * 0.8),
           time: '1-3 hours',
-          why: 'Technical SEO ensures search engines can properly crawl, index, and understand your content. Missing or poor technical implementation directly limits ranking potential.',
-          how: 'Implement Article and FAQ schema markup, optimize title tag (50-60 chars with primary keyword), write compelling meta description (150-160 chars), add 7+ internal links with descriptive anchors, ensure mobile Core Web Vitals pass (LCP<2.5s, FID<100ms, CLS<0.1).',
-          benefit: 'Rich snippets increase click-through rates by 20-30%. Better crawlability means faster indexing. Mobile optimization is critical as Google uses mobile-first indexing. Expected improvement: +' + Math.round((20 - techTotal) * 0.8) + ' points.'
+          why: 'Technical SEO ensures search engines can properly crawl, index, and understand your content.',
+          how: 'Implement Article and FAQ schema markup, optimize title tag, write compelling meta description, add 7+ internal links with descriptive anchors, ensure mobile optimization.',
+          benefit: 'Rich snippets increase click-through rates by 20-30%. Better crawlability means faster indexing.'
         });
       }
       
-      // Sort by impact (highest first)
       recs.sort((a, b) => b.impact - a.impact);
       return recs.slice(0, 5);
     }
@@ -1034,7 +1153,6 @@
       return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    // Enter key support
     document.getElementById('urlInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') scanURL();
     });
