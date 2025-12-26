@@ -6,7 +6,6 @@
   <title>ContentScale - AI-Powered SEO Content Analyzer</title>
   <meta name="description" content="Advanced SEO content analysis with hybrid AI. Get deterministic scoring + Claude AI validation for the most accurate SEO recommendations.">
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- jsPDF for PDF Export -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     .calc-breakdown { display: block; padding: 12px; background: #1f2937; border-radius: 8px; margin-top: 8px; }
@@ -26,61 +25,18 @@
     input:checked + .toggle-slider:before { transform: translateX(24px); }
     .loading-spinner { border: 3px solid #f3f4f6; border-top: 3px solid #8b5cf6; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    @keyframes scan-pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-    .scanning-pulse {
-      animation: scan-pulse 2s ease-in-out infinite;
-    }
-    .progress-bar {
-      transition: width 0.5s ease-out;
-    }
-    /* Circular Score Visualization */
-    .score-circle {
-      position: relative;
-      width: 200px;
-      height: 200px;
-      margin: 0 auto;
-    }
-    .score-circle svg {
-      transform: rotate(-90deg);
-    }
-    .score-circle-bg {
-      fill: none;
-      stroke: #374151;
-      stroke-width: 20;
-    }
-    .score-circle-progress {
-      fill: none;
-      stroke-width: 20;
-      stroke-linecap: round;
-      transition: stroke-dashoffset 1s ease-in-out;
-    }
-    .score-circle-text {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      text-align: center;
-    }
+    @keyframes scan-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .scanning-pulse { animation: scan-pulse 2s ease-in-out infinite; }
+    .progress-bar { transition: width 0.5s ease-out; }
     
-    /* Share buttons */
-    .share-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 20px;
-      border-radius: 8px;
-      font-weight: 600;
-      transition: all 0.2s;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    .share-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    }
+    .score-circle { position: relative; width: 200px; height: 200px; margin: 0 auto; }
+    .score-circle svg { transform: rotate(-90deg); }
+    .score-circle-bg { fill: none; stroke: #374151; stroke-width: 20; }
+    .score-circle-progress { fill: none; stroke-width: 20; stroke-linecap: round; transition: stroke-dashoffset 1s ease-in-out; }
+    .score-circle-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+    
+    .share-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 8px; font-weight: 600; transition: all 0.2s; cursor: pointer; font-size: 14px; }
+    .share-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
     .share-btn.whatsapp { background: #25D366; color: white; }
     .share-btn.linkedin { background: #0077B5; color: white; }
     .share-btn.twitter { background: #1DA1F2; color: white; }
@@ -97,27 +53,10 @@
       animation: slideIn 0.5s ease-out;
     }
     
-    @keyframes slideIn {
-      from {
-        opacity: 0;
-        transform: translateY(30px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
     
-    .cta-trophy {
-      font-size: 64px;
-      line-height: 1;
-      animation: pulse 2s infinite;
-    }
-    
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.1); }
-    }
+    .cta-trophy { font-size: 64px; line-height: 1; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
     
     .cta-badge {
       background: rgba(255, 255, 255, 0.2);
@@ -170,6 +109,8 @@
       cursor: pointer;
       transition: all 0.3s;
       backdrop-filter: blur(10px);
+      text-decoration: none;
+      display: inline-block;
     }
     
     .btn-hire:hover {
@@ -178,16 +119,8 @@
       transform: translateY(-2px);
     }
     
-    .social-proof-item {
-      text-align: center;
-    }
-    
-    .social-proof-item strong {
-      display: block;
-      font-size: 28px;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
+    .social-proof-item { text-align: center; }
+    .social-proof-item strong { display: block; font-size: 28px; font-weight: 700; margin-bottom: 4px; }
     
     /* Prompt Modal */
     .prompt-modal {
@@ -222,15 +155,8 @@
       animation: slideUp 0.3s;
     }
     
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-    
-    @keyframes slideUp {
-      from { transform: translateY(50px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     
     .modal-close {
       position: absolute;
@@ -258,36 +184,17 @@
     
     /* Mobile Responsive */
     @media (max-width: 768px) {
-      .free-prompt-cta {
-        padding: 25px;
-      }
-      
-      .cta-trophy {
-        font-size: 48px;
-      }
-      
-      .btn-download-prompt {
-        width: 100%;
-        justify-content: center;
-        padding: 18px 24px;
-        font-size: 16px;
-      }
-      
-      .btn-hire {
-        width: 100%;
-        justify-content: center;
-      }
-      
-      .modal-content {
-        border-radius: 20px 20px 0 0;
-        max-height: 95vh;
-      }
+      .free-prompt-cta { padding: 25px; }
+      .cta-trophy { font-size: 48px; }
+      .btn-download-prompt { width: 100%; justify-content: center; padding: 18px 24px; font-size: 16px; }
+      .btn-hire { width: 100%; justify-content: center; text-align: center; }
+      .modal-content { border-radius: 20px 20px 0 0; max-height: 95vh; }
     }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen p-8">
   <div class="max-w-5xl mx-auto">
-    <!-- Hero Title (Compact) -->
+    <!-- Hero Title -->
     <div class="text-center mb-8">
       <h1 class="text-5xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
         ContentScale AI SEO Analyzer
@@ -295,7 +202,7 @@
       <p class="text-xl text-gray-300">The Most Advanced SEO Scoring System</p>
     </div>
 
-    <!-- SCAN FORM (TOP - Most Visible!) -->
+    <!-- SCAN FORM -->
     <div class="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-8 mb-6 shadow-2xl border-2 border-purple-500">
       <h2 class="text-3xl font-bold mb-2 text-center">🔍 Scan Your Content</h2>
       <p class="text-sm text-gray-400 text-center mb-6">Get your SEO score in ~10 seconds</p>
@@ -347,7 +254,7 @@
         </div>
       </div>
       
-      <!-- Loading Indicator - ENHANCED -->
+      <!-- Loading Indicator -->
       <div id="loadingIndicator" class="hidden mt-6">
         <div class="bg-gray-800 rounded-lg p-6">
           <div class="text-center mb-4">
@@ -356,7 +263,6 @@
             <p id="loadingText" class="text-gray-300">Initializing scan...</p>
           </div>
           
-          <!-- Progress Bar -->
           <div class="mb-4">
             <div class="flex justify-between mb-2 text-sm">
               <span class="text-gray-400">Progress</span>
@@ -367,7 +273,6 @@
             </div>
           </div>
           
-          <!-- Scanning Steps -->
           <div class="grid grid-cols-4 gap-3 text-sm">
             <div id="step-fetch" class="bg-slate-700 bg-opacity-50 rounded p-2 border-2 border-transparent text-center">
               <div class="text-xl mb-1">📥</div>
@@ -390,11 +295,9 @@
       </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- RESULTS SECTION (Shows after scan) -->
-    <!-- ========================================== -->
+    <!-- RESULTS SECTION -->
     <div id="resultsContainer" class="hidden">
-      <!-- Interactive Score Display -->
+      <!-- Score Display -->
       <div class="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-8 mb-6 shadow-2xl border-2 border-purple-500">
         <div class="flex items-center justify-between mb-6">
           <h2 class="text-3xl font-bold">📊 Your SEO Score</h2>
@@ -419,7 +322,7 @@
           </div>
         </div>
 
-        <!-- Single Big Score Circle -->
+        <!-- Score Circle -->
         <div class="text-center mb-8">
           <div style="width: 250px; height: 250px; position: relative; margin: 0 auto;">
             <svg width="250" height="250" style="transform: rotate(-90deg);">
@@ -446,9 +349,7 @@
         </div>
       </div>
 
-      <!-- ============================================================ -->
-      <!-- 🎯 FREE 100/100 PROMPT CTA - INSERTED HERE (OPTIMAL SPOT!) -->
-      <!-- ============================================================ -->
+      <!-- FREE 100/100 PROMPT CTA -->
       <div class="free-prompt-cta mb-6">
         <div class="flex items-start gap-6 mb-6">
           <div class="cta-trophy">🏆</div>
@@ -476,9 +377,11 @@
               <div style="font-size: 12px; opacity: 0.9; font-weight: 500;">12,420 words • 100% free</div>
             </div>
           </button>
-          <button class="btn-hire" onclick="showHireOptions()">
+          <a href="https://wa.me/31628073996?text=Hi%2C%20I%20want%20100%2F100%20content%20writing%20service%20for%20my%20website" 
+             class="btn-hire" 
+             target="_blank">
             Or let us do it for you →
-          </button>
+          </a>
         </div>
         
         <div class="flex flex-wrap gap-8 pt-6 border-t border-white border-opacity-20">
@@ -496,11 +399,8 @@
           </div>
         </div>
       </div>
-      <!-- ============================================================ -->
-      <!-- END FREE PROMPT CTA -->
-      <!-- ============================================================ -->
 
-      <!-- Score Breakdown - ALWAYS OPEN -->
+      <!-- Score Breakdown -->
       <div class="bg-gray-800 rounded-lg p-6 mb-6">
         <h3 class="text-2xl font-bold mb-4">📈 Score Breakdown</h3>
         <div id="scoreBreakdown" class="space-y-4"></div>
@@ -512,11 +412,8 @@
         <div id="recommendationsContainer"></div>
       </div>
     </div>
-    <!-- ========================================== -->
-    <!-- END RESULTS SECTION -->
-    <!-- ========================================== -->
 
-    <!-- Value Propositions (ALWAYS VISIBLE) -->
+    <!-- Value Propositions -->
     <div class="grid md:grid-cols-3 gap-4 mb-6">
       <div class="bg-gray-800 rounded-lg p-5 text-center border border-gray-700 hover:border-purple-500 transition">
         <div class="text-4xl mb-3">🎯</div>
@@ -535,7 +432,7 @@
       </div>
     </div>
 
-    <!-- How It Works (ALWAYS VISIBLE) -->
+    <!-- How It Works -->
     <div class="bg-gray-800 rounded-lg p-6 mb-8 border border-gray-700">
       <h3 class="font-bold text-white mb-5 text-center text-lg">⚡ How It Works (4 Layers)</h3>
       <div class="grid md:grid-cols-4 gap-4">
@@ -563,9 +460,7 @@
     </div>
   </div>
 
-  <!-- ============================================================ -->
   <!-- PROMPT MODAL -->
-  <!-- ============================================================ -->
   <div id="promptModal" class="prompt-modal">
     <div class="modal-content">
       <button class="modal-close" onclick="closePromptModal()">×</button>
@@ -660,15 +555,17 @@
         <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; padding: 25px; text-align: center;">
           <p style="color: #92400e; margin: 0 0 8px 0; line-height: 1.6;"><strong>Too busy to DIY?</strong></p>
           <p style="color: #92400e; margin: 0 0 15px 0; line-height: 1.6;">We write 100/100 content for you. Guaranteed within 48 hours.</p>
-          <button onclick="showContactForm()" style="background: #f59e0b; color: white; border: none; padding: 15px 30px; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+          <a href="https://wa.me/31628073996?text=Hi%2C%20I%20want%20100%2F100%20content%20writing%20service" 
+             target="_blank"
+             style="background: #f59e0b; color: white; border: none; padding: 15px 30px; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s; text-decoration: none; display: inline-block;">
             View Done-For-You Options →
-          </button>
+          </a>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Footer with Trust Signals (ALWAYS VISIBLE) -->
+  <!-- Footer -->
   <div class="max-w-5xl mx-auto mt-12 pb-8">
     <div class="bg-gray-800 rounded-lg p-6 text-center">
       <div class="grid md:grid-cols-3 gap-6 mb-6">
@@ -703,25 +600,24 @@
           <a href="https://wa.me/31628073996" target="_blank" class="text-green-400 hover:text-green-300">
             💬 WhatsApp: +31 628073996
           </a>
+          <a href="mailto:info@contentscale.site" class="text-blue-400 hover:text-blue-300">
+            📧 info@contentscale.site
+          </a>
         </div>
       </div>
     </div>
     
     <div class="mt-4 text-center text-xs text-gray-600">
-      <p>
-        Powered by: Puppeteer (JS Rendering) • Claude Sonnet 4 (AI Validation) • GRAAF+CRAFT Frameworks
-      </p>
-      <p class="mt-1">
-        Version 1.3 with FREE Prompt CTA | Last Updated: December 2025
-      </p>
+      <p>Powered by: Puppeteer (JS Rendering) • Claude Sonnet 4 (AI Validation) • GRAAF+CRAFT Frameworks</p>
+      <p class="mt-1">Version 1.4 FIXED | Last Updated: December 2025</p>
     </div>
   </div>
 
   <script>
-    console.log('%c🎯 ContentScale Scanner v1.3 - WITH FREE PROMPT CTA', 'color: #10b981; font-size: 16px; font-weight: bold');
-    console.log('%c✅ Free 100/100 prompt CTA integrated', 'color: #10b981');
-    console.log('%c✅ Modal with download options', 'color: #10b981');
-    console.log('%c✅ Optimal placement after score display', 'color: #10b981');
+    console.log('%c🎯 ContentScale Scanner v1.4 - FIXED VERSION', 'color: #10b981; font-size: 16px; font-weight: bold');
+    console.log('%c✅ WhatsApp/Email links fixed', 'color: #10b981');
+    console.log('%c✅ Recommendations logic corrected', 'color: #10b981');
+    console.log('%c✅ High scores show proper message', 'color: #10b981');
     
     let currentScanData = null;
     let currentScannedURL = '';
@@ -731,18 +627,15 @@
       claudeEnabled: true
     };
 
-    // ============================================================================
     // PROMPT MODAL FUNCTIONS
-    // ============================================================================
     function openPromptModal() {
       document.getElementById('promptModal').classList.add('active');
       document.body.style.overflow = 'hidden';
       
-      // Track in Google Analytics
       if (typeof gtag !== 'undefined') {
         gtag('event', 'prompt_modal_opened', {
           'event_category': 'engagement',
-          'event_label': 'free_prompt_cta_score_page'
+          'event_label': 'free_prompt_cta'
         });
       }
     }
@@ -753,19 +646,16 @@
     }
 
     function downloadPromptTxt() {
-      // Download TXT version
       window.location.href = '/prompts/perfect-100-score-prompt.txt';
       
-      // Track download
       if (typeof gtag !== 'undefined') {
         gtag('event', 'prompt_downloaded', {
           'event_category': 'conversion',
           'event_label': 'txt_format',
-          'value': 1997 // Estimated value
+          'value': 1997
         });
       }
       
-      // Show success message
       setTimeout(() => {
         alert('✅ Prompt downloaded! Open the file and copy-paste to Claude.ai\n\nHow to use:\n1. Open downloaded file\n2. Ctrl+A (select all)\n3. Ctrl+C (copy)\n4. Go to Claude.ai\n5. Paste and write: "Write article about: [TOPIC]"');
       }, 500);
@@ -774,10 +664,8 @@
     }
 
     function downloadPromptMd() {
-      // Download MD version
       window.location.href = '/prompts/perfect-100-score-prompt.md';
       
-      // Track download
       if (typeof gtag !== 'undefined') {
         gtag('event', 'prompt_downloaded', {
           'event_category': 'conversion',
@@ -787,59 +675,18 @@
       }
       
       setTimeout(() => {
-        alert('✅ Prompt downloaded! Open in Markdown editor and copy-paste to Claude.ai\n\nRecommended editors:\n- VS Code\n- Typora\n- Obsidian\n- Notepad++');
+        alert('✅ Prompt downloaded! Open in Markdown editor and copy-paste to Claude.ai');
       }, 500);
       
       closePromptModal();
     }
 
-    function showContactForm() {
-      closePromptModal();
-      // Scroll to contact form or redirect
-      const contactForm = document.getElementById('contactForm');
-      if (contactForm) {
-        contactForm.scrollIntoView({ behavior: 'smooth' });
-      } else {
-        window.location.href = '/contact';
-      }
-      
-      // Track
-      if (typeof gtag !== 'undefined') {
-        gtag('event', 'hire_clicked', {
-          'event_category': 'conversion',
-          'event_label': 'from_prompt_modal'
-        });
-      }
-    }
-
-    function showHireOptions() {
-      // Scroll to pricing or redirect
-      const pricingSection = document.getElementById('pricingSection');
-      if (pricingSection) {
-        pricingSection.scrollIntoView({ behavior: 'smooth' });
-      } else {
-        window.location.href = '/pricing';
-      }
-      
-      // Track
-      if (typeof gtag !== 'undefined') {
-        gtag('event', 'hire_clicked', {
-          'event_category': 'conversion',
-          'event_label': 'from_score_page_prompt_cta'
-        });
-      }
-    }
-
-    // Close modal on Escape key
+    // Close modal on Escape
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        closePromptModal();
-      }
+      if (e.key === 'Escape') closePromptModal();
     });
 
-    // ============================================================================
     // PROGRESS UPDATE
-    // ============================================================================
     function updateProgress(percent, message, activeStep) {
       document.getElementById('progress-bar').style.width = percent + '%';
       document.getElementById('progress-percent').textContent = percent + '%';
@@ -862,9 +709,7 @@
       });
     }
 
-    // ============================================================================
     // SHARE FUNCTIONS
-    // ============================================================================
     function shareWhatsApp() {
       const text = getShareText();
       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
@@ -872,7 +717,7 @@
 
     function shareLinkedIn() {
       const text = getShareText();
-      window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentScannedURL)}&summary=${encodeURIComponent(text)}`, '_blank');
+      window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentScannedURL)}`, '_blank');
     }
 
     function shareTwitter() {
@@ -897,9 +742,7 @@
       alert('PDF export coming soon!');
     }
 
-    // ============================================================================
     // SCAN FUNCTION
-    // ============================================================================
     async function scanURL() {
       let url = document.getElementById('urlInput').value.trim();
       
@@ -908,7 +751,6 @@
         return;
       }
       
-      // Auto-add https:// if missing
       if (!url.match(/^https?:\/\//i)) {
         url = 'https://' + url;
         document.getElementById('urlInput').value = url;
@@ -987,17 +829,14 @@
       
       const score = Math.round(data.score || 0);
       
-      // Update main score
       document.getElementById('mainScoreDisplay').textContent = score;
       
-      // Animate circle
       const circumference = 2 * Math.PI * 110;
       const offset = circumference - (score / 100) * circumference;
       const circle = document.getElementById('mainScoreCircle');
       setTimeout(() => {
         circle.style.strokeDashoffset = offset;
         
-        // Change color based on score
         if (score >= 90) circle.setAttribute('stroke', '#10b981');
         else if (score >= 80) circle.setAttribute('stroke', '#3b82f6');
         else if (score >= 70) circle.setAttribute('stroke', '#f59e0b');
@@ -1007,9 +846,18 @@
       
       displayBreakdown(data.breakdown);
       
-      // Generate recommendations
-      const generatedRecs = generateRecommendations(data.breakdown);
-      displayRecommendations(generatedRecs);
+      // FIXED: Use backend recommendations if available, otherwise generate
+      let recommendations = [];
+      
+      if (data.recommendations && data.recommendations.length > 0) {
+        // Use backend recommendations
+        recommendations = data.recommendations;
+      } else {
+        // Generate frontend recommendations
+        recommendations = generateRecommendations(data.breakdown, score);
+      }
+      
+      displayRecommendations(recommendations);
     }
 
     function displayBreakdown(breakdown) {
@@ -1021,7 +869,6 @@
       
       let html = '';
       
-      // GRAAF - Show only total with progress bar
       if (breakdown.graaf) {
         const graafTotal = breakdown.graaf.total || 0;
         html += `
@@ -1038,7 +885,6 @@
         `;
       }
       
-      // CRAFT - Show only total with progress bar
       if (breakdown.craft) {
         const craftTotal = breakdown.craft.total || 0;
         html += `
@@ -1055,7 +901,6 @@
         `;
       }
       
-      // Technical - Show only total with progress bar
       if (breakdown.technical) {
         const techTotal = breakdown.technical.total || 0;
         html += `
@@ -1075,22 +920,36 @@
       container.innerHTML = html;
     }
 
-    function generateRecommendations(breakdown) {
+    // FIXED: Better recommendation logic
+    function generateRecommendations(breakdown, totalScore) {
       const recs = [];
       if (!breakdown) return recs;
+      
+      // If score is already high, show success message
+      if (totalScore >= 90) {
+        return [{
+          title: 'Excellent Score!',
+          impact: 0,
+          time: 'N/A',
+          why: 'Your content is already scoring in the excellent range (90+/100). This indicates strong SEO fundamentals across GRAAF, CRAFT, and Technical dimensions.',
+          how: 'Continue maintaining this quality level. Monitor for any algorithm updates and refresh content quarterly to maintain freshness signals.',
+          benefit: 'Content scoring 90+ consistently ranks in top positions and maintains those rankings over time.'
+        }];
+      }
       
       const graafTotal = breakdown.graaf?.total || 0;
       const craftTotal = breakdown.craft?.total || 0;
       const techTotal = breakdown.technical?.total || 0;
       
+      // Only add recommendations for areas scoring below 80% of maximum
       if (graafTotal < 40) {
         recs.push({
           title: 'Improve GRAAF Framework Score',
           impact: Math.round((50 - graafTotal) * 0.8),
           time: '3-5 hours',
-          why: 'GRAAF (Genuinely Credible, Relevance, Actionability, Accuracy, Freshness) is critical for AI-era rankings.',
-          how: 'Add authoritative sources, ensure content directly answers search intent, provide actionable steps, fact-check claims, and update with 2024/2025 data.',
-          benefit: 'Higher trust signals, better AI Overview eligibility, improved rankings.'
+          why: 'GRAAF (Genuinely Credible, Relevance, Actionability, Accuracy, Freshness) is critical for AI-era rankings. Your current score suggests content may lack authoritative sources, clear actionability, or current data.',
+          how: 'Add 5-7 authoritative sources with citations, ensure content directly answers search intent, provide step-by-step actionable guides, fact-check all claims, and update statistics to 2024/2025.',
+          benefit: 'Higher trust signals lead to better AI Overview eligibility, improved E-E-A-T scores, and significantly better rankings. Expected improvement: +' + Math.round((50 - graafTotal) * 0.8) + ' points.'
         });
       }
       
@@ -1099,9 +958,9 @@
           title: 'Enhance CRAFT Methodology',
           impact: Math.round((30 - craftTotal) * 0.8),
           time: '2-4 hours',
-          why: 'CRAFT (Cut Fluff, Review & Optimize, Add Visuals, FAQ, Trust) improves user experience and engagement.',
-          how: 'Remove unnecessary words, optimize for readability, add images/charts, create FAQ section, and include trust signals.',
-          benefit: 'Lower bounce rate, higher engagement, better conversion rates.'
+          why: 'CRAFT (Cut Fluff, Review, Add Visuals, FAQ, Trust) directly impacts user experience and engagement metrics that Google uses for rankings.',
+          how: 'Remove unnecessary filler words (aim for 20% reduction), run readability check (target 60-70 Flesch score), add 5-8 relevant images/charts, create comprehensive FAQ section with schema markup, and include trust signals (credentials, testimonials).',
+          benefit: 'Better engagement metrics (lower bounce rate, higher time on page) signal quality to Google. Visuals and FAQs increase chances of featured snippets. Expected improvement: +' + Math.round((30 - craftTotal) * 0.8) + ' points.'
         });
       }
       
@@ -1110,12 +969,13 @@
           title: 'Fix Technical SEO Issues',
           impact: Math.round((20 - techTotal) * 0.8),
           time: '1-3 hours',
-          why: 'Technical SEO ensures search engines can properly crawl, understand, and rank your content.',
-          how: 'Add schema markup, optimize meta tags, improve internal linking, fix page structure, ensure mobile optimization.',
-          benefit: 'Better crawlability, rich snippets, improved mobile rankings.'
+          why: 'Technical SEO ensures search engines can properly crawl, index, and understand your content. Missing or poor technical implementation directly limits ranking potential.',
+          how: 'Implement Article and FAQ schema markup, optimize title tag (50-60 chars with primary keyword), write compelling meta description (150-160 chars), add 7+ internal links with descriptive anchors, ensure mobile Core Web Vitals pass (LCP<2.5s, FID<100ms, CLS<0.1).',
+          benefit: 'Rich snippets increase click-through rates by 20-30%. Better crawlability means faster indexing. Mobile optimization is critical as Google uses mobile-first indexing. Expected improvement: +' + Math.round((20 - techTotal) * 0.8) + ' points.'
         });
       }
       
+      // Sort by impact (highest first)
       recs.sort((a, b) => b.impact - a.impact);
       return recs.slice(0, 5);
     }
@@ -1136,10 +996,12 @@
             <h4 class="text-xl font-bold text-white mb-2">
               ${idx + 1}. ${rec.title}
             </h4>
+            ${rec.impact > 0 ? `
             <div class="flex gap-3 text-sm mb-3">
               <span class="text-green-400 font-bold">⚡ ${rec.time}</span>
               <span class="text-blue-400 font-bold">+${rec.impact} pts</span>
             </div>
+            ` : ''}
             
             ${rec.why ? `
               <div class="mb-3">
