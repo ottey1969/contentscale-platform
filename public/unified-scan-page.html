@@ -86,6 +86,203 @@
     .share-btn.twitter { background: #1DA1F2; color: white; }
     .share-btn.pdf { background: #EF4444; color: white; }
     .share-btn.copy { background: #8B5CF6; color: white; }
+    
+    /* FREE PROMPT CTA STYLES */
+    .free-prompt-cta {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 16px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(102, 126, 234, 0.4);
+      color: white;
+      animation: slideIn 0.5s ease-out;
+    }
+    
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .cta-trophy {
+      font-size: 64px;
+      line-height: 1;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+    
+    .cta-badge {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      backdrop-filter: blur(10px);
+      display: inline-block;
+      margin: 4px;
+    }
+    
+    .cta-highlight {
+      background: #10b981;
+      padding: 4px 12px;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+    
+    .btn-download-prompt {
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 20px 40px;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.3s;
+      box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+    }
+    
+    .btn-download-prompt:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 35px rgba(16, 185, 129, 0.6);
+      background: #059669;
+    }
+    
+    .btn-hire {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      padding: 16px 32px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      backdrop-filter: blur(10px);
+    }
+    
+    .btn-hire:hover {
+      background: rgba(255, 255, 255, 0.3);
+      border-color: rgba(255, 255, 255, 0.6);
+      transform: translateY(-2px);
+    }
+    
+    .social-proof-item {
+      text-align: center;
+    }
+    
+    .social-proof-item strong {
+      display: block;
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    
+    /* Prompt Modal */
+    .prompt-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 9999;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(5px);
+      animation: fadeIn 0.3s;
+    }
+    
+    .prompt-modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .modal-content {
+      position: relative;
+      background: #1f2937;
+      border-radius: 20px;
+      max-width: 700px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6);
+      animation: slideUp 0.3s;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    @keyframes slideUp {
+      from { transform: translateY(50px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    
+    .modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: #374151;
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      font-size: 28px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      transition: all 0.3s;
+      z-index: 10;
+    }
+    
+    .modal-close:hover {
+      background: #4b5563;
+      transform: rotate(90deg);
+    }
+    
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .free-prompt-cta {
+        padding: 25px;
+      }
+      
+      .cta-trophy {
+        font-size: 48px;
+      }
+      
+      .btn-download-prompt {
+        width: 100%;
+        justify-content: center;
+        padding: 18px 24px;
+        font-size: 16px;
+      }
+      
+      .btn-hire {
+        width: 100%;
+        justify-content: center;
+      }
+      
+      .modal-content {
+        border-radius: 20px 20px 0 0;
+        max-height: 95vh;
+      }
+    }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen p-8">
@@ -249,6 +446,60 @@
         </div>
       </div>
 
+      <!-- ============================================================ -->
+      <!-- 🎯 FREE 100/100 PROMPT CTA - INSERTED HERE (OPTIMAL SPOT!) -->
+      <!-- ============================================================ -->
+      <div class="free-prompt-cta mb-6">
+        <div class="flex items-start gap-6 mb-6">
+          <div class="cta-trophy">🏆</div>
+          <div class="flex-1">
+            <h3 class="text-3xl font-bold mb-3">
+              Want <span class="cta-highlight">100/100</span> scores?
+            </h3>
+            <p class="text-lg mb-4 opacity-95">
+              Download the <strong>FREE Elite 100/100 Writer Prompt</strong> (12,420 words) 
+              with EXACT criteria for perfect scores.
+            </p>
+            <div class="flex flex-wrap gap-2 mb-4">
+              <span class="cta-badge">✅ GRAAF Framework (50pts)</span>
+              <span class="cta-badge">✅ CRAFT Methodology (30pts)</span>
+              <span class="cta-badge">✅ Technical SEO (20pts)</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="flex flex-wrap gap-4 mb-6">
+          <button class="btn-download-prompt" onclick="openPromptModal()">
+            <span style="font-size: 24px;">⚡</span>
+            <div style="text-align: left;">
+              <div>Download FREE Prompt</div>
+              <div style="font-size: 12px; opacity: 0.9; font-weight: 500;">12,420 words • 100% free</div>
+            </div>
+          </button>
+          <button class="btn-hire" onclick="showHireOptions()">
+            Or let us do it for you →
+          </button>
+        </div>
+        
+        <div class="flex flex-wrap gap-8 pt-6 border-t border-white border-opacity-20">
+          <div class="social-proof-item">
+            <strong>200+</strong>
+            <div class="text-sm opacity-90">implementations</div>
+          </div>
+          <div class="social-proof-item">
+            <strong>78%</strong>
+            <div class="text-sm opacity-90">avg recovery</div>
+          </div>
+          <div class="social-proof-item">
+            <strong>67%</strong>
+            <div class="text-sm opacity-90">better rankings</div>
+          </div>
+        </div>
+      </div>
+      <!-- ============================================================ -->
+      <!-- END FREE PROMPT CTA -->
+      <!-- ============================================================ -->
+
       <!-- Score Breakdown - ALWAYS OPEN -->
       <div class="bg-gray-800 rounded-lg p-6 mb-6">
         <h3 class="text-2xl font-bold mb-4">📈 Score Breakdown</h3>
@@ -312,6 +563,111 @@
     </div>
   </div>
 
+  <!-- ============================================================ -->
+  <!-- PROMPT MODAL -->
+  <!-- ============================================================ -->
+  <div id="promptModal" class="prompt-modal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closePromptModal()">×</button>
+      
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 50px 40px 40px; text-align: center; border-radius: 20px 20px 0 0;">
+        <div style="font-size: 72px; margin-bottom: 15px; animation: pulse 2s infinite;">🏆</div>
+        <h2 style="font-size: 32px; margin: 0 0 10px 0; font-weight: 700;">FREE Elite 100/100 Writer Prompt</h2>
+        <p style="font-size: 18px; opacity: 0.95; margin: 0;">Exactly how ContentScale achieves 95-100/100 scores</p>
+      </div>
+      
+      <div style="padding: 40px; color: white;">
+        <div style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 30px;">
+          <div style="display: flex; gap: 15px; padding: 20px; background: #374151; border-radius: 12px; border: 2px solid #4b5563;">
+            <span style="font-size: 32px;">🎯</span>
+            <div>
+              <strong style="display: block; font-size: 18px; margin-bottom: 5px;">GRAAF Framework (50 points)</strong>
+              <p style="color: #9ca3af; margin: 0; font-size: 14px;">Credible, Relevance, Actionability, Accuracy, Freshness</p>
+            </div>
+          </div>
+          
+          <div style="display: flex; gap: 15px; padding: 20px; background: #374151; border-radius: 12px; border: 2px solid #4b5563;">
+            <span style="font-size: 32px;">✨</span>
+            <div>
+              <strong style="display: block; font-size: 18px; margin-bottom: 5px;">CRAFT Methodology (30 points)</strong>
+              <p style="color: #9ca3af; margin: 0; font-size: 14px;">Cut Fluff, Review, Add Visuals, FAQ, Trust Building</p>
+            </div>
+          </div>
+          
+          <div style="display: flex; gap: 15px; padding: 20px; background: #374151; border-radius: 12px; border: 2px solid #4b5563;">
+            <span style="font-size: 32px;">⚙️</span>
+            <div>
+              <strong style="display: block; font-size: 18px; margin-bottom: 5px;">Technical SEO (20 points)</strong>
+              <p style="color: #9ca3af; margin: 0; font-size: 14px;">Schema, Meta, Linking, Structure, Mobile</p>
+            </div>
+          </div>
+          
+          <div style="display: flex; gap: 15px; padding: 20px; background: #374151; border-radius: 12px; border: 2px solid #4b5563;">
+            <span style="font-size: 32px;">📚</span>
+            <div>
+              <strong style="display: block; font-size: 18px; margin-bottom: 5px;">Complete Resources</strong>
+              <p style="color: #9ca3af; margin: 0; font-size: 14px;">100+ examples, templates, checklists, code</p>
+            </div>
+          </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; padding: 25px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; text-align: center;">
+          <div>
+            <strong style="display: block; font-size: 32px; font-weight: 700; margin-bottom: 5px;">12,420</strong>
+            <span style="font-size: 14px; opacity: 0.9;">words</span>
+          </div>
+          <div>
+            <strong style="display: block; font-size: 32px; font-weight: 700; margin-bottom: 5px;">100%</strong>
+            <span style="font-size: 14px; opacity: 0.9;">free</span>
+          </div>
+          <div>
+            <strong style="display: block; font-size: 32px; font-weight: 700; margin-bottom: 5px;">200+</strong>
+            <span style="font-size: 14px; opacity: 0.9;">verified cases</span>
+          </div>
+        </div>
+        
+        <div style="margin-bottom: 30px;">
+          <h3 style="font-size: 20px; margin: 0 0 15px 0;">Choose your format:</h3>
+          <button onclick="downloadPromptTxt()" style="width: 100%; background: #374151; border: 2px solid #4b5563; padding: 20px; border-radius: 12px; display: flex; align-items: center; gap: 20px; cursor: pointer; margin-bottom: 12px; transition: all 0.3s; color: white;">
+            <span style="font-size: 36px;">💾</span>
+            <span style="text-align: left; flex: 1;">
+              <strong style="display: block; font-size: 18px; margin-bottom: 4px;">Download as .TXT</strong>
+              <small style="color: #9ca3af; font-size: 14px;">For plain text editors</small>
+            </span>
+          </button>
+          
+          <button onclick="downloadPromptMd()" style="width: 100%; background: #374151; border: 2px solid #4b5563; padding: 20px; border-radius: 12px; display: flex; align-items: center; gap: 20px; cursor: pointer; margin-bottom: 12px; transition: all 0.3s; color: white;">
+            <span style="font-size: 36px;">📝</span>
+            <span style="text-align: left; flex: 1;">
+              <strong style="display: block; font-size: 18px; margin-bottom: 4px;">Download as .MD</strong>
+              <small style="color: #9ca3af; font-size: 14px;">For Markdown editors (recommended)</small>
+            </span>
+          </button>
+        </div>
+        
+        <div style="background: #064e3b; border: 2px solid #10b981; border-radius: 12px; padding: 25px; margin-bottom: 25px;">
+          <h4 style="color: #d1fae5; font-size: 18px; margin: 0 0 15px 0;">🚀 How to use:</h4>
+          <ol style="margin: 0; padding-left: 25px; color: #a7f3d0;">
+            <li style="margin-bottom: 10px; line-height: 1.6;">Download prompt (choose format above)</li>
+            <li style="margin-bottom: 10px; line-height: 1.6;">Open in text editor</li>
+            <li style="margin-bottom: 10px; line-height: 1.6;">Copy ALL (Ctrl+A, Ctrl+C)</li>
+            <li style="margin-bottom: 10px; line-height: 1.6;">Paste in <strong style="color: #d1fae5;">Claude.ai</strong></li>
+            <li style="margin-bottom: 10px; line-height: 1.6;">Type: "Write article about: [YOUR TOPIC]"</li>
+            <li style="margin-bottom: 10px; line-height: 1.6;">Claude writes 95-100/100 content!</li>
+          </ol>
+        </div>
+        
+        <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; padding: 25px; text-align: center;">
+          <p style="color: #92400e; margin: 0 0 8px 0; line-height: 1.6;"><strong>Too busy to DIY?</strong></p>
+          <p style="color: #92400e; margin: 0 0 15px 0; line-height: 1.6;">We write 100/100 content for you. Guaranteed within 48 hours.</p>
+          <button onclick="showContactForm()" style="background: #f59e0b; color: white; border: none; padding: 15px 30px; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+            View Done-For-You Options →
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Footer with Trust Signals (ALWAYS VISIBLE) -->
   <div class="max-w-5xl mx-auto mt-12 pb-8">
     <div class="bg-gray-800 rounded-lg p-6 text-center">
@@ -356,16 +712,16 @@
         Powered by: Puppeteer (JS Rendering) • Claude Sonnet 4 (AI Validation) • GRAAF+CRAFT Frameworks
       </p>
       <p class="mt-1">
-        Version 1.2 Fixed | Last Updated: December 2025
+        Version 1.3 with FREE Prompt CTA | Last Updated: December 2025
       </p>
     </div>
   </div>
 
   <script>
-    console.log('%c🎯 ContentScale Scanner - FIXED VERSION (Only JS)', 'color: #10b981; font-size: 16px; font-weight: bold');
-    console.log('%c✅ Auto-add https://', 'color: #10b981');
-    console.log('%c✅ No undefined subscores', 'color: #10b981');
-    console.log('%c✅ Recommendations generated', 'color: #10b981');
+    console.log('%c🎯 ContentScale Scanner v1.3 - WITH FREE PROMPT CTA', 'color: #10b981; font-size: 16px; font-weight: bold');
+    console.log('%c✅ Free 100/100 prompt CTA integrated', 'color: #10b981');
+    console.log('%c✅ Modal with download options', 'color: #10b981');
+    console.log('%c✅ Optimal placement after score display', 'color: #10b981');
     
     let currentScanData = null;
     let currentScannedURL = '';
@@ -374,6 +730,112 @@
       scanEndpoint: '/api/scan-free',
       claudeEnabled: true
     };
+
+    // ============================================================================
+    // PROMPT MODAL FUNCTIONS
+    // ============================================================================
+    function openPromptModal() {
+      document.getElementById('promptModal').classList.add('active');
+      document.body.style.overflow = 'hidden';
+      
+      // Track in Google Analytics
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'prompt_modal_opened', {
+          'event_category': 'engagement',
+          'event_label': 'free_prompt_cta_score_page'
+        });
+      }
+    }
+
+    function closePromptModal() {
+      document.getElementById('promptModal').classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    function downloadPromptTxt() {
+      // Download TXT version
+      window.location.href = '/prompts/perfect-100-score-prompt.txt';
+      
+      // Track download
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'prompt_downloaded', {
+          'event_category': 'conversion',
+          'event_label': 'txt_format',
+          'value': 1997 // Estimated value
+        });
+      }
+      
+      // Show success message
+      setTimeout(() => {
+        alert('✅ Prompt downloaded! Open the file and copy-paste to Claude.ai\n\nHow to use:\n1. Open downloaded file\n2. Ctrl+A (select all)\n3. Ctrl+C (copy)\n4. Go to Claude.ai\n5. Paste and write: "Write article about: [TOPIC]"');
+      }, 500);
+      
+      closePromptModal();
+    }
+
+    function downloadPromptMd() {
+      // Download MD version
+      window.location.href = '/prompts/perfect-100-score-prompt.md';
+      
+      // Track download
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'prompt_downloaded', {
+          'event_category': 'conversion',
+          'event_label': 'md_format',
+          'value': 1997
+        });
+      }
+      
+      setTimeout(() => {
+        alert('✅ Prompt downloaded! Open in Markdown editor and copy-paste to Claude.ai\n\nRecommended editors:\n- VS Code\n- Typora\n- Obsidian\n- Notepad++');
+      }, 500);
+      
+      closePromptModal();
+    }
+
+    function showContactForm() {
+      closePromptModal();
+      // Scroll to contact form or redirect
+      const contactForm = document.getElementById('contactForm');
+      if (contactForm) {
+        contactForm.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        window.location.href = '/contact';
+      }
+      
+      // Track
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'hire_clicked', {
+          'event_category': 'conversion',
+          'event_label': 'from_prompt_modal'
+        });
+      }
+    }
+
+    function showHireOptions() {
+      // Scroll to pricing or redirect
+      const pricingSection = document.getElementById('pricingSection');
+      if (pricingSection) {
+        pricingSection.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        window.location.href = '/pricing';
+      }
+      
+      // Track
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'hire_clicked', {
+          'event_category': 'conversion',
+          'event_label': 'from_score_page_prompt_cta'
+        });
+      }
+    }
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closePromptModal();
+      }
+    });
 
     // ============================================================================
     // PROGRESS UPDATE
@@ -436,7 +898,7 @@
     }
 
     // ============================================================================
-    // SCAN FUNCTION - FIXED
+    // SCAN FUNCTION
     // ============================================================================
     async function scanURL() {
       let url = document.getElementById('urlInput').value.trim();
@@ -446,7 +908,7 @@
         return;
       }
       
-      // ✅ FIX 1: Auto-add https:// if missing
+      // Auto-add https:// if missing
       if (!url.match(/^https?:\/\//i)) {
         url = 'https://' + url;
         document.getElementById('urlInput').value = url;
@@ -545,14 +1007,11 @@
       
       displayBreakdown(data.breakdown);
       
-      // ✅ FIX 3: ALWAYS generate recommendations
+      // Generate recommendations
       const generatedRecs = generateRecommendations(data.breakdown);
       displayRecommendations(generatedRecs);
     }
 
-    // ============================================================================
-    // FIX 2: BREAKDOWN WITHOUT UNDEFINED
-    // ============================================================================
     function displayBreakdown(breakdown) {
       const container = document.getElementById('scoreBreakdown');
       if (!breakdown) {
@@ -616,9 +1075,6 @@
       container.innerHTML = html;
     }
 
-    // ============================================================================
-    // FIX 3: GENERATE RECOMMENDATIONS BASED ON TOTALS
-    // ============================================================================
     function generateRecommendations(breakdown) {
       const recs = [];
       if (!breakdown) return recs;
