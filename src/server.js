@@ -2428,9 +2428,6 @@ const anthropic = new Anthropic({
 // Generates 95-100/100 Scoring Prompts
 // Vervang app.post('/api/generate-content-prompt') in server.js
 // ==========================================
-
-app.post('/api/generate-content-prompt
-    }
     
     console.log(`[ELITE PROMPT] Generating 95-100/100 prompt for ${url}`);
     
