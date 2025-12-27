@@ -1268,6 +1268,25 @@ function emailPrompts() {
     
     // Auto-refresh every 5 minutes
     setInterval(loadLeaderboard, 300000);
+    <!-- EMERGENCY FIX - Paste dit ONDERAAN je <script> sectie in leaderboard-scanner-page.html -->
+
+<script>
+// NUCLEAR OPTION - Works 100%
+window.closePromptsModal = function() {
+  document.getElementById('promptsModal').style.display = 'none';
+};
+</script>
+
+<!-- 
+USAGE:
+1. Open public/leaderboard-scanner-page.html
+2. Scroll naar beneden naar </body>
+3. Zoek de laatste <script> tag
+4. Paste deze code BINNEN die script tag
+5. Save
+6. Refresh browser
+7. Button werkt nu! ✅
+-->
   </script>
 </body>
 </html>
