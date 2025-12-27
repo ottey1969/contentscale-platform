@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ContentScale Global AI SEO Leaderboard - Free Scanner</title>
-  <meta name="description" content="Global leaderboard of top websites ranked by AI-era content quality. Scan your site for free and claim your spot!">
+  <title>ContentScale Global AI SEO Leaderboard - Free Scanner & Prompts</title>
+  <meta name="description" content="Global leaderboard of top websites ranked by AI-era content quality. Scan your site for free, get AI improvement prompts, and claim your spot!">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* LEADERBOARD STYLES */
@@ -42,6 +42,7 @@
       margin-bottom: 8px;
       padding: 16px;
       border-left: 4px solid transparent;
+      position: relative;
     }
     
     .leaderboard-row:hover {
@@ -137,6 +138,38 @@
       50% { opacity: 0.5; transform: scale(1.2); }
     }
     
+    /* FILTER STYLES */
+    .filter-section {
+      background: #1f2937;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+      border: 1px solid #374151;
+    }
+    
+    .filter-btn {
+      background: #374151;
+      color: #9ca3af;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    
+    .filter-btn:hover {
+      background: #4b5563;
+      color: white;
+    }
+    
+    .filter-btn.active {
+      background: #8b5cf6;
+      color: white;
+      border-color: #a78bfa;
+    }
+    
     /* SCANNER STYLES */
     .scanner-section {
       background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
@@ -167,6 +200,39 @@
       cursor: not-allowed;
     }
     
+    .prompt-btn {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 13px;
+    }
+    
+    .prompt-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    }
+    
+    /* CATEGORY BADGE */
+    .category-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    
+    .category-agency { background: #7c3aed; color: white; }
+    .category-saas { background: #3b82f6; color: white; }
+    .category-blog { background: #f59e0b; color: white; }
+    .category-ecommerce { background: #10b981; color: white; }
+    .category-other { background: #6b7280; color: white; }
+    
     /* MODAL STYLES */
     .modal {
       display: none;
@@ -190,8 +256,10 @@
       background: #1f2937;
       border-radius: 16px;
       padding: 32px;
-      max-width: 500px;
+      max-width: 600px;
       width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
       position: relative;
     }
     
@@ -230,7 +298,7 @@
       <h1 class="text-5xl font-bold mb-3 bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
         🏆 Global AI SEO Leaderboard
       </h1>
-      <p class="text-xl text-gray-300 mb-4">The World's First AI-Era Content Quality Rankings + AI Era SEO Elite Prompt</p>
+      <p class="text-xl text-gray-300 mb-4">The World's First AI-Era Content Quality Rankings</p>
       <span class="live-indicator">
         <span class="live-dot"></span>
         Live Rankings
@@ -241,12 +309,57 @@
     <div class="leaderboard-section">
       <div class="flex justify-between items-center mb-6">
         <div>
-          <h2 class="text-3xl font-bold text-yellow-400">Top 100 Websites Globally</h2>
+          <h2 class="text-3xl font-bold text-yellow-400">Top 100 Websites</h2>
           <p class="text-sm text-gray-400 mt-1">Ranked by GRAAF + CRAFT + Technical SEO (100 points max)</p>
         </div>
         <button onclick="refreshLeaderboard()" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-semibold transition">
           🔄 Refresh
         </button>
+      </div>
+      
+      <!-- FILTERS -->
+      <div class="filter-section">
+        <div class="mb-4">
+          <h3 class="text-sm font-bold text-gray-400 mb-2">FILTER BY:</h3>
+        </div>
+        
+        <!-- Category Filter -->
+        <div class="mb-4">
+          <label class="text-xs text-gray-500 uppercase font-bold mb-2 block">Category</label>
+          <div class="flex flex-wrap gap-2">
+            <button class="filter-btn active" onclick="filterCategory('all')">All</button>
+            <button class="filter-btn" onclick="filterCategory('agency')">🎯 SEO Agencies</button>
+            <button class="filter-btn" onclick="filterCategory('saas')">💻 SaaS</button>
+            <button class="filter-btn" onclick="filterCategory('blog')">📝 Blogs</button>
+            <button class="filter-btn" onclick="filterCategory('ecommerce')">🛒 E-commerce</button>
+            <button class="filter-btn" onclick="filterCategory('other')">📌 Other</button>
+          </div>
+        </div>
+        
+        <!-- Country Filter -->
+        <div class="mb-4">
+          <label class="text-xs text-gray-500 uppercase font-bold mb-2 block">Country</label>
+          <div class="flex flex-wrap gap-2">
+            <button class="filter-btn active" onclick="filterCountry('all')">🌍 Global</button>
+            <button class="filter-btn" onclick="filterCountry('NL')">🇳🇱 Netherlands</button>
+            <button class="filter-btn" onclick="filterCountry('BE')">🇧🇪 Belgium</button>
+            <button class="filter-btn" onclick="filterCountry('DE')">🇩🇪 Germany</button>
+            <button class="filter-btn" onclick="filterCountry('UK')">🇬🇧 UK</button>
+            <button class="filter-btn" onclick="filterCountry('GLOBAL')">🌐 .com/.org</button>
+          </div>
+        </div>
+        
+        <!-- Language Filter -->
+        <div>
+          <label class="text-xs text-gray-500 uppercase font-bold mb-2 block">Language</label>
+          <div class="flex flex-wrap gap-2">
+            <button class="filter-btn active" onclick="filterLanguage('all')">All Languages</button>
+            <button class="filter-btn" onclick="filterLanguage('en')">🇺🇸 English</button>
+            <button class="filter-btn" onclick="filterLanguage('nl')">🇳🇱 Dutch</button>
+            <button class="filter-btn" onclick="filterLanguage('de')">🇩🇪 German</button>
+            <button class="filter-btn" onclick="filterLanguage('fr')">🇫🇷 French</button>
+          </div>
+        </div>
       </div>
       
       <!-- Stats Bar -->
@@ -265,6 +378,11 @@
         </div>
       </div>
       
+      <!-- Current Filter Display -->
+      <div id="current-filter" class="text-sm text-gray-400 mb-4 hidden">
+        Showing: <span id="filter-display" class="text-white font-bold"></span>
+      </div>
+      
       <!-- Leaderboard Table -->
       <div id="leaderboard-container">
         <div class="text-center py-12">
@@ -278,7 +396,7 @@
     <div class="scanner-section mb-8">
       <div class="text-center mb-8">
         <h2 class="text-4xl font-bold mb-3">🚀 Scan Your Website</h2>
-        <p class="text-gray-300">Get your AI-Era SEO score and claim your spot on the leaderboard!</p>
+        <p class="text-gray-300">Get your AI-Era SEO score, FREE improvement prompts, and claim your spot!</p>
       </div>
       
       <div class="max-w-3xl mx-auto">
@@ -304,7 +422,7 @@
             <div>• GRAAF Framework Score (50 pts)</div>
             <div>• CRAFT Methodology (30 pts)</div>
             <div>• Technical SEO (20 pts)</div>
-            <div>• Instant Leaderboard Ranking</div>
+            <div>• AI Improvement Prompts 🎁</div>
           </div>
         </div>
       </div>
@@ -340,7 +458,7 @@
         </div>
         
         <!-- Add to Leaderboard -->
-        <div id="leaderboard-prompt" class="hidden">
+        <div id="leaderboard-prompt" class="mb-4">
           <div class="bg-purple-900 bg-opacity-30 border border-purple-700 rounded-lg p-4 mb-4">
             <h3 class="font-bold text-purple-400 mb-2">🏆 Claim Your Spot!</h3>
             <p class="text-sm text-gray-300 mb-3">Add your site to the public leaderboard?</p>
@@ -351,6 +469,18 @@
               placeholder="Company/Site Name (optional)"
               class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
+            
+            <select 
+              id="category-select"
+              class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
+              <option value="">Auto-detect category</option>
+              <option value="agency">🎯 SEO Agency</option>
+              <option value="saas">💻 SaaS</option>
+              <option value="blog">📝 Blog</option>
+              <option value="ecommerce">🛒 E-commerce</option>
+              <option value="other">📌 Other</option>
+            </select>
             
             <div class="flex gap-2">
               <button onclick="submitToLeaderboard()" class="flex-1 bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-bold transition">
@@ -363,15 +493,54 @@
           </div>
         </div>
         
-        <div id="leaderboard-result" class="hidden text-center">
+        <div id="leaderboard-result" class="hidden text-center mb-4">
           <div class="bg-green-900 bg-opacity-30 border border-green-700 rounded-lg p-4">
             <div class="text-green-400 font-bold text-2xl mb-2" id="rank-display">🎉 Rank #-</div>
             <p class="text-sm text-gray-300">You're now on the global leaderboard!</p>
           </div>
         </div>
         
-        <button onclick="closeResultsModal()" class="w-full mt-4 bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg font-bold transition">
+        <!-- FREE PROMPTS BUTTON -->
+        <button onclick="getPrompts()" id="get-prompts-btn" class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-6 py-4 rounded-lg font-bold text-lg transition mb-4">
+          🎁 Get FREE AI Improvement Prompts
+        </button>
+        
+        <button onclick="closeResultsModal()" class="w-full bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg font-bold transition">
           Close
+        </button>
+      </div>
+    </div>
+
+    <!-- PROMPTS MODAL -->
+    <div id="promptsModal" class="modal">
+      <div class="modal-content">
+        <button class="modal-close" onclick="closePromptsModal()">×</button>
+        
+        <div class="text-center mb-6">
+          <div class="text-5xl mb-3">🎁</div>
+          <h2 class="text-3xl font-bold mb-2">Your FREE AI Prompts</h2>
+          <p class="text-gray-400">Apply these to improve your content!</p>
+        </div>
+        
+        <div id="prompts-container" class="space-y-4 mb-6">
+          <div class="text-center py-8">
+            <div class="text-4xl mb-3">⏳</div>
+            <div class="text-gray-400">Generating prompts...</div>
+          </div>
+        </div>
+        
+        <div class="bg-blue-900 bg-opacity-30 border border-blue-700 rounded-lg p-4 mb-4">
+          <div class="font-bold text-blue-400 mb-2">💡 How to use:</div>
+          <ol class="text-sm text-gray-300 list-decimal list-inside space-y-1">
+            <li>Apply these prompts to your content</li>
+            <li>Update your page</li>
+            <li>Rescan to see your score improve!</li>
+            <li>Share your improvement on LinkedIn 🚀</li>
+          </ol>
+        </div>
+        
+        <button onclick="closePromptsModal()" class="w-full bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-bold transition">
+          Got It! Let's Improve 💪
         </button>
       </div>
     </div>
@@ -390,14 +559,75 @@
   <script>
     console.log('%c🏆 ContentScale Global Leaderboard', 'color: #f59e0b; font-size: 16px; font-weight: bold');
     
-    const API_BASE = '';  // Same origin
+    const API_BASE = '';
     let currentScanResult = null;
     let currentUrl = '';
+    let currentFilters = {
+      category: 'all',
+      country: 'all',
+      language: 'all'
+    };
+    
+    // FILTER FUNCTIONS
+    function filterCategory(cat) {
+      currentFilters.category = cat;
+      updateFilterButtons('category', cat);
+      loadLeaderboard();
+    }
+    
+    function filterCountry(country) {
+      currentFilters.country = country;
+      updateFilterButtons('country', country);
+      loadLeaderboard();
+    }
+    
+    function filterLanguage(lang) {
+      currentFilters.language = lang;
+      updateFilterButtons('language', lang);
+      loadLeaderboard();
+    }
+    
+    function updateFilterButtons(type, value) {
+      const buttons = document.querySelectorAll('.filter-btn');
+      buttons.forEach(btn => {
+        const onClick = btn.getAttribute('onclick');
+        if (onClick && onClick.includes(`filter${type.charAt(0).toUpperCase() + type.slice(1)}`)) {
+          if (onClick.includes(`'${value}'`)) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        }
+      });
+      
+      // Update filter display
+      const filterDisplay = document.getElementById('filter-display');
+      const currentFilterDiv = document.getElementById('current-filter');
+      
+      let filterText = [];
+      if (currentFilters.category !== 'all') filterText.push(currentFilters.category.toUpperCase());
+      if (currentFilters.country !== 'all') filterText.push(currentFilters.country);
+      if (currentFilters.language !== 'all') filterText.push(currentFilters.language.toUpperCase());
+      
+      if (filterText.length > 0) {
+        filterDisplay.textContent = filterText.join(' • ');
+        currentFilterDiv.classList.remove('hidden');
+      } else {
+        currentFilterDiv.classList.add('hidden');
+      }
+    }
     
     // LOAD LEADERBOARD
     async function loadLeaderboard() {
       try {
-        const response = await fetch(`${API_BASE}/api/leaderboard?limit=100`);
+        const params = new URLSearchParams({
+          limit: 100,
+          category: currentFilters.category,
+          country: currentFilters.country,
+          language: currentFilters.language
+        });
+        
+        const response = await fetch(`${API_BASE}/api/leaderboard?${params}`);
         const data = await response.json();
         
         if (!data.success) {
@@ -407,27 +637,18 @@
         displayLeaderboard(data.entries);
         
         // Load stats
-       // Load stats
-try {
-  const statsResponse = await fetch(`${API_BASE}/api/leaderboard/stats`);
-  const statsData = await statsResponse.json();
-  
-  if (statsData && statsData.success && statsData.stats) {
-    document.getElementById('total-entries').textContent = statsData.stats.total_entries || 0;
-    document.getElementById('average-score').textContent = statsData.stats.average_score || '-';
-    document.getElementById('highest-score').textContent = statsData.stats.highest_score || '-';
-  } else {
-    // Fallback values
-    document.getElementById('total-entries').textContent = '0';
-    document.getElementById('average-score').textContent = '-';
-    document.getElementById('highest-score').textContent = '-';
-  }
-} catch (error) {
-  console.log('Stats not available yet');
-  document.getElementById('total-entries').textContent = '0';
-  document.getElementById('average-score').textContent = '-';
-  document.getElementById('highest-score').textContent = '-';
-}
+        try {
+          const statsResponse = await fetch(`${API_BASE}/api/leaderboard/stats`);
+          const statsData = await statsResponse.json();
+          
+          if (statsData && statsData.success && statsData.stats) {
+            document.getElementById('total-entries').textContent = statsData.stats.total_entries || 0;
+            document.getElementById('average-score').textContent = statsData.stats.average_score || '-';
+            document.getElementById('highest-score').textContent = statsData.stats.highest_score || '-';
+          }
+        } catch (statsError) {
+          console.log('Stats not available');
+        }
         
       } catch (error) {
         console.error('Leaderboard error:', error);
@@ -444,7 +665,7 @@ try {
       if (!entries || entries.length === 0) {
         document.getElementById('leaderboard-container').innerHTML = `
           <div class="text-center py-12">
-            <div class="text-gray-400">No entries yet. Be the first to scan!</div>
+            <div class="text-gray-400">No entries found. Try different filters or be the first to scan!</div>
           </div>
         `;
         return;
@@ -455,21 +676,28 @@ try {
       entries.forEach(entry => {
         const scoreClass = getScoreClass(entry.score);
         const rankClass = entry.rank <= 3 ? `rank-${entry.rank}` : '';
+        const categoryClass = `category-${entry.category || 'other'}`;
         
         html += `
           <div class="leaderboard-row ${rankClass}">
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between mb-2">
               <div class="flex items-center gap-4 flex-1">
                 <div class="rank-badge ${entry.rank > 3 ? 'default' : ''}">${entry.rank}</div>
                 <div class="flex-1">
                   <div class="font-bold text-white text-lg">${entry.company_name || 'Unknown'}</div>
                   <div class="text-sm text-gray-400">${truncateUrl(entry.url)}</div>
+                  ${entry.category ? `<span class="category-badge ${categoryClass}">${entry.category}</span>` : ''}
                 </div>
               </div>
               <div class="text-right">
                 <div class="score-display ${scoreClass}">${entry.score}</div>
                 <div class="text-xs text-gray-400">/100</div>
               </div>
+            </div>
+            <div class="flex justify-end">
+              <button onclick="getPromptsForUrl('${entry.url}', ${entry.score}, ${JSON.stringify(entry).replace(/'/g, "\\'")})" class="prompt-btn">
+                🎁 Get FREE Prompts
+              </button>
             </div>
           </div>
         `;
@@ -498,7 +726,7 @@ try {
     function refreshLeaderboard() {
       document.getElementById('leaderboard-container').innerHTML = `
         <div class="text-center py-12">
-          <div class="text-5xl mb-4 scanning-pulse">🔄</div>
+          <div class="text-5xl mb-4">🔄</div>
           <div class="text-gray-400">Refreshing...</div>
         </div>
       `;
@@ -583,6 +811,7 @@ try {
     
     async function submitToLeaderboard() {
       const companyName = document.getElementById('company-name').value.trim();
+      const category = document.getElementById('category-select').value;
       
       try {
         const response = await fetch(`${API_BASE}/api/leaderboard/submit`, {
@@ -597,9 +826,9 @@ try {
             technical_score: currentScanResult.breakdown.technical.total,
             word_count: currentScanResult.wordCount,
             company_name: companyName || null,
-            category: null, // Auto-detect on backend
-            country: null,  // Auto-detect on backend
-            language: null  // Auto-detect on backend
+            category: category || null,
+            country: null,
+            language: null
           })
         });
         
@@ -610,7 +839,6 @@ try {
           document.getElementById('rank-display').textContent = `🎉 Rank #${data.rank}`;
           document.getElementById('leaderboard-result').classList.remove('hidden');
           
-          // Refresh leaderboard after 1 second
           setTimeout(() => {
             refreshLeaderboard();
           }, 1000);
@@ -630,6 +858,82 @@ try {
     
     function closeResultsModal() {
       document.getElementById('resultsModal').classList.remove('active');
+    }
+    
+    // GET PROMPTS
+    async function getPrompts() {
+      if (!currentScanResult) return;
+      
+      document.getElementById('promptsModal').classList.add('active');
+      
+      try {
+        const response = await fetch(`${API_BASE}/api/generate-content-prompt`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: currentUrl,
+            score: currentScanResult.score,
+            breakdown: currentScanResult.breakdown,
+            wordCount: currentScanResult.wordCount
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.prompts) {
+          displayPrompts(data.prompts);
+        } else {
+          throw new Error('Failed to generate prompts');
+        }
+        
+      } catch (error) {
+        console.error('Prompts error:', error);
+        document.getElementById('prompts-container').innerHTML = `
+          <div class="text-center py-8">
+            <div class="text-red-400">Failed to generate prompts</div>
+          </div>
+        `;
+      }
+    }
+    
+    async function getPromptsForUrl(url, score, entry) {
+      currentUrl = url;
+      currentScanResult = {
+        score: score,
+        breakdown: {
+          graaf: { total: entry.graaf_score || 0 },
+          craft: { total: entry.craft_score || 0 },
+          technical: { total: entry.technical_score || 0 }
+        },
+        wordCount: entry.word_count || 0
+      };
+      
+      getPrompts();
+    }
+    
+    function displayPrompts(prompts) {
+      let html = '';
+      
+      prompts.forEach((prompt, index) => {
+        html += `
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <div class="flex items-start gap-3">
+              <div class="text-2xl">${index + 1}.</div>
+              <div class="flex-1">
+                <div class="font-bold text-purple-400 mb-1">📍 ${prompt.section}</div>
+                <div class="text-sm text-gray-400 mb-2">Issue: ${prompt.issue}</div>
+                <div class="text-white">${prompt.prompt}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      
+      document.getElementById('prompts-container').innerHTML = html;
+    }
+    
+    function closePromptsModal() {
+      document.getElementById('promptsModal').classList.remove('active');
     }
     
     // Enter key to scan
