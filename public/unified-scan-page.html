@@ -1203,7 +1203,7 @@ function emailPrompts() {
         const data = await response.json();
         
         if (data.success && data.prompts) {
-          displayPrompts(data.prompts);
+          displayPrompts(data);
         } else {
           throw new Error('Failed to generate prompts');
         }
@@ -1233,37 +1233,6 @@ function emailPrompts() {
       getPrompts();
     }
     
-    function displayPrompts(prompts) {
-      let html = '';
-      
-      prompts.forEach((prompt, index) => {
-        html += `
-          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
-            <div class="flex items-start gap-3">
-              <div class="text-2xl">${index + 1}.</div>
-              <div class="flex-1">
-                <div class="font-bold text-purple-400 mb-1">📍 ${prompt.section}</div>
-                <div class="text-sm text-gray-400 mb-2">Issue: ${prompt.issue}</div>
-                <div class="text-white">${prompt.prompt}</div>
-              </div>
-            </div>
-          </div>
-        `;
-      });
-      
-      document.getElementById('prompts-container').innerHTML = html;
-    }
-    
-    function closePromptsModal() {
-      document.getElementById('promptsModal').classList.remove('active');
-    }
-    
-    // Enter key to scan
-    document.getElementById('scanInput').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') performScan();
-    });
-    
-    // Load leaderboard on page load
     // Enter key to scan
     document.getElementById('scanInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') performScan();
@@ -1275,10 +1244,13 @@ function emailPrompts() {
     // Auto-refresh every 5 minutes
     setInterval(loadLeaderboard, 300000);
     
-    // EMERGENCY FIX - Close Prompts Modal
+    // Close Prompts Modal
     window.closePromptsModal = function() {
-      document.getElementById('promptsModal').style.display = 'none';
-      document.getElementById('promptsModal').classList.remove('active');
+      const modal = document.getElementById('promptsModal');
+      if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('active');
+      }
     };
     
   </script>
