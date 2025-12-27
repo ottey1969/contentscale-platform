@@ -511,15 +511,330 @@
     </div>
 
     <!-- PROMPTS MODAL -->
-    <div id="promptsModal" class="modal">
-      <div class="modal-content">
-        <button class="modal-close" onclick="closePromptsModal()">×</button>
-        
-        <div class="text-center mb-6">
-          <div class="text-5xl mb-3">🎁</div>
-          <h2 class="text-3xl font-bold mb-2">Your FREE AI Prompts</h2>
-          <p class="text-gray-400">Apply these to improve your content!</p>
+   <!-- ==========================================
+     PROMPTS MODAL - 100% INLINE STYLES
+     
+     GEEN EXTERNE CSS NODIG!
+     
+     INSTALLATIE:
+     1. Open: public/leaderboard-scanner-page.html
+     2. Zoek: <div id="promptsModal" class="modal">
+     3. Selecteer HELE modal (tot sluitende </div>)
+     4. DELETE
+     5. PASTE deze code
+     6. KLAAR!
+     ========================================== -->
+
+<div id="promptsModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; overflow-y: auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-radius: 20px; max-width: 900px; margin: 40px auto; padding: 40px; position: relative; box-shadow: 0 25px 50px rgba(0,0,0,0.8);">
+    
+    <!-- Close Button -->
+    <button onclick="closePromptsModal()" style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.1); border: none; color: white; font-size: 32px; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; transition: all 0.2s; line-height: 1;" onmouseover="this.style.background='rgba(255,255,255,0.2)'; this.style.transform='rotate(90deg)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'; this.style.transform='rotate(0deg)'">
+      ×
+    </button>
+    
+    <!-- Header -->
+    <div style="text-align: center; margin-bottom: 32px;">
+      <div style="font-size: 64px; margin-bottom: 16px;">🏆</div>
+      <h2 style="font-size: 32px; font-weight: 700; margin: 0 0 12px 0; background: linear-gradient(to right, #fbbf24, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+        Your ELITE AI Content Prompts
+      </h2>
+      <p style="color: #9ca3af; font-size: 15px; margin: 0 0 16px 0;">
+        Professional-grade prompts for 95-100/100 scores
+      </p>
+      <div style="display: flex; align-items: center; justify-content: center; gap: 20px; font-size: 13px; font-weight: 600;">
+        <span style="color: #10b981;">✅ Claude AI</span>
+        <span style="color: #3b82f6;">✅ ChatGPT</span>
+        <span style="color: #a78bfa;">✅ Perplexity</span>
+      </div>
+    </div>
+    
+    <!-- Instructions Box -->
+    <div style="background: rgba(59, 130, 246, 0.1); border: 2px solid #3b82f6; border-radius: 12px; padding: 24px; margin-bottom: 28px;">
+      <div style="display: flex; gap: 16px;">
+        <div style="font-size: 32px; flex-shrink: 0;">💡</div>
+        <div style="flex: 1;">
+          <div style="font-weight: 700; color: #60a5fa; margin-bottom: 12px; font-size: 16px;">
+            How to Use (5 Simple Steps):
+          </div>
+          <ol id="usage-instructions" style="color: #d1d5db; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 24px;">
+            <li><strong>1.</strong> Click "📋 Copy ELITE Prompt" below</li>
+            <li><strong>2.</strong> Open Claude.ai, ChatGPT, or Perplexity</li>
+            <li><strong>3.</strong> Paste the entire prompt (Ctrl+V)</li>
+            <li><strong>4.</strong> AI generates complete 2500+ word article</li>
+            <li><strong>5.</strong> Copy result → Update your page → Rescan! 📈</li>
+          </ol>
         </div>
+      </div>
+    </div>
+    
+    <!-- Prompts Container -->
+    <div id="prompts-container" style="margin-bottom: 28px;">
+      <div style="text-align: center; padding: 60px 20px;">
+        <div style="font-size: 56px; margin-bottom: 16px;">⏳</div>
+        <div style="color: #9ca3af; font-size: 16px;">Generating elite prompts...</div>
+      </div>
+    </div>
+    
+    <!-- Export Buttons -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-bottom: 20px;">
+      <button onclick="exportPromptsToFile()" style="background: #374151; color: white; padding: 14px 20px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 10px; transition: all 0.2s;" onmouseover="this.style.background='#4b5563'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#374151'; this.style.transform='translateY(0)'">
+        <span style="font-size: 20px;">📥</span>
+        <span>Export to File</span>
+      </button>
+      
+      <button onclick="sharePromptsOnLinkedIn()" style="background: #2563eb; color: white; padding: 14px 20px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 10px; transition: all 0.2s;" onmouseover="this.style.background='#1d4ed8'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#2563eb'; this.style.transform='translateY(0)'">
+        <span style="font-size: 20px;">🔗</span>
+        <span>Share on LinkedIn</span>
+      </button>
+      
+      <button onclick="emailPrompts()" style="background: #7c3aed; color: white; padding: 14px 20px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 10px; transition: all 0.2s;" onmouseover="this.style.background='#6d28d9'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#7c3aed'; this.style.transform='translateY(0)'">
+        <span style="font-size: 20px;">📧</span>
+        <span>Email to Me</span>
+      </button>
+    </div>
+    
+    <!-- Close Button -->
+    <button onclick="closePromptsModal()" style="width: 100%; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 18px 32px; border-radius: 12px; border: none; cursor: pointer; font-weight: 700; font-size: 17px; transition: all 0.3s; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(16, 185, 129, 0.5)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(16, 185, 129, 0.3)'">
+      Got It! Let's Create Elite Content 🚀
+    </button>
+    
+  </div>
+</div>
+
+<script>
+// Display Prompts with INLINE STYLES
+function displayPrompts(promptData) {
+  const prompts = promptData.prompts || [];
+  const usageInstructions = promptData.usage_instructions || [];
+  
+  if (prompts.length === 0) {
+    document.getElementById('prompts-container').innerHTML = `
+      <div style="text-align: center; padding: 40px 20px;">
+        <div style="color: #ef4444; font-size: 16px; margin-bottom: 12px;">Failed to generate prompts</div>
+        <button onclick="getPrompts()" style="color: #a78bfa; text-decoration: underline; background: none; border: none; cursor: pointer; font-size: 14px;">
+          Try again
+        </button>
+      </div>
+    `;
+    return;
+  }
+  
+  // Update instructions
+  if (usageInstructions.length > 0) {
+    const list = document.getElementById('usage-instructions');
+    if (list) {
+      list.innerHTML = usageInstructions.map(instr => `<li>${instr}</li>`).join('');
+    }
+  }
+  
+  let html = '';
+  
+  prompts.forEach((prompt, index) => {
+    const isElite = prompt.type === 'elite';
+    const promptId = `prompt-full-${index}`;
+    const previewId = `prompt-preview-${index}`;
+    const preview = prompt.prompt.substring(0, 500) + '...';
+    
+    html += `
+      <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 3px solid ${isElite ? '#8b5cf6' : '#4b5563'}; border-radius: 16px; padding: 28px; margin-bottom: 24px; position: relative; box-shadow: 0 8px 24px rgba(0,0,0,0.4); transition: all 0.3s;" onmouseover="this.style.borderColor='${isElite ? '#a78bfa' : '#6b7280'}'; this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 32px rgba(0,0,0,0.5)'" onmouseout="this.style.borderColor='${isElite ? '#8b5cf6' : '#4b5563'}'; this.style.transform='translateY(0)'; this.style.boxShadow='0 8px 24px rgba(0,0,0,0.4)'">
+        
+        ${isElite ? `
+          <div style="position: absolute; top: -14px; right: 24px; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #1e293b; padding: 8px 20px; border-radius: 24px; font-size: 11px; font-weight: 800; text-transform: uppercase; box-shadow: 0 6px 16px rgba(251, 191, 36, 0.6); letter-spacing: 1px;">
+            🏆 RECOMMENDED
+          </div>
+        ` : ''}
+        
+        <!-- Title -->
+        <div style="margin-bottom: 20px;">
+          <h3 style="font-size: 20px; font-weight: 700; color: #a78bfa; margin: 0 0 8px 0;">
+            ${prompt.title}
+          </h3>
+          <p style="font-size: 13px; color: #9ca3af; margin: 0 0 12px 0; line-height: 1.5;">
+            ${prompt.description || ''}
+          </p>
+          ${prompt.estimated_score ? `
+            <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(5, 150, 105, 0.2); border: 1px solid #10b981; color: #d1fae5; padding: 6px 16px; border-radius: 24px; font-size: 12px; font-weight: 700;">
+              <span style="display: inline-block; width: 8px; height: 8px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite;"></span>
+              Target: ${prompt.estimated_score}
+            </div>
+          ` : ''}
+        </div>
+        
+        <!-- Preview -->
+        <div id="${previewId}" style="background: #0f172a; padding: 20px; border-radius: 12px; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.7; color: #cbd5e1; max-height: 250px; overflow-y: auto; border: 1px solid #334155; margin-bottom: 16px; white-space: pre-wrap; word-wrap: break-word;">
+${preview}
+        </div>
+        
+        <!-- Full Prompt (Hidden) -->
+        <div id="${promptId}" style="display: none; background: #0f172a; padding: 24px; border-radius: 12px; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.8; color: #e2e8f0; max-height: 600px; overflow-y: auto; border: 2px solid #334155; margin-bottom: 16px; white-space: pre-wrap; word-wrap: break-word;">
+${prompt.prompt}
+        </div>
+        
+        <!-- Buttons -->
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <button 
+            id="copy-btn-${index}"
+            onclick="copyPromptInline('${promptId}', ${index})" 
+            style="flex: 1; min-width: 200px; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none; padding: 14px 24px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 14px; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4); transition: all 0.3s;"
+            onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(139, 92, 246, 0.6)'"
+            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(139, 92, 246, 0.4)'"
+          >
+            📋 Copy ${isElite ? 'ELITE' : ''} Prompt
+          </button>
+          
+          <button 
+            id="expand-btn-${index}"
+            onclick="toggleExpandInline('${promptId}', '${previewId}', ${index})"
+            style="background: #374151; color: #9ca3af; border: none; padding: 12px 24px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s;"
+            onmouseover="this.style.background='#4b5563'; this.style.color='white'"
+            onmouseout="this.style.background='#374151'; this.style.color='#9ca3af'"
+          >
+            👁️ View Full
+          </button>
+        </div>
+        
+        ${isElite ? `
+          <div style="font-size: 11px; color: #6b7280; margin-top: 12px;">
+            💡 ${(prompt.prompt.length / 1000).toFixed(1)}K characters - Complete framework for 95-100/100 score
+          </div>
+        ` : ''}
+        
+      </div>
+    `;
+  });
+  
+  document.getElementById('prompts-container').innerHTML = html;
+  
+  // Store globally
+  window.currentPrompts = prompts;
+  window.currentPromptData = promptData;
+}
+
+function toggleExpandInline(promptId, previewId, index) {
+  const full = document.getElementById(promptId);
+  const preview = document.getElementById(previewId);
+  const btn = document.getElementById('expand-btn-' + index);
+  
+  if (full.style.display === 'none') {
+    full.style.display = 'block';
+    preview.style.display = 'none';
+    btn.textContent = '👁️ Hide Full';
+  } else {
+    full.style.display = 'none';
+    preview.style.display = 'block';
+    btn.textContent = '👁️ View Full';
+  }
+}
+
+function copyPromptInline(promptId, index) {
+  const elem = document.getElementById(promptId);
+  const btn = document.getElementById('copy-btn-' + index);
+  const text = elem.textContent;
+  
+  navigator.clipboard.writeText(text).then(() => {
+    btn.innerHTML = '✅ Copied! Paste in AI';
+    btn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+    
+    setTimeout(() => {
+      btn.innerHTML = '📋 Copy Prompt';
+      btn.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
+    }, 3000);
+    
+    showToastInline('✅ Prompt copied! Now paste in Claude AI or ChatGPT');
+  }).catch(err => {
+    alert('Copy failed. Please select and copy manually.');
+  });
+}
+
+function showToastInline(message) {
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #10b981;
+    color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    z-index: 99999;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    animation: slideIn 0.3s ease-out;
+  `;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.style.animation = 'slideOut 0.3s ease-in';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+function exportPromptsToFile() {
+  if (!window.currentPrompts) {
+    alert('No prompts to export');
+    return;
+  }
+  
+  const { url, topic, keyword, score } = window.currentPromptData;
+  let content = `ELITE AI CONTENT PROMPTS - ContentScale
+URL: ${currentUrl}
+Score: ${score}/100
+Generated: ${new Date().toLocaleString()}
+
+HOW TO USE:
+1. Copy the ELITE prompt below
+2. Paste into Claude.ai, ChatGPT, or Perplexity
+3. AI generates complete article
+4. Update your page
+5. Rescan!
+
+${'='.repeat(60)}\n\n`;
+  
+  window.currentPrompts.forEach((prompt, i) => {
+    content += `PROMPT ${i + 1}: ${prompt.title}\n`;
+    content += `${'='.repeat(60)}\n${prompt.prompt}\n\n${'='.repeat(60)}\n\n`;
+  });
+  
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `contentscale-prompts-${Date.now()}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  showToastInline('✅ Prompts exported!');
+}
+
+function sharePromptsOnLinkedIn() {
+  const score = currentScanResult?.score || 'XX';
+  const text = `🚀 Got ELITE AI Prompts from ContentScale! Score: ${score}/100. Try it: contentscale.site/leaderboard`;
+  navigator.clipboard.writeText(text);
+  window.open('https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent('https://contentscale.site/leaderboard'), '_blank');
+  showToastInline('✅ Post text copied!');
+}
+
+function emailPrompts() {
+  alert('📧 Email feature coming soon! Use Export button for now.');
+}
+</script>
+
+<style>
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.2); }
+}
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes slideOut {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(100%); opacity: 0; }
+}
+</style>
         
         <div id="prompts-container" class="space-y-4 mb-6">
           <div class="text-center py-8">
