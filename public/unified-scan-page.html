@@ -3,140 +3,120 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ContentScale - AI-Powered SEO Content Analyzer</title>
-  <meta name="description" content="Advanced SEO content analysis with hybrid AI. Scan URLs or paste HTML code directly.">
+  <title>ContentScale Global AI SEO Leaderboard - Free Scanner</title>
+  <meta name="description" content="Global leaderboard of top websites ranked by AI-era content quality. Scan your site for free and claim your spot!">
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
-    /* All existing styles from v1.7... */
-    .calc-breakdown { display: block; padding: 12px; background: #1f2937; border-radius: 8px; margin-top: 8px; }
-    .score-formula { font-family: 'Courier New', monospace; background: #111827; padding: 8px; border-radius: 4px; font-size: 13px; }
-    .recommendation { cursor: pointer; transition: all 0.2s; }
-    .recommendation:hover { transform: translateX(4px); }
-    .loading-spinner { border: 3px solid #f3f4f6; border-top: 3px solid #8b5cf6; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    @keyframes scan-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-    .scanning-pulse { animation: scan-pulse 2s ease-in-out infinite; }
-    .progress-bar { transition: width 0.5s ease-out; }
-    
-    .share-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 8px; font-weight: 600; transition: all 0.2s; cursor: pointer; font-size: 14px; }
-    .share-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-    .share-btn.whatsapp { background: #25D366; color: white; }
-    .share-btn.linkedin { background: #0077B5; color: white; }
-    .share-btn.twitter { background: #1DA1F2; color: white; }
-    .share-btn.pdf { background: #EF4444; color: white; }
-    .share-btn.copy { background: #8B5CF6; color: white; }
-    
-    /* SCORE INTERPRETATION BADGE */
-    .score-interpretation {
-      display: inline-block;
-      padding: 12px 24px;
-      border-radius: 12px;
-      font-size: 18px;
-      font-weight: 700;
-      margin-top: 15px;
-      animation: fadeIn 0.5s ease-in;
+    /* LEADERBOARD STYLES */
+    .leaderboard-section {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 32px;
+      border: 2px solid #334155;
+      position: relative;
+      overflow: hidden;
     }
     
-    .score-interpretation.excellent {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      color: white;
-      box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+    .leaderboard-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #f59e0b 0%, #eab308 50%, #f59e0b 100%);
+      animation: shimmer 2s infinite;
     }
     
-    .score-interpretation.very-good {
-      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-      color: white;
-      box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+    @keyframes shimmer {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
     }
     
-    .score-interpretation.good {
-      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-      color: white;
-      box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
-    }
-    
-    .score-interpretation.fair {
-      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-      color: white;
-      box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
-    }
-    
-    .score-interpretation.poor {
-      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-      color: white;
-      box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
-    }
-    
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    
-    /* MODE SWITCHER */
-    .mode-tab {
-      padding: 12px 24px;
-      border-radius: 8px 8px 0 0;
+    .leaderboard-row {
+      background: #1e293b;
+      transition: all 0.3s;
       cursor: pointer;
-      transition: all 0.3s;
-      font-weight: 600;
-      background: #374151;
-      color: #9ca3af;
-      border: 2px solid transparent;
-    }
-    
-    .mode-tab.active {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      border-color: #8b5cf6;
-      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-    }
-    
-    .mode-tab:hover:not(.active) {
-      background: #4b5563;
-      color: white;
-    }
-    
-    .mode-content {
-      display: none;
-    }
-    
-    .mode-content.active {
-      display: block;
-      animation: fadeIn 0.3s ease-in;
-    }
-    
-    /* HTML PASTE AREA */
-    .html-paste-area {
-      width: 100%;
-      min-height: 200px;
-      background: #1f2937;
-      border: 2px solid #374151;
       border-radius: 8px;
+      margin-bottom: 8px;
       padding: 16px;
-      color: #e5e7eb;
-      font-family: 'Courier New', monospace;
-      font-size: 13px;
-      line-height: 1.5;
-      resize: vertical;
-      transition: all 0.3s;
+      border-left: 4px solid transparent;
     }
     
-    .html-paste-area:focus {
-      outline: none;
-      border-color: #8b5cf6;
-      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    .leaderboard-row:hover {
+      background: #334155;
+      transform: translateX(4px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
     
-    .html-paste-area::placeholder {
-      color: #6b7280;
+    .leaderboard-row.rank-1 {
+      border-left-color: #fbbf24;
+      background: linear-gradient(135deg, #1e293b 0%, #2d1f08 100%);
     }
     
-    /* COST BADGE */
-    .cost-badge {
+    .leaderboard-row.rank-2 {
+      border-left-color: #9ca3af;
+      background: linear-gradient(135deg, #1e293b 0%, #25282e 100%);
+    }
+    
+    .leaderboard-row.rank-3 {
+      border-left-color: #f97316;
+      background: linear-gradient(135deg, #1e293b 0%, #2d1908 100%);
+    }
+    
+    .rank-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      font-weight: 800;
+      font-size: 18px;
+    }
+    
+    .rank-1 .rank-badge {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      color: #1e293b;
+      box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+      font-size: 24px;
+    }
+    
+    .rank-2 .rank-badge {
+      background: linear-gradient(135deg, #e5e7eb 0%, #9ca3af 100%);
+      color: #1e293b;
+      box-shadow: 0 4px 12px rgba(156, 163, 175, 0.4);
+    }
+    
+    .rank-3 .rank-badge {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+    }
+    
+    .rank-badge.default {
+      background: #334155;
+      color: #94a3b8;
+    }
+    
+    .score-display {
+      font-size: 32px;
+      font-weight: 800;
+    }
+    
+    .score-excellent { color: #10b981; }
+    .score-very-good { color: #3b82f6; }
+    .score-good { color: #8b5cf6; }
+    .score-fair { color: #f59e0b; }
+    .score-poor { color: #ef4444; }
+    
+    .live-indicator {
       display: inline-flex;
       align-items: center;
       gap: 6px;
+      background: #065f46;
+      color: #d1fae5;
       padding: 4px 12px;
       border-radius: 12px;
       font-size: 11px;
@@ -144,884 +124,400 @@
       text-transform: uppercase;
     }
     
-    .cost-badge.expensive {
-      background: #fef3c7;
-      color: #92400e;
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      background: #10b981;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
     }
     
-    .cost-badge.cheap {
-      background: #d1fae5;
-      color: #065f46;
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
     }
     
-    /* FREE PROMPT CTA STYLES (keep all from v1.7) */
-    .free-prompt-cta {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    /* SCANNER STYLES */
+    .scanner-section {
+      background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
       border-radius: 16px;
-      padding: 40px;
-      box-shadow: 0 20px 60px rgba(102, 126, 234, 0.4);
-      color: white;
-      animation: slideIn 0.5s ease-out;
+      padding: 32px;
+      border: 2px solid #374151;
     }
     
-    @keyframes slideIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-    
-    .cta-trophy { font-size: 64px; line-height: 1; animation: pulse 2s infinite; }
-    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
-    
-    .cta-badge {
-      background: rgba(255, 255, 255, 0.2);
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 14px;
-      font-weight: 600;
-      backdrop-filter: blur(10px);
-      display: inline-block;
-      margin: 4px;
-    }
-    
-    .cta-highlight {
-      background: #10b981;
-      padding: 4px 12px;
-      border-radius: 8px;
-      font-weight: bold;
-    }
-    
-    .btn-download-prompt {
-      background: #10b981;
+    .scan-btn {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      padding: 16px 40px;
+      border-radius: 12px;
+      font-weight: 700;
       color: white;
       border: none;
-      padding: 20px 40px;
-      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s;
       font-size: 18px;
-      font-weight: 700;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      transition: all 0.3s;
-      box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
     }
     
-    .btn-download-prompt:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 12px 35px rgba(16, 185, 129, 0.6);
-      background: #059669;
-    }
-    
-    .btn-hire {
-      background: rgba(255, 255, 255, 0.2);
-      color: white;
-      border: 2px solid rgba(255, 255, 255, 0.4);
-      padding: 16px 32px;
-      border-radius: 12px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s;
-      backdrop-filter: blur(10px);
-      text-decoration: none;
-      display: inline-block;
-    }
-    
-    .btn-hire:hover {
-      background: rgba(255, 255, 255, 0.3);
-      border-color: rgba(255, 255, 255, 0.6);
+    .scan-btn:hover {
       transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
     }
     
-    .social-proof-item { text-align: center; }
-    .social-proof-item strong { display: block; font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+    .scan-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
     
-    /* Prompt Modal (keep from v1.7) */
-    .prompt-modal {
+    /* MODAL STYLES */
+    .modal {
       display: none;
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      z-index: 9999;
       background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(5px);
-    }
-    
-    .prompt-modal.active {
-      display: flex;
+      z-index: 9999;
       align-items: center;
       justify-content: center;
       padding: 20px;
     }
     
-    .modal-content {
-      position: relative;
-      background: #1f2937;
-      border-radius: 20px;
-      max-width: 700px;
-      width: 100%;
-      max-height: 90vh;
-      overflow-y: auto;
-      box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6);
-      animation: slideUp 0.3s;
+    .modal.active {
+      display: flex;
     }
     
-    @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-content {
+      background: #1f2937;
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 500px;
+      width: 100%;
+      position: relative;
+    }
     
     .modal-close {
       position: absolute;
-      top: 20px;
-      right: 20px;
+      top: 16px;
+      right: 16px;
       background: #374151;
       border: none;
-      width: 40px;
-      height: 40px;
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
-      font-size: 28px;
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       color: white;
-      transition: all 0.3s;
-      z-index: 10;
+      font-size: 20px;
     }
     
     .modal-close:hover {
       background: #4b5563;
-      transform: rotate(90deg);
     }
     
-    /* Mobile Responsive */
+    /* MOBILE */
     @media (max-width: 768px) {
-      .free-prompt-cta { padding: 25px; }
-      .cta-trophy { font-size: 48px; }
-      .btn-download-prompt { width: 100%; justify-content: center; padding: 18px 24px; font-size: 16px; }
-      .btn-hire { width: 100%; justify-content: center; text-align: center; }
-      .modal-content { border-radius: 20px 20px 0 0; max-height: 95vh; }
-      .score-interpretation { font-size: 16px; padding: 10px 20px; }
-      .mode-tab { padding: 10px 16px; font-size: 14px; }
-      .html-paste-area { min-height: 150px; font-size: 12px; }
+      .leaderboard-section, .scanner-section { padding: 20px; }
+      .rank-badge { width: 32px; height: 32px; font-size: 14px; }
+      .rank-1 .rank-badge { font-size: 18px; }
+      .score-display { font-size: 24px; }
     }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen p-8">
-  <div class="max-w-5xl mx-auto">
-    <!-- Hero Title -->
+  <div class="max-w-6xl mx-auto">
+    
+    <!-- HEADER -->
     <div class="text-center mb-8">
-      <h1 class="text-5xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-        ContentScale AI SEO Analyzer
+      <h1 class="text-5xl font-bold mb-3 bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
+        🏆 Global AI SEO Leaderboard
       </h1>
-      <p class="text-xl text-gray-300">The Most Advanced SEO Scoring System + FREE AI Era SEO Prompt</p>
+      <p class="text-xl text-gray-300 mb-4">The World's First AI-Era Content Quality Rankings</p>
+      <span class="live-indicator">
+        <span class="live-dot"></span>
+        Live Rankings
+      </span>
     </div>
 
-    <!-- SCAN FORM WITH DUAL MODE -->
-    <div class="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-8 mb-6 shadow-2xl border-2 border-purple-500">
-      <h2 class="text-3xl font-bold mb-2 text-center">🔍 Analyze Your Content</h2>
-      <p class="text-sm text-gray-400 text-center mb-6">Choose your analysis method</p>
-      
-      <!-- MODE TABS -->
-      <div class="flex gap-2 mb-6">
-        <button 
-          id="tab-url" 
-          class="mode-tab active flex-1"
-          onclick="switchMode('url')"
-        >
-          <div class="flex items-center justify-center gap-2">
-            <span>🌐 Scan URL</span>
-            <span class="cost-badge expensive">$$$ Full Analysis</span>
-          </div>
-        </button>
-        <button 
-          id="tab-html" 
-          class="mode-tab flex-1"
-          onclick="switchMode('html')"
-        >
-          <div class="flex items-center justify-center gap-2">
-            <span>📝 Paste HTML</span>
-            <span class="cost-badge cheap">$ Quick Test</span>
-          </div>
+    <!-- LEADERBOARD SECTION -->
+    <div class="leaderboard-section">
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <h2 class="text-3xl font-bold text-yellow-400">Top 100 Websites Globally</h2>
+          <p class="text-sm text-gray-400 mt-1">Ranked by GRAAF + CRAFT + Technical SEO (100 points max)</p>
+        </div>
+        <button onclick="refreshLeaderboard()" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-semibold transition">
+          🔄 Refresh
         </button>
       </div>
       
-      <!-- URL MODE -->
-      <div id="mode-url" class="mode-content active">
+      <!-- Stats Bar -->
+      <div class="grid grid-cols-3 gap-4 mb-6 p-4 bg-gray-800 bg-opacity-50 rounded-lg">
+        <div class="text-center">
+          <div class="text-2xl font-bold text-green-400" id="total-entries">-</div>
+          <div class="text-xs text-gray-400">Total Entries</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-blue-400" id="average-score">-</div>
+          <div class="text-xs text-gray-400">Average Score</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-yellow-400" id="highest-score">-</div>
+          <div class="text-xs text-gray-400">Highest Score</div>
+        </div>
+      </div>
+      
+      <!-- Leaderboard Table -->
+      <div id="leaderboard-container">
+        <div class="text-center py-12">
+          <div class="text-5xl mb-4">🔍</div>
+          <div class="text-gray-400">Loading leaderboard...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCAN YOUR SITE SECTION -->
+    <div class="scanner-section mb-8">
+      <div class="text-center mb-8">
+        <h2 class="text-4xl font-bold mb-3">🚀 Scan Your Website</h2>
+        <p class="text-gray-300">Get your AI-Era SEO score and claim your spot on the leaderboard!</p>
+      </div>
+      
+      <div class="max-w-3xl mx-auto">
         <div class="flex gap-3 mb-5">
           <input 
             type="text" 
-            id="urlInput" 
-            placeholder="https://example.com/your-article"
-            class="flex-1 bg-gray-700 text-white px-6 py-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg shadow-inner"
+            id="scanInput" 
+            placeholder="https://yourwebsite.com"
+            class="flex-1 bg-gray-700 text-white px-6 py-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg"
           >
           <button 
-            onclick="scanURL()"
-            id="scan-button"
-            class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-12 py-4 rounded-lg font-bold text-lg transition shadow-lg hover:shadow-xl"
+            onclick="performScan()"
+            id="scanButton"
+            class="scan-btn"
           >
             Scan Now
           </button>
         </div>
         
-        <div class="bg-gray-800 bg-opacity-70 rounded-lg p-4 border border-gray-700">
-          <div class="text-sm">
-            <div class="font-bold text-green-400 mb-2">✅ Complete Analysis Includes:</div>
-            <div class="grid md:grid-cols-2 gap-2 text-xs text-gray-400">
-              <div>• Live page rendering</div>
-              <div>• Image optimization check</div>
-              <div>• External links validation</div>
-              <div>• Real page speed</div>
-              <div>• Schema markup verification</div>
-              <div>• Mobile responsiveness</div>
+        <div class="bg-gray-800 bg-opacity-70 rounded-lg p-4 text-sm text-gray-400">
+          <div class="font-bold text-green-400 mb-2">✅ Free Analysis Includes:</div>
+          <div class="grid md:grid-cols-2 gap-2 text-xs">
+            <div>• GRAAF Framework Score (50 pts)</div>
+            <div>• CRAFT Methodology (30 pts)</div>
+            <div>• Technical SEO (20 pts)</div>
+            <div>• Instant Leaderboard Ranking</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULTS MODAL -->
+    <div id="resultsModal" class="modal">
+      <div class="modal-content">
+        <button class="modal-close" onclick="closeResultsModal()">×</button>
+        
+        <div class="text-center mb-6">
+          <div class="text-6xl mb-3" id="modal-emoji">🎯</div>
+          <div class="text-5xl font-bold mb-2" id="modal-score">--/100</div>
+          <div class="text-lg text-gray-400" id="modal-quality">Analyzing...</div>
+        </div>
+        
+        <div class="mb-6">
+          <h3 class="font-bold text-lg mb-3">Breakdown:</h3>
+          <div class="space-y-2">
+            <div class="flex justify-between">
+              <span>GRAAF Framework:</span>
+              <span class="font-bold" id="modal-graaf">-/50</span>
+            </div>
+            <div class="flex justify-between">
+              <span>CRAFT Methodology:</span>
+              <span class="font-bold" id="modal-craft">-/30</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Technical SEO:</span>
+              <span class="font-bold" id="modal-technical">-/20</span>
             </div>
           </div>
         </div>
         
-        <div class="flex items-center justify-between text-xs mt-3">
-          <div class="text-gray-400">
-            <span class="text-gray-500">💡 Try example:</span>
-            <button 
-              onclick="document.getElementById('urlInput').value='https://contentscale.site'; scanURL();"
-              class="text-purple-400 hover:text-purple-300 underline ml-1 font-semibold"
+        <!-- Add to Leaderboard -->
+        <div id="leaderboard-prompt" class="hidden">
+          <div class="bg-purple-900 bg-opacity-30 border border-purple-700 rounded-lg p-4 mb-4">
+            <h3 class="font-bold text-purple-400 mb-2">🏆 Claim Your Spot!</h3>
+            <p class="text-sm text-gray-300 mb-3">Add your site to the public leaderboard?</p>
+            
+            <input 
+              type="text" 
+              id="company-name" 
+              placeholder="Company/Site Name (optional)"
+              class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
-              ContentScale.site
-            </button>
-          </div>
-          <div class="text-gray-500">
-            ⚡ Analysis time: ~10 seconds
-          </div>
-        </div>
-      </div>
-      
-      <!-- HTML MODE -->
-      <div id="mode-html" class="mode-content">
-        <div class="mb-5">
-          <textarea 
-            id="htmlInput"
-            class="html-paste-area"
-            placeholder="Paste your HTML code here...
-
-Example:
-<!DOCTYPE html>
-<html>
-<head>
-  <title>My Article</title>
-  <meta name=&quot;description&quot; content=&quot;...&quot;>
-</head>
-<body>
-  <h1>Main Heading</h1>
-  <p>Content here...</p>
-</body>
-</html>"
-          ></textarea>
-          
-          <button 
-            onclick="analyzeHTML()"
-            id="analyze-button"
-            class="w-full mt-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 px-12 py-4 rounded-lg font-bold text-lg transition shadow-lg hover:shadow-xl"
-          >
-            Analyze HTML
-          </button>
-        </div>
-        
-        <div class="bg-blue-900 bg-opacity-30 rounded-lg p-4 border border-blue-700">
-          <div class="text-sm">
-            <div class="font-bold text-blue-400 mb-2">⚡ Quick Analysis Includes:</div>
-            <div class="grid md:grid-cols-2 gap-2 text-xs text-gray-400">
-              <div>✅ Content structure</div>
-              <div>✅ Heading hierarchy</div>
-              <div>✅ Word count & readability</div>
-              <div>✅ Meta tags check</div>
-              <div>✅ Internal links</div>
-              <div>✅ Schema markup (static)</div>
-            </div>
-            <div class="mt-3 text-xs text-yellow-400">
-              ⚠️ Note: Cannot verify live images, external links, or real page speed
+            
+            <div class="flex gap-2">
+              <button onclick="submitToLeaderboard()" class="flex-1 bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-bold transition">
+                Yes, Add Me!
+              </button>
+              <button onclick="skipLeaderboard()" class="flex-1 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg font-bold transition">
+                No Thanks
+              </button>
             </div>
           </div>
         </div>
         
-        <div class="flex items-center justify-between text-xs mt-3">
-          <div class="text-gray-400">
-            💡 Perfect for: Draft content, pre-publish checks, privacy needs
-          </div>
-          <div class="text-green-500 font-semibold">
-            ⚡ 10X faster & cheaper!
-          </div>
-        </div>
-      </div>
-      
-      <!-- Loading Indicator -->
-      <div id="loadingIndicator" class="hidden mt-6">
-        <div class="bg-gray-800 rounded-lg p-6">
-          <div class="text-center mb-4">
-            <div class="text-5xl mb-3 scanning-pulse">🔍</div>
-            <h3 class="text-xl font-bold mb-2">Analyzing Content...</h3>
-            <p id="loadingText" class="text-gray-300">Initializing analysis...</p>
-          </div>
-          
-          <div class="mb-4">
-            <div class="flex justify-between mb-2 text-sm">
-              <span class="text-gray-400">Progress</span>
-              <span id="progress-percent" class="text-purple-400 font-bold">0%</span>
-            </div>
-            <div class="w-full bg-slate-700 rounded-full h-3 overflow-hidden">
-              <div id="progress-bar" class="progress-bar h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full" style="width: 0%"></div>
-            </div>
-          </div>
-          
-          <div class="grid grid-cols-4 gap-3 text-sm" id="progress-steps">
-            <div id="step-fetch" class="bg-slate-700 bg-opacity-50 rounded p-2 border-2 border-transparent text-center">
-              <div class="text-xl mb-1">📥</div>
-              <div class="font-bold text-xs">Fetching</div>
-            </div>
-            <div id="step-parse" class="bg-slate-700 bg-opacity-50 rounded p-2 border-2 border-transparent text-center">
-              <div class="text-xl mb-1">🔍</div>
-              <div class="font-bold text-xs">Parsing</div>
-            </div>
-            <div id="step-validate" class="bg-slate-700 bg-opacity-50 rounded p-2 border-2 border-transparent text-center">
-              <div class="text-xl mb-1">🤖</div>
-              <div class="font-bold text-xs">AI Check</div>
-            </div>
-            <div id="step-score" class="bg-slate-700 bg-opacity-50 rounded p-2 border-2 border-transparent text-center">
-              <div class="text-xl mb-1">🎯</div>
-              <div class="font-bold text-xs">Scoring</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- RESULTS SECTION (keep all from v1.7) -->
-    <div id="resultsContainer" class="hidden">
-      <div class="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-8 mb-6 shadow-2xl border-2 border-purple-500">
-        <div class="flex items-center justify-between mb-6">
-          <h2 class="text-3xl font-bold">📊 Your SEO Score</h2>
-          
-          <div class="flex gap-2 flex-wrap justify-end">
-            <button onclick="shareWhatsApp()" class="share-btn whatsapp" title="Share on WhatsApp">
-              <span>📱</span> WhatsApp
-            </button>
-            <button onclick="shareLinkedIn()" class="share-btn linkedin" title="Share on LinkedIn">
-              <span>💼</span> LinkedIn
-            </button>
-            <button onclick="shareTwitter()" class="share-btn twitter" title="Share on Twitter">
-              <span>🐦</span> Twitter
-            </button>
-            <button onclick="exportCompletePDF()" class="share-btn pdf" title="Export Complete PDF Report">
-              <span>📄</span> Complete PDF
-            </button>
-            <button onclick="copyResults()" class="share-btn copy" title="Copy to Clipboard">
-              <span>📋</span> Copy
-            </button>
-          </div>
-        </div>
-
-        <div class="text-center mb-8">
-          <div style="width: 250px; height: 250px; position: relative; margin: 0 auto;">
-            <svg width="250" height="250" style="transform: rotate(-90deg);">
-              <circle cx="125" cy="125" r="110" stroke="#374151" stroke-width="25" fill="none"></circle>
-              <circle id="mainScoreCircle" cx="125" cy="125" r="110" 
-                      stroke="#A78BFA" 
-                      stroke-width="25" 
-                      fill="none"
-                      stroke-linecap="round"
-                      stroke-dasharray="691" 
-                      stroke-dashoffset="691"
-                      style="transition: stroke-dashoffset 1.5s ease-in-out;"></circle>
-            </svg>
-            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
-              <div class="text-7xl font-bold text-purple-400" id="mainScoreDisplay">--</div>
-              <div class="text-sm text-gray-400 mt-2">/ 100</div>
-            </div>
-          </div>
-          
-          <!-- SCORE INTERPRETATION BADGE -->
-          <div id="scoreInterpretation" class="score-interpretation" style="display: none;">
-            <span id="interpretationEmoji"></span>
-            <span id="interpretationText"></span>
-          </div>
-          
-          <div class="mt-6">
-            <h3 class="text-2xl font-bold text-white mb-2">AI-Era SEO Content Score</h3>
-            <p class="text-gray-400">Powered by GRAAF + CRAFT frameworks with Claude AI validation</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- FREE PROMPT CTA (keep from v1.7) -->
-      <div class="free-prompt-cta mb-6">
-        <div class="flex items-start gap-6 mb-6">
-          <div class="cta-trophy">🏆</div>
-          <div class="flex-1">
-            <h3 class="text-3xl font-bold mb-3">
-              Want <span class="cta-highlight">100/100</span> scores?
-            </h3>
-            <p class="text-lg mb-4 opacity-95">
-              Download the <strong>FREE Elite 100/100 Writer Prompt</strong> (12,420 words) 
-              with EXACT criteria for perfect scores.
-            </p>
-            <div class="flex flex-wrap gap-2 mb-4">
-              <span class="cta-badge">✅ GRAAF Framework (50pts)</span>
-              <span class="cta-badge">✅ CRAFT Methodology (30pts)</span>
-              <span class="cta-badge">✅ Technical SEO (20pts)</span>
-            </div>
+        <div id="leaderboard-result" class="hidden text-center">
+          <div class="bg-green-900 bg-opacity-30 border border-green-700 rounded-lg p-4">
+            <div class="text-green-400 font-bold text-2xl mb-2" id="rank-display">🎉 Rank #-</div>
+            <p class="text-sm text-gray-300">You're now on the global leaderboard!</p>
           </div>
         </div>
         
-        <div class="flex flex-wrap gap-4 mb-6">
-          <button class="btn-download-prompt" onclick="openPromptModal()">
-            <span style="font-size: 24px;">⚡</span>
-            <div style="text-align: left;">
-              <div>Download FREE Prompt</div>
-              <div style="font-size: 12px; opacity: 0.9; font-weight: 500;">12,420 words • 100% free</div>
-            </div>
-          </button>
-          <a href="https://wa.me/31628073996?text=Hi%2C%20I%20want%20100%2F100%20content%20writing%20service%20for%20my%20website" 
-             class="btn-hire" 
-             target="_blank">
-            Or let us do it for you →
-          </a>
-        </div>
-        
-        <div class="flex flex-wrap gap-8 pt-6 border-t border-white border-opacity-20">
-          <div class="social-proof-item">
-            <strong>200+</strong>
-            <div class="text-sm opacity-90">implementations</div>
-          </div>
-          <div class="social-proof-item">
-            <strong>78%</strong>
-            <div class="text-sm opacity-90">avg recovery</div>
-          </div>
-          <div class="social-proof-item">
-            <strong>67%</strong>
-            <div class="text-sm opacity-90">better rankings</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Score Breakdown -->
-      <div class="bg-gray-800 rounded-lg p-6 mb-6">
-        <h3 class="text-2xl font-bold mb-4">📈 Score Breakdown</h3>
-        <div id="scoreBreakdown" class="space-y-4"></div>
-      </div>
-
-      <!-- Priority Recommendations -->
-      <div class="bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg p-6 mb-6 border border-blue-700">
-        <h3 class="text-2xl font-bold mb-6">🎯 Priority Recommendations</h3>
-        <div id="recommendationsContainer"></div>
+        <button onclick="closeResultsModal()" class="w-full mt-4 bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg font-bold transition">
+          Close
+        </button>
       </div>
     </div>
 
-    <!-- Value Propositions -->
-    <div class="grid md:grid-cols-3 gap-4 mb-6">
-      <div class="bg-gray-800 rounded-lg p-5 text-center border border-gray-700 hover:border-purple-500 transition">
-        <div class="text-4xl mb-3">🎯</div>
-        <div class="font-bold text-white mb-2">Dual Analysis Modes</div>
-        <div class="text-sm text-gray-400">Scan live URLs or paste HTML code for instant feedback</div>
-      </div>
-      <div class="bg-gray-800 rounded-lg p-5 text-center border border-gray-700 hover:border-purple-500 transition">
-        <div class="text-4xl mb-3">🤖</div>
-        <div class="font-bold text-white mb-2">AI-Powered Insights</div>
-        <div class="text-sm text-gray-400">Claude AI spots edge cases and provides educational recommendations</div>
-      </div>
-      <div class="bg-gray-800 rounded-lg p-5 text-center border border-gray-700 hover:border-purple-500 transition">
-        <div class="text-4xl mb-3">⚡</div>
-        <div class="font-bold text-white mb-2">Choose Your Speed</div>
-        <div class="text-sm text-gray-400">Full analysis (10s) or quick test (2s) - you decide</div>
-      </div>
-    </div>
-
-    <!-- How It Works -->
-    <div class="bg-gray-800 rounded-lg p-6 mb-8 border border-gray-700">
-      <h3 class="font-bold text-white mb-5 text-center text-lg">⚡ How It Works</h3>
-      <div class="grid md:grid-cols-2 gap-6">
-        <div>
-          <h4 class="font-bold text-purple-400 mb-3">🌐 URL Scan Mode</h4>
-          <div class="text-sm text-gray-400 space-y-2">
-            <div>• Complete live page analysis</div>
-            <div>• Real performance metrics</div>
-            <div>• Image & resource checks</div>
-            <div>• External link validation</div>
-            <div>• Full SEO audit</div>
-          </div>
-        </div>
-        <div>
-          <h4 class="font-bold text-green-400 mb-3">📝 HTML Paste Mode</h4>
-          <div class="text-sm text-gray-400 space-y-2">
-            <div>• Instant content analysis</div>
-            <div>• Pre-publish checks</div>
-            <div>• Privacy-focused (no URL needed)</div>
-            <div>• Structure & markup validation</div>
-            <div>• 10X faster results</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- PROMPT MODAL (keep from v1.7) -->
-  <div id="promptModal" class="prompt-modal">
-    <!-- Modal content same as v1.7... -->
-  </div>
-
-  <!-- Footer -->
-  <div class="max-w-5xl mx-auto mt-12 pb-8">
-    <div class="bg-gray-800 rounded-lg p-6 text-center">
-      <div class="grid md:grid-cols-3 gap-6 mb-6">
-        <div>
-          <div class="text-3xl mb-2">🏆</div>
-          <div class="font-semibold text-white mb-1">78% Avg Recovery Rate</div>
-          <div class="text-xs text-gray-400">200+ clients across 47+ countries</div>
-        </div>
-        <div>
-          <div class="text-3xl mb-2">⚡</div>
-          <div class="font-semibold text-white mb-1">Dual Analysis Modes</div>
-          <div class="text-xs text-gray-400">URL scan or HTML paste - your choice</div>
-        </div>
-        <div>
-          <div class="text-3xl mb-2">🔒</div>
-          <div class="font-semibold text-white mb-1">Privacy First</div>
-          <div class="text-xs text-gray-400">Zero data collection, your content stays private</div>
-        </div>
-      </div>
-      
-      <div class="border-t border-gray-700 pt-4">
-        <p class="text-sm text-gray-400 mb-2">
-          Developed by <strong class="text-white">ContentScale</strong> - Expert SEO Recovery Service
-        </p>
-        <p class="text-xs text-gray-500 mb-3">
-          Specializing in Google Algorithm Update Recovery & AI Overview Optimization
-        </p>
-        <div class="flex justify-center gap-4 text-xs">
-          <a href="https://contentscale.site" target="_blank" class="text-purple-400 hover:text-purple-300">
-            🌐 contentscale.site
-          </a>
-          <a href="https://wa.me/31628073996" target="_blank" class="text-green-400 hover:text-green-300">
-            💬 WhatsApp: +31 628073996
-          </a>
-          <a href="mailto:info@contentscale.site" class="text-blue-400 hover:text-blue-300">
-            📧 info@contentscale.site
-          </a>
-        </div>
-      </div>
-    </div>
-    
-    <div class="mt-4 text-center text-xs text-gray-600">
-      <p>Powered by: Puppeteer (URL Mode) • DOMParser (HTML Mode) • Claude Sonnet 4 (AI Validation)</p>
-      <p class="mt-1">Version 1.8 with Dual Analysis Modes | Last Updated: December 2025</p>
+    <!-- FOOTER -->
+    <div class="text-center text-gray-500 text-sm mt-12">
+      <p class="mb-2">Powered by ContentScale AI • GRAAF + CRAFT Frameworks • Claude Sonnet 4</p>
+      <p>
+        <a href="https://contentscale.site" class="text-purple-400 hover:text-purple-300">contentscale.site</a>
+        •
+        <a href="https://wa.me/31628073996" class="text-green-400 hover:text-green-300">WhatsApp</a>
+      </p>
     </div>
   </div>
 
   <script>
-    console.log('%c🎯 ContentScale Scanner v1.8 - DUAL MODE', 'color: #10b981; font-size: 16px; font-weight: bold');
-    console.log('%c✅ URL Scan: Complete analysis', 'color: #10b981');
-    console.log('%c✅ HTML Paste: Quick test (10X faster & cheaper!)', 'color: #10b981');
+    console.log('%c🏆 ContentScale Global Leaderboard', 'color: #f59e0b; font-size: 16px; font-weight: bold');
     
-    let currentScanData = null;
-    let currentScannedURL = '';
-    let currentMode = 'url';
+    const API_BASE = '';  // Same origin
+    let currentScanResult = null;
+    let currentUrl = '';
     
-    const CONFIG = {
-      scanEndpoint: '/api/scan-free',
-      analyzeEndpoint: '/api/analyze-html',  // NEW: HTML analysis endpoint
-      claudeEnabled: true
-    };
-
-    // MODE SWITCHER
-    function switchMode(mode) {
-      currentMode = mode;
-      
-      // Update tabs
-      document.getElementById('tab-url').classList.toggle('active', mode === 'url');
-      document.getElementById('tab-html').classList.toggle('active', mode === 'html');
-      
-      // Update content
-      document.getElementById('mode-url').classList.toggle('active', mode === 'url');
-      document.getElementById('mode-html').classList.toggle('active', mode === 'html');
-    }
-
-    // HTML ANALYSIS FUNCTION
-    async function analyzeHTML() {
-      const html = document.getElementById('htmlInput').value.trim();
-      
-      if (!html) {
-        alert('⚠️ Please paste HTML code');
-        return;
-      }
-      
-      if (html.length < 100) {
-        alert('⚠️ HTML seems too short. Please paste complete HTML code.');
-        return;
-      }
-      
-      currentScannedURL = 'HTML Paste Analysis';
-      
-      document.getElementById('analyze-button').disabled = true;
-      document.getElementById('analyze-button').textContent = 'Analyzing...';
-      document.getElementById('loadingIndicator').classList.remove('hidden');
-      document.getElementById('resultsContainer').classList.add('hidden');
-      updateProgress(0, 'Initializing HTML analysis...');
-      
+    // LOAD LEADERBOARD
+    async function loadLeaderboard() {
       try {
-        updateProgress(20, 'Parsing HTML structure...', 'step-parse');
-        await sleep(300);
-        
-        updateProgress(50, 'Analyzing content...', 'step-parse');
-        
-        // Send to backend for analysis
-        const response = await fetch(CONFIG.analyzeEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ html })
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
+        const response = await fetch(`${API_BASE}/api/leaderboard?limit=100`);
         const data = await response.json();
         
         if (!data.success) {
-          throw new Error(data.error || 'Analysis failed');
+          throw new Error(data.error || 'Failed to load');
         }
         
-        updateProgress(80, 'Calculating scores...', 'step-score');
-        await sleep(300);
-        updateProgress(100, 'Analysis complete!', 'step-score');
-        await sleep(300);
+        displayLeaderboard(data.entries);
         
-        currentScanData = data;
-        displayResults(data);
+        // Load stats
+        const statsResponse = await fetch(`${API_BASE}/api/leaderboard/stats`);
+        const statsData = await statsResponse.json();
         
-        setTimeout(() => {
-          document.getElementById('resultsContainer').scrollIntoView({ 
-            behavior: 'smooth',
-            block: 'start'
-          });
-        }, 300);
+        if (statsData.success) {
+          document.getElementById('total-entries').textContent = statsData.stats.total_entries || 0;
+          document.getElementById('average-score').textContent = statsData.stats.average_score || '-';
+          document.getElementById('highest-score').textContent = statsData.stats.highest_score || '-';
+        }
         
       } catch (error) {
-        console.error('Analysis error:', error);
-        updateProgress(0, `Error: ${error.message}`);
-        setTimeout(() => {
-          document.getElementById('loadingIndicator').classList.add('hidden');
-        }, 3000);
-      } finally {
-        document.getElementById('analyze-button').disabled = false;
-        document.getElementById('analyze-button').textContent = 'Analyze HTML';
+        console.error('Leaderboard error:', error);
+        document.getElementById('leaderboard-container').innerHTML = `
+          <div class="text-center py-12">
+            <div class="text-red-400 mb-2">Failed to load leaderboard</div>
+            <button onclick="loadLeaderboard()" class="text-purple-400 hover:text-purple-300 underline">Try again</button>
+          </div>
+        `;
       }
     }
-
-    // SCORE INTERPRETATION (keep from v1.7)
-    function getScoreInterpretation(score) {
-      if (score >= 90) {
-        return {
-          class: 'excellent',
-          emoji: '🌟',
-          text: 'Excellent',
-          description: 'Top-tier SEO optimization'
-        };
-      } else if (score >= 80) {
-        return {
-          class: 'very-good',
-          emoji: '👍',
-          text: 'Very Good',
-          description: 'Strong SEO foundation'
-        };
-      } else if (score >= 70) {
-        return {
-          class: 'good',
-          emoji: '✓',
-          text: 'Good',
-          description: 'Solid but improvable'
-        };
-      } else if (score >= 60) {
-        return {
-          class: 'fair',
-          emoji: '⚠️',
-          text: 'Fair',
-          description: 'Needs optimization'
-        };
-      } else {
-        return {
-          class: 'poor',
-          emoji: '❌',
-          text: 'Needs Improvement',
-          description: 'Significant issues detected'
-        };
-      }
-    }
-
-    function showScoreInterpretation(score) {
-      const interpretation = getScoreInterpretation(score);
-      const badge = document.getElementById('scoreInterpretation');
-      const emoji = document.getElementById('interpretationEmoji');
-      const text = document.getElementById('interpretationText');
-      
-      badge.className = 'score-interpretation';
-      badge.classList.add(interpretation.class);
-      
-      emoji.textContent = interpretation.emoji + ' ';
-      text.textContent = interpretation.text;
-      
-      badge.style.display = 'inline-block';
-    }
-
-    // PROMPT MODAL FUNCTIONS (keep from v1.7)
-    function openPromptModal() {
-      document.getElementById('promptModal').classList.add('active');
-      document.body.style.overflow = 'hidden';
-      
-      if (typeof gtag !== 'undefined') {
-        gtag('event', 'prompt_modal_opened', {
-          'event_category': 'engagement',
-          'event_label': 'free_prompt_cta'
-        });
-      }
-    }
-
-    function closePromptModal() {
-      document.getElementById('promptModal').classList.remove('active');
-      document.body.style.overflow = '';
-    }
-
-    function downloadPromptTxt() {
-      window.location.href = '/prompts/perfect-100-score-prompt.txt';
-      if (typeof gtag !== 'undefined') {
-        gtag('event', 'prompt_downloaded', {
-          'event_category': 'conversion',
-          'event_label': 'txt_format',
-          'value': 1997
-        });
-      }
-      setTimeout(() => {
-        alert('✅ Prompt downloaded!');
-      }, 500);
-      closePromptModal();
-    }
-
-    function downloadPromptMd() {
-      window.location.href = '/prompts/perfect-100-score-prompt.md';
-      if (typeof gtag !== 'undefined') {
-        gtag('event', 'prompt_downloaded', {
-          'event_category': 'conversion',
-          'event_label': 'md_format',
-          'value': 1997
-        });
-      }
-      setTimeout(() => {
-        alert('✅ Prompt downloaded!');
-      }, 500);
-      closePromptModal();
-    }
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closePromptModal();
-    });
-
-    // PROGRESS UPDATE
-    function updateProgress(percent, message, activeStep) {
-      document.getElementById('progress-bar').style.width = percent + '%';
-      document.getElementById('progress-percent').textContent = percent + '%';
-      document.getElementById('loadingText').textContent = message;
-
-      if (!activeStep) return;
-
-      const steps = ['step-fetch', 'step-parse', 'step-validate', 'step-score'];
-      steps.forEach(step => {
-        const el = document.getElementById(step);
-        if (step === activeStep) {
-          el.classList.remove('border-transparent');
-          el.classList.add('border-purple-500', 'bg-purple-900', 'bg-opacity-30');
-        } else if (steps.indexOf(step) < steps.indexOf(activeStep)) {
-          el.classList.remove('border-transparent', 'border-purple-500');
-          el.classList.add('border-green-500', 'bg-green-900', 'bg-opacity-20');
-        } else {
-          el.classList.remove('border-purple-500', 'border-green-500');
-          el.classList.add('border-transparent');
-          el.classList.remove('bg-purple-900', 'bg-green-900', 'bg-opacity-30', 'bg-opacity-20');
-        }
-      });
-    }
-
-    // SHARE FUNCTIONS (keep from v1.7)
-    function shareWhatsApp() {
-      const text = getShareText();
-      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-    }
-
-    function shareLinkedIn() {
-      const text = getShareText();
-      window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentScannedURL)}`, '_blank');
-    }
-
-    function shareTwitter() {
-      const text = getShareText();
-      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
-    }
-
-    function copyResults() {
-      const text = getShareText();
-      navigator.clipboard.writeText(text).then(() => {
-        alert('✅ Results copied to clipboard!');
-      });
-    }
-
-    function getShareText() {
-      if (!currentScanData) return '';
-      const score = Math.round(currentScanData.score || 0);
-      const interpretation = getScoreInterpretation(score);
-      return `📊 My AI-Era SEO Content Score: ${score}/100 (${interpretation.text})\n\nAnalyzed with ContentScale AI Scanner\n🔗 Try it: https://contentscale.site/seo-contentscore/`;
-    }
-
-    // COMPLETE PDF EXPORT (simplified version from v1.7)
-    function exportCompletePDF() {
-      alert('PDF export feature - implement with full v1.7 code');
-    }
-
-    // SCAN URL FUNCTION (keep from v1.7)
-    async function scanURL() {
-      let url = document.getElementById('urlInput').value.trim();
-      
-      if (!url) {
-        alert('⚠️ Please enter a URL');
+    
+    function displayLeaderboard(entries) {
+      if (!entries || entries.length === 0) {
+        document.getElementById('leaderboard-container').innerHTML = `
+          <div class="text-center py-12">
+            <div class="text-gray-400">No entries yet. Be the first to scan!</div>
+          </div>
+        `;
         return;
       }
       
-      if (!url.match(/^https?:\/\//i)) {
-        url = 'https://' + url;
-        document.getElementById('urlInput').value = url;
+      let html = '';
+      
+      entries.forEach(entry => {
+        const scoreClass = getScoreClass(entry.score);
+        const rankClass = entry.rank <= 3 ? `rank-${entry.rank}` : '';
+        
+        html += `
+          <div class="leaderboard-row ${rankClass}">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4 flex-1">
+                <div class="rank-badge ${entry.rank > 3 ? 'default' : ''}">${entry.rank}</div>
+                <div class="flex-1">
+                  <div class="font-bold text-white text-lg">${entry.company_name || 'Unknown'}</div>
+                  <div class="text-sm text-gray-400">${truncateUrl(entry.url)}</div>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="score-display ${scoreClass}">${entry.score}</div>
+                <div class="text-xs text-gray-400">/100</div>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      
+      document.getElementById('leaderboard-container').innerHTML = html;
+    }
+    
+    function getScoreClass(score) {
+      if (score >= 90) return 'score-excellent';
+      if (score >= 80) return 'score-very-good';
+      if (score >= 70) return 'score-good';
+      if (score >= 60) return 'score-fair';
+      return 'score-poor';
+    }
+    
+    function truncateUrl(url) {
+      try {
+        const urlObj = new URL(url);
+        return urlObj.hostname.replace('www.', '');
+      } catch {
+        return url.substring(0, 50) + '...';
+      }
+    }
+    
+    function refreshLeaderboard() {
+      document.getElementById('leaderboard-container').innerHTML = `
+        <div class="text-center py-12">
+          <div class="text-5xl mb-4 scanning-pulse">🔄</div>
+          <div class="text-gray-400">Refreshing...</div>
+        </div>
+      `;
+      loadLeaderboard();
+    }
+    
+    // SCAN FUNCTION
+    async function performScan() {
+      const url = document.getElementById('scanInput').value.trim();
+      
+      if (!url) {
+        alert('Please enter a URL');
+        return;
       }
       
-      currentScannedURL = url;
+      if (!url.startsWith('http')) {
+        document.getElementById('scanInput').value = 'https://' + url;
+        return performScan();
+      }
       
-      document.getElementById('scan-button').disabled = true;
-      document.getElementById('scan-button').textContent = 'Scanning...';
-      document.getElementById('loadingIndicator').classList.remove('hidden');
-      document.getElementById('resultsContainer').classList.add('hidden');
-      updateProgress(0, 'Initializing scan...');
+      currentUrl = url;
+      
+      const btn = document.getElementById('scanButton');
+      btn.disabled = true;
+      btn.textContent = 'Scanning...';
       
       try {
-        updateProgress(10, 'Fetching website content...', 'step-fetch');
-        await sleep(500);
-        updateProgress(25, 'Loading HTML and assets...', 'step-fetch');
-        await sleep(500);
-
-        updateProgress(30, 'Parsing content structure...', 'step-parse');
-        await sleep(500);
-        updateProgress(45, 'Analyzing headings, paragraphs, links...', 'step-parse');
-        await sleep(500);
-
-        updateProgress(50, 'Validating with Claude AI...', 'step-validate');
-        
-        const response = await fetch(CONFIG.scanEndpoint, {
+        const response = await fetch(`${API_BASE}/api/scan-free`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url })
         });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
         
         const data = await response.json();
         
@@ -1029,252 +525,110 @@ Example:
           throw new Error(data.error || 'Scan failed');
         }
         
-        updateProgress(70, 'AI validation complete...', 'step-validate');
-        await sleep(500);
-
-        updateProgress(85, 'Calculating final scores...', 'step-score');
-        await sleep(500);
-        updateProgress(100, 'Analysis complete!', 'step-score');
-        await sleep(500);
-        
-        currentScanData = data;
-        displayResults(data);
-        
-        setTimeout(() => {
-          document.getElementById('resultsContainer').scrollIntoView({ 
-            behavior: 'smooth',
-            block: 'start'
-          });
-        }, 300);
+        currentScanResult = data;
+        showResults(data);
         
       } catch (error) {
         console.error('Scan error:', error);
-        updateProgress(0, `Error: ${error.message}`);
-        setTimeout(() => {
-          document.getElementById('loadingIndicator').classList.add('hidden');
-        }, 3000);
+        alert('Scan failed: ' + error.message);
       } finally {
-        document.getElementById('scan-button').disabled = false;
-        document.getElementById('scan-button').textContent = 'Scan Now';
+        btn.disabled = false;
+        btn.textContent = 'Scan Now';
       }
     }
-
-    // DISPLAY RESULTS (keep from v1.7)
-    function displayResults(data) {
-      document.getElementById('loadingIndicator').classList.add('hidden');
-      document.getElementById('resultsContainer').classList.remove('hidden');
+    
+    function showResults(data) {
+      document.getElementById('modal-score').textContent = data.score + '/100';
+      document.getElementById('modal-quality').textContent = getQualityText(data.score);
+      document.getElementById('modal-emoji').textContent = getQualityEmoji(data.score);
       
-      const score = Math.round(data.score || 0);
+      document.getElementById('modal-graaf').textContent = `${data.breakdown.graaf.total}/50`;
+      document.getElementById('modal-craft').textContent = `${data.breakdown.craft.total}/30`;
+      document.getElementById('modal-technical').textContent = `${data.breakdown.technical.total}/20`;
       
-      document.getElementById('mainScoreDisplay').textContent = score;
-      showScoreInterpretation(score);
+      document.getElementById('leaderboard-prompt').classList.remove('hidden');
+      document.getElementById('leaderboard-result').classList.add('hidden');
       
-      const circumference = 2 * Math.PI * 110;
-      const offset = circumference - (score / 100) * circumference;
-      const circle = document.getElementById('mainScoreCircle');
-      setTimeout(() => {
-        circle.style.strokeDashoffset = offset;
+      document.getElementById('resultsModal').classList.add('active');
+    }
+    
+    function getQualityText(score) {
+      if (score >= 90) return 'Excellent! 🌟';
+      if (score >= 80) return 'Very Good! 👍';
+      if (score >= 70) return 'Good ✓';
+      if (score >= 60) return 'Fair ⚠️';
+      return 'Needs Improvement ❌';
+    }
+    
+    function getQualityEmoji(score) {
+      if (score >= 90) return '🌟';
+      if (score >= 80) return '👍';
+      if (score >= 70) return '✓';
+      if (score >= 60) return '⚠️';
+      return '❌';
+    }
+    
+    async function submitToLeaderboard() {
+      const companyName = document.getElementById('company-name').value.trim();
+      
+      try {
+        const response = await fetch(`${API_BASE}/api/leaderboard/submit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: currentUrl,
+            score: currentScanResult.score,
+            quality: currentScanResult.quality,
+            graaf_score: currentScanResult.breakdown.graaf.total,
+            craft_score: currentScanResult.breakdown.craft.total,
+            technical_score: currentScanResult.breakdown.technical.total,
+            word_count: currentScanResult.wordCount,
+            company_name: companyName || null,
+            category: null, // Auto-detect on backend
+            country: null,  // Auto-detect on backend
+            language: null  // Auto-detect on backend
+          })
+        });
         
-        if (score >= 90) circle.setAttribute('stroke', '#10b981');
-        else if (score >= 80) circle.setAttribute('stroke', '#3b82f6');
-        else if (score >= 70) circle.setAttribute('stroke', '#8b5cf6');
-        else if (score >= 60) circle.setAttribute('stroke', '#f59e0b');
-        else circle.setAttribute('stroke', '#ef4444');
-      }, 100);
-      
-      displayBreakdown(data.breakdown);
-      
-      let recommendations = [];
-      if (data.recommendations && data.recommendations.length > 0) {
-        recommendations = data.recommendations;
-      } else {
-        recommendations = generateRecommendations(data.breakdown, score);
+        const data = await response.json();
+        
+        if (data.success) {
+          document.getElementById('leaderboard-prompt').classList.add('hidden');
+          document.getElementById('rank-display').textContent = `🎉 Rank #${data.rank}`;
+          document.getElementById('leaderboard-result').classList.remove('hidden');
+          
+          // Refresh leaderboard after 1 second
+          setTimeout(() => {
+            refreshLeaderboard();
+          }, 1000);
+        } else {
+          alert('Failed to add to leaderboard: ' + (data.error || 'Unknown error'));
+        }
+        
+      } catch (error) {
+        console.error('Submit error:', error);
+        alert('Failed to submit: ' + error.message);
       }
-      
-      displayRecommendations(recommendations);
     }
-
-    // DISPLAY BREAKDOWN (keep from v1.7)
-    function displayBreakdown(breakdown) {
-      const container = document.getElementById('scoreBreakdown');
-      if (!breakdown) {
-        container.innerHTML = '<p class="text-gray-400">No breakdown available</p>';
-        return;
-      }
-      
-      let html = '';
-      
-      if (breakdown.graaf) {
-        const graafTotal = breakdown.graaf.total || 0;
-        html += `
-          <div class="bg-gray-700 rounded-lg p-4">
-            <div class="flex justify-between items-center mb-3">
-              <h4 class="font-bold text-lg">🎯 GRAAF Framework</h4>
-              <span class="text-2xl font-bold text-green-400">${graafTotal}/50</span>
-            </div>
-            <div class="w-full bg-gray-600 rounded-full h-3">
-              <div class="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full transition-all duration-1000" 
-                   style="width: ${(graafTotal / 50 * 100)}%"></div>
-            </div>
-          </div>
-        `;
-      }
-      
-      if (breakdown.craft) {
-        const craftTotal = breakdown.craft.total || 0;
-        html += `
-          <div class="bg-gray-700 rounded-lg p-4">
-            <div class="flex justify-between items-center mb-3">
-              <h4 class="font-bold text-lg">✨ CRAFT Methodology</h4>
-              <span class="text-2xl font-bold text-blue-400">${craftTotal}/30</span>
-            </div>
-            <div class="w-full bg-gray-600 rounded-full h-3">
-              <div class="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-1000" 
-                   style="width: ${(craftTotal / 30 * 100)}%"></div>
-            </div>
-          </div>
-        `;
-      }
-      
-      if (breakdown.technical) {
-        const techTotal = breakdown.technical.total || 0;
-        html += `
-          <div class="bg-gray-700 rounded-lg p-4">
-            <div class="flex justify-between items-center mb-3">
-              <h4 class="font-bold text-lg">⚙️ Technical SEO</h4>
-              <span class="text-2xl font-bold text-purple-400">${techTotal}/20</span>
-            </div>
-            <div class="w-full bg-gray-600 rounded-full h-3">
-              <div class="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-1000" 
-                   style="width: ${(techTotal / 20 * 100)}%"></div>
-            </div>
-          </div>
-        `;
-      }
-      
-      container.innerHTML = html;
+    
+    function skipLeaderboard() {
+      document.getElementById('leaderboard-prompt').classList.add('hidden');
     }
-
-    // GENERATE RECOMMENDATIONS (keep from v1.7)
-    function generateRecommendations(breakdown, totalScore) {
-      const recs = [];
-      if (!breakdown) return recs;
-      
-      if (totalScore >= 90) {
-        return [{
-          title: 'Excellent Score!',
-          impact: 0,
-          time: 'N/A',
-          why: 'Your content is already scoring in the excellent range (90+/100).',
-          how: 'Continue maintaining this quality level.',
-          benefit: 'Content scoring 90+ consistently ranks in top positions.'
-        }];
-      }
-      
-      const graafTotal = breakdown.graaf?.total || 0;
-      const craftTotal = breakdown.craft?.total || 0;
-      const techTotal = breakdown.technical?.total || 0;
-      
-      if (graafTotal < 40) {
-        recs.push({
-          title: 'Improve GRAAF Framework Score',
-          impact: Math.round((50 - graafTotal) * 0.8),
-          time: '3-5 hours',
-          why: 'GRAAF is critical for AI-era rankings.',
-          how: 'Add authoritative sources, ensure relevance, provide actionability.',
-          benefit: 'Higher trust signals lead to better rankings.'
-        });
-      }
-      
-      if (craftTotal < 24) {
-        recs.push({
-          title: 'Enhance CRAFT Methodology',
-          impact: Math.round((30 - craftTotal) * 0.8),
-          time: '2-4 hours',
-          why: 'CRAFT directly impacts user experience.',
-          how: 'Remove filler, add visuals, create FAQ section.',
-          benefit: 'Better engagement metrics signal quality to Google.'
-        });
-      }
-      
-      if (techTotal < 16) {
-        recs.push({
-          title: 'Fix Technical SEO Issues',
-          impact: Math.round((20 - techTotal) * 0.8),
-          time: '1-3 hours',
-          why: 'Technical SEO ensures proper crawling and indexing.',
-          how: 'Implement schema, optimize meta tags, add internal links.',
-          benefit: 'Rich snippets increase click-through rates by 20-30%.'
-        });
-      }
-      
-      recs.sort((a, b) => b.impact - a.impact);
-      return recs.slice(0, 5);
+    
+    function closeResultsModal() {
+      document.getElementById('resultsModal').classList.remove('active');
     }
-
-    // DISPLAY RECOMMENDATIONS (keep from v1.7)
-    function displayRecommendations(recommendations) {
-      const container = document.getElementById('recommendationsContainer');
-      
-      if (!recommendations || recommendations.length === 0) {
-        container.innerHTML = '<p class="text-gray-400">Great job! No major issues found.</p>';
-        return;
-      }
-      
-      let html = '';
-      
-      recommendations.forEach((rec, idx) => {
-        html += `
-          <div class="bg-gray-800 rounded-lg p-6 mb-4 border border-gray-700 hover:border-purple-500 transition">
-            <h4 class="text-xl font-bold text-white mb-2">
-              ${idx + 1}. ${rec.title}
-            </h4>
-            ${rec.impact > 0 ? `
-            <div class="flex gap-3 text-sm mb-3">
-              <span class="text-green-400 font-bold">⚡ ${rec.time}</span>
-              <span class="text-blue-400 font-bold">+${rec.impact} pts</span>
-            </div>
-            ` : ''}
-            
-            ${rec.why ? `
-              <div class="mb-3">
-                <div class="font-semibold text-purple-400 mb-1">💡 Why This Matters:</div>
-                <div class="text-gray-300">${rec.why}</div>
-              </div>
-            ` : ''}
-            
-            ${rec.how ? `
-              <div class="mb-3">
-                <div class="font-semibold text-blue-400 mb-1">🔧 How to Implement:</div>
-                <div class="text-gray-300">${rec.how}</div>
-              </div>
-            ` : ''}
-            
-            ${rec.benefit ? `
-              <div>
-                <div class="font-semibold text-green-400 mb-1">📈 Real-World Benefit:</div>
-                <div class="text-gray-300">${rec.benefit}</div>
-              </div>
-            ` : ''}
-          </div>
-        `;
-      });
-      
-      container.innerHTML = html;
-    }
-
-    function sleep(ms) {
-      return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    // KEYBOARD SHORTCUTS
-    document.getElementById('urlInput').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') scanURL();
+    
+    // Enter key to scan
+    document.getElementById('scanInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') performScan();
     });
     
-    document.getElementById('htmlInput').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && e.ctrlKey) analyzeHTML();
-    });
+    // Load leaderboard on page load
+    loadLeaderboard();
+    
+    // Auto-refresh every 5 minutes
+    setInterval(loadLeaderboard, 300000);
   </script>
 </body>
 </html>
