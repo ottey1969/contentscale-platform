@@ -1,6 +1,5 @@
 // ==========================================
-// CONTENTSCALE SERVER.JS - DEEL 1 van 2
-// INSTALLATIE: Copy DEEL-1 + DEEL-2 achter elkaar
+// CONTENTSCALE SERVER.JS - DEEL 1 van 3
 // ==========================================
 
 require('dotenv').config();
@@ -388,11 +387,6 @@ app.post('/api/scan-free', async (req, res) => {
     });
   }
 });
-// ==========================================
-// SERVER-DEEL-2.js
-// Admin + Share Links + Leaderboard + ELITE PROMPTS
-// Paste dit DIRECT NA DEEL-1
-// ==========================================
 
 app.get('/api/scan-result/:shareId', async (req, res) => {
   try {
@@ -475,10 +469,6 @@ app.post('/api/scan', async (req, res) => {
   }
 });
 
-// ==========================================
-// ADMIN ENDPOINTS
-// ==========================================
-
 app.get('/api/admins', authenticateSuperAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -553,10 +543,6 @@ app.post('/api/admins', authenticateSuperAdmin, async (req, res) => {
     });
   }
 });
-
-// ==========================================
-// GLOBAL LEADERBOARD
-// ==========================================
 
 app.get('/api/leaderboard', async (req, res) => {
   try {
@@ -633,7 +619,6 @@ app.get('/api/leaderboard', async (req, res) => {
     });
   }
 });
-
 app.post('/api/leaderboard/submit', async (req, res) => {
   try {
     const {
@@ -657,31 +642,7 @@ app.post('/api/leaderboard/submit', async (req, res) => {
       });
     }
     
- app.post('/api/leaderboard/submit', async (req, res) => {
-  try {
-    const {
-      url,
-      score,
-      quality,
-      graaf_score,
-      craft_score,
-      technical_score,
-      word_count,
-      company_name,
-      category,
-      country,
-      language
-    } = req.body;
-    
-    if (!url || score === undefined) {
-      return res.status(400).json({
-        success: false,
-        error: 'URL and score required'
-      });
-    }
-    
     // ✅ GENERATE url_hash
-    const crypto = require('crypto');
     const url_hash = crypto.createHash('md5').update(url).digest('hex');
     
     const existing = await pool.query(
@@ -1180,13 +1141,6 @@ function extractCompanyName(url) {
     return 'Unknown';
   }
 }
-// ==========================================
-// SERVER-DEEL-3.js
-// Routes + Server Startup
-// Paste dit DIRECT NA DEEL-2
-// DIT IS HET LAATSTE DEEL!
-// ==========================================
-
 app.get('/leaderboard', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/leaderboard-scanner-page.html'));
 });
