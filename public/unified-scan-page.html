@@ -8,7 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     .leaderboard-section { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; padding: 32px; margin-bottom: 32px; border: 2px solid #334155; position: relative; overflow: hidden; }
-    .leaderboard-section::before { content: ''; position: aFbsolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #f59e0b 0%, #eab308 50%, #f59e0b 100%); animation: shimmer 2s infinite; }
+    .leaderboard-section::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #f59e0b 0%, #eab308 50%, #f59e0b 100%); animation: shimmer 2s infinite; }
     @keyframes shimmer { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     .leaderboard-row { background: #1e293b; transition: all 0.3s; cursor: pointer; border-radius: 8px; margin-bottom: 8px; padding: 16px; border-left: 4px solid transparent; }
     .leaderboard-row:hover { background: #334155; transform: translateX(4px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
@@ -52,6 +52,10 @@
     .modal-close:hover { background: #4b5563; }
     @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+    /* SCAN LOADING ANIMATION */
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .scan-spinner { display: inline-block; width: 18px; height: 18px; border: 3px solid rgba(255, 255, 255, 0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 10px; vertical-align: middle; }
+    .scan-stage { font-size: 14px; opacity: 0.9; margin-left: 8px; }
     @media (max-width: 768px) { .leaderboard-section, .scanner-section { padding: 20px; } .rank-badge { width: 32px; height: 32px; font-size: 14px; } .rank-1 .rank-badge { font-size: 18px; } .score-display { font-size: 24px; } }
   </style>
 </head>
@@ -62,19 +66,6 @@
       <p class="text-xl text-gray-300 mb-4">The World's First AI-Era Content Quality Rankings</p>
       <span class="live-indicator"><span class="live-dot"></span>Live Rankings</span>
     </div>
-    
-
-    <div class="scanner-section mb-8">
-      <div class="text-center mb-8">
-        <h2 class="text-4xl font-bold mb-3">🚀 Scan Your Website</h2>
-        <p class="text-gray-300">Get your AI-Era SEO score, FREE improvement prompts, and claim your spot!</p>
-      </div>
-      <div class="max-w-3xl mx-auto">
-        <div class="flex gap-3 mb-5">
-          <input type="text" id="scanInput" placeholder="https://yourwebsite.com" class="flex-1 bg-gray-700 text-white px-6 py-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg">
-          <button onclick="performScan()" id="scanButton" class="scan-btn">Scan Now</button>
-        </div>
-        
     
     <div class="leaderboard-section">
       <div class="flex justify-between items-center mb-6">
@@ -126,6 +117,7 @@
       <div id="current-filter" class="text-sm text-gray-400 mb-4 hidden">Showing: <span id="filter-display" class="text-white font-bold"></span></div>
       <div id="leaderboard-container"><div class="text-center py-12"><div class="text-5xl mb-4">🔍</div><div class="text-gray-400">Loading leaderboard...</div></div></div>
     </div>
+    
     <div class="scanner-section mb-8">
       <div class="text-center mb-8">
         <h2 class="text-4xl font-bold mb-3">🚀 Scan Your Website</h2>
@@ -144,6 +136,7 @@
         </div>
       </div>
     </div>
+    
     <div id="resultsModal" class="modal">
       <div class="modal-content">
         <button class="modal-close" onclick="closeResultsModal()">×</button>
@@ -184,6 +177,7 @@
         <button onclick="closeResultsModal()" class="w-full bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg font-bold transition">Close</button>
       </div>
     </div>
+    
     <div id="promptsModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;overflow-y:auto;padding:20px">
       <div style="background:linear-gradient(135deg,#1f2937 0%,#111827 100%);border-radius:20px;max-width:900px;margin:40px auto;padding:40px;position:relative;box-shadow:0 25px 50px rgba(0,0,0,0.8)">
         <button onclick="closePromptsModal()" style="position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.1);border:none;color:white;font-size:32px;width:50px;height:50px;border-radius:50%;cursor:pointer;line-height:1" onmouseover="this.style.background='rgba(255,255,255,0.2)';this.style.transform='rotate(90deg)'" onmouseout="this.style.background='rgba(255,255,255,0.1)';this.style.transform='rotate(0deg)'">×</button>
@@ -220,6 +214,7 @@
         <button onclick="closePromptsModal()" style="width:100%;background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:white;padding:18px 32px;border-radius:12px;border:none;cursor:pointer;font-weight:700;font-size:17px;box-shadow:0 4px 12px rgba(16,185,129,0.3)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(16,185,129,0.5)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 12px rgba(16,185,129,0.3)'">Got It! Let's Create Elite Content 🚀</button>
       </div>
     </div>
+    
     <div class="text-center text-gray-500 text-sm mt-12">
       <p class="mb-2">Powered by ContentScale AI • GRAAF + CRAFT Frameworks • Claude Sonnet 4</p>
       <p><a href="https://contentscale.site" class="text-purple-400 hover:text-purple-300">contentscale.site</a> • <a href="https://wa.me/31628073996" class="text-green-400 hover:text-green-300">WhatsApp</a></p>
@@ -228,31 +223,104 @@
   <script>
     console.log('%c🏆 ContentScale Global Leaderboard','color:#f59e0b;font-size:16px;font-weight:bold');
     const API_BASE='';let currentScanResult=null;let currentUrl='';let currentFilters={category:'all',country:'all',language:'all'};
+    
     function filterCategory(cat){currentFilters.category=cat;updateFilterButtons('category',cat);loadLeaderboard()}
     function filterCountry(country){currentFilters.country=country;updateFilterButtons('country',country);loadLeaderboard()}
     function filterLanguage(lang){currentFilters.language=lang;updateFilterButtons('language',lang);loadLeaderboard()}
     function updateFilterButtons(type,value){const buttons=document.querySelectorAll('.filter-btn');buttons.forEach(btn=>{const onClick=btn.getAttribute('onclick');if(onClick&&onClick.includes(`filter${type.charAt(0).toUpperCase()+type.slice(1)}`)){onClick.includes(`'${value}'`)?btn.classList.add('active'):btn.classList.remove('active')}});const filterDisplay=document.getElementById('filter-display');const currentFilterDiv=document.getElementById('current-filter');let filterText=[];if(currentFilters.category!=='all')filterText.push(currentFilters.category.toUpperCase());if(currentFilters.country!=='all')filterText.push(currentFilters.country);if(currentFilters.language!=='all')filterText.push(currentFilters.language.toUpperCase());if(filterText.length>0){filterDisplay.textContent=filterText.join(' • ');currentFilterDiv.classList.remove('hidden')}else{currentFilterDiv.classList.add('hidden')}}
+    
     async function loadLeaderboard(){try{const params=new URLSearchParams({limit:100,category:currentFilters.category,country:currentFilters.country,language:currentFilters.language});const response=await fetch(`${API_BASE}/api/leaderboard?${params}`);const data=await response.json();if(!data.success)throw new Error(data.error||'Failed to load');displayLeaderboard(data.entries);try{const statsResponse=await fetch(`${API_BASE}/api/leaderboard/stats`);const statsData=await statsResponse.json();if(statsData&&statsData.success&&statsData.stats){document.getElementById('total-entries').textContent=statsData.stats.total_entries||0;document.getElementById('average-score').textContent=statsData.stats.average_score||'-';document.getElementById('highest-score').textContent=statsData.stats.highest_score||'-'}}catch(statsError){console.log('Stats not available')}}catch(error){console.error('Leaderboard error:',error);document.getElementById('leaderboard-container').innerHTML='<div class="text-center py-12"><div class="text-red-400 mb-2">Failed to load leaderboard</div><button onclick="loadLeaderboard()" class="text-purple-400 hover:text-purple-300 underline">Try again</button></div>'}}
+    
     function displayLeaderboard(entries){if(!entries||entries.length===0){document.getElementById('leaderboard-container').innerHTML='<div class="text-center py-12"><div class="text-gray-400">No entries found. Try different filters or be the first to scan!</div></div>';return}let html='';entries.forEach(entry=>{const scoreClass=getScoreClass(entry.score);const rankClass=entry.rank<=3?`rank-${entry.rank}`:'';const categoryClass=`category-${entry.category||'other'}`;html+=`<div class="leaderboard-row ${rankClass}"><div class="flex items-center justify-between mb-2"><div class="flex items-center gap-4 flex-1"><div class="rank-badge ${entry.rank>3?'default':''}">${entry.rank}</div><div class="flex-1"><div class="font-bold text-white text-lg">${entry.company_name||'Unknown'}</div><div class="text-sm text-gray-400">${truncateUrl(entry.url)}</div>${entry.category?`<span class="category-badge ${categoryClass}">${entry.category}</span>`:''}</div></div><div class="text-right"><div class="score-display ${scoreClass}">${entry.score}</div><div class="text-xs text-gray-400">/100</div></div></div><div class="flex justify-end"><button onclick="getPromptsForUrl('${entry.url}',${entry.score},${JSON.stringify(entry).replace(/'/g,"\\'")})" class="prompt-btn">🎁 Get FREE Prompts</button></div></div>`});document.getElementById('leaderboard-container').innerHTML=html}
+    
     function getScoreClass(score){if(score>=90)return'score-excellent';if(score>=80)return'score-very-good';if(score>=70)return'score-good';if(score>=60)return'score-fair';return'score-poor'}
     function truncateUrl(url){try{const urlObj=new URL(url);return urlObj.hostname.replace('www.','')}catch{return url.substring(0,50)+'...'}}
     function refreshLeaderboard(){document.getElementById('leaderboard-container').innerHTML='<div class="text-center py-12"><div class="text-5xl mb-4">🔄</div><div class="text-gray-400">Refreshing...</div></div>';loadLeaderboard()}
-    async function performScan(){const url=document.getElementById('scanInput').value.trim();if(!url){alert('Please enter a URL');return}if(!url.startsWith('http')){document.getElementById('scanInput').value='https://'+url;return performScan()}currentUrl=url;const btn=document.getElementById('scanButton');btn.disabled=true;btn.textContent='Scanning...';try{const response=await fetch(`${API_BASE}/api/scan-free`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});const data=await response.json();if(!data.success)throw new Error(data.error||'Scan failed');currentScanResult=data;showResults(data)}catch(error){console.error('Scan error:',error);alert('Scan failed: '+error.message)}finally{btn.disabled=false;btn.textContent='Scan Now'}}
+    
+    // ✅ UPDATED performScan WITH LOADING ANIMATION
+    async function performScan() {
+      const url = document.getElementById('scanInput').value.trim();
+      
+      if (!url) {
+        alert('Please enter a URL');
+        return;
+      }
+      
+      if (!url.startsWith('http')) {
+        document.getElementById('scanInput').value = 'https://' + url;
+        return performScan();
+      }
+      
+      currentUrl = url;
+      const btn = document.getElementById('scanButton');
+      btn.disabled = true;
+      
+      // Stage 1: Fetching
+      btn.innerHTML = '<span class="scan-spinner"></span>Fetching page<span class="scan-stage">●○○</span>';
+      
+      try {
+        const response = await fetch(`${API_BASE}/api/scan-free`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+        
+        // Stage 2: Analyzing
+        btn.innerHTML = '<span class="scan-spinner"></span>Analyzing content<span class="scan-stage">●●○</span>';
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Scan failed');
+        }
+        
+        // Stage 3: Calculating
+        btn.innerHTML = '<span class="scan-spinner"></span>Calculating score<span class="scan-stage">●●●</span>';
+        
+        // Small delay for better UX
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        currentScanResult = data;
+        showResults(data);
+        
+      } catch (error) {
+        console.error('Scan error:', error);
+        btn.innerHTML = 'Scan Now';
+        alert('Scan failed: ' + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Scan Now';
+      }
+    }
+    
     function showResults(data){document.getElementById('modal-score').textContent=data.score+'/100';document.getElementById('modal-quality').textContent=getQualityText(data.score);document.getElementById('modal-emoji').textContent=getQualityEmoji(data.score);document.getElementById('modal-graaf').textContent=`${data.breakdown.graaf.total}/50`;document.getElementById('modal-craft').textContent=`${data.breakdown.craft.total}/30`;document.getElementById('modal-technical').textContent=`${data.breakdown.technical.total}/20`;document.getElementById('leaderboard-prompt').classList.remove('hidden');document.getElementById('leaderboard-result').classList.add('hidden');document.getElementById('resultsModal').classList.add('active')}
+    
     function getQualityText(score){if(score>=90)return'Excellent! 🌟';if(score>=80)return'Very Good! 👍';if(score>=70)return'Good ✓';if(score>=60)return'Fair ⚠️';return'Needs Improvement ❌'}
     function getQualityEmoji(score){if(score>=90)return'🌟';if(score>=80)return'👍';if(score>=70)return'✓';if(score>=60)return'⚠️';return'❌'}
+    
     async function submitToLeaderboard(){const companyName=document.getElementById('company-name').value.trim();const category=document.getElementById('category-select').value;try{const response=await fetch(`${API_BASE}/api/leaderboard/submit`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:currentUrl,score:currentScanResult.score,quality:currentScanResult.quality,graaf_score:currentScanResult.breakdown.graaf.total,craft_score:currentScanResult.breakdown.craft.total,technical_score:currentScanResult.breakdown.technical.total,word_count:currentScanResult.wordCount,company_name:companyName||null,category:category||null,country:null,language:null})});const data=await response.json();if(data.success){document.getElementById('leaderboard-prompt').classList.add('hidden');let rank=data.rank;if(!rank||rank===undefined){const allEntries=document.querySelectorAll('.leaderboard-row');rank=allEntries.length+1}document.getElementById('rank-display').textContent=`🎉 Rank #${rank}`;document.getElementById('leaderboard-result').classList.remove('hidden');setTimeout(()=>{refreshLeaderboard()},1000)}else{alert('Failed to add to leaderboard: '+(data.error||'Unknown error'))}}catch(error){console.error('Submit error:',error);alert('Failed to submit: '+error.message)}}
+    
     function skipLeaderboard(){document.getElementById('leaderboard-prompt').classList.add('hidden')}
     function closeResultsModal(){document.getElementById('resultsModal').classList.remove('active')}
+    
     async function getPrompts(){if(!currentScanResult)return;document.getElementById('promptsModal').classList.add('active');document.getElementById('promptsModal').style.display='block';try{const response=await fetch(`${API_BASE}/api/generate-content-prompt`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:currentUrl,score:currentScanResult.score,breakdown:currentScanResult.breakdown,wordCount:currentScanResult.wordCount})});const data=await response.json();if(data.success&&data.prompts){displayPrompts(data)}else{throw new Error('Failed to generate prompts')}}catch(error){console.error('Prompts error:',error);document.getElementById('prompts-container').innerHTML='<div class="text-center py-8"><div class="text-red-400">Failed to generate prompts</div></div>'}}
+    
     async function getPromptsForUrl(url,score,entry){currentUrl=url;currentScanResult={score:score,breakdown:{graaf:{total:entry.graaf_score||0},craft:{total:entry.craft_score||0},technical:{total:entry.technical_score||0}},wordCount:entry.word_count||0};getPrompts()}
+    
     function displayPrompts(promptData){const prompts=promptData.prompts||[];const usageInstructions=promptData.usage_instructions||[];if(prompts.length===0){document.getElementById('prompts-container').innerHTML='<div style="text-align:center;padding:40px 20px"><div style="color:#ef4444;font-size:16px;margin-bottom:12px">Failed to generate prompts</div><button onclick="getPrompts()" style="color:#a78bfa;text-decoration:underline;background:none;border:none;cursor:pointer;font-size:14px">Try again</button></div>';return}if(usageInstructions.length>0){const list=document.getElementById('usage-instructions');if(list){list.innerHTML=usageInstructions.map(instr=>`<li>${instr}</li>`).join('')}}let html='';prompts.forEach((prompt,index)=>{const isElite=prompt.type==='elite';const promptId=`prompt-full-${index}`;const previewId=`prompt-preview-${index}`;const preview=prompt.prompt.substring(0,500)+'...';html+=`<div style="background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);border:3px solid ${isElite?'#8b5cf6':'#4b5563'};border-radius:16px;padding:28px;margin-bottom:24px;position:relative">${isElite?'<div style="position:absolute;top:-14px;right:24px;background:linear-gradient(135deg,#fbbf24 0%,#f59e0b 100%);color:#1e293b;padding:8px 20px;border-radius:24px;font-size:11px;font-weight:800;text-transform:uppercase;box-shadow:0 6px 16px rgba(251,191,36,0.6)">🏆 RECOMMENDED</div>':''}<div style="margin-bottom:20px"><h3 style="font-size:20px;font-weight:700;color:#a78bfa;margin:0 0 8px 0">${prompt.title}</h3><p style="font-size:13px;color:#9ca3af;margin:0 0 12px 0">${prompt.description||''}</p>${prompt.estimated_score?`<div style="display:inline-flex;align-items:center;gap:8px;background:rgba(5,150,105,0.2);border:1px solid #10b981;color:#d1fae5;padding:6px 16px;border-radius:24px;font-size:12px;font-weight:700"><span style="display:inline-block;width:8px;height:8px;background:#10b981;border-radius:50%"></span>Target: ${prompt.estimated_score}</div>`:''}</div><div id="${previewId}" style="background:#0f172a;padding:20px;border-radius:12px;font-family:'Courier New',monospace;font-size:12px;line-height:1.7;color:#cbd5e1;max-height:250px;overflow-y:auto;border:1px solid #334155;margin-bottom:16px;white-space:pre-wrap">${preview}</div><div id="${promptId}" style="display:none;background:#0f172a;padding:24px;border-radius:12px;font-family:'Courier New',monospace;font-size:13px;line-height:1.8;color:#e2e8f0;max-height:600px;overflow-y:auto;border:2px solid #334155;margin-bottom:16px;white-space:pre-wrap">${prompt.prompt}</div><div style="display:flex;gap:12px;flex-wrap:wrap"><button id="copy-btn-${index}" onclick="copyPromptInline('${promptId}',${index})" style="flex:1;min-width:200px;background:linear-gradient(135deg,#8b5cf6 0%,#7c3aed 100%);color:white;border:none;padding:14px 24px;border-radius:10px;cursor:pointer;font-weight:700;font-size:14px">📋 Copy ${isElite?'ELITE':''} Prompt</button><button id="expand-btn-${index}" onclick="toggleExpandInline('${promptId}','${previewId}',${index})" style="background:#374151;color:#9ca3af;border:none;padding:12px 24px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600">👁️ View Full</button></div>${isElite?`<div style="font-size:11px;color:#6b7280;margin-top:12px">💡 ${(prompt.prompt.length/1000).toFixed(1)}K characters - Complete framework</div>`:''}</div>`});document.getElementById('prompts-container').innerHTML=html;window.currentPrompts=prompts;window.currentPromptData=promptData}
+    
     function toggleExpandInline(promptId,previewId,index){const full=document.getElementById(promptId);const preview=document.getElementById(previewId);const btn=document.getElementById('expand-btn-'+index);if(full.style.display==='none'){full.style.display='block';preview.style.display='none';btn.textContent='👁️ Hide Full'}else{full.style.display='none';preview.style.display='block';btn.textContent='👁️ View Full'}}
+    
     function copyPromptInline(promptId,index){const elem=document.getElementById(promptId);const btn=document.getElementById('copy-btn-'+index);const text=elem.textContent;navigator.clipboard.writeText(text).then(()=>{btn.innerHTML='✅ Copied!';btn.style.background='linear-gradient(135deg,#10b981 0%,#059669 100%)';setTimeout(()=>{btn.innerHTML='📋 Copy Prompt';btn.style.background='linear-gradient(135deg,#8b5cf6 0%,#7c3aed 100%)'},3000);showToastInline('✅ Prompt copied! Paste in Claude AI')}).catch(err=>{alert('Copy failed')})}
+    
     function showToastInline(message){const toast=document.createElement('div');toast.style.cssText='position:fixed;top:20px;right:20px;background:#10b981;color:white;padding:16px 24px;border-radius:12px;font-weight:600;z-index:99999;box-shadow:0 8px 24px rgba(0,0,0,0.4)';toast.textContent=message;document.body.appendChild(toast);setTimeout(()=>toast.remove(),3000)}
+    
     function exportPromptsToFile(){if(!window.currentPrompts){alert('No prompts to export');return}const{topic,keyword,score}=window.currentPromptData||{};let content=`ELITE AI CONTENT PROMPTS - ContentScale\nURL: ${currentUrl}\nScore: ${score}/100\nGenerated: ${new Date().toLocaleString()}\n\nHOW TO USE:\n1. Copy the ELITE prompt below\n2. Paste into Claude.ai, ChatGPT, or Perplexity\n3. AI generates complete article\n4. Update your page\n5. Rescan!\n\n${'='.repeat(60)}\n\n`;window.currentPrompts.forEach((prompt,i)=>{content+=`PROMPT ${i+1}: ${prompt.title}\n`;content+=`${'='.repeat(60)}\n${prompt.prompt}\n\n${'='.repeat(60)}\n\n`});const blob=new Blob([content],{type:'text/plain'});const downloadUrl=URL.createObjectURL(blob);const a=document.createElement('a');a.href=downloadUrl;a.download=`contentscale-prompts-${Date.now()}.txt`;a.click();URL.revokeObjectURL(downloadUrl);showToastInline('✅ Prompts exported!')}
+    
     function sharePromptsOnLinkedIn(){const score=currentScanResult?.score||'XX';const text=`🚀 Got ELITE AI Prompts from ContentScale! Score: ${score}/100. Try it: contentscale.site/leaderboard`;navigator.clipboard.writeText(text);window.open('https://www.linkedin.com/sharing/share-offsite/?url='+encodeURIComponent('https://contentscale.site/leaderboard'),'_blank');showToastInline('✅ Post text copied!')}
+    
     function emailPrompts(){alert('📧 Email feature coming soon! Use Export button for now.')}
+    
     document.getElementById('scanInput').addEventListener('keypress',(e)=>{if(e.key==='Enter')performScan()});
     loadLeaderboard();
     setInterval(loadLeaderboard,300000);
