@@ -2144,22 +2144,90 @@
       }
     }
 
-    function triggerManualScan() {
-      if (!confirm('🔍 Alle agencies scannen?\n\nDit kan enkele minuten duren afhankelijk van het aantal agencies.')) {
-        return;
+ async function triggerManualScan() {
+  if (!confirm('🔍 Alle agencies scannen?\n\nDit kan 5-10 minuten duren afhankelijk van het aantal agencies.\n\nDe pagina kan traag reageren tijdens het scannen.')) {
+    return;
+  }
+  
+  const resultDiv = document.getElementById('autoscan-result');
+  const scanBtn = document.querySelector('button[onclick="triggerManualScan()"]');
+  
+  // Disable button
+  if (scanBtn) {
+    scanBtn.disabled = true;
+    scanBtn.textContent = '⏳ Bezig met scannen...';
+  }
+  
+  // Show loading
+  resultDiv.className = 'mt-4 p-4 rounded-lg bg-blue-900 border border-blue-700';
+  resultDiv.innerHTML = `
+    <div class="flex items-center gap-3">
+      <div class="animate-spin text-2xl">⏳</div>
+      <div>
+        <div class="font-bold">Bezig met scannen van alle agencies...</div>
+        <div class="text-sm text-blue-300 mt-1">Dit kan enkele minuten duren. De pagina kan traag reageren.</div>
+      </div>
+    </div>
+  `;
+  resultDiv.classList.remove('hidden');
+  
+  try {
+    const response = await fetch('/api/admin/scan-all-agencies', {
+      method: 'POST',
+      headers: {
+        'x-admin-key': localStorage.getItem('admin_id')
       }
-      
-      const resultDiv = document.getElementById('autoscan-result');
-      resultDiv.className = 'mt-4 p-4 rounded-lg bg-blue-900 border border-blue-700';
-      resultDiv.textContent = '🔍 Bezig met scannen van alle agencies... Dit kan een paar minuten duren.';
-      resultDiv.classList.remove('hidden');
-      
-      setTimeout(() => {
-        resultDiv.className = 'mt-4 p-4 rounded-lg bg-green-900 border border-green-700';
-        resultDiv.textContent = '✅ Succesvol 3 agencies gescand. Leaderboard bijgewerkt!';
-        loadAdminLeaderboard();
-      }, 3000);
+    });
+    
+    const data = await response.json();
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Scan failed');
     }
+    
+    // Show results
+    resultDiv.className = 'mt-4 p-4 rounded-lg bg-green-900 border border-green-700';
+    resultDiv.innerHTML = `
+      <div class="font-bold text-lg mb-3">✅ Scan Compleet!</div>
+      <div class="space-y-2 text-sm">
+        <p><strong>Totaal agencies:</strong> ${data.total}</p>
+        <p><strong>Succesvol gescand:</strong> <span class="text-green-300">${data.successCount}</span></p>
+        <p><strong>Mislukt:</strong> <span class="text-red-300">${data.failCount}</span></p>
+      </div>
+      ${data.failCount > 0 ? `
+        <details class="mt-3">
+          <summary class="cursor-pointer text-sm text-yellow-300">⚠️ Bekijk gefaalde scans (${data.failCount})</summary>
+          <div class="mt-2 text-xs space-y-1">
+            ${data.results.filter(r => r.status === 'failed').map(r => `
+              <div class="p-2 bg-red-900 bg-opacity-30 rounded">
+                <strong>${r.agency}</strong>: ${r.error}
+              </div>
+            `).join('')}
+          </div>
+        </details>
+      ` : ''}
+    `;
+    
+    // Reload leaderboard
+    setTimeout(() => {
+      loadAdminLeaderboard();
+    }, 1000);
+    
+  } catch (error) {
+    console.error('Scan error:', error);
+    resultDiv.className = 'mt-4 p-4 rounded-lg bg-red-900 border border-red-700';
+    resultDiv.innerHTML = `
+      <div class="font-bold">❌ Scan Mislukt</div>
+      <div class="text-sm mt-2">${error.message}</div>
+    `;
+  } finally {
+    // Re-enable button
+    if (scanBtn) {
+      scanBtn.disabled = false;
+      scanBtn.textContent = '🔍 Scan Alle Agencies Nu';
+    }
+  }
+}
 
     function saveAutoScanSettings() {
       const frequency = document.getElementById('autoscan-frequency').value;
