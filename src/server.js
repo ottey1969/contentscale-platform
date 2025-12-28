@@ -964,6 +964,244 @@ app.get('/api/admin/scan-progress', authenticateSuperAdmin, async (req, res) => 
 // SUPER ADMIN: LEADERBOARD MANAGEMENT
 // ==========================================
 
+// ==========================================
+// SUPER ADMIN: AGENCY MANAGEMENT
+// ==========================================
+
+// Get all agencies (Super Admin)
+app.get('/api/super-admin/agencies', authenticateSuperAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        a.id,
+        a.name,
+        a.domain,
+        a.country,
+        a.plan,
+        a.admin_key,
+        a.is_active,
+        a.whitelabel_enabled,
+        a.v52_score,
+        a.last_scan_date,
+        a.created_at,
+        COUNT(DISTINCT c.id) as client_count,
+        COUNT(DISTINCT s.id) as total_scans
+      FROM agencies a
+      LEFT JOIN clients c ON c.agency_id = a.id
+      LEFT JOIN scans s ON s.agency_id = a.id
+      GROUP BY a.id
+      ORDER BY a.created_at DESC
+    `);
+    
+    console.log(`[SUPER ADMIN] Fetched ${result.rows.length} agencies`);
+    
+    res.json({
+      success: true,
+      agencies: result.rows
+    });
+    
+  } catch (error) {
+    console.error('[GET AGENCIES ERROR]', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch agencies'
+    });
+  }
+});
+
+// Create new agency (Super Admin)
+app.post('/api/agencies', authenticateSuperAdmin, async (req, res) => {
+  try {
+    const {
+      name,
+      domain,
+      country,
+      plan,
+      contact_person,
+      contact_email,
+      phone,
+      whitelabel,
+      is_active
+    } = req.body;
+    
+    // Validation
+    if (!name || !domain || !country || !plan) {
+      return res.status(400).json({
+        success: false,
+        error: 'Name, domain, country, and plan are required'
+      });
+    }
+    
+    // Check if domain already exists
+    const existing = await pool.query(
+      'SELECT id FROM agencies WHERE domain = $1',
+      [domain]
+    );
+    
+    if (existing.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Agency with this domain already exists'
+      });
+    }
+    
+    // Generate admin key
+    const adminKey = generateAdminKey();
+    
+    // Insert agency
+    const result = await pool.query(`
+      INSERT INTO agencies (
+        name,
+        domain,
+        country,
+        plan,
+        contact_person,
+        contact_email,
+        phone,
+        admin_key,
+        whitelabel_enabled,
+        is_active,
+        created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+      RETURNING id, name, domain, admin_key, created_at
+    `, [
+      name,
+      domain,
+      country,
+      plan,
+      contact_person || null,
+      contact_email || null,
+      phone || null,
+      adminKey,
+      whitelabel || false,
+      is_active !== false // Default true
+    ]);
+    
+    console.log(`✅ Agency created: ${name} (${domain})`);
+    
+    res.json({
+      success: true,
+      message: 'Agency created successfully',
+      agency: result.rows[0]
+    });
+    
+  } catch (error) {
+    console.error('[CREATE AGENCY ERROR]', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create agency',
+      details: error.message
+    });
+  }
+});
+
+// Update agency (Super Admin)
+app.put('/api/agencies/:id', authenticateSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      name,
+      domain,
+      country,
+      plan,
+      contact_person,
+      contact_email,
+      phone,
+      whitelabel_enabled,
+      is_active
+    } = req.body;
+    
+    const result = await pool.query(`
+      UPDATE agencies
+      SET
+        name = COALESCE($1, name),
+        domain = COALESCE($2, domain),
+        country = COALESCE($3, country),
+        plan = COALESCE($4, plan),
+        contact_person = COALESCE($5, contact_person),
+        contact_email = COALESCE($6, contact_email),
+        phone = COALESCE($7, phone),
+        whitelabel_enabled = COALESCE($8, whitelabel_enabled),
+        is_active = COALESCE($9, is_active),
+        updated_at = NOW()
+      WHERE id = $10
+      RETURNING *
+    `, [
+      name, domain, country, plan,
+      contact_person, contact_email, phone,
+      whitelabel_enabled, is_active, id
+    ]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Agency not found'
+      });
+    }
+    
+    console.log(`✅ Agency updated: ${result.rows[0].name}`);
+    
+    res.json({
+      success: true,
+      message: 'Agency updated successfully',
+      agency: result.rows[0]
+    });
+    
+  } catch (error) {
+    console.error('[UPDATE AGENCY ERROR]', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update agency'
+    });
+  }
+});
+
+// Delete agency (Super Admin)
+app.delete('/api/agencies/:id', authenticateSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if agency has clients
+    const clientCheck = await pool.query(
+      'SELECT COUNT(*) as count FROM clients WHERE agency_id = $1',
+      [id]
+    );
+    
+    if (parseInt(clientCheck.rows[0].count) > 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot delete agency with active clients'
+      });
+    }
+    
+    const result = await pool.query(
+      'DELETE FROM agencies WHERE id = $1 RETURNING *',
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Agency not found'
+      });
+    }
+    
+    console.log(`✅ Agency deleted: ${result.rows[0].name}`);
+    
+    res.json({
+      success: true,
+      message: 'Agency deleted successfully'
+    });
+    
+  } catch (error) {
+    console.error('[DELETE AGENCY ERROR]', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete agency'
+    });
+  }
+});
+
 app.get('/api/admin/leaderboard', authenticateSuperAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
