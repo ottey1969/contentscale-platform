@@ -66,29 +66,6 @@
       <p class="text-xl text-gray-300 mb-4">The World's First AI-Era Content Quality Rankings</p>
       <span class="live-indicator"><span class="live-dot"></span>Live Rankings</span>
     </div>
-
-
-
- <div class="scanner-section mb-8">
-      <div class="text-center mb-8">
-        <h2 class="text-4xl font-bold mb-3">🚀 Scan Your Website</h2>
-        <p class="text-gray-300">Get your AI-Era SEO score, FREE improvement prompts, and claim your spot!</p>
-      </div>
-      <div class="max-w-3xl mx-auto">
-        <div class="flex gap-3 mb-5">
-          <input type="text" id="scanInput" placeholder="https://yourwebsite.com" class="flex-1 bg-gray-700 text-white px-6 py-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg">
-          <button onclick="performScan()" id="scanButton" class="scan-btn">Scan Now</button>
-        </div>
-        <div class="bg-gray-800 bg-opacity-70 rounded-lg p-4 text-sm text-gray-400">
-          <div class="font-bold text-green-400 mb-2">✅ Free Analysis Includes:</div>
-          <div class="grid md:grid-cols-2 gap-2 text-xs">
-            <div>• GRAAF Framework Score (50 pts)</div><div>• CRAFT Methodology (30 pts)</div><div>• Technical SEO (20 pts)</div><div>• AI Improvement Prompts 🎁</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    
     
     <div class="leaderboard-section">
       <div class="flex justify-between items-center mb-6">
@@ -192,8 +169,8 @@
         </div>
         <div id="leaderboard-result" class="hidden text-center mb-4">
           <div class="bg-green-900 bg-opacity-30 border border-green-700 rounded-lg p-4">
-            <div class="text-green-400 font-bold text-2xl mb-2" id="rank-display">🎉 Rank #-</div>
-            <p class="text-sm text-gray-300">You're now on the global leaderboard!</p>
+            <div class="text-green-400 font-bold text-2xl mb-2" id="rank-display">🎉 Added to Leaderboard!</div>
+            <p class="text-sm text-gray-400">Refreshing to show your position...</p>
           </div>
         </div>
         <button onclick="getPrompts()" class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-6 py-4 rounded-lg font-bold text-lg transition mb-4">🎁 Get FREE AI Improvement Prompts</button>
@@ -254,7 +231,35 @@
     
     async function loadLeaderboard(){try{const params=new URLSearchParams({limit:100,category:currentFilters.category,country:currentFilters.country,language:currentFilters.language});const response=await fetch(`${API_BASE}/api/leaderboard?${params}`);const data=await response.json();if(!data.success)throw new Error(data.error||'Failed to load');displayLeaderboard(data.entries);try{const statsResponse=await fetch(`${API_BASE}/api/leaderboard/stats`);const statsData=await statsResponse.json();if(statsData&&statsData.success&&statsData.stats){document.getElementById('total-entries').textContent=statsData.stats.total_entries||0;document.getElementById('average-score').textContent=statsData.stats.average_score||'-';document.getElementById('highest-score').textContent=statsData.stats.highest_score||'-'}}catch(statsError){console.log('Stats not available')}}catch(error){console.error('Leaderboard error:',error);document.getElementById('leaderboard-container').innerHTML='<div class="text-center py-12"><div class="text-red-400 mb-2">Failed to load leaderboard</div><button onclick="loadLeaderboard()" class="text-purple-400 hover:text-purple-300 underline">Try again</button></div>'}}
     
-    function displayLeaderboard(entries){if(!entries||entries.length===0){document.getElementById('leaderboard-container').innerHTML='<div class="text-center py-12"><div class="text-gray-400">No entries found. Try different filters or be the first to scan!</div></div>';return}let html='';entries.forEach(entry=>{const scoreClass=getScoreClass(entry.score);const rankClass=entry.rank<=3?`rank-${entry.rank}`:'';const categoryClass=`category-${entry.category||'other'}`;html+=`<div class="leaderboard-row ${rankClass}"><div class="flex items-center justify-between mb-2"><div class="flex items-center gap-4 flex-1"><div class="rank-badge ${entry.rank>3?'default':''}">${entry.rank}</div><div class="flex-1"><div class="font-bold text-white text-lg">${entry.company_name||'Unknown'}</div><div class="text-sm text-gray-400">${truncateUrl(entry.url)}</div>${entry.category?`<span class="category-badge ${categoryClass}">${entry.category}</span>`:''}</div></div><div class="text-right"><div class="score-display ${scoreClass}">${entry.score}</div><div class="text-xs text-gray-400">/100</div></div></div><div class="flex justify-end"><button onclick="getPromptsForUrl('${entry.url}',${entry.score},${JSON.stringify(entry).replace(/'/g,"\\'")})" class="prompt-btn">🎁 Get FREE Prompts</button></div></div>`});document.getElementById('leaderboard-container').innerHTML=html}
+    function displayLeaderboard(entries){
+      if(!entries||entries.length===0){
+        document.getElementById('leaderboard-container').innerHTML='<div class="text-center py-12"><div class="text-gray-400">No entries found. Try different filters or be the first to scan!</div></div>';
+        return;
+      }
+      let html='';
+      entries.forEach(entry=>{
+        const scoreClass=getScoreClass(entry.score);
+        const rankClass=entry.rank<=3?`rank-${entry.rank}`:'';
+        const categoryClass=`category-${entry.category||'other'}`;
+        
+        // ✅ HIGHLIGHT: Highlight newly added entry
+        const isNewEntry = currentUrl && entry.url === currentUrl;
+        const highlightClass = isNewEntry ? 'ring-2 ring-green-500 ring-opacity-50' : '';
+        
+        html+=`<div class="leaderboard-row ${rankClass} ${highlightClass}"><div class="flex items-center justify-between mb-2"><div class="flex items-center gap-4 flex-1"><div class="rank-badge ${entry.rank>3?'default':''}">${entry.rank}</div><div class="flex-1"><div class="font-bold text-white text-lg">${entry.company_name||'Unknown'}</div><div class="text-sm text-gray-400">${truncateUrl(entry.url)}</div>${entry.category?`<span class="category-badge ${categoryClass}">${entry.category}</span>`:''}</div></div><div class="text-right"><div class="score-display ${scoreClass}">${entry.score}</div><div class="text-xs text-gray-400">/100</div></div></div><div class="flex justify-end"><button onclick="getPromptsForUrl('${entry.url}',${entry.score},${JSON.stringify(entry).replace(/'/g,"\\'")})" class="prompt-btn">🎁 Get FREE Prompts</button></div></div>`;
+      });
+      document.getElementById('leaderboard-container').innerHTML=html;
+      
+      // ✅ SCROLL: Scroll to newly added entry
+      if(currentUrl){
+        setTimeout(()=>{
+          const newEntry = document.querySelector('.leaderboard-row.ring-green-500');
+          if(newEntry){
+            newEntry.scrollIntoView({behavior: 'smooth', block: 'center'});
+          }
+        }, 500);
+      }
+    }
     
     function getScoreClass(score){if(score>=90)return'score-excellent';if(score>=80)return'score-very-good';if(score>=70)return'score-good';if(score>=60)return'score-fair';return'score-poor'}
     function truncateUrl(url){try{const urlObj=new URL(url);return urlObj.hostname.replace('www.','')}catch{return url.substring(0,50)+'...'}}
@@ -321,7 +326,50 @@
     function getQualityText(score){if(score>=90)return'Excellent! 🌟';if(score>=80)return'Very Good! 👍';if(score>=70)return'Good ✓';if(score>=60)return'Fair ⚠️';return'Needs Improvement ❌'}
     function getQualityEmoji(score){if(score>=90)return'🌟';if(score>=80)return'👍';if(score>=70)return'✓';if(score>=60)return'⚠️';return'❌'}
     
-    async function submitToLeaderboard(){const companyName=document.getElementById('company-name').value.trim();const category=document.getElementById('category-select').value;try{const response=await fetch(`${API_BASE}/api/leaderboard/submit`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:currentUrl,score:currentScanResult.score,quality:currentScanResult.quality,graaf_score:currentScanResult.breakdown.graaf.total,craft_score:currentScanResult.breakdown.craft.total,technical_score:currentScanResult.breakdown.technical.total,word_count:currentScanResult.wordCount,company_name:companyName||null,category:category||null,country:null,language:null})});const data=await response.json();if(data.success){document.getElementById('leaderboard-prompt').classList.add('hidden');let rank=data.rank;if(!rank||rank===undefined){const allEntries=document.querySelectorAll('.leaderboard-row');rank=allEntries.length+1}document.getElementById('rank-display').textContent=`🎉 Rank #${rank}`;document.getElementById('leaderboard-result').classList.remove('hidden');setTimeout(()=>{refreshLeaderboard()},1000)}else{alert('Failed to add to leaderboard: '+(data.error||'Unknown error'))}}catch(error){console.error('Submit error:',error);alert('Failed to submit: '+error.message)}}
+    async function submitToLeaderboard(){
+      const companyName=document.getElementById('company-name').value.trim();
+      const category=document.getElementById('category-select').value;
+      try{
+        const response=await fetch(`${API_BASE}/api/leaderboard/submit`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            url:currentUrl,
+            score:currentScanResult.score,
+            quality:currentScanResult.quality,
+            graaf_score:currentScanResult.breakdown.graaf.total,
+            craft_score:currentScanResult.breakdown.craft.total,
+            technical_score:currentScanResult.breakdown.technical.total,
+            word_count:currentScanResult.wordCount,
+            company_name:companyName||null,
+            category:category||null,
+            country:null,
+            language:null
+          })
+        });
+        const data=await response.json();
+        if(data.success){
+          document.getElementById('leaderboard-prompt').classList.add('hidden');
+          
+          // ✅ FIXED: Show success message without claiming specific rank
+          // The actual rank will be visible after leaderboard refreshes
+          document.getElementById('rank-display').textContent='🎉 Added to Leaderboard!';
+          document.getElementById('leaderboard-result').classList.remove('hidden');
+          
+          // ✅ FIXED: Refresh leaderboard to show actual rank
+          setTimeout(()=>{
+            refreshLeaderboard();
+            // Scroll to top to see new entry
+            window.scrollTo({top: 0, behavior: 'smooth'});
+          },1500);
+        }else{
+          alert('Failed to add to leaderboard: '+(data.error||'Unknown error'));
+        }
+      }catch(error){
+        console.error('Submit error:',error);
+        alert('Failed to submit: '+error.message);
+      }
+    }
     
     function skipLeaderboard(){document.getElementById('leaderboard-prompt').classList.add('hidden')}
     function closeResultsModal(){document.getElementById('resultsModal').classList.remove('active')}
