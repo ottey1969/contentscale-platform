@@ -2933,7 +2933,247 @@ app.delete('/api/admin/share-links/:code', authenticateSuperAdmin, async (req, r
   }
 });
 
+// ==========================================
+// SUPER ADMIN: GET ALL CLIENTS
+// ==========================================
+app.get('/api/admin/clients', authenticateSuperAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        c.id,
+        c.url,
+        c.agency_id,
+        c.created_at,
+        c.last_scan_at,
+        a.name as agency_name,
+        (SELECT COUNT(*)::integer FROM scans WHERE client_id = c.id) as scan_count
+      FROM clients c
+      LEFT JOIN agencies a ON a.id = c.agency_id
+      ORDER BY c.created_at DESC
+      LIMIT 500
+    `);
+    
+    console.log(`[ADMIN CLIENTS] Fetched ${result.rows.length} clients`);
+    
+    res.json({
+      success: true,
+      total: result.rows.length,
+      clients: result.rows
+    });
+    
+  } catch (error) {
+    console.error('[ADMIN CLIENTS ERROR]', error.message);
+    console.error('[ADMIN CLIENTS STACK]', error.stack);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to load clients',
+      details: error.message
+    });
+  }
+});
 
+// ==========================================
+// SUPER ADMIN: GET ALL SCANS
+// ==========================================
+app.get('/api/admin/scans', authenticateSuperAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        s.id,
+        s.url,
+        s.score,
+        s.quality,
+        s.graaf_score,
+        s.craft_score,
+        s.technical_score,
+        s.word_count,
+        s.scan_type,
+        s.created_at,
+        s.agency_id,
+        s.client_id,
+        a.name as agency_name,
+        c.url as client_url
+      FROM scans s
+      LEFT JOIN agencies a ON a.id = s.agency_id
+      LEFT JOIN clients c ON c.id = s.client_id
+      ORDER BY s.created_at DESC
+      LIMIT 500
+    `);
+    
+    console.log(`[ADMIN SCANS] Fetched ${result.rows.length} scans`);
+    
+    res.json({
+      success: true,
+      total: result.rows.length,
+      scans: result.rows
+    });
+    
+  } catch (error) {
+    console.error('[ADMIN SCANS ERROR]', error.message);
+    console.error('[ADMIN SCANS STACK]', error.stack);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to load scans',
+      details: error.message
+    });
+  }
+});
+
+// ==========================================
+// SUPER ADMIN: DELETE CLIENT
+// ==========================================
+app.delete('/api/admin/clients/:id', authenticateSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    await pool.query('DELETE FROM scans WHERE client_id = $1', [id]);
+    
+    const result = await pool.query(
+      'DELETE FROM clients WHERE id = $1 RETURNING *',
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Client not found'
+      });
+    }
+    
+    console.log(`✅ Client deleted: ${result.rows[0].url}`);
+    
+    res.json({
+      success: true,
+      message: 'Client deleted successfully'
+    });
+    
+  } catch (error) {
+    console.error('[DELETE CLIENT ERROR]', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete client'
+    });
+  }
+});
+
+// ==========================================
+// SUPER ADMIN: DELETE SCAN
+// ==========================================
+app.delete('/api/admin/scans/:id', authenticateSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await pool.query(
+      'DELETE FROM scans WHERE id = $1 RETURNING *',
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Scan not found'
+      });
+    }
+    
+    console.log(`✅ Scan deleted: #${id}`);
+    
+    res.json({
+      success: true,
+      message: 'Scan deleted successfully'
+    });
+    
+  } catch (error) {
+    console.error('[DELETE SCAN ERROR]', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete scan'
+    });
+  }
+});
+
+// ==========================================
+// ADMIN: GET PLATFORM STATS
+// ==========================================
+app.get('/api/admin/stats', authenticateSuperAdmin, async (req, res) => {
+  try {
+    const agenciesResult = await pool.query(
+      'SELECT COUNT(*) as count FROM agencies WHERE is_active = true'
+    );
+    
+    const clientsResult = await pool.query(
+      'SELECT COUNT(*) as count FROM clients'
+    );
+    
+    const scansResult = await pool.query(
+      'SELECT COUNT(*) as count FROM scans'
+    );
+    
+    const helpersResult = await pool.query(
+      'SELECT COUNT(*) as count FROM admins WHERE is_active = true'
+    );
+    
+    const recentScansResult = await pool.query(
+      'SELECT COUNT(*) as count FROM scans WHERE created_at > NOW() - INTERVAL \'24 hours\''
+    );
+    
+    console.log('[ADMIN STATS] Fetched platform statistics');
+    
+    res.json({
+      success: true,
+      stats: {
+        total_agencies: parseInt(agenciesResult.rows[0].count),
+        total_clients: parseInt(clientsResult.rows[0].count),
+        total_scans: parseInt(scansResult.rows[0].count),
+        active_helpers: parseInt(helpersResult.rows[0].count),
+        recent_scans_24h: parseInt(recentScansResult.rows[0].count)
+      }
+    });
+    
+  } catch (error) {
+    console.error('[ADMIN STATS ERROR]', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to load statistics'
+    });
+  }
+});
+
+// ==========================================
+// SUPER ADMIN: DELETE ADMIN/HELPER
+// ==========================================
+app.delete('/api/admins/:id', authenticateSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await pool.query(
+      'DELETE FROM admins WHERE id = $1 RETURNING *',
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Admin not found'
+      });
+    }
+    
+    console.log(`✅ Admin deleted: ${result.rows[0].username}`);
+    
+    res.json({
+      success: true,
+      message: 'Admin deleted successfully'
+    });
+    
+  } catch (error) {
+    console.error('[DELETE ADMIN ERROR]', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete admin'
+    });
+  }
+});
+
+console.log('✅ All missing API routes loaded successfully!');
 
 // ==========================================
 // SUPER ADMIN: GET ALL CLIENTS
