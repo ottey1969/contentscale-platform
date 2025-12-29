@@ -271,8 +271,7 @@
             <table class="w-full">
               <thead class="bg-gray-700">
                 <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Name</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">URL</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Client URL</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Agency</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Scans</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Last Scan</th>
@@ -1561,7 +1560,6 @@
           data.clients.forEach(client => {
             const row = `
               <tr>
-                <td class="px-4 py-3">${client.name || 'Unknown'}</td>
                 <td class="px-4 py-3 text-blue-400">${client.url}</td>
                 <td class="px-4 py-3">${client.agency_name || '-'}</td>
                 <td class="px-4 py-3">${client.scan_count || 0}</td>
@@ -1633,12 +1631,14 @@
               poor: 'text-red-400'
             };
             
+            const displayClient = scan.agency_name || (scan.client_url ? scan.client_url.substring(0, 30) + '...' : '-');
+            
             const row = `
               <tr>
                 <td class="px-4 py-3 text-blue-400 text-sm">${scan.url.substring(0, 50)}...</td>
                 <td class="px-4 py-3 font-bold">${scan.score}/100</td>
                 <td class="px-4 py-3 ${qualityColors[scan.quality] || 'text-gray-400'}">${scan.quality}</td>
-                <td class="px-4 py-3 text-sm">${scan.agency_name || scan.client_name || '-'}</td>
+                <td class="px-4 py-3 text-sm">${displayClient}</td>
                 <td class="px-4 py-3"><span class="px-2 py-1 bg-gray-700 rounded text-xs">${scan.scan_type}</span></td>
                 <td class="px-4 py-3 text-sm">${new Date(scan.created_at).toLocaleDateString()}</td>
                 <td class="px-4 py-3">
