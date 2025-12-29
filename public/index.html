@@ -3,594 +3,418 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ContentScale Platform - SEO Agency Rankings</title>
+  <title>ContentScale Global AI SEO Leaderboard - Free Scanner & Prompts</title>
+  <meta name="description" content="Global leaderboard of top websites ranked by AI-era content quality. Scan your site for free, get AI improvement prompts, and claim your spot!">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
-    
-    body {
-      font-family: 'Inter', sans-serif;
-    }
-    
-    .gradient-bg {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-    
-    .gradient-text {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    
-    .score-gradient-excellent {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    }
-    
-    .score-gradient-good {
-      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    }
-    
-    .score-gradient-average {
-      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    }
-    
-    .score-gradient-poor {
-      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-    }
-    
-    .rank-badge {
-      position: relative;
-      width: 60px;
-      height: 60px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 900;
-      font-size: 24px;
-      border-radius: 50%;
-      box-shadow: 0 4px 14px 0 rgba(0,0,0,0.3);
-    }
-    
-    .rank-1 {
-      background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-      color: #92400e;
-      box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
-    }
-    
-    .rank-2 {
-      background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
-      color: #4b5563;
-      box-shadow: 0 0 20px rgba(192, 192, 192, 0.5);
-    }
-    
-    .rank-3 {
-      background: linear-gradient(135deg, #cd7f32 0%, #e5a663 100%);
-      color: #78350f;
-      box-shadow: 0 0 20px rgba(205, 127, 50, 0.5);
-    }
-    
-    .rank-other {
-      background: linear-gradient(135deg, #4b5563 0%, #6b7280 100%);
-      color: white;
-    }
-    
-    .pulse-animation {
-      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
-    
-    @keyframes pulse {
-      0%, 100% {
-        opacity: 1;
-      }
-      50% {
-        opacity: .7;
-      }
-    }
-    
-    .fade-in {
-      animation: fadeIn 0.6s ease-in;
-    }
-    
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-    
-    .hover-lift {
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    
-    .hover-lift:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
-    }
-    
-    .score-circle {
-      position: relative;
-      width: 80px;
-      height: 80px;
-    }
-    
-    .score-circle-bg {
-      fill: none;
-      stroke: #374151;
-      stroke-width: 8;
-    }
-    
-    .score-circle-progress {
-      fill: none;
-      stroke-width: 8;
-      stroke-linecap: round;
-      transform: rotate(-90deg);
-      transform-origin: 50% 50%;
-      transition: stroke-dashoffset 1s ease;
-    }
-    
-    .country-flag {
-      font-size: 32px;
-      display: inline-block;
-      margin-right: 12px;
-    }
+    .leaderboard-section { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; padding: 32px; margin-bottom: 32px; border: 2px solid #334155; position: relative; overflow: hidden; }
+    .leaderboard-section::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #f59e0b 0%, #eab308 50%, #f59e0b 100%); animation: shimmer 2s infinite; }
+    @keyframes shimmer { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .leaderboard-row { background: #1e293b; transition: all 0.3s; cursor: pointer; border-radius: 8px; margin-bottom: 8px; padding: 16px; border-left: 4px solid transparent; }
+    .leaderboard-row:hover { background: #334155; transform: translateX(4px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
+    .leaderboard-row.rank-1 { border-left-color: #fbbf24; background: linear-gradient(135deg, #1e293b 0%, #2d1f08 100%); }
+    .leaderboard-row.rank-2 { border-left-color: #9ca3af; background: linear-gradient(135deg, #1e293b 0%, #25282e 100%); }
+    .leaderboard-row.rank-3 { border-left-color: #f97316; background: linear-gradient(135deg, #1e293b 0%, #2d1908 100%); }
+    .rank-badge { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; font-weight: 800; font-size: 18px; }
+    .rank-1 .rank-badge { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #1e293b; box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4); font-size: 24px; }
+    .rank-2 .rank-badge { background: linear-gradient(135deg, #e5e7eb 0%, #9ca3af 100%); color: #1e293b; box-shadow: 0 4px 12px rgba(156, 163, 175, 0.4); }
+    .rank-3 .rank-badge { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white; box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4); }
+    .rank-badge.default { background: #334155; color: #94a3b8; }
+    .score-display { font-size: 32px; font-weight: 800; }
+    .score-excellent { color: #10b981; }
+    .score-very-good { color: #3b82f6; }
+    .score-good { color: #8b5cf6; }
+    .score-fair { color: #f59e0b; }
+    .score-poor { color: #ef4444; }
+    .live-indicator { display: inline-flex; align-items: center; gap: 6px; background: #065f46; color: #d1fae5; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+    .live-dot { width: 6px; height: 6px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.2); } }
+    .filter-section { background: #1f2937; border-radius: 12px; padding: 20px; margin-bottom: 24px; border: 1px solid #374151; }
+    .filter-btn { background: #374151; color: #9ca3af; padding: 8px 16px; border-radius: 8px; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; font-size: 14px; font-weight: 600; }
+    .filter-btn:hover { background: #4b5563; color: white; }
+    .filter-btn.active { background: #8b5cf6; color: white; border-color: #a78bfa; }
+    .scanner-section { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-radius: 16px; padding: 32px; border: 2px solid #374151; }
+    .scan-btn { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); padding: 16px 40px; border-radius: 12px; font-weight: 700; color: white; border: none; cursor: pointer; transition: all 0.3s; font-size: 18px; }
+    .scan-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4); }
+    .scan-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .prompt-btn { background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 8px 16px; border-radius: 8px; font-weight: 600; color: white; border: none; cursor: pointer; transition: all 0.2s; font-size: 13px; }
+    .prompt-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); }
+    .category-badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+    .category-agency { background: #7c3aed; color: white; }
+    .category-saas { background: #3b82f6; color: white; }
+    .category-blog { background: #f59e0b; color: white; }
+    .category-ecommerce { background: #10b981; color: white; }
+    .category-other { background: #6b7280; color: white; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 9999; align-items: center; justify-content: center; padding: 20px; }
+    .modal.active { display: flex; }
+    .modal-content { background: #1f2937; border-radius: 16px; padding: 32px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; }
+    .modal-close { position: absolute; top: 16px; right: 16px; background: #374151; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; color: white; font-size: 20px; }
+    .modal-close:hover { background: #4b5563; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+    /* SCAN LOADING ANIMATION */
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .scan-spinner { display: inline-block; width: 18px; height: 18px; border: 3px solid rgba(255, 255, 255, 0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 10px; vertical-align: middle; }
+    .scan-stage { font-size: 14px; opacity: 0.9; margin-left: 8px; }
+    @media (max-width: 768px) { .leaderboard-section, .scanner-section { padding: 20px; } .rank-badge { width: 32px; height: 32px; font-size: 14px; } .rank-1 .rank-badge { font-size: 18px; } .score-display { font-size: 24px; } }
   </style>
 </head>
-<body class="bg-gray-900 text-white min-h-screen">
+<body class="bg-gray-900 text-gray-100 min-h-screen p-8">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-8">
+      <h1 class="text-5xl font-bold mb-3 bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">🏆 Global AI SEO Leaderboard</h1>
+      <p class="text-xl text-gray-300 mb-4">The World's First AI-Era Content Quality Rankings</p>
+      <span class="live-indicator"><span class="live-dot"></span>Live Rankings</span>
+    </div>
 
-  <!-- HERO SECTION -->
-  <div class="gradient-bg relative overflow-hidden">
-    <!-- Animated Background Elements -->
-    <div class="absolute inset-0 opacity-20">
-      <div class="absolute top-20 left-20 w-64 h-64 bg-white rounded-full blur-3xl"></div>
-      <div class="absolute bottom-20 right-20 w-96 h-96 bg-blue-300 rounded-full blur-3xl"></div>
+     <div class="scanner-section mb-8">
+      <div class="text-center mb-8">
+        <h2 class="text-4xl font-bold mb-3">🚀 Scan Your Website</h2>
+        <p class="text-gray-300">Get your AI-Era SEO score, FREE improvement prompts, and claim your spot!</p>
+      </div>
+      <div class="max-w-3xl mx-auto">
+        <div class="flex gap-3 mb-5">
+          <input type="text" id="scanInput" placeholder="https://yourwebsite.com" class="flex-1 bg-gray-700 text-white px-6 py-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg">
+          <button onclick="performScan()" id="scanButton" class="scan-btn">Scan Now</button>
+        </div>
+        <div class="bg-gray-800 bg-opacity-70 rounded-lg p-4 text-sm text-gray-400">
+          <div class="font-bold text-green-400 mb-2">✅ Free Analysis Includes:</div>
+          <div class="grid md:grid-cols-2 gap-2 text-xs">
+            <div>• GRAAF Framework Score (50 pts)</div><div>• CRAFT Methodology (30 pts)</div><div>• Technical SEO (20 pts)</div><div>• AI Improvement Prompts 🎁</div>
+          </div>
+        </div>
+      </div>
     </div>
     
-    <div class="container mx-auto px-6 py-20 relative z-10">
-      <div class="text-center mb-12">
-        <h1 class="text-6xl md:text-7xl font-black mb-6 text-white drop-shadow-lg">
-          🏆 SEO Agency Rankings
-        </h1>
-        <p class="text-2xl md:text-3xl text-white/90 font-semibold mb-8">
-          The World's First AI-Powered SEO Agency Leaderboard
-        </p>
-        <p class="text-lg md:text-xl text-white/80 max-w-3xl mx-auto mb-12">
-          Real-time content quality scores powered by our advanced GRAAF Framework™. 
-          See how top agencies rank and test your own content instantly.
-        </p>
-        
-        <!-- CTA Buttons -->
-        <div class="flex flex-col sm:flex-row gap-6 justify-center items-center">
-          <a href="/seo-contentscore" target="_blank" class="group relative px-10 py-5 bg-white text-purple-600 rounded-full font-bold text-lg shadow-2xl hover:shadow-white/50 transition-all duration-300 hover:scale-105">
-            <span class="relative z-10">🔍 Test Your Content Free</span>
-            <div class="absolute inset-0 rounded-full bg-gradient-to-r from-yellow-400 to-pink-500 opacity-0 group-hover:opacity-20 transition-opacity"></div>
-          </a>
-          
-          <a href="#leaderboard" class="px-10 py-5 bg-white/10 backdrop-blur-sm text-white border-2 border-white/30 rounded-full font-bold text-lg hover:bg-white/20 transition-all duration-300">
-            📊 View Rankings
-          </a>
+    <div class="leaderboard-section">
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <h2 class="text-3xl font-bold text-yellow-400">Top 100 Websites</h2>
+          <p class="text-sm text-gray-400 mt-1">Ranked by GRAAF + CRAFT + Technical SEO (100 points max)</p>
+        </div>
+        <button onclick="refreshLeaderboard()" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-semibold transition">🔄 Refresh</button>
+      </div>
+      <div class="filter-section">
+        <div class="mb-4"><h3 class="text-sm font-bold text-gray-400 mb-2">FILTER BY:</h3></div>
+        <div class="mb-4">
+          <label class="text-xs text-gray-500 uppercase font-bold mb-2 block">Category</label>
+          <div class="flex flex-wrap gap-2">
+            <button class="filter-btn active" onclick="filterCategory('all')">All</button>
+            <button class="filter-btn" onclick="filterCategory('agency')">🎯 SEO Agencies</button>
+            <button class="filter-btn" onclick="filterCategory('saas')">💻 SaaS</button>
+            <button class="filter-btn" onclick="filterCategory('blog')">📝 Blogs</button>
+            <button class="filter-btn" onclick="filterCategory('ecommerce')">🛒 E-commerce</button>
+            <button class="filter-btn" onclick="filterCategory('other')">📌 Other</button>
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="text-xs text-gray-500 uppercase font-bold mb-2 block">Country</label>
+          <div class="flex flex-wrap gap-2">
+            <button class="filter-btn active" onclick="filterCountry('all')">🌍 Global</button>
+            <button class="filter-btn" onclick="filterCountry('NL')">🇳🇱 Netherlands</button>
+            <button class="filter-btn" onclick="filterCountry('BE')">🇧🇪 Belgium</button>
+            <button class="filter-btn" onclick="filterCountry('DE')">🇩🇪 Germany</button>
+            <button class="filter-btn" onclick="filterCountry('UK')">🇬🇧 UK</button>
+            <button class="filter-btn" onclick="filterCountry('GLOBAL')">🌐 .com/.org</button>
+          </div>
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 uppercase font-bold mb-2 block">Language</label>
+          <div class="flex flex-wrap gap-2">
+            <button class="filter-btn active" onclick="filterLanguage('all')">All Languages</button>
+            <button class="filter-btn" onclick="filterLanguage('en')">🇺🇸 English</button>
+            <button class="filter-btn" onclick="filterLanguage('nl')">🇳🇱 Dutch</button>
+            <button class="filter-btn" onclick="filterLanguage('es')">🇪🇸 Spanish</button>
+          </div>
         </div>
       </div>
-      
-      <!-- Live Stats -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
-          <div class="text-4xl font-black text-white mb-2" id="total-agencies">-</div>
-          <div class="text-white/80">Agencies Ranked</div>
+      <div class="grid grid-cols-3 gap-4 mb-6 p-4 bg-gray-800 bg-opacity-50 rounded-lg">
+        <div class="text-center"><div class="text-2xl font-bold text-green-400" id="total-entries">-</div><div class="text-xs text-gray-400">Total Entries</div></div>
+        <div class="text-center"><div class="text-2xl font-bold text-blue-400" id="average-score">-</div><div class="text-xs text-gray-400">Average Score</div></div>
+        <div class="text-center"><div class="text-2xl font-bold text-yellow-400" id="highest-score">-</div><div class="text-xs text-gray-400">Highest Score</div></div>
+      </div>
+      <div id="current-filter" class="text-sm text-gray-400 mb-4 hidden">Showing: <span id="filter-display" class="text-white font-bold"></span></div>
+      <div id="leaderboard-container"><div class="text-center py-12"><div class="text-5xl mb-4">🔍</div><div class="text-gray-400">Loading leaderboard...</div></div></div>
+    </div>
+    
+    <div class="scanner-section mb-8">
+      <div class="text-center mb-8">
+        <h2 class="text-4xl font-bold mb-3">🚀 Scan Your Website</h2>
+        <p class="text-gray-300">Get your AI-Era SEO score, FREE improvement prompts, and claim your spot!</p>
+      </div>
+      <div class="max-w-3xl mx-auto">
+        <div class="flex gap-3 mb-5">
+          <input type="text" id="scanInput" placeholder="https://yourwebsite.com" class="flex-1 bg-gray-700 text-white px-6 py-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg">
+          <button onclick="performScan()" id="scanButton" class="scan-btn">Scan Now</button>
         </div>
-        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
-          <div class="text-4xl font-black text-white mb-2" id="countries-count">5</div>
-          <div class="text-white/80">Countries</div>
-        </div>
-        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
-          <div class="text-4xl font-black text-white mb-2">100%</div>
-          <div class="text-white/80">AI-Powered</div>
+        <div class="bg-gray-800 bg-opacity-70 rounded-lg p-4 text-sm text-gray-400">
+          <div class="font-bold text-green-400 mb-2">✅ Free Analysis Includes:</div>
+          <div class="grid md:grid-cols-2 gap-2 text-xs">
+            <div>• GRAAF Framework Score (50 pts)</div><div>• CRAFT Methodology (30 pts)</div><div>• Technical SEO (20 pts)</div><div>• AI Improvement Prompts 🎁</div>
+          </div>
         </div>
       </div>
+    </div>
+    
+    <div id="resultsModal" class="modal">
+      <div class="modal-content">
+        <button class="modal-close" onclick="closeResultsModal()">×</button>
+        <div class="text-center mb-6">
+          <div class="text-6xl mb-3" id="modal-emoji">🎯</div>
+          <div class="text-5xl font-bold mb-2" id="modal-score">--/100</div>
+          <div class="text-lg text-gray-400" id="modal-quality">Analyzing...</div>
+        </div>
+        <div class="mb-6">
+          <h3 class="font-bold text-lg mb-3">Breakdown:</h3>
+          <div class="space-y-2">
+            <div class="flex justify-between"><span>GRAAF Framework:</span><span class="font-bold" id="modal-graaf">-/50</span></div>
+            <div class="flex justify-between"><span>CRAFT Methodology:</span><span class="font-bold" id="modal-craft">-/30</span></div>
+            <div class="flex justify-between"><span>Technical SEO:</span><span class="font-bold" id="modal-technical">-/20</span></div>
+          </div>
+        </div>
+        <div id="leaderboard-prompt" class="mb-4">
+          <div class="bg-purple-900 bg-opacity-30 border border-purple-700 rounded-lg p-4 mb-4">
+            <h3 class="font-bold text-purple-400 mb-2">🏆 Claim Your Spot!</h3>
+            <p class="text-sm text-gray-300 mb-3">Add your site to the public leaderboard?</p>
+            <input type="text" id="company-name" placeholder="Company/Site Name (optional)" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500">
+            <select id="category-select" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500">
+              <option value="">Auto-detect category</option><option value="agency">🎯 SEO Agency</option><option value="saas">💻 SaaS</option><option value="blog">📝 Blog</option><option value="ecommerce">🛒 E-commerce</option><option value="other">📌 Other</option>
+            </select>
+            <div class="flex gap-2">
+              <button onclick="submitToLeaderboard()" class="flex-1 bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-bold transition">Yes, Add Me!</button>
+              <button onclick="skipLeaderboard()" class="flex-1 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg font-bold transition">No Thanks</button>
+            </div>
+          </div>
+        </div>
+        <div id="leaderboard-result" class="hidden text-center mb-4">
+          <div class="bg-green-900 bg-opacity-30 border border-green-700 rounded-lg p-4">
+            <div class="text-green-400 font-bold text-2xl mb-2" id="rank-display">🎉 Added to Leaderboard!</div>
+            <p class="text-sm text-gray-400">Refreshing to show your position...</p>
+          </div>
+        </div>
+        <button onclick="getPrompts()" class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-6 py-4 rounded-lg font-bold text-lg transition mb-4">🎁 Get FREE AI Improvement Prompts</button>
+        <button onclick="closeResultsModal()" class="w-full bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg font-bold transition">Close</button>
+      </div>
+    </div>
+    
+    <div id="promptsModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;overflow-y:auto;padding:20px">
+      <div style="background:linear-gradient(135deg,#1f2937 0%,#111827 100%);border-radius:20px;max-width:900px;margin:40px auto;padding:40px;position:relative;box-shadow:0 25px 50px rgba(0,0,0,0.8)">
+        <button onclick="closePromptsModal()" style="position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.1);border:none;color:white;font-size:32px;width:50px;height:50px;border-radius:50%;cursor:pointer;line-height:1" onmouseover="this.style.background='rgba(255,255,255,0.2)';this.style.transform='rotate(90deg)'" onmouseout="this.style.background='rgba(255,255,255,0.1)';this.style.transform='rotate(0deg)'">×</button>
+        <div style="text-align:center;margin-bottom:32px">
+          <div style="font-size:64px;margin-bottom:16px">🏆</div>
+          <h2 style="font-size:32px;font-weight:700;margin:0 0 12px 0;background:linear-gradient(to right,#fbbf24,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Your ELITE AI Content Prompts</h2>
+          <p style="color:#9ca3af;font-size:15px;margin:0 0 16px 0">Professional-grade prompts for 95-100/100 scores</p>
+          <div style="display:flex;align-items:center;justify-content:center;gap:20px;font-size:13px;font-weight:600">
+            <span style="color:#10b981">✅ Claude AI</span><span style="color:#3b82f6">✅ ChatGPT</span><span style="color:#a78bfa">✅ Perplexity</span>
+          </div>
+        </div>
+        <div style="background:rgba(59,130,246,0.1);border:2px solid #3b82f6;border-radius:12px;padding:24px;margin-bottom:28px">
+          <div style="display:flex;gap:16px">
+            <div style="font-size:32px;flex-shrink:0">💡</div>
+            <div style="flex:1">
+              <div style="font-weight:700;color:#60a5fa;margin-bottom:12px;font-size:16px">How to Use (5 Simple Steps):</div>
+              <ol id="usage-instructions" style="color:#d1d5db;font-size:14px;line-height:1.8;margin:0;padding-left:24px">
+                <li><strong>1.</strong> Click "📋 Copy ELITE Prompt" below</li><li><strong>2.</strong> Open Claude.ai, ChatGPT, or Perplexity</li><li><strong>3.</strong> Paste the entire prompt (Ctrl+V)</li><li><strong>4.</strong> AI generates complete 2500+ word article</li><li><strong>5.</strong> Copy result → Update your page → Rescan! 📈</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+        <div id="prompts-container" style="margin-bottom:28px">
+          <div style="text-align:center;padding:60px 20px">
+            <div style="font-size:56px;margin-bottom:16px">⏳</div>
+            <div style="color:#9ca3af;font-size:16px">Generating elite prompts...</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:20px">
+          <button onclick="exportPromptsToFile()" style="background:#374151;color:white;padding:14px 20px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:10px" onmouseover="this.style.background='#4b5563';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#374151';this.style.transform='translateY(0)'"><span style="font-size:20px">📥</span><span>Export to File</span></button>
+          <button onclick="sharePromptsOnLinkedIn()" style="background:#2563eb;color:white;padding:14px 20px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:10px" onmouseover="this.style.background='#1d4ed8';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#2563eb';this.style.transform='translateY(0)'"><span style="font-size:20px">🔗</span><span>Share on LinkedIn</span></button>
+          <button onclick="emailPrompts()" style="background:#7c3aed;color:white;padding:14px 20px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:10px" onmouseover="this.style.background='#6d28d9';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#7c3aed';this.style.transform='translateY(0)'"><span style="font-size:20px">📧</span><span>Email to Me</span></button>
+        </div>
+        <button onclick="closePromptsModal()" style="width:100%;background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:white;padding:18px 32px;border-radius:12px;border:none;cursor:pointer;font-weight:700;font-size:17px;box-shadow:0 4px 12px rgba(16,185,129,0.3)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(16,185,129,0.5)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 12px rgba(16,185,129,0.3)'">Got It! Let's Create Elite Content 🚀</button>
+      </div>
+    </div>
+    
+    <div class="text-center text-gray-500 text-sm mt-12">
+      <p class="mb-2">Powered by ContentScale AI • GRAAF + CRAFT Frameworks • Claude Sonnet 4</p>
+      <p><a href="https://contentscale.site" class="text-purple-400 hover:text-purple-300">contentscale.site</a> • <a href="https://wa.me/31628073996" class="text-green-400 hover:text-green-300">WhatsApp</a></p>
     </div>
   </div>
-
-  <!-- LEADERBOARD SECTION -->
-  <div id="leaderboard" class="container mx-auto px-6 py-16">
-    
-    <!-- Section Header -->
-    <div class="text-center mb-12">
-      <h2 class="text-5xl font-black mb-4">
-        <span class="gradient-text">Global Rankings</span>
-      </h2>
-      <p class="text-xl text-gray-400 max-w-2xl mx-auto">
-        Live rankings updated based on content quality, SEO optimization, and GRAAF Framework compliance
-      </p>
-    </div>
-    
-    <!-- Country Selector -->
-    <div class="max-w-4xl mx-auto mb-12">
-      <div class="bg-gray-800 rounded-2xl p-8 border border-gray-700">
-        <label class="block text-lg font-bold mb-4 text-gray-300">Select Country:</label>
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <button onclick="loadLeaderboard('netherlands')" class="country-btn bg-gray-700 hover:bg-purple-600 px-6 py-4 rounded-xl font-bold transition-all duration-300 border-2 border-transparent hover:border-purple-400 hover:scale-105">
-            <span class="country-flag">🇳🇱</span>
-            <div class="text-sm">Netherlands</div>
-          </button>
-          <button onclick="loadLeaderboard('belgium')" class="country-btn bg-gray-700 hover:bg-purple-600 px-6 py-4 rounded-xl font-bold transition-all duration-300 border-2 border-transparent hover:border-purple-400 hover:scale-105">
-            <span class="country-flag">🇧🇪</span>
-            <div class="text-sm">Belgium</div>
-          </button>
-          <button onclick="loadLeaderboard('germany')" class="country-btn bg-gray-700 hover:bg-purple-600 px-6 py-4 rounded-xl font-bold transition-all duration-300 border-2 border-transparent hover:border-purple-400 hover:scale-105">
-            <span class="country-flag">🇩🇪</span>
-            <div class="text-sm">Germany</div>
-          </button>
-          <button onclick="loadLeaderboard('uk')" class="country-btn bg-gray-700 hover:bg-purple-600 px-6 py-4 rounded-xl font-bold transition-all duration-300 border-2 border-transparent hover:border-purple-400 hover:scale-105">
-            <span class="country-flag">🇬🇧</span>
-            <div class="text-sm">UK</div>
-          </button>
-          <button onclick="loadLeaderboard('usa')" class="country-btn bg-gray-700 hover:bg-purple-600 px-6 py-4 rounded-xl font-bold transition-all duration-300 border-2 border-transparent hover:border-purple-400 hover:scale-105">
-            <span class="country-flag">🇺🇸</span>
-            <div class="text-sm">USA</div>
-          </button>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Loading State -->
-    <div id="loading" class="text-center py-20">
-      <div class="inline-block">
-        <div class="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p class="text-xl text-gray-400 pulse-animation">Loading rankings...</p>
-      </div>
-    </div>
-    
-    <!-- Leaderboard Content -->
-    <div id="leaderboard-content" class="hidden">
-      <div class="mb-8">
-        <h3 class="text-3xl font-bold mb-2">
-          <span id="current-country-name">Netherlands</span> Rankings
-        </h3>
-        <p class="text-gray-400">
-          Showing <span id="showing-count">10</span> of <span id="total-results">0</span> agencies
-        </p>
-      </div>
-      
-      <!-- Top 3 Podium -->
-      <div id="podium" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        <!-- Filled by JavaScript -->
-      </div>
-      
-      <!-- Full Rankings Table -->
-      <div class="bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden">
-        <table class="w-full">
-          <thead class="bg-gray-900">
-            <tr>
-              <th class="px-6 py-4 text-left text-sm font-bold text-gray-400 uppercase tracking-wider">Rank</th>
-              <th class="px-6 py-4 text-left text-sm font-bold text-gray-400 uppercase tracking-wider">Agency</th>
-              <th class="px-6 py-4 text-left text-sm font-bold text-gray-400 uppercase tracking-wider">Website</th>
-              <th class="px-6 py-4 text-left text-sm font-bold text-gray-400 uppercase tracking-wider">Score</th>
-              <th class="px-6 py-4 text-left text-sm font-bold text-gray-400 uppercase tracking-wider">Last Scanned</th>
-            </tr>
-          </thead>
-          <tbody id="rankings-table" class="divide-y divide-gray-700">
-            <!-- Filled by JavaScript -->
-          </tbody>
-        </table>
-      </div>
-      
-      <!-- View All Button -->
-      <div id="view-all-container" class="mt-6">
-        <!-- Filled by JavaScript -->
-      </div>
-    </div>
-  </div>
-
-  <!-- CTA SECTION -->
-  <div class="bg-gradient-to-r from-purple-900 to-indigo-900 py-20">
-    <div class="container mx-auto px-6 text-center">
-      <h2 class="text-5xl font-black mb-6">Want to Rank Higher?</h2>
-      <p class="text-2xl mb-10 text-purple-200 max-w-3xl mx-auto">
-        Test your content with our AI-powered scanner and get instant recommendations to improve your score
-      </p>
-      <div class="flex flex-col sm:flex-row gap-6 justify-center">
-        <a href="/seo-contentscore" target="_blank" class="px-12 py-6 bg-white text-purple-600 rounded-full font-black text-xl shadow-2xl hover:shadow-white/50 transition-all duration-300 hover:scale-105">
-          🚀 Scan Your Content Now
-        </a>
-        <a href="/contact-form" target="_blank" class="px-12 py-6 bg-purple-700 text-white rounded-full font-black text-xl border-2 border-purple-400 hover:bg-purple-600 transition-all duration-300 hover:scale-105">
-          📧 Get Free Analysis
-        </a>
-      </div>
-    </div>
-  </div>
-
-  <!-- FOOTER -->
-  <footer class="bg-gray-950 py-12 border-t border-gray-800">
-    <div class="container mx-auto px-6 text-center">
-      <div class="mb-6">
-        <h3 class="text-2xl font-bold gradient-text mb-2">ContentScale Platform</h3>
-        <p class="text-gray-400">AI-Powered SEO Agency Rankings</p>
-      </div>
-      <div class="flex justify-center gap-8 text-sm text-gray-500">
-        <a href="/admin" class="hover:text-purple-400 transition">Admin</a>
-        <a href="/seo-contentscore" target="_blank" class="hover:text-purple-400 transition">Scanner</a>
-        <a href="/contact-form" target="_blank" class="hover:text-purple-400 transition">Contact</a>
-      </div>
-      <div class="mt-6 text-gray-600 text-sm">
-        © 2024 ContentScale. Powered by GRAAF Framework™
-      </div>
-    </div>
-  </footer>
-
   <script>
-    let currentCountry = 'netherlands';
-    let allAgencies = [];
-    let showingAll = false;
-    const INITIAL_DISPLAY = 10; // Show top 10 initially
+    console.log('%c🏆 ContentScale Global Leaderboard','color:#f59e0b;font-size:16px;font-weight:bold');
+    const API_BASE='';let currentScanResult=null;let currentUrl='';let currentFilters={category:'all',country:'all',language:'all'};
     
-    // Country name mapping
-    const countryNames = {
-      'netherlands': 'Netherlands 🇳🇱',
-      'belgium': 'Belgium 🇧🇪',
-      'germany': 'Germany 🇩🇪',
-      'uk': 'United Kingdom 🇬🇧',
-      'usa': 'United States 🇺🇸'
-    };
+    function filterCategory(cat){currentFilters.category=cat;updateFilterButtons('category',cat);loadLeaderboard()}
+    function filterCountry(country){currentFilters.country=country;updateFilterButtons('country',country);loadLeaderboard()}
+    function filterLanguage(lang){currentFilters.language=lang;updateFilterButtons('language',lang);loadLeaderboard()}
+    function updateFilterButtons(type,value){const buttons=document.querySelectorAll('.filter-btn');buttons.forEach(btn=>{const onClick=btn.getAttribute('onclick');if(onClick&&onClick.includes(`filter${type.charAt(0).toUpperCase()+type.slice(1)}`)){onClick.includes(`'${value}'`)?btn.classList.add('active'):btn.classList.remove('active')}});const filterDisplay=document.getElementById('filter-display');const currentFilterDiv=document.getElementById('current-filter');let filterText=[];if(currentFilters.category!=='all')filterText.push(currentFilters.category.toUpperCase());if(currentFilters.country!=='all')filterText.push(currentFilters.country);if(currentFilters.language!=='all')filterText.push(currentFilters.language.toUpperCase());if(filterText.length>0){filterDisplay.textContent=filterText.join(' • ');currentFilterDiv.classList.remove('hidden')}else{currentFilterDiv.classList.add('hidden')}}
     
-    // Load leaderboard on page load
-    document.addEventListener('DOMContentLoaded', function() {
-      loadLeaderboard('netherlands');
-    });
+    async function loadLeaderboard(){try{const params=new URLSearchParams({limit:100,category:currentFilters.category,country:currentFilters.country,language:currentFilters.language});const response=await fetch(`${API_BASE}/api/leaderboard?${params}`);const data=await response.json();if(!data.success)throw new Error(data.error||'Failed to load');displayLeaderboard(data.entries);try{const statsResponse=await fetch(`${API_BASE}/api/leaderboard/stats`);const statsData=await statsResponse.json();if(statsData&&statsData.success&&statsData.stats){document.getElementById('total-entries').textContent=statsData.stats.total_entries||0;document.getElementById('average-score').textContent=statsData.stats.average_score||'-';document.getElementById('highest-score').textContent=statsData.stats.highest_score||'-'}}catch(statsError){console.log('Stats not available')}}catch(error){console.error('Leaderboard error:',error);document.getElementById('leaderboard-container').innerHTML='<div class="text-center py-12"><div class="text-red-400 mb-2">Failed to load leaderboard</div><button onclick="loadLeaderboard()" class="text-purple-400 hover:text-purple-300 underline">Try again</button></div>'}}
     
-    async function loadLeaderboard(country) {
-      currentCountry = country;
-      showingAll = false;
-      
-      // Show loading
-      document.getElementById('loading').classList.remove('hidden');
-      document.getElementById('leaderboard-content').classList.add('hidden');
-      
-      // Update active country button
-      document.querySelectorAll('.country-btn').forEach(btn => {
-        btn.classList.remove('bg-purple-600', 'border-purple-400', 'scale-105');
-        btn.classList.add('bg-gray-700', 'border-transparent');
+    function displayLeaderboard(entries){
+      if(!entries||entries.length===0){
+        document.getElementById('leaderboard-container').innerHTML='<div class="text-center py-12"><div class="text-gray-400">No entries found. Try different filters or be the first to scan!</div></div>';
+        return;
+      }
+      let html='';
+      entries.forEach(entry=>{
+        const scoreClass=getScoreClass(entry.score);
+        const rankClass=entry.rank<=3?`rank-${entry.rank}`:'';
+        const categoryClass=`category-${entry.category||'other'}`;
+        
+        // ✅ HIGHLIGHT: Highlight newly added entry
+        const isNewEntry = currentUrl && entry.url === currentUrl;
+        const highlightClass = isNewEntry ? 'ring-2 ring-green-500 ring-opacity-50' : '';
+        
+        html+=`<div class="leaderboard-row ${rankClass} ${highlightClass}"><div class="flex items-center justify-between mb-2"><div class="flex items-center gap-4 flex-1"><div class="rank-badge ${entry.rank>3?'default':''}">${entry.rank}</div><div class="flex-1"><div class="font-bold text-white text-lg">${entry.company_name||'Unknown'}</div><div class="text-sm text-gray-400">${truncateUrl(entry.url)}</div>${entry.category?`<span class="category-badge ${categoryClass}">${entry.category}</span>`:''}</div></div><div class="text-right"><div class="score-display ${scoreClass}">${entry.score}</div><div class="text-xs text-gray-400">/100</div></div></div><div class="flex justify-end"><button onclick="getPromptsForUrl('${entry.url}',${entry.score},${JSON.stringify(entry).replace(/'/g,"\\'")})" class="prompt-btn">🎁 Get FREE Prompts</button></div></div>`;
       });
-      event?.target.closest('.country-btn')?.classList.add('bg-purple-600', 'border-purple-400', 'scale-105');
+      document.getElementById('leaderboard-container').innerHTML=html;
+      
+      // ✅ SCROLL: Scroll to newly added entry
+      if(currentUrl){
+        setTimeout(()=>{
+          const newEntry = document.querySelector('.leaderboard-row.ring-green-500');
+          if(newEntry){
+            newEntry.scrollIntoView({behavior: 'smooth', block: 'center'});
+          }
+        }, 500);
+      }
+    }
+    
+    function getScoreClass(score){if(score>=90)return'score-excellent';if(score>=80)return'score-very-good';if(score>=70)return'score-good';if(score>=60)return'score-fair';return'score-poor'}
+    function truncateUrl(url){try{const urlObj=new URL(url);return urlObj.hostname.replace('www.','')}catch{return url.substring(0,50)+'...'}}
+    function refreshLeaderboard(){document.getElementById('leaderboard-container').innerHTML='<div class="text-center py-12"><div class="text-5xl mb-4">🔄</div><div class="text-gray-400">Refreshing...</div></div>';loadLeaderboard()}
+    
+    // ✅ UPDATED performScan WITH LOADING ANIMATION
+    async function performScan() {
+      const url = document.getElementById('scanInput').value.trim();
+      
+      if (!url) {
+        alert('Please enter a URL');
+        return;
+      }
+      
+      if (!url.startsWith('http')) {
+        document.getElementById('scanInput').value = 'https://' + url;
+        return performScan();
+      }
+      
+      currentUrl = url;
+      const btn = document.getElementById('scanButton');
+      btn.disabled = true;
+      
+      // Stage 1: Fetching
+      btn.innerHTML = '<span class="scan-spinner"></span>Fetching page<span class="scan-stage">●○○</span>';
       
       try {
-        const response = await fetch(`/api/leaderboard/${country}`);
+        const response = await fetch(`${API_BASE}/api/scan-free`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+        
+        // Stage 2: Analyzing
+        btn.innerHTML = '<span class="scan-spinner"></span>Analyzing content<span class="scan-stage">●●○</span>';
+        
         const data = await response.json();
         
         if (!data.success) {
-          throw new Error('Failed to load leaderboard');
+          throw new Error(data.error || 'Scan failed');
         }
         
-        allAgencies = data.agencies;
+        // Stage 3: Calculating
+        btn.innerHTML = '<span class="scan-spinner"></span>Calculating score<span class="scan-stage">●●●</span>';
         
-        // Update stats
-        document.getElementById('total-agencies').textContent = data.total || allAgencies.length;
-        document.getElementById('total-results').textContent = data.total || allAgencies.length;
-        document.getElementById('current-country-name').textContent = countryNames[country];
+        // Small delay for better UX
+        await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Render podium (top 3)
-        renderPodium(allAgencies.slice(0, 3));
-        
-        // Render initial table (top 10)
-        const displayCount = Math.min(INITIAL_DISPLAY, allAgencies.length);
-        renderTable(allAgencies.slice(0, displayCount));
-        document.getElementById('showing-count').textContent = displayCount;
-        
-        // Show "View All" button if there are more agencies
-        updateViewAllButton();
-        
-        // Hide loading, show content
-        document.getElementById('loading').classList.add('hidden');
-        document.getElementById('leaderboard-content').classList.remove('hidden');
+        currentScanResult = data;
+        showResults(data);
         
       } catch (error) {
-        console.error('Error loading leaderboard:', error);
-        document.getElementById('loading').innerHTML = `
-          <div class="text-center py-20">
-            <div class="text-red-400 text-xl mb-4">❌ Failed to load rankings</div>
-            <p class="text-gray-400">${error.message}</p>
-            <button onclick="loadLeaderboard('${country}')" class="mt-6 px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-bold">
-              Try Again
-            </button>
-          </div>
-        `;
+        console.error('Scan error:', error);
+        btn.innerHTML = 'Scan Now';
+        alert('Scan failed: ' + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Scan Now';
       }
     }
     
-    function toggleViewAll() {
-      showingAll = !showingAll;
-      
-      if (showingAll) {
-        renderTable(allAgencies);
-        document.getElementById('showing-count').textContent = allAgencies.length;
-      } else {
-        const displayCount = Math.min(INITIAL_DISPLAY, allAgencies.length);
-        renderTable(allAgencies.slice(0, displayCount));
-        document.getElementById('showing-count').textContent = displayCount;
-        
-        // Scroll to table
-        document.getElementById('leaderboard-content').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-      
-      updateViewAllButton();
-    }
+    function showResults(data){document.getElementById('modal-score').textContent=data.score+'/100';document.getElementById('modal-quality').textContent=getQualityText(data.score);document.getElementById('modal-emoji').textContent=getQualityEmoji(data.score);document.getElementById('modal-graaf').textContent=`${data.breakdown.graaf.total}/50`;document.getElementById('modal-craft').textContent=`${data.breakdown.craft.total}/30`;document.getElementById('modal-technical').textContent=`${data.breakdown.technical.total}/20`;document.getElementById('leaderboard-prompt').classList.remove('hidden');document.getElementById('leaderboard-result').classList.add('hidden');document.getElementById('resultsModal').classList.add('active')}
     
-    function updateViewAllButton() {
-      const container = document.getElementById('view-all-container');
-      
-      if (allAgencies.length <= INITIAL_DISPLAY) {
-        container.innerHTML = '';
-        return;
-      }
-      
-      if (showingAll) {
-        container.innerHTML = `
-          <button onclick="toggleViewAll()" class="w-full px-6 py-4 bg-gray-700 hover:bg-gray-600 rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2">
-            <span>Show Less</span>
-            <span class="text-xl">↑</span>
-          </button>
-        `;
-      } else {
-        const remaining = allAgencies.length - INITIAL_DISPLAY;
-        container.innerHTML = `
-          <button onclick="toggleViewAll()" class="w-full px-6 py-4 bg-purple-600 hover:bg-purple-700 rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2">
-            <span>View All ${allAgencies.length} Agencies</span>
-            <span class="text-sm bg-white/20 px-3 py-1 rounded-full">+${remaining} more</span>
-            <span class="text-xl">↓</span>
-          </button>
-        `;
-      }
-    }
+    function getQualityText(score){if(score>=90)return'Excellent! 🌟';if(score>=80)return'Very Good! 👍';if(score>=70)return'Good ✓';if(score>=60)return'Fair ⚠️';return'Needs Improvement ❌'}
+    function getQualityEmoji(score){if(score>=90)return'🌟';if(score>=80)return'👍';if(score>=70)return'✓';if(score>=60)return'⚠️';return'❌'}
     
-    function renderPodium(topThree) {
-      const podium = document.getElementById('podium');
-      
-      if (topThree.length === 0) {
-        podium.innerHTML = '<div class="col-span-3 text-center text-gray-400">No agencies ranked yet</div>';
-        return;
-      }
-      
-      // Reorder for podium: 2nd, 1st, 3rd
-      const podiumOrder = [topThree[1], topThree[0], topThree[2]].filter(a => a);
-      
-      podium.innerHTML = podiumOrder.map((agency, index) => {
-        if (!agency) return '';
-        
-        const actualRank = agency.rank;
-        const score = agency.v52_score || 0;
-        const scoreClass = getScoreClass(score);
-        const rankClass = actualRank === 1 ? 'rank-1' : actualRank === 2 ? 'rank-2' : 'rank-3';
-        
-        // Medal heights for visual podium effect
-        const heights = { 2: 'md:mt-12', 1: 'md:mt-0', 3: 'md:mt-16' };
-        const height = heights[actualRank] || '';
-        
-        return `
-          <div class="bg-gray-800 rounded-2xl p-8 border-2 ${actualRank === 1 ? 'border-yellow-400' : actualRank === 2 ? 'border-gray-400' : 'border-orange-400'} hover-lift fade-in ${height}">
-            <div class="text-center mb-6">
-              <div class="rank-badge ${rankClass} mx-auto mb-4">
-                ${actualRank === 1 ? '👑' : actualRank}
-              </div>
-              <h3 class="text-2xl font-bold mb-2">${agency.name}</h3>
-              <a href="https://${agency.domain}" target="_blank" class="text-purple-400 hover:text-purple-300 text-sm">
-                ${agency.domain}
-              </a>
-            </div>
-            
-            <div class="text-center mb-4">
-              <div class="inline-block">
-                ${renderScoreCircle(score)}
-              </div>
-            </div>
-            
-            <div class="text-center">
-              <div class="text-5xl font-black ${scoreClass} mb-2">${score}</div>
-              <div class="text-gray-400 text-sm">out of 100</div>
-            </div>
-            
-            ${actualRank === 1 ? `
-              <div class="mt-6 text-center">
-                <div class="inline-block px-4 py-2 bg-yellow-400/20 text-yellow-400 rounded-full text-sm font-bold">
-                  🏆 Top Ranked
-                </div>
-              </div>
-            ` : ''}
-          </div>
-        `;
-      }).join('');
-    }
-    
-    function renderTable(agencies) {
-      const tbody = document.getElementById('rankings-table');
-      
-      if (agencies.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="5" class="px-6 py-12 text-center text-gray-400">
-              No agencies found for this country
-            </td>
-          </tr>
-        `;
-        return;
-      }
-      
-      tbody.innerHTML = agencies.map(agency => {
-        const score = agency.v52_score || 0;
-        const scoreClass = getScoreClass(score);
-        const rankClass = agency.rank <= 3 ? 'font-black text-2xl' : 'font-bold text-lg';
-        const lastScanned = agency.last_scanned 
-          ? new Date(agency.last_scanned).toLocaleDateString()
-          : 'Never';
-        
-        return `
-          <tr class="hover:bg-gray-700/50 transition-colors fade-in">
-            <td class="px-6 py-4">
-              <div class="${rankClass} ${agency.rank === 1 ? 'text-yellow-400' : agency.rank === 2 ? 'text-gray-300' : agency.rank === 3 ? 'text-orange-400' : 'text-gray-400'}">
-                ${agency.rank === 1 ? '🥇' : agency.rank === 2 ? '🥈' : agency.rank === 3 ? '🥉' : '#' + agency.rank}
-              </div>
-            </td>
-            <td class="px-6 py-4">
-              <div class="font-bold text-lg">${agency.name}</div>
-            </td>
-            <td class="px-6 py-4">
-              <a href="https://${agency.domain}" target="_blank" class="text-purple-400 hover:text-purple-300 transition">
-                ${agency.domain} →
-              </a>
-            </td>
-            <td class="px-6 py-4">
-              <div class="flex items-center gap-3">
-                <div class="text-3xl font-black ${scoreClass}">${score}</div>
-                <div class="text-sm text-gray-400">/100</div>
-              </div>
-            </td>
-            <td class="px-6 py-4 text-gray-400">
-              ${lastScanned}
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
-    
-    function renderScoreCircle(score) {
-      const radius = 36;
-      const circumference = 2 * Math.PI * radius;
-      const offset = circumference - (score / 100) * circumference;
-      const strokeColor = score >= 90 ? '#10b981' : score >= 80 ? '#3b82f6' : score >= 70 ? '#f59e0b' : '#ef4444';
-      
-      return `
-        <svg class="score-circle" width="80" height="80">
-          <circle class="score-circle-bg" cx="40" cy="40" r="${radius}"></circle>
-          <circle class="score-circle-progress" 
-                  cx="40" cy="40" r="${radius}"
-                  stroke="${strokeColor}"
-                  stroke-dasharray="${circumference}"
-                  stroke-dashoffset="${offset}">
-          </circle>
-        </svg>
-      `;
-    }
-    
-    function getScoreClass(score) {
-      if (score >= 90) return 'text-green-400';
-      if (score >= 80) return 'text-blue-400';
-      if (score >= 70) return 'text-yellow-400';
-      if (score >= 60) return 'text-orange-400';
-      return 'text-red-400';
-    }
-    
-    // Smooth scroll to leaderboard
-    document.querySelectorAll('a[href="#leaderboard"]').forEach(anchor => {
-      anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        document.querySelector('#leaderboard').scrollIntoView({
-          behavior: 'smooth'
+    async function submitToLeaderboard(){
+      const companyName=document.getElementById('company-name').value.trim();
+      const category=document.getElementById('category-select').value;
+      try{
+        const response=await fetch(`${API_BASE}/api/leaderboard/submit`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            url:currentUrl,
+            score:currentScanResult.score,
+            quality:currentScanResult.quality,
+            graaf_score:currentScanResult.breakdown.graaf.total,
+            craft_score:currentScanResult.breakdown.craft.total,
+            technical_score:currentScanResult.breakdown.technical.total,
+            word_count:currentScanResult.wordCount,
+            company_name:companyName||null,
+            category:category||null,
+            country:null,
+            language:null
+          })
         });
-      });
-    });
+        const data=await response.json();
+        if(data.success){
+          document.getElementById('leaderboard-prompt').classList.add('hidden');
+          
+          // ✅ FIXED: Show success message without claiming specific rank
+          // The actual rank will be visible after leaderboard refreshes
+          document.getElementById('rank-display').textContent='🎉 Added to Leaderboard!';
+          document.getElementById('leaderboard-result').classList.remove('hidden');
+          
+          // ✅ FIXED: Refresh leaderboard to show actual rank
+          setTimeout(()=>{
+            refreshLeaderboard();
+            // Scroll to top to see new entry
+            window.scrollTo({top: 0, behavior: 'smooth'});
+          },1500);
+        }else{
+          alert('Failed to add to leaderboard: '+(data.error||'Unknown error'));
+        }
+      }catch(error){
+        console.error('Submit error:',error);
+        alert('Failed to submit: '+error.message);
+      }
+    }
+    
+    function skipLeaderboard(){document.getElementById('leaderboard-prompt').classList.add('hidden')}
+    function closeResultsModal(){document.getElementById('resultsModal').classList.remove('active')}
+    
+    async function getPrompts(){if(!currentScanResult)return;document.getElementById('promptsModal').classList.add('active');document.getElementById('promptsModal').style.display='block';try{const response=await fetch(`${API_BASE}/api/generate-content-prompt`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:currentUrl,score:currentScanResult.score,breakdown:currentScanResult.breakdown,wordCount:currentScanResult.wordCount})});const data=await response.json();if(data.success&&data.prompts){displayPrompts(data)}else{throw new Error('Failed to generate prompts')}}catch(error){console.error('Prompts error:',error);document.getElementById('prompts-container').innerHTML='<div class="text-center py-8"><div class="text-red-400">Failed to generate prompts</div></div>'}}
+    
+    async function getPromptsForUrl(url,score,entry){currentUrl=url;currentScanResult={score:score,breakdown:{graaf:{total:entry.graaf_score||0},craft:{total:entry.craft_score||0},technical:{total:entry.technical_score||0}},wordCount:entry.word_count||0};getPrompts()}
+    
+    function displayPrompts(promptData){const prompts=promptData.prompts||[];const usageInstructions=promptData.usage_instructions||[];if(prompts.length===0){document.getElementById('prompts-container').innerHTML='<div style="text-align:center;padding:40px 20px"><div style="color:#ef4444;font-size:16px;margin-bottom:12px">Failed to generate prompts</div><button onclick="getPrompts()" style="color:#a78bfa;text-decoration:underline;background:none;border:none;cursor:pointer;font-size:14px">Try again</button></div>';return}if(usageInstructions.length>0){const list=document.getElementById('usage-instructions');if(list){list.innerHTML=usageInstructions.map(instr=>`<li>${instr}</li>`).join('')}}let html='';prompts.forEach((prompt,index)=>{const isElite=prompt.type==='elite';const promptId=`prompt-full-${index}`;const previewId=`prompt-preview-${index}`;const preview=prompt.prompt.substring(0,500)+'...';html+=`<div style="background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);border:3px solid ${isElite?'#8b5cf6':'#4b5563'};border-radius:16px;padding:28px;margin-bottom:24px;position:relative">${isElite?'<div style="position:absolute;top:-14px;right:24px;background:linear-gradient(135deg,#fbbf24 0%,#f59e0b 100%);color:#1e293b;padding:8px 20px;border-radius:24px;font-size:11px;font-weight:800;text-transform:uppercase;box-shadow:0 6px 16px rgba(251,191,36,0.6)">🏆 RECOMMENDED</div>':''}<div style="margin-bottom:20px"><h3 style="font-size:20px;font-weight:700;color:#a78bfa;margin:0 0 8px 0">${prompt.title}</h3><p style="font-size:13px;color:#9ca3af;margin:0 0 12px 0">${prompt.description||''}</p>${prompt.estimated_score?`<div style="display:inline-flex;align-items:center;gap:8px;background:rgba(5,150,105,0.2);border:1px solid #10b981;color:#d1fae5;padding:6px 16px;border-radius:24px;font-size:12px;font-weight:700"><span style="display:inline-block;width:8px;height:8px;background:#10b981;border-radius:50%"></span>Target: ${prompt.estimated_score}</div>`:''}</div><div id="${previewId}" style="background:#0f172a;padding:20px;border-radius:12px;font-family:'Courier New',monospace;font-size:12px;line-height:1.7;color:#cbd5e1;max-height:250px;overflow-y:auto;border:1px solid #334155;margin-bottom:16px;white-space:pre-wrap">${preview}</div><div id="${promptId}" style="display:none;background:#0f172a;padding:24px;border-radius:12px;font-family:'Courier New',monospace;font-size:13px;line-height:1.8;color:#e2e8f0;max-height:600px;overflow-y:auto;border:2px solid #334155;margin-bottom:16px;white-space:pre-wrap">${prompt.prompt}</div><div style="display:flex;gap:12px;flex-wrap:wrap"><button id="copy-btn-${index}" onclick="copyPromptInline('${promptId}',${index})" style="flex:1;min-width:200px;background:linear-gradient(135deg,#8b5cf6 0%,#7c3aed 100%);color:white;border:none;padding:14px 24px;border-radius:10px;cursor:pointer;font-weight:700;font-size:14px">📋 Copy ${isElite?'ELITE':''} Prompt</button><button id="expand-btn-${index}" onclick="toggleExpandInline('${promptId}','${previewId}',${index})" style="background:#374151;color:#9ca3af;border:none;padding:12px 24px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600">👁️ View Full</button></div>${isElite?`<div style="font-size:11px;color:#6b7280;margin-top:12px">💡 ${(prompt.prompt.length/1000).toFixed(1)}K characters - Complete framework</div>`:''}</div>`});document.getElementById('prompts-container').innerHTML=html;window.currentPrompts=prompts;window.currentPromptData=promptData}
+    
+    function toggleExpandInline(promptId,previewId,index){const full=document.getElementById(promptId);const preview=document.getElementById(previewId);const btn=document.getElementById('expand-btn-'+index);if(full.style.display==='none'){full.style.display='block';preview.style.display='none';btn.textContent='👁️ Hide Full'}else{full.style.display='none';preview.style.display='block';btn.textContent='👁️ View Full'}}
+    
+    function copyPromptInline(promptId,index){const elem=document.getElementById(promptId);const btn=document.getElementById('copy-btn-'+index);const text=elem.textContent;navigator.clipboard.writeText(text).then(()=>{btn.innerHTML='✅ Copied!';btn.style.background='linear-gradient(135deg,#10b981 0%,#059669 100%)';setTimeout(()=>{btn.innerHTML='📋 Copy Prompt';btn.style.background='linear-gradient(135deg,#8b5cf6 0%,#7c3aed 100%)'},3000);showToastInline('✅ Prompt copied! Paste in Claude AI')}).catch(err=>{alert('Copy failed')})}
+    
+    function showToastInline(message){const toast=document.createElement('div');toast.style.cssText='position:fixed;top:20px;right:20px;background:#10b981;color:white;padding:16px 24px;border-radius:12px;font-weight:600;z-index:99999;box-shadow:0 8px 24px rgba(0,0,0,0.4)';toast.textContent=message;document.body.appendChild(toast);setTimeout(()=>toast.remove(),3000)}
+    
+    function exportPromptsToFile(){if(!window.currentPrompts){alert('No prompts to export');return}const{topic,keyword,score}=window.currentPromptData||{};let content=`ELITE AI CONTENT PROMPTS - ContentScale\nURL: ${currentUrl}\nScore: ${score}/100\nGenerated: ${new Date().toLocaleString()}\n\nHOW TO USE:\n1. Copy the ELITE prompt below\n2. Paste into Claude.ai, ChatGPT, or Perplexity\n3. AI generates complete article\n4. Update your page\n5. Rescan!\n\n${'='.repeat(60)}\n\n`;window.currentPrompts.forEach((prompt,i)=>{content+=`PROMPT ${i+1}: ${prompt.title}\n`;content+=`${'='.repeat(60)}\n${prompt.prompt}\n\n${'='.repeat(60)}\n\n`});const blob=new Blob([content],{type:'text/plain'});const downloadUrl=URL.createObjectURL(blob);const a=document.createElement('a');a.href=downloadUrl;a.download=`contentscale-prompts-${Date.now()}.txt`;a.click();URL.revokeObjectURL(downloadUrl);showToastInline('✅ Prompts exported!')}
+    
+    function sharePromptsOnLinkedIn(){const score=currentScanResult?.score||'XX';const text=`🚀 Got ELITE AI Prompts from ContentScale! Score: ${score}/100. Try it: contentscale.site/leaderboard`;navigator.clipboard.writeText(text);window.open('https://www.linkedin.com/sharing/share-offsite/?url='+encodeURIComponent('https://contentscale.site/leaderboard'),'_blank');showToastInline('✅ Post text copied!')}
+    
+    function emailPrompts(){alert('📧 Email feature coming soon! Use Export button for now.')}
+    
+    document.getElementById('scanInput').addEventListener('keypress',(e)=>{if(e.key==='Enter')performScan()});
+    loadLeaderboard();
+    setInterval(loadLeaderboard,300000);
+    window.closePromptsModal=function(){const modal=document.getElementById('promptsModal');if(modal){modal.style.display='none';modal.classList.remove('active')}};
   </script>
-
 </body>
 </html>
