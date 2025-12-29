@@ -2183,6 +2183,340 @@ app.get('/api/admin/stats', authenticateSuperAdmin, async (req, res) => {
 
 console.log('✅ All missing API routes loaded successfully!');
 
+// ==========================================
+// CONTENTSCALE SERVER.JS - MISSING ROUTES FIX
+// ==========================================
+// 
+// INSTRUCTIES:
+// Voeg deze code toe AAN HET EINDE van je server.js
+// VOOR de app.listen() regel
+// ==========================================
+
+// ==========================================
+// SUPER ADMIN: GET ALL CLIENTS
+// ==========================================
+app.get('/api/admin/clients', authenticateSuperAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        c.id,
+        c.name,
+        c.url,
+        c.agency_id,
+        c.created_at,
+        c.last_scan_at,
+        a.name as agency_name,
+        COUNT(s.id)::integer as scan_count
+      FROM clients c
+      LEFT JOIN agencies a ON a.id = c.agency_id
+      LEFT JOIN scans s ON s.client_id = c.id
+      GROUP BY c.id, a.name
+      ORDER BY c.created_at DESC
+      LIMIT 500
+    `);
+    
+    console.log(`[ADMIN CLIENTS] Fetched ${result.rows.length} clients`);
+    
+    res.json({
+      success: true,
+      total: result.rows.length,
+      clients: result.rows
+    });
+    
+  } catch (error) {
+    console.error('[ADMIN CLIENTS ERROR]', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to load clients'
+    });
+  }
+});
+
+// ==========================================
+// SUPER ADMIN: GET ALL SCANS
+// ==========================================
+app.get('/api/admin/scans', authenticateSuperAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        s.id,
+        s.url,
+        s.score,
+        s.quality,
+        s.graaf_score,
+        s.craft_score,
+        s.technical_score,
+        s.word_count,
+        s.scan_type,
+        s.created_at,
+        s.agency_id,
+        s.client_id,
+        a.name as agency_name,
+        c.name as client_name
+      FROM scans s
+      LEFT JOIN agencies a ON a.id = s.agency_id
+      LEFT JOIN clients c ON c.id = s.client_id
+      ORDER BY s.created_at DESC
+      LIMIT 500
+    `);
+    
+    console.log(`[ADMIN SCANS] Fetched ${result.rows.length} scans`);
+    
+    res.json({
+      success: true,
+      total: result.rows.length,
+      scans: result.rows
+    });
+    
+  } catch (error) {
+    console.error('[ADMIN SCANS ERROR]', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to load scans'
+    });
+  }
+});
+
+// ==========================================
+// SUPER ADMIN: DELETE CLIENT
+// ==========================================
+app.delete('/api/admin/clients/:id', authenticateSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Delete associated scans first
+    await pool.query('DELETE FROM scans WHERE client_id = $1', [id]);
+    
+    // Delete client
+    const result = await pool.query(
+      'DELETE FROM clients WHERE id = $1 RETURNING *',
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Client not found'
+      });
+    }
+    
+    console.log(`✅ Client deleted: ${result.rows[0].name}`);
+    
+    res.json({
+      success: true,
+      message: 'Client deleted successfully'
+    });
+    
+  } catch (error) {
+    console.error('[DELETE CLIENT ERROR]', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete client'
+    });
+  }
+});
+
+// ==========================================
+// SUPER ADMIN: DELETE SCAN
+// ==========================================
+app.delete('/api/admin/scans/:id', authenticateSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await pool.query(
+      'DELETE FROM scans WHERE id = $1 RETURNING *',
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Scan not found'
+      });
+    }
+    
+    console.log(`✅ Scan deleted: #${id}`);
+    
+    res.json({
+      success: true,
+      message: 'Scan deleted successfully'
+    });
+    
+  } catch (error) {
+    console.error('[DELETE SCAN ERROR]', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete scan'
+    });
+  }
+});
+
+// ==========================================
+// SUPER ADMIN: TOGGLE AGENCY ACTIVE STATUS
+// ==========================================
+app.patch('/api/agencies/:id/toggle-active', authenticateSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await pool.query(`
+      UPDATE agencies
+      SET is_active = NOT is_active,
+          updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `, [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Agency not found'
+      });
+    }
+    
+    console.log(`✅ Agency ${result.rows[0].name} active status: ${result.rows[0].is_active}`);
+    
+    res.json({
+      success: true,
+      message: `Agency ${result.rows[0].is_active ? 'activated' : 'deactivated'}`,
+      agency: result.rows[0]
+    });
+    
+  } catch (error) {
+    console.error('[TOGGLE AGENCY ERROR]', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to toggle agency status'
+    });
+  }
+});
+
+// ==========================================
+// SUPER ADMIN: TOGGLE SHARE LINK ACTIVE STATUS
+// ==========================================
+app.patch('/api/admin/share-links/:code/toggle-active', authenticateSuperAdmin, async (req, res) => {
+  try {
+    const { code } = req.params;
+    
+    const result = await pool.query(`
+      UPDATE share_links
+      SET is_active = NOT is_active
+      WHERE share_code = $1
+      RETURNING *
+    `, [code]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Share link not found'
+      });
+    }
+    
+    console.log(`✅ Share link ${code} active status: ${result.rows[0].is_active}`);
+    
+    res.json({
+      success: true,
+      message: `Share link ${result.rows[0].is_active ? 'activated' : 'deactivated'}`,
+      share_link: result.rows[0]
+    });
+    
+  } catch (error) {
+    console.error('[TOGGLE SHARE LINK ERROR]', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to toggle share link status'
+    });
+  }
+});
+
+// ==========================================
+// ADMIN: GET PLATFORM STATS FOR OVERVIEW
+// ==========================================
+app.get('/api/admin/stats', authenticateSuperAdmin, async (req, res) => {
+  try {
+    // Get total agencies
+    const agenciesResult = await pool.query(
+      'SELECT COUNT(*) as count FROM agencies WHERE is_active = true'
+    );
+    
+    // Get total clients
+    const clientsResult = await pool.query(
+      'SELECT COUNT(*) as count FROM clients'
+    );
+    
+    // Get total scans
+    const scansResult = await pool.query(
+      'SELECT COUNT(*) as count FROM scans'
+    );
+    
+    // Get active helpers
+    const helpersResult = await pool.query(
+      'SELECT COUNT(*) as count FROM admins WHERE is_active = true'
+    );
+    
+    // Get recent activity (last 24h)
+    const recentScansResult = await pool.query(
+      'SELECT COUNT(*) as count FROM scans WHERE created_at > NOW() - INTERVAL \'24 hours\''
+    );
+    
+    console.log('[ADMIN STATS] Fetched platform statistics');
+    
+    res.json({
+      success: true,
+      stats: {
+        total_agencies: parseInt(agenciesResult.rows[0].count),
+        total_clients: parseInt(clientsResult.rows[0].count),
+        total_scans: parseInt(scansResult.rows[0].count),
+        active_helpers: parseInt(helpersResult.rows[0].count),
+        recent_scans_24h: parseInt(recentScansResult.rows[0].count)
+      }
+    });
+    
+  } catch (error) {
+    console.error('[ADMIN STATS ERROR]', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to load statistics'
+    });
+  }
+});
+
+// ==========================================
+// SUPER ADMIN: DELETE ADMIN/HELPER
+// ==========================================
+app.delete('/api/admins/:id', authenticateSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await pool.query(
+      'DELETE FROM admins WHERE id = $1 RETURNING *',
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Admin not found'
+      });
+    }
+    
+    console.log(`✅ Admin deleted: ${result.rows[0].username}`);
+    
+    res.json({
+      success: true,
+      message: 'Admin deleted successfully'
+    });
+    
+  } catch (error) {
+    console.error('[DELETE ADMIN ERROR]', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete admin'
+    });
+  }
+});
+
+console.log('✅ All missing API routes loaded successfully!');
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`
 ╔═══════════════════════════════════════════════════════════╗
