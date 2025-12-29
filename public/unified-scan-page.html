@@ -3,399 +3,2160 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ContentScale Global AI SEO Leaderboard - Free Scanner & Prompts</title>
-  <meta name="description" content="Global leaderboard of top websites ranked by AI-era content quality. Scan your site for free, get AI improvement prompts, and claim your spot!">
+  <title>Super Admin Dashboard - ContentScale</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    .leaderboard-section { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; padding: 32px; margin-bottom: 32px; border: 2px solid #334155; position: relative; overflow: hidden; }
-    .leaderboard-section::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #f59e0b 0%, #eab308 50%, #f59e0b 100%); animation: shimmer 2s infinite; }
-    @keyframes shimmer { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-    .leaderboard-row { background: #1e293b; transition: all 0.3s; cursor: pointer; border-radius: 8px; margin-bottom: 8px; padding: 16px; border-left: 4px solid transparent; }
-    .leaderboard-row:hover { background: #334155; transform: translateX(4px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
-    .leaderboard-row.rank-1 { border-left-color: #fbbf24; background: linear-gradient(135deg, #1e293b 0%, #2d1f08 100%); }
-    .leaderboard-row.rank-2 { border-left-color: #9ca3af; background: linear-gradient(135deg, #1e293b 0%, #25282e 100%); }
-    .leaderboard-row.rank-3 { border-left-color: #f97316; background: linear-gradient(135deg, #1e293b 0%, #2d1908 100%); }
-    .rank-badge { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; font-weight: 800; font-size: 18px; }
-    .rank-1 .rank-badge { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #1e293b; box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4); font-size: 24px; }
-    .rank-2 .rank-badge { background: linear-gradient(135deg, #e5e7eb 0%, #9ca3af 100%); color: #1e293b; box-shadow: 0 4px 12px rgba(156, 163, 175, 0.4); }
-    .rank-3 .rank-badge { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white; box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4); }
-    .rank-badge.default { background: #334155; color: #94a3b8; }
-    .score-display { font-size: 32px; font-weight: 800; }
-    .score-excellent { color: #10b981; }
-    .score-very-good { color: #3b82f6; }
-    .score-good { color: #8b5cf6; }
-    .score-fair { color: #f59e0b; }
-    .score-poor { color: #ef4444; }
-    .live-indicator { display: inline-flex; align-items: center; gap: 6px; background: #065f46; color: #d1fae5; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
-    .live-dot { width: 6px; height: 6px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.2); } }
-    .filter-section { background: #1f2937; border-radius: 12px; padding: 20px; margin-bottom: 24px; border: 1px solid #374151; }
-    .filter-btn { background: #374151; color: #9ca3af; padding: 8px 16px; border-radius: 8px; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; font-size: 14px; font-weight: 600; }
-    .filter-btn:hover { background: #4b5563; color: white; }
-    .filter-btn.active { background: #8b5cf6; color: white; border-color: #a78bfa; }
-    .scanner-section { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-radius: 16px; padding: 32px; border: 2px solid #374151; }
-    .scan-btn { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); padding: 16px 40px; border-radius: 12px; font-weight: 700; color: white; border: none; cursor: pointer; transition: all 0.3s; font-size: 18px; }
-    .scan-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4); }
-    .scan-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .prompt-btn { background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 8px 16px; border-radius: 8px; font-weight: 600; color: white; border: none; cursor: pointer; transition: all 0.2s; font-size: 13px; }
-    .prompt-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); }
-    .category-badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
-    .category-agency { background: #7c3aed; color: white; }
-    .category-saas { background: #3b82f6; color: white; }
-    .category-blog { background: #f59e0b; color: white; }
-    .category-ecommerce { background: #10b981; color: white; }
-    .category-other { background: #6b7280; color: white; }
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 9999; align-items: center; justify-content: center; padding: 20px; }
-    .modal.active { display: flex; }
-    .modal-content { background: #1f2937; border-radius: 16px; padding: 32px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; }
-    .modal-close { position: absolute; top: 16px; right: 16px; background: #374151; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; color: white; font-size: 20px; }
-    .modal-close:hover { background: #4b5563; }
-    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-    @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
-    /* SCAN LOADING ANIMATION */
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .scan-spinner { display: inline-block; width: 18px; height: 18px; border: 3px solid rgba(255, 255, 255, 0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 10px; vertical-align: middle; }
-    .scan-stage { font-size: 14px; opacity: 0.9; margin-left: 8px; }
-    @media (max-width: 768px) { .leaderboard-section, .scanner-section { padding: 20px; } .rank-badge { width: 32px; height: 32px; font-size: 14px; } .rank-1 .rank-badge { font-size: 18px; } .score-display { font-size: 24px; } }
+    .tab-button {
+      transition: all 0.2s;
+    }
+    .tab-button.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .stat-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
   </style>
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen p-8">
-  <div class="max-w-6xl mx-auto">
-    <div class="text-center mb-8">
-      <h1 class="text-5xl font-bold mb-3 bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">🏆 Global AI SEO Leaderboard</h1>
-      <p class="text-xl text-gray-300 mb-4">The World's First AI-Era Content Quality Rankings</p>
-      <span class="live-indicator"><span class="live-dot"></span>Live Rankings</span>
-    </div>
-    
-    <div class="leaderboard-section">
-      <div class="flex justify-between items-center mb-6">
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+  
+  <!-- Login Screen -->
+  <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
+    <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-md border border-purple-500">
+      <div class="flex items-center justify-center mb-6">
+        <span class="text-4xl">👑</span>
+        <h1 class="text-2xl font-bold ml-3 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+          Super Admin Dashboard
+        </h1>
+      </div>
+      <p class="text-gray-400 text-center mb-6">ContentScale Platform Control Center</p>
+      
+      <div id="login-error" class="hidden mb-4 p-3 bg-red-900 border border-red-700 rounded text-red-200 text-sm"></div>
+      
+      <div class="space-y-4">
         <div>
-          <h2 class="text-3xl font-bold text-yellow-400">Top 100 Websites</h2>
-          <p class="text-sm text-gray-400 mt-1">Ranked by GRAAF + CRAFT + Technical SEO (100 points max)</p>
+          <label class="block text-sm font-medium text-gray-300 mb-2">Username</label>
+          <input type="text" id="login-username" 
+            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
+            placeholder="Enter username">
         </div>
-        <button onclick="refreshLeaderboard()" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-semibold transition">🔄 Refresh</button>
-      </div>
-      <div class="filter-section">
-        <div class="mb-4"><h3 class="text-sm font-bold text-gray-400 mb-2">FILTER BY:</h3></div>
-        <div class="mb-4">
-          <label class="text-xs text-gray-500 uppercase font-bold mb-2 block">Category</label>
-          <div class="flex flex-wrap gap-2">
-            <button class="filter-btn active" onclick="filterCategory('all')">All</button>
-            <button class="filter-btn" onclick="filterCategory('agency')">🎯 SEO Agencies</button>
-            <button class="filter-btn" onclick="filterCategory('saas')">💻 SaaS</button>
-            <button class="filter-btn" onclick="filterCategory('blog')">📝 Blogs</button>
-            <button class="filter-btn" onclick="filterCategory('ecommerce')">🛒 E-commerce</button>
-            <button class="filter-btn" onclick="filterCategory('other')">📌 Other</button>
-          </div>
-        </div>
-        <div class="mb-4">
-          <label class="text-xs text-gray-500 uppercase font-bold mb-2 block">Country</label>
-          <div class="flex flex-wrap gap-2">
-            <button class="filter-btn active" onclick="filterCountry('all')">🌍 Global</button>
-            <button class="filter-btn" onclick="filterCountry('NL')">🇳🇱 Netherlands</button>
-            <button class="filter-btn" onclick="filterCountry('BE')">🇧🇪 Belgium</button>
-            <button class="filter-btn" onclick="filterCountry('DE')">🇩🇪 Germany</button>
-            <button class="filter-btn" onclick="filterCountry('UK')">🇬🇧 UK</button>
-            <button class="filter-btn" onclick="filterCountry('GLOBAL')">🌐 .com/.org</button>
-          </div>
-        </div>
+        
         <div>
-          <label class="text-xs text-gray-500 uppercase font-bold mb-2 block">Language</label>
-          <div class="flex flex-wrap gap-2">
-            <button class="filter-btn active" onclick="filterLanguage('all')">All Languages</button>
-            <button class="filter-btn" onclick="filterLanguage('en')">🇺🇸 English</button>
-            <button class="filter-btn" onclick="filterLanguage('nl')">🇳🇱 Dutch</button>
-            <button class="filter-btn" onclick="filterLanguage('es')">🇪🇸 Spanish</button>
-          </div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+          <input type="password" id="login-password" 
+            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
+            placeholder="Enter password">
         </div>
-      </div>
-      <div class="grid grid-cols-3 gap-4 mb-6 p-4 bg-gray-800 bg-opacity-50 rounded-lg">
-        <div class="text-center"><div class="text-2xl font-bold text-green-400" id="total-entries">-</div><div class="text-xs text-gray-400">Total Entries</div></div>
-        <div class="text-center"><div class="text-2xl font-bold text-blue-400" id="average-score">-</div><div class="text-xs text-gray-400">Average Score</div></div>
-        <div class="text-center"><div class="text-2xl font-bold text-yellow-400" id="highest-score">-</div><div class="text-xs text-gray-400">Highest Score</div></div>
-      </div>
-      <div id="current-filter" class="text-sm text-gray-400 mb-4 hidden">Showing: <span id="filter-display" class="text-white font-bold"></span></div>
-      <div id="leaderboard-container"><div class="text-center py-12"><div class="text-5xl mb-4">🔍</div><div class="text-gray-400">Loading leaderboard...</div></div></div>
-    </div>
-    
-    <div class="scanner-section mb-8">
-      <div class="text-center mb-8">
-        <h2 class="text-4xl font-bold mb-3">🚀 Scan Your Website</h2>
-        <p class="text-gray-300">Get your AI-Era SEO score, FREE improvement prompts, and claim your spot!</p>
-      </div>
-      <div class="max-w-3xl mx-auto">
-        <div class="flex gap-3 mb-5">
-          <input type="text" id="scanInput" placeholder="https://yourwebsite.com" class="flex-1 bg-gray-700 text-white px-6 py-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg">
-          <button onclick="performScan()" id="scanButton" class="scan-btn">Scan Now</button>
-        </div>
-        <div class="bg-gray-800 bg-opacity-70 rounded-lg p-4 text-sm text-gray-400">
-          <div class="font-bold text-green-400 mb-2">✅ Free Analysis Includes:</div>
-          <div class="grid md:grid-cols-2 gap-2 text-xs">
-            <div>• GRAAF Framework Score (50 pts)</div><div>• CRAFT Methodology (30 pts)</div><div>• Technical SEO (20 pts)</div><div>• AI Improvement Prompts 🎁</div>
-          </div>
-        </div>
+        
+        <button onclick="login()" id="login-btn"
+          class="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg font-semibold transition-all transform hover:scale-105">
+          Login
+        </button>
       </div>
     </div>
-    
-    <div id="resultsModal" class="modal">
-      <div class="modal-content">
-        <button class="modal-close" onclick="closeResultsModal()">×</button>
-        <div class="text-center mb-6">
-          <div class="text-6xl mb-3" id="modal-emoji">🎯</div>
-          <div class="text-5xl font-bold mb-2" id="modal-score">--/100</div>
-          <div class="text-lg text-gray-400" id="modal-quality">Analyzing...</div>
-        </div>
-        <div class="mb-6">
-          <h3 class="font-bold text-lg mb-3">Breakdown:</h3>
-          <div class="space-y-2">
-            <div class="flex justify-between"><span>GRAAF Framework:</span><span class="font-bold" id="modal-graaf">-/50</span></div>
-            <div class="flex justify-between"><span>CRAFT Methodology:</span><span class="font-bold" id="modal-craft">-/30</span></div>
-            <div class="flex justify-between"><span>Technical SEO:</span><span class="font-bold" id="modal-technical">-/20</span></div>
+  </div>
+
+  <!-- Main Dashboard -->
+  <div id="main-dashboard" class="hidden">
+    <!-- Header -->
+    <header class="bg-gray-800 border-b border-gray-700 sticky top-0 z-50">
+      <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+        <div class="flex items-center space-x-3">
+          <span class="text-3xl">👑</span>
+          <div>
+            <h1 class="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              Super Admin Dashboard
+            </h1>
+            <p class="text-xs text-gray-400">ContentScale Platform Control Center</p>
           </div>
         </div>
-        <div id="leaderboard-prompt" class="mb-4">
-          <div class="bg-purple-900 bg-opacity-30 border border-purple-700 rounded-lg p-4 mb-4">
-            <h3 class="font-bold text-purple-400 mb-2">🏆 Claim Your Spot!</h3>
-            <p class="text-sm text-gray-300 mb-3">Add your site to the public leaderboard?</p>
-            <input type="text" id="company-name" placeholder="Company/Site Name (optional)" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500">
-            <select id="category-select" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500">
-              <option value="">Auto-detect category</option><option value="agency">🎯 SEO Agency</option><option value="saas">💻 SaaS</option><option value="blog">📝 Blog</option><option value="ecommerce">🛒 E-commerce</option><option value="other">📌 Other</option>
-            </select>
-            <div class="flex gap-2">
-              <button onclick="submitToLeaderboard()" class="flex-1 bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-bold transition">Yes, Add Me!</button>
-              <button onclick="skipLeaderboard()" class="flex-1 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg font-bold transition">No Thanks</button>
+        <div class="flex items-center space-x-4">
+          <span class="text-sm text-gray-400">
+            Logged in as: <span class="text-blue-400 font-semibold" id="admin-username"></span>
+          </span>
+          <button onclick="logout()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold transition-all">
+            Logout
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="bg-gray-800 border-b border-gray-700 sticky top-[73px] z-40">
+      <div class="max-w-7xl mx-auto px-4">
+        <div class="flex space-x-1 overflow-x-auto">
+          <button onclick="switchTab('overview')" class="tab-button active px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap">
+            📊 Overview
+          </button>
+          <button onclick="switchTab('admins')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
+            👥 Admins
+          </button>
+          <button onclick="switchTab('agencies')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
+            🏢 Agencies
+          </button>
+          <button onclick="switchTab('clients')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
+            👤 All Clients
+          </button>
+          <button onclick="switchTab('scans')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
+            🔍 All Scans
+          </button>
+          <button onclick="switchTab('share-links')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
+            🔗 Share Links
+          </button>
+          <button onclick="switchTab('leaderboard')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
+            🏆 Leaderboard
+          </button>
+          <button onclick="switchTab('lead-scanner')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
+            🎯 Lead Scanner
+          </button>
+          <button onclick="switchTab('contentscore')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
+            📊 ContentScore
+          </button>
+          <button onclick="switchTab('code-generators')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
+            🎨 Code Generators
+          </button>
+          <button onclick="switchTab('ltd-codes')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
+            💰 LTD Codes
+          </button>
+          <button onclick="switchTab('settings')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
+            ⚙️ Settings
+          </button>
+          <button onclick="switchTab('handleiding')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
+            📚 Handleiding
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Tab Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+      
+      <!-- Overview Tab -->
+      <div id="tab-overview" class="tab-content">
+        <h2 class="text-2xl font-bold mb-6">Platform Overview</h2>
+        
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div class="stat-card p-6 rounded-lg shadow-lg text-white">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm opacity-90">Total Agencies</p>
+                <p class="text-3xl font-bold mt-2" id="stat-total-agencies">-</p>
+              </div>
+              <span class="text-5xl opacity-50">🏢</span>
+            </div>
+          </div>
+          
+          <div class="stat-card p-6 rounded-lg shadow-lg text-white">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm opacity-90">Total Clients</p>
+                <p class="text-3xl font-bold mt-2" id="stat-total-clients">-</p>
+              </div>
+              <span class="text-5xl opacity-50">👥</span>
+            </div>
+          </div>
+          
+          <div class="stat-card p-6 rounded-lg shadow-lg text-white">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm opacity-90">Total Scans</p>
+                <p class="text-3xl font-bold mt-2" id="stat-total-scans">-</p>
+              </div>
+              <span class="text-5xl opacity-50">🔍</span>
+            </div>
+          </div>
+          
+          <div class="stat-card p-6 rounded-lg shadow-lg text-white">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm opacity-90">Active Helpers</p>
+                <p class="text-3xl font-bold mt-2" id="stat-active-helpers">-</p>
+              </div>
+              <span class="text-5xl opacity-50">🤝</span>
             </div>
           </div>
         </div>
-        <div id="leaderboard-result" class="hidden text-center mb-4">
-          <div class="bg-green-900 bg-opacity-30 border border-green-700 rounded-lg p-4">
-            <div class="text-green-400 font-bold text-2xl mb-2" id="rank-display">🎉 Added to Leaderboard!</div>
-            <p class="text-sm text-gray-400">Refreshing to show your position...</p>
+
+        <!-- Quick Actions -->
+        <div class="bg-gray-800 rounded-lg p-6 shadow-lg mb-8">
+          <h3 class="text-xl font-bold mb-4">Quick Actions</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <button onclick="switchTab('agencies')" class="p-4 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-all">
+              ➕ Add Agency
+            </button>
+            <button onclick="switchTab('admins')" class="p-4 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all">
+              👤 Add Helper
+            </button>
+            <button onclick="switchTab('share-links')" class="p-4 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all">
+              🔗 Create Share Link
+            </button>
+            <button onclick="switchTab('leaderboard')" class="p-4 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold transition-all">
+              🎯 Scan Leads
+            </button>
           </div>
         </div>
-        <button onclick="getPrompts()" class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-6 py-4 rounded-lg font-bold text-lg transition mb-4">🎁 Get FREE AI Improvement Prompts</button>
-        <button onclick="closeResultsModal()" class="w-full bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg font-bold transition">Close</button>
+
+        <!-- Platform Health -->
+        <div class="bg-gray-800 rounded-lg p-6 shadow-lg">
+          <h3 class="text-xl font-bold mb-4">Platform Health</h3>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
+              <span>Database Connection</span>
+              <span class="text-green-400 font-semibold">✅ Connected</span>
+            </div>
+            <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
+              <span>API Status</span>
+              <span class="text-green-400 font-semibold">✅ Operational</span>
+            </div>
+            <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
+              <span>Auto-Scan Service</span>
+              <span class="text-yellow-400 font-semibold">⏸️ Paused</span>
+            </div>
+            <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
+              <span>Last Backup</span>
+              <span class="text-gray-400">2 hours ago</span>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-    
-    <div id="promptsModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;overflow-y:auto;padding:20px">
-      <div style="background:linear-gradient(135deg,#1f2937 0%,#111827 100%);border-radius:20px;max-width:900px;margin:40px auto;padding:40px;position:relative;box-shadow:0 25px 50px rgba(0,0,0,0.8)">
-        <button onclick="closePromptsModal()" style="position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.1);border:none;color:white;font-size:32px;width:50px;height:50px;border-radius:50%;cursor:pointer;line-height:1" onmouseover="this.style.background='rgba(255,255,255,0.2)';this.style.transform='rotate(90deg)'" onmouseout="this.style.background='rgba(255,255,255,0.1)';this.style.transform='rotate(0deg)'">×</button>
-        <div style="text-align:center;margin-bottom:32px">
-          <div style="font-size:64px;margin-bottom:16px">🏆</div>
-          <h2 style="font-size:32px;font-weight:700;margin:0 0 12px 0;background:linear-gradient(to right,#fbbf24,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Your ELITE AI Content Prompts</h2>
-          <p style="color:#9ca3af;font-size:15px;margin:0 0 16px 0">Professional-grade prompts for 95-100/100 scores</p>
-          <div style="display:flex;align-items:center;justify-content:center;gap:20px;font-size:13px;font-weight:600">
-            <span style="color:#10b981">✅ Claude AI</span><span style="color:#3b82f6">✅ ChatGPT</span><span style="color:#a78bfa">✅ Perplexity</span>
+
+      <!-- Agencies Tab -->
+      <div id="tab-agencies" class="tab-content hidden">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold">All Agencies</h2>
+          <button onclick="showAddAgencyModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-all">
+            ➕ Add Agency
+          </button>
+        </div>
+
+        <div id="agencies-loading" class="text-center py-12">
+          <div class="inline-block animate-spin text-4xl">⏳</div>
+          <p class="text-gray-400 mt-4">Loading agencies...</p>
+        </div>
+
+        <div id="agencies-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-700">
+                <tr>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Name</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Domain</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Country</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Plan</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Clients</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Scans</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="agencies-tbody" class="divide-y divide-gray-700">
+              </tbody>
+            </table>
           </div>
         </div>
-        <div style="background:rgba(59,130,246,0.1);border:2px solid #3b82f6;border-radius:12px;padding:24px;margin-bottom:28px">
-          <div style="display:flex;gap:16px">
-            <div style="font-size:32px;flex-shrink:0">💡</div>
-            <div style="flex:1">
-              <div style="font-weight:700;color:#60a5fa;margin-bottom:12px;font-size:16px">How to Use (5 Simple Steps):</div>
-              <ol id="usage-instructions" style="color:#d1d5db;font-size:14px;line-height:1.8;margin:0;padding-left:24px">
-                <li><strong>1.</strong> Click "📋 Copy ELITE Prompt" below</li><li><strong>2.</strong> Open Claude.ai, ChatGPT, or Perplexity</li><li><strong>3.</strong> Paste the entire prompt (Ctrl+V)</li><li><strong>4.</strong> AI generates complete 2500+ word article</li><li><strong>5.</strong> Copy result → Update your page → Rescan! 📈</li>
+      </div>
+
+      <!-- Clients Tab -->
+      <div id="tab-clients" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">All Clients</h2>
+
+        <div id="clients-loading" class="text-center py-12">
+          <div class="inline-block animate-spin text-4xl">⏳</div>
+          <p class="text-gray-400 mt-4">Loading clients...</p>
+        </div>
+
+        <div id="clients-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-700">
+                <tr>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Name</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">URL</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Agency</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Scans</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Last Scan</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="clients-tbody" class="divide-y divide-gray-700">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scans Tab -->
+      <div id="tab-scans" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">All Scans</h2>
+
+        <div id="scans-loading" class="text-center py-12">
+          <div class="inline-block animate-spin text-4xl">⏳</div>
+          <p class="text-gray-400 mt-4">Loading scans...</p>
+        </div>
+
+        <div id="scans-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-700">
+                <tr>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">URL</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Score</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Quality</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Agency/Client</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Type</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Date</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="scans-tbody" class="divide-y divide-gray-700">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Share Links Tab -->
+      <div id="tab-share-links" class="tab-content hidden">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold">Share Links</h2>
+          <button onclick="showCreateShareLinkModal()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all">
+            ➕ Create Share Link
+          </button>
+        </div>
+
+        <div id="share-links-loading" class="text-center py-12">
+          <div class="inline-block animate-spin text-4xl">⏳</div>
+          <p class="text-gray-400 mt-4">Loading share links...</p>
+        </div>
+
+        <div id="share-links-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-700">
+                <tr>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Client</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Email</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Usage</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Expires</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="share-links-tbody" class="divide-y divide-gray-700">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Leaderboard Tab -->
+      <div id="tab-leaderboard" class="tab-content hidden">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold">Global Leaderboard Management</h2>
+          <button onclick="scanAllAgencies()" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold transition-all">
+            🔍 Scan Alle Agencies Nu
+          </button>
+        </div>
+
+        <div class="mb-4 flex gap-4">
+          <input type="text" id="leaderboard-search" placeholder="Search by URL, company, or score..." 
+            class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+          <button onclick="searchLeaderboard()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
+            Search
+          </button>
+        </div>
+
+        <div id="leaderboard-list" class="bg-gray-800 rounded-lg overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-700">
+                <tr>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Rank</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Company</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">URL</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Score</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Country</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="leaderboard-tbody" class="divide-y divide-gray-700">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admins Tab -->
+      <div id="tab-admins" class="tab-content hidden">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold">Admin & Helper Management</h2>
+          <button onclick="showAddAdminModal()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all">
+            ➕ Add Admin/Helper
+          </button>
+        </div>
+
+        <div id="admins-loading" class="text-center py-12">
+          <div class="inline-block animate-spin text-4xl">⏳</div>
+          <p class="text-gray-400 mt-4">Loading admins...</p>
+        </div>
+
+        <div id="admins-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-700">
+                <tr>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Username</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Full Name</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Email</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Role</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Created</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Last Login</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admins-tbody" class="divide-y divide-gray-700">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-lead-scanner" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">Lead Scanner</h2>
+        <p class="text-gray-400">Coming soon...</p>
+      </div>
+
+      <div id="tab-contentscore" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">ContentScore Tool</h2>
+        <iframe src="/seo-contentscore" class="w-full h-screen border-0 rounded-lg"></iframe>
+      </div>
+
+      <!-- Code Generators Tab -->
+      <div id="tab-code-generators" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">🎨 Code Generators - Professional Badges & Banners</h2>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <!-- Circular Score Badge Generator -->
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-xl font-bold mb-4 flex items-center">
+              <span class="text-3xl mr-3">🏆</span>
+              Circular Score Badge Generator
+            </h3>
+            
+            <div class="space-y-4">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium mb-2 text-gray-300">Score (0-100)</label>
+                  <input type="number" id="badge-score" value="85" min="0" max="100" 
+                    class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                    oninput="generateCircularBadge()">
+                </div>
+                
+                <div>
+                  <label class="block text-sm font-medium mb-2 text-gray-300">Size</label>
+                  <select id="badge-size" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                    onchange="generateCircularBadge()">
+                    <option value="120">Small (120px)</option>
+                    <option value="180" selected>Medium (180px)</option>
+                    <option value="240">Large (240px)</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium mb-3 text-gray-300">Quality Level (Auto-detected)</label>
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                  <div class="p-2 bg-green-900 bg-opacity-30 border border-green-700 rounded text-green-400">
+                    <strong>90-100:</strong> Excellent
+                  </div>
+                  <div class="p-2 bg-blue-900 bg-opacity-30 border border-blue-700 rounded text-blue-400">
+                    <strong>80-89:</strong> Good
+                  </div>
+                  <div class="p-2 bg-yellow-900 bg-opacity-30 border border-yellow-700 rounded text-yellow-400">
+                    <strong>70-79:</strong> Average
+                  </div>
+                  <div class="p-2 bg-orange-900 bg-opacity-30 border border-orange-700 rounded text-orange-400">
+                    <strong>60-69:</strong> Below Average
+                  </div>
+                  <div class="p-2 bg-red-900 bg-opacity-30 border border-red-700 rounded text-red-400 col-span-2">
+                    <strong>0-59:</strong> Poor
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium mb-2 text-gray-300">Live Preview</label>
+                <div id="badge-preview" class="bg-gradient-to-br from-gray-900 to-gray-800 p-8 rounded-lg border border-gray-700 flex items-center justify-center min-h-[250px]">
+                  <!-- Preview will be inserted here -->
+                </div>
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium mb-2 text-gray-300">HTML Code (Copy & Paste)</label>
+                <div class="relative">
+                  <textarea id="badge-code" readonly 
+                    class="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-green-400 font-mono text-xs leading-relaxed"
+                    rows="10"></textarea>
+                  <button onclick="copyBadgeCode()" 
+                    class="absolute top-2 right-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs font-semibold transition-all">
+                    📋 Copy
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- CTA Banner Generator -->
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-xl font-bold mb-4 flex items-center">
+              <span class="text-3xl mr-3">📢</span>
+              CTA Banner Generator
+            </h3>
+            
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium mb-2 text-gray-300">Headline</label>
+                <input type="text" id="banner-headline" value="Get Your FREE SEO Content Score" 
+                  class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-purple-500"
+                  oninput="generateBanner()">
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium mb-2 text-gray-300">Subheadline</label>
+                <input type="text" id="banner-subheadline" value="Analyse your content with our AI-powered GRAAF Framework" 
+                  class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-purple-500"
+                  oninput="generateBanner()">
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium mb-2 text-gray-300">Button Text</label>
+                <input type="text" id="banner-button" value="Scan Now - Free!" 
+                  class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-purple-500"
+                  oninput="generateBanner()">
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium mb-2 text-gray-300">Link URL</label>
+                <input type="url" id="banner-url" value="https://contentscale.com/scan" 
+                  class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-purple-500"
+                  oninput="generateBanner()">
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium mb-2 text-gray-300">Live Preview</label>
+                <div id="banner-preview" class="bg-gradient-to-br from-gray-900 to-gray-800 p-6 rounded-lg border border-gray-700 min-h-[200px]">
+                  <!-- Preview will be inserted here -->
+                </div>
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium mb-2 text-gray-300">HTML Code (Copy & Paste)</label>
+                <div class="relative">
+                  <textarea id="banner-code" readonly 
+                    class="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-green-400 font-mono text-xs leading-relaxed"
+                    rows="10"></textarea>
+                  <button onclick="copyBannerCode()" 
+                    class="absolute top-2 right-2 px-3 py-1 bg-purple-600 hover:bg-purple-700 rounded text-xs font-semibold transition-all">
+                    📋 Copy
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+        
+        <!-- Usage Instructions -->
+        <div class="mt-6 bg-blue-900 bg-opacity-20 border border-blue-700 rounded-lg p-6">
+          <h3 class="text-lg font-bold mb-3 text-blue-300">📖 How to Use</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-gray-300">
+            <div>
+              <p class="font-semibold mb-2">For Score Badges:</p>
+              <ol class="list-decimal list-inside space-y-1 ml-2">
+                <li>Set your desired score (0-100)</li>
+                <li>Choose size (Small/Medium/Large)</li>
+                <li>Preview updates automatically</li>
+                <li>Click "📋 Copy" button</li>
+                <li>Paste HTML into your website</li>
+              </ol>
+            </div>
+            <div>
+              <p class="font-semibold mb-2">For CTA Banners:</p>
+              <ol class="list-decimal list-inside space-y-1 ml-2">
+                <li>Customize headline and subheadline</li>
+                <li>Set button text and link URL</li>
+                <li>Preview updates in real-time</li>
+                <li>Click "📋 Copy" button</li>
+                <li>Add to your landing page or blog</li>
               </ol>
             </div>
           </div>
         </div>
-        <div id="prompts-container" style="margin-bottom:28px">
-          <div style="text-align:center;padding:60px 20px">
-            <div style="font-size:56px;margin-bottom:16px">⏳</div>
-            <div style="color:#9ca3af;font-size:16px">Generating elite prompts...</div>
+      </div>
+
+      <div id="tab-ltd-codes" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">LTD Codes</h2>
+        <p class="text-gray-400">Coming soon...</p>
+      </div>
+
+      <div id="tab-settings" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">Platform Settings</h2>
+        
+        <div class="space-y-6">
+          
+          <!-- Auto-Scan Settings -->
+          <div class="bg-gray-800 rounded-lg p-6">
+            <h3 class="text-xl font-bold mb-4">🔄 Auto-Scan Service</h3>
+            <p class="text-gray-400 mb-4">Automatically scan agencies on a schedule</p>
+            
+            <div class="space-y-4">
+              <div class="flex items-center justify-between p-4 bg-gray-700 rounded-lg">
+                <div>
+                  <p class="font-semibold">Auto-Scan Enabled</p>
+                  <p class="text-sm text-gray-400">Scan all agencies daily at 3:00 AM</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="auto-scan-enabled" class="sr-only peer" onchange="toggleAutoScan()">
+                  <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium mb-2">Scan Frequency</label>
+                <select id="scan-frequency" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </div>
+              
+              <button onclick="saveAutoScanSettings()" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
+                💾 Save Auto-Scan Settings
+              </button>
+            </div>
           </div>
+          
+          <!-- Backup Settings -->
+          <div class="bg-gray-800 rounded-lg p-6">
+            <h3 class="text-xl font-bold mb-4">💾 Backup & Export</h3>
+            
+            <div class="space-y-4">
+              <div class="flex items-center justify-between p-4 bg-gray-700 rounded-lg">
+                <div>
+                  <p class="font-semibold">Last Backup</p>
+                  <p class="text-sm text-gray-400" id="last-backup-time">Never</p>
+                </div>
+                <button onclick="createBackup()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
+                  Create Backup Now
+                </button>
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button onclick="exportAgencies()" class="p-4 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
+                  📊 Export Agencies
+                </button>
+                <button onclick="exportClients()" class="p-4 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold">
+                  👥 Export Clients
+                </button>
+                <button onclick="exportScans()" class="p-4 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold">
+                  🔍 Export Scans
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Platform Info -->
+          <div class="bg-gray-800 rounded-lg p-6">
+            <h3 class="text-xl font-bold mb-4">ℹ️ Platform Information</h3>
+            
+            <div class="space-y-3">
+              <div class="flex justify-between p-3 bg-gray-700 rounded">
+                <span class="text-gray-400">Platform Version</span>
+                <span class="font-semibold">2.0.0</span>
+              </div>
+              <div class="flex justify-between p-3 bg-gray-700 rounded">
+                <span class="text-gray-400">API Version</span>
+                <span class="font-semibold">v1</span>
+              </div>
+              <div class="flex justify-between p-3 bg-gray-700 rounded">
+                <span class="text-gray-400">Database Status</span>
+                <span class="text-green-400 font-semibold">✅ Connected</span>
+              </div>
+              <div class="flex justify-between p-3 bg-gray-700 rounded">
+                <span class="text-gray-400">Environment</span>
+                <span class="font-semibold">Production</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Danger Zone -->
+          <div class="bg-red-900 bg-opacity-20 border border-red-700 rounded-lg p-6">
+            <h3 class="text-xl font-bold mb-4 text-red-400">⚠️ Danger Zone</h3>
+            
+            <div class="space-y-4">
+              <div class="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
+                <div>
+                  <p class="font-semibold text-red-400">Clear All Cache</p>
+                  <p class="text-sm text-gray-400">Remove all cached scan results</p>
+                </div>
+                <button onclick="clearCache()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">
+                  Clear Cache
+                </button>
+              </div>
+              
+              <div class="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
+                <div>
+                  <p class="font-semibold text-red-400">Reset Platform Statistics</p>
+                  <p class="text-sm text-gray-400">Reset all counters and stats (WARNING: Cannot be undone!)</p>
+                </div>
+                <button onclick="resetStats()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">
+                  Reset Stats
+                </button>
+              </div>
+            </div>
+          </div>
+          
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:20px">
-          <button onclick="exportPromptsToFile()" style="background:#374151;color:white;padding:14px 20px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:10px" onmouseover="this.style.background='#4b5563';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#374151';this.style.transform='translateY(0)'"><span style="font-size:20px">📥</span><span>Export to File</span></button>
-          <button onclick="sharePromptsOnLinkedIn()" style="background:#2563eb;color:white;padding:14px 20px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:10px" onmouseover="this.style.background='#1d4ed8';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#2563eb';this.style.transform='translateY(0)'"><span style="font-size:20px">🔗</span><span>Share on LinkedIn</span></button>
-          <button onclick="emailPrompts()" style="background:#7c3aed;color:white;padding:14px 20px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:10px" onmouseover="this.style.background='#6d28d9';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#7c3aed';this.style.transform='translateY(0)'"><span style="font-size:20px">📧</span><span>Email to Me</span></button>
+      </div>
+
+      <div id="tab-handleiding" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">📚 Handleiding - ContentScale Platform</h2>
+        
+        <div class="space-y-6">
+          
+          <!-- Quick Start -->
+          <div class="bg-gray-800 rounded-lg p-6">
+            <h3 class="text-xl font-bold mb-4">🚀 Quick Start Guide</h3>
+            <div class="space-y-3 text-gray-300">
+              <p><strong>Welkom bij het ContentScale Super Admin Dashboard!</strong></p>
+              <p>Dit platform geeft je volledige controle over alle agencies, clients, scans en share links.</p>
+              
+              <div class="mt-4 p-4 bg-blue-900 bg-opacity-30 border border-blue-700 rounded-lg">
+                <p class="font-semibold mb-2">🎯 Belangrijkste functies:</p>
+                <ul class="list-disc list-inside space-y-1 text-sm">
+                  <li>Beheer agencies en hun toegang</li>
+                  <li>Monitor alle scans en scores</li>
+                  <li>Creëer share links voor prospects</li>
+                  <li>Beheer de global leaderboard</li>
+                  <li>Genereer code voor badges en banners</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Overview Tab -->
+          <div class="bg-gray-800 rounded-lg p-6">
+            <h3 class="text-xl font-bold mb-4">📊 Overview Tab</h3>
+            <div class="space-y-2 text-gray-300">
+              <p><strong>Doel:</strong> Platform-wide statistieken en quick actions.</p>
+              
+              <p class="mt-3"><strong>Wat zie je hier:</strong></p>
+              <ul class="list-disc list-inside ml-4 space-y-1">
+                <li><strong>Total Agencies:</strong> Aantal actieve agencies in het platform</li>
+                <li><strong>Total Clients:</strong> Totaal aantal clients van alle agencies</li>
+                <li><strong>Total Scans:</strong> Alle uitgevoerde scans</li>
+                <li><strong>Active Helpers:</strong> Aantal actieve admin/helper accounts</li>
+              </ul>
+              
+              <p class="mt-3"><strong>Quick Actions:</strong></p>
+              <ul class="list-disc list-inside ml-4 space-y-1">
+                <li>Add Agency - Snel een nieuwe agency toevoegen</li>
+                <li>Add Helper - Nieuwe admin/helper account aanmaken</li>
+                <li>Create Share Link - Share link voor prospects</li>
+                <li>Scan Leads - Leaderboard scanning starten</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- Admins Tab -->
+          <div class="bg-gray-800 rounded-lg p-6">
+            <h3 class="text-xl font-bold mb-4">👥 Admins Tab</h3>
+            <div class="space-y-2 text-gray-300">
+              <p><strong>Doel:</strong> Beheer van admin en helper accounts.</p>
+              
+              <p class="mt-3"><strong>Rollen:</strong></p>
+              <ul class="list-disc list-inside ml-4 space-y-1">
+                <li><strong>Super Admin:</strong> Volledige toegang tot alles (jij!)</li>
+                <li><strong>Helper:</strong> Beperkte toegang, kan data bekijken en basis taken uitvoeren</li>
+              </ul>
+              
+              <p class="mt-3"><strong>Admin toevoegen:</strong></p>
+              <ol class="list-decimal list-inside ml-4 space-y-1">
+                <li>Klik op "➕ Add Admin/Helper"</li>
+                <li>Vul username (min 3 karakters)</li>
+                <li>Vul wachtwoord (min 8 karakters)</li>
+                <li>Selecteer role (Helper of Super Admin)</li>
+                <li>Optioneel: Full Name en Email</li>
+                <li>Klik "Create Admin/Helper"</li>
+              </ol>
+            </div>
+          </div>
+          
+          <!-- Agencies Tab -->
+          <div class="bg-gray-800 rounded-lg p-6">
+            <h3 class="text-xl font-bold mb-4">🏢 Agencies Tab</h3>
+            <div class="space-y-2 text-gray-300">
+              <p><strong>Doel:</strong> Beheer van alle SEO agencies in het platform.</p>
+              
+              <p class="mt-3"><strong>Agency toevoegen:</strong></p>
+              <ol class="list-decimal list-inside ml-4 space-y-1">
+                <li>Klik op "➕ Add Agency"</li>
+                <li>Vul agency naam in</li>
+                <li>Vul domain in (bijv. example.com)</li>
+                <li>Selecteer land (NL, BE, DE, UK, etc.)</li>
+                <li>Selecteer plan (Free, Basic, Pro, Enterprise)</li>
+                <li>Optioneel: Contact persoon en email</li>
+                <li>Klik "Create Agency"</li>
+              </ol>
+              
+              <p class="mt-3"><strong>Admin Key:</strong></p>
+              <p class="ml-4">Elke agency krijgt automatisch een unieke Admin Key. Deze key gebruiken zij om in te loggen op hun agency dashboard.</p>
+              
+              <p class="mt-3"><strong>Kolommen uitleg:</strong></p>
+              <ul class="list-disc list-inside ml-4 space-y-1">
+                <li><strong>Clients:</strong> Aantal clients van deze agency</li>
+                <li><strong>Scans:</strong> Totaal aantal scans gedaan door deze agency</li>
+                <li><strong>Status:</strong> Active (groen) of Inactive (rood)</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- Clients Tab -->
+          <div class="bg-gray-800 rounded-lg p-6">
+            <h3 class="text-xl font-bold mb-4">👤 All Clients Tab</h3>
+            <div class="space-y-2 text-gray-300">
+              <p><strong>Doel:</strong> Overzicht van alle clients van alle agencies.</p>
+              
+              <p class="mt-3"><strong>Wat zie je hier:</strong></p>
+              <ul class="list-disc list-inside ml-4 space-y-1">
+                <li>Client naam en URL</li>
+                <li>Bij welke agency de client hoort</li>
+                <li>Aantal scans voor deze client</li>
+                <li>Laatste scan datum</li>
+              </ul>
+              
+              <p class="mt-3"><strong>Acties:</strong></p>
+              <ul class="list-disc list-inside ml-4 space-y-1">
+                <li><strong>Delete:</strong> Verwijdert client EN alle bijbehorende scans (niet ongedaan te maken!)</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- Scans Tab -->
+          <div class="bg-gray-800 rounded-lg p-6">
+            <h3 class="text-xl font-bold mb-4">🔍 All Scans Tab</h3>
+            <div class="space-y-2 text-gray-300">
+              <p><strong>Doel:</strong> Alle uitgevoerde scans in het platform bekijken.</p>
+              
+              <p class="mt-3"><strong>Score Quality Levels:</strong></p>
+              <ul class="list-disc list-inside ml-4 space-y-1">
+                <li><strong class="text-green-400">Excellent:</strong> 90-100 punten</li>
+                <li><strong class="text-blue-400">Good:</strong> 80-89 punten</li>
+                <li><strong class="text-yellow-400">Average:</strong> 70-79 punten</li>
+                <li><strong class="text-orange-400">Below Average:</strong> 60-69 punten</li>
+                <li><strong class="text-red-400">Poor:</strong> 0-59 punten</li>
+              </ul>
+              
+              <p class="mt-3"><strong>Scan Types:</strong></p>
+              <ul class="list-disc list-inside ml-4 space-y-1">
+                <li><strong>free:</strong> Gratis scan via public interface</li>
+                <li><strong>agency:</strong> Scan door een agency</li>
+                <li><strong>share:</strong> Scan via share link</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- Share Links Tab -->
+          <div class="bg-gray-800 rounded-lg p-6">
+            <h3 class="text-xl font-bold mb-4">🔗 Share Links Tab</h3>
+            <div class="space-y-2 text-gray-300">
+              <p><strong>Doel:</strong> Creëer unieke scan links voor prospects en klanten.</p>
+              
+              <p class="mt-3"><strong>Share link aanmaken:</strong></p>
+              <ol class="list-decimal list-inside ml-4 space-y-1">
+                <li>Klik op "➕ Create Share Link"</li>
+                <li>Vul client email in (verplicht)</li>
+                <li>Optioneel: Client naam en bedrijfsnaam</li>
+                <li>Scans Limit: Hoeveel scans mag deze link doen?</li>
+                <li>Valid Days: Hoe lang is de link geldig?</li>
+                <li>Klik "Create Link"</li>
+                <li>URL wordt automatisch gekopieerd naar clipboard</li>
+              </ol>
+              
+              <p class="mt-3"><strong>Status types:</strong></p>
+              <ul class="list-disc list-inside ml-4 space-y-1">
+                <li><strong class="text-green-400">Active:</strong> Link werkt en heeft nog scans over</li>
+                <li><strong class="text-orange-400">Limit Reached:</strong> Alle scans opgebruikt</li>
+                <li><strong class="text-red-400">Expired:</strong> Verloopdatum bereikt</li>
+                <li><strong class="text-gray-400">Inactive:</strong> Handmatig uitgeschakeld</li>
+              </ul>
+              
+              <p class="mt-3"><strong>Acties:</strong></p>
+              <ul class="list-disc list-inside ml-4 space-y-1">
+                <li><strong>👁️ View:</strong> Open de share link in nieuw tab</li>
+                <li><strong>📋 Copy URL:</strong> Kopieer URL naar clipboard</li>
+                <li><strong>🗑️ Delete:</strong> Verwijder de share link</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- Leaderboard Tab -->
+          <div class="bg-gray-800 rounded-lg p-6">
+            <h3 class="text-xl font-bold mb-4">🏆 Leaderboard Tab</h3>
+            <div class="space-y-2 text-gray-300">
+              <p><strong>Doel:</strong> Beheer de public leaderboard en scan agencies.</p>
+              
+              <p class="mt-3"><strong>Scan Alle Agencies Nu:</strong></p>
+              <p class="ml-4">Deze knop scant alle actieve agencies en voegt ze toe aan de leaderboard. Dit proces kan 1-2 minuten duren per agency.</p>
+              
+              <p class="mt-3"><strong>Search functie:</strong></p>
+              <p class="ml-4">Zoek entries op URL, bedrijfsnaam of score. Typ je zoekterm en klik "Search".</p>
+              
+              <p class="mt-3"><strong>Rank badges:</strong></p>
+              <ul class="list-disc list-inside ml-4 space-y-1">
+                <li>🥇 - Rank #1 (hoogste score)</li>
+                <li>🥈 - Rank #2</li>
+                <li>🥉 - Rank #3</li>
+              </ul>
+              
+              <p class="mt-3"><strong>Entry verwijderen:</strong></p>
+              <p class="ml-4">Klik 🗑️ Delete om een entry uit de leaderboard te verwijderen. Alle ranks worden automatisch opnieuw berekend.</p>
+            </div>
+          </div>
+          
+          <!-- Code Generators Tab -->
+          <div class="bg-gray-800 rounded-lg p-6">
+            <h3 class="text-xl font-bold mb-4">🎨 Code Generators Tab</h3>
+            <div class="space-y-2 text-gray-300">
+              <p><strong>Doel:</strong> Genereer HTML code voor badges en banners.</p>
+              
+              <p class="mt-3"><strong>Score Badge Generator:</strong></p>
+              <ol class="list-decimal list-inside ml-4 space-y-1">
+                <li>Vul de gewenste score in (0-100)</li>
+                <li>Selecteer size (Small, Medium, Large)</li>
+                <li>Bekijk live preview</li>
+                <li>Klik "📋 Copy HTML Code"</li>
+                <li>Plak code in je website</li>
+              </ol>
+              
+              <p class="mt-3"><strong>Banner Generator:</strong></p>
+              <ol class="list-decimal list-inside ml-4 space-y-1">
+                <li>Vul headline in</li>
+                <li>Vul button text in</li>
+                <li>Vul link URL in</li>
+                <li>Bekijk live preview</li>
+                <li>Klik "📋 Copy HTML Code"</li>
+                <li>Plak code in je website</li>
+              </ol>
+            </div>
+          </div>
+          
+          <!-- Settings Tab -->
+          <div class="bg-gray-800 rounded-lg p-6">
+            <h3 class="text-xl font-bold mb-4">⚙️ Settings Tab</h3>
+            <div class="space-y-2 text-gray-300">
+              <p><strong>Doel:</strong> Platform-wide instellingen en beheer.</p>
+              
+              <p class="mt-3"><strong>Auto-Scan Service:</strong></p>
+              <p class="ml-4">Schakel automatische scanning van agencies in/uit. Je kunt kiezen tussen daily, weekly of monthly scans.</p>
+              
+              <p class="mt-3"><strong>Backup & Export:</strong></p>
+              <ul class="list-disc list-inside ml-4 space-y-1">
+                <li><strong>Create Backup:</strong> Maak backup van hele database</li>
+                <li><strong>Export Agencies:</strong> Download CSV van alle agencies</li>
+                <li><strong>Export Clients:</strong> Download CSV van alle clients</li>
+                <li><strong>Export Scans:</strong> Download CSV van alle scans</li>
+              </ul>
+              
+              <p class="mt-3"><strong>⚠️ Danger Zone:</strong></p>
+              <p class="ml-4 text-red-400">Wees voorzichtig met deze acties - ze kunnen niet ongedaan gemaakt worden!</p>
+              <ul class="list-disc list-inside ml-4 space-y-1">
+                <li><strong>Clear Cache:</strong> Verwijdert alle cached scan resultaten</li>
+                <li><strong>Reset Stats:</strong> Reset alle counters (gebruik alleen bij setup!)</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- Support -->
+          <div class="bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg p-6">
+            <h3 class="text-xl font-bold mb-4">💬 Support & Contact</h3>
+            <div class="space-y-3 text-gray-200">
+              <p><strong>Hulp nodig?</strong></p>
+              <p>Als je vragen hebt of problemen tegenkomt, neem dan contact op:</p>
+              
+              <div class="mt-4 space-y-2">
+                <p>📧 Email: support@contentscale.com</p>
+                <p>💬 WhatsApp: [Your WhatsApp Number]</p>
+                <p>🌐 Website: https://contentscale.com</p>
+              </div>
+              
+              <div class="mt-4 p-4 bg-black bg-opacity-30 rounded-lg">
+                <p class="text-sm"><strong>⚡ Pro Tip:</strong> Gebruik de search functie in de Leaderboard tab om snel specifieke entries te vinden!</p>
+              </div>
+            </div>
+          </div>
+          
         </div>
-        <button onclick="closePromptsModal()" style="width:100%;background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:white;padding:18px 32px;border-radius:12px;border:none;cursor:pointer;font-weight:700;font-size:17px;box-shadow:0 4px 12px rgba(16,185,129,0.3)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(16,185,129,0.5)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 12px rgba(16,185,129,0.3)'">Got It! Let's Create Elite Content 🚀</button>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Add Agency Modal -->
+  <div id="modal-add-agency" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-lg p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-2xl font-bold">Add New Agency</h3>
+        <button onclick="closeModal('modal-add-agency')" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-2">Agency Name *</label>
+          <input type="text" id="agency-name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2">Domain *</label>
+          <input type="text" id="agency-domain" placeholder="example.com" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2">Country *</label>
+          <select id="agency-country" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+            <option value="NL">Netherlands</option>
+            <option value="BE">Belgium</option>
+            <option value="DE">Germany</option>
+            <option value="UK">United Kingdom</option>
+            <option value="US">United States</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2">Plan *</label>
+          <select id="agency-plan" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+            <option value="free">Free</option>
+            <option value="basic">Basic</option>
+            <option value="pro">Pro</option>
+            <option value="enterprise">Enterprise</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2">Contact Person</label>
+          <input type="text" id="agency-contact-person" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2">Contact Email</label>
+          <input type="email" id="agency-contact-email" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        </div>
+
+        <div class="flex gap-4 mt-6">
+          <button onclick="submitAddAgency()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
+            Create Agency
+          </button>
+          <button onclick="closeModal('modal-add-agency')" class="flex-1 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
-    
-    <div class="text-center text-gray-500 text-sm mt-12">
-      <p class="mb-2">Powered by ContentScale AI • GRAAF + CRAFT Frameworks • Claude Sonnet 4</p>
-      <p><a href="https://contentscale.site" class="text-purple-400 hover:text-purple-300">contentscale.site</a> • <a href="https://wa.me/31628073996" class="text-green-400 hover:text-green-300">WhatsApp</a></p>
+  </div>
+
+  <!-- Create Share Link Modal -->
+  <div id="modal-create-share-link" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-lg p-8 max-w-2xl w-full mx-4">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-2xl font-bold">Create Share Link</h3>
+        <button onclick="closeModal('modal-create-share-link')" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-2">Client Email *</label>
+          <input type="email" id="share-client-email" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2">Client Name</label>
+          <input type="text" id="share-client-name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2">Company</label>
+          <input type="text" id="share-client-company" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2">Scans Limit *</label>
+          <input type="number" id="share-scans-limit" value="5" min="1" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2">Valid For (Days) *</label>
+          <input type="number" id="share-valid-days" value="30" min="1" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        </div>
+
+        <div class="flex gap-4 mt-6">
+          <button onclick="submitCreateShareLink()" class="flex-1 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold">
+            Create Link
+          </button>
+          <button onclick="closeModal('modal-create-share-link')" class="flex-1 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
+            Cancel
+          </button>
+        </div>
+      </div>
     </div>
   </div>
+
+  <!-- Add Admin/Helper Modal -->
+  <div id="modal-add-admin" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-lg p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-2xl font-bold">Add Admin/Helper</h3>
+        <button onclick="closeModal('modal-add-admin')" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-2">Username *</label>
+          <input type="text" id="admin-username" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2">Password *</label>
+          <input type="password" id="admin-password" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+          <p class="text-xs text-gray-400 mt-1">Minimum 8 characters</p>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2">Role *</label>
+          <select id="admin-role" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+            <option value="helper">Helper (Limited Access)</option>
+            <option value="super_admin">Super Admin (Full Access)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2">Full Name</label>
+          <input type="text" id="admin-full-name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2">Email</label>
+          <input type="email" id="admin-email" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        </div>
+
+        <div class="bg-blue-900 border border-blue-700 rounded-lg p-4 mt-4">
+          <p class="text-sm text-blue-200">
+            <strong>Helper Role:</strong> Can view data and perform basic tasks<br>
+            <strong>Super Admin Role:</strong> Full platform control including user management
+          </p>
+        </div>
+
+        <div class="flex gap-4 mt-6">
+          <button onclick="submitAddAdmin()" class="flex-1 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
+            Create Admin/Helper
+          </button>
+          <button onclick="closeModal('modal-add-admin')" class="flex-1 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
-    console.log('%c🏆 ContentScale Global Leaderboard','color:#f59e0b;font-size:16px;font-weight:bold');
-    const API_BASE='';let currentScanResult=null;let currentUrl='';let currentFilters={category:'all',country:'all',language:'all'};
-    
-    function filterCategory(cat){currentFilters.category=cat;updateFilterButtons('category',cat);loadLeaderboard()}
-    function filterCountry(country){currentFilters.country=country;updateFilterButtons('country',country);loadLeaderboard()}
-    function filterLanguage(lang){currentFilters.language=lang;updateFilterButtons('language',lang);loadLeaderboard()}
-    function updateFilterButtons(type,value){const buttons=document.querySelectorAll('.filter-btn');buttons.forEach(btn=>{const onClick=btn.getAttribute('onclick');if(onClick&&onClick.includes(`filter${type.charAt(0).toUpperCase()+type.slice(1)}`)){onClick.includes(`'${value}'`)?btn.classList.add('active'):btn.classList.remove('active')}});const filterDisplay=document.getElementById('filter-display');const currentFilterDiv=document.getElementById('current-filter');let filterText=[];if(currentFilters.category!=='all')filterText.push(currentFilters.category.toUpperCase());if(currentFilters.country!=='all')filterText.push(currentFilters.country);if(currentFilters.language!=='all')filterText.push(currentFilters.language.toUpperCase());if(filterText.length>0){filterDisplay.textContent=filterText.join(' • ');currentFilterDiv.classList.remove('hidden')}else{currentFilterDiv.classList.add('hidden')}}
-    
-    async function loadLeaderboard(){try{const params=new URLSearchParams({limit:100,category:currentFilters.category,country:currentFilters.country,language:currentFilters.language});const response=await fetch(`${API_BASE}/api/leaderboard?${params}`);const data=await response.json();if(!data.success)throw new Error(data.error||'Failed to load');displayLeaderboard(data.entries);try{const statsResponse=await fetch(`${API_BASE}/api/leaderboard/stats`);const statsData=await statsResponse.json();if(statsData&&statsData.success&&statsData.stats){document.getElementById('total-entries').textContent=statsData.stats.total_entries||0;document.getElementById('average-score').textContent=statsData.stats.average_score||'-';document.getElementById('highest-score').textContent=statsData.stats.highest_score||'-'}}catch(statsError){console.log('Stats not available')}}catch(error){console.error('Leaderboard error:',error);document.getElementById('leaderboard-container').innerHTML='<div class="text-center py-12"><div class="text-red-400 mb-2">Failed to load leaderboard</div><button onclick="loadLeaderboard()" class="text-purple-400 hover:text-purple-300 underline">Try again</button></div>'}}
-    
-    function displayLeaderboard(entries){
-      if(!entries||entries.length===0){
-        document.getElementById('leaderboard-container').innerHTML='<div class="text-center py-12"><div class="text-gray-400">No entries found. Try different filters or be the first to scan!</div></div>';
+    // ==========================================
+    // AUTHENTICATION
+    // ==========================================
+    async function login() {
+      const username = document.getElementById('login-username').value;
+      const password = document.getElementById('login-password').value;
+      const errorDiv = document.getElementById('login-error');
+      
+      if (!username || !password) {
+        errorDiv.textContent = 'Please enter username and password';
+        errorDiv.classList.remove('hidden');
         return;
       }
-      let html='';
-      entries.forEach(entry=>{
-        const scoreClass=getScoreClass(entry.score);
-        const rankClass=entry.rank<=3?`rank-${entry.rank}`:'';
-        const categoryClass=`category-${entry.category||'other'}`;
-        
-        // ✅ HIGHLIGHT: Highlight newly added entry
-        const isNewEntry = currentUrl && entry.url === currentUrl;
-        const highlightClass = isNewEntry ? 'ring-2 ring-green-500 ring-opacity-50' : '';
-        
-        html+=`<div class="leaderboard-row ${rankClass} ${highlightClass}"><div class="flex items-center justify-between mb-2"><div class="flex items-center gap-4 flex-1"><div class="rank-badge ${entry.rank>3?'default':''}">${entry.rank}</div><div class="flex-1"><div class="font-bold text-white text-lg">${entry.company_name||'Unknown'}</div><div class="text-sm text-gray-400">${truncateUrl(entry.url)}</div>${entry.category?`<span class="category-badge ${categoryClass}">${entry.category}</span>`:''}</div></div><div class="text-right"><div class="score-display ${scoreClass}">${entry.score}</div><div class="text-xs text-gray-400">/100</div></div></div><div class="flex justify-end"><button onclick="getPromptsForUrl('${entry.url}',${entry.score},${JSON.stringify(entry).replace(/'/g,"\\'")})" class="prompt-btn">🎁 Get FREE Prompts</button></div></div>`;
-      });
-      document.getElementById('leaderboard-container').innerHTML=html;
-      
-      // ✅ SCROLL: Scroll to newly added entry
-      if(currentUrl){
-        setTimeout(()=>{
-          const newEntry = document.querySelector('.leaderboard-row.ring-green-500');
-          if(newEntry){
-            newEntry.scrollIntoView({behavior: 'smooth', block: 'center'});
-          }
-        }, 500);
-      }
-    }
-    
-    function getScoreClass(score){if(score>=90)return'score-excellent';if(score>=80)return'score-very-good';if(score>=70)return'score-good';if(score>=60)return'score-fair';return'score-poor'}
-    function truncateUrl(url){try{const urlObj=new URL(url);return urlObj.hostname.replace('www.','')}catch{return url.substring(0,50)+'...'}}
-    function refreshLeaderboard(){document.getElementById('leaderboard-container').innerHTML='<div class="text-center py-12"><div class="text-5xl mb-4">🔄</div><div class="text-gray-400">Refreshing...</div></div>';loadLeaderboard()}
-    
-    // ✅ UPDATED performScan WITH LOADING ANIMATION
-    async function performScan() {
-      const url = document.getElementById('scanInput').value.trim();
-      
-      if (!url) {
-        alert('Please enter a URL');
-        return;
-      }
-      
-      if (!url.startsWith('http')) {
-        document.getElementById('scanInput').value = 'https://' + url;
-        return performScan();
-      }
-      
-      currentUrl = url;
-      const btn = document.getElementById('scanButton');
-      btn.disabled = true;
-      
-      // Stage 1: Fetching
-      btn.innerHTML = '<span class="scan-spinner"></span>Fetching page<span class="scan-stage">●○○</span>';
       
       try {
-        const response = await fetch(`${API_BASE}/api/scan-free`, {
+        const response = await fetch('/api/setup/verify-admin', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url })
+          body: JSON.stringify({ username, password })
         });
-        
-        // Stage 2: Analyzing
-        btn.innerHTML = '<span class="scan-spinner"></span>Analyzing content<span class="scan-stage">●●○</span>';
         
         const data = await response.json();
         
-        if (!data.success) {
-          throw new Error(data.error || 'Scan failed');
+        if (data.success) {
+          localStorage.setItem('admin_id', data.admin_id);
+          sessionStorage.setItem('superadmin_logged_in', 'true');
+          sessionStorage.setItem('superadmin_username', data.admin.username);
+          
+          document.getElementById('login-screen').classList.add('hidden');
+          document.getElementById('main-dashboard').classList.remove('hidden');
+          document.getElementById('admin-username').textContent = data.admin.username;
+          
+          loadOverview();
+        } else {
+          errorDiv.textContent = data.error || 'Login failed';
+          errorDiv.classList.remove('hidden');
         }
-        
-        // Stage 3: Calculating
-        btn.innerHTML = '<span class="scan-spinner"></span>Calculating score<span class="scan-stage">●●●</span>';
-        
-        // Small delay for better UX
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        currentScanResult = data;
-        showResults(data);
-        
       } catch (error) {
-        console.error('Scan error:', error);
-        btn.innerHTML = 'Scan Now';
-        alert('Scan failed: ' + error.message);
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = 'Scan Now';
+        console.error('Login error:', error);
+        errorDiv.textContent = 'Connection error';
+        errorDiv.classList.remove('hidden');
       }
     }
-    
-    function showResults(data){document.getElementById('modal-score').textContent=data.score+'/100';document.getElementById('modal-quality').textContent=getQualityText(data.score);document.getElementById('modal-emoji').textContent=getQualityEmoji(data.score);document.getElementById('modal-graaf').textContent=`${data.breakdown.graaf.total}/50`;document.getElementById('modal-craft').textContent=`${data.breakdown.craft.total}/30`;document.getElementById('modal-technical').textContent=`${data.breakdown.technical.total}/20`;document.getElementById('leaderboard-prompt').classList.remove('hidden');document.getElementById('leaderboard-result').classList.add('hidden');document.getElementById('resultsModal').classList.add('active')}
-    
-    function getQualityText(score){if(score>=90)return'Excellent! 🌟';if(score>=80)return'Very Good! 👍';if(score>=70)return'Good ✓';if(score>=60)return'Fair ⚠️';return'Needs Improvement ❌'}
-    function getQualityEmoji(score){if(score>=90)return'🌟';if(score>=80)return'👍';if(score>=70)return'✓';if(score>=60)return'⚠️';return'❌'}
-    
-    async function submitToLeaderboard(){
-      const companyName=document.getElementById('company-name').value.trim();
-      const category=document.getElementById('category-select').value;
-      try{
-        const response=await fetch(`${API_BASE}/api/leaderboard/submit`,{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({
-            url:currentUrl,
-            score:currentScanResult.score,
-            quality:currentScanResult.quality,
-            graaf_score:currentScanResult.breakdown.graaf.total,
-            craft_score:currentScanResult.breakdown.craft.total,
-            technical_score:currentScanResult.breakdown.technical.total,
-            word_count:currentScanResult.wordCount,
-            company_name:companyName||null,
-            category:category||null,
-            country:null,
-            language:null
-          })
+
+    function logout() {
+      localStorage.removeItem('admin_id');
+      sessionStorage.removeItem('superadmin_logged_in');
+      sessionStorage.removeItem('superadmin_username');
+      location.reload();
+    }
+
+    // Check login on page load
+    if (sessionStorage.getItem('superadmin_logged_in') === 'true') {
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('main-dashboard').classList.remove('hidden');
+      document.getElementById('admin-username').textContent = sessionStorage.getItem('superadmin_username');
+      loadOverview();
+    }
+
+    // ==========================================
+    // TAB SWITCHING
+    // ==========================================
+    function switchTab(tabName) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.add('hidden');
+      });
+      
+      // Remove active class from all buttons
+      document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      
+      // Show selected tab
+      document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+      
+      // Add active class to clicked button
+      event.target.classList.add('active');
+      
+      // Load data for specific tabs
+      if (tabName === 'overview') loadOverview();
+      if (tabName === 'admins') loadAdmins();
+      if (tabName === 'agencies') loadAgencies();
+      if (tabName === 'clients') loadClients();
+      if (tabName === 'scans') loadScans();
+      if (tabName === 'share-links') loadShareLinks();
+      if (tabName === 'leaderboard') loadLeaderboard();
+    }
+
+    // ==========================================
+    // ADMINS TAB
+    // ==========================================
+    async function loadAdmins() {
+      document.getElementById('admins-loading').classList.remove('hidden');
+      document.getElementById('admins-list').classList.add('hidden');
+      
+      try {
+        const response = await fetch('/api/admins', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
         });
-        const data=await response.json();
-        if(data.success){
-          document.getElementById('leaderboard-prompt').classList.add('hidden');
+        
+        if (!response.ok) throw new Error('Failed to load admins');
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          const tbody = document.getElementById('admins-tbody');
+          tbody.innerHTML = '';
           
-          // ✅ FIXED: Show success message without claiming specific rank
-          // The actual rank will be visible after leaderboard refreshes
-          document.getElementById('rank-display').textContent='🎉 Added to Leaderboard!';
-          document.getElementById('leaderboard-result').classList.remove('hidden');
+          data.admins.forEach(admin => {
+            const roleColors = {
+              'super_admin': 'bg-purple-600',
+              'helper': 'bg-blue-600',
+              'admin': 'bg-green-600'
+            };
+            
+            const roleColor = roleColors[admin.role] || 'bg-gray-600';
+            
+            const row = `
+              <tr>
+                <td class="px-4 py-3 font-semibold">${admin.username}</td>
+                <td class="px-4 py-3">${admin.full_name || '-'}</td>
+                <td class="px-4 py-3 text-sm">${admin.email || '-'}</td>
+                <td class="px-4 py-3">
+                  <span class="px-2 py-1 ${roleColor} rounded text-xs font-semibold">
+                    ${admin.role.replace('_', ' ').toUpperCase()}
+                  </span>
+                </td>
+                <td class="px-4 py-3">
+                  ${admin.is_active 
+                    ? '<span class="text-green-400">✅ Active</span>' 
+                    : '<span class="text-red-400">❌ Inactive</span>'}
+                </td>
+                <td class="px-4 py-3 text-sm">${new Date(admin.created_at).toLocaleDateString()}</td>
+                <td class="px-4 py-3 text-sm">${admin.last_login ? new Date(admin.last_login).toLocaleDateString() : 'Never'}</td>
+                <td class="px-4 py-3">
+                  <button onclick="deleteAdmin('${admin.id}')" class="text-red-400 hover:text-red-300">
+                    🗑️ Delete
+                  </button>
+                </td>
+              </tr>
+            `;
+            tbody.innerHTML += row;
+          });
           
-          // ✅ FIXED: Refresh leaderboard to show actual rank
-          setTimeout(()=>{
-            refreshLeaderboard();
-            // Scroll to top to see new entry
-            window.scrollTo({top: 0, behavior: 'smooth'});
-          },1500);
-        }else{
-          alert('Failed to add to leaderboard: '+(data.error||'Unknown error'));
+          document.getElementById('admins-loading').classList.add('hidden');
+          document.getElementById('admins-list').classList.remove('hidden');
         }
-      }catch(error){
-        console.error('Submit error:',error);
-        alert('Failed to submit: '+error.message);
+      } catch (error) {
+        console.error('Error loading admins:', error);
+        document.getElementById('admins-loading').innerHTML = '<p class="text-red-400">Error loading admins</p>';
       }
     }
+
+    async function submitAddAdmin() {
+      const formData = {
+        username: document.getElementById('admin-username').value,
+        password: document.getElementById('admin-password').value,
+        role: document.getElementById('admin-role').value,
+        full_name: document.getElementById('admin-full-name').value,
+        email: document.getElementById('admin-email').value
+      };
+      
+      // Validation
+      if (!formData.username || formData.username.length < 3) {
+        alert('Username must be at least 3 characters');
+        return;
+      }
+      
+      if (!formData.password || formData.password.length < 8) {
+        alert('Password must be at least 8 characters');
+        return;
+      }
+      
+      if (!formData.role) {
+        alert('Please select a role');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/admins', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          },
+          body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          alert('Admin/Helper created successfully!');
+          closeModal('modal-add-admin');
+          
+          // Clear form
+          document.getElementById('admin-username').value = '';
+          document.getElementById('admin-password').value = '';
+          document.getElementById('admin-role').value = 'helper';
+          document.getElementById('admin-full-name').value = '';
+          document.getElementById('admin-email').value = '';
+          
+          loadAdmins();
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Error creating admin:', error);
+        alert('Failed to create admin/helper');
+      }
+    }
+
+    async function deleteAdmin(adminId) {
+      if (!confirm('Are you sure you want to delete this admin/helper?')) return;
+      
+      try {
+        const response = await fetch(`/api/admins/${adminId}`, {
+          method: 'DELETE',
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          alert('Admin/Helper deleted successfully!');
+          loadAdmins();
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Error deleting admin:', error);
+        alert('Failed to delete admin/helper');
+      }
+    }
+
+    function showAddAdminModal() {
+      document.getElementById('modal-add-admin').classList.remove('hidden');
+    }
+
+    // ==========================================
+    // OVERVIEW TAB
+    // ==========================================
+    async function loadOverview() {
+      try {
+        const response = await fetch('/api/admin/stats', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          document.getElementById('stat-total-agencies').textContent = data.stats.total_agencies;
+          document.getElementById('stat-total-clients').textContent = data.stats.total_clients;
+          document.getElementById('stat-total-scans').textContent = data.stats.total_scans;
+          document.getElementById('stat-active-helpers').textContent = data.stats.active_helpers;
+        }
+      } catch (error) {
+        console.error('Error loading overview:', error);
+      }
+    }
+
+    // ==========================================
+    // AGENCIES TAB
+    // ==========================================
+    async function loadAgencies() {
+      document.getElementById('agencies-loading').classList.remove('hidden');
+      document.getElementById('agencies-list').classList.add('hidden');
+      
+      try {
+        const response = await fetch('/api/super-admin/agencies', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load agencies');
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          const tbody = document.getElementById('agencies-tbody');
+          tbody.innerHTML = '';
+          
+          data.agencies.forEach(agency => {
+            const row = `
+              <tr>
+                <td class="px-4 py-3">${agency.name}</td>
+                <td class="px-4 py-3">${agency.domain}</td>
+                <td class="px-4 py-3">${agency.country}</td>
+                <td class="px-4 py-3"><span class="px-2 py-1 bg-blue-600 rounded text-xs">${agency.plan}</span></td>
+                <td class="px-4 py-3">${agency.client_count || 0}</td>
+                <td class="px-4 py-3">${agency.total_scans || 0}</td>
+                <td class="px-4 py-3">
+                  ${agency.is_active ? '<span class="text-green-400">✅ Active</span>' : '<span class="text-red-400">❌ Inactive</span>'}
+                </td>
+                <td class="px-4 py-3">
+                  <button onclick="deleteAgency(${agency.id})" class="text-red-400 hover:text-red-300">🗑️ Delete</button>
+                </td>
+              </tr>
+            `;
+            tbody.innerHTML += row;
+          });
+          
+          document.getElementById('agencies-loading').classList.add('hidden');
+          document.getElementById('agencies-list').classList.remove('hidden');
+        }
+      } catch (error) {
+        console.error('Error loading agencies:', error);
+        document.getElementById('agencies-loading').innerHTML = '<p class="text-red-400">Error loading agencies</p>';
+      }
+    }
+
+    async function submitAddAgency() {
+      const formData = {
+        name: document.getElementById('agency-name').value,
+        domain: document.getElementById('agency-domain').value,
+        country: document.getElementById('agency-country').value,
+        plan: document.getElementById('agency-plan').value,
+        contact_person: document.getElementById('agency-contact-person').value,
+        contact_email: document.getElementById('agency-contact-email').value
+      };
+      
+      try {
+        const response = await fetch('/api/agencies', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          },
+          body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          alert('Agency created successfully!');
+          closeModal('modal-add-agency');
+          loadAgencies();
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Error creating agency:', error);
+        alert('Failed to create agency');
+      }
+    }
+
+    async function deleteAgency(id) {
+      if (!confirm('Are you sure you want to delete this agency?')) return;
+      
+      try {
+        const response = await fetch(`/api/agencies/${id}`, {
+          method: 'DELETE',
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          alert('Agency deleted successfully!');
+          loadAgencies();
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Error deleting agency:', error);
+        alert('Failed to delete agency');
+      }
+    }
+
+    // ==========================================
+    // CLIENTS TAB
+    // ==========================================
+    async function loadClients() {
+      document.getElementById('clients-loading').classList.remove('hidden');
+      document.getElementById('clients-list').classList.add('hidden');
+      
+      try {
+        const response = await fetch('/api/admin/clients', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          const tbody = document.getElementById('clients-tbody');
+          tbody.innerHTML = '';
+          
+          data.clients.forEach(client => {
+            const row = `
+              <tr>
+                <td class="px-4 py-3">${client.name || 'Unknown'}</td>
+                <td class="px-4 py-3 text-blue-400">${client.url}</td>
+                <td class="px-4 py-3">${client.agency_name || '-'}</td>
+                <td class="px-4 py-3">${client.scan_count || 0}</td>
+                <td class="px-4 py-3">${client.last_scan_at ? new Date(client.last_scan_at).toLocaleDateString() : 'Never'}</td>
+                <td class="px-4 py-3">
+                  <button onclick="deleteClient(${client.id})" class="text-red-400 hover:text-red-300">🗑️ Delete</button>
+                </td>
+              </tr>
+            `;
+            tbody.innerHTML += row;
+          });
+          
+          document.getElementById('clients-loading').classList.add('hidden');
+          document.getElementById('clients-list').classList.remove('hidden');
+        }
+      } catch (error) {
+        console.error('Error loading clients:', error);
+        document.getElementById('clients-loading').innerHTML = '<p class="text-red-400">Error loading clients</p>';
+      }
+    }
+
+    async function deleteClient(id) {
+      if (!confirm('Delete this client and all associated scans?')) return;
+      
+      try {
+        const response = await fetch(`/api/admin/clients/${id}`, {
+          method: 'DELETE',
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          alert('Client deleted successfully!');
+          loadClients();
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to delete client');
+      }
+    }
+
+    // ==========================================
+    // SCANS TAB
+    // ==========================================
+    async function loadScans() {
+      document.getElementById('scans-loading').classList.remove('hidden');
+      document.getElementById('scans-list').classList.add('hidden');
+      
+      try {
+        const response = await fetch('/api/admin/scans', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          const tbody = document.getElementById('scans-tbody');
+          tbody.innerHTML = '';
+          
+          data.scans.forEach(scan => {
+            const qualityColors = {
+              excellent: 'text-green-400',
+              good: 'text-blue-400',
+              average: 'text-yellow-400',
+              'below-average': 'text-orange-400',
+              poor: 'text-red-400'
+            };
+            
+            const row = `
+              <tr>
+                <td class="px-4 py-3 text-blue-400 text-sm">${scan.url.substring(0, 50)}...</td>
+                <td class="px-4 py-3 font-bold">${scan.score}/100</td>
+                <td class="px-4 py-3 ${qualityColors[scan.quality] || 'text-gray-400'}">${scan.quality}</td>
+                <td class="px-4 py-3 text-sm">${scan.agency_name || scan.client_name || '-'}</td>
+                <td class="px-4 py-3"><span class="px-2 py-1 bg-gray-700 rounded text-xs">${scan.scan_type}</span></td>
+                <td class="px-4 py-3 text-sm">${new Date(scan.created_at).toLocaleDateString()}</td>
+                <td class="px-4 py-3">
+                  <button onclick="deleteScan(${scan.id})" class="text-red-400 hover:text-red-300">🗑️</button>
+                </td>
+              </tr>
+            `;
+            tbody.innerHTML += row;
+          });
+          
+          document.getElementById('scans-loading').classList.add('hidden');
+          document.getElementById('scans-list').classList.remove('hidden');
+        }
+      } catch (error) {
+        console.error('Error loading scans:', error);
+        document.getElementById('scans-loading').innerHTML = '<p class="text-red-400">Error loading scans</p>';
+      }
+    }
+
+    async function deleteScan(id) {
+      if (!confirm('Delete this scan?')) return;
+      
+      try {
+        const response = await fetch(`/api/admin/scans/${id}`, {
+          method: 'DELETE',
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          loadScans();
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to delete scan');
+      }
+    }
+
+    // ==========================================
+    // SHARE LINKS TAB
+    // ==========================================
+    async function loadShareLinks() {
+      document.getElementById('share-links-loading').classList.remove('hidden');
+      document.getElementById('share-links-list').classList.add('hidden');
+      
+      try {
+        const response = await fetch('/api/admin/share-links', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          const tbody = document.getElementById('share-links-tbody');
+          tbody.innerHTML = '';
+          
+          data.share_links.forEach(link => {
+            const statusColors = {
+              active: 'text-green-400',
+              expired: 'text-red-400',
+              limit_reached: 'text-orange-400',
+              inactive: 'text-gray-400'
+            };
+            
+            const shareUrl = `${window.location.origin}/scan-with-link/${link.share_code}`;
+            
+            const row = `
+              <tr>
+                <td class="px-4 py-3">${link.client_name || '-'}</td>
+                <td class="px-4 py-3 text-sm">${link.client_email}</td>
+                <td class="px-4 py-3">${link.scans_used}/${link.scans_limit}</td>
+                <td class="px-4 py-3 text-sm">${new Date(link.expires_at).toLocaleDateString()}</td>
+                <td class="px-4 py-3 ${statusColors[link.status]}">${link.status}</td>
+                <td class="px-4 py-3 space-x-2">
+                  <button onclick="window.open('${shareUrl}', '_blank')" class="text-blue-400 hover:text-blue-300" title="View">👁️</button>
+                  <button onclick="copyShareUrl('${shareUrl}')" class="text-green-400 hover:text-green-300" title="Copy URL">📋</button>
+                  <button onclick="deleteShareLink('${link.share_code}')" class="text-red-400 hover:text-red-300" title="Delete">🗑️</button>
+                </td>
+              </tr>
+            `;
+            tbody.innerHTML += row;
+          });
+          
+          document.getElementById('share-links-loading').classList.add('hidden');
+          document.getElementById('share-links-list').classList.remove('hidden');
+        }
+      } catch (error) {
+        console.error('Error loading share links:', error);
+        document.getElementById('share-links-loading').innerHTML = '<p class="text-red-400">Error loading share links</p>';
+      }
+    }
+
+    async function submitCreateShareLink() {
+      const formData = {
+        client_email: document.getElementById('share-client-email').value,
+        client_name: document.getElementById('share-client-name').value,
+        client_company: document.getElementById('share-client-company').value,
+        scans_limit: parseInt(document.getElementById('share-scans-limit').value),
+        valid_days: parseInt(document.getElementById('share-valid-days').value)
+      };
+      
+      try {
+        const response = await fetch('/api/admin/share-links/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          },
+          body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          alert('Share link created! URL copied to clipboard.');
+          navigator.clipboard.writeText(data.share_url);
+          closeModal('modal-create-share-link');
+          loadShareLinks();
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Error creating share link:', error);
+        alert('Failed to create share link');
+      }
+    }
+
+    function copyShareUrl(url) {
+      navigator.clipboard.writeText(url);
+      alert('URL copied to clipboard!');
+    }
+
+    async function deleteShareLink(code) {
+      if (!confirm('Delete this share link?')) return;
+      
+      try {
+        const response = await fetch(`/api/admin/share-links/${code}`, {
+          method: 'DELETE',
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          alert('Share link deleted!');
+          loadShareLinks();
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to delete share link');
+      }
+    }
+
+    // ==========================================
+    // LEADERBOARD TAB
+    // ==========================================
+    async function loadLeaderboard() {
+      try {
+        const response = await fetch('/api/admin/leaderboard', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          displayLeaderboardResults(data.entries);
+        }
+      } catch (error) {
+        console.error('Error loading leaderboard:', error);
+      }
+    }
+
+    async function searchLeaderboard() {
+      const query = document.getElementById('leaderboard-search').value;
+      
+      if (!query) {
+        loadLeaderboard();
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/admin/leaderboard/search?q=${encodeURIComponent(query)}`, {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          displayLeaderboardResults(data.entries);
+        }
+      } catch (error) {
+        console.error('Error searching leaderboard:', error);
+      }
+    }
+
+    function displayLeaderboardResults(entries) {
+      const tbody = document.getElementById('leaderboard-tbody');
+      tbody.innerHTML = '';
+      
+      entries.forEach(entry => {
+        const medals = ['🥇', '🥈', '🥉'];
+        const medal = entry.rank <= 3 ? medals[entry.rank - 1] : '';
+        
+        const row = `
+          <tr>
+            <td class="px-4 py-3 font-bold">${medal} #${entry.rank}</td>
+            <td class="px-4 py-3">${entry.company_name || '-'}</td>
+            <td class="px-4 py-3 text-blue-400 text-sm">${entry.url.substring(0, 50)}...</td>
+            <td class="px-4 py-3 font-bold">${entry.score}/100</td>
+            <td class="px-4 py-3">${entry.country}</td>
+            <td class="px-4 py-3">
+              <button onclick="deleteLeaderboardEntry(${entry.id})" class="text-red-400 hover:text-red-300">🗑️ Delete</button>
+            </td>
+          </tr>
+        `;
+        tbody.innerHTML += row;
+      });
+    }
+
+    async function deleteLeaderboardEntry(id) {
+      if (!confirm('Delete this leaderboard entry?')) return;
+      
+      try {
+        const response = await fetch(`/api/admin/leaderboard/${id}`, {
+          method: 'DELETE',
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          alert('Entry deleted!');
+          loadLeaderboard();
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to delete entry');
+      }
+    }
+
+    async function scanAllAgencies() {
+      if (!confirm('This will scan all agencies and add them to the leaderboard. Continue?')) return;
+      
+      alert('Scanning started! This may take a few minutes...');
+      
+      try {
+        const response = await fetch('/api/admin/scan-all-agencies', {
+          method: 'POST',
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          alert(`Scan complete!\nSuccess: ${data.successCount}\nFailed: ${data.failCount}`);
+          loadLeaderboard();
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Scan failed');
+      }
+    }
+
+    // ==========================================
+    // MODAL HELPERS
+    // ==========================================
+    function showAddAgencyModal() {
+      document.getElementById('modal-add-agency').classList.remove('hidden');
+    }
+
+    function showCreateShareLinkModal() {
+      document.getElementById('modal-create-share-link').classList.remove('hidden');
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.add('hidden');
+    }
+
+    // ==========================================
+    // CODE GENERATORS TAB - PROFESSIONAL VERSION
+    // ==========================================
+    function generateCircularBadge() {
+      const score = parseInt(document.getElementById('badge-score').value) || 0;
+      const size = parseInt(document.getElementById('badge-size').value) || 180;
+      
+      // Determine quality and color based on score
+      let quality, gradient, textColor, ringColor;
+      
+      if (score >= 90) {
+        quality = 'EXCELLENT';
+        gradient = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+        textColor = '#ffffff';
+        ringColor = '#10b981';
+      } else if (score >= 80) {
+        quality = 'GOOD';
+        gradient = 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)';
+        textColor = '#ffffff';
+        ringColor = '#3b82f6';
+      } else if (score >= 70) {
+        quality = 'AVERAGE';
+        gradient = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+        textColor = '#ffffff';
+        ringColor = '#f59e0b';
+      } else if (score >= 60) {
+        quality = 'BELOW AVERAGE';
+        gradient = 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)';
+        textColor = '#ffffff';
+        ringColor = '#f97316';
+      } else {
+        quality = 'POOR';
+        gradient = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+        textColor = '#ffffff';
+        ringColor = '#ef4444';
+      }
+      
+      const badgeHTML = `<div style="display: inline-flex; flex-direction: column; align-items: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <!-- Circular Badge -->
+  <div style="position: relative; width: ${size}px; height: ${size}px;">
+    <!-- Outer Ring -->
+    <div style="position: absolute; inset: 0; border-radius: 50%; background: ${gradient}; padding: 6px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+      <!-- Inner Circle -->
+      <div style="width: 100%; height: 100%; border-radius: 50%; background: white; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: inset 0 2px 8px rgba(0,0,0,0.1);">
+        <!-- Score -->
+        <div style="font-size: ${size * 0.35}px; font-weight: 800; background: ${gradient}; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1;">
+          ${score}
+        </div>
+        <!-- /100 Text -->
+        <div style="font-size: ${size * 0.12}px; color: #6b7280; font-weight: 600; margin-top: ${size * 0.04}px;">
+          /100
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Quality Label -->
+  <div style="margin-top: ${size * 0.15}px; padding: ${size * 0.04}px ${size * 0.12}px; background: ${gradient}; color: ${textColor}; font-size: ${size * 0.09}px; font-weight: 700; border-radius: ${size * 0.08}px; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+    ${quality}
+  </div>
+  
+  <!-- ContentScale Branding -->
+  <div style="margin-top: ${size * 0.08}px; font-size: ${size * 0.07}px; color: #9ca3af; font-weight: 500;">
+    ContentScale Score
+  </div>
+</div>`;
+      
+      document.getElementById('badge-preview').innerHTML = badgeHTML;
+      document.getElementById('badge-code').value = badgeHTML;
+    }
     
-    function skipLeaderboard(){document.getElementById('leaderboard-prompt').classList.add('hidden')}
-    function closeResultsModal(){document.getElementById('resultsModal').classList.remove('active')}
+    function copyBadgeCode() {
+      const code = document.getElementById('badge-code').value;
+      navigator.clipboard.writeText(code);
+      
+      // Visual feedback
+      const btn = event.target;
+      const originalText = btn.textContent;
+      btn.textContent = '✅ Copied!';
+      btn.classList.add('bg-green-600');
+      btn.classList.remove('bg-blue-600');
+      
+      setTimeout(() => {
+        btn.textContent = originalText;
+        btn.classList.remove('bg-green-600');
+        btn.classList.add('bg-blue-600');
+      }, 2000);
+    }
     
-    async function getPrompts(){if(!currentScanResult)return;document.getElementById('promptsModal').classList.add('active');document.getElementById('promptsModal').style.display='block';try{const response=await fetch(`${API_BASE}/api/generate-content-prompt`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:currentUrl,score:currentScanResult.score,breakdown:currentScanResult.breakdown,wordCount:currentScanResult.wordCount})});const data=await response.json();if(data.success&&data.prompts){displayPrompts(data)}else{throw new Error('Failed to generate prompts')}}catch(error){console.error('Prompts error:',error);document.getElementById('prompts-container').innerHTML='<div class="text-center py-8"><div class="text-red-400">Failed to generate prompts</div></div>'}}
+    function generateBanner() {
+      const headline = document.getElementById('banner-headline').value;
+      const subheadline = document.getElementById('banner-subheadline').value;
+      const buttonText = document.getElementById('banner-button').value;
+      const url = document.getElementById('banner-url').value;
+      
+      const bannerHTML = `<div style="max-width: 700px; margin: 0 auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px; padding: 40px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <!-- Content Container -->
+  <div style="text-align: center; color: white;">
+    <!-- Icon/Emoji -->
+    <div style="font-size: 48px; margin-bottom: 20px;">
+      🎯
+    </div>
     
-    async function getPromptsForUrl(url,score,entry){currentUrl=url;currentScanResult={score:score,breakdown:{graaf:{total:entry.graaf_score||0},craft:{total:entry.craft_score||0},technical:{total:entry.technical_score||0}},wordCount:entry.word_count||0};getPrompts()}
+    <!-- Headline -->
+    <h2 style="margin: 0 0 12px 0; font-size: 32px; font-weight: 800; line-height: 1.2; letter-spacing: -0.5px;">
+      ${headline}
+    </h2>
     
-    function displayPrompts(promptData){const prompts=promptData.prompts||[];const usageInstructions=promptData.usage_instructions||[];if(prompts.length===0){document.getElementById('prompts-container').innerHTML='<div style="text-align:center;padding:40px 20px"><div style="color:#ef4444;font-size:16px;margin-bottom:12px">Failed to generate prompts</div><button onclick="getPrompts()" style="color:#a78bfa;text-decoration:underline;background:none;border:none;cursor:pointer;font-size:14px">Try again</button></div>';return}if(usageInstructions.length>0){const list=document.getElementById('usage-instructions');if(list){list.innerHTML=usageInstructions.map(instr=>`<li>${instr}</li>`).join('')}}let html='';prompts.forEach((prompt,index)=>{const isElite=prompt.type==='elite';const promptId=`prompt-full-${index}`;const previewId=`prompt-preview-${index}`;const preview=prompt.prompt.substring(0,500)+'...';html+=`<div style="background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);border:3px solid ${isElite?'#8b5cf6':'#4b5563'};border-radius:16px;padding:28px;margin-bottom:24px;position:relative">${isElite?'<div style="position:absolute;top:-14px;right:24px;background:linear-gradient(135deg,#fbbf24 0%,#f59e0b 100%);color:#1e293b;padding:8px 20px;border-radius:24px;font-size:11px;font-weight:800;text-transform:uppercase;box-shadow:0 6px 16px rgba(251,191,36,0.6)">🏆 RECOMMENDED</div>':''}<div style="margin-bottom:20px"><h3 style="font-size:20px;font-weight:700;color:#a78bfa;margin:0 0 8px 0">${prompt.title}</h3><p style="font-size:13px;color:#9ca3af;margin:0 0 12px 0">${prompt.description||''}</p>${prompt.estimated_score?`<div style="display:inline-flex;align-items:center;gap:8px;background:rgba(5,150,105,0.2);border:1px solid #10b981;color:#d1fae5;padding:6px 16px;border-radius:24px;font-size:12px;font-weight:700"><span style="display:inline-block;width:8px;height:8px;background:#10b981;border-radius:50%"></span>Target: ${prompt.estimated_score}</div>`:''}</div><div id="${previewId}" style="background:#0f172a;padding:20px;border-radius:12px;font-family:'Courier New',monospace;font-size:12px;line-height:1.7;color:#cbd5e1;max-height:250px;overflow-y:auto;border:1px solid #334155;margin-bottom:16px;white-space:pre-wrap">${preview}</div><div id="${promptId}" style="display:none;background:#0f172a;padding:24px;border-radius:12px;font-family:'Courier New',monospace;font-size:13px;line-height:1.8;color:#e2e8f0;max-height:600px;overflow-y:auto;border:2px solid #334155;margin-bottom:16px;white-space:pre-wrap">${prompt.prompt}</div><div style="display:flex;gap:12px;flex-wrap:wrap"><button id="copy-btn-${index}" onclick="copyPromptInline('${promptId}',${index})" style="flex:1;min-width:200px;background:linear-gradient(135deg,#8b5cf6 0%,#7c3aed 100%);color:white;border:none;padding:14px 24px;border-radius:10px;cursor:pointer;font-weight:700;font-size:14px">📋 Copy ${isElite?'ELITE':''} Prompt</button><button id="expand-btn-${index}" onclick="toggleExpandInline('${promptId}','${previewId}',${index})" style="background:#374151;color:#9ca3af;border:none;padding:12px 24px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600">👁️ View Full</button></div>${isElite?`<div style="font-size:11px;color:#6b7280;margin-top:12px">💡 ${(prompt.prompt.length/1000).toFixed(1)}K characters - Complete framework</div>`:''}</div>`});document.getElementById('prompts-container').innerHTML=html;window.currentPrompts=prompts;window.currentPromptData=promptData}
+    <!-- Subheadline -->
+    <p style="margin: 0 0 30px 0; font-size: 18px; opacity: 0.95; line-height: 1.5; max-width: 500px; margin-left: auto; margin-right: auto;">
+      ${subheadline}
+    </p>
     
-    function toggleExpandInline(promptId,previewId,index){const full=document.getElementById(promptId);const preview=document.getElementById(previewId);const btn=document.getElementById('expand-btn-'+index);if(full.style.display==='none'){full.style.display='block';preview.style.display='none';btn.textContent='👁️ Hide Full'}else{full.style.display='none';preview.style.display='block';btn.textContent='👁️ View Full'}}
+    <!-- CTA Button -->
+    <a href="${url}" style="display: inline-block; padding: 16px 48px; background: white; color: #667eea; text-decoration: none; border-radius: 50px; font-weight: 700; font-size: 18px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); transition: all 0.3s ease; border: 3px solid white;">
+      ${buttonText} →
+    </a>
     
-    function copyPromptInline(promptId,index){const elem=document.getElementById(promptId);const btn=document.getElementById('copy-btn-'+index);const text=elem.textContent;navigator.clipboard.writeText(text).then(()=>{btn.innerHTML='✅ Copied!';btn.style.background='linear-gradient(135deg,#10b981 0%,#059669 100%)';setTimeout(()=>{btn.innerHTML='📋 Copy Prompt';btn.style.background='linear-gradient(135deg,#8b5cf6 0%,#7c3aed 100%)'},3000);showToastInline('✅ Prompt copied! Paste in Claude AI')}).catch(err=>{alert('Copy failed')})}
+    <!-- Trust Badge -->
+    <div style="margin-top: 24px; font-size: 14px; opacity: 0.8;">
+      ✓ No credit card required • ✓ Instant results • ✓ 100% free
+    </div>
+  </div>
+</div>`;
+      
+      document.getElementById('banner-preview').innerHTML = bannerHTML;
+      document.getElementById('banner-code').value = bannerHTML;
+    }
     
-    function showToastInline(message){const toast=document.createElement('div');toast.style.cssText='position:fixed;top:20px;right:20px;background:#10b981;color:white;padding:16px 24px;border-radius:12px;font-weight:600;z-index:99999;box-shadow:0 8px 24px rgba(0,0,0,0.4)';toast.textContent=message;document.body.appendChild(toast);setTimeout(()=>toast.remove(),3000)}
+    function copyBannerCode() {
+      const code = document.getElementById('banner-code').value;
+      navigator.clipboard.writeText(code);
+      
+      // Visual feedback
+      const btn = event.target;
+      const originalText = btn.textContent;
+      btn.textContent = '✅ Copied!';
+      btn.classList.add('bg-green-600');
+      btn.classList.remove('bg-purple-600');
+      
+      setTimeout(() => {
+        btn.textContent = originalText;
+        btn.classList.remove('bg-green-600');
+        btn.classList.add('bg-purple-600');
+      }, 2000);
+    }
     
-    function exportPromptsToFile(){if(!window.currentPrompts){alert('No prompts to export');return}const{topic,keyword,score}=window.currentPromptData||{};let content=`ELITE AI CONTENT PROMPTS - ContentScale\nURL: ${currentUrl}\nScore: ${score}/100\nGenerated: ${new Date().toLocaleString()}\n\nHOW TO USE:\n1. Copy the ELITE prompt below\n2. Paste into Claude.ai, ChatGPT, or Perplexity\n3. AI generates complete article\n4. Update your page\n5. Rescan!\n\n${'='.repeat(60)}\n\n`;window.currentPrompts.forEach((prompt,i)=>{content+=`PROMPT ${i+1}: ${prompt.title}\n`;content+=`${'='.repeat(60)}\n${prompt.prompt}\n\n${'='.repeat(60)}\n\n`});const blob=new Blob([content],{type:'text/plain'});const downloadUrl=URL.createObjectURL(blob);const a=document.createElement('a');a.href=downloadUrl;a.download=`contentscale-prompts-${Date.now()}.txt`;a.click();URL.revokeObjectURL(downloadUrl);showToastInline('✅ Prompts exported!')}
+    // Initialize generators on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      if (document.getElementById('badge-score')) {
+        generateCircularBadge();
+        generateBanner();
+      }
+    });
+
+    // ==========================================
+    // SETTINGS TAB
+    // ==========================================
+    function toggleAutoScan() {
+      const enabled = document.getElementById('auto-scan-enabled').checked;
+      console.log('Auto-scan:', enabled ? 'enabled' : 'disabled');
+      // In production, this would call an API to save the setting
+    }
     
-    function sharePromptsOnLinkedIn(){const score=currentScanResult?.score||'XX';const text=`🚀 Got ELITE AI Prompts from ContentScale! Score: ${score}/100. Try it: contentscale.site/leaderboard`;navigator.clipboard.writeText(text);window.open('https://www.linkedin.com/sharing/share-offsite/?url='+encodeURIComponent('https://contentscale.site/leaderboard'),'_blank');showToastInline('✅ Post text copied!')}
+    function saveAutoScanSettings() {
+      const enabled = document.getElementById('auto-scan-enabled').checked;
+      const frequency = document.getElementById('scan-frequency').value;
+      
+      alert(`Auto-scan settings saved!\nEnabled: ${enabled}\nFrequency: ${frequency}`);
+      
+      // In production, this would call an API:
+      // await fetch('/api/admin/settings/auto-scan', {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //     'x-admin-key': localStorage.getItem('admin_id')
+      //   },
+      //   body: JSON.stringify({ enabled, frequency })
+      // });
+    }
     
-    function emailPrompts(){alert('📧 Email feature coming soon! Use Export button for now.')}
+    function createBackup() {
+      const now = new Date().toISOString();
+      document.getElementById('last-backup-time').textContent = new Date().toLocaleString();
+      alert('Backup created successfully!\n\nIn production, this would create a database backup.');
+      
+      // In production:
+      // await fetch('/api/admin/backup/create', {
+      //   method: 'POST',
+      //   headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+      // });
+    }
     
-    document.getElementById('scanInput').addEventListener('keypress',(e)=>{if(e.key==='Enter')performScan()});
-    loadLeaderboard();
-    setInterval(loadLeaderboard,300000);
-    window.closePromptsModal=function(){const modal=document.getElementById('promptsModal');if(modal){modal.style.display='none';modal.classList.remove('active')}};
+    function exportAgencies() {
+      alert('Exporting agencies to CSV...\n\nIn production, this would download a CSV file with all agencies.');
+      // In production, this would trigger a CSV download
+    }
+    
+    function exportClients() {
+      alert('Exporting clients to CSV...\n\nIn production, this would download a CSV file with all clients.');
+      // In production, this would trigger a CSV download
+    }
+    
+    function exportScans() {
+      alert('Exporting scans to CSV...\n\nIn production, this would download a CSV file with all scans.');
+      // In production, this would trigger a CSV download
+    }
+    
+    function clearCache() {
+      if (!confirm('Are you sure you want to clear all cached scan results?')) return;
+      
+      alert('Cache cleared!\n\nIn production, this would remove all cached data from the database.');
+      
+      // In production:
+      // await fetch('/api/admin/cache/clear', {
+      //   method: 'POST',
+      //   headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+      // });
+    }
+    
+    function resetStats() {
+      if (!confirm('⚠️ WARNING: This will reset ALL platform statistics!\n\nThis action CANNOT be undone!\n\nAre you absolutely sure?')) return;
+      
+      alert('Statistics reset!\n\nIn production, this would reset all counters in the database.');
+      
+      // In production:
+      // await fetch('/api/admin/stats/reset', {
+      //   method: 'POST',
+      //   headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+      // });
+    }
   </script>
 </body>
 </html>
