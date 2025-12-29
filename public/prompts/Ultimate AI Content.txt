@@ -1,0 +1,273 @@
+# 🏆 CONTENTSCALE ELITE 100/100 PROMPT - COPY & PASTE VERSION
+
+**INSTRUCTIONS:**
+1. Replace [TARGET_URL], [TOPIC], [KEYWORD], and [CURRENT_SCORE] with your information
+2. Copy EVERYTHING below this line
+3. Paste into Claude.ai, ChatGPT, or Perplexity
+4. AI generates your 95-100/100 article
+
+---
+
+## YOUR REWRITING MISSION
+
+TARGET URL: [YOUR_URL_HERE]
+TOPIC: [YOUR_TOPIC_HERE]
+TARGET KEYWORD: "[YOUR_KEYWORD_HERE]"
+CURRENT SCORE: [YOUR_SCORE]/100
+TARGET SCORE: 95-100/100
+
+Completely rewrite this content to achieve 95-100/100 ContentScale score using the GRAAF + CRAFT + Technical SEO framework.
+
+---
+
+## MANDATORY OUTPUT STRUCTURE - FOLLOW EXACTLY:
+
+### 1. DIRECT ANSWER BOX (40-60 words)
+- Answer main question in first sentence
+- Include target keyword
+- Cite expert (Name, Title, Organization)
+- Include specific statistic
+- Max 60 words total
+
+### 2. TL;DR (5 Key Takeaways)
+- Exactly 5 bullet points
+- Each 15-25 words with source
+- Include keyword in 2 bullets
+
+### 3. TABLE OF CONTENTS
+- Auto-generate from all H2 headings
+- Make clickable with anchor links
+
+### 4. MAIN CONTENT (2500+ words, 5-7 H2 Sections)
+
+EACH H2 Section Must Include:
+- 350-500 words
+- Opening paragraph (100-150 words)
+- Detail paragraph (100-150 words)  
+- Application paragraph (100-150 words)
+- 1 Expert Quote with attribution
+- 1 Statistic with source (2023-2025)
+- 1 Pro Tip
+- Optional: Comparison table
+
+H2 Topics (Choose 5-7):
+- What is [KEYWORD]?
+- How Does [KEYWORD] Work?
+- Benefits of [KEYWORD]
+- Common [KEYWORD] Mistakes
+- [KEYWORD] vs Alternatives
+- Best Practices
+- Future Trends
+
+### 5. CASE STUDIES (Minimum 2)
+
+EACH Case Study (200-300 words):
+- Industry + Company Size + Timeline
+- Challenge (with numbers)
+- Solution (3-5 specific steps)
+- Results (concrete metrics: X% increase, $Y savings)
+- Key Lesson
+- Client quote
+
+### 6. FAQ SECTION (Minimum 10)
+
+Questions to Cover:
+1. What is [KEYWORD]?
+2. How does [KEYWORD] work?
+3. Why is [KEYWORD] important?
+4. When to use [KEYWORD]?
+5. Where to find [KEYWORD]?
+6. Who needs [KEYWORD]?
+7. [KEYWORD] vs [Alternative]?
+8. Best [KEYWORD] for [use case]?
+9. Common mistakes with [KEYWORD]?
+10. How much does [KEYWORD] cost?
+
+Each Answer (100-150 words):
+- Direct answer in first sentence
+- 1 internal link
+- 1 external authoritative link
+
+### 7. STATISTICS (Minimum 8)
+- All from 2023-2025 only
+- Format: **X%** of [group] [outcome] (Source, Year)
+
+### 8. EXPERT QUOTES (Minimum 4)
+- 20-60 words each
+- Format: > "Quote" — **Name**, Title, Organization
+
+### 9. AUTHOR BIO (200-250 words)
+Include:
+- Current role + years experience
+- 3+ expertise areas
+- Certifications/credentials
+- Notable achievements with numbers
+- Published work
+- Contact info
+
+### 10. SCHEMA MARKUP (CRITICAL!)
+
+#### Article Schema:
+```json
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "[Title 50-70 chars]",
+  "description": "[Meta desc 150-160 chars]",
+  "image": "[Image URL]",
+  "author": {
+    "@type": "Person",
+    "name": "[Author Name]",
+    "jobTitle": "[Title]"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "[Company]",
+    "logo": {"@type": "ImageObject", "url": "[Logo URL]"}
+  },
+  "datePublished": "2025-01-15",
+  "dateModified": "2025-01-15"
+}
+</script>
+```
+
+#### FAQPage Schema (Include ALL FAQ questions):
+```json
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "[Question 1]",
+      "acceptedAnswer": {"@type": "Answer", "text": "[Complete answer]"}
+    },
+    {
+      "@type": "Question",
+      "name": "[Question 2]",
+      "acceptedAnswer": {"@type": "Answer", "text": "[Complete answer]"}
+    }
+  ]
+}
+</script>
+```
+
+### 11. META TAGS
+
+Meta Title (50-60 characters):
+```
+[Keyword]: [Benefit] - [Authority/Year]
+```
+
+Meta Description (150-160 characters):
+```
+[Keyword] explained: [Benefit with number]. [CTA]. [Authority signal].
+```
+
+---
+
+## WRITING RULES - ENFORCE STRICTLY:
+
+**Keyword Usage:**
+- Primary keyword: 20-30 times (0.8-1.2% density)
+- Exact phrase: 12-15 times
+- Variations: 10-12 times
+- Locations: H1, first H2, intro, conclusion, naturally throughout
+
+**Readability:**
+- Sentence length: Average 15-18 words, max 20
+- Paragraph length: 3-4 sentences, max 100 words
+- Active voice: 80%+
+- Flesch Reading Ease: 60-70
+- Grade level: 8th-9th
+
+**Links:**
+- Internal: 8-12 links to related pages
+- External: 5-8 links to authority sites (.edu, .gov, major publications)
+- All statistics and expert quotes must link to source
+
+**Images:**
+- Minimum 6-8 images
+- Hero image at top
+- 1 per H2 section
+- ALT text with keyword (2-3 images)
+- Format: `<img src="..." alt="[Keyword] - [description]" loading="lazy">`
+
+---
+
+## QUALITY CHECKLIST - MUST ACHIEVE:
+
+**GRAAF (50 points):**
+✅ Keyword density 0.8-1.2%
+✅ 8+ statistics (2023-2025) with sources
+✅ 4+ expert quotes (Name, Title, Org)
+✅ 2+ case studies with numbers
+✅ Author bio 200-250 words with credentials
+
+**CRAFT (30 points):**
+✅ 2500+ words minimum
+✅ Sentences under 20 words
+✅ Paragraphs under 100 words
+✅ 10+ FAQ (100+ words each)
+✅ Each FAQ has 1 internal + 1 external link
+✅ 6-8 images with ALT text
+✅ Comparison tables
+
+**Technical SEO (20 points):**
+✅ Meta title 50-60 characters
+✅ Meta description 150-160 characters
+✅ H1/H2/H3 hierarchy
+✅ Article Schema JSON-LD
+✅ FAQPage Schema JSON-LD
+✅ 8-12 internal links
+✅ 5-8 external authority links
+
+---
+
+## CRITICAL REQUIREMENTS - DO NOT SKIP:
+
+1. ALL statistics MUST be from 2023-2025 (no older!)
+2. ALL expert quotes MUST have full attribution (Name, Title, Organization)
+3. EVERY FAQ needs 100+ words + 1 internal link + 1 external link
+4. Schema markup is MANDATORY (worth 8 points!)
+5. Word count MUST be 2500+ minimum
+6. Keyword density MUST be 0.8-1.2% (20-30 times in 2500 words)
+7. NO keyword stuffing - use naturally
+8. ALL case studies need real numbers and metrics
+
+---
+
+## EXPECTED SCORE BREAKDOWN:
+
+**After completing this framework:**
+
+GRAAF Score: 48-50/50
+- Keyword optimization: 10/10
+- Statistics: 10/10
+- Expert quotes: 10/10
+- Case studies: 10/10
+- Author authority: 8-10/10
+
+CRAFT Score: 28-30/30
+- Word count: 8/8
+- Readability: 6/6
+- FAQ quality: 8/8
+- Visual elements: 6-8/8
+
+Technical Score: 19-20/20
+- Meta tags: 4/4
+- Schema markup: 8/8
+- Internal links: 4/4
+- External links: 3-4/4
+
+**TOTAL: 95-100/100**
+
+---
+
+NOW REWRITE THE CONTENT AT [TARGET_URL] FOLLOWING THIS EXACT FRAMEWORK!
+
+Generate the complete article with all sections, schema markup, and meta tags. Make it comprehensive, authoritative, and optimized for 95-100/100 score.
+
+GO!
