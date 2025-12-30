@@ -3,10 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ContentScale Global AI SEO Leaderboard - Free Scanner & Prompts</title>
-  <meta name="description" content="Global leaderboard of top websites ranked by AI-era content quality. Scan your site for free, get AI improvement prompts, and claim your spot!">
+  <title>ContentScale - Free AI SEO Scanner & Global Leaderboard</title>
+  <meta name="description" content="Free AI-powered SEO content scanner. Get your score, AI improvement prompts, and join the global leaderboard. GRAAF + CRAFT + Technical analysis.">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    /* NAVIGATION */
+    .nav-bar { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-bottom: 2px solid #374151; position: sticky; top: 0; z-index: 1000; }
+    .nav-link { color: #9ca3af; padding: 12px 20px; font-weight: 600; transition: all 0.3s; border-bottom: 3px solid transparent; cursor: pointer; }
+    .nav-link:hover { color: white; border-bottom-color: #8b5cf6; }
+    .nav-link.active { color: white; border-bottom-color: #8b5cf6; }
+    
+    /* LEADERBOARD */
     .leaderboard-section { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; padding: 32px; margin-bottom: 32px; border: 2px solid #334155; position: relative; overflow: hidden; }
     .leaderboard-section::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #f59e0b 0%, #eab308 50%, #f59e0b 100%); animation: shimmer 2s infinite; }
     @keyframes shimmer { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
@@ -50,24 +57,74 @@
     .modal-content { background: #1f2937; border-radius: 16px; padding: 32px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; }
     .modal-close { position: absolute; top: 16px; right: 16px; background: #374151; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; color: white; font-size: 20px; }
     .modal-close:hover { background: #4b5563; }
-    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-    @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
-    /* SCAN LOADING ANIMATION */
+    
+    /* PRICING CARDS */
+    .pricing-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid #334155; border-radius: 16px; padding: 32px; transition: all 0.3s; }
+    .pricing-card:hover { transform: translateY(-8px); box-shadow: 0 12px 30px rgba(139, 92, 246, 0.3); border-color: #8b5cf6; }
+    .pricing-card.popular { border-color: #f59e0b; position: relative; }
+    .pricing-card.popular::before { content: '⭐ POPULAR'; position: absolute; top: -12px; right: 24px; background: linear-gradient(135deg, #f59e0b 0%, #eab308 100%); color: #1e293b; padding: 6px 16px; border-radius: 20px; font-size: 11px; font-weight: 800; }
+    .price-tag { font-size: 48px; font-weight: 800; background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .price-period { color: #9ca3af; font-size: 16px; }
+    .feature-list { list-style: none; padding: 0; margin: 24px 0; }
+    .feature-list li { padding: 12px 0; border-bottom: 1px solid #334155; color: #d1d5db; display: flex; align-items: center; gap: 12px; }
+    .feature-list li:last-child { border-bottom: none; }
+    .feature-icon { color: #10b981; font-size: 20px; }
+    .cta-btn { width: 100%; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; padding: 16px; border-radius: 12px; font-weight: 700; border: none; cursor: pointer; transition: all 0.3s; font-size: 16px; }
+    .cta-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(139, 92, 246, 0.5); }
+    .ltd-banner { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border-radius: 16px; padding: 32px; text-align: center; margin-top: 32px; border: 3px solid #eab308; }
+    
+    /* SCAN LOADING */
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     .scan-spinner { display: inline-block; width: 18px; height: 18px; border: 3px solid rgba(255, 255, 255, 0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 10px; vertical-align: middle; }
     .scan-stage { font-size: 14px; opacity: 0.9; margin-left: 8px; }
-    @media (max-width: 768px) { .leaderboard-section, .scanner-section { padding: 20px; } .rank-badge { width: 32px; height: 32px; font-size: 14px; } .rank-1 .rank-badge { font-size: 18px; } .score-display { font-size: 24px; } }
+    
+    @media (max-width: 768px) { 
+      .leaderboard-section, .scanner-section { padding: 20px; } 
+      .rank-badge { width: 32px; height: 32px; font-size: 14px; } 
+      .rank-1 .rank-badge { font-size: 18px; } 
+      .score-display { font-size: 24px; }
+      .nav-link { padding: 10px 12px; font-size: 14px; }
+      .pricing-card { padding: 24px; }
+      .price-tag { font-size: 36px; }
+    }
   </style>
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen p-8">
-  <div class="max-w-6xl mx-auto">
-    <div class="text-center mb-8">
+<body class="bg-gray-900 text-gray-100">
+
+  <!-- NAVIGATION BAR -->
+  <nav class="nav-bar">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">ContentScale</div>
+        </div>
+        <div class="flex items-center gap-1">
+          <a class="nav-link active" onclick="scrollToSection('home')">🏠 Home</a>
+          <a class="nav-link" onclick="scrollToSection('scanner')">🔍 Scanner</a>
+          <a class="nav-link" onclick="scrollToSection('leaderboard')">🏆 Leaderboard</a>
+          <a class="nav-link" onclick="scrollToSection('pricing')">💰 Pricing</a>
+          <a class="nav-link" href="/blog">📝 Blog</a>
+          <a class="nav-link" href="/contact-form">📞 Contact</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-6xl mx-auto p-8">
+    
+    <!-- HOME SECTION -->
+    <div id="home" class="text-center mb-12 pt-8">
       <h1 class="text-5xl font-bold mb-3 bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">🏆 Global AI SEO Leaderboard</h1>
       <p class="text-xl text-gray-300 mb-4">The World's First AI-Era Content Quality Rankings</p>
       <span class="live-indicator"><span class="live-dot"></span>Live Rankings</span>
+      <div class="mt-6 text-gray-400 max-w-3xl mx-auto">
+        <p class="mb-4">Free AI-powered content analysis using the <strong class="text-purple-400">GRAAF Framework</strong> (50pts) + <strong class="text-blue-400">CRAFT Methodology</strong> (30pts) + <strong class="text-green-400">Technical SEO</strong> (20pts) = 100 points total.</p>
+        <p>Scan your website, get FREE AI improvement prompts, and claim your spot on the global leaderboard!</p>
+      </div>
     </div>
 
-     <div class="scanner-section mb-8">
+    <!-- SCANNER SECTION -->
+    <div id="scanner" class="scanner-section mb-8">
       <div class="text-center mb-8">
         <h2 class="text-4xl font-bold mb-3">🚀 Scan Your Website</h2>
         <p class="text-gray-300">Get your AI-Era SEO score, FREE improvement prompts, and claim your spot!</p>
@@ -77,16 +134,28 @@
           <input type="text" id="scanInput" placeholder="https://yourwebsite.com" class="flex-1 bg-gray-700 text-white px-6 py-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg">
           <button onclick="performScan()" id="scanButton" class="scan-btn">Scan Now</button>
         </div>
+        
+        <!-- SCAN COUNTER -->
+        <div id="scan-counter" class="bg-blue-900 bg-opacity-50 border border-blue-700 rounded-lg p-4 mb-5 text-center">
+          <div class="text-sm text-blue-300">
+            <span id="scans-used-text">First scan FREE - No email required!</span>
+          </div>
+        </div>
+        
         <div class="bg-gray-800 bg-opacity-70 rounded-lg p-4 text-sm text-gray-400">
           <div class="font-bold text-green-400 mb-2">✅ Free Analysis Includes:</div>
           <div class="grid md:grid-cols-2 gap-2 text-xs">
-            <div>• GRAAF Framework Score (50 pts)</div><div>• CRAFT Methodology (30 pts)</div><div>• Technical SEO (20 pts)</div><div>• AI Improvement Prompts 🎁</div>
+            <div>• GRAAF Framework Score (50 pts)</div>
+            <div>• CRAFT Methodology (30 pts)</div>
+            <div>• Technical SEO (20 pts)</div>
+            <div>• AI Improvement Prompts 🎁</div>
           </div>
         </div>
       </div>
     </div>
     
-    <div class="leaderboard-section">
+    <!-- LEADERBOARD SECTION -->
+    <div id="leaderboard" class="leaderboard-section">
       <div class="flex justify-between items-center mb-6">
         <div>
           <h2 class="text-3xl font-bold text-yellow-400">Top 100 Websites</h2>
@@ -94,6 +163,7 @@
         </div>
         <button onclick="refreshLeaderboard()" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-semibold transition">🔄 Refresh</button>
       </div>
+      
       <div class="filter-section">
         <div class="mb-4"><h3 class="text-sm font-bold text-gray-400 mb-2">FILTER BY:</h3></div>
         <div class="mb-4">
@@ -128,164 +198,667 @@
           </div>
         </div>
       </div>
+      
       <div class="grid grid-cols-3 gap-4 mb-6 p-4 bg-gray-800 bg-opacity-50 rounded-lg">
-        <div class="text-center"><div class="text-2xl font-bold text-green-400" id="total-entries">-</div><div class="text-xs text-gray-400">Total Entries</div></div>
-        <div class="text-center"><div class="text-2xl font-bold text-blue-400" id="average-score">-</div><div class="text-xs text-gray-400">Average Score</div></div>
-        <div class="text-center"><div class="text-2xl font-bold text-yellow-400" id="highest-score">-</div><div class="text-xs text-gray-400">Highest Score</div></div>
-      </div>
-      <div id="current-filter" class="text-sm text-gray-400 mb-4 hidden">Showing: <span id="filter-display" class="text-white font-bold"></span></div>
-      <div id="leaderboard-container"><div class="text-center py-12"><div class="text-5xl mb-4">🔍</div><div class="text-gray-400">Loading leaderboard...</div></div></div>
-    </div>
-    
-    <div class="scanner-section mb-8">
-      <div class="text-center mb-8">
-        <h2 class="text-4xl font-bold mb-3">🚀 Scan Your Website</h2>
-        <p class="text-gray-300">Get your AI-Era SEO score, FREE improvement prompts, and claim your spot!</p>
-      </div>
-      <div class="max-w-3xl mx-auto">
-        <div class="flex gap-3 mb-5">
-          <input type="text" id="scanInput" placeholder="https://yourwebsite.com" class="flex-1 bg-gray-700 text-white px-6 py-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg">
-          <button onclick="performScan()" id="scanButton" class="scan-btn">Scan Now</button>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-green-400" id="total-entries">-</div>
+          <div class="text-xs text-gray-400">Total Entries</div>
         </div>
-        <div class="bg-gray-800 bg-opacity-70 rounded-lg p-4 text-sm text-gray-400">
-          <div class="font-bold text-green-400 mb-2">✅ Free Analysis Includes:</div>
-          <div class="grid md:grid-cols-2 gap-2 text-xs">
-            <div>• GRAAF Framework Score (50 pts)</div><div>• CRAFT Methodology (30 pts)</div><div>• Technical SEO (20 pts)</div><div>• AI Improvement Prompts 🎁</div>
-          </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-blue-400" id="average-score">-</div>
+          <div class="text-xs text-gray-400">Average Score</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-yellow-400" id="highest-score">-</div>
+          <div class="text-xs text-gray-400">Highest Score</div>
         </div>
       </div>
-    </div>
-    
-    <div id="resultsModal" class="modal">
-      <div class="modal-content">
-        <button class="modal-close" onclick="closeResultsModal()">×</button>
-        <div class="text-center mb-6">
-          <div class="text-6xl mb-3" id="modal-emoji">🎯</div>
-          <div class="text-5xl font-bold mb-2" id="modal-score">--/100</div>
-          <div class="text-lg text-gray-400" id="modal-quality">Analyzing...</div>
+      
+      <div id="current-filter" class="text-sm text-gray-400 mb-4 hidden">
+        Showing: <span id="filter-display" class="text-white font-bold"></span>
+      </div>
+      
+      <div id="leaderboard-container">
+        <div class="text-center py-12">
+          <div class="text-5xl mb-4">🔍</div>
+          <div class="text-gray-400">Loading leaderboard...</div>
         </div>
-        <div class="mb-6">
-          <h3 class="font-bold text-lg mb-3">Breakdown:</h3>
-          <div class="space-y-2">
-            <div class="flex justify-between"><span>GRAAF Framework:</span><span class="font-bold" id="modal-graaf">-/50</span></div>
-            <div class="flex justify-between"><span>CRAFT Methodology:</span><span class="font-bold" id="modal-craft">-/30</span></div>
-            <div class="flex justify-between"><span>Technical SEO:</span><span class="font-bold" id="modal-technical">-/20</span></div>
-          </div>
-        </div>
-        <div id="leaderboard-prompt" class="mb-4">
-          <div class="bg-purple-900 bg-opacity-30 border border-purple-700 rounded-lg p-4 mb-4">
-            <h3 class="font-bold text-purple-400 mb-2">🏆 Claim Your Spot!</h3>
-            <p class="text-sm text-gray-300 mb-3">Add your site to the public leaderboard?</p>
-            <input type="text" id="company-name" placeholder="Company/Site Name (optional)" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500">
-            <select id="category-select" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500">
-              <option value="">Auto-detect category</option><option value="agency">🎯 SEO Agency</option><option value="saas">💻 SaaS</option><option value="blog">📝 Blog</option><option value="ecommerce">🛒 E-commerce</option><option value="other">📌 Other</option>
-            </select>
-            <div class="flex gap-2">
-              <button onclick="submitToLeaderboard()" class="flex-1 bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-bold transition">Yes, Add Me!</button>
-              <button onclick="skipLeaderboard()" class="flex-1 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg font-bold transition">No Thanks</button>
-            </div>
-          </div>
-        </div>
-        <div id="leaderboard-result" class="hidden text-center mb-4">
-          <div class="bg-green-900 bg-opacity-30 border border-green-700 rounded-lg p-4">
-            <div class="text-green-400 font-bold text-2xl mb-2" id="rank-display">🎉 Added to Leaderboard!</div>
-            <p class="text-sm text-gray-400">Refreshing to show your position...</p>
-          </div>
-        </div>
-        <button onclick="getPrompts()" class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-6 py-4 rounded-lg font-bold text-lg transition mb-4">🎁 Get FREE AI Improvement Prompts</button>
-        <button onclick="closeResultsModal()" class="w-full bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg font-bold transition">Close</button>
       </div>
     </div>
-    
-    <div id="promptsModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;overflow-y:auto;padding:20px">
-      <div style="background:linear-gradient(135deg,#1f2937 0%,#111827 100%);border-radius:20px;max-width:900px;margin:40px auto;padding:40px;position:relative;box-shadow:0 25px 50px rgba(0,0,0,0.8)">
-        <button onclick="closePromptsModal()" style="position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.1);border:none;color:white;font-size:32px;width:50px;height:50px;border-radius:50%;cursor:pointer;line-height:1" onmouseover="this.style.background='rgba(255,255,255,0.2)';this.style.transform='rotate(90deg)'" onmouseout="this.style.background='rgba(255,255,255,0.1)';this.style.transform='rotate(0deg)'">×</button>
-        <div style="text-align:center;margin-bottom:32px">
-          <div style="font-size:64px;margin-bottom:16px">🏆</div>
-          <h2 style="font-size:32px;font-weight:700;margin:0 0 12px 0;background:linear-gradient(to right,#fbbf24,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Your ELITE AI Content Prompts</h2>
-          <p style="color:#9ca3af;font-size:15px;margin:0 0 16px 0">Professional-grade prompts for 95-100/100 scores</p>
-          <div style="display:flex;align-items:center;justify-content:center;gap:20px;font-size:13px;font-weight:600">
-            <span style="color:#10b981">✅ Claude AI</span><span style="color:#3b82f6">✅ ChatGPT</span><span style="color:#a78bfa">✅ Perplexity</span>
+
+    <!-- PRICING SECTION -->
+    <div id="pricing" class="py-12">
+      <div class="text-center mb-12">
+        <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">💰 Simple, Transparent Pricing</h2>
+        <p class="text-gray-400 text-lg">Start free, upgrade when you need more scans</p>
+      </div>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        
+        <!-- FREE TIER -->
+        <div class="pricing-card">
+          <div class="text-center mb-6">
+            <h3 class="text-2xl font-bold mb-2">FREE</h3>
+            <div class="price-tag">€0</div>
+            <div class="price-period">Forever Free</div>
+          </div>
+          <ul class="feature-list">
+            <li><span class="feature-icon">✅</span> 3 scans/day with email</li>
+            <li><span class="feature-icon">✅</span> Basic score breakdown</li>
+            <li><span class="feature-icon">✅</span> Community support</li>
+            <li><span class="feature-icon">✅</span> Leaderboard access</li>
+          </ul>
+          <button onclick="scrollToSection('scanner')" class="cta-btn">Start Free</button>
+        </div>
+
+        <!-- STARTER TIER -->
+        <div class="pricing-card">
+          <div class="text-center mb-6">
+            <h3 class="text-2xl font-bold mb-2">STARTER</h3>
+            <div class="price-tag">€7</div>
+            <div class="price-period">/month</div>
+            <div class="text-xs text-green-400 mt-2">€67/year (save 20%)</div>
+          </div>
+          <ul class="feature-list">
+            <li><span class="feature-icon">✅</span> 30 scans/month</li>
+            <li><span class="feature-icon">✅</span> Score + AI prompts</li>
+            <li><span class="feature-icon">✅</span> Email support</li>
+            <li><span class="feature-icon">✅</span> Leaderboard submission</li>
+          </ul>
+          <button onclick="alert('Contact us: info@contentscale.site')" class="cta-btn">Get Started</button>
+        </div>
+
+        <!-- PRO TIER (POPULAR) -->
+        <div class="pricing-card popular">
+          <div class="text-center mb-6">
+            <h3 class="text-2xl font-bold mb-2">PRO</h3>
+            <div class="price-tag">€27</div>
+            <div class="price-period">/month</div>
+            <div class="text-xs text-green-400 mt-2">€259/year (save 20%)</div>
+          </div>
+          <ul class="feature-list">
+            <li><span class="feature-icon">✅</span> 100 scans/month</li>
+            <li><span class="feature-icon">✅</span> Priority support</li>
+            <li><span class="feature-icon">✅</span> WhatsApp access</li>
+            <li><span class="feature-icon">✅</span> Advanced analytics</li>
+          </ul>
+          <button onclick="alert('Contact us: info@contentscale.site')" class="cta-btn">Get Started</button>
+        </div>
+
+        <!-- AGENCY TIER -->
+        <div class="pricing-card">
+          <div class="text-center mb-6">
+            <h3 class="text-2xl font-bold mb-2">AGENCY</h3>
+            <div class="price-tag">€97</div>
+            <div class="price-period">/month</div>
+            <div class="text-xs text-green-400 mt-2">€929/year (save 20%)</div>
+          </div>
+          <ul class="feature-list">
+            <li><span class="feature-icon">✅</span> 500 scans/month</li>
+            <li><span class="feature-icon">✅</span> White-label</li>
+            <li><span class="feature-icon">✅</span> Client dashboard</li>
+            <li><span class="feature-icon">✅</span> API access</li>
+            <li><span class="feature-icon">✅</span> Account manager</li>
+          </ul>
+          <button onclick="alert('Contact us: info@contentscale.site')" class="cta-btn">Contact Sales</button>
+        </div>
+      </div>
+
+      <!-- LIFETIME DEAL BANNER -->
+      <div class="ltd-banner">
+        <div class="text-5xl mb-3">💎</div>
+        <h3 class="text-3xl font-bold text-gray-900 mb-3">LIMITED: Lifetime Deal Available</h3>
+        <p class="text-lg text-gray-800 mb-4">Pay once, use forever. Better value than monthly plans!</p>
+        <div class="flex justify-center items-center gap-4 mb-6">
+          <div class="text-gray-900">
+            <div class="text-sm font-semibold">Starting from</div>
+            <div class="text-4xl font-bold">€49</div>
+            <div class="text-xs">One-time payment</div>
+          </div>
+          <div class="text-5xl">→</div>
+          <div class="text-gray-900">
+            <div class="text-sm font-semibold">You get</div>
+            <div class="text-4xl font-bold">Lifetime</div>
+            <div class="text-xs">No monthly fees</div>
           </div>
         </div>
-        <div style="background:rgba(59,130,246,0.1);border:2px solid #3b82f6;border-radius:12px;padding:24px;margin-bottom:28px">
-          <div style="display:flex;gap:16px">
-            <div style="font-size:32px;flex-shrink:0">💡</div>
-            <div style="flex:1">
-              <div style="font-weight:700;color:#60a5fa;margin-bottom:12px;font-size:16px">How to Use (5 Simple Steps):</div>
-              <ol id="usage-instructions" style="color:#d1d5db;font-size:14px;line-height:1.8;margin:0;padding-left:24px">
-                <li><strong>1.</strong> Click "📋 Copy ELITE Prompt" below</li><li><strong>2.</strong> Open Claude.ai, ChatGPT, or Perplexity</li><li><strong>3.</strong> Paste the entire prompt (Ctrl+V)</li><li><strong>4.</strong> AI generates complete 2500+ word article</li><li><strong>5.</strong> Copy result → Update your page → Rescan! 📈</li>
-              </ol>
-            </div>
+        <div class="bg-gray-900 bg-opacity-20 rounded-lg p-4 mb-6 max-w-2xl mx-auto">
+          <div class="grid grid-cols-3 gap-4 text-sm text-gray-900">
+            <div><strong>Tier 1:</strong> €49 - 50 scans/mo</div>
+            <div><strong>Tier 2:</strong> €99 - 150 scans/mo</div>
+            <div><strong>Tier 3:</strong> €199 - 400 scans/mo</div>
           </div>
         </div>
-        <div id="prompts-container" style="margin-bottom:28px">
-          <div style="text-align:center;padding:60px 20px">
-            <div style="font-size:56px;margin-bottom:16px">⏳</div>
-            <div style="color:#9ca3af;font-size:16px">Generating elite prompts...</div>
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:20px">
-          <button onclick="exportPromptsToFile()" style="background:#374151;color:white;padding:14px 20px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:10px" onmouseover="this.style.background='#4b5563';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#374151';this.style.transform='translateY(0)'"><span style="font-size:20px">📥</span><span>Export to File</span></button>
-          <button onclick="sharePromptsOnLinkedIn()" style="background:#2563eb;color:white;padding:14px 20px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:10px" onmouseover="this.style.background='#1d4ed8';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#2563eb';this.style.transform='translateY(0)'"><span style="font-size:20px">🔗</span><span>Share on LinkedIn</span></button>
-          <button onclick="emailPrompts()" style="background:#7c3aed;color:white;padding:14px 20px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:10px" onmouseover="this.style.background='#6d28d9';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#7c3aed';this.style.transform='translateY(0)'"><span style="font-size:20px">📧</span><span>Email to Me</span></button>
-        </div>
-        <button onclick="closePromptsModal()" style="width:100%;background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:white;padding:18px 32px;border-radius:12px;border:none;cursor:pointer;font-weight:700;font-size:17px;box-shadow:0 4px 12px rgba(16,185,129,0.3)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(16,185,129,0.5)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 12px rgba(16,185,129,0.3)'">Got It! Let's Create Elite Content 🚀</button>
+        <p class="text-sm text-gray-800 mb-4">⚠️ LTD tiers offer better value than regular plans but exclude white-label, API, and enterprise features</p>
+        <a href="/lifetime-deal" class="inline-block bg-gray-900 text-yellow-400 px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-800 transition">
+          🔥 View Lifetime Deal Options
+        </a>
       </div>
     </div>
-    
-    <div class="text-center text-gray-500 text-sm mt-12">
+
+    <!-- FOOTER -->
+    <div class="text-center text-gray-500 text-sm mt-12 pb-8">
       <p class="mb-2">Powered by ContentScale AI • GRAAF + CRAFT Frameworks • Claude Sonnet 4</p>
-      <p><a href="https://contentscale.site" class="text-purple-400 hover:text-purple-300">contentscale.site</a> • <a href="https://wa.me/31628073996" class="text-green-400 hover:text-green-300">WhatsApp</a></p>
+      <p>
+        <a href="https://contentscale.site" class="text-purple-400 hover:text-purple-300">contentscale.site</a> • 
+        <a href="https://wa.me/31628073996" class="text-green-400 hover:text-green-300">WhatsApp</a> •
+        <a href="/cdn-cgi/l/email-protection#b3daddd5dcf3d0dcddc7d6ddc7c0d0d2dfd69dc0dac7d6" class="text-blue-400 hover:text-blue-300">Email</a>
+      </p>
     </div>
   </div>
-  <script>
-    console.log('%c🏆 ContentScale Global Leaderboard','color:#f59e0b;font-size:16px;font-weight:bold');
-    const API_BASE='';let currentScanResult=null;let currentUrl='';let currentFilters={category:'all',country:'all',language:'all'};
+
+  <!-- EMAIL CAPTURE MODAL -->
+  <div id="emailModal" class="modal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeEmailModal()">×</button>
+      <div class="text-center mb-6">
+        <div class="text-6xl mb-3">📧</div>
+        <h3 class="text-2xl font-bold mb-2">Get 30 Bonus Scans!</h3>
+        <p class="text-gray-400">Enter your email to unlock 30 additional scans</p>
+      </div>
+      <div class="mb-6">
+        <input type="email" id="email-input" placeholder="your@email.com" class="w-full bg-gray-700 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg">
+      </div>
+      <button onclick="submitEmail()" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-6 py-4 rounded-lg font-bold text-lg transition mb-3">
+        🎁 Get 30 Bonus Scans
+      </button>
+      <button onclick="closeEmailModal()" class="w-full bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg font-bold transition">
+        Maybe Later
+      </button>
+      <p class="text-xs text-gray-500 mt-4 text-center">We respect your privacy. No spam, ever.</p>
+    </div>
+  </div>
+
+  <!-- DAILY LIMIT MODAL -->
+  <div id="dailyLimitModal" class="modal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeDailyLimitModal()">×</button>
+      <div class="text-center mb-6">
+        <div class="text-6xl mb-3">⏰</div>
+        <h3 class="text-2xl font-bold mb-2">Daily Limit Reached</h3>
+        <p class="text-gray-400">You've used all 3 free scans for today</p>
+      </div>
+      <div class="bg-blue-900 bg-opacity-30 border border-blue-700 rounded-lg p-6 mb-6">
+        <h4 class="font-bold text-lg mb-3">Want More Scans?</h4>
+        <ul class="space-y-2 text-sm text-gray-300 mb-4">
+          <li>✅ Come back tomorrow (3 more free scans)</li>
+          <li>✅ Upgrade to paid plan (30-500 scans/month)</li>
+          <li>✅ Get Lifetime Deal (from €49 one-time)</li>
+        </ul>
+      </div>
+      <button onclick="scrollToSection('pricing'); closeDailyLimitModal();" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-6 py-4 rounded-lg font-bold text-lg transition mb-3">
+        💰 View Pricing Plans
+      </button>
+      <button onclick="closeDailyLimitModal()" class="w-full bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg font-bold transition">
+        OK, I'll Come Back Tomorrow
+      </button>
+    </div>
+  </div>
+
+  <!-- RESULTS MODAL -->
+  <div id="resultsModal" class="modal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeResultsModal()">×</button>
+      <div class="text-center mb-6">
+        <div class="text-6xl mb-3" id="modal-emoji">🎯</div>
+        <div class="text-5xl font-bold mb-2" id="modal-score">--/100</div>
+        <div class="text-lg text-gray-400" id="modal-quality">Analyzing...</div>
+      </div>
+      <div class="mb-6">
+        <h3 class="font-bold text-lg mb-3">Breakdown:</h3>
+        <div class="space-y-2">
+          <div class="flex justify-between"><span>GRAAF Framework:</span><span class="font-bold" id="modal-graaf">-/50</span></div>
+          <div class="flex justify-between"><span>CRAFT Methodology:</span><span class="font-bold" id="modal-craft">-/30</span></div>
+          <div class="flex justify-between"><span>Technical SEO:</span><span class="font-bold" id="modal-technical">-/20</span></div>
+        </div>
+      </div>
+      <div id="leaderboard-prompt" class="mb-4">
+        <div class="bg-purple-900 bg-opacity-30 border border-purple-700 rounded-lg p-4 mb-4">
+          <h3 class="font-bold text-purple-400 mb-2">🏆 Claim Your Spot!</h3>
+          <p class="text-sm text-gray-300 mb-3">Add your site to the public leaderboard?</p>
+          <input type="text" id="company-name" placeholder="Company/Site Name (optional)" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500">
+          <select id="category-select" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500">
+            <option value="">Auto-detect category</option>
+            <option value="agency">🎯 SEO Agency</option>
+            <option value="saas">💻 SaaS</option>
+            <option value="blog">📝 Blog</option>
+            <option value="ecommerce">🛒 E-commerce</option>
+            <option value="other">📌 Other</option>
+          </select>
+          <div class="flex gap-2">
+            <button onclick="submitToLeaderboard()" class="flex-1 bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-bold transition">Yes, Add Me!</button>
+            <button onclick="skipLeaderboard()" class="flex-1 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg font-bold transition">No Thanks</button>
+          </div>
+        </div>
+      </div>
+      <div id="leaderboard-result" class="hidden text-center mb-4">
+        <div class="bg-green-900 bg-opacity-30 border border-green-700 rounded-lg p-4">
+          <div class="text-green-400 font-bold text-2xl mb-2" id="rank-display">🎉 Added to Leaderboard!</div>
+          <p class="text-sm text-gray-400">Refreshing to show your position...</p>
+        </div>
+      </div>
+      <button onclick="getPrompts()" class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-6 py-4 rounded-lg font-bold text-lg transition mb-4">
+        🎁 Get FREE AI Improvement Prompts
+      </button>
+      <button onclick="closeResultsModal()" class="w-full bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg font-bold transition">Close</button>
+    </div>
+  </div>
+
+  <!-- PROMPTS MODAL -->
+  <div id="promptsModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;overflow-y:auto;padding:20px">
+    <div style="background:linear-gradient(135deg,#1f2937 0%,#111827 100%);border-radius:20px;max-width:900px;margin:40px auto;padding:40px;position:relative;box-shadow:0 25px 50px rgba(0,0,0,0.8)">
+      <button onclick="closePromptsModal()" style="position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.1);border:none;color:white;font-size:32px;width:50px;height:50px;border-radius:50%;cursor:pointer;line-height:1" onmouseover="this.style.background='rgba(255,255,255,0.2)';this.style.transform='rotate(90deg)'" onmouseout="this.style.background='rgba(255,255,255,0.1)';this.style.transform='rotate(0deg)'">×</button>
+      <div style="text-align:center;margin-bottom:32px">
+        <div style="font-size:64px;margin-bottom:16px">🏆</div>
+        <h2 style="font-size:32px;font-weight:700;margin:0 0 12px 0;background:linear-gradient(to right,#fbbf24,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Your ELITE AI Content Prompts</h2>
+        <p style="color:#9ca3af;font-size:15px;margin:0 0 16px 0">Professional-grade prompts for 95-100/100 scores</p>
+        <div style="display:flex;align-items:center;justify-content:center;gap:20px;font-size:13px;font-weight:600">
+          <span style="color:#10b981">✅ Claude AI</span>
+          <span style="color:#3b82f6">✅ ChatGPT</span>
+          <span style="color:#a78bfa">✅ Perplexity</span>
+        </div>
+      </div>
+      <div style="background:rgba(59,130,246,0.1);border:2px solid #3b82f6;border-radius:12px;padding:24px;margin-bottom:28px">
+        <div style="display:flex;gap:16px">
+          <div style="font-size:32px;flex-shrink:0">💡</div>
+          <div style="flex:1">
+            <div style="font-weight:700;color:#60a5fa;margin-bottom:12px;font-size:16px">How to Use (5 Simple Steps):</div>
+            <ol id="usage-instructions" style="color:#d1d5db;font-size:14px;line-height:1.8;margin:0;padding-left:24px">
+              <li><strong>1.</strong> Click "📋 Copy ELITE Prompt" below</li>
+              <li><strong>2.</strong> Open Claude.ai, ChatGPT, or Perplexity</li>
+              <li><strong>3.</strong> Paste the entire prompt (Ctrl+V)</li>
+              <li><strong>4.</strong> AI generates complete 2500+ word article</li>
+              <li><strong>5.</strong> Copy result → Update your page → Rescan! 📈</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+      <div id="prompts-container" style="margin-bottom:28px">
+        <div style="text-align:center;padding:60px 20px">
+          <div style="font-size:56px;margin-bottom:16px">⏳</div>
+          <div style="color:#9ca3af;font-size:16px">Generating elite prompts...</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:20px">
+        <button onclick="exportPromptsToFile()" style="background:#374151;color:white;padding:14px 20px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:10px" onmouseover="this.style.background='#4b5563';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#374151';this.style.transform='translateY(0)'">
+          <span style="font-size:20px">📥</span><span>Export to File</span>
+        </button>
+        <button onclick="sharePromptsOnLinkedIn()" style="background:#2563eb;color:white;padding:14px 20px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:10px" onmouseover="this.style.background='#1d4ed8';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#2563eb';this.style.transform='translateY(0)'">
+          <span style="font-size:20px">🔗</span><span>Share on LinkedIn</span>
+        </button>
+        <button onclick="emailPrompts()" style="background:#7c3aed;color:white;padding:14px 20px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:10px" onmouseover="this.style.background='#6d28d9';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#7c3aed';this.style.transform='translateY(0)'">
+          <span style="font-size:20px">📧</span><span>Email to Me</span>
+        </button>
+      </div>
+      <button onclick="closePromptsModal()" style="width:100%;background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:white;padding:18px 32px;border-radius:12px;border:none;cursor:pointer;font-weight:700;font-size:17px;box-shadow:0 4px 12px rgba(16,185,129,0.3)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(16,185,129,0.5)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 12px rgba(16,185,129,0.3)'">
+        Got It! Let's Create Elite Content 🚀
+      </button>
+    </div>
+  </div>
+
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+    console.log('%c🏆 ContentScale - Updated with Scan Limits','color:#f59e0b;font-size:16px;font-weight:bold');
     
-    function filterCategory(cat){currentFilters.category=cat;updateFilterButtons('category',cat);loadLeaderboard()}
-    function filterCountry(country){currentFilters.country=country;updateFilterButtons('country',country);loadLeaderboard()}
-    function filterLanguage(lang){currentFilters.language=lang;updateFilterButtons('language',lang);loadLeaderboard()}
-    function updateFilterButtons(type,value){const buttons=document.querySelectorAll('.filter-btn');buttons.forEach(btn=>{const onClick=btn.getAttribute('onclick');if(onClick&&onClick.includes(`filter${type.charAt(0).toUpperCase()+type.slice(1)}`)){onClick.includes(`'${value}'`)?btn.classList.add('active'):btn.classList.remove('active')}});const filterDisplay=document.getElementById('filter-display');const currentFilterDiv=document.getElementById('current-filter');let filterText=[];if(currentFilters.category!=='all')filterText.push(currentFilters.category.toUpperCase());if(currentFilters.country!=='all')filterText.push(currentFilters.country);if(currentFilters.language!=='all')filterText.push(currentFilters.language.toUpperCase());if(filterText.length>0){filterDisplay.textContent=filterText.join(' • ');currentFilterDiv.classList.remove('hidden')}else{currentFilterDiv.classList.add('hidden')}}
+    const API_BASE = '';
+    let currentScanResult = null;
+    let currentUrl = '';
+    let currentFilters = { category: 'all', country: 'all', language: 'all' };
     
-    async function loadLeaderboard(){try{const params=new URLSearchParams({limit:100,category:currentFilters.category,country:currentFilters.country,language:currentFilters.language});const response=await fetch(`${API_BASE}/api/leaderboard?${params}`);const data=await response.json();if(!data.success)throw new Error(data.error||'Failed to load');displayLeaderboard(data.entries);try{const statsResponse=await fetch(`${API_BASE}/api/leaderboard/stats`);const statsData=await statsResponse.json();if(statsData&&statsData.success&&statsData.stats){document.getElementById('total-entries').textContent=statsData.stats.total_entries||0;document.getElementById('average-score').textContent=statsData.stats.average_score||'-';document.getElementById('highest-score').textContent=statsData.stats.highest_score||'-'}}catch(statsError){console.log('Stats not available')}}catch(error){console.error('Leaderboard error:',error);document.getElementById('leaderboard-container').innerHTML='<div class="text-center py-12"><div class="text-red-400 mb-2">Failed to load leaderboard</div><button onclick="loadLeaderboard()" class="text-purple-400 hover:text-purple-300 underline">Try again</button></div>'}}
+    // ==========================================
+    // SCAN LIMIT SYSTEM
+    // ==========================================
+    const STORAGE_KEYS = {
+      TOTAL_SCANS: 'cs_total_scans',
+      DAILY_SCANS: 'cs_daily_scans',
+      LAST_SCAN_DATE: 'cs_last_scan_date',
+      USER_EMAIL: 'cs_user_email',
+      BONUS_SCANS: 'cs_bonus_scans'
+    };
     
-    function displayLeaderboard(entries){
-      if(!entries||entries.length===0){
-        document.getElementById('leaderboard-container').innerHTML='<div class="text-center py-12"><div class="text-gray-400">No entries found. Try different filters or be the first to scan!</div></div>';
+    function getToday() {
+      return new Date().toISOString().split('T')[0];
+    }
+    
+    function getTotalScans() {
+      return parseInt(localStorage.getItem(STORAGE_KEYS.TOTAL_SCANS) || '0');
+    }
+    
+    function getDailyScans() {
+      const lastDate = localStorage.getItem(STORAGE_KEYS.LAST_SCAN_DATE);
+      const today = getToday();
+      
+      if (lastDate !== today) {
+        // New day - reset daily counter
+        localStorage.setItem(STORAGE_KEYS.DAILY_SCANS, '0');
+        localStorage.setItem(STORAGE_KEYS.LAST_SCAN_DATE, today);
+        return 0;
+      }
+      
+      return parseInt(localStorage.getItem(STORAGE_KEYS.DAILY_SCANS) || '0');
+    }
+    
+    function getUserEmail() {
+      return localStorage.getItem(STORAGE_KEYS.USER_EMAIL);
+    }
+    
+    function getBonusScans() {
+      return parseInt(localStorage.getItem(STORAGE_KEYS.BONUS_SCANS) || '0');
+    }
+    
+    function incrementScanCount() {
+      const total = getTotalScans() + 1;
+      const daily = getDailyScans() + 1;
+      
+      localStorage.setItem(STORAGE_KEYS.TOTAL_SCANS, total.toString());
+      localStorage.setItem(STORAGE_KEYS.DAILY_SCANS, daily.toString());
+      localStorage.setItem(STORAGE_KEYS.LAST_SCAN_DATE, getToday());
+      
+      // Decrement bonus scans if using them
+      if (total > 5 && getBonusScans() > 0) {
+        const bonus = getBonusScans() - 1;
+        localStorage.setItem(STORAGE_KEYS.BONUS_SCANS, bonus.toString());
+      }
+      
+      updateScanCounter();
+    }
+    
+    function updateScanCounter() {
+      const total = getTotalScans();
+      const daily = getDailyScans();
+      const email = getUserEmail();
+      const bonus = getBonusScans();
+      const counterText = document.getElementById('scans-used-text');
+      
+      if (total === 0) {
+        counterText.innerHTML = '🎁 First scan FREE - No email required!';
+      } else if (total >= 1 && total <= 4 && !email) {
+        counterText.innerHTML = `📊 Scans today: ${daily}/3 free • Email required for more scans`;
+      } else if (email && bonus > 0) {
+        counterText.innerHTML = `✅ Bonus scans: ${bonus}/30 remaining • Daily: ${daily}/3`;
+      } else if (email && bonus === 0 && total > 35) {
+        counterText.innerHTML = `⚠️ Bonus scans used up • Daily free: ${daily}/3 • <a href="#pricing" class="underline">Upgrade for more</a>`;
+      } else {
+        counterText.innerHTML = `📊 Daily scans: ${daily}/3 free • <a href="#pricing" class="underline">Need more? View pricing</a>`;
+      }
+    }
+    
+    function checkScanLimit() {
+      const total = getTotalScans();
+      const daily = getDailyScans();
+      const email = getUserEmail();
+      const bonus = getBonusScans();
+      
+      // Check daily limit (3 per day)
+      if (daily >= 3) {
+        showDailyLimitModal();
+        return false;
+      }
+      
+      // Scan 1: Free, no email
+      if (total === 0) {
+        return true;
+      }
+      
+      // Scans 2-5: Email required
+      if (total >= 1 && total <= 4 && !email) {
+        showEmailModal();
+        return false;
+      }
+      
+      // Scan 6+: Check if has bonus scans
+      if (total >= 5 && !email) {
+        showEmailModal();
+        return false;
+      }
+      
+      // Has email but no bonus scans and used all daily
+      if (total >= 5 && email && bonus === 0 && daily >= 3) {
+        showDailyLimitModal();
+        return false;
+      }
+      
+      return true;
+    }
+    
+    // ==========================================
+    // EMAIL MODAL
+    // ==========================================
+    function showEmailModal() {
+      document.getElementById('emailModal').classList.add('active');
+    }
+    
+    function closeEmailModal() {
+      document.getElementById('emailModal').classList.remove('active');
+    }
+    
+    async function submitEmail() {
+      const email = document.getElementById('email-input').value.trim();
+      
+      if (!email || !email.includes('@')) {
+        alert('Please enter a valid email address');
         return;
       }
-      let html='';
-      entries.forEach(entry=>{
-        const scoreClass=getScoreClass(entry.score);
-        const rankClass=entry.rank<=3?`rank-${entry.rank}`:'';
-        const categoryClass=`category-${entry.category||'other'}`;
+      
+      // Save email
+      localStorage.setItem(STORAGE_KEYS.USER_EMAIL, email);
+      
+      // Grant 30 bonus scans
+      localStorage.setItem(STORAGE_KEYS.BONUS_SCANS, '30');
+      
+      // Close modal
+      closeEmailModal();
+      
+      // Update counter
+      updateScanCounter();
+      
+      // Show success
+      alert('✅ Email saved! You now have 30 bonus scans!');
+      
+      // Perform the scan that was pending
+      performScanNow();
+    }
+    
+    // ==========================================
+    // DAILY LIMIT MODAL
+    // ==========================================
+    function showDailyLimitModal() {
+      document.getElementById('dailyLimitModal').classList.add('active');
+    }
+    
+    function closeDailyLimitModal() {
+      document.getElementById('dailyLimitModal').classList.remove('active');
+    }
+    
+    // ==========================================
+    // NAVIGATION
+    // ==========================================
+    function scrollToSection(sectionId) {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
         
-        // ✅ HIGHLIGHT: Highlight newly added entry
+        // Update active nav link
+        document.querySelectorAll('.nav-link').forEach(link => {
+          link.classList.remove('active');
+          if (link.getAttribute('onclick')?.includes(sectionId)) {
+            link.classList.add('active');
+          }
+        });
+      }
+    }
+    
+    // ==========================================
+    // FILTERS
+    // ==========================================
+    function filterCategory(cat) {
+      currentFilters.category = cat;
+      updateFilterButtons('category', cat);
+      loadLeaderboard();
+    }
+    
+    function filterCountry(country) {
+      currentFilters.country = country;
+      updateFilterButtons('country', country);
+      loadLeaderboard();
+    }
+    
+    function filterLanguage(lang) {
+      currentFilters.language = lang;
+      updateFilterButtons('language', lang);
+      loadLeaderboard();
+    }
+    
+    function updateFilterButtons(type, value) {
+      const buttons = document.querySelectorAll('.filter-btn');
+      buttons.forEach(btn => {
+        const onClick = btn.getAttribute('onclick');
+        if (onClick && onClick.includes(`filter${type.charAt(0).toUpperCase() + type.slice(1)}`)) {
+          onClick.includes(`'${value}'`) ? btn.classList.add('active') : btn.classList.remove('active');
+        }
+      });
+      
+      const filterDisplay = document.getElementById('filter-display');
+      const currentFilterDiv = document.getElementById('current-filter');
+      let filterText = [];
+      
+      if (currentFilters.category !== 'all') filterText.push(currentFilters.category.toUpperCase());
+      if (currentFilters.country !== 'all') filterText.push(currentFilters.country);
+      if (currentFilters.language !== 'all') filterText.push(currentFilters.language.toUpperCase());
+      
+      if (filterText.length > 0) {
+        filterDisplay.textContent = filterText.join(' • ');
+        currentFilterDiv.classList.remove('hidden');
+      } else {
+        currentFilterDiv.classList.add('hidden');
+      }
+    }
+    
+    // ==========================================
+    // LEADERBOARD
+    // ==========================================
+    async function loadLeaderboard() {
+      try {
+        const params = new URLSearchParams({
+          limit: 100,
+          category: currentFilters.category,
+          country: currentFilters.country,
+          language: currentFilters.language
+        });
+        
+        const response = await fetch(`${API_BASE}/api/leaderboard?${params}`);
+        const data = await response.json();
+        
+        if (!data.success) throw new Error(data.error || 'Failed to load');
+        
+        displayLeaderboard(data.entries);
+        
+        try {
+          const statsResponse = await fetch(`${API_BASE}/api/leaderboard/stats`);
+          const statsData = await statsResponse.json();
+          
+          if (statsData && statsData.success && statsData.stats) {
+            document.getElementById('total-entries').textContent = statsData.stats.total_entries || 0;
+            document.getElementById('average-score').textContent = statsData.stats.average_score || '-';
+            document.getElementById('highest-score').textContent = statsData.stats.highest_score || '-';
+          }
+        } catch (statsError) {
+          console.log('Stats not available');
+        }
+      } catch (error) {
+        console.error('Leaderboard error:', error);
+        document.getElementById('leaderboard-container').innerHTML = 
+          '<div class="text-center py-12"><div class="text-red-400 mb-2">Failed to load leaderboard</div><button onclick="loadLeaderboard()" class="text-purple-400 hover:text-purple-300 underline">Try again</button></div>';
+      }
+    }
+    
+    function displayLeaderboard(entries) {
+      if (!entries || entries.length === 0) {
+        document.getElementById('leaderboard-container').innerHTML = 
+          '<div class="text-center py-12"><div class="text-gray-400">No entries found. Try different filters or be the first to scan!</div></div>';
+        return;
+      }
+      
+      let html = '';
+      entries.forEach(entry => {
+        const scoreClass = getScoreClass(entry.score);
+        const rankClass = entry.rank <= 3 ? `rank-${entry.rank}` : '';
+        const categoryClass = `category-${entry.category || 'other'}`;
         const isNewEntry = currentUrl && entry.url === currentUrl;
         const highlightClass = isNewEntry ? 'ring-2 ring-green-500 ring-opacity-50' : '';
         
-        html+=`<div class="leaderboard-row ${rankClass} ${highlightClass}"><div class="flex items-center justify-between mb-2"><div class="flex items-center gap-4 flex-1"><div class="rank-badge ${entry.rank>3?'default':''}">${entry.rank}</div><div class="flex-1"><div class="font-bold text-white text-lg">${entry.company_name||'Unknown'}</div><div class="text-sm text-gray-400">${truncateUrl(entry.url)}</div>${entry.category?`<span class="category-badge ${categoryClass}">${entry.category}</span>`:''}</div></div><div class="text-right"><div class="score-display ${scoreClass}">${entry.score}</div><div class="text-xs text-gray-400">/100</div></div></div><div class="flex justify-end"><button onclick="getPromptsForUrl('${entry.url}',${entry.score},${JSON.stringify(entry).replace(/'/g,"\\'")})" class="prompt-btn">🎁 Get FREE Prompts</button></div></div>`;
+        html += `
+          <div class="leaderboard-row ${rankClass} ${highlightClass}">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-4 flex-1">
+                <div class="rank-badge ${entry.rank > 3 ? 'default' : ''}">${entry.rank}</div>
+                <div class="flex-1">
+                  <div class="font-bold text-white text-lg">${entry.company_name || 'Unknown'}</div>
+                  <div class="text-sm text-gray-400">${truncateUrl(entry.url)}</div>
+                  ${entry.category ? `<span class="category-badge ${categoryClass}">${entry.category}</span>` : ''}
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="score-display ${scoreClass}">${entry.score}</div>
+                <div class="text-xs text-gray-400">/100</div>
+              </div>
+            </div>
+            <div class="flex justify-end">
+              <button onclick="getPromptsForUrl('${entry.url}',${entry.score},${JSON.stringify(entry).replace(/'/g, "\\'")})" class="prompt-btn">
+                🎁 Get FREE Prompts
+              </button>
+            </div>
+          </div>
+        `;
       });
-      document.getElementById('leaderboard-container').innerHTML=html;
       
-      // ✅ SCROLL: Scroll to newly added entry
-      if(currentUrl){
-        setTimeout(()=>{
+      document.getElementById('leaderboard-container').innerHTML = html;
+      
+      if (currentUrl) {
+        setTimeout(() => {
           const newEntry = document.querySelector('.leaderboard-row.ring-green-500');
-          if(newEntry){
-            newEntry.scrollIntoView({behavior: 'smooth', block: 'center'});
+          if (newEntry) {
+            newEntry.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
         }, 500);
       }
     }
     
-    function getScoreClass(score){if(score>=90)return'score-excellent';if(score>=80)return'score-very-good';if(score>=70)return'score-good';if(score>=60)return'score-fair';return'score-poor'}
-    function truncateUrl(url){try{const urlObj=new URL(url);return urlObj.hostname.replace('www.','')}catch{return url.substring(0,50)+'...'}}
-    function refreshLeaderboard(){document.getElementById('leaderboard-container').innerHTML='<div class="text-center py-12"><div class="text-5xl mb-4">🔄</div><div class="text-gray-400">Refreshing...</div></div>';loadLeaderboard()}
+    function getScoreClass(score) {
+      if (score >= 90) return 'score-excellent';
+      if (score >= 80) return 'score-very-good';
+      if (score >= 70) return 'score-good';
+      if (score >= 60) return 'score-fair';
+      return 'score-poor';
+    }
     
-    // ✅ UPDATED performScan WITH LOADING ANIMATION
+    function truncateUrl(url) {
+      try {
+        const urlObj = new URL(url);
+        return urlObj.hostname.replace('www.', '');
+      } catch {
+        return url.substring(0, 50) + '...';
+      }
+    }
+    
+    function refreshLeaderboard() {
+      document.getElementById('leaderboard-container').innerHTML = 
+        '<div class="text-center py-12"><div class="text-5xl mb-4">🔄</div><div class="text-gray-400">Refreshing...</div></div>';
+      loadLeaderboard();
+    }
+    
+    // ==========================================
+    // SCAN
+    // ==========================================
     async function performScan() {
+      // Check scan limit first
+      if (!checkScanLimit()) {
+        return;
+      }
+      
+      performScanNow();
+    }
+    
+    async function performScanNow() {
       const url = document.getElementById('scanInput').value.trim();
       
       if (!url) {
@@ -295,14 +868,12 @@
       
       if (!url.startsWith('http')) {
         document.getElementById('scanInput').value = 'https://' + url;
-        return performScan();
+        return performScanNow();
       }
       
       currentUrl = url;
       const btn = document.getElementById('scanButton');
       btn.disabled = true;
-      
-      // Stage 1: Fetching
       btn.innerHTML = '<span class="scan-spinner"></span>Fetching page<span class="scan-stage">●○○</span>';
       
       try {
@@ -312,7 +883,6 @@
           body: JSON.stringify({ url })
         });
         
-        // Stage 2: Analyzing
         btn.innerHTML = '<span class="scan-spinner"></span>Analyzing content<span class="scan-stage">●●○</span>';
         
         const data = await response.json();
@@ -321,13 +891,15 @@
           throw new Error(data.error || 'Scan failed');
         }
         
-        // Stage 3: Calculating
         btn.innerHTML = '<span class="scan-spinner"></span>Calculating score<span class="scan-stage">●●●</span>';
         
-        // Small delay for better UX
         await new Promise(resolve => setTimeout(resolve, 500));
         
         currentScanResult = data;
+        
+        // Increment scan count
+        incrementScanCount();
+        
         showResults(data);
         
       } catch (error) {
@@ -340,81 +912,278 @@
       }
     }
     
-    function showResults(data){document.getElementById('modal-score').textContent=data.score+'/100';document.getElementById('modal-quality').textContent=getQualityText(data.score);document.getElementById('modal-emoji').textContent=getQualityEmoji(data.score);document.getElementById('modal-graaf').textContent=`${data.breakdown.graaf.total}/50`;document.getElementById('modal-craft').textContent=`${data.breakdown.craft.total}/30`;document.getElementById('modal-technical').textContent=`${data.breakdown.technical.total}/20`;document.getElementById('leaderboard-prompt').classList.remove('hidden');document.getElementById('leaderboard-result').classList.add('hidden');document.getElementById('resultsModal').classList.add('active')}
+    function showResults(data) {
+      document.getElementById('modal-score').textContent = data.score + '/100';
+      document.getElementById('modal-quality').textContent = getQualityText(data.score);
+      document.getElementById('modal-emoji').textContent = getQualityEmoji(data.score);
+      document.getElementById('modal-graaf').textContent = `${data.breakdown.graaf.total}/50`;
+      document.getElementById('modal-craft').textContent = `${data.breakdown.craft.total}/30`;
+      document.getElementById('modal-technical').textContent = `${data.breakdown.technical.total}/20`;
+      document.getElementById('leaderboard-prompt').classList.remove('hidden');
+      document.getElementById('leaderboard-result').classList.add('hidden');
+      document.getElementById('resultsModal').classList.add('active');
+    }
     
-    function getQualityText(score){if(score>=90)return'Excellent! 🌟';if(score>=80)return'Very Good! 👍';if(score>=70)return'Good ✓';if(score>=60)return'Fair ⚠️';return'Needs Improvement ❌'}
-    function getQualityEmoji(score){if(score>=90)return'🌟';if(score>=80)return'👍';if(score>=70)return'✓';if(score>=60)return'⚠️';return'❌'}
+    function getQualityText(score) {
+      if (score >= 90) return 'Excellent! 🌟';
+      if (score >= 80) return 'Very Good! 👍';
+      if (score >= 70) return 'Good ✓';
+      if (score >= 60) return 'Fair ⚠️';
+      return 'Needs Improvement ❌';
+    }
     
-    async function submitToLeaderboard(){
-      const companyName=document.getElementById('company-name').value.trim();
-      const category=document.getElementById('category-select').value;
-      try{
-        const response=await fetch(`${API_BASE}/api/leaderboard/submit`,{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({
-            url:currentUrl,
-            score:currentScanResult.score,
-            quality:currentScanResult.quality,
-            graaf_score:currentScanResult.breakdown.graaf.total,
-            craft_score:currentScanResult.breakdown.craft.total,
-            technical_score:currentScanResult.breakdown.technical.total,
-            word_count:currentScanResult.wordCount,
-            company_name:companyName||null,
-            category:category||null,
-            country:null,
-            language:null
+    function getQualityEmoji(score) {
+      if (score >= 90) return '🌟';
+      if (score >= 80) return '👍';
+      if (score >= 70) return '✓';
+      if (score >= 60) return '⚠️';
+      return '❌';
+    }
+    
+    async function submitToLeaderboard() {
+      const companyName = document.getElementById('company-name').value.trim();
+      const category = document.getElementById('category-select').value;
+      
+      try {
+        const response = await fetch(`${API_BASE}/api/leaderboard/submit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: currentUrl,
+            score: currentScanResult.score,
+            quality: currentScanResult.quality,
+            graaf_score: currentScanResult.breakdown.graaf.total,
+            craft_score: currentScanResult.breakdown.craft.total,
+            technical_score: currentScanResult.breakdown.technical.total,
+            word_count: currentScanResult.wordCount,
+            company_name: companyName || null,
+            category: category || null,
+            country: null,
+            language: null
           })
         });
-        const data=await response.json();
-        if(data.success){
+        
+        const data = await response.json();
+        
+        if (data.success) {
           document.getElementById('leaderboard-prompt').classList.add('hidden');
-          
-          // ✅ FIXED: Show success message without claiming specific rank
-          // The actual rank will be visible after leaderboard refreshes
-          document.getElementById('rank-display').textContent='🎉 Added to Leaderboard!';
+          document.getElementById('rank-display').textContent = '🎉 Added to Leaderboard!';
           document.getElementById('leaderboard-result').classList.remove('hidden');
           
-          // ✅ FIXED: Refresh leaderboard to show actual rank
-          setTimeout(()=>{
+          setTimeout(() => {
             refreshLeaderboard();
-            // Scroll to top to see new entry
-            window.scrollTo({top: 0, behavior: 'smooth'});
-          },1500);
-        }else{
-          alert('Failed to add to leaderboard: '+(data.error||'Unknown error'));
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }, 1500);
+        } else {
+          alert('Failed to add to leaderboard: ' + (data.error || 'Unknown error'));
         }
-      }catch(error){
-        console.error('Submit error:',error);
-        alert('Failed to submit: '+error.message);
+      } catch (error) {
+        console.error('Submit error:', error);
+        alert('Failed to submit: ' + error.message);
       }
     }
     
-    function skipLeaderboard(){document.getElementById('leaderboard-prompt').classList.add('hidden')}
-    function closeResultsModal(){document.getElementById('resultsModal').classList.remove('active')}
+    function skipLeaderboard() {
+      document.getElementById('leaderboard-prompt').classList.add('hidden');
+    }
     
-    async function getPrompts(){if(!currentScanResult)return;document.getElementById('promptsModal').classList.add('active');document.getElementById('promptsModal').style.display='block';try{const response=await fetch(`${API_BASE}/api/generate-content-prompt`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:currentUrl,score:currentScanResult.score,breakdown:currentScanResult.breakdown,wordCount:currentScanResult.wordCount})});const data=await response.json();if(data.success&&data.prompts){displayPrompts(data)}else{throw new Error('Failed to generate prompts')}}catch(error){console.error('Prompts error:',error);document.getElementById('prompts-container').innerHTML='<div class="text-center py-8"><div class="text-red-400">Failed to generate prompts</div></div>'}}
+    function closeResultsModal() {
+      document.getElementById('resultsModal').classList.remove('active');
+    }
     
-    async function getPromptsForUrl(url,score,entry){currentUrl=url;currentScanResult={score:score,breakdown:{graaf:{total:entry.graaf_score||0},craft:{total:entry.craft_score||0},technical:{total:entry.technical_score||0}},wordCount:entry.word_count||0};getPrompts()}
+    // ==========================================
+    // PROMPTS
+    // ==========================================
+    async function getPrompts() {
+      if (!currentScanResult) return;
+      
+      document.getElementById('promptsModal').style.display = 'block';
+      
+      try {
+        const response = await fetch(`${API_BASE}/api/generate-content-prompt`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: currentUrl,
+            score: currentScanResult.score,
+            breakdown: currentScanResult.breakdown,
+            wordCount: currentScanResult.wordCount
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.prompts) {
+          displayPrompts(data);
+        } else {
+          throw new Error('Failed to generate prompts');
+        }
+      } catch (error) {
+        console.error('Prompts error:', error);
+        document.getElementById('prompts-container').innerHTML = 
+          '<div class="text-center py-8"><div class="text-red-400">Failed to generate prompts</div></div>';
+      }
+    }
     
-    function displayPrompts(promptData){const prompts=promptData.prompts||[];const usageInstructions=promptData.usage_instructions||[];if(prompts.length===0){document.getElementById('prompts-container').innerHTML='<div style="text-align:center;padding:40px 20px"><div style="color:#ef4444;font-size:16px;margin-bottom:12px">Failed to generate prompts</div><button onclick="getPrompts()" style="color:#a78bfa;text-decoration:underline;background:none;border:none;cursor:pointer;font-size:14px">Try again</button></div>';return}if(usageInstructions.length>0){const list=document.getElementById('usage-instructions');if(list){list.innerHTML=usageInstructions.map(instr=>`<li>${instr}</li>`).join('')}}let html='';prompts.forEach((prompt,index)=>{const isElite=prompt.type==='elite';const promptId=`prompt-full-${index}`;const previewId=`prompt-preview-${index}`;const preview=prompt.prompt.substring(0,500)+'...';html+=`<div style="background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);border:3px solid ${isElite?'#8b5cf6':'#4b5563'};border-radius:16px;padding:28px;margin-bottom:24px;position:relative">${isElite?'<div style="position:absolute;top:-14px;right:24px;background:linear-gradient(135deg,#fbbf24 0%,#f59e0b 100%);color:#1e293b;padding:8px 20px;border-radius:24px;font-size:11px;font-weight:800;text-transform:uppercase;box-shadow:0 6px 16px rgba(251,191,36,0.6)">🏆 RECOMMENDED</div>':''}<div style="margin-bottom:20px"><h3 style="font-size:20px;font-weight:700;color:#a78bfa;margin:0 0 8px 0">${prompt.title}</h3><p style="font-size:13px;color:#9ca3af;margin:0 0 12px 0">${prompt.description||''}</p>${prompt.estimated_score?`<div style="display:inline-flex;align-items:center;gap:8px;background:rgba(5,150,105,0.2);border:1px solid #10b981;color:#d1fae5;padding:6px 16px;border-radius:24px;font-size:12px;font-weight:700"><span style="display:inline-block;width:8px;height:8px;background:#10b981;border-radius:50%"></span>Target: ${prompt.estimated_score}</div>`:''}</div><div id="${previewId}" style="background:#0f172a;padding:20px;border-radius:12px;font-family:'Courier New',monospace;font-size:12px;line-height:1.7;color:#cbd5e1;max-height:250px;overflow-y:auto;border:1px solid #334155;margin-bottom:16px;white-space:pre-wrap">${preview}</div><div id="${promptId}" style="display:none;background:#0f172a;padding:24px;border-radius:12px;font-family:'Courier New',monospace;font-size:13px;line-height:1.8;color:#e2e8f0;max-height:600px;overflow-y:auto;border:2px solid #334155;margin-bottom:16px;white-space:pre-wrap">${prompt.prompt}</div><div style="display:flex;gap:12px;flex-wrap:wrap"><button id="copy-btn-${index}" onclick="copyPromptInline('${promptId}',${index})" style="flex:1;min-width:200px;background:linear-gradient(135deg,#8b5cf6 0%,#7c3aed 100%);color:white;border:none;padding:14px 24px;border-radius:10px;cursor:pointer;font-weight:700;font-size:14px">📋 Copy ${isElite?'ELITE':''} Prompt</button><button id="expand-btn-${index}" onclick="toggleExpandInline('${promptId}','${previewId}',${index})" style="background:#374151;color:#9ca3af;border:none;padding:12px 24px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600">👁️ View Full</button></div>${isElite?`<div style="font-size:11px;color:#6b7280;margin-top:12px">💡 ${(prompt.prompt.length/1000).toFixed(1)}K characters - Complete framework</div>`:''}</div>`});document.getElementById('prompts-container').innerHTML=html;window.currentPrompts=prompts;window.currentPromptData=promptData}
+    async function getPromptsForUrl(url, score, entry) {
+      currentUrl = url;
+      currentScanResult = {
+        score: score,
+        breakdown: {
+          graaf: { total: entry.graaf_score || 0 },
+          craft: { total: entry.craft_score || 0 },
+          technical: { total: entry.technical_score || 0 }
+        },
+        wordCount: entry.word_count || 0
+      };
+      getPrompts();
+    }
     
-    function toggleExpandInline(promptId,previewId,index){const full=document.getElementById(promptId);const preview=document.getElementById(previewId);const btn=document.getElementById('expand-btn-'+index);if(full.style.display==='none'){full.style.display='block';preview.style.display='none';btn.textContent='👁️ Hide Full'}else{full.style.display='none';preview.style.display='block';btn.textContent='👁️ View Full'}}
+    function displayPrompts(promptData) {
+      const prompts = promptData.prompts || [];
+      const usageInstructions = promptData.usage_instructions || [];
+      
+      if (prompts.length === 0) {
+        document.getElementById('prompts-container').innerHTML = 
+          '<div style="text-align:center;padding:40px 20px"><div style="color:#ef4444;font-size:16px;margin-bottom:12px">Failed to generate prompts</div><button onclick="getPrompts()" style="color:#a78bfa;text-decoration:underline;background:none;border:none;cursor:pointer;font-size:14px">Try again</button></div>';
+        return;
+      }
+      
+      if (usageInstructions.length > 0) {
+        const list = document.getElementById('usage-instructions');
+        if (list) {
+          list.innerHTML = usageInstructions.map(instr => `<li>${instr}</li>`).join('');
+        }
+      }
+      
+      let html = '';
+      prompts.forEach((prompt, index) => {
+        const isElite = prompt.type === 'elite';
+        const promptId = `prompt-full-${index}`;
+        const previewId = `prompt-preview-${index}`;
+        const preview = prompt.prompt.substring(0, 500) + '...';
+        
+        html += `
+          <div style="background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);border:3px solid ${isElite ? '#8b5cf6' : '#4b5563'};border-radius:16px;padding:28px;margin-bottom:24px;position:relative">
+            ${isElite ? '<div style="position:absolute;top:-14px;right:24px;background:linear-gradient(135deg,#fbbf24 0%,#f59e0b 100%);color:#1e293b;padding:8px 20px;border-radius:24px;font-size:11px;font-weight:800;text-transform:uppercase;box-shadow:0 6px 16px rgba(251,191,36,0.6)">🏆 RECOMMENDED</div>' : ''}
+            <div style="margin-bottom:20px">
+              <h3 style="font-size:20px;font-weight:700;color:#a78bfa;margin:0 0 8px 0">${prompt.title}</h3>
+              <p style="font-size:13px;color:#9ca3af;margin:0 0 12px 0">${prompt.description || ''}</p>
+              ${prompt.estimated_score ? `<div style="display:inline-flex;align-items:center;gap:8px;background:rgba(5,150,105,0.2);border:1px solid #10b981;color:#d1fae5;padding:6px 16px;border-radius:24px;font-size:12px;font-weight:700"><span style="display:inline-block;width:8px;height:8px;background:#10b981;border-radius:50%"></span>Target: ${prompt.estimated_score}</div>` : ''}
+            </div>
+            <div id="${previewId}" style="background:#0f172a;padding:20px;border-radius:12px;font-family:'Courier New',monospace;font-size:12px;line-height:1.7;color:#cbd5e1;max-height:250px;overflow-y:auto;border:1px solid #334155;margin-bottom:16px;white-space:pre-wrap">${preview}</div>
+            <div id="${promptId}" style="display:none;background:#0f172a;padding:24px;border-radius:12px;font-family:'Courier New',monospace;font-size:13px;line-height:1.8;color:#e2e8f0;max-height:600px;overflow-y:auto;border:2px solid #334155;margin-bottom:16px;white-space:pre-wrap">${prompt.prompt}</div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+              <button id="copy-btn-${index}" onclick="copyPromptInline('${promptId}',${index})" style="flex:1;min-width:200px;background:linear-gradient(135deg,#8b5cf6 0%,#7c3aed 100%);color:white;border:none;padding:14px 24px;border-radius:10px;cursor:pointer;font-weight:700;font-size:14px">
+                📋 Copy ${isElite ? 'ELITE' : ''} Prompt
+              </button>
+              <button id="expand-btn-${index}" onclick="toggleExpandInline('${promptId}','${previewId}',${index})" style="background:#374151;color:#9ca3af;border:none;padding:12px 24px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600">
+                👁️ View Full
+              </button>
+            </div>
+            ${isElite ? `<div style="font-size:11px;color:#6b7280;margin-top:12px">💡 ${(prompt.prompt.length / 1000).toFixed(1)}K characters - Complete framework</div>` : ''}
+          </div>
+        `;
+      });
+      
+      document.getElementById('prompts-container').innerHTML = html;
+      window.currentPrompts = prompts;
+      window.currentPromptData = promptData;
+    }
     
-    function copyPromptInline(promptId,index){const elem=document.getElementById(promptId);const btn=document.getElementById('copy-btn-'+index);const text=elem.textContent;navigator.clipboard.writeText(text).then(()=>{btn.innerHTML='✅ Copied!';btn.style.background='linear-gradient(135deg,#10b981 0%,#059669 100%)';setTimeout(()=>{btn.innerHTML='📋 Copy Prompt';btn.style.background='linear-gradient(135deg,#8b5cf6 0%,#7c3aed 100%)'},3000);showToastInline('✅ Prompt copied! Paste in Claude AI')}).catch(err=>{alert('Copy failed')})}
+    function toggleExpandInline(promptId, previewId, index) {
+      const full = document.getElementById(promptId);
+      const preview = document.getElementById(previewId);
+      const btn = document.getElementById('expand-btn-' + index);
+      
+      if (full.style.display === 'none') {
+        full.style.display = 'block';
+        preview.style.display = 'none';
+        btn.textContent = '👁️ Hide Full';
+      } else {
+        full.style.display = 'none';
+        preview.style.display = 'block';
+        btn.textContent = '👁️ View Full';
+      }
+    }
     
-    function showToastInline(message){const toast=document.createElement('div');toast.style.cssText='position:fixed;top:20px;right:20px;background:#10b981;color:white;padding:16px 24px;border-radius:12px;font-weight:600;z-index:99999;box-shadow:0 8px 24px rgba(0,0,0,0.4)';toast.textContent=message;document.body.appendChild(toast);setTimeout(()=>toast.remove(),3000)}
+    function copyPromptInline(promptId, index) {
+      const elem = document.getElementById(promptId);
+      const btn = document.getElementById('copy-btn-' + index);
+      const text = elem.textContent;
+      
+      navigator.clipboard.writeText(text).then(() => {
+        btn.innerHTML = '✅ Copied!';
+        btn.style.background = 'linear-gradient(135deg,#10b981 0%,#059669 100%)';
+        setTimeout(() => {
+          btn.innerHTML = '📋 Copy Prompt';
+          btn.style.background = 'linear-gradient(135deg,#8b5cf6 0%,#7c3aed 100%)';
+        }, 3000);
+        showToastInline('✅ Prompt copied! Paste in Claude AI');
+      }).catch(err => {
+        alert('Copy failed');
+      });
+    }
     
-    function exportPromptsToFile(){if(!window.currentPrompts){alert('No prompts to export');return}const{topic,keyword,score}=window.currentPromptData||{};let content=`ELITE AI CONTENT PROMPTS - ContentScale\nURL: ${currentUrl}\nScore: ${score}/100\nGenerated: ${new Date().toLocaleString()}\n\nHOW TO USE:\n1. Copy the ELITE prompt below\n2. Paste into Claude.ai, ChatGPT, or Perplexity\n3. AI generates complete article\n4. Update your page\n5. Rescan!\n\n${'='.repeat(60)}\n\n`;window.currentPrompts.forEach((prompt,i)=>{content+=`PROMPT ${i+1}: ${prompt.title}\n`;content+=`${'='.repeat(60)}\n${prompt.prompt}\n\n${'='.repeat(60)}\n\n`});const blob=new Blob([content],{type:'text/plain'});const downloadUrl=URL.createObjectURL(blob);const a=document.createElement('a');a.href=downloadUrl;a.download=`contentscale-prompts-${Date.now()}.txt`;a.click();URL.revokeObjectURL(downloadUrl);showToastInline('✅ Prompts exported!')}
+    function showToastInline(message) {
+      const toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;top:20px;right:20px;background:#10b981;color:white;padding:16px 24px;border-radius:12px;font-weight:600;z-index:99999;box-shadow:0 8px 24px rgba(0,0,0,0.4)';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
     
-    function sharePromptsOnLinkedIn(){const score=currentScanResult?.score||'XX';const text=`🚀 Got ELITE AI Prompts from ContentScale! Score: ${score}/100. Try it: contentscale.site/leaderboard`;navigator.clipboard.writeText(text);window.open('https://www.linkedin.com/sharing/share-offsite/?url='+encodeURIComponent('https://contentscale.site/leaderboard'),'_blank');showToastInline('✅ Post text copied!')}
+    function exportPromptsToFile() {
+      if (!window.currentPrompts) {
+        alert('No prompts to export');
+        return;
+      }
+      
+      const { score } = window.currentPromptData || {};
+      let content = `ELITE AI CONTENT PROMPTS - ContentScale\nURL: ${currentUrl}\nScore: ${score}/100\nGenerated: ${new Date().toLocaleString()}\n\nHOW TO USE:\n1. Copy the ELITE prompt below\n2. Paste into Claude.ai, ChatGPT, or Perplexity\n3. AI generates complete article\n4. Update your page\n5. Rescan!\n\n${'='.repeat(60)}\n\n`;
+      
+      window.currentPrompts.forEach((prompt, i) => {
+        content += `PROMPT ${i + 1}: ${prompt.title}\n`;
+        content += `${'='.repeat(60)}\n${prompt.prompt}\n\n${'='.repeat(60)}\n\n`;
+      });
+      
+      const blob = new Blob([content], { type: 'text/plain' });
+      const downloadUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `contentscale-prompts-${Date.now()}.txt`;
+      a.click();
+      URL.revokeObjectURL(downloadUrl);
+      showToastInline('✅ Prompts exported!');
+    }
     
-    function emailPrompts(){alert('📧 Email feature coming soon! Use Export button for now.')}
+    function sharePromptsOnLinkedIn() {
+      const score = currentScanResult?.score || 'XX';
+      const text = `🚀 Got ELITE AI Prompts from ContentScale! Score: ${score}/100. Try it: contentscale.site`;
+      navigator.clipboard.writeText(text);
+      window.open('https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent('https://contentscale.site'), '_blank');
+      showToastInline('✅ Post text copied!');
+    }
     
-    document.getElementById('scanInput').addEventListener('keypress',(e)=>{if(e.key==='Enter')performScan()});
-    loadLeaderboard();
-    setInterval(loadLeaderboard,300000);
-    window.closePromptsModal=function(){const modal=document.getElementById('promptsModal');if(modal){modal.style.display='none';modal.classList.remove('active')}};
-  </script>
-</body>
-</html>
+    function emailPrompts() {
+      alert('📧 Email feature coming soon! Use Export button for now.');
+    }
+    
+    window.closePromptsModal = function() {
+      const modal = document.getElementById('promptsModal');
+      if (modal) {
+        modal.style.display = 'none';
+      }
+    };
+    
+    // ==========================================
+    // INITIALIZATION
+    // ==========================================
+    document.getElementById('scanInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') performScan();
+    });
+    
+    // Update scan counter on load
+    updateScanCounter();
+    
+    /
