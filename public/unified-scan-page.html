@@ -243,9 +243,9 @@
             <div class="price-period">Forever Free</div>
           </div>
           <ul class="feature-list">
-            <li><span class="feature-icon">✅</span> 3 scans/day with email</li>
+            <li><span class="feature-icon">✅</span> 3 scans/day (no email!)</li>
             <li><span class="feature-icon">✅</span> Basic score breakdown</li>
-            <li><span class="feature-icon">✅</span> Community support</li>
+            <li><span class="feature-icon">✅</span> AI improvement prompts</li>
             <li><span class="feature-icon">✅</span> Leaderboard access</li>
           </ul>
           <button onclick="scrollToSection('scanner')" class="cta-btn">Start Free</button>
@@ -265,7 +265,7 @@
             <li><span class="feature-icon">✅</span> Email support</li>
             <li><span class="feature-icon">✅</span> Leaderboard submission</li>
           </ul>
-          <button onclick="alert('Contact us: info@contentscale.site')" class="cta-btn">Get Started</button>
+          <button onclick="whatsappPlan('Starter', '€7/month')" class="cta-btn">Get Started</button>
         </div>
 
         <!-- PRO TIER (POPULAR) -->
@@ -282,7 +282,7 @@
             <li><span class="feature-icon">✅</span> WhatsApp access</li>
             <li><span class="feature-icon">✅</span> Advanced analytics</li>
           </ul>
-          <button onclick="alert('Contact us: info@contentscale.site')" class="cta-btn">Get Started</button>
+          <button onclick="whatsappPlan('Pro', '€27/month')" class="cta-btn">Get Started</button>
         </div>
 
         <!-- AGENCY TIER -->
@@ -300,7 +300,7 @@
             <li><span class="feature-icon">✅</span> API access</li>
             <li><span class="feature-icon">✅</span> Account manager</li>
           </ul>
-          <button onclick="alert('Contact us: info@contentscale.site')" class="cta-btn">Contact Sales</button>
+          <button onclick="whatsappPlan('Agency', '€97/month')" class="cta-btn">Contact Sales</button>
         </div>
       </div>
 
@@ -347,25 +347,40 @@
     </div>
   </div>
 
-  <!-- EMAIL CAPTURE MODAL -->
-  <div id="emailModal" class="modal">
+  <!-- WHATSAPP CTA MODAL -->
+  <div id="whatsappModal" class="modal">
     <div class="modal-content">
-      <button class="modal-close" onclick="closeEmailModal()">×</button>
+      <button class="modal-close" onclick="closeWhatsAppModal()">×</button>
       <div class="text-center mb-6">
-        <div class="text-6xl mb-3">📧</div>
-        <h3 class="text-2xl font-bold mb-2">Get 30 Bonus Scans!</h3>
-        <p class="text-gray-400">Enter your email to unlock 30 additional scans</p>
+        <div class="text-6xl mb-3">💬</div>
+        <h3 class="text-2xl font-bold mb-2">Want Unlimited Scans?</h3>
+        <p class="text-gray-400">WhatsApp Ot directly for instant access</p>
       </div>
-      <div class="mb-6">
-        <input type="email" id="email-input" placeholder="your@email.com" class="w-full bg-gray-700 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg">
+      
+      <div class="bg-green-900 bg-opacity-30 border border-green-700 rounded-lg p-6 mb-6">
+        <h4 class="font-bold text-lg mb-3 text-green-400">✅ What You Get:</h4>
+        <ul class="space-y-2 text-sm text-gray-300">
+          <li>🚀 Unlimited scans (no daily limit)</li>
+          <li>📊 Detailed analysis for each scan</li>
+          <li>💡 Personalized improvement tips</li>
+          <li>⚡ Direct support from Ot</li>
+          <li>🎯 Priority response (2-4 hours)</li>
+        </ul>
       </div>
-      <button onclick="submitEmail()" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-6 py-4 rounded-lg font-bold text-lg transition mb-3">
-        🎁 Get 30 Bonus Scans
+      
+      <button onclick="whatsappForUnlimited()" class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-6 py-4 rounded-lg font-bold text-lg transition mb-3 flex items-center justify-center gap-2">
+        <span class="text-2xl">💬</span>
+        <span>WhatsApp Ot Now</span>
       </button>
-      <button onclick="closeEmailModal()" class="w-full bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg font-bold transition">
-        Maybe Later
+      
+      <button onclick="closeWhatsAppModal()" class="w-full bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg font-bold transition">
+        Maybe Later (3 scans/day)
       </button>
-      <p class="text-xs text-gray-500 mt-4 text-center">We respect your privacy. No spam, ever.</p>
+      
+      <p class="text-xs text-gray-400 mt-4 text-center">
+        Average response time: 2-4 hours<br>
+        200+ successful recoveries • 78% reach 95+ score
+      </p>
     </div>
   </div>
 
@@ -375,20 +390,37 @@
       <button class="modal-close" onclick="closeDailyLimitModal()">×</button>
       <div class="text-center mb-6">
         <div class="text-6xl mb-3">⏰</div>
-        <h3 class="text-2xl font-bold mb-2">Daily Limit Reached</h3>
+        <h3 class="text-2xl font-bold mb-2">Daily Limit Reached (3/3)</h3>
         <p class="text-gray-400">You've used all 3 free scans for today</p>
       </div>
+      
       <div class="bg-blue-900 bg-opacity-30 border border-blue-700 rounded-lg p-6 mb-6">
-        <h4 class="font-bold text-lg mb-3">Want More Scans?</h4>
-        <ul class="space-y-2 text-sm text-gray-300 mb-4">
-          <li>✅ Come back tomorrow (3 more free scans)</li>
-          <li>✅ Upgrade to paid plan (30-500 scans/month)</li>
-          <li>✅ Get Lifetime Deal (from €49 one-time)</li>
+        <h4 class="font-bold text-lg mb-3">💡 Your Options:</h4>
+        <ul class="space-y-3 text-sm text-gray-300">
+          <li class="flex items-start gap-2">
+            <span class="text-green-400">✅</span>
+            <span>Come back tomorrow (3 more free scans)</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-green-400">✅</span>
+            <span>WhatsApp Ot for unlimited access (instant)</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-green-400">✅</span>
+            <span>Upgrade to paid plan (30-500 scans/month)</span>
+          </li>
         </ul>
       </div>
-      <button onclick="scrollToSection('pricing'); closeDailyLimitModal();" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-6 py-4 rounded-lg font-bold text-lg transition mb-3">
+      
+      <button onclick="whatsappForUnlimited()" class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-6 py-4 rounded-lg font-bold text-lg transition mb-3 flex items-center justify-center gap-2">
+        <span class="text-2xl">💬</span>
+        <span>WhatsApp for Unlimited Scans</span>
+      </button>
+      
+      <button onclick="scrollToSection('pricing'); closeDailyLimitModal();" class="w-full bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-bold transition mb-3">
         💰 View Pricing Plans
       </button>
+      
       <button onclick="closeDailyLimitModal()" class="w-full bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg font-bold transition">
         OK, I'll Come Back Tomorrow
       </button>
@@ -437,9 +469,15 @@
           <p class="text-sm text-gray-400">Refreshing to show your position...</p>
         </div>
       </div>
-      <button onclick="getPrompts()" class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-6 py-4 rounded-lg font-bold text-lg transition mb-4">
+      <button onclick="getPrompts()" class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-6 py-4 rounded-lg font-bold text-lg transition mb-3">
         🎁 Get FREE AI Improvement Prompts
       </button>
+      
+      <button onclick="whatsappForHelp()" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-6 py-4 rounded-lg font-bold text-lg transition mb-4 flex items-center justify-center gap-2">
+        <span class="text-2xl">💬</span>
+        <span>WhatsApp Ot - Get Expert Help</span>
+      </button>
+      
       <button onclick="closeResultsModal()" class="w-full bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg font-bold transition">Close</button>
     </div>
   </div>
@@ -505,14 +543,12 @@
     let currentFilters = { category: 'all', country: 'all', language: 'all' };
     
     // ==========================================
-    // SCAN LIMIT SYSTEM
+    // SCAN LIMIT SYSTEM (SIMPLIFIED)
     // ==========================================
     const STORAGE_KEYS = {
       TOTAL_SCANS: 'cs_total_scans',
       DAILY_SCANS: 'cs_daily_scans',
-      LAST_SCAN_DATE: 'cs_last_scan_date',
-      USER_EMAIL: 'cs_user_email',
-      BONUS_SCANS: 'cs_bonus_scans'
+      LAST_SCAN_DATE: 'cs_last_scan_date'
     };
     
     function getToday() {
@@ -565,54 +601,22 @@
     function updateScanCounter() {
       const total = getTotalScans();
       const daily = getDailyScans();
-      const email = getUserEmail();
-      const bonus = getBonusScans();
       const counterText = document.getElementById('scans-used-text');
       
       if (total === 0) {
-        counterText.innerHTML = '🎁 First scan FREE - No email required!';
-      } else if (total >= 1 && total <= 4 && !email) {
-        counterText.innerHTML = `📊 Scans today: ${daily}/3 free • Email required for more scans`;
-      } else if (email && bonus > 0) {
-        counterText.innerHTML = `✅ Bonus scans: ${bonus}/30 remaining • Daily: ${daily}/3`;
-      } else if (email && bonus === 0 && total > 35) {
-        counterText.innerHTML = `⚠️ Bonus scans used up • Daily free: ${daily}/3 • <a href="#pricing" class="underline">Upgrade for more</a>`;
+        counterText.innerHTML = '🎁 First 3 scans FREE today - No signup required!';
+      } else if (daily < 3) {
+        counterText.innerHTML = `📊 Scans today: ${daily}/3 free • <a href="#pricing" class="underline hover:text-blue-300">Need more? View plans</a>`;
       } else {
-        counterText.innerHTML = `📊 Daily scans: ${daily}/3 free • <a href="#pricing" class="underline">Need more? View pricing</a>`;
+        counterText.innerHTML = `⏰ Daily limit reached (3/3) • <a onclick="whatsappForUnlimited()" class="underline hover:text-green-300 cursor-pointer">WhatsApp for unlimited</a>`;
       }
     }
     
     function checkScanLimit() {
-      const total = getTotalScans();
       const daily = getDailyScans();
-      const email = getUserEmail();
-      const bonus = getBonusScans();
       
       // Check daily limit (3 per day)
       if (daily >= 3) {
-        showDailyLimitModal();
-        return false;
-      }
-      
-      // Scan 1: Free, no email
-      if (total === 0) {
-        return true;
-      }
-      
-      // Scans 2-5: Email required
-      if (total >= 1 && total <= 4 && !email) {
-        showEmailModal();
-        return false;
-      }
-      
-      // Scan 6+: Check if has bonus scans
-      if (total >= 5 && !email) {
-        showEmailModal();
-        return false;
-      }
-      
-      // Has email but no bonus scans and used all daily
-      if (total >= 5 && email && bonus === 0 && daily >= 3) {
         showDailyLimitModal();
         return false;
       }
@@ -621,41 +625,43 @@
     }
     
     // ==========================================
-    // EMAIL MODAL
+    // WHATSAPP FUNCTIONS
     // ==========================================
-    function showEmailModal() {
-      document.getElementById('emailModal').classList.add('active');
+    function whatsappForUnlimited() {
+      const msg = `Hi Ot! I've used my 3 free scans today and need more. Can you give me unlimited access?`;
+      window.open(`https://wa.me/31628073996?text=${encodeURIComponent(msg)}`, '_blank');
     }
     
-    function closeEmailModal() {
-      document.getElementById('emailModal').classList.remove('active');
-    }
-    
-    async function submitEmail() {
-      const email = document.getElementById('email-input').value.trim();
+    function whatsappForHelp() {
+      const score = currentScanResult?.score || 0;
+      const url = currentUrl || 'my website';
       
-      if (!email || !email.includes('@')) {
-        alert('Please enter a valid email address');
-        return;
+      let msg = '';
+      if (score < 70) {
+        msg = `Hi Ot! 🚨 I just scanned ${url} and got ${score}/100. This is concerning! Can you help me improve it quickly?`;
+      } else if (score < 85) {
+        msg = `Hi Ot! I scanned ${url} and got ${score}/100. It's decent but I want to reach 95+. What would it take?`;
+      } else {
+        msg = `Hi Ot! My site ${url} scored ${score}/100 - not bad! But I want to hit the top of the leaderboard. Can you help?`;
       }
       
-      // Save email
-      localStorage.setItem(STORAGE_KEYS.USER_EMAIL, email);
-      
-      // Grant 30 bonus scans
-      localStorage.setItem(STORAGE_KEYS.BONUS_SCANS, '30');
-      
-      // Close modal
-      closeEmailModal();
-      
-      // Update counter
-      updateScanCounter();
-      
-      // Show success
-      alert('✅ Email saved! You now have 30 bonus scans!');
-      
-      // Perform the scan that was pending
-      performScanNow();
+      window.open(`https://wa.me/31628073996?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+    
+    function whatsappPlan(plan, price) {
+      const msg = `Hi Ot! I'm interested in the ${plan} plan (${price}). Can you tell me more about what's included and how to get started?`;
+      window.open(`https://wa.me/31628073996?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+    
+    // ==========================================
+    // MODAL FUNCTIONS
+    // ==========================================
+    function showWhatsAppModal() {
+      document.getElementById('whatsappModal').classList.add('active');
+    }
+    
+    function closeWhatsAppModal() {
+      document.getElementById('whatsappModal').classList.remove('active');
     }
     
     // ==========================================
