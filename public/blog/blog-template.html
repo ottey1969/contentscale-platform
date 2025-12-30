@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- ============================================ -->
+  <!-- ✏️ EDIT THESE META TAGS FOR EACH BLOG POST -->
+  <!-- ============================================ -->
+  <title>[BLOG TITLE] - ContentScale Blog</title>
+  <meta name="description" content="[150-160 character description of your blog post]">
+  <meta name="keywords" content="[keyword1, keyword2, keyword3]">
+  <meta name="author" content="Ot van ContentScale">
+  <link rel="canonical" href="https://app.contentscale.site/blog/[your-blog-slug]">
+  
+  <!-- Open Graph (Social Media) -->
+  <meta property="og:title" content="[BLOG TITLE]">
+  <meta property="og:description" content="[Same as meta description]">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://app.contentscale.site/blog/[your-blog-slug]">
+  <meta property="og:image" content="https://app.contentscale.site/images/blog/[featured-image].jpg">
+  
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="[BLOG TITLE]">
+  <meta name="twitter:description" content="[Same as meta description]">
+  
+  <!-- Schema.org JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "[BLOG TITLE]",
+    "description": "[Meta description]",
+    "author": {
+      "@type": "Person",
+      "name": "Ot van ContentScale",
+      "url": "https://app.contentscale.site"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "ContentScale",
+      "url": "https://app.contentscale.site",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://app.contentscale.site/logo.png"
+      }
+    },
+    "datePublished": "[2025-01-02]",
+    "dateModified": "[2025-01-02]",
+    "image": "https://app.contentscale.site/images/blog/[featured-image].jpg",
+    "articleBody": "[First paragraph of article]",
+    "keywords": "[keyword1, keyword2, keyword3]"
+  }
+  </script>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .nav-bar { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-bottom: 2px solid #374151; position: sticky; top: 0; z-index: 1000; }
+    .nav-link { color: #9ca3af; padding: 12px 20px; font-weight: 600; transition: all 0.3s; border-bottom: 3px solid transparent; cursor: pointer; text-decoration: none; }
+    .nav-link:hover { color: white; border-bottom-color: #8b5cf6; }
+    .nav-link.active { color: white; border-bottom-color: #8b5cf6; }
+    
+    .blog-content { max-width: 800px; margin: 0 auto; }
+    .blog-content h2 { font-size: 2rem; font-weight: 700; margin-top: 3rem; margin-bottom: 1rem; color: #a78bfa; }
+    .blog-content h3 { font-size: 1.5rem; font-weight: 700; margin-top: 2rem; margin-bottom: 0.75rem; color: #c4b5fd; }
+    .blog-content p { font-size: 1.125rem; line-height: 1.8; margin-bottom: 1.5rem; color: #d1d5db; }
+    .blog-content ul, .blog-content ol { margin: 1.5rem 0; padding-left: 2rem; }
+    .blog-content li { margin-bottom: 0.75rem; line-height: 1.8; color: #d1d5db; }
+    .blog-content strong { color: #e5e7eb; font-weight: 700; }
+    .blog-content em { font-style: italic; color: #9ca3af; }
+    .blog-content code { background: #1f2937; padding: 2px 6px; border-radius: 4px; font-family: 'Courier New', monospace; color: #60a5fa; }
+    .blog-content pre { background: #1f2937; padding: 1.5rem; border-radius: 8px; overflow-x: auto; margin: 1.5rem 0; border: 1px solid #374151; }
+    .blog-content blockquote { border-left: 4px solid #8b5cf6; padding-left: 1.5rem; margin: 2rem 0; font-style: italic; color: #9ca3af; }
+    .blog-content a { color: #60a5fa; text-decoration: underline; }
+    .blog-content a:hover { color: #93c5fd; }
+    .blog-content img { max-width: 100%; height: auto; border-radius: 8px; margin: 2rem 0; }
+    
+    .highlight-box { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid #8b5cf6; border-radius: 12px; padding: 1.5rem; margin: 2rem 0; }
+    .success-metric { display: inline-flex; align-items: center; gap: 8px; background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #d1fae5; padding: 6px 16px; border-radius: 24px; font-size: 14px; font-weight: 700; margin: 4px; }
+    .warning-box { background: rgba(245, 158, 11, 0.1); border: 2px solid #f59e0b; border-radius: 12px; padding: 1.5rem; margin: 2rem 0; }
+    
+    .category-badge { display: inline-block; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+    .cat-guide { background: #8b5cf6; color: white; }
+    .cat-case-study { background: #10b981; color: white; }
+    .cat-tips { background: #3b82f6; color: white; }
+    .cat-news { background: #f59e0b; color: white; }
+    .cat-agency { background: #ec4899; color: white; }
+    
+    .toc { background: #1f2937; border: 2px solid #374151; border-radius: 12px; padding: 1.5rem; margin: 2rem 0; }
+    .toc a { color: #9ca3af; text-decoration: none; display: block; padding: 8px 0; transition: all 0.2s; }
+    .toc a:hover { color: #a78bfa; padding-left: 8px; }
+  </style>
+</head>
+<body class="bg-gray-900 text-gray-100">
+
+  <!-- NAVIGATION -->
+  <nav class="nav-bar">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">ContentScale</div>
+        </div>
+        <div class="flex items-center gap-1">
+          <a href="/" class="nav-link">🏠 Home</a>
+          <a href="/#scanner" class="nav-link">🔍 Scanner</a>
+          <a href="/#leaderboard" class="nav-link">🏆 Leaderboard</a>
+          <a href="/#pricing" class="nav-link">💰 Pricing</a>
+          <a href="/blog" class="nav-link active">📝 Blog</a>
+          <a href="/contact-form" class="nav-link">📞 Contact</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-4xl mx-auto px-6 py-12">
+    
+    <!-- BREADCRUMBS -->
+    <div class="mb-6 text-sm text-gray-500">
+      <a href="/" class="hover:text-purple-400">Home</a> / 
+      <a href="/blog" class="hover:text-purple-400">Blog</a> / 
+      <span class="text-gray-400">[Blog Title]</span>
+    </div>
+
+    <!-- ARTICLE HEADER -->
+    <article class="blog-content">
+      
+      <!-- Category & Meta Info -->
+      <div class="mb-6">
+        <!-- ✏️ EDIT: Choose category -->
+        <span class="category-badge cat-guide">Guide</span>
+        <div class="text-sm text-gray-500 mt-3">
+          📅 <span id="publish-date">January 2, 2025</span> • 
+          ⏱️ <span id="read-time">12 min read</span> •
+          👤 Ot van ContentScale
+        </div>
+      </div>
+
+      <!-- Main Title -->
+      <!-- ✏️ EDIT: Your blog title (use H1!) -->
+      <h1 class="text-4xl md:text-5xl font-bold mb-6 leading-tight">
+        [Your Blog Title Here]
+      </h1>
+
+      <!-- Featured Image (Optional) -->
+      <!-- ✏️ EDIT: Add featured image if you have one -->
+      <div class="mb-8">
+        <img src="/images/blog/[featured-image].jpg" alt="[Alt text for SEO]" class="w-full rounded-lg">
+      </div>
+
+      <!-- Introduction / Summary -->
+      <!-- ✏️ EDIT: Write compelling intro (150-200 words) -->
+      <p class="text-xl text-gray-300 leading-relaxed mb-8">
+        [Write your introduction here. Hook the reader, explain what they'll learn, and why it matters. Make it compelling!]
+      </p>
+
+      <!-- Table of Contents (Optional but recommended for long posts) -->
+      <div class="toc">
+        <h3 class="font-bold text-lg mb-3">📋 Table of Contents</h3>
+        <a href="#section1">1. [Section 1 Title]</a>
+        <a href="#section2">2. [Section 2 Title]</a>
+        <a href="#section3">3. [Section 3 Title]</a>
+        <a href="#section4">4. [Section 4 Title]</a>
+        <a href="#conclusion">5. Conclusion</a>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- ✏️ MAIN CONTENT STARTS HERE -->
+      <!-- ============================================ -->
+
+      <!-- Section 1 -->
+      <h2 id="section1">[Section 1 Title]</h2>
+      <p>
+        [Write your content here. Use AI-generated content from your GRAAF prompt or write manually.]
+      </p>
+
+      <!-- Example: Highlight Box -->
+      <div class="highlight-box">
+        <h3 class="text-lg font-bold mb-2 text-purple-400">💡 Key Takeaway</h3>
+        <p class="mb-0">[Important point or summary]</p>
+      </div>
+
+      <!-- Section 2 -->
+      <h2 id="section2">[Section 2 Title]</h2>
+      <p>
+        [More content...]
+      </p>
+
+      <!-- Example: List -->
+      <ul>
+        <li><strong>Point 1:</strong> Description</li>
+        <li><strong>Point 2:</strong> Description</li>
+        <li><strong>Point 3:</strong> Description</li>
+      </ul>
+
+      <!-- Example: For Case Studies - Show Metrics -->
+      <div class="my-8">
+        <h3 class="text-xl font-bold mb-4">📊 Results Achieved:</h3>
+        <div class="flex flex-wrap gap-2">
+          <span class="success-metric">✅ 97/100 Score</span>
+          <span class="success-metric">📈 +127% Traffic</span>
+          <span class="success-metric">⏱️ 90 Days</span>
+          <span class="success-metric">💰 +€45K Revenue</span>
+        </div>
+      </div>
+
+      <!-- Section 3 -->
+      <h2 id="section3">[Section 3 Title]</h2>
+      <p>
+        [More content...]
+      </p>
+
+      <!-- Example: Warning/Tip Box -->
+      <div class="warning-box">
+        <h3 class="text-lg font-bold mb-2 text-yellow-400">⚠️ Common Mistake</h3>
+        <p class="mb-0">[Warning or tip]</p>
+      </div>
+
+      <!-- Section 4 -->
+      <h2 id="section4">[Section 4 Title]</h2>
+      <p>
+        [More content...]
+      </p>
+
+      <!-- Example: Code Block (if technical) -->
+      <pre><code>// Example code
+function example() {
+  return "Hello World";
+}</code></pre>
+
+      <!-- Conclusion -->
+      <h2 id="conclusion">Conclusion</h2>
+      <p>
+        [Wrap up your article. Summarize key points and provide actionable next steps.]
+      </p>
+
+      <!-- Internal Links (Important for SEO!) -->
+      <div class="highlight-box mt-8">
+        <h3 class="text-lg font-bold mb-3 text-green-400">🔗 Related Resources:</h3>
+        <ul class="mb-0">
+          <li><a href="/blog/graaf-framework-guide">Complete GRAAF Framework Guide</a></li>
+          <li><a href="/blog/craft-methodology-explained">CRAFT Methodology Explained</a></li>
+          <li><a href="/#scanner">Scan Your Website Free</a></li>
+        </ul>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- ✏️ MAIN CONTENT ENDS HERE -->
+      <!-- ============================================ -->
+
+    </article>
+
+    <!-- CTA SECTION -->
+    <div class="mt-16 bg-gradient-to-r from-purple-900 to-blue-900 rounded-lg p-8 text-center border border-purple-700">
+      <h3 class="text-3xl font-bold mb-3">Want to Improve Your Content Score?</h3>
+      <p class="text-lg text-gray-300 mb-6">
+        Get your free AI-powered content analysis and personalized improvement prompts in 30 seconds.
+      </p>
+      <a href="/#scanner" class="inline-block bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-8 py-4 rounded-lg font-bold text-lg transition">
+        🚀 Scan Your Website Free
+      </a>
+    </div>
+
+    <!-- AUTHOR BIO -->
+    <div class="mt-12 bg-gray-800 rounded-lg p-6 flex gap-6 items-start border border-gray-700">
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='40' cy='40' r='40' fill='%238b5cf6'/%3E%3Ctext x='40' y='52' text-anchor='middle' fill='white' font-size='32' font-weight='bold'%3EO%3C/text%3E%3C/svg%3E" class="w-20 h-20 rounded-full flex-shrink-0">
+      <div>
+        <h3 class="text-xl font-bold mb-2">About the Author</h3>
+        <p class="text-gray-400 mb-3">
+          <strong class="text-white">Ot van ContentScale</strong> is the founder of ContentScale, an AI-powered SEO recovery service. With 24+ years of experience and 200+ successful client recoveries, Ot specializes in helping businesses recover from Google algorithm updates using the proprietary GRAAF Framework.
+        </p>
+        <div class="flex gap-4 text-sm">
+          <a href="https://wa.me/31628073996" class="text-green-400 hover:text-green-300">💬 WhatsApp</a>
+          <a href="mailto:info@contentscale.site" class="text-blue-400 hover:text-blue-300">✉️ Email</a>
+          <a href="/#scanner" class="text-purple-400 hover:text-purple-300">🔍 Try Scanner</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- BACK TO BLOG -->
+    <div class="mt-12 text-center">
+      <a href="/blog" class="inline-block bg-gray-800 hover:bg-gray-700 px-6 py-3 rounded-lg font-bold transition">
+        ← Back to All Articles
+      </a>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="text-center text-gray-500 text-sm mt-12 pt-8 border-t border-gray-800">
+      <p class="mb-2">ContentScale Blog © 2025 • AI-Powered SEO Recovery</p>
+      <p>
+        <a href="https://app.contentscale.site" class="text-purple-400 hover:text-purple-300">Scanner</a> • 
+        <a href="https://wa.me/31628073996" class="text-green-400 hover:text-green-300">WhatsApp</a> •
+        <a href="mailto:info@contentscale.site" class="text-blue-400 hover:text-blue-300">Email</a>
+      </p>
+    </div>
+
+  </div>
+
+  <!-- ============================================ -->
+  <!-- OPTIONAL: Analytics & Tracking -->
+  <!-- ============================================ -->
+  <script>
+    // Reading time calculator (automatic)
+    document.addEventListener('DOMContentLoaded', function() {
+      const article = document.querySelector('.blog-content');
+      const words = article.textContent.trim().split(/\s+/).length;
+      const readingTime = Math.ceil(words / 200); // Average 200 words per minute
+      document.getElementById('read-time').textContent = readingTime + ' min read';
+    });
+    
+    // Scroll progress indicator (optional)
+    window.addEventListener('scroll', function() {
+      const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = (winScroll / height) * 100;
+      // You can show this in a progress bar if you want
+    });
+    
+    // Add Google Analytics tracking here
+    // gtag('event', 'blog_view', { blog_title: document.title });
+  </script>
+
+</body>
+</html>
