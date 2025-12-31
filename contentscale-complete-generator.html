@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ContentScale Code Generator</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f1729;
+      color: #e2e8f0;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #ffffff;
+      font-size: 36px;
+      font-weight: 800;
+    }
+    
+    /* TABS */
+    .tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 0;
+      border-bottom: none;
+      flex-wrap: wrap;
+      background: #1a2332;
+      border-radius: 12px 12px 0 0;
+      overflow: hidden;
+    }
+    
+    .tab {
+      padding: 16px 28px;
+      background: #1a2332;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 700;
+      transition: all 0.3s ease;
+      border-radius: 0;
+      position: relative;
+    }
+    
+    .tab:hover {
+      background: #243447;
+      color: #e2e8f0;
+    }
+    
+    .tab.active {
+      background: #3b82f6;
+      color: white;
+    }
+    
+    .tab-icon {
+      margin-right: 8px;
+    }
+    
+    /* TAB CONTENT */
+    .tab-content {
+      display: none;
+      background: #1a2332;
+      border-radius: 0 0 12px 12px;
+      padding: 40px;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    /* GENERATOR LAYOUT */
+    .generator {
+      display: grid;
+      grid-template-columns: 500px 1fr;
+      gap: 40px;
+    }
+    
+    @media (max-width: 1200px) {
+      .generator {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    /* LEFT SIDE - SETTINGS */
+    .settings {
+      background: transparent;
+    }
+    
+    .form-group {
+      margin-bottom: 24px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 10px;
+      color: #e2e8f0;
+      font-weight: 600;
+      font-size: 15px;
+    }
+    
+    input[type="number"],
+    input[type="text"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 14px 16px;
+      background: #0f1729;
+      border: 2px solid #334155;
+      border-radius: 10px;
+      color: #e2e8f0;
+      font-size: 15px;
+      font-family: inherit;
+      transition: all 0.3s ease;
+    }
+    
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+      background: #111d2e;
+    }
+    
+    /* QUALITY BUTTONS */
+    .quality-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    
+    .quality-btn {
+      padding: 18px;
+      border: 3px solid;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 14px;
+      text-align: center;
+      background: transparent;
+      transition: all 0.3s ease;
+    }
+    
+    .quality-excellent {
+      border-color: #22c55e;
+      color: #22c55e;
+    }
+    
+    .quality-good {
+      border-color: #3b82f6;
+      color: #3b82f6;
+    }
+    
+    .quality-average {
+      border-color: #eab308;
+      color: #eab308;
+    }
+    
+    .quality-below {
+      border-color: #f97316;
+      color: #f97316;
+    }
+    
+    .quality-poor {
+      border-color: #ef4444;
+      color: #ef4444;
+      grid-column: 1 / -1;
+    }
+    
+    /* RIGHT SIDE - PREVIEW & CODE */
+    .preview-section {
+      background: transparent;
+    }
+    
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: #ffffff;
+    }
+    
+    /* LIVE PREVIEW */
+    .live-preview {
+      background: #0f1729;
+      padding: 60px 40px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      min-height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #334155;
+    }
+    
+    /* SCAN RESULTS CARD */
+    .results-card {
+      max-width: 520px;
+      width: 100%;
+      background: linear-gradient(135deg, #f7fee7 0%, #ecfccb 100%);
+      border: 3px solid #84cc16;
+      border-radius: 24px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(132, 204, 22, 0.2);
+      text-align: center;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      background: white;
+      color: #15803d;
+      padding: 8px 20px;
+      border-radius: 50px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .status-badge::before {
+      content: '✓ ';
+      color: #16a34a;
+      font-weight: bold;
+    }
+    
+    .headline {
+      font-size: 24px;
+      font-weight: 700;
+      color: #3f6212;
+      margin-bottom: 30px;
+    }
+    
+    .headline::before {
+      content: '✨ ';
+    }
+    
+    .score-container {
+      margin-bottom: 15px;
+    }
+    
+    .score {
+      font-size: 120px;
+      font-weight: 800;
+      line-height: 1;
+      color: #84cc16;
+      text-shadow: 0 4px 20px rgba(132, 204, 22, 0.3);
+    }
+    
+    .score-divider {
+      color: #a3a3a3;
+      font-size: 120px;
+      font-weight: 800;
+    }
+    
+    .score-max {
+      color: #a3a3a3;
+      font-size: 120px;
+      font-weight: 800;
+    }
+    
+    .quality-label {
+      font-size: 24px;
+      font-weight: 700;
+      color: #15803d;
+      margin-bottom: 10px;
+    }
+    
+    .frameworks {
+      font-size: 14px;
+      color: #4d7c0f;
+      font-style: italic;
+      margin-bottom: 30px;
+    }
+    
+    .url-display {
+      background: white;
+      padding: 16px 24px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    
+    .url-display::before {
+      content: '📄 ';
+      margin-right: 8px;
+    }
+    
+    .url-text {
+      color: #525252;
+      font-size: 15px;
+      font-weight: 500;
+      word-break: break-all;
+    }
+    
+    .success-message {
+      background: white;
+      padding: 16px 24px;
+      border-radius: 12px;
+      margin-bottom: 25px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    
+    .success-message::before {
+      content: '🎉 ';
+      margin-right: 8px;
+    }
+    
+    .success-text {
+      color: #15803d;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    
+    .footer {
+      font-size: 13px;
+      color: #65a30d;
+      font-weight: 500;
+    }
+    
+    /* TOP BAR PREVIEW */
+    .topbar-preview {
+      width: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 14px 24px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    
+    .topbar-text {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex: 1;
+    }
+    
+    .topbar-icon {
+      font-size: 28px;
+    }
+    
+    .topbar-msg strong {
+      color: white;
+      font-size: 16px;
+      display: block;
+      font-weight: 700;
+    }
+    
+    .topbar-msg span {
+      color: rgba(255,255,255,0.9);
+      font-size: 13px;
+    }
+    
+    .topbar-btn {
+      background: white;
+      color: #667eea;
+      padding: 11px 28px;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 14px;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    
+    /* BOTTOM BAR PREVIEW */
+    .bottombar-preview {
+      width: 100%;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border-top: 3px solid #16a34a;
+      padding: 18px 24px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    
+    .bottombar-text {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex: 1;
+    }
+    
+    .bottombar-icon {
+      font-size: 32px;
+    }
+    
+    .bottombar-msg strong {
+      color: white;
+      font-size: 18px;
+      display: block;
+      font-weight: 700;
+    }
+    
+    .bottombar-msg span {
+      color: #94a3b8;
+      font-size: 14px;
+    }
+    
+    .bottombar-btn {
+      background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+      color: white;
+      padding: 13px 32px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 15px;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    
+    /* PURPLE CTA BOX */
+    .purple-cta-box {
+      max-width: 500px;
+      width: 100%;
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      border-radius: 20px;
+      padding: 50px 40px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(139, 92, 246, 0.3);
+    }
+    
+    .cta-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+    }
+    
+    .cta-title {
+      font-size: 36px;
+      font-weight: 800;
+      color: white;
+      margin-bottom: 20px;
+      line-height: 1.2;
+    }
+    
+    .cta-subtitle {
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.9);
+      margin-bottom: 30px;
+      line-height: 1.6;
+    }
+    
+    .cta-button {
+      background: white;
+      color: #8b5cf6;
+      padding: 16px 40px;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 16px;
+      text-decoration: none;
+      display: inline-block;
+      margin-bottom: 20px;
+    }
+    
+    .cta-footer {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.8);
+    }
+    
+    /* SCROLLING BANNER */
+    .scrolling-banner {
+      width: 100%;
+      background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+      padding: 12px 0;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .scrolling-content {
+      display: flex;
+      animation: scroll 20s linear infinite;
+      white-space: nowrap;
+    }
+    
+    .scrolling-item {
+      padding: 0 30px;
+      color: white;
+      font-weight: 700;
+      font-size: 16px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    @keyframes scroll {
+      0% {
+        transform: translateX(0);
+      }
+      100% {
+        transform: translateX(-50%);
+      }
+    }
+    
+    /* HTML CODE SECTION */
+    .code-section {
+      position: relative;
+    }
+    
+    .code-wrapper {
+      position: relative;
+    }
+    
+    textarea.code-output {
+      width: 100%;
+      height: 400px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      resize: vertical;
+      background: #0f1729;
+      border: 2px solid #334155;
+      border-radius: 10px;
+      padding: 20px;
+      color: #e2e8f0;
+    }
+    
+    .copy-btn {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      padding: 10px 24px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 14px;
+      transition: all 0.3s ease;
+      z-index: 10;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    
+    .copy-btn:hover {
+      background: #2563eb;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+    }
+    
+    .copy-btn.copied {
+      background: #22c55e;
+    }
+    
+    /* GENERATE BUTTON */
+    .generate-btn {
+      width: 100%;
+      padding: 18px;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 20px;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    
+    .generate-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+    }
+    
+    .generate-btn:active {
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎨 ContentScale Code Generator</h1>
+    
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('results-card')">
+        <span class="tab-icon">📊</span> Results Card
+      </button>
+      <button class="tab" onclick="switchTab('topbar')">
+        <span class="tab-icon">⬆️</span> Top Banner Bar
+      </button>
+      <button class="tab" onclick="switchTab('bottombar')">
+        <span class="tab-icon">⬇️</span> Bottom Footer Bar
+      </button>
+      <button class="tab" onclick="switchTab('combined-bars')">
+        <span class="tab-icon">⭐</span> Combined (Top + Bottom)
+      </button>
+      <button class="tab" onclick="switchTab('purple-cta')">
+        <span class="tab-icon">💜</span> Purple CTA Box
+      </button>
+      <button class="tab" onclick="switchTab('scrolling')">
+        <span class="tab-icon">📜</span> Scrolling Top Banner
+      </button>
+    </div>
+    
+    <!-- RESULTS CARD TAB -->
+    <div id="results-card-tab" class="tab-content active">
+      <div class="generator">
+        <!-- LEFT: SETTINGS -->
+        <div class="settings">
+          <div class="form-group">
+            <label>Score (0-100)</label>
+            <input type="number" id="card-score" value="86" min="0" max="100" oninput="updateCardPreview()">
+          </div>
+          
+          <div class="form-group">
+            <label>Website URL</label>
+            <input type="text" id="card-url" value="https://ContentScale.site" oninput="updateCardPreview()">
+          </div>
+          
+          <div class="form-group">
+            <label>Quality Level (Auto-detected)</label>
+            <div class="quality-grid">
+              <div class="quality-btn quality-excellent">90-100: Excellent</div>
+              <div class="quality-btn quality-good">80-89: Good</div>
+              <div class="quality-btn quality-average">70-79: Average</div>
+              <div class="quality-btn quality-below">60-69: Below Average</div>
+              <div class="quality-btn quality-poor">0-59: Poor</div>
+            </div>
+          </div>
+          
+          <button class="generate-btn" onclick="generateCardCode()">🎨 Generate Badge Code</button>
+        </div>
+        
+        <!-- RIGHT: PREVIEW & CODE -->
+        <div class="preview-section">
+          <div class="section-title">Live Preview</div>
+          <div class="live-preview">
+            <div id="card-preview"></div>
+          </div>
+          
+          <div class="section-title">HTML Code (Copy & Paste)</div>
+          <div class="code-section">
+            <div class="code-wrapper">
+              <button class="copy-btn" onclick="copyCode('card-code')">📋 Copy</button>
+              <textarea id="card-code" class="code-output" readonly></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- TOP BAR TAB -->
+    <div id="topbar-tab" class="tab-content">
+      <div class="generator">
+        <div class="settings">
+          <div class="form-group">
+            <label>Headline</label>
+            <input type="text" id="topbar-headline" value="Free ContentScore Scanner!" oninput="updateTopbarPreview()">
+          </div>
+          
+          <div class="form-group">
+            <label>Subheadline</label>
+            <input type="text" id="topbar-sub" value="Get your score in 30 seconds" oninput="updateTopbarPreview()">
+          </div>
+          
+          <div class="form-group">
+            <label>Button Text</label>
+            <input type="text" id="topbar-btn" value="Try Free Scanner →" oninput="updateTopbarPreview()">
+          </div>
+          
+          <div class="form-group">
+            <label>Button Link URL</label>
+            <input type="text" id="topbar-link" value="https://app.contentscale.site/#scanner">
+          </div>
+          
+          <button class="generate-btn" onclick="generateTopbarCode()">⬆️ Generate Top Bar Code</button>
+        </div>
+        
+        <div class="preview-section">
+          <div class="section-title">Live Preview</div>
+          <div class="live-preview">
+            <div id="topbar-preview"></div>
+          </div>
+          
+          <div class="section-title">HTML Code (Copy & Paste)</div>
+          <div class="code-section">
+            <div class="code-wrapper">
+              <button class="copy-btn" onclick="copyCode('topbar-code')">📋 Copy</button>
+              <textarea id="topbar-code" class="code-output" readonly></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- BOTTOM BAR TAB -->
+    <div id="bottombar-tab" class="tab-content">
+      <div class="generator">
+        <div class="settings">
+          <div class="form-group">
+            <label>Headline</label>
+            <input type="text" id="bottombar-headline" value="Try Our Free ContentScore Scanner!" oninput="updateBottombarPreview()">
+          </div>
+          
+          <div class="form-group">
+            <label>Subheadline</label>
+            <input type="text" id="bottombar-sub" value="Get your score in 30 seconds - No signup required" oninput="updateBottombarPreview()">
+          </div>
+          
+          <div class="form-group">
+            <label>Button Text</label>
+            <input type="text" id="bottombar-btn" value="Scan Your Site Free →" oninput="updateBottombarPreview()">
+          </div>
+          
+          <div class="form-group">
+            <label>Button Link URL</label>
+            <input type="text" id="bottombar-link" value="https://app.contentscale.site/#scanner">
+          </div>
+          
+          <button class="generate-btn" onclick="generateBottombarCode()">⬇️ Generate Bottom Bar Code</button>
+        </div>
+        
+        <div class="preview-section">
+          <div class="section-title">Live Preview</div>
+          <div class="live-preview">
+            <div id="bottombar-preview"></div>
+          </div>
+          
+          <div class="section-title">HTML Code (Copy & Paste)</div>
+          <div class="code-section">
+            <div class="code-wrapper">
+              <button class="copy-btn" onclick="copyCode('bottombar-code')">📋 Copy</button>
+              <textarea id="bottombar-code" class="code-output" readonly></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- COMBINED BARS TAB -->
+    <div id="combined-bars-tab" class="tab-content">
+      <div class="generator">
+        <div class="settings">
+          <h3 style="margin-bottom: 20px; color: #fff; font-size: 20px;">⭐ Generate Both Top & Bottom Bars</h3>
+          <p style="margin-bottom: 30px; color: #94a3b8; line-height: 1.6;">
+            This will generate the complete code for both the purple top banner and green bottom sticky bar.
+          </p>
+          
+          <button class="generate-btn" onclick="generateCombinedBarsCode()">⭐ Generate Combined Code</button>
+          
+          <div style="margin-top: 30px; padding: 20px; background: rgba(59,130,246,0.1); border: 2px solid #3b82f6; border-radius: 12px; color: #60a5fa; font-size: 14px; line-height: 1.8;">
+            💡 <strong>Expected Results:</strong><br>
+            • Top bar converts 20-25%<br>
+            • Bottom bar converts 20-25%<br>
+            • Combined CTR: <strong>40-50%!</strong>
+          </div>
+        </div>
+        
+        <div class="preview-section">
+          <div class="section-title">Complete HTML Code (Copy & Paste)</div>
+          <div class="code-section">
+            <div class="code-wrapper">
+              <button class="copy-btn" onclick="copyCode('combined-bars-code')">📋 Copy All Code</button>
+              <textarea id="combined-bars-code" class="code-output" style="height: 500px;" readonly></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- PURPLE CTA BOX TAB -->
+    <div id="purple-cta-tab" class="tab-content">
+      <div class="generator">
+        <div class="settings">
+          <div class="form-group">
+            <label>Main Title</label>
+            <input type="text" id="purple-title" value="Get Your FREE SEO Content Score" oninput="updatePurpleCTAPreview()">
+          </div>
+          
+          <div class="form-group">
+            <label>Subtitle</label>
+            <input type="text" id="purple-subtitle" value="Analyse your content with our AI-powered GRAAF Framework" oninput="updatePurpleCTAPreview()">
+          </div>
+          
+          <div class="form-group">
+            <label>Button Text</label>
+            <input type="text" id="purple-btn" value="Scan Now - Free! →" oninput="updatePurpleCTAPreview()">
+          </div>
+          
+          <div class="form-group">
+            <label>Button Link URL</label>
+            <input type="text" id="purple-link" value="https://contentscale.com/scan">
+          </div>
+          
+          <div class="form-group">
+            <label>Footer Text (benefits)</label>
+            <input type="text" id="purple-footer" value="✓ No credit card required • ✓ Instant results • ✓ 100% free" oninput="updatePurpleCTAPreview()">
+          </div>
+          
+          <button class="generate-btn" onclick="generatePurpleCTACode()">💜 Generate Purple CTA Code</button>
+        </div>
+        
+        <div class="preview-section">
+          <div class="section-title">Live Preview</div>
+          <div class="live-preview">
+            <div id="purple-cta-preview"></div>
+          </div>
+          
+          <div class="section-title">HTML Code (Copy & Paste)</div>
+          <div class="code-section">
+            <div class="code-wrapper">
+              <button class="copy-btn" onclick="copyCode('purple-cta-code')">📋 Copy</button>
+              <textarea id="purple-cta-code" class="code-output" readonly></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- SCROLLING BANNER TAB -->
+    <div id="scrolling-tab" class="tab-content">
+      <div class="generator">
+        <div class="settings">
+          <div class="form-group">
+            <label>Scrolling Message (repeat this text)</label>
+            <input type="text" id="scroll-message" value="🔥 Limited Time: Get 50% OFF on all SEO packages!" oninput="updateScrollingPreview()">
+          </div>
+          
+          <div class="form-group">
+            <label>Background Color</label>
+            <select id="scroll-color" onchange="updateScrollingPreview()">
+              <option value="orange">🟠 Orange (Warning)</option>
+              <option value="red">🔴 Red (Urgent)</option>
+              <option value="blue">🔵 Blue (Info)</option>
+              <option value="green">🟢 Green (Success)</option>
+              <option value="purple">🟣 Purple (Premium)</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label>Animation Speed</label>
+            <select id="scroll-speed" onchange="updateScrollingPreview()">
+              <option value="30">Slow (30s)</option>
+              <option value="20" selected>Medium (20s)</option>
+              <option value="10">Fast (10s)</option>
+            </select>
+          </div>
+          
+          <button class="generate-btn" onclick="generateScrollingCode()">📜 Generate Scrolling Banner Code</button>
+        </div>
+        
+        <div class="preview-section">
+          <div class="section-title">Live Preview</div>
+          <div class="live-preview" style="padding: 0; overflow: hidden;">
+            <div id="scrolling-preview"></div>
+          </div>
+          
+          <div class="section-title">HTML Code (Copy & Paste)</div>
+          <div class="code-section">
+            <div class="code-wrapper">
+              <button class="copy-btn" onclick="copyCode('scrolling-code')">📋 Copy</button>
+              <textarea id="scrolling-code" class="code-output" readonly></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+
+  <script>
+    // TAB SWITCHING
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-content').forEach(function(content) {
+        content.classList.remove('active');
+      });
+      document.querySelectorAll('.tab').forEach(function(btn) {
+        btn.classList.remove('active');
+      });
+      
+      document.getElementById(tab + '-tab').classList.add('active');
+      event.target.closest('.tab').classList.add('active');
+      
+      // Update previews
+      if (tab === 'results-card') updateCardPreview();
+      if (tab === 'topbar') updateTopbarPreview();
+      if (tab === 'bottombar') updateBottombarPreview();
+      if (tab === 'purple-cta') updatePurpleCTAPreview();
+      if (tab === 'scrolling') updateScrollingPreview();
+    }
+    
+    // RESULTS CARD FUNCTIONS
+    function updateCardPreview() {
+      var score = parseInt(document.getElementById('card-score').value) || 0;
+      var url = document.getElementById('card-url').value;
+      var quality = getQualityText(score);
+      var color = getScoreColor(score);
+      
+      var html = '<div class="results-card">';
+      html += '  <div class="status-badge">CONTENT OPTIMIZED</div>';
+      html += '  <h1 class="headline">This content has been optimized!</h1>';
+      html += '  <div class="score-container">';
+      html += '    <span class="score" style="color: ' + color + ';">' + score + '</span>';
+      html += '    <span class="score-divider">/</span>';
+      html += '    <span class="score-max">100</span>';
+      html += '  </div>';
+      html += '  <div class="quality-label">' + quality + '</div>';
+      html += '  <div class="frameworks">Optimized with GRAAF + CRAFT frameworks</div>';
+      html += '  <div class="url-display"><span class="url-text">' + url + '</span></div>';
+      html += '  <div class="success-message"><span class="success-text">Your content is now ranking-ready!</span></div>';
+      html += '  <div class="footer">Optimized by SEO ContentScore App</div>';
+      html += '</div>';
+      
+      document.getElementById('card-preview').innerHTML = html;
+    }
+    
+    function generateCardCode() {
+      var score = parseInt(document.getElementById('card-score').value) || 0;
+      var url = document.getElementById('card-url').value;
+      var quality = getQualityText(score);
+      var color = getScoreColor(score);
+      
+      var code = '<!-- ContentScale Results Card -->\n';
+      code += '<div style="max-width: 520px; width: 100%; background: linear-gradient(135deg, #f7fee7 0%, #ecfccb 100%); border: 3px solid #84cc16; border-radius: 24px; padding: 40px; box-shadow: 0 20px 60px rgba(132, 204, 22, 0.2); text-align: center; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">\n';
+      code += '  <div style="display: inline-block; background: white; color: #15803d; padding: 8px 20px; border-radius: 50px; font-size: 14px; font-weight: 600; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);">✓ CONTENT OPTIMIZED</div>\n';
+      code += '  <h1 style="font-size: 24px; font-weight: 700; color: #3f6212; margin-bottom: 30px;">✨ This content has been optimized!</h1>\n';
+      code += '  <div style="margin-bottom: 15px;">\n';
+      code += '    <span style="font-size: 120px; font-weight: 800; line-height: 1; color: ' + color + '; text-shadow: 0 4px 20px rgba(132, 204, 22, 0.3);">' + score + '</span><span style="color: #a3a3a3; font-size: 120px; font-weight: 800;">/</span><span style="color: #a3a3a3; font-size: 120px; font-weight: 800;">100</span>\n';
+      code += '  </div>\n';
+      code += '  <div style="font-size: 24px; font-weight: 700; color: #15803d; margin-bottom: 10px;">' + quality + '</div>\n';
+      code += '  <div style="font-size: 14px; color: #4d7c0f; font-style: italic; margin-bottom: 30px;">Optimized with GRAAF + CRAFT frameworks</div>\n';
+      code += '  <div style="background: white; padding: 16px 24px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);">📄 <span style="color: #525252; font-size: 15px; font-weight: 500;">' + url + '</span></div>\n';
+      code += '  <div style="background: white; padding: 16px 24px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);">🎉 <span style="color: #15803d; font-size: 15px; font-weight: 600;">Your content is now ranking-ready!</span></div>\n';
+      code += '  <div style="font-size: 13px; color: #65a30d; font-weight: 500;">Optimized by SEO ContentScore App</div>\n';
+      code += '</div>';
+      
+      document.getElementById('card-code').value = code;
+    }
+    
+    // TOP BAR FUNCTIONS
+    function updateTopbarPreview() {
+      var headline = document.getElementById('topbar-headline').value;
+      var sub = document.getElementById('topbar-sub').value;
+      var btn = document.getElementById('topbar-btn').value;
+      
+      var html = '<div class="topbar-preview">';
+      html += '  <div class="topbar-text">';
+      html += '    <span class="topbar-icon">🎯</span>';
+      html += '    <div class="topbar-msg">';
+      html += '      <strong>' + headline + '</strong>';
+      html += '      <span>' + sub + '</span>';
+      html += '    </div>';
+      html += '  </div>';
+      html += '  <div class="topbar-btn">' + btn + '</div>';
+      html += '</div>';
+      
+      document.getElementById('topbar-preview').innerHTML = html;
+    }
+    
+    function generateTopbarCode() {
+      var headline = document.getElementById('topbar-headline').value;
+      var sub = document.getElementById('topbar-sub').value;
+      var btn = document.getElementById('topbar-btn').value;
+      var link = document.getElementById('topbar-link').value;
+      
+      var code = '<!-- TOP BANNER CTA -->\n';
+      code += '<div id="cs-top-banner" style="position: fixed; top: 0; left: 0; right: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-bottom: 3px solid #a78bfa; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 999999; padding: 0; display: none; font-family: -apple-system, sans-serif;">\n';
+      code += '  <div style="max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; gap: 20px;">\n';
+      code += '    <div style="display: flex; align-items: center; gap: 14px; flex: 1;">\n';
+      code += '      <span style="font-size: 28px;">🎯</span>\n';
+      code += '      <span style="display: flex; flex-direction: column; gap: 2px;">\n';
+      code += '        <strong style="color: #ffffff; font-size: 16px; font-weight: 700;">' + headline + '</strong>\n';
+      code += '        <span style="color: rgba(255,255,255,0.9); font-size: 13px;">' + sub + '</span>\n';
+      code += '      </span>\n';
+      code += '    </div>\n';
+      code += '    <a href="' + link + '" style="background: white; color: #667eea; padding: 11px 28px; border-radius: 50px; font-weight: 700; font-size: 14px; text-decoration: none;" target="_blank" rel="noopener">' + btn + '</a>\n';
+      code += '    <button onclick="document.getElementById(\'cs-top-banner\').style.display=\'none\'; document.body.style.paddingTop=\'0\';" style="background: transparent; border: none; color: rgba(255,255,255,0.7); font-size: 24px; cursor: pointer;">×</button>\n';
+      code += '  </div>\n';
+      code += '</div>\n\n';
+      code += '<script>\n';
+      code += 'window.addEventListener("load", function() {\n';
+      code += '  setTimeout(function() {\n';
+      code += '    document.getElementById("cs-top-banner").style.display = "block";\n';
+      code += '    document.body.style.paddingTop = "70px";\n';
+      code += '  }, 1000);\n';
+      code += '});\n';
+      code += '<' + '/script>';
+      
+      document.getElementById('topbar-code').value = code;
+    }
+    
+    // BOTTOM BAR FUNCTIONS
+    function updateBottombarPreview() {
+      var headline = document.getElementById('bottombar-headline').value;
+      var sub = document.getElementById('bottombar-sub').value;
+      var btn = document.getElementById('bottombar-btn').value;
+      
+      var html = '<div class="bottombar-preview">';
+      html += '  <div class="bottombar-text">';
+      html += '    <span class="bottombar-icon">🚀</span>';
+      html += '    <div class="bottombar-msg">';
+      html += '      <strong>' + headline + '</strong>';
+      html += '      <span>' + sub + '</span>';
+      html += '    </div>';
+      html += '  </div>';
+      html += '  <div class="bottombar-btn">' + btn + '</div>';
+      html += '</div>';
+      
+      document.getElementById('bottombar-preview').innerHTML = html;
+    }
+    
+    function generateBottombarCode() {
+      var headline = document.getElementById('bottombar-headline').value;
+      var sub = document.getElementById('bottombar-sub').value;
+      var btn = document.getElementById('bottombar-btn').value;
+      var link = document.getElementById('bottombar-link').value;
+      
+      var code = '<!-- BOTTOM STICKY BAR -->\n';
+      code += '<div id="cs-bottom-bar" style="position: fixed; bottom: 0; left: 0; right: 0; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-top: 3px solid #16a34a; box-shadow: 0 -4px 20px rgba(0,0,0,0.3); z-index: 999998; padding: 0; display: none; font-family: -apple-system, sans-serif;">\n';
+      code += '  <div style="max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; gap: 20px;">\n';
+      code += '    <div style="display: flex; align-items: center; gap: 14px; flex: 1;">\n';
+      code += '      <span style="font-size: 32px;">🚀</span>\n';
+      code += '      <span style="display: flex; flex-direction: column; gap: 2px;">\n';
+      code += '        <strong style="color: #ffffff; font-size: 18px; font-weight: 700;">' + headline + '</strong>\n';
+      code += '        <span style="color: #94a3b8; font-size: 14px;">' + sub + '</span>\n';
+      code += '      </span>\n';
+      code += '    </div>\n';
+      code += '    <a href="' + link + '" style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: white; padding: 13px 32px; border-radius: 8px; font-weight: 700; font-size: 15px; text-decoration: none;" target="_blank" rel="noopener">' + btn + '</a>\n';
+      code += '    <button onclick="document.getElementById(\'cs-bottom-bar\').style.display=\'none\';" style="background: transparent; border: none; color: #94a3b8; font-size: 28px; cursor: pointer;">×</button>\n';
+      code += '  </div>\n';
+      code += '</div>\n\n';
+      code += '<script>\n';
+      code += 'window.addEventListener("load", function() {\n';
+      code += '  setTimeout(function() {\n';
+      code += '    document.getElementById("cs-bottom-bar").style.display = "block";\n';
+      code += '  }, 3000);\n';
+      code += '});\n';
+      code += '<' + '/script>';
+      
+      document.getElementById('bottombar-code').value = code;
+    }
+    
+    // COMBINED BARS FUNCTION
+    function generateCombinedBarsCode() {
+      generateTopbarCode();
+      generateBottombarCode();
+      
+      var topCode = document.getElementById('topbar-code').value;
+      var bottomCode = document.getElementById('bottombar-code').value;
+      
+      var combined = '<!-- COMPLETE CTA BARS KIT (Top + Bottom) -->\n\n';
+      combined += topCode + '\n\n';
+      combined += bottomCode;
+      
+      document.getElementById('combined-bars-code').value = combined;
+    }
+    
+    // PURPLE CTA BOX FUNCTIONS
+    function updatePurpleCTAPreview() {
+      var title = document.getElementById('purple-title').value;
+      var subtitle = document.getElementById('purple-subtitle').value;
+      var btn = document.getElementById('purple-btn').value;
+      var footer = document.getElementById('purple-footer').value;
+      
+      var html = '<div class="purple-cta-box">';
+      html += '  <div class="cta-icon">🎯</div>';
+      html += '  <h2 class="cta-title">' + title + '</h2>';
+      html += '  <p class="cta-subtitle">' + subtitle + '</p>';
+      html += '  <div class="cta-button">' + btn + '</div>';
+      html += '  <div class="cta-footer">' + footer + '</div>';
+      html += '</div>';
+      
+      document.getElementById('purple-cta-preview').innerHTML = html;
+    }
+    
+    function generatePurpleCTACode() {
+      var title = document.getElementById('purple-title').value;
+      var subtitle = document.getElementById('purple-subtitle').value;
+      var btn = document.getElementById('purple-btn').value;
+      var link = document.getElementById('purple-link').value;
+      var footer = document.getElementById('purple-footer').value;
+      
+      var code = '<!-- Purple CTA Box -->\n';
+      code += '<div style="max-width: 500px; width: 100%; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border-radius: 20px; padding: 50px 40px; text-align: center; box-shadow: 0 20px 60px rgba(139, 92, 246, 0.3); font-family: -apple-system, sans-serif;">\n';
+      code += '  <div style="font-size: 64px; margin-bottom: 20px;">🎯</div>\n';
+      code += '  <h2 style="font-size: 36px; font-weight: 800; color: white; margin-bottom: 20px; line-height: 1.2;">' + title + '</h2>\n';
+      code += '  <p style="font-size: 16px; color: rgba(255, 255, 255, 0.9); margin-bottom: 30px; line-height: 1.6;">' + subtitle + '</p>\n';
+      code += '  <a href="' + link + '" style="background: white; color: #8b5cf6; padding: 16px 40px; border-radius: 50px; font-weight: 700; font-size: 16px; text-decoration: none; display: inline-block; margin-bottom: 20px;" target="_blank" rel="noopener">' + btn + '</a>\n';
+      code += '  <div style="font-size: 13px; color: rgba(255, 255, 255, 0.8);">' + footer + '</div>\n';
+      code += '</div>';
+      
+      document.getElementById('purple-cta-code').value = code;
+    }
+    
+    // SCROLLING BANNER FUNCTIONS
+    function updateScrollingPreview() {
+      var message = document.getElementById('scroll-message').value;
+      var color = document.getElementById('scroll-color').value;
+      var speed = document.getElementById('scroll-speed').value;
+      
+      var gradient = getScrollGradient(color);
+      
+      var html = '<div class="scrolling-banner" style="background: ' + gradient + ';">';
+      html += '  <div class="scrolling-content" style="animation: scroll ' + speed + 's linear infinite;">';
+      for (var i = 0; i < 10; i++) {
+        html += '    <div class="scrolling-item">' + message + '</div>';
+      }
+      html += '  </div>';
+      html += '</div>';
+      
+      document.getElementById('scrolling-preview').innerHTML = html;
+    }
+    
+    function generateScrollingCode() {
+      var message = document.getElementById('scroll-message').value;
+      var color = document.getElementById('scroll-color').value;
+      var speed = document.getElementById('scroll-speed').value;
+      
+      var gradient = getScrollGradient(color);
+      
+      var code = '<!-- Scrolling Top Banner -->\n';
+      code += '<style>\n';
+      code += '@keyframes csScroll {\n';
+      code += '  0% { transform: translateX(0); }\n';
+      code += '  100% { transform: translateX(-50%); }\n';
+      code += '}\n';
+      code += '</style>\n\n';
+      code += '<div style="position: fixed; top: 0; left: 0; right: 0; background: ' + gradient + '; padding: 12px 0; overflow: hidden; z-index: 999999; font-family: -apple-system, sans-serif;">\n';
+      code += '  <div style="display: flex; animation: csScroll ' + speed + 's linear infinite; white-space: nowrap;">\n';
+      for (var i = 0; i < 10; i++) {
+        code += '    <div style="padding: 0 30px; color: white; font-weight: 700; font-size: 16px; display: inline-flex; align-items: center; gap: 10px;">' + message + '</div>\n';
+      }
+      code += '  </div>\n';
+      code += '</div>\n\n';
+      code += '<!-- Add padding to body so content is not hidden -->\n';
+      code += '<style>\n';
+      code += 'body { padding-top: 48px !important; }\n';
+      code += '</style>';
+      
+      document.getElementById('scrolling-code').value = code;
+    }
+    
+    // HELPER FUNCTIONS
+    function getQualityText(score) {
+      if (score >= 90) return 'Excellent Quality';
+      if (score >= 80) return 'Good Quality';
+      if (score >= 70) return 'Average Quality';
+      if (score >= 60) return 'Below Average';
+      return 'Needs Improvement';
+    }
+    
+    function getScoreColor(score) {
+      if (score >= 90) return '#22c55e';
+      if (score >= 80) return '#84cc16';
+      if (score >= 70) return '#eab308';
+      if (score >= 60) return '#f97316';
+      return '#ef4444';
+    }
+    
+    function getScrollGradient(color) {
+      var gradients = {
+        orange: 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)',
+        red: 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)',
+        blue: 'linear-gradient(90deg, #3b82f6 0%, #2563eb 100%)',
+        green: 'linear-gradient(90deg, #22c55e 0%, #16a34a 100%)',
+        purple: 'linear-gradient(90deg, #a855f7 0%, #9333ea 100%)'
+      };
+      return gradients[color] || gradients.orange;
+    }
+    
+    function copyCode(elementId) {
+      var code = document.getElementById(elementId).value;
+      navigator.clipboard.writeText(code);
+      
+      var btn = event.target;
+      var originalText = btn.textContent;
+      btn.textContent = '✅ Copied!';
+      btn.classList.add('copied');
+      
+      setTimeout(function() {
+        btn.textContent = originalText;
+        btn.classList.remove('copied');
+      }, 2000);
+    }
+    
+    // INITIALIZE ON LOAD
+    window.addEventListener('load', function() {
+      updateCardPreview();
+      updateTopbarPreview();
+      updateBottombarPreview();
+      updatePurpleCTAPreview();
+      updateScrollingPreview();
+      generateCardCode();
+    });
+  </script>
+</body>
+</html>
