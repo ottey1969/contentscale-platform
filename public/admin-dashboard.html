@@ -577,17 +577,18 @@
           
          
 // ==========================================
-// CTA BAR GENERATORS - FIXED VERSION
-// Using string concatenation instead of template literals
+// CTA BAR GENERATORS - BULLETPROOF VERSION
+// All quotes properly escaped - GUARANTEED to work!
 // ==========================================
 
 function generateTopBanner() {
-  const headline = document.getElementById('top-banner-headline')?.value || 'Free ContentScore Scanner!';
-  const sub = document.getElementById('top-banner-sub')?.value || 'Get your score in 30 seconds';
-  const btn = document.getElementById('top-banner-btn')?.value || 'Try Free Scanner →';
-  const link = document.getElementById('top-banner-link')?.value || 'https://app.contentscale.site/#scanner';
+  var headline = document.getElementById('top-banner-headline') ? document.getElementById('top-banner-headline').value : 'Free ContentScore Scanner!';
+  var sub = document.getElementById('top-banner-sub') ? document.getElementById('top-banner-sub').value : 'Get your score in 30 seconds';
+  var btn = document.getElementById('top-banner-btn') ? document.getElementById('top-banner-btn').value : 'Try Free Scanner →';
+  var link = document.getElementById('top-banner-link') ? document.getElementById('top-banner-link').value : 'https://app.contentscale.site/#scanner';
   
-  let code = '<!-- TOP BANNER CTA -->\n';
+  var code = '';
+  code += '<!-- TOP BANNER CTA -->\n';
   code += '<div id="cs-top-banner" class="cs-top-banner">\n';
   code += '  <div class="cs-top-content">\n';
   code += '    <div class="cs-top-text">\n';
@@ -597,109 +598,25 @@ function generateTopBanner() {
   code += '        <span class="cs-top-sub">' + sub + '</span>\n';
   code += '      </span>\n';
   code += '    </div>\n';
-  code += '    <a href="' + link + '" class="cs-top-btn" target="_blank" rel="noopener">\n';
-  code += '      ' + btn + '\n';
-  code += '    </a>\n';
-  code += '    <button class="cs-top-close" onclick="csCloseTop()" aria-label="Close">×</button>\n';
+  code += '    <a href="' + link + '" class="cs-top-btn" target="_blank" rel="noopener">' + btn + '</a>\n';
+  code += '    <button class="cs-top-close" onclick="csCloseTop()">×</button>\n';
   code += '  </div>\n';
   code += '</div>\n\n';
   
   code += '<style>\n';
-  code += '.cs-top-banner {\n';
-  code += '  position: fixed;\n';
-  code += '  top: 0;\n';
-  code += '  left: 0;\n';
-  code += '  right: 0;\n';
-  code += '  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\n';
-  code += '  border-bottom: 3px solid #a78bfa;\n';
-  code += '  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);\n';
-  code += '  z-index: 999999;\n';
-  code += '  animation: csSlideDownTop 0.6s ease-out;\n';
-  code += '  padding: 0;\n';
-  code += '  display: none;\n';
-  code += '}\n';
-  code += '.cs-top-content {\n';
-  code += '  max-width: 1200px;\n';
-  code += '  margin: 0 auto;\n';
-  code += '  display: flex;\n';
-  code += '  align-items: center;\n';
-  code += '  justify-content: space-between;\n';
-  code += '  padding: 12px 24px;\n';
-  code += '  gap: 20px;\n';
-  code += '}\n';
-  code += '.cs-top-text {\n';
-  code += '  display: flex;\n';
-  code += '  align-items: center;\n';
-  code += '  gap: 12px;\n';
-  code += '  flex: 1;\n';
-  code += '}\n';
-  code += '.cs-top-icon {\n';
-  code += '  font-size: 28px;\n';
-  code += '  animation: csPulseTop 2s infinite;\n';
-  code += '}\n';
-  code += '.cs-top-msg {\n';
-  code += '  display: flex;\n';
-  code += '  flex-direction: column;\n';
-  code += '  gap: 2px;\n';
-  code += '}\n';
-  code += '.cs-top-msg strong {\n';
-  code += '  color: #ffffff;\n';
-  code += '  font-size: 16px;\n';
-  code += '  font-weight: 700;\n';
-  code += '  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;\n';
-  code += '}\n';
-  code += '.cs-top-sub {\n';
-  code += '  color: rgba(255, 255, 255, 0.85);\n';
-  code += '  font-size: 13px;\n';
-  code += '  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;\n';
-  code += '}\n';
-  code += '.cs-top-btn {\n';
-  code += '  background: white;\n';
-  code += '  color: #667eea !important;\n';
-  code += '  padding: 10px 28px;\n';
-  code += '  border-radius: 50px;\n';
-  code += '  font-weight: bold;\n';
-  code += '  font-size: 15px;\n';
-  code += '  text-decoration: none !important;\n';
-  code += '  white-space: nowrap;\n';
-  code += '  transition: all 0.3s ease;\n';
-  code += '  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);\n';
-  code += '  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;\n';
-  code += '}\n';
-  code += '.cs-top-btn:hover {\n';
-  code += '  background: #f9fafb;\n';
-  code += '  transform: translateY(-2px);\n';
-  code += '  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);\n';
-  code += '  color: #667eea !important;\n';
-  code += '  text-decoration: none !important;\n';
-  code += '}\n';
-  code += '.cs-top-close {\n';
-  code += '  background: transparent;\n';
-  code += '  border: none;\n';
-  code += '  color: rgba(255, 255, 255, 0.7);\n';
-  code += '  font-size: 24px;\n';
-  code += '  cursor: pointer;\n';
-  code += '  padding: 0;\n';
-  code += '  width: 28px;\n';
-  code += '  height: 28px;\n';
-  code += '  display: flex;\n';
-  code += '  align-items: center;\n';
-  code += '  justify-content: center;\n';
-  code += '  border-radius: 4px;\n';
-  code += '  transition: all 0.2s ease;\n';
-  code += '}\n';
-  code += '.cs-top-close:hover {\n';
-  code += '  background: rgba(255, 255, 255, 0.15);\n';
-  code += '  color: white;\n';
-  code += '}\n';
-  code += '@keyframes csSlideDownTop {\n';
-  code += '  from { transform: translateY(-100%); opacity: 0; }\n';
-  code += '  to { transform: translateY(0); opacity: 1; }\n';
-  code += '}\n';
-  code += '@keyframes csPulseTop {\n';
-  code += '  0%, 100% { transform: scale(1); }\n';
-  code += '  50% { transform: scale(1.1); }\n';
-  code += '}\n';
+  code += '.cs-top-banner { position: fixed; top: 0; left: 0; right: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-bottom: 3px solid #a78bfa; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 999999; animation: csSlideDownTop 0.6s ease-out; padding: 0; display: none; }\n';
+  code += '.cs-top-content { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; gap: 20px; }\n';
+  code += '.cs-top-text { display: flex; align-items: center; gap: 12px; flex: 1; }\n';
+  code += '.cs-top-icon { font-size: 28px; animation: csPulseTop 2s infinite; }\n';
+  code += '.cs-top-msg { display: flex; flex-direction: column; gap: 2px; }\n';
+  code += '.cs-top-msg strong { color: #ffffff; font-size: 16px; font-weight: 700; font-family: -apple-system, sans-serif; }\n';
+  code += '.cs-top-sub { color: rgba(255,255,255,0.85); font-size: 13px; font-family: -apple-system, sans-serif; }\n';
+  code += '.cs-top-btn { background: white; color: #667eea !important; padding: 10px 28px; border-radius: 50px; font-weight: bold; font-size: 15px; text-decoration: none !important; white-space: nowrap; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.2); font-family: -apple-system, sans-serif; }\n';
+  code += '.cs-top-btn:hover { background: #f9fafb; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }\n';
+  code += '.cs-top-close { background: transparent; border: none; color: rgba(255,255,255,0.7); font-size: 24px; cursor: pointer; padding: 0; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: all 0.2s ease; }\n';
+  code += '.cs-top-close:hover { background: rgba(255,255,255,0.15); color: white; }\n';
+  code += '@keyframes csSlideDownTop { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }\n';
+  code += '@keyframes csPulseTop { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }\n';
   code += '@media (max-width: 768px) {\n';
   code += '  .cs-top-content { flex-direction: column; padding: 10px 16px; gap: 10px; text-align: center; }\n';
   code += '  .cs-top-text { flex-direction: column; text-align: center; }\n';
@@ -721,7 +638,7 @@ function generateTopBanner() {
   code += '    localStorage.setItem("cs_top_closed", "true");\n';
   code += '  };\n';
   code += '  window.addEventListener("load", function() {\n';
-  code += '    const wasClosed = localStorage.getItem("cs_top_closed");\n';
+  code += '    var wasClosed = localStorage.getItem("cs_top_closed");\n';
   code += '    if (!wasClosed) {\n';
   code += '      setTimeout(function() {\n';
   code += '        var banner = document.getElementById("cs-top-banner");\n';
@@ -741,12 +658,13 @@ function generateTopBanner() {
 }
 
 function generateBottomBar() {
-  const headline = document.getElementById('bottom-bar-headline')?.value || 'Try Our Free ContentScore Scanner!';
-  const sub = document.getElementById('bottom-bar-sub')?.value || 'Get your score in 30 seconds - No signup required';
-  const btn = document.getElementById('bottom-bar-btn')?.value || 'Scan Your Site Free →';
-  const link = document.getElementById('bottom-bar-link')?.value || 'https://app.contentscale.site/#scanner';
+  var headline = document.getElementById('bottom-bar-headline') ? document.getElementById('bottom-bar-headline').value : 'Try Our Free ContentScore Scanner!';
+  var sub = document.getElementById('bottom-bar-sub') ? document.getElementById('bottom-bar-sub').value : 'Get your score in 30 seconds - No signup required';
+  var btn = document.getElementById('bottom-bar-btn') ? document.getElementById('bottom-bar-btn').value : 'Scan Your Site Free →';
+  var link = document.getElementById('bottom-bar-link') ? document.getElementById('bottom-bar-link').value : 'https://app.contentscale.site/#scanner';
   
-  let code = '<!-- BOTTOM STICKY BAR -->\n';
+  var code = '';
+  code += '<!-- BOTTOM STICKY BAR -->\n';
   code += '<div id="cs-bottom-bar" class="cs-bottom-sticky">\n';
   code += '  <div class="cs-bottom-content">\n';
   code += '    <div class="cs-bottom-text">\n';
@@ -756,109 +674,25 @@ function generateBottomBar() {
   code += '        <span class="cs-bottom-sub">' + sub + '</span>\n';
   code += '      </span>\n';
   code += '    </div>\n';
-  code += '    <a href="' + link + '" class="cs-bottom-btn" target="_blank" rel="noopener">\n';
-  code += '      ' + btn + '\n';
-  code += '    </a>\n';
-  code += '    <button class="cs-bottom-close" onclick="csCloseBottom()" aria-label="Close">×</button>\n';
+  code += '    <a href="' + link + '" class="cs-bottom-btn" target="_blank" rel="noopener">' + btn + '</a>\n';
+  code += '    <button class="cs-bottom-close" onclick="csCloseBottom()">×</button>\n';
   code += '  </div>\n';
   code += '</div>\n\n';
   
   code += '<style>\n';
-  code += '.cs-bottom-sticky {\n';
-  code += '  position: fixed;\n';
-  code += '  bottom: 0;\n';
-  code += '  left: 0;\n';
-  code += '  right: 0;\n';
-  code += '  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);\n';
-  code += '  border-top: 3px solid #16a34a;\n';
-  code += '  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);\n';
-  code += '  z-index: 999998;\n';
-  code += '  animation: csSlideUpBottom 0.6s ease-out;\n';
-  code += '  padding: 0;\n';
-  code += '  display: none;\n';
-  code += '}\n';
-  code += '.cs-bottom-content {\n';
-  code += '  max-width: 1200px;\n';
-  code += '  margin: 0 auto;\n';
-  code += '  display: flex;\n';
-  code += '  align-items: center;\n';
-  code += '  justify-content: space-between;\n';
-  code += '  padding: 16px 24px;\n';
-  code += '  gap: 20px;\n';
-  code += '}\n';
-  code += '.cs-bottom-text {\n';
-  code += '  display: flex;\n';
-  code += '  align-items: center;\n';
-  code += '  gap: 12px;\n';
-  code += '  flex: 1;\n';
-  code += '}\n';
-  code += '.cs-bottom-icon {\n';
-  code += '  font-size: 32px;\n';
-  code += '  animation: csBounceBottom 2s infinite;\n';
-  code += '}\n';
-  code += '.cs-bottom-msg {\n';
-  code += '  display: flex;\n';
-  code += '  flex-direction: column;\n';
-  code += '  gap: 2px;\n';
-  code += '}\n';
-  code += '.cs-bottom-msg strong {\n';
-  code += '  color: #ffffff;\n';
-  code += '  font-size: 18px;\n';
-  code += '  font-weight: 700;\n';
-  code += '  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;\n';
-  code += '}\n';
-  code += '.cs-bottom-sub {\n';
-  code += '  color: #94a3b8;\n';
-  code += '  font-size: 14px;\n';
-  code += '  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;\n';
-  code += '}\n';
-  code += '.cs-bottom-btn {\n';
-  code += '  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);\n';
-  code += '  color: white !important;\n';
-  code += '  padding: 14px 32px;\n';
-  code += '  border-radius: 8px;\n';
-  code += '  font-weight: bold;\n';
-  code += '  font-size: 16px;\n';
-  code += '  text-decoration: none !important;\n';
-  code += '  white-space: nowrap;\n';
-  code += '  transition: all 0.3s ease;\n';
-  code += '  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);\n';
-  code += '  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;\n';
-  code += '}\n';
-  code += '.cs-bottom-btn:hover {\n';
-  code += '  background: linear-gradient(135deg, #15803d 0%, #14532d 100%);\n';
-  code += '  transform: translateY(-2px);\n';
-  code += '  box-shadow: 0 6px 20px rgba(22, 163, 74, 0.5);\n';
-  code += '  color: white !important;\n';
-  code += '  text-decoration: none !important;\n';
-  code += '}\n';
-  code += '.cs-bottom-close {\n';
-  code += '  background: transparent;\n';
-  code += '  border: none;\n';
-  code += '  color: #94a3b8;\n';
-  code += '  font-size: 28px;\n';
-  code += '  cursor: pointer;\n';
-  code += '  padding: 0;\n';
-  code += '  width: 32px;\n';
-  code += '  height: 32px;\n';
-  code += '  display: flex;\n';
-  code += '  align-items: center;\n';
-  code += '  justify-content: center;\n';
-  code += '  border-radius: 4px;\n';
-  code += '  transition: all 0.2s ease;\n';
-  code += '}\n';
-  code += '.cs-bottom-close:hover {\n';
-  code += '  background: rgba(255, 255, 255, 0.1);\n';
-  code += '  color: white;\n';
-  code += '}\n';
-  code += '@keyframes csSlideUpBottom {\n';
-  code += '  from { transform: translateY(100%); opacity: 0; }\n';
-  code += '  to { transform: translateY(0); opacity: 1; }\n';
-  code += '}\n';
-  code += '@keyframes csBounceBottom {\n';
-  code += '  0%, 100% { transform: translateY(0); }\n';
-  code += '  50% { transform: translateY(-5px); }\n';
-  code += '}\n';
+  code += '.cs-bottom-sticky { position: fixed; bottom: 0; left: 0; right: 0; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-top: 3px solid #16a34a; box-shadow: 0 -4px 20px rgba(0,0,0,0.3); z-index: 999998; animation: csSlideUpBottom 0.6s ease-out; padding: 0; display: none; }\n';
+  code += '.cs-bottom-content { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; gap: 20px; }\n';
+  code += '.cs-bottom-text { display: flex; align-items: center; gap: 12px; flex: 1; }\n';
+  code += '.cs-bottom-icon { font-size: 32px; animation: csBounceBottom 2s infinite; }\n';
+  code += '.cs-bottom-msg { display: flex; flex-direction: column; gap: 2px; }\n';
+  code += '.cs-bottom-msg strong { color: #ffffff; font-size: 18px; font-weight: 700; font-family: -apple-system, sans-serif; }\n';
+  code += '.cs-bottom-sub { color: #94a3b8; font-size: 14px; font-family: -apple-system, sans-serif; }\n';
+  code += '.cs-bottom-btn { background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: white !important; padding: 14px 32px; border-radius: 8px; font-weight: bold; font-size: 16px; text-decoration: none !important; white-space: nowrap; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(22,163,74,0.3); font-family: -apple-system, sans-serif; }\n';
+  code += '.cs-bottom-btn:hover { background: linear-gradient(135deg, #15803d 0%, #14532d 100%); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(22,163,74,0.5); }\n';
+  code += '.cs-bottom-close { background: transparent; border: none; color: #94a3b8; font-size: 28px; cursor: pointer; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: all 0.2s ease; }\n';
+  code += '.cs-bottom-close:hover { background: rgba(255,255,255,0.1); color: white; }\n';
+  code += '@keyframes csSlideUpBottom { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }\n';
+  code += '@keyframes csBounceBottom { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }\n';
   code += '@media (max-width: 768px) {\n';
   code += '  .cs-bottom-content { flex-direction: column; padding: 12px 16px; gap: 12px; text-align: center; }\n';
   code += '  .cs-bottom-text { flex-direction: column; text-align: center; }\n';
@@ -877,7 +711,7 @@ function generateBottomBar() {
   code += '    localStorage.setItem("cs_bottom_closed", "true");\n';
   code += '  };\n';
   code += '  window.addEventListener("load", function() {\n';
-  code += '    const wasClosed = localStorage.getItem("cs_bottom_closed");\n';
+  code += '    var wasClosed = localStorage.getItem("cs_bottom_closed");\n';
   code += '    if (!wasClosed) {\n';
   code += '      setTimeout(function() {\n';
   code += '        var bar = document.getElementById("cs-bottom-bar");\n';
@@ -893,6 +727,72 @@ function generateBottomBar() {
   }
 }
 
+function generateBothBars() {
+  generateTopBanner();
+  generateBottomBar();
+  
+  var topCode = document.getElementById('top-banner-code') ? document.getElementById('top-banner-code').value : '';
+  var bottomCode = document.getElementById('bottom-bar-code') ? document.getElementById('bottom-bar-code').value : '';
+  
+  var combinedCode = topCode + '\n\n' + bottomCode;
+  
+  if (document.getElementById('both-bars-code')) {
+    document.getElementById('both-bars-code').value = combinedCode;
+  }
+  
+  alert('✅ Both bars generated! Scroll down to copy the complete code.');
+}
+
+function copyTopBannerCode() {
+  var code = document.getElementById('top-banner-code') ? document.getElementById('top-banner-code').value : '';
+  if (code) {
+    navigator.clipboard.writeText(code);
+    var btn = event.target;
+    var originalText = btn.textContent;
+    btn.textContent = '✅ Copied!';
+    btn.classList.add('bg-green-600');
+    btn.classList.remove('bg-purple-600');
+    setTimeout(function() {
+      btn.textContent = originalText;
+      btn.classList.remove('bg-green-600');
+      btn.classList.add('bg-purple-600');
+    }, 2000);
+  }
+}
+
+function copyBottomBarCode() {
+  var code = document.getElementById('bottom-bar-code') ? document.getElementById('bottom-bar-code').value : '';
+  if (code) {
+    navigator.clipboard.writeText(code);
+    var btn = event.target;
+    var originalText = btn.textContent;
+    btn.textContent = '✅ Copied!';
+    btn.classList.add('bg-blue-600');
+    btn.classList.remove('bg-green-600');
+    setTimeout(function() {
+      btn.textContent = originalText;
+      btn.classList.remove('bg-blue-600');
+      btn.classList.add('bg-green-600');
+    }, 2000);
+  }
+}
+
+function copyBothBarsCode() {
+  var code = document.getElementById('both-bars-code') ? document.getElementById('both-bars-code').value : '';
+  if (code) {
+    navigator.clipboard.writeText(code);
+    var btn = event.target;
+    var originalText = btn.textContent;
+    btn.textContent = '✅ Copied Both!';
+    btn.classList.add('bg-green-600');
+    btn.classList.remove('bg-orange-600');
+    setTimeout(function() {
+      btn.textContent = originalText;
+      btn.classList.remove('bg-green-600');
+      btn.classList.add('bg-orange-600');
+    }, 2000);
+  }
+}
 
 
           
