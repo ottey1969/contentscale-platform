@@ -56,11 +56,13 @@
   
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    /* GLOBAL NAVIGATION */
     .nav-bar { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-bottom: 2px solid #374151; position: sticky; top: 0; z-index: 1000; }
     .nav-link { color: #9ca3af; padding: 12px 20px; font-weight: 600; transition: all 0.3s; border-bottom: 3px solid transparent; cursor: pointer; text-decoration: none; }
     .nav-link:hover { color: white; border-bottom-color: #8b5cf6; }
     .nav-link.active { color: white; border-bottom-color: #8b5cf6; }
     
+    /* BLOG CONTENT */
     .blog-content { max-width: 800px; margin: 0 auto; }
     .blog-content h2 { font-size: 2rem; font-weight: 700; margin-top: 3rem; margin-bottom: 1rem; color: #a78bfa; }
     .blog-content h3 { font-size: 1.5rem; font-weight: 700; margin-top: 2rem; margin-bottom: 0.75rem; color: #c4b5fd; }
@@ -90,24 +92,44 @@
     .toc { background: #1f2937; border: 2px solid #374151; border-radius: 12px; padding: 1.5rem; margin: 2rem 0; }
     .toc a { color: #9ca3af; text-decoration: none; display: block; padding: 8px 0; transition: all 0.2s; }
     .toc a:hover { color: #a78bfa; padding-left: 8px; }
+    
+    /* GLOBAL FOOTER */
+    .contentscale-footer { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-top: 2px solid #374151; padding: 4rem 0 2rem; margin-top: 4rem; color: #d1d5db; }
+    .contentscale-container { max-width: 1200px; margin: 0 auto; padding: 0 2rem; }
+    .contentscale-footer h3 { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: #a78bfa; }
+    .contentscale-footer h4 { font-size: 1.125rem; font-weight: 600; margin-bottom: 0.75rem; color: #c4b5fd; margin-top: 1.5rem; }
+    .contentscale-footer p { line-height: 1.8; margin-bottom: 1.5rem; color: #9ca3af; }
+    .contentscale-footer a { color: #60a5fa; text-decoration: none; transition: color 0.2s; }
+    .contentscale-footer a:hover { color: #93c5fd; text-decoration: underline; }
+    
+    @media (max-width: 768px) {
+      .nav-link { padding: 10px 12px; font-size: 14px; }
+      .contentscale-footer { padding: 3rem 0 1.5rem; }
+      .contentscale-container { padding: 0 1rem; }
+      .contentscale-footer h3 { font-size: 1.25rem; }
+    }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100">
 
-  <!-- NAVIGATION -->
+  <!-- ========================================
+       GLOBAL NAVIGATION - Same as all pages
+       ======================================== -->
   <nav class="nav-bar">
     <div class="max-w-6xl mx-auto px-6">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">ContentScale</div>
+          <a href="/" style="text-decoration: none;">
+            <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">ContentScale</div>
+          </a>
         </div>
         <div class="flex items-center gap-1">
           <a href="/" class="nav-link">🏠 Home</a>
           <a href="/#scanner" class="nav-link">🔍 Scanner</a>
           <a href="/#leaderboard" class="nav-link">🏆 Leaderboard</a>
           <a href="/#pricing" class="nav-link">💰 Pricing</a>
-          <a href="/blog" class="nav-link active">📝 Blog</a>
-          <a href="/contact-form" class="nav-link">📞 Contact</a>
+          <a href="/blog/index.html" class="nav-link active">📝 Blog</a>
+          <a href="/#contact" class="nav-link">📞 Contact</a>
         </div>
       </div>
     </div>
@@ -118,7 +140,7 @@
     <!-- BREADCRUMBS -->
     <div class="mb-6 text-sm text-gray-500">
       <a href="/" class="hover:text-purple-400">Home</a> / 
-      <a href="/blog" class="hover:text-purple-400">Blog</a> / 
+      <a href="/blog/index.html" class="hover:text-purple-400">Blog</a> / 
       <span class="text-gray-400">[Blog Title]</span>
     </div>
 
@@ -276,7 +298,7 @@ function example() {
         </p>
         <div class="flex gap-4 text-sm">
           <a href="https://wa.me/31628073996" class="text-green-400 hover:text-green-300">💬 WhatsApp</a>
-          <a href="/cdn-cgi/l/email-protection#d6bfb8b0b996b5b9b8a2b3b8a2a5b5b7bab3f8a5bfa2b3" class="text-blue-400 hover:text-blue-300">✉️ Email</a>
+          <a href="mailto:info@contentscale.site" class="text-blue-400 hover:text-blue-300">✉️ Email</a>
           <a href="/#scanner" class="text-purple-400 hover:text-purple-300">🔍 Try Scanner</a>
         </div>
       </div>
@@ -284,27 +306,113 @@ function example() {
 
     <!-- BACK TO BLOG -->
     <div class="mt-12 text-center">
-      <a href="/blog" class="inline-block bg-gray-800 hover:bg-gray-700 px-6 py-3 rounded-lg font-bold transition">
+      <a href="/blog/index.html" class="inline-block bg-gray-800 hover:bg-gray-700 px-6 py-3 rounded-lg font-bold transition">
         ← Back to All Articles
       </a>
     </div>
 
-    <!-- FOOTER -->
-    <div class="text-center text-gray-500 text-sm mt-12 pt-8 border-t border-gray-800">
-      <p class="mb-2">ContentScale Blog © 2025 • AI-Powered SEO Recovery</p>
-      <p>
-        <a href="https://app.contentscale.site" class="text-purple-400 hover:text-purple-300">Scanner</a> • 
-        <a href="https://wa.me/31628073996" class="text-green-400 hover:text-green-300">WhatsApp</a> •
-        <a href="/cdn-cgi/l/email-protection#375e59515877545859435259434454565b5219445e4352" class="text-blue-400 hover:text-blue-300">Email</a>
-      </p>
-    </div>
-
   </div>
+
+  <!-- ========================================
+       GLOBAL FOOTER - Same as all pages
+       ======================================== -->
+  <footer class="contentscale-footer">
+    <div class="contentscale-container">
+      
+      <!-- Main Heading -->
+      <h3>ContentScale – SEO-ContentScore Platform & Traffic Recovery Services</h3>
+      <p>
+        <strong>SEO-ContentScore Platform:</strong> AI-powered content analysis tool using GRAAF Framework (50pts) + CRAFT Methodology (30pts) + Technical SEO (20pts). 
+        Free scanner, global leaderboard, and AI improvement prompts for 200+ clients across 47+ countries.
+      </p>
+      <p>
+        <strong>Expert Services:</strong> Specializing in algorithm update recovery, AI Overviews optimization, and international SEO expansion. 
+        Proven 78% success rate with documented results.
+      </p>
+      
+      <!-- Geographic Coverage -->
+      <p>
+        <strong>Serving:</strong> Netherlands (Amsterdam, Rotterdam, The Hague, Utrecht), Belgium (Brussels, Antwerp, Ghent), 
+        Germany (Berlin, Munich, Hamburg), UK (London, Manchester, Edinburgh), and 45+ countries worldwide with 24/7 emergency 
+        support via WhatsApp.
+      </p>
+      
+      <!-- Platform Tools -->
+      <div style="margin-bottom: 2rem;">
+        <h4>SEO-ContentScore Platform:</h4>
+        <p style="margin: 0; line-height: 2;">
+          <a href="/#scanner">Free Content Scanner</a> |
+          <a href="/#leaderboard">Global Leaderboard</a> |
+          <a href="/#pricing">Pricing Plans</a> |
+          <a href="/seo-contentscore">ContentScore Tool</a> |
+          <a href="/super-admin">Admin Dashboard</a> |
+          <a href="/blog/index.html">SEO Blog</a>
+        </p>
+      </div>
+      
+      <!-- SEO Recovery Resources -->
+      <div style="margin-bottom: 2rem;">
+        <h4>SEO Recovery Resources:</h4>
+        <p style="margin: 0; line-height: 2;">
+          <a href="https://contentscale.site/traffic-drop-recovery/">Traffic Drop Recovery</a> |
+          <a href="https://contentscale.site/ai-overview-optimization/">AI Overview Optimization</a> |
+          <a href="https://contentscale.site/international-seo/">International SEO</a> |
+          <a href="https://contentscale.site/website-traffic-drop/">Website Traffic Drop</a> |
+          <a href="https://contentscale.site/graaf-framework/">GRAAF Framework</a>
+        </p>
+      </div>
+      
+      <!-- Free Tools -->
+      <div style="margin-bottom: 2.5rem;">
+        <h4>Free Tools & Templates:</h4>
+        <p style="margin: 0; line-height: 2;">
+          <a href="https://contentscale.site/international-seo/">International SEO Checklist</a> |
+          <a href="https://contentscale.site/graaf-framework-scorecard/">GRAAF Scorecard</a> |
+          <a href="https://contentscale.site/craft-framework-checklist/">CRAFT Checklist</a> |
+          <a href="https://contentscale.site/90-day-recovery-timeline/">Traffic Recovery Roadmap</a>
+        </p>
+      </div>
+      
+      <!-- Footer Links -->
+      <p style="margin: 0 0 1.5rem; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.15); font-size: 0.95rem;">
+        © 2025 ContentScale. All rights reserved. |
+        <a href="https://contentscale.site/privacy-policy/">Privacy Policy</a> |
+        <a href="mailto:info@contentscale.site">Contact</a> |
+        <a href="https://contentscale.site/about/">About Ot</a> |
+        <a href="/#scanner">Free Scanner</a>
+      </p>
+      
+      <!-- Connect Links -->
+      <p style="margin: 0 0 2rem; font-size: 0.95rem;">
+        <strong>Connect:</strong>
+        <a href="https://linkedin.com/in/otdeboer" target="_blank" rel="noopener">LinkedIn</a> |
+        <a href="https://wa.me/31628073996" target="_blank" rel="noopener">WhatsApp (24/7)</a> |
+        <a href="mailto:info@contentscale.site">Email: info@contentscale.site</a> |
+        <a href="https://calendly.com/contentscale" target="_blank">Book Free Call</a>
+      </p>
+      
+      <!-- Framework Disclaimer -->
+      <p style="margin: 0 0 1rem; font-size: 0.85rem; font-style: italic; opacity: 0.85; line-height: 1.6;">
+        GRAAF Framework is a proprietary SEO methodology created by Ot van ContentScale in 2023 and continuously updated. 
+        This framework complements established methodologies like Google's E-E-A-T guidelines and Julia McCoy's CRAFT Framework.
+      </p>
+      
+      <!-- Data Sources -->
+      <p style="margin: 0; font-size: 0.85rem; opacity: 0.8; line-height: 1.6;">
+        <strong>Data Sources (Verified January 2025):</strong> Performance metrics based on 200+ client implementations across 
+        47 countries (2018-2025, validated via Google Search Console API, Google Analytics 4, SEMrush Position Tracking, and 
+        Ahrefs Rank Tracker). Individual results may vary based on industry vertical, competition level, domain authority, 
+        and implementation quality.
+      </p>
+      
+    </div>
+  </footer>
 
   <!-- ============================================ -->
   <!-- OPTIONAL: Analytics & Tracking -->
   <!-- ============================================ -->
-  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
+  <script>
     // Reading time calculator (automatic)
     document.addEventListener('DOMContentLoaded', function() {
       const article = document.querySelector('.blog-content');
@@ -313,9 +421,17 @@ function example() {
       document.getElementById('read-time').textContent = readingTime + ' min read';
     });
     
-    // Scroll progress indicator (optional)
-    window.addEventListener('scroll', function() {
-      const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
-      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-      const scrolled = (winScroll / height) * 100;
-      // Y
+    // Smooth scroll for TOC links
+    document.querySelectorAll('.toc a').forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const targetId = this.getAttribute('href');
+        const targetElement = document.querySelector(targetId);
+        if (targetElement) {
+          targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
