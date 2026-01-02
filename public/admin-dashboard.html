@@ -800,11 +800,15 @@
 
         <div>
           <label class="block text-sm font-medium mb-2">Role *</label>
-          <select id="admin-role" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-            <option value="helper">Helper (Limited Access)</option>
-            <option value="super_admin">Super Admin (Full Access)</option>
-          </select>
-        </div>
+<select id="admin-role" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+  <option value="">-- Select Role --</option>
+  <option value="super_admin">👑 Super Admin (Full Access)</option>
+  <option value="admin">🔑 Admin (Management Access)</option>
+  <option value="helper">🤝 Helper (Limited Access)</option>
+  <option value="sales">💼 Sales (Client Management)</option>
+  <option value="support">🎧 Support (Customer Service)</option>
+  <option value="analyst">📊 Analyst (View Only)</option>
+</select>
 
         <div>
           <label class="block text-sm font-medium mb-2">Full Name</label>
@@ -990,20 +994,30 @@
       }
     }
 
-    async function submitAddAdmin() {
-      const formData = {
-        username: document.getElementById('admin-username').value,
-        password: document.getElementById('admin-password').value,
-        role: document.getElementById('admin-role').value,
-        full_name: document.getElementById('admin-full-name').value,
-        email: document.getElementById('admin-email').value
-      };
-      
-      // Validation
-      if (!formData.username || formData.username.length < 3) {
-        alert('Username must be at least 3 characters');
-        return;
-      }
+async function submitAddAdmin() {
+  const username = document.getElementById('admin-username').value.trim();
+  const password = document.getElementById('admin-password').value.trim();
+  const role = document.getElementById('admin-role').value;
+  const full_name = document.getElementById('admin-full-name').value.trim();
+  const email = document.getElementById('admin-email').value.trim();
+  
+  // Validation
+  if (!username || username.length < 3) {
+    alert('Username must be at least 3 characters (current: ' + username.length + ')');
+    return;
+  }
+  
+  if (!password || password.length < 8) {
+    alert('Password must be at least 8 characters');
+    return;
+  }
+  
+  if (!role) {
+    alert('Please select a role');
+    return;
+  }
+  
+  const formData = { username, password, role, full_name, email };
       
       if (!formData.password || formData.password.length < 8) {
         alert('Password must be at least 8 characters');
