@@ -291,6 +291,156 @@ app.get('/seo-contentscore', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
+
+// ==========================================
+// MISSING PUBLIC API ENDPOINTS
+// ==========================================
+
+// Public leaderboard (NO AUTH!)
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    const { limit = 100, category = 'all', country = 'all', language = 'all' } = req.query;
+    
+    let query = 'SELECT * FROM public_leaderboard WHERE is_public = true';
+    const params = [];
+    let paramIndex = 1;
+    
+    if (category !== 'all') {
+      query += ` AND category = $${paramIndex}`;
+      params.push(category);
+      paramIndex++;
+    }
+    
+    if (country !== 'all') {
+      query += ` AND country = $${paramIndex}`;
+      params.push(country);
+      paramIndex++;
+    }
+    
+    if (language !== 'all') {
+      query += ` AND language = $${paramIndex}`;
+      params.push(language);
+      paramIndex++;
+    }
+    
+    query += ` ORDER BY score DESC LIMIT $${paramIndex}`;
+    params.push(parseInt(limit));
+    
+    const result = await pool.query(query, params);
+    const entries = result.rows.map((entry, index) => ({ ...entry, rank: index + 1 }));
+    
+    res.json({ success: true, entries });
+  } catch (error) {
+    console.error('[LEADERBOARD ERROR]', error);
+    res.status(500).json({ success: false, error: 'Failed to load leaderboard' });
+  }
+});
+
+// Leaderboard stats (NO AUTH!)
+app.get('/api/leaderboard/stats', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        COUNT(*)::integer as total_entries,
+        ROUND(AVG(score))::integer as average_score,
+        MAX(score) as highest_score
+      FROM public_leaderboard 
+      WHERE is_public = true
+    `);
+    
+    res.json({ success: true, stats: result.rows[0] });
+  } catch (error) {
+    console.error('[STATS ERROR]', error);
+    res.status(500).json({ success: false, error: 'Failed to load stats' });
+  }
+});
+
+// Free scan endpoint (NO AUTH!)
+app.post('/api/scan-free', async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ success: false, error: 'URL required' });
+    
+    // Mock scan result for now
+    const mockScore = Math.floor(Math.random() * 30) + 60; // 60-90
+    const mockResult = {
+      success: true,
+      score: mockScore,
+      quality: mockScore >= 80 ? 'good' : mockScore >= 70 ? 'fair' : 'needs-improvement',
+      breakdown: {
+        graaf: { total: Math.floor(mockScore * 0.5) },
+        craft: { total: Math.floor(mockScore * 0.3) },
+        technical: { total: Math.floor(mockScore * 0.2) }
+      },
+      wordCount: Math.floor(Math.random() * 1000) + 1000
+    };
+    
+    res.json(mockResult);
+  } catch (error) {
+    console.error('[SCAN ERROR]', error);
+    res.status(500).json({ success: false, error: 'Scan failed' });
+  }
+});
+
+// Submit to leaderboard (NO AUTH!)
+app.post('/api/leaderboard/submit', async (req, res) => {
+  try {
+    const { url, score, quality, graaf_score, craft_score, technical_score, word_count, company_name, category } = req.body;
+    
+    if (!url || !score) return res.status(400).json({ success: false, error: 'URL and score required' });
+    
+    const urlHash = require('crypto').createHash('md5').update(url).digest('hex');
+    
+    // Check if exists
+    const existing = await pool.query('SELECT id FROM public_leaderboard WHERE url_hash = $1', [urlHash]);
+    
+    if (existing.rows.length > 0) {
+      // Update existing
+      await pool.query(`
+        UPDATE public_leaderboard 
+        SET score = $1, quality = $2, graaf_score = $3, craft_score = $4, 
+            technical_score = $5, word_count = $6, company_name = $7, 
+            category = $8, updated_at = NOW()
+        WHERE url_hash = $9
+      `, [score, quality, graaf_score, craft_score, technical_score, word_count, company_name, category, urlHash]);
+    } else {
+      // Insert new
+      await pool.query(`
+        INSERT INTO public_leaderboard 
+        (url, url_hash, score, quality, graaf_score, craft_score, technical_score, 
+         word_count, company_name, category, is_public, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, NOW(), NOW())
+      `, [url, urlHash, score, quality, graaf_score, craft_score, technical_score, word_count, company_name, category]);
+    }
+    
+    res.json({ success: true, message: 'Added to leaderboard' });
+  } catch (error) {
+    console.error('[SUBMIT ERROR]', error);
+    res.status(500).json({ success: false, error: 'Failed to submit' });
+  }
+});
+
+// Generate prompts (NO AUTH!)
+app.post('/api/generate-content-prompt', async (req, res) => {
+  try {
+    const { url, score } = req.body;
+    
+    const prompts = [{
+      type: 'elite',
+      title: '🏆 ELITE Content Rewrite Prompt',
+      description: 'Complete rewrite for 95+ score',
+      prompt: `Rewrite this URL: ${url}\n\nCurrent score: ${score}/100\n\nCreate comprehensive 2500+ word article following GRAAF + CRAFT frameworks...`,
+      estimated_score: '95-100/100'
+    }];
+    
+    res.json({ success: true, prompts, usage_instructions: ['Copy prompt', 'Paste in Claude AI', 'Get article', 'Update page', 'Rescan'] });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to generate prompts' });
+  }
+});
+
+
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`
 ╔════════════════════════════════════════╗
