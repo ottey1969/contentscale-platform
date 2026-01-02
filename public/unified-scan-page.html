@@ -9,7 +9,7 @@
   <style>
     /* NAVIGATION */
     .nav-bar { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-bottom: 2px solid #374151; position: sticky; top: 0; z-index: 1000; }
-    .nav-link { color: #9ca3af; padding: 12px 20px; font-weight: 600; transition: all 0.3s; border-bottom: 3px solid transparent; cursor: pointer; }
+    .nav-link { color: #9ca3af; padding: 12px 20px; font-weight: 600; transition: all 0.3s; border-bottom: 3px solid transparent; cursor: pointer; text-decoration: none; }
     .nav-link:hover { color: white; border-bottom-color: #8b5cf6; }
     .nav-link.active { color: white; border-bottom-color: #8b5cf6; }
     
@@ -78,6 +78,15 @@
     .scan-spinner { display: inline-block; width: 18px; height: 18px; border: 3px solid rgba(255, 255, 255, 0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 10px; vertical-align: middle; }
     .scan-stage { font-size: 14px; opacity: 0.9; margin-left: 8px; }
     
+    /* GLOBAL FOOTER STYLES */
+    .contentscale-footer { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-top: 2px solid #374151; padding: 4rem 0 2rem; margin-top: 4rem; color: #d1d5db; }
+    .contentscale-container { max-width: 1200px; margin: 0 auto; padding: 0 2rem; }
+    .contentscale-footer h3 { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: #a78bfa; }
+    .contentscale-footer h4 { font-size: 1.125rem; font-weight: 600; margin-bottom: 0.75rem; color: #c4b5fd; margin-top: 1.5rem; }
+    .contentscale-footer p { line-height: 1.8; margin-bottom: 1.5rem; color: #9ca3af; }
+    .contentscale-footer a { color: #60a5fa; text-decoration: none; transition: color 0.2s; }
+    .contentscale-footer a:hover { color: #93c5fd; text-decoration: underline; }
+    
     @media (max-width: 768px) { 
       .leaderboard-section, .scanner-section { padding: 20px; } 
       .rank-badge { width: 32px; height: 32px; font-size: 14px; } 
@@ -86,25 +95,32 @@
       .nav-link { padding: 10px 12px; font-size: 14px; }
       .pricing-card { padding: 24px; }
       .price-tag { font-size: 36px; }
+      .contentscale-footer { padding: 3rem 0 1.5rem; }
+      .contentscale-container { padding: 0 1rem; }
+      .contentscale-footer h3 { font-size: 1.25rem; }
     }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100">
 
-  <!-- NAVIGATION BAR -->
+  <!-- ========================================
+       GLOBAL NAVIGATION - Use on all pages
+       ======================================== -->
   <nav class="nav-bar">
     <div class="max-w-6xl mx-auto px-6">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">ContentScale</div>
+          <a href="/" style="text-decoration: none;">
+            <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">ContentScale</div>
+          </a>
         </div>
         <div class="flex items-center gap-1">
           <a class="nav-link active" onclick="scrollToSection('home')">🏠 Home</a>
           <a class="nav-link" onclick="scrollToSection('scanner')">🔍 Scanner</a>
           <a class="nav-link" onclick="scrollToSection('leaderboard')">🏆 Leaderboard</a>
           <a class="nav-link" onclick="scrollToSection('pricing')">💰 Pricing</a>
-          <a class="nav-link" href="/blog">📝 Blog</a>
-          <a class="nav-link" href="/contact-form">📞 Contact</a>
+          <a class="nav-link" href="/blog/index.html">📝 Blog</a>
+          <a class="nav-link" onclick="scrollToSection('contact')">📞 Contact</a>
         </div>
       </div>
     </div>
@@ -336,16 +352,211 @@
       </div>
     </div>
 
-    <!-- FOOTER -->
-    <div class="text-center text-gray-500 text-sm mt-12 pb-8">
-      <p class="mb-2">Powered by ContentScale AI • GRAAF + CRAFT Frameworks • Claude Sonnet 4</p>
-      <p>
-        <a href="https://contentscale.site" class="text-purple-400 hover:text-purple-300">contentscale.site</a> • 
-        <a href="https://wa.me/31628073996" class="text-green-400 hover:text-green-300">WhatsApp</a> •
-        <a href="/cdn-cgi/l/email-protection#b3daddd5dcf3d0dcddc7d6ddc7c0d0d2dfd69dc0dac7d6" class="text-blue-400 hover:text-blue-300">Email</a>
-      </p>
+    <!-- CONTACT SECTION (NEW!) -->
+    <div id="contact" class="py-12">
+      <div class="text-center mb-12">
+        <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">📞 Get In Touch</h2>
+        <p class="text-gray-400 text-lg">Questions? Want expert SEO help? Reach out!</p>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        
+        <!-- CONTACT INFO -->
+        <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-8 border border-gray-700">
+          <h3 class="text-2xl font-bold mb-6">Contact Information</h3>
+          
+          <div class="space-y-6">
+            <!-- EMAIL -->
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center text-2xl flex-shrink-0">📧</div>
+              <div>
+                <div class="text-sm text-gray-400 mb-1">Email</div>
+                <a href="mailto:info@contentscale.site" class="text-lg font-semibold text-blue-400 hover:text-blue-300">
+                  info@contentscale.site
+                </a>
+              </div>
+            </div>
+
+            <!-- WHATSAPP -->
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center text-2xl flex-shrink-0">💬</div>
+              <div>
+                <div class="text-sm text-gray-400 mb-1">WhatsApp</div>
+                <a href="https://wa.me/31628073996" target="_blank" class="text-lg font-semibold text-green-400 hover:text-green-300">
+                  +31 628 073 996
+                </a>
+                <div class="text-xs text-gray-500 mt-1">Response time: 2-4 hours</div>
+              </div>
+            </div>
+
+            <!-- OFFICE -->
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center text-2xl flex-shrink-0">📍</div>
+              <div>
+                <div class="text-sm text-gray-400 mb-1">Office</div>
+                <div class="text-lg font-semibold">Amsterdam, Netherlands</div>
+                <div class="text-sm text-gray-400">Serving 47+ countries worldwide</div>
+              </div>
+            </div>
+
+            <!-- HOURS -->
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 bg-orange-600 rounded-lg flex items-center justify-center text-2xl flex-shrink-0">⏰</div>
+              <div>
+                <div class="text-sm text-gray-400 mb-1">Business Hours</div>
+                <div class="text-lg font-semibold">Mon-Fri: 9AM - 6PM CET</div>
+                <div class="text-sm text-gray-400">Weekend: Emergency only</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CTA BUTTONS -->
+          <div class="mt-8 space-y-3">
+            <a href="https://wa.me/31628073996?text=Hi%20Ot!%20I%27d%20like%20to%20learn%20more%20about%20ContentScale" 
+               target="_blank"
+               class="block w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-center py-4 rounded-lg font-bold text-lg transition">
+              💬 WhatsApp Ot Directly
+            </a>
+            <a href="mailto:info@contentscale.site?subject=ContentScale%20Inquiry" 
+               class="block w-full bg-gray-700 hover:bg-gray-600 text-center py-3 rounded-lg font-semibold transition">
+              📧 Send Email
+            </a>
+          </div>
+        </div>
+
+        <!-- QUICK CONTACT FORM -->
+        <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-8 border border-gray-700">
+          <h3 class="text-2xl font-bold mb-6">Quick Message</h3>
+          
+          <form id="quick-contact-form" class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium mb-2">Your Name</label>
+              <input type="text" name="name" required 
+                     class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500">
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium mb-2">Email</label>
+              <input type="email" name="email" required
+                     class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500">
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium mb-2">Message</label>
+              <textarea name="message" rows="5" required
+                        class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+            </div>
+            
+            <button type="submit" 
+                    class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 py-4 rounded-lg font-bold text-lg transition">
+              Send Message →
+            </button>
+          </form>
+          
+          <p class="text-xs text-gray-400 mt-4 text-center">
+            We respond within 24 hours on business days
+          </p>
+        </div>
+
+      </div>
     </div>
+
   </div>
+
+  <!-- ========================================
+       GLOBAL FOOTER - Use on all pages
+       ======================================== -->
+  <footer class="contentscale-footer">
+    <div class="contentscale-container">
+      
+      <!-- Main Heading -->
+      <h3>ContentScale – SEO-ContentScore Platform & Traffic Recovery Services</h3>
+      <p>
+        <strong>SEO-ContentScore Platform:</strong> AI-powered content analysis tool using GRAAF Framework (50pts) + CRAFT Methodology (30pts) + Technical SEO (20pts). 
+        Free scanner, global leaderboard, and AI improvement prompts for 200+ clients across 47+ countries.
+      </p>
+      <p>
+        <strong>Expert Services:</strong> Specializing in algorithm update recovery, AI Overviews optimization, and international SEO expansion. 
+        Proven 78% success rate with documented results.
+      </p>
+      
+      <!-- Geographic Coverage -->
+      <p>
+        <strong>Serving:</strong> Netherlands (Amsterdam, Rotterdam, The Hague, Utrecht), Belgium (Brussels, Antwerp, Ghent), 
+        Germany (Berlin, Munich, Hamburg), UK (London, Manchester, Edinburgh), and 45+ countries worldwide with 24/7 emergency 
+        support via WhatsApp.
+      </p>
+      
+      <!-- Platform Tools -->
+      <div style="margin-bottom: 2rem;">
+        <h4>SEO-ContentScore Platform:</h4>
+        <p style="margin: 0; line-height: 2;">
+          <a href="/#scanner">Free Content Scanner</a> |
+          <a href="/#leaderboard">Global Leaderboard</a> |
+          <a href="/#pricing">Pricing Plans</a> |
+          <a href="/seo-contentscore">ContentScore Tool</a> |
+          <a href="/super-admin">Admin Dashboard</a> |
+          <a href="/blog/index.html">SEO Blog</a>
+        </p>
+      </div>
+      
+      <!-- SEO Recovery Resources -->
+      <div style="margin-bottom: 2rem;">
+        <h4>SEO Recovery Resources:</h4>
+        <p style="margin: 0; line-height: 2;">
+          <a href="https://contentscale.site/traffic-drop-recovery/">Traffic Drop Recovery</a> |
+          <a href="https://contentscale.site/ai-overview-optimization/">AI Overview Optimization</a> |
+          <a href="https://contentscale.site/international-seo/">International SEO</a> |
+          <a href="https://contentscale.site/website-traffic-drop/">Website Traffic Drop</a> |
+          <a href="https://contentscale.site/graaf-framework/">GRAAF Framework</a>
+        </p>
+      </div>
+      
+      <!-- Free Tools -->
+      <div style="margin-bottom: 2.5rem;">
+        <h4>Free Tools & Templates:</h4>
+        <p style="margin: 0; line-height: 2;">
+          <a href="https://contentscale.site/international-seo/">International SEO Checklist</a> |
+          <a href="https://contentscale.site/graaf-framework-scorecard/">GRAAF Scorecard</a> |
+          <a href="https://contentscale.site/craft-framework-checklist/">CRAFT Checklist</a> |
+          <a href="https://contentscale.site/90-day-recovery-timeline/">Traffic Recovery Roadmap</a>
+        </p>
+      </div>
+      
+      <!-- Footer Links -->
+      <p style="margin: 0 0 1.5rem; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.15); font-size: 0.95rem;">
+        © 2025 ContentScale. All rights reserved. |
+        <a href="https://contentscale.site/privacy-policy/">Privacy Policy</a> |
+        <a href="mailto:info@contentscale.site">Contact</a> |
+        <a href="https://contentscale.site/about/">About Ot</a> |
+        <a href="/#scanner">Free Scanner</a>
+      </p>
+      
+      <!-- Connect Links -->
+      <p style="margin: 0 0 2rem; font-size: 0.95rem;">
+        <strong>Connect:</strong>
+        <a href="https://linkedin.com/in/otdeboer" target="_blank" rel="noopener">LinkedIn</a> |
+        <a href="https://wa.me/31628073996" target="_blank" rel="noopener">WhatsApp (24/7)</a> |
+        <a href="mailto:info@contentscale.site">Email: info@contentscale.site</a> |
+        <a href="https://calendly.com/contentscale" target="_blank">Book Free Call</a>
+      </p>
+      
+      <!-- Framework Disclaimer -->
+      <p style="margin: 0 0 1rem; font-size: 0.85rem; font-style: italic; opacity: 0.85; line-height: 1.6;">
+        GRAAF Framework is a proprietary SEO methodology created by Ot van ContentScale in 2023 and continuously updated. 
+        This framework complements established methodologies like Google's E-E-A-T guidelines and Julia McCoy's CRAFT Framework.
+      </p>
+      
+      <!-- Data Sources -->
+      <p style="margin: 0; font-size: 0.85rem; opacity: 0.8; line-height: 1.6;">
+        <strong>Data Sources (Verified January 2025):</strong> Performance metrics based on 200+ client implementations across 
+        47 countries (2018-2025, validated via Google Search Console API, Google Analytics 4, SEMrush Position Tracking, and 
+        Ahrefs Rank Tracker). Individual results may vary based on industry vertical, competition level, domain authority, 
+        and implementation quality.
+      </p>
+      
+    </div>
+  </footer>
 
   <!-- WHATSAPP CTA MODAL -->
   <div id="whatsappModal" class="modal">
@@ -521,7 +732,7 @@
         <button onclick="exportPromptsToFile()" style="background:#374151;color:white;padding:14px 20px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:10px" onmouseover="this.style.background='#4b5563';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#374151';this.style.transform='translateY(0)'">
           <span style="font-size:20px">📥</span><span>Export to File</span>
         </button>
-        <button onclick="sharePromptsOnLinkedIn()" style="background:#2563eb;color:white;padding:14px 20px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:10px" onmouseover="this.style.background='#1d4ed8';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#2563eb';this.style.transform='translateY(0)'">
+        <button onclick="sharePromptsOnLinkedIn()" style="background:#2563eb;color:white;padding:14px 20px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;display:flex;align-items:center;justify-center;gap:10px" onmouseover="this.style.background='#1d4ed8';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#2563eb';this.style.transform='translateY(0)'">
           <span style="font-size:20px">🔗</span><span>Share on LinkedIn</span>
         </button>
         <button onclick="emailPrompts()" style="background:#7c3aed;color:white;padding:14px 20px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:10px" onmouseover="this.style.background='#6d28d9';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#7c3aed';this.style.transform='translateY(0)'">
@@ -534,7 +745,8 @@
     </div>
   </div>
 
-  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
+<script>
     console.log('%c🏆 ContentScale - Updated with Scan Limits','color:#f59e0b;font-size:16px;font-weight:bold');
     
     const API_BASE = '';
@@ -542,9 +754,7 @@
     let currentUrl = '';
     let currentFilters = { category: 'all', country: 'all', language: 'all' };
     
-    // ==========================================
-    // SCAN LIMIT SYSTEM (SIMPLIFIED)
-    // ==========================================
+    // SCAN LIMIT SYSTEM
     const STORAGE_KEYS = {
       TOTAL_SCANS: 'cs_total_scans',
       DAILY_SCANS: 'cs_daily_scans',
@@ -564,21 +774,12 @@
       const today = getToday();
       
       if (lastDate !== today) {
-        // New day - reset daily counter
         localStorage.setItem(STORAGE_KEYS.DAILY_SCANS, '0');
         localStorage.setItem(STORAGE_KEYS.LAST_SCAN_DATE, today);
         return 0;
       }
       
       return parseInt(localStorage.getItem(STORAGE_KEYS.DAILY_SCANS) || '0');
-    }
-    
-    function getUserEmail() {
-      return localStorage.getItem(STORAGE_KEYS.USER_EMAIL);
-    }
-    
-    function getBonusScans() {
-      return parseInt(localStorage.getItem(STORAGE_KEYS.BONUS_SCANS) || '0');
     }
     
     function incrementScanCount() {
@@ -588,12 +789,6 @@
       localStorage.setItem(STORAGE_KEYS.TOTAL_SCANS, total.toString());
       localStorage.setItem(STORAGE_KEYS.DAILY_SCANS, daily.toString());
       localStorage.setItem(STORAGE_KEYS.LAST_SCAN_DATE, getToday());
-      
-      // Decrement bonus scans if using them
-      if (total > 5 && getBonusScans() > 0) {
-        const bonus = getBonusScans() - 1;
-        localStorage.setItem(STORAGE_KEYS.BONUS_SCANS, bonus.toString());
-      }
       
       updateScanCounter();
     }
@@ -614,19 +809,14 @@
     
     function checkScanLimit() {
       const daily = getDailyScans();
-      
-      // Check daily limit (3 per day)
       if (daily >= 3) {
         showDailyLimitModal();
         return false;
       }
-      
       return true;
     }
     
-    // ==========================================
     // WHATSAPP FUNCTIONS
-    // ==========================================
     function whatsappForUnlimited() {
       const msg = `Hi Ot! I've used my 3 free scans today and need more. Can you give me unlimited access?`;
       window.open(`https://wa.me/31628073996?text=${encodeURIComponent(msg)}`, '_blank');
@@ -653,9 +843,7 @@
       window.open(`https://wa.me/31628073996?text=${encodeURIComponent(msg)}`, '_blank');
     }
     
-    // ==========================================
     // MODAL FUNCTIONS
-    // ==========================================
     function showWhatsAppModal() {
       document.getElementById('whatsappModal').classList.add('active');
     }
@@ -664,9 +852,6 @@
       document.getElementById('whatsappModal').classList.remove('active');
     }
     
-    // ==========================================
-    // DAILY LIMIT MODAL
-    // ==========================================
     function showDailyLimitModal() {
       document.getElementById('dailyLimitModal').classList.add('active');
     }
@@ -675,15 +860,12 @@
       document.getElementById('dailyLimitModal').classList.remove('active');
     }
     
-    // ==========================================
     // NAVIGATION
-    // ==========================================
     function scrollToSection(sectionId) {
       const element = document.getElementById(sectionId);
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
         
-        // Update active nav link
         document.querySelectorAll('.nav-link').forEach(link => {
           link.classList.remove('active');
           if (link.getAttribute('onclick')?.includes(sectionId)) {
@@ -693,9 +875,25 @@
       }
     }
     
-    // ==========================================
+    // CONTACT FORM HANDLER
+    document.getElementById('quick-contact-form')?.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const data = {
+        name: formData.get('name'),
+        email: formData.get('email'),
+        message: formData.get('message')
+      };
+      
+      const subject = encodeURIComponent('ContentScale Contact Form Submission');
+      const body = encodeURIComponent(`Name: ${data.name}\nEmail: ${data.email}\n\nMessage:\n${data.message}`);
+      window.location.href = `mailto:info@contentscale.site?subject=${subject}&body=${body}`;
+      
+      alert('✅ Email client opened! Send your message.');
+      e.target.reset();
+    });
+    
     // FILTERS
-    // ==========================================
     function filterCategory(cat) {
       currentFilters.category = cat;
       updateFilterButtons('category', cat);
@@ -739,9 +937,7 @@
       }
     }
     
-    // ==========================================
     // LEADERBOARD
-    // ==========================================
     async function loadLeaderboard() {
       try {
         const params = new URLSearchParams({
@@ -852,15 +1048,11 @@
       loadLeaderboard();
     }
     
-    // ==========================================
     // SCAN
-    // ==========================================
     async function performScan() {
-      // Check scan limit first
       if (!checkScanLimit()) {
         return;
       }
-      
       performScanNow();
     }
     
@@ -902,10 +1094,7 @@
         await new Promise(resolve => setTimeout(resolve, 500));
         
         currentScanResult = data;
-        
-        // Increment scan count
         incrementScanCount();
-        
         showResults(data);
         
       } catch (error) {
@@ -997,9 +1186,7 @@
       document.getElementById('resultsModal').classList.remove('active');
     }
     
-    // ==========================================
     // PROMPTS
-    // ==========================================
     async function getPrompts() {
       if (!currentScanResult) return;
       
@@ -1182,14 +1369,13 @@
       }
     };
     
-    // ==========================================
     // INITIALIZATION
-    // ==========================================
     document.getElementById('scanInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') performScan();
     });
     
-    // Update scan counter on load
     updateScanCounter();
-    
-    /
+    loadLeaderboard();
+  </script>
+</body>
+</html>
