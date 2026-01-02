@@ -441,6 +441,47 @@ app.post('/api/generate-content-prompt', async (req, res) => {
 
 
 
+// ==========================================
+// EMERGENCY ADMIN SETUP - REMOVE AFTER USE!
+// ==========================================
+app.post('/api/emergency-setup', async (req, res) => {
+  try {
+    const { password } = req.body;
+    
+    if (!password || password.length < 8) {
+      return res.status(400).json({ error: 'Password must be 8+ characters' });
+    }
+    
+    // Delete old admin
+    await pool.query('DELETE FROM super_admins WHERE username = $1', ['superadmin']);
+    
+    // Create new admin with WORKING hash
+    const hash = await bcrypt.hash(password, 10);
+    const id = 'ADMIN-' + crypto.randomBytes(8).toString('hex').toUpperCase();
+    
+    await pool.query(
+      'INSERT INTO super_admins (id, username, password_hash, created_at) VALUES ($1, $2, $3, NOW())',
+      [id, 'superadmin', hash]
+    );
+    
+    res.json({ 
+      success: true, 
+      message: '✅ Admin created successfully!',
+      credentials: {
+        username: 'superadmin',
+        password: password
+      },
+      warning: 'DELETE THIS ENDPOINT NOW!'
+    });
+    
+  } catch (error) {
+    console.error('[EMERGENCY SETUP ERROR]', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`
 ╔════════════════════════════════════════╗
