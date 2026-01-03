@@ -208,7 +208,7 @@ app.delete('/api/admin/scans/:id', authenticateSuperAdmin, async (req, res) => {
 });
 
 // ========================================
-// ✅ SHARE LINKS ROUTES - FIXED! 
+// ✅ SHARE LINKS ROUTES - FIXED WITH ALLOWED_FEATURES! 
 // ========================================
 app.get('/api/admin/share-links', authenticateSuperAdmin, async (req, res) => {
   try {
@@ -247,12 +247,19 @@ app.post('/api/admin/share-links/create', authenticateSuperAdmin, async (req, re
     
     console.log('[SHARE LINK CREATE] Code:', code, 'Expires:', expires);
     
-    // FIXED: Using actual database column names (token, name, max_uses, current_uses)
+    // FIXED: Added allowed_features (required NOT NULL column!)
+    const defaultFeatures = {
+      graaf_enabled: true,
+      craft_enabled: true,
+      technical_enabled: true,
+      max_pages_per_scan: 1
+    };
+    
     await pool.query(
       `INSERT INTO share_links 
-       (token, name, client_name, company, max_uses, current_uses, expires_at, is_active, created_at) 
-       VALUES ($1, $2, $3, $4, $5, 0, $6, true, NOW())`,
-      [code, client_email, client_name || null, company || null, scans_limit, expires]
+       (token, name, client_name, company, max_uses, current_uses, expires_at, is_active, allowed_features, created_at) 
+       VALUES ($1, $2, $3, $4, $5, 0, $6, true, $7, NOW())`,
+      [code, client_email, client_name || null, company || null, scans_limit, expires, JSON.stringify(defaultFeatures)]
     );
     
     const shareUrl = `${req.protocol}://${req.get('host')}/scan-with-link/${code}`;
