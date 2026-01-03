@@ -157,6 +157,7 @@ app.delete('/api/agencies/:id', authenticateSuperAdmin, async (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to delete' });
   }
 });
+
 app.get('/api/admin/clients', authenticateSuperAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -208,7 +209,7 @@ app.delete('/api/admin/scans/:id', authenticateSuperAdmin, async (req, res) => {
 });
 
 // ========================================
-// ✅ SHARE LINKS ROUTES - FIXED WITH ALLOWED_FEATURES! 
+// ✅ SHARE LINKS ADMIN ROUTES
 // ========================================
 app.get('/api/admin/share-links', authenticateSuperAdmin, async (req, res) => {
   try {
@@ -247,7 +248,6 @@ app.post('/api/admin/share-links/create', authenticateSuperAdmin, async (req, re
     
     console.log('[SHARE LINK CREATE] Code:', code, 'Expires:', expires);
     
-    // FIXED: Added allowed_features (required NOT NULL column!)
     const defaultFeatures = {
       graaf_enabled: true,
       craft_enabled: true,
@@ -283,9 +283,8 @@ app.delete('/api/admin/share-links/:code', authenticateSuperAdmin, async (req, r
     res.status(500).json({ success: false, error: 'Failed to delete' });
   }
 });
-// ========================================
-// END SHARE LINKS FIX
-// ========================================
+
+
 
 app.get('/api/admin/leaderboard', authenticateSuperAdmin, async (req, res) => {
   try {
@@ -305,7 +304,8 @@ app.delete('/api/admin/leaderboard/:id', authenticateSuperAdmin, async (req, res
     res.status(500).json({ success: false, error: 'Failed to delete' });
   }
 });
-// FRONTEND ROUTES (CRITICAL!)
+
+// FRONTEND ROUTES
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
@@ -327,11 +327,7 @@ app.get('/seo-contentscore', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-// ==========================================
-// MISSING PUBLIC API ENDPOINTS
-// ==========================================
-
-// Public leaderboard (NO AUTH!)
+// PUBLIC API ENDPOINTS
 app.get('/api/leaderboard', async (req, res) => {
   try {
     const { limit = 100, category = 'all', country = 'all', language = 'all' } = req.query;
@@ -371,7 +367,6 @@ app.get('/api/leaderboard', async (req, res) => {
   }
 });
 
-// Leaderboard stats (NO AUTH!)
 app.get('/api/leaderboard/stats', async (req, res) => {
   try {
     const result = await pool.query(`
@@ -390,14 +385,12 @@ app.get('/api/leaderboard/stats', async (req, res) => {
   }
 });
 
-// Free scan endpoint (NO AUTH!)
 app.post('/api/scan-free', async (req, res) => {
   try {
     const { url } = req.body;
     if (!url) return res.status(400).json({ success: false, error: 'URL required' });
     
-    // Mock scan result for now
-    const mockScore = Math.floor(Math.random() * 30) + 60; // 60-90
+    const mockScore = Math.floor(Math.random() * 30) + 60;
     const mockResult = {
       success: true,
       score: mockScore,
@@ -417,7 +410,6 @@ app.post('/api/scan-free', async (req, res) => {
   }
 });
 
-// Submit to leaderboard (NO AUTH!)
 app.post('/api/leaderboard/submit', async (req, res) => {
   try {
     const { url, score, quality, graaf_score, craft_score, technical_score, word_count, company_name, category } = req.body;
@@ -425,12 +417,9 @@ app.post('/api/leaderboard/submit', async (req, res) => {
     if (!url || !score) return res.status(400).json({ success: false, error: 'URL and score required' });
     
     const urlHash = require('crypto').createHash('md5').update(url).digest('hex');
-    
-    // Check if exists
     const existing = await pool.query('SELECT id FROM public_leaderboard WHERE url_hash = $1', [urlHash]);
     
     if (existing.rows.length > 0) {
-      // Update existing
       await pool.query(`
         UPDATE public_leaderboard 
         SET score = $1, quality = $2, graaf_score = $3, craft_score = $4, 
@@ -439,7 +428,6 @@ app.post('/api/leaderboard/submit', async (req, res) => {
         WHERE url_hash = $9
       `, [score, quality, graaf_score, craft_score, technical_score, word_count, company_name, category, urlHash]);
     } else {
-      // Insert new
       await pool.query(`
         INSERT INTO public_leaderboard 
         (url, url_hash, score, quality, graaf_score, craft_score, technical_score, 
@@ -455,7 +443,6 @@ app.post('/api/leaderboard/submit', async (req, res) => {
   }
 });
 
-// Generate prompts (NO AUTH!)
 app.post('/api/generate-content-prompt', async (req, res) => {
   try {
     const { url, score } = req.body;
@@ -474,9 +461,6 @@ app.post('/api/generate-content-prompt', async (req, res) => {
   }
 });
 
-// ==========================================
-// EMERGENCY ADMIN SETUP - REMOVE AFTER USE!
-// ==========================================
 app.post('/api/emergency-setup', async (req, res) => {
   try {
     const { password } = req.body;
@@ -485,10 +469,8 @@ app.post('/api/emergency-setup', async (req, res) => {
       return res.status(400).json({ error: 'Password must be 8+ characters' });
     }
     
-    // Delete old admin
     await pool.query('DELETE FROM super_admins WHERE username = $1', ['superadmin']);
     
-    // Create new admin with WORKING hash
     const hash = await bcrypt.hash(password, 10);
     const id = 'ADMIN-' + crypto.randomBytes(8).toString('hex').toUpperCase();
     
@@ -514,15 +496,13 @@ app.post('/api/emergency-setup', async (req, res) => {
 });
 
 // ==========================================
-// SHARE LINK PUBLIC ROUTES
+// ✅ SHARE LINK PUBLIC ROUTES
 // ==========================================
 
-// Serve the share link page
 app.get('/scan-with-link/:code', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/share-link.html'));
 });
 
-// Validate share link
 app.get('/api/share-link/validate/:code', async (req, res) => {
   try {
     const { code } = req.params;
@@ -540,12 +520,10 @@ app.get('/api/share-link/validate/:code', async (req, res) => {
     
     const link = result.rows[0];
     
-    // Check if active
     if (!link.is_active) {
       return res.json({ success: false, error: 'Link deactivated', status: 'inactive' });
     }
     
-    // Check if expired
     if (new Date(link.expires_at) < new Date()) {
       return res.json({ 
         success: false, 
@@ -555,7 +533,6 @@ app.get('/api/share-link/validate/:code', async (req, res) => {
       });
     }
     
-    // Check if limit reached
     if (link.current_uses >= link.max_uses) {
       return res.json({ 
         success: false, 
@@ -565,7 +542,6 @@ app.get('/api/share-link/validate/:code', async (req, res) => {
       });
     }
     
-    // Return valid link data
     res.json({
       success: true,
       status: 'active',
@@ -578,7 +554,14 @@ app.get('/api/share-link/validate/:code', async (req, res) => {
       expires_at: link.expires_at
     });
     
-// Execute scan with share link
+  } catch (error) {
+    console.error('[SHARE LINK VALIDATE ERROR]', error);
+    res.status(500).json({ success: false, error: 'Validation failed' });
+  }
+});
+
+
+
 app.post('/api/share-link/scan', async (req, res) => {
   try {
     const { share_code, url } = req.body;
@@ -587,7 +570,6 @@ app.post('/api/share-link/scan', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Share code and URL required' });
     }
     
-    // Validate share link
     const result = await pool.query(`
       SELECT token, max_uses, current_uses, expires_at, is_active
       FROM share_links 
@@ -600,7 +582,6 @@ app.post('/api/share-link/scan', async (req, res) => {
     
     const link = result.rows[0];
     
-    // Validate
     if (!link.is_active) {
       return res.json({ success: false, error: 'Link deactivated', status: 'inactive' });
     }
@@ -613,7 +594,6 @@ app.post('/api/share-link/scan', async (req, res) => {
       return res.json({ success: false, error: 'Scan limit reached', status: 'limit_reached' });
     }
     
-    // PERFORM SCAN (mock for now)
     const mockScore = Math.floor(Math.random() * 30) + 60;
     const scanResult = {
       success: true,
@@ -630,7 +610,6 @@ app.post('/api/share-link/scan', async (req, res) => {
       scans_remaining: link.max_uses - link.current_uses - 1
     };
     
-    // Increment usage counter
     await pool.query(
       'UPDATE share_links SET current_uses = current_uses + 1 WHERE token = $1',
       [share_code]
@@ -645,7 +624,6 @@ app.post('/api/share-link/scan', async (req, res) => {
     res.status(500).json({ success: false, error: 'Scan failed' });
   }
 });
-
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`
