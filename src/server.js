@@ -513,6 +513,121 @@ app.post('/api/emergency-setup', async (req, res) => {
   }
 });
 
+// ==========================================
+// SHARE LINK PUBLIC ROUTES
+// ==========================================
+
+// Serve the share link page
+app.get('/scan-with-link/:code', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/share-link.html'));
+});
+
+// Validate share link
+app.get('/api/share-link/validate/:code', async (req, res) => {
+  try {
+    const { code } = req.params;
+    
+    const result = await pool.query(`
+      SELECT token, name as client_email, client_name, company, 
+             max_uses, current_uses, expires_at, is_active
+      FROM share_links 
+      WHERE token = $1
+    `, [code]);
+    
+    if (result.rows.length === 0) {
+      return res.json({ success: false, error: 'Invalid share link', status: 'invalid' });
+    }
+    
+    const link = result.rows[0];
+    
+    // Check if active
+    if (!link.is_active) {
+      return res.json({ success: false, error: 'Link deactivated', status: 'inactive' });
+    }
+    
+    // Check if expired
+    if (new Date(link.expires_at) < new Date()) {
+      return res.json({ 
+        success: false, 
+        error: 'Link expired', 
+        status: 'expired',
+        expires_at: link.expires_at
+      });
+    }
+    
+    // Check if limit reached
+    if (link.current_uses >= link.max_uses) {
+      return res.json({ 
+        success: false, 
+        error: 'Scan limit reached', 
+        status: 'limit_reached',
+        scans_limit: link.max_uses
+      });
+    }
+    
+    // Return valid link data
+    res.json({
+      success: true,
+      status: 'active',
+      client_email: link.client_email,
+      client_name: link.client_name,
+      company: link.company,
+      scans_limit: link.max_uses,
+      scans_used: link.current_uses,
+      scans_remaining: link.max_uses - link.current_uses,
+      expires_at: link.expires_at
+    });
+    
+  } catch (error) {
+    console.error('[SHARE LINK VALIDATE ERROR]', error);
+    res.status(500).json({ success: false, error: 'Validation failed' });
+  }
+});
+
+// Execute scan with share link
+app.post('/api/share-link/scan', async (req, res) => {
+  try {
+    const { share_code, url } = req.body;
+    
+    if (!share_code || !url) {
+      return res.status(400).json({ success: false, error: 'Share code and URL required' });
+    }
+    
+    // Validate share link
+    const result = await pool.query(`
+      SELECT token, max_uses, current_uses, expires_at, is_active
+      FROM share_links 
+      WHERE token = $1
+    `, [share_code]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Invalid share link', status: 'invalid' });
+    }
+    
+    const link = result.rows[0];
+    
+    // Validate
+    if (!link.is_active) {
+      return res.json({ success: false, error: 'Link deactivated', status: 'inactive' });
+    }
+    
+    if (new Date(link.expires_at) < new Date()) {
+      return res.json({ success: false, error: 'Link expired', status: 'expired' });
+    }
+    
+    if (link.current_uses >= link.max_uses) {
+      return res.json({ success: false, error: 'Scan limit reached', status: 'limit_reached' });
+    }
+    
+    // PERFORM SCAN (mock for now - you can replace with real scan later)
+    const mockScore = Math.floor(Math.random() * 30) + 60; // 60-90
+    const scanResult = {
+      success: true,
+      score: mockScore,
+      quality: mockScore >= 80 ? 'good' : mockScore >= 70 ? 'fair' : 'needs-improvement',
+      breakdown: {
+        graaf
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`
 ╔════════════════════════════════════════╗
