@@ -89,6 +89,7 @@ app.get('/api/admins', authenticateSuperAdmin, async (req, res) => {
     const result = await pool.query('SELECT id, username, role, full_name, email, is_active, created_at, last_login FROM admins ORDER BY created_at DESC');
     res.json({ success: true, admins: result.rows });
   } catch (error) {
+    console.error('[ADMINS FETCH ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to fetch admins' });
   }
 });
@@ -104,6 +105,7 @@ app.post('/api/admins', authenticateSuperAdmin, async (req, res) => {
     );
     res.json({ success: true, admin: result.rows[0] });
   } catch (error) {
+    console.error('[ADMIN CREATE ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to create admin' });
   }
 });
@@ -113,6 +115,7 @@ app.delete('/api/admins/:id', authenticateSuperAdmin, async (req, res) => {
     await pool.query('DELETE FROM admins WHERE id = $1', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
+    console.error('[ADMIN DELETE ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to delete' });
   }
 });
@@ -129,6 +132,7 @@ app.get('/api/super-admin/agencies', authenticateSuperAdmin, async (req, res) =>
     `);
     res.json({ success: true, agencies: result.rows });
   } catch (error) {
+    console.error('[AGENCIES FETCH ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to fetch agencies' });
   }
 });
@@ -144,6 +148,7 @@ app.post('/api/agencies', authenticateSuperAdmin, async (req, res) => {
     );
     res.json({ success: true, agency: result.rows[0] });
   } catch (error) {
+    console.error('[AGENCY CREATE ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to create agency' });
   }
 });
@@ -153,6 +158,7 @@ app.delete('/api/agencies/:id', authenticateSuperAdmin, async (req, res) => {
     await pool.query('DELETE FROM agencies WHERE id = $1', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
+    console.error('[AGENCY DELETE ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to delete' });
   }
 });
@@ -168,6 +174,7 @@ app.get('/api/admin/clients', authenticateSuperAdmin, async (req, res) => {
     `);
     res.json({ success: true, clients: result.rows });
   } catch (error) {
+    console.error('[CLIENTS FETCH ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to load clients' });
   }
 });
@@ -178,6 +185,7 @@ app.delete('/api/admin/clients/:id', authenticateSuperAdmin, async (req, res) =>
     await pool.query('DELETE FROM clients WHERE id = $1', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
+    console.error('[CLIENT DELETE ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to delete' });
   }
 });
@@ -194,6 +202,7 @@ app.get('/api/admin/scans', authenticateSuperAdmin, async (req, res) => {
     `);
     res.json({ success: true, scans: result.rows });
   } catch (error) {
+    console.error('[SCANS FETCH ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to load scans' });
   }
 });
@@ -203,6 +212,7 @@ app.delete('/api/admin/scans/:id', authenticateSuperAdmin, async (req, res) => {
     await pool.query('DELETE FROM scans WHERE id = $1', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
+    console.error('[SCAN DELETE ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to delete' });
   }
 });
@@ -210,7 +220,7 @@ app.delete('/api/admin/scans/:id', authenticateSuperAdmin, async (req, res) => {
 app.get('/api/admin/share-links', authenticateSuperAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT share_code, client_name, client_email, scans_limit, scans_used, expires_at, is_active,
+      SELECT share_code, client_name, client_email, company, scans_limit, scans_used, expires_at, is_active,
              CASE
                WHEN NOT is_active THEN 'inactive'
                WHEN scans_used >= scans_limit THEN 'limit_reached'
@@ -221,23 +231,45 @@ app.get('/api/admin/share-links', authenticateSuperAdmin, async (req, res) => {
     `);
     res.json({ success: true, share_links: result.rows });
   } catch (error) {
+    console.error('[SHARE LINKS FETCH ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to load share links' });
   }
 });
 
+// ✅ FIXED SHARE LINK CREATION
 app.post('/api/admin/share-links/create', authenticateSuperAdmin, async (req, res) => {
   try {
-    const { client_email, scans_limit, valid_days } = req.body;
-    if (!client_email || !scans_limit) return res.status(400).json({ success: false, error: 'Email and limit required' });
+    const { client_email, client_name, company, scans_limit, valid_days } = req.body;
+    
+    console.log('[SHARE LINK CREATE] Received:', { client_email, client_name, company, scans_limit, valid_days });
+    
+    if (!client_email || !scans_limit) {
+      return res.status(400).json({ success: false, error: 'Email and limit required' });
+    }
+    
     const code = 'SCAN-' + crypto.randomBytes(6).toString('hex').toUpperCase();
     const expires = new Date();
     expires.setDate(expires.getDate() + parseInt(valid_days || 30));
+    
+    console.log('[SHARE LINK CREATE] Generated code:', code, 'Expires:', expires);
+    
+    // FIXED: Added client_name and company to INSERT
     await pool.query(
-      'INSERT INTO share_links (share_code, client_email, scans_limit, scans_used, expires_at, is_active, created_at) VALUES ($1, $2, $3, 0, $4, true, NOW())',
-      [code, client_email, scans_limit, expires]
+      `INSERT INTO share_links 
+       (share_code, client_email, client_name, company, scans_limit, scans_used, expires_at, is_active, created_at) 
+       VALUES ($1, $2, $3, $4, $5, 0, $6, true, NOW())`,
+      [code, client_email, client_name || null, company || null, scans_limit, expires]
     );
-    res.json({ success: true, share_url: `${req.protocol}://${req.get('host')}/scan-with-link/${code}` });
+    
+    const shareUrl = `${req.protocol}://${req.get('host')}/scan-with-link/${code}`;
+    console.log('[SHARE LINK CREATE] Success! URL:', shareUrl);
+    
+    res.json({ success: true, share_url: shareUrl });
+    
   } catch (error) {
+    console.error('[SHARE LINK CREATE ERROR] Message:', error.message);
+    console.error('[SHARE LINK CREATE ERROR] Stack:', error.stack);
+    console.error('[SHARE LINK CREATE ERROR] Full:', error);
     res.status(500).json({ success: false, error: 'Failed to create link' });
   }
 });
@@ -247,16 +279,17 @@ app.delete('/api/admin/share-links/:code', authenticateSuperAdmin, async (req, r
     await pool.query('DELETE FROM share_links WHERE share_code = $1', [req.params.code]);
     res.json({ success: true });
   } catch (error) {
+    console.error('[SHARE LINK DELETE ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to delete' });
   }
 });
-
 app.get('/api/admin/leaderboard', authenticateSuperAdmin, async (req, res) => {
   try {
     const result = await pool.query('SELECT id, url, score, company_name, country FROM public_leaderboard ORDER BY score DESC');
     const entries = result.rows.map((e, i) => ({ ...e, rank: i + 1 }));
     res.json({ success: true, entries });
   } catch (error) {
+    console.error('[LEADERBOARD FETCH ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to load leaderboard' });
   }
 });
@@ -266,10 +299,12 @@ app.delete('/api/admin/leaderboard/:id', authenticateSuperAdmin, async (req, res
     await pool.query('DELETE FROM public_leaderboard WHERE id = $1', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
+    console.error('[LEADERBOARD DELETE ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to delete' });
   }
 });
-// FRONTEND ROUTES (CRITICAL!)
+
+// FRONTEND ROUTES
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
@@ -291,12 +326,7 @@ app.get('/seo-contentscore', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-
-// ==========================================
-// MISSING PUBLIC API ENDPOINTS
-// ==========================================
-
-// Public leaderboard (NO AUTH!)
+// PUBLIC API ENDPOINTS
 app.get('/api/leaderboard', async (req, res) => {
   try {
     const { limit = 100, category = 'all', country = 'all', language = 'all' } = req.query;
@@ -331,12 +361,11 @@ app.get('/api/leaderboard', async (req, res) => {
     
     res.json({ success: true, entries });
   } catch (error) {
-    console.error('[LEADERBOARD ERROR]', error);
+    console.error('[PUBLIC LEADERBOARD ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to load leaderboard' });
   }
 });
 
-// Leaderboard stats (NO AUTH!)
 app.get('/api/leaderboard/stats', async (req, res) => {
   try {
     const result = await pool.query(`
@@ -350,19 +379,17 @@ app.get('/api/leaderboard/stats', async (req, res) => {
     
     res.json({ success: true, stats: result.rows[0] });
   } catch (error) {
-    console.error('[STATS ERROR]', error);
+    console.error('[LEADERBOARD STATS ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to load stats' });
   }
 });
 
-// Free scan endpoint (NO AUTH!)
 app.post('/api/scan-free', async (req, res) => {
   try {
     const { url } = req.body;
     if (!url) return res.status(400).json({ success: false, error: 'URL required' });
     
-    // Mock scan result for now
-    const mockScore = Math.floor(Math.random() * 30) + 60; // 60-90
+    const mockScore = Math.floor(Math.random() * 30) + 60;
     const mockResult = {
       success: true,
       score: mockScore,
@@ -377,12 +404,11 @@ app.post('/api/scan-free', async (req, res) => {
     
     res.json(mockResult);
   } catch (error) {
-    console.error('[SCAN ERROR]', error);
+    console.error('[FREE SCAN ERROR]', error);
     res.status(500).json({ success: false, error: 'Scan failed' });
   }
 });
 
-// Submit to leaderboard (NO AUTH!)
 app.post('/api/leaderboard/submit', async (req, res) => {
   try {
     const { url, score, quality, graaf_score, craft_score, technical_score, word_count, company_name, category } = req.body;
@@ -391,11 +417,9 @@ app.post('/api/leaderboard/submit', async (req, res) => {
     
     const urlHash = require('crypto').createHash('md5').update(url).digest('hex');
     
-    // Check if exists
     const existing = await pool.query('SELECT id FROM public_leaderboard WHERE url_hash = $1', [urlHash]);
     
     if (existing.rows.length > 0) {
-      // Update existing
       await pool.query(`
         UPDATE public_leaderboard 
         SET score = $1, quality = $2, graaf_score = $3, craft_score = $4, 
@@ -404,7 +428,6 @@ app.post('/api/leaderboard/submit', async (req, res) => {
         WHERE url_hash = $9
       `, [score, quality, graaf_score, craft_score, technical_score, word_count, company_name, category, urlHash]);
     } else {
-      // Insert new
       await pool.query(`
         INSERT INTO public_leaderboard 
         (url, url_hash, score, quality, graaf_score, craft_score, technical_score, 
@@ -415,12 +438,11 @@ app.post('/api/leaderboard/submit', async (req, res) => {
     
     res.json({ success: true, message: 'Added to leaderboard' });
   } catch (error) {
-    console.error('[SUBMIT ERROR]', error);
+    console.error('[LEADERBOARD SUBMIT ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to submit' });
   }
 });
 
-// Generate prompts (NO AUTH!)
 app.post('/api/generate-content-prompt', async (req, res) => {
   try {
     const { url, score } = req.body;
@@ -435,15 +457,12 @@ app.post('/api/generate-content-prompt', async (req, res) => {
     
     res.json({ success: true, prompts, usage_instructions: ['Copy prompt', 'Paste in Claude AI', 'Get article', 'Update page', 'Rescan'] });
   } catch (error) {
+    console.error('[GENERATE PROMPT ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to generate prompts' });
   }
 });
 
-
-
-// ==========================================
-// EMERGENCY ADMIN SETUP - REMOVE AFTER USE!
-// ==========================================
+// EMERGENCY ADMIN SETUP
 app.post('/api/emergency-setup', async (req, res) => {
   try {
     const { password } = req.body;
@@ -452,10 +471,8 @@ app.post('/api/emergency-setup', async (req, res) => {
       return res.status(400).json({ error: 'Password must be 8+ characters' });
     }
     
-    // Delete old admin
     await pool.query('DELETE FROM super_admins WHERE username = $1', ['superadmin']);
     
-    // Create new admin with WORKING hash
     const hash = await bcrypt.hash(password, 10);
     const id = 'ADMIN-' + crypto.randomBytes(8).toString('hex').toUpperCase();
     
@@ -479,8 +496,6 @@ app.post('/api/emergency-setup', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
-
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`
