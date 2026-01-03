@@ -578,12 +578,6 @@ app.get('/api/share-link/validate/:code', async (req, res) => {
       expires_at: link.expires_at
     });
     
-  } catch (error) {
-    console.error('[SHARE LINK VALIDATE ERROR]', error);
-    res.status(500).json({ success: false, error: 'Validation failed' });
-  }
-});
-
 // Execute scan with share link
 app.post('/api/share-link/scan', async (req, res) => {
   try {
@@ -619,14 +613,39 @@ app.post('/api/share-link/scan', async (req, res) => {
       return res.json({ success: false, error: 'Scan limit reached', status: 'limit_reached' });
     }
     
-    // PERFORM SCAN (mock for now - you can replace with real scan later)
-    const mockScore = Math.floor(Math.random() * 30) + 60; // 60-90
+    // PERFORM SCAN (mock for now)
+    const mockScore = Math.floor(Math.random() * 30) + 60;
     const scanResult = {
       success: true,
       score: mockScore,
       quality: mockScore >= 80 ? 'good' : mockScore >= 70 ? 'fair' : 'needs-improvement',
       breakdown: {
-        graaf
+        graaf: { total: Math.floor(mockScore * 0.5) },
+        craft: { total: Math.floor(mockScore * 0.3) },
+        technical: { total: Math.floor(mockScore * 0.2) }
+      },
+      wordCount: Math.floor(Math.random() * 1000) + 1000,
+      url: url,
+      scanned_at: new Date().toISOString(),
+      scans_remaining: link.max_uses - link.current_uses - 1
+    };
+    
+    // Increment usage counter
+    await pool.query(
+      'UPDATE share_links SET current_uses = current_uses + 1 WHERE token = $1',
+      [share_code]
+    );
+    
+    console.log('[SHARE LINK SCAN] Code:', share_code, 'URL:', url, 'Score:', mockScore);
+    
+    res.json(scanResult);
+    
+  } catch (error) {
+    console.error('[SHARE LINK SCAN ERROR]', error);
+    res.status(500).json({ success: false, error: 'Scan failed' });
+  }
+});
+
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`
