@@ -23,6 +23,125 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
+// ==========================================
+// 🆘 EMERGENCY ADMIN SETUP - DELETE AFTER USE!
+// ==========================================
+app.get('/api/setup/create-admin', async (req, res) => {
+  try {
+    console.log('[SETUP] Creating admin...');
+    
+    // Generate fresh hash
+    const hash = await bcrypt.hash('admin123', 10);
+    
+    // Delete old if exists
+    await pool.query('DELETE FROM super_admins WHERE username IN ($1, $2)', ['ot', 'superadmin']);
+    
+    // Create new admin
+    const id = 'ADMIN-' + crypto.randomBytes(8).toString('hex').toUpperCase();
+    await pool.query(
+      'INSERT INTO super_admins (id, username, password_hash, created_at) VALUES ($1, $2, $3, NOW())',
+      [id, 'ot', hash]
+    );
+    
+    console.log('[SETUP] ✅ Admin created!');
+    
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Admin Created ✅</title>
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              padding: 40px; 
+              text-align: center;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              min-height: 100vh;
+              margin: 0;
+            }
+            .container {
+              background: white;
+              padding: 40px;
+              border-radius: 20px;
+              box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+              max-width: 500px;
+              margin: 0 auto;
+            }
+            h1 { color: #22c55e; margin-bottom: 10px; }
+            .credentials {
+              background: #f0f0f0;
+              padding: 30px;
+              border-radius: 10px;
+              margin: 30px 0;
+              font-size: 18px;
+            }
+            .credentials p {
+              margin: 15px 0;
+              font-weight: bold;
+            }
+            .btn {
+              background: #3b82f6;
+              color: white;
+              padding: 15px 40px;
+              text-decoration: none;
+              border-radius: 10px;
+              display: inline-block;
+              margin: 10px;
+              font-weight: bold;
+              font-size: 16px;
+            }
+            .btn:hover { background: #2563eb; }
+            .warning {
+              color: #ef4444;
+              font-size: 14px;
+              margin-top: 30px;
+              padding: 15px;
+              background: #fee2e2;
+              border-radius: 8px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>✅ Admin Created Successfully!</h1>
+            <p style="color: #666;">You can now login to the admin panel</p>
+            
+            <div class="credentials">
+              <p>👤 Username: <span style="color: #3b82f6;">ot</span></p>
+              <p>🔑 Password: <span style="color: #3b82f6;">admin123</span></p>
+            </div>
+            
+            <a href="/admin" class="btn">🚀 Go to Admin Panel</a>
+            
+            <div class="warning">
+              <strong>⚠️ SECURITY WARNING</strong><br>
+              After login, immediately:<br>
+              1. Change your password in admin panel<br>
+              2. Delete this setup endpoint from server.js<br>
+              3. Redeploy the application
+            </div>
+          </div>
+        </body>
+      </html>
+    `);
+    
+  } catch (error) {
+    console.error('[SETUP ERROR]', error);
+    res.status(500).send(`
+      <!DOCTYPE html>
+      <html>
+        <body style="font-family: Arial; padding: 40px; text-align: center;">
+          <h1 style="color: red;">❌ Setup Failed</h1>
+          <p>${error.message}</p>
+          <a href="/admin" style="background: blue; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px;">Try Admin Panel</a>
+        </body>
+      </html>
+    `);
+  }
+});
+
 // AUTH MIDDLEWARE
 async function authenticateSuperAdmin(req, res, next) {
   const adminKey = req.headers['x-admin-key'];
@@ -45,22 +164,42 @@ async function authenticateSuperAdmin(req, res, next) {
 app.post('/api/setup/verify-admin', async (req, res) => {
   try {
     const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+    
+    console.log('[LOGIN ATTEMPT] Username:', username);
+    
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password required' });
+    }
     
     const result = await pool.query('SELECT id, username, password_hash FROM super_admins WHERE username = $1', [username]);
-    if (result.rows.length === 0) return res.status(401).json({ error: 'Invalid credentials' });
+    
+    if (result.rows.length === 0) {
+      console.log('[LOGIN FAILED] User not found:', username);
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
     
     const admin = result.rows[0];
     const isValid = await bcrypt.compare(password, admin.password_hash);
-    if (!isValid) return res.status(401).json({ error: 'Invalid credentials' });
     
-    res.json({ success: true, admin_id: admin.id, admin: { id: admin.id, username: admin.username } });
+    console.log('[LOGIN] Password check:', isValid ? 'VALID ✅' : 'INVALID ❌');
+    
+    if (!isValid) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    console.log('[LOGIN SUCCESS] User:', username, 'ID:', admin.id);
+    
+    res.json({ 
+      success: true, 
+      admin_id: admin.id, 
+      admin: { id: admin.id, username: admin.username } 
+    });
+    
   } catch (error) {
     console.error('[VERIFY ERROR]', error);
     res.status(500).json({ error: error.message });
   }
 });
-
 app.get('/api/admin/stats', authenticateSuperAdmin, async (req, res) => {
   try {
     const [agencies, clients, scans, helpers] = await Promise.all([
@@ -208,9 +347,6 @@ app.delete('/api/admin/scans/:id', authenticateSuperAdmin, async (req, res) => {
   }
 });
 
-// ========================================
-// ✅ SHARE LINKS ADMIN ROUTES
-// ========================================
 app.get('/api/admin/share-links', authenticateSuperAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -236,8 +372,6 @@ app.post('/api/admin/share-links/create', authenticateSuperAdmin, async (req, re
   try {
     const { client_email, client_name, company, scans_limit, valid_days } = req.body;
     
-    console.log('[SHARE LINK CREATE] Received:', { client_email, client_name, company, scans_limit, valid_days });
-    
     if (!client_email || !scans_limit) {
       return res.status(400).json({ success: false, error: 'Email and limit required' });
     }
@@ -245,8 +379,6 @@ app.post('/api/admin/share-links/create', authenticateSuperAdmin, async (req, re
     const code = 'SCAN-' + crypto.randomBytes(6).toString('hex').toUpperCase();
     const expires = new Date();
     expires.setDate(expires.getDate() + parseInt(valid_days || 30));
-    
-    console.log('[SHARE LINK CREATE] Code:', code, 'Expires:', expires);
     
     const defaultFeatures = {
       graaf_enabled: true,
@@ -263,13 +395,11 @@ app.post('/api/admin/share-links/create', authenticateSuperAdmin, async (req, re
     );
     
     const shareUrl = `${req.protocol}://${req.get('host')}/scan-with-link/${code}`;
-    console.log('[SHARE LINK CREATE] ✅ Success! URL:', shareUrl);
     
     res.json({ success: true, share_url: shareUrl });
     
   } catch (error) {
-    console.error('[SHARE LINK CREATE ERROR]', error.message);
-    console.error('[SHARE LINK STACK]', error.stack);
+    console.error('[SHARE LINK CREATE ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to create link' });
   }
 });
@@ -279,12 +409,9 @@ app.delete('/api/admin/share-links/:code', authenticateSuperAdmin, async (req, r
     await pool.query('DELETE FROM share_links WHERE token = $1', [req.params.code]);
     res.json({ success: true });
   } catch (error) {
-    console.error('[SHARE LINK DELETE ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to delete' });
   }
 });
-
-
 
 app.get('/api/admin/leaderboard', authenticateSuperAdmin, async (req, res) => {
   try {
@@ -304,7 +431,6 @@ app.delete('/api/admin/leaderboard/:id', authenticateSuperAdmin, async (req, res
     res.status(500).json({ success: false, error: 'Failed to delete' });
   }
 });
-
 // FRONTEND ROUTES
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
@@ -416,7 +542,7 @@ app.post('/api/leaderboard/submit', async (req, res) => {
     
     if (!url || !score) return res.status(400).json({ success: false, error: 'URL and score required' });
     
-    const urlHash = require('crypto').createHash('md5').update(url).digest('hex');
+    const urlHash = crypto.createHash('md5').update(url).digest('hex');
     const existing = await pool.query('SELECT id FROM public_leaderboard WHERE url_hash = $1', [urlHash]);
     
     if (existing.rows.length > 0) {
@@ -461,44 +587,6 @@ app.post('/api/generate-content-prompt', async (req, res) => {
   }
 });
 
-app.post('/api/emergency-setup', async (req, res) => {
-  try {
-    const { password } = req.body;
-    
-    if (!password || password.length < 8) {
-      return res.status(400).json({ error: 'Password must be 8+ characters' });
-    }
-    
-    await pool.query('DELETE FROM super_admins WHERE username = $1', ['superadmin']);
-    
-    const hash = await bcrypt.hash(password, 10);
-    const id = 'ADMIN-' + crypto.randomBytes(8).toString('hex').toUpperCase();
-    
-    await pool.query(
-      'INSERT INTO super_admins (id, username, password_hash, created_at) VALUES ($1, $2, $3, NOW())',
-      [id, 'superadmin', hash]
-    );
-    
-    res.json({ 
-      success: true, 
-      message: '✅ Admin created successfully!',
-      credentials: {
-        username: 'superadmin',
-        password: password
-      },
-      warning: 'DELETE THIS ENDPOINT NOW!'
-    });
-    
-  } catch (error) {
-    console.error('[EMERGENCY SETUP ERROR]', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ==========================================
-// ✅ SHARE LINK PUBLIC ROUTES
-// ==========================================
-
 app.get('/scan-with-link/:code', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/share-link.html'));
 });
@@ -525,21 +613,11 @@ app.get('/api/share-link/validate/:code', async (req, res) => {
     }
     
     if (new Date(link.expires_at) < new Date()) {
-      return res.json({ 
-        success: false, 
-        error: 'Link expired', 
-        status: 'expired',
-        expires_at: link.expires_at
-      });
+      return res.json({ success: false, error: 'Link expired', status: 'expired', expires_at: link.expires_at });
     }
     
     if (link.current_uses >= link.max_uses) {
-      return res.json({ 
-        success: false, 
-        error: 'Scan limit reached', 
-        status: 'limit_reached',
-        scans_limit: link.max_uses
-      });
+      return res.json({ success: false, error: 'Scan limit reached', status: 'limit_reached', scans_limit: link.max_uses });
     }
     
     res.json({
@@ -559,8 +637,6 @@ app.get('/api/share-link/validate/:code', async (req, res) => {
     res.status(500).json({ success: false, error: 'Validation failed' });
   }
 });
-
-
 
 app.post('/api/share-link/scan', async (req, res) => {
   try {
@@ -615,8 +691,6 @@ app.post('/api/share-link/scan', async (req, res) => {
       [share_code]
     );
     
-    console.log('[SHARE LINK SCAN] Code:', share_code, 'URL:', url, 'Score:', mockScore);
-    
     res.json(scanResult);
     
   } catch (error) {
@@ -628,9 +702,9 @@ app.post('/api/share-link/scan', async (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`
 ╔════════════════════════════════════════╗
-║ ✅ CONTENTSCALE COMPLETE               ║
+║ ✅ CONTENTSCALE READY                  ║
 ║ Port: ${PORT}                          ║
-║ Status: OPERATIONAL                    ║
+║ 🆘 Setup: /api/setup/create-admin     ║
 ╚════════════════════════════════════════╝
   `);
 });
