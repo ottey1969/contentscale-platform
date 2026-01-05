@@ -167,18 +167,21 @@
   </div>
 
   <script>
+    console.log('🚀 Share Link Scanner v2.0 LOADED');
+    
     let shareCode = '';
     let linkData = null;
     let currentScanResult = null;
 
     async function validateLink() {
       shareCode = window.location.pathname.split('/').pop();
+      console.log('🔍 Validating share code:', shareCode);
       
       try {
         const response = await fetch(`/api/share-link/validate/${shareCode}`);
         const data = await response.json();
         
-        console.log('✅ Link validation:', data);
+        console.log('✅ Link validation response:', data);
         
         if (!data.success) {
           showError(data.status, data.error, data);
@@ -189,7 +192,7 @@
         showScanInterface(data);
         
       } catch (error) {
-        console.error('Validation error:', error);
+        console.error('❌ Validation error:', error);
         showError('error', 'Failed to validate link');
       }
     }
@@ -218,6 +221,7 @@
     }
 
     function showScanInterface(data) {
+      console.log('✅ Showing scan interface');
       document.getElementById('loading').classList.add('hidden');
       document.getElementById('scan-interface').classList.remove('hidden');
       
@@ -244,6 +248,9 @@
       btn.disabled = true;
       btn.textContent = 'Scanning...';
       
+      console.log('🔍 Scanning URL:', url);
+      console.log('🔍 Share code:', shareCode);
+      
       try {
         const response = await fetch('/api/share-link/scan', {
           method: 'POST',
@@ -253,7 +260,18 @@
         
         const data = await response.json();
         
-        console.log('✅ Scan result:', data);
+        console.log('📊 RAW SCAN RESPONSE:', data);
+        console.log('📊 Has recommendations?', !!data.recommendations);
+        console.log('📊 Recommendations object:', data.recommendations);
+        
+        if (data.recommendations) {
+          console.log('✅ Quick Wins:', data.recommendations.quickWins?.length || 0);
+          console.log('✅ Major Impact:', data.recommendations.majorImpact?.length || 0);
+          console.log('✅ Advanced:', data.recommendations.advanced?.length || 0);
+          console.log('✅ Summary:', data.recommendations.summary);
+        } else {
+          console.log('❌ NO RECOMMENDATIONS IN RESPONSE!');
+        }
         
         if (!data.success) {
           if (data.status === 'limit_reached') {
@@ -267,7 +285,6 @@
         currentScanResult = data;
         showResults(data);
         
-        // Update remaining scans
         if (data.scans_remaining !== undefined) {
           document.getElementById('scans-remaining').textContent = data.scans_remaining;
           document.getElementById('scans-used').textContent = (linkData.scans_limit - data.scans_remaining);
@@ -275,7 +292,7 @@
         }
         
       } catch (error) {
-        console.error('Scan error:', error);
+        console.error('❌ Scan error:', error);
         alert('Scan failed: ' + error.message);
       } finally {
         btn.disabled = false;
@@ -284,8 +301,8 @@
     }
 
     function showResults(data) {
-      console.log('🔍 SHOWING RESULTS:', data);
-      console.log('🔍 HAS RECOMMENDATIONS?', !!data.recommendations);
+      console.log('🎯 SHOWING RESULTS - START');
+      console.log('Data:', data);
       
       document.getElementById('modal-score').textContent = data.score + '/100';
       document.getElementById('modal-quality').textContent = getQualityText(data.score);
@@ -296,137 +313,171 @@
       document.getElementById('modal-craft').textContent = `${data.breakdown.craft.total}/30`;
       document.getElementById('modal-technical').textContent = `${data.breakdown.technical.total}/20`;
       
+      console.log('✅ Basic info displayed');
+      
       // RECOMMENDATIONS
       const recSection = document.getElementById('recommendations-section');
+      
+      if (!recSection) {
+        console.error('❌ recommendations-section element NOT FOUND!');
+        return;
+      }
+      
+      console.log('✅ Found recommendations section element');
+      
       if (data.recommendations) {
-        console.log('✅ DISPLAYING RECOMMENDATIONS');
-        recSection.classList.remove('hidden');
+        console.log('✅ Data has recommendations, displaying...');
         
-        document.getElementById('rec-total-issues').textContent = data.recommendations.summary.totalIssues;
-        document.getElementById('rec-time').textContent = Math.round(data.recommendations.summary.estimatedTimeToFix / 60) + 'h';
-        document.getElementById('rec-gain').textContent = '+' + data.recommendations.summary.potentialScoreGain;
+        recSection.classList.remove('hidden');
+        console.log('✅ Removed hidden class from section');
+        
+        // Summary
+        const totalIssues = data.recommendations.summary.totalIssues;
+        const timeToFix = data.recommendations.summary.estimatedTimeToFix;
+        const scoreGain = data.recommendations.summary.potentialScoreGain;
+        
+        console.log('Summary:', { totalIssues, timeToFix, scoreGain });
+        
+        document.getElementById('rec-total-issues').textContent = totalIssues;
+        document.getElementById('rec-time').textContent = Math.round(timeToFix / 60) + 'h';
+        document.getElementById('rec-gain').textContent = '+' + scoreGain;
+        
+        console.log('✅ Summary displayed');
         
         // Quick Wins
         if (data.recommendations.quickWins && data.recommendations.quickWins.length > 0) {
-          console.log('✅ Quick Wins:', data.recommendations.quickWins.length);
-          document.getElementById('quick-wins-section').classList.remove('hidden');
-          const list = document.getElementById('quick-wins-list');
-          list.innerHTML = data.recommendations.quickWins.map((rec, i) => `
-            <div class="bg-gray-800 rounded p-3 text-sm">
-              <div class="flex justify-between items-start mb-1">
-                <div class="font-bold text-green-400">${i + 1}. ${rec.action}</div>
-                <div class="text-xs text-gray-400">${rec.timeEstimate}min | +${rec.impact}pts</div>
+          console.log('✅ Displaying Quick Wins:', data.recommendations.quickWins.length);
+          
+          const quickWinsSection = document.getElementById('quick-wins-section');
+          const quickWinsList = document.getElementById('quick-wins-list');
+          
+          if (!quickWinsSection || !quickWinsList) {
+            console.error('❌ Quick wins elements not found!');
+          } else {
+            quickWinsSection.classList.remove('hidden');
+            
+            quickWinsList.innerHTML = data.recommendations.quickWins.map((rec, i) => `
+              <div class="bg-gray-800 rounded p-3 text-sm">
+                <div class="flex justify-between items-start mb-1">
+                  <div class="font-bold text-green-400">${i + 1}. ${rec.action}</div>
+                  <div class="text-xs text-gray-400">${rec.timeEstimate}min | +${rec.impact}pts</div>
+                </div>
+                <div class="text-xs text-gray-400">${rec.issue}</div>
               </div>
-              <div class="text-xs text-gray-400">${rec.issue}</div>
-            </div>
-          `).join('');
+            `).join('');
+            
+            console.log('✅ Quick Wins HTML injected');
+          }
+        } else {
+          console.log('⚠️ No Quick Wins to display');
         }
         
         // Major Impact
         if (data.recommendations.majorImpact && data.recommendations.majorImpact.length > 0) {
-          console.log('✅ Major Impact:', data.recommendations.majorImpact.length);
-          document.getElementById('major-impact-section').classList.remove('hidden');
-          const list = document.getElementById('major-impact-list');
-          list.innerHTML = data.recommendations.majorImpact.map((rec, i) => `
-            <div class="bg-gray-800 rounded p-3 text-sm">
-              <div class="flex justify-between items-start mb-1">
-                <div class="font-bold text-orange-400">${i + 1}. ${rec.action}</div>
-                <div class="text-xs text-gray-400">${rec.timeEstimate}min | +${rec.impact}pts</div>
+          console.log('✅ Displaying Major Impact:', data.recommendations.majorImpact.length);
+          
+          const majorSection = document.getElementById('major-impact-section');
+          const majorList = document.getElementById('major-impact-list');
+          
+          if (!majorSection || !majorList) {
+            console.error('❌ Major impact elements not found!');
+          } else {
+            majorSection.classList.remove('hidden');
+            
+            majorList.innerHTML = data.recommendations.majorImpact.map((rec, i) => `
+              <div class="bg-gray-800 rounded p-3 text-sm">
+                <div class="flex justify-between items-start mb-1">
+                  <div class="font-bold text-orange-400">${i + 1}. ${rec.action}</div>
+                  <div class="text-xs text-gray-400">${rec.timeEstimate}min | +${rec.impact}pts</div>
+                </div>
+                <div class="text-xs text-gray-400">${rec.issue}</div>
               </div>
-              <div class="text-xs text-gray-400">${rec.issue}</div>
-            </div>
-          `).join('');
+            `).join('');
+            
+            console.log('✅ Major Impact HTML injected');
+          }
+        } else {
+          console.log('⚠️ No Major Impact to display');
         }
         
         // Advanced
         if (data.recommendations.advanced && data.recommendations.advanced.length > 0) {
-          console.log('✅ Advanced:', data.recommendations.advanced.length);
-          document.getElementById('advanced-section').classList.remove('hidden');
-          const list = document.getElementById('advanced-list');
-          list.innerHTML = data.recommendations.advanced.map((rec, i) => `
-            <div class="bg-gray-800 rounded p-3 text-sm">
-              <div class="flex justify-between items-start mb-1">
-                <div class="font-bold text-purple-400">${i + 1}. ${rec.action}</div>
-                <div class="text-xs text-gray-400">${rec.timeEstimate}min | +${rec.impact}pts</div>
+          console.log('✅ Displaying Advanced:', data.recommendations.advanced.length);
+          
+          const advSection = document.getElementById('advanced-section');
+          const advList = document.getElementById('advanced-list');
+          
+          if (!advSection || !advList) {
+            console.error('❌ Advanced elements not found!');
+          } else {
+            advSection.classList.remove('hidden');
+            
+            advList.innerHTML = data.recommendations.advanced.map((rec, i) => `
+              <div class="bg-gray-800 rounded p-3 text-sm">
+                <div class="flex justify-between items-start mb-1">
+                  <div class="font-bold text-purple-400">${i + 1}. ${rec.action}</div>
+                  <div class="text-xs text-gray-400">${rec.timeEstimate}min | +${rec.impact}pts</div>
+                </div>
+                <div class="text-xs text-gray-400">${rec.issue}</div>
               </div>
-              <div class="text-xs text-gray-400">${rec.issue}</div>
-            </div>
-          `).join('');
+            `).join('');
+            
+            console.log('✅ Advanced HTML injected');
+          }
+        } else {
+          console.log('⚠️ No Advanced to display');
         }
+        
+        console.log('✅ ALL RECOMMENDATIONS PROCESSED');
+        
       } else {
-        console.log('❌ NO RECOMMENDATIONS');
+        console.log('❌ NO RECOMMENDATIONS IN DATA');
         recSection.classList.add('hidden');
       }
       
+      console.log('🎯 Opening modal...');
       document.getElementById('resultsModal').classList.add('active');
+      console.log('✅ SHOWING RESULTS - COMPLETE');
     }
 
     function downloadPDFReport() {
-      if (!currentScanResult) return;
+      if (!currentScanResult) {
+        console.error('No scan result to download');
+        return;
+      }
       
       const score = currentScanResult.score;
       const url = currentScanResult.url;
       const recs = currentScanResult.recommendations;
       
-      let content = `CONTENTSCALE SEO REPORT
-${'='.repeat(60)}
-
-URL: ${url}
-Score: ${score}/100
-Quality: ${getQualityText(score)}
-Date: ${new Date().toLocaleString()}
-
-SCORE BREAKDOWN
-${'='.repeat(60)}
-GRAAF Framework: ${currentScanResult.breakdown.graaf.total}/50
-CRAFT Methodology: ${currentScanResult.breakdown.craft.total}/30
-Technical SEO: ${currentScanResult.breakdown.technical.total}/20
-
-`;
+      let content = `CONTENTSCALE SEO REPORT\n${'='.repeat(60)}\n\nURL: ${url}\nScore: ${score}/100\nQuality: ${getQualityText(score)}\nDate: ${new Date().toLocaleString()}\n\nSCORE BREAKDOWN\n${'='.repeat(60)}\nGRAAF Framework: ${currentScanResult.breakdown.graaf.total}/50\nCRAFT Methodology: ${currentScanResult.breakdown.craft.total}/30\nTechnical SEO: ${currentScanResult.breakdown.technical.total}/20\n\n`;
 
       if (recs) {
-        content += `\nRECOMMENDATIONS SUMMARY
-${'='.repeat(60)}
-Total Issues: ${recs.summary.totalIssues}
-Estimated Fix Time: ${Math.round(recs.summary.estimatedTimeToFix / 60)} hours
-Potential Score Gain: +${recs.summary.potentialScoreGain} points
-
-`;
+        content += `RECOMMENDATIONS SUMMARY\n${'='.repeat(60)}\nTotal Issues: ${recs.summary.totalIssues}\nEstimated Fix Time: ${Math.round(recs.summary.estimatedTimeToFix / 60)} hours\nPotential Score Gain: +${recs.summary.potentialScoreGain} points\n\n`;
 
         if (recs.quickWins && recs.quickWins.length > 0) {
-          content += `\nQUICK WINS (High Impact, Low Time)
-${'='.repeat(60)}\n`;
+          content += `QUICK WINS (High Impact, Low Time)\n${'='.repeat(60)}\n`;
           recs.quickWins.forEach((rec, i) => {
-            content += `${i + 1}. ${rec.action}\n`;
-            content += `   Issue: ${rec.issue}\n`;
-            content += `   Time: ${rec.timeEstimate}min | Impact: +${rec.impact}pts\n\n`;
+            content += `${i + 1}. ${rec.action}\n   Issue: ${rec.issue}\n   Time: ${rec.timeEstimate}min | Impact: +${rec.impact}pts\n\n`;
           });
         }
 
         if (recs.majorImpact && recs.majorImpact.length > 0) {
-          content += `\nMAJOR IMPACT (Critical for 90+)
-${'='.repeat(60)}\n`;
+          content += `MAJOR IMPACT (Critical for 90+)\n${'='.repeat(60)}\n`;
           recs.majorImpact.forEach((rec, i) => {
-            content += `${i + 1}. ${rec.action}\n`;
-            content += `   Issue: ${rec.issue}\n`;
-            content += `   Time: ${rec.timeEstimate}min | Impact: +${rec.impact}pts\n\n`;
+            content += `${i + 1}. ${rec.action}\n   Issue: ${rec.issue}\n   Time: ${rec.timeEstimate}min | Impact: +${rec.impact}pts\n\n`;
           });
         }
 
         if (recs.advanced && recs.advanced.length > 0) {
-          content += `\nADVANCED (For 95+)
-${'='.repeat(60)}\n`;
+          content += `ADVANCED (For 95+)\n${'='.repeat(60)}\n`;
           recs.advanced.forEach((rec, i) => {
-            content += `${i + 1}. ${rec.action}\n`;
-            content += `   Issue: ${rec.issue}\n`;
-            content += `   Time: ${rec.timeEstimate}min | Impact: +${rec.impact}pts\n\n`;
+            content += `${i + 1}. ${rec.action}\n   Issue: ${rec.issue}\n   Time: ${rec.timeEstimate}min | Impact: +${rec.impact}pts\n\n`;
           });
         }
       }
 
-      content += `\n${'='.repeat(60)}
-Generated by ContentScale | contentscale.site
-`;
+      content += `\n${'='.repeat(60)}\nGenerated by ContentScale | contentscale.site\n`;
 
       const blob = new Blob([content], { type: 'text/plain' });
       const url2 = URL.createObjectURL(blob);
@@ -471,8 +522,13 @@ Generated by ContentScale | contentscale.site
       if (e.key === 'Enter') performScan();
     });
 
-    document.addEventListener('DOMContentLoaded', validateLink);
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('🚀 Page loaded, validating link...');
+      validateLink();
+    });
   </script>
 
+</body>
+</html>
 </body>
 </html>
