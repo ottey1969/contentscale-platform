@@ -24,11 +24,55 @@ app.use(express.json());
 app.use(express.static('public'));
 
 // ==========================================
-// 🆘 EMERGENCY ADMIN SETUP - DELETE AFTER USE!
+// 🔐 BEVEILIGDE ADMIN SETUP - MET SECRET KEY
 // ==========================================
 app.get('/api/setup/create-admin', async (req, res) => {
   try {
-    console.log('[SETUP] Creating admin...');
+    // 🔐 SECRET KEY VERIFICATIE
+    const secretKey = req.query.secret;
+    const SETUP_SECRET = process.env.SETUP_SECRET || 'ContentScale2025Secret!';
+    
+    if (secretKey !== SETUP_SECRET) {
+      console.log('[SETUP] ❌ Invalid secret key attempt');
+      return res.status(403).send(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="UTF-8">
+            <title>Access Denied</title>
+            <style>
+              body { 
+                font-family: Arial; 
+                padding: 40px; 
+                text-align: center; 
+                background: #1a1a1a; 
+                color: white;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              }
+              .container {
+                background: #2a2a2a;
+                padding: 40px;
+                border-radius: 20px;
+                border: 2px solid #ef4444;
+              }
+              h1 { color: #ef4444; margin-bottom: 20px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>🚫 Access Denied</h1>
+              <p>Invalid setup secret key</p>
+              <p style="color: #666; font-size: 14px; margin-top: 20px;">This endpoint requires a valid secret parameter</p>
+            </div>
+          </body>
+        </html>
+      `);
+    }
+    
+    console.log('[SETUP] ✅ Secret verified, creating admin...');
     
     // Generate fresh hash
     const hash = await bcrypt.hash('admin123', 10);
@@ -43,7 +87,7 @@ app.get('/api/setup/create-admin', async (req, res) => {
       [id, 'ot', hash]
     );
     
-    console.log('[SETUP] ✅ Admin created!');
+    console.log('[SETUP] ✅ Admin created successfully!');
     
     res.send(`
       <!DOCTYPE html>
@@ -132,7 +176,7 @@ app.get('/api/setup/create-admin', async (req, res) => {
     res.status(500).send(`
       <!DOCTYPE html>
       <html>
-        <body style="font-family: Arial; padding: 40px; text-align: center;">
+        <body style="font-family: Arial; padding: 40px; text-align: center; background: #1a1a1a; color: white;">
           <h1 style="color: red;">❌ Setup Failed</h1>
           <p>${error.message}</p>
           <a href="/admin" style="background: blue; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px;">Try Admin Panel</a>
@@ -200,6 +244,127 @@ app.post('/api/setup/verify-admin', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// ==========================================
+// MOCK RECOMMENDATIONS GENERATOR
+// ==========================================
+function generateMockRecommendations(score) {
+  const recommendations = {
+    quickWins: [],
+    majorImpact: [],
+    advanced: [],
+    summary: {
+      totalIssues: 0,
+      estimatedTimeToFix: 0,
+      potentialScoreGain: 100 - score,
+      currentScore: score,
+      targetScore: 100
+    }
+  };
+  
+  // QUICK WINS (score < 80)
+  if (score < 80) {
+    recommendations.quickWins.push(
+      {
+        category: 'GRAAF - Freshness',
+        issue: 'Missing publication date',
+        action: 'Add publication date and last updated date',
+        details: ['Add <time> tag with datetime attribute', 'Show "Published: Month DD, YYYY"', 'Add "Last Updated" timestamp'],
+        impact: 3,
+        timeEstimate: 5,
+        priority: 'high'
+      },
+      {
+        category: 'CRAFT - Review & Optimize',
+        issue: 'Meta title needs optimization',
+        action: 'Adjust title to 50-60 characters with keyword',
+        details: ['Include primary keyword at start', 'Add year (2025) for freshness', 'Keep under 60 characters'],
+        impact: 3,
+        timeEstimate: 10,
+        priority: 'high'
+      },
+      {
+        category: 'Technical SEO',
+        issue: 'Not enough internal links',
+        action: 'Add 5-7 contextual internal links',
+        details: ['Link to related articles', 'Use descriptive anchor text', 'Distribute throughout content'],
+        impact: 2,
+        timeEstimate: 15,
+        priority: 'medium'
+      }
+    );
+  }
+  
+  // MAJOR IMPACT (score < 90)
+  if (score < 90) {
+    recommendations.majorImpact.push(
+      {
+        category: 'GRAAF - Credibility',
+        issue: 'Missing expert quotes (need 3+)',
+        action: 'Add 3 expert quotes with full credentials',
+        details: ['Find industry experts or academics', 'Include: Name, title, organization', 'Format: "Quote" — Name, Title, Org', 'Link to LinkedIn profiles when possible'],
+        impact: 4,
+        timeEstimate: 60,
+        priority: 'high'
+      },
+      {
+        category: 'GRAAF - Actionability',
+        issue: 'Need more step-by-step guides (5+ required)',
+        action: 'Create 3 detailed step-by-step tutorials',
+        details: ['Use numbered lists', 'Each step should be specific and actionable', 'Include expected outcomes', 'Add time estimates per step'],
+        impact: 3,
+        timeEstimate: 45,
+        priority: 'high'
+      },
+      {
+        category: 'CRAFT - FAQ Integration',
+        issue: 'Need 8+ FAQ questions',
+        action: 'Add 8 frequently asked questions with answers',
+        details: ['Research "People Also Ask" on Google', 'Cover What, Why, How, When questions', 'Answers should be 40-150 words', 'Add FAQ schema markup'],
+        impact: 2,
+        timeEstimate: 30,
+        priority: 'medium'
+      }
+    );
+  }
+  
+  // ADVANCED (score < 95)
+  if (score < 95) {
+    recommendations.advanced.push(
+      {
+        category: 'GRAAF - Accuracy',
+        issue: 'Missing case studies (2 required)',
+        action: 'Add 2 detailed case studies with results',
+        details: ['Include company name and industry', 'Show before/after metrics', 'Add specific timeframes', 'List 3 key learnings'],
+        impact: 3,
+        timeEstimate: 90,
+        priority: 'medium'
+      },
+      {
+        category: 'CRAFT - Add Visuals',
+        issue: 'Could add more images',
+        action: 'Add 3-5 more images with alt text',
+        details: ['Target: 1 image per 350 words', 'Use screenshots, diagrams, charts', 'Add descriptive alt text (50-100 chars)', 'Optimize to WebP format <200KB'],
+        impact: 2,
+        timeEstimate: 40,
+        priority: 'low'
+      }
+    );
+  }
+  
+  // Calculate totals
+  recommendations.summary.totalIssues = 
+    recommendations.quickWins.length + 
+    recommendations.majorImpact.length + 
+    recommendations.advanced.length;
+  
+  recommendations.summary.estimatedTimeToFix = 
+    recommendations.quickWins.reduce((sum, r) => sum + r.timeEstimate, 0) +
+    recommendations.majorImpact.reduce((sum, r) => sum + r.timeEstimate, 0) +
+    recommendations.advanced.reduce((sum, r) => sum + r.timeEstimate, 0);
+  
+  return recommendations;
+}
 app.get('/api/admin/stats', authenticateSuperAdmin, async (req, res) => {
   try {
     const [agencies, clients, scans, helpers] = await Promise.all([
@@ -511,23 +676,59 @@ app.get('/api/leaderboard/stats', async (req, res) => {
   }
 });
 
+// ==========================================
+// 📊 FREE SCAN - MET RECOMMENDATIONS
+// ==========================================
 app.post('/api/scan-free', async (req, res) => {
   try {
     const { url } = req.body;
     if (!url) return res.status(400).json({ success: false, error: 'URL required' });
     
     const mockScore = Math.floor(Math.random() * 30) + 60;
+    
+    // Generate recommendations based on score
+    const recommendations = generateMockRecommendations(mockScore);
+    
     const mockResult = {
       success: true,
+      url: url,
       score: mockScore,
-      quality: mockScore >= 80 ? 'good' : mockScore >= 70 ? 'fair' : 'needs-improvement',
+      quality: mockScore >= 90 ? 'excellent' : 
+               mockScore >= 80 ? 'good' : 
+               mockScore >= 70 ? 'fair' : 
+               mockScore >= 60 ? 'average' : 'needs-improvement',
       breakdown: {
-        graaf: { total: Math.floor(mockScore * 0.5) },
-        craft: { total: Math.floor(mockScore * 0.3) },
-        technical: { total: Math.floor(mockScore * 0.2) }
+        graaf: { 
+          total: Math.floor(mockScore * 0.5),
+          credibility: Math.floor(mockScore * 0.1),
+          relevance: Math.floor(mockScore * 0.1),
+          actionability: Math.floor(mockScore * 0.1),
+          accuracy: Math.floor(mockScore * 0.1),
+          freshness: Math.floor(mockScore * 0.1)
+        },
+        craft: { 
+          total: Math.floor(mockScore * 0.3),
+          cutFluff: Math.floor(mockScore * 0.08),
+          reviewOptimize: Math.floor(mockScore * 0.08),
+          addVisuals: Math.floor(mockScore * 0.06),
+          faqIntegration: Math.floor(mockScore * 0.05),
+          trustBuilding: Math.floor(mockScore * 0.03)
+        },
+        technical: { 
+          total: Math.floor(mockScore * 0.2),
+          schemaMarkup: Math.floor(mockScore * 0.04),
+          metaOptimization: Math.floor(mockScore * 0.04),
+          internalLinking: Math.floor(mockScore * 0.04),
+          pageStructure: Math.floor(mockScore * 0.04),
+          mobileOptimization: Math.floor(mockScore * 0.04)
+        }
       },
-      wordCount: Math.floor(Math.random() * 1000) + 1000
+      recommendations: recommendations,
+      wordCount: Math.floor(Math.random() * 1000) + 1000,
+      scanned_at: new Date().toISOString()
     };
+    
+    console.log('[SCAN-FREE] URL:', url, 'Score:', mockScore, 'Recommendations:', recommendations.summary.totalIssues);
     
     res.json(mockResult);
   } catch (error) {
@@ -587,6 +788,9 @@ app.post('/api/generate-content-prompt', async (req, res) => {
   }
 });
 
+// ==========================================
+// 🔗 SHARE LINK ROUTES - MET RECOMMENDATIONS
+// ==========================================
 app.get('/scan-with-link/:code', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/share-link.html'));
 });
@@ -671,17 +875,24 @@ app.post('/api/share-link/scan', async (req, res) => {
     }
     
     const mockScore = Math.floor(Math.random() * 30) + 60;
+    
+    // Generate recommendations
+    const recommendations = generateMockRecommendations(mockScore);
+    
     const scanResult = {
       success: true,
+      url: url,
       score: mockScore,
-      quality: mockScore >= 80 ? 'good' : mockScore >= 70 ? 'fair' : 'needs-improvement',
+      quality: mockScore >= 90 ? 'excellent' : 
+               mockScore >= 80 ? 'good' : 
+               mockScore >= 70 ? 'fair' : 'needs-improvement',
       breakdown: {
         graaf: { total: Math.floor(mockScore * 0.5) },
         craft: { total: Math.floor(mockScore * 0.3) },
         technical: { total: Math.floor(mockScore * 0.2) }
       },
+      recommendations: recommendations,
       wordCount: Math.floor(Math.random() * 1000) + 1000,
-      url: url,
       scanned_at: new Date().toISOString(),
       scans_remaining: link.max_uses - link.current_uses - 1
     };
@@ -690,6 +901,8 @@ app.post('/api/share-link/scan', async (req, res) => {
       'UPDATE share_links SET current_uses = current_uses + 1 WHERE token = $1',
       [share_code]
     );
+    
+    console.log('[SHARE LINK SCAN] Code:', share_code, 'URL:', url, 'Score:', mockScore);
     
     res.json(scanResult);
     
@@ -702,11 +915,23 @@ app.post('/api/share-link/scan', async (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`
 ╔════════════════════════════════════════╗
-║ ✅ CONTENTSCALE READY                  ║
+║ ✅ CONTENTSCALE v2.0                   ║
 ║ Port: ${PORT}                          ║
-║ 🆘 Setup: /api/setup/create-admin     ║
+║ 🔐 Setup: /api/setup/create-admin     ║
+║     ?secret=ContentScale2025Secret!    ║
+║ 📊 Recommendations: ENABLED            ║
 ╚════════════════════════════════════════╝
   `);
 });
 
 module.exports = { pool };
+```
+
+---
+
+## 🎯 **WAT IS ER VERANDERD:**
+
+### ✅ **1. Setup Endpoint Beveiligd**
+```
+Oud: https://app.contentscale.site/api/setup/create-admin
+Nieuw: https://app.contentscale.site/api/setup/create-admin?secret=ContentScale2025Secret!
