@@ -5,13 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ContentScale - Client Scan Portal</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
-    .modal.active { display: flex; }
-    .modal-content { background: #1f2937; border-radius: 16px; padding: 32px; max-width: 900px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; }
-    .modal-close { position: absolute; top: 16px; right: 16px; background: #374151; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; color: white; font-size: 20px; }
-    .modal-close:hover { background: #4b5563; }
-  </style>
 </head>
 <body class="bg-gray-900 text-white min-h-screen">
 
@@ -29,10 +22,10 @@
       <p class="text-xl text-gray-400">Validating access...</p>
     </div>
 
-    <div id="error-state" class="hidden bg-red-900 border border-red-700 rounded-lg p-6 text-center">
+    <div id="error-state" style="display:none;" class="bg-red-900 border border-red-700 rounded-lg p-6 text-center">
       <h3 class="text-2xl font-bold mb-2" id="error-title">❌ Access Error</h3>
       <p class="text-gray-400 mb-4" id="error-message">There was a problem with your scan link.</p>
-      <div id="error-contact" class="mt-6 p-4 bg-gray-800 rounded-lg">
+      <div class="mt-6 p-4 bg-gray-800 rounded-lg">
         <p class="text-sm text-gray-400 mb-3">Need help? Contact us:</p>
         <div class="flex justify-center gap-3">
           <a href="https://wa.me/31628073996" target="_blank" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-bold text-sm transition">
@@ -45,7 +38,7 @@
       </div>
     </div>
 
-    <div id="scan-interface" class="hidden">
+    <div id="scan-interface" style="display:none;">
       <div class="bg-gray-800 rounded-lg p-6 mb-6">
         <h2 class="text-2xl font-bold mb-4">Welcome, <span id="client-name" class="text-blue-400">Client</span>!</h2>
         <div class="grid md:grid-cols-3 gap-4 mb-4">
@@ -79,95 +72,96 @@
   </div>
 
   <!-- RESULTS MODAL -->
-  <div id="resultsModal" class="modal">
-    <div class="modal-content">
-      <button class="modal-close" onclick="closeResultsModal()">×</button>
+  <div id="resultsModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;overflow-y:auto;padding:20px;">
+    <div style="background:#1f2937;border-radius:16px;max-width:900px;margin:40px auto;padding:32px;position:relative;">
+      <button onclick="closeResultsModal()" style="position:absolute;top:16px;right:16px;background:#374151;border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;color:white;font-size:20px;">×</button>
       
-      <div class="text-center mb-6">
-        <div class="text-6xl mb-3" id="modal-emoji">🎯</div>
-        <div class="text-5xl font-bold mb-2" id="modal-score">--/100</div>
-        <div class="text-lg text-gray-400" id="modal-quality">Analyzing...</div>
-        <div class="text-sm text-gray-500 mt-2" id="modal-url"></div>
+      <div style="text-center;margin-bottom:24px;">
+        <div style="font-size:64px;margin-bottom:12px;" id="modal-emoji">🎯</div>
+        <div style="font-size:48px;font-weight:bold;margin-bottom:8px;" id="modal-score">--/100</div>
+        <div style="font-size:18px;color:#9ca3af;margin-bottom:8px;" id="modal-quality">Analyzing...</div>
+        <div style="font-size:14px;color:#6b7280;" id="modal-url"></div>
       </div>
       
-      <div class="mb-6">
-        <h3 class="font-bold text-lg mb-3">Score Breakdown:</h3>
-        <div class="grid grid-cols-3 gap-4">
-          <div class="bg-blue-900/30 rounded-lg p-4 text-center">
-            <div class="text-sm text-gray-400 mb-1">🎯 GRAAF</div>
-            <div class="text-2xl font-bold text-blue-400" id="modal-graaf">-/50</div>
+      <div style="margin-bottom:24px;">
+        <h3 style="font-weight:bold;font-size:18px;margin-bottom:12px;">Score Breakdown:</h3>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+          <div style="background:rgba(59,130,246,0.2);border-radius:8px;padding:16px;text-align:center;">
+            <div style="font-size:14px;color:#9ca3af;margin-bottom:4px;">🎯 GRAAF</div>
+            <div style="font-size:24px;font-weight:bold;color:#60a5fa;" id="modal-graaf">-/50</div>
           </div>
-          <div class="bg-purple-900/30 rounded-lg p-4 text-center">
-            <div class="text-sm text-gray-400 mb-1">⚡ CRAFT</div>
-            <div class="text-2xl font-bold text-purple-400" id="modal-craft">-/30</div>
+          <div style="background:rgba(139,92,246,0.2);border-radius:8px;padding:16px;text-align:center;">
+            <div style="font-size:14px;color:#9ca3af;margin-bottom:4px;">⚡ CRAFT</div>
+            <div style="font-size:24px;font-weight:bold;color:#a78bfa;" id="modal-craft">-/30</div>
           </div>
-          <div class="bg-green-900/30 rounded-lg p-4 text-center">
-            <div class="text-sm text-gray-400 mb-1">🔧 Technical</div>
-            <div class="text-2xl font-bold text-green-400" id="modal-technical">-/20</div>
+          <div style="background:rgba(16,185,129,0.2);border-radius:8px;padding:16px;text-align:center;">
+            <div style="font-size:14px;color:#9ca3af;margin-bottom:4px;">🔧 Technical</div>
+            <div style="font-size:24px;font-weight:bold;color:#10b981;" id="modal-technical">-/20</div>
           </div>
         </div>
       </div>
 
       <!-- RECOMMENDATIONS -->
-      <div id="recommendations-section" class="mb-6 hidden">
-        <h3 class="font-bold text-xl mb-4">💡 Recommendations to Reach 100/100</h3>
+      <div id="recommendations-section" style="margin-bottom:24px;">
+        <h3 style="font-weight:bold;font-size:20px;margin-bottom:16px;">💡 Recommendations to Reach 100/100</h3>
         
-        <div class="bg-gray-800 rounded-lg p-4 mb-4">
-          <div class="grid grid-cols-3 gap-4 text-center text-sm">
+        <div style="background:#1f2937;border-radius:8px;padding:16px;margin-bottom:16px;">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;text-align:center;font-size:14px;">
             <div>
-              <div class="text-2xl font-bold text-blue-400" id="rec-total-issues">0</div>
-              <div class="text-gray-400">Issues Found</div>
+              <div style="font-size:24px;font-weight:bold;color:#60a5fa;" id="rec-total-issues">0</div>
+              <div style="color:#9ca3af;">Issues Found</div>
             </div>
             <div>
-              <div class="text-2xl font-bold text-purple-400" id="rec-time">0h</div>
-              <div class="text-gray-400">Est. Fix Time</div>
+              <div style="font-size:24px;font-weight:bold;color:#a78bfa;" id="rec-time">0h</div>
+              <div style="color:#9ca3af;">Est. Fix Time</div>
             </div>
             <div>
-              <div class="text-2xl font-bold text-green-400" id="rec-gain">+0</div>
-              <div class="text-gray-400">Score Gain</div>
+              <div style="font-size:24px;font-weight:bold;color:#10b981;" id="rec-gain">+0</div>
+              <div style="color:#9ca3af;">Score Gain</div>
             </div>
           </div>
         </div>
 
-        <div id="quick-wins-section" class="hidden mb-4">
-          <div class="bg-green-900/20 border border-green-700 rounded-lg p-4">
-            <h4 class="font-bold text-green-400 mb-3">⚡ Quick Wins (High Impact, Low Time)</h4>
-            <div id="quick-wins-list" class="space-y-2"></div>
+        <div id="quick-wins-section" style="margin-bottom:16px;">
+          <div style="background:rgba(16,185,129,0.2);border:1px solid #10b981;border-radius:8px;padding:16px;">
+            <h4 style="font-weight:bold;color:#10b981;margin-bottom:12px;">⚡ Quick Wins (High Impact, Low Time)</h4>
+            <div id="quick-wins-list"></div>
           </div>
         </div>
 
-        <div id="major-impact-section" class="hidden mb-4">
-          <div class="bg-orange-900/20 border border-orange-700 rounded-lg p-4">
-            <h4 class="font-bold text-orange-400 mb-3">🎯 Major Impact (Critical for 90+)</h4>
-            <div id="major-impact-list" class="space-y-2"></div>
+        <div id="major-impact-section" style="margin-bottom:16px;">
+          <div style="background:rgba(249,115,22,0.2);border:1px solid #f97316;border-radius:8px;padding:16px;">
+            <h4 style="font-weight:bold;color:#f97316;margin-bottom:12px;">🎯 Major Impact (Critical for 90+)</h4>
+            <div id="major-impact-list"></div>
           </div>
         </div>
 
-        <div id="advanced-section" class="hidden">
-          <div class="bg-purple-900/20 border border-purple-700 rounded-lg p-4">
-            <h4 class="font-bold text-purple-400 mb-3">🚀 Advanced (For 95+)</h4>
-            <div id="advanced-list" class="space-y-2"></div>
+        <div id="advanced-section">
+          <div style="background:rgba(139,92,246,0.2);border:1px solid #a78bfa;border-radius:8px;padding:16px;">
+            <h4 style="font-weight:bold;color:#a78bfa;margin-bottom:12px;">🚀 Advanced (For 95+)</h4>
+            <div id="advanced-list"></div>
           </div>
         </div>
       </div>
 
-      <div class="space-y-3">
-        <button onclick="downloadPDFReport()" class="w-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 px-6 py-4 rounded-lg font-bold text-lg transition flex items-center justify-center gap-2">
-          <span class="text-2xl">📄</span>
-          <span>Download PDF Report</span>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <button onclick="downloadPDFReport()" style="width:100%;background:linear-gradient(135deg,#dc2626,#db2777);color:white;padding:16px 24px;border-radius:8px;font-weight:bold;font-size:18px;border:none;cursor:pointer;">
+          📄 Download PDF Report
         </button>
         
-        <button onclick="scanAnother()" class="w-full bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-bold transition">
+        <button onclick="scanAnother()" style="width:100%;background:#2563eb;color:white;padding:12px 24px;border-radius:8px;font-weight:bold;border:none;cursor:pointer;">
           🔍 Scan Another Page (<span id="remaining-scans">0</span> left)
         </button>
         
-        <button onclick="closeResultsModal()" class="w-full bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg font-bold transition">Close</button>
+        <button onclick="closeResultsModal()" style="width:100%;background:#4b5563;color:white;padding:12px 24px;border-radius:8px;font-weight:bold;border:none;cursor:pointer;">
+          Close
+        </button>
       </div>
     </div>
   </div>
 
   <script>
-    console.log('🚀 Share Link Scanner v2.0 LOADED');
+    console.log('🚀 ContentScale Share Link Scanner LOADED');
     
     let shareCode = '';
     let linkData = null;
@@ -175,13 +169,13 @@
 
     async function validateLink() {
       shareCode = window.location.pathname.split('/').pop();
-      console.log('🔍 Validating share code:', shareCode);
+      console.log('🔍 Share code:', shareCode);
       
       try {
         const response = await fetch(`/api/share-link/validate/${shareCode}`);
         const data = await response.json();
         
-        console.log('✅ Link validation response:', data);
+        console.log('✅ Validation:', data);
         
         if (!data.success) {
           showError(data.status, data.error, data);
@@ -198,7 +192,7 @@
     }
 
     function showError(status, message, data = {}) {
-      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('loading').style.display = 'none';
       const errorState = document.getElementById('error-state');
       
       let title = '❌ Access Error';
@@ -217,13 +211,13 @@
       
       document.getElementById('error-title').textContent = title;
       document.getElementById('error-message').textContent = msg;
-      errorState.classList.remove('hidden');
+      errorState.style.display = 'block';
     }
 
     function showScanInterface(data) {
-      console.log('✅ Showing scan interface');
-      document.getElementById('loading').classList.add('hidden');
-      document.getElementById('scan-interface').classList.remove('hidden');
+      console.log('✅ Showing interface');
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('scan-interface').style.display = 'block';
       
       document.getElementById('client-name').textContent = data.client_name || data.company || 'Valued Client';
       document.getElementById('scans-remaining').textContent = data.scans_remaining;
@@ -248,8 +242,7 @@
       btn.disabled = true;
       btn.textContent = 'Scanning...';
       
-      console.log('🔍 Scanning URL:', url);
-      console.log('🔍 Share code:', shareCode);
+      console.log('🔍 Scanning:', url);
       
       try {
         const response = await fetch('/api/share-link/scan', {
@@ -260,25 +253,22 @@
         
         const data = await response.json();
         
-        console.log('📊 RAW SCAN RESPONSE:', data);
+        console.log('📊 SCAN RESULT:', data);
         console.log('📊 Has recommendations?', !!data.recommendations);
-        console.log('📊 Recommendations object:', data.recommendations);
         
         if (data.recommendations) {
-          console.log('✅ Quick Wins:', data.recommendations.quickWins?.length || 0);
-          console.log('✅ Major Impact:', data.recommendations.majorImpact?.length || 0);
-          console.log('✅ Advanced:', data.recommendations.advanced?.length || 0);
-          console.log('✅ Summary:', data.recommendations.summary);
+          console.log('✅ Recommendations:', {
+            quickWins: data.recommendations.quickWins?.length || 0,
+            majorImpact: data.recommendations.majorImpact?.length || 0,
+            advanced: data.recommendations.advanced?.length || 0,
+            summary: data.recommendations.summary
+          });
         } else {
-          console.log('❌ NO RECOMMENDATIONS IN RESPONSE!');
+          console.log('❌ NO RECOMMENDATIONS!');
         }
         
         if (!data.success) {
-          if (data.status === 'limit_reached') {
-            alert('⚠️ All scans have been used! Contact us for more scans.');
-          } else {
-            alert('Scan failed: ' + (data.error || 'Unknown error'));
-          }
+          alert('Scan failed: ' + (data.error || 'Unknown error'));
           return;
         }
         
@@ -301,8 +291,7 @@
     }
 
     function showResults(data) {
-      console.log('🎯 SHOWING RESULTS - START');
-      console.log('Data:', data);
+      console.log('🎯 SHOWING RESULTS');
       
       document.getElementById('modal-score').textContent = data.score + '/100';
       document.getElementById('modal-quality').textContent = getQualityText(data.score);
@@ -313,183 +302,124 @@
       document.getElementById('modal-craft').textContent = `${data.breakdown.craft.total}/30`;
       document.getElementById('modal-technical').textContent = `${data.breakdown.technical.total}/20`;
       
-      console.log('✅ Basic info displayed');
-      
       // RECOMMENDATIONS
-      const recSection = document.getElementById('recommendations-section');
-      
-      if (!recSection) {
-        console.error('❌ recommendations-section element NOT FOUND!');
-        return;
-      }
-      
-      console.log('✅ Found recommendations section element');
-      
       if (data.recommendations) {
-        console.log('✅ Data has recommendations, displaying...');
+        console.log('✅ Processing recommendations');
         
-        recSection.classList.remove('hidden');
-        console.log('✅ Removed hidden class from section');
-        
-        // Summary
-        const totalIssues = data.recommendations.summary.totalIssues;
-        const timeToFix = data.recommendations.summary.estimatedTimeToFix;
-        const scoreGain = data.recommendations.summary.potentialScoreGain;
-        
-        console.log('Summary:', { totalIssues, timeToFix, scoreGain });
-        
-        document.getElementById('rec-total-issues').textContent = totalIssues;
-        document.getElementById('rec-time').textContent = Math.round(timeToFix / 60) + 'h';
-        document.getElementById('rec-gain').textContent = '+' + scoreGain;
-        
-        console.log('✅ Summary displayed');
+        const summary = data.recommendations.summary;
+        document.getElementById('rec-total-issues').textContent = summary.totalIssues;
+        document.getElementById('rec-time').textContent = Math.round(summary.estimatedTimeToFix / 60) + 'h';
+        document.getElementById('rec-gain').textContent = '+' + summary.potentialScoreGain;
         
         // Quick Wins
+        const quickWinsList = document.getElementById('quick-wins-list');
+        const quickWinsSection = document.getElementById('quick-wins-section');
         if (data.recommendations.quickWins && data.recommendations.quickWins.length > 0) {
-          console.log('✅ Displaying Quick Wins:', data.recommendations.quickWins.length);
-          
-          const quickWinsSection = document.getElementById('quick-wins-section');
-          const quickWinsList = document.getElementById('quick-wins-list');
-          
-          if (!quickWinsSection || !quickWinsList) {
-            console.error('❌ Quick wins elements not found!');
-          } else {
-            quickWinsSection.classList.remove('hidden');
-            
-            quickWinsList.innerHTML = data.recommendations.quickWins.map((rec, i) => `
-              <div class="bg-gray-800 rounded p-3 text-sm">
-                <div class="flex justify-between items-start mb-1">
-                  <div class="font-bold text-green-400">${i + 1}. ${rec.action}</div>
-                  <div class="text-xs text-gray-400">${rec.timeEstimate}min | +${rec.impact}pts</div>
-                </div>
-                <div class="text-xs text-gray-400">${rec.issue}</div>
+          console.log('✅ Showing Quick Wins:', data.recommendations.quickWins.length);
+          quickWinsSection.style.display = 'block';
+          quickWinsList.innerHTML = data.recommendations.quickWins.map((rec, i) => `
+            <div style="background:#1f2937;border-radius:8px;padding:12px;margin-bottom:8px;">
+              <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:4px;">
+                <div style="font-weight:bold;color:#10b981;">${i + 1}. ${rec.action}</div>
+                <div style="font-size:12px;color:#9ca3af;">${rec.timeEstimate}min | +${rec.impact}pts</div>
               </div>
-            `).join('');
-            
-            console.log('✅ Quick Wins HTML injected');
-          }
+              <div style="font-size:12px;color:#9ca3af;">${rec.issue}</div>
+            </div>
+          `).join('');
         } else {
-          console.log('⚠️ No Quick Wins to display');
+          quickWinsSection.style.display = 'none';
         }
         
         // Major Impact
+        const majorList = document.getElementById('major-impact-list');
+        const majorSection = document.getElementById('major-impact-section');
         if (data.recommendations.majorImpact && data.recommendations.majorImpact.length > 0) {
-          console.log('✅ Displaying Major Impact:', data.recommendations.majorImpact.length);
-          
-          const majorSection = document.getElementById('major-impact-section');
-          const majorList = document.getElementById('major-impact-list');
-          
-          if (!majorSection || !majorList) {
-            console.error('❌ Major impact elements not found!');
-          } else {
-            majorSection.classList.remove('hidden');
-            
-            majorList.innerHTML = data.recommendations.majorImpact.map((rec, i) => `
-              <div class="bg-gray-800 rounded p-3 text-sm">
-                <div class="flex justify-between items-start mb-1">
-                  <div class="font-bold text-orange-400">${i + 1}. ${rec.action}</div>
-                  <div class="text-xs text-gray-400">${rec.timeEstimate}min | +${rec.impact}pts</div>
-                </div>
-                <div class="text-xs text-gray-400">${rec.issue}</div>
+          console.log('✅ Showing Major Impact:', data.recommendations.majorImpact.length);
+          majorSection.style.display = 'block';
+          majorList.innerHTML = data.recommendations.majorImpact.map((rec, i) => `
+            <div style="background:#1f2937;border-radius:8px;padding:12px;margin-bottom:8px;">
+              <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:4px;">
+                <div style="font-weight:bold;color:#f97316;">${i + 1}. ${rec.action}</div>
+                <div style="font-size:12px;color:#9ca3af;">${rec.timeEstimate}min | +${rec.impact}pts</div>
               </div>
-            `).join('');
-            
-            console.log('✅ Major Impact HTML injected');
-          }
+              <div style="font-size:12px;color:#9ca3af;">${rec.issue}</div>
+            </div>
+          `).join('');
         } else {
-          console.log('⚠️ No Major Impact to display');
+          majorSection.style.display = 'none';
         }
         
         // Advanced
+        const advList = document.getElementById('advanced-list');
+        const advSection = document.getElementById('advanced-section');
         if (data.recommendations.advanced && data.recommendations.advanced.length > 0) {
-          console.log('✅ Displaying Advanced:', data.recommendations.advanced.length);
-          
-          const advSection = document.getElementById('advanced-section');
-          const advList = document.getElementById('advanced-list');
-          
-          if (!advSection || !advList) {
-            console.error('❌ Advanced elements not found!');
-          } else {
-            advSection.classList.remove('hidden');
-            
-            advList.innerHTML = data.recommendations.advanced.map((rec, i) => `
-              <div class="bg-gray-800 rounded p-3 text-sm">
-                <div class="flex justify-between items-start mb-1">
-                  <div class="font-bold text-purple-400">${i + 1}. ${rec.action}</div>
-                  <div class="text-xs text-gray-400">${rec.timeEstimate}min | +${rec.impact}pts</div>
-                </div>
-                <div class="text-xs text-gray-400">${rec.issue}</div>
+          console.log('✅ Showing Advanced:', data.recommendations.advanced.length);
+          advSection.style.display = 'block';
+          advList.innerHTML = data.recommendations.advanced.map((rec, i) => `
+            <div style="background:#1f2937;border-radius:8px;padding:12px;margin-bottom:8px;">
+              <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:4px;">
+                <div style="font-weight:bold;color:#a78bfa;">${i + 1}. ${rec.action}</div>
+                <div style="font-size:12px;color:#9ca3af;">${rec.timeEstimate}min | +${rec.impact}pts</div>
               </div>
-            `).join('');
-            
-            console.log('✅ Advanced HTML injected');
-          }
+              <div style="font-size:12px;color:#9ca3af;">${rec.issue}</div>
+            </div>
+          `).join('');
         } else {
-          console.log('⚠️ No Advanced to display');
+          advSection.style.display = 'none';
         }
         
-        console.log('✅ ALL RECOMMENDATIONS PROCESSED');
-        
+        console.log('✅ All recommendations displayed');
       } else {
-        console.log('❌ NO RECOMMENDATIONS IN DATA');
-        recSection.classList.add('hidden');
+        console.log('❌ No recommendations in data');
+        document.getElementById('recommendations-section').style.display = 'none';
       }
       
-      console.log('🎯 Opening modal...');
-      document.getElementById('resultsModal').classList.add('active');
-      console.log('✅ SHOWING RESULTS - COMPLETE');
+      document.getElementById('resultsModal').style.display = 'flex';
+      console.log('✅ Modal opened');
     }
 
     function downloadPDFReport() {
-      if (!currentScanResult) {
-        console.error('No scan result to download');
-        return;
-      }
+      if (!currentScanResult) return;
       
       const score = currentScanResult.score;
       const url = currentScanResult.url;
       const recs = currentScanResult.recommendations;
       
-      let content = `CONTENTSCALE SEO REPORT\n${'='.repeat(60)}\n\nURL: ${url}\nScore: ${score}/100\nQuality: ${getQualityText(score)}\nDate: ${new Date().toLocaleString()}\n\nSCORE BREAKDOWN\n${'='.repeat(60)}\nGRAAF Framework: ${currentScanResult.breakdown.graaf.total}/50\nCRAFT Methodology: ${currentScanResult.breakdown.craft.total}/30\nTechnical SEO: ${currentScanResult.breakdown.technical.total}/20\n\n`;
+      let content = `CONTENTSCALE SEO REPORT\n${'='.repeat(60)}\n\nURL: ${url}\nScore: ${score}/100\nDate: ${new Date().toLocaleString()}\n\nSCORE BREAKDOWN\n${'='.repeat(60)}\nGRAAF: ${currentScanResult.breakdown.graaf.total}/50\nCRAFT: ${currentScanResult.breakdown.craft.total}/30\nTechnical: ${currentScanResult.breakdown.technical.total}/20\n\n`;
 
       if (recs) {
-        content += `RECOMMENDATIONS SUMMARY\n${'='.repeat(60)}\nTotal Issues: ${recs.summary.totalIssues}\nEstimated Fix Time: ${Math.round(recs.summary.estimatedTimeToFix / 60)} hours\nPotential Score Gain: +${recs.summary.potentialScoreGain} points\n\n`;
+        content += `RECOMMENDATIONS\n${'='.repeat(60)}\nTotal Issues: ${recs.summary.totalIssues}\nFix Time: ${Math.round(recs.summary.estimatedTimeToFix / 60)}h\nScore Gain: +${recs.summary.potentialScoreGain}\n\n`;
 
-        if (recs.quickWins && recs.quickWins.length > 0) {
-          content += `QUICK WINS (High Impact, Low Time)\n${'='.repeat(60)}\n`;
+        if (recs.quickWins?.length) {
+          content += `QUICK WINS\n${'='.repeat(60)}\n`;
           recs.quickWins.forEach((rec, i) => {
-            content += `${i + 1}. ${rec.action}\n   Issue: ${rec.issue}\n   Time: ${rec.timeEstimate}min | Impact: +${rec.impact}pts\n\n`;
+            content += `${i + 1}. ${rec.action}\n   ${rec.issue}\n   ${rec.timeEstimate}min | +${rec.impact}pts\n\n`;
           });
         }
 
-        if (recs.majorImpact && recs.majorImpact.length > 0) {
-          content += `MAJOR IMPACT (Critical for 90+)\n${'='.repeat(60)}\n`;
+        if (recs.majorImpact?.length) {
+          content += `MAJOR IMPACT\n${'='.repeat(60)}\n`;
           recs.majorImpact.forEach((rec, i) => {
-            content += `${i + 1}. ${rec.action}\n   Issue: ${rec.issue}\n   Time: ${rec.timeEstimate}min | Impact: +${rec.impact}pts\n\n`;
+            content += `${i + 1}. ${rec.action}\n   ${rec.issue}\n   ${rec.timeEstimate}min | +${rec.impact}pts\n\n`;
           });
         }
 
-        if (recs.advanced && recs.advanced.length > 0) {
-          content += `ADVANCED (For 95+)\n${'='.repeat(60)}\n`;
+        if (recs.advanced?.length) {
+          content += `ADVANCED\n${'='.repeat(60)}\n`;
           recs.advanced.forEach((rec, i) => {
-            content += `${i + 1}. ${rec.action}\n   Issue: ${rec.issue}\n   Time: ${rec.timeEstimate}min | Impact: +${rec.impact}pts\n\n`;
+            content += `${i + 1}. ${rec.action}\n   ${rec.issue}\n   ${rec.timeEstimate}min | +${rec.impact}pts\n\n`;
           });
         }
       }
-
-      content += `\n${'='.repeat(60)}\nGenerated by ContentScale | contentscale.site\n`;
 
       const blob = new Blob([content], { type: 'text/plain' });
       const url2 = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url2;
-      a.download = `ContentScale-Report-${score}-${Date.now()}.txt`;
-      document.body.appendChild(a);
+      a.download = `ContentScale-Report-${score}.txt`;
       a.click();
-      document.body.removeChild(a);
       URL.revokeObjectURL(url2);
-      
-      alert('✅ Report downloaded!');
+      alert('✅ Downloaded!');
     }
 
     function getQualityText(score) {
@@ -509,26 +439,20 @@
     }
 
     function closeResultsModal() {
-      document.getElementById('resultsModal').classList.remove('active');
+      document.getElementById('resultsModal').style.display = 'none';
     }
 
     function scanAnother() {
       closeResultsModal();
       document.getElementById('scan-url').value = '';
-      document.getElementById('scan-url').focus();
     }
 
-    document.getElementById('scan-url').addEventListener('keypress', (e) => {
+    document.getElementById('scan-url')?.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') performScan();
     });
 
-    document.addEventListener('DOMContentLoaded', () => {
-      console.log('🚀 Page loaded, validating link...');
-      validateLink();
-    });
+    document.addEventListener('DOMContentLoaded', validateLink);
   </script>
 
-</body>
-</html>
 </body>
 </html>
