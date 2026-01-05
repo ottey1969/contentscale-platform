@@ -925,13 +925,3 @@ app.listen(PORT, '0.0.0.0', () => {
 });
 
 module.exports = { pool };
-```
-
----
-
-## 🎯 **WAT IS ER VERANDERD:**
-
-### ✅ **1. Setup Endpoint Beveiligd**
-```
-Oud: https://app.contentscale.site/api/setup/create-admin
-Nieuw: https://app.contentscale.site/api/setup/create-admin?secret=ContentScale2025Secret!
