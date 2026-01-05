@@ -52,7 +52,7 @@
     .category-blog { background: #f59e0b; color: white; }
     .category-ecommerce { background: #10b981; color: white; }
     .category-other { background: #6b7280; color: white; }
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 9999; align-items: center; justify-content: center; padding: 20px; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 9999; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
     .modal.active { display: flex; }
     .modal-content { background: #1f2937; border-radius: 16px; padding: 32px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; }
     .modal-close { position: absolute; top: 16px; right: 16px; background: #374151; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; color: white; font-size: 20px; }
@@ -103,9 +103,7 @@
 </head>
 <body class="bg-gray-900 text-gray-100">
 
-  <!-- ========================================
-       GLOBAL NAVIGATION - Use on all pages
-       ======================================== -->
+  <!-- NAVIGATION -->
   <nav class="nav-bar">
     <div class="max-w-6xl mx-auto px-6">
       <div class="flex items-center justify-between">
@@ -169,7 +167,6 @@
         </div>
       </div>
     </div>
-    
     <!-- LEADERBOARD SECTION -->
     <div id="leaderboard" class="leaderboard-section">
       <div class="flex justify-between items-center mb-6">
@@ -352,7 +349,7 @@
       </div>
     </div>
 
-    <!-- CONTACT SECTION (NEW!) -->
+    <!-- CONTACT SECTION -->
     <div id="contact" class="py-12">
       <div class="text-center mb-12">
         <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">📞 Get In Touch</h2>
@@ -462,10 +459,7 @@
     </div>
 
   </div>
-
-  <!-- ========================================
-       GLOBAL FOOTER - Use on all pages
-       ======================================== -->
+  <!-- GLOBAL FOOTER -->
   <footer class="contentscale-footer">
     <div class="contentscale-container">
       
@@ -638,25 +632,88 @@
     </div>
   </div>
 
-  <!-- RESULTS MODAL -->
+  <!-- RESULTS MODAL WITH RECOMMENDATIONS -->
   <div id="resultsModal" class="modal">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width: 900px;">
       <button class="modal-close" onclick="closeResultsModal()">×</button>
+      
+      <!-- SCORE SECTION -->
       <div class="text-center mb-6">
         <div class="text-6xl mb-3" id="modal-emoji">🎯</div>
         <div class="text-5xl font-bold mb-2" id="modal-score">--/100</div>
         <div class="text-lg text-gray-400" id="modal-quality">Analyzing...</div>
+        <div class="text-sm text-gray-500 mt-2" id="modal-url"></div>
       </div>
+      
+      <!-- BREAKDOWN -->
       <div class="mb-6">
-        <h3 class="font-bold text-lg mb-3">Breakdown:</h3>
-        <div class="space-y-2">
-          <div class="flex justify-between"><span>GRAAF Framework:</span><span class="font-bold" id="modal-graaf">-/50</span></div>
-          <div class="flex justify-between"><span>CRAFT Methodology:</span><span class="font-bold" id="modal-craft">-/30</span></div>
-          <div class="flex justify-between"><span>Technical SEO:</span><span class="font-bold" id="modal-technical">-/20</span></div>
+        <h3 class="font-bold text-lg mb-3">Score Breakdown:</h3>
+        <div class="grid grid-cols-3 gap-4">
+          <div class="bg-blue-900/30 rounded-lg p-4 text-center">
+            <div class="text-sm text-gray-400 mb-1">🎯 GRAAF</div>
+            <div class="text-2xl font-bold text-blue-400" id="modal-graaf">-/50</div>
+          </div>
+          <div class="bg-purple-900/30 rounded-lg p-4 text-center">
+            <div class="text-sm text-gray-400 mb-1">⚡ CRAFT</div>
+            <div class="text-2xl font-bold text-purple-400" id="modal-craft">-/30</div>
+          </div>
+          <div class="bg-green-900/30 rounded-lg p-4 text-center">
+            <div class="text-sm text-gray-400 mb-1">🔧 Technical</div>
+            <div class="text-2xl font-bold text-green-400" id="modal-technical">-/20</div>
+          </div>
         </div>
       </div>
+
+      <!-- RECOMMENDATIONS -->
+      <div id="recommendations-section" class="mb-6 hidden">
+        <h3 class="font-bold text-xl mb-4">💡 Recommendations to Reach 100/100</h3>
+        
+        <!-- SUMMARY -->
+        <div class="bg-gray-800 rounded-lg p-4 mb-4">
+          <div class="grid grid-cols-3 gap-4 text-center text-sm">
+            <div>
+              <div class="text-2xl font-bold text-blue-400" id="rec-total-issues">0</div>
+              <div class="text-gray-400">Issues Found</div>
+            </div>
+            <div>
+              <div class="text-2xl font-bold text-purple-400" id="rec-time">0h</div>
+              <div class="text-gray-400">Est. Fix Time</div>
+            </div>
+            <div>
+              <div class="text-2xl font-bold text-green-400" id="rec-gain">+0</div>
+              <div class="text-gray-400">Score Gain</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- QUICK WINS -->
+        <div id="quick-wins-section" class="hidden mb-4">
+          <div class="bg-green-900/20 border border-green-700 rounded-lg p-4">
+            <h4 class="font-bold text-green-400 mb-3">⚡ Quick Wins (High Impact, Low Time)</h4>
+            <div id="quick-wins-list" class="space-y-2"></div>
+          </div>
+        </div>
+
+        <!-- MAJOR IMPACT -->
+        <div id="major-impact-section" class="hidden mb-4">
+          <div class="bg-orange-900/20 border border-orange-700 rounded-lg p-4">
+            <h4 class="font-bold text-orange-400 mb-3">🎯 Major Impact (Critical for 90+)</h4>
+            <div id="major-impact-list" class="space-y-2"></div>
+          </div>
+        </div>
+
+        <!-- ADVANCED -->
+        <div id="advanced-section" class="hidden">
+          <div class="bg-purple-900/20 border border-purple-700 rounded-lg p-4">
+            <h4 class="font-bold text-purple-400 mb-3">🚀 Advanced (For 95+)</h4>
+            <div id="advanced-list" class="space-y-2"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEADERBOARD PROMPT -->
       <div id="leaderboard-prompt" class="mb-4">
-        <div class="bg-purple-900 bg-opacity-30 border border-purple-700 rounded-lg p-4 mb-4">
+        <div class="bg-purple-900/30 border border-purple-700 rounded-lg p-4 mb-4">
           <h3 class="font-bold text-purple-400 mb-2">🏆 Claim Your Spot!</h3>
           <p class="text-sm text-gray-300 mb-3">Add your site to the public leaderboard?</p>
           <input type="text" id="company-name" placeholder="Company/Site Name (optional)" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500">
@@ -674,22 +731,32 @@
           </div>
         </div>
       </div>
+
       <div id="leaderboard-result" class="hidden text-center mb-4">
         <div class="bg-green-900 bg-opacity-30 border border-green-700 rounded-lg p-4">
           <div class="text-green-400 font-bold text-2xl mb-2" id="rank-display">🎉 Added to Leaderboard!</div>
           <p class="text-sm text-gray-400">Refreshing to show your position...</p>
         </div>
       </div>
-      <button onclick="getPrompts()" class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-6 py-4 rounded-lg font-bold text-lg transition mb-3">
-        🎁 Get FREE AI Improvement Prompts
-      </button>
-      
-      <button onclick="whatsappForHelp()" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-6 py-4 rounded-lg font-bold text-lg transition mb-4 flex items-center justify-center gap-2">
-        <span class="text-2xl">💬</span>
-        <span>WhatsApp Ot - Get Expert Help</span>
-      </button>
-      
-      <button onclick="closeResultsModal()" class="w-full bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg font-bold transition">Close</button>
+
+      <!-- ACTIONS -->
+      <div class="space-y-3">
+        <button onclick="downloadPDFReport()" class="w-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 px-6 py-4 rounded-lg font-bold text-lg transition flex items-center justify-center gap-2">
+          <span class="text-2xl">📄</span>
+          <span>Download PDF Report</span>
+        </button>
+
+        <button onclick="getPrompts()" class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-6 py-4 rounded-lg font-bold text-lg transition">
+          🎁 Get FREE AI Improvement Prompts
+        </button>
+        
+        <button onclick="whatsappForHelp()" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-6 py-4 rounded-lg font-bold text-lg transition flex items-center justify-center gap-2">
+          <span class="text-2xl">💬</span>
+          <span>WhatsApp Ot - Get Expert Help</span>
+        </button>
+        
+        <button onclick="closeResultsModal()" class="w-full bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg font-bold transition">Close</button>
+      </div>
     </div>
   </div>
 
@@ -732,7 +799,7 @@
         <button onclick="exportPromptsToFile()" style="background:#374151;color:white;padding:14px 20px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:10px" onmouseover="this.style.background='#4b5563';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#374151';this.style.transform='translateY(0)'">
           <span style="font-size:20px">📥</span><span>Export to File</span>
         </button>
-        <button onclick="sharePromptsOnLinkedIn()" style="background:#2563eb;color:white;padding:14px 20px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;display:flex;align-items:center;justify-center;gap:10px" onmouseover="this.style.background='#1d4ed8';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#2563eb';this.style.transform='translateY(0)'">
+        <button onclick="sharePromptsOnLinkedIn()" style="background:#2563eb;color:white;padding:14px 20px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:10px" onmouseover="this.style.background='#1d4ed8';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#2563eb';this.style.transform='translateY(0)'">
           <span style="font-size:20px">🔗</span><span>Share on LinkedIn</span>
         </button>
         <button onclick="emailPrompts()" style="background:#7c3aed;color:white;padding:14px 20px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:10px" onmouseover="this.style.background='#6d28d9';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#7c3aed';this.style.transform='translateY(0)'">
@@ -744,10 +811,8 @@
       </button>
     </div>
   </div>
-
-  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
-<script>
-    console.log('%c🏆 ContentScale - Updated with Scan Limits','color:#f59e0b;font-size:16px;font-weight:bold');
+  <script>
+    console.log('%c🏆 ContentScale v2.0 - With Recommendations','color:#f59e0b;font-size:16px;font-weight:bold');
     
     const API_BASE = '';
     let currentScanResult = null;
@@ -1108,15 +1173,181 @@
     }
     
     function showResults(data) {
+      // Score display
       document.getElementById('modal-score').textContent = data.score + '/100';
       document.getElementById('modal-quality').textContent = getQualityText(data.score);
       document.getElementById('modal-emoji').textContent = getQualityEmoji(data.score);
+      document.getElementById('modal-url').textContent = data.url || currentUrl;
+      
+      // Breakdown
       document.getElementById('modal-graaf').textContent = `${data.breakdown.graaf.total}/50`;
       document.getElementById('modal-craft').textContent = `${data.breakdown.craft.total}/30`;
       document.getElementById('modal-technical').textContent = `${data.breakdown.technical.total}/20`;
+      
+      // Recommendations
+      if (data.recommendations) {
+        displayRecommendations(data.recommendations);
+      }
+      
+      // Show modal
       document.getElementById('leaderboard-prompt').classList.remove('hidden');
       document.getElementById('leaderboard-result').classList.add('hidden');
       document.getElementById('resultsModal').classList.add('active');
+    }
+
+    function displayRecommendations(recs) {
+      const section = document.getElementById('recommendations-section');
+      section.classList.remove('hidden');
+      
+      // Summary
+      document.getElementById('rec-total-issues').textContent = recs.summary.totalIssues;
+      document.getElementById('rec-time').textContent = Math.round(recs.summary.estimatedTimeToFix / 60) + 'h';
+      document.getElementById('rec-gain').textContent = '+' + recs.summary.potentialScoreGain;
+      
+      // Quick Wins
+      if (recs.quickWins && recs.quickWins.length > 0) {
+        const quickWinsSection = document.getElementById('quick-wins-section');
+        const quickWinsList = document.getElementById('quick-wins-list');
+        quickWinsSection.classList.remove('hidden');
+        
+        quickWinsList.innerHTML = recs.quickWins.map((rec, i) => `
+          <div class="bg-gray-800 rounded p-3 text-sm">
+            <div class="flex justify-between items-start mb-1">
+              <div class="font-bold text-green-400">${i + 1}. ${rec.action}</div>
+              <div class="text-xs text-gray-400">${rec.timeEstimate}min | +${rec.impact}pts</div>
+            </div>
+            <div class="text-xs text-gray-400">${rec.issue}</div>
+          </div>
+        `).join('');
+      }
+      
+      // Major Impact
+      if (recs.majorImpact && recs.majorImpact.length > 0) {
+        const majorSection = document.getElementById('major-impact-section');
+        const majorList = document.getElementById('major-impact-list');
+        majorSection.classList.remove('hidden');
+        
+        majorList.innerHTML = recs.majorImpact.map((rec, i) => `
+          <div class="bg-gray-800 rounded p-3 text-sm">
+            <div class="flex justify-between items-start mb-1">
+              <div class="font-bold text-orange-400">${i + 1}. ${rec.action}</div>
+              <div class="text-xs text-gray-400">${rec.timeEstimate}min | +${rec.impact}pts</div>
+            </div>
+            <div class="text-xs text-gray-400 mb-2">${rec.issue}</div>
+            ${rec.details ? `
+              <details class="text-xs">
+                <summary class="cursor-pointer text-blue-400 hover:text-blue-300">Show details</summary>
+                <ul class="mt-2 ml-4 list-disc text-gray-300">
+                  ${rec.details.map(d => `<li>${d}</li>`).join('')}
+                </ul>
+              </details>
+            ` : ''}
+          </div>
+        `).join('');
+      }
+      
+      // Advanced
+      if (recs.advanced && recs.advanced.length > 0) {
+        const advSection = document.getElementById('advanced-section');
+        const advList = document.getElementById('advanced-list');
+        advSection.classList.remove('hidden');
+        
+        advList.innerHTML = recs.advanced.map((rec, i) => `
+          <div class="bg-gray-800 rounded p-3 text-sm">
+            <div class="flex justify-between items-start mb-1">
+              <div class="font-bold text-purple-400">${i + 1}. ${rec.action}</div>
+              <div class="text-xs text-gray-400">${rec.timeEstimate}min | +${rec.impact}pts</div>
+            </div>
+            <div class="text-xs text-gray-400">${rec.issue}</div>
+          </div>
+        `).join('');
+      }
+    }
+
+    // PDF DOWNLOAD FUNCTION
+    function downloadPDFReport() {
+      if (!currentScanResult) {
+        alert('No scan data available');
+        return;
+      }
+      
+      const score = currentScanResult.score;
+      const url = currentUrl;
+      const recs = currentScanResult.recommendations;
+      
+      let content = `CONTENTSCALE SEO REPORT
+${'='.repeat(60)}
+
+URL: ${url}
+Score: ${score}/100
+Quality: ${getQualityText(score)}
+Date: ${new Date().toLocaleString()}
+
+SCORE BREAKDOWN
+${'='.repeat(60)}
+GRAAF Framework: ${currentScanResult.breakdown.graaf.total}/50
+CRAFT Methodology: ${currentScanResult.breakdown.craft.total}/30
+Technical SEO: ${currentScanResult.breakdown.technical.total}/20
+
+`;
+
+      if (recs) {
+        content += `\nRECOMMENDATIONS SUMMARY
+${'='.repeat(60)}
+Total Issues: ${recs.summary.totalIssues}
+Estimated Fix Time: ${Math.round(recs.summary.estimatedTimeToFix / 60)} hours
+Potential Score Gain: +${recs.summary.potentialScoreGain} points
+
+`;
+
+        if (recs.quickWins && recs.quickWins.length > 0) {
+          content += `\nQUICK WINS (High Impact, Low Time)
+${'='.repeat(60)}\n`;
+          recs.quickWins.forEach((rec, i) => {
+            content += `${i + 1}. ${rec.action}\n`;
+            content += `   Issue: ${rec.issue}\n`;
+            content += `   Time: ${rec.timeEstimate}min | Impact: +${rec.impact}pts\n\n`;
+          });
+        }
+
+        if (recs.majorImpact && recs.majorImpact.length > 0) {
+          content += `\nMAJOR IMPACT (Critical for 90+)
+${'='.repeat(60)}\n`;
+          recs.majorImpact.forEach((rec, i) => {
+            content += `${i + 1}. ${rec.action}\n`;
+            content += `   Issue: ${rec.issue}\n`;
+            content += `   Time: ${rec.timeEstimate}min | Impact: +${rec.impact}pts\n\n`;
+          });
+        }
+
+        if (recs.advanced && recs.advanced.length > 0) {
+          content += `\nADVANCED (For 95+)
+${'='.repeat(60)}\n`;
+          recs.advanced.forEach((rec, i) => {
+            content += `${i + 1}. ${rec.action}\n`;
+            content += `   Issue: ${rec.issue}\n`;
+            content += `   Time: ${rec.timeEstimate}min | Impact: +${rec.impact}pts\n\n`;
+          });
+        }
+      }
+
+      content += `\n${'='.repeat(60)}
+Generated by ContentScale | contentscale.site
+For questions: info@contentscale.site | WhatsApp: +31628073996
+`;
+
+      // Download as TXT file
+      const blob = new Blob([content], { type: 'text/plain' });
+      const downloadUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `ContentScale-Report-${score}-${Date.now()}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+      
+      alert('✅ Report downloaded! Check your Downloads folder.');
     }
     
     function getQualityText(score) {
