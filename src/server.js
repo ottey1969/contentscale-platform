@@ -5,6 +5,7 @@ const { Pool } = require('pg');
 const path = require('path');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
+const { performFullScan } = require('./scanner');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -346,14 +347,6 @@ function generateMockRecommendations(score) {
     recommendations.majorImpact.reduce((sum, r) => sum + r.timeEstimate, 0) +
     recommendations.advanced.reduce((sum, r) => sum + r.timeEstimate, 0);
   
-  console.log('[RECOMMENDATIONS GENERATED]', {
-    score,
-    totalIssues: recommendations.summary.totalIssues,
-    quickWins: recommendations.quickWins.length,
-    majorImpact: recommendations.majorImpact.length,
-    advanced: recommendations.advanced.length
-  });
-  
   return recommendations;
 }
 
@@ -379,7 +372,6 @@ app.get('/api/admin/stats', authenticateSuperAdmin, async (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to load stats' });
   }
 });
-
 app.get('/api/admins', authenticateSuperAdmin, async (req, res) => {
   try {
     const result = await pool.query('SELECT id, username, role, full_name, email, is_active, created_at, last_login FROM admins ORDER BY created_at DESC');
@@ -667,58 +659,28 @@ app.get('/api/leaderboard/stats', async (req, res) => {
   }
 });
 
+// ==========================================
+// 🤖 REAL SCAN - FREE ENDPOINT
+// ==========================================
 app.post('/api/scan-free', async (req, res) => {
   try {
     const { url } = req.body;
     if (!url) return res.status(400).json({ success: false, error: 'URL required' });
     
-    const mockScore = Math.floor(Math.random() * 30) + 60;
-    const recommendations = generateMockRecommendations(mockScore);
+    console.log('[SCAN-FREE] 🤖 Starting REAL scan:', url);
     
-    const mockResult = {
-      success: true,
-      url: url,
-      score: mockScore,
-      quality: mockScore >= 90 ? 'excellent' : 
-               mockScore >= 80 ? 'good' : 
-               mockScore >= 70 ? 'fair' : 
-               mockScore >= 60 ? 'average' : 'needs-improvement',
-      breakdown: {
-        graaf: { 
-          total: Math.floor(mockScore * 0.5),
-          credibility: Math.floor(mockScore * 0.1),
-          relevance: Math.floor(mockScore * 0.1),
-          actionability: Math.floor(mockScore * 0.1),
-          accuracy: Math.floor(mockScore * 0.1),
-          freshness: Math.floor(mockScore * 0.1)
-        },
-        craft: { 
-          total: Math.floor(mockScore * 0.3),
-          cutFluff: Math.floor(mockScore * 0.08),
-          reviewOptimize: Math.floor(mockScore * 0.08),
-          addVisuals: Math.floor(mockScore * 0.06),
-          faqIntegration: Math.floor(mockScore * 0.05),
-          trustBuilding: Math.floor(mockScore * 0.03)
-        },
-        technical: { 
-          total: Math.floor(mockScore * 0.2),
-          schemaMarkup: Math.floor(mockScore * 0.04),
-          metaOptimization: Math.floor(mockScore * 0.04),
-          internalLinking: Math.floor(mockScore * 0.04),
-          pageStructure: Math.floor(mockScore * 0.04),
-          mobileOptimization: Math.floor(mockScore * 0.04)
-        }
-      },
-      recommendations: recommendations,
-      wordCount: Math.floor(Math.random() * 1000) + 1000,
-      scanned_at: new Date().toISOString()
-    };
+    const result = await performFullScan(url);
     
-    console.log('✅ [SCAN-FREE] URL:', url, 'Score:', mockScore, 'Recommendations:', recommendations.summary.totalIssues);
+    if (!result.success) {
+      console.log('[SCAN-FREE] ❌ Failed:', result.error);
+      return res.status(500).json({ success: false, error: result.error });
+    }
     
-    res.json(mockResult);
+    console.log('[SCAN-FREE] ✅ Complete. Score:', result.score, 'Recs:', result.recommendations.summary.totalIssues);
+    
+    res.json(result);
   } catch (error) {
-    console.error('❌ [SCAN ERROR]', error);
+    console.error('[SCAN ERROR]', error);
     res.status(500).json({ success: false, error: 'Scan failed' });
   }
 });
@@ -773,7 +735,6 @@ app.post('/api/generate-content-prompt', async (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to generate prompts' });
   }
 });
-
 app.get('/scan-with-link/:code', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/share-link.html'));
 });
@@ -825,6 +786,9 @@ app.get('/api/share-link/validate/:code', async (req, res) => {
   }
 });
 
+// ==========================================
+// 🤖 REAL SCAN - SHARE LINK ENDPOINT
+// ==========================================
 app.post('/api/share-link/scan', async (req, res) => {
   try {
     const { share_code, url } = req.body;
@@ -857,38 +821,28 @@ app.post('/api/share-link/scan', async (req, res) => {
       return res.json({ success: false, error: 'Scan limit reached', status: 'limit_reached' });
     }
     
-    const mockScore = Math.floor(Math.random() * 30) + 60;
-    const recommendations = generateMockRecommendations(mockScore);
+    console.log('[SHARE LINK] 🤖 Starting REAL scan:', url);
     
-    const scanResult = {
-      success: true,
-      url: url,
-      score: mockScore,
-      quality: mockScore >= 90 ? 'excellent' : 
-               mockScore >= 80 ? 'good' : 
-               mockScore >= 70 ? 'fair' : 'needs-improvement',
-      breakdown: {
-        graaf: { total: Math.floor(mockScore * 0.5) },
-        craft: { total: Math.floor(mockScore * 0.3) },
-        technical: { total: Math.floor(mockScore * 0.2) }
-      },
-      recommendations: recommendations,
-      wordCount: Math.floor(Math.random() * 1000) + 1000,
-      scanned_at: new Date().toISOString(),
-      scans_remaining: link.max_uses - link.current_uses - 1
-    };
+    const scanResult = await performFullScan(url);
+    
+    if (!scanResult.success) {
+      console.log('[SHARE LINK] ❌ Failed:', scanResult.error);
+      return res.status(500).json({ success: false, error: scanResult.error });
+    }
     
     await pool.query(
       'UPDATE share_links SET current_uses = current_uses + 1 WHERE token = $1',
       [share_code]
     );
     
-    console.log('✅ [SHARE LINK SCAN] Code:', share_code, 'Score:', mockScore, 'Recommendations:', recommendations.summary.totalIssues);
+    scanResult.scans_remaining = link.max_uses - link.current_uses - 1;
+    
+    console.log('[SHARE LINK] ✅ Complete. Score:', scanResult.score, 'Recs:', scanResult.recommendations.summary.totalIssues);
     
     res.json(scanResult);
     
   } catch (error) {
-    console.error('❌ [SHARE LINK SCAN ERROR]', error);
+    console.error('[SHARE LINK SCAN ERROR]', error);
     res.status(500).json({ success: false, error: 'Scan failed' });
   }
 });
@@ -896,8 +850,9 @@ app.post('/api/share-link/scan', async (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`
 ╔════════════════════════════════════════╗
-║ ✅ CONTENTSCALE v2.0                   ║
+║ ✅ CONTENTSCALE v2.0 - REAL SCANNING   ║
 ║ Port: ${PORT}                          ║
+║ 🤖 Puppeteer + Claude: ACTIVE          ║
 ║ 📊 Recommendations: ACTIVE             ║
 ╚════════════════════════════════════════╝
   `);
