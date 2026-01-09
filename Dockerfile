@@ -18,14 +18,13 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /app
 
 # Copy package files
-COPY package.json ./
+COPY package.json package-lock.json ./
 
-# Install dependencies (use npm install instead of npm ci)
-RUN npm install --production --no-package-lock
+# Install dependencies
+RUN npm ci --omit=dev
 
 # Copy application
 COPY . .
@@ -34,8 +33,6 @@ COPY . .
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
-# Expose port
 EXPOSE 3000
 
-# Start application
 CMD ["node", "src/server.js"]
