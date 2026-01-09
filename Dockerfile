@@ -1,4 +1,4 @@
-vFROM node:20-slim
+FROM node:20-slim
 
 # Install Chromium and dependencies
 RUN apt-get update && apt-get install -y \
