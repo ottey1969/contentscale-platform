@@ -167,6 +167,7 @@
         </div>
       </div>
     </div>
+    
     <!-- LEADERBOARD SECTION -->
     <div id="leaderboard" class="leaderboard-section">
       <div class="flex justify-between items-center mb-6">
@@ -459,6 +460,7 @@
     </div>
 
   </div>
+  
   <!-- GLOBAL FOOTER -->
   <footer class="contentscale-footer">
     <div class="contentscale-container">
@@ -711,24 +713,41 @@
         </div>
       </div>
 
-      <!-- LEADERBOARD PROMPT -->
+      <!-- LEADERBOARD PROMPT (UPDATED WITH CHECKBOX) -->
       <div id="leaderboard-prompt" class="mb-4">
         <div class="bg-purple-900/30 border border-purple-700 rounded-lg p-4 mb-4">
-          <h3 class="font-bold text-purple-400 mb-2">🏆 Claim Your Spot!</h3>
-          <p class="text-sm text-gray-300 mb-3">Add your site to the public leaderboard?</p>
-          <input type="text" id="company-name" placeholder="Company/Site Name (optional)" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500">
-          <select id="category-select" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500">
-            <option value="">Auto-detect category</option>
-            <option value="agency">🎯 SEO Agency</option>
-            <option value="saas">💻 SaaS</option>
-            <option value="blog">📝 Blog</option>
-            <option value="ecommerce">🛒 E-commerce</option>
-            <option value="other">📌 Other</option>
-          </select>
-          <div class="flex gap-2">
-            <button onclick="submitToLeaderboard()" class="flex-1 bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-bold transition">Yes, Add Me!</button>
-            <button onclick="skipLeaderboard()" class="flex-1 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg font-bold transition">No Thanks</button>
+          <h3 class="font-bold text-purple-400 mb-3">🏆 Add to Public Leaderboard</h3>
+          
+          <!-- CHECKBOX OPT-OUT -->
+          <label class="flex items-start gap-3 mb-4 cursor-pointer group">
+            <input type="checkbox" id="add-to-leaderboard" checked 
+                   class="mt-1 w-5 h-5 rounded bg-gray-700 border-gray-600 text-purple-600 focus:ring-purple-500 focus:ring-2 cursor-pointer">
+            <div>
+              <div class="text-sm font-semibold text-white group-hover:text-purple-300 transition">
+                Add my site to the public leaderboard
+              </div>
+              <div class="text-xs text-gray-400 mt-1">
+                Your URL, score, and company name will be publicly visible. Uncheck to keep private.
+              </div>
+            </div>
+          </label>
+          
+          <div id="leaderboard-fields">
+            <input type="text" id="company-name" placeholder="Company/Site Name (auto-detected)" 
+                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500">
+            <select id="category-select" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500">
+              <option value="">Auto-detect category</option>
+              <option value="agency">🎯 SEO Agency</option>
+              <option value="saas">💻 SaaS</option>
+              <option value="blog">📝 Blog</option>
+              <option value="ecommerce">🛒 E-commerce</option>
+              <option value="other">📌 Other</option>
+            </select>
           </div>
+          
+          <button onclick="handleLeaderboardSubmit()" class="w-full bg-purple-600 hover:bg-purple-700 px-4 py-3 rounded-lg font-bold transition">
+            Continue
+          </button>
         </div>
       </div>
 
@@ -768,7 +787,7 @@
         <div style="font-size:64px;margin-bottom:16px">🏆</div>
         <h2 style="font-size:32px;font-weight:700;margin:0 0 12px 0;background:linear-gradient(to right,#fbbf24,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Your ELITE AI Content Prompts</h2>
         <p style="color:#9ca3af;font-size:15px;margin:0 0 16px 0">Professional-grade prompts for 95-100/100 scores</p>
-        <div style="display:flex;align-items:center;justify-content:center;gap:20px;font-size:13px;font-weight:600">
+        <div style="display:flex;align-items:center;justify-center;gap:20px;font-size:13px;font-weight:600">
           <span style="color:#10b981">✅ Claude AI</span>
           <span style="color:#3b82f6">✅ ChatGPT</span>
           <span style="color:#a78bfa">✅ Perplexity</span>
@@ -811,8 +830,9 @@
       </button>
     </div>
   </div>
+
   <script>
-    console.log('%c🏆 ContentScale v2.0 - With Recommendations','color:#f59e0b;font-size:16px;font-weight:bold');
+    console.log('%c🏆 ContentScale v2.1 - Checkbox Opt-Out + Auto-Detect','color:#f59e0b;font-size:16px;font-weight:bold');
     
     const API_BASE = '';
     let currentScanResult = null;
@@ -879,6 +899,46 @@
         return false;
       }
       return true;
+    }
+    
+    // AUTO-DETECT COMPANY NAME FROM URL
+    function autoDetectCompanyName(url) {
+      try {
+        const urlObj = new URL(url);
+        let hostname = urlObj.hostname;
+        
+        // Remove www.
+        hostname = hostname.replace(/^www\./, '');
+        
+        // Remove TLD (.com, .nl, .co.uk, etc)
+        hostname = hostname.replace(/\.(com|nl|be|de|uk|org|net|io|ai|co\.uk|co\.nl)$/, '');
+        
+        // Replace hyphens and underscores with spaces
+        hostname = hostname.replace(/[-_]/g, ' ');
+        
+        // Capitalize first letter of each word
+        hostname = hostname.split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+        
+        return hostname;
+      } catch (e) {
+        return '';
+      }
+    }
+    
+    // HANDLE LEADERBOARD SUBMIT WITH CHECKBOX CHECK
+    async function handleLeaderboardSubmit() {
+      const checkbox = document.getElementById('add-to-leaderboard');
+      
+      if (checkbox.checked) {
+        // User wants to submit to leaderboard
+        await submitToLeaderboard();
+      } else {
+        // User opted out - skip leaderboard
+        document.getElementById('leaderboard-prompt').classList.add('hidden');
+        console.log('User opted out of leaderboard');
+      }
     }
     
     // WHATSAPP FUNCTIONS
@@ -1184,6 +1244,11 @@
       document.getElementById('modal-craft').textContent = `${data.breakdown.craft.total}/30`;
       document.getElementById('modal-technical').textContent = `${data.breakdown.technical.total}/20`;
       
+      // AUTO-FILL COMPANY NAME
+      const autoName = autoDetectCompanyName(currentUrl);
+      document.getElementById('company-name').value = autoName;
+      document.getElementById('company-name').placeholder = autoName || 'Company/Site Name';
+      
       // Recommendations
       if (data.recommendations) {
         displayRecommendations(data.recommendations);
@@ -1370,7 +1435,12 @@ For questions: info@contentscale.site | WhatsApp: +31628073996
       const companyName = document.getElementById('company-name').value.trim();
       const category = document.getElementById('category-select').value;
       
+      // If company name is empty, use auto-detected name
+      const finalCompanyName = companyName || autoDetectCompanyName(currentUrl);
+      
       try {
+        // TODO: Add rate limiting on server side - limit to 1 submission per URL per day per IP
+        // This prevents spam and manipulation of leaderboard
         const response = await fetch(`${API_BASE}/api/leaderboard/submit`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1382,7 +1452,7 @@ For questions: info@contentscale.site | WhatsApp: +31628073996
             craft_score: currentScanResult.breakdown.craft.total,
             technical_score: currentScanResult.breakdown.technical.total,
             word_count: currentScanResult.wordCount,
-            company_name: companyName || null,
+            company_name: finalCompanyName || null,
             category: category || null,
             country: null,
             language: null
