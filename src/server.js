@@ -10,6 +10,47 @@ const { performFullScan } = require('./scanner');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ==========================================
+// 🔒 RATE LIMITING SYSTEM
+// ==========================================
+const submissionLimits = new Map();
+
+// Cleanup oude entries elke 6 uur
+setInterval(() => {
+  const now = Date.now();
+  let cleanedCount = 0;
+  
+  for (const [key, timestamp] of submissionLimits.entries()) {
+    if (now - timestamp > 24 * 60 * 60 * 1000) {
+      submissionLimits.delete(key);
+      cleanedCount++;
+    }
+  }
+  
+  if (cleanedCount > 0) {
+    console.log(`[RATE LIMIT] 🧹 Cleaned ${cleanedCount} expired entries`);
+  }
+}, 6 * 60 * 60 * 1000);
+
+// Helper function: Sanitize user input
+function sanitizeInput(input, maxLength = 100) {
+  if (!input) return null;
+  return input
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/[<>'"]/g, '')   // Remove dangerous chars
+    .trim()
+    .substring(0, maxLength);
+}
+
+// Helper function: Get client IP
+function getClientIP(req) {
+  return req.headers['x-forwarded-for']?.split(',')[0].trim() 
+    || req.headers['x-real-ip']
+    || req.connection.remoteAddress 
+    || req.socket.remoteAddress
+    || 'unknown';
+}
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
@@ -349,7 +390,6 @@ function generateMockRecommendations(score) {
   
   return recommendations;
 }
-
 app.get('/api/admin/stats', authenticateSuperAdmin, async (req, res) => {
   try {
     const [agencies, clients, scans, helpers] = await Promise.all([
@@ -372,6 +412,7 @@ app.get('/api/admin/stats', authenticateSuperAdmin, async (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to load stats' });
   }
 });
+
 app.get('/api/admins', authenticateSuperAdmin, async (req, res) => {
   try {
     const result = await pool.query('SELECT id, username, role, full_name, email, is_active, created_at, last_login FROM admins ORDER BY created_at DESC');
@@ -685,39 +726,93 @@ app.post('/api/scan-free', async (req, res) => {
   }
 });
 
+// ==========================================
+// 🔒 LEADERBOARD SUBMIT - WITH SECURITY
+// ==========================================
 app.post('/api/leaderboard/submit', async (req, res) => {
   try {
     const { url, score, quality, graaf_score, craft_score, technical_score, word_count, company_name, category } = req.body;
     
-    if (!url || !score) return res.status(400).json({ success: false, error: 'URL and score required' });
+    // VALIDATION: Required fields
+    if (!url || !score) {
+      return res.status(400).json({ success: false, error: 'URL and score required' });
+    }
     
-    const urlHash = crypto.createHash('md5').update(url).digest('hex');
-    const existing = await pool.query('SELECT id FROM public_leaderboard WHERE url_hash = $1', [urlHash]);
+    // VALIDATION: URL format
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return res.status(400).json({ success: false, error: 'Invalid URL format (must start with http:// or https://)' });
+    }
+    
+    // VALIDATION: Score range
+    if (score < 0 || score > 100) {
+      return res.status(400).json({ success: false, error: 'Score must be between 0 and 100' });
+    }
+    
+    // SECURITY: Rate limiting - 1 submission per URL per 24h per IP
+    const clientIP = getClientIP(req);
+    const rateLimitKey = `${url}:${clientIP}`;
+    const now = Date.now();
+    
+    if (submissionLimits.has(rateLimitKey)) {
+      const lastSubmit = submissionLimits.get(rateLimitKey);
+      const timeSinceLastSubmit = now - lastSubmit;
+      const hoursRemaining = Math.ceil((24 * 60 * 60 * 1000 - timeSinceLastSubmit) / (60 * 60 * 1000));
+      
+      if (timeSinceLastSubmit < 24 * 60 * 60 * 1000) {
+        console.log(`[RATE LIMIT] ⏰ Blocked submission for ${url} from ${clientIP} (${hoursRemaining}h remaining)`);
+        return res.status(429).json({ 
+          success: false, 
+          error: `Rate limit: You can only submit this URL once per day. Try again in ${hoursRemaining} hour${hoursRemaining > 1 ? 's' : ''}.`,
+          retry_after_hours: hoursRemaining
+        });
+      }
+    }
+    
+    // SECURITY: Sanitize user inputs
+    const sanitizedCompanyName = sanitizeInput(company_name, 100);
+    const sanitizedCategory = category && ['agency', 'saas', 'blog', 'ecommerce', 'other'].includes(category) 
+      ? category 
+      : null;
+    
+    // Generate URL hash for duplicate detection
+    const urlHash = crypto.createHash('md5').update(url.toLowerCase().trim()).digest('hex');
+    
+    // Check if URL already exists
+    const existing = await pool.query('SELECT id, score FROM public_leaderboard WHERE url_hash = $1', [urlHash]);
     
     if (existing.rows.length > 0) {
+      // UPDATE existing entry
       await pool.query(`
         UPDATE public_leaderboard 
         SET score = $1, quality = $2, graaf_score = $3, craft_score = $4, 
             technical_score = $5, word_count = $6, company_name = $7, 
             category = $8, updated_at = NOW()
         WHERE url_hash = $9
-      `, [score, quality, graaf_score, craft_score, technical_score, word_count, company_name, category, urlHash]);
+      `, [score, quality, graaf_score, craft_score, technical_score, word_count, sanitizedCompanyName, sanitizedCategory, urlHash]);
+      
+      console.log(`[LEADERBOARD] ♻️ Updated: ${url} (${score}/100) - Company: ${sanitizedCompanyName || 'N/A'} - IP: ${clientIP}`);
     } else {
+      // INSERT new entry
       await pool.query(`
         INSERT INTO public_leaderboard 
         (url, url_hash, score, quality, graaf_score, craft_score, technical_score, 
          word_count, company_name, category, is_public, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, NOW(), NOW())
-      `, [url, urlHash, score, quality, graaf_score, craft_score, technical_score, word_count, company_name, category]);
+      `, [url, urlHash, score, quality, graaf_score, craft_score, technical_score, word_count, sanitizedCompanyName, sanitizedCategory]);
+      
+      console.log(`[LEADERBOARD] ✅ New entry: ${url} (${score}/100) - Company: ${sanitizedCompanyName || 'N/A'} - IP: ${clientIP}`);
     }
     
+    // Update rate limit cache
+    submissionLimits.set(rateLimitKey, now);
+    
     res.json({ success: true, message: 'Added to leaderboard' });
+    
   } catch (error) {
     console.error('[SUBMIT ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to submit' });
   }
 });
-
 app.post('/api/generate-content-prompt', async (req, res) => {
   try {
     const { url, score } = req.body;
@@ -735,6 +830,7 @@ app.post('/api/generate-content-prompt', async (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to generate prompts' });
   }
 });
+
 app.get('/scan-with-link/:code', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/share-link.html'));
 });
@@ -850,10 +946,12 @@ app.post('/api/share-link/scan', async (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`
 ╔════════════════════════════════════════╗
-║ ✅ CONTENTSCALE v2.0 - REAL SCANNING   ║
+║ ✅ CONTENTSCALE v2.1 - SECURE          ║
 ║ Port: ${PORT}                          ║
 ║ 🤖 Puppeteer + Claude: ACTIVE          ║
 ║ 📊 Recommendations: ACTIVE             ║
+║ 🔒 Rate Limiting: ACTIVE               ║
+║ 🛡️  Input Sanitization: ACTIVE        ║
 ╚════════════════════════════════════════╝
   `);
 });
