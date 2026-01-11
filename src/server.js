@@ -541,16 +541,18 @@ app.delete('/api/admin/scans/:id', authenticateSuperAdmin, async (req, res) => {
 app.get('/api/admin/share-links', authenticateSuperAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT token as share_code, name as client_email, client_name, company, 
-             max_uses as scans_limit, current_uses as scans_used, 
-             expires_at, is_active,
+      SELECT sl.token as share_code, sl.name as client_email, sl.client_name, sl.company, 
+             sl.max_uses as scans_limit, sl.current_uses as scans_used, sl.agency_id,
+             sl.expires_at, sl.is_active, a.name as agency_name,
              CASE
-               WHEN NOT is_active THEN 'inactive'
-               WHEN current_uses >= max_uses THEN 'limit_reached'
-               WHEN expires_at < NOW() THEN 'expired'
+               WHEN NOT sl.is_active THEN 'inactive'
+               WHEN sl.current_uses >= sl.max_uses THEN 'limit_reached'
+               WHEN sl.expires_at < NOW() THEN 'expired'
                ELSE 'active'
              END as status
-      FROM share_links ORDER BY created_at DESC LIMIT 100
+      FROM share_links sl
+      LEFT JOIN agencies a ON a.id = sl.agency_id
+      ORDER BY sl.created_at DESC LIMIT 100
     `);
     res.json({ success: true, share_links: result.rows });
   } catch (error) {
@@ -561,7 +563,7 @@ app.get('/api/admin/share-links', authenticateSuperAdmin, async (req, res) => {
 
 app.post('/api/admin/share-links/create', authenticateSuperAdmin, async (req, res) => {
   try {
-    const { client_email, client_name, company, scans_limit, valid_days } = req.body;
+    const { client_email, client_name, company, scans_limit, valid_days, agency_id } = req.body;
     
     if (!client_email || !scans_limit) {
       return res.status(400).json({ success: false, error: 'Email and limit required' });
@@ -580,9 +582,9 @@ app.post('/api/admin/share-links/create', authenticateSuperAdmin, async (req, re
     
     await pool.query(
       `INSERT INTO share_links 
-       (token, name, client_name, company, max_uses, current_uses, expires_at, is_active, allowed_features, created_at) 
-       VALUES ($1, $2, $3, $4, $5, 0, $6, true, $7, NOW())`,
-      [code, client_email, client_name || null, company || null, scans_limit, expires, JSON.stringify(defaultFeatures)]
+       (token, name, client_name, company, max_uses, current_uses, expires_at, is_active, allowed_features, agency_id, created_at) 
+       VALUES ($1, $2, $3, $4, $5, 0, $6, true, $7, $8, NOW())`,
+      [code, client_email, client_name || null, company || null, scans_limit, expires, JSON.stringify(defaultFeatures), agency_id || null]
     );
     
     const shareUrl = `${req.protocol}://${req.get('host')}/scan-with-link/${code}`;
@@ -606,7 +608,7 @@ app.delete('/api/admin/share-links/:code', authenticateSuperAdmin, async (req, r
 
 app.get('/api/admin/leaderboard', authenticateSuperAdmin, async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, url, score, company_name, country FROM public_leaderboard ORDER BY score DESC');
+    const result = await pool.query('SELECT id, url, score, company_name, agency_name, country FROM public_leaderboard ORDER BY score DESC');
     const entries = result.rows.map((e, i) => ({ ...e, rank: i + 1 }));
     res.json({ success: true, entries });
   } catch (error) {
@@ -644,11 +646,12 @@ app.get('/seo-contentscore', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
+// ⭐ UPDATED: Include agency fields in leaderboard query
 app.get('/api/leaderboard', async (req, res) => {
   try {
     const { limit = 100, category = 'all', country = 'all', language = 'all' } = req.query;
     
-    let query = 'SELECT * FROM public_leaderboard WHERE is_public = true';
+    let query = 'SELECT id, url, score, quality, graaf_score, craft_score, technical_score, word_count, company_name, agency_id, agency_name, category, country, language, created_at, updated_at FROM public_leaderboard WHERE is_public = true';
     const params = [];
     let paramIndex = 1;
     
@@ -935,8 +938,8 @@ app.get('/api/share-link/validate/:code', async (req, res) => {
 });
 
 // ==========================================
-// 🤖 REAL SCAN - SHARE LINK ENDPOINT (FIXED!)
-// Nu slaat het op in database!
+// 🤖 REAL SCAN - SHARE LINK ENDPOINT 
+// ⭐ NOW WITH AGENCY LEADERBOARD INTEGRATION!
 // ==========================================
 app.post('/api/share-link/scan', async (req, res) => {
   try {
@@ -948,11 +951,13 @@ app.post('/api/share-link/scan', async (req, res) => {
     
     console.log('[SHARE LINK SCAN] 🔍 Code:', share_code, 'URL:', url);
     
-    // 1️⃣ VALIDATE SHARE LINK
+    // 1️⃣ VALIDATE SHARE LINK & GET AGENCY INFO
     const linkResult = await pool.query(`
-      SELECT token, max_uses, current_uses, expires_at, is_active
-      FROM share_links 
-      WHERE token = $1
+      SELECT sl.token, sl.max_uses, sl.current_uses, sl.expires_at, sl.is_active,
+             sl.agency_id, sl.client_name, sl.company, a.name as agency_name
+      FROM share_links sl
+      LEFT JOIN agencies a ON a.id = sl.agency_id
+      WHERE sl.token = $1
     `, [share_code]);
     
     if (linkResult.rows.length === 0) {
@@ -985,7 +990,7 @@ app.post('/api/share-link/scan', async (req, res) => {
     
     console.log('[SHARE LINK] ✅ Scan complete! Score:', scanResult.score);
     
-    // 3️⃣ 🔥 SAVE TO DATABASE (THIS IS THE FIX!)
+    // 3️⃣ 🔥 SAVE TO SCANS DATABASE
     try {
       await pool.query(`
         INSERT INTO scans (
@@ -1014,23 +1019,88 @@ app.post('/api/share-link/scan', async (req, res) => {
         'share_link'
       ]);
       
-      console.log('[DATABASE] ✅ Scan saved to database!');
+      console.log('[DATABASE] ✅ Scan saved to scans table!');
       
     } catch (dbError) {
       console.error('[DATABASE ERROR] ❌ Failed to save scan:', dbError.message);
-      // Continue anyway - don't fail the whole scan if DB save fails
     }
     
-    // 4️⃣ UPDATE SHARE LINK USAGE
+    // 4️⃣ ⭐ NEW: ADD TO PUBLIC LEADERBOARD WITH AGENCY CREDIT
+    try {
+      const agencyId = link.agency_id || null;
+      const agencyName = link.agency_name || null;
+      const companyName = link.company || link.client_name || null;
+      
+      // Create URL hash for duplicate detection
+      const urlHash = crypto.createHash('md5').update(scanResult.url.toLowerCase().trim()).digest('hex');
+      
+      // Check if URL already exists in leaderboard
+      const existing = await pool.query(
+        'SELECT id FROM public_leaderboard WHERE url_hash = $1', 
+        [urlHash]
+      );
+      
+      if (existing.rows.length > 0) {
+        // UPDATE existing entry
+        await pool.query(`
+          UPDATE public_leaderboard 
+          SET score = $1, quality = $2, graaf_score = $3, craft_score = $4,
+              technical_score = $5, word_count = $6, agency_id = $7, 
+              agency_name = $8, updated_at = NOW()
+          WHERE url_hash = $9
+        `, [
+          scanResult.score,
+          scanResult.quality,
+          scanResult.breakdown.graaf.total,
+          scanResult.breakdown.craft.total,
+          scanResult.breakdown.technical.total,
+          scanResult.wordCount,
+          agencyId,
+          agencyName,
+          urlHash
+        ]);
+        
+        console.log(`[LEADERBOARD] ♻️ Updated: ${scanResult.url} - Agency: ${agencyName || 'None'}`);
+      } else {
+        // INSERT new entry
+        await pool.query(`
+          INSERT INTO public_leaderboard (
+            url, url_hash, score, quality, graaf_score, craft_score,
+            technical_score, word_count, company_name, agency_id, 
+            agency_name, is_public, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true, NOW(), NOW())
+        `, [
+          scanResult.url,
+          urlHash,
+          scanResult.score,
+          scanResult.quality,
+          scanResult.breakdown.graaf.total,
+          scanResult.breakdown.craft.total,
+          scanResult.breakdown.technical.total,
+          scanResult.wordCount,
+          companyName,
+          agencyId,
+          agencyName
+        ]);
+        
+        console.log(`[LEADERBOARD] ✅ New entry: ${scanResult.url} - Agency: ${agencyName || 'None'}`);
+      }
+      
+    } catch (leaderboardError) {
+      console.error('[LEADERBOARD] ❌ Failed to add to leaderboard:', leaderboardError.message);
+      // Don't fail the whole scan if leaderboard insert fails
+    }
+    
+    // 5️⃣ UPDATE SHARE LINK USAGE
     await pool.query(
       'UPDATE share_links SET current_uses = current_uses + 1 WHERE token = $1',
       [share_code]
     );
     
-    // 5️⃣ ADD REMAINING SCANS TO RESPONSE
+    // 6️⃣ ADD REMAINING SCANS TO RESPONSE
     scanResult.scans_remaining = link.max_uses - link.current_uses - 1;
     
-    console.log('[SHARE LINK] 🎉 Complete! Score:', scanResult.score, 'Recs:', scanResult.recommendations.summary.totalIssues, 'Remaining:', scanResult.scans_remaining);
+    console.log('[SHARE LINK] 🎉 Complete! Score:', scanResult.score, 'Agency:', link.agency_name || 'None', 'Remaining:', scanResult.scans_remaining);
     
     res.json(scanResult);
     
@@ -1042,11 +1112,12 @@ app.post('/api/share-link/scan', async (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`
 ╔════════════════════════════════════════╗
-║ ✅ CONTENTSCALE v2.1 - DATABASE FIXED  ║
+║ ✅ CONTENTSCALE v2.1 - AGENCY CREDIT   ║
 ║ Port: ${PORT}                          ║
 ║ 🤖 Puppeteer + Claude: ACTIVE          ║
 ║ 📊 Recommendations: ACTIVE             ║
-║ 💾 Database Save: ACTIVE (FIXED!)      ║
+║ 💾 Database Save: ACTIVE               ║
+║ 🏢 Agency Leaderboard: ACTIVE          ║
 ║ 🔒 Rate Limiting: ACTIVE               ║
 ║ 🛡️  Input Sanitization: ACTIVE        ║
 ╚════════════════════════════════════════╝
