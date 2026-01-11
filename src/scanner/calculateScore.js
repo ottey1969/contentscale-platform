@@ -44,22 +44,11 @@ class ScoreCalculator {
     const data = this.parsed.graaf.genuinelyCredible;
     const quality = this.validation.graaf.genuinelyCredible;
 
-    // MAX 10 points
     let score = 0;
-
-    // Expert Quotes: 2 points each, max 4 points
     score += Math.min((data.expertQuotes * 2), 4) * quality;
-
-    // Author Bios: 1.5 points each, max 1.5 points
     score += Math.min((data.authorBios * 1.5), 1.5) * quality;
-
-    // Case Studies: 1.5 points each, max 3 points
     score += Math.min((data.caseStudies * 1.5), 3) * quality;
-
-    // Testimonials: 0.3 points each, max 1 point
     score += Math.min((data.testimonials * 0.3), 1) * quality;
-
-    // Certifications: 0.4 points each, max 0.5 points
     score += Math.min((data.certifications * 0.4), 0.5) * quality;
 
     return Math.min(Math.round(score * 10) / 10, 10);
@@ -69,16 +58,9 @@ class ScoreCalculator {
     const data = this.parsed.graaf.relevance;
     const quality = this.validation.graaf.relevance;
 
-    // MAX 10 points
     let score = 0;
-
-    // Title Keywords: 0.5 points each, max 5 points
     score += Math.min((data.titleKeywords * 0.5), 5) * quality;
-
-    // H2 Keywords: 0.4 points each, max 3 points
     score += Math.min((data.h2Keywords * 0.4), 3) * quality;
-
-    // Keyword Density: Direct score, max 2 points
     score += Math.min((data.keywordDensity * 0.2), 2) * quality;
 
     return Math.min(Math.round(score * 10) / 10, 10);
@@ -88,16 +70,9 @@ class ScoreCalculator {
     const data = this.parsed.graaf.actionability;
     const quality = this.validation.graaf.actionability;
 
-    // MAX 10 points
     let score = 0;
-
-    // CTA Buttons: 0.5 points each, max 5 points
     score += Math.min((data.ctaButtons * 0.5), 5) * quality;
-
-    // Next Steps: 1 point each, max 2.5 points
     score += Math.min((data.nextSteps * 1), 2.5) * quality;
-
-    // How-To Sections: 0.5 points each, max 2.5 points
     score += Math.min((data.howToSections * 0.5), 2.5) * quality;
 
     return Math.min(Math.round(score * 10) / 10, 10);
@@ -107,16 +82,9 @@ class ScoreCalculator {
     const data = this.parsed.graaf.accuracy;
     const quality = this.validation.graaf.accuracy;
 
-    // MAX 10 points
     let score = 0;
-
-    // Statistics: 0.5 points each, max 5 points
     score += Math.min((data.statistics * 0.5), 5) * quality;
-
-    // Citations: 0.3 points each, max 3 points
     score += Math.min((data.citations * 0.3), 3) * quality;
-
-    // Dates: 0.4 points each, max 2 points
     score += Math.min((data.dates * 0.4), 2) * quality;
 
     return Math.min(Math.round(score * 10) / 10, 10);
@@ -126,13 +94,8 @@ class ScoreCalculator {
     const data = this.parsed.graaf.freshness;
     const quality = this.validation.graaf.freshness;
 
-    // MAX 10 points
     let score = 0;
-
-    // Recent Dates: 0.7 points each, max 7 points
     score += Math.min((data.recentDates * 0.7), 7) * quality;
-
-    // Update Indicators: 0.6 points each, max 3 points
     score += Math.min((data.updatedIndicators * 0.6), 3) * quality;
 
     return Math.min(Math.round(score * 10) / 10, 10);
@@ -168,10 +131,7 @@ class ScoreCalculator {
     const data = this.parsed.craft.clarity;
     const quality = this.validation.craft.clarity;
 
-    // MAX 6 points
     let score = 0;
-
-    // Average Sentence Length: Ideal 15-25 words
     const avgSentence = data.avgSentenceLength;
     if (avgSentence >= 15 && avgSentence <= 25) {
       score += 3 * quality;
@@ -183,7 +143,6 @@ class ScoreCalculator {
       score += 1 * quality;
     }
 
-    // Short Paragraphs: 0.3 points each, max 3 points
     score += Math.min((data.shortParagraphs * 0.3), 3) * quality;
 
     return Math.min(Math.round(score * 10) / 10, 6);
@@ -193,10 +152,7 @@ class ScoreCalculator {
     const data = this.parsed.craft.readability;
     const quality = this.validation.craft.readability;
 
-    // MAX 6 points
     let score = 0;
-
-    // Word Count: Ideal 1500-3000 words
     const wordCount = data.wordCount;
     if (wordCount >= 1500 && wordCount <= 3000) {
       score += 4 * quality;
@@ -210,7 +166,6 @@ class ScoreCalculator {
       score += 1 * quality;
     }
 
-    // Lists: 0.2 points each, max 2 points
     score += Math.min((data.listCount * 0.2), 2) * quality;
 
     return Math.min(Math.round(score * 10) / 10, 6);
@@ -220,23 +175,17 @@ class ScoreCalculator {
     const data = this.parsed.craft.audienceFit;
     const quality = this.validation.craft.audienceFit;
 
-    // MAX 6 points
     let score = 0;
-
-    // Technical Terms: 0.1 points each, max 2 points
-    // More terms = more technical audience
     score += Math.min((data.technicalTerms * 0.1), 2) * quality;
 
-    // Jargon: Penalty if too much
-    // Ideal: 5-15 complex words
     if (data.jargonCount >= 5 && data.jargonCount <= 15) {
       score += 4 * quality;
     } else if (data.jargonCount < 5) {
-      score += 3 * quality; // Too simple
+      score += 3 * quality;
     } else if (data.jargonCount > 15 && data.jargonCount <= 25) {
-      score += 2 * quality; // Bit complex
+      score += 2 * quality;
     } else {
-      score += 1 * quality; // Way too complex
+      score += 1 * quality;
     }
 
     return Math.min(Math.round(score * 10) / 10, 6);
@@ -246,13 +195,8 @@ class ScoreCalculator {
     const data = this.parsed.craft.flow;
     const quality = this.validation.craft.flow;
 
-    // MAX 6 points
     let score = 0;
-
-    // Transition Words: 0.4 points each, max 4 points
     score += Math.min((data.transitionWords * 0.4), 4) * quality;
-
-    // Internal Links: 0.13 points each, max 2 points
     score += Math.min((data.internalLinks * 0.13), 2) * quality;
 
     return Math.min(Math.round(score * 10) / 10, 6);
@@ -262,13 +206,8 @@ class ScoreCalculator {
     const data = this.parsed.craft.tone;
     const quality = this.validation.craft.tone;
 
-    // MAX 6 points
     let score = 0;
-
-    // Positive Words: 0.1 points each, max 2 points
     score += Math.min((data.positiveWords * 0.1), 2) * quality;
-
-    // Professional Words: 0.13 points each, max 4 points
     score += Math.min((data.professionalWords * 0.13), 4) * quality;
 
     return Math.min(Math.round(score * 10) / 10, 6);
@@ -283,17 +222,9 @@ class ScoreCalculator {
     const quality = this.validation.technical.quality;
 
     let score = 0;
-
-    // Meta Tags (8 points max)
     score += this.scoreMetaTags(data.metaTags) * quality;
-
-    // Headings (5 points max)
     score += this.scoreHeadings(data.headings) * quality;
-
-    // Schema (4 points max)
     score += this.scoreSchema(data.schema) * quality;
-
-    // Images (3 points max)
     score += this.scoreImages(data.images) * quality;
 
     return {
@@ -308,7 +239,6 @@ class ScoreCalculator {
   scoreMetaTags(meta) {
     let score = 0;
 
-    // Title (3 points)
     if (meta.hasTitle) {
       if (meta.titleLength >= 50 && meta.titleLength <= 60) {
         score += 3;
@@ -321,7 +251,6 @@ class ScoreCalculator {
       }
     }
 
-    // Description (3 points)
     if (meta.hasDescription) {
       if (meta.descriptionLength >= 150 && meta.descriptionLength <= 160) {
         score += 3;
@@ -334,7 +263,6 @@ class ScoreCalculator {
       }
     }
 
-    // Open Graph (2 points)
     if (meta.hasOgTitle) score += 1;
     if (meta.hasOgDescription) score += 1;
 
@@ -344,14 +272,12 @@ class ScoreCalculator {
   scoreHeadings(headings) {
     let score = 0;
 
-    // H1 (2 points) - Should be exactly 1
     if (headings.h1Count === 1) {
       score += 2;
     } else if (headings.h1Count === 0 || headings.h1Count === 2) {
       score += 1;
     }
 
-    // H2s (2 points) - Should have multiple
     if (headings.h2Count >= 3 && headings.h2Count <= 8) {
       score += 2;
     } else if (headings.h2Count >= 2 && headings.h2Count < 3) {
@@ -360,7 +286,6 @@ class ScoreCalculator {
       score += 1;
     }
 
-    // H3s (1 point) - Optional but good
     if (headings.h3Count >= 2) {
       score += 1;
     } else if (headings.h3Count === 1) {
@@ -373,12 +298,10 @@ class ScoreCalculator {
   scoreSchema(schema) {
     let score = 0;
 
-    // Has Schema (2 points)
     if (schema.hasSchema) {
       score += 2;
     }
 
-    // Multiple Schema Types (2 points)
     if (schema.schemaCount >= 2) {
       score += 2;
     } else if (schema.schemaCount === 1) {
@@ -391,7 +314,6 @@ class ScoreCalculator {
   scoreImages(images) {
     let score = 0;
 
-    // Alt Text Percentage (3 points)
     if (images.altPercentage === 100) {
       score += 3;
     } else if (images.altPercentage >= 80) {
@@ -414,7 +336,6 @@ class ScoreCalculator {
 
     const totalScore = Math.round((graaf.total + craft.total + technical.total) * 10) / 10;
 
-    // Determine quality
     let quality = 'poor';
     if (totalScore >= 90) quality = 'excellent';
     else if (totalScore >= 75) quality = 'good';
