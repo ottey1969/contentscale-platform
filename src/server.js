@@ -390,6 +390,7 @@ function generateMockRecommendations(score) {
   
   return recommendations;
 }
+
 app.get('/api/admin/stats', authenticateSuperAdmin, async (req, res) => {
   try {
     const [agencies, clients, scans, helpers] = await Promise.all([
@@ -699,30 +700,80 @@ app.get('/api/leaderboard/stats', async (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to load stats' });
   }
 });
-
 // ==========================================
-// 🤖 REAL SCAN - FREE ENDPOINT
+// 🤖 REAL SCAN - FREE ENDPOINT (FIXED!)
+// Nu slaat het op in database!
 // ==========================================
 app.post('/api/scan-free', async (req, res) => {
   try {
     const { url } = req.body;
-    if (!url) return res.status(400).json({ success: false, error: 'URL required' });
     
-    console.log('[SCAN-FREE] 🤖 Starting REAL scan:', url);
-    
-    const result = await performFullScan(url);
-    
-    if (!result.success) {
-      console.log('[SCAN-FREE] ❌ Failed:', result.error);
-      return res.status(500).json({ success: false, error: result.error });
+    if (!url) {
+      return res.status(400).json({ success: false, error: 'URL required' });
     }
     
-    console.log('[SCAN-FREE] ✅ Complete. Score:', result.score, 'Recs:', result.recommendations.summary.totalIssues);
+    console.log('[SCAN-FREE] 🔍 Starting scan for:', url);
     
-    res.json(result);
+    // 1️⃣ PERFORM REAL SCAN (Puppeteer + Claude)
+    const scanResult = await performFullScan(url);
+    
+    if (!scanResult.success) {
+      console.log('[SCAN-FREE] ❌ Scan failed:', scanResult.error);
+      return res.status(500).json({ 
+        success: false, 
+        error: scanResult.error || 'Scan failed' 
+      });
+    }
+    
+    console.log('[SCAN-FREE] ✅ Scan complete! Score:', scanResult.score);
+    
+    // 2️⃣ 🔥 SAVE TO DATABASE (THIS IS THE FIX!)
+    try {
+      await pool.query(`
+        INSERT INTO scans (
+          url, 
+          score, 
+          quality,
+          graaf_score,
+          craft_score,
+          technical_score,
+          breakdown,
+          recommendations,
+          word_count,
+          scan_type,
+          created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+      `, [
+        scanResult.url,
+        scanResult.score,
+        scanResult.quality,
+        scanResult.breakdown.graaf.total,
+        scanResult.breakdown.craft.total,
+        scanResult.breakdown.technical.total,
+        JSON.stringify(scanResult.breakdown),
+        JSON.stringify(scanResult.recommendations),
+        scanResult.wordCount,
+        'free'
+      ]);
+      
+      console.log('[DATABASE] ✅ Scan saved to database!');
+      
+    } catch (dbError) {
+      console.error('[DATABASE ERROR] ❌ Failed to save scan:', dbError.message);
+      // Continue anyway - don't fail the whole scan if DB save fails
+    }
+    
+    // 3️⃣ RETURN RESULT
+    console.log('[SCAN-FREE] 🎉 Complete! Recommendations:', scanResult.recommendations.summary.totalIssues);
+    
+    res.json(scanResult);
+    
   } catch (error) {
-    console.error('[SCAN ERROR]', error);
-    res.status(500).json({ success: false, error: 'Scan failed' });
+    console.error('[SCAN-FREE ERROR] ❌', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Scan failed: ' + error.message 
+    });
   }
 });
 
@@ -813,6 +864,7 @@ app.post('/api/leaderboard/submit', async (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to submit' });
   }
 });
+
 app.post('/api/generate-content-prompt', async (req, res) => {
   try {
     const { url, score } = req.body;
@@ -883,7 +935,8 @@ app.get('/api/share-link/validate/:code', async (req, res) => {
 });
 
 // ==========================================
-// 🤖 REAL SCAN - SHARE LINK ENDPOINT
+// 🤖 REAL SCAN - SHARE LINK ENDPOINT (FIXED!)
+// Nu slaat het op in database!
 // ==========================================
 app.post('/api/share-link/scan', async (req, res) => {
   try {
@@ -893,17 +946,20 @@ app.post('/api/share-link/scan', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Share code and URL required' });
     }
     
-    const result = await pool.query(`
+    console.log('[SHARE LINK SCAN] 🔍 Code:', share_code, 'URL:', url);
+    
+    // 1️⃣ VALIDATE SHARE LINK
+    const linkResult = await pool.query(`
       SELECT token, max_uses, current_uses, expires_at, is_active
       FROM share_links 
       WHERE token = $1
     `, [share_code]);
     
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Invalid share link', status: 'invalid' });
+    if (linkResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Invalid share link' });
     }
     
-    const link = result.rows[0];
+    const link = linkResult.rows[0];
     
     if (!link.is_active) {
       return res.json({ success: false, error: 'Link deactivated', status: 'inactive' });
@@ -917,39 +973,80 @@ app.post('/api/share-link/scan', async (req, res) => {
       return res.json({ success: false, error: 'Scan limit reached', status: 'limit_reached' });
     }
     
-    console.log('[SHARE LINK] 🤖 Starting REAL scan:', url);
+    // 2️⃣ PERFORM REAL SCAN (Puppeteer + Claude)
+    console.log('[SHARE LINK] 🤖 Starting real scan...');
     
     const scanResult = await performFullScan(url);
     
     if (!scanResult.success) {
-      console.log('[SHARE LINK] ❌ Failed:', scanResult.error);
+      console.log('[SHARE LINK] ❌ Scan failed:', scanResult.error);
       return res.status(500).json({ success: false, error: scanResult.error });
     }
     
+    console.log('[SHARE LINK] ✅ Scan complete! Score:', scanResult.score);
+    
+    // 3️⃣ 🔥 SAVE TO DATABASE (THIS IS THE FIX!)
+    try {
+      await pool.query(`
+        INSERT INTO scans (
+          url, 
+          score, 
+          quality,
+          graaf_score,
+          craft_score,
+          technical_score,
+          breakdown,
+          recommendations,
+          word_count,
+          scan_type,
+          created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+      `, [
+        scanResult.url,
+        scanResult.score,
+        scanResult.quality,
+        scanResult.breakdown.graaf.total,
+        scanResult.breakdown.craft.total,
+        scanResult.breakdown.technical.total,
+        JSON.stringify(scanResult.breakdown),
+        JSON.stringify(scanResult.recommendations),
+        scanResult.wordCount,
+        'share_link'
+      ]);
+      
+      console.log('[DATABASE] ✅ Scan saved to database!');
+      
+    } catch (dbError) {
+      console.error('[DATABASE ERROR] ❌ Failed to save scan:', dbError.message);
+      // Continue anyway - don't fail the whole scan if DB save fails
+    }
+    
+    // 4️⃣ UPDATE SHARE LINK USAGE
     await pool.query(
       'UPDATE share_links SET current_uses = current_uses + 1 WHERE token = $1',
       [share_code]
     );
     
+    // 5️⃣ ADD REMAINING SCANS TO RESPONSE
     scanResult.scans_remaining = link.max_uses - link.current_uses - 1;
     
-    console.log('[SHARE LINK] ✅ Complete. Score:', scanResult.score, 'Recs:', scanResult.recommendations.summary.totalIssues);
+    console.log('[SHARE LINK] 🎉 Complete! Score:', scanResult.score, 'Recs:', scanResult.recommendations.summary.totalIssues, 'Remaining:', scanResult.scans_remaining);
     
     res.json(scanResult);
     
   } catch (error) {
-    console.error('[SHARE LINK SCAN ERROR]', error);
-    res.status(500).json({ success: false, error: 'Scan failed' });
+    console.error('[SHARE LINK SCAN ERROR] ❌', error);
+    res.status(500).json({ success: false, error: 'Scan failed: ' + error.message });
   }
 });
-
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`
 ╔════════════════════════════════════════╗
-║ ✅ CONTENTSCALE v2.1 - SECURE          ║
+║ ✅ CONTENTSCALE v2.1 - DATABASE FIXED  ║
 ║ Port: ${PORT}                          ║
 ║ 🤖 Puppeteer + Claude: ACTIVE          ║
 ║ 📊 Recommendations: ACTIVE             ║
+║ 💾 Database Save: ACTIVE (FIXED!)      ║
 ║ 🔒 Rate Limiting: ACTIVE               ║
 ║ 🛡️  Input Sanitization: ACTIVE        ║
 ╚════════════════════════════════════════╝
