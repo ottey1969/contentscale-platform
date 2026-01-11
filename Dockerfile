@@ -17,16 +17,19 @@ RUN apt-get update && apt-get install -y \
 RUN ln -s /usr/bin/chromium /usr/bin/chromium-browser
 
 # Puppeteer environment variables
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
+    NODE_ENV=production
 
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install dependencies with fallback strategy
+# Try npm ci first (faster), fallback to npm install if it fails
+RUN npm ci --omit=dev --legacy-peer-deps 2>/dev/null || \
+    npm install --omit=dev --legacy-peer-deps
 
 # Copy application files
 COPY . .
