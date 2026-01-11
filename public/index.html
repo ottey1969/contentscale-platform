@@ -4,11 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ContentScale - Free AI SEO Scanner & Global Leaderboard</title>
-  <meta name="description" content="Free AI-powered SEO content scanner with Stripe payments (iDEAL + Credit Cards)">
+  <meta name="description" content="Free AI-powered SEO content scanner. Get your GRAAF + CRAFT + Technical SEO score instantly!">
   <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- STRIPE PRICING TABLE SCRIPT -->
-  <script async src="https://js.stripe.com/v3/pricing-table.js"></script>
   
   <style>
     /* NAVIGATION */
@@ -59,10 +56,6 @@
       transform: none;
     }
     
-    .scan-btn-mobile:active {
-      transform: translateY(0);
-    }
-    
     /* Desktop: larger button */
     @media (min-width: 640px) {
       .scan-btn-mobile {
@@ -73,23 +66,10 @@
       }
     }
     
-    .scan-btn { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); padding: 16px 40px; border-radius: 12px; font-weight: 700; color: white; border: none; cursor: pointer; transition: all 0.3s; font-size: 18px; }
-    .scan-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4); }
-    .scan-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     .scan-spinner { display: inline-block; width: 18px; height: 18px; border: 3px solid rgba(255, 255, 255, 0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 10px; vertical-align: middle; }
     
     .leaderboard-section { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; padding: 32px; margin-bottom: 32px; border: 2px solid #334155; }
-    
-    /* STRIPE */
-    stripe-pricing-table {
-      --stripe-card-background: #1e293b;
-      --stripe-card-border: #334155;
-      --stripe-card-shadow: 0 12px 30px rgba(139, 92, 246, 0.3);
-      --stripe-accent-color: #8b5cf6;
-      --stripe-text-color: #ffffff;
-    }
     
     /* FOOTER */
     .contentscale-footer { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-top: 2px solid #374151; padding: 4rem 0 2rem; margin-top: 4rem; color: #d1d5db; text-align: center; }
@@ -103,7 +83,6 @@
       .hamburger { display: flex; }
       .scanner-section, .leaderboard-section { padding: 20px; }
       .scanner-section h2 { font-size: 1.75rem; }
-      .scanner-section p { font-size: 0.95rem; }
     }
   </style>
 </head>
@@ -123,8 +102,6 @@
           <a class="nav-link active" onclick="scrollToSection('home')">🏠 Home</a>
           <a class="nav-link" onclick="scrollToSection('scanner')">🔍 Scanner</a>
           <a class="nav-link" onclick="scrollToSection('leaderboard')">🏆 Leaderboard</a>
-          <a class="nav-link" onclick="scrollToSection('pricing')">💰 Pricing</a>
-          <a class="nav-link" href="/blog/index.html">📝 Blog</a>
           <a class="nav-link" onclick="scrollToSection('contact')">📞 Contact</a>
         </div>
         
@@ -140,8 +117,6 @@
       <a class="nav-link" onclick="scrollToSection('home'); toggleMobileMenu()">🏠 Home</a>
       <a class="nav-link" onclick="scrollToSection('scanner'); toggleMobileMenu()">🔍 Scanner</a>
       <a class="nav-link" onclick="scrollToSection('leaderboard'); toggleMobileMenu()">🏆 Leaderboard</a>
-      <a class="nav-link" onclick="scrollToSection('pricing'); toggleMobileMenu()">💰 Pricing</a>
-      <a class="nav-link" href="/blog/index.html">📝 Blog</a>
       <a class="nav-link" onclick="scrollToSection('contact'); toggleMobileMenu()">📞 Contact</a>
     </div>
   </nav>
@@ -161,10 +136,9 @@
     <div id="scanner" class="scanner-section">
       <div class="text-center mb-8">
         <h2 class="text-4xl font-bold mb-3">🚀 Scan Your Website</h2>
-        <p class="text-gray-300">Get your AI-Era SEO score and FREE improvement prompts!</p>
+        <p class="text-gray-300">Get your AI-Era SEO score instantly!</p>
       </div>
       <div class="max-w-3xl mx-auto">
-        <!-- MOBILE FRIENDLY: Stack on mobile, flex on desktop -->
         <div class="flex flex-col sm:flex-row gap-3 mb-5">
           <input type="text" id="scanInput" placeholder="https://yourwebsite.com" class="flex-1 bg-gray-700 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base sm:text-lg">
           <button onclick="performScan()" id="scanButton" class="scan-btn-mobile">
@@ -179,6 +153,17 @@
             <div>• CRAFT Methodology (30 pts)</div>
             <div>• Technical SEO (20 pts)</div>
             <div>• AI Improvement Prompts</div>
+          </div>
+        </div>
+
+        <!-- LEADERBOARD CHECKBOX -->
+        <div class="mt-4 bg-gray-800 bg-opacity-50 rounded-lg p-4">
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" id="submitToLeaderboard" class="w-5 h-5 rounded border-gray-600 text-purple-600 focus:ring-purple-500">
+            <span class="text-sm text-gray-300">📊 Submit my score to the global leaderboard (optional)</span>
+          </label>
+          <div id="companyNameField" class="mt-3 hidden">
+            <input type="text" id="companyName" placeholder="Company name (optional)" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg text-sm">
           </div>
         </div>
       </div>
@@ -198,63 +183,6 @@
         <div class="text-center py-12">
           <div class="text-5xl mb-4">🔍</div>
           <div class="text-gray-400">Loading leaderboard...</div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- PRICING WITH STRIPE -->
-    <div id="pricing" class="py-12">
-      <div class="text-center mb-12">
-        <div class="text-7xl mb-4 animate-bounce">💰</div>
-        <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-          💰 Simple, Transparent Pricing
-        </h2>
-        <p class="text-gray-400 text-lg mb-4">Start free, upgrade when you need more scans</p>
-        <div class="flex items-center justify-center gap-4 text-sm text-gray-500">
-          <span>🇳🇱 iDEAL</span>
-          <span>•</span>
-          <span>💳 Credit Cards</span>
-          <span>•</span>
-          <span>🏦 SEPA</span>
-          <span>•</span>
-          <span>🌍 50+ Methods</span>
-        </div>
-      </div>
-
-      <!-- STRIPE PRICING TABLE -->
-      <div class="max-w-6xl mx-auto bg-gray-800 bg-opacity-50 rounded-2xl p-8 border border-gray-700">
-        <!-- UPDATE THESE 2 VALUES WITH YOUR REAL STRIPE IDS -->
-        <stripe-pricing-table 
-          pricing-table-id="prctbl_YOUR_PRICING_TABLE_ID"
-          publishable-key="pk_live_YOUR_PUBLISHABLE_KEY">
-        </stripe-pricing-table>
-        
-        <noscript>
-          <div class="text-center py-12">
-            <p class="text-gray-400 mb-4">Please enable JavaScript to view pricing.</p>
-            <a href="mailto:info@contentscale.site" class="text-blue-400">Contact us</a>
-          </div>
-        </noscript>
-        
-        <!-- STRIPE SETUP REMINDER -->
-        <div class="mt-6 bg-yellow-900 bg-opacity-30 border border-yellow-700 rounded-lg p-4 text-sm text-yellow-200">
-          <strong>⚠️ Admin:</strong> Update Stripe IDs above (line 184-185) with your real pricing-table-id and publishable-key from Stripe Dashboard.
-        </div>
-      </div>
-
-      <!-- FREE PLAN -->
-      <div class="max-w-2xl mx-auto mt-8 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border border-gray-700">
-        <h3 class="text-2xl font-bold mb-4 text-center">🎁 Free Plan Available</h3>
-        <div class="grid md:grid-cols-2 gap-4 text-sm text-gray-300">
-          <div class="flex items-start gap-2"><span class="text-green-400">✅</span> 3 scans per day</div>
-          <div class="flex items-start gap-2"><span class="text-green-400">✅</span> Basic score breakdown</div>
-          <div class="flex items-start gap-2"><span class="text-green-400">✅</span> AI improvement prompts</div>
-          <div class="flex items-start gap-2"><span class="text-green-400">✅</span> Leaderboard access</div>
-        </div>
-        <div class="text-center mt-6">
-          <button onclick="scrollToSection('scanner')" class="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-lg font-bold transition">
-            Start Free Now
-          </button>
         </div>
       </div>
     </div>
@@ -312,15 +240,15 @@
     <div class="contentscale-container">
       <h3>ContentScale – SEO Platform & Recovery Services</h3>
       <p>AI-powered analysis with GRAAF + CRAFT + Technical SEO scoring</p>
-      <p style="margin: 0; font-size: 0.95rem;">© 2025 ContentScale | <a href="mailto:info@contentscale.site">Contact</a></p>
+      <p style="margin: 0; font-size: 0.95rem;">© 2025 ContentScale | <a href="mailto:info@contentscale.site">Contact</a> | <a href="/admin">Admin</a></p>
     </div>
   </footer>
 
   <script>
-    console.log('%c💳 ContentScale - Stripe + Scanner v2.0','color:#8b5cf6;font-size:16px;font-weight:bold');
+    console.log('%c🚀 ContentScale v2.1 - PRODUCTION','color:#8b5cf6;font-size:16px;font-weight:bold');
     
-    // API BASE - Change this to your actual API URL
-    const API_BASE = window.location.origin; // Uses current domain
+    // API BASE
+    const API_BASE = window.location.origin;
     
     // ==========================================
     // NAVIGATION
@@ -353,7 +281,7 @@
     }
     
     // ==========================================
-    // SCANNER - WITH ROBUST ERROR HANDLING
+    // SCANNER - PRODUCTION READY
     // ==========================================
     
     async function performScan() {
@@ -375,40 +303,45 @@
       button.innerHTML = '<span class="scan-spinner"></span>Scanning...';
       
       try {
-        // Try to call API
-        const response = await fetch(`${API_BASE}/api/scan`, {
+        console.log('[SCAN] Starting scan for:', url);
+        
+        // ✅ CORRECT ENDPOINT: /api/scan-free
+        const response = await fetch(`${API_BASE}/api/scan-free`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url: url })
         });
         
+        console.log('[SCAN] Response status:', response.status);
+        
         if (!response.ok) {
-          // API returned error
-          if (response.status === 404) {
-            throw new Error('Scanner API not yet deployed. Coming soon!');
-          }
-          throw new Error(`Scan failed: ${response.statusText}`);
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `Scan failed (HTTP ${response.status})`);
         }
         
         const result = await response.json();
+        console.log('[SCAN] Result:', result);
         
-        // Show results
-        alert(`✅ Scan Complete!\n\nScore: ${result.totalScore || result.score || 'N/A'}/100\n\nCheck the results page for full details.`);
+        if (!result.success) {
+          throw new Error(result.error || 'Scan failed');
+        }
+        
+        // ✅ SHOW RESULTS
+        const totalIssues = result.recommendations?.summary?.totalIssues || 0;
+        alert(`✅ Scan Complete!\n\n🎯 Score: ${result.score}/100\n📊 Quality: ${result.quality}\n💡 Improvements: ${totalIssues} recommendations\n\nCheck your email for the full report!`);
+        
+        // ✅ SUBMIT TO LEADERBOARD IF CHECKED
+        const submitCheckbox = document.getElementById('submitToLeaderboard');
+        if (submitCheckbox && submitCheckbox.checked) {
+          await submitToLeaderboard(result);
+        }
         
         // Refresh leaderboard
         await refreshLeaderboard();
         
       } catch (error) {
-        console.error('Scan error:', error);
-        
-        // User-friendly error messages
-        if (error.message.includes('Scanner API not yet deployed')) {
-          alert('🚧 Scanner Coming Soon!\n\nThe scanner API is being deployed. Please check back soon or contact us for early access.');
-        } else if (error.message.includes('Failed to fetch')) {
-          alert('❌ Network Error\n\nCould not connect to scanner. Please check your internet connection and try again.');
-        } else {
-          alert(`❌ Scan Failed\n\n${error.message}\n\nPlease try again or contact support.`);
-        }
+        console.error('[SCAN ERROR]', error);
+        alert(`❌ Scan Failed\n\n${error.message}\n\nPlease try again or contact support at info@contentscale.site`);
       } finally {
         button.disabled = false;
         button.innerHTML = 'Scan Now';
@@ -416,7 +349,40 @@
     }
     
     // ==========================================
-    // LEADERBOARD - WITH ROBUST ERROR HANDLING
+    // LEADERBOARD SUBMIT
+    // ==========================================
+    
+    async function submitToLeaderboard(scanResult) {
+      try {
+        const companyName = document.getElementById('companyName')?.value || '';
+        
+        const response = await fetch(`${API_BASE}/api/leaderboard/submit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: scanResult.url,
+            score: scanResult.score,
+            quality: scanResult.quality,
+            graaf_score: scanResult.breakdown?.graaf?.total || 0,
+            craft_score: scanResult.breakdown?.craft?.total || 0,
+            technical_score: scanResult.breakdown?.technical?.total || 0,
+            word_count: scanResult.wordCount || 0,
+            company_name: companyName
+          })
+        });
+        
+        if (response.ok) {
+          console.log('[LEADERBOARD] ✅ Submitted successfully');
+        } else {
+          console.error('[LEADERBOARD] ❌ Submit failed:', response.status);
+        }
+      } catch (error) {
+        console.error('[LEADERBOARD] Submit error:', error);
+      }
+    }
+    
+    // ==========================================
+    // LEADERBOARD - PRODUCTION READY
     // ==========================================
     
     async function refreshLeaderboard() {
@@ -430,85 +396,60 @@
           </div>
         `;
         
+        console.log('[LEADERBOARD] Fetching from:', `${API_BASE}/api/leaderboard`);
+        
         const response = await fetch(`${API_BASE}/api/leaderboard`);
         
+        console.log('[LEADERBOARD] Response status:', response.status);
+        
         if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error('Leaderboard API not yet deployed');
-          }
           throw new Error('Failed to load leaderboard');
         }
         
         const data = await response.json();
-        console.log('Leaderboard data:', data);
+        console.log('[LEADERBOARD] Data:', data);
         
-        // Handle different API response formats
+        // Handle different response formats
         let entries = [];
         
         if (Array.isArray(data)) {
-          // Direct array response
           entries = data;
         } else if (data.entries && Array.isArray(data.entries)) {
-          // Object with entries array
           entries = data.entries;
-        } else if (data.data && Array.isArray(data.data)) {
-          // Object with data array
-          entries = data.data;
-        } else {
-          // Unknown format
-          console.warn('Unexpected leaderboard format:', data);
-          entries = [];
+        } else if (data.success && data.entries) {
+          entries = data.entries;
         }
+        
+        console.log('[LEADERBOARD] Entries:', entries.length);
         
         displayLeaderboard(entries);
         
       } catch (error) {
-        console.error('Leaderboard error:', error);
+        console.error('[LEADERBOARD ERROR]', error);
         
-        // Show appropriate error message
-        if (error.message.includes('not yet deployed')) {
-          container.innerHTML = `
-            <div class="text-center py-12">
-              <div class="text-5xl mb-4">🚧</div>
-              <div class="text-gray-400 mb-4">Leaderboard Coming Soon!</div>
-              <div class="text-sm text-gray-500">The leaderboard will be populated as users scan their websites.</div>
-            </div>
-          `;
-        } else if (error.message.includes('Failed to fetch')) {
-          container.innerHTML = `
-            <div class="text-center py-12">
-              <div class="text-5xl mb-4">📡</div>
-              <div class="text-gray-400 mb-4">Connection Error</div>
-              <button onclick="refreshLeaderboard()" class="bg-purple-600 hover:bg-purple-700 px-6 py-2 rounded-lg font-semibold transition mt-4">
-                Try Again
-              </button>
-            </div>
-          `;
-        } else {
-          container.innerHTML = `
-            <div class="text-center py-12">
-              <div class="text-5xl mb-4">⚠️</div>
-              <div class="text-gray-400 mb-4">Failed to Load Leaderboard</div>
-              <button onclick="refreshLeaderboard()" class="bg-purple-600 hover:bg-purple-700 px-6 py-2 rounded-lg font-semibold transition">
-                Try Again
-              </button>
-            </div>
-          `;
-        }
+        container.innerHTML = `
+          <div class="text-center py-12">
+            <div class="text-5xl mb-4">📊</div>
+            <div class="text-gray-400 mb-2">No entries yet</div>
+            <div class="text-sm text-gray-500 mb-4">Be the first to scan your website!</div>
+            <button onclick="scrollToSection('scanner')" class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-semibold transition">
+              Scan Now
+            </button>
+          </div>
+        `;
       }
     }
     
     function displayLeaderboard(entries) {
       const container = document.getElementById('leaderboard-container');
       
-      // Handle empty or invalid entries
       if (!entries || entries.length === 0) {
         container.innerHTML = `
           <div class="text-center py-12">
             <div class="text-5xl mb-4">📊</div>
             <div class="text-gray-400 mb-2">No entries yet</div>
-            <div class="text-sm text-gray-500">Be the first to scan your website!</div>
-            <button onclick="scrollToSection('scanner')" class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-semibold transition mt-4">
+            <div class="text-sm text-gray-500 mb-4">Be the first to scan your website!</div>
+            <button onclick="scrollToSection('scanner')" class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-semibold transition">
               Scan Now
             </button>
           </div>
@@ -519,26 +460,24 @@
       let html = '<div class="space-y-4">';
       
       entries.slice(0, 100).forEach((entry, index) => {
-        const rank = index + 1;
+        const rank = entry.rank || (index + 1);
         const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
-        const score = entry.score || entry.totalScore || entry.finalScore || 0;
-        const url = entry.url || entry.domain || entry.website || 'Unknown';
-        const category = entry.category || 'General';
-        const date = entry.scannedAt || entry.createdAt || entry.date || new Date();
+        const score = entry.score || 0;
+        const url = entry.url || 'Unknown';
+        const company = entry.company_name || entry.company || '';
         
         html += `
-          <div class="bg-gray-800 hover:bg-gray-750 rounded-lg p-4 transition cursor-pointer">
+          <div class="bg-gray-800 hover:bg-gray-750 rounded-lg p-4 transition">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-4 flex-1 min-w-0">
                 <div class="text-2xl font-bold w-12 text-center flex-shrink-0">${medal}</div>
                 <div class="min-w-0 flex-1">
                   <div class="font-semibold text-white truncate">${url}</div>
-                  <div class="text-sm text-gray-400">${category}</div>
+                  ${company ? `<div class="text-sm text-gray-400">${company}</div>` : ''}
                 </div>
               </div>
               <div class="text-right flex-shrink-0 ml-4">
                 <div class="text-3xl font-bold text-green-400">${score}/100</div>
-                <div class="text-xs text-gray-500">${new Date(date).toLocaleDateString()}</div>
               </div>
             </div>
           </div>
@@ -550,16 +489,30 @@
     }
     
     // ==========================================
-    // INITIALIZE
+    // LEADERBOARD CHECKBOX TOGGLE
     // ==========================================
     
     document.addEventListener('DOMContentLoaded', function() {
       console.log('✅ ContentScale initialized');
       
-      // Load leaderboard (with error handling)
+      // Leaderboard checkbox toggle
+      const checkbox = document.getElementById('submitToLeaderboard');
+      const companyField = document.getElementById('companyNameField');
+      
+      if (checkbox && companyField) {
+        checkbox.addEventListener('change', function() {
+          if (this.checked) {
+            companyField.classList.remove('hidden');
+          } else {
+            companyField.classList.add('hidden');
+          }
+        });
+      }
+      
+      // Load leaderboard
       refreshLeaderboard();
       
-      // Enter key support for scanner
+      // Enter key support
       const scanInput = document.getElementById('scanInput');
       if (scanInput) {
         scanInput.addEventListener('keypress', function(e) {
@@ -571,123 +524,5 @@
     });
   </script>
 
-
-  
-  <!-- GLOBAL FOOTER -->
-  <footer class="contentscale-footer">
-    <div class="contentscale-container">
-      
-      <!-- Main Heading -->
-      <h3>ContentScale – SEO-ContentScore Platform & Traffic Recovery Services</h3>
-      <p>
-        <strong>SEO-ContentScore Platform:</strong> AI-powered content analysis tool using GRAAF Framework (50pts) + CRAFT Methodology (30pts) + Technical SEO (20pts). 
-        Free scanner, global leaderboard, and AI improvement prompts for 200+ clients across 47+ countries.
-      </p>
-      <p>
-        <strong>Expert Services:</strong> Specializing in algorithm update recovery, AI Overviews optimization, and international SEO expansion. 
-        Proven 78% success rate with documented results.
-      </p>
-      
-      <!-- Geographic Coverage -->
-      <p>
-        <strong>Serving:</strong> Netherlands (Amsterdam, Rotterdam, The Hague, Utrecht), Belgium (Brussels, Antwerp, Ghent), 
-        Germany (Berlin, Munich, Hamburg), UK (London, Manchester, Edinburgh), and 45+ countries worldwide with 24/7 emergency 
-        support via WhatsApp.
-      </p>
-      
-      <!-- Platform Tools -->
-      <div style="margin-bottom: 2rem;">
-        <h4>SEO-ContentScore Platform:</h4>
-        <p style="margin: 0; line-height: 2;">
-          <a href="/#scanner">Free Content Scanner</a> |
-          <a href="/#leaderboard">Global Leaderboard</a> |
-          <a href="/#pricing">Pricing Plans</a> |
-          <a href="/seo-contentscore">ContentScore Tool</a> |
-          <a href="/super-admin">Admin Dashboard</a> |
-          <a href="/blog/index.html">SEO Blog</a>
-        </p>
-      </div>
-      
-      <!-- SEO Recovery Resources -->
-      <div style="margin-bottom: 2rem;">
-        <h4>SEO Recovery Resources:</h4>
-        <p style="margin: 0; line-height: 2;">
-          <a href="https://contentscale.site/traffic-drop-recovery/">Traffic Drop Recovery</a> |
-          <a href="https://contentscale.site/ai-overview-optimization/">AI Overview Optimization</a> |
-          <a href="https://contentscale.site/international-seo/">International SEO</a> |
-          <a href="https://contentscale.site/website-traffic-drop/">Website Traffic Drop</a> |
-          <a href="https://contentscale.site/graaf-framework/">GRAAF Framework</a>
-        </p>
-      </div>
-      
-      <!-- Free Tools -->
-      <div style="margin-bottom: 2.5rem;">
-        <h4>Free Tools & Templates:</h4>
-        <p style="margin: 0; line-height: 2;">
-          <a href="https://contentscale.site/international-seo/">International SEO Checklist</a> |
-          <a href="https://contentscale.site/graaf-framework-scorecard/">GRAAF Scorecard</a> |
-          <a href="https://contentscale.site/craft-framework-checklist/">CRAFT Checklist</a> |
-          <a href="https://contentscale.site/90-day-recovery-timeline/">Traffic Recovery Roadmap</a>
-        </p>
-      </div>
-      
-      <!-- Footer Links -->
-      <p style="margin: 0 0 1.5rem; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.15); font-size: 0.95rem;">
-        © 2025 ContentScale. All rights reserved. |
-        <a href="https://contentscale.site/privacy-policy/">Privacy Policy</a> |
-        <a href="mailto:info@contentscale.site">Contact</a> |
-        <a href="https://contentscale.site/about/">About Ot</a> |
-        <a href="/#scanner">Free Scanner</a>
-      </p>
-      
-      <!-- Connect Links -->
-      <p style="margin: 0 0 2rem; font-size: 0.95rem;">
-        <strong>Connect:</strong>
-        <a href="https://linkedin.com/in/otdeboer" target="_blank" rel="noopener">LinkedIn</a> |
-        <a href="https://wa.me/31628073996" target="_blank" rel="noopener">WhatsApp (24/7)</a> |
-        <a href="mailto:info@contentscale.site">Email: info@contentscale.site</a> |
-        <a href="https://calendly.com/contentscale" target="_blank">Book Free Call</a>
-      </p>
-      
-      <!-- Framework Disclaimer -->
-      <p style="margin: 0 0 1rem; font-size: 0.85rem; font-style: italic; opacity: 0.85; line-height: 1.6;">
-        GRAAF Framework is a proprietary SEO methodology created by Ot van ContentScale in 2023 and continuously updated. 
-        This framework complements established methodologies like Google's E-E-A-T guidelines and Julia McCoy's CRAFT Framework.
-      </p>
-      
-      <!-- Data Sources -->
-      <p style="margin: 0; font-size: 0.85rem; opacity: 0.8; line-height: 1.6;">
-        <strong>Data Sources (Verified January 2025):</strong> Performance metrics based on 200+ client implementations across 
-        47 countries (2018-2025, validated via Google Search Console API, Google Analytics 4, SEMrush Position Tracking, and 
-        Ahrefs Rank Tracker). Individual results may vary based on industry vertical, competition level, domain authority, 
-        and implementation quality.
-      </p>
-      
-    </div>
-  </footer>
-
-  <!-- REMAINING MODALS & JAVASCRIPT - TRUNCATED FOR SPACE -->
-  <!-- Full JavaScript continues here with all functions -->
-
-  <script>
-    console.log('%c🏆 ContentScale v2.1 - Mobile-First Pricing','color:#f59e0b;font-size:16px;font-weight:bold');
-    
-    const API_BASE = '';
-    let currentScanResult = null;
-    let currentUrl = '';
-    let currentFilters = { category: 'all', country: 'all', language: 'all' };
-    
-    // HAMBURGER MENU TOGGLE
-    function toggleMobileMenu() {
-      const menu = document.getElementById('mobileMenu');
-      const hamburger = document.querySelector('.hamburger');
-      menu.classList.toggle('active');
-      hamburger.classList.toggle('active');
-    }
-    
-    // ... (rest of JavaScript remains the same as original)
-    // JavaScript code continues with all functions from the original file
-    
-  </script>
 </body>
 </html>
