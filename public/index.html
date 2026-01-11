@@ -4,8 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ContentScale - Free AI SEO Scanner & Global Leaderboard</title>
-  <meta name="description" content="Free AI-powered SEO content scanner. Get your score, AI improvement prompts, and join the global leaderboard. GRAAF + CRAFT + Technical analysis.">
+  <meta name="description" content="Free AI-powered SEO content scanner with Stripe payments (iDEAL + Credit Cards)">
   <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- STRIPE PRICING TABLE SCRIPT -->
+  <script async src="https://js.stripe.com/v3/pricing-table.js"></script>
+  
   <style>
     /* NAVIGATION */
     .nav-bar { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-bottom: 2px solid #374151; position: sticky; top: 0; z-index: 1000; }
@@ -13,7 +17,7 @@
     .nav-link:hover { color: white; border-bottom-color: #8b5cf6; }
     .nav-link.active { color: white; border-bottom-color: #8b5cf6; }
     
-    /* HAMBURGER MENU - MOBILE */
+    /* HAMBURGER MENU */
     .hamburger { display: none; flex-direction: column; gap: 4px; cursor: pointer; padding: 8px; }
     .hamburger span { width: 25px; height: 3px; background: white; border-radius: 2px; transition: all 0.3s; }
     .hamburger.active span:nth-child(1) { transform: rotate(45deg) translate(6px, 6px); }
@@ -25,302 +29,81 @@
     .mobile-menu .nav-link { display: block; padding: 12px 0; border-bottom: 1px solid #374151; border-left: none; }
     .mobile-menu .nav-link:last-child { border-bottom: none; }
     
-    /* LEADERBOARD */
-    .leaderboard-section { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; padding: 32px; margin-bottom: 32px; border: 2px solid #334155; position: relative; overflow: hidden; }
-    .leaderboard-section::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #f59e0b 0%, #eab308 50%, #f59e0b 100%); animation: shimmer 2s infinite; }
-    @keyframes shimmer { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-    .leaderboard-row { background: #1e293b; transition: all 0.3s; cursor: pointer; border-radius: 8px; margin-bottom: 8px; padding: 16px; border-left: 4px solid transparent; }
-    .leaderboard-row:hover { background: #334155; transform: translateX(4px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
-    .leaderboard-row.rank-1 { border-left-color: #fbbf24; background: linear-gradient(135deg, #1e293b 0%, #2d1f08 100%); }
-    .leaderboard-row.rank-2 { border-left-color: #9ca3af; background: linear-gradient(135deg, #1e293b 0%, #25282e 100%); }
-    .leaderboard-row.rank-3 { border-left-color: #f97316; background: linear-gradient(135deg, #1e293b 0%, #2d1908 100%); }
-    .rank-badge { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; font-weight: 800; font-size: 18px; }
-    .rank-1 .rank-badge { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #1e293b; box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4); font-size: 24px; }
-    .rank-2 .rank-badge { background: linear-gradient(135deg, #e5e7eb 0%, #9ca3af 100%); color: #1e293b; box-shadow: 0 4px 12px rgba(156, 163, 175, 0.4); }
-    .rank-3 .rank-badge { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white; box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4); }
-    .rank-badge.default { background: #334155; color: #94a3b8; }
-    .score-display { font-size: 32px; font-weight: 800; }
-    .score-excellent { color: #10b981; }
-    .score-very-good { color: #3b82f6; }
-    .score-good { color: #8b5cf6; }
-    .score-fair { color: #f59e0b; }
-    .score-poor { color: #ef4444; }
-    .live-indicator { display: inline-flex; align-items: center; gap: 6px; background: #065f46; color: #d1fae5; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
-    .live-dot { width: 6px; height: 6px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.2); } }
-    .filter-section { background: #1f2937; border-radius: 12px; padding: 20px; margin-bottom: 24px; border: 1px solid #374151; }
-    .filter-btn { background: #374151; color: #9ca3af; padding: 8px 16px; border-radius: 8px; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; font-size: 14px; font-weight: 600; }
-    .filter-btn:hover { background: #4b5563; color: white; }
-    .filter-btn.active { background: #8b5cf6; color: white; border-color: #a78bfa; }
-    .scanner-section { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-radius: 16px; padding: 32px; border: 2px solid #374151; }
-    .scan-btn { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); padding: 16px 40px; border-radius: 12px; font-weight: 700; color: white; border: none; cursor: pointer; transition: all 0.3s; font-size: 18px; }
-    .scan-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4); }
-    .scan-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .prompt-btn { background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 8px 16px; border-radius: 8px; font-weight: 600; color: white; border: none; cursor: pointer; transition: all 0.2s; font-size: 13px; }
-    .prompt-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); }
-    .category-badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
-    .category-agency { background: #7c3aed; color: white; }
-    .category-saas { background: #3b82f6; color: white; }
-    .category-blog { background: #f59e0b; color: white; }
-    .category-ecommerce { background: #10b981; color: white; }
-    .category-other { background: #6b7280; color: white; }
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 9999; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
-    .modal.active { display: flex; }
-    .modal-content { background: #1f2937; border-radius: 16px; padding: 32px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; }
-    .modal-close { position: absolute; top: 16px; right: 16px; background: #374151; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; color: white; font-size: 20px; }
-    .modal-close:hover { background: #4b5563; }
+    /* SCANNER & LEADERBOARD */
+    .scanner-section { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-radius: 16px; padding: 32px; border: 2px solid #374151; margin-bottom: 32px; }
     
-    /* ==========================================
-       PRICING CARDS - MOBILE FIRST + BOTTOM BUTTONS
-       ========================================== */
-    
-    /* PRICING GRID */
-    .pricing-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 24px;
-      margin-bottom: 32px;
-    }
-    
-    /* PRICING CARD - FLEXBOX FOR BOTTOM BUTTONS */
-    .pricing-card {
-      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-      border: 2px solid #334155;
-      border-radius: 16px;
-      padding: 24px;
-      transition: all 0.3s ease;
-      
-      /* CRITICAL: FLEXBOX FOR BOTTOM BUTTONS */
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      min-height: 480px;
-    }
-    
-    .pricing-card:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 12px 30px rgba(139, 92, 246, 0.3);
-      border-color: #8b5cf6;
-    }
-    
-    .pricing-card.popular {
-      border-color: #f59e0b;
-      position: relative;
-    }
-    
-    .pricing-card.popular::before {
-      content: '⭐ POPULAR';
-      position: absolute;
-      top: -12px;
-      right: 24px;
-      background: linear-gradient(135deg, #f59e0b 0%, #eab308 100%);
-      color: #1e293b;
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: 0.5px;
-    }
-    
-    /* PRICING HEADER - FIXED HEIGHT */
-    .pricing-header {
-      text-align: center;
-      margin-bottom: 24px;
-      min-height: 140px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-    
-    .pricing-header h3 {
-      font-size: 24px;
-      font-weight: 700;
-      margin-bottom: 12px;
-      color: white;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    
-    .price-tag {
-      font-size: 48px;
-      font-weight: 800;
-      background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      line-height: 1;
-      margin: 8px 0;
-    }
-    
-    .price-period {
-      color: #9ca3af;
-      font-size: 16px;
-      margin-top: 4px;
-      font-weight: 500;
-    }
-    
-    .price-savings {
-      color: #10b981;
-      font-size: 12px;
-      margin-top: 8px;
-      font-weight: 600;
-    }
-    
-    /* FEATURE LIST - GROWS TO FILL SPACE */
-    .feature-list {
-      list-style: none;
-      padding: 0;
-      margin: 0 0 24px 0;
-      flex-grow: 1; /* THIS PUSHES BUTTON TO BOTTOM */
-    }
-    
-    .feature-list li {
-      padding: 12px 0;
-      border-bottom: 1px solid #334155;
-      color: #d1d5db;
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      font-size: 15px;
-      line-height: 1.5;
-    }
-    
-    .feature-list li:last-child {
-      border-bottom: none;
-    }
-    
-    .feature-icon {
-      color: #10b981;
-      font-size: 20px;
-      flex-shrink: 0;
-      margin-top: 2px;
-    }
-    
-    /* CTA SECTION - ALWAYS AT BOTTOM */
-    .pricing-cta {
-      margin-top: auto; /* PUSHES TO BOTTOM */
-      padding-top: 16px;
-    }
-    
-    .cta-btn {
-      width: 100%;
+    /* SCAN BUTTON - MOBILE FIRST */
+    .scan-btn-mobile {
       background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-      color: white;
-      padding: 16px 24px;
+      padding: 14px 24px;
       border-radius: 12px;
       font-weight: 700;
+      color: white;
       border: none;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: all 0.3s;
       font-size: 16px;
+      width: 100%;
       text-align: center;
-      display: block;
-      text-decoration: none;
+      white-space: nowrap;
     }
     
-    .cta-btn:hover {
+    .scan-btn-mobile:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(139, 92, 246, 0.5);
-      background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+      box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
     }
     
-    .cta-btn:active {
+    .scan-btn-mobile:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .scan-btn-mobile:active {
       transform: translateY(0);
     }
     
-    /* LTD BANNER */
-    .ltd-banner {
-      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-      border-radius: 16px;
-      padding: 32px;
-      text-align: center;
-      margin-top: 32px;
-      border: 3px solid #eab308;
-    }
-    
-    /* ==========================================
-       RESPONSIVE - MOBILE FIRST
-       ========================================== */
-    
-    /* SMALL TABLET (640px+) */
+    /* Desktop: larger button */
     @media (min-width: 640px) {
-      .pricing-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-      
-      .pricing-card {
-        min-height: 500px;
-      }
-    }
-    
-    /* TABLET (768px+) */
-    @media (min-width: 768px) {
-      .pricing-card {
-        padding: 28px;
-      }
-      
-      .pricing-header {
-        min-height: 140px;
-      }
-      
-      .price-tag {
-        font-size: 44px;
+      .scan-btn-mobile {
+        padding: 16px 40px;
+        font-size: 18px;
+        width: auto;
+        min-width: 160px;
       }
     }
     
-    /* DESKTOP (1024px+) */
-    @media (min-width: 1024px) {
-      .pricing-grid {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 20px;
-      }
-      
-      .pricing-card {
-        padding: 32px;
-        min-height: 520px;
-      }
-      
-      .price-tag {
-        font-size: 48px;
-      }
-    }
+    .scan-btn { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); padding: 16px 40px; border-radius: 12px; font-weight: 700; color: white; border: none; cursor: pointer; transition: all 0.3s; font-size: 18px; }
+    .scan-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4); }
+    .scan-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     
-    /* LARGE DESKTOP (1280px+) */
-    @media (min-width: 1280px) {
-      .pricing-grid {
-        gap: 24px;
-      }
-    }
-    
-    /* SCAN LOADING */
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     .scan-spinner { display: inline-block; width: 18px; height: 18px; border: 3px solid rgba(255, 255, 255, 0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 10px; vertical-align: middle; }
-    .scan-stage { font-size: 14px; opacity: 0.9; margin-left: 8px; }
     
-    /* GLOBAL FOOTER STYLES */
+    .leaderboard-section { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; padding: 32px; margin-bottom: 32px; border: 2px solid #334155; }
+    
+    /* STRIPE */
+    stripe-pricing-table {
+      --stripe-card-background: #1e293b;
+      --stripe-card-border: #334155;
+      --stripe-card-shadow: 0 12px 30px rgba(139, 92, 246, 0.3);
+      --stripe-accent-color: #8b5cf6;
+      --stripe-text-color: #ffffff;
+    }
+    
+    /* FOOTER */
     .contentscale-footer { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-top: 2px solid #374151; padding: 4rem 0 2rem; margin-top: 4rem; color: #d1d5db; text-align: center; }
     .contentscale-container { max-width: 1200px; margin: 0 auto; padding: 0 2rem; }
     .contentscale-footer h3 { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: #a78bfa; }
-    .contentscale-footer h4 { font-size: 1.125rem; font-weight: 600; margin-bottom: 0.75rem; color: #c4b5fd; margin-top: 1.5rem; }
     .contentscale-footer p { line-height: 1.8; margin-bottom: 1.5rem; color: #9ca3af; }
     .contentscale-footer a { color: #60a5fa; text-decoration: none; transition: color 0.2s; }
     .contentscale-footer a:hover { color: #93c5fd; text-decoration: underline; }
     
     @media (max-width: 768px) { 
-      .leaderboard-section, .scanner-section { padding: 20px; } 
-      .rank-badge { width: 32px; height: 32px; font-size: 14px; } 
-      .rank-1 .rank-badge { font-size: 18px; } 
-      .score-display { font-size: 24px; }
-      .nav-link { padding: 10px 12px; font-size: 14px; }
       .hamburger { display: flex; }
-      .pricing-card { padding: 20px; min-height: 450px; }
-      .pricing-header { min-height: 120px; }
-      .price-tag { font-size: 36px; }
-      .feature-list li { font-size: 14px; padding: 10px 0; }
-      .cta-btn { padding: 14px 20px; font-size: 15px; }
-      .contentscale-footer { padding: 3rem 0 1.5rem; }
-      .contentscale-container { padding: 0 1rem; }
-      .contentscale-footer h3 { font-size: 1.25rem; }
+      .scanner-section, .leaderboard-section { padding: 20px; }
+      .scanner-section h2 { font-size: 1.75rem; }
+      .scanner-section p { font-size: 0.95rem; }
     }
   </style>
 </head>
@@ -336,7 +119,6 @@
           </a>
         </div>
         
-        <!-- DESKTOP MENU -->
         <div class="hidden md:flex items-center gap-1">
           <a class="nav-link active" onclick="scrollToSection('home')">🏠 Home</a>
           <a class="nav-link" onclick="scrollToSection('scanner')">🔍 Scanner</a>
@@ -346,7 +128,6 @@
           <a class="nav-link" onclick="scrollToSection('contact')">📞 Contact</a>
         </div>
         
-        <!-- HAMBURGER MENU (MOBILE) -->
         <div class="hamburger md:hidden" onclick="toggleMobileMenu()">
           <span></span>
           <span></span>
@@ -355,7 +136,6 @@
       </div>
     </div>
     
-    <!-- MOBILE MENU -->
     <div class="mobile-menu" id="mobileMenu">
       <a class="nav-link" onclick="scrollToSection('home'); toggleMobileMenu()">🏠 Home</a>
       <a class="nav-link" onclick="scrollToSection('scanner'); toggleMobileMenu()">🔍 Scanner</a>
@@ -368,110 +148,50 @@
 
   <div class="max-w-6xl mx-auto p-8">
     
-    <!-- HOME SECTION -->
+    <!-- HOME -->
     <div id="home" class="text-center mb-12 pt-8">
       <h1 class="text-5xl font-bold mb-3 bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">🏆 Global AI SEO Leaderboard</h1>
       <p class="text-xl text-gray-300 mb-4">The World's First AI-Era Content Quality Rankings</p>
-      <span class="live-indicator"><span class="live-dot"></span>Live Rankings</span>
       <div class="mt-6 text-gray-400 max-w-3xl mx-auto">
-        <p class="mb-4">Free AI-powered content analysis using the <strong class="text-purple-400">GRAAF Framework</strong> (50pts) + <strong class="text-blue-400">CRAFT Methodology</strong> (30pts) + <strong class="text-green-400">Technical SEO</strong> (20pts) = 100 points total.</p>
-        <p>Scan your website, get FREE AI improvement prompts, and claim your spot on the global leaderboard!</p>
+        <p>Free AI-powered content analysis using GRAAF (50pts) + CRAFT (30pts) + Technical SEO (20pts) = 100 points total.</p>
       </div>
     </div>
 
-    <!-- SCANNER SECTION -->
-    <div id="scanner" class="scanner-section mb-8">
+    <!-- SCANNER -->
+    <div id="scanner" class="scanner-section">
       <div class="text-center mb-8">
         <h2 class="text-4xl font-bold mb-3">🚀 Scan Your Website</h2>
-        <p class="text-gray-300">Get your AI-Era SEO score, FREE improvement prompts, and claim your spot!</p>
+        <p class="text-gray-300">Get your AI-Era SEO score and FREE improvement prompts!</p>
       </div>
       <div class="max-w-3xl mx-auto">
-        <div class="flex gap-3 mb-5">
-          <input type="text" id="scanInput" placeholder="https://yourwebsite.com" class="flex-1 bg-gray-700 text-white px-6 py-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg">
-          <button onclick="performScan()" id="scanButton" class="scan-btn">Scan Now</button>
-        </div>
-        
-        <!-- SCAN COUNTER -->
-        <div id="scan-counter" class="bg-blue-900 bg-opacity-50 border border-blue-700 rounded-lg p-4 mb-5 text-center">
-          <div class="text-sm text-blue-300">
-            <span id="scans-used-text">First scan FREE - No email required!</span>
-          </div>
+        <!-- MOBILE FRIENDLY: Stack on mobile, flex on desktop -->
+        <div class="flex flex-col sm:flex-row gap-3 mb-5">
+          <input type="text" id="scanInput" placeholder="https://yourwebsite.com" class="flex-1 bg-gray-700 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base sm:text-lg">
+          <button onclick="performScan()" id="scanButton" class="scan-btn-mobile">
+            Scan Now
+          </button>
         </div>
         
         <div class="bg-gray-800 bg-opacity-70 rounded-lg p-4 text-sm text-gray-400">
           <div class="font-bold text-green-400 mb-2">✅ Free Analysis Includes:</div>
-          <div class="grid md:grid-cols-2 gap-2 text-xs">
-            <div>• GRAAF Framework Score (50 pts)</div>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div>• GRAAF Framework (50 pts)</div>
             <div>• CRAFT Methodology (30 pts)</div>
             <div>• Technical SEO (20 pts)</div>
-            <div>• AI Improvement Prompts 🎁</div>
+            <div>• AI Improvement Prompts</div>
           </div>
         </div>
       </div>
     </div>
-    
-    <!-- LEADERBOARD SECTION -->
+
+    <!-- LEADERBOARD -->
     <div id="leaderboard" class="leaderboard-section">
       <div class="flex justify-between items-center mb-6">
         <div>
-          <h2 class="text-3xl font-bold text-yellow-400">Top 100 Websites</h2>
-          <p class="text-sm text-gray-400 mt-1">Ranked by GRAAF + CRAFT + Technical SEO (100 points max)</p>
+          <h2 class="text-3xl font-bold text-yellow-400">Top Websites</h2>
+          <p class="text-sm text-gray-400 mt-1">Ranked by total score (100 points max)</p>
         </div>
         <button onclick="refreshLeaderboard()" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-semibold transition">🔄 Refresh</button>
-      </div>
-      
-      <div class="filter-section">
-        <div class="mb-4"><h3 class="text-sm font-bold text-gray-400 mb-2">FILTER BY:</h3></div>
-        <div class="mb-4">
-          <label class="text-xs text-gray-500 uppercase font-bold mb-2 block">Category</label>
-          <div class="flex flex-wrap gap-2">
-            <button class="filter-btn active" onclick="filterCategory('all')">All</button>
-            <button class="filter-btn" onclick="filterCategory('agency')">🎯 SEO Agencies</button>
-            <button class="filter-btn" onclick="filterCategory('saas')">💻 SaaS</button>
-            <button class="filter-btn" onclick="filterCategory('blog')">📝 Blogs</button>
-            <button class="filter-btn" onclick="filterCategory('ecommerce')">🛒 E-commerce</button>
-            <button class="filter-btn" onclick="filterCategory('other')">📌 Other</button>
-          </div>
-        </div>
-        <div class="mb-4">
-          <label class="text-xs text-gray-500 uppercase font-bold mb-2 block">Country</label>
-          <div class="flex flex-wrap gap-2">
-            <button class="filter-btn active" onclick="filterCountry('all')">🌍 Global</button>
-            <button class="filter-btn" onclick="filterCountry('NL')">🇳🇱 Netherlands</button>
-            <button class="filter-btn" onclick="filterCountry('BE')">🇧🇪 Belgium</button>
-            <button class="filter-btn" onclick="filterCountry('DE')">🇩🇪 Germany</button>
-            <button class="filter-btn" onclick="filterCountry('UK')">🇬🇧 UK</button>
-            <button class="filter-btn" onclick="filterCountry('GLOBAL')">🌐 .com/.org</button>
-          </div>
-        </div>
-        <div>
-          <label class="text-xs text-gray-500 uppercase font-bold mb-2 block">Language</label>
-          <div class="flex flex-wrap gap-2">
-            <button class="filter-btn active" onclick="filterLanguage('all')">All Languages</button>
-            <button class="filter-btn" onclick="filterLanguage('en')">🇺🇸 English</button>
-            <button class="filter-btn" onclick="filterLanguage('nl')">🇳🇱 Dutch</button>
-            <button class="filter-btn" onclick="filterLanguage('es')">🇪🇸 Spanish</button>
-          </div>
-        </div>
-      </div>
-      
-      <div class="grid grid-cols-3 gap-4 mb-6 p-4 bg-gray-800 bg-opacity-50 rounded-lg">
-        <div class="text-center">
-          <div class="text-2xl font-bold text-green-400" id="total-entries">-</div>
-          <div class="text-xs text-gray-400">Total Entries</div>
-        </div>
-        <div class="text-center">
-          <div class="text-2xl font-bold text-blue-400" id="average-score">-</div>
-          <div class="text-xs text-gray-400">Average Score</div>
-        </div>
-        <div class="text-center">
-          <div class="text-2xl font-bold text-yellow-400" id="highest-score">-</div>
-          <div class="text-xs text-gray-400">Highest Score</div>
-        </div>
-      </div>
-      
-      <div id="current-filter" class="text-sm text-gray-400 mb-4 hidden">
-        Showing: <span id="filter-display" class="text-white font-bold"></span>
       </div>
       
       <div id="leaderboard-container">
@@ -481,283 +201,377 @@
         </div>
       </div>
     </div>
-
-    <!-- PRICING SECTION -->
+    
+    <!-- PRICING WITH STRIPE -->
     <div id="pricing" class="py-12">
       <div class="text-center mb-12">
-        <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">💰 Simple, Transparent Pricing</h2>
-        <p class="text-gray-400 text-lg">Start free, upgrade when you need more scans</p>
+        <div class="text-7xl mb-4 animate-bounce">💰</div>
+        <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+          💰 Simple, Transparent Pricing
+        </h2>
+        <p class="text-gray-400 text-lg mb-4">Start free, upgrade when you need more scans</p>
+        <div class="flex items-center justify-center gap-4 text-sm text-gray-500">
+          <span>🇳🇱 iDEAL</span>
+          <span>•</span>
+          <span>💳 Credit Cards</span>
+          <span>•</span>
+          <span>🏦 SEPA</span>
+          <span>•</span>
+          <span>🌍 50+ Methods</span>
+        </div>
       </div>
 
-      <div class="pricing-grid">
+      <!-- STRIPE PRICING TABLE -->
+      <div class="max-w-6xl mx-auto bg-gray-800 bg-opacity-50 rounded-2xl p-8 border border-gray-700">
+        <!-- UPDATE THESE 2 VALUES WITH YOUR REAL STRIPE IDS -->
+        <stripe-pricing-table 
+          pricing-table-id="prctbl_YOUR_PRICING_TABLE_ID"
+          publishable-key="pk_live_YOUR_PUBLISHABLE_KEY">
+        </stripe-pricing-table>
         
-        <!-- FREE TIER -->
-        <div class="pricing-card">
-          <div class="pricing-header">
-            <h3>FREE</h3>
-            <div class="price-tag">€0</div>
-            <div class="price-period">Forever Free</div>
+        <noscript>
+          <div class="text-center py-12">
+            <p class="text-gray-400 mb-4">Please enable JavaScript to view pricing.</p>
+            <a href="mailto:info@contentscale.site" class="text-blue-400">Contact us</a>
           </div>
-          
-          <ul class="feature-list">
-            <li><span class="feature-icon">✅</span> 3 scans/day (no email!)</li>
-            <li><span class="feature-icon">✅</span> Basic score breakdown</li>
-            <li><span class="feature-icon">✅</span> AI improvement prompts</li>
-            <li><span class="feature-icon">✅</span> Leaderboard access</li>
-          </ul>
-          
-          <div class="pricing-cta">
-            <button onclick="scrollToSection('scanner')" class="cta-btn">Start Free</button>
-          </div>
+        </noscript>
+        
+        <!-- STRIPE SETUP REMINDER -->
+        <div class="mt-6 bg-yellow-900 bg-opacity-30 border border-yellow-700 rounded-lg p-4 text-sm text-yellow-200">
+          <strong>⚠️ Admin:</strong> Update Stripe IDs above (line 184-185) with your real pricing-table-id and publishable-key from Stripe Dashboard.
         </div>
-
-        <!-- STARTER TIER -->
-        <div class="pricing-card">
-          <div class="pricing-header">
-            <h3>STARTER</h3>
-            <div class="price-tag">€7</div>
-            <div class="price-period">/month</div>
-            <div class="price-savings">€67/year (save 20%)</div>
-          </div>
-          
-          <ul class="feature-list">
-            <li><span class="feature-icon">✅</span> 30 scans/month</li>
-            <li><span class="feature-icon">✅</span> Score + AI prompts</li>
-            <li><span class="feature-icon">✅</span> Email support</li>
-            <li><span class="feature-icon">✅</span> Leaderboard submission</li>
-          </ul>
-          
-          <div class="pricing-cta">
-            <button onclick="whatsappPlan('Starter', '€7/month')" class="cta-btn">Get Started</button>
-          </div>
-        </div>
-
-        <!-- PRO TIER (POPULAR) -->
-        <div class="pricing-card popular">
-          <div class="pricing-header">
-            <h3>PRO</h3>
-            <div class="price-tag">€27</div>
-            <div class="price-period">/month</div>
-            <div class="price-savings">€259/year (save 20%)</div>
-          </div>
-          
-          <ul class="feature-list">
-            <li><span class="feature-icon">✅</span> 100 scans/month</li>
-            <li><span class="feature-icon">✅</span> Priority support</li>
-            <li><span class="feature-icon">✅</span> WhatsApp access</li>
-            <li><span class="feature-icon">✅</span> Advanced analytics</li>
-          </ul>
-          
-          <div class="pricing-cta">
-            <button onclick="whatsappPlan('Pro', '€27/month')" class="cta-btn">Get Started</button>
-          </div>
-        </div>
-
-        <!-- AGENCY TIER -->
-        <div class="pricing-card">
-          <div class="pricing-header">
-            <h3>AGENCY</h3>
-            <div class="price-tag">€97</div>
-            <div class="price-period">/month</div>
-            <div class="price-savings">€929/year (save 20%)</div>
-          </div>
-          
-          <ul class="feature-list">
-            <li><span class="feature-icon">✅</span> 500 scans/month</li>
-            <li><span class="feature-icon">✅</span> White-label</li>
-            <li><span class="feature-icon">✅</span> Client dashboard</li>
-            <li><span class="feature-icon">✅</span> API access</li>
-            <li><span class="feature-icon">✅</span> Account manager</li>
-          </ul>
-          
-          <div class="pricing-cta">
-            <button onclick="whatsappPlan('Agency', '€97/month')" class="cta-btn">Contact Sales</button>
-          </div>
-        </div>
-
       </div>
 
-      <!-- LIFETIME DEAL BANNER -->
-      <div class="ltd-banner">
-        <div class="text-5xl mb-3">💎</div>
-        <h3 class="text-3xl font-bold text-gray-900 mb-3">LIMITED: Lifetime Deal Available</h3>
-        <p class="text-lg text-gray-800 mb-4">Pay once, use forever. Better value than monthly plans!</p>
-        <div class="flex justify-center items-center gap-4 mb-6 flex-wrap">
-          <div class="text-gray-900">
-            <div class="text-sm font-semibold">Starting from</div>
-            <div class="text-4xl font-bold">€49</div>
-            <div class="text-xs">One-time payment</div>
-          </div>
-          <div class="text-5xl">→</div>
-          <div class="text-gray-900">
-            <div class="text-sm font-semibold">You get</div>
-            <div class="text-4xl font-bold">Lifetime</div>
-            <div class="text-xs">No monthly fees</div>
-          </div>
+      <!-- FREE PLAN -->
+      <div class="max-w-2xl mx-auto mt-8 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border border-gray-700">
+        <h3 class="text-2xl font-bold mb-4 text-center">🎁 Free Plan Available</h3>
+        <div class="grid md:grid-cols-2 gap-4 text-sm text-gray-300">
+          <div class="flex items-start gap-2"><span class="text-green-400">✅</span> 3 scans per day</div>
+          <div class="flex items-start gap-2"><span class="text-green-400">✅</span> Basic score breakdown</div>
+          <div class="flex items-start gap-2"><span class="text-green-400">✅</span> AI improvement prompts</div>
+          <div class="flex items-start gap-2"><span class="text-green-400">✅</span> Leaderboard access</div>
         </div>
-        <div class="bg-gray-900 bg-opacity-20 rounded-lg p-4 mb-6 max-w-2xl mx-auto">
-          <div class="grid grid-cols-3 gap-4 text-sm text-gray-900">
-            <div><strong>Tier 1:</strong> €49 - 50 scans/mo</div>
-            <div><strong>Tier 2:</strong> €99 - 150 scans/mo</div>
-            <div><strong>Tier 3:</strong> €199 - 400 scans/mo</div>
-          </div>
+        <div class="text-center mt-6">
+          <button onclick="scrollToSection('scanner')" class="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-lg font-bold transition">
+            Start Free Now
+          </button>
         </div>
-        <p class="text-sm text-gray-800 mb-4">⚠️ LTD tiers offer better value than regular plans but exclude white-label, API, and enterprise features</p>
-        <a href="/lifetime-deal" class="inline-block bg-gray-900 text-yellow-400 px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-800 transition">
-          🔥 View Lifetime Deal Options
-        </a>
       </div>
     </div>
 
-    <!-- CONTACT SECTION -->
+    <!-- CONTACT -->
     <div id="contact" class="py-12">
       <div class="text-center mb-12">
+        <div class="text-7xl mb-4 animate-bounce">📞</div>
         <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">📞 Get In Touch</h2>
-        <p class="text-gray-400 text-lg">Questions? Want expert SEO help? Reach out!</p>
-        <p class="text-sm text-gray-500 mt-2">🔒 Privacy-First: No forms, no data capture. Direct contact only.</p>
+        <p class="text-gray-400 text-lg">Questions? Want expert SEO help?</p>
       </div>
 
-      <div class="max-w-5xl mx-auto">
+      <div class="max-w-5xl mx-auto grid md:grid-cols-2 gap-8">
         
-        <div class="grid md:grid-cols-2 gap-8 mb-8">
-          
-          <!-- CONTACT INFO -->
-          <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-8 border border-gray-700">
-            <h3 class="text-2xl font-bold mb-6">Contact Information</h3>
-            
-            <div class="space-y-6">
-              <!-- EMAIL -->
-              <div class="flex items-start gap-4">
-                <div class="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center text-2xl flex-shrink-0">📧</div>
-                <div>
-                  <div class="text-sm text-gray-400 mb-1">Email</div>
-                  <a href="mailto:info@contentscale.site" class="text-lg font-semibold text-blue-400 hover:text-blue-300">
-                    info@contentscale.site
-                  </a>
-                </div>
-              </div>
-
-              <!-- WHATSAPP -->
-              <div class="flex items-start gap-4">
-                <div class="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center text-2xl flex-shrink-0">💬</div>
-                <div>
-                  <div class="text-sm text-gray-400 mb-1">WhatsApp</div>
-                  <a href="https://wa.me/31628073996" target="_blank" class="text-lg font-semibold text-green-400 hover:text-green-300">
-                    +31 628 073 996
-                  </a>
-                  <div class="text-xs text-gray-500 mt-1">Response time: 2-4 hours</div>
-                </div>
-              </div>
-
-              <!-- OFFICE -->
-              <div class="flex items-start gap-4">
-                <div class="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center text-2xl flex-shrink-0">📍</div>
-                <div>
-                  <div class="text-sm text-gray-400 mb-1">Office</div>
-                  <div class="text-lg font-semibold">Amsterdam, Netherlands</div>
-                  <div class="text-sm text-gray-400">Serving 47+ countries worldwide</div>
-                </div>
-              </div>
-
-              <!-- HOURS -->
-              <div class="flex items-start gap-4">
-                <div class="w-12 h-12 bg-orange-600 rounded-lg flex items-center justify-center text-2xl flex-shrink-0">⏰</div>
-                <div>
-                  <div class="text-sm text-gray-400 mb-1">Business Hours</div>
-                  <div class="text-lg font-semibold">Mon-Fri: 9AM - 6PM CET</div>
-                  <div class="text-sm text-gray-400">Weekend: Emergency only</div>
-                </div>
+        <!-- CONTACT INFO -->
+        <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-8 border border-gray-700">
+          <h3 class="text-2xl font-bold mb-6">Contact</h3>
+          <div class="space-y-6">
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center text-2xl">📧</div>
+              <div>
+                <div class="text-sm text-gray-400 mb-1">Email</div>
+                <a href="mailto:info@contentscale.site" class="text-lg font-semibold text-blue-400 hover:text-blue-300">info@contentscale.site</a>
               </div>
             </div>
-
-            <!-- CTA BUTTON -->
-            <div class="mt-8">
-              <a href="mailto:info@contentscale.site?subject=ContentScale%20Inquiry" 
-                 class="block w-full bg-gray-700 hover:bg-gray-600 text-center py-3 rounded-lg font-semibold transition">
-                📧 Send Email
-              </a>
-            </div>
-          </div>
-
-          <!-- WHATSAPP CTA CARD -->
-          <div class="bg-gradient-to-br from-green-900 to-green-800 rounded-xl p-8 border-2 border-green-600 relative overflow-hidden">
-            <!-- ANIMATED BACKGROUND -->
-            <div class="absolute inset-0 opacity-10">
-              <div class="absolute top-0 right-0 w-64 h-64 bg-white rounded-full blur-3xl animate-pulse"></div>
-              <div class="absolute bottom-0 left-0 w-64 h-64 bg-white rounded-full blur-3xl animate-pulse" style="animation-delay: 1s;"></div>
-            </div>
-            
-            <div class="relative z-10">
-              <div class="text-center mb-8">
-                <div class="text-7xl mb-4 animate-bounce">💬</div>
-                <h3 class="text-3xl font-bold mb-3 text-white">Let's Talk on WhatsApp!</h3>
-                <p class="text-green-100 text-lg">Fastest way to get help. Average response: 2-4 hours</p>
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center text-2xl">💬</div>
+              <div>
+                <div class="text-sm text-gray-400 mb-1">WhatsApp</div>
+                <a href="https://wa.me/31628073996" target="_blank" class="text-lg font-semibold text-green-400 hover:text-green-300">+31 628 073 996</a>
               </div>
-
-              <!-- BENEFITS -->
-              <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-6 mb-6">
-                <h4 class="font-bold text-lg mb-4 text-white">✅ Why WhatsApp?</h4>
-                <ul class="space-y-3 text-green-50">
-                  <li class="flex items-start gap-3">
-                    <span class="text-green-300 flex-shrink-0">⚡</span>
-                    <span>Instant communication, no delays</span>
-                  </li>
-                  <li class="flex items-start gap-3">
-                    <span class="text-green-300 flex-shrink-0">🔒</span>
-                    <span>End-to-end encrypted, privacy-first</span>
-                  </li>
-                  <li class="flex items-start gap-3">
-                    <span class="text-green-300 flex-shrink-0">📊</span>
-                    <span>Share screens, files, scan results directly</span>
-                  </li>
-                  <li class="flex items-start gap-3">
-                    <span class="text-green-300 flex-shrink-0">💬</span>
-                    <span>Talk to Ot personally, not a chatbot</span>
-                  </li>
-                </ul>
-              </div>
-
-              <!-- CTA BUTTON -->
-              <a href="https://wa.me/31628073996?text=Hi%20Ot!%20I%27d%20like%20to%20learn%20more%20about%20ContentScale" 
-                 target="_blank"
-                 class="block w-full bg-white hover:bg-green-50 text-green-900 text-center py-5 rounded-xl font-bold text-xl transition transform hover:scale-105 shadow-2xl">
-                💬 Start WhatsApp Chat Now →
-              </a>
-              
-              <p class="text-center text-xs text-green-200 mt-4">
-                🌍 Available worldwide • 200+ successful recoveries • 78% reach 95+ score
-              </p>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- TRUST INDICATORS -->
-        <div class="bg-gradient-to-r from-purple-900 to-blue-900 rounded-xl p-6 border border-purple-700">
-          <div class="grid md:grid-cols-4 gap-6 text-center">
-            <div>
-              <div class="text-3xl font-bold text-purple-300 mb-1">200+</div>
-              <div class="text-sm text-gray-300">Happy Clients</div>
-            </div>
-            <div>
-              <div class="text-3xl font-bold text-blue-300 mb-1">47+</div>
-              <div class="text-sm text-gray-300">Countries Served</div>
-            </div>
-            <div>
-              <div class="text-3xl font-bold text-green-300 mb-1">78%</div>
-              <div class="text-sm text-gray-300">Reach 95+ Score</div>
-            </div>
-            <div>
-              <div class="text-3xl font-bold text-yellow-300 mb-1">2-4h</div>
-              <div class="text-sm text-gray-300">Response Time</div>
             </div>
           </div>
         </div>
 
+        <!-- WHATSAPP CTA -->
+        <div class="bg-gradient-to-br from-green-900 to-green-800 rounded-xl p-8 border-2 border-green-600">
+          <div class="text-center mb-8">
+            <div class="text-7xl mb-4 animate-bounce">💬</div>
+            <h3 class="text-3xl font-bold mb-3 text-white">Let's Talk!</h3>
+          </div>
+          <a href="https://wa.me/31628073996?text=Hi!%20I%27d%20like%20to%20learn%20more%20about%20ContentScale" 
+             target="_blank"
+             class="block w-full bg-white hover:bg-green-50 text-green-900 text-center py-5 rounded-xl font-bold text-xl transition transform hover:scale-105">
+            💬 Start WhatsApp Chat →
+          </a>
+        </div>
       </div>
     </div>
 
   </div>
+  
+  <!-- FOOTER -->
+  <footer class="contentscale-footer">
+    <div class="contentscale-container">
+      <h3>ContentScale – SEO Platform & Recovery Services</h3>
+      <p>AI-powered analysis with GRAAF + CRAFT + Technical SEO scoring</p>
+      <p style="margin: 0; font-size: 0.95rem;">© 2025 ContentScale | <a href="mailto:info@contentscale.site">Contact</a></p>
+    </div>
+  </footer>
+
+  <script>
+    console.log('%c💳 ContentScale - Stripe + Scanner v2.0','color:#8b5cf6;font-size:16px;font-weight:bold');
+    
+    // API BASE - Change this to your actual API URL
+    const API_BASE = window.location.origin; // Uses current domain
+    
+    // ==========================================
+    // NAVIGATION
+    // ==========================================
+    
+    function toggleMobileMenu() {
+      const menu = document.getElementById('mobileMenu');
+      const hamburger = document.querySelector('.hamburger');
+      menu.classList.toggle('active');
+      hamburger.classList.toggle('active');
+    }
+    
+    function scrollToSection(sectionId) {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const menu = document.getElementById('mobileMenu');
+        const hamburger = document.querySelector('.hamburger');
+        if (menu && menu.classList.contains('active')) {
+          menu.classList.remove('active');
+          hamburger.classList.remove('active');
+        }
+        document.querySelectorAll('.nav-link').forEach(link => {
+          link.classList.remove('active');
+          if (link.getAttribute('onclick')?.includes(sectionId)) {
+            link.classList.add('active');
+          }
+        });
+      }
+    }
+    
+    // ==========================================
+    // SCANNER - WITH ROBUST ERROR HANDLING
+    // ==========================================
+    
+    async function performScan() {
+      const input = document.getElementById('scanInput');
+      const button = document.getElementById('scanButton');
+      const url = input.value.trim();
+      
+      if (!url) {
+        alert('⚠️ Please enter a URL');
+        return;
+      }
+      
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        alert('⚠️ Please enter a valid URL starting with http:// or https://');
+        return;
+      }
+      
+      button.disabled = true;
+      button.innerHTML = '<span class="scan-spinner"></span>Scanning...';
+      
+      try {
+        // Try to call API
+        const response = await fetch(`${API_BASE}/api/scan`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: url })
+        });
+        
+        if (!response.ok) {
+          // API returned error
+          if (response.status === 404) {
+            throw new Error('Scanner API not yet deployed. Coming soon!');
+          }
+          throw new Error(`Scan failed: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        
+        // Show results
+        alert(`✅ Scan Complete!\n\nScore: ${result.totalScore || result.score || 'N/A'}/100\n\nCheck the results page for full details.`);
+        
+        // Refresh leaderboard
+        await refreshLeaderboard();
+        
+      } catch (error) {
+        console.error('Scan error:', error);
+        
+        // User-friendly error messages
+        if (error.message.includes('Scanner API not yet deployed')) {
+          alert('🚧 Scanner Coming Soon!\n\nThe scanner API is being deployed. Please check back soon or contact us for early access.');
+        } else if (error.message.includes('Failed to fetch')) {
+          alert('❌ Network Error\n\nCould not connect to scanner. Please check your internet connection and try again.');
+        } else {
+          alert(`❌ Scan Failed\n\n${error.message}\n\nPlease try again or contact support.`);
+        }
+      } finally {
+        button.disabled = false;
+        button.innerHTML = 'Scan Now';
+      }
+    }
+    
+    // ==========================================
+    // LEADERBOARD - WITH ROBUST ERROR HANDLING
+    // ==========================================
+    
+    async function refreshLeaderboard() {
+      const container = document.getElementById('leaderboard-container');
+      
+      try {
+        container.innerHTML = `
+          <div class="text-center py-12">
+            <div class="scan-spinner mx-auto mb-4" style="width: 40px; height: 40px; border-width: 4px;"></div>
+            <div class="text-gray-400">Loading leaderboard...</div>
+          </div>
+        `;
+        
+        const response = await fetch(`${API_BASE}/api/leaderboard`);
+        
+        if (!response.ok) {
+          if (response.status === 404) {
+            throw new Error('Leaderboard API not yet deployed');
+          }
+          throw new Error('Failed to load leaderboard');
+        }
+        
+        const data = await response.json();
+        console.log('Leaderboard data:', data);
+        
+        // Handle different API response formats
+        let entries = [];
+        
+        if (Array.isArray(data)) {
+          // Direct array response
+          entries = data;
+        } else if (data.entries && Array.isArray(data.entries)) {
+          // Object with entries array
+          entries = data.entries;
+        } else if (data.data && Array.isArray(data.data)) {
+          // Object with data array
+          entries = data.data;
+        } else {
+          // Unknown format
+          console.warn('Unexpected leaderboard format:', data);
+          entries = [];
+        }
+        
+        displayLeaderboard(entries);
+        
+      } catch (error) {
+        console.error('Leaderboard error:', error);
+        
+        // Show appropriate error message
+        if (error.message.includes('not yet deployed')) {
+          container.innerHTML = `
+            <div class="text-center py-12">
+              <div class="text-5xl mb-4">🚧</div>
+              <div class="text-gray-400 mb-4">Leaderboard Coming Soon!</div>
+              <div class="text-sm text-gray-500">The leaderboard will be populated as users scan their websites.</div>
+            </div>
+          `;
+        } else if (error.message.includes('Failed to fetch')) {
+          container.innerHTML = `
+            <div class="text-center py-12">
+              <div class="text-5xl mb-4">📡</div>
+              <div class="text-gray-400 mb-4">Connection Error</div>
+              <button onclick="refreshLeaderboard()" class="bg-purple-600 hover:bg-purple-700 px-6 py-2 rounded-lg font-semibold transition mt-4">
+                Try Again
+              </button>
+            </div>
+          `;
+        } else {
+          container.innerHTML = `
+            <div class="text-center py-12">
+              <div class="text-5xl mb-4">⚠️</div>
+              <div class="text-gray-400 mb-4">Failed to Load Leaderboard</div>
+              <button onclick="refreshLeaderboard()" class="bg-purple-600 hover:bg-purple-700 px-6 py-2 rounded-lg font-semibold transition">
+                Try Again
+              </button>
+            </div>
+          `;
+        }
+      }
+    }
+    
+    function displayLeaderboard(entries) {
+      const container = document.getElementById('leaderboard-container');
+      
+      // Handle empty or invalid entries
+      if (!entries || entries.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12">
+            <div class="text-5xl mb-4">📊</div>
+            <div class="text-gray-400 mb-2">No entries yet</div>
+            <div class="text-sm text-gray-500">Be the first to scan your website!</div>
+            <button onclick="scrollToSection('scanner')" class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-semibold transition mt-4">
+              Scan Now
+            </button>
+          </div>
+        `;
+        return;
+      }
+      
+      let html = '<div class="space-y-4">';
+      
+      entries.slice(0, 100).forEach((entry, index) => {
+        const rank = index + 1;
+        const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
+        const score = entry.score || entry.totalScore || entry.finalScore || 0;
+        const url = entry.url || entry.domain || entry.website || 'Unknown';
+        const category = entry.category || 'General';
+        const date = entry.scannedAt || entry.createdAt || entry.date || new Date();
+        
+        html += `
+          <div class="bg-gray-800 hover:bg-gray-750 rounded-lg p-4 transition cursor-pointer">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4 flex-1 min-w-0">
+                <div class="text-2xl font-bold w-12 text-center flex-shrink-0">${medal}</div>
+                <div class="min-w-0 flex-1">
+                  <div class="font-semibold text-white truncate">${url}</div>
+                  <div class="text-sm text-gray-400">${category}</div>
+                </div>
+              </div>
+              <div class="text-right flex-shrink-0 ml-4">
+                <div class="text-3xl font-bold text-green-400">${score}/100</div>
+                <div class="text-xs text-gray-500">${new Date(date).toLocaleDateString()}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      
+      html += '</div>';
+      container.innerHTML = html;
+    }
+    
+    // ==========================================
+    // INITIALIZE
+    // ==========================================
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('✅ ContentScale initialized');
+      
+      // Load leaderboard (with error handling)
+      refreshLeaderboard();
+      
+      // Enter key support for scanner
+      const scanInput = document.getElementById('scanInput');
+      if (scanInput) {
+        scanInput.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            performScan();
+          }
+        });
+      }
+    });
+  </script>
+
+
   
   <!-- GLOBAL FOOTER -->
   <footer class="contentscale-footer">
