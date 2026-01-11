@@ -71,6 +71,80 @@
     
     .leaderboard-section { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; padding: 32px; margin-bottom: 32px; border: 2px solid #334155; }
     
+    /* MODAL STYLES */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 20px;
+    }
+
+    .modal-content {
+      background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+      border-radius: 20px;
+      max-width: 900px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      border: 2px solid #374151;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+      padding: 30px;
+      border-bottom: 2px solid #374151;
+      text-align: center;
+    }
+
+    .modal-body {
+      padding: 30px;
+    }
+
+    .score-circle {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      border: 5px solid;
+    }
+
+    .score-excellent { border-color: #22c55e; background: rgba(34, 197, 94, 0.1); }
+    .score-good { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+    .score-fair { border-color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+    .score-poor { border-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+
+    .rec-section {
+      background: rgba(17, 24, 39, 0.5);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-left: 4px solid;
+    }
+
+    .rec-quickwin { border-color: #22c55e; }
+    .rec-major { border-color: #f59e0b; }
+    .rec-advanced { border-color: #8b5cf6; }
+
+    .rec-item {
+      background: rgba(31, 41, 55, 0.5);
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+
+    .rec-item:last-child { margin-bottom: 0; }
+    
     /* FOOTER */
     .contentscale-footer { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-top: 2px solid #374151; padding: 4rem 0 2rem; margin-top: 4rem; color: #d1d5db; text-align: center; }
     .contentscale-container { max-width: 1200px; margin: 0 auto; padding: 0 2rem; }
@@ -83,6 +157,10 @@
       .hamburger { display: flex; }
       .scanner-section, .leaderboard-section { padding: 20px; }
       .scanner-section h2 { font-size: 1.75rem; }
+      .modal-content { margin: 10px; max-height: 95vh; }
+      .modal-header { padding: 20px; }
+      .modal-body { padding: 20px; }
+      .score-circle { width: 120px; height: 120px; }
     }
   </style>
 </head>
@@ -102,6 +180,7 @@
           <a class="nav-link active" onclick="scrollToSection('home')">🏠 Home</a>
           <a class="nav-link" onclick="scrollToSection('scanner')">🔍 Scanner</a>
           <a class="nav-link" onclick="scrollToSection('leaderboard')">🏆 Leaderboard</a>
+          <a href="/blog/index.html" class="nav-link">📝 Blog</a>
           <a class="nav-link" onclick="scrollToSection('contact')">📞 Contact</a>
         </div>
         
@@ -117,6 +196,7 @@
       <a class="nav-link" onclick="scrollToSection('home'); toggleMobileMenu()">🏠 Home</a>
       <a class="nav-link" onclick="scrollToSection('scanner'); toggleMobileMenu()">🔍 Scanner</a>
       <a class="nav-link" onclick="scrollToSection('leaderboard'); toggleMobileMenu()">🏆 Leaderboard</a>
+      <a href="/blog/index.html" class="nav-link">📝 Blog</a>
       <a class="nav-link" onclick="scrollToSection('contact'); toggleMobileMenu()">📞 Contact</a>
     </div>
   </nav>
@@ -240,289 +320,11 @@
     <div class="contentscale-container">
       <h3>ContentScale – SEO Platform & Recovery Services</h3>
       <p>AI-powered analysis with GRAAF + CRAFT + Technical SEO scoring</p>
-      <p style="margin: 0; font-size: 0.95rem;">© 2025 ContentScale | <a href="mailto:info@contentscale.site">Contact</a> | <a href="/admin">Admin</a></p>
+      <p style="margin: 0; font-size: 0.95rem;">© 2025 ContentScale | <a href="mailto:info@contentscale.site">Contact</a> | <a href="/admin">Admin</a> | <a href="/blog/index.html">Blog</a></p>
     </div>
   </footer>
 
-  <script>
-    console.log('%c🚀 ContentScale v2.1 - PRODUCTION','color:#8b5cf6;font-size:16px;font-weight:bold');
-    
-    // API BASE
-    const API_BASE = window.location.origin;
-    
-    // ==========================================
-    // NAVIGATION
-    // ==========================================
-    
-    function toggleMobileMenu() {
-      const menu = document.getElementById('mobileMenu');
-      const hamburger = document.querySelector('.hamburger');
-      menu.classList.toggle('active');
-      hamburger.classList.toggle('active');
-    }
-    
-    function scrollToSection(sectionId) {
-      const element = document.getElementById(sectionId);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        const menu = document.getElementById('mobileMenu');
-        const hamburger = document.querySelector('.hamburger');
-        if (menu && menu.classList.contains('active')) {
-          menu.classList.remove('active');
-          hamburger.classList.remove('active');
-        }
-        document.querySelectorAll('.nav-link').forEach(link => {
-          link.classList.remove('active');
-          if (link.getAttribute('onclick')?.includes(sectionId)) {
-            link.classList.add('active');
-          }
-        });
-      }
-    }
-    
-    // ==========================================
-    // SCANNER - PRODUCTION READY
-    // ==========================================
-    
-    async function performScan() {
-      const input = document.getElementById('scanInput');
-      const button = document.getElementById('scanButton');
-      const url = input.value.trim();
-      
-      if (!url) {
-        alert('⚠️ Please enter a URL');
-        return;
-      }
-      
-      if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        alert('⚠️ Please enter a valid URL starting with http:// or https://');
-        return;
-      }
-      
-      button.disabled = true;
-      button.innerHTML = '<span class="scan-spinner"></span>Scanning...';
-      
-      try {
-        console.log('[SCAN] Starting scan for:', url);
-        
-        // ✅ CORRECT ENDPOINT: /api/scan-free
-        const response = await fetch(`${API_BASE}/api/scan-free`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: url })
-        });
-        
-        console.log('[SCAN] Response status:', response.status);
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || `Scan failed (HTTP ${response.status})`);
-        }
-        
-        const result = await response.json();
-        console.log('[SCAN] Result:', result);
-        
-        if (!result.success) {
-          throw new Error(result.error || 'Scan failed');
-        }
-        
-        // ✅ SHOW RESULTS
-        const totalIssues = result.recommendations?.summary?.totalIssues || 0;
-        alert(`✅ Scan Complete!\n\n🎯 Score: ${result.score}/100\n📊 Quality: ${result.quality}\n💡 Improvements: ${totalIssues} recommendations\n\nCheck your email for the full report!`);
-        
-        // ✅ SUBMIT TO LEADERBOARD IF CHECKED
-        const submitCheckbox = document.getElementById('submitToLeaderboard');
-        if (submitCheckbox && submitCheckbox.checked) {
-          await submitToLeaderboard(result);
-        }
-        
-        // Refresh leaderboard
-        await refreshLeaderboard();
-        
-      } catch (error) {
-        console.error('[SCAN ERROR]', error);
-        alert(`❌ Scan Failed\n\n${error.message}\n\nPlease try again or contact support at info@contentscale.site`);
-      } finally {
-        button.disabled = false;
-        button.innerHTML = 'Scan Now';
-      }
-    }
-    
-    // ==========================================
-    // LEADERBOARD SUBMIT
-    // ==========================================
-    
-    async function submitToLeaderboard(scanResult) {
-      try {
-        const companyName = document.getElementById('companyName')?.value || '';
-        
-        const response = await fetch(`${API_BASE}/api/leaderboard/submit`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            url: scanResult.url,
-            score: scanResult.score,
-            quality: scanResult.quality,
-            graaf_score: scanResult.breakdown?.graaf?.total || 0,
-            craft_score: scanResult.breakdown?.craft?.total || 0,
-            technical_score: scanResult.breakdown?.technical?.total || 0,
-            word_count: scanResult.wordCount || 0,
-            company_name: companyName
-          })
-        });
-        
-        if (response.ok) {
-          console.log('[LEADERBOARD] ✅ Submitted successfully');
-        } else {
-          console.error('[LEADERBOARD] ❌ Submit failed:', response.status);
-        }
-      } catch (error) {
-        console.error('[LEADERBOARD] Submit error:', error);
-      }
-    }
-    
-    // ==========================================
-    // LEADERBOARD - PRODUCTION READY
-    // ==========================================
-    
-    async function refreshLeaderboard() {
-      const container = document.getElementById('leaderboard-container');
-      
-      try {
-        container.innerHTML = `
-          <div class="text-center py-12">
-            <div class="scan-spinner mx-auto mb-4" style="width: 40px; height: 40px; border-width: 4px;"></div>
-            <div class="text-gray-400">Loading leaderboard...</div>
-          </div>
-        `;
-        
-        console.log('[LEADERBOARD] Fetching from:', `${API_BASE}/api/leaderboard`);
-        
-        const response = await fetch(`${API_BASE}/api/leaderboard`);
-        
-        console.log('[LEADERBOARD] Response status:', response.status);
-        
-        if (!response.ok) {
-          throw new Error('Failed to load leaderboard');
-        }
-        
-        const data = await response.json();
-        console.log('[LEADERBOARD] Data:', data);
-        
-        // Handle different response formats
-        let entries = [];
-        
-        if (Array.isArray(data)) {
-          entries = data;
-        } else if (data.entries && Array.isArray(data.entries)) {
-          entries = data.entries;
-        } else if (data.success && data.entries) {
-          entries = data.entries;
-        }
-        
-        console.log('[LEADERBOARD] Entries:', entries.length);
-        
-        displayLeaderboard(entries);
-        
-      } catch (error) {
-        console.error('[LEADERBOARD ERROR]', error);
-        
-        container.innerHTML = `
-          <div class="text-center py-12">
-            <div class="text-5xl mb-4">📊</div>
-            <div class="text-gray-400 mb-2">No entries yet</div>
-            <div class="text-sm text-gray-500 mb-4">Be the first to scan your website!</div>
-            <button onclick="scrollToSection('scanner')" class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-semibold transition">
-              Scan Now
-            </button>
-          </div>
-        `;
-      }
-    }
-    
-    function displayLeaderboard(entries) {
-      const container = document.getElementById('leaderboard-container');
-      
-      if (!entries || entries.length === 0) {
-        container.innerHTML = `
-          <div class="text-center py-12">
-            <div class="text-5xl mb-4">📊</div>
-            <div class="text-gray-400 mb-2">No entries yet</div>
-            <div class="text-sm text-gray-500 mb-4">Be the first to scan your website!</div>
-            <button onclick="scrollToSection('scanner')" class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-semibold transition">
-              Scan Now
-            </button>
-          </div>
-        `;
-        return;
-      }
-      
-      let html = '<div class="space-y-4">';
-      
-      entries.slice(0, 100).forEach((entry, index) => {
-        const rank = entry.rank || (index + 1);
-        const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
-        const score = entry.score || 0;
-        const url = entry.url || 'Unknown';
-        const company = entry.company_name || entry.company || '';
-        
-        html += `
-          <div class="bg-gray-800 hover:bg-gray-750 rounded-lg p-4 transition">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-4 flex-1 min-w-0">
-                <div class="text-2xl font-bold w-12 text-center flex-shrink-0">${medal}</div>
-                <div class="min-w-0 flex-1">
-                  <div class="font-semibold text-white truncate">${url}</div>
-                  ${company ? `<div class="text-sm text-gray-400">${company}</div>` : ''}
-                </div>
-              </div>
-              <div class="text-right flex-shrink-0 ml-4">
-                <div class="text-3xl font-bold text-green-400">${score}/100</div>
-              </div>
-            </div>
-          </div>
-        `;
-      });
-      
-      html += '</div>';
-      container.innerHTML = html;
-    }
-    
-    // ==========================================
-    // LEADERBOARD CHECKBOX TOGGLE
-    // ==========================================
-    
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('✅ ContentScale initialized');
-      
-      // Leaderboard checkbox toggle
-      const checkbox = document.getElementById('submitToLeaderboard');
-      const companyField = document.getElementById('companyNameField');
-      
-      if (checkbox && companyField) {
-        checkbox.addEventListener('change', function() {
-          if (this.checked) {
-            companyField.classList.remove('hidden');
-          } else {
-            companyField.classList.add('hidden');
-          }
-        });
-      }
-      
-      // Load leaderboard
-      refreshLeaderboard();
-      
-      // Enter key support
-      const scanInput = document.getElementById('scanInput');
-      if (scanInput) {
-        scanInput.addEventListener('keypress', function(e) {
-          if (e.key === 'Enter') {
-            performScan();
-          }
-        });
-      }
-    });
-  </script>
+  <script src="/js/scanner-with-modal.js"></script>
 
 </body>
 </html>
