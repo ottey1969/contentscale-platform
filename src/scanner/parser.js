@@ -48,7 +48,6 @@ class ContentParser {
   }
 
   countExpertQuotes() {
-    // Pattern: "According to [Expert]", "[Name], [Title] at [Company] says"
     const patterns = [
       /according to [A-Z][a-z]+ [A-Z][a-z]+/gi,
       /says [A-Z][a-z]+ [A-Z][a-z]+, (?:CEO|Director|Professor|Expert|Researcher)/gi,
@@ -61,11 +60,10 @@ class ContentParser {
       if (matches) count += matches.length;
     });
     
-    return Math.min(count, 20); // Cap at 20
+    return Math.min(count, 20);
   }
 
   countAuthorBios() {
-    // Look for author bio sections
     const bioSelectors = [
       '[class*="author"]',
       '[class*="bio"]',
@@ -78,16 +76,14 @@ class ContentParser {
       const elements = this.$(selector);
       elements.each((i, el) => {
         const text = this.$(el).text();
-        // Must be at least 50 words
         if (text.split(/\s+/).length >= 50) count++;
       });
     });
     
-    return Math.min(count, 5); // Cap at 5
+    return Math.min(count, 5);
   }
 
   countCaseStudies() {
-    // Pattern: "increased by X%", "grew from X to Y", "achieved X"
     const resultPatterns = [
       /(?:increased|grew|improved|boosted|gained)\s+(?:by\s+)?(\d+)%/gi,
       /(?:from|reduced)\s+\$?\d+[KMB]?\s+to\s+\$?\d+[KMB]?/gi,
@@ -100,7 +96,7 @@ class ContentParser {
       if (matches) count += matches.length;
     });
     
-    return Math.min(Math.floor(count / 3), 10); // 3 metrics = 1 case study
+    return Math.min(Math.floor(count / 3), 10);
   }
 
   countTestimonials() {
@@ -132,7 +128,7 @@ class ContentParser {
       if (matches) count += matches.length;
     });
     
-    return Math.min(Math.floor(count / 2), 5); // 2 mentions = 1 cert
+    return Math.min(Math.floor(count / 2), 5);
   }
 
   parseRelevance() {
@@ -151,13 +147,11 @@ class ContentParser {
     const title = this.$('title').text().toLowerCase();
     const h1 = this.$('h1').first().text().toLowerCase();
     
-    // Extract main keywords (words > 4 chars)
     const keywords = [...new Set([
       ...title.match(/\b\w{5,}\b/g) || [],
       ...h1.match(/\b\w{5,}\b/g) || []
     ])];
     
-    // Count occurrences in body
     let relevanceScore = 0;
     keywords.forEach(keyword => {
       const regex = new RegExp(keyword, 'gi');
@@ -177,7 +171,6 @@ class ContentParser {
     const words = this.text.split(/\s+/).length;
     const uniqueWords = new Set(this.text.toLowerCase().match(/\b\w{5,}\b/g) || []);
     
-    // Good density: 1-2% unique important words
     const density = (uniqueWords.size / words) * 100;
     
     if (density >= 1 && density <= 2) return 10;
@@ -227,7 +220,6 @@ class ContentParser {
       if (pattern.test(this.text)) count++;
     });
     
-    // Also count numbered lists
     const numberedLists = this.$('ol').length;
     count += Math.min(numberedLists, 3);
     
@@ -263,7 +255,6 @@ class ContentParser {
   }
 
   countStatistics() {
-    // Pattern: percentages, numbers with units
     const statPatterns = [
       /\d+%/g,
       /\$\d+[KMB]?/g,
@@ -297,7 +288,6 @@ class ContentParser {
   }
 
   countDates() {
-    // Pattern: 2024, January 2025, etc.
     const datePatterns = [
       /20\d{2}/g,
       /(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+20\d{2}/gi
@@ -386,7 +376,7 @@ class ContentParser {
     const paragraphs = this.$('p').map((i, el) => this.$(el).text()).get();
     const shortParas = paragraphs.filter(p => {
       const words = p.split(/\s+/).length;
-      return words >= 20 && words <= 100; // Ideal length
+      return words >= 20 && words <= 100;
     });
     
     return Math.min(shortParas.length, 10);
@@ -421,7 +411,6 @@ class ContentParser {
   }
 
   countTechnicalTerms() {
-    // Common tech/business terms
     const techTerms = [
       'API', 'SEO', 'CRM', 'ROI', 'KPI', 'SQL', 'CSS', 'HTML',
       'algorithm', 'framework', 'methodology', 'optimization'
@@ -438,7 +427,6 @@ class ContentParser {
   }
 
   countJargon() {
-    // Over-complex words
     const jargonWords = this.text.match(/\b\w{12,}\b/g) || [];
     return Math.min(jargonWords.length, 30);
   }
