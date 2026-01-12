@@ -903,31 +903,35 @@
     // TAB SWITCHING
     // ==========================================
     function switchTab(tabName) {
-      // Hide all tabs
-      document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.add('hidden');
-      });
-      
-      // Remove active class from all buttons
-      document.querySelectorAll('.tab-button').forEach(btn => {
-        btn.classList.remove('active');
-      });
-      
-      // Show selected tab
-      document.getElementById(`tab-${tabName}`).classList.remove('hidden');
-      
-      // Add active class to clicked button
-      event.target.classList.add('active');
-      
-      // Load data for specific tabs
-      if (tabName === 'overview') loadOverview();
-      if (tabName === 'admins') loadAdmins();
-      if (tabName === 'agencies') loadAgencies();
-      if (tabName === 'clients') loadClients();
-      if (tabName === 'scans') loadScans();
-      if (tabName === 'share-links') loadShareLinks();
-      if (tabName === 'leaderboard') loadLeaderboard();
+  // Hide all tabs
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    tab.classList.add('hidden');
+  });
+  
+  // Remove active class from all buttons
+  document.querySelectorAll('.tab-button').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  // Show selected tab
+  document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+  
+  // ✅ FIX: Find button by onclick attribute instead of using event
+  document.querySelectorAll('.tab-button').forEach(btn => {
+    if (btn.getAttribute('onclick').includes(`'${tabName}'`)) {
+      btn.classList.add('active');
     }
+  });
+  
+  // Load data for specific tabs
+  if (tabName === 'overview') loadOverview();
+  if (tabName === 'admins') loadAdmins();
+  if (tabName === 'agencies') loadAgencies();
+  if (tabName === 'clients') loadClients();
+  if (tabName === 'scans') loadScans();
+  if (tabName === 'share-links') loadShareLinks();
+  if (tabName === 'leaderboard') loadLeaderboard();
+}
 
     // ==========================================
     // ADMINS TAB
