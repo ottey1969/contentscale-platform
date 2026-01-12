@@ -617,36 +617,5 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 });
-```
 
----
 
-## ✅ **WAT IS ER VERANDERD:**
-
-1. **Line 113:** `window.currentScanResult = result;` - Sla scan data op
-2. **Line 298-385:** **NEW** `copyRecommendations()` functie
-3. **Line 289:** Updated `closeResultsModal()` - Clear stored data
-4. **Line 295:** Updated `downloadPDF()` - Better message
-
----
-
-## 📋 **COPY OUTPUT VOORBEELD:**
-```
-╔═══════════════════════════════════════════════╗
-║  📊 CONTENTSCALE SEO SCAN RESULTS           ║
-╚═══════════════════════════════════════════════╝
-
-🌐 URL: contentscale.site
-🔢 Score: 87/100
-⭐ Quality: EXCELLENT
-📝 Word Count: 2450
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📈 BREAKDOWN:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-✅ GRAAF Framework: 42/50
-✅ CRAFT Methodology: 27/30
-✅ Technical SEO: 18/20
-
-...
