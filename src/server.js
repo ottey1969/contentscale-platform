@@ -438,6 +438,10 @@ function generateMockRecommendations(score) {
 // 🔧 ALL ADMIN ENDPOINTS - NOW WORKING!
 // ==========================================
 
+// ==========================
+// 🔧 ALL ADMIN ENDPOINTS - NOW WORKING!
+// ==========================================
+
 app.get('/api/admin/stats', authenticateSuperAdmin, async (req, res) => {
   try {
     const [agencies, clients, scans, helpers] = await Promise.all([
@@ -686,6 +690,94 @@ app.delete('/api/admin/leaderboard/:id', authenticateSuperAdmin, async (req, res
     res.status(500).json({ success: false, error: 'Failed to delete' });
   }
 });
+// ==========================================
+// ✅ NEW: SCAN ALL AGENCIES ENDPOINT
+// ==========================================
+app.post('/api/admin/scan-all-agencies', authenticateSuperAdmin, async (req, res) => {
+  try {
+    console.log('[SCAN ALL] Starting bulk agency scan...');
+    
+    // Get all active agencies
+    const agenciesResult = await pool.query(
+      'SELECT id, name, domain FROM agencies WHERE is_active = true'
+    );
+    
+    const agencies = agenciesResult.rows;
+    console.log(`[SCAN ALL] Found ${agencies.length} agencies to scan`);
+    
+    let successCount = 0;
+    let failCount = 0;
+    
+    // Scan each agency
+    for (const agency of agencies) {
+      try {
+        const url = agency.domain.startsWith('http') 
+          ? agency.domain 
+          : `https://${agency.domain}`;
+        
+        console.log(`[SCAN ALL] Scanning: ${url}`);
+        
+        // Perform scan
+        const { performFullScan } = require('./scanner');
+        const scanResult = await performFullScan(url);
+        
+        if (scanResult.success) {
+          // Save to leaderboard
+          await pool.query(`
+            INSERT INTO public_leaderboard (url, score, quality, company_name, agency_name, country, 
+              graaf_score, craft_score, technical_score, word_count, is_public, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, NOW(), NOW())
+            ON CONFLICT (url) DO UPDATE SET
+              score = EXCLUDED.score,
+              quality = EXCLUDED.quality,
+              graaf_score = EXCLUDED.graaf_score,
+              craft_score = EXCLUDED.craft_score,
+              technical_score = EXCLUDED.technical_score,
+              word_count = EXCLUDED.word_count,
+              updated_at = NOW()
+          `, [
+            url,
+            scanResult.score,
+            scanResult.quality,
+            agency.name,
+            agency.name,
+            'NL', // Default country
+            scanResult.breakdown?.graaf?.total || 0,
+            scanResult.breakdown?.craft?.total || 0,
+            scanResult.breakdown?.technical?.total || 0,
+            scanResult.wordCount || 0
+          ]);
+          
+          successCount++;
+          console.log(`[SCAN ALL] ✅ Success: ${url} - Score: ${scanResult.score}`);
+        } else {
+          failCount++;
+          console.log(`[SCAN ALL] ❌ Failed: ${url}`);
+        }
+        
+        // Rate limit: wait 2 seconds between scans
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+      } catch (error) {
+        failCount++;
+        console.error(`[SCAN ALL] Error scanning ${agency.domain}:`, error.message);
+      }
+    }
+    
+    console.log(`[SCAN ALL] Complete. Success: ${successCount}, Failed: ${failCount}`);
+    
+    res.json({ 
+      success: true, 
+      successCount, 
+      failCount,
+      total: agencies.length
+    });
+    
+  } catch (error) {
+    console.error('[SCAN ALL ERROR]', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 // ==========================================
 // PUBLIC ROUTES (NO AUTH)
@@ -705,7 +797,7 @@ app.get('/health', async (req, res) => {
 });
 
 app.get('/admin', (req, res) => {
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
   res.sendFile(path.join(__dirname, '../public/admin-dashboard.html'));
@@ -1006,6 +1098,7 @@ app.get('/api/share-link/validate/:code', async (req, res) => {
     res.status(500).json({ success: false, error: 'Validation failed' });
   }
 });
+
 // ==========================================
 // 🤖 REAL SCAN - SHARE LINK ENDPOINT 
 // ⭐ NOW WITH AGENCY LEADERBOARD INTEGRATION!
@@ -1185,7 +1278,7 @@ app.post('/api/share-link/scan', async (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`
 ╔════════════════════════════════════════╗
-║ ✅ CONTENTSCALE v2.2 - FIXED AUTH      ║
+║ ✅ CONTENTSCALE v2.3 - CACHE FIXED    ║
 ║ Port: ${PORT}                          ║
 ║ 🤖 Puppeteer + Claude: ACTIVE          ║
 ║ 📊 Recommendations: ACTIVE             ║
@@ -1193,7 +1286,8 @@ app.listen(PORT, '0.0.0.0', () => {
 ║ 🏢 Agency Leaderboard: ACTIVE          ║
 ║ 🔒 Rate Limiting: ACTIVE               ║
 ║ 🛡️  Input Sanitization: ACTIVE        ║
-║ ✅ ADMIN AUTH: FIXED!                  ║
+║ ✅ SCAN ALL AGENCIES: ADDED!           ║
+║ ✅ NO-CACHE HEADERS: ADDED!            ║
 ╚════════════════════════════════════════╝
   `);
 });
