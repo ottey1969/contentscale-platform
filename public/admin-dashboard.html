@@ -881,11 +881,8 @@
           sessionStorage.setItem('superadmin_logged_in', 'true');
           sessionStorage.setItem('superadmin_username', data.admin.username);
           
-          document.getElementById('login-screen').classList.add('hidden');
-          document.getElementById('main-dashboard').classList.remove('hidden');
-          document.getElementById('admin-username').textContent = data.admin.username;
-          
-          loadOverview();
+          // ✅ FORCE PAGE RELOAD WITH CACHE BUSTER
+          window.location.href = '/admin?v=' + Date.now();
         } else {
           errorDiv.textContent = data.error || 'Login failed';
           errorDiv.classList.remove('hidden');
@@ -906,10 +903,15 @@
 
     // Check login on page load
     if (sessionStorage.getItem('superadmin_logged_in') === 'true') {
-      document.getElementById('login-screen').classList.add('hidden');
-      document.getElementById('main-dashboard').classList.remove('hidden');
-      document.getElementById('admin-username').textContent = sessionStorage.getItem('superadmin_username');
-      loadOverview();
+      // ✅ CHECK IF URL HAS CACHE BUSTER
+      if (!window.location.search.includes('?v=')) {
+        window.location.href = '/admin?v=' + Date.now();
+      } else {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('main-dashboard').classList.remove('hidden');
+        document.getElementById('admin-username').textContent = sessionStorage.getItem('superadmin_username');
+        loadOverview();
+      }
     }
 
     // ==========================================
@@ -1671,5 +1673,7 @@ async function submitAddAdmin() {
       alert('Statistics reset!');
     }
   </script>
+</body>
+</html>
 </body>
 </html>
