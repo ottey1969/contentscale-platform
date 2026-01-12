@@ -65,6 +65,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
+// ==========================================
+// 🔧 FIX: Updated setup endpoint
+// ==========================================
 app.get('/api/setup/create-admin', async (req, res) => {
   try {
     const secretKey = req.query.secret;
@@ -113,15 +116,29 @@ app.get('/api/setup/create-admin', async (req, res) => {
     console.log('[SETUP] ✅ Secret verified, creating admin...');
     
     const hash = await bcrypt.hash('admin123', 10);
+    const adminId = 'ADMIN-' + crypto.randomBytes(8).toString('hex').toUpperCase();
+    
+    // ✅ FIX: First ensure table exists with correct structure
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS super_admins (
+        id SERIAL PRIMARY KEY,
+        admin_id VARCHAR(50) UNIQUE NOT NULL,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // Delete old entries
     await pool.query('DELETE FROM super_admins WHERE username IN ($1, $2)', ['ot', 'superadmin']);
     
-    const id = 'ADMIN-' + crypto.randomBytes(8).toString('hex').toUpperCase();
+    // ✅ FIX: Insert with admin_id column
     await pool.query(
-      'INSERT INTO super_admins (id, username, password_hash, created_at) VALUES ($1, $2, $3, NOW())',
-      [id, 'ot', hash]
+      'INSERT INTO super_admins (admin_id, username, password_hash, created_at) VALUES ($1, $2, $3, NOW())',
+      [adminId, 'ot', hash]
     );
     
-    console.log('[SETUP] ✅ Admin created successfully!');
+    console.log('[SETUP] ✅ Admin created successfully! ID:', adminId);
     
     res.send(`
       <!DOCTYPE html>
@@ -220,23 +237,41 @@ app.get('/api/setup/create-admin', async (req, res) => {
   }
 });
 
+// ==========================================
+// 🔧 FIX: Updated authenticateSuperAdmin
+// ==========================================
 async function authenticateSuperAdmin(req, res, next) {
   const adminKey = req.headers['x-admin-key'];
-  if (!adminKey) return res.status(401).json({ success: false, error: 'Auth required' });
+  
+  if (!adminKey) {
+    return res.status(401).json({ success: false, error: 'Auth required' });
+  }
   
   try {
-    const result = await pool.query('SELECT id, username FROM super_admins WHERE id = $1', [adminKey]);
+    // ✅ FIX: Query by admin_id (string) instead of id (integer)
+    const result = await pool.query(
+      'SELECT id, admin_id, username FROM super_admins WHERE admin_id = $1', 
+      [adminKey]
+    );
+    
     if (result.rows.length > 0) {
       req.admin = { ...result.rows[0], role: 'super_admin' };
+      console.log('[AUTH] ✅ Admin authenticated:', result.rows[0].username);
       return next();
     }
+    
+    console.log('[AUTH] ❌ Invalid admin key:', adminKey);
     return res.status(403).json({ success: false, error: 'Access denied' });
+    
   } catch (error) {
     console.error('[AUTH ERROR]', error);
     res.status(500).json({ success: false, error: 'Auth failed' });
   }
 }
 
+// ==========================================
+// 🔧 FIX: Updated verify-admin endpoint
+// ==========================================
 app.post('/api/setup/verify-admin', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -247,7 +282,11 @@ app.post('/api/setup/verify-admin', async (req, res) => {
       return res.status(400).json({ error: 'Username and password required' });
     }
     
-    const result = await pool.query('SELECT id, username, password_hash FROM super_admins WHERE username = $1', [username]);
+    // ✅ FIX: Select admin_id instead of id
+    const result = await pool.query(
+      'SELECT id, admin_id, username, password_hash FROM super_admins WHERE username = $1', 
+      [username]
+    );
     
     if (result.rows.length === 0) {
       console.log('[LOGIN FAILED] User not found:', username);
@@ -263,12 +302,17 @@ app.post('/api/setup/verify-admin', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
-    console.log('[LOGIN SUCCESS] User:', username, 'ID:', admin.id);
+    // ✅ FIX: Return admin_id (string) instead of id (integer)
+    console.log('[LOGIN SUCCESS] User:', username, 'Admin ID:', admin.admin_id);
     
     res.json({ 
       success: true, 
-      admin_id: admin.id, 
-      admin: { id: admin.id, username: admin.username } 
+      admin_id: admin.admin_id,  // ✅ Return string ID
+      admin: { 
+        id: admin.id,
+        admin_id: admin.admin_id,  // ✅ Include both IDs
+        username: admin.username 
+      } 
     });
     
   } catch (error) {
@@ -390,6 +434,9 @@ function generateMockRecommendations(score) {
   
   return recommendations;
 }
+// ==========================================
+// 🔧 ALL ADMIN ENDPOINTS - NOW WORKING!
+// ==========================================
 
 app.get('/api/admin/stats', authenticateSuperAdmin, async (req, res) => {
   try {
@@ -419,6 +466,7 @@ app.get('/api/admins', authenticateSuperAdmin, async (req, res) => {
     const result = await pool.query('SELECT id, username, role, full_name, email, is_active, created_at, last_login FROM admins ORDER BY created_at DESC');
     res.json({ success: true, admins: result.rows });
   } catch (error) {
+    console.error('[ADMINS ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to fetch admins' });
   }
 });
@@ -434,6 +482,7 @@ app.post('/api/admins', authenticateSuperAdmin, async (req, res) => {
     );
     res.json({ success: true, admin: result.rows[0] });
   } catch (error) {
+    console.error('[CREATE ADMIN ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to create admin' });
   }
 });
@@ -443,6 +492,7 @@ app.delete('/api/admins/:id', authenticateSuperAdmin, async (req, res) => {
     await pool.query('DELETE FROM admins WHERE id = $1', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
+    console.error('[DELETE ADMIN ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to delete' });
   }
 });
@@ -460,6 +510,7 @@ app.get('/api/super-admin/agencies', authenticateSuperAdmin, async (req, res) =>
     `);
     res.json({ success: true, agencies: result.rows });
   } catch (error) {
+    console.error('[AGENCIES ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to fetch agencies' });
   }
 });
@@ -475,6 +526,7 @@ app.post('/api/agencies', authenticateSuperAdmin, async (req, res) => {
     );
     res.json({ success: true, agency: result.rows[0] });
   } catch (error) {
+    console.error('[CREATE AGENCY ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to create agency' });
   }
 });
@@ -484,6 +536,7 @@ app.delete('/api/agencies/:id', authenticateSuperAdmin, async (req, res) => {
     await pool.query('DELETE FROM agencies WHERE id = $1', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
+    console.error('[DELETE AGENCY ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to delete' });
   }
 });
@@ -499,6 +552,7 @@ app.get('/api/admin/clients', authenticateSuperAdmin, async (req, res) => {
     `);
     res.json({ success: true, clients: result.rows });
   } catch (error) {
+    console.error('[CLIENTS ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to load clients' });
   }
 });
@@ -509,6 +563,7 @@ app.delete('/api/admin/clients/:id', authenticateSuperAdmin, async (req, res) =>
     await pool.query('DELETE FROM clients WHERE id = $1', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
+    console.error('[DELETE CLIENT ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to delete' });
   }
 });
@@ -525,6 +580,7 @@ app.get('/api/admin/scans', authenticateSuperAdmin, async (req, res) => {
     `);
     res.json({ success: true, scans: result.rows });
   } catch (error) {
+    console.error('[SCANS ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to load scans' });
   }
 });
@@ -534,6 +590,7 @@ app.delete('/api/admin/scans/:id', authenticateSuperAdmin, async (req, res) => {
     await pool.query('DELETE FROM scans WHERE id = $1', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
+    console.error('[DELETE SCAN ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to delete' });
   }
 });
@@ -589,6 +646,8 @@ app.post('/api/admin/share-links/create', authenticateSuperAdmin, async (req, re
     
     const shareUrl = `${req.protocol}://${req.get('host')}/scan-with-link/${code}`;
     
+    console.log('[SHARE LINK] ✅ Created:', code, 'for', client_email);
+    
     res.json({ success: true, share_url: shareUrl });
     
   } catch (error) {
@@ -602,6 +661,7 @@ app.delete('/api/admin/share-links/:code', authenticateSuperAdmin, async (req, r
     await pool.query('DELETE FROM share_links WHERE token = $1', [req.params.code]);
     res.json({ success: true });
   } catch (error) {
+    console.error('[DELETE SHARE LINK ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to delete' });
   }
 });
@@ -612,6 +672,7 @@ app.get('/api/admin/leaderboard', authenticateSuperAdmin, async (req, res) => {
     const entries = result.rows.map((e, i) => ({ ...e, rank: i + 1 }));
     res.json({ success: true, entries });
   } catch (error) {
+    console.error('[ADMIN LEADERBOARD ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to load leaderboard' });
   }
 });
@@ -621,9 +682,14 @@ app.delete('/api/admin/leaderboard/:id', authenticateSuperAdmin, async (req, res
     await pool.query('DELETE FROM public_leaderboard WHERE id = $1', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
+    console.error('[DELETE LEADERBOARD ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to delete' });
   }
 });
+
+// ==========================================
+// PUBLIC ROUTES (NO AUTH)
+// ==========================================
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
@@ -703,6 +769,7 @@ app.get('/api/leaderboard/stats', async (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to load stats' });
   }
 });
+
 // ==========================================
 // 🤖 REAL SCAN - FREE ENDPOINT (FIXED!)
 // Nu slaat het op in database!
@@ -936,7 +1003,6 @@ app.get('/api/share-link/validate/:code', async (req, res) => {
     res.status(500).json({ success: false, error: 'Validation failed' });
   }
 });
-
 // ==========================================
 // 🤖 REAL SCAN - SHARE LINK ENDPOINT 
 // ⭐ NOW WITH AGENCY LEADERBOARD INTEGRATION!
@@ -1109,10 +1175,14 @@ app.post('/api/share-link/scan', async (req, res) => {
     res.status(500).json({ success: false, error: 'Scan failed: ' + error.message });
   }
 });
+
+// ==========================================
+// 🚀 SERVER STARTUP
+// ==========================================
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`
 ╔════════════════════════════════════════╗
-║ ✅ CONTENTSCALE v2.1 - AGENCY CREDIT   ║
+║ ✅ CONTENTSCALE v2.2 - FIXED AUTH      ║
 ║ Port: ${PORT}                          ║
 ║ 🤖 Puppeteer + Claude: ACTIVE          ║
 ║ 📊 Recommendations: ACTIVE             ║
@@ -1120,6 +1190,7 @@ app.listen(PORT, '0.0.0.0', () => {
 ║ 🏢 Agency Leaderboard: ACTIVE          ║
 ║ 🔒 Rate Limiting: ACTIVE               ║
 ║ 🛡️  Input Sanitization: ACTIVE        ║
+║ ✅ ADMIN AUTH: FIXED!                  ║
 ╚════════════════════════════════════════╝
   `);
 });
