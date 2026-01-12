@@ -1,6 +1,6 @@
 /**
- * CONTENTSCALE SCANNER WITH MODAL + AGENCY LEADERBOARD
- * Version: 2.1
+ * CONTENTSCALE SCANNER WITH MODAL + AGENCY LEADERBOARD + COPY FUNCTION
+ * Version: 2.2
  */
 
 // API Configuration
@@ -104,6 +104,9 @@ function showResultsModal(result) {
   modal.id = 'resultsModal';
   modal.className = 'modal-overlay';
   
+  // Store result data for copy function
+  window.currentScanResult = result;
+  
   // Determine score class
   let scoreClass = 'score-poor';
   if (result.score >= 90) scoreClass = 'score-excellent';
@@ -173,10 +176,13 @@ function showResultsModal(result) {
         
         <!-- ACTIONS -->
         <div style="display: flex; gap: 10px; margin-top: 30px; flex-wrap: wrap;">
-          <button onclick="closeResultsModal()" style="flex: 1; min-width: 200px; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; padding: 15px 30px; border-radius: 12px; font-weight: 700; border: none; cursor: pointer; transition: all 0.3s;">
+          <button onclick="closeResultsModal()" style="flex: 1; min-width: 150px; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; padding: 15px 30px; border-radius: 12px; font-weight: 700; border: none; cursor: pointer; transition: all 0.3s;">
             ✅ Close
           </button>
-          <button onclick="downloadPDF()" style="flex: 1; min-width: 200px; background: #374151; color: white; padding: 15px 30px; border-radius: 12px; font-weight: 700; border: none; cursor: pointer; transition: all 0.3s;">
+          <button onclick="copyRecommendations()" style="flex: 1; min-width: 150px; background: #22c55e; color: white; padding: 15px 30px; border-radius: 12px; font-weight: 700; border: none; cursor: pointer; transition: all 0.3s;">
+            📋 Copy Text
+          </button>
+          <button onclick="downloadPDF()" style="flex: 1; min-width: 150px; background: #374151; color: white; padding: 15px 30px; border-radius: 12px; font-weight: 700; border: none; cursor: pointer; transition: all 0.3s;">
             📥 Download PDF
           </button>
         </div>
@@ -294,10 +300,139 @@ function closeResultsModal() {
   if (modal) {
     modal.remove();
   }
+  window.currentScanResult = null;
 }
 
 function downloadPDF() {
-  alert('📥 PDF Download\n\nPDF generation coming soon!\n\nFor now, take a screenshot of this report or contact us at info@contentscale.site for a detailed PDF report.');
+  alert('📥 PDF Download\n\nPDF generation coming soon!\n\nFor now, use the "📋 Copy Text" button to get a text version, or take a screenshot.\n\nContact info@contentscale.site for professional PDF reports.');
+}
+
+// ==========================================
+// ⭐ NEW: COPY RECOMMENDATIONS FUNCTION
+// ==========================================
+
+function copyRecommendations() {
+  const result = window.currentScanResult;
+  
+  if (!result) {
+    alert('❌ No scan data available');
+    return;
+  }
+  
+  // Build text content
+  let text = `╔═══════════════════════════════════════════════╗\n`;
+  text += `║  📊 CONTENTSCALE SEO SCAN RESULTS           ║\n`;
+  text += `╚═══════════════════════════════════════════════╝\n\n`;
+  
+  text += `🌐 URL: ${result.url}\n`;
+  text += `🔢 Score: ${result.score}/100\n`;
+  text += `⭐ Quality: ${result.quality.toUpperCase()}\n`;
+  text += `📝 Word Count: ${result.wordCount}\n\n`;
+  
+  text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  text += `📈 BREAKDOWN:\n`;
+  text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  
+  text += `✅ GRAAF Framework: ${result.breakdown.graaf.total}/50\n`;
+  text += `✅ CRAFT Methodology: ${result.breakdown.craft.total}/30\n`;
+  text += `✅ Technical SEO: ${result.breakdown.technical.total}/20\n\n`;
+  
+  text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  text += `📋 SUMMARY:\n`;
+  text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  
+  text += `🔍 Issues Found: ${result.recommendations.summary.totalIssues}\n`;
+  text += `⏱️  Est. Fix Time: ${result.recommendations.summary.estimatedTimeToFix} minutes\n`;
+  text += `📈 Potential Gain: +${result.recommendations.summary.potentialScoreGain} points\n\n`;
+  
+  // Quick Wins
+  if (result.recommendations.quickWins && result.recommendations.quickWins.length > 0) {
+    text += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    text += `⚡ QUICK WINS (High Priority)\n`;
+    text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    
+    result.recommendations.quickWins.forEach((rec, index) => {
+      text += `${index + 1}. ${rec.category} (${rec.timeEstimate || 5} min)\n`;
+      text += `   ❌ Issue: ${rec.issue}\n`;
+      text += `   ✅ Action: ${rec.action}\n`;
+      
+      if (rec.details && rec.details.length > 0) {
+        text += `   📌 Details:\n`;
+        rec.details.forEach(d => {
+          text += `      • ${d}\n`;
+        });
+      }
+      text += `\n`;
+    });
+  }
+  
+  // Major Impact
+  if (result.recommendations.majorImpact && result.recommendations.majorImpact.length > 0) {
+    text += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    text += `🎯 MAJOR IMPACT (Medium Priority)\n`;
+    text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    
+    result.recommendations.majorImpact.forEach((rec, index) => {
+      text += `${index + 1}. ${rec.category} (${rec.timeEstimate || 30} min)\n`;
+      text += `   ❌ Issue: ${rec.issue}\n`;
+      text += `   🎯 Action: ${rec.action}\n`;
+      
+      if (rec.details && rec.details.length > 0) {
+        text += `   📌 Details:\n`;
+        rec.details.forEach(d => {
+          text += `      • ${d}\n`;
+        });
+      }
+      text += `\n`;
+    });
+  }
+  
+  // Advanced
+  if (result.recommendations.advanced && result.recommendations.advanced.length > 0) {
+    text += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    text += `🚀 ADVANCED (Long-term)\n`;
+    text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    
+    result.recommendations.advanced.forEach((rec, index) => {
+      text += `${index + 1}. ${rec.category} (${rec.timeEstimate || 60} min)\n`;
+      text += `   ❌ Issue: ${rec.issue}\n`;
+      text += `   🚀 Action: ${rec.action}\n`;
+      
+      if (rec.details && rec.details.length > 0) {
+        text += `   📌 Details:\n`;
+        rec.details.forEach(d => {
+          text += `      • ${d}\n`;
+        });
+      }
+      text += `\n`;
+    });
+  }
+  
+  text += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  text += `🌐 Generated by ContentScale.site\n`;
+  text += `📅 ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}\n`;
+  text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  
+  // Copy to clipboard
+  navigator.clipboard.writeText(text).then(() => {
+    // Show success feedback
+    const btn = event.target;
+    const originalHTML = btn.innerHTML;
+    const originalBG = btn.style.background;
+    
+    btn.innerHTML = '✅ Copied!';
+    btn.style.background = '#16a34a';
+    
+    setTimeout(() => {
+      btn.innerHTML = originalHTML;
+      btn.style.background = originalBG;
+    }, 2000);
+    
+    console.log('[COPY] ✅ Recommendations copied to clipboard');
+  }).catch(err => {
+    console.error('[COPY] ❌ Failed:', err);
+    alert('❌ Copy failed. Please try again or take a screenshot.');
+  });
 }
 
 // ==========================================
@@ -446,7 +581,7 @@ function displayLeaderboard(entries) {
 // ==========================================
 
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('✅ ContentScale initialized with results modal + agency leaderboard');
+  console.log('✅ ContentScale initialized with results modal + agency leaderboard + copy function');
   
   // Leaderboard checkbox toggle
   const checkbox = document.getElementById('submitToLeaderboard');
@@ -482,3 +617,36 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 });
+```
+
+---
+
+## ✅ **WAT IS ER VERANDERD:**
+
+1. **Line 113:** `window.currentScanResult = result;` - Sla scan data op
+2. **Line 298-385:** **NEW** `copyRecommendations()` functie
+3. **Line 289:** Updated `closeResultsModal()` - Clear stored data
+4. **Line 295:** Updated `downloadPDF()` - Better message
+
+---
+
+## 📋 **COPY OUTPUT VOORBEELD:**
+```
+╔═══════════════════════════════════════════════╗
+║  📊 CONTENTSCALE SEO SCAN RESULTS           ║
+╚═══════════════════════════════════════════════╝
+
+🌐 URL: contentscale.site
+🔢 Score: 87/100
+⭐ Quality: EXCELLENT
+📝 Word Count: 2450
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📈 BREAKDOWN:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ GRAAF Framework: 42/50
+✅ CRAFT Methodology: 27/30
+✅ Technical SEO: 18/20
+
+...
