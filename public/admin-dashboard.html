@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
-  <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
@@ -12,9 +10,6 @@
   <meta http-equiv="Expires" content="0">
   <!-- ✅ END -->
   
-  
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Super Admin Dashboard - ContentScale</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -800,7 +795,6 @@
 
       <div class="space-y-4">
         <div>
-          
           <label class="block text-sm font-medium mb-2">Username *</label>
           <input type="text" id="admin-username" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
         </div>
@@ -813,16 +807,17 @@
 
         <div>
           <label class="block text-sm font-medium mb-2">Role *</label>
-<select id="admin-role" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-  <option value="">-- Select Role --</option>
-  <option value="super_admin">👑 Super Admin (Full Access)</option>
-  <option value="admin">🔑 Admin (Management Access)</option>
-  <option value="helper">🤝 Helper (Limited Access)</option>
-  <option value="sales">💼 Sales (Client Management)</option>
-  <option value="support">🎧 Support (Customer Service)</option>
-  <option value="analyst">📊 Analyst (View Only)</option>
-</select>
-</div> 
+          <select id="admin-role" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+            <option value="">-- Select Role --</option>
+            <option value="super_admin">👑 Super Admin (Full Access)</option>
+            <option value="admin">🔑 Admin (Management Access)</option>
+            <option value="helper">🤝 Helper (Limited Access)</option>
+            <option value="sales">💼 Sales (Client Management)</option>
+            <option value="support">🎧 Support (Customer Service)</option>
+            <option value="analyst">📊 Analyst (View Only)</option>
+          </select>
+        </div> 
+        
         <div>
           <label class="block text-sm font-medium mb-2">Full Name</label>
           <input type="text" id="admin-full-name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
@@ -851,7 +846,9 @@
       </div>
     </div>
   </div>
-<script>window.ADMIN_VERSION = '2.3.0';</script>
+  
+  <script>window.ADMIN_VERSION = '2.3.0';</script>
+  
   <script>
     // ==========================================
     // AUTHENTICATION
@@ -918,38 +915,38 @@
     // TAB SWITCHING
     // ==========================================
     function switchTab(tabName) {
-  // Hide all tabs
-  document.querySelectorAll('.tab-content').forEach(tab => {
-    tab.classList.add('hidden');
-  });
-  
-  // Remove active class from all buttons
-  document.querySelectorAll('.tab-button').forEach(btn => {
-    btn.classList.remove('active');
-  });
-  
-  // Show selected tab
-  document.getElementById(`tab-${tabName}`).classList.remove('hidden');
-  
-  // ✅ FIX: Find button by onclick attribute instead of using event
-  document.querySelectorAll('.tab-button').forEach(btn => {
-    if (btn.getAttribute('onclick').includes(`'${tabName}'`)) {
-      btn.classList.add('active');
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.add('hidden');
+      });
+      
+      // Remove active class from all buttons
+      document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      
+      // Show selected tab
+      document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+      
+      // ✅ FIX: Find button by onclick attribute instead of using event
+      document.querySelectorAll('.tab-button').forEach(btn => {
+        if (btn.getAttribute('onclick').includes(`'${tabName}'`)) {
+          btn.classList.add('active');
+        }
+      });
+      
+      // Load data for specific tabs
+      if (tabName === 'overview') loadOverview();
+      if (tabName === 'admins') loadAdmins();
+      if (tabName === 'agencies') loadAgencies();
+      if (tabName === 'clients') loadClients();
+      if (tabName === 'scans') loadScans();
+      if (tabName === 'share-links') loadShareLinks();
+      if (tabName === 'leaderboard') loadLeaderboard();
     }
-  });
-  
-  // Load data for specific tabs
-  if (tabName === 'overview') loadOverview();
-  if (tabName === 'admins') loadAdmins();
-  if (tabName === 'agencies') loadAgencies();
-  if (tabName === 'clients') loadClients();
-  if (tabName === 'scans') loadScans();
-  if (tabName === 'share-links') loadShareLinks();
-  if (tabName === 'leaderboard') loadLeaderboard();
-}
 
     // ==========================================
-    // ADMINS TAB
+    // ADMINS TAB - GEFIXTE VERSIE
     // ==========================================
     async function loadAdmins() {
       document.getElementById('admins-loading').classList.remove('hidden');
@@ -1013,79 +1010,122 @@
       }
     }
 
-async function submitAddAdmin() {
-  // Get form values with null checks
-  const usernameEl = document.getElementById('admin-username');
-  const passwordEl = document.getElementById('admin-password');
-  const roleEl = document.getElementById('admin-role');
-  const fullNameEl = document.getElementById('admin-full-name');
-  const emailEl = document.getElementById('admin-email');
-  
-  // Check if elements exist
-  if (!usernameEl || !passwordEl || !roleEl) {
-    alert('❌ Form error: Required fields not found');
-    console.error('Missing elements:', { usernameEl, passwordEl, roleEl });
-    return;
-  }
-  
-  // Get values
-  const username = usernameEl.value.trim();
-  const password = passwordEl.value.trim();
-  const role = roleEl.value;
-  const full_name = fullNameEl ? fullNameEl.value.trim() : '';
-  const email = emailEl ? emailEl.value.trim() : '';
-  
-  // Validation
-  if (!username || username.length < 3) {
-    alert('❌ Username must be at least 3 characters');
-    return;
-  }
-  
-  if (!password || password.length < 8) {
-    alert('❌ Password must be at least 8 characters');
-    return;
-  }
-  
-  if (!role) {
-    alert('❌ Please select a role');
-    return;
-  }
-  
-  // Prepare data
-  const formData = { username, password, role, full_name, email };
-  
-  try {
-    const response = await fetch('/api/admins', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-admin-key': localStorage.getItem('admin_id')
-      },
-      body: JSON.stringify(formData)
-    });
-    
-    const data = await response.json();
-    
-    if (data.success) {
-      alert('✅ Admin/Helper created successfully!');
-      closeModal('modal-add-admin');
+    // ✅ GEFIXTE submitAddAdmin() FUNCTIE
+    async function submitAddAdmin() {
+      console.log('🧪 DEBUG: submitAddAdmin functie gestart');
       
-      // Clear form
-      usernameEl.value = '';
-      passwordEl.value = '';
-      roleEl.value = '';
-      if (fullNameEl) fullNameEl.value = '';
-      if (emailEl) emailEl.value = '';
+      // VEILIG ELEMENTEN OPHALEN
+      function getElementSafely(id) {
+        const element = document.getElementById(id);
+        if (!element) {
+          console.error(`❌ Element niet gevonden: ${id}`);
+          return null;
+        }
+        return element;
+      }
       
-      loadAdmins();
-    } else {
-      alert('❌ Error: ' + data.error);
+      // Alle elementen ophalen
+      const usernameEl = getElementSafely('admin-username');
+      const passwordEl = getElementSafely('admin-password');
+      const roleEl = getElementSafely('admin-role');
+      const fullNameEl = getElementSafely('admin-full-name');
+      const emailEl = getElementSafely('admin-email');
+      
+      // Check of verplichte velden bestaan
+      if (!usernameEl || !passwordEl || !roleEl) {
+        alert('❌ FOUT: Formulier velden niet gevonden. Herlaad de pagina.');
+        console.error('Missende velden:', { 
+          username: !usernameEl, 
+          password: !passwordEl, 
+          role: !roleEl 
+        });
+        return;
+      }
+      
+      // VEILIG WAARDEN OPHALEN
+      const username = usernameEl.value ? usernameEl.value.trim() : '';
+      const password = passwordEl.value ? passwordEl.value.trim() : '';
+      const role = roleEl.value || '';
+      const full_name = fullNameEl && fullNameEl.value ? fullNameEl.value.trim() : '';
+      const email = emailEl && emailEl.value ? emailEl.value.trim() : '';
+      
+      console.log('Ingetypte waarden:', {
+        username: username,
+        password: '***' + password.length + ' tekens',
+        role: role,
+        full_name: full_name,
+        email: email
+      });
+      
+      // VALIDATIE
+      if (!username || username.length < 3) {
+        alert('❌ Gebruikersnaam moet minstens 3 tekens hebben');
+        usernameEl.focus();
+        return;
+      }
+      
+      if (!password || password.length < 8) {
+        alert('❌ Wachtwoord moet minstens 8 tekens hebben');
+        passwordEl.focus();
+        return;
+      }
+      
+      if (!role) {
+        alert('❌ Selecteer een rol voor de admin/helper');
+        roleEl.focus();
+        return;
+      }
+      
+      // Voorbereiden voor API
+      const formData = {
+        username: username,
+        password: password,
+        role: role,
+        full_name: full_name,
+        email: email
+      };
+      
+      console.log('Versturen naar API:', formData);
+      
+      try {
+        // Versturen naar server
+        const response = await fetch('/api/admins', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          },
+          body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        console.log('API antwoord:', data);
+        
+        if (data.success) {
+          alert('✅ Admin/Helper succesvol aangemaakt!');
+          
+          // Modal sluiten
+          document.getElementById('modal-add-admin').classList.add('hidden');
+          
+          // Formulier leegmaken
+          usernameEl.value = '';
+          passwordEl.value = '';
+          roleEl.value = '';
+          if (fullNameEl) fullNameEl.value = '';
+          if (emailEl) emailEl.value = '';
+          
+          // Admin lijst verversen
+          loadAdmins();
+          
+        } else {
+          alert('❌ Fout van server: ' + (data.error || 'Onbekende fout'));
+        }
+        
+      } catch (error) {
+        console.error('NETWERK FOUT:', error);
+        alert('❌ Netwerk fout: Kon geen admin aanmaken. Check je internet verbinding.');
+      }
     }
-  } catch (error) {
-    console.error('[CREATE ADMIN ERROR]', error);
-    alert('❌ Failed to create admin/helper');
-  }
-}
 
     async function deleteAdmin(adminId) {
       if (!confirm('Are you sure you want to delete this admin/helper?')) return;
@@ -1110,8 +1150,16 @@ async function submitAddAdmin() {
       }
     }
 
+    // ✅ GEFIXTE showAddAdminModal() FUNCTIE
     function showAddAdminModal() {
-      document.getElementById('modal-add-admin').classList.remove('hidden');
+      console.log('🟢 showAddAdminModal aangeroepen');
+      const modal = document.getElementById('modal-add-admin');
+      if (modal) {
+        modal.classList.remove('hidden');
+        console.log('✅ Modal zichtbaar gemaakt');
+      } else {
+        console.error('❌ Modal niet gevonden!');
+      }
     }
 
     // ==========================================
@@ -1672,8 +1720,40 @@ async function submitAddAdmin() {
       if (!confirm('⚠️ WARNING: This will reset ALL platform statistics!\n\nThis action CANNOT be undone!\n\nAre you absolutely sure?')) return;
       alert('Statistics reset!');
     }
+
+    // ==========================================
+    // DEBUG FUNCTIES (TESTEN IN CONSOLE)
+    // ==========================================
+    
+    function testAdminFormulier() {
+      console.log('🧪 TEST: Admin formulier controleren');
+      
+      // Check modal
+      const modal = document.getElementById('modal-add-admin');
+      console.log('1. Modal gevonden?', modal ? '✅ JA' : '❌ NEE');
+      
+      // Check alle velden
+      const velden = [
+        'admin-username',
+        'admin-password', 
+        'admin-role',
+        'admin-full-name',
+        'admin-email'
+      ];
+      
+      velden.forEach(id => {
+        const el = document.getElementById(id);
+        console.log(`2. ${id}:`, el ? '✅ Gevonden' : '❌ Niet gevonden');
+      });
+      
+      // Toon modal voor test
+      if (modal) {
+        modal.classList.remove('hidden');
+        console.log('3. Modal nu zichtbaar gemaakt');
+      }
+      
+      return 'Test voltooid! Check de Console (F12)';
+    }
   </script>
-</body>
-</html>
 </body>
 </html>
