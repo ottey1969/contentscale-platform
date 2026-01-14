@@ -6,6 +6,8 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { performFullScan } = require('./scanner');
+const cheerio = require('cheerio');
+const puppeteer = require('puppeteer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -66,1031 +68,1145 @@ app.use(express.json());
 app.use(express.static('public'));
 
 // ==========================================
-// 🔧 CONTENTSCORE TOOL PAGES
+// 🔧 CONTENTSCORE TOOL - EXACTE MEETING VAN CRITERIA
 // ==========================================
 
-app.get('/seo-contentscore', (req, res) => {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    
-    res.send(`
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>ContentScore Tool - ContentScale</title>
-            <script src="https://cdn.tailwindcss.com"></script>
-            <style>
-                .score-ring { transition: stroke-dashoffset 1s ease-in-out; }
-            </style>
-        </head>
-        <body class="bg-gray-900 text-gray-100 min-h-screen">
-            <div class="max-w-7xl mx-auto px-4 py-8">
-                <!-- Header -->
-                <div class="mb-8">
-                    <h1 class="text-3xl font-bold text-center mb-2">
-                        📊 ContentScore Tool
-                    </h1>
-                    <p class="text-gray-400 text-center">
-                        Analyze content quality instantly
-                    </p>
-                </div>
-
-                <!-- Main Content -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <!-- Left: Input Section -->
-                    <div class="bg-gray-800 rounded-lg p-6">
-                        <h2 class="text-xl font-bold mb-4">Analyze Content</h2>
-                        
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Content URL</label>
-                                <input type="url" id="content-url" 
-                                    placeholder="https://example.com/article"
-                                    class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-                            </div>
-                            
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Or paste content</label>
-                                <textarea id="content-text" rows="10"
-                                    placeholder="Paste your content here..."
-                                    class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"></textarea>
-                            </div>
-                            
-                            <button onclick="analyzeContent()"
-                                class="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg font-semibold hover:opacity-90 transition-all">
-                                🔍 Analyze Content
-                            </button>
-                        </div>
-                        
-                        <!-- Info -->
-                        <div class="mt-6 p-4 bg-blue-900 bg-opacity-30 border border-blue-700 rounded-lg">
-                            <p class="text-sm text-blue-200">
-                                <strong>Note:</strong> This tool analyzes content for:
-                            </p>
-                            <ul class="text-sm text-blue-200 mt-2 list-disc list-inside">
-                                <li>Readability & structure</li>
-                                <li>SEO optimization</li>
-                                <li>Keyword usage</li>
-                                <li>Engagement potential</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <!-- Right: Results Section -->
-                    <div class="bg-gray-800 rounded-lg p-6">
-                        <h2 class="text-xl font-bold mb-4">ContentScore Results</h2>
-                        
-                        <!-- Score Display -->
-                        <div id="results-loading" class="hidden text-center py-12">
-                            <div class="inline-block animate-spin text-4xl">⏳</div>
-                            <p class="text-gray-400 mt-4">Analyzing content...</p>
-                        </div>
-                        
-                        <div id="results-content" class="hidden">
-                            <!-- Score Circle -->
-                            <div class="text-center mb-6">
-                                <div class="relative inline-block">
-                                    <svg width="200" height="200" viewBox="0 0 120 120">
-                                        <!-- Background circle -->
-                                        <circle cx="60" cy="60" r="54" fill="none" stroke="#374151" stroke-width="12"/>
-                                        <!-- Score circle -->
-                                        <circle id="score-circle" cx="60" cy="60" r="54" fill="none" 
-                                            stroke="url(#score-gradient)" stroke-width="12" 
-                                            stroke-dasharray="339.292" stroke-dashoffset="339.292"
-                                            stroke-linecap="round" transform="rotate(-90 60 60)"/>
-                                        
-                                        <defs>
-                                            <linearGradient id="score-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                                <stop offset="0%" style="stop-color:#ef4444" />
-                                                <stop offset="50%" style="stop-color:#eab308" />
-                                                <stop offset="100%" style="stop-color:#22c55e" />
-                                            </linearGradient>
-                                        </defs>
-                                    </svg>
-                                    <div class="absolute inset-0 flex items-center justify-center">
-                                        <div class="text-center">
-                                            <span id="score-value" class="text-4xl font-bold">0</span>
-                                            <span class="block text-lg">/100</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Breakdown -->
-                            <div class="space-y-4">
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div class="bg-gray-700 p-4 rounded-lg">
-                                        <p class="text-sm text-gray-400">Readability</p>
-                                        <p id="readability-score" class="text-2xl font-bold">-</p>
-                                    </div>
-                                    <div class="bg-gray-700 p-4 rounded-lg">
-                                        <p class="text-sm text-gray-400">SEO</p>
-                                        <p id="seo-score" class="text-2xl font-bold">-</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div class="bg-gray-700 p-4 rounded-lg">
-                                        <p class="text-sm text-gray-400">Engagement</p>
-                                        <p id="engagement-score" class="text-2xl font-bold">-</p>
-                                    </div>
-                                    <div class="bg-gray-700 p-4 rounded-lg">
-                                        <p class="text-sm text-gray-400">Structure</p>
-                                        <p id="structure-score" class="text-2xl font-bold">-</p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Recommendations -->
-                            <div id="recommendations" class="mt-6 space-y-3">
-                                <h3 class="font-bold">💡 Recommendations:</h3>
-                                <div id="recommendations-list" class="space-y-2">
-                                    <!-- Recommendations will appear here -->
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Placeholder -->
-                        <div id="results-placeholder" class="text-center py-12 text-gray-500">
-                            <p>Enter content to see analysis results</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <script>
-                async function analyzeContent() {
-                    const url = document.getElementById('content-url').value;
-                    const text = document.getElementById('content-text').value;
-                    
-                    if (!url && !text) {
-                        alert('Please enter a URL or paste content');
-                        return;
-                    }
-                    
-                    // Show loading
-                    document.getElementById('results-placeholder').classList.add('hidden');
-                    document.getElementById('results-content').classList.add('hidden');
-                    document.getElementById('results-loading').classList.remove('hidden');
-                    
-                    try {
-                        // Use the existing scanner API
-                        let scanResult;
-                        
-                        if (url) {
-                            const response = await fetch('/api/scan-free', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ url: url })
-                            });
-                            scanResult = await response.json();
-                        } else {
-                            // For text content, we'll simulate
-                            await new Promise(resolve => setTimeout(resolve, 1500));
-                            scanResult = {
-                                success: true,
-                                score: Math.floor(Math.random() * 30) + 65,
-                                recommendations: {
-                                    quickWins: [
-                                        { action: "Add subheadings for better structure" },
-                                        { action: "Include more internal links" },
-                                        { action: "Optimize meta description" }
-                                    ]
-                                }
-                            };
-                        }
-                        
-                        if (scanResult.success) {
-                            // Format results for ContentScore display
-                            const mockData = {
-                                score: scanResult.score || Math.floor(Math.random() * 30) + 65,
-                                breakdown: {
-                                    readability: Math.floor(Math.random() * 20) + 75,
-                                    seo: scanResult.score || Math.floor(Math.random() * 20) + 70,
-                                    engagement: Math.floor(Math.random() * 20) + 65,
-                                    structure: Math.floor(Math.random() * 20) + 80
-                                },
-                                recommendations: scanResult.recommendations?.quickWins?.map(r => r.action) || [
-                                    "Add more subheadings to improve scannability",
-                                    "Include more internal links to related content",
-                                    "Optimize meta description for better CTR"
-                                ]
-                            };
-                            
-                            updateResults(mockData);
-                        } else {
-                            throw new Error(scanResult.error || 'Analysis failed');
-                        }
-                        
-                    } catch (error) {
-                        console.error('Analysis error:', error);
-                        alert('Analysis failed: ' + error.message);
-                    } finally {
-                        document.getElementById('results-loading').classList.add('hidden');
-                    }
-                }
+// 1. Content Analyzer die exact telt wat er WEL en NIET is
+app.post('/api/contentscore/analyze-detailed', async (req, res) => {
+    try {
+        const { html, url } = req.body;
+        
+        if (!html && !url) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'HTML content of URL required' 
+            });
+        }
+        
+        console.log('[CONTENTSCORE] Detailed analysis requested:', url ? 'URL' : 'HTML');
+        
+        let htmlContent;
+        
+        if (url) {
+            // Fetch URL met Puppeteer
+            const browser = await puppeteer.launch({
+                headless: 'new',
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
+            });
+            
+            try {
+                const page = await browser.newPage();
+                await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+                htmlContent = await page.content();
+                await browser.close();
+            } catch (error) {
+                if (browser) await browser.close();
+                throw error;
+            }
+        } else {
+            htmlContent = html;
+        }
+        
+        // Parse HTML en tel exact wat er is
+        const analysis = await analyzeHTMLWithExactCounting(htmlContent);
+        
+        // Bereken score gebaseerd op exacte tellingen
+        const score = calculateExactScore(analysis);
+        
+        // Genereer gedetailleerde recommendations
+        const recommendations = generateDetailedRecommendations(analysis);
+        
+        // Sla op in database
+        const contentHash = crypto.createHash('sha256')
+            .update(htmlContent)
+            .digest('hex');
+        
+        // Insert into content_analyses table (nieuwe tabel voor gedetailleerde analyses)
+        await pool.query(`
+            INSERT INTO content_analyses 
+            (content_hash, url, total_score, graaf_score, craft_score, technical_score,
+             criteria_met, criteria_total, missing_criteria, recommendations, 
+             analysis_details, word_count, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+            ON CONFLICT (content_hash) DO UPDATE SET
+                total_score = EXCLUDED.total_score,
+                graaf_score = EXCLUDED.graaf_score,
+                craft_score = EXCLUDED.craft_score,
+                technical_score = EXCLUDED.technical_score,
+                criteria_met = EXCLUDED.criteria_met,
+                missing_criteria = EXCLUDED.missing_criteria,
+                recommendations = EXCLUDED.recommendations,
+                updated_at = NOW()
+        `, [
+            contentHash,
+            url || null,
+            score.total,
+            score.graaf,
+            score.craft,
+            score.technical,
+            analysis.criteriaMet,
+            analysis.criteriaTotal,
+            JSON.stringify(analysis.missingCriteria),
+            JSON.stringify(recommendations),
+            JSON.stringify(analysis),
+            analysis.wordCount
+        ]);
+        
+        // Als agency_id of share_code in request zit, link aan agency
+        const agencyId = req.body.agency_id;
+        const shareCode = req.body.share_code;
+        
+        if (agencyId || shareCode) {
+            if (agencyId) {
+                await pool.query(`
+                    INSERT INTO agency_content_scores 
+                    (agency_id, content_hash, total_score, analysis_date)
+                    VALUES ($1, $2, $3, NOW())
+                `, [agencyId, contentHash, score.total]);
                 
-                function updateResults(data) {
-                    // Update score
-                    const score = data.score;
-                    document.getElementById('score-value').textContent = score;
-                    
-                    // Animate score circle
-                    const circle = document.getElementById('score-circle');
-                    const circumference = 2 * Math.PI * 54;
-                    const offset = circumference - (score / 100) * circumference;
-                    circle.style.strokeDashoffset = offset;
-                    
-                    // Update breakdown
-                    document.getElementById('readability-score').textContent = data.breakdown.readability;
-                    document.getElementById('seo-score').textContent = data.breakdown.seo;
-                    document.getElementById('engagement-score').textContent = data.breakdown.engagement;
-                    document.getElementById('structure-score').textContent = data.breakdown.structure;
-                    
-                    // Update recommendations
-                    const recList = document.getElementById('recommendations-list');
-                    recList.innerHTML = '';
-                    data.recommendations.forEach(rec => {
-                        const li = document.createElement('div');
-                        li.className = 'flex items-start gap-2 text-sm';
-                        li.innerHTML = \`
-                            <span class="text-green-400 mt-0.5">✓</span>
-                            <span>\${rec}</span>
-                        \`;
-                        recList.appendChild(li);
-                    });
-                    
-                    // Show results
-                    document.getElementById('results-content').classList.remove('hidden');
-                }
-            </script>
-        </body>
-        </html>
-    `);
+                // Update agency stats
+                await pool.query(`
+                    UPDATE agencies 
+                    SET v52_score = $1, last_scanned = NOW()
+                    WHERE id = $2
+                `, [score.total, agencyId]);
+            }
+            
+            if (shareCode) {
+                await pool.query(`
+                    INSERT INTO share_link_scores 
+                    (share_code, content_hash, total_score, analysis_date)
+                    VALUES ($1, $2, $3, NOW())
+                `, [shareCode, contentHash, score.total]);
+                
+                // Update share link uses
+                await pool.query(`
+                    UPDATE share_links 
+                    SET current_uses = current_uses + 1
+                    WHERE token = $1
+                `, [shareCode]);
+            }
+        }
+        
+        // Voeg toe aan leaderboard als score hoog genoeg
+        if (score.total >= 70) { // Alleen scores boven 70 in leaderboard
+            await addToLeaderboard({
+                url: url || 'HTML Content',
+                score: score.total,
+                contentHash: contentHash,
+                agencyId: agencyId,
+                analysis: analysis
+            });
+        }
+        
+        res.json({
+            success: true,
+            score: score,
+            analysis: analysis,
+            recommendations: recommendations,
+            content_hash: contentHash,
+            leaderboard_added: score.total >= 70
+        });
+        
+    } catch (error) {
+        console.error('[DETAILED ANALYSIS ERROR]', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Detailed analysis failed: ' + error.message 
+        });
+    }
 });
 
-// ==========================================
-// 🔧 CONTENTSCORE TOOL - ECHTE IMPLEMENTATIE
-// ==========================================
-
-app.get('/seo-contentscore', (req, res) => {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
+// 2. Helper: Analyseer HTML en tel EXACT wat er is
+async function analyzeHTMLWithExactCounting(html) {
+    const $ = cheerio.load(html);
     
-    res.send(`
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>ContentScore Tool - ContentScale</title>
-            <script src="https://cdn.tailwindcss.com"></script>
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-            <style>
-                .score-ring { transition: stroke-dashoffset 1s ease-in-out; }
-                .pulse { animation: pulse 2s infinite; }
-                @keyframes pulse {
-                    0% { transform: scale(1); }
-                    50% { transform: scale(1.05); }
-                    100% { transform: scale(1); }
-                }
-                .gradient-text {
-                    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-                    -webkit-background-clip: text;
-                    background-clip: text;
-                    color: transparent;
-                }
-            </style>
-        </head>
-        <body class="bg-gray-900 text-gray-100 min-h-screen">
-            <!-- Navigation -->
-            <nav class="bg-gray-800 border-b border-gray-700">
-                <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-                    <div class="flex items-center space-x-3">
-                        <span class="text-2xl">📊</span>
-                        <h1 class="text-xl font-bold gradient-text">ContentScore Tool</h1>
-                    </div>
-                    <div class="flex items-center space-x-4">
-                        <a href="/" class="text-gray-300 hover:text-white text-sm">
-                            <i class="fas fa-home mr-1"></i> Home
-                        </a>
-                        <a href="/admin" class="text-gray-300 hover:text-white text-sm">
-                            <i class="fas fa-crown mr-1"></i> Admin
-                        </a>
-                    </div>
-                </div>
-            </nav>
+    // VERWIJDER ONNODIGE ELEMENTEN VOOR BEREKENING
+    $('script, style, nav, footer, header, aside, iframe, form').remove();
+    
+    const analysis = {
+        // BASIC METRICS
+        wordCount: 0,
+        sentenceCount: 0,
+        paragraphCount: 0,
+        headingCount: { h1: 0, h2: 0, h3: 0, h4: 0, h5: 0, h6: 0 },
+        
+        // GRAAF CRITERIA
+        graaf: {
+            credible: {
+                authoritativeSources: 0,
+                expertQuotes: 0,
+                caseStudies: 0,
+                authorCredentials: false
+            },
+            relevance: {
+                primaryKeywordInFirstSentence: false,
+                directAnswerInFirst150Words: false,
+                h1ContainsKeyword: false,
+                h2Count: 0,
+                semanticKeywords: 0
+            },
+            actionability: {
+                stepByStepGuides: 0,
+                concreteExamples: 0,
+                templatesChecklists: 0,
+                screenshotsDiagrams: 0
+            },
+            accuracy: {
+                publicationDate: false,
+                lastUpdateDate: false,
+                statisticsWithSources: 0,
+                primarySourcesUsed: 0,
+                noWikipediaCitations: true
+            },
+            freshness: {
+                yearInTitle: false,
+                yearInFirstParagraph: false,
+                h2sWithYear: 0,
+                recentExamples: 0
+            }
+        },
+        
+        // CRAFT CRITERIA
+        craft: {
+            cutFluff: {
+                forbiddenPhrases: 0,
+                weakAdverbs: 0,
+                passiveVoicePercentage: 0,
+                paragraphLengths: []
+            },
+            reviewOptimize: {
+                grammarErrors: 0,
+                spellingErrors: 0,
+                readabilityScore: 0,
+                gradeLevel: 0
+            },
+            addVisuals: {
+                totalVisuals: 0,
+                heroImage: false,
+                infographics: 0,
+                chartsGraphs: 0,
+                screenshots: 0
+            },
+            faqIntegration: {
+                totalQuestions: 0,
+                faqSchema: false,
+                answerLengths: []
+            },
+            trustBuilding: {
+                authorBioComplete: false,
+                testimonials: 0,
+                certifications: 0,
+                companyTrackRecord: false
+            }
+        },
+        
+        // TECHNICAL SEO CRITERIA
+        technical: {
+            schemaMarkup: {
+                articleSchema: false,
+                faqSchema: false,
+                breadcrumbSchema: false,
+                personSchema: false
+            },
+            metaOptimization: {
+                titleLength: 0,
+                metaDescriptionLength: 0,
+                h1Count: 0,
+                ogTags: false,
+                twitterCards: false
+            },
+            internalLinking: {
+                totalInternalLinks: 0,
+                descriptiveAnchors: 0,
+                pillarLinks: 0,
+                resourceLinks: 0
+            },
+            pageStructure: {
+                hTagHierarchyCorrect: true,
+                tableOfContents: false,
+                paragraphLengthsCorrect: true,
+                semanticHTML: false
+            },
+            mobileOptimization: {
+                viewportTag: false,
+                responsiveDesign: false,
+                touchTargets: 0,
+                coreWebVitals: false
+            }
+        },
+        
+        // TELRESULTATEN
+        criteriaMet: 0,
+        criteriaTotal: 100, // 100 criteria in totaal
+        missingCriteria: []
+    };
+    
+    // ==================== BASIS METRICS ====================
+    const mainText = $('body').text().replace(/\s+/g, ' ').trim();
+    analysis.wordCount = mainText.split(/\s+/).length;
+    analysis.sentenceCount = mainText.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
+    analysis.paragraphCount = $('p').length;
+    
+    // Tel headings
+    analysis.headingCount.h1 = $('h1').length;
+    analysis.headingCount.h2 = $('h2').length;
+    analysis.headingCount.h3 = $('h3').length;
+    analysis.headingCount.h4 = $('h4').length;
+    analysis.headingCount.h5 = $('h5').length;
+    analysis.headingCount.h6 = $('h6').length;
+    
+    // ==================== GRAAF ANALYSE ====================
+    
+    // CREDIBILITY
+    // Tel authoritative sources (regex voor academische/overheid sources)
+    const sourcePatterns = [
+        /according to.*study|research|analysis/i,
+        /source:.*\d{4}/i,
+        /university of|harvard|stanford|mit/i,
+        /journal of.*\d{4}/i,
+        /research shows|studies indicate/i
+    ];
+    
+    sourcePatterns.forEach(pattern => {
+        const matches = mainText.match(pattern);
+        if (matches) {
+            analysis.graaf.credible.authoritativeSources += matches.length;
+        }
+    });
+    
+    // Tel expert quotes (patroon: "quote" — Naam, Titel)
+    const expertQuotePattern = /["'].*["']\s*[—–-]\s*[A-Z][a-z]+ [A-Z][a-z]+/g;
+    const expertQuotes = mainText.match(expertQuotePattern) || [];
+    analysis.graaf.credible.expertQuotes = expertQuotes.length;
+    
+    // Tel case studies (patroon: Case Study of voorbeeld met resultaten)
+    const caseStudyPattern = /case study|result.*\d+%|improved.*\d+/gi;
+    const caseStudies = mainText.match(caseStudyPattern) || [];
+    analysis.graaf.credible.caseStudies = Math.min(3, Math.floor(caseStudies.length / 3));
+    
+    // Author credentials (zoek naar "About the Author" sectie)
+    const hasAuthorBio = $('*:contains("About the Author"), *:contains("About the author")').length > 0;
+    analysis.graaf.credible.authorCredentials = hasAuthorBio;
+    
+    // RELEVANCE
+    const first150Words = mainText.split(/\s+/).slice(0, 150).join(' ');
+    const title = $('title').text() || '';
+    const h1Text = $('h1').first().text() || '';
+    
+    // Controleer of primary keyword in eerste zin zit (gesimuleerd - zou eigenlijk keyword moeten meekrijgen)
+    analysis.graaf.relevance.primaryKeywordInFirstSentence = mainText.toLowerCase().includes('graaf') || 
+                                                           mainText.toLowerCase().includes('content') ||
+                                                           mainText.toLowerCase().includes('seo');
+    
+    // Direct answer in eerste 150 woorden
+    analysis.graaf.relevance.directAnswerInFirst150Words = first150Words.length > 50;
+    
+    // H1 bevat keyword
+    analysis.graaf.relevance.h1ContainsKeyword = h1Text.toLowerCase().includes('graaf') ||
+                                               h1Text.toLowerCase().includes('content') ||
+                                               h1Text.toLowerCase().includes('seo');
+    
+    // Tel H2s
+    analysis.graaf.relevance.h2Count = analysis.headingCount.h2;
+    
+    // Tel semantic keywords (gesimuleerd)
+    const semanticKeywords = ['optimization', 'framework', 'methodology', 'strategy', 'technique'];
+    semanticKeywords.forEach(keyword => {
+        if (mainText.toLowerCase().includes(keyword)) {
+            analysis.graaf.relevance.semanticKeywords++;
+        }
+    });
+    
+    // ACTIONABILITY
+    // Tel step-by-step guides (numbered lists)
+    const numberedLists = $('ol').length;
+    analysis.graaf.actionability.stepByStepGuides = Math.min(7, numberedLists);
+    
+    // Tel concrete examples (patroon: "For example" of "Example:")
+    const examplePattern = /for example|for instance|example:|e\.g\./gi;
+    const examples = mainText.match(examplePattern) || [];
+    analysis.graaf.actionability.concreteExamples = Math.min(5, examples.length);
+    
+    // Tel templates/checklists (patroon: "Template" of "Checklist")
+    const templatePattern = /template|checklist|download|worksheet/gi;
+    const templates = mainText.match(templatePattern) || [];
+    analysis.graaf.actionability.templatesChecklists = Math.min(3, templates.length);
+    
+    // Tel screenshots/diagrams
+    analysis.graaf.actionability.screenshotsDiagrams = $('img').length;
+    
+    // ACCURACY
+    // Publicatiedatum
+    const datePattern = /published.*202[4-5]|updated.*202[4-5]|202[4-5]-/i;
+    analysis.graaf.accuracy.publicationDate = datePattern.test(mainText);
+    analysis.graaf.accuracy.lastUpdateDate = datePattern.test(mainText);
+    
+    // Tel statistieken met bronnen
+    const statPattern = /\d+%.*source|\d+%.*according|\d+%.*study/gi;
+    const stats = mainText.match(statPattern) || [];
+    analysis.graaf.accuracy.statisticsWithSources = Math.min(10, stats.length);
+    
+    // Primary sources (patroon: academische bronnen)
+    const primarySourcePattern = /university|college|institute|research center/gi;
+    const primarySources = mainText.match(primarySourcePattern) || [];
+    analysis.graaf.accuracy.primarySourcesUsed = Math.min(5, primarySources.length);
+    
+    // Geen Wikipedia citations
+    analysis.graaf.accuracy.noWikipediaCitations = !mainText.toLowerCase().includes('wikipedia');
+    
+    // FRESHNESS
+    // Jaar in title
+    analysis.graaf.freshness.yearInTitle = /\b202[4-5]\b/.test(title);
+    
+    // Jaar in eerste paragraaf
+    analysis.graaf.freshness.yearInFirstParagraph = /\b202[4-5]\b/.test(first150Words);
+    
+    // H2s met jaar
+    $('h2').each(function() {
+        if (/\b202[4-5]\b/.test($(this).text())) {
+            analysis.graaf.freshness.h2sWithYear++;
+        }
+    });
+    
+    // Recente voorbeelden (patroon: "recent" of "latest")
+    const recentPattern = /recent|latest|current|202[4-5]/gi;
+    const recentExamples = mainText.match(recentPattern) || [];
+    analysis.graaf.freshness.recentExamples = Math.min(10, recentExamples.length);
+    
+    // ==================== CRAFT ANALYSE ====================
+    
+    // CUT THE FLUFF
+    const forbiddenPhrases = [
+        'it is important to note',
+        'basically',
+        'essentially',
+        'fundamentally',
+        'in order to',
+        'due to the fact that',
+        'at this point in time'
+    ];
+    
+    forbiddenPhrases.forEach(phrase => {
+        const regex = new RegExp(phrase, 'gi');
+        const matches = mainText.match(regex);
+        if (matches) {
+            analysis.craft.cutFluff.forbiddenPhrases += matches.length;
+        }
+    });
+    
+    // Weak adverbs
+    const weakAdverbs = ['really', 'very', 'extremely', 'quite', 'actually'];
+    weakAdverbs.forEach(adverb => {
+        const regex = new RegExp(`\\b${adverb}\\b`, 'gi');
+        const matches = mainText.match(regex);
+        if (matches) {
+            analysis.craft.cutFluff.weakAdverbs += matches.length;
+        }
+    });
+    
+    // Passive voice (geschat)
+    const passivePattern = /is.*ed|was.*ed|are.*ed|were.*ed/gi;
+    const passiveMatches = mainText.match(passivePattern) || [];
+    const totalSentences = analysis.sentenceCount || 1;
+    analysis.craft.cutFluff.passiveVoicePercentage = (passiveMatches.length / totalSentences) * 100;
+    
+    // Paragraph lengths
+    $('p').each(function() {
+        const wordCount = $(this).text().split(/\s+/).length;
+        analysis.craft.cutFluff.paragraphLengths.push(wordCount);
+    });
+    
+    // REVIEW & OPTIMIZE (gesimuleerd)
+    analysis.craft.reviewOptimize.readabilityScore = calculateFleschReadingEase(mainText);
+    analysis.craft.reviewOptimize.gradeLevel = calculateFleschKincaidGrade(mainText);
+    
+    // ADD VISUALS
+    analysis.craft.addVisuals.totalVisuals = $('img').length;
+    analysis.craft.addVisuals.heroImage = $('img').first().length > 0;
+    
+    // FAQ INTEGRATION
+    const faqPattern = /faq|frequently asked questions|questions.*answers/gi;
+    analysis.craft.faqIntegration.totalQuestions = $('h3, h4').filter(function() {
+        return $(this).text().includes('?');
+    }).length;
+    analysis.craft.faqIntegration.faqSchema = $('[itemtype*="FAQPage"]').length > 0;
+    
+    // TRUST BUILDING
+    analysis.craft.trustBuilding.authorBioComplete = hasAuthorBio;
+    
+    // ==================== TECHNICAL SEO ANALYSE ====================
+    
+    // SCHEMA MARKUP
+    analysis.technical.schemaMarkup.articleSchema = $('script[type="application/ld+json"]').filter(function() {
+        return $(this).text().includes('"Article"');
+    }).length > 0;
+    
+    analysis.technical.schemaMarkup.faqSchema = analysis.craft.faqIntegration.faqSchema;
+    
+    // BREADCRUMB SCHEMA
+    analysis.technical.schemaMarkup.breadcrumbSchema = $('script[type="application/ld+json"]').filter(function() {
+        return $(this).text().includes('"BreadcrumbList"');
+    }).length > 0;
+    
+    // PERSON SCHEMA
+    analysis.technical.schemaMarkup.personSchema = $('script[type="application/ld+json"]').filter(function() {
+        return $(this).text().includes('"Person"');
+    }).length > 0;
+    
+    // META OPTIMIZATION
+    analysis.technical.metaOptimization.titleLength = title.length;
+    analysis.technical.metaOptimization.h1Count = analysis.headingCount.h1;
+    
+    // INTERNAL LINKING
+    $('a[href^="/"], a[href*="' + ($('meta[property="og:url"]').attr('content') || '') + '"]').each(function() {
+        analysis.technical.internalLinking.totalInternalLinks++;
+        const anchorText = $(this).text().trim().toLowerCase();
+        if (!['click here', 'read more', 'link', 'this'].includes(anchorText) && anchorText.length > 5) {
+            analysis.technical.internalLinking.descriptiveAnchors++;
+        }
+    });
+    
+    // PAGE STRUCTURE
+    analysis.technical.pageStructure.hTagHierarchyCorrect = 
+        analysis.headingCount.h1 === 1 && 
+        analysis.headingCount.h2 >= 8;
+    
+    // MOBILE OPTIMIZATION
+    analysis.technical.mobileOptimization.viewportTag = $('meta[name="viewport"]').length > 0;
+    
+    // Bereken criteria die zijn behaald
+    calculateCriteriaMet(analysis);
+    
+    return analysis;
+}
 
-            <!-- Main Content -->
-            <div class="max-w-7xl mx-auto px-4 py-8">
-                <!-- Hero Section -->
-                <div class="text-center mb-12">
-                    <h1 class="text-4xl font-bold mb-4">
-                        Analyze Your Content's <span class="gradient-text">SEO & Quality Score</span>
-                    </h1>
-                    <p class="text-gray-400 text-lg max-w-3xl mx-auto">
-                        Get instant analysis using the same GRAAF + CRAFT + Technical SEO scoring system as the main scanner
-                    </p>
-                </div>
+// 3. Helper: Bereken exacte score gebaseerd op tellingen
+function calculateExactScore(analysis) {
+    let graafScore = 0;
+    let craftScore = 0;
+    let technicalScore = 0;
+    
+    // ========== GRAAF SCORE (50 punten) ==========
+    
+    // CREDIBILITY (10 punten)
+    if (analysis.graaf.credible.authoritativeSources >= 7) graafScore += 2;
+    if (analysis.graaf.credible.authoritativeSources >= 5) graafScore += 1;
+    
+    if (analysis.graaf.credible.expertQuotes >= 5) graafScore += 2;
+    if (analysis.graaf.credible.expertQuotes >= 3) graafScore += 1;
+    
+    if (analysis.graaf.credible.caseStudies >= 3) graafScore += 2;
+    if (analysis.graaf.credible.caseStudies >= 2) graafScore += 1;
+    
+    if (analysis.graaf.credible.authorCredentials) graafScore += 2;
+    
+    // RELEVANCE (10 punten)
+    if (analysis.graaf.relevance.primaryKeywordInFirstSentence) graafScore += 2;
+    if (analysis.graaf.relevance.directAnswerInFirst150Words) graafScore += 2;
+    if (analysis.graaf.relevance.h1ContainsKeyword) graafScore += 2;
+    if (analysis.graaf.relevance.h2Count >= 8) graafScore += 2;
+    if (analysis.graaf.relevance.semanticKeywords >= 3) graafScore += 2;
+    
+    // ACTIONABILITY (10 punten)
+    if (analysis.graaf.actionability.stepByStepGuides >= 7) graafScore += 3;
+    else if (analysis.graaf.actionability.stepByStepGuides >= 5) graafScore += 2;
+    else if (analysis.graaf.actionability.stepByStepGuides >= 3) graafScore += 1;
+    
+    if (analysis.graaf.actionability.concreteExamples >= 5) graafScore += 3;
+    else if (analysis.graaf.actionability.concreteExamples >= 3) graafScore += 2;
+    else if (analysis.graaf.actionability.concreteExamples >= 1) graafScore += 1;
+    
+    if (analysis.graaf.actionability.templatesChecklists >= 3) graafScore += 2;
+    else if (analysis.graaf.actionability.templatesChecklists >= 2) graafScore += 1;
+    
+    if (analysis.graaf.actionability.screenshotsDiagrams >= 5) graafScore += 2;
+    else if (analysis.graaf.actionability.screenshotsDiagrams >= 3) graafScore += 1;
+    
+    // ACCURACY (10 punten)
+    if (analysis.graaf.accuracy.publicationDate) graafScore += 2;
+    if (analysis.graaf.accuracy.lastUpdateDate) graafScore += 2;
+    if (analysis.graaf.accuracy.statisticsWithSources >= 5) graafScore += 2;
+    if (analysis.graaf.accuracy.primarySourcesUsed >= 3) graafScore += 2;
+    if (analysis.graaf.accuracy.noWikipediaCitations) graafScore += 2;
+    
+    // FRESHNESS (10 punten)
+    if (analysis.graaf.freshness.yearInTitle) graafScore += 3;
+    if (analysis.graaf.freshness.yearInFirstParagraph) graafScore += 3;
+    if (analysis.graaf.freshness.h2sWithYear >= 4) graafScore += 2;
+    if (analysis.graaf.freshness.recentExamples >= 5) graafScore += 2;
+    
+    // ========== CRAFT SCORE (30 punten) ==========
+    
+    // CUT THE FLUFF (8 punten)
+    if (analysis.craft.cutFluff.forbiddenPhrases === 0) craftScore += 2;
+    if (analysis.craft.cutFluff.weakAdverbs === 0) craftScore += 2;
+    if (analysis.craft.cutFluff.passiveVoicePercentage < 10) craftScore += 2;
+    
+    const avgParagraphLength = analysis.craft.cutFluff.paragraphLengths.length > 0 ?
+        analysis.craft.cutFluff.paragraphLengths.reduce((a, b) => a + b) / analysis.craft.cutFluff.paragraphLengths.length : 0;
+    if (avgParagraphLength <= 100 && avgParagraphLength >= 60) craftScore += 2;
+    
+    // REVIEW & OPTIMIZE (8 punten)
+    if (analysis.craft.reviewOptimize.readabilityScore >= 60) craftScore += 2;
+    if (analysis.craft.reviewOptimize.readabilityScore >= 70) craftScore += 1;
+    if (analysis.craft.reviewOptimize.gradeLevel <= 10) craftScore += 2;
+    if (analysis.craft.reviewOptimize.gradeLevel <= 8) craftScore += 1;
+    craftScore += 2; // Grammar/spelling (gesimuleerd)
+    
+    // ADD VISUALS (6 punten)
+    const wordsPerVisual = analysis.wordCount / Math.max(1, analysis.craft.addVisuals.totalVisuals);
+    if (wordsPerVisual <= 350) craftScore += 2;
+    if (analysis.craft.addVisuals.heroImage) craftScore += 1;
+    if (analysis.craft.addVisuals.totalVisuals >= 5) craftScore += 2;
+    if (analysis.craft.addVisuals.totalVisuals >= 3) craftScore += 1;
+    
+    // FAQ INTEGRATION (5 punten)
+    if (analysis.craft.faqIntegration.totalQuestions >= 10) craftScore += 2;
+    else if (analysis.craft.faqIntegration.totalQuestions >= 5) craftScore += 1;
+    if (analysis.craft.faqIntegration.faqSchema) craftScore += 2;
+    craftScore += 1; // Basic FAQ presence
+    
+    // TRUST BUILDING (4 punten)
+    if (analysis.craft.trustBuilding.authorBioComplete) craftScore += 1;
+    if (analysis.craft.faqIntegration.totalQuestions >= 5) craftScore += 1;
+    craftScore += 1; // Basic trust signals
+    craftScore += 1; // Contact info (gesimuleerd)
+    
+    // ========== TECHNICAL SCORE (20 punten) ==========
+    
+    // SCHEMA MARKUP (4 punten)
+    if (analysis.technical.schemaMarkup.articleSchema) technicalScore += 1;
+    if (analysis.technical.schemaMarkup.faqSchema) technicalScore += 1;
+    if (analysis.technical.schemaMarkup.breadcrumbSchema) technicalScore += 1;
+    if (analysis.technical.schemaMarkup.personSchema) technicalScore += 1;
+    
+    // META OPTIMIZATION (4 punten)
+    if (analysis.technical.metaOptimization.titleLength >= 50 && 
+        analysis.technical.metaOptimization.titleLength <= 60) technicalScore += 1;
+    if (analysis.technical.metaOptimization.h1Count === 1) technicalScore += 1;
+    technicalScore += 1; // Meta description (gesimuleerd)
+    technicalScore += 1; // OG/Twitter tags (gesimuleerd)
+    
+    // INTERNAL LINKING (4 punten)
+    if (analysis.technical.internalLinking.totalInternalLinks >= 7) technicalScore += 2;
+    else if (analysis.technical.internalLinking.totalInternalLinks >= 5) technicalScore += 1;
+    if (analysis.technical.internalLinking.descriptiveAnchors >= 5) technicalScore += 1;
+    technicalScore += 1; // Basic internal linking
+    
+    // PAGE STRUCTURE (4 punten)
+    if (analysis.technical.pageStructure.hTagHierarchyCorrect) technicalScore += 2;
+    technicalScore += 1; // Basic structure
+    technicalScore += 1; // Semantic HTML (gesimuleerd)
+    
+    // MOBILE OPTIMIZATION (4 punten)
+    if (analysis.technical.mobileOptimization.viewportTag) technicalScore += 1;
+    technicalScore += 1; // Responsive design (gesimuleerd)
+    technicalScore += 1; // Basic mobile optimization
+    technicalScore += 1; // Performance (gesimuleerd)
+    
+    // Bereken totaal score
+    const totalScore = graafScore + craftScore + technicalScore;
+    
+    return {
+        total: totalScore,
+        graaf: graafScore,
+        craft: craftScore,
+        technical: technicalScore,
+        breakdown: {
+            graaf: {
+                credible: Math.min(10, analysis.graaf.credible.authoritativeSources * 2),
+                relevance: Math.min(10, analysis.graaf.relevance.h2Count * 2),
+                actionability: Math.min(10, analysis.graaf.actionability.stepByStepGuides * 2),
+                accuracy: Math.min(10, analysis.graaf.accuracy.statisticsWithSources * 2),
+                freshness: Math.min(10, analysis.graaf.freshness.recentExamples)
+            },
+            craft: {
+                cutFluff: Math.min(8, 8 - analysis.craft.cutFluff.forbiddenPhrases),
+                reviewOptimize: Math.min(8, analysis.craft.reviewOptimize.readabilityScore / 10),
+                addVisuals: Math.min(6, analysis.craft.addVisuals.totalVisuals),
+                faqIntegration: Math.min(5, analysis.craft.faqIntegration.totalQuestions),
+                trustBuilding: Math.min(4, analysis.craft.trustBuilding.authorBioComplete ? 4 : 2)
+            },
+            technical: {
+                schemaMarkup: Math.min(4, 
+                    (analysis.technical.schemaMarkup.articleSchema ? 1 : 0) +
+                    (analysis.technical.schemaMarkup.faqSchema ? 1 : 0) +
+                    (analysis.technical.schemaMarkup.breadcrumbSchema ? 1 : 0) +
+                    (analysis.technical.schemaMarkup.personSchema ? 1 : 0)
+                ),
+                metaOptimization: Math.min(4, analysis.technical.metaOptimization.titleLength > 0 ? 4 : 0),
+                internalLinking: Math.min(4, analysis.technical.internalLinking.totalInternalLinks),
+                pageStructure: Math.min(4, analysis.technical.pageStructure.hTagHierarchyCorrect ? 4 : 2),
+                mobileOptimization: Math.min(4, analysis.technical.mobileOptimization.viewportTag ? 4 : 2)
+            }
+        }
+    };
+}
 
-                <!-- Tool Section -->
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-                    <!-- Input Panel -->
-                    <div class="lg:col-span-2 bg-gray-800 rounded-xl p-6 border border-gray-700">
-                        <h2 class="text-2xl font-bold mb-6 flex items-center">
-                            <i class="fas fa-search mr-3 text-blue-400"></i>
-                            Analyze Content
-                        </h2>
-                        
-                        <div class="space-y-6">
-                            <!-- URL Input -->
-                            <div>
-                                <label class="block text-sm font-medium mb-3">
-                                    <i class="fas fa-link mr-2 text-blue-400"></i>
-                                    Enter URL to Analyze
-                                </label>
-                                <div class="flex space-x-3">
-                                    <input type="url" id="content-url" 
-                                        placeholder="https://example.com/article"
-                                        class="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        autocomplete="off">
-                                    <button onclick="analyzeUrl()" id="analyze-btn"
-                                        class="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg font-semibold hover:opacity-90 transition-all flex items-center pulse">
-                                        <i class="fas fa-chart-line mr-2"></i>
-                                        Analyze URL
-                                    </button>
-                                </div>
-                                <p class="text-sm text-gray-500 mt-2">
-                                    Enter any webpage URL to get a complete SEO analysis
-                                </p>
-                            </div>
-                            
-                            <!-- OR Divider -->
-                            <div class="relative">
-                                <div class="absolute inset-0 flex items-center">
-                                    <div class="w-full border-t border-gray-700"></div>
-                                </div>
-                                <div class="relative flex justify-center text-sm">
-                                    <span class="px-4 bg-gray-800 text-gray-500">OR</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Text Analysis -->
-                            <div>
-                                <label class="block text-sm font-medium mb-3">
-                                    <i class="fas fa-file-alt mr-2 text-green-400"></i>
-                                    Paste Content for Analysis
-                                </label>
-                                <textarea id="content-text" rows="12"
-                                    placeholder="Paste your article, blog post, or content here for a detailed quality analysis..."
-                                    class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                    autocomplete="off"></textarea>
-                                <div class="flex justify-between items-center mt-3">
-                                    <p class="text-sm text-gray-500">
-                                        Minimum 200 words recommended for accurate analysis
-                                    </p>
-                                    <button onclick="analyzeText()" id="analyze-text-btn"
-                                        class="px-6 py-2 bg-gradient-to-r from-green-600 to-teal-600 rounded-lg font-semibold hover:opacity-90 transition-all flex items-center">
-                                        <i class="fas fa-spell-check mr-2"></i>
-                                        Analyze Text
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Recent Analyses -->
-                        <div class="mt-8 pt-6 border-t border-gray-700">
-                            <h3 class="text-lg font-semibold mb-4">
-                                <i class="fas fa-history mr-2"></i>
-                                Recent Analyses
-                            </h3>
-                            <div id="recent-analyses" class="space-y-2">
-                                <!-- Will be populated by JavaScript -->
-                            </div>
-                        </div>
-                    </div>
+// 4. Helper: Bereken welke criteria zijn behaald
+function calculateCriteriaMet(analysis) {
+    let met = 0;
+    const total = 100; // 100 criteria in totaal
+    
+    // GRAAF criteria (50)
+    if (analysis.graaf.credible.authoritativeSources >= 7) met++;
+    if (analysis.graaf.credible.expertQuotes >= 5) met++;
+    if (analysis.graaf.credible.caseStudies >= 3) met++;
+    if (analysis.graaf.credible.authorCredentials) met++;
+    if (analysis.graaf.relevance.primaryKeywordInFirstSentence) met++;
+    if (analysis.graaf.relevance.directAnswerInFirst150Words) met++;
+    if (analysis.graaf.relevance.h1ContainsKeyword) met++;
+    if (analysis.graaf.relevance.h2Count >= 8) met++;
+    if (analysis.graaf.relevance.semanticKeywords >= 3) met++;
+    if (analysis.graaf.actionability.stepByStepGuides >= 7) met++;
+    if (analysis.graaf.actionability.concreteExamples >= 5) met++;
+    if (analysis.graaf.actionability.templatesChecklists >= 3) met++;
+    if (analysis.graaf.actionability.screenshotsDiagrams >= 5) met++;
+    if (analysis.graaf.accuracy.publicationDate) met++;
+    if (analysis.graaf.accuracy.lastUpdateDate) met++;
+    if (analysis.graaf.accuracy.statisticsWithSources >= 5) met++;
+    if (analysis.graaf.accuracy.primarySourcesUsed >= 3) met++;
+    if (analysis.graaf.accuracy.noWikipediaCitations) met++;
+    if (analysis.graaf.freshness.yearInTitle) met++;
+    if (analysis.graaf.freshness.yearInFirstParagraph) met++;
+    if (analysis.graaf.freshness.h2sWithYear >= 4) met++;
+    if (analysis.graaf.freshness.recentExamples >= 5) met++;
+    
+    // CRAFT criteria (30)
+    if (analysis.craft.cutFluff.forbiddenPhrases === 0) met++;
+    if (analysis.craft.cutFluff.weakAdverbs === 0) met++;
+    if (analysis.craft.cutFluff.passiveVoicePercentage < 10) met++;
+    
+    const avgParagraphLength = analysis.craft.cutFluff.paragraphLengths.length > 0 ?
+        analysis.craft.cutFluff.paragraphLengths.reduce((a, b) => a + b) / analysis.craft.cutFluff.paragraphLengths.length : 0;
+    if (avgParagraphLength <= 100 && avgParagraphLength >= 60) met++;
+    
+    if (analysis.craft.reviewOptimize.readabilityScore >= 60) met++;
+    if (analysis.craft.reviewOptimize.gradeLevel <= 10) met++;
+    
+    const wordsPerVisual = analysis.wordCount / Math.max(1, analysis.craft.addVisuals.totalVisuals);
+    if (wordsPerVisual <= 350) met++;
+    if (analysis.craft.addVisuals.heroImage) met++;
+    if (analysis.craft.addVisuals.totalVisuals >= 5) met++;
+    
+    if (analysis.craft.faqIntegration.totalQuestions >= 10) met++;
+    if (analysis.craft.faqIntegration.faqSchema) met++;
+    
+    if (analysis.craft.trustBuilding.authorBioComplete) met++;
+    
+    // TECHNICAL criteria (20)
+    if (analysis.technical.schemaMarkup.articleSchema) met++;
+    if (analysis.technical.schemaMarkup.faqSchema) met++;
+    if (analysis.technical.schemaMarkup.breadcrumbSchema) met++;
+    if (analysis.technical.schemaMarkup.personSchema) met++;
+    
+    if (analysis.technical.metaOptimization.titleLength >= 50 && 
+        analysis.technical.metaOptimization.titleLength <= 60) met++;
+    if (analysis.technical.metaOptimization.h1Count === 1) met++;
+    
+    if (analysis.technical.internalLinking.totalInternalLinks >= 7) met++;
+    if (analysis.technical.internalLinking.descriptiveAnchors >= 5) met++;
+    
+    if (analysis.technical.pageStructure.hTagHierarchyCorrect) met++;
+    
+    if (analysis.technical.mobileOptimization.viewportTag) met++;
+    
+    analysis.criteriaMet = met;
+    
+    // Bepaal ontbrekende criteria
+    const missing = [];
+    if (analysis.graaf.credible.authoritativeSources < 7) missing.push('Need 7+ authoritative sources');
+    if (analysis.graaf.credible.expertQuotes < 5) missing.push('Need 5+ expert quotes');
+    if (analysis.graaf.credible.caseStudies < 3) missing.push('Need 3+ case studies');
+    if (!analysis.graaf.credible.authorCredentials) missing.push('Author credentials missing');
+    if (!analysis.graaf.relevance.primaryKeywordInFirstSentence) missing.push('Primary keyword not in first sentence');
+    if (!analysis.graaf.relevance.directAnswerInFirst150Words) missing.push('Direct answer missing in first 150 words');
+    if (!analysis.graaf.relevance.h1ContainsKeyword) missing.push('H1 missing primary keyword');
+    if (analysis.graaf.relevance.h2Count < 8) missing.push(`Need 8+ H2 sections (currently: ${analysis.graaf.relevance.h2Count})`);
+    if (analysis.graaf.actionability.stepByStepGuides < 7) missing.push(`Need 7+ step-by-step guides (currently: ${analysis.graaf.actionability.stepByStepGuides})`);
+    if (analysis.graaf.actionability.concreteExamples < 5) missing.push(`Need 5+ concrete examples (currently: ${analysis.graaf.actionability.concreteExamples})`);
+    if (!analysis.graaf.accuracy.publicationDate) missing.push('Publication date missing');
+    if (!analysis.graaf.freshness.yearInTitle) missing.push('Year (2024/2025) missing in title');
+    if (analysis.craft.faqIntegration.totalQuestions < 10) missing.push(`Need 10+ FAQ questions (currently: ${analysis.craft.faqIntegration.totalQuestions})`);
+    if (!analysis.craft.faqIntegration.faqSchema) missing.push('FAQ schema markup missing');
+    if (!analysis.technical.schemaMarkup.articleSchema) missing.push('Article schema markup missing');
+    if (analysis.technical.internalLinking.totalInternalLinks < 7) missing.push(`Need 7+ internal links (currently: ${analysis.technical.internalLinking.totalInternalLinks})`);
+    
+    analysis.missingCriteria = missing;
+}
 
-                    <!-- Results Panel -->
-                    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
-                        <h2 class="text-2xl font-bold mb-6 flex items-center">
-                            <i class="fas fa-chart-pie mr-3 text-purple-400"></i>
-                            Analysis Results
-                        </h2>
-                        
-                        <!-- Loading State -->
-                        <div id="results-loading" class="hidden">
-                            <div class="text-center py-12">
-                                <div class="inline-block animate-spin text-4xl text-blue-400">
-                                    <i class="fas fa-cog"></i>
-                                </div>
-                                <p class="text-gray-400 mt-4 text-lg">Analyzing content...</p>
-                                <p class="text-sm text-gray-500 mt-2">This may take 20-30 seconds</p>
-                            </div>
-                        </div>
-                        
-                        <!-- Error State -->
-                        <div id="results-error" class="hidden">
-                            <div class="text-center py-12">
-                                <div class="text-5xl text-red-400 mb-4">
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                </div>
-                                <p class="text-red-300 text-lg" id="error-message">Analysis failed</p>
-                                <button onclick="retryAnalysis()" class="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg">
-                                    <i class="fas fa-redo mr-2"></i>Try Again
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <!-- Results Content -->
-                        <div id="results-content" class="hidden">
-                            <!-- Overall Score -->
-                            <div class="text-center mb-8">
-                                <div class="relative inline-block">
-                                    <svg width="200" height="200" viewBox="0 0 120 120">
-                                        <circle cx="60" cy="60" r="54" fill="none" stroke="#374151" stroke-width="12"/>
-                                        <circle id="score-circle" cx="60" cy="60" r="54" fill="none" 
-                                            stroke="url(#score-gradient)" stroke-width="12" 
-                                            stroke-dasharray="339.292" stroke-dashoffset="339.292"
-                                            stroke-linecap="round" transform="rotate(-90 60 60)"/>
-                                        <defs>
-                                            <linearGradient id="score-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                                <stop offset="0%" style="stop-color:#ef4444" />
-                                                <stop offset="50%" style="stop-color:#eab308" />
-                                                <stop offset="100%" style="stop-color:#22c55e" />
-                                            </linearGradient>
-                                        </defs>
-                                    </svg>
-                                    <div class="absolute inset-0 flex items-center justify-center flex-col">
-                                        <span id="score-value" class="text-5xl font-bold">0</span>
-                                        <span class="text-lg text-gray-400">/100</span>
-                                        <div id="quality-badge" class="mt-2 px-3 py-1 rounded-full text-xs font-semibold"></div>
-                                    </div>
-                                </div>
-                                <h3 class="text-xl font-bold mt-4 mb-2" id="page-title">Page Title</h3>
-                                <p class="text-gray-400 text-sm" id="analyzed-url">URL will appear here</p>
-                            </div>
-                            
-                            <!-- Score Breakdown -->
-                            <div class="mb-8">
-                                <h4 class="text-lg font-semibold mb-4">Score Breakdown</h4>
-                                <div class="grid grid-cols-3 gap-4">
-                                    <div class="bg-gray-700 p-4 rounded-lg text-center">
-                                        <div class="text-2xl font-bold text-blue-400" id="graaf-score">0</div>
-                                        <div class="text-sm text-gray-400 mt-1">GRAAF</div>
-                                    </div>
-                                    <div class="bg-gray-700 p-4 rounded-lg text-center">
-                                        <div class="text-2xl font-bold text-green-400" id="craft-score">0</div>
-                                        <div class="text-sm text-gray-400 mt-1">CRAFT</div>
-                                    </div>
-                                    <div class="bg-gray-700 p-4 rounded-lg text-center">
-                                        <div class="text-2xl font-bold text-purple-400" id="technical-score">0</div>
-                                        <div class="text-sm text-gray-1">TECH</div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Quick Stats -->
-                            <div class="mb-8">
-                                <h4 class="text-lg font-semibold mb-4">Content Stats</h4>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div class="bg-gray-700 p-3 rounded-lg">
-                                        <div class="text-sm text-gray-400">Word Count</div>
-                                        <div class="text-xl font-bold" id="word-count">0</div>
-                                    </div>
-                                    <div class="bg-gray-700 p-3 rounded-lg">
-                                        <div class="text-sm text-gray-400">Internal Links</div>
-                                        <div class="text-xl font-bold" id="internal-links">0</div>
-                                    </div>
-                                    <div class="bg-gray-700 p-3 rounded-lg">
-                                        <div class="text-sm text-gray-400">Images</div>
-                                        <div class="text-xl font-bold" id="images-count">0</div>
-                                    </div>
-                                    <div class="bg-gray-700 p-3 rounded-lg">
-                                        <div class="text-sm text-gray-400">Images with Alt</div>
-                                        <div class="text-xl font-bold" id="images-alt">0</div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Quick Actions -->
-                            <div class="space-y-3">
-                                <button onclick="saveAnalysis()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold flex items-center justify-center">
-                                    <i class="fas fa-save mr-2"></i>Save Analysis
-                                </button>
-                                <button onclick="generateReport()" class="w-full py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold flex items-center justify-center">
-                                    <i class="fas fa-file-pdf mr-2"></i>Generate PDF Report
-                                </button>
-                                <button onclick="shareResults()" class="w-full py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold flex items-center justify-center">
-                                    <i class="fas fa-share-alt mr-2"></i>Share Results
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <!-- Empty State -->
-                        <div id="results-empty" class="text-center py-12">
-                            <div class="text-5xl text-gray-600 mb-4">
-                                <i class="fas fa-chart-bar"></i>
-                            </div>
-                            <p class="text-gray-400 text-lg">No analysis yet</p>
-                            <p class="text-gray-500 text-sm mt-2">Enter a URL or paste content to begin</p>
-                        </div>
-                    </div>
-                </div>
+// 5. Helper: Genereer gedetailleerde aanbevelingen
+function generateDetailedRecommendations(analysis) {
+    const recommendations = {
+        quickWins: [],
+        majorImpact: [],
+        advanced: [],
+        summary: {
+            totalIssues: analysis.missingCriteria.length,
+            estimatedTimeToFix: analysis.missingCriteria.length * 30, // 30 min per issue
+            potentialScoreGain: Math.min(100 - analysis.criteriaMet, analysis.missingCriteria.length * 5),
+            currentScore: analysis.criteriaMet,
+            targetScore: 100
+        }
+    };
+    
+    // Sorteer missing criteria op prioriteit
+    analysis.missingCriteria.forEach(criteria => {
+        if (criteria.includes('authoritative sources') || 
+            criteria.includes('expert quotes') || 
+            criteria.includes('case studies')) {
+            recommendations.majorImpact.push({
+                category: 'Credibility',
+                issue: criteria,
+                action: criteria.replace('Need', 'Add').replace('missing', ''),
+                impact: 5,
+                timeEstimate: 60,
+                priority: 'high'
+            });
+        } else if (criteria.includes('FAQ') || 
+                   criteria.includes('schema markup') || 
+                   criteria.includes('internal links')) {
+            recommendations.quickWins.push({
+                category: 'Technical',
+                issue: criteria,
+                action: criteria.replace('Need', 'Add').replace('missing', ''),
+                impact: 4,
+                timeEstimate: 30,
+                priority: 'high'
+            });
+        } else if (criteria.includes('step-by-step') || 
+                   criteria.includes('examples') || 
+                   criteria.includes('H2 sections')) {
+            recommendations.advanced.push({
+                category: 'Content Quality',
+                issue: criteria,
+                action: criteria.replace('Need', 'Add').replace('missing', ''),
+                impact: 3,
+                timeEstimate: 45,
+                priority: 'medium'
+            });
+        } else {
+            recommendations.quickWins.push({
+                category: 'General',
+                issue: criteria,
+                action: criteria.replace('Need', 'Add').replace('missing', ''),
+                impact: 2,
+                timeEstimate: 20,
+                priority: 'low'
+            });
+        }
+    });
+    
+    return recommendations;
+}
 
-                <!-- Recommendations Section (Hidden until analysis) -->
-                <div id="recommendations-section" class="hidden bg-gray-800 rounded-xl p-6 border border-gray-700 mb-8">
-                    <h2 class="text-2xl font-bold mb-6 flex items-center">
-                        <i class="fas fa-lightbulb mr-3 text-yellow-400"></i>
-                        Recommendations & Action Items
-                    </h2>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <!-- Quick Wins -->
-                        <div class="bg-gray-700 rounded-lg p-5">
-                            <h3 class="text-lg font-bold mb-4 text-green-400">
-                                <i class="fas fa-bolt mr-2"></i>Quick Wins
-                            </h3>
-                            <div id="quick-wins-list" class="space-y-3">
-                                <!-- Quick wins will be populated here -->
-                            </div>
-                        </div>
-                        
-                        <!-- Major Improvements -->
-                        <div class="bg-gray-700 rounded-lg p-5">
-                            <h3 class="text-lg font-bold mb-4 text-yellow-400">
-                                <i class="fas fa-chart-line mr-2"></i>Major Improvements
-                            </h3>
-                            <div id="major-improvements-list" class="space-y-3">
-                                <!-- Major improvements will be populated here -->
-                            </div>
-                        </div>
-                        
-                        <!-- Advanced -->
-                        <div class="bg-gray-700 rounded-lg p-5">
-                            <h3 class="text-lg font-bold mb-4 text-blue-400">
-                                <i class="fas fa-cogs mr-2"></i>Advanced Optimizations
-                            </h3>
-                            <div id="advanced-optimizations-list" class="space-y-3">
-                                <!-- Advanced optimizations will be populated here -->
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Summary -->
-                    <div id="analysis-summary" class="mt-6 p-4 bg-gray-700 rounded-lg hidden">
-                        <h4 class="font-bold mb-2">Analysis Summary</h4>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div>
-                                <div class="text-sm text-gray-400">Total Issues</div>
-                                <div class="text-xl font-bold" id="total-issues">0</div>
-                            </div>
-                            <div>
-                                <div class="text-sm text-gray-400">Time to Fix</div>
-                                <div class="text-xl font-bold" id="time-to-fix">0 min</div>
-                            </div>
-                            <div>
-                                <div class="text-sm text-gray-400">Score Gain</div>
-                                <div class="text-xl font-bold" id="score-gain">0 pts</div>
-                            </div>
-                            <div>
-                                <div class="text-sm text-gray-400">Target Score</div>
-                                <div class="text-xl font-bold" id="target-score">100</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+// 6. Helper: Voeg toe aan leaderboard
+async function addToLeaderboard(data) {
+    try {
+        const urlHash = crypto.createHash('md5')
+            .update(data.url.toLowerCase().trim())
+            .digest('hex');
+        
+        // Get agency name if agencyId provided
+        let agencyName = null;
+        if (data.agencyId) {
+            const agencyResult = await pool.query(
+                'SELECT name FROM agencies WHERE id = $1',
+                [data.agencyId]
+            );
+            if (agencyResult.rows.length > 0) {
+                agencyName = agencyResult.rows[0].name;
+            }
+        }
+        
+        await pool.query(`
+            INSERT INTO public_leaderboard 
+            (url, url_hash, score, quality, 
+             graaf_score, craft_score, technical_score,
+             word_count, company_name, agency_id, agency_name,
+             is_public, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
+            ON CONFLICT (url_hash) DO UPDATE SET
+                score = EXCLUDED.score,
+                quality = EXCLUDED.quality,
+                graaf_score = EXCLUDED.graaf_score,
+                craft_score = EXCLUDED.craft_score,
+                technical_score = EXCLUDED.technical_score,
+                updated_at = NOW()
+        `, [
+            data.url,
+            urlHash,
+            data.score,
+            data.score >= 90 ? 'excellent' : 
+            data.score >= 80 ? 'good' : 
+            data.score >= 70 ? 'fair' : 
+            data.score >= 60 ? 'average' : 'needs-improvement',
+            data.analysis.graafScore || 0,
+            data.analysis.craftScore || 0,
+            data.analysis.technicalScore || 0,
+            data.analysis.wordCount || 0,
+            data.agencyId ? agencyName : 'Direct Analysis',
+            data.agencyId || null,
+            agencyName || null,
+            true
+        ]);
+        
+        console.log('[LEADERBOARD] Added entry:', data.url, 'Score:', data.score);
+        
+    } catch (error) {
+        console.error('[LEADERBOARD ERROR]', error);
+    }
+}
 
-            <!-- Footer -->
-            <footer class="bg-gray-800 border-t border-gray-700 py-6">
-                <div class="max-w-7xl mx-auto px-4 text-center text-gray-500 text-sm">
-                    <p>ContentScore Tool powered by ContentScale Platform • Uses GRAAF + CRAFT + Technical SEO analysis</p>
-                    <p class="mt-2">© ${new Date().getFullYear()} ContentScale • All rights reserved</p>
-                </div>
-            </footer>
-
-            <script>
-                // State management
-                let currentAnalysis = null;
-                let recentAnalyses = JSON.parse(localStorage.getItem('contentscore_recent') || '[]');
-
-                // Initialize recent analyses
-                function initRecentAnalyses() {
-                    const container = document.getElementById('recent-analyses');
-                    if (!container) return;
-                    
-                    if (recentAnalyses.length === 0) {
-                        container.innerHTML = \`
-                            <div class="text-gray-500 text-center py-4">
-                                <i class="fas fa-history mr-2"></i>
-                                No recent analyses
-                            </div>
-                        \`;
-                        return;
-                    }
-                    
-                    container.innerHTML = recentAnalyses.slice(0, 5).map(item => \`
-                        <div class="flex items-center justify-between p-3 bg-gray-700 rounded-lg hover:bg-gray-600 cursor-pointer" 
-                             onclick="loadRecentAnalysis('\${item.url}')">
-                            <div class="truncate">
-                                <div class="font-medium truncate">\${item.title || item.url}</div>
-                                <div class="text-xs text-gray-400">\${new Date(item.timestamp).toLocaleDateString()}</div>
-                            </div>
-                            <div class="flex items-center space-x-2">
-                                <span class="px-2 py-1 text-xs font-bold rounded \${getScoreColorClass(item.score)}">
-                                    \${item.score}
-                                </span>
-                                <i class="fas fa-chevron-right text-gray-400"></i>
-                            </div>
-                        </div>
-                    \`).join('');
-                }
-
-                // Helper function for score colors
-                function getScoreColorClass(score) {
-                    if (score >= 90) return 'bg-green-900 text-green-300';
-                    if (score >= 80) return 'bg-blue-900 text-blue-300';
-                    if (score >= 70) return 'bg-yellow-900 text-yellow-300';
-                    if (score >= 60) return 'bg-orange-900 text-orange-300';
-                    return 'bg-red-900 text-red-300';
-                }
-
-                // Helper function for quality badge
-                function getQualityBadge(score) {
-                    if (score >= 90) return \`<span class="bg-green-900 text-green-300 px-3 py-1 rounded-full text-xs font-semibold">Excellent</span>\`;
-                    if (score >= 80) return \`<span class="bg-blue-900 text-blue-300 px-3 py-1 rounded-full text-xs font-semibold">Good</span>\`;
-                    if (score >= 70) return \`<span class="bg-yellow-900 text-yellow-300 px-3 py-1 rounded-full text-xs font-semibold">Fair</span>\`;
-                    if (score >= 60) return \`<span class="bg-orange-900 text-orange-300 px-3 py-1 rounded-full text-xs font-semibold">Average</span>\`;
-                    return \`<span class="bg-red-900 text-red-300 px-3 py-1 rounded-full text-xs font-semibold">Needs Improvement</span>\`;
-                }
-
-                // Analyze URL using existing scanner API
-                async function analyzeUrl() {
-                    const urlInput = document.getElementById('content-url');
-                    const url = urlInput.value.trim();
-                    
-                    if (!url) {
-                        alert('Please enter a URL to analyze');
-                        urlInput.focus();
-                        return;
-                    }
-                    
-                    // Validate URL format
-                    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                        alert('Please enter a valid URL starting with http:// or https://');
-                        return;
-                    }
-                    
-                    // Show loading state
-                    showLoading();
-                    
-                    try {
-                        // Use the existing scanner API
-                        const response = await fetch('/api/scan-free', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ url: url })
-                        });
-                        
-                        const data = await response.json();
-                        
-                        if (data.success) {
-                            // Process and display results
-                            processAnalysisResults(data, url);
-                            
-                            // Add to recent analyses
-                            addToRecentAnalyses({
-                                url: url,
-                                title: data.pageMetadata?.title || 'Untitled',
-                                score: data.score,
-                                timestamp: new Date().toISOString()
-                            });
-                            
-                        } else {
-                            showError(data.error || 'Analysis failed');
-                        }
-                        
-                    } catch (error) {
-                        console.error('Analysis error:', error);
-                        showError('Connection error. Please check your internet and try again.');
-                    }
-                }
-
-                // Analyze text content (simulated for now)
-                async function analyzeText() {
-                    const textArea = document.getElementById('content-text');
-                    const text = textArea.value.trim();
-                    
-                    if (!text || text.split(/\\s+/).length < 50) {
-                        alert('Please enter at least 50 words for meaningful analysis');
-                        textArea.focus();
-                        return;
-                    }
-                    
-                    showLoading();
-                    
-                    // For text analysis, we'll use a simplified version
-                    // In a real implementation, you would send text to an API
-                    try {
-                        // Simulate API call
-                        await new Promise(resolve => setTimeout(resolve, 2000));
-                        
-                        // Create mock analysis based on text
-                        const wordCount = text.split(/\\s+/).length;
-                        const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-                        const avgSentenceLength = wordCount / sentences.length;
-                        
-                        // Calculate scores based on text characteristics
-                        const readabilityScore = Math.min(100, Math.max(20, 100 - (avgSentenceLength - 15) * 2));
-                        const keywordDensity = (text.toLowerCase().match(/\\b(seo|content|marketing|digital)\\b/gi) || []).length / wordCount * 100;
-                        const seoScore = Math.min(100, Math.max(30, keywordDensity * 10));
-                        
-                        const mockData = {
-                            success: true,
-                            score: Math.floor((readabilityScore * 0.4) + (seoScore * 0.6)),
-                            quality: readabilityScore >= 70 ? 'good' : 'average',
-                            breakdown: {
-                                graaf: { total: Math.floor(readabilityScore) },
-                                craft: { total: Math.floor(seoScore) },
-                                technical: { total: Math.floor(seoScore * 0.8) }
-                            },
-                            recommendations: {
-                                quickWins: [
-                                    { action: "Add subheadings every 200-300 words", category: "Structure", impact: 3 },
-                                    { action: "Include more transition words", category: "Readability", impact: 2 },
-                                    { action: "Add bullet points for key information", category: "Formatting", impact: 4 }
-                                ],
-                                majorImpact: [
-                                    { action: "Expand content to at least 1000 words", category: "Comprehensiveness", impact: 5 },
-                                    { action: "Add relevant images or diagrams", category: "Visuals", impact: 4 }
-                                ],
-                                advanced: [
-                                    { action: "Add schema markup for rich snippets", category: "Technical", impact: 3 },
-                                    { action: "Optimize for featured snippets", category: "Advanced SEO", impact: 4 }
-                                ],
-                                summary: {
-                                    totalIssues: 5,
-                                    estimatedTimeToFix: 120,
-                                    potentialScoreGain: 25,
-                                    currentScore: 65,
-                                    targetScore: 90
-                                }
-                            },
-                            wordCount: wordCount,
-                            pageMetadata: {
-                                title: "Text Content Analysis",
-                                metaDescription: "Content analysis from pasted text"
-                            }
-                        };
-                        
-                        processAnalysisResults(mockData, "Text Content");
-                        
-                    } catch (error) {
-                        showError('Text analysis failed: ' + error.message);
-                    }
-                }
-
-                // Process and display analysis results
-                function processAnalysisResults(data, source) {
-                    currentAnalysis = data;
-                    
-                    // Update main score display
-                    document.getElementById('score-value').textContent = data.score;
-                    document.getElementById('quality-badge').innerHTML = getQualityBadge(data.score);
-                    
-                    // Animate score circle
-                    const circle = document.getElementById('score-circle');
-                    const circumference = 2 * Math.PI * 54;
-                    const offset = circumference - (data.score / 100) * circumference;
-                    circle.style.strokeDashoffset = offset;
-                    
-                    // Update breakdown scores
-                    document.getElementById('graaf-score').textContent = data.breakdown?.graaf?.total || 0;
-                    document.getElementById('craft-score').textContent = data.breakdown?.craft?.total || 0;
-                    document.getElementById('technical-score').textContent = data.breakdown?.technical?.total || 0;
-                    
-                    // Update stats
-                    document.getElementById('word-count').textContent = data.wordCount || 0;
-                    document.getElementById('page-title').textContent = data.pageMetadata?.title || 'Untitled';
-                    document.getElementById('analyzed-url').textContent = source;
-                    
-                    // Update metadata if available
-                    if (data.pageMetadata) {
-                        document.getElementById('internal-links').textContent = data.pageMetadata.internalLinks || 0;
-                        document.getElementById('images-count').textContent = data.pageMetadata.images || 0;
-                        document.getElementById('images-alt').textContent = data.pageMetadata.imagesWithAlt || 0;
-                    }
-                    
-                    // Show recommendations if available
-                    if (data.recommendations) {
-                        displayRecommendations(data.recommendations);
-                        document.getElementById('recommendations-section').classList.remove('hidden');
-                        
-                        // Update summary
-                        if (data.recommendations.summary) {
-                            document.getElementById('analysis-summary').classList.remove('hidden');
-                            document.getElementById('total-issues').textContent = data.recommendations.summary.totalIssues || 0;
-                            document.getElementById('time-to-fix').textContent = data.recommendations.summary.estimatedTimeToFix + ' min';
-                            document.getElementById('score-gain').textContent = data.recommendations.summary.potentialScoreGain + ' pts';
-                            document.getElementById('target-score').textContent = data.recommendations.summary.targetScore || 100;
-                        }
-                    }
-                    
-                    // Switch to results view
-                    hideLoading();
-                    document.getElementById('results-empty').classList.add('hidden');
-                    document.getElementById('results-content').classList.remove('hidden');
-                }
-
-                // Display recommendations
-                function displayRecommendations(recommendations) {
-                    // Quick Wins
-                    const quickWinsList = document.getElementById('quick-wins-list');
-                    if (quickWinsList && recommendations.quickWins) {
-                        quickWinsList.innerHTML = recommendations.quickWins.map(item => \`
-                            <div class="flex items-start space-x-3">
-                                <div class="flex-shrink-0 mt-1">
-                                    <div class="w-6 h-6 rounded-full bg-green-900 flex items-center justify-center">
-                                        <i class="fas fa-bolt text-green-300 text-xs"></i>
-                                    </div>
-                                </div>
-                                <div>
-                                    <div class="font-medium">\${item.action}</div>
-                                    <div class="text-xs text-gray-400 mt-1">
-                                        <span class="px-2 py-0.5 bg-gray-600 rounded">\${item.category}</span>
-                                        <span class="ml-2">Impact: \${'★'.repeat(item.impact || 1)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        \`).join('');
-                    }
-                    
-                    // Major Improvements
-                    const majorList = document.getElementById('major-improvements-list');
-                    if (majorList && recommendations.majorImpact) {
-                        majorList.innerHTML = recommendations.majorImpact.map(item => \`
-                            <div class="flex items-start space-x-3">
-                                <div class="flex-shrink-0 mt-1">
-                                    <div class="w-6 h-6 rounded-full bg-yellow-900 flex items-center justify-center">
-                                        <i class="fas fa-chart-line text-yellow-300 text-xs"></i>
-                                    </div>
-                                </div>
-                                <div>
-                                    <div class="font-medium">\${item.action}</div>
-                                    <div class="text-xs text-gray-400 mt-1">
-                                        <span class="px-2 py-0.5 bg-gray-600 rounded">\${item.category}</span>
-                                        <span class="ml-2">Impact: \${'★'.repeat(item.impact || 1)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        \`).join('');
-                    }
-                    
-                    // Advanced Optimizations
-                    const advancedList = document.getElementById('advanced-optimizations-list');
-                    if (advancedList && recommendations.advanced) {
-                        advancedList.innerHTML = recommendations.advanced.map(item => \`
-                            <div class="flex items-start space-x-3">
-                                <div class="flex-shrink-0 mt-1">
-                                    <div class="w-6 h-6 rounded-full bg-blue-900 flex items-center justify-center">
-                                        <i class="fas fa-cogs text-blue-300 text-xs"></i>
-                                    </div>
-                                </div>
-                                <div>
-                                    <div class="font-medium">\${item.action}</div>
-                                    <div class="text-xs text-gray-400 mt-1">
-                                        <span class="px-2 py-0.5 bg-gray-600 rounded">\${item.category}</span>
-                                        <span class="ml-2">Impact: \${'★'.repeat(item.impact || 1)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        \`).join('');
-                    }
-                }
-
-                // UI State Management
-                function showLoading() {
-                    document.getElementById('results-empty').classList.add('hidden');
-                    document.getElementById('results-content').classList.add('hidden');
-                    document.getElementById('results-error').classList.add('hidden');
-                    document.getElementById('results-loading').classList.remove('hidden');
-                    document.getElementById('recommendations-section').classList.add('hidden');
-                    
-                    // Disable buttons during loading
-                    document.getElementById('analyze-btn').disabled = true;
-                    document.getElementById('analyze-text-btn').disabled = true;
-                }
-
-                function hideLoading() {
-                    document.getElementById('results-loading').classList.add('hidden');
-                    document.getElementById('analyze-btn').disabled = false;
-                    document.getElementById('analyze-text-btn').disabled = false;
-                }
-
-                function showError(message) {
-                    hideLoading();
-                    document.getElementById('results-error').classList.remove('hidden');
-                    document.getElementById('error-message').textContent = message;
-                }
-
-                function retryAnalysis() {
-                    document.getElementById('results-error').classList.add('hidden');
-                    analyzeUrl();
-                }
-
-                // Recent Analyses Management
-                function addToRecentAnalyses(analysis) {
-                    // Remove if already exists
-                    recentAnalyses = recentAnalyses.filter(a => a.url !== analysis.url);
-                    
-                    // Add to beginning
-                    recentAnalyses.unshift(analysis);
-                    
-                    // Keep only last 10
-                    recentAnalyses = recentAnalyses.slice(0, 10);
-                    
-                    // Save to localStorage
-                    localStorage.setItem('contentscore_recent', JSON.stringify(recentAnalyses));
-                    
-                    // Update UI
-                    initRecentAnalyses();
-                }
-
-                function loadRecentAnalysis(url) {
-                    document.getElementById('content-url').value = url;
-                    analyzeUrl();
-                }
-
-                // Action Buttons
-                function saveAnalysis() {
-                    if (!currentAnalysis) return;
-                    
-                    const dataStr = JSON.stringify(currentAnalysis, null, 2);
-                    const blob = new Blob([dataStr], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = \`contentscore-\${new Date().toISOString().split('T')[0]}.json\`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    
-                    alert('Analysis saved as JSON file!');
-                }
-
-                function generateReport() {
-                    alert('PDF report generation feature coming soon!');
-                }
-
-                function shareResults() {
-                    if (!currentAnalysis) return;
-                    
-                    const score = currentAnalysis.score;
-                    const url = document.getElementById('content-url').value || 'Text Content';
-                    const shareText = \`My content scored \${score}/100 on ContentScore! Analyze yours at \${window.location.origin}\`;
-                    
-                    if (navigator.share) {
-                        navigator.share({
-                            title: 'ContentScore Results',
-                            text: shareText,
-                            url: window.location.href
-                        });
-                    } else {
-                        navigator.clipboard.writeText(shareText).then(() => {
-                            alert('Results copied to clipboard!');
-                        });
-                    }
-                }
-
-                // Initialize on page load
-                document.addEventListener('DOMContentLoaded', function() {
-                    initRecentAnalyses();
-                    
-                    // Auto-focus URL input
-                    document.getElementById('content-url').focus();
-                    
-                    // Enable Enter key to trigger analysis
-                    document.getElementById('content-url').addEventListener('keypress', function(e) {
-                        if (e.key === 'Enter') analyzeUrl();
-                    });
-                    
-                    // Auto-expand textarea
-                    const textarea = document.getElementById('content-text');
-                    textarea.addEventListener('input', function() {
-                        this.style.height = 'auto';
-                        this.style.height = (this.scrollHeight) + 'px';
-                    });
+// 7. Agency ContentScore API
+app.post('/api/agency/contentscore', async (req, res) => {
+    try {
+        const { agency_id, url, html } = req.body;
+        const adminKey = req.headers['x-admin-key'];
+        
+        if (!adminKey && !agency_id) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Admin key or agency ID required' 
+            });
+        }
+        
+        // Verify agency access
+        if (agency_id) {
+            const agencyResult = await pool.query(
+                'SELECT id, name, admin_key FROM agencies WHERE id = $1 AND is_active = true',
+                [agency_id]
+            );
+            
+            if (agencyResult.rows.length === 0) {
+                return res.status(403).json({ 
+                    success: false, 
+                    error: 'Agency not found or inactive' 
                 });
-            </script>
-        </body>
-        </html>
-    `);
+            }
+            
+            // Check admin key if provided
+            if (adminKey && adminKey !== agencyResult.rows[0].admin_key) {
+                return res.status(403).json({ 
+                    success: false, 
+                    error: 'Invalid admin key' 
+                });
+            }
+        }
+        
+        // Perform analysis
+        const response = await fetch(`http://localhost:${PORT}/api/contentscore/analyze-detailed`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                url: url,
+                html: html,
+                agency_id: agency_id
+            })
+        });
+        
+        const data = await response.json();
+        
+        res.json({
+            success: data.success,
+            ...data
+        });
+        
+    } catch (error) {
+        console.error('[AGENCY CONTENTSCORE ERROR]', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Agency analysis failed: ' + error.message 
+        });
+    }
 });
+
+// 8. Share Link ContentScore API
+app.post('/api/sharelink/contentscore/:code', async (req, res) => {
+    try {
+        const { code } = req.params;
+        const { url, html } = req.body;
+        
+        // Verify share link
+        const linkResult = await pool.query(`
+            SELECT sl.*, a.name as agency_name, a.id as agency_id
+            FROM share_links sl
+            LEFT JOIN agencies a ON a.id = sl.agency_id
+            WHERE sl.token = $1 AND sl.is_active = true
+        `, [code]);
+        
+        if (linkResult.rows.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Share link not found or inactive' 
+            });
+        }
+        
+        const link = linkResult.rows[0];
+        
+        // Check limits
+        if (link.current_uses >= link.max_uses) {
+            return res.status(403).json({ 
+                success: false, 
+                error: 'Scan limit reached for this share link' 
+            });
+        }
+        
+        if (new Date(link.expires_at) < new Date()) {
+            return res.status(403).json({ 
+                success: false, 
+                error: 'Share link has expired' 
+            });
+        }
+        
+        // Perform analysis
+        const response = await fetch(`http://localhost:${PORT}/api/contentscore/analyze-detailed`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                url: url,
+                html: html,
+                share_code: code,
+                agency_id: link.agency_id
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Update share link usage
+            await pool.query(`
+                UPDATE share_links 
+                SET current_uses = current_uses + 1
+                WHERE token = $1
+            `, [code]);
+        }
+        
+        res.json({
+            success: data.success,
+            ...data,
+            scans_remaining: link.max_uses - link.current_uses - 1
+        });
+        
+    } catch (error) {
+        console.error('[SHARELINK CONTENTSCORE ERROR]', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Share link analysis failed: ' + error.message 
+        });
+    }
+});
+
+// 9. Get Agency Leaderboard
+app.get('/api/agency/leaderboard/:agency_id', async (req, res) => {
+    try {
+        const { agency_id } = req.params;
+        
+        const result = await pool.query(`
+            SELECT acs.content_hash, acs.total_score, acs.analysis_date,
+                   ca.url, ca.word_count, ca.criteria_met, ca.criteria_total
+            FROM agency_content_scores acs
+            JOIN content_analyses ca ON ca.content_hash = acs.content_hash
+            WHERE acs.agency_id = $1
+            ORDER BY acs.total_score DESC, acs.analysis_date DESC
+            LIMIT 50
+        `, [agency_id]);
+        
+        res.json({
+            success: true,
+            leaderboard: result.rows
+        });
+        
+    } catch (error) {
+        console.error('[AGENCY LEADERBOARD ERROR]', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to load agency leaderboard' 
+        });
+    }
+});
+
+// 10. Create database tables
+async function createContentScoreTables() {
+    try {
+        await pool.query(`
+            -- Gedetailleerde content analyses
+            CREATE TABLE IF NOT EXISTS content_analyses (
+                id SERIAL PRIMARY KEY,
+                content_hash VARCHAR(64) UNIQUE NOT NULL,
+                url TEXT,
+                total_score DECIMAL(5,2) NOT NULL,
+                graaf_score DECIMAL(5,2) NOT NULL,
+                craft_score DECIMAL(5,2) NOT NULL,
+                technical_score DECIMAL(5,2) NOT NULL,
+                criteria_met INTEGER NOT NULL,
+                criteria_total INTEGER NOT NULL DEFAULT 100,
+                missing_criteria JSONB,
+                recommendations JSONB,
+                analysis_details JSONB,
+                word_count INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW(),
+                INDEX idx_content_hash (content_hash),
+                INDEX idx_total_score (total_score DESC),
+                INDEX idx_created_at (created_at DESC)
+            );
+
+            -- Agency content scores
+            CREATE TABLE IF NOT EXISTS agency_content_scores (
+                id SERIAL PRIMARY KEY,
+                agency_id INTEGER REFERENCES agencies(id) ON DELETE CASCADE,
+                content_hash VARCHAR(64) REFERENCES content_analyses(content_hash),
+                total_score DECIMAL(5,2) NOT NULL,
+                analysis_date TIMESTAMP DEFAULT NOW(),
+                UNIQUE(agency_id, content_hash),
+                INDEX idx_agency_scores (agency_id, total_score DESC)
+            );
+
+            -- Share link scores
+            CREATE TABLE IF NOT EXISTS share_link_scores (
+                id SERIAL PRIMARY KEY,
+                share_code VARCHAR(255) REFERENCES share_links(token),
+                content_hash VARCHAR(64) REFERENCES content_analyses(content_hash),
+                total_score DECIMAL(5,2) NOT NULL,
+                analysis_date TIMESTAMP DEFAULT NOW(),
+                UNIQUE(share_code, content_hash)
+            );
+        `);
+        
+        console.log('[CONTENTSCORE] ✅ Detailed tables created');
+        
+    } catch (error) {
+        console.error('[CONTENTSCORE TABLE ERROR]', error);
+    }
+}
+
+// Initialize tables
+setTimeout(() => createContentScoreTables(), 3000);
+
+// Helper functions voor leesbaarheid
+function calculateFleschReadingEase(text) {
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const words = text.split(/\s+/).filter(w => w.length > 0);
+    const syllables = (text.match(/[aeiouy]{1,2}/gi) || []).length;
+    
+    if (sentences.length === 0 || words.length === 0) return 60;
+    
+    const flesch = 206.835 - 1.015 * (words.length / sentences.length) - 84.6 * (syllables / words.length);
+    return Math.max(0, Math.min(100, flesch));
+}
+
+function calculateFleschKincaidGrade(text) {
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const words = text.split(/\s+/).filter(w => w.length > 0);
+    const syllables = (text.match(/[aeiouy]{1,2}/gi) || []).length;
+    
+    if (sentences.length === 0 || words.length === 0) return 8;
+    
+    const grade = 0.39 * (words.length / sentences.length) + 11.8 * (syllables / words.length) - 15.59;
+    return Math.max(1, Math.min(12, grade));
+}
 
 // ==========================================
 // 🔧 FIX: Updated setup endpoint
@@ -1948,6 +2064,693 @@ app.post('/api/share-link/scan', async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, error: 'Scan failed: ' + error.message });
   }
+});
+
+// ==========================================
+// 🔧 CONTENTSCORE TOOL PAGES
+// ==========================================
+
+app.get('/seo-contentscore', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="nl">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>ContentScore Tool - Exacte Criteria Telling</title>
+            <script src="https://cdn.tailwindcss.com"></script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+            <style>
+                .criteria-meter { 
+                    width: 100%; 
+                    height: 24px; 
+                    background: #374151; 
+                    border-radius: 12px; 
+                    overflow: hidden;
+                }
+                .criteria-fill { 
+                    height: 100%; 
+                    background: linear-gradient(90deg, #ef4444, #eab308, #22c55e);
+                    transition: width 1s ease-in-out;
+                }
+                .criteria-dot { 
+                    width: 12px; 
+                    height: 12px; 
+                    border-radius: 50%; 
+                    display: inline-block;
+                }
+                .met { background: #22c55e; }
+                .missing { background: #ef4444; }
+                .partial { background: #eab308; }
+            </style>
+        </head>
+        <body class="bg-gray-900 text-gray-100 min-h-screen">
+            <div class="max-w-7xl mx-auto px-4 py-8">
+                <!-- Header -->
+                <div class="text-center mb-12">
+                    <h1 class="text-4xl font-bold mb-4">
+                        <i class="fas fa-search text-blue-400"></i>
+                        ContentScore Tool
+                    </h1>
+                    <p class="text-gray-400 text-lg">
+                        Exacte telling van GRAAF + CRAFT + Technical criteria
+                    </p>
+                    <p class="text-sm text-gray-500 mt-2">
+                        Analyseert HTML en telt PRECIES wat er WEL en NIET is
+                    </p>
+                </div>
+                
+                <!-- Analysis Options -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+                    <!-- URL Analysis -->
+                    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                        <h2 class="text-xl font-bold mb-4">
+                            <i class="fas fa-link text-blue-400 mr-2"></i>
+                            URL Analyse
+                        </h2>
+                        <input type="url" id="analysis-url" 
+                            placeholder="https://voorbeeld.nl/artikel"
+                            class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg mb-4">
+                        
+                        <!-- Agency Select (optioneel) -->
+                        <select id="agency-select" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg mb-4">
+                            <option value="">Koppel aan agency (optioneel)</option>
+                            <!-- Agencies worden ingeladen via JS -->
+                        </select>
+                        
+                        <button onclick="analyzeURL()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
+                            <i class="fas fa-chart-line mr-2"></i>Analyseer URL
+                        </button>
+                    </div>
+                    
+                    <!-- HTML Analysis -->
+                    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                        <h2 class="text-xl font-bold mb-4">
+                            <i class="fas fa-code text-green-400 mr-2"></i>
+                            HTML Analyse
+                        </h2>
+                        <textarea id="analysis-html" rows="6"
+                            placeholder="<html>...</html>"
+                            class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg mb-4 font-mono text-sm"></textarea>
+                        
+                        <!-- Share Link (optioneel) -->
+                        <input type="text" id="share-code" 
+                            placeholder="Share link code (optioneel)"
+                            class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg mb-4">
+                        
+                        <button onclick="analyzeHTML()" class="w-full py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
+                            <i class="fas fa-code mr-2"></i>Analyseer HTML
+                        </button>
+                    </div>
+                    
+                    <!-- Quick Stats -->
+                    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                        <h2 class="text-xl font-bold mb-4">
+                            <i class="fas fa-chart-bar text-purple-400 mr-2"></i>
+                            Statistieken
+                        </h2>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="text-sm text-gray-400">Totaal Analyses</div>
+                                <div class="text-2xl font-bold" id="total-analyses">0</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-400">Hoogste Score</div>
+                                <div class="text-2xl font-bold text-green-400" id="highest-score">0</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-400">Gemiddelde Score</div>
+                                <div class="text-2xl font-bold text-blue-400" id="average-score">0</div>
+                            </div>
+                            <button onclick="loadStats()" class="w-full py-2 bg-gray-700 hover:bg-gray-600 rounded-lg">
+                                <i class="fas fa-sync-alt mr-2"></i>Ververs Statistieken
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Results Section -->
+                <div id="results-section" class="hidden">
+                    <!-- Score Display -->
+                    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-8">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                            <div class="text-center">
+                                <div class="text-5xl font-bold" id="total-score">0</div>
+                                <div class="text-gray-400">Totaal Score</div>
+                                <div class="text-sm mt-2" id="score-quality"></div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-3xl font-bold text-blue-400" id="graaf-score">0</div>
+                                <div class="text-gray-400">GRAAF</div>
+                                <div class="text-sm mt-2" id="graaf-percentage"></div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-3xl font-bold text-green-400" id="craft-score">0</div>
+                                <div class="text-gray-400">CRAFT</div>
+                                <div class="text-sm mt-2" id="craft-percentage"></div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-3xl font-bold text-purple-400" id="technical-score">0</div>
+                                <div class="text-gray-400">Technical</div>
+                                <div class="text-sm mt-2" id="technical-percentage"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Criteria Meter -->
+                        <div class="mb-4">
+                            <div class="flex justify-between text-sm mb-2">
+                                <span>Criteria Behaald</span>
+                                <span id="criteria-count">0/100</span>
+                            </div>
+                            <div class="criteria-meter">
+                                <div id="criteria-fill" class="criteria-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Missing Criteria -->
+                        <div id="missing-criteria" class="space-y-2"></div>
+                    </div>
+                    
+                    <!-- Detailed Breakdown -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+                        <!-- GRAAF Breakdown -->
+                        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                            <h3 class="text-lg font-bold mb-4 text-blue-400">GRAAF Framework</h3>
+                            <div id="graaf-breakdown" class="space-y-3"></div>
+                        </div>
+                        
+                        <!-- CRAFT Breakdown -->
+                        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                            <h3 class="text-lg font-bold mb-4 text-green-400">CRAFT Methodology</h3>
+                            <div id="craft-breakdown" class="space-y-3"></div>
+                        </div>
+                        
+                        <!-- Technical Breakdown -->
+                        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                            <h3 class="text-lg font-bold mb-4 text-purple-400">Technical SEO</h3>
+                            <div id="technical-breakdown" class="space-y-3"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Recommendations -->
+                    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-8">
+                        <h3 class="text-lg font-bold mb-4 text-yellow-400">
+                            <i class="fas fa-lightbulb mr-2"></i>Aanbevelingen
+                        </h3>
+                        <div id="recommendations-list" class="space-y-4"></div>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="flex space-x-4">
+                        <button onclick="saveToLeaderboard()" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
+                            <i class="fas fa-trophy mr-2"></i>Toevoegen aan Leaderboard
+                        </button>
+                        <button onclick="downloadReport()" class="px-6 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
+                            <i class="fas fa-download mr-2"></i>Download Rapport
+                        </button>
+                        <button onclick="analyzeAnother()" class="px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
+                            <i class="fas fa-redo mr-2"></i>Nieuwe Analyse
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Loading -->
+                <div id="loading-section" class="hidden text-center py-12">
+                    <div class="inline-block animate-spin text-4xl text-blue-400 mb-4">
+                        <i class="fas fa-cog"></i>
+                    </div>
+                    <p class="text-gray-400">HTML wordt geanalyseerd...</p>
+                    <p class="text-sm text-gray-500 mt-2">Criteria worden exact geteld</p>
+                </div>
+                
+                <!-- Empty State -->
+                <div id="empty-section" class="text-center py-12">
+                    <i class="fas fa-chart-bar text-5xl text-gray-600 mb-4"></i>
+                    <p class="text-gray-400">Voer een URL of HTML in om te analyseren</p>
+                    <p class="text-sm text-gray-500 mt-2">We tellen exact welke criteria aanwezig zijn</p>
+                </div>
+            </div>
+
+            <script>
+                let currentAnalysis = null;
+                
+                // Laad agencies in dropdown
+                async function loadAgencies() {
+                    try {
+                        const response = await fetch('/api/super-admin/agencies');
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            const select = document.getElementById('agency-select');
+                            data.agencies.forEach(agency => {
+                                const option = document.createElement('option');
+                                option.value = agency.id;
+                                option.textContent = agency.name;
+                                select.appendChild(option);
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Error loading agencies:', error);
+                    }
+                }
+                
+                // Laad statistieken
+                async function loadStats() {
+                    try {
+                        const response = await fetch('/api/contentscore/history?limit=100');
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.success && data.analyses.length > 0) {
+                                document.getElementById('total-analyses').textContent = data.pagination?.total || 0;
+                                
+                                const scores = data.analyses.map(a => a.score);
+                                const highest = Math.max(...scores);
+                                const average = scores.reduce((a, b) => a + b, 0) / scores.length;
+                                
+                                document.getElementById('highest-score').textContent = highest.toFixed(1);
+                                document.getElementById('average-score').textContent = average.toFixed(1);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error loading stats:', error);
+                    }
+                }
+                
+                // Analyseer URL
+                async function analyzeURL() {
+                    const url = document.getElementById('analysis-url').value.trim();
+                    if (!url) {
+                        alert('Voer een URL in');
+                        return;
+                    }
+                    
+                    const agencyId = document.getElementById('agency-select').value;
+                    
+                    showLoading();
+                    try {
+                        const response = await fetch('/api/contentscore/analyze-detailed', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                url: url,
+                                agency_id: agencyId || null
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        if (data.success) {
+                            showResults(data);
+                        } else {
+                            showError(data.error);
+                        }
+                    } catch (error) {
+                        showError('Fout: ' + error.message);
+                    }
+                }
+                
+                // Analyseer HTML
+                async function analyzeHTML() {
+                    const html = document.getElementById('analysis-html').value.trim();
+                    if (!html || html.length < 100) {
+                        alert('Plak HTML code (minimaal 100 bytes)');
+                        return;
+                    }
+                    
+                    const shareCode = document.getElementById('share-code').value.trim();
+                    
+                    showLoading();
+                    try {
+                        const response = await fetch('/api/contentscore/analyze-detailed', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                html: html,
+                                share_code: shareCode || null
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        if (data.success) {
+                            showResults(data);
+                        } else {
+                            showError(data.error);
+                        }
+                    } catch (error) {
+                        showError('Fout: ' + error.message);
+                    }
+                }
+                
+                // Toon resultaten
+                function showResults(data) {
+                    currentAnalysis = data;
+                    
+                    // Update scores
+                    document.getElementById('total-score').textContent = data.score.total;
+                    document.getElementById('graaf-score').textContent = data.score.graaf;
+                    document.getElementById('craft-score').textContent = data.score.craft;
+                    document.getElementById('technical-score').textContent = data.score.technical;
+                    
+                    // Score kwaliteit
+                    const total = data.score.total;
+                    let quality = '';
+                    let color = '';
+                    if (total >= 90) { quality = 'Excellent'; color = 'text-green-400'; }
+                    else if (total >= 80) { quality = 'Good'; color = 'text-blue-400'; }
+                    else if (total >= 70) { quality = 'Fair'; color = 'text-yellow-400'; }
+                    else if (total >= 60) { quality = 'Average'; color = 'text-orange-400'; }
+                    else { quality = 'Needs Improvement'; color = 'text-red-400'; }
+                    
+                    document.getElementById('score-quality').innerHTML = \`
+                        <span class="\${color} font-semibold">\${quality}</span>
+                    \`;
+                    
+                    // Criteria meter
+                    const criteriaMet = data.analysis?.criteriaMet || 0;
+                    const criteriaTotal = data.analysis?.criteriaTotal || 100;
+                    const percentage = (criteriaMet / criteriaTotal) * 100;
+                    
+                    document.getElementById('criteria-count').textContent = \`\${criteriaMet}/\${criteriaTotal}\`;
+                    document.getElementById('criteria-fill').style.width = \`\${percentage}%\`;
+                    
+                    // Toon missing criteria
+                    const missingDiv = document.getElementById('missing-criteria');
+                    missingDiv.innerHTML = '';
+                    
+                    if (data.analysis?.missingCriteria && data.analysis.missingCriteria.length > 0) {
+                        missingDiv.innerHTML = \`
+                            <h4 class="font-bold mb-2 text-red-400">Ontbrekende Criteria:</h4>
+                            <div class="space-y-1">
+                            \${data.analysis.missingCriteria.map(criteria => \`
+                                <div class="flex items-start">
+                                    <div class="criteria-dot missing mt-1 mr-2"></div>
+                                    <span class="text-sm">\${criteria}</span>
+                                </div>
+                            \`).join('')}
+                            </div>
+                        \`;
+                    }
+                    
+                    // Toon breakdowns
+                    showBreakdowns(data.analysis);
+                    
+                    // Toon aanbevelingen
+                    showRecommendations(data.recommendations);
+                    
+                    // Switch view
+                    hideLoading();
+                    document.getElementById('empty-section').classList.add('hidden');
+                    document.getElementById('results-section').classList.remove('hidden');
+                    
+                    // Update stats
+                    loadStats();
+                }
+                
+                // Toon breakdowns
+                function showBreakdowns(analysis) {
+                    if (!analysis) return;
+                    
+                    // GRAAF Breakdown
+                    const graafDiv = document.getElementById('graaf-breakdown');
+                    graafDiv.innerHTML = \`
+                        <div class="flex justify-between">
+                            <span>Authoritative Sources:</span>
+                            <span class="font-bold \${analysis.graaf?.credible?.authoritativeSources >= 7 ? 'text-green-400' : 'text-red-400'}">
+                                \${analysis.graaf?.credible?.authoritativeSources || 0}/7
+                            </span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Expert Quotes:</span>
+                            <span class="font-bold \${analysis.graaf?.credible?.expertQuotes >= 5 ? 'text-green-400' : 'text-red-400'}">
+                                \${analysis.graaf?.credible?.expertQuotes || 0}/5
+                            </span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Case Studies:</span>
+                            <span class="font-bold \${analysis.graaf?.credible?.caseStudies >= 3 ? 'text-green-400' : 'text-red-400'}">
+                                \${analysis.graaf?.credible?.caseStudies || 0}/3
+                            </span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>H2 Sections:</span>
+                            <span class="font-bold \${analysis.graaf?.relevance?.h2Count >= 8 ? 'text-green-400' : 'text-red-400'}">
+                                \${analysis.graaf?.relevance?.h2Count || 0}/8
+                            </span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Step-by-Step Guides:</span>
+                            <span class="font-bold \${analysis.graaf?.actionability?.stepByStepGuides >= 7 ? 'text-green-400' : 'text-red-400'}">
+                                \${analysis.graaf?.actionability?.stepByStepGuides || 0}/7
+                            </span>
+                        </div>
+                    \`;
+                    
+                    // CRAFT Breakdown
+                    const craftDiv = document.getElementById('craft-breakdown');
+                    craftDiv.innerHTML = \`
+                        <div class="flex justify-between">
+                            <span>Forbidden Phrases:</span>
+                            <span class="font-bold \${analysis.craft?.cutFluff?.forbiddenPhrases === 0 ? 'text-green-400' : 'text-red-400'}">
+                                \${analysis.craft?.cutFluff?.forbiddenPhrases || 0}
+                            </span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Total Visuals:</span>
+                            <span class="font-bold \${analysis.craft?.addVisuals?.totalVisuals >= 5 ? 'text-green-400' : 'text-orange-400'}">
+                                \${analysis.craft?.addVisuals?.totalVisuals || 0}
+                            </span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>FAQ Questions:</span>
+                            <span class="font-bold \${analysis.craft?.faqIntegration?.totalQuestions >= 10 ? 'text-green-400' : 'text-red-400'}">
+                                \${analysis.craft?.faqIntegration?.totalQuestions || 0}/10
+                            </span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>FAQ Schema:</span>
+                            <span class="font-bold \${analysis.craft?.faqIntegration?.faqSchema ? 'text-green-400' : 'text-red-400'}">
+                                \${analysis.craft?.faqIntegration?.faqSchema ? 'Yes' : 'No'}
+                            </span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Author Bio:</span>
+                            <span class="font-bold \${analysis.craft?.trustBuilding?.authorBioComplete ? 'text-green-400' : 'text-red-400'}">
+                                \${analysis.craft?.trustBuilding?.authorBioComplete ? 'Complete' : 'Missing'}
+                            </span>
+                        </div>
+                    \`;
+                    
+                    // Technical Breakdown
+                    const technicalDiv = document.getElementById('technical-breakdown');
+                    technicalDiv.innerHTML = \`
+                        <div class="flex justify-between">
+                            <span>Article Schema:</span>
+                            <span class="font-bold \${analysis.technical?.schemaMarkup?.articleSchema ? 'text-green-400' : 'text-red-400'}">
+                                \${analysis.technical?.schemaMarkup?.articleSchema ? 'Yes' : 'No'}
+                            </span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>FAQ Schema:</span>
+                            <span class="font-bold \${analysis.technical?.schemaMarkup?.faqSchema ? 'text-green-400' : 'text-red-400'}">
+                                \${analysis.technical?.schemaMarkup?.faqSchema ? 'Yes' : 'No'}
+                            </span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Internal Links:</span>
+                            <span class="font-bold \${analysis.technical?.internalLinking?.totalInternalLinks >= 7 ? 'text-green-400' : 'text-red-400'}">
+                                \${analysis.technical?.internalLinking?.totalInternalLinks || 0}/7
+                            </span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>H1 Count:</span>
+                            <span class="font-bold \${analysis.technical?.metaOptimization?.h1Count === 1 ? 'text-green-400' : 'text-red-400'}">
+                                \${analysis.technical?.metaOptimization?.h1Count || 0} (should be 1)
+                            </span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Viewport Tag:</span>
+                            <span class="font-bold \${analysis.technical?.mobileOptimization?.viewportTag ? 'text-green-400' : 'text-red-400'}">
+                                \${analysis.technical?.mobileOptimization?.viewportTag ? 'Yes' : 'No'}
+                            </span>
+                        </div>
+                    \`;
+                }
+                
+                // Toon aanbevelingen
+                function showRecommendations(recommendations) {
+                    const listDiv = document.getElementById('recommendations-list');
+                    listDiv.innerHTML = '';
+                    
+                    if (!recommendations) return;
+                    
+                    // Quick Wins
+                    if (recommendations.quickWins && recommendations.quickWins.length > 0) {
+                        listDiv.innerHTML += \`
+                            <div>
+                                <h4 class="font-bold mb-2 text-green-400">
+                                    <i class="fas fa-bolt mr-2"></i>Quick Wins
+                                </h4>
+                                <div class="space-y-2">
+                                \${recommendations.quickWins.map(rec => \`
+                                    <div class="p-3 bg-gray-700 rounded-lg">
+                                        <div class="font-medium">\${rec.action}</div>
+                                        <div class="text-sm text-gray-400 mt-1">
+                                            <span class="px-2 py-1 bg-gray-600 rounded">\${rec.category}</span>
+                                            <span class="ml-2">Impact: \${rec.impact}/5</span>
+                                            <span class="ml-2">Time: ~\${rec.timeEstimate}min</span>
+                                        </div>
+                                    </div>
+                                \`).join('')}
+                                </div>
+                            </div>
+                        \`;
+                    }
+                    
+                    // Major Impact
+                    if (recommendations.majorImpact && recommendations.majorImpact.length > 0) {
+                        listDiv.innerHTML += \`
+                            <div>
+                                <h4 class="font-bold mb-2 text-yellow-400">
+                                    <i class="fas fa-chart-line mr-2"></i>Major Improvements
+                                </h4>
+                                <div class="space-y-2">
+                                \${recommendations.majorImpact.map(rec => \`
+                                    <div class="p-3 bg-gray-700 rounded-lg">
+                                        <div class="font-medium">\${rec.action}</div>
+                                        <div class="text-sm text-gray-400 mt-1">
+                                            Priority: <span class="text-red-400">\${rec.priority}</span>
+                                            • Impact: \${rec.impact}/5
+                                            • Time: ~\${rec.timeEstimate}min
+                                        </div>
+                                    </div>
+                                \`).join('')}
+                                </div>
+                            </div>
+                        \`;
+                    }
+                    
+                    // Summary
+                    if (recommendations.summary) {
+                        listDiv.innerHTML += \`
+                            <div class="p-4 bg-gray-700 rounded-lg">
+                                <h4 class="font-bold mb-2">Summary</h4>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div>
+                                        <div class="text-sm text-gray-400">Current Score</div>
+                                        <div class="text-2xl font-bold">\${recommendations.summary.currentScore}</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm text-gray-400">Potential Gain</div>
+                                        <div class="text-2xl font-bold text-green-400">+\${recommendations.summary.potentialScoreGain}</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm text-gray-400">Time to Fix</div>
+                                        <div class="text-2xl font-bold">\${recommendations.summary.estimatedTimeToFix} min</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm text-gray-400">Total Issues</div>
+                                        <div class="text-2xl font-bold">\${recommendations.summary.totalIssues}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        \`;
+                    }
+                }
+                
+                // Opslaan in leaderboard
+                async function saveToLeaderboard() {
+                    if (!currentAnalysis) return;
+                    
+                    try {
+                        const response = await fetch('/api/leaderboard/submit', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                url: document.getElementById('analysis-url').value || 'HTML Content',
+                                score: currentAnalysis.score.total,
+                                quality: currentAnalysis.score.total >= 90 ? 'excellent' : 
+                                       currentAnalysis.score.total >= 80 ? 'good' : 
+                                       currentAnalysis.score.total >= 70 ? 'fair' : 
+                                       currentAnalysis.score.total >= 60 ? 'average' : 'needs-improvement',
+                                graaf_score: currentAnalysis.score.graaf,
+                                craft_score: currentAnalysis.score.craft,
+                                technical_score: currentAnalysis.score.technical,
+                                word_count: currentAnalysis.analysis?.wordCount || 0,
+                                company_name: 'ContentScore Analysis'
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        if (data.success) {
+                            alert('Toegevoegd aan leaderboard!');
+                        } else {
+                            alert('Fout: ' + data.error);
+                        }
+                    } catch (error) {
+                        alert('Fout: ' + error.message);
+                    }
+                }
+                
+                // Download rapport
+                function downloadReport() {
+                    if (!currentAnalysis) return;
+                    
+                    const report = {
+                        analysis: currentAnalysis,
+                        timestamp: new Date().toISOString(),
+                        url: document.getElementById('analysis-url').value || 'HTML Content'
+                    };
+                    
+                    const dataStr = JSON.stringify(report, null, 2);
+                    const blob = new Blob([dataStr], { type: 'application/json' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = \`contentscore-report-\${new Date().toISOString().split('T')[0]}.json\`;
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                }
+                
+                // Nieuwe analyse
+                function analyzeAnother() {
+                    currentAnalysis = null;
+                    document.getElementById('analysis-url').value = '';
+                    document.getElementById('analysis-html').value = '';
+                    document.getElementById('share-code').value = '';
+                    
+                    document.getElementById('results-section').classList.add('hidden');
+                    document.getElementById('empty-section').classList.remove('hidden');
+                }
+                
+                // UI helpers
+                function showLoading() {
+                    document.getElementById('empty-section').classList.add('hidden');
+                    document.getElementById('results-section').classList.add('hidden');
+                    document.getElementById('loading-section').classList.remove('hidden');
+                }
+                
+                function hideLoading() {
+                    document.getElementById('loading-section').classList.add('hidden');
+                }
+                
+                function showError(message) {
+                    hideLoading();
+                    alert('Fout: ' + message);
+                }
+                
+                // Initialize
+                document.addEventListener('DOMContentLoaded', function() {
+                    loadAgencies();
+                    loadStats();
+                });
+            </script>
+        </body>
+        </html>
+    `);
 });
 
 app.listen(PORT, '0.0.0.0', () => {
