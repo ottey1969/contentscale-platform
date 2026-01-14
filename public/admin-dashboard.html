@@ -1267,7 +1267,7 @@ async function submitAddAdmin() {
                 <td class="px-4 py-3 text-blue-400">${client.url}</td>
                 <td class="px-4 py-3">${client.agency_name || '-'}</td>
                 <td class="px-4 py-3">${client.scan_count || 0}</td>
-                <td class="px-4 py-3">${client.last_scan_at ? new Date(client.last_scan_at).toLocaleDateString() : 'Never'}</td>
+                <td class="px-4 py-3">${client.created_at ? new Date(client.created_at).toLocaleDateString() : 'Never'}</td>
                 <td class="px-4 py-3">
                   <button onclick="deleteClient(${client.id})" class="text-red-400 hover:text-red-300">🗑️ Delete</button>
                 </td>
