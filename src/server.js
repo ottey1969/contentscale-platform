@@ -118,15 +118,114 @@ app.get('/api/setup/create-admin', async (req, res) => {
     const hash = await bcrypt.hash('admin123', 10);
     const adminId = 'ADMIN-' + crypto.randomBytes(8).toString('hex').toUpperCase();
     
-    // ✅ FIX: First ensure table exists with correct structure
+    // ✅ FIX: Ensure all tables exist with correct structure
     await pool.query(`
       CREATE TABLE IF NOT EXISTS super_admins (
-        id SERIAL PRIMARY KEY,
-        admin_id VARCHAR(50) UNIQUE NOT NULL,
-        username VARCHAR(50) UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
+          id SERIAL PRIMARY KEY,
+          admin_id VARCHAR(50) UNIQUE NOT NULL,
+          username VARCHAR(50) UNIQUE NOT NULL,
+          password_hash TEXT NOT NULL,
+          created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS admins (
+          id SERIAL PRIMARY KEY,
+          username VARCHAR(50) UNIQUE NOT NULL,
+          password_hash TEXT NOT NULL,
+          role VARCHAR(50) NOT NULL,
+          full_name VARCHAR(255),
+          email VARCHAR(255),
+          is_active BOOLEAN DEFAULT true,
+          created_at TIMESTAMP DEFAULT NOW(),
+          last_login TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS agencies (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          domain VARCHAR(255) UNIQUE NOT NULL,
+          country VARCHAR(50) NOT NULL,
+          v52_score DECIMAL(5,2),
+          rank INTEGER,
+          last_scanned TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          email VARCHAR(255),
+          admin_key VARCHAR(255) UNIQUE,
+          plan VARCHAR(50) DEFAULT 'starter',
+          scans_limit INTEGER DEFAULT 100,
+          scans_used INTEGER DEFAULT 0,
+          subscription_expires TIMESTAMP,
+          is_active BOOLEAN DEFAULT true,
+          enabled BOOLEAN DEFAULT true,
+          whitelabel_enabled BOOLEAN DEFAULT false,
+          whitelabel_name VARCHAR(255),
+          whitelabel_logo TEXT,
+          whitelabel_primary_color VARCHAR(7),
+          custom_domain VARCHAR(255),
+          notes TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS clients (
+          id SERIAL PRIMARY KEY,
+          url TEXT NOT NULL,
+          agency_id INTEGER REFERENCES agencies(id) ON DELETE CASCADE,
+          created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS scans (
+          id SERIAL PRIMARY KEY,
+          url TEXT NOT NULL,
+          score DECIMAL(5,2),
+          quality VARCHAR(50),
+          graaf_score DECIMAL(5,2),
+          craft_score DECIMAL(5,2),
+          technical_score DECIMAL(5,2),
+          breakdown JSONB,
+          recommendations JSONB,
+          word_count INTEGER,
+          scan_type VARCHAR(50),
+          share_key VARCHAR(255),
+          agency_id INTEGER REFERENCES agencies(id) ON DELETE SET NULL,
+          client_id INTEGER REFERENCES clients(id) ON DELETE CASCADE,
+          scan_data JSONB,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS share_links (
+          id SERIAL PRIMARY KEY,
+          token VARCHAR(255) UNIQUE NOT NULL,
+          name VARCHAR(255) NOT NULL,
+          client_name VARCHAR(255),
+          company VARCHAR(255),
+          max_uses INTEGER DEFAULT 30,
+          current_uses INTEGER DEFAULT 0,
+          expires_at TIMESTAMP,
+          is_active BOOLEAN DEFAULT true,
+          allowed_features JSONB,
+          agency_id INTEGER REFERENCES agencies(id) ON DELETE SET NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS public_leaderboard (
+          id SERIAL PRIMARY KEY,
+          url TEXT NOT NULL,
+          url_hash VARCHAR(32) UNIQUE,
+          score DECIMAL(5,2),
+          quality VARCHAR(50),
+          graaf_score DECIMAL(5,2),
+          craft_score DECIMAL(5,2),
+          technical_score DECIMAL(5,2),
+          word_count INTEGER,
+          company_name VARCHAR(255),
+          agency_id INTEGER REFERENCES agencies(id) ON DELETE SET NULL,
+          agency_name VARCHAR(255),
+          category VARCHAR(50),
+          country VARCHAR(50),
+          language VARCHAR(50),
+          is_public BOOLEAN DEFAULT true,
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+      );
     `);
     
     // Delete old entries
@@ -229,7 +328,8 @@ app.get('/api/setup/create-admin', async (req, res) => {
       <html>
         <body style="font-family: Arial; padding: 40px; text-align: center; background: #1a1a1a; color: white;">
           <h1 style="color: red;">❌ Setup Failed</h1>
-          <p>${error.message}</p>
+          <p>${error.message || 'Unknown error'}</p>
+          <pre style="text-align: left; background: #333; padding: 10px; border-radius: 5px; overflow: auto;">${error.stack}</pre>
           <a href="/admin" style="background: blue; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px;">Try Admin Panel</a>
         </body>
       </html>
@@ -321,125 +421,8 @@ app.post('/api/setup/verify-admin', async (req, res) => {
   }
 });
 
-function generateMockRecommendations(score) {
-  const recommendations = {
-    quickWins: [],
-    majorImpact: [],
-    advanced: [],
-    summary: {
-      totalIssues: 0,
-      estimatedTimeToFix: 0,
-      potentialScoreGain: 100 - score,
-      currentScore: score,
-      targetScore: 100
-    }
-  };
-  
-  if (score < 80) {
-    recommendations.quickWins.push(
-      {
-        category: 'GRAAF - Freshness',
-        issue: 'Missing publication date',
-        action: 'Add publication date and last updated date',
-        details: ['Add <time> tag with datetime attribute', 'Show "Published: Month DD, YYYY"', 'Add "Last Updated" timestamp'],
-        impact: 3,
-        timeEstimate: 5,
-        priority: 'high'
-      },
-      {
-        category: 'CRAFT - Review & Optimize',
-        issue: 'Meta title needs optimization',
-        action: 'Adjust title to 50-60 characters with keyword',
-        details: ['Include primary keyword at start', 'Add year (2025) for freshness', 'Keep under 60 characters'],
-        impact: 3,
-        timeEstimate: 10,
-        priority: 'high'
-      },
-      {
-        category: 'Technical SEO',
-        issue: 'Not enough internal links',
-        action: 'Add 5-7 contextual internal links',
-        details: ['Link to related articles', 'Use descriptive anchor text', 'Distribute throughout content'],
-        impact: 2,
-        timeEstimate: 15,
-        priority: 'medium'
-      }
-    );
-  }
-  
-  if (score < 90) {
-    recommendations.majorImpact.push(
-      {
-        category: 'GRAAF - Credibility',
-        issue: 'Missing expert quotes (need 3+)',
-        action: 'Add 3 expert quotes with full credentials',
-        details: ['Find industry experts or academics', 'Include: Name, title, organization', 'Format: "Quote" — Name, Title, Org', 'Link to LinkedIn profiles when possible'],
-        impact: 4,
-        timeEstimate: 60,
-        priority: 'high'
-      },
-      {
-        category: 'GRAAF - Actionability',
-        issue: 'Need more step-by-step guides (5+ required)',
-        action: 'Create 3 detailed step-by-step tutorials',
-        details: ['Use numbered lists', 'Each step should be specific and actionable', 'Include expected outcomes', 'Add time estimates per step'],
-        impact: 3,
-        timeEstimate: 45,
-        priority: 'high'
-      },
-      {
-        category: 'CRAFT - FAQ Integration',
-        issue: 'Need 8+ FAQ questions',
-        action: 'Add 8 frequently asked questions with answers',
-        details: ['Research "People Also Ask" on Google', 'Cover What, Why, How, When questions', 'Answers should be 40-150 words', 'Add FAQ schema markup'],
-        impact: 2,
-        timeEstimate: 30,
-        priority: 'medium'
-      }
-    );
-  }
-  
-  if (score < 95) {
-    recommendations.advanced.push(
-      {
-        category: 'GRAAF - Accuracy',
-        issue: 'Missing case studies (2 required)',
-        action: 'Add 2 detailed case studies with results',
-        details: ['Include company name and industry', 'Show before/after metrics', 'Add specific timeframes', 'List 3 key learnings'],
-        impact: 3,
-        timeEstimate: 90,
-        priority: 'medium'
-      },
-      {
-        category: 'CRAFT - Add Visuals',
-        issue: 'Could add more images',
-        action: 'Add 3-5 more images with alt text',
-        details: ['Target: 1 image per 350 words', 'Use screenshots, diagrams, charts', 'Add descriptive alt text (50-100 chars)', 'Optimize to WebP format <200KB'],
-        impact: 2,
-        timeEstimate: 40,
-        priority: 'low'
-      }
-    );
-  }
-  
-  recommendations.summary.totalIssues = 
-    recommendations.quickWins.length + 
-    recommendations.majorImpact.length + 
-    recommendations.advanced.length;
-  
-  recommendations.summary.estimatedTimeToFix = 
-    recommendations.quickWins.reduce((sum, r) => sum + r.timeEstimate, 0) +
-    recommendations.majorImpact.reduce((sum, r) => sum + r.timeEstimate, 0) +
-    recommendations.advanced.reduce((sum, r) => sum + r.timeEstimate, 0);
-  
-  return recommendations;
-}
 // ==========================================
-// 🔧 ALL ADMIN ENDPOINTS - NOW WORKING!
-// ==========================================
-
-// ==========================
-// 🔧 ALL ADMIN ENDPOINTS - NOW WORKING!
+// 🔧 ALL ADMIN ENDPOINTS
 // ==========================================
 
 app.get('/api/admin/stats', authenticateSuperAdmin, async (req, res) => {
@@ -504,7 +487,7 @@ app.delete('/api/admins/:id', authenticateSuperAdmin, async (req, res) => {
 app.get('/api/super-admin/agencies', authenticateSuperAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT a.id, a.name, a.domain, a.country, a.plan, a.is_active,
+      SELECT a.*, 
              COUNT(DISTINCT c.id)::integer as client_count,
              COUNT(DISTINCT s.id)::integer as total_scans
       FROM agencies a
@@ -548,7 +531,7 @@ app.delete('/api/agencies/:id', authenticateSuperAdmin, async (req, res) => {
 app.get('/api/admin/clients', authenticateSuperAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT c.id, c.url, c.agency_id, a.name as agency_name, COUNT(s.id)::integer as scan_count
+      SELECT c.id, c.url, c.agency_id, a.name as agency_name, COUNT(s.id)::integer as scan_count, c.created_at
       FROM clients c
       LEFT JOIN agencies a ON a.id = c.agency_id
       LEFT JOIN scans s ON s.client_id = c.id
@@ -681,6 +664,26 @@ app.get('/api/admin/leaderboard', authenticateSuperAdmin, async (req, res) => {
   }
 });
 
+app.get('/api/admin/leaderboard/search', authenticateSuperAdmin, async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) return res.json({ success: true, entries: [] });
+    
+    const result = await pool.query(`
+      SELECT id, url, score, company_name, agency_name, country 
+      FROM public_leaderboard 
+      WHERE url ILIKE $1 OR company_name ILIKE $1 OR agency_name ILIKE $1
+      ORDER BY score DESC
+    `, [`%${q}%`]);
+    
+    const entries = result.rows.map((e, i) => ({ ...e, rank: i + 1 }));
+    res.json({ success: true, entries });
+  } catch (error) {
+    console.error('[SEARCH ERROR]', error);
+    res.status(500).json({ success: false, error: 'Search failed' });
+  }
+});
+
 app.delete('/api/admin/leaderboard/:id', authenticateSuperAdmin, async (req, res) => {
   try {
     await pool.query('DELETE FROM public_leaderboard WHERE id = $1', [req.params.id]);
@@ -690,14 +693,11 @@ app.delete('/api/admin/leaderboard/:id', authenticateSuperAdmin, async (req, res
     res.status(500).json({ success: false, error: 'Failed to delete' });
   }
 });
-// ==========================================
-// ✅ NEW: SCAN ALL AGENCIES ENDPOINT
-// ==========================================
+
 app.post('/api/admin/scan-all-agencies', authenticateSuperAdmin, async (req, res) => {
   try {
     console.log('[SCAN ALL] Starting bulk agency scan...');
     
-    // Get all active agencies
     const agenciesResult = await pool.query(
       'SELECT id, name, domain FROM agencies WHERE is_active = true'
     );
@@ -708,26 +708,20 @@ app.post('/api/admin/scan-all-agencies', authenticateSuperAdmin, async (req, res
     let successCount = 0;
     let failCount = 0;
     
-    // Scan each agency
     for (const agency of agencies) {
       try {
-        const url = agency.domain.startsWith('http') 
-          ? agency.domain 
-          : `https://${agency.domain}`;
-        
+        const url = agency.domain.startsWith('http') ? agency.domain : `https://${agency.domain}`;
         console.log(`[SCAN ALL] Scanning: ${url}`);
         
-        // Perform scan
-        const { performFullScan } = require('./scanner');
         const scanResult = await performFullScan(url);
         
         if (scanResult.success) {
-          // Save to leaderboard
+          const urlHash = crypto.createHash('md5').update(url.toLowerCase().trim()).digest('hex');
           await pool.query(`
-            INSERT INTO public_leaderboard (url, score, quality, company_name, agency_name, country, 
+            INSERT INTO public_leaderboard (url, url_hash, score, quality, company_name, agency_name, country, 
               graaf_score, craft_score, technical_score, word_count, is_public, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, NOW(), NOW())
-            ON CONFLICT (url) DO UPDATE SET
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true, NOW(), NOW())
+            ON CONFLICT (url_hash) DO UPDATE SET
               score = EXCLUDED.score,
               quality = EXCLUDED.quality,
               graaf_score = EXCLUDED.graaf_score,
@@ -736,12 +730,7 @@ app.post('/api/admin/scan-all-agencies', authenticateSuperAdmin, async (req, res
               word_count = EXCLUDED.word_count,
               updated_at = NOW()
           `, [
-            url,
-            scanResult.score,
-            scanResult.quality,
-            agency.name,
-            agency.name,
-            'NL', // Default country
+            url, urlHash, scanResult.score, scanResult.quality, agency.name, agency.name, 'NL',
             scanResult.breakdown?.graaf?.total || 0,
             scanResult.breakdown?.craft?.total || 0,
             scanResult.breakdown?.technical?.total || 0,
@@ -755,24 +744,14 @@ app.post('/api/admin/scan-all-agencies', authenticateSuperAdmin, async (req, res
           console.log(`[SCAN ALL] ❌ Failed: ${url}`);
         }
         
-        // Rate limit: wait 2 seconds between scans
         await new Promise(resolve => setTimeout(resolve, 2000));
-        
       } catch (error) {
         failCount++;
         console.error(`[SCAN ALL] Error scanning ${agency.domain}:`, error.message);
       }
     }
     
-    console.log(`[SCAN ALL] Complete. Success: ${successCount}, Failed: ${failCount}`);
-    
-    res.json({ 
-      success: true, 
-      successCount, 
-      failCount,
-      total: agencies.length
-    });
-    
+    res.json({ success: true, successCount, failCount, total: agencies.length });
   } catch (error) {
     console.error('[SCAN ALL ERROR]', error);
     res.status(500).json({ success: false, error: error.message });
@@ -780,7 +759,7 @@ app.post('/api/admin/scan-all-agencies', authenticateSuperAdmin, async (req, res
 });
 
 // ==========================================
-// PUBLIC ROUTES (NO AUTH)
+// PUBLIC ROUTES
 // ==========================================
 
 app.get('/', (req, res) => {
@@ -803,43 +782,22 @@ app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/admin-dashboard.html'));
 });
 
-app.get('/seo-contentscore', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
-});
-
-// ⭐ UPDATED: Include agency fields in leaderboard query
 app.get('/api/leaderboard', async (req, res) => {
   try {
     const { limit = 100, category = 'all', country = 'all', language = 'all' } = req.query;
-    
     let query = 'SELECT id, url, score, quality, graaf_score, craft_score, technical_score, word_count, company_name, agency_id, agency_name, category, country, language, created_at, updated_at FROM public_leaderboard WHERE is_public = true';
     const params = [];
     let paramIndex = 1;
     
-    if (category !== 'all') {
-      query += ` AND category = $${paramIndex}`;
-      params.push(category);
-      paramIndex++;
-    }
-    
-    if (country !== 'all') {
-      query += ` AND country = $${paramIndex}`;
-      params.push(country);
-      paramIndex++;
-    }
-    
-    if (language !== 'all') {
-      query += ` AND language = $${paramIndex}`;
-      params.push(language);
-      paramIndex++;
-    }
+    if (category !== 'all') { query += ` AND category = $${paramIndex}`; params.push(category); paramIndex++; }
+    if (country !== 'all') { query += ` AND country = $${paramIndex}`; params.push(country); paramIndex++; }
+    if (language !== 'all') { query += ` AND language = $${paramIndex}`; params.push(language); paramIndex++; }
     
     query += ` ORDER BY score DESC LIMIT $${paramIndex}`;
     params.push(parseInt(limit));
     
     const result = await pool.query(query, params);
     const entries = result.rows.map((entry, index) => ({ ...entry, rank: index + 1 }));
-    
     res.json({ success: true, entries });
   } catch (error) {
     console.error('[LEADERBOARD ERROR]', error);
@@ -850,14 +808,9 @@ app.get('/api/leaderboard', async (req, res) => {
 app.get('/api/leaderboard/stats', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT 
-        COUNT(*)::integer as total_entries,
-        ROUND(AVG(score))::integer as average_score,
-        MAX(score) as highest_score
-      FROM public_leaderboard 
-      WHERE is_public = true
+      SELECT COUNT(*)::integer as total_entries, ROUND(AVG(score))::integer as average_score, MAX(score) as highest_score
+      FROM public_leaderboard WHERE is_public = true
     `);
-    
     res.json({ success: true, stats: result.rows[0] });
   } catch (error) {
     console.error('[STATS ERROR]', error);
@@ -865,431 +818,110 @@ app.get('/api/leaderboard/stats', async (req, res) => {
   }
 });
 
-// ==========================================
-// 🤖 REAL SCAN - FREE ENDPOINT (FIXED!)
-// Nu slaat het op in database!
-// ==========================================
 app.post('/api/scan-free', async (req, res) => {
   try {
     const { url } = req.body;
+    if (!url) return res.status(400).json({ success: false, error: 'URL required' });
     
-    if (!url) {
-      return res.status(400).json({ success: false, error: 'URL required' });
-    }
-    
-    console.log('[SCAN-FREE] 🔍 Starting scan for:', url);
-    
-    // 1️⃣ PERFORM REAL SCAN (Puppeteer + Claude)
     const scanResult = await performFullScan(url);
+    if (!scanResult.success) return res.status(500).json({ success: false, error: scanResult.error || 'Scan failed' });
     
-    if (!scanResult.success) {
-      console.log('[SCAN-FREE] ❌ Scan failed:', scanResult.error);
-      return res.status(500).json({ 
-        success: false, 
-        error: scanResult.error || 'Scan failed' 
-      });
-    }
-    
-    console.log('[SCAN-FREE] ✅ Scan complete! Score:', scanResult.score);
-    
-    // 2️⃣ 🔥 SAVE TO DATABASE (THIS IS THE FIX!)
     try {
       await pool.query(`
-        INSERT INTO scans (
-          url, 
-          score, 
-          quality,
-          graaf_score,
-          craft_score,
-          technical_score,
-          breakdown,
-          recommendations,
-          word_count,
-          scan_type,
-          created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+        INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, breakdown, recommendations, word_count, scan_type, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
       `, [
-        scanResult.url,
-        scanResult.score,
-        scanResult.quality,
-        scanResult.breakdown.graaf.total,
-        scanResult.breakdown.craft.total,
-        scanResult.breakdown.technical.total,
-        JSON.stringify(scanResult.breakdown),
-        JSON.stringify(scanResult.recommendations),
-        scanResult.wordCount,
-        'free'
+        scanResult.url, scanResult.score, scanResult.quality,
+        scanResult.breakdown.graaf.total, scanResult.breakdown.craft.total, scanResult.breakdown.technical.total,
+        JSON.stringify(scanResult.breakdown), JSON.stringify(scanResult.recommendations), scanResult.wordCount, 'free'
       ]);
-      
-      console.log('[DATABASE] ✅ Scan saved to database!');
-      
-    } catch (dbError) {
-      console.error('[DATABASE ERROR] ❌ Failed to save scan:', dbError.message);
-      // Continue anyway - don't fail the whole scan if DB save fails
-    }
-    
-    // 3️⃣ RETURN RESULT
-    console.log('[SCAN-FREE] 🎉 Complete! Recommendations:', scanResult.recommendations.summary.totalIssues);
+    } catch (dbError) { console.error('[DATABASE ERROR]', dbError.message); }
     
     res.json(scanResult);
-    
   } catch (error) {
-    console.error('[SCAN-FREE ERROR] ❌', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Scan failed: ' + error.message 
-    });
+    console.error('[SCAN-FREE ERROR]', error);
+    res.status(500).json({ success: false, error: 'Scan failed: ' + error.message });
   }
 });
 
-// ==========================================
-// 🔒 LEADERBOARD SUBMIT - WITH SECURITY
-// ==========================================
 app.post('/api/leaderboard/submit', async (req, res) => {
   try {
     const { url, score, quality, graaf_score, craft_score, technical_score, word_count, company_name, category } = req.body;
+    if (!url || !score) return res.status(400).json({ success: false, error: 'URL and score required' });
     
-    // VALIDATION: Required fields
-    if (!url || !score) {
-      return res.status(400).json({ success: false, error: 'URL and score required' });
-    }
-    
-    // VALIDATION: URL format
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      return res.status(400).json({ success: false, error: 'Invalid URL format (must start with http:// or https://)' });
-    }
-    
-    // VALIDATION: Score range
-    if (score < 0 || score > 100) {
-      return res.status(400).json({ success: false, error: 'Score must be between 0 and 100' });
-    }
-    
-    // SECURITY: Rate limiting - 1 submission per URL per 24h per IP
     const clientIP = getClientIP(req);
     const rateLimitKey = `${url}:${clientIP}`;
     const now = Date.now();
     
-    if (submissionLimits.has(rateLimitKey)) {
-      const lastSubmit = submissionLimits.get(rateLimitKey);
-      const timeSinceLastSubmit = now - lastSubmit;
-      const hoursRemaining = Math.ceil((24 * 60 * 60 * 1000 - timeSinceLastSubmit) / (60 * 60 * 1000));
-      
-      if (timeSinceLastSubmit < 24 * 60 * 60 * 1000) {
-        console.log(`[RATE LIMIT] ⏰ Blocked submission for ${url} from ${clientIP} (${hoursRemaining}h remaining)`);
-        return res.status(429).json({ 
-          success: false, 
-          error: `Rate limit: You can only submit this URL once per day. Try again in ${hoursRemaining} hour${hoursRemaining > 1 ? 's' : ''}.`,
-          retry_after_hours: hoursRemaining
-        });
-      }
+    if (submissionLimits.has(rateLimitKey) && (now - submissionLimits.get(rateLimitKey) < 24 * 60 * 60 * 1000)) {
+      return res.status(429).json({ success: false, error: 'Rate limit: once per day per URL' });
     }
     
-    // SECURITY: Sanitize user inputs
     const sanitizedCompanyName = sanitizeInput(company_name, 100);
-    const sanitizedCategory = category && ['agency', 'saas', 'blog', 'ecommerce', 'other'].includes(category) 
-      ? category 
-      : null;
-    
-    // Generate URL hash for duplicate detection
+    const sanitizedCategory = ['agency', 'saas', 'blog', 'ecommerce', 'other'].includes(category) ? category : null;
     const urlHash = crypto.createHash('md5').update(url.toLowerCase().trim()).digest('hex');
     
-    // Check if URL already exists
-    const existing = await pool.query('SELECT id, score FROM public_leaderboard WHERE url_hash = $1', [urlHash]);
+    await pool.query(`
+      INSERT INTO public_leaderboard (url, url_hash, score, quality, graaf_score, craft_score, technical_score, word_count, company_name, category, is_public, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, NOW(), NOW())
+      ON CONFLICT (url_hash) DO UPDATE SET
+        score = EXCLUDED.score, quality = EXCLUDED.quality, graaf_score = EXCLUDED.graaf_score, craft_score = EXCLUDED.craft_score,
+        technical_score = EXCLUDED.technical_score, word_count = EXCLUDED.word_count, company_name = EXCLUDED.company_name,
+        category = EXCLUDED.category, updated_at = NOW()
+    `, [url, urlHash, score, quality, graaf_score, craft_score, technical_score, word_count, sanitizedCompanyName, sanitizedCategory]);
     
-    if (existing.rows.length > 0) {
-      // UPDATE existing entry
-      await pool.query(`
-        UPDATE public_leaderboard 
-        SET score = $1, quality = $2, graaf_score = $3, craft_score = $4, 
-            technical_score = $5, word_count = $6, company_name = $7, 
-            category = $8, updated_at = NOW()
-        WHERE url_hash = $9
-      `, [score, quality, graaf_score, craft_score, technical_score, word_count, sanitizedCompanyName, sanitizedCategory, urlHash]);
-      
-      console.log(`[LEADERBOARD] ♻️ Updated: ${url} (${score}/100) - Company: ${sanitizedCompanyName || 'N/A'} - IP: ${clientIP}`);
-    } else {
-      // INSERT new entry
-      await pool.query(`
-        INSERT INTO public_leaderboard 
-        (url, url_hash, score, quality, graaf_score, craft_score, technical_score, 
-         word_count, company_name, category, is_public, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, NOW(), NOW())
-      `, [url, urlHash, score, quality, graaf_score, craft_score, technical_score, word_count, sanitizedCompanyName, sanitizedCategory]);
-      
-      console.log(`[LEADERBOARD] ✅ New entry: ${url} (${score}/100) - Company: ${sanitizedCompanyName || 'N/A'} - IP: ${clientIP}`);
-    }
-    
-    // Update rate limit cache
     submissionLimits.set(rateLimitKey, now);
-    
     res.json({ success: true, message: 'Added to leaderboard' });
-    
   } catch (error) {
     console.error('[SUBMIT ERROR]', error);
     res.status(500).json({ success: false, error: 'Failed to submit' });
   }
 });
 
-app.post('/api/generate-content-prompt', async (req, res) => {
-  try {
-    const { url, score } = req.body;
-    
-    const prompts = [{
-      type: 'elite',
-      title: '🏆 ELITE Content Rewrite Prompt',
-      description: 'Complete rewrite for 95+ score',
-      prompt: `Rewrite this URL: ${url}\n\nCurrent score: ${score}/100\n\nCreate comprehensive 2500+ word article following GRAAF + CRAFT frameworks...`,
-      estimated_score: '95-100/100'
-    }];
-    
-    res.json({ success: true, prompts, usage_instructions: ['Copy prompt', 'Paste in Claude AI', 'Get article', 'Update page', 'Rescan'] });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to generate prompts' });
-  }
-});
-
-app.get('/scan-with-link/:code', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/share-link.html'));
-});
-
 app.get('/api/share-link/validate/:code', async (req, res) => {
   try {
     const { code } = req.params;
-    
-    const result = await pool.query(`
-      SELECT token, name as client_email, client_name, company, 
-             max_uses, current_uses, expires_at, is_active
-      FROM share_links 
-      WHERE token = $1
-    `, [code]);
-    
-    if (result.rows.length === 0) {
-      return res.json({ success: false, error: 'Invalid share link', status: 'invalid' });
-    }
-    
+    const result = await pool.query('SELECT * FROM share_links WHERE token = $1', [code]);
+    if (result.rows.length === 0) return res.json({ success: false, error: 'Invalid share link' });
     const link = result.rows[0];
-    
-    if (!link.is_active) {
-      return res.json({ success: false, error: 'Link deactivated', status: 'inactive' });
-    }
-    
-    if (new Date(link.expires_at) < new Date()) {
-      return res.json({ success: false, error: 'Link expired', status: 'expired', expires_at: link.expires_at });
-    }
-    
-    if (link.current_uses >= link.max_uses) {
-      return res.json({ success: false, error: 'Scan limit reached', status: 'limit_reached', scans_limit: link.max_uses });
-    }
-    
-    res.json({
-      success: true,
-      status: 'active',
-      client_email: link.client_email,
-      client_name: link.client_name,
-      company: link.company,
-      scans_limit: link.max_uses,
-      scans_used: link.current_uses,
-      scans_remaining: link.max_uses - link.current_uses,
-      expires_at: link.expires_at
-    });
-    
+    if (!link.is_active) return res.json({ success: false, error: 'Link deactivated' });
+    if (new Date(link.expires_at) < new Date()) return res.json({ success: false, error: 'Link expired' });
+    if (link.current_uses >= link.max_uses) return res.json({ success: false, error: 'Scan limit reached' });
+    res.json({ success: true, ...link, scans_remaining: link.max_uses - link.current_uses });
   } catch (error) {
-    console.error('[SHARE LINK VALIDATE ERROR]', error);
     res.status(500).json({ success: false, error: 'Validation failed' });
   }
 });
 
-// ==========================================
-// 🤖 REAL SCAN - SHARE LINK ENDPOINT 
-// ⭐ NOW WITH AGENCY LEADERBOARD INTEGRATION!
-// ==========================================
 app.post('/api/share-link/scan', async (req, res) => {
   try {
     const { share_code, url } = req.body;
+    if (!share_code || !url) return res.status(400).json({ success: false, error: 'Share code and URL required' });
     
-    if (!share_code || !url) {
-      return res.status(400).json({ success: false, error: 'Share code and URL required' });
-    }
-    
-    console.log('[SHARE LINK SCAN] 🔍 Code:', share_code, 'URL:', url);
-    
-    // 1️⃣ VALIDATE SHARE LINK & GET AGENCY INFO
-    const linkResult = await pool.query(`
-      SELECT sl.token, sl.max_uses, sl.current_uses, sl.expires_at, sl.is_active,
-             sl.agency_id, sl.client_name, sl.company, a.name as agency_name
-      FROM share_links sl
-      LEFT JOIN agencies a ON a.id = sl.agency_id
-      WHERE sl.token = $1
-    `, [share_code]);
-    
-    if (linkResult.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Invalid share link' });
-    }
-    
+    const linkResult = await pool.query('SELECT sl.*, a.name as agency_name FROM share_links sl LEFT JOIN agencies a ON a.id = sl.agency_id WHERE sl.token = $1', [share_code]);
+    if (linkResult.rows.length === 0) return res.status(404).json({ success: false, error: 'Invalid share link' });
     const link = linkResult.rows[0];
-    
-    if (!link.is_active) {
-      return res.json({ success: false, error: 'Link deactivated', status: 'inactive' });
-    }
-    
-    if (new Date(link.expires_at) < new Date()) {
-      return res.json({ success: false, error: 'Link expired', status: 'expired' });
-    }
-    
-    if (link.current_uses >= link.max_uses) {
-      return res.json({ success: false, error: 'Scan limit reached', status: 'limit_reached' });
-    }
-    
-    // 2️⃣ PERFORM REAL SCAN (Puppeteer + Claude)
-    console.log('[SHARE LINK] 🤖 Starting real scan...');
+    if (!link.is_active || new Date(link.expires_at) < new Date() || link.current_uses >= link.max_uses) return res.status(403).json({ success: false, error: 'Link invalid or expired' });
     
     const scanResult = await performFullScan(url);
+    if (!scanResult.success) return res.status(500).json({ success: false, error: scanResult.error });
     
-    if (!scanResult.success) {
-      console.log('[SHARE LINK] ❌ Scan failed:', scanResult.error);
-      return res.status(500).json({ success: false, error: scanResult.error });
-    }
+    const urlHash = crypto.createHash('md5').update(url.toLowerCase().trim()).digest('hex');
+    await pool.query(`
+      INSERT INTO public_leaderboard (url, url_hash, score, quality, graaf_score, craft_score, technical_score, word_count, company_name, agency_id, agency_name, is_public, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true, NOW(), NOW())
+      ON CONFLICT (url_hash) DO UPDATE SET
+        score = EXCLUDED.score, quality = EXCLUDED.quality, graaf_score = EXCLUDED.graaf_score, craft_score = EXCLUDED.craft_score,
+        technical_score = EXCLUDED.technical_score, word_count = EXCLUDED.word_count, updated_at = NOW()
+    `, [url, urlHash, scanResult.score, scanResult.quality, link.company || link.client_name, link.agency_id, link.agency_name]);
     
-    console.log('[SHARE LINK] ✅ Scan complete! Score:', scanResult.score);
-    
-    // 3️⃣ 🔥 SAVE TO SCANS DATABASE
-    try {
-      await pool.query(`
-        INSERT INTO scans (
-          url, 
-          score, 
-          quality,
-          graaf_score,
-          craft_score,
-          technical_score,
-          breakdown,
-          recommendations,
-          word_count,
-          scan_type,
-          created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
-      `, [
-        scanResult.url,
-        scanResult.score,
-        scanResult.quality,
-        scanResult.breakdown.graaf.total,
-        scanResult.breakdown.craft.total,
-        scanResult.breakdown.technical.total,
-        JSON.stringify(scanResult.breakdown),
-        JSON.stringify(scanResult.recommendations),
-        scanResult.wordCount,
-        'share_link'
-      ]);
-      
-      console.log('[DATABASE] ✅ Scan saved to scans table!');
-      
-    } catch (dbError) {
-      console.error('[DATABASE ERROR] ❌ Failed to save scan:', dbError.message);
-    }
-    
-    // 4️⃣ ⭐ NEW: ADD TO PUBLIC LEADERBOARD WITH AGENCY CREDIT
-    try {
-      const agencyId = link.agency_id || null;
-      const agencyName = link.agency_name || null;
-      const companyName = link.company || link.client_name || null;
-      
-      // Create URL hash for duplicate detection
-      const urlHash = crypto.createHash('md5').update(scanResult.url.toLowerCase().trim()).digest('hex');
-      
-      // Check if URL already exists in leaderboard
-      const existing = await pool.query(
-        'SELECT id FROM public_leaderboard WHERE url_hash = $1', 
-        [urlHash]
-      );
-      
-      if (existing.rows.length > 0) {
-        // UPDATE existing entry
-        await pool.query(`
-          UPDATE public_leaderboard 
-          SET score = $1, quality = $2, graaf_score = $3, craft_score = $4,
-              technical_score = $5, word_count = $6, agency_id = $7, 
-              agency_name = $8, updated_at = NOW()
-          WHERE url_hash = $9
-        `, [
-          scanResult.score,
-          scanResult.quality,
-          scanResult.breakdown.graaf.total,
-          scanResult.breakdown.craft.total,
-          scanResult.breakdown.technical.total,
-          scanResult.wordCount,
-          agencyId,
-          agencyName,
-          urlHash
-        ]);
-        
-        console.log(`[LEADERBOARD] ♻️ Updated: ${scanResult.url} - Agency: ${agencyName || 'None'}`);
-      } else {
-        // INSERT new entry
-        await pool.query(`
-          INSERT INTO public_leaderboard (
-            url, url_hash, score, quality, graaf_score, craft_score,
-            technical_score, word_count, company_name, agency_id, 
-            agency_name, is_public, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true, NOW(), NOW())
-        `, [
-          scanResult.url,
-          urlHash,
-          scanResult.score,
-          scanResult.quality,
-          scanResult.breakdown.graaf.total,
-          scanResult.breakdown.craft.total,
-          scanResult.breakdown.technical.total,
-          scanResult.wordCount,
-          companyName,
-          agencyId,
-          agencyName
-        ]);
-        
-        console.log(`[LEADERBOARD] ✅ New entry: ${scanResult.url} - Agency: ${agencyName || 'None'}`);
-      }
-      
-    } catch (leaderboardError) {
-      console.error('[LEADERBOARD] ❌ Failed to add to leaderboard:', leaderboardError.message);
-      // Don't fail the whole scan if leaderboard insert fails
-    }
-    
-    // 5️⃣ UPDATE SHARE LINK USAGE
-    await pool.query(
-      'UPDATE share_links SET current_uses = current_uses + 1 WHERE token = $1',
-      [share_code]
-    );
-    
-    // 6️⃣ ADD REMAINING SCANS TO RESPONSE
-    scanResult.scans_remaining = link.max_uses - link.current_uses - 1;
-    
-    console.log('[SHARE LINK] 🎉 Complete! Score:', scanResult.score, 'Agency:', link.agency_name || 'None', 'Remaining:', scanResult.scans_remaining);
-    
+    await pool.query('UPDATE share_links SET current_uses = current_uses + 1 WHERE token = $1', [share_code]);
     res.json(scanResult);
-    
   } catch (error) {
-    console.error('[SHARE LINK SCAN ERROR] ❌', error);
     res.status(500).json({ success: false, error: 'Scan failed: ' + error.message });
   }
 });
 
-// ==========================================
-// 🚀 SERVER STARTUP
-// ==========================================
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`
-╔════════════════════════════════════════╗
-║ ✅ CONTENTSCALE v2.3 - CACHE FIXED    ║
-║ Port: ${PORT}                          ║
-║ 🤖 Puppeteer + Claude: ACTIVE          ║
-║ 📊 Recommendations: ACTIVE             ║
-║ 💾 Database Save: ACTIVE               ║
-║ 🏢 Agency Leaderboard: ACTIVE          ║
-║ 🔒 Rate Limiting: ACTIVE               ║
-║ 🛡️  Input Sanitization: ACTIVE        ║
-║ ✅ SCAN ALL AGENCIES: ADDED!           ║
-║ ✅ NO-CACHE HEADERS: ADDED!            ║
-╚════════════════════════════════════════╝
-  `);
+  console.log(`Server running on port ${PORT}`);
 });
-
-module.exports = { pool };
