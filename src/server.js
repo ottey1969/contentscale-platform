@@ -66,9 +66,6 @@ app.use(express.json());
 app.use(express.static('public'));
 
 // ==========================================
-// 🔧 FIX: Updated setup endpoint
-// ==========================================
-// ==========================================
 // 🔧 CONTENTSCORE TOOL PAGES
 // ==========================================
 
@@ -334,6 +331,10 @@ app.get('/seo-contentscore', (req, res) => {
         </html>
     `);
 });
+
+// ==========================================
+// 🔧 FIX: Updated setup endpoint
+// ==========================================
 
 app.get('/api/setup/create-admin', async (req, res) => {
   try {
