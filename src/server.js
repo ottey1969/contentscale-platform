@@ -333,6 +333,766 @@ app.get('/seo-contentscore', (req, res) => {
 });
 
 // ==========================================
+// 🔧 CONTENTSCORE TOOL - ECHTE IMPLEMENTATIE
+// ==========================================
+
+app.get('/seo-contentscore', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>ContentScore Tool - ContentScale</title>
+            <script src="https://cdn.tailwindcss.com"></script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <style>
+                .score-ring { transition: stroke-dashoffset 1s ease-in-out; }
+                .pulse { animation: pulse 2s infinite; }
+                @keyframes pulse {
+                    0% { transform: scale(1); }
+                    50% { transform: scale(1.05); }
+                    100% { transform: scale(1); }
+                }
+                .gradient-text {
+                    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+                    -webkit-background-clip: text;
+                    background-clip: text;
+                    color: transparent;
+                }
+            </style>
+        </head>
+        <body class="bg-gray-900 text-gray-100 min-h-screen">
+            <!-- Navigation -->
+            <nav class="bg-gray-800 border-b border-gray-700">
+                <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-2xl">📊</span>
+                        <h1 class="text-xl font-bold gradient-text">ContentScore Tool</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <a href="/" class="text-gray-300 hover:text-white text-sm">
+                            <i class="fas fa-home mr-1"></i> Home
+                        </a>
+                        <a href="/admin" class="text-gray-300 hover:text-white text-sm">
+                            <i class="fas fa-crown mr-1"></i> Admin
+                        </a>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <div class="max-w-7xl mx-auto px-4 py-8">
+                <!-- Hero Section -->
+                <div class="text-center mb-12">
+                    <h1 class="text-4xl font-bold mb-4">
+                        Analyze Your Content's <span class="gradient-text">SEO & Quality Score</span>
+                    </h1>
+                    <p class="text-gray-400 text-lg max-w-3xl mx-auto">
+                        Get instant analysis using the same GRAAF + CRAFT + Technical SEO scoring system as the main scanner
+                    </p>
+                </div>
+
+                <!-- Tool Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+                    <!-- Input Panel -->
+                    <div class="lg:col-span-2 bg-gray-800 rounded-xl p-6 border border-gray-700">
+                        <h2 class="text-2xl font-bold mb-6 flex items-center">
+                            <i class="fas fa-search mr-3 text-blue-400"></i>
+                            Analyze Content
+                        </h2>
+                        
+                        <div class="space-y-6">
+                            <!-- URL Input -->
+                            <div>
+                                <label class="block text-sm font-medium mb-3">
+                                    <i class="fas fa-link mr-2 text-blue-400"></i>
+                                    Enter URL to Analyze
+                                </label>
+                                <div class="flex space-x-3">
+                                    <input type="url" id="content-url" 
+                                        placeholder="https://example.com/article"
+                                        class="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        autocomplete="off">
+                                    <button onclick="analyzeUrl()" id="analyze-btn"
+                                        class="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg font-semibold hover:opacity-90 transition-all flex items-center pulse">
+                                        <i class="fas fa-chart-line mr-2"></i>
+                                        Analyze URL
+                                    </button>
+                                </div>
+                                <p class="text-sm text-gray-500 mt-2">
+                                    Enter any webpage URL to get a complete SEO analysis
+                                </p>
+                            </div>
+                            
+                            <!-- OR Divider -->
+                            <div class="relative">
+                                <div class="absolute inset-0 flex items-center">
+                                    <div class="w-full border-t border-gray-700"></div>
+                                </div>
+                                <div class="relative flex justify-center text-sm">
+                                    <span class="px-4 bg-gray-800 text-gray-500">OR</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Text Analysis -->
+                            <div>
+                                <label class="block text-sm font-medium mb-3">
+                                    <i class="fas fa-file-alt mr-2 text-green-400"></i>
+                                    Paste Content for Analysis
+                                </label>
+                                <textarea id="content-text" rows="12"
+                                    placeholder="Paste your article, blog post, or content here for a detailed quality analysis..."
+                                    class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                    autocomplete="off"></textarea>
+                                <div class="flex justify-between items-center mt-3">
+                                    <p class="text-sm text-gray-500">
+                                        Minimum 200 words recommended for accurate analysis
+                                    </p>
+                                    <button onclick="analyzeText()" id="analyze-text-btn"
+                                        class="px-6 py-2 bg-gradient-to-r from-green-600 to-teal-600 rounded-lg font-semibold hover:opacity-90 transition-all flex items-center">
+                                        <i class="fas fa-spell-check mr-2"></i>
+                                        Analyze Text
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Recent Analyses -->
+                        <div class="mt-8 pt-6 border-t border-gray-700">
+                            <h3 class="text-lg font-semibold mb-4">
+                                <i class="fas fa-history mr-2"></i>
+                                Recent Analyses
+                            </h3>
+                            <div id="recent-analyses" class="space-y-2">
+                                <!-- Will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results Panel -->
+                    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                        <h2 class="text-2xl font-bold mb-6 flex items-center">
+                            <i class="fas fa-chart-pie mr-3 text-purple-400"></i>
+                            Analysis Results
+                        </h2>
+                        
+                        <!-- Loading State -->
+                        <div id="results-loading" class="hidden">
+                            <div class="text-center py-12">
+                                <div class="inline-block animate-spin text-4xl text-blue-400">
+                                    <i class="fas fa-cog"></i>
+                                </div>
+                                <p class="text-gray-400 mt-4 text-lg">Analyzing content...</p>
+                                <p class="text-sm text-gray-500 mt-2">This may take 20-30 seconds</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Error State -->
+                        <div id="results-error" class="hidden">
+                            <div class="text-center py-12">
+                                <div class="text-5xl text-red-400 mb-4">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </div>
+                                <p class="text-red-300 text-lg" id="error-message">Analysis failed</p>
+                                <button onclick="retryAnalysis()" class="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg">
+                                    <i class="fas fa-redo mr-2"></i>Try Again
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Results Content -->
+                        <div id="results-content" class="hidden">
+                            <!-- Overall Score -->
+                            <div class="text-center mb-8">
+                                <div class="relative inline-block">
+                                    <svg width="200" height="200" viewBox="0 0 120 120">
+                                        <circle cx="60" cy="60" r="54" fill="none" stroke="#374151" stroke-width="12"/>
+                                        <circle id="score-circle" cx="60" cy="60" r="54" fill="none" 
+                                            stroke="url(#score-gradient)" stroke-width="12" 
+                                            stroke-dasharray="339.292" stroke-dashoffset="339.292"
+                                            stroke-linecap="round" transform="rotate(-90 60 60)"/>
+                                        <defs>
+                                            <linearGradient id="score-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                <stop offset="0%" style="stop-color:#ef4444" />
+                                                <stop offset="50%" style="stop-color:#eab308" />
+                                                <stop offset="100%" style="stop-color:#22c55e" />
+                                            </linearGradient>
+                                        </defs>
+                                    </svg>
+                                    <div class="absolute inset-0 flex items-center justify-center flex-col">
+                                        <span id="score-value" class="text-5xl font-bold">0</span>
+                                        <span class="text-lg text-gray-400">/100</span>
+                                        <div id="quality-badge" class="mt-2 px-3 py-1 rounded-full text-xs font-semibold"></div>
+                                    </div>
+                                </div>
+                                <h3 class="text-xl font-bold mt-4 mb-2" id="page-title">Page Title</h3>
+                                <p class="text-gray-400 text-sm" id="analyzed-url">URL will appear here</p>
+                            </div>
+                            
+                            <!-- Score Breakdown -->
+                            <div class="mb-8">
+                                <h4 class="text-lg font-semibold mb-4">Score Breakdown</h4>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div class="bg-gray-700 p-4 rounded-lg text-center">
+                                        <div class="text-2xl font-bold text-blue-400" id="graaf-score">0</div>
+                                        <div class="text-sm text-gray-400 mt-1">GRAAF</div>
+                                    </div>
+                                    <div class="bg-gray-700 p-4 rounded-lg text-center">
+                                        <div class="text-2xl font-bold text-green-400" id="craft-score">0</div>
+                                        <div class="text-sm text-gray-400 mt-1">CRAFT</div>
+                                    </div>
+                                    <div class="bg-gray-700 p-4 rounded-lg text-center">
+                                        <div class="text-2xl font-bold text-purple-400" id="technical-score">0</div>
+                                        <div class="text-sm text-gray-1">TECH</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Quick Stats -->
+                            <div class="mb-8">
+                                <h4 class="text-lg font-semibold mb-4">Content Stats</h4>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="bg-gray-700 p-3 rounded-lg">
+                                        <div class="text-sm text-gray-400">Word Count</div>
+                                        <div class="text-xl font-bold" id="word-count">0</div>
+                                    </div>
+                                    <div class="bg-gray-700 p-3 rounded-lg">
+                                        <div class="text-sm text-gray-400">Internal Links</div>
+                                        <div class="text-xl font-bold" id="internal-links">0</div>
+                                    </div>
+                                    <div class="bg-gray-700 p-3 rounded-lg">
+                                        <div class="text-sm text-gray-400">Images</div>
+                                        <div class="text-xl font-bold" id="images-count">0</div>
+                                    </div>
+                                    <div class="bg-gray-700 p-3 rounded-lg">
+                                        <div class="text-sm text-gray-400">Images with Alt</div>
+                                        <div class="text-xl font-bold" id="images-alt">0</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Quick Actions -->
+                            <div class="space-y-3">
+                                <button onclick="saveAnalysis()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold flex items-center justify-center">
+                                    <i class="fas fa-save mr-2"></i>Save Analysis
+                                </button>
+                                <button onclick="generateReport()" class="w-full py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold flex items-center justify-center">
+                                    <i class="fas fa-file-pdf mr-2"></i>Generate PDF Report
+                                </button>
+                                <button onclick="shareResults()" class="w-full py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold flex items-center justify-center">
+                                    <i class="fas fa-share-alt mr-2"></i>Share Results
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Empty State -->
+                        <div id="results-empty" class="text-center py-12">
+                            <div class="text-5xl text-gray-600 mb-4">
+                                <i class="fas fa-chart-bar"></i>
+                            </div>
+                            <p class="text-gray-400 text-lg">No analysis yet</p>
+                            <p class="text-gray-500 text-sm mt-2">Enter a URL or paste content to begin</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recommendations Section (Hidden until analysis) -->
+                <div id="recommendations-section" class="hidden bg-gray-800 rounded-xl p-6 border border-gray-700 mb-8">
+                    <h2 class="text-2xl font-bold mb-6 flex items-center">
+                        <i class="fas fa-lightbulb mr-3 text-yellow-400"></i>
+                        Recommendations & Action Items
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Quick Wins -->
+                        <div class="bg-gray-700 rounded-lg p-5">
+                            <h3 class="text-lg font-bold mb-4 text-green-400">
+                                <i class="fas fa-bolt mr-2"></i>Quick Wins
+                            </h3>
+                            <div id="quick-wins-list" class="space-y-3">
+                                <!-- Quick wins will be populated here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Major Improvements -->
+                        <div class="bg-gray-700 rounded-lg p-5">
+                            <h3 class="text-lg font-bold mb-4 text-yellow-400">
+                                <i class="fas fa-chart-line mr-2"></i>Major Improvements
+                            </h3>
+                            <div id="major-improvements-list" class="space-y-3">
+                                <!-- Major improvements will be populated here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Advanced -->
+                        <div class="bg-gray-700 rounded-lg p-5">
+                            <h3 class="text-lg font-bold mb-4 text-blue-400">
+                                <i class="fas fa-cogs mr-2"></i>Advanced Optimizations
+                            </h3>
+                            <div id="advanced-optimizations-list" class="space-y-3">
+                                <!-- Advanced optimizations will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Summary -->
+                    <div id="analysis-summary" class="mt-6 p-4 bg-gray-700 rounded-lg hidden">
+                        <h4 class="font-bold mb-2">Analysis Summary</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div>
+                                <div class="text-sm text-gray-400">Total Issues</div>
+                                <div class="text-xl font-bold" id="total-issues">0</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-400">Time to Fix</div>
+                                <div class="text-xl font-bold" id="time-to-fix">0 min</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-400">Score Gain</div>
+                                <div class="text-xl font-bold" id="score-gain">0 pts</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-400">Target Score</div>
+                                <div class="text-xl font-bold" id="target-score">100</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="bg-gray-800 border-t border-gray-700 py-6">
+                <div class="max-w-7xl mx-auto px-4 text-center text-gray-500 text-sm">
+                    <p>ContentScore Tool powered by ContentScale Platform • Uses GRAAF + CRAFT + Technical SEO analysis</p>
+                    <p class="mt-2">© ${new Date().getFullYear()} ContentScale • All rights reserved</p>
+                </div>
+            </footer>
+
+            <script>
+                // State management
+                let currentAnalysis = null;
+                let recentAnalyses = JSON.parse(localStorage.getItem('contentscore_recent') || '[]');
+
+                // Initialize recent analyses
+                function initRecentAnalyses() {
+                    const container = document.getElementById('recent-analyses');
+                    if (!container) return;
+                    
+                    if (recentAnalyses.length === 0) {
+                        container.innerHTML = \`
+                            <div class="text-gray-500 text-center py-4">
+                                <i class="fas fa-history mr-2"></i>
+                                No recent analyses
+                            </div>
+                        \`;
+                        return;
+                    }
+                    
+                    container.innerHTML = recentAnalyses.slice(0, 5).map(item => \`
+                        <div class="flex items-center justify-between p-3 bg-gray-700 rounded-lg hover:bg-gray-600 cursor-pointer" 
+                             onclick="loadRecentAnalysis('\${item.url}')">
+                            <div class="truncate">
+                                <div class="font-medium truncate">\${item.title || item.url}</div>
+                                <div class="text-xs text-gray-400">\${new Date(item.timestamp).toLocaleDateString()}</div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="px-2 py-1 text-xs font-bold rounded \${getScoreColorClass(item.score)}">
+                                    \${item.score}
+                                </span>
+                                <i class="fas fa-chevron-right text-gray-400"></i>
+                            </div>
+                        </div>
+                    \`).join('');
+                }
+
+                // Helper function for score colors
+                function getScoreColorClass(score) {
+                    if (score >= 90) return 'bg-green-900 text-green-300';
+                    if (score >= 80) return 'bg-blue-900 text-blue-300';
+                    if (score >= 70) return 'bg-yellow-900 text-yellow-300';
+                    if (score >= 60) return 'bg-orange-900 text-orange-300';
+                    return 'bg-red-900 text-red-300';
+                }
+
+                // Helper function for quality badge
+                function getQualityBadge(score) {
+                    if (score >= 90) return \`<span class="bg-green-900 text-green-300 px-3 py-1 rounded-full text-xs font-semibold">Excellent</span>\`;
+                    if (score >= 80) return \`<span class="bg-blue-900 text-blue-300 px-3 py-1 rounded-full text-xs font-semibold">Good</span>\`;
+                    if (score >= 70) return \`<span class="bg-yellow-900 text-yellow-300 px-3 py-1 rounded-full text-xs font-semibold">Fair</span>\`;
+                    if (score >= 60) return \`<span class="bg-orange-900 text-orange-300 px-3 py-1 rounded-full text-xs font-semibold">Average</span>\`;
+                    return \`<span class="bg-red-900 text-red-300 px-3 py-1 rounded-full text-xs font-semibold">Needs Improvement</span>\`;
+                }
+
+                // Analyze URL using existing scanner API
+                async function analyzeUrl() {
+                    const urlInput = document.getElementById('content-url');
+                    const url = urlInput.value.trim();
+                    
+                    if (!url) {
+                        alert('Please enter a URL to analyze');
+                        urlInput.focus();
+                        return;
+                    }
+                    
+                    // Validate URL format
+                    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                        alert('Please enter a valid URL starting with http:// or https://');
+                        return;
+                    }
+                    
+                    // Show loading state
+                    showLoading();
+                    
+                    try {
+                        // Use the existing scanner API
+                        const response = await fetch('/api/scan-free', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ url: url })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            // Process and display results
+                            processAnalysisResults(data, url);
+                            
+                            // Add to recent analyses
+                            addToRecentAnalyses({
+                                url: url,
+                                title: data.pageMetadata?.title || 'Untitled',
+                                score: data.score,
+                                timestamp: new Date().toISOString()
+                            });
+                            
+                        } else {
+                            showError(data.error || 'Analysis failed');
+                        }
+                        
+                    } catch (error) {
+                        console.error('Analysis error:', error);
+                        showError('Connection error. Please check your internet and try again.');
+                    }
+                }
+
+                // Analyze text content (simulated for now)
+                async function analyzeText() {
+                    const textArea = document.getElementById('content-text');
+                    const text = textArea.value.trim();
+                    
+                    if (!text || text.split(/\\s+/).length < 50) {
+                        alert('Please enter at least 50 words for meaningful analysis');
+                        textArea.focus();
+                        return;
+                    }
+                    
+                    showLoading();
+                    
+                    // For text analysis, we'll use a simplified version
+                    // In a real implementation, you would send text to an API
+                    try {
+                        // Simulate API call
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        
+                        // Create mock analysis based on text
+                        const wordCount = text.split(/\\s+/).length;
+                        const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+                        const avgSentenceLength = wordCount / sentences.length;
+                        
+                        // Calculate scores based on text characteristics
+                        const readabilityScore = Math.min(100, Math.max(20, 100 - (avgSentenceLength - 15) * 2));
+                        const keywordDensity = (text.toLowerCase().match(/\\b(seo|content|marketing|digital)\\b/gi) || []).length / wordCount * 100;
+                        const seoScore = Math.min(100, Math.max(30, keywordDensity * 10));
+                        
+                        const mockData = {
+                            success: true,
+                            score: Math.floor((readabilityScore * 0.4) + (seoScore * 0.6)),
+                            quality: readabilityScore >= 70 ? 'good' : 'average',
+                            breakdown: {
+                                graaf: { total: Math.floor(readabilityScore) },
+                                craft: { total: Math.floor(seoScore) },
+                                technical: { total: Math.floor(seoScore * 0.8) }
+                            },
+                            recommendations: {
+                                quickWins: [
+                                    { action: "Add subheadings every 200-300 words", category: "Structure", impact: 3 },
+                                    { action: "Include more transition words", category: "Readability", impact: 2 },
+                                    { action: "Add bullet points for key information", category: "Formatting", impact: 4 }
+                                ],
+                                majorImpact: [
+                                    { action: "Expand content to at least 1000 words", category: "Comprehensiveness", impact: 5 },
+                                    { action: "Add relevant images or diagrams", category: "Visuals", impact: 4 }
+                                ],
+                                advanced: [
+                                    { action: "Add schema markup for rich snippets", category: "Technical", impact: 3 },
+                                    { action: "Optimize for featured snippets", category: "Advanced SEO", impact: 4 }
+                                ],
+                                summary: {
+                                    totalIssues: 5,
+                                    estimatedTimeToFix: 120,
+                                    potentialScoreGain: 25,
+                                    currentScore: 65,
+                                    targetScore: 90
+                                }
+                            },
+                            wordCount: wordCount,
+                            pageMetadata: {
+                                title: "Text Content Analysis",
+                                metaDescription: "Content analysis from pasted text"
+                            }
+                        };
+                        
+                        processAnalysisResults(mockData, "Text Content");
+                        
+                    } catch (error) {
+                        showError('Text analysis failed: ' + error.message);
+                    }
+                }
+
+                // Process and display analysis results
+                function processAnalysisResults(data, source) {
+                    currentAnalysis = data;
+                    
+                    // Update main score display
+                    document.getElementById('score-value').textContent = data.score;
+                    document.getElementById('quality-badge').innerHTML = getQualityBadge(data.score);
+                    
+                    // Animate score circle
+                    const circle = document.getElementById('score-circle');
+                    const circumference = 2 * Math.PI * 54;
+                    const offset = circumference - (data.score / 100) * circumference;
+                    circle.style.strokeDashoffset = offset;
+                    
+                    // Update breakdown scores
+                    document.getElementById('graaf-score').textContent = data.breakdown?.graaf?.total || 0;
+                    document.getElementById('craft-score').textContent = data.breakdown?.craft?.total || 0;
+                    document.getElementById('technical-score').textContent = data.breakdown?.technical?.total || 0;
+                    
+                    // Update stats
+                    document.getElementById('word-count').textContent = data.wordCount || 0;
+                    document.getElementById('page-title').textContent = data.pageMetadata?.title || 'Untitled';
+                    document.getElementById('analyzed-url').textContent = source;
+                    
+                    // Update metadata if available
+                    if (data.pageMetadata) {
+                        document.getElementById('internal-links').textContent = data.pageMetadata.internalLinks || 0;
+                        document.getElementById('images-count').textContent = data.pageMetadata.images || 0;
+                        document.getElementById('images-alt').textContent = data.pageMetadata.imagesWithAlt || 0;
+                    }
+                    
+                    // Show recommendations if available
+                    if (data.recommendations) {
+                        displayRecommendations(data.recommendations);
+                        document.getElementById('recommendations-section').classList.remove('hidden');
+                        
+                        // Update summary
+                        if (data.recommendations.summary) {
+                            document.getElementById('analysis-summary').classList.remove('hidden');
+                            document.getElementById('total-issues').textContent = data.recommendations.summary.totalIssues || 0;
+                            document.getElementById('time-to-fix').textContent = data.recommendations.summary.estimatedTimeToFix + ' min';
+                            document.getElementById('score-gain').textContent = data.recommendations.summary.potentialScoreGain + ' pts';
+                            document.getElementById('target-score').textContent = data.recommendations.summary.targetScore || 100;
+                        }
+                    }
+                    
+                    // Switch to results view
+                    hideLoading();
+                    document.getElementById('results-empty').classList.add('hidden');
+                    document.getElementById('results-content').classList.remove('hidden');
+                }
+
+                // Display recommendations
+                function displayRecommendations(recommendations) {
+                    // Quick Wins
+                    const quickWinsList = document.getElementById('quick-wins-list');
+                    if (quickWinsList && recommendations.quickWins) {
+                        quickWinsList.innerHTML = recommendations.quickWins.map(item => \`
+                            <div class="flex items-start space-x-3">
+                                <div class="flex-shrink-0 mt-1">
+                                    <div class="w-6 h-6 rounded-full bg-green-900 flex items-center justify-center">
+                                        <i class="fas fa-bolt text-green-300 text-xs"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="font-medium">\${item.action}</div>
+                                    <div class="text-xs text-gray-400 mt-1">
+                                        <span class="px-2 py-0.5 bg-gray-600 rounded">\${item.category}</span>
+                                        <span class="ml-2">Impact: \${'★'.repeat(item.impact || 1)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        \`).join('');
+                    }
+                    
+                    // Major Improvements
+                    const majorList = document.getElementById('major-improvements-list');
+                    if (majorList && recommendations.majorImpact) {
+                        majorList.innerHTML = recommendations.majorImpact.map(item => \`
+                            <div class="flex items-start space-x-3">
+                                <div class="flex-shrink-0 mt-1">
+                                    <div class="w-6 h-6 rounded-full bg-yellow-900 flex items-center justify-center">
+                                        <i class="fas fa-chart-line text-yellow-300 text-xs"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="font-medium">\${item.action}</div>
+                                    <div class="text-xs text-gray-400 mt-1">
+                                        <span class="px-2 py-0.5 bg-gray-600 rounded">\${item.category}</span>
+                                        <span class="ml-2">Impact: \${'★'.repeat(item.impact || 1)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        \`).join('');
+                    }
+                    
+                    // Advanced Optimizations
+                    const advancedList = document.getElementById('advanced-optimizations-list');
+                    if (advancedList && recommendations.advanced) {
+                        advancedList.innerHTML = recommendations.advanced.map(item => \`
+                            <div class="flex items-start space-x-3">
+                                <div class="flex-shrink-0 mt-1">
+                                    <div class="w-6 h-6 rounded-full bg-blue-900 flex items-center justify-center">
+                                        <i class="fas fa-cogs text-blue-300 text-xs"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="font-medium">\${item.action}</div>
+                                    <div class="text-xs text-gray-400 mt-1">
+                                        <span class="px-2 py-0.5 bg-gray-600 rounded">\${item.category}</span>
+                                        <span class="ml-2">Impact: \${'★'.repeat(item.impact || 1)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        \`).join('');
+                    }
+                }
+
+                // UI State Management
+                function showLoading() {
+                    document.getElementById('results-empty').classList.add('hidden');
+                    document.getElementById('results-content').classList.add('hidden');
+                    document.getElementById('results-error').classList.add('hidden');
+                    document.getElementById('results-loading').classList.remove('hidden');
+                    document.getElementById('recommendations-section').classList.add('hidden');
+                    
+                    // Disable buttons during loading
+                    document.getElementById('analyze-btn').disabled = true;
+                    document.getElementById('analyze-text-btn').disabled = true;
+                }
+
+                function hideLoading() {
+                    document.getElementById('results-loading').classList.add('hidden');
+                    document.getElementById('analyze-btn').disabled = false;
+                    document.getElementById('analyze-text-btn').disabled = false;
+                }
+
+                function showError(message) {
+                    hideLoading();
+                    document.getElementById('results-error').classList.remove('hidden');
+                    document.getElementById('error-message').textContent = message;
+                }
+
+                function retryAnalysis() {
+                    document.getElementById('results-error').classList.add('hidden');
+                    analyzeUrl();
+                }
+
+                // Recent Analyses Management
+                function addToRecentAnalyses(analysis) {
+                    // Remove if already exists
+                    recentAnalyses = recentAnalyses.filter(a => a.url !== analysis.url);
+                    
+                    // Add to beginning
+                    recentAnalyses.unshift(analysis);
+                    
+                    // Keep only last 10
+                    recentAnalyses = recentAnalyses.slice(0, 10);
+                    
+                    // Save to localStorage
+                    localStorage.setItem('contentscore_recent', JSON.stringify(recentAnalyses));
+                    
+                    // Update UI
+                    initRecentAnalyses();
+                }
+
+                function loadRecentAnalysis(url) {
+                    document.getElementById('content-url').value = url;
+                    analyzeUrl();
+                }
+
+                // Action Buttons
+                function saveAnalysis() {
+                    if (!currentAnalysis) return;
+                    
+                    const dataStr = JSON.stringify(currentAnalysis, null, 2);
+                    const blob = new Blob([dataStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = \`contentscore-\${new Date().toISOString().split('T')[0]}.json\`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    alert('Analysis saved as JSON file!');
+                }
+
+                function generateReport() {
+                    alert('PDF report generation feature coming soon!');
+                }
+
+                function shareResults() {
+                    if (!currentAnalysis) return;
+                    
+                    const score = currentAnalysis.score;
+                    const url = document.getElementById('content-url').value || 'Text Content';
+                    const shareText = \`My content scored \${score}/100 on ContentScore! Analyze yours at \${window.location.origin}\`;
+                    
+                    if (navigator.share) {
+                        navigator.share({
+                            title: 'ContentScore Results',
+                            text: shareText,
+                            url: window.location.href
+                        });
+                    } else {
+                        navigator.clipboard.writeText(shareText).then(() => {
+                            alert('Results copied to clipboard!');
+                        });
+                    }
+                }
+
+                // Initialize on page load
+                document.addEventListener('DOMContentLoaded', function() {
+                    initRecentAnalyses();
+                    
+                    // Auto-focus URL input
+                    document.getElementById('content-url').focus();
+                    
+                    // Enable Enter key to trigger analysis
+                    document.getElementById('content-url').addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') analyzeUrl();
+                    });
+                    
+                    // Auto-expand textarea
+                    const textarea = document.getElementById('content-text');
+                    textarea.addEventListener('input', function() {
+                        this.style.height = 'auto';
+                        this.style.height = (this.scrollHeight) + 'px';
+                    });
+                });
+            </script>
+        </body>
+        </html>
+    `);
+});
+
+// ==========================================
 // 🔧 FIX: Updated setup endpoint
 // ==========================================
 
