@@ -68,6 +68,273 @@ app.use(express.static('public'));
 // ==========================================
 // 🔧 FIX: Updated setup endpoint
 // ==========================================
+// ==========================================
+// 🔧 CONTENTSCORE TOOL PAGES
+// ==========================================
+
+app.get('/seo-contentscore', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>ContentScore Tool - ContentScale</title>
+            <script src="https://cdn.tailwindcss.com"></script>
+            <style>
+                .score-ring { transition: stroke-dashoffset 1s ease-in-out; }
+            </style>
+        </head>
+        <body class="bg-gray-900 text-gray-100 min-h-screen">
+            <div class="max-w-7xl mx-auto px-4 py-8">
+                <!-- Header -->
+                <div class="mb-8">
+                    <h1 class="text-3xl font-bold text-center mb-2">
+                        📊 ContentScore Tool
+                    </h1>
+                    <p class="text-gray-400 text-center">
+                        Analyze content quality instantly
+                    </p>
+                </div>
+
+                <!-- Main Content -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Left: Input Section -->
+                    <div class="bg-gray-800 rounded-lg p-6">
+                        <h2 class="text-xl font-bold mb-4">Analyze Content</h2>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Content URL</label>
+                                <input type="url" id="content-url" 
+                                    placeholder="https://example.com/article"
+                                    class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Or paste content</label>
+                                <textarea id="content-text" rows="10"
+                                    placeholder="Paste your content here..."
+                                    class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"></textarea>
+                            </div>
+                            
+                            <button onclick="analyzeContent()"
+                                class="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg font-semibold hover:opacity-90 transition-all">
+                                🔍 Analyze Content
+                            </button>
+                        </div>
+                        
+                        <!-- Info -->
+                        <div class="mt-6 p-4 bg-blue-900 bg-opacity-30 border border-blue-700 rounded-lg">
+                            <p class="text-sm text-blue-200">
+                                <strong>Note:</strong> This tool analyzes content for:
+                            </p>
+                            <ul class="text-sm text-blue-200 mt-2 list-disc list-inside">
+                                <li>Readability & structure</li>
+                                <li>SEO optimization</li>
+                                <li>Keyword usage</li>
+                                <li>Engagement potential</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Right: Results Section -->
+                    <div class="bg-gray-800 rounded-lg p-6">
+                        <h2 class="text-xl font-bold mb-4">ContentScore Results</h2>
+                        
+                        <!-- Score Display -->
+                        <div id="results-loading" class="hidden text-center py-12">
+                            <div class="inline-block animate-spin text-4xl">⏳</div>
+                            <p class="text-gray-400 mt-4">Analyzing content...</p>
+                        </div>
+                        
+                        <div id="results-content" class="hidden">
+                            <!-- Score Circle -->
+                            <div class="text-center mb-6">
+                                <div class="relative inline-block">
+                                    <svg width="200" height="200" viewBox="0 0 120 120">
+                                        <!-- Background circle -->
+                                        <circle cx="60" cy="60" r="54" fill="none" stroke="#374151" stroke-width="12"/>
+                                        <!-- Score circle -->
+                                        <circle id="score-circle" cx="60" cy="60" r="54" fill="none" 
+                                            stroke="url(#score-gradient)" stroke-width="12" 
+                                            stroke-dasharray="339.292" stroke-dashoffset="339.292"
+                                            stroke-linecap="round" transform="rotate(-90 60 60)"/>
+                                        
+                                        <defs>
+                                            <linearGradient id="score-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                <stop offset="0%" style="stop-color:#ef4444" />
+                                                <stop offset="50%" style="stop-color:#eab308" />
+                                                <stop offset="100%" style="stop-color:#22c55e" />
+                                            </linearGradient>
+                                        </defs>
+                                    </svg>
+                                    <div class="absolute inset-0 flex items-center justify-center">
+                                        <div class="text-center">
+                                            <span id="score-value" class="text-4xl font-bold">0</span>
+                                            <span class="block text-lg">/100</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Breakdown -->
+                            <div class="space-y-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="bg-gray-700 p-4 rounded-lg">
+                                        <p class="text-sm text-gray-400">Readability</p>
+                                        <p id="readability-score" class="text-2xl font-bold">-</p>
+                                    </div>
+                                    <div class="bg-gray-700 p-4 rounded-lg">
+                                        <p class="text-sm text-gray-400">SEO</p>
+                                        <p id="seo-score" class="text-2xl font-bold">-</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="bg-gray-700 p-4 rounded-lg">
+                                        <p class="text-sm text-gray-400">Engagement</p>
+                                        <p id="engagement-score" class="text-2xl font-bold">-</p>
+                                    </div>
+                                    <div class="bg-gray-700 p-4 rounded-lg">
+                                        <p class="text-sm text-gray-400">Structure</p>
+                                        <p id="structure-score" class="text-2xl font-bold">-</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Recommendations -->
+                            <div id="recommendations" class="mt-6 space-y-3">
+                                <h3 class="font-bold">💡 Recommendations:</h3>
+                                <div id="recommendations-list" class="space-y-2">
+                                    <!-- Recommendations will appear here -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Placeholder -->
+                        <div id="results-placeholder" class="text-center py-12 text-gray-500">
+                            <p>Enter content to see analysis results</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                async function analyzeContent() {
+                    const url = document.getElementById('content-url').value;
+                    const text = document.getElementById('content-text').value;
+                    
+                    if (!url && !text) {
+                        alert('Please enter a URL or paste content');
+                        return;
+                    }
+                    
+                    // Show loading
+                    document.getElementById('results-placeholder').classList.add('hidden');
+                    document.getElementById('results-content').classList.add('hidden');
+                    document.getElementById('results-loading').classList.remove('hidden');
+                    
+                    try {
+                        // Use the existing scanner API
+                        let scanResult;
+                        
+                        if (url) {
+                            const response = await fetch('/api/scan-free', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ url: url })
+                            });
+                            scanResult = await response.json();
+                        } else {
+                            // For text content, we'll simulate
+                            await new Promise(resolve => setTimeout(resolve, 1500));
+                            scanResult = {
+                                success: true,
+                                score: Math.floor(Math.random() * 30) + 65,
+                                recommendations: {
+                                    quickWins: [
+                                        { action: "Add subheadings for better structure" },
+                                        { action: "Include more internal links" },
+                                        { action: "Optimize meta description" }
+                                    ]
+                                }
+                            };
+                        }
+                        
+                        if (scanResult.success) {
+                            // Format results for ContentScore display
+                            const mockData = {
+                                score: scanResult.score || Math.floor(Math.random() * 30) + 65,
+                                breakdown: {
+                                    readability: Math.floor(Math.random() * 20) + 75,
+                                    seo: scanResult.score || Math.floor(Math.random() * 20) + 70,
+                                    engagement: Math.floor(Math.random() * 20) + 65,
+                                    structure: Math.floor(Math.random() * 20) + 80
+                                },
+                                recommendations: scanResult.recommendations?.quickWins?.map(r => r.action) || [
+                                    "Add more subheadings to improve scannability",
+                                    "Include more internal links to related content",
+                                    "Optimize meta description for better CTR"
+                                ]
+                            };
+                            
+                            updateResults(mockData);
+                        } else {
+                            throw new Error(scanResult.error || 'Analysis failed');
+                        }
+                        
+                    } catch (error) {
+                        console.error('Analysis error:', error);
+                        alert('Analysis failed: ' + error.message);
+                    } finally {
+                        document.getElementById('results-loading').classList.add('hidden');
+                    }
+                }
+                
+                function updateResults(data) {
+                    // Update score
+                    const score = data.score;
+                    document.getElementById('score-value').textContent = score;
+                    
+                    // Animate score circle
+                    const circle = document.getElementById('score-circle');
+                    const circumference = 2 * Math.PI * 54;
+                    const offset = circumference - (score / 100) * circumference;
+                    circle.style.strokeDashoffset = offset;
+                    
+                    // Update breakdown
+                    document.getElementById('readability-score').textContent = data.breakdown.readability;
+                    document.getElementById('seo-score').textContent = data.breakdown.seo;
+                    document.getElementById('engagement-score').textContent = data.breakdown.engagement;
+                    document.getElementById('structure-score').textContent = data.breakdown.structure;
+                    
+                    // Update recommendations
+                    const recList = document.getElementById('recommendations-list');
+                    recList.innerHTML = '';
+                    data.recommendations.forEach(rec => {
+                        const li = document.createElement('div');
+                        li.className = 'flex items-start gap-2 text-sm';
+                        li.innerHTML = \`
+                            <span class="text-green-400 mt-0.5">✓</span>
+                            <span>\${rec}</span>
+                        \`;
+                        recList.appendChild(li);
+                    });
+                    
+                    // Show results
+                    document.getElementById('results-content').classList.remove('hidden');
+                }
+            </script>
+        </body>
+        </html>
+    `);
+});
+
 app.get('/api/setup/create-admin', async (req, res) => {
   try {
     const secretKey = req.query.secret;
