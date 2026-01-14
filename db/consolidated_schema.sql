@@ -113,3 +113,29 @@ CREATE TABLE IF NOT EXISTS public_leaderboard (
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
+-- 8. CONTENTSCORE ANALYSES TABLES
+CREATE TABLE IF NOT EXISTS contentscore_analyses (
+    id SERIAL PRIMARY KEY,
+    content_hash VARCHAR(64) UNIQUE NOT NULL,
+    content_type VARCHAR(20) NOT NULL CHECK (content_type IN ('url', 'text')),
+    url TEXT,
+    text_preview TEXT,
+    score DECIMAL(5,2) NOT NULL,
+    breakdown JSONB NOT NULL,
+    recommendations JSONB NOT NULL,
+    word_count INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    INDEX idx_content_hash (content_hash),
+    INDEX idx_created_at (created_at),
+    INDEX idx_score (score DESC)
+);
+
+CREATE TABLE IF NOT EXISTS contentscore_comparisons (
+    id SERIAL PRIMARY KEY,
+    hash1 VARCHAR(64) NOT NULL,
+    hash2 VARCHAR(64) NOT NULL,
+    comparison_data JSONB NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(hash1, hash2)
+);
