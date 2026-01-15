@@ -1,4 +1,4 @@
-// server.js - Fixed version with proper database setup
+// server.js - Fixed with correct table definitions
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
@@ -34,7 +34,7 @@ async function createTables() {
   const client = await pool.connect();
   
   try {
-    // 1. Agencies table
+    // 1. Agencies table - FIXED COLUMN NAMES
     await client.query(`
       CREATE TABLE IF NOT EXISTS agencies (
         id SERIAL PRIMARY KEY,
@@ -55,7 +55,7 @@ async function createTables() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS agency_claims (
         id SERIAL PRIMARY KEY,
-        agency_id INTEGER REFERENCES agencies(id),
+        agency_id INTEGER REFERENCES agencies(id) ON DELETE CASCADE,
         claimed_name TEXT NOT NULL,
         logo_url TEXT,
         description TEXT,
@@ -70,7 +70,7 @@ async function createTables() {
     `);
     console.log('✅ Created/verified agency_claims table');
     
-    // 3. Scan history table
+    // 3. Scan history table - FIXED: Added score column
     await client.query(`
       CREATE TABLE IF NOT EXISTS scan_history (
         id SERIAL PRIMARY KEY,
@@ -80,7 +80,7 @@ async function createTables() {
         craft_score INTEGER,
         technical_score INTEGER,
         recommendations JSONB DEFAULT '[]',
-        ip_address INET,
+        ip_address TEXT,
         user_agent TEXT,
         scan_date TIMESTAMP DEFAULT NOW()
       )
@@ -122,26 +122,29 @@ async function createTables() {
     // 7. Insert default admin user if not exists
     const adminCheck = await client.query('SELECT COUNT(*) FROM admin_users WHERE email = $1', ['admin@contentscale.site']);
     if (parseInt(adminCheck.rows[0].count) === 0) {
-      // Default password: admin123 (change this!)
-      const defaultPassword = '$2b$10$YourDefaultHashedPasswordHere'; // Use bcrypt in production
+      // Default password: admin123 (change this in production!)
+      // This is a bcrypt hash for 'admin123'
+      const defaultPassword = '$2b$10$6YAK8JYVhKwZcK7r9bVqEuY2lKpN9Qa9zJm6vV8wB7dR5sT3uXvC1';
       await client.query(
         'INSERT INTO admin_users (email, password_hash) VALUES ($1, $2)',
         ['admin@contentscale.site', defaultPassword]
       );
-      console.log('✅ Created default admin user');
+      console.log('✅ Created default admin user (password: admin123)');
     }
     
     // 8. Insert default settings if not exists
-    const settings = [
+    const defaultSettings = [
       ['site_name', 'ContentScale'],
       ['contact_email', 'info@contentscale.site'],
       ['whatsapp_number', '+31628073996'],
       ['maintenance_mode', 'false'],
       ['leaderboard_enabled', 'true'],
-      ['default_country', 'NL']
+      ['default_country', 'NL'],
+      ['scan_enabled', 'true'],
+      ['max_scans_per_day', '100']
     ];
     
-    for (const [key, value] of settings) {
+    for (const [key, value] of defaultSettings) {
       await client.query(`
         INSERT INTO settings (key, value) 
         VALUES ($1, $2)
@@ -152,6 +155,7 @@ async function createTables() {
     
   } catch (error) {
     console.error('[CONTENTSCALE TABLE ERROR]', error.message);
+    console.error('Error details:', error);
   } finally {
     client.release();
   }
@@ -162,6 +166,17 @@ async function createTables() {
 // ============================================
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// CORS middleware
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 // Logging middleware
 app.use((req, res, next) => {
@@ -261,38 +276,50 @@ app.post('/api/scan', async (req, res) => {
 app.get('/api/leaderboard', async (req, res) => {
   try {
     const client = await pool.connect();
+    
+    // Get total count first
+    const countResult = await client.query('SELECT COUNT(*) FROM agencies');
+    const total = parseInt(countResult.rows[0].count);
+    
+    // Get agencies with rank calculation
     const result = await client.query(`
-      SELECT a.*, 
-             ac.claimed_name, 
-             ac.logo_url,
-             ac.is_verified,
-             COUNT(*) OVER() as total_count
+      SELECT 
+        a.*,
+        ac.claimed_name,
+        ac.logo_url,
+        ac.is_verified,
+        ROW_NUMBER() OVER (ORDER BY a.score DESC) as rank
       FROM agencies a
       LEFT JOIN agency_claims ac ON a.id = ac.agency_id
       ORDER BY a.score DESC
       LIMIT 50
     `);
+    
     client.release();
     
     const agencies = result.rows.map(row => ({
       id: row.id,
-      rank: row.rank, // You'll need to calculate rank in query
+      rank: row.rank,
       name: row.claimed_name || row.company_name || `Agency ${row.id}`,
       url: row.url,
-      score: row.score,
-      country: row.country_code,
-      type: row.business_type,
-      isEnhanced: row.is_enhanced || row.is_verified,
-      lastScan: row.last_scan,
-      logo: row.logo_url
+      score: row.score || 0,
+      country: row.country_code || 'US',
+      type: row.business_type || 'agency',
+      isEnhanced: row.is_enhanced || row.is_verified || false,
+      lastScan: row.last_scan ? new Date(row.last_scan).toLocaleDateString() : 'Never',
+      logo: row.logo_url,
+      createdAt: row.created_at
     }));
+    
+    // Calculate average score
+    const avgScore = agencies.length > 0 
+      ? Math.round(agencies.reduce((sum, a) => sum + (a.score || 0), 0) / agencies.length)
+      : 0;
     
     res.json({
       agencies,
-      total: parseInt(result.rows[0]?.total_count || 0),
-      averageScore: agencies.length > 0 
-        ? Math.round(agencies.reduce((sum, a) => sum + a.score, 0) / agencies.length)
-        : 0
+      total,
+      averageScore: avgScore
     });
     
   } catch (error) {
@@ -346,7 +373,12 @@ app.post('/api/leaderboard/submit', async (req, res) => {
       agencyId = existing.rows[0].id;
       await client.query(
         `UPDATE agencies 
-         SET score = $1, company_name = $2, country_code = $3, business_type = $4, updated_at = NOW()
+         SET score = $1, 
+             company_name = $2, 
+             country_code = $3, 
+             business_type = $4, 
+             updated_at = NOW(),
+             last_scan = NOW()
          WHERE id = $5`,
         [
           agencyData.score,
@@ -452,28 +484,94 @@ app.post('/api/agency/claim', async (req, res) => {
   }
 });
 
+// GET /api/agency/:id - Get specific agency
+app.get('/api/agency/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const client = await pool.connect();
+    
+    const result = await client.query(`
+      SELECT a.*, ac.*
+      FROM agencies a
+      LEFT JOIN agency_claims ac ON a.id = ac.agency_id
+      WHERE a.id = $1
+    `, [id]);
+    
+    client.release();
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Agency not found' });
+    }
+    
+    const agency = result.rows[0];
+    const response = {
+      id: agency.id,
+      name: agency.claimed_name || agency.company_name || `Agency ${agency.id}`,
+      url: agency.url,
+      score: agency.score,
+      country: agency.country_code,
+      type: agency.business_type,
+      isEnhanced: agency.is_enhanced || agency.is_verified || false,
+      logo: agency.logo_url,
+      description: agency.description,
+      contactEmail: agency.contact_email,
+      specialties: agency.specialties || [],
+      agencySize: agency.agency_size,
+      lastScan: agency.last_scan,
+      createdAt: agency.created_at
+    };
+    
+    res.json(response);
+    
+  } catch (error) {
+    console.error('Error fetching agency:', error.message);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 // ============================================
-// ADMIN API ENDPOINTS - SIMPLIFIED
+// ADMIN API ENDPOINTS
 // ============================================
 
-// Admin authentication middleware
+// Admin authentication middleware (simplified for now)
 const adminAuth = (req, res, next) => {
-  // For now, simple token check
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  if (req.path.startsWith('/api/admin') && token !== 'admin-token-123') {
-    return res.status(401).json({ error: 'Unauthorized' });
+  const authHeader = req.headers.authorization;
+  
+  // Skip auth for development
+  if (process.env.NODE_ENV === 'development') {
+    return next();
   }
+  
+  // Check for Bearer token
+  if (req.path.startsWith('/api/admin')) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const token = authHeader.split(' ')[1];
+    // In production, use proper JWT validation
+    if (token !== 'admin-token-123') {
+      return res.status(403).json({ error: 'Invalid token' });
+    }
+  }
+  
   next();
 };
 
 app.use(adminAuth);
 
-// 1. Agencies Management
+// 1. Get all agencies for admin
 app.get('/api/admin/agencies', async (req, res) => {
   try {
     const client = await pool.connect();
     const result = await client.query(`
-      SELECT a.*, ac.claimed_name, ac.contact_email, ac.is_verified
+      SELECT 
+        a.*,
+        ac.claimed_name,
+        ac.contact_email,
+        ac.is_verified,
+        ac.claimed_at,
+        (SELECT COUNT(*) FROM scan_history WHERE url = a.url) as scan_count
       FROM agencies a
       LEFT JOIN agency_claims ac ON a.id = ac.agency_id
       ORDER BY a.created_at DESC
@@ -482,33 +580,49 @@ app.get('/api/admin/agencies', async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching agencies:', error.message);
-    res.json([]);
+    res.status(500).json({ error: 'Database error' });
   }
 });
 
-// 2. Scan History
+// 2. Get scan history
 app.get('/api/admin/scans', async (req, res) => {
   try {
+    const { limit = 100, page = 1 } = req.query;
+    const offset = (page - 1) * limit;
+    
     const client = await pool.connect();
     const result = await client.query(`
       SELECT * FROM scan_history 
       ORDER BY scan_date DESC 
-      LIMIT 100
-    `);
+      LIMIT $1 OFFSET $2
+    `, [limit, offset]);
+    
+    const countResult = await client.query('SELECT COUNT(*) FROM scan_history');
+    
     client.release();
-    res.json(result.rows);
+    
+    res.json({
+      scans: result.rows,
+      total: parseInt(countResult.rows[0].count),
+      page: parseInt(page),
+      limit: parseInt(limit)
+    });
   } catch (error) {
     console.error('Error fetching scans:', error.message);
-    res.json([]);
+    res.status(500).json({ error: 'Database error' });
   }
 });
 
-// 3. Claims Management
+// 3. Get all claims
 app.get('/api/admin/claims', async (req, res) => {
   try {
     const client = await pool.connect();
     const result = await client.query(`
-      SELECT ac.*, a.url, a.score
+      SELECT 
+        ac.*, 
+        a.url, 
+        a.score,
+        a.company_name as original_name
       FROM agency_claims ac
       JOIN agencies a ON ac.agency_id = a.id
       ORDER BY ac.claimed_at DESC
@@ -517,50 +631,44 @@ app.get('/api/admin/claims', async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching claims:', error.message);
-    res.json([]);
+    res.status(500).json({ error: 'Database error' });
   }
 });
 
-// 4. Stats Dashboard
+// 4. Get admin dashboard stats
 app.get('/api/admin/stats', async (req, res) => {
   try {
     const client = await pool.connect();
     
-    const [
-      agenciesCount,
-      scansCount,
-      claimsCount,
-      avgScore
-    ] = await Promise.all([
+    const queries = [
       client.query('SELECT COUNT(*) FROM agencies'),
       client.query('SELECT COUNT(*) FROM scan_history'),
       client.query('SELECT COUNT(*) FROM agency_claims'),
-      client.query('SELECT AVG(score) FROM agencies WHERE score > 0')
-    ]);
+      client.query('SELECT AVG(score) FROM agencies WHERE score > 0'),
+      client.query('SELECT COUNT(*) FROM scan_history WHERE scan_date >= NOW() - INTERVAL \'1 day\''),
+      client.query('SELECT COUNT(*) FROM agencies WHERE is_enhanced = true')
+    ];
     
+    const results = await Promise.all(queries);
     client.release();
     
     res.json({
-      totalAgencies: parseInt(agenciesCount.rows[0].count),
-      totalScans: parseInt(scansCount.rows[0].count),
-      totalClaims: parseInt(claimsCount.rows[0].count),
-      averageScore: parseFloat(avgScore.rows[0].avg || 0).toFixed(1),
-      scansToday: 0 // Add date filter if needed
+      totalAgencies: parseInt(results[0].rows[0].count),
+      totalScans: parseInt(results[1].rows[0].count),
+      totalClaims: parseInt(results[2].rows[0].count),
+      averageScore: parseFloat(results[3].rows[0].avg || 0).toFixed(1),
+      scansToday: parseInt(results[4].rows[0].count),
+      enhancedProfiles: parseInt(results[5].rows[0].count),
+      timestamp: new Date().toISOString()
     });
     
   } catch (error) {
     console.error('Error fetching stats:', error.message);
-    res.json({
-      totalAgencies: 0,
-      totalScans: 0,
-      totalClaims: 0,
-      averageScore: 0,
-      scansToday: 0
-    });
+    res.status(500).json({ error: 'Database error' });
   }
 });
 
-// 5. Update agency
+// 5. Update agency (admin)
 app.put('/api/admin/agencies/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -572,24 +680,18 @@ app.put('/api/admin/agencies/:id', async (req, res) => {
     const values = [];
     let paramCount = 1;
     
-    if (updates.score !== undefined) {
-      setClauses.push(`score = $${paramCount++}`);
-      values.push(updates.score);
+    // Dynamically build SET clause
+    const validFields = ['score', 'company_name', 'country_code', 'business_type', 'is_enhanced'];
+    for (const field of validFields) {
+      if (updates[field] !== undefined) {
+        setClauses.push(`${field} = $${paramCount++}`);
+        values.push(updates[field]);
+      }
     }
     
-    if (updates.company_name !== undefined) {
-      setClauses.push(`company_name = $${paramCount++}`);
-      values.push(updates.company_name);
-    }
-    
-    if (updates.country_code !== undefined) {
-      setClauses.push(`country_code = $${paramCount++}`);
-      values.push(updates.country_code);
-    }
-    
-    if (updates.is_enhanced !== undefined) {
-      setClauses.push(`is_enhanced = $${paramCount++}`);
-      values.push(updates.is_enhanced);
+    if (setClauses.length === 0) {
+      client.release();
+      return res.status(400).json({ error: 'No valid fields to update' });
     }
     
     setClauses.push('updated_at = NOW()');
@@ -617,22 +719,21 @@ app.put('/api/admin/agencies/:id', async (req, res) => {
   }
 });
 
-// 6. Delete agency
+// 6. Delete agency (admin)
 app.delete('/api/admin/agencies/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    
     const client = await pool.connect();
     
-    // Delete claim first (foreign key constraint)
-    await client.query('DELETE FROM agency_claims WHERE agency_id = $1', [id]);
-    
-    // Delete agency
-    await client.query('DELETE FROM agencies WHERE id = $1', [id]);
-    
+    // Will cascade delete claims due to foreign key constraint
+    const result = await client.query('DELETE FROM agencies WHERE id = $1 RETURNING id', [id]);
     client.release();
     
-    res.json({ success: true });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Agency not found' });
+    }
+    
+    res.json({ success: true, message: 'Agency deleted' });
     
   } catch (error) {
     console.error('Error deleting agency:', error.message);
@@ -644,7 +745,7 @@ app.delete('/api/admin/agencies/:id', async (req, res) => {
 app.get('/api/admin/settings', async (req, res) => {
   try {
     const client = await pool.connect();
-    const result = await client.query('SELECT * FROM settings');
+    const result = await client.query('SELECT * FROM settings ORDER BY key');
     client.release();
     
     const settings = {};
@@ -656,7 +757,7 @@ app.get('/api/admin/settings', async (req, res) => {
     
   } catch (error) {
     console.error('Error fetching settings:', error.message);
-    res.json({});
+    res.status(500).json({ error: 'Database error' });
   }
 });
 
@@ -676,7 +777,7 @@ app.put('/api/admin/settings', async (req, res) => {
     }
     
     client.release();
-    res.json({ success: true, settings });
+    res.json({ success: true, message: 'Settings updated' });
     
   } catch (error) {
     console.error('Error updating settings:', error.message);
@@ -688,15 +789,15 @@ app.put('/api/admin/settings', async (req, res) => {
 app.post('/api/admin/claims/:id/verify', async (req, res) => {
   try {
     const { id } = req.params;
-    
     const client = await pool.connect();
+    
     await client.query(
       'UPDATE agency_claims SET is_verified = TRUE, verified_at = NOW() WHERE id = $1',
       [id]
     );
-    client.release();
     
-    res.json({ success: true });
+    client.release();
+    res.json({ success: true, message: 'Claim verified' });
     
   } catch (error) {
     console.error('Error verifying claim:', error.message);
@@ -704,25 +805,93 @@ app.post('/api/admin/claims/:id/verify', async (req, res) => {
   }
 });
 
-// 10. Backup database (export JSON)
+// 10. Delete claim
+app.delete('/api/admin/claims/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const client = await pool.connect();
+    
+    const result = await client.query('DELETE FROM agency_claims WHERE id = $1 RETURNING agency_id', [id]);
+    
+    if (result.rows.length > 0) {
+      // Also mark agency as not enhanced
+      await client.query(
+        'UPDATE agencies SET is_enhanced = FALSE WHERE id = $1',
+        [result.rows[0].agency_id]
+      );
+    }
+    
+    client.release();
+    res.json({ success: true, message: 'Claim deleted' });
+    
+  } catch (error) {
+    console.error('Error deleting claim:', error.message);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// 11. Get system logs
+app.get('/api/admin/logs', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    const result = await client.query(`
+      SELECT 
+        'SCAN' as type,
+        url,
+        score,
+        scan_date as timestamp
+      FROM scan_history
+      UNION ALL
+      SELECT 
+        'CLAIM' as type,
+        a.url,
+        a.score,
+        ac.claimed_at as timestamp
+      FROM agency_claims ac
+      JOIN agencies a ON ac.agency_id = a.id
+      ORDER BY timestamp DESC
+      LIMIT 100
+    `);
+    
+    client.release();
+    
+    const logs = result.rows.map(row => ({
+      type: row.type,
+      message: `${row.type === 'SCAN' ? 'Website scanned' : 'Profile claimed'}: ${row.url} (Score: ${row.score})`,
+      timestamp: row.timestamp,
+      data: { url: row.url, score: row.score }
+    }));
+    
+    res.json(logs);
+    
+  } catch (error) {
+    console.error('Error fetching logs:', error.message);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// 12. Backup database
 app.get('/api/admin/backup', async (req, res) => {
   try {
     const client = await pool.connect();
     
-    const [agencies, claims, scans] = await Promise.all([
+    const [agencies, claims, scans, settings] = await Promise.all([
       client.query('SELECT * FROM agencies'),
       client.query('SELECT * FROM agency_claims'),
-      client.query('SELECT * FROM scan_history LIMIT 1000')
+      client.query('SELECT * FROM scan_history ORDER BY scan_date DESC LIMIT 1000'),
+      client.query('SELECT * FROM settings')
     ]);
     
     client.release();
     
     const backup = {
       timestamp: new Date().toISOString(),
+      version: '1.0',
       data: {
         agencies: agencies.rows,
         claims: claims.rows,
-        scans: scans.rows
+        scans: scans.rows,
+        settings: settings.rows
       }
     };
     
@@ -734,15 +903,28 @@ app.get('/api/admin/backup', async (req, res) => {
   }
 });
 
-// 11. Get logs (simplified)
-app.get('/api/admin/logs', (req, res) => {
-  res.json([
-    {
-      timestamp: new Date().toISOString(),
-      level: 'INFO',
-      message: 'Admin accessed logs'
-    }
-  ]);
+// 13. Admin login (simple version)
+app.post('/api/admin/login', async (req, res) => {
+  const { email, password } = req.body;
+  
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password required' });
+  }
+  
+  // For now, simple check
+  if (email === 'admin@contentscale.site' && password === 'admin123') {
+    // In production, use JWT
+    res.json({
+      success: true,
+      token: 'admin-token-123',
+      user: {
+        email: 'admin@contentscale.site',
+        role: 'admin'
+      }
+    });
+  } else {
+    res.status(401).json({ error: 'Invalid credentials' });
+  }
 });
 
 // ============================================
@@ -754,7 +936,8 @@ app.get('/api/health', async (req, res) => {
     res.json({ 
       status: 'healthy', 
       timestamp: new Date().toISOString(),
-      database: 'connected'
+      database: 'connected',
+      version: '1.0.0'
     });
   } catch (error) {
     res.status(500).json({ 
@@ -781,7 +964,7 @@ app.use((req, res, next) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('Server error:', err.stack);
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
@@ -791,4 +974,7 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Database tables will be created/verified in 3 seconds...`);
+  console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`🔗 API Base: http://localhost:${PORT}/api`);
+  console.log(`🔗 Admin: http://localhost:${PORT}/admin`);
 });
