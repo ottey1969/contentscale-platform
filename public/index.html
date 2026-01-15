@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ContentScale - Free AI SEO Scanner & Global Leaderboard</title>
   <meta name="description" content="Free AI-powered SEO content scanner. Get your GRAAF + CRAFT + Technical SEO score instantly!">
   <script src="https://cdn.tailwindcss.com"></script>
@@ -230,6 +230,36 @@
       box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
     }
     
+    /* ENHANCED PROFILE BADGE */
+    .enhanced-badge {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    /* COUNTRY DROPDOWN */
+    .country-select {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid #475569;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    
+    /* LOADING ANIMATION */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .loading-pulse {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    
     @media (max-width: 768px) { 
       .hamburger { display: flex; }
       .scanner-section, .leaderboard-section { padding: 20px; }
@@ -313,14 +343,72 @@
           </div>
         </div>
 
-        <!-- LEADERBOARD CHECKBOX -->
+        <!-- ENHANCED LEADERBOARD SUBMISSION -->
         <div class="mt-4 bg-gray-800 bg-opacity-50 rounded-lg p-4">
           <label class="flex items-center gap-3 cursor-pointer">
             <input type="checkbox" id="submitToLeaderboard" class="w-5 h-5 rounded border-gray-600 text-purple-600 focus:ring-purple-500">
-            <span class="text-sm text-gray-300">📊 Submit to leaderboard (optional)</span>
+            <span class="text-sm text-gray-300">📊 Submit to leaderboard & claim profile (optional)</span>
           </label>
           <div id="companyNameField" class="mt-3 hidden">
-            <input type="text" id="companyName" placeholder="Company name (optional)" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg text-sm">
+            <input type="text" id="companyName" placeholder="Company name (optional)" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg text-sm mb-3">
+            
+            <!-- COUNTRY SELECTION -->
+            <div class="mb-3">
+              <label class="block text-sm text-gray-400 mb-2">Select Country:</label>
+              <select id="countrySelect" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg text-sm">
+                <option value="">Auto-detect from domain</option>
+                <optgroup label="🇺🇸 English-Speaking Markets">
+                  <option value="US">United States</option>
+                  <option value="CA">Canada</option>
+                  <option value="UK">United Kingdom</option>
+                  <option value="AU">Australia</option>
+                  <option value="NZ">New Zealand</option>
+                  <option value="IE">Ireland</option>
+                </optgroup>
+                <optgroup label="🇪🇺 Top European Markets">
+                  <option value="NL">Netherlands</option>
+                  <option value="DE">Germany</option>
+                  <option value="FR">France</option>
+                  <option value="ES">Spain</option>
+                  <option value="IT">Italy</option>
+                  <option value="BE">Belgium</option>
+                  <option value="SE">Sweden</option>
+                  <option value="DK">Denmark</option>
+                  <option value="NO">Norway</option>
+                  <option value="FI">Finland</option>
+                  <option value="CH">Switzerland</option>
+                  <option value="AT">Austria</option>
+                </optgroup>
+                <optgroup label="🌏 Other Key Markets">
+                  <option value="SG">Singapore</option>
+                  <option value="JP">Japan</option>
+                  <option value="KR">South Korea</option>
+                  <option value="AE">United Arab Emirates</option>
+                </optgroup>
+              </select>
+            </div>
+            
+            <!-- AGENCY TYPE -->
+            <div class="mb-3">
+              <label class="block text-sm text-gray-400 mb-2">Business Type:</label>
+              <div class="flex flex-wrap gap-2">
+                <button type="button" class="agency-type-btn px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm" data-type="agency">🏢 SEO Agency</button>
+                <button type="button" class="agency-type-btn px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm" data-type="ecommerce">🛒 E-commerce</button>
+                <button type="button" class="agency-type-btn px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm" data-type="saas">💻 SaaS/Tech</button>
+                <button type="button" class="agency-type-btn px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm" data-type="other">🎯 Other</button>
+              </div>
+            </div>
+            
+            <!-- QUICK CLAIM OPTION -->
+            <div class="mt-4 p-3 bg-gradient-to-r from-purple-900 to-blue-900 rounded-lg">
+              <div class="flex items-center gap-3">
+                <div class="text-2xl">🚀</div>
+                <div class="text-sm">
+                  <div class="font-bold">Pro Tip:</div>
+                  <div class="text-gray-300">Complete your profile later to get verified badge and more leads!</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -335,7 +423,7 @@
         </div>
         
         <!-- FOR AGENCIES -->
-        <div class="bg-purple-900 border border-purple-700 rounded-lg p-3">
+        <div class="bg-gradient-to-r from-purple-900 to-blue-900 border border-purple-700 rounded-lg p-3">
           <div class="flex items-center gap-3">
             <div class="text-2xl">🏢</div>
             <div>
@@ -364,89 +452,144 @@
           <div class="text-xs text-gray-400">Countries</div>
         </div>
         <div class="bg-gray-800 rounded-lg p-4 text-center">
-          <div class="text-2xl font-bold text-purple-400" id="leadsGenerated">0</div>
-          <div class="text-xs text-gray-400">Profiles Claimed</div>
+          <div class="text-2xl font-bold text-purple-400" id="enhancedProfiles">0</div>
+          <div class="text-xs text-gray-400">Enhanced Profiles</div>
         </div>
       </div>
       
-      <!-- SIMPLE FILTERS -->
+      <!-- ADVANCED FILTERS -->
       <div class="mb-6 p-4 bg-gray-800 rounded-lg">
-        <div class="text-sm text-gray-400 mb-3">Filter by:</div>
-        <div class="flex flex-wrap gap-2">
-          <!-- COUNTRY FILTERS -->
-          <div class="simple-filter active" data-filter="country" data-value="all">🌍 All Countries</div>
-          <div class="simple-filter" data-filter="country" data-value="NL">🇳🇱 Netherlands</div>
-          <div class="simple-filter" data-filter="country" data-value="BE">🇧🇪 Belgium</div>
-          <div class="simple-filter" data-filter="country" data-value="DE">🇩🇪 Germany</div>
-          <div class="simple-filter" data-filter="country" data-value="UK">🇬🇧 UK</div>
-          <div class="simple-filter" data-filter="country" data-value="US">🇺🇸 USA</div>
-          <div class="simple-filter" data-filter="country" data-value="CA">🇨🇦 Canada</div>
-          <div class="simple-filter" data-filter="country" data-value="AU">🇦🇺 Australia</div>
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+          <div class="text-sm text-gray-400">Find agencies by:</div>
+          <div class="flex items-center gap-3">
+            <button onclick="toggleViewMode()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm">
+              <span id="viewModeIcon">📋</span> <span id="viewModeText">Table View</span>
+            </button>
+            <button onclick="refreshLeaderboard()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm">
+              🔄 Refresh
+            </button>
+          </div>
         </div>
         
-        <div class="mt-4 flex flex-wrap gap-2">
-          <!-- TYPE FILTERS -->
-          <div class="simple-filter active" data-filter="type" data-value="all">🎯 All Types</div>
-          <div class="simple-filter" data-filter="type" data-value="agency">🏢 SEO Agencies</div>
-          <div class="simple-filter" data-filter="type" data-value="ecommerce">🛒 E-commerce</div>
-          <div class="simple-filter" data-filter="type" data-value="saas">💻 SaaS/Tech</div>
-          <div class="simple-filter" data-filter="type" data-value="claimed">✅ Claimed Profiles</div>
+        <!-- COUNTRY FILTERS -->
+        <div class="mb-4">
+          <div class="text-xs text-gray-500 mb-2">Country:</div>
+          <div class="flex flex-wrap gap-2">
+            <div class="simple-filter active" data-filter="country" data-value="all">🌍 All</div>
+            <div class="simple-filter" data-filter="country" data-value="NL">🇳🇱 NL</div>
+            <div class="simple-filter" data-filter="country" data-value="BE">🇧🇪 BE</div>
+            <div class="simple-filter" data-filter="country" data-value="DE">🇩🇪 DE</div>
+            <div class="simple-filter" data-filter="country" data-value="UK">🇬🇧 UK</div>
+            <div class="simple-filter" data-filter="country" data-value="US">🇺🇸 US</div>
+            <div class="simple-filter" data-filter="country" data-value="CA">🇨🇦 CA</div>
+            <div class="simple-filter" data-filter="country" data-value="AU">🇦🇺 AU</div>
+            <button onclick="showAllCountries()" class="text-xs text-gray-400 hover:text-white px-2">+ More</button>
+          </div>
+        </div>
+        
+        <!-- TYPE FILTERS -->
+        <div class="mb-4">
+          <div class="text-xs text-gray-500 mb-2">Type:</div>
+          <div class="flex flex-wrap gap-2">
+            <div class="simple-filter active" data-filter="type" data-value="all">🎯 All</div>
+            <div class="simple-filter" data-filter="type" data-value="agency">🏢 Agencies</div>
+            <div class="simple-filter" data-filter="type" data-value="ecommerce">🛒 E-commerce</div>
+            <div class="simple-filter" data-filter="type" data-value="saas">💻 SaaS/Tech</div>
+            <div class="simple-filter" data-filter="type" data-value="enhanced">⭐ Enhanced</div>
+            <div class="simple-filter" data-filter="type" data-value="new">🆕 Recently Added</div>
+          </div>
+        </div>
+        
+        <!-- SCORE RANGE -->
+        <div class="mb-4">
+          <div class="text-xs text-gray-500 mb-2">Score Range:</div>
+          <div class="flex items-center gap-4">
+            <input type="range" id="scoreRange" min="0" max="100" value="0" class="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+            <div class="text-sm">
+              <span id="minScore">0</span> - <span id="maxScore">100</span>
+            </div>
+          </div>
         </div>
         
         <!-- SEARCH -->
-        <div class="mt-4">
-          <div class="relative">
-            <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"></i>
-            <input type="text" id="searchInput" placeholder="Search agencies..." class="w-full bg-gray-700 text-white pl-10 pr-4 py-2 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-          </div>
+        <div class="relative">
+          <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"></i>
+          <input type="text" id="searchInput" placeholder="Search agencies by name, country, or specialization..." class="w-full bg-gray-700 text-white pl-10 pr-4 py-2 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+        </div>
+        
+        <!-- ACTIVE FILTERS -->
+        <div id="activeFilters" class="mt-3 hidden">
+          <div class="text-xs text-gray-500 mb-1">Active filters:</div>
+          <div id="activeFiltersList" class="flex flex-wrap gap-1"></div>
         </div>
       </div>
       
-      <!-- LEADERBOARD TABLE -->
+      <!-- LEADERBOARD CONTENT -->
       <div id="leaderboard-container">
-        <div class="text-center py-12">
+        <div class="text-center py-12 loading-pulse">
           <div class="text-5xl mb-4">🔍</div>
           <div class="text-gray-400">Loading leaderboard...</div>
+        </div>
+      </div>
+      
+      <!-- PAGINATION -->
+      <div id="pagination" class="mt-6 flex justify-center hidden">
+        <div class="flex gap-1">
+          <button onclick="changePage(-1)" class="px-3 py-2 bg-gray-800 rounded-lg hover:bg-gray-700">&laquo;</button>
+          <button class="px-3 py-2 bg-purple-600 rounded-lg">1</button>
+          <button onclick="changePage(2)" class="px-3 py-2 bg-gray-800 rounded-lg hover:bg-gray-700">2</button>
+          <button onclick="changePage(3)" class="px-3 py-2 bg-gray-800 rounded-lg hover:bg-gray-700">3</button>
+          <button onclick="changePage(1)" class="px-3 py-2 bg-gray-800 rounded-lg hover:bg-gray-700">&raquo;</button>
         </div>
       </div>
       
       <!-- AGENCY CLAIM FORM -->
       <div id="claimForm" class="mt-12 p-6 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl border-2 border-purple-600 hidden">
         <div class="text-center mb-6">
-          <h3 class="text-2xl font-bold text-white">🏢 Claim Your Agency Profile</h3>
-          <p class="text-gray-400">Complete your profile to attract better clients</p>
+          <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full mb-4">
+            <span class="text-2xl">🏢</span>
+          </div>
+          <h3 class="text-2xl font-bold text-white">Claim Your Agency Profile</h3>
+          <p class="text-gray-400 mt-2">Complete your profile to attract better clients and get verified</p>
         </div>
         
         <div class="grid md:grid-cols-2 gap-6">
           <!-- LEFT: Current Info -->
           <div class="bg-gray-900 rounded-lg p-6">
-            <h4 class="font-bold text-lg mb-4">Current Listing</h4>
+            <h4 class="font-bold text-lg mb-4 text-white">Current Listing</h4>
             <div id="currentAgencyInfo">
               <div class="text-center py-8">
                 <div class="text-4xl mb-4">🏢</div>
                 <div class="text-gray-400">Select an agency to claim</div>
+                <div class="text-xs text-gray-500 mt-2">Click "+ Claim Profile" on any listing</div>
               </div>
             </div>
           </div>
           
           <!-- RIGHT: Claim Form -->
           <div class="bg-gray-900 rounded-lg p-6">
-            <h4 class="font-bold text-lg mb-4">Enhance Your Profile</h4>
+            <h4 class="font-bold text-lg mb-4 text-white">Enhance Your Profile</h4>
             <form id="agencyClaimForm">
               <div class="space-y-4">
                 <div>
-                  <label class="block text-sm text-gray-400 mb-2">Agency Name</label>
-                  <input type="text" name="agencyName" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                  <label class="block text-sm text-gray-400 mb-2">Agency Name *</label>
+                  <input type="text" name="agencyName" required class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-purple-500">
                 </div>
                 
                 <div>
                   <label class="block text-sm text-gray-400 mb-2">Logo URL</label>
-                  <input type="url" name="logoUrl" placeholder="https://..." class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                  <input type="url" name="logoUrl" placeholder="https://yourlogo.com/logo.png" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                  <div class="text-xs text-gray-500 mt-1">Square image recommended (200x200px)</div>
                 </div>
                 
                 <div>
-                  <label class="block text-sm text-gray-400 mb-2">Specializations</label>
-                  <div class="flex flex-wrap gap-3">
+                  <label class="block text-sm text-gray-400 mb-2">Description</label>
+                  <textarea name="description" rows="3" placeholder="Brief description of your agency..." class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2"></textarea>
+                </div>
+                
+                <div>
+                  <label class="block text-sm text-gray-400 mb-2">Specializations *</label>
+                  <div class="grid grid-cols-2 gap-2">
                     <label class="flex items-center gap-2">
                       <input type="checkbox" name="specialties" value="technical" class="rounded">
                       <span class="text-sm">Technical SEO</span>
@@ -457,39 +600,83 @@
                     </label>
                     <label class="flex items-center gap-2">
                       <input type="checkbox" name="specialties" value="ecommerce" class="rounded">
-                      <span class="text-sm">E-commerce</span>
+                      <span class="text-sm">E-commerce SEO</span>
                     </label>
                     <label class="flex items-center gap-2">
                       <input type="checkbox" name="specialties" value="local" class="rounded">
                       <span class="text-sm">Local SEO</span>
                     </label>
+                    <label class="flex items-center gap-2">
+                      <input type="checkbox" name="specialties" value="enterprise" class="rounded">
+                      <span class="text-sm">Enterprise SEO</span>
+                    </label>
+                    <label class="flex items-center gap-2">
+                      <input type="checkbox" name="specialties" value="international" class="rounded">
+                      <span class="text-sm">International SEO</span>
+                    </label>
+                  </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm text-gray-400 mb-2">Country</label>
+                    <select name="country" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                      <option value="NL">Netherlands</option>
+                      <option value="BE">Belgium</option>
+                      <option value="DE">Germany</option>
+                      <option value="UK">United Kingdom</option>
+                      <option value="US">United States</option>
+                      <option value="CA">Canada</option>
+                      <option value="AU">Australia</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label class="block text-sm text-gray-400 mb-2">Agency Size</label>
+                    <select name="agencySize" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                      <option value="freelancer">Freelancer</option>
+                      <option value="boutique">Boutique (2-10)</option>
+                      <option value="mid-market">Mid-Market (11-50)</option>
+                      <option value="enterprise">Enterprise (50+)</option>
+                    </select>
                   </div>
                 </div>
                 
                 <div>
-                  <label class="block text-sm text-gray-400 mb-2">Typical Project Size</label>
-                  <select name="projectSize" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
-                    <option value="">Select range</option>
-                    <option value="1k-3k">€1K - €3K/month</option>
-                    <option value="3k-10k">€3K - €10K/month</option>
-                    <option value="10k-25k">€10K - €25K/month</option>
-                    <option value="25k+">€25K+/month</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label class="block text-sm text-gray-400 mb-2">Contact Email for Leads</label>
-                  <input type="email" name="contactEmail" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                  <label class="block text-sm text-gray-400 mb-2">Contact Email for Leads *</label>
+                  <input type="email" name="contactEmail" required class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                  <div class="text-xs text-gray-500 mt-1">Will be displayed publicly</div>
                 </div>
                 
                 <div class="pt-4">
-                  <button type="submit" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-3 rounded-lg">
-                    🚀 Claim & Enhance Profile
+                  <button type="submit" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-3 rounded-lg transition-all duration-300">
+                    🚀 Claim & Publish Profile
                   </button>
-                  <p class="text-xs text-gray-500 mt-2 text-center">Free forever for basic profile</p>
+                  <p class="text-xs text-gray-500 mt-2 text-center">Free forever • Get listed in our agency directory</p>
                 </div>
               </div>
             </form>
+          </div>
+        </div>
+        
+        <div class="mt-6 pt-6 border-t border-gray-700">
+          <h4 class="font-bold text-white mb-3">🎯 Benefits of Claiming Your Profile:</h4>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-gray-800 rounded-lg p-4">
+              <div class="text-green-400 text-xl mb-2">✅</div>
+              <div class="font-bold text-sm">Verified Badge</div>
+              <div class="text-xs text-gray-400">Stand out with official verification</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4">
+              <div class="text-blue-400 text-xl mb-2">📈</div>
+              <div class="font-bold text-sm">More Leads</div>
+              <div class="text-xs text-gray-400">Get discovered by potential clients</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4">
+              <div class="text-purple-400 text-xl mb-2">🏆</div>
+              <div class="font-bold text-sm">Higher Ranking</div>
+              <div class="text-xs text-gray-400">Enhanced profiles rank higher</div>
+            </div>
           </div>
         </div>
       </div>
@@ -592,8 +779,13 @@
       }
       
       // Validate URL
+      let fullUrl = urlInput;
+      if (!urlInput.startsWith('http')) {
+        fullUrl = `https://${urlInput}`;
+      }
+      
       try {
-        new URL(urlInput.startsWith('http') ? urlInput : `https://${urlInput}`);
+        new URL(fullUrl);
       } catch {
         alert('Please enter a valid URL (e.g., https://example.com)');
         return;
@@ -607,11 +799,11 @@
       // Simulate scan
       setTimeout(async () => {
         try {
-          // Generate mock data
+          // Generate mock data with more realistic scores
           const mockData = {
             success: true,
-            score: Math.floor(Math.random() * 30) + 70,
-            url: urlInput,
+            score: Math.floor(Math.random() * 25) + 75, // 75-100 for better UX
+            url: fullUrl,
             recommendations: [
               {
                 type: 'quickwin',
@@ -633,9 +825,9 @@
               }
             ],
             metrics: {
-              graaf: Math.floor(Math.random() * 15) + 35,
-              craft: Math.floor(Math.random() * 10) + 20,
-              technical: Math.floor(Math.random() * 5) + 15
+              graaf: Math.floor(Math.random() * 10) + 40, // 40-50
+              craft: Math.floor(Math.random() * 8) + 22, // 22-30
+              technical: Math.floor(Math.random() * 5) + 15 // 15-20
             }
           };
           
@@ -656,7 +848,7 @@
           scanButton.innerHTML = originalText;
           scanButton.disabled = false;
         }
-      }, 2000);
+      }, 1500);
     }
 
     function showScanResults(data) {
@@ -666,13 +858,13 @@
       // Determine score color
       let scoreClass = 'score-poor';
       let scoreText = 'Needs Work';
-      if (data.score >= 80) {
+      if (data.score >= 85) {
         scoreClass = 'score-excellent';
         scoreText = 'Excellent';
-      } else if (data.score >= 70) {
+      } else if (data.score >= 75) {
         scoreClass = 'score-good';
         scoreText = 'Good';
-      } else if (data.score >= 60) {
+      } else if (data.score >= 65) {
         scoreClass = 'score-fair';
         scoreText = 'Fair';
       }
@@ -725,7 +917,7 @@
             <button onclick="closeModal()" class="flex-1 bg-gray-700 hover:bg-gray-600 py-3 rounded-lg font-semibold">
               Close
             </button>
-            <button onclick="scanAnother()" class="flex-1 bg-purple-600 hover:bg-purple-700 py-3 rounded-lg font-semibold">
+            <button onclick="scanAnother()" class="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 py-3 rounded-lg font-semibold">
               Scan Another
             </button>
           </div>
@@ -747,22 +939,69 @@
 
     async function submitToLeaderboardAPI(scanData) {
       const companyName = document.getElementById('companyName').value;
+      const countrySelect = document.getElementById('countrySelect');
+      const selectedCountry = countrySelect.value;
+      
+      // Auto-detect country from domain if not selected
+      let country = selectedCountry;
+      if (!country) {
+        country = detectCountryFromDomain(scanData.url);
+      }
+      
+      // Get agency type
+      let agencyType = 'other';
+      const activeTypeBtn = document.querySelector('.agency-type-btn.active');
+      if (activeTypeBtn) {
+        agencyType = activeTypeBtn.dataset.type;
+      }
       
       const agencyData = {
+        id: Date.now(),
         url: scanData.url,
         score: scanData.score,
         company: companyName || 'Individual',
-        timestamp: new Date().toISOString()
+        country: country || 'US',
+        type: agencyType,
+        timestamp: new Date().toISOString(),
+        isEnhanced: false,
+        lastScan: 'Just now'
       };
       
       try {
         // Save to localStorage
         let agencies = JSON.parse(localStorage.getItem('agencies') || '[]');
-        agencies.push(agencyData);
+        // Check if already exists
+        const existingIndex = agencies.findIndex(a => a.url === agencyData.url);
+        if (existingIndex !== -1) {
+          agencies[existingIndex] = agencyData;
+        } else {
+          agencies.push(agencyData);
+        }
         localStorage.setItem('agencies', JSON.stringify(agencies));
         
         console.log('Submitted to leaderboard:', agencyData);
-        alert('✅ Successfully added to leaderboard!');
+        
+        // Show success message with claim prompt
+        const modal = document.getElementById('scanModal');
+        const modalContent = modal.querySelector('.modal-content');
+        const existingBody = modalContent.querySelector('.modal-body');
+        
+        const claimSection = document.createElement('div');
+        claimSection.className = 'mt-6 p-4 bg-gradient-to-r from-purple-900 to-blue-900 rounded-lg';
+        claimSection.innerHTML = `
+          <div class="flex items-center gap-4">
+            <div class="text-3xl">🏢</div>
+            <div>
+              <div class="font-bold">Want to stand out?</div>
+              <div class="text-sm text-gray-300">Claim your agency profile to get verified and attract more clients!</div>
+            </div>
+            <button onclick="claimNewAgency(${agencyData.id})" class="bg-white text-purple-900 hover:bg-purple-100 px-4 py-2 rounded-lg font-bold">
+              Claim Profile
+            </button>
+          </div>
+        `;
+        
+        existingBody.appendChild(claimSection);
         
         // Refresh leaderboard
         loadLeaderboard();
@@ -773,6 +1012,20 @@
       }
     }
 
+    function detectCountryFromDomain(url) {
+      const domain = new URL(url).hostname;
+      const tld = domain.split('.').pop().toLowerCase();
+      
+      const countryTLDs = {
+        'nl': 'NL', 'be': 'BE', 'de': 'DE', 'fr': 'FR', 'es': 'ES',
+        'it': 'IT', 'uk': 'UK', 'co.uk': 'UK', 'com': 'US', 'us': 'US',
+        'ca': 'CA', 'au': 'AU', 'nz': 'NZ', 'ie': 'IE', 'se': 'SE',
+        'dk': 'DK', 'no': 'NO', 'fi': 'FI', 'ch': 'CH', 'at': 'AT'
+      };
+      
+      return countryTLDs[tld] || 'US';
+    }
+
     // ============================================
     // LEADERBOARD & AGENCY CLAIM SYSTEM
     // ============================================
@@ -781,11 +1034,45 @@
     let currentFilters = {
       country: 'all',
       type: 'all',
+      minScore: 0,
+      maxScore: 100,
       search: ''
     };
+    let currentView = 'table';
+    let currentPage = 1;
+    const itemsPerPage = 10;
 
     // Initialize page
     document.addEventListener('DOMContentLoaded', function() {
+      // Initialize scanner checkbox
+      document.getElementById('submitToLeaderboard').addEventListener('change', function() {
+        const companyField = document.getElementById('companyNameField');
+        if (this.checked) {
+          companyField.classList.remove('hidden');
+          // Auto-select first agency type
+          const firstTypeBtn = document.querySelector('.agency-type-btn');
+          if (firstTypeBtn) {
+            firstTypeBtn.classList.add('bg-purple-600', 'text-white');
+            firstTypeBtn.classList.remove('bg-gray-700', 'text-gray-300');
+            firstTypeBtn.classList.add('active');
+          }
+        } else {
+          companyField.classList.add('hidden');
+        }
+      });
+      
+      // Initialize agency type buttons
+      document.querySelectorAll('.agency-type-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          document.querySelectorAll('.agency-type-btn').forEach(b => {
+            b.classList.remove('bg-purple-600', 'text-white', 'active');
+            b.classList.add('bg-gray-700', 'text-gray-300');
+          });
+          this.classList.remove('bg-gray-700', 'text-gray-300');
+          this.classList.add('bg-purple-600', 'text-white', 'active');
+        });
+      });
+      
       // Initialize filter buttons
       document.querySelectorAll('.simple-filter').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -800,24 +1087,34 @@
           
           // Update filter
           currentFilters[filterType] = filterValue;
+          
+          // Special handling for score filter
+          if (filterType === 'type' && filterValue === 'enhanced') {
+            currentFilters.minScore = 70; // Enhanced profiles have higher scores
+          }
+          
           renderLeaderboard();
+          updateActiveFilters();
         });
+      });
+      
+      // Initialize score range
+      const scoreRange = document.getElementById('scoreRange');
+      const minScore = document.getElementById('minScore');
+      const maxScore = document.getElementById('maxScore');
+      
+      scoreRange.addEventListener('input', function() {
+        currentFilters.minScore = parseInt(this.value);
+        minScore.textContent = this.value;
+        renderLeaderboard();
+        updateActiveFilters();
       });
       
       // Initialize search
       document.getElementById('searchInput').addEventListener('input', function() {
         currentFilters.search = this.value.toLowerCase();
         renderLeaderboard();
-      });
-      
-      // Initialize scanner checkbox
-      document.getElementById('submitToLeaderboard').addEventListener('change', function() {
-        const companyField = document.getElementById('companyNameField');
-        if (this.checked) {
-          companyField.classList.remove('hidden');
-        } else {
-          companyField.classList.add('hidden');
-        }
+        updateActiveFilters();
       });
       
       // Initialize claim form
@@ -831,24 +1128,44 @@
     });
 
     function loadLeaderboard() {
-      // Mock data for demo
-      const countries = ['US', 'NL', 'UK', 'DE', 'FR', 'ES', 'CA', 'AU', 'BE', 'IT'];
-      const types = ['agency', 'ecommerce', 'saas', 'agency', 'ecommerce'];
-      
-      // Get from localStorage
+      // Load from localStorage
       let savedAgencies = JSON.parse(localStorage.getItem('agencies') || '[]');
       
-      // Generate mock agencies if none saved
+      // Generate mock data if none saved (for demo)
       if (savedAgencies.length === 0) {
-        savedAgencies = Array.from({ length: 15 }, (_, i) => ({
+        const countries = ['NL', 'BE', 'DE', 'UK', 'US', 'CA', 'AU', 'FR', 'ES'];
+        const types = ['agency', 'ecommerce', 'saas', 'other'];
+        
+        savedAgencies = Array.from({ length: 25 }, (_, i) => ({
           id: i + 1,
           url: `https://agency${i + 1}.com`,
-          score: Math.floor(Math.random() * 30) + 70,
+          score: Math.floor(Math.random() * 35) + 65, // 65-100
           company: `SEO Agency ${i + 1}`,
           country: countries[Math.floor(Math.random() * countries.length)],
           type: types[Math.floor(Math.random() * types.length)],
+          timestamp: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+          isEnhanced: Math.random() > 0.7,
           lastScan: `${Math.floor(Math.random() * 30) + 1} days ago`
         }));
+        
+        // Add some enhanced profiles
+        savedAgencies.forEach((agency, index) => {
+          if (index < 5) {
+            agency.isEnhanced = true;
+            claimedAgencies[agency.id] = {
+              name: agency.company,
+              logo: `https://ui-avatars.com/api/?name=${encodeURIComponent(agency.company)}&background=8b5cf6&color=fff`,
+              description: `Leading ${agency.type} SEO agency based in ${getCountryName(agency.country)}`,
+              specialties: ['technical', 'content', agency.type === 'ecommerce' ? 'ecommerce' : 'enterprise'].slice(0, Math.floor(Math.random() * 3) + 1),
+              agencySize: ['freelancer', 'boutique', 'mid-market', 'enterprise'][Math.floor(Math.random() * 4)],
+              contactEmail: `contact@agency${index + 1}.com`,
+              claimedAt: new Date().toISOString()
+            };
+          }
+        });
+        
+        localStorage.setItem('agencies', JSON.stringify(savedAgencies));
+        localStorage.setItem('claimedAgencies', JSON.stringify(claimedAgencies));
       }
       
       // Add IDs and timestamps if missing
@@ -856,19 +1173,27 @@
         id: agency.id || index + 1,
         rank: index + 1,
         url: agency.url,
-        score: agency.score,
-        company: agency.company,
+        score: agency.score || Math.floor(Math.random() * 35) + 65,
+        company: agency.company || `SEO Agency ${index + 1}`,
         country: agency.country || 'US',
         type: agency.type || 'agency',
+        isEnhanced: agency.isEnhanced || false,
         lastScan: agency.lastScan || 'Recently',
         timestamp: agency.timestamp || new Date().toISOString()
       }));
       
-      // Sort by score
-      allAgencies.sort((a, b) => b.score - a.score);
+      // Sort by score (enhanced profiles first)
+      allAgencies.sort((a, b) => {
+        if (a.isEnhanced && !b.isEnhanced) return -1;
+        if (!a.isEnhanced && b.isEnhanced) return 1;
+        return b.score - a.score;
+      });
+      
+      // Update ranks
       allAgencies.forEach((agency, index) => agency.rank = index + 1);
       
       renderLeaderboard();
+      updateStats();
     }
 
     function filterAgencies() {
@@ -880,11 +1205,19 @@
         
         // Type filter
         if (currentFilters.type !== 'all') {
-          if (currentFilters.type === 'claimed') {
-            if (!claimedAgencies[agency.id]) return false;
+          if (currentFilters.type === 'enhanced') {
+            if (!agency.isEnhanced) return false;
+          } else if (currentFilters.type === 'new') {
+            const daysAgo = (new Date() - new Date(agency.timestamp)) / (1000 * 60 * 60 * 24);
+            if (daysAgo > 7) return false; // New = less than 7 days
           } else if (agency.type !== currentFilters.type) {
             return false;
           }
+        }
+        
+        // Score filter
+        if (agency.score < currentFilters.minScore || agency.score > currentFilters.maxScore) {
+          return false;
         }
         
         // Search filter
@@ -893,7 +1226,8 @@
             agency.company,
             agency.url,
             getCountryName(agency.country),
-            agency.type
+            agency.type,
+            ...(claimedAgencies[agency.id]?.specialties || [])
           ].join(' ').toLowerCase();
           
           if (!searchable.includes(currentFilters.search)) {
@@ -908,23 +1242,48 @@
     function renderLeaderboard() {
       const filteredAgencies = filterAgencies();
       const container = document.getElementById('leaderboard-container');
+      const pagination = document.getElementById('pagination');
+      
+      // Calculate pagination
+      const totalPages = Math.ceil(filteredAgencies.length / itemsPerPage);
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const pagedAgencies = filteredAgencies.slice(startIndex, endIndex);
       
       if (filteredAgencies.length === 0) {
         container.innerHTML = `
           <div class="text-center py-12">
             <div class="text-5xl mb-4">🏢</div>
             <div class="text-xl font-semibold mb-2">No agencies found</div>
-            <p class="text-gray-400 mb-4">Try different filters or scan your website first</p>
-            <button onclick="scrollToSection('scanner')" class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-semibold">
+            <p class="text-gray-400 mb-4">Try adjusting your filters or scan your website first</p>
+            <button onclick="scrollToSection('scanner')" class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-6 py-3 rounded-lg font-semibold">
               Scan Your Website
             </button>
           </div>
         `;
-        updateStats();
+        pagination.classList.add('hidden');
         return;
       }
       
-      container.innerHTML = `
+      if (currentView === 'table') {
+        container.innerHTML = renderTableView(pagedAgencies);
+      } else {
+        container.innerHTML = renderCardsView(pagedAgencies);
+      }
+      
+      // Show pagination if needed
+      if (totalPages > 1) {
+        pagination.classList.remove('hidden');
+        renderPagination(totalPages);
+      } else {
+        pagination.classList.add('hidden');
+      }
+      
+      updateStats();
+    }
+
+    function renderTableView(agencies) {
+      return `
         <div class="overflow-x-auto rounded-lg border border-gray-700">
           <table class="min-w-full divide-y divide-gray-700">
             <thead class="bg-gray-800">
@@ -933,17 +1292,18 @@
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Agency</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Country</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Score</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Type</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Action</th>
               </tr>
             </thead>
             <tbody class="bg-gray-900 divide-y divide-gray-800">
-              ${filteredAgencies.slice(0, 20).map(agency => {
-                const isClaimed = claimedAgencies[agency.id];
-                const claimedInfo = isClaimed ? claimedAgencies[agency.id] : null;
+              ${agencies.map(agency => {
+                const isClaimed = claimedAgencies[agency.id] || agency.isEnhanced;
+                const claimedInfo = claimedAgencies[agency.id];
                 
                 return `
-                <tr class="hover:bg-gray-800 transition">
+                <tr class="hover:bg-gray-800 transition ${agency.isEnhanced ? 'bg-gradient-to-r from-gray-800 to-gray-900' : ''}">
                   <td class="px-6 py-4 whitespace-nowrap">
                     <div class="rank-badge ${agency.rank === 1 ? 'rank-1' : agency.rank === 2 ? 'rank-2' : agency.rank === 3 ? 'rank-3' : 'rank-other'}">
                       ${agency.rank}
@@ -951,16 +1311,17 @@
                   </td>
                   <td class="px-6 py-4">
                     <div class="flex items-center">
-                      ${isClaimed && claimedInfo.logo ? `
-                        <img src="${claimedInfo.logo}" alt="${claimedInfo.name}" class="h-10 w-10 rounded-lg mr-3 object-cover">
+                      ${isClaimed && claimedInfo?.logo ? `
+                        <img src="${claimedInfo.logo}" alt="${claimedInfo.name}" class="h-10 w-10 rounded-lg mr-3 object-cover border border-purple-500">
                       ` : `
                         <div class="h-10 w-10 bg-gray-700 rounded-lg flex items-center justify-center mr-3">
                           ${getFlagEmoji(agency.country)}
                         </div>
                       `}
                       <div>
-                        <div class="font-medium text-white">
+                        <div class="font-medium text-white flex items-center gap-2">
                           ${isClaimed ? claimedInfo.name : agency.company}
+                          ${agency.isEnhanced ? '<span class="enhanced-badge text-xs">⭐</span>' : ''}
                         </div>
                         <div class="text-sm text-gray-400">
                           ${agency.url.replace('https://', '')}
@@ -984,10 +1345,15 @@
                     </div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="text-xs px-2 py-1 rounded-full ${getTypeColor(agency.type)}">
+                      ${getTypeLabel(agency.type)}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
                     ${isClaimed ? `
                       <div class="text-sm">
-                        <div class="text-green-400">✓ Enhanced Profile</div>
-                        <div class="text-xs text-gray-500">${claimedInfo.specialties?.length || 0} specializations</div>
+                        <div class="text-green-400">✓ Enhanced</div>
+                        <div class="text-xs text-gray-500">${claimedInfo?.specialties?.length || 3} specializations</div>
                       </div>
                     ` : `
                       <div class="text-sm text-gray-400">Basic Listing</div>
@@ -1011,21 +1377,147 @@
           </table>
         </div>
         
-        <div class="mt-6 text-center">
-          <div class="inline-flex items-center gap-4 bg-gray-800 rounded-lg p-4">
-            <div class="text-2xl">🎯</div>
-            <div class="text-left">
-              <div class="font-bold">Agency Owners:</div>
-              <div class="text-sm text-gray-400">Claim your profile to get more visibility!</div>
-            </div>
-            <button onclick="scrollToClaimForm()" class="bg-white text-gray-900 hover:bg-gray-100 px-4 py-2 rounded-lg font-bold">
-              Claim Yours Now
-            </button>
-          </div>
+        <div class="mt-4 text-sm text-gray-400">
+          Showing ${agencies.length} of ${filterAgencies().length} agencies
         </div>
       `;
+    }
+
+    function renderCardsView(agencies) {
+      return `
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          ${agencies.map(agency => {
+            const isClaimed = claimedAgencies[agency.id] || agency.isEnhanced;
+            const claimedInfo = claimedAgencies[agency.id];
+            
+            return `
+            <div class="agency-card" onclick="${isClaimed ? `viewAgencyProfile(${agency.id})` : `claimAgencyProfile(${agency.id})`}">
+              <div class="flex justify-between items-start mb-4">
+                <div class="flex items-center">
+                  <div class="rank-badge ${agency.rank <= 3 ? (agency.rank === 1 ? 'rank-1' : agency.rank === 2 ? 'rank-2' : 'rank-3') : 'rank-other'} mr-3">
+                    ${agency.rank}
+                  </div>
+                  <div>
+                    <h3 class="font-bold text-lg">${isClaimed ? claimedInfo.name : agency.company}</h3>
+                    <div class="flex items-center text-sm text-gray-400 mt-1">
+                      ${getFlagEmoji(agency.country)}
+                      <span class="ml-1">${getCountryName(agency.country)}</span>
+                      ${agency.isEnhanced ? '<span class="ml-2 enhanced-badge text-xs">⭐ Enhanced</span>' : ''}
+                    </div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-2xl font-bold ${getScoreColor(agency.score)}">${agency.score}</div>
+                  <div class="text-xs text-gray-400">score</div>
+                </div>
+              </div>
+              
+              <div class="mb-4">
+                <div class="text-sm text-gray-400 mb-2">Specialization:</div>
+                <div class="flex flex-wrap gap-2">
+                  <span class="text-xs px-2 py-1 ${getTypeColor(agency.type)} rounded-full">
+                    ${getTypeLabel(agency.type)}
+                  </span>
+                  ${isClaimed && claimedInfo.specialties ? claimedInfo.specialties.slice(0, 2).map(spec => `
+                    <span class="text-xs px-2 py-1 bg-gray-800 rounded-full">${getSpecialtyName(spec)}</span>
+                  `).join('') : ''}
+                </div>
+              </div>
+              
+              <div class="flex justify-between items-center text-sm">
+                <div class="text-gray-400">${agency.lastScan}</div>
+                <div>
+                  ${isClaimed ? `
+                    <span class="text-green-400">✓ Verified</span>
+                  ` : `
+                    <span class="text-purple-400 font-semibold">+ Claim Profile</span>
+                  `}
+                </div>
+              </div>
+            </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    function renderPagination(totalPages) {
+      const pagination = document.getElementById('pagination');
+      let html = '<div class="flex gap-1">';
       
-      updateStats();
+      // Previous button
+      html += `<button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} class="px-3 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}">&laquo;</button>`;
+      
+      // Page numbers
+      for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+          html += `<button onclick="changePage(${i})" class="px-3 py-2 ${i === currentPage ? 'bg-purple-600' : 'bg-gray-800 hover:bg-gray-700'} rounded-lg">${i}</button>`;
+        } else if (i === currentPage - 2 || i === currentPage + 2) {
+          html += '<span class="px-3 py-2 text-gray-500">...</span>';
+        }
+      }
+      
+      // Next button
+      html += `<button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''} class="px-3 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}">&raquo;</button>`;
+      
+      html += '</div>';
+      pagination.innerHTML = html;
+    }
+
+    function changePage(page) {
+      const totalPages = Math.ceil(filterAgencies().length / itemsPerPage);
+      if (page < 1 || page > totalPages) return;
+      
+      currentPage = page;
+      renderLeaderboard();
+    }
+
+    function toggleViewMode() {
+      currentView = currentView === 'table' ? 'cards' : 'table';
+      const viewModeIcon = document.getElementById('viewModeIcon');
+      const viewModeText = document.getElementById('viewModeText');
+      
+      if (currentView === 'table') {
+        viewModeIcon.textContent = '📋';
+        viewModeText.textContent = 'Table View';
+      } else {
+        viewModeIcon.textContent = '🃏';
+        viewModeText.textContent = 'Cards View';
+      }
+      
+      renderLeaderboard();
+    }
+
+    function updateActiveFilters() {
+      const activeFilters = document.getElementById('activeFilters');
+      const activeFiltersList = document.getElementById('activeFiltersList');
+      
+      const activeFiltersArray = [];
+      
+      if (currentFilters.country !== 'all') {
+        activeFiltersArray.push(`Country: ${getCountryName(currentFilters.country)}`);
+      }
+      
+      if (currentFilters.type !== 'all') {
+        activeFiltersArray.push(`Type: ${getTypeLabel(currentFilters.type)}`);
+      }
+      
+      if (currentFilters.minScore > 0) {
+        activeFiltersArray.push(`Min Score: ${currentFilters.minScore}`);
+      }
+      
+      if (currentFilters.search) {
+        activeFiltersArray.push(`Search: "${currentFilters.search}"`);
+      }
+      
+      if (activeFiltersArray.length > 0) {
+        activeFilters.classList.remove('hidden');
+        activeFiltersList.innerHTML = activeFiltersArray.map(filter => `
+          <span class="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded">${filter}</span>
+        `).join('');
+      } else {
+        activeFilters.classList.add('hidden');
+      }
     }
 
     function claimAgencyProfile(agencyId) {
@@ -1037,46 +1529,69 @@
       const currentInfo = document.getElementById('currentAgencyInfo');
       
       currentInfo.innerHTML = `
-        <div class="space-y-3">
-          <div>
-            <div class="text-sm text-gray-400">Current URL</div>
-            <div class="font-medium">${agency.url}</div>
+        <div class="space-y-4">
+          <div class="flex items-center gap-4">
+            <div class="h-16 w-16 bg-gray-800 rounded-lg flex items-center justify-center text-2xl">
+              ${getFlagEmoji(agency.country)}
+            </div>
+            <div>
+              <div class="font-bold text-lg">${agency.company}</div>
+              <div class="text-sm text-gray-400">${agency.url.replace('https://', '')}</div>
+            </div>
           </div>
-          <div>
-            <div class="text-sm text-gray-400">Current Score</div>
-            <div class="text-2xl font-bold ${getScoreColor(agency.score)}">${agency.score}/100</div>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-gray-800 rounded-lg p-3">
+              <div class="text-xs text-gray-400">Current Score</div>
+              <div class="text-2xl font-bold ${getScoreColor(agency.score)}">${agency.score}</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+              <div class="text-xs text-gray-400">Global Rank</div>
+              <div class="text-2xl font-bold">#${agency.rank}</div>
+            </div>
           </div>
+          
           <div>
-            <div class="text-sm text-gray-400">Country</div>
+            <div class="text-xs text-gray-400 mb-1">Country</div>
             <div class="flex items-center">
               ${getFlagEmoji(agency.country)}
               <span class="ml-2">${getCountryName(agency.country)}</span>
             </div>
           </div>
+          
           <div>
-            <div class="text-sm text-gray-400">Current Name</div>
-            <div class="font-medium">${agency.company}</div>
+            <div class="text-xs text-gray-400 mb-1">Last Scan</div>
+            <div>${agency.lastScan}</div>
           </div>
         </div>
       `;
       
       // Pre-fill form
-      document.querySelector('input[name="agencyName"]').value = agency.company;
-      document.querySelector('input[name="contactEmail"]').value = '';
+      const form = document.getElementById('agencyClaimForm');
+      form.querySelector('input[name="agencyName"]').value = agency.company;
+      form.querySelector('select[name="country"]').value = agency.country;
+      form.querySelector('input[name="contactEmail"]').value = '';
       
       // Store agency ID in form
-      document.getElementById('agencyClaimForm').dataset.agencyId = agencyId;
+      form.dataset.agencyId = agencyId;
       
       // Show form and scroll to it
       claimForm.classList.remove('hidden');
       claimForm.scrollIntoView({ behavior: 'smooth' });
     }
 
+    function claimNewAgency(agencyId) {
+      closeModal();
+      setTimeout(() => {
+        claimAgencyProfile(agencyId);
+      }, 300);
+    }
+
     function scrollToClaimForm() {
       const claimForm = document.getElementById('claimForm');
       if (allAgencies.length > 0) {
         // Auto-select first unclaimed agency
-        const unclaimedAgency = allAgencies.find(a => !claimedAgencies[a.id]);
+        const unclaimedAgency = allAgencies.find(a => !claimedAgencies[a.id] && !a.isEnhanced);
         if (unclaimedAgency) {
           claimAgencyProfile(unclaimedAgency.id);
         } else {
@@ -1089,6 +1604,11 @@
       }
     }
 
+    function showAllCountries() {
+      // Show modal with all countries
+      alert('More countries available in the dropdown when submitting your website!');
+    }
+
     function submitClaimForm() {
       const form = document.getElementById('agencyClaimForm');
       const agencyId = form.dataset.agencyId;
@@ -1097,8 +1617,10 @@
       const claimedData = {
         name: formData.get('agencyName'),
         logo: formData.get('logoUrl'),
+        description: formData.get('description'),
         specialties: Array.from(formData.getAll('specialties')),
-        projectSize: formData.get('projectSize'),
+        country: formData.get('country'),
+        agencySize: formData.get('agencySize'),
         contactEmail: formData.get('contactEmail'),
         claimedAt: new Date().toISOString()
       };
@@ -1107,14 +1629,73 @@
       claimedAgencies[agencyId] = claimedData;
       localStorage.setItem('claimedAgencies', JSON.stringify(claimedAgencies));
       
+      // Update agency as enhanced
+      const agencyIndex = allAgencies.findIndex(a => a.id.toString() === agencyId);
+      if (agencyIndex !== -1) {
+        allAgencies[agencyIndex].isEnhanced = true;
+        allAgencies[agencyIndex].company = claimedData.name;
+        allAgencies[agencyIndex].country = claimedData.country;
+        localStorage.setItem('agencies', JSON.stringify(allAgencies));
+      }
+      
       // Hide form
       document.getElementById('claimForm').classList.add('hidden');
       
       // Show success message
-      alert('🎉 Profile claimed successfully! Your enhanced profile is now live.');
+      const modal = document.getElementById('scanModal');
+      modal.querySelector('.modal-content').innerHTML = `
+        <div class="modal-header">
+          <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full mb-4">
+            <span class="text-3xl">🎉</span>
+          </div>
+          <h2 class="text-3xl font-bold mb-2">Profile Claimed Successfully!</h2>
+          <p class="text-gray-400">Your agency is now verified and enhanced</p>
+        </div>
+        <div class="modal-body">
+          <div class="text-center mb-8">
+            <div class="text-5xl mb-4">🏢</div>
+            <h3 class="text-2xl font-bold mb-2">${claimedData.name}</h3>
+            <p class="text-gray-400">Your profile is now live in our directory!</p>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-4 mb-8">
+            <div class="bg-gray-800 rounded-lg p-4 text-center">
+              <div class="text-2xl mb-2">⭐</div>
+              <div class="font-bold">Verified Badge</div>
+              <div class="text-xs text-gray-400">Added to your profile</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4 text-center">
+              <div class="text-2xl mb-2">📈</div>
+              <div class="font-bold">Higher Ranking</div>
+              <div class="text-xs text-gray-400">Better visibility</div>
+            </div>
+          </div>
+          
+          <div class="mb-6 p-4 bg-gradient-to-r from-purple-900 to-blue-900 rounded-lg">
+            <div class="flex items-center gap-3">
+              <div class="text-2xl">📧</div>
+              <div>
+                <div class="font-bold">Leads will be sent to:</div>
+                <div class="text-sm text-gray-300">${claimedData.contactEmail}</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="flex gap-4 mt-8 pt-6 border-t border-gray-700">
+            <button onclick="closeModal()" class="flex-1 bg-gray-700 hover:bg-gray-600 py-3 rounded-lg font-semibold">
+              Close
+            </button>
+            <button onclick="closeModal(); scrollToSection('leaderboard')" class="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 py-3 rounded-lg font-semibold">
+              View Your Listing
+            </button>
+          </div>
+        </div>
+      `;
+      
+      modal.classList.remove('hidden');
       
       // Refresh leaderboard
-      renderLeaderboard();
+      loadLeaderboard();
     }
 
     function viewAgencyProfile(agencyId) {
@@ -1125,34 +1706,44 @@
       modal.querySelector('.modal-content').innerHTML = `
         <div class="modal-header">
           <div class="flex items-center justify-center gap-4 mb-4">
-            ${claimedInfo.logo ? `
-              <img src="${claimedInfo.logo}" alt="${claimedInfo.name}" class="h-20 w-20 rounded-xl object-cover">
+            ${claimedInfo?.logo ? `
+              <img src="${claimedInfo.logo}" alt="${claimedInfo.name}" class="h-24 w-24 rounded-2xl object-cover border-2 border-purple-500">
             ` : `
-              <div class="h-20 w-20 bg-gradient-to-br from-purple-600 to-blue-600 rounded-xl flex items-center justify-center text-3xl">
+              <div class="h-24 w-24 bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl flex items-center justify-center text-4xl">
                 🏢
               </div>
             `}
           </div>
-          <h2 class="text-3xl font-bold mb-2">${claimedInfo.name}</h2>
+          <h2 class="text-3xl font-bold mb-2">${claimedInfo?.name || agency.company}</h2>
           <div class="flex items-center justify-center gap-4 text-gray-400">
             <span>${getFlagEmoji(agency.country)} ${getCountryName(agency.country)}</span>
             <span>•</span>
             <span>Score: <span class="font-bold ${getScoreColor(agency.score)}">${agency.score}/100</span></span>
             <span>•</span>
-            <span class="bg-green-900 text-green-300 px-2 py-1 rounded text-xs">✓ Verified Profile</span>
+            <span class="enhanced-badge">⭐ Enhanced Profile</span>
           </div>
         </div>
         <div class="modal-body">
+          <!-- DESCRIPTION -->
+          ${claimedInfo?.description ? `
+            <div class="mb-6">
+              <div class="text-sm text-gray-400 mb-2">About</div>
+              <p class="text-gray-300">${claimedInfo.description}</p>
+            </div>
+          ` : ''}
+          
           <!-- SCORE -->
           <div class="bg-gray-800 rounded-xl p-6 mb-6">
             <div class="flex justify-between items-center mb-4">
-              <div class="text-2xl font-bold">SEO Score</div>
+              <div>
+                <div class="text-2xl font-bold">SEO Score</div>
+                <div class="text-sm text-gray-400">Ranked #${agency.rank} globally</div>
+              </div>
               <div class="text-4xl font-bold ${getScoreColor(agency.score)}">${agency.score}</div>
             </div>
             <div class="w-full bg-gray-700 rounded-full h-3">
               <div class="bg-gradient-to-r from-green-500 to-yellow-500 h-3 rounded-full" style="width: ${agency.score}%"></div>
             </div>
-            <div class="text-sm text-gray-400 mt-2 text-center">Ranked #${agency.rank} globally</div>
           </div>
           
           <!-- AGENCY DETAILS -->
@@ -1160,17 +1751,17 @@
             <div class="bg-gray-800 rounded-lg p-5">
               <div class="text-sm text-gray-400 mb-3">Specializations</div>
               <div class="flex flex-wrap gap-2">
-                ${claimedInfo.specialties?.map(spec => `
+                ${claimedInfo?.specialties?.map(spec => `
                   <span class="px-3 py-1 bg-purple-900 text-purple-200 rounded-full text-sm">
                     ${getSpecialtyName(spec)}
                   </span>
-                `).join('')}
+                `).join('') || '<span class="text-gray-500">Not specified</span>'}
               </div>
             </div>
             
             <div class="bg-gray-800 rounded-lg p-5">
-              <div class="text-sm text-gray-400 mb-3">Typical Project Size</div>
-              <div class="text-xl font-bold">${getProjectSizeLabel(claimedInfo.projectSize)}</div>
+              <div class="text-sm text-gray-400 mb-3">Agency Size</div>
+              <div class="text-xl font-bold">${getAgencySizeLabel(claimedInfo?.agencySize)}</div>
             </div>
             
             <div class="bg-gray-800 rounded-lg p-5">
@@ -1180,7 +1771,7 @@
             
             <div class="bg-gray-800 rounded-lg p-5">
               <div class="text-sm text-gray-400 mb-3">Contact for Leads</div>
-              <div class="text-lg font-semibold">${claimedInfo.contactEmail || 'Contact via website'}</div>
+              <div class="text-lg font-semibold">${claimedInfo?.contactEmail || 'Contact via website'}</div>
             </div>
           </div>
           
@@ -1192,8 +1783,8 @@
             <a href="${agency.url}" target="_blank" class="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 py-3 rounded-lg font-semibold text-center">
               Visit Website
             </a>
-            ${claimedInfo.contactEmail ? `
-              <a href="mailto:${claimedInfo.contactEmail}?subject=Inquiry%20from%20ContentScale%20Leaderboard" class="flex-1 bg-green-600 hover:bg-green-700 py-3 rounded-lg font-semibold text-center">
+            ${claimedInfo?.contactEmail ? `
+              <a href="mailto:${claimedInfo.contactEmail}?subject=SEO%20Inquiry%20from%20ContentScale%20Leaderboard" class="flex-1 bg-green-600 hover:bg-green-700 py-3 rounded-lg font-semibold text-center">
                 Contact Agency
               </a>
             ` : ''}
@@ -1208,17 +1799,29 @@
       const total = allAgencies.length;
       const avgScore = total > 0 ? Math.round(allAgencies.reduce((sum, a) => sum + a.score, 0) / total) : 0;
       const countries = new Set(allAgencies.map(a => a.country)).size;
-      const claimedCount = Object.keys(claimedAgencies).length;
+      const enhancedProfiles = allAgencies.filter(a => a.isEnhanced).length;
       
       document.getElementById('totalAgencies').textContent = total;
       document.getElementById('avgScore').textContent = avgScore;
       document.getElementById('countriesCount').textContent = countries;
-      document.getElementById('leadsGenerated').textContent = claimedCount;
+      document.getElementById('enhancedProfiles').textContent = enhancedProfiles;
     }
 
     function refreshLeaderboard() {
       loadLeaderboard();
-      alert('Leaderboard refreshed!');
+      
+      // Show refresh animation
+      const container = document.getElementById('leaderboard-container');
+      container.innerHTML = `
+        <div class="text-center py-12">
+          <div class="inline-block animate-spin text-5xl mb-4">🔄</div>
+          <div class="text-gray-400">Refreshing leaderboard...</div>
+        </div>
+      `;
+      
+      setTimeout(() => {
+        renderLeaderboard();
+      }, 800);
     }
 
     // ============================================
@@ -1226,19 +1829,50 @@
     // ============================================
     function getFlagEmoji(countryCode) {
       const flagEmojis = {
-        'US': '🇺🇸', 'NL': '🇳🇱', 'UK': '🇬🇧', 'DE': '🇩🇪', 'FR': '🇫🇷',
-        'ES': '🇪🇸', 'CA': '🇨🇦', 'AU': '🇦🇺', 'BE': '🇧🇪', 'IT': '🇮🇹'
+        'US': '🇺🇸', 'CA': '🇨🇦', 'UK': '🇬🇧', 'AU': '🇦🇺', 'NZ': '🇳🇿',
+        'NL': '🇳🇱', 'BE': '🇧🇪', 'DE': '🇩🇪', 'FR': '🇫🇷', 'ES': '🇪🇸',
+        'IT': '🇮🇹', 'SE': '🇸🇪', 'DK': '🇩🇰', 'NO': '🇳🇴', 'FI': '🇫🇮',
+        'CH': '🇨🇭', 'AT': '🇦🇹', 'IE': '🇮🇪', 'SG': '🇸🇬', 'JP': '🇯🇵',
+        'KR': '🇰🇷', 'AE': '🇦🇪'
       };
       return flagEmojis[countryCode] || '🌐';
     }
 
     function getCountryName(countryCode) {
       const countryNames = {
-        'US': 'United States', 'NL': 'Netherlands', 'UK': 'United Kingdom',
-        'DE': 'Germany', 'FR': 'France', 'ES': 'Spain', 'CA': 'Canada',
-        'AU': 'Australia', 'BE': 'Belgium', 'IT': 'Italy'
+        'US': 'United States', 'CA': 'Canada', 'UK': 'United Kingdom',
+        'AU': 'Australia', 'NZ': 'New Zealand', 'NL': 'Netherlands',
+        'BE': 'Belgium', 'DE': 'Germany', 'FR': 'France', 'ES': 'Spain',
+        'IT': 'Italy', 'SE': 'Sweden', 'DK': 'Denmark', 'NO': 'Norway',
+        'FI': 'Finland', 'CH': 'Switzerland', 'AT': 'Austria',
+        'IE': 'Ireland', 'SG': 'Singapore', 'JP': 'Japan',
+        'KR': 'South Korea', 'AE': 'UAE'
       };
       return countryNames[countryCode] || countryCode;
+    }
+
+    function getTypeLabel(type) {
+      const labels = {
+        'agency': 'SEO Agency',
+        'ecommerce': 'E-commerce',
+        'saas': 'SaaS/Tech',
+        'other': 'Other',
+        'enhanced': 'Enhanced',
+        'new': 'New'
+      };
+      return labels[type] || type;
+    }
+
+    function getTypeColor(type) {
+      const colors = {
+        'agency': 'bg-blue-900 text-blue-200',
+        'ecommerce': 'bg-green-900 text-green-200',
+        'saas': 'bg-purple-900 text-purple-200',
+        'other': 'bg-gray-800 text-gray-200',
+        'enhanced': 'bg-yellow-900 text-yellow-200',
+        'new': 'bg-red-900 text-red-200'
+      };
+      return colors[type] || 'bg-gray-800 text-gray-200';
     }
 
     function getSpecialtyName(spec) {
@@ -1246,17 +1880,19 @@
         'technical': 'Technical SEO',
         'content': 'Content SEO',
         'ecommerce': 'E-commerce SEO',
-        'local': 'Local SEO'
+        'local': 'Local SEO',
+        'enterprise': 'Enterprise SEO',
+        'international': 'International SEO'
       };
       return names[spec] || spec;
     }
 
-    function getProjectSizeLabel(size) {
+    function getAgencySizeLabel(size) {
       const labels = {
-        '1k-3k': '€1K - €3K/month',
-        '3k-10k': '€3K - €10K/month',
-        '10k-25k': '€10K - €25K/month',
-        '25k+': '€25K+/month'
+        'freelancer': 'Freelancer',
+        'boutique': 'Boutique (2-10)',
+        'mid-market': 'Mid-Market (11-50)',
+        'enterprise': 'Enterprise (50+)'
       };
       return labels[size] || 'Not specified';
     }
