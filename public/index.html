@@ -6,6 +6,7 @@
   <title>ContentScale - Free AI SEO Scanner & Global Leaderboard</title>
   <meta name="description" content="Free AI-powered SEO content scanner. Get your GRAAF + CRAFT + Technical SEO score instantly!">
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <style>
     /* NAVIGATION */
@@ -70,6 +71,77 @@
     .scan-spinner { display: inline-block; width: 18px; height: 18px; border: 3px solid rgba(255, 255, 255, 0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 10px; vertical-align: middle; }
     
     .leaderboard-section { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; padding: 32px; margin-bottom: 32px; border: 2px solid #334155; }
+    
+    /* FILTER CHIPS */
+    .filter-chip {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #93c5fd;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 14px;
+      margin: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .filter-chip:hover {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: rgba(59, 130, 246, 0.5);
+    }
+    
+    .filter-chip.active {
+      background: #3b82f6;
+      color: white;
+      border-color: #3b82f6;
+    }
+    
+    .filter-chip i {
+      margin-right: 6px;
+    }
+    
+    .filter-chip-close {
+      margin-left: 8px;
+      opacity: 0.7;
+    }
+    
+    .filter-chip-close:hover {
+      opacity: 1;
+    }
+    
+    /* ADVANCED FILTERS */
+    .filter-section {
+      background: rgba(30, 41, 59, 0.5);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid #334155;
+    }
+    
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+    
+    .filter-group {
+      background: rgba(15, 23, 42, 0.7);
+      border-radius: 10px;
+      padding: 15px;
+      border: 1px solid #475569;
+    }
+    
+    .filter-group-title {
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
     
     /* MODAL STYLES */
     .modal-overlay {
@@ -161,6 +233,87 @@
       .modal-header { padding: 20px; }
       .modal-body { padding: 20px; }
       .score-circle { width: 120px; height: 120px; }
+      .filter-grid { grid-template-columns: 1fr; }
+    }
+    
+    /* RANK BADGES */
+    .rank-1 { background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); }
+    .rank-2 { background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%); }
+    .rank-3 { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
+    .rank-other { background: linear-gradient(135deg, #475569 0%, #334155 100%); }
+    
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      font-weight: bold;
+      color: white;
+      font-size: 14px;
+    }
+    
+    /* AGENCY CARDS */
+    .agency-card {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid #334155;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    
+    .agency-card:hover {
+      transform: translateY(-4px);
+      border-color: #8b5cf6;
+      box-shadow: 0 10px 25px rgba(139, 92, 246, 0.2);
+    }
+    
+    /* TOGGLE SWITCH */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 24px;
+    }
+    
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #475569;
+      transition: .4s;
+      border-radius: 24px;
+    }
+    
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    
+    input:checked + .toggle-slider {
+      background-color: #8b5cf6;
+    }
+    
+    input:checked + .toggle-slider:before {
+      transform: translateX(26px);
     }
   </style>
 </head>
@@ -243,7 +396,115 @@
             <span class="text-sm text-gray-300">📊 Submit my score to the global leaderboard (optional)</span>
           </label>
           <div id="companyNameField" class="mt-3 hidden">
-            <input type="text" id="companyName" placeholder="Company name (optional)" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg text-sm">
+            <input type="text" id="companyName" placeholder="Company name (optional)" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg text-sm mb-3">
+            
+            <!-- Advanced Agency Profile Fields -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+              <div>
+                <select id="agencyCountry" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg text-sm">
+                  <option value="">Select Country</option>
+                  <!-- English-Speaking First World -->
+                  <optgroup label="🇺🇸 English-Speaking">
+                    <option value="US">🇺🇸 United States</option>
+                    <option value="CA">🇨🇦 Canada</option>
+                    <option value="UK">🇬🇧 United Kingdom</option>
+                    <option value="AU">🇦🇺 Australia</option>
+                    <option value="NZ">🇳🇿 New Zealand</option>
+                    <option value="IE">🇮🇪 Ireland</option>
+                    <option value="SG">🇸🇬 Singapore</option>
+                  </optgroup>
+                  <!-- Best European Markets -->
+                  <optgroup label="🇪🇺 Top European">
+                    <option value="NL">🇳🇱 Netherlands</option>
+                    <option value="DE">🇩🇪 Germany</option>
+                    <option value="FR">🇫🇷 France</option>
+                    <option value="ES">🇪🇸 Spain</option>
+                    <option value="IT">🇮🇹 Italy</option>
+                    <option value="SE">🇸🇪 Sweden</option>
+                    <option value="DK">🇩🇰 Denmark</option>
+                    <option value="NO">🇳🇴 Norway</option>
+                    <option value="FI">🇫🇮 Finland</option>
+                    <option value="BE">🇧🇪 Belgium</option>
+                    <option value="CH">🇨🇭 Switzerland</option>
+                    <option value="AT">🇦🇹 Austria</option>
+                  </optgroup>
+                </select>
+              </div>
+              <div>
+                <select id="agencyNiche" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg text-sm">
+                  <option value="">Select Specialization</option>
+                  <optgroup label="📊 Agency Types">
+                    <option value="full-service">🎯 Full-Service SEO</option>
+                    <option value="technical-seo">⚙️ Technical SEO</option>
+                    <option value="content-seo">✍️ Content SEO</option>
+                    <option value="local-seo">📍 Local SEO</option>
+                    <option value="ecommerce-seo">🛒 E-commerce SEO</option>
+                    <option value="enterprise-seo">🏢 Enterprise SEO</option>
+                  </optgroup>
+                  <optgroup label="🎯 Industry Focus">
+                    <option value="saas-seo">💻 SaaS/Tech</option>
+                    <option value="health-seo">🏥 Healthcare</option>
+                    <option value="finance-seo">💰 Finance</option>
+                    <option value="travel-seo">✈️ Travel</option>
+                    <option value="realestate-seo">🏠 Real Estate</option>
+                    <option value="legal-seo">⚖️ Legal</option>
+                  </optgroup>
+                </select>
+              </div>
+            </div>
+            
+            <!-- Agency Size -->
+            <div class="mb-3">
+              <label class="block text-sm text-gray-400 mb-2">Agency Size:</label>
+              <div class="flex gap-2">
+                <button class="agency-size-btn flex-1 bg-gray-700 hover:bg-gray-600 text-gray-300 py-2 rounded-lg text-sm" data-size="freelancer">👤 Freelancer</button>
+                <button class="agency-size-btn flex-1 bg-gray-700 hover:bg-gray-600 text-gray-300 py-2 rounded-lg text-sm" data-size="boutique">🏢 Boutique (2-10)</button>
+                <button class="agency-size-btn flex-1 bg-gray-700 hover:bg-gray-600 text-gray-300 py-2 rounded-lg text-sm" data-size="mid-market">🏛️ Mid-Market (11-50)</button>
+                <button class="agency-size-btn flex-1 bg-gray-700 hover:bg-gray-600 text-gray-300 py-2 rounded-lg text-sm" data-size="enterprise">🏙️ Enterprise (50+)</button>
+              </div>
+            </div>
+            
+            <!-- Monthly Budget Indicator -->
+            <div class="mb-3">
+              <label class="block text-sm text-gray-400 mb-2">Typical Monthly Client Budget:</label>
+              <div class="flex items-center gap-4">
+                <span class="text-xs text-gray-500">€1K</span>
+                <input type="range" id="clientBudget" min="1" max="5" value="3" class="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                <span class="text-xs text-gray-500">€50K+</span>
+              </div>
+              <div class="text-xs text-gray-500 mt-1 text-center" id="budgetLabel">€5K-€10K per month</div>
+            </div>
+            
+            <!-- Tools Used -->
+            <div class="mb-3">
+              <label class="block text-sm text-gray-400 mb-2">Primary SEO Tools Used:</label>
+              <div class="flex flex-wrap gap-2">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="tool-checkbox" value="ahrefs">
+                  <span class="text-sm">Ahrefs</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="tool-checkbox" value="semrush">
+                  <span class="text-sm">SEMrush</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="tool-checkbox" value="moz">
+                  <span class="text-sm">Moz</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="tool-checkbox" value="brightedge">
+                  <span class="text-sm">BrightEdge</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="tool-checkbox" value="seoclarity">
+                  <span class="text-sm">SEOClarity</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="tool-checkbox" value="conductor">
+                  <span class="text-sm">Conductor</span>
+                </label>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -251,19 +512,257 @@
 
     <!-- LEADERBOARD -->
     <div id="leaderboard" class="leaderboard-section">
-      <div class="flex justify-between items-center mb-6">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
-          <h2 class="text-3xl font-bold text-yellow-400">Top Websites</h2>
-          <p class="text-sm text-gray-400 mt-1">Ranked by total score (100 points max)</p>
+          <h2 class="text-3xl font-bold text-yellow-400">🌍 Global SEO Agencies Leaderboard</h2>
+          <p class="text-sm text-gray-400 mt-1">Find and compare top SEO agencies worldwide</p>
         </div>
-        <button onclick="refreshLeaderboard()" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-semibold transition">🔄 Refresh</button>
+        
+        <!-- VIEW TOGGLE -->
+        <div class="flex items-center gap-3">
+          <span class="text-sm text-gray-400">View:</span>
+          <div class="flex bg-gray-800 rounded-lg p-1">
+            <button id="viewTable" class="px-3 py-1 rounded-md bg-purple-600 text-white text-sm">Table</button>
+            <button id="viewCards" class="px-3 py-1 rounded-md text-gray-300 hover:text-white text-sm">Cards</button>
+          </div>
+        </div>
       </div>
       
-      <div id="leaderboard-container">
+      <!-- FILTERS HEADER -->
+      <div class="filter-section mb-6">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-bold text-white">🔍 Smart Agency Finder</h3>
+          <button onclick="toggleAdvancedFilters()" class="text-sm text-purple-400 hover:text-purple-300 flex items-center gap-2">
+            <i class="fas fa-sliders-h"></i>
+            Advanced Filters
+          </button>
+        </div>
+        
+        <!-- QUICK FILTER CHIPS -->
+        <div class="mb-4">
+          <div class="text-sm text-gray-400 mb-2">Quick Filters:</div>
+          <div id="quickFilterChips" class="flex flex-wrap gap-2">
+            <!-- Chips will be populated by JavaScript -->
+          </div>
+        </div>
+        
+        <!-- ACTIVE FILTERS -->
+        <div id="activeFilters" class="mb-4 hidden">
+          <div class="text-sm text-gray-400 mb-2">Active Filters:</div>
+          <div id="activeFilterChips" class="flex flex-wrap gap-2">
+            <!-- Active filters will appear here -->
+          </div>
+        </div>
+        
+        <!-- ADVANCED FILTERS (Collapsible) -->
+        <div id="advancedFilters" class="hidden">
+          <div class="filter-grid">
+            <!-- REGION FILTER -->
+            <div class="filter-group">
+              <div class="filter-group-title">
+                <i class="fas fa-globe"></i>
+                Region
+              </div>
+              <div class="space-y-2">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="region-filter" value="north-america">
+                  <span class="text-sm">🇺🇸 North America</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="region-filter" value="europe">
+                  <span class="text-sm">🇪🇺 Europe</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="region-filter" value="apac">
+                  <span class="text-sm">🌏 APAC</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="region-filter" value="uk-ireland">
+                  <span class="text-sm">🇬🇧 UK & Ireland</span>
+                </label>
+              </div>
+            </div>
+            
+            <!-- AGENCY SIZE -->
+            <div class="filter-group">
+              <div class="filter-group-title">
+                <i class="fas fa-users"></i>
+                Agency Size
+              </div>
+              <div class="space-y-2">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="size-filter" value="freelancer">
+                  <span class="text-sm">👤 Freelancer</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="size-filter" value="boutique">
+                  <span class="text-sm">🏢 Boutique (2-10)</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="size-filter" value="mid-market">
+                  <span class="text-sm">🏛️ Mid-Market (11-50)</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="size-filter" value="enterprise">
+                  <span class="text-sm">🏙️ Enterprise (50+)</span>
+                </label>
+              </div>
+            </div>
+            
+            <!-- SPECIALIZATION -->
+            <div class="filter-group">
+              <div class="filter-group-title">
+                <i class="fas fa-bullseye"></i>
+                Specialization
+              </div>
+              <div class="space-y-2">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="specialization-filter" value="technical-seo">
+                  <span class="text-sm">⚙️ Technical SEO</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="specialization-filter" value="content-seo">
+                  <span class="text-sm">✍️ Content SEO</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="specialization-filter" value="local-seo">
+                  <span class="text-sm">📍 Local SEO</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="specialization-filter" value="ecommerce-seo">
+                  <span class="text-sm">🛒 E-commerce SEO</span>
+                </label>
+              </div>
+            </div>
+            
+            <!-- BUDGET RANGE -->
+            <div class="filter-group">
+              <div class="filter-group-title">
+                <i class="fas fa-euro-sign"></i>
+                Client Budget
+              </div>
+              <div class="space-y-2">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="budget-filter" value="budget-1">
+                  <span class="text-sm">€1K-€3K/month</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="budget-filter" value="budget-2">
+                  <span class="text-sm">€3K-€10K/month</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="budget-filter" value="budget-3">
+                  <span class="text-sm">€10K-€25K/month</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="budget-filter" value="budget-4">
+                  <span class="text-sm">€25K+/month</span>
+                </label>
+              </div>
+            </div>
+            
+            <!-- TOOLS USED -->
+            <div class="filter-group">
+              <div class="filter-group-title">
+                <i class="fas fa-tools"></i>
+                Tools Stack
+              </div>
+              <div class="space-y-2">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="tool-filter" value="ahrefs">
+                  <span class="text-sm">Ahrefs</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="tool-filter" value="semrush">
+                  <span class="text-sm">SEMrush</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="tool-filter" value="enterprise-tools">
+                  <span class="text-sm">Enterprise Tools</span>
+                </label>
+              </div>
+            </div>
+            
+            <!-- LANGUAGE SUPPORT -->
+            <div class="filter-group">
+              <div class="filter-group-title">
+                <i class="fas fa-language"></i>
+                Language Support
+              </div>
+              <div class="space-y-2">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="language-filter" value="english">
+                  <span class="text-sm">English</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="language-filter" value="dutch">
+                  <span class="text-sm">Dutch</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="language-filter" value="german">
+                  <span class="text-sm">German</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="language-filter" value="french">
+                  <span class="text-sm">French</span>
+                </label>
+              </div>
+            </div>
+          </div>
+          
+          <!-- FILTER ACTIONS -->
+          <div class="flex justify-between items-center mt-6 pt-4 border-t border-gray-700">
+            <div class="text-sm text-gray-400">
+              <span id="filterCount">0</span> filters active
+            </div>
+            <div class="flex gap-3">
+              <button onclick="resetAllFilters()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">
+                Reset All
+              </button>
+              <button onclick="applyAdvancedFilters()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-semibold">
+                Apply Filters
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- SEARCH BAR -->
+      <div class="mb-6">
+        <div class="relative">
+          <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500"></i>
+          <input type="text" id="agencySearch" placeholder="Search agencies by name, country, or specialization..." class="w-full bg-gray-800 border border-gray-700 text-white pl-12 pr-4 py-3 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+        </div>
+      </div>
+      
+      <!-- LEADERBOARD CONTENT -->
+      <div id="leaderboard-container" class="table-view">
+        <!-- Content will be populated by JavaScript -->
         <div class="text-center py-12">
           <div class="text-5xl mb-4">🔍</div>
           <div class="text-gray-400">Loading leaderboard...</div>
         </div>
+      </div>
+      
+      <!-- PAGINATION -->
+      <div id="pagination" class="mt-8 flex justify-center hidden">
+        <div class="flex gap-2">
+          <button class="px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700">&laquo;</button>
+          <button class="px-4 py-2 bg-purple-600 rounded-lg">1</button>
+          <button class="px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700">2</button>
+          <button class="px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700">3</button>
+          <button class="px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700">&raquo;</button>
+        </div>
+      </div>
+      
+      <!-- NO RESULTS -->
+      <div id="noResults" class="text-center py-12 hidden">
+        <div class="text-5xl mb-4">🌍</div>
+        <div class="text-xl font-semibold mb-2">No agencies match your filters</div>
+        <div class="text-gray-400 mb-6">Try adjusting your filters or <a href="#scanner" class="text-purple-400 hover:text-purple-300" onclick="scrollToSection('scanner')">add your agency</a> to the leaderboard.</div>
+        <button onclick="resetAllFilters()" class="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold">
+          Reset All Filters
+        </button>
       </div>
     </div>
 
@@ -324,7 +823,941 @@
     </div>
   </footer>
 
-  <script src="/js/scanner-with-modal.js"></script>
+  <!-- MODAL (Will be added by scanner script) -->
+  <div id="scanModal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <!-- Modal content will be inserted here -->
+    </div>
+  </div>
+
+  <!-- COMPLETE JAVASCRIPT -->
+  <script>
+    // ============================================
+    // NAVIGATION & MOBILE MENU
+    // ============================================
+    function toggleMobileMenu() {
+      const hamburger = document.querySelector('.hamburger');
+      const mobileMenu = document.getElementById('mobileMenu');
+      hamburger.classList.toggle('active');
+      mobileMenu.classList.toggle('active');
+    }
+
+    function scrollToSection(sectionId) {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+        toggleMobileMenu();
+      }
+    }
+
+    // ============================================
+    // SCANNER FUNCTIONALITY
+    // ============================================
+    async function performScan() {
+      const urlInput = document.getElementById('scanInput').value.trim();
+      const scanButton = document.getElementById('scanButton');
+      
+      if (!urlInput) {
+        alert('Please enter a valid URL');
+        return;
+      }
+      
+      // Validate URL
+      try {
+        new URL(urlInput.startsWith('http') ? urlInput : `https://${urlInput}`);
+      } catch {
+        alert('Please enter a valid URL (e.g., https://example.com)');
+        return;
+      }
+      
+      // Show loading state
+      const originalText = scanButton.innerHTML;
+      scanButton.innerHTML = '<div class="scan-spinner"></div> Scanning...';
+      scanButton.disabled = true;
+      
+      // Simulate scan (replace with actual API call)
+      setTimeout(async () => {
+        try {
+          // This would be your actual API call
+          // const response = await fetch('/api/scan', {
+          //   method: 'POST',
+          //   headers: { 'Content-Type': 'application/json' },
+          //   body: JSON.stringify({ url: urlInput })
+          // });
+          // const data = await response.json();
+          
+          // For demo, generate mock data
+          const mockData = {
+            success: true,
+            score: Math.floor(Math.random() * 30) + 70, // 70-100
+            url: urlInput,
+            recommendations: [
+              {
+                type: 'quickwin',
+                title: 'Improve Meta Description',
+                description: 'Add a compelling meta description with target keywords.',
+                impact: 'High'
+              },
+              {
+                type: 'major',
+                title: 'Optimize Page Speed',
+                description: 'Reduce image sizes and leverage browser caching.',
+                impact: 'Medium'
+              },
+              {
+                type: 'advanced',
+                title: 'Implement Schema Markup',
+                description: 'Add structured data for better rich snippets.',
+                impact: 'Low'
+              }
+            ],
+            metrics: {
+              graaf: Math.floor(Math.random() * 15) + 35,
+              craft: Math.floor(Math.random() * 10) + 20,
+              technical: Math.floor(Math.random() * 5) + 15
+            }
+          };
+          
+          // Show modal with results
+          showScanResults(mockData);
+          
+          // Submit to leaderboard if checked
+          const submitToLeaderboard = document.getElementById('submitToLeaderboard').checked;
+          if (submitToLeaderboard) {
+            await submitToLeaderboardAPI(mockData);
+          }
+          
+        } catch (error) {
+          console.error('Scan error:', error);
+          alert('Scan failed. Please try again.');
+        } finally {
+          // Reset button
+          scanButton.innerHTML = originalText;
+          scanButton.disabled = false;
+        }
+      }, 2000);
+    }
+
+    function showScanResults(data) {
+      const modal = document.getElementById('scanModal');
+      const modalContent = modal.querySelector('.modal-content') || modal;
+      
+      // Determine score color
+      let scoreClass = 'score-poor';
+      let scoreText = 'Needs Work';
+      if (data.score >= 80) {
+        scoreClass = 'score-excellent';
+        scoreText = 'Excellent';
+      } else if (data.score >= 70) {
+        scoreClass = 'score-good';
+        scoreText = 'Good';
+      } else if (data.score >= 60) {
+        scoreClass = 'score-fair';
+        scoreText = 'Fair';
+      }
+      
+      modalContent.innerHTML = `
+        <div class="modal-header">
+          <h2 class="text-3xl font-bold mb-2">🎯 Scan Results</h2>
+          <p class="text-gray-400">${data.url}</p>
+        </div>
+        <div class="modal-body">
+          <!-- SCORE CIRCLE -->
+          <div class="score-circle ${scoreClass}">
+            <div class="text-4xl font-bold">${data.score}/100</div>
+            <div class="text-lg mt-2">${scoreText}</div>
+          </div>
+          
+          <!-- SCORE BREAKDOWN -->
+          <div class="grid grid-cols-3 gap-4 mb-8">
+            <div class="text-center p-4 bg-gray-800 rounded-lg">
+              <div class="text-2xl font-bold text-green-400">${data.metrics.graaf}/50</div>
+              <div class="text-sm text-gray-400 mt-1">GRAAF</div>
+            </div>
+            <div class="text-center p-4 bg-gray-800 rounded-lg">
+              <div class="text-2xl font-bold text-blue-400">${data.metrics.craft}/30</div>
+              <div class="text-sm text-gray-400 mt-1">CRAFT</div>
+            </div>
+            <div class="text-center p-4 bg-gray-800 rounded-lg">
+              <div class="text-2xl font-bold text-purple-400">${data.metrics.technical}/20</div>
+              <div class="text-sm text-gray-400 mt-1">Technical</div>
+            </div>
+          </div>
+          
+          <!-- RECOMMENDATIONS -->
+          <h3 class="text-xl font-bold mb-4">📈 Recommendations</h3>
+          ${data.recommendations.map(rec => `
+            <div class="rec-section rec-${rec.type} mb-4">
+              <div class="flex justify-between items-start mb-2">
+                <h4 class="font-bold text-lg">${rec.title}</h4>
+                <span class="text-xs px-2 py-1 rounded-full ${rec.type === 'quickwin' ? 'bg-green-900 text-green-300' : rec.type === 'major' ? 'bg-yellow-900 text-yellow-300' : 'bg-purple-900 text-purple-300'}">
+                  ${rec.type.toUpperCase()}
+                </span>
+              </div>
+              <p class="text-gray-300 mb-3">${rec.description}</p>
+              <div class="text-sm text-gray-400">Impact: <span class="font-semibold">${rec.impact}</span></div>
+            </div>
+          `).join('')}
+          
+          <!-- ACTION BUTTONS -->
+          <div class="flex gap-4 mt-8 pt-6 border-t border-gray-700">
+            <button onclick="closeModal()" class="flex-1 bg-gray-700 hover:bg-gray-600 py-3 rounded-lg font-semibold">
+              Close
+            </button>
+            <button onclick="scanAnother()" class="flex-1 bg-purple-600 hover:bg-purple-700 py-3 rounded-lg font-semibold">
+              Scan Another
+            </button>
+          </div>
+        </div>
+      `;
+      
+      modal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('scanModal').classList.add('hidden');
+    }
+
+    function scanAnother() {
+      closeModal();
+      document.getElementById('scanInput').value = '';
+      document.getElementById('scanInput').focus();
+    }
+
+    async function submitToLeaderboardAPI(scanData) {
+      const companyName = document.getElementById('companyName').value;
+      const country = document.getElementById('agencyCountry').value;
+      const niche = document.getElementById('agencyNiche').value;
+      const size = document.querySelector('.agency-size-btn.active')?.dataset.size;
+      const budget = document.getElementById('clientBudget').value;
+      const tools = Array.from(document.querySelectorAll('.tool-checkbox:checked')).map(cb => cb.value);
+      
+      const agencyData = {
+        url: scanData.url,
+        score: scanData.score,
+        company: companyName || 'Individual',
+        country: country,
+        niche: niche,
+        size: size,
+        budget: parseInt(budget),
+        tools: tools,
+        timestamp: new Date().toISOString()
+      };
+      
+      try {
+        // This would be your actual API call
+        // const response = await fetch('/api/leaderboard/submit', {
+        //   method: 'POST',
+        //   headers: { 'Content-Type': 'application/json' },
+        //   body: JSON.stringify(agencyData)
+        // });
+        
+        console.log('Submitted to leaderboard:', agencyData);
+        alert('✅ Successfully added to leaderboard!');
+        
+        // Refresh leaderboard
+        refreshLeaderboard();
+        
+      } catch (error) {
+        console.error('Submission error:', error);
+        alert('⚠️ Added to leaderboard but there was an issue.');
+      }
+    }
+
+    // ============================================
+    // LEADERBOARD & FILTERING SYSTEM
+    // ============================================
+    let allAgencies = [];
+    let currentFilters = {
+      region: [],
+      size: [],
+      specialization: [],
+      budget: [],
+      tools: [],
+      language: [],
+      search: ''
+    };
+    let currentView = 'table';
+
+    // Initialize leaderboard
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeQuickFilters();
+      initializeAgencySizeButtons();
+      initializeBudgetSlider();
+      initializeViewToggle();
+      initializeSearch();
+      loadMockAgencies(); // Replace with actual API call
+      
+      // Show/hide agency profile fields
+      document.getElementById('submitToLeaderboard').addEventListener('change', function() {
+        const companyField = document.getElementById('companyNameField');
+        if (this.checked) {
+          companyField.classList.remove('hidden');
+        } else {
+          companyField.classList.add('hidden');
+        }
+      });
+    });
+
+    function initializeQuickFilters() {
+      const quickFilters = [
+        { id: 'top-nl', label: '🇳🇱 Top Dutch Agencies', filters: { region: ['europe'], search: 'Netherlands' } },
+        { id: 'usa-enterprise', label: '🇺🇸 US Enterprise', filters: { region: ['north-america'], size: ['enterprise'], search: 'United States' } },
+        { id: 'ecommerce-experts', label: '🛒 E-commerce Experts', filters: { specialization: ['ecommerce-seo'] } },
+        { id: 'technical-seo', label: '⚙️ Technical SEO', filters: { specialization: ['technical-seo'] } },
+        { id: 'budget-friendly', label: '💰 Budget-Friendly', filters: { budget: ['budget-1', 'budget-2'] } },
+        { id: 'english-speaking', label: '🗣️ English Speaking', filters: { language: ['english'] } }
+      ];
+      
+      const container = document.getElementById('quickFilterChips');
+      container.innerHTML = quickFilters.map(filter => `
+        <div class="filter-chip" onclick="applyQuickFilter('${filter.id}', ${JSON.stringify(filter.filters)})">
+          ${filter.label}
+        </div>
+      `).join('');
+    }
+
+    function initializeAgencySizeButtons() {
+      const buttons = document.querySelectorAll('.agency-size-btn');
+      buttons.forEach(btn => {
+        btn.addEventListener('click', function() {
+          buttons.forEach(b => b.classList.remove('bg-purple-600', 'text-white'));
+          buttons.forEach(b => b.classList.add('bg-gray-700', 'text-gray-300'));
+          this.classList.remove('bg-gray-700', 'text-gray-300');
+          this.classList.add('bg-purple-600', 'text-white');
+        });
+      });
+    }
+
+    function initializeBudgetSlider() {
+      const slider = document.getElementById('clientBudget');
+      const label = document.getElementById('budgetLabel');
+      
+      const budgetLabels = [
+        '€1K-€3K per month',
+        '€3K-€5K per month',
+        '€5K-€10K per month',
+        '€10K-€20K per month',
+        '€20K+ per month'
+      ];
+      
+      slider.addEventListener('input', function() {
+        label.textContent = budgetLabels[this.value - 1];
+      });
+    }
+
+    function initializeViewToggle() {
+      const tableBtn = document.getElementById('viewTable');
+      const cardsBtn = document.getElementById('viewCards');
+      
+      tableBtn.addEventListener('click', function() {
+        currentView = 'table';
+        tableBtn.classList.add('bg-purple-600', 'text-white');
+        tableBtn.classList.remove('text-gray-300');
+        cardsBtn.classList.remove('bg-purple-600', 'text-white');
+        cardsBtn.classList.add('text-gray-300');
+        renderLeaderboard();
+      });
+      
+      cardsBtn.addEventListener('click', function() {
+        currentView = 'cards';
+        cardsBtn.classList.add('bg-purple-600', 'text-white');
+        cardsBtn.classList.remove('text-gray-300');
+        tableBtn.classList.remove('bg-purple-600', 'text-white');
+        tableBtn.classList.add('text-gray-300');
+        renderLeaderboard();
+      });
+    }
+
+    function initializeSearch() {
+      const searchInput = document.getElementById('agencySearch');
+      let searchTimeout;
+      
+      searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          currentFilters.search = this.value.toLowerCase();
+          renderLeaderboard();
+        }, 300);
+      });
+    }
+
+    function toggleAdvancedFilters() {
+      const advancedFilters = document.getElementById('advancedFilters');
+      advancedFilters.classList.toggle('hidden');
+    }
+
+    function applyQuickFilter(id, filters) {
+      // Reset all filters first
+      resetAllFilters();
+      
+      // Apply quick filter
+      Object.keys(filters).forEach(key => {
+        if (Array.isArray(filters[key])) {
+          currentFilters[key] = filters[key];
+          
+          // Check corresponding checkboxes
+          filters[key].forEach(value => {
+            const checkbox = document.querySelector(`.${key}-filter[value="${value}"]`);
+            if (checkbox) checkbox.checked = true;
+          });
+        } else {
+          currentFilters[key] = filters[key];
+        }
+      });
+      
+      applyAdvancedFilters();
+      
+      // Highlight the clicked chip
+      document.querySelectorAll('.filter-chip').forEach(chip => chip.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+
+    function applyAdvancedFilters() {
+      // Collect filter values
+      currentFilters.region = Array.from(document.querySelectorAll('.region-filter:checked')).map(cb => cb.value);
+      currentFilters.size = Array.from(document.querySelectorAll('.size-filter:checked')).map(cb => cb.value);
+      currentFilters.specialization = Array.from(document.querySelectorAll('.specialization-filter:checked')).map(cb => cb.value);
+      currentFilters.budget = Array.from(document.querySelectorAll('.budget-filter:checked')).map(cb => cb.value);
+      currentFilters.tools = Array.from(document.querySelectorAll('.tool-filter:checked')).map(cb => cb.value);
+      currentFilters.language = Array.from(document.querySelectorAll('.language-filter:checked')).map(cb => cb.value);
+      
+      // Update filter count
+      const totalFilters = Object.values(currentFilters).reduce((sum, arr) => sum + arr.length, 0);
+      document.getElementById('filterCount').textContent = totalFilters;
+      
+      // Show active filters section
+      const activeFilters = document.getElementById('activeFilters');
+      const activeFilterChips = document.getElementById('activeFilterChips');
+      
+      if (totalFilters > 0) {
+        activeFilters.classList.remove('hidden');
+        
+        // Create active filter chips
+        let chipsHTML = '';
+        Object.keys(currentFilters).forEach(key => {
+          currentFilters[key].forEach(value => {
+            const label = getFilterLabel(key, value);
+            if (label) {
+              chipsHTML += `
+                <div class="filter-chip active">
+                  ${label}
+                  <span class="filter-chip-close" onclick="removeFilter('${key}', '${value}')">×</span>
+                </div>
+              `;
+            }
+          });
+        });
+        
+        activeFilterChips.innerHTML = chipsHTML;
+      } else {
+        activeFilters.classList.add('hidden');
+      }
+      
+      renderLeaderboard();
+    }
+
+    function getFilterLabel(filterType, value) {
+      const labels = {
+        'region': {
+          'north-america': '🇺🇸 North America',
+          'europe': '🇪🇺 Europe',
+          'apac': '🌏 APAC',
+          'uk-ireland': '🇬🇧 UK & Ireland'
+        },
+        'size': {
+          'freelancer': '👤 Freelancer',
+          'boutique': '🏢 Boutique',
+          'mid-market': '🏛️ Mid-Market',
+          'enterprise': '🏙️ Enterprise'
+        },
+        'specialization': {
+          'technical-seo': '⚙️ Technical SEO',
+          'content-seo': '✍️ Content SEO',
+          'local-seo': '📍 Local SEO',
+          'ecommerce-seo': '🛒 E-commerce SEO'
+        },
+        'budget': {
+          'budget-1': '€1K-€3K',
+          'budget-2': '€3K-€10K',
+          'budget-3': '€10K-€25K',
+          'budget-4': '€25K+'
+        },
+        'tools': {
+          'ahrefs': 'Ahrefs',
+          'semrush': 'SEMrush',
+          'enterprise-tools': 'Enterprise Tools'
+        },
+        'language': {
+          'english': 'English',
+          'dutch': 'Dutch',
+          'german': 'German',
+          'french': 'French'
+        }
+      };
+      
+      return labels[filterType]?.[value] || value;
+    }
+
+    function removeFilter(filterType, value) {
+      currentFilters[filterType] = currentFilters[filterType].filter(v => v !== value);
+      
+      // Uncheck corresponding checkbox
+      const checkbox = document.querySelector(`.${filterType}-filter[value="${value}"]`);
+      if (checkbox) checkbox.checked = false;
+      
+      applyAdvancedFilters();
+    }
+
+    function resetAllFilters() {
+      // Reset filter object
+      Object.keys(currentFilters).forEach(key => {
+        currentFilters[key] = key === 'search' ? '' : [];
+      });
+      
+      // Uncheck all checkboxes
+      document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+      
+      // Clear search
+      document.getElementById('agencySearch').value = '';
+      
+      // Hide active filters
+      document.getElementById('activeFilters').classList.add('hidden');
+      
+      // Reset quick filter chips
+      document.querySelectorAll('.filter-chip').forEach(chip => chip.classList.remove('active'));
+      
+      renderLeaderboard();
+    }
+
+    // Load mock agencies (replace with API call)
+    function loadMockAgencies() {
+      const countries = ['US', 'CA', 'UK', 'AU', 'NL', 'DE', 'FR', 'ES', 'SE', 'DK'];
+      const niches = ['full-service', 'technical-seo', 'content-seo', 'ecommerce-seo', 'saas-seo'];
+      const sizes = ['freelancer', 'boutique', 'mid-market', 'enterprise'];
+      const tools = ['ahrefs', 'semrush', 'moz', 'brightedge'];
+      
+      allAgencies = Array.from({ length: 50 }, (_, i) => {
+        const country = countries[Math.floor(Math.random() * countries.length)];
+        const niche = niches[Math.floor(Math.random() * niches.length)];
+        const size = sizes[Math.floor(Math.random() * sizes.length)];
+        
+        return {
+          id: i + 1,
+          rank: i + 1,
+          name: `SEO Agency ${i + 1}`,
+          url: `https://agency${i + 1}.com`,
+          country: country,
+          niche: niche,
+          size: size,
+          score: Math.floor(Math.random() * 30) + 70, // 70-100
+          budget: Math.floor(Math.random() * 5) + 1,
+          tools: tools.slice(0, Math.floor(Math.random() * 3) + 1),
+          languages: ['english', Math.random() > 0.7 ? 'dutch' : null, Math.random() > 0.7 ? 'german' : null].filter(Boolean),
+          region: getRegionFromCountry(country),
+          lastScan: `${Math.floor(Math.random() * 30) + 1} days ago`
+        };
+      });
+      
+      // Sort by score
+      allAgencies.sort((a, b) => b.score - a.score);
+      allAgencies.forEach((agency, index) => agency.rank = index + 1);
+      
+      renderLeaderboard();
+    }
+
+    function getRegionFromCountry(country) {
+      const northAmerica = ['US', 'CA'];
+      const europe = ['UK', 'NL', 'DE', 'FR', 'ES', 'SE', 'DK'];
+      const apac = ['AU'];
+      
+      if (northAmerica.includes(country)) return 'north-america';
+      if (europe.includes(country)) return 'europe';
+      if (apac.includes(country)) return 'apac';
+      return 'other';
+    }
+
+    function filterAgencies() {
+      return allAgencies.filter(agency => {
+        // Region filter
+        if (currentFilters.region.length > 0 && !currentFilters.region.includes(agency.region)) {
+          return false;
+        }
+        
+        // Size filter
+        if (currentFilters.size.length > 0 && !currentFilters.size.includes(agency.size)) {
+          return false;
+        }
+        
+        // Specialization filter
+        if (currentFilters.specialization.length > 0 && !currentFilters.specialization.includes(agency.niche)) {
+          return false;
+        }
+        
+        // Budget filter
+        if (currentFilters.budget.length > 0) {
+          const budgetMatch = currentFilters.budget.some(budget => {
+            switch(budget) {
+              case 'budget-1': return agency.budget <= 2;
+              case 'budget-2': return agency.budget >= 2 && agency.budget <= 3;
+              case 'budget-3': return agency.budget >= 3 && agency.budget <= 4;
+              case 'budget-4': return agency.budget >= 4;
+              default: return true;
+            }
+          });
+          if (!budgetMatch) return false;
+        }
+        
+        // Tools filter
+        if (currentFilters.tools.length > 0) {
+          const hasTool = currentFilters.tools.some(tool => {
+            if (tool === 'enterprise-tools') {
+              return agency.tools.some(t => ['brightedge', 'seoclarity', 'conductor'].includes(t));
+            }
+            return agency.tools.includes(tool);
+          });
+          if (!hasTool) return false;
+        }
+        
+        // Language filter
+        if (currentFilters.language.length > 0) {
+          const hasLanguage = currentFilters.language.some(lang => agency.languages.includes(lang));
+          if (!hasLanguage) return false;
+        }
+        
+        // Search filter
+        if (currentFilters.search) {
+          const searchTerm = currentFilters.search.toLowerCase();
+          const searchable = [
+            agency.name,
+            agency.url,
+            getCountryName(agency.country),
+            getNicheName(agency.niche),
+            agency.size
+          ].join(' ').toLowerCase();
+          
+          if (!searchable.includes(searchTerm)) {
+            return false;
+          }
+        }
+        
+        return true;
+      });
+    }
+
+    function renderLeaderboard() {
+      const filteredAgencies = filterAgencies();
+      const container = document.getElementById('leaderboard-container');
+      const noResults = document.getElementById('noResults');
+      const pagination = document.getElementById('pagination');
+      
+      if (filteredAgencies.length === 0) {
+        container.classList.add('hidden');
+        pagination.classList.add('hidden');
+        noResults.classList.remove('hidden');
+        return;
+      }
+      
+      noResults.classList.add('hidden');
+      container.classList.remove('hidden');
+      
+      if (currentView === 'table') {
+        container.className = 'table-view';
+        container.innerHTML = renderTableView(filteredAgencies);
+      } else {
+        container.className = 'cards-view grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
+        container.innerHTML = renderCardsView(filteredAgencies);
+      }
+      
+      // Show pagination if many results
+      if (filteredAgencies.length > 20) {
+        pagination.classList.remove('hidden');
+      } else {
+        pagination.classList.add('hidden');
+      }
+    }
+
+    function renderTableView(agencies) {
+      return `
+        <div class="overflow-x-auto rounded-lg border border-gray-700">
+          <table class="min-w-full divide-y divide-gray-700">
+            <thead class="bg-gray-800">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Rank</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Agency</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Country</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Size</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Specialization</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Score</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Tools</th>
+              </tr>
+            </thead>
+            <tbody class="bg-gray-900 divide-y divide-gray-800">
+              ${agencies.slice(0, 20).map(agency => `
+                <tr class="hover:bg-gray-800 transition cursor-pointer" onclick="showAgencyDetails(${agency.id})">
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                      <span class="badge ${agency.rank === 1 ? 'rank-1' : agency.rank === 2 ? 'rank-2' : agency.rank === 3 ? 'rank-3' : 'rank-other'}">
+                        ${agency.rank}
+                      </span>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="flex items-center">
+                      <div class="flex-shrink-0 h-10 w-10 bg-gray-700 rounded-lg flex items-center justify-center mr-3">
+                        ${getFlagEmoji(agency.country)}
+                      </div>
+                      <div>
+                        <div class="font-medium text-white">${agency.name}</div>
+                        <div class="text-sm text-gray-400">${agency.url.replace('https://', '')}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                      ${getFlagEmoji(agency.country)}
+                      <span class="ml-2 text-sm">${getCountryName(agency.country)}</span>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getSizeColor(agency.size)}">
+                      ${getSizeLabel(agency.size)}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm">
+                    ${getNicheName(agency.niche)}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                      <div class="w-24 bg-gray-700 rounded-full h-2.5 mr-3">
+                        <div class="bg-gradient-to-r from-green-500 to-yellow-500 h-2.5 rounded-full" style="width: ${agency.score}%"></div>
+                      </div>
+                      <span class="font-bold ${getScoreColor(agency.score)}">${agency.score}</span>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex gap-1">
+                      ${agency.tools.slice(0, 2).map(tool => `
+                        <span class="text-xs px-2 py-1 bg-gray-800 rounded">${tool}</span>
+                      `).join('')}
+                      ${agency.tools.length > 2 ? `<span class="text-xs px-2 py-1 bg-gray-800 rounded">+${agency.tools.length - 2}</span>` : ''}
+                    </div>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="mt-4 text-center text-sm text-gray-500">
+          Showing ${Math.min(agencies.length, 20)} of ${agencies.length} agencies
+        </div>
+      `;
+    }
+
+    function renderCardsView(agencies) {
+      return agencies.slice(0, 12).map(agency => `
+        <div class="agency-card" onclick="showAgencyDetails(${agency.id})">
+          <div class="flex justify-between items-start mb-4">
+            <div class="flex items-center">
+              <div class="badge ${agency.rank <= 3 ? (agency.rank === 1 ? 'rank-1' : agency.rank === 2 ? 'rank-2' : 'rank-3') : 'rank-other'} mr-3">
+                ${agency.rank}
+              </div>
+              <div>
+                <h3 class="font-bold text-lg">${agency.name}</h3>
+                <div class="flex items-center text-sm text-gray-400">
+                  ${getFlagEmoji(agency.country)}
+                  <span class="ml-1">${getCountryName(agency.country)}</span>
+                </div>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-2xl font-bold ${getScoreColor(agency.score)}">${agency.score}</div>
+              <div class="text-xs text-gray-400">score</div>
+            </div>
+          </div>
+          
+          <div class="mb-4">
+            <div class="text-sm text-gray-400 mb-2">Specialization:</div>
+            <div class="flex flex-wrap gap-2">
+              <span class="text-xs px-2 py-1 bg-purple-900 text-purple-200 rounded-full">
+                ${getNicheName(agency.niche)}
+              </span>
+              <span class="text-xs px-2 py-1 bg-blue-900 text-blue-200 rounded-full">
+                ${getSizeLabel(agency.size)}
+              </span>
+            </div>
+          </div>
+          
+          <div class="mb-4">
+            <div class="text-sm text-gray-400 mb-2">Tools:</div>
+            <div class="flex flex-wrap gap-1">
+              ${agency.tools.slice(0, 3).map(tool => `
+                <span class="text-xs px-2 py-1 bg-gray-800 rounded">${tool}</span>
+              `).join('')}
+            </div>
+          </div>
+          
+          <div class="flex justify-between items-center text-sm text-gray-400">
+            <div>${agency.lastScan}</div>
+            <button class="text-purple-400 hover:text-purple-300 font-semibold">
+              View Details →
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function showAgencyDetails(id) {
+      const agency = allAgencies.find(a => a.id === id);
+      if (!agency) return;
+      
+      const modal = document.getElementById('scanModal');
+      modal.querySelector('.modal-content').innerHTML = `
+        <div class="modal-header">
+          <h2 class="text-3xl font-bold mb-2">🏢 ${agency.name}</h2>
+          <div class="flex items-center justify-center gap-4 text-gray-400">
+            <span>${getFlagEmoji(agency.country)} ${getCountryName(agency.country)}</span>
+            <span>•</span>
+            <span>${getSizeLabel(agency.size)}</span>
+            <span>•</span>
+            <span>Score: <span class="font-bold ${getScoreColor(agency.score)}">${agency.score}/100</span></span>
+          </div>
+        </div>
+        <div class="modal-body">
+          <div class="grid grid-cols-2 gap-6 mb-8">
+            <div class="bg-gray-800 rounded-lg p-4">
+              <div class="text-sm text-gray-400 mb-2">Website</div>
+              <a href="${agency.url}" target="_blank" class="text-blue-400 hover:text-blue-300 font-semibold">${agency.url}</a>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4">
+              <div class="text-sm text-gray-400 mb-2">Specialization</div>
+              <div class="font-semibold">${getNicheName(agency.niche)}</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4">
+              <div class="text-sm text-gray-400 mb-2">Budget Range</div>
+              <div class="font-semibold">${getBudgetRange(agency.budget)}</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4">
+              <div class="text-sm text-gray-400 mb-2">Languages</div>
+              <div class="font-semibold">${agency.languages.map(lang => lang.charAt(0).toUpperCase() + lang.slice(1)).join(', ')}</div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold mb-4">🛠️ Tools Stack</h3>
+          <div class="flex flex-wrap gap-2 mb-8">
+            ${agency.tools.map(tool => `
+              <span class="px-3 py-2 bg-gray-800 rounded-lg">${tool.charAt(0).toUpperCase() + tool.slice(1)}</span>
+            `).join('')}
+          </div>
+          
+          <h3 class="text-xl font-bold mb-4">📊 Performance</h3>
+          <div class="bg-gray-800 rounded-lg p-6 mb-8">
+            <div class="flex items-center justify-between mb-4">
+              <div class="text-2xl font-bold">Overall Score</div>
+              <div class="text-4xl font-bold ${getScoreColor(agency.score)}">${agency.score}</div>
+            </div>
+            <div class="w-full bg-gray-700 rounded-full h-4">
+              <div class="bg-gradient-to-r from-green-500 to-yellow-500 h-4 rounded-full" style="width: ${agency.score}%"></div>
+            </div>
+            <div class="text-sm text-gray-400 mt-2 text-center">Ranked #${agency.rank} globally</div>
+          </div>
+          
+          <div class="flex gap-4 mt-8 pt-6 border-t border-gray-700">
+            <button onclick="closeModal()" class="flex-1 bg-gray-700 hover:bg-gray-600 py-3 rounded-lg font-semibold">
+              Close
+            </button>
+            <a href="${agency.url}" target="_blank" class="flex-1 bg-purple-600 hover:bg-purple-700 py-3 rounded-lg font-semibold text-center">
+              Visit Website
+            </a>
+          </div>
+        </div>
+      `;
+      
+      modal.classList.remove('hidden');
+    }
+
+    // Helper functions
+    function getFlagEmoji(countryCode) {
+      const flagEmojis = {
+        'US': '🇺🇸', 'CA': '🇨🇦', 'UK': '🇬🇧', 'AU': '🇦🇺', 'NZ': '🇳🇿',
+        'NL': '🇳🇱', 'DE': '🇩🇪', 'FR': '🇫🇷', 'ES': '🇪🇸', 'IT': '🇮🇹',
+        'SE': '🇸🇪', 'DK': '🇩🇰', 'NO': '🇳🇴', 'FI': '🇫🇮', 'BE': '🇧🇪',
+        'CH': '🇨🇭', 'AT': '🇦🇹', 'IE': '🇮🇪', 'SG': '🇸🇬'
+      };
+      return flagEmojis[countryCode] || '🌐';
+    }
+
+    function getCountryName(countryCode) {
+      const countryNames = {
+        'US': 'United States', 'CA': 'Canada', 'UK': 'United Kingdom',
+        'AU': 'Australia', 'NZ': 'New Zealand', 'NL': 'Netherlands',
+        'DE': 'Germany', 'FR': 'France', 'ES': 'Spain', 'IT': 'Italy',
+        'SE': 'Sweden', 'DK': 'Denmark', 'NO': 'Norway', 'FI': 'Finland',
+        'BE': 'Belgium', 'CH': 'Switzerland', 'AT': 'Austria',
+        'IE': 'Ireland', 'SG': 'Singapore'
+      };
+      return countryNames[countryCode] || countryCode;
+    }
+
+    function getNicheName(nicheCode) {
+      const nicheNames = {
+        'full-service': 'Full-Service SEO',
+        'technical-seo': 'Technical SEO',
+        'content-seo': 'Content SEO',
+        'ecommerce-seo': 'E-commerce SEO',
+        'saas-seo': 'SaaS/Tech SEO',
+        'local-seo': 'Local SEO',
+        'health-seo': 'Healthcare SEO',
+        'finance-seo': 'Finance SEO'
+      };
+      return nicheNames[nicheCode] || nicheCode.replace('-', ' ').toUpperCase();
+    }
+
+    function getSizeLabel(size) {
+      const labels = {
+        'freelancer': 'Freelancer',
+        'boutique': 'Boutique',
+        'mid-market': 'Mid-Market',
+        'enterprise': 'Enterprise'
+      };
+      return labels[size] || size;
+    }
+
+    function getSizeColor(size) {
+      const colors = {
+        'freelancer': 'bg-blue-900 text-blue-200',
+        'boutique': 'bg-green-900 text-green-200',
+        'mid-market': 'bg-yellow-900 text-yellow-200',
+        'enterprise': 'bg-purple-900 text-purple-200'
+      };
+      return colors[size] || 'bg-gray-800 text-gray-200';
+    }
+
+    function getScoreColor(score) {
+      if (score >= 90) return 'text-green-400';
+      if (score >= 80) return 'text-green-300';
+      if (score >= 70) return 'text-yellow-400';
+      if (score >= 60) return 'text-orange-400';
+      return 'text-red-400';
+    }
+
+    function getBudgetRange(budgetLevel) {
+      const ranges = [
+        '€1K-€3K per month',
+        '€3K-€5K per month',
+        '€5K-€10K per month',
+        '€10K-€20K per month',
+        '€20K+ per month'
+      ];
+      return ranges[budgetLevel - 1] || 'Custom';
+    }
+
+    function refreshLeaderboard() {
+      // This would reload from API
+      console.log('Refreshing leaderboard...');
+      loadMockAgencies(); // Replace with actual API call
+    }
+  </script>
 
 </body>
 </html>
