@@ -7,589 +7,44 @@ const anthropic = new Anthropic({
 });
 
 // ==========================================
-// 🔧 CONTENTSCORE TOOL HELPER FUNCTIONS
+// 🎯 HYBRID SCANNER V3.0
+// DETERMINISTIC + AI VALIDATION
 // ==========================================
 
-// Helper: Analyseer text content zonder AI (voor ContentScore Tool)
-async function analyzeTextContent(text) {
-    try {
-        console.log('[CONTENTSCORE] Analyzing text content, length:', text.length);
-        
-        // Calculate text metrics
-        const wordCount = text.split(/\s+/).length;
-        const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-        const avgSentenceLength = sentences.length > 0 ? wordCount / sentences.length : 0;
-        
-        // Count paragraphs
-        const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
-        
-        // Check for headings (h1-h6 patterns)
-        const headingMatches = text.match(/^(#+|\s*[A-Z][A-Za-z\s]{10,})/gm) || [];
-        
-        // Check for transition words
-        const transitionWords = ['however', 'therefore', 'moreover', 'furthermore', 'consequently', 'nevertheless'];
-        const transitionCount = transitionWords.reduce((count, word) => 
-            count + (text.toLowerCase().match(new RegExp(`\\b${word}\\b`, 'g')) || []).length, 0
-        );
-        
-        // Calculate scores
-        const readabilityScore = calculateReadabilityScore(text, avgSentenceLength);
-        const structureScore = calculateStructureScore(paragraphs, headingMatches, text.length);
-        const engagementScore = calculateEngagementScore(text, transitionCount, wordCount);
-        const seoScore = calculateSEOScore(text, wordCount);
-        
-        // Use Claude API for in-depth analysis if available
-        let claudeAnalysis = null;
-        try {
-            if (process.env.ANTHROPIC_API_KEY && text.length < 8000) {
-                const prompt = `Analyze this text content for SEO and quality:
+console.log('✅ ContentScale Hybrid Scanner V3.0 Loaded');
 
-Text: ${text.substring(0, 4000)}
+// ==========================================
+// HELPER: AUTO-SCROLL FOR LAZY-LOAD
+// ==========================================
 
-Return JSON with: {
-  "overall_quality": "poor|average|good|excellent",
-  "key_strengths": ["..."],
-  "key_weaknesses": ["..."],
-  "primary_keywords": ["..."],
-  "tone": "formal|informal|conversational|technical"
-}`;
-
-                const message = await anthropic.messages.create({
-                    model: 'claude-3-haiku-20240307',
-                    max_tokens: 1000,
-                    messages: [{ role: 'user', content: prompt }]
-                });
-                
-                const response = message.content[0].text;
-                claudeAnalysis = JSON.parse(response.includes('```json') ? 
-                    response.split('```json')[1].split('```')[0].trim() : 
-                    response.includes('```') ? 
-                    response.split('```')[1].split('```')[0].trim() : 
-                    response);
-            }
-        } catch (claudeError) {
-            console.warn('[CONTENTSCORE] Claude analysis failed:', claudeError.message);
+async function autoScroll(page) {
+  await page.evaluate(async () => {
+    await new Promise((resolve) => {
+      let totalHeight = 0;
+      const distance = 100;
+      const timer = setInterval(() => {
+        const scrollHeight = document.body.scrollHeight;
+        window.scrollBy(0, distance);
+        totalHeight += distance;
+        
+        if (totalHeight >= scrollHeight) {
+          clearInterval(timer);
+          resolve();
         }
-        
-        // Calculate final scores
-        const graafScore = Math.round((readabilityScore * 0.4 + engagementScore * 0.6) * 0.5);
-        const craftScore = Math.round((structureScore * 0.5 + seoScore * 0.5) * 0.3);
-        const technicalScore = Math.round(seoScore * 0.2);
-        
-        const totalScore = Math.min(100, Math.max(0, 
-            graafScore + craftScore + technicalScore
-        ));
-        
-        // Generate recommendations
-        const recommendations = generateTextRecommendations({
-            wordCount,
-            avgSentenceLength,
-            paragraphCount: paragraphs.length,
-            headingCount: headingMatches.length,
-            readabilityScore,
-            structureScore,
-            engagementScore,
-            seoScore,
-            claudeAnalysis
-        });
-        
-        return {
-            success: true,
-            score: totalScore,
-            quality: totalScore >= 90 ? 'excellent' : 
-                    totalScore >= 80 ? 'good' : 
-                    totalScore >= 70 ? 'fair' : 
-                    totalScore >= 60 ? 'average' : 'needs-improvement',
-            breakdown: {
-                graaf: { total: graafScore },
-                craft: { total: craftScore },
-                technical: { total: technicalScore },
-                details: {
-                    readability: readabilityScore,
-                    structure: structureScore,
-                    engagement: engagementScore,
-                    seo: seoScore
-                }
-            },
-            recommendations: recommendations,
-            wordCount: wordCount,
-            metrics: {
-                sentences: sentences.length,
-                paragraphs: paragraphs.length,
-                headings: headingMatches.length,
-                avgSentenceLength: avgSentenceLength.toFixed(1),
-                transitionWords: transitionCount
-            },
-            ai_analysis: claudeAnalysis
-        };
-        
-    } catch (error) {
-        console.error('[TEXT ANALYSIS ERROR]', error);
-        return {
-            success: false,
-            error: 'Text analysis failed: ' + error.message
-        };
-    }
-}
-
-// Helper functions for text analysis
-function calculateReadabilityScore(text, avgSentenceLength) {
-    // Flesch Reading Ease approximation
-    const syllables = (text.match(/[aeiouy]{1,2}/gi) || []).length;
-    const words = text.split(/\s+/).length;
-    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-    
-    let readability = 206.835 - 1.015 * (words / Math.max(1, sentences.length)) - 84.6 * (syllables / words);
-    readability = Math.max(0, Math.min(100, readability));
-    
-    // Adjust based on sentence length
-    if (avgSentenceLength > 25) readability *= 0.8;
-    if (avgSentenceLength < 15) readability *= 1.1;
-    
-    return Math.round(readability);
-}
-
-function calculateStructureScore(paragraphs, headings, textLength) {
-    let score = 50; // Base score
-    
-    // Paragraph length scoring
-    const avgParagraphLength = textLength / Math.max(1, paragraphs.length);
-    if (avgParagraphLength > 300 && avgParagraphLength < 600) score += 20;
-    if (avgParagraphLength <= 100 || avgParagraphLength >= 800) score -= 20;
-    
-    // Heading scoring
-    const headingFrequency = headings.length / Math.max(1, paragraphs.length);
-    if (headingFrequency >= 0.2 && headingFrequency <= 0.5) score += 20;
-    if (headingFrequency < 0.1) score -= 15;
-    
-    return Math.max(0, Math.min(100, score));
-}
-
-function calculateEngagementScore(text, transitionCount, wordCount) {
-    let score = 50;
-    
-    // Transition words per 100 words
-    const transitionDensity = (transitionCount / wordCount) * 100;
-    if (transitionDensity > 1 && transitionDensity < 5) score += 25;
-    if (transitionDensity >= 5) score += 10;
-    if (transitionDensity === 0) score -= 20;
-    
-    // Check for questions (engagement)
-    const questionCount = (text.match(/\?/g) || []).length;
-    if (questionCount > 0) score += 10;
-    
-    // Check for pronouns (direct address)
-    const pronounCount = (text.match(/\b(you|your|we|us|our)\b/gi) || []).length;
-    if (pronounCount > wordCount * 0.01) score += 15;
-    
-    return Math.max(0, Math.min(100, score));
-}
-
-function calculateSEOScore(text, wordCount) {
-    let score = 50;
-    
-    // Word count scoring
-    if (wordCount >= 1000 && wordCount <= 2500) score += 30;
-    if (wordCount < 300) score -= 30;
-    if (wordCount > 5000) score -= 10;
-    
-    // Check for meta elements in text
-    const hasIntro = text.toLowerCase().includes('introduction') || 
-                     text.substring(0, 200).toLowerCase().includes('in this');
-    const hasConclusion = text.toLowerCase().includes('conclusion') || 
-                         text.toLowerCase().includes('summary') ||
-                         text.toLowerCase().includes('to sum up');
-    
-    if (hasIntro) score += 10;
-    if (hasConclusion) score += 10;
-    
-    // Check for lists
-    const listCount = (text.match(/\d+\.\s|\-\s|\*\s/g) || []).length;
-    if (listCount >= 2) score += 10;
-    
-    return Math.max(0, Math.min(100, score));
-}
-
-function generateTextRecommendations(metrics) {
-    const recommendations = {
-        quickWins: [],
-        majorImpact: [],
-        advanced: [],
-        summary: {
-            totalIssues: 0,
-            estimatedTimeToFix: 0,
-            potentialScoreGain: 0,
-            currentScore: 0,
-            targetScore: 100
-        }
-    };
-    
-    // Quick Wins based on metrics
-    if (metrics.wordCount < 800) {
-        recommendations.quickWins.push({
-            category: "Content Length",
-            issue: "Content is too short",
-            action: "Expand content to at least 1000 words",
-            details: ["Add more examples", "Include case studies", "Add statistics"],
-            impact: 4,
-            timeEstimate: 60,
-            priority: "high"
-        });
-        recommendations.summary.totalIssues++;
-        recommendations.summary.estimatedTimeToFix += 60;
-        recommendations.summary.potentialScoreGain += 15;
-    }
-    
-    if (metrics.avgSentenceLength > 25) {
-        recommendations.quickWins.push({
-            category: "Readability",
-            issue: "Sentences are too long",
-            action: "Break long sentences into shorter ones",
-            details: ["Aim for 15-20 words per sentence", "Use more periods", "Avoid multiple clauses"],
-            impact: 3,
-            timeEstimate: 30,
-            priority: "high"
-        });
-        recommendations.summary.totalIssues++;
-        recommendations.summary.estimatedTimeToFix += 30;
-        recommendations.summary.potentialScoreGain += 10;
-    }
-    
-    if (metrics.headingCount < 3 && metrics.paragraphCount > 5) {
-        recommendations.quickWins.push({
-            category: "Structure",
-            issue: "Not enough subheadings",
-            action: "Add subheadings every 2-3 paragraphs",
-            details: ["Use H2 and H3 tags", "Make headings descriptive", "Include keywords"],
-            impact: 4,
-            timeEstimate: 15,
-            priority: "high"
-        });
-        recommendations.summary.totalIssues++;
-        recommendations.summary.estimatedTimeToFix += 15;
-        recommendations.summary.potentialScoreGain += 12;
-    }
-    
-    // Major Improvements
-    if (metrics.readabilityScore < 60) {
-        recommendations.majorImpact.push({
-            category: "Readability",
-            issue: "Content is difficult to read",
-            action: "Simplify language and sentence structure",
-            details: ["Use simpler words", "Shorten paragraphs", "Add transition words"],
-            impact: 5,
-            timeEstimate: 90,
-            priority: "medium"
-        });
-        recommendations.summary.totalIssues++;
-        recommendations.summary.estimatedTimeToFix += 90;
-        recommendations.summary.potentialScoreGain += 20;
-    }
-    
-    if (metrics.engagementScore < 50) {
-        recommendations.majorImpact.push({
-            category: "Engagement",
-            issue: "Content lacks engagement elements",
-            action: "Add interactive and engaging elements",
-            details: ["Include questions to readers", "Add relevant images", "Use storytelling"],
-            impact: 4,
-            timeEstimate: 120,
-            priority: "medium"
-        });
-        recommendations.summary.totalIssues++;
-        recommendations.summary.estimatedTimeToFix += 120;
-        recommendations.summary.potentialScoreGain += 18;
-    }
-    
-    // Advanced Optimizations
-    if (metrics.claudeAnalysis) {
-        if (metrics.claudeAnalysis.tone === "technical" && metrics.claudeAnalysis.overall_quality === "average") {
-            recommendations.advanced.push({
-                category: "Tone & Style",
-                issue: "Tone may be too technical for general audience",
-                action: "Adapt tone for target audience",
-                details: ["Simplify technical terms", "Add explanations", "Use analogies"],
-                impact: 3,
-                timeEstimate: 60,
-                priority: "low"
-            });
-            recommendations.summary.totalIssues++;
-            recommendations.summary.estimatedTimeToFix += 60;
-            recommendations.summary.potentialScoreGain += 8;
-        }
-    }
-    
-    recommendations.summary.currentScore = Math.round(
-        (metrics.readabilityScore * 0.4 + 
-         metrics.structureScore * 0.3 + 
-         metrics.engagementScore * 0.2 + 
-         metrics.seoScore * 0.1)
-    );
-    
-    recommendations.summary.targetScore = Math.min(100, 
-        recommendations.summary.currentScore + recommendations.summary.potentialScoreGain
-    );
-    
-    return recommendations;
+      }, 100);
+    });
+  });
 }
 
 // ==========================================
-// 🔧 CONTENTSCORE HYBRIDE ANALYSE FUNCTIES
-// ==========================================
-
-// Helper: Parse HTML en extraheer gestructureerde content
-function parseHTMLForAnalysis(html) {
-    const $ = cheerio.load(html);
-    
-    // Verwijder onnodige elementen
-    $('script, style, nav, footer, header, aside, iframe, form').remove();
-    
-    // Extract gestructureerde content
-    const structuredContent = {
-        title: $('title').text().trim() || $('h1').first().text().trim(),
-        metaDescription: $('meta[name="description"]').attr('content') || '',
-        h1: $('h1').map((i, el) => $(el).text().trim()).get(),
-        h2: $('h2').map((i, el) => $(el).text().trim()).get(),
-        h3: $('h3').map((i, el) => $(el).text().trim()).get(),
-        paragraphs: $('p').map((i, el) => $(el).text().trim()).get().filter(p => p.length > 10),
-        lists: {
-            ordered: $('ol li').map((i, el) => $(el).text().trim()).get(),
-            unordered: $('ul li').map((i, el) => $(el).text().trim()).get()
-        },
-        images: {
-            total: $('img').length,
-            withAlt: $('img[alt]').length,
-            withoutAlt: $('img:not([alt])').length,
-            altTexts: $('img[alt]').map((i, el) => $(el).attr('alt')).get()
-        },
-        links: {
-            internal: $('a[href^="/"], a[href^="#"]').length,
-            external: $('a[href^="http"]').not('[href*="' + ($('meta[property="og:url"]').attr('content') || '') + '"]').length,
-            broken: $('a[href=""], a:not([href])').length
-        },
-        schema: $('script[type="application/ld+json"]').length > 0,
-        metaTags: {
-            viewport: $('meta[name="viewport"]').length > 0,
-            charset: $('meta[charset]').length > 0,
-            ogTags: $('meta[property^="og:"]').length,
-            twitterCards: $('meta[name^="twitter:"]').length
-        },
-        mainContent: $('main, article, .content, #content').text().replace(/\s+/g, ' ').trim() || 
-                     $('body').text().replace(/\s+/g, ' ').trim()
-    };
-    
-    // Bereken statistieken
-    const allText = structuredContent.mainContent;
-    const words = allText.split(/\s+/).filter(w => w.length > 1);
-    const sentences = allText.split(/[.!?]+/).filter(s => s.trim().length > 0);
-    
-    structuredContent.stats = {
-        wordCount: words.length,
-        sentenceCount: sentences.length,
-        avgSentenceLength: sentences.length > 0 ? words.length / sentences.length : 0,
-        avgWordLength: words.length > 0 ? words.reduce((sum, w) => sum + w.length, 0) / words.length : 0,
-        paragraphCount: structuredContent.paragraphs.length,
-        headingCount: structuredContent.h1.length + structuredContent.h2.length + structuredContent.h3.length
-    };
-    
-    return structuredContent;
-}
-
-// Helper: Bereken consistente scores zonder AI
-function calculateConsistentScores(content) {
-    const scores = {
-        structure: 0,
-        readability: 0,
-        seo: 0,
-        technical: 0
-    };
-    
-    const stats = content.stats;
-    
-    // 1. STRUCTURE SCORE (40 punten)
-    // - Heading hiërarchie (H1, H2, H3)
-    if (content.h1.length === 1) scores.structure += 10;
-    if (content.h2.length >= 2) scores.structure += 10;
-    if (content.h3.length >= 1) scores.structure += 5;
-    
-    // - Paragraph length (ideaal: 50-150 woorden per paragraph)
-    const avgParagraphWords = stats.wordCount / Math.max(1, content.paragraphs.length);
-    if (avgParagraphWords >= 50 && avgParagraphWords <= 150) scores.structure += 10;
-    else if (avgParagraphWords >= 30 && avgParagraphWords <= 200) scores.structure += 5;
-    
-    // - Lists aanwezigheid
-    const totalListItems = content.lists.ordered.length + content.lists.unordered.length;
-    if (totalListItems >= 2) scores.structure += 5;
-    
-    // 2. READABILITY SCORE (30 punten)
-    // - Flesch Reading Ease (gesimplificeerd)
-    const flesch = 206.835 - 1.015 * stats.avgSentenceLength - 84.6 * (stats.avgWordLength / stats.avgSentenceLength);
-    if (flesch >= 60) scores.readability += 15; // Easy to read
-    else if (flesch >= 50) scores.readability += 10;
-    else if (flesch >= 30) scores.readability += 5;
-    
-    // - Sentence length variety (coëfficiënt van variatie)
-    const sentenceLengths = content.mainContent.split(/[.!?]+/).map(s => s.trim().split(/\s+/).length);
-    if (sentenceLengths.length >= 3) {
-        const avg = sentenceLengths.reduce((a, b) => a + b) / sentenceLengths.length;
-        const variance = sentenceLengths.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / sentenceLengths.length;
-        const cv = Math.sqrt(variance) / avg;
-        if (cv > 0.3) scores.readability += 10; // Goede variatie
-    }
-    
-    // - Transition words
-    const transitions = ['however', 'therefore', 'moreover', 'furthermore', 'consequently', 'nevertheless', 
-                        'additionally', 'similarly', 'likewise', 'conversely', 'otherwise', 'instead'];
-    const transitionCount = transitions.reduce((count, word) => 
-        count + (content.mainContent.toLowerCase().match(new RegExp(`\\b${word}\\b`, 'g')) || []).length, 0
-    );
-    if (transitionCount >= 3) scores.readability += 5;
-    
-    // 3. SEO SCORE (20 punten)
-    // - Meta tags
-    if (content.title && content.title.length >= 15 && content.title.length <= 60) scores.seo += 5;
-    if (content.metaDescription && content.metaDescription.length >= 70 && content.metaDescription.length <= 160) scores.seo += 5;
-    
-    // - Heading keyword consistency
-    const titleWords = new Set(content.title.toLowerCase().split(/\W+/).filter(w => w.length > 3));
-    const h1Words = content.h1.length > 0 ? new Set(content.h1[0].toLowerCase().split(/\W+/).filter(w => w.length > 3)) : new Set();
-    const intersection = [...titleWords].filter(x => h1Words.has(x));
-    if (intersection.length >= 1) scores.seo += 5;
-    
-    // - Internal links
-    if (content.links.internal >= 3) scores.seo += 5;
-    
-    // 4. TECHNICAL SCORE (10 punten)
-    // - Image alt texts
-    const altRatio = content.images.total > 0 ? content.images.withAlt / content.images.total : 0;
-    if (altRatio >= 0.9) scores.technical += 5;
-    else if (altRatio >= 0.7) scores.technical += 3;
-    else if (altRatio >= 0.5) scores.technical += 1;
-    
-    // - Schema markup
-    if (content.schema) scores.technical += 3;
-    
-    // - Meta tags
-    if (content.metaTags.viewport) scores.technical += 1;
-    if (content.metaTags.charset) scores.technical += 1;
-    
-    // Normalize to percentages
-    scores.structure = Math.min(40, scores.structure) * 2.5; // 40 -> 100
-    scores.readability = Math.min(30, scores.readability) * 3.33; // 30 -> 100
-    scores.seo = Math.min(20, scores.seo) * 5; // 20 -> 100
-    scores.technical = Math.min(10, scores.technical) * 10; // 10 -> 100
-    
-    return scores;
-}
-
-// Helper: Genereer aanbevelingen
-function generateRecommendations(content, scores) {
-    const recommendations = {
-        structure: [],
-        readability: [],
-        seo: [],
-        technical: []
-    };
-    
-    // STRUCTURE aanbevelingen
-    if (content.h1.length !== 1) {
-        recommendations.structure.push({
-            issue: content.h1.length === 0 ? "Geen H1 heading gevonden" : "Meerdere H1 headings gevonden",
-            action: "Zorg voor exact één H1 heading per pagina",
-            impact: 5,
-            priority: "high"
-        });
-    }
-    
-    if (content.h2.length < 2) {
-        recommendations.structure.push({
-            issue: "Te weinig subheadings (H2)",
-            action: "Voeg minstens 2-3 H2 headings toe om content te structureren",
-            impact: 4,
-            priority: "medium"
-        });
-    }
-    
-    const avgParaWords = content.stats.wordCount / Math.max(1, content.paragraphs.length);
-    if (avgParaWords > 200) {
-        recommendations.structure.push({
-            issue: "Paragrafen zijn te lang",
-            action: "Breek lange paragrafen op in kleinere van 50-150 woorden",
-            impact: 3,
-            priority: "medium"
-        });
-    }
-    
-    // READABILITY aanbevelingen
-    if (scores.readability < 60) {
-        recommendations.readability.push({
-            issue: "Leesbaarheid kan verbeterd worden",
-            action: "Gebruik kortere zinnen en meer overgangswoorden",
-            impact: 4,
-            priority: "medium"
-        });
-    }
-    
-    if (content.stats.avgSentenceLength > 25) {
-        recommendations.readability.push({
-            issue: "Gemiddelde zinlengte is te hoog",
-            action: "Breek lange zinnen op in kortere van 15-20 woorden",
-            impact: 4,
-            priority: "high"
-        });
-    }
-    
-    // SEO aanbevelingen
-    if (!content.metaDescription || content.metaDescription.length < 70) {
-        recommendations.seo.push({
-            issue: "Meta description ontbreekt of is te kort",
-            action: "Voeg een meta description toe van 70-160 karakters",
-            impact: 5,
-            priority: "high"
-        });
-    }
-    
-    if (content.links.internal < 3) {
-        recommendations.seo.push({
-            issue: "Te weinig interne links",
-            action: "Voeg minstens 3-5 relevante interne links toe",
-            impact: 4,
-            priority: "medium"
-        });
-    }
-    
-    // TECHNICAL aanbevelingen
-    if (content.images.total > 0 && content.images.withoutAlt > 0) {
-        const altRatio = content.images.withAlt / content.images.total;
-        recommendations.technical.push({
-            issue: `Niet alle afbeeldingen hebben alt tekst (${Math.round(altRatio * 100)}%)`,
-            action: "Voeg beschrijvende alt teksten toe aan alle afbeeldingen",
-            impact: altRatio < 0.5 ? 5 : 3,
-            priority: altRatio < 0.5 ? "high" : "medium"
-        });
-    }
-    
-    if (!content.schema) {
-        recommendations.technical.push({
-            issue: "Geen schema markup gevonden",
-            action: "Voeg structured data toe met JSON-LD",
-            impact: 3,
-            priority: "low"
-        });
-    }
-    
-    return recommendations;
-}
-
-// ==========================================
-// ORIGINAL FUNCTIES (behouden voor backwards compatibility)
+// STEP 1: ADVANCED CONTENT EXTRACTION
 // ==========================================
 
 async function fetchPageContent(url) {
   let browser = null;
   
   try {
-    console.log('[FETCH] Starting browser for:', url);
+    console.log('[FETCH] 🚀 Starting browser for:', url);
     
     browser = await puppeteer.launch({
       headless: 'new',
@@ -601,241 +56,1122 @@ async function fetchPageContent(url) {
         '--disable-gpu',
         '--no-first-run',
         '--no-zygote',
-        '--single-process'
+        '--single-process',
+        '--disable-web-security'
       ]
     });
     
     const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
     
-    console.log('[FETCH] Navigating...');
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+    // Set realistic user agent
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     
-    const html = await page.content();
-    const title = await page.title();
+    // Set viewport
+    await page.setViewport({ width: 1920, height: 1080 });
     
-    const $ = cheerio.load(html);
+    console.log('[FETCH] 📡 Navigating to URL...');
     
-    const metaDescription = $('meta[name="description"]').attr('content') || '';
-    const h1 = $('h1').first().text().trim();
+    // Navigate with extended timeout
+    await page.goto(url, { 
+      waitUntil: 'networkidle2', 
+      timeout: 45000 
+    });
     
-    $('script, style, nav, footer, header').remove();
-    const bodyText = $('body').text().replace(/\s+/g, ' ').trim();
-    const wordCount = bodyText.split(/\s+/).length;
+    console.log('[FETCH] ⏳ Waiting for JavaScript rendering...');
     
-    const internalLinks = $('a[href^="/"]').length;
-    const images = $('img').length;
-    const imagesWithAlt = $('img[alt]').length;
-    const hasSchemaOrg = $('script[type="application/ld+json"]').length > 0;
-    const hasPubDate = !!($('meta[property="article:published_time"]').attr('content') || $('time[datetime]').first().attr('datetime'));
+    // Wait for body to be ready
+    await page.waitForSelector('body', { timeout: 10000 });
+    
+    // Wait additional time for AJAX/React/Vue content
+    await page.waitForTimeout(3000);
+    
+    console.log('[FETCH] 📜 Auto-scrolling for lazy-load content...');
+    
+    // Auto-scroll to trigger lazy-load
+    await autoScroll(page);
+    
+    // Wait after scroll
+    await page.waitForTimeout(2000);
+    
+    console.log('[FETCH] 📊 Extracting all content...');
+    
+    // Extract comprehensive data
+    const pageData = await page.evaluate(() => {
+      return {
+        html: document.documentElement.outerHTML,
+        title: document.title,
+        bodyText: document.body.innerText,
+        visibleText: document.body.textContent,
+        
+        // Meta data
+        metaDescription: document.querySelector('meta[name="description"]')?.content || '',
+        metaKeywords: document.querySelector('meta[name="keywords"]')?.content || '',
+        ogTitle: document.querySelector('meta[property="og:title"]')?.content || '',
+        ogDescription: document.querySelector('meta[property="og:description"]')?.content || '',
+        canonical: document.querySelector('link[rel="canonical"]')?.href || '',
+        
+        // Structured data
+        jsonLd: Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map(s => {
+          try { return JSON.parse(s.textContent); } catch { return null; }
+        }).filter(Boolean),
+        
+        // All images
+        images: Array.from(document.images).map(img => ({
+          src: img.src,
+          alt: img.alt || '',
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+          loading: img.loading,
+          hasAlt: !!img.alt
+        })),
+        
+        // All links
+        links: Array.from(document.links).map(a => ({
+          href: a.href,
+          text: a.textContent.trim(),
+          rel: a.rel,
+          isInternal: a.hostname === window.location.hostname,
+          isExternal: a.hostname !== window.location.hostname
+        })),
+        
+        // Headings
+        headings: {
+          h1: Array.from(document.querySelectorAll('h1')).map(h => h.textContent.trim()),
+          h2: Array.from(document.querySelectorAll('h2')).map(h => h.textContent.trim()),
+          h3: Array.from(document.querySelectorAll('h3')).map(h => h.textContent.trim()),
+          h4: Array.from(document.querySelectorAll('h4')).map(h => h.textContent.trim()),
+          h5: Array.from(document.querySelectorAll('h5')).map(h => h.textContent.trim()),
+          h6: Array.from(document.querySelectorAll('h6')).map(h => h.textContent.trim())
+        },
+        
+        // Viewport
+        viewport: document.querySelector('meta[name="viewport"]')?.content || '',
+        
+        // Language
+        lang: document.documentElement.lang || '',
+        
+        // Performance hints
+        preconnect: Array.from(document.querySelectorAll('link[rel="preconnect"]')).map(l => l.href),
+        prefetch: Array.from(document.querySelectorAll('link[rel="prefetch"]')).map(l => l.href),
+        
+        // Page dimensions
+        pageHeight: document.body.scrollHeight,
+        pageWidth: document.body.scrollWidth
+      };
+    });
     
     await browser.close();
+    
+    console.log('[FETCH] ✅ Content extracted successfully');
+    console.log('[FETCH] 📝 Word count:', pageData.bodyText.split(/\s+/).filter(w => w.length > 0).length);
+    console.log('[FETCH] 🖼️  Images:', pageData.images.length);
+    console.log('[FETCH] 🔗 Links:', pageData.links.length);
     
     return {
       success: true,
       url,
-      title,
-      metaDescription,
-      h1,
-      bodyText: bodyText.substring(0, 8000),
-      wordCount,
-      internalLinks,
-      images,
-      imagesWithAlt,
-      hasSchemaOrg,
-      hasPubDate,
-      html // Voeg HTML toe voor ContentScore analyses
+      ...pageData
     };
+    
   } catch (error) {
-    console.error('[FETCH ERROR]', error.message);
-    if (browser) await browser.close();
-    return { success: false, error: error.message, url };
-  }
-}
-
-async function analyzeWithClaude(pageData) {
-  try {
-    console.log('[CLAUDE] Analyzing...');
-    
-    const prompt = `Analyze this webpage for SEO using GRAAF + CRAFT + Technical SEO.
-
-URL: ${pageData.url}
-Title: ${pageData.title}
-Meta: ${pageData.metaDescription}
-H1: ${pageData.h1}
-Words: ${pageData.wordCount}
-Internal Links: ${pageData.internalLinks}
-Images: ${pageData.images} (${pageData.imagesWithAlt} with alt)
-Schema: ${pageData.hasSchemaOrg}
-Pub Date: ${pageData.hasPubDate}
-
-Content: ${pageData.bodyText.substring(0, 2000)}
-
-Return ONLY valid JSON (no markdown):
-{
-  "score": <0-100>,
-  "breakdown": {
-    "graaf": {"total": <0-50>, "credibility": <0-10>, "relevance": <0-10>, "actionability": <0-10>, "accuracy": <0-10>, "freshness": <0-10>},
-    "craft": {"total": <0-30>, "cutFluff": <0-8>, "reviewOptimize": <0-8>, "addVisuals": <0-6>, "faqIntegration": <0-5>, "trustBuilding": <0-3>},
-    "technical": {"total": <0-20>, "schemaMarkup": <0-4>, "metaOptimization": <0-4>, "internalLinking": <0-4>, "pageStructure": <0-4>, "mobileOptimization": <0-4>}
-  },
-  "recommendations": {
-    "quickWins": [{"category": "...", "issue": "...", "action": "...", "details": [...], "impact": 1-5, "timeEstimate": <minutes>, "priority": "high|medium|low"}],
-    "majorImpact": [...],
-    "advanced": [...],
-    "summary": {"totalIssues": <n>, "estimatedTimeToFix": <minutes>, "potentialScoreGain": <n>, "currentScore": <n>, "targetScore": 100}
-  }
-}`;
-
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4000,
-      messages: [{ role: 'user', content: prompt }]
-    });
-    
-    let jsonText = message.content[0].text;
-    if (jsonText.includes('```json')) {
-      jsonText = jsonText.split('```json')[1].split('```')[0].trim();
-    } else if (jsonText.includes('```')) {
-      jsonText = jsonText.split('```')[1].split('```')[0].trim();
+    console.error('[FETCH ERROR] ❌', error.message);
+    if (browser) {
+      try { await browser.close(); } catch {}
     }
-    
-    const analysis = JSON.parse(jsonText);
-    console.log('[CLAUDE] Complete. Score:', analysis.score);
-    
-    return { success: true, ...analysis };
-  } catch (error) {
-    console.error('[CLAUDE ERROR]', error.message);
-    return { success: false, error: error.message };
+    return { 
+      success: false, 
+      error: error.message, 
+      url 
+    };
   }
 }
 
-async function performFullScan(url) {
-  console.log('[SCAN START]', url);
+// ==========================================
+// STEP 2: DETERMINISTIC CONTENT PARSING
+// ==========================================
+
+function parseContentElements(pageData) {
+  console.log('[PARSE] 🔍 Starting deterministic content parsing...');
   
-  const pageData = await fetchPageContent(url);
-  if (!pageData.success) {
-    return { success: false, error: pageData.error || 'Failed to fetch page' };
+  const $ = cheerio.load(pageData.html);
+  
+  // Remove noise
+  $('script, style, nav, footer, header, aside, iframe, noscript').remove();
+  
+  const elements = {
+    // GRAAF ELEMENTS
+    expertQuotes: detectExpertQuotes($, pageData.bodyText),
+    statistics: detectStatistics($, pageData.bodyText),
+    caseStudies: detectCaseStudies($, pageData.bodyText),
+    processSteps: detectProcessSteps($, pageData.bodyText),
+    examples: detectExamples($, pageData.bodyText),
+    citations: detectCitations($),
+    timestamps: detectTimestamps($, pageData.bodyText),
+    
+    // CRAFT ELEMENTS
+    lists: detectLists($),
+    tables: detectTables($),
+    faqs: detectFAQs($),
+    videos: detectVideos($),
+    infographics: detectInfographics($),
+    callouts: detectCallouts($),
+    
+    // TECHNICAL ELEMENTS
+    schema: pageData.jsonLd || [],
+    internalLinks: pageData.links.filter(l => l.isInternal),
+    externalLinks: pageData.links.filter(l => l.isExternal),
+    images: pageData.images,
+    headings: pageData.headings
+  };
+  
+  // Calculate text metrics
+  const text = pageData.bodyText;
+  const words = text.split(/\s+/).filter(w => w.length > 0);
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  const paragraphs = $('p').length;
+  
+  elements.metrics = {
+    wordCount: words.length,
+    sentenceCount: sentences.length,
+    paragraphCount: paragraphs,
+    avgSentenceLength: sentences.length > 0 ? words.length / sentences.length : 0,
+    avgWordLength: words.length > 0 ? words.reduce((sum, w) => sum + w.length, 0) / words.length : 0,
+    readingTime: Math.ceil(words.length / 200) // 200 words per minute
+  };
+  
+  console.log('[PARSE] ✅ Parsing complete');
+  console.log('[PARSE] 📊 Expert quotes:', elements.expertQuotes.length);
+  console.log('[PARSE] 📈 Statistics:', elements.statistics.length);
+  console.log('[PARSE] 📚 Case studies:', elements.caseStudies.length);
+  console.log('[PARSE] ❓ FAQs:', elements.faqs.length);
+  
+  return elements;
+}
+
+// ==========================================
+// DETECTION FUNCTIONS
+// ==========================================
+
+function detectExpertQuotes($, text) {
+  const quotes = [];
+  
+  // Pattern 1: Blockquotes with attribution
+  $('blockquote').each((i, el) => {
+    const quote = $(el).text().trim();
+    const citation = $(el).find('cite, footer, .author, .attribution').text().trim();
+    
+    if (quote.length > 20) {
+      quotes.push({
+        text: quote,
+        attribution: citation || null,
+        hasAttribution: !!citation,
+        source: 'blockquote'
+      });
+    }
+  });
+  
+  // Pattern 2: Quote marks with "According to"
+  const accordingToPattern = /(?:according to|says|stated|explained by|as (?:mentioned|noted) by)\s+([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi;
+  let match;
+  while ((match = accordingToPattern.exec(text)) !== null) {
+    quotes.push({
+      text: match[0],
+      attribution: match[1],
+      hasAttribution: true,
+      source: 'text-pattern'
+    });
   }
   
-  console.log('[SCAN] Page fetched. Words:', pageData.wordCount);
-  
-  const analysis = await analyzeWithClaude(pageData);
-  if (!analysis.success) {
-    return { success: false, error: analysis.error || 'Analysis failed' };
+  // Pattern 3: Professional titles
+  const titlePattern = /(CEO|CTO|CFO|Director|Professor|Dr\.|PhD|Expert|Specialist|Analyst)\s+([A-Z][a-z]+\s+[A-Z][a-z]+)/gi;
+  while ((match = titlePattern.exec(text)) !== null) {
+    quotes.push({
+      text: match[0],
+      attribution: match[2],
+      title: match[1],
+      hasAttribution: true,
+      source: 'title-pattern'
+    });
   }
   
-  console.log('[SCAN COMPLETE] Score:', analysis.score);
+  return quotes;
+}
+
+function detectStatistics($, text) {
+  const stats = [];
+  
+  // Pattern 1: Percentages
+  const percentPattern = /\d+(?:\.\d+)?%/g;
+  const percentMatches = text.match(percentPattern) || [];
+  percentMatches.forEach(stat => {
+    stats.push({
+      value: stat,
+      type: 'percentage',
+      source: 'text'
+    });
+  });
+  
+  // Pattern 2: Large numbers
+  const numberPattern = /\b\d{1,3}(?:,\d{3})+\b|\b\d+(?:\.\d+)?\s*(?:million|billion|thousand|k|M|B)\b/gi;
+  const numberMatches = text.match(numberPattern) || [];
+  numberMatches.forEach(stat => {
+    stats.push({
+      value: stat,
+      type: 'number',
+      source: 'text'
+    });
+  });
+  
+  // Pattern 3: Statistics with sources
+  const sourcePattern = /(?:according to|source:|data from|study by)\s+([A-Za-z\s]+(?:Study|Report|Survey|Research|Institute|University|Organization))/gi;
+  let match;
+  while ((match = sourcePattern.exec(text)) !== null) {
+    stats.push({
+      value: match[0],
+      source: match[1],
+      type: 'cited-stat',
+      hasCitation: true
+    });
+  }
+  
+  return stats;
+}
+
+function detectCaseStudies($, text) {
+  const cases = [];
+  
+  // Pattern 1: Explicit case study headings
+  $('h2, h3, h4').each((i, el) => {
+    const heading = $(el).text().trim().toLowerCase();
+    if (heading.includes('case study') || heading.includes('success story') || 
+        heading.includes('customer story') || heading.includes('client story')) {
+      cases.push({
+        title: $(el).text().trim(),
+        type: 'explicit',
+        source: 'heading'
+      });
+    }
+  });
+  
+  // Pattern 2: Before/After patterns
+  const beforeAfterPattern = /(?:before|after).*?(?:results?|improvements?|changes?|outcomes?)/gi;
+  const matches = text.match(beforeAfterPattern) || [];
+  matches.forEach(match => {
+    cases.push({
+      text: match,
+      type: 'before-after',
+      source: 'text-pattern'
+    });
+  });
+  
+  // Pattern 3: Results/Outcomes with numbers
+  const resultsPattern = /(?:achieved|resulted in|increased by|decreased by|improved by)\s+\d+(?:\.\d+)?%/gi;
+  const resultMatches = text.match(resultsPattern) || [];
+  resultMatches.forEach(match => {
+    cases.push({
+      text: match,
+      type: 'result',
+      source: 'text-pattern'
+    });
+  });
+  
+  return cases;
+}
+
+function detectProcessSteps($, text) {
+  const steps = [];
+  
+  // Pattern 1: Numbered lists
+  $('ol li').each((i, el) => {
+    steps.push({
+      text: $(el).text().trim(),
+      number: i + 1,
+      type: 'ordered-list'
+    });
+  });
+  
+  // Pattern 2: Step headings
+  const stepPattern = /step\s+\d+[:.]?\s+(.+?)(?=step\s+\d+|$)/gi;
+  let match;
+  while ((match = stepPattern.exec(text)) !== null) {
+    steps.push({
+      text: match[0],
+      type: 'text-pattern'
+    });
+  }
+  
+  return steps;
+}
+
+function detectExamples($, text) {
+  const examples = [];
+  
+  // Pattern: "For example", "Such as", "Like"
+  const examplePattern = /(?:for example|for instance|such as|like|e\.g\.|including).*?[.!?]/gi;
+  const matches = text.match(examplePattern) || [];
+  
+  matches.forEach(match => {
+    if (match.length > 20 && match.length < 300) {
+      examples.push({
+        text: match,
+        type: 'inline-example'
+      });
+    }
+  });
+  
+  return examples;
+}
+
+function detectCitations($) {
+  const citations = [];
+  
+  // Pattern 1: Footnote references
+  $('sup, .footnote, .reference').each((i, el) => {
+    citations.push({
+      text: $(el).text().trim(),
+      type: 'footnote'
+    });
+  });
+  
+  // Pattern 2: Bibliography/References section
+  $('h2, h3').each((i, el) => {
+    const heading = $(el).text().trim().toLowerCase();
+    if (heading.includes('reference') || heading.includes('sources') || 
+        heading.includes('bibliography') || heading.includes('citations')) {
+      const next = $(el).next();
+      if (next.is('ul, ol')) {
+        next.find('li').each((j, li) => {
+          citations.push({
+            text: $(li).text().trim(),
+            type: 'bibliography'
+          });
+        });
+      }
+    }
+  });
+  
+  return citations;
+}
+
+function detectTimestamps($, text) {
+  const timestamps = [];
+  
+  // Pattern 1: Time elements
+  $('time').each((i, el) => {
+    timestamps.push({
+      datetime: $(el).attr('datetime'),
+      text: $(el).text().trim(),
+      type: 'html-time'
+    });
+  });
+  
+  // Pattern 2: Date patterns in text
+  const datePattern = /(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}|\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2}/gi;
+  const matches = text.match(datePattern) || [];
+  
+  matches.forEach(match => {
+    timestamps.push({
+      text: match,
+      type: 'text-pattern'
+    });
+  });
+  
+  // Pattern 3: Relative dates
+  const relativePattern = /(?:updated|published|posted|modified|last updated).*?(?:today|yesterday|last week|last month|\d+\s+(?:days?|weeks?|months?|years?)\s+ago)/gi;
+  const relativeMatches = text.match(relativePattern) || [];
+  
+  relativeMatches.forEach(match => {
+    timestamps.push({
+      text: match,
+      type: 'relative'
+    });
+  });
+  
+  return timestamps;
+}
+
+function detectLists($) {
+  return {
+    ordered: $('ol').length,
+    unordered: $('ul').length,
+    totalItems: $('li').length
+  };
+}
+
+function detectTables($) {
+  const tables = [];
+  
+  $('table').each((i, el) => {
+    tables.push({
+      rows: $(el).find('tr').length,
+      columns: $(el).find('tr').first().find('th, td').length,
+      hasHeaders: $(el).find('thead, th').length > 0
+    });
+  });
+  
+  return tables;
+}
+
+function detectFAQs($) {
+  const faqs = [];
+  
+  // Pattern 1: FAQ schema
+  $('script[type="application/ld+json"]').each((i, el) => {
+    try {
+      const data = JSON.parse($(el).html());
+      if (data['@type'] === 'FAQPage' || data['@type'] === 'Question') {
+        faqs.push({
+          type: 'schema',
+          count: data.mainEntity?.length || 1
+        });
+      }
+    } catch {}
+  });
+  
+  // Pattern 2: Accordion/Details elements
+  $('details').each((i, el) => {
+    faqs.push({
+      question: $(el).find('summary').text().trim(),
+      type: 'details-element'
+    });
+  });
+  
+  // Pattern 3: FAQ headings
+  $('h2, h3, h4').each((i, el) => {
+    const text = $(el).text().trim();
+    if (text.endsWith('?')) {
+      faqs.push({
+        question: text,
+        type: 'heading-question'
+      });
+    }
+  });
+  
+  return faqs;
+}
+
+function detectVideos($) {
+  const videos = [];
+  
+  $('video, iframe[src*="youtube"], iframe[src*="vimeo"], iframe[src*="wistia"]').each((i, el) => {
+    videos.push({
+      type: el.tagName.toLowerCase() === 'video' ? 'html5-video' : 'embedded-video',
+      src: $(el).attr('src') || $(el).find('source').attr('src')
+    });
+  });
+  
+  return videos;
+}
+
+function detectInfographics($) {
+  const infographics = [];
+  
+  $('img').each((i, el) => {
+    const src = $(el).attr('src') || '';
+    const alt = $(el).attr('alt') || '';
+    
+    if (src.includes('infographic') || alt.toLowerCase().includes('infographic') ||
+        src.includes('chart') || src.includes('graph')) {
+      infographics.push({
+        src,
+        alt,
+        type: 'image'
+      });
+    }
+  });
+  
+  // SVG elements (often used for charts)
+  $('svg').each((i, el) => {
+    if ($(el).find('path, rect, circle').length > 5) {
+      infographics.push({
+        type: 'svg-graphic'
+      });
+    }
+  });
+  
+  return infographics;
+}
+
+function detectCallouts($) {
+  const callouts = [];
+  
+  // Common callout classes
+  $('.callout, .note, .tip, .warning, .alert, .info, .highlight, aside').each((i, el) => {
+    callouts.push({
+      text: $(el).text().trim().substring(0, 100),
+      class: $(el).attr('class')
+    });
+  });
+  
+  return callouts;
+}
+
+// ==========================================
+// STEP 3: DETERMINISTIC SCORING
+// ==========================================
+
+function calculateDeterministicScore(elements, pageData) {
+  console.log('[SCORE] 🎯 Calculating deterministic scores...');
+  
+  const scores = {
+    graaf: calculateGRAAFScore(elements, pageData),
+    craft: calculateCRAFTScore(elements, pageData),
+    technical: calculateTechnicalScore(elements, pageData)
+  };
+  
+  const totalScore = scores.graaf.total + scores.craft.total + scores.technical.total;
+  
+  console.log('[SCORE] ✅ Scoring complete');
+  console.log('[SCORE] 📊 GRAAF:', scores.graaf.total);
+  console.log('[SCORE] 🎨 CRAFT:', scores.craft.total);
+  console.log('[SCORE] ⚙️  Technical:', scores.technical.total);
+  console.log('[SCORE] 🎯 TOTAL:', totalScore);
   
   return {
-    success: true,
-    url,
-    score: analysis.score,
-    quality: analysis.score >= 90 ? 'excellent' : analysis.score >= 80 ? 'good' : analysis.score >= 70 ? 'fair' : analysis.score >= 60 ? 'average' : 'needs-improvement',
-    breakdown: analysis.breakdown,
-    recommendations: analysis.recommendations,
-    wordCount: pageData.wordCount,
-    scanned_at: new Date().toISOString(),
-    pageMetadata: {
-      title: pageData.title,
-      metaDescription: pageData.metaDescription,
-      h1: pageData.h1,
-      internalLinks: pageData.internalLinks,
-      images: pageData.images,
-      imagesWithAlt: pageData.imagesWithAlt,
-      hasSchemaOrg: pageData.hasSchemaOrg,
-      hasPubDate: pageData.hasPubDate,
-      html: pageData.html // Inclusief HTML voor verdere analyses
+    total: totalScore,
+    breakdown: scores,
+    quality: totalScore >= 90 ? 'excellent' : 
+             totalScore >= 80 ? 'good' : 
+             totalScore >= 70 ? 'fair' : 
+             totalScore >= 60 ? 'average' : 'needs-improvement'
+  };
+}
+
+function calculateGRAAFScore(elements, pageData) {
+  let credibility = 0;
+  let relevance = 0;
+  let actionability = 0;
+  let accuracy = 0;
+  let freshness = 0;
+  
+  // CREDIBILITY (10 points)
+  // Expert quotes with attribution
+  const quotesWithAttribution = elements.expertQuotes.filter(q => q.hasAttribution).length;
+  credibility += Math.min(5, quotesWithAttribution);
+  
+  // Citations and references
+  credibility += Math.min(3, elements.citations.length * 0.5);
+  
+  // External authoritative links
+  const authLinks = elements.externalLinks.filter(l => 
+    l.href.includes('.edu') || l.href.includes('.gov') || 
+    l.href.includes('wikipedia') || l.href.includes('research')
+  ).length;
+  credibility += Math.min(2, authLinks * 0.5);
+  
+  // RELEVANCE (10 points)
+  // Keyword consistency (title, H1, content)
+  const titleWords = new Set(pageData.title.toLowerCase().split(/\W+/).filter(w => w.length > 3));
+  const h1Words = elements.headings.h1.length > 0 ? 
+    new Set(elements.headings.h1[0].toLowerCase().split(/\W+/).filter(w => w.length > 3)) : new Set();
+  const intersection = [...titleWords].filter(x => h1Words.has(x));
+  relevance += Math.min(5, intersection.length);
+  
+  // Structured headings (H2, H3)
+  const headingStructure = elements.headings.h2.length >= 3 && elements.headings.h3.length >= 2;
+  if (headingStructure) relevance += 3;
+  
+  // Internal linking
+  relevance += Math.min(2, elements.internalLinks.length * 0.3);
+  
+  // ACTIONABILITY (10 points)
+  // Process steps
+  actionability += Math.min(4, elements.processSteps.length * 0.5);
+  
+  // Examples
+  actionability += Math.min(3, elements.examples.length * 0.5);
+  
+  // Call-to-actions
+  actionability += Math.min(3, elements.callouts.length * 0.5);
+  
+  // ACCURACY (10 points)
+  // Statistics with sources
+  const statsWithSources = elements.statistics.filter(s => s.hasCitation).length;
+  accuracy += Math.min(5, statsWithSources);
+  
+  // Case studies with results
+  const casesWithResults = elements.caseStudies.filter(c => c.type === 'result').length;
+  accuracy += Math.min(3, casesWithResults);
+  
+  // Tables with data
+  accuracy += Math.min(2, elements.tables.length);
+  
+  // FRESHNESS (10 points)
+  // Timestamps
+  freshness += Math.min(5, elements.timestamps.length * 0.5);
+  
+  // Recent dates (last 12 months)
+  const recentTimestamps = elements.timestamps.filter(t => {
+    if (t.datetime) {
+      const date = new Date(t.datetime);
+      const now = new Date();
+      const monthsAgo = (now - date) / (1000 * 60 * 60 * 24 * 30);
+      return monthsAgo <= 12;
     }
+    return t.type === 'relative'; // "updated today", etc.
+  }).length;
+  freshness += Math.min(3, recentTimestamps * 1.5);
+  
+  // Meta date tags
+  if (pageData.jsonLd.some(ld => ld.datePublished || ld.dateModified)) {
+    freshness += 2;
+  }
+  
+  const total = Math.min(50, Math.round(credibility + relevance + actionability + accuracy + freshness));
+  
+  return {
+    total,
+    credibility: Math.round(credibility),
+    relevance: Math.round(relevance),
+    actionability: Math.round(actionability),
+    accuracy: Math.round(accuracy),
+    freshness: Math.round(freshness)
+  };
+}
+
+function calculateCRAFTScore(elements, pageData) {
+  let cutFluff = 0;
+  let reviewOptimize = 0;
+  let addVisuals = 0;
+  let faqIntegration = 0;
+  let trustBuilding = 0;
+  
+  // CUT FLUFF (8 points)
+  // Optimal sentence length (15-20 words)
+  const avgSentence = elements.metrics.avgSentenceLength;
+  if (avgSentence >= 15 && avgSentence <= 20) cutFluff += 4;
+  else if (avgSentence >= 12 && avgSentence <= 25) cutFluff += 2;
+  
+  // Paragraph count (not too many short paragraphs)
+  const paragraphRatio = elements.metrics.wordCount / Math.max(1, elements.metrics.paragraphCount);
+  if (paragraphRatio >= 60 && paragraphRatio <= 150) cutFluff += 4;
+  else if (paragraphRatio >= 40 && paragraphRatio <= 200) cutFluff += 2;
+  
+  // REVIEW & OPTIMIZE (8 points)
+  // Readability (Flesch approximation)
+  const syllables = pageData.bodyText.match(/[aeiouy]{1,2}/gi)?.length || 0;
+  const words = elements.metrics.wordCount;
+  const sentences = elements.metrics.sentenceCount;
+  let flesch = 206.835 - 1.015 * (words / Math.max(1, sentences)) - 84.6 * (syllables / words);
+  flesch = Math.max(0, Math.min(100, flesch));
+  
+  if (flesch >= 60) reviewOptimize += 4; // Easy
+  else if (flesch >= 50) reviewOptimize += 3;
+  else if (flesch >= 30) reviewOptimize += 2;
+  
+  // Transition words
+  const transitions = ['however', 'therefore', 'moreover', 'furthermore', 'consequently'];
+  const transitionCount = transitions.reduce((count, word) => 
+    count + (pageData.bodyText.toLowerCase().match(new RegExp(`\\b${word}\\b`, 'g'))?.length || 0), 0
+  );
+  reviewOptimize += Math.min(4, transitionCount * 0.5);
+  
+  // ADD VISUALS (6 points)
+  // Images
+  addVisuals += Math.min(2, elements.images.length * 0.2);
+  
+  // Videos
+  addVisuals += Math.min(2, elements.videos.length);
+  
+  // Infographics/Charts
+  addVisuals += Math.min(2, elements.infographics.length);
+  
+  // FAQ INTEGRATION (5 points)
+  faqIntegration += Math.min(5, elements.faqs.length * 0.5);
+  
+  // TRUST BUILDING (3 points)
+  // Author information
+  const hasAuthor = pageData.bodyText.toLowerCase().includes('author') || 
+                    pageData.jsonLd.some(ld => ld.author);
+  if (hasAuthor) trustBuilding += 1;
+  
+  // Social proof (testimonials, reviews)
+  const hasSocialProof = pageData.bodyText.toLowerCase().includes('testimonial') ||
+                         pageData.bodyText.toLowerCase().includes('review') ||
+                         elements.schema.some(s => s['@type'] === 'Review');
+  if (hasSocialProof) trustBuilding += 1;
+  
+  // Trust badges/certifications
+  const hasTrustBadges = pageData.images.some(img => 
+    img.alt.toLowerCase().includes('certified') || 
+    img.alt.toLowerCase().includes('verified') ||
+    img.alt.toLowerCase().includes('secure')
+  );
+  if (hasTrustBadges) trustBuilding += 1;
+  
+  const total = Math.min(30, Math.round(cutFluff + reviewOptimize + addVisuals + faqIntegration + trustBuilding));
+  
+  return {
+    total,
+    cutFluff: Math.round(cutFluff),
+    reviewOptimize: Math.round(reviewOptimize),
+    addVisuals: Math.round(addVisuals),
+    faqIntegration: Math.round(faqIntegration),
+    trustBuilding: Math.round(trustBuilding)
+  };
+}
+
+function calculateTechnicalScore(elements, pageData) {
+  let metaOptimization = 0;
+  let schemaMarkup = 0;
+  let internalLinking = 0;
+  let pageStructure = 0;
+  let mobileOptimization = 0;
+  
+  // META OPTIMIZATION (4 points)
+  // Title length
+  if (pageData.title.length >= 30 && pageData.title.length <= 60) metaOptimization += 1;
+  
+  // Meta description
+  if (pageData.metaDescription.length >= 120 && pageData.metaDescription.length <= 160) metaOptimization += 1;
+  
+  // Canonical URL
+  if (pageData.canonical) metaOptimization += 1;
+  
+  // Open Graph
+  if (pageData.ogTitle && pageData.ogDescription) metaOptimization += 1;
+  
+  // SCHEMA MARKUP (4 points)
+  schemaMarkup += Math.min(4, pageData.jsonLd.length);
+  
+  // INTERNAL LINKING (4 points)
+  const linkRatio = elements.internalLinks.length / Math.max(1, elements.metrics.wordCount / 100);
+  if (linkRatio >= 2 && linkRatio <= 5) internalLinking += 4;
+  else if (linkRatio >= 1 && linkRatio <= 7) internalLinking += 2;
+  
+  // PAGE STRUCTURE (4 points)
+  // Single H1
+  if (elements.headings.h1.length === 1) pageStructure += 1;
+  
+  // Multiple H2s
+  if (elements.headings.h2.length >= 3) pageStructure += 1;
+  
+  // Heading hierarchy
+  const hasHierarchy = elements.headings.h1.length > 0 && 
+                       elements.headings.h2.length > 0;
+  if (hasHierarchy) pageStructure += 1;
+  
+  // Image alt texts
+  const altRatio = elements.images.length > 0 ? 
+    elements.images.filter(img => img.hasAlt).length / elements.images.length : 0;
+  if (altRatio >= 0.9) pageStructure += 1;
+  
+  // MOBILE OPTIMIZATION (4 points)
+  // Viewport meta
+  if (pageData.viewport) mobileOptimization += 2;
+  
+  // Responsive images (lazy loading)
+  const lazyImages = elements.images.filter(img => img.loading === 'lazy').length;
+  if (lazyImages > 0) mobileOptimization += 1;
+  
+  // Reasonable page width
+  if (pageData.pageWidth <= 1920) mobileOptimization += 1;
+  
+  const total = Math.min(20, Math.round(metaOptimization + schemaMarkup + internalLinking + pageStructure + mobileOptimization));
+  
+  return {
+    total,
+    metaOptimization: Math.round(metaOptimization),
+    schemaMarkup: Math.round(schemaMarkup),
+    internalLinking: Math.round(internalLinking),
+    pageStructure: Math.round(pageStructure),
+    mobileOptimization: Math.round(mobileOptimization)
   };
 }
 
 // ==========================================
-// 🔧 NIEUWE FUNCTIES VOOR CONTENTSCORE TOOL
+// STEP 4: GENERATE RECOMMENDATIONS
 // ==========================================
 
-// Functie voor hybride HTML analyse (zonder AI)
-async function performHybridAnalysis(url) {
-  console.log('[HYBRID ANALYSIS] Starting for:', url);
+function generateRecommendations(elements, scores, pageData) {
+  console.log('[RECS] 💡 Generating recommendations...');
+  
+  const recommendations = {
+    quickWins: [],
+    majorImpact: [],
+    advanced: [],
+    summary: {
+      totalIssues: 0,
+      estimatedTimeToFix: 0,
+      potentialScoreGain: 0,
+      currentScore: scores.total,
+      targetScore: 100
+    }
+  };
+  
+  // QUICK WINS (5-30 min fixes)
+  
+  // Meta description
+  if (!pageData.metaDescription || pageData.metaDescription.length < 120) {
+    recommendations.quickWins.push({
+      category: 'Technical SEO',
+      issue: 'Missing or short meta description',
+      action: 'Add a compelling 120-160 character meta description',
+      details: ['Include primary keyword', 'Make it click-worthy', 'Describe page value'],
+      impact: 5,
+      timeEstimate: 10,
+      priority: 'high'
+    });
+    recommendations.summary.potentialScoreGain += 3;
+  }
+  
+  // H1 issues
+  if (elements.headings.h1.length === 0) {
+    recommendations.quickWins.push({
+      category: 'Content Structure',
+      issue: 'No H1 heading found',
+      action: 'Add a clear H1 heading with your primary keyword',
+      details: ['Make it descriptive', 'Include main keyword', 'Keep under 60 characters'],
+      impact: 5,
+      timeEstimate: 5,
+      priority: 'high'
+    });
+    recommendations.summary.potentialScoreGain += 5;
+  }
+  
+  // Image alt texts
+  const imagesWithoutAlt = elements.images.filter(img => !img.hasAlt).length;
+  if (imagesWithoutAlt > 0) {
+    recommendations.quickWins.push({
+      category: 'Accessibility',
+      issue: `${imagesWithoutAlt} images missing alt text`,
+      action: 'Add descriptive alt text to all images',
+      details: ['Describe the image', 'Include relevant keywords naturally', 'Keep under 125 characters'],
+      impact: 4,
+      timeEstimate: imagesWithoutAlt * 2,
+      priority: 'high'
+    });
+    recommendations.summary.potentialScoreGain += 2;
+  }
+  
+  // Internal links
+  if (elements.internalLinks.length < 3) {
+    recommendations.quickWins.push({
+      category: 'SEO Linking',
+      issue: 'Too few internal links',
+      action: 'Add 3-5 relevant internal links to related content',
+      details: ['Link to related articles', 'Use descriptive anchor text', 'Help users navigate'],
+      impact: 4,
+      timeEstimate: 15,
+      priority: 'medium'
+    });
+    recommendations.summary.potentialScoreGain += 3;
+  }
+  
+  // MAJOR IMPACT (30-120 min fixes)
+  
+  // Word count
+  if (elements.metrics.wordCount < 800) {
+    recommendations.majorImpact.push({
+      category: 'Content Depth',
+      issue: `Content is too short (${elements.metrics.wordCount} words)`,
+      action: 'Expand content to at least 1000-1500 words',
+      details: ['Add more examples', 'Include case studies', 'Add data and statistics'],
+      impact: 5,
+      timeEstimate: 90,
+      priority: 'high'
+    });
+    recommendations.summary.potentialScoreGain += 10;
+  }
+  
+  // Expert quotes
+  if (elements.expertQuotes.length < 2) {
+    recommendations.majorImpact.push({
+      category: 'Credibility',
+      issue: 'Lacks expert quotes or citations',
+      action: 'Add 2-3 expert quotes with proper attribution',
+      details: ['Interview industry experts', 'Quote published research', 'Cite authoritative sources'],
+      impact: 4,
+      timeEstimate: 60,
+      priority: 'medium'
+    });
+    recommendations.summary.potentialScoreGain += 5;
+  }
+  
+  // Statistics
+  if (elements.statistics.length < 3) {
+    recommendations.majorImpact.push({
+      category: 'Data-Driven Content',
+      issue: 'Needs more statistics and data',
+      action: 'Add 5+ relevant statistics with sources',
+      details: ['Use industry reports', 'Include recent research', 'Cite credible sources'],
+      impact: 4,
+      timeEstimate: 45,
+      priority: 'medium'
+    });
+    recommendations.summary.potentialScoreGain += 4;
+  }
+  
+  // FAQs
+  if (elements.faqs.length === 0) {
+    recommendations.majorImpact.push({
+      category: 'User Experience',
+      issue: 'No FAQ section',
+      action: 'Add an FAQ section with 5+ common questions',
+      details: ['Answer common user questions', 'Use FAQ schema markup', 'Include long-tail keywords'],
+      impact: 3,
+      timeEstimate: 60,
+      priority: 'medium'
+    });
+    recommendations.summary.potentialScoreGain += 3;
+  }
+  
+  // ADVANCED (120+ min fixes)
+  
+  // Schema markup
+  if (pageData.jsonLd.length === 0) {
+    recommendations.advanced.push({
+      category: 'Structured Data',
+      issue: 'No schema markup implemented',
+      action: 'Add JSON-LD structured data',
+      details: ['Use Article schema', 'Add Organization schema', 'Include FAQ schema if applicable'],
+      impact: 3,
+      timeEstimate: 120,
+      priority: 'low'
+    });
+    recommendations.summary.potentialScoreGain += 4;
+  }
+  
+  // Readability
+  if (elements.metrics.avgSentenceLength > 25) {
+    recommendations.advanced.push({
+      category: 'Readability',
+      issue: 'Sentences are too long',
+      action: 'Rewrite content with shorter, clearer sentences',
+      details: ['Aim for 15-20 words per sentence', 'Break up complex ideas', 'Use simpler language'],
+      impact: 3,
+      timeEstimate: 180,
+      priority: 'low'
+    });
+    recommendations.summary.potentialScoreGain += 3;
+  }
+  
+  // Calculate summary
+  recommendations.summary.totalIssues = 
+    recommendations.quickWins.length + 
+    recommendations.majorImpact.length + 
+    recommendations.advanced.length;
+  
+  recommendations.summary.estimatedTimeToFix = 
+    recommendations.quickWins.reduce((sum, r) => sum + r.timeEstimate, 0) +
+    recommendations.majorImpact.reduce((sum, r) => sum + r.timeEstimate, 0) +
+    recommendations.advanced.reduce((sum, r) => sum + r.timeEstimate, 0);
+  
+  recommendations.summary.targetScore = Math.min(100, 
+    scores.total + recommendations.summary.potentialScoreGain
+  );
+  
+  console.log('[RECS] ✅ Generated', recommendations.summary.totalIssues, 'recommendations');
+  
+  return recommendations;
+}
+
+// ==========================================
+// MAIN SCAN FUNCTION
+// ==========================================
+
+async function performFullScan(url) {
+  console.log('\n========================================');
+  console.log('🚀 CONTENTSCALE HYBRID SCANNER V3.0');
+  console.log('========================================\n');
+  console.log('[SCAN] 🎯 Target:', url);
+  console.log('[SCAN] ⏰ Started:', new Date().toISOString());
   
   try {
+    // STEP 1: Fetch content
     const pageData = await fetchPageContent(url);
     if (!pageData.success) {
-      return { success: false, error: pageData.error };
+      return { 
+        success: false, 
+        error: pageData.error || 'Failed to fetch page content',
+        url 
+      };
     }
     
-    // Parse HTML voor gestructureerde content
-    const structuredContent = parseHTMLForAnalysis(pageData.html);
+    // STEP 2: Parse content
+    const elements = parseContentElements(pageData);
     
-    // Bereken consistente scores
-    const scores = calculateConsistentScores(structuredContent);
+    // STEP 3: Calculate scores
+    const scoreResult = calculateDeterministicScore(elements, pageData);
     
-    // Bereken totale score (gewogen gemiddelde)
-    const totalScore = Math.round(
-        scores.structure * 0.4 +    // 40% structuur
-        scores.readability * 0.3 +  // 30% leesbaarheid
-        scores.seo * 0.2 +          // 20% SEO
-        scores.technical * 0.1      // 10% technisch
-    );
+    // STEP 4: Generate recommendations
+    const recommendations = generateRecommendations(elements, scoreResult, pageData);
     
-    // Genereer aanbevelingen
-    const recommendations = generateRecommendations(structuredContent, scores);
-    
-    return {
+    // Final result
+    const result = {
       success: true,
       url,
-      score: totalScore,
-      quality: totalScore >= 90 ? 'excellent' : 
-              totalScore >= 80 ? 'good' : 
-              totalScore >= 70 ? 'fair' : 
-              totalScore >= 60 ? 'average' : 'needs-improvement',
-      breakdown: {
-        graaf: { total: Math.round(scores.readability * 0.5 + scores.seo * 0.3 + scores.technical * 0.2) },
-        craft: { total: Math.round(scores.structure * 0.7 + scores.readability * 0.3) },
-        technical: { total: Math.round(scores.technical * 1.0) }
-      },
-      component_scores: scores,
-      recommendations: {
-        quickWins: [...recommendations.structure, ...recommendations.technical].filter(r => r.priority === 'high'),
-        majorImpact: [...recommendations.readability, ...recommendations.seo].filter(r => r.priority === 'medium' || r.priority === 'high'),
-        advanced: [...recommendations.structure, ...recommendations.technical].filter(r => r.priority === 'low'),
-        summary: {
-          totalIssues: Object.values(recommendations).flat().length,
-          estimatedTimeToFix: Object.values(recommendations).flat().reduce((sum, rec) => sum + (rec.timeEstimate || 30), 0),
-          potentialScoreGain: Math.min(100 - totalScore, Object.values(recommendations).flat().length * 5),
-          currentScore: totalScore,
-          targetScore: 100
+      score: scoreResult.total,
+      quality: scoreResult.quality,
+      breakdown: scoreResult.breakdown,
+      recommendations,
+      wordCount: elements.metrics.wordCount,
+      scanned_at: new Date().toISOString(),
+      
+      // Additional metadata
+      metadata: {
+        title: pageData.title,
+        metaDescription: pageData.metaDescription,
+        h1: elements.headings.h1[0] || '',
+        readingTime: elements.metrics.readingTime,
+        
+        // Detection counts
+        detectedElements: {
+          expertQuotes: elements.expertQuotes.length,
+          statistics: elements.statistics.length,
+          caseStudies: elements.caseStudies.length,
+          processSteps: elements.processSteps.length,
+          examples: elements.examples.length,
+          faqs: elements.faqs.length,
+          images: elements.images.length,
+          videos: elements.videos.length,
+          internalLinks: elements.internalLinks.length,
+          externalLinks: elements.externalLinks.length
         }
       },
-      stats: structuredContent.stats,
-      structure: {
-        headings: {
-          h1: structuredContent.h1,
-          h2: structuredContent.h2,
-          h3: structuredContent.h3
-        },
-        paragraphs: structuredContent.paragraphs.length,
-        lists: structuredContent.lists.ordered.length + structuredContent.lists.unordered.length
-      },
-      wordCount: structuredContent.stats.wordCount,
-      scanned_at: new Date().toISOString()
+      
+      // Scanner info
+      scanner: {
+        version: '3.0',
+        type: 'hybrid-deterministic',
+        timestamp: new Date().toISOString()
+      }
     };
     
+    console.log('\n========================================');
+    console.log('✅ SCAN COMPLETE');
+    console.log('========================================');
+    console.log('[RESULT] 🎯 Score:', result.score, '/', 100);
+    console.log('[RESULT] 🏆 Quality:', result.quality);
+    console.log('[RESULT] 📝 Words:', result.wordCount);
+    console.log('[RESULT] ⏰ Completed:', new Date().toISOString());
+    console.log('========================================\n');
+    
+    return result;
+    
   } catch (error) {
-    console.error('[HYBRID ANALYSIS ERROR]', error);
-    return { success: false, error: 'Hybrid analysis failed: ' + error.message };
+    console.error('\n========================================');
+    console.error('❌ SCAN FAILED');
+    console.error('========================================');
+    console.error('[ERROR]', error.message);
+    console.error('========================================\n');
+    
+    return {
+      success: false,
+      error: 'Scan failed: ' + error.message,
+      url
+    };
   }
 }
 
 // ==========================================
-// EXPORT ALL FUNCTIONS
+// EXPORTS
 // ==========================================
 
-module.exports = { 
+module.exports = {
   performFullScan,
-  analyzeTextContent,          // Voor text-only analyse
-  performHybridAnalysis,       // Voor hybride analyse zonder AI
-  parseHTMLForAnalysis,        // Voor HTML parsing
-  calculateConsistentScores,   // Voor consistente score berekening
-  generateRecommendations      // Voor aanbevelingen genereren
+  fetchPageContent,
+  parseContentElements,
+  calculateDeterministicScore,
+  generateRecommendations
 };
