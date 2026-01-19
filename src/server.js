@@ -204,6 +204,40 @@ async function createAllTables() {
     `);
     console.log('✅ Created settings table');
     
+    // ============================================
+    // DATABASE MIGRATIONS - Add missing columns
+    // ============================================
+    console.log('[MIGRATION] Checking for missing columns...');
+    
+    try {
+      // Migrate super_admins
+      await client.query(`ALTER TABLE super_admins ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
+      await client.query(`ALTER TABLE super_admins ADD COLUMN IF NOT EXISTS last_login TIMESTAMP`);
+      
+      // Migrate agencies
+      await client.query(`ALTER TABLE agencies ADD COLUMN IF NOT EXISTS is_enhanced BOOLEAN DEFAULT FALSE`);
+      await client.query(`ALTER TABLE agencies ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
+      await client.query(`ALTER TABLE agencies ADD COLUMN IF NOT EXISTS last_scan TIMESTAMP`);
+      await client.query(`ALTER TABLE agencies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`);
+      await client.query(`ALTER TABLE agencies ADD COLUMN IF NOT EXISTS company_name TEXT`);
+      await client.query(`ALTER TABLE agencies ADD COLUMN IF NOT EXISTS country_code VARCHAR(2)`);
+      await client.query(`ALTER TABLE agencies ADD COLUMN IF NOT EXISTS business_type VARCHAR(50)`);
+      
+      // Migrate scans
+      await client.query(`ALTER TABLE scans ADD COLUMN IF NOT EXISTS recommendations JSONB DEFAULT '[]'`);
+      await client.query(`ALTER TABLE scans ADD COLUMN IF NOT EXISTS client_url TEXT`);
+      await client.query(`ALTER TABLE scans ADD COLUMN IF NOT EXISTS ip_address TEXT`);
+      await client.query(`ALTER TABLE scans ADD COLUMN IF NOT EXISTS user_agent TEXT`);
+      
+      // Migrate leaderboard
+      await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE`);
+      await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS last_scan TIMESTAMP DEFAULT NOW()`);
+      
+      console.log('✅ Database migrations completed');
+    } catch (migrationError) {
+      console.log('⚠️  Some migrations may have failed:', migrationError.message);
+    }
+    
     // Insert default settings
     const defaultSettings = [
       ['site_name', 'ContentScale'],
@@ -259,15 +293,23 @@ async function autoPopulateLeaderboard() {
         { url: 'https://seo-ninjas.uk', company: 'SEO Ninjas', score: 68, country: 'UK', type: 'seo-agency' }
       ];
       
+      let added = 0;
       for (const agency of demoAgencies) {
-        await pool.query(`
-          INSERT INTO leaderboard (url, company_name, score, country, business_type, is_verified)
-          VALUES ($1, $2, $3, $4, $5, $6)
-          ON CONFLICT (url) DO NOTHING
-        `, [agency.url, agency.company, agency.score, agency.country, agency.type, true]);
+        try {
+          await pool.query(`
+            INSERT INTO leaderboard (url, company_name, score, country, business_type, is_verified)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            ON CONFLICT (url) DO NOTHING
+          `, [agency.url, agency.company, agency.score, agency.country, agency.type, true]);
+          added++;
+        } catch (insertError) {
+          console.log(`⚠️  Could not add ${agency.company}:`, insertError.message);
+        }
       }
       
-      console.log('✅ Leaderboard populated with demo data');
+      console.log(`✅ Leaderboard populated with ${added} demo agencies`);
+    } else {
+      console.log(`ℹ️  Leaderboard already has ${count} entries, skipping auto-populate`);
     }
   } catch (error) {
     console.error('[LEADERBOARD ERROR]', error.message);
