@@ -1,233 +1,1910 @@
-<!DOCTYPE html>
+<!DOCTYPE html>  
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ContentScore Tool - ContentScale</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .score-ring {
-            transition: stroke-dashoffset 1s ease-in-out;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ContentScale - Free AI SEO Scanner & Global Leaderboard</title>
+  <meta name="description" content="Free AI-powered SEO content scanner. Get your GRAAF + CRAFT + Technical SEO score instantly!">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    /* NAVIGATION */
+    .nav-bar { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-bottom: 2px solid #374151; position: sticky; top: 0; z-index: 1000; }
+    .nav-link { color: #9ca3af; padding: 12px 20px; font-weight: 600; transition: all 0.3s; border-bottom: 3px solid transparent; cursor: pointer; text-decoration: none; }
+    .nav-link:hover { color: white; border-bottom-color: #8b5cf6; }
+    .nav-link.active { color: white; border-bottom-color: #8b5cf6; }
+    
+    /* HAMBURGER MENU */
+    .hamburger { display: none; flex-direction: column; gap: 4px; cursor: pointer; padding: 8px; }
+    .hamburger span { width: 25px; height: 3px; background: white; border-radius: 2px; transition: all 0.3s; }
+    .hamburger.active span:nth-child(1) { transform: rotate(45deg) translate(6px, 6px); }
+    .hamburger.active span:nth-child(2) { opacity: 0; }
+    .hamburger.active span:nth-child(3) { transform: rotate(-45deg) translate(6px, -6px); }
+    
+    .mobile-menu { display: none; position: fixed; top: 65px; left: 0; right: 0; background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-bottom: 2px solid #374151; padding: 20px; z-index: 999; }
+    .mobile-menu.active { display: block; }
+    .mobile-menu .nav-link { display: block; padding: 12px 0; border-bottom: 1px solid #374151; border-left: none; }
+    .mobile-menu .nav-link:last-child { border-bottom: none; }
+    
+    /* SCANNER & LEADERBOARD */
+    .scanner-section { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-radius: 16px; padding: 32px; border: 2px solid #374151; margin-bottom: 32px; }
+    
+    /* SCAN BUTTON - MOBILE FIRST */
+    .scan-btn-mobile {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-weight: 700;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 16px;
+      width: 100%;
+      text-align: center;
+      white-space: nowrap;
+    }
+    
+    .scan-btn-mobile:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+    }
+    
+    .scan-btn-mobile:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    /* Desktop: larger button */
+    @media (min-width: 640px) {
+      .scan-btn-mobile {
+        padding: 16px 40px;
+        font-size: 18px;
+        width: auto;
+        min-width: 160px;
+      }
+    }
+    
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .scan-spinner { display: inline-block; width: 18px; height: 18px; border: 3px solid rgba(255, 255, 255, 0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 10px; vertical-align: middle; }
+    
+    .leaderboard-section { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; padding: 32px; margin-bottom: 32px; border: 2px solid #334155; }
+    
+    /* SIMPLE FILTERS */
+    .simple-filter {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #93c5fd;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      margin: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .simple-filter:hover {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: rgba(59, 130, 246, 0.5);
+    }
+    
+    .simple-filter.active {
+      background: #3b82f6;
+      color: white;
+      border-color: #3b82f6;
+    }
+    
+    /* MODAL STYLES */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 20px;
+    }
+
+    .modal-content {
+      background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+      border-radius: 20px;
+      max-width: 900px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      border: 2px solid #374151;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+      padding: 30px;
+      border-bottom: 2px solid #374151;
+      text-align: center;
+    }
+
+    .modal-body {
+      padding: 30px;
+    }
+
+    .score-circle {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      border: 5px solid;
+    }
+
+    .score-excellent { border-color: #22c55e; background: rgba(34, 197, 94, 0.1); }
+    .score-good { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+    .score-fair { border-color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+    .score-poor { border-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+
+    .rec-section {
+      background: rgba(17, 24, 39, 0.5);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-left: 4px solid;
+    }
+
+    .rec-quickwin { border-color: #22c55e; }
+    .rec-major { border-color: #f59e0b; }
+    .rec-advanced { border-color: #8b5cf6; }
+
+    .rec-item {
+      background: rgba(31, 41, 55, 0.5);
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+
+    .rec-item:last-child { margin-bottom: 0; }
+    
+    /* FOOTER */
+    .contentscale-footer { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-top: 2px solid #374151; padding: 4rem 0 2rem; margin-top: 4rem; color: #d1d5db; text-align: center; }
+    .contentscale-container { max-width: 1200px; margin: 0 auto; padding: 0 2rem; }
+    .contentscale-footer h3 { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: #a78bfa; }
+    .contentscale-footer p { line-height: 1.8; margin-bottom: 1.5rem; color: #9ca3af; }
+    .contentscale-footer a { color: #60a5fa; text-decoration: none; transition: color 0.2s; }
+    .contentscale-footer a:hover { color: #93c5fd; text-decoration: underline; }
+    
+    /* RANK BADGES */
+    .rank-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: white;
+    }
+    
+    .rank-1 { background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); }
+    .rank-2 { background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%); }
+    .rank-3 { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
+    .rank-other { background: linear-gradient(135deg, #475569 0%, #334155 100%); }
+    
+    /* AGENCY CARD */
+    .agency-card {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid #334155;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    
+    .agency-card:hover {
+      transform: translateY(-4px);
+      border-color: #8b5cf6;
+      box-shadow: 0 10px 25px rgba(139, 92, 246, 0.2);
+    }
+    
+    /* CLAIM BUTTON */
+    .claim-btn {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .claim-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+    }
+    
+    /* ENHANCED PROFILE BADGE */
+    .enhanced-badge {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    /* COUNTRY DROPDOWN */
+    .country-select {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid #475569;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    
+    /* LOADING ANIMATION */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .loading-pulse {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    
+    @media (max-width: 768px) { 
+      .hamburger { display: flex; }
+      .scanner-section, .leaderboard-section { padding: 20px; }
+      .scanner-section h2 { font-size: 1.75rem; }
+      .modal-content { margin: 10px; max-height: 95vh; }
+      .modal-header { padding: 20px; }
+      .modal-body { padding: 20px; }
+      .score-circle { width: 120px; height: 120px; }
+    }
+  </style>
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen">
-    <div class="max-w-7xl mx-auto px-4 py-8">
-        <!-- Header -->
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold text-center mb-2">
-                📊 ContentScore Tool
-            </h1>
-            <p class="text-gray-400 text-center">
-                Analyze content quality instantly
-            </p>
-        </div>
+<body class="bg-gray-900 text-gray-100">
 
-        <!-- Main Content -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <!-- Left: Input Section -->
-            <div class="bg-gray-800 rounded-lg p-6">
-                <h2 class="text-xl font-bold mb-4">Analyze Content</h2>
-                
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Content URL</label>
-                        <input type="url" id="content-url" 
-                            placeholder="https://example.com/article"
-                            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Or paste content</label>
-                        <textarea id="content-text" rows="10"
-                            placeholder="Paste your content here..."
-                            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"></textarea>
-                    </div>
-                    
-                    <button onclick="analyzeContent()"
-                        class="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg font-semibold hover:opacity-90 transition-all">
-                        🔍 Analyze Content
-                    </button>
-                </div>
-                
-                <!-- Info -->
-                <div class="mt-6 p-4 bg-blue-900 bg-opacity-30 border border-blue-700 rounded-lg">
-                    <p class="text-sm text-blue-200">
-                        <strong>Note:</strong> This tool analyzes content for:
-                    </p>
-                    <ul class="text-sm text-blue-200 mt-2 list-disc list-inside">
-                        <li>Readability & structure</li>
-                        <li>SEO optimization</li>
-                        <li>Keyword usage</li>
-                        <li>Engagement potential</li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- Right: Results Section -->
-            <div class="bg-gray-800 rounded-lg p-6">
-                <h2 class="text-xl font-bold mb-4">ContentScore Results</h2>
-                
-                <!-- Score Display -->
-                <div id="results-loading" class="hidden text-center py-12">
-                    <div class="inline-block animate-spin text-4xl">⏳</div>
-                    <p class="text-gray-400 mt-4">Analyzing content...</p>
-                </div>
-                
-                <div id="results-content" class="hidden">
-                    <!-- Score Circle -->
-                    <div class="text-center mb-6">
-                        <div class="relative inline-block">
-                            <svg width="200" height="200" viewBox="0 0 120 120">
-                                <!-- Background circle -->
-                                <circle cx="60" cy="60" r="54" fill="none" stroke="#374151" stroke-width="12"/>
-                                <!-- Score circle -->
-                                <circle id="score-circle" cx="60" cy="60" r="54" fill="none" 
-                                    stroke="url(#score-gradient)" stroke-width="12" 
-                                    stroke-dasharray="339.292" stroke-dashoffset="339.292"
-                                    stroke-linecap="round" transform="rotate(-90 60 60)"/>
-                                
-                                <defs>
-                                    <linearGradient id="score-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                        <stop offset="0%" style="stop-color:#ef4444" />
-                                        <stop offset="50%" style="stop-color:#eab308" />
-                                        <stop offset="100%" style="stop-color:#22c55e" />
-                                    </linearGradient>
-                                </defs>
-                            </svg>
-                            <div class="absolute inset-0 flex items-center justify-center">
-                                <div class="text-center">
-                                    <span id="score-value" class="text-4xl font-bold">0</span>
-                                    <span class="block text-lg">/100</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Breakdown -->
-                    <div class="space-y-4">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div class="bg-gray-700 p-4 rounded-lg">
-                                <p class="text-sm text-gray-400">Readability</p>
-                                <p id="readability-score" class="text-2xl font-bold">-</p>
-                            </div>
-                            <div class="bg-gray-700 p-4 rounded-lg">
-                                <p class="text-sm text-gray-400">SEO</p>
-                                <p id="seo-score" class="text-2xl font-bold">-</p>
-                            </div>
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-4">
-                            <div class="bg-gray-700 p-4 rounded-lg">
-                                <p class="text-sm text-gray-400">Engagement</p>
-                                <p id="engagement-score" class="text-2xl font-bold">-</p>
-                            </div>
-                            <div class="bg-gray-700 p-4 rounded-lg">
-                                <p class="text-sm text-gray-400">Structure</p>
-                                <p id="structure-score" class="text-2xl font-bold">-</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Recommendations -->
-                    <div id="recommendations" class="mt-6 space-y-3">
-                        <h3 class="font-bold">💡 Recommendations:</h3>
-                        <div id="recommendations-list" class="space-y-2">
-                            <!-- Recommendations will appear here -->
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Placeholder -->
-                <div id="results-placeholder" class="text-center py-12 text-gray-500">
-                    <p>Enter content to see analysis results</p>
-                </div>
-            </div>
+  <!-- NAVIGATION -->
+  <nav class="nav-bar">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <a href="/" style="text-decoration: none;">
+            <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">ContentScale</div>
+          </a>
         </div>
+        
+        <div class="hidden md:flex items-center gap-1">
+          <a class="nav-link active" onclick="scrollToSection('home')">🏠 Home</a>
+          <a class="nav-link" onclick="scrollToSection('scanner')">🔍 Scanner</a>
+          <a class="nav-link" onclick="scrollToSection('leaderboard')">🏆 Leaderboard</a>
+          <a href="/blog/index.html" class="nav-link">📝 Blog</a>
+          <a class="nav-link" onclick="scrollToSection('contact')">📞 Contact</a>
+        </div>
+        
+        <div class="hamburger md:hidden" onclick="toggleMobileMenu()">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="mobile-menu" id="mobileMenu">
+      <a class="nav-link" onclick="scrollToSection('home'); toggleMobileMenu()">🏠 Home</a>
+      <a class="nav-link" onclick="scrollToSection('scanner'); toggleMobileMenu()">🔍 Scanner</a>
+      <a class="nav-link" onclick="scrollToSection('leaderboard'); toggleMobileMenu()">🏆 Leaderboard</a>
+      <a href="/blog/index.html" class="nav-link">📝 Blog</a>
+      <a class="nav-link" onclick="scrollToSection('contact'); toggleMobileMenu()">📞 Contact</a>
+    </div>
+  </nav>
+
+  <div class="max-w-6xl mx-auto p-8">
+    
+    <!-- HOME -->
+    <div id="home" class="text-center mb-12 pt-8">
+      <h1 class="text-5xl font-bold mb-3 bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">🏆 Global SEO Leaderboard</h1>
+      <p class="text-xl text-gray-300 mb-4">The World's First AI-Era Content Quality Rankings</p>
+      <div class="mt-6 text-gray-400 max-w-3xl mx-auto">
+        <p>Free AI-powered content analysis using GRAAF (50pts) + CRAFT (30pts) + Technical SEO (20pts) = 100 points total.</p>
+      </div>
     </div>
 
-    <script>
-        async function analyzeContent() {
-            const url = document.getElementById('content-url').value;
-            const text = document.getElementById('content-text').value;
+    <!-- SCANNER -->
+    <div id="scanner" class="scanner-section">
+      <div class="text-center mb-8">
+        <h2 class="text-4xl font-bold mb-3">🚀 Scan Your Website</h2>
+        <p class="text-gray-300">Get your AI-Era SEO score instantly!</p>
+      </div>
+      <div class="max-w-3xl mx-auto">
+        <div class="flex flex-col sm:flex-row gap-3 mb-5">
+          <input type="text" id="scanInput" placeholder="https://yourwebsite.com" class="flex-1 bg-gray-700 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base sm:text-lg">
+          <button onclick="performScan()" id="scanButton" class="scan-btn-mobile">
+            Scan Now
+          </button>
+        </div>
+        
+        <div class="bg-gray-800 bg-opacity-70 rounded-lg p-4 text-sm text-gray-400">
+          <div class="font-bold text-green-400 mb-2">✅ Free Analysis Includes:</div>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div>• GRAAF Framework (50 pts)</div>
+            <div>• CRAFT Methodology (30 pts)</div>
+            <div>• Technical SEO (20 pts)</div>
+            <div>• AI Improvement Prompts</div>
+          </div>
+        </div>
+
+        <!-- ENHANCED LEADERBOARD SUBMISSION -->
+        <div class="mt-4 bg-gray-800 bg-opacity-50 rounded-lg p-4">
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" id="submitToLeaderboard" class="w-5 h-5 rounded border-gray-600 text-purple-600 focus:ring-purple-500">
+            <span class="text-sm text-gray-300">📊 Submit to leaderboard & claim profile (optional)</span>
+          </label>
+          <div id="companyNameField" class="mt-3 hidden">
+            <input type="text" id="companyName" placeholder="Company name (optional)" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg text-sm mb-3">
             
-            if (!url && !text) {
-                alert('Please enter a URL or paste content');
-                return;
+            <!-- COUNTRY SELECTION -->
+            <div class="mb-3">
+              <label class="block text-sm text-gray-400 mb-2">Select Country:</label>
+              <select id="countrySelect" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg text-sm">
+                <option value="">Auto-detect from domain</option>
+                <optgroup label="🇺🇸 English-Speaking Markets">
+                  <option value="US">United States</option>
+                  <option value="CA">Canada</option>
+                  <option value="UK">United Kingdom</option>
+                  <option value="AU">Australia</option>
+                  <option value="NZ">New Zealand</option>
+                  <option value="IE">Ireland</option>
+                </optgroup>
+                <optgroup label="🇪🇺 Top European Markets">
+                  <option value="NL">Netherlands</option>
+                  <option value="DE">Germany</option>
+                  <option value="FR">France</option>
+                  <option value="ES">Spain</option>
+                  <option value="IT">Italy</option>
+                  <option value="BE">Belgium</option>
+                  <option value="SE">Sweden</option>
+                  <option value="DK">Denmark</option>
+                  <option value="NO">Norway</option>
+                  <option value="FI">Finland</option>
+                  <option value="CH">Switzerland</option>
+                  <option value="AT">Austria</option>
+                </optgroup>
+                <optgroup label="🌏 Other Key Markets">
+                  <option value="SG">Singapore</option>
+                  <option value="JP">Japan</option>
+                  <option value="KR">South Korea</option>
+                  <option value="AE">United Arab Emirates</option>
+                </optgroup>
+              </select>
+            </div>
+            
+            <!-- AGENCY TYPE -->
+            <div class="mb-3">
+              <label class="block text-sm text-gray-400 mb-2">Business Type:</label>
+              <div class="flex flex-wrap gap-2">
+                <button type="button" class="agency-type-btn px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm" data-type="agency">🏢 SEO Agency</button>
+                <button type="button" class="agency-type-btn px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm" data-type="ecommerce">🛒 E-commerce</button>
+                <button type="button" class="agency-type-btn px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm" data-type="saas">💻 SaaS/Tech</button>
+                <button type="button" class="agency-type-btn px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm" data-type="other">🎯 Other</button>
+              </div>
+            </div>
+            
+            <!-- QUICK CLAIM OPTION -->
+            <div class="mt-4 p-3 bg-gradient-to-r from-purple-900 to-blue-900 rounded-lg">
+              <div class="flex items-center gap-3">
+                <div class="text-2xl">🚀</div>
+                <div class="text-sm">
+                  <div class="font-bold">Pro Tip:</div>
+                  <div class="text-gray-300">Complete your profile later to get verified badge and more leads!</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEADERBOARD WITH CLAIM PROFILES -->
+    <div id="leaderboard" class="leaderboard-section">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div>
+          <h2 class="text-3xl font-bold text-yellow-400">🏢 SEO Agencies Directory</h2>
+          <p class="text-sm text-gray-400 mt-1">Find & compare top SEO agencies worldwide</p>
+        </div>
+        
+        <!-- FOR AGENCIES -->
+        <div class="bg-gradient-to-r from-purple-900 to-blue-900 border border-purple-700 rounded-lg p-3">
+          <div class="flex items-center gap-3">
+            <div class="text-2xl">🏢</div>
+            <div>
+              <div class="font-bold text-sm">Agency Owners:</div>
+              <div class="text-xs text-purple-300">Claim your profile → Get more clients!</div>
+            </div>
+            <button onclick="scrollToClaimForm()" class="bg-white text-purple-900 hover:bg-purple-100 px-4 py-2 rounded-lg text-sm font-bold">
+              Claim Yours
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- QUICK STATS -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-gray-800 rounded-lg p-4 text-center">
+          <div class="text-2xl font-bold text-green-400" id="totalAgencies">0</div>
+          <div class="text-xs text-gray-400">Agencies Listed</div>
+        </div>
+        <div class="bg-gray-800 rounded-lg p-4 text-center">
+          <div class="text-2xl font-bold text-blue-400" id="avgScore">0</div>
+          <div class="text-xs text-gray-400">Avg. Score</div>
+        </div>
+        <div class="bg-gray-800 rounded-lg p-4 text-center">
+          <div class="text-2xl font-bold text-yellow-400" id="countriesCount">0</div>
+          <div class="text-xs text-gray-400">Countries</div>
+        </div>
+        <div class="bg-gray-800 rounded-lg p-4 text-center">
+          <div class="text-2xl font-bold text-purple-400" id="enhancedProfiles">0</div>
+          <div class="text-xs text-gray-400">Enhanced Profiles</div>
+        </div>
+      </div>
+      
+      <!-- ADVANCED FILTERS -->
+      <div class="mb-6 p-4 bg-gray-800 rounded-lg">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+          <div class="text-sm text-gray-400">Find agencies by:</div>
+          <div class="flex items-center gap-3">
+            <button onclick="toggleViewMode()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm">
+              <span id="viewModeIcon">📋</span> <span id="viewModeText">Table View</span>
+            </button>
+            <button onclick="refreshLeaderboard()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm">
+              🔄 Refresh
+            </button>
+          </div>
+        </div>
+        
+        <!-- COUNTRY FILTERS -->
+        <div class="mb-4">
+          <div class="text-xs text-gray-500 mb-2">Country:</div>
+          <div class="flex flex-wrap gap-2">
+            <div class="simple-filter active" data-filter="country" data-value="all">🌍 All</div>
+            <div class="simple-filter" data-filter="country" data-value="NL">🇳🇱 NL</div>
+            <div class="simple-filter" data-filter="country" data-value="BE">🇧🇪 BE</div>
+            <div class="simple-filter" data-filter="country" data-value="DE">🇩🇪 DE</div>
+            <div class="simple-filter" data-filter="country" data-value="UK">🇬🇧 UK</div>
+            <div class="simple-filter" data-filter="country" data-value="US">🇺🇸 US</div>
+            <div class="simple-filter" data-filter="country" data-value="CA">🇨🇦 CA</div>
+            <div class="simple-filter" data-filter="country" data-value="AU">🇦🇺 AU</div>
+            <button onclick="showAllCountries()" class="text-xs text-gray-400 hover:text-white px-2">+ More</button>
+          </div>
+        </div>
+        
+        <!-- TYPE FILTERS -->
+        <div class="mb-4">
+          <div class="text-xs text-gray-500 mb-2">Type:</div>
+          <div class="flex flex-wrap gap-2">
+            <div class="simple-filter active" data-filter="type" data-value="all">🎯 All</div>
+            <div class="simple-filter" data-filter="type" data-value="agency">🏢 Agencies</div>
+            <div class="simple-filter" data-filter="type" data-value="ecommerce">🛒 E-commerce</div>
+            <div class="simple-filter" data-filter="type" data-value="saas">💻 SaaS/Tech</div>
+            <div class="simple-filter" data-filter="type" data-value="enhanced">⭐ Enhanced</div>
+            <div class="simple-filter" data-filter="type" data-value="new">🆕 Recently Added</div>
+          </div>
+        </div>
+        
+        <!-- SCORE RANGE -->
+        <div class="mb-4">
+          <div class="text-xs text-gray-500 mb-2">Score Range:</div>
+          <div class="flex items-center gap-4">
+            <input type="range" id="scoreRange" min="0" max="100" value="0" class="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+            <div class="text-sm">
+              <span id="minScore">0</span> - <span id="maxScore">100</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- SEARCH -->
+        <div class="relative">
+          <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"></i>
+          <input type="text" id="searchInput" placeholder="Search agencies by name, country, or specialization..." class="w-full bg-gray-700 text-white pl-10 pr-4 py-2 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+        </div>
+        
+        <!-- ACTIVE FILTERS -->
+        <div id="activeFilters" class="mt-3 hidden">
+          <div class="text-xs text-gray-500 mb-1">Active filters:</div>
+          <div id="activeFiltersList" class="flex flex-wrap gap-1"></div>
+        </div>
+      </div>
+      
+      <!-- LEADERBOARD CONTENT -->
+      <div id="leaderboard-container">
+        <div class="text-center py-12 loading-pulse">
+          <div class="text-5xl mb-4">🔍</div>
+          <div class="text-gray-400">Loading leaderboard...</div>
+        </div>
+      </div>
+      
+      <!-- PAGINATION -->
+      <div id="pagination" class="mt-6 flex justify-center hidden">
+        <div class="flex gap-1">
+          <button onclick="changePage(-1)" class="px-3 py-2 bg-gray-800 rounded-lg hover:bg-gray-700">&laquo;</button>
+          <button class="px-3 py-2 bg-purple-600 rounded-lg">1</button>
+          <button onclick="changePage(2)" class="px-3 py-2 bg-gray-800 rounded-lg hover:bg-gray-700">2</button>
+          <button onclick="changePage(3)" class="px-3 py-2 bg-gray-800 rounded-lg hover:bg-gray-700">3</button>
+          <button onclick="changePage(1)" class="px-3 py-2 bg-gray-800 rounded-lg hover:bg-gray-700">&raquo;</button>
+        </div>
+      </div>
+      
+      <!-- AGENCY CLAIM FORM -->
+      <div id="claimForm" class="mt-12 p-6 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl border-2 border-purple-600 hidden">
+        <div class="text-center mb-6">
+          <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full mb-4">
+            <span class="text-2xl">🏢</span>
+          </div>
+          <h3 class="text-2xl font-bold text-white">Claim Your Agency Profile</h3>
+          <p class="text-gray-400 mt-2">Complete your profile to attract better clients and get verified</p>
+        </div>
+        
+        <div class="grid md:grid-cols-2 gap-6">
+          <!-- LEFT: Current Info -->
+          <div class="bg-gray-900 rounded-lg p-6">
+            <h4 class="font-bold text-lg mb-4 text-white">Current Listing</h4>
+            <div id="currentAgencyInfo">
+              <div class="text-center py-8">
+                <div class="text-4xl mb-4">🏢</div>
+                <div class="text-gray-400">Select an agency to claim</div>
+                <div class="text-xs text-gray-500 mt-2">Click "+ Claim Profile" on any listing</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- RIGHT: Claim Form -->
+          <div class="bg-gray-900 rounded-lg p-6">
+            <h4 class="font-bold text-lg mb-4 text-white">Enhance Your Profile</h4>
+            <form id="agencyClaimForm">
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm text-gray-400 mb-2">Agency Name *</label>
+                  <input type="text" name="agencyName" required class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-purple-500">
+                </div>
+                
+                <div>
+                  <label class="block text-sm text-gray-400 mb-2">Logo URL</label>
+                  <input type="url" name="logoUrl" placeholder="https://yourlogo.com/logo.png" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                  <div class="text-xs text-gray-500 mt-1">Square image recommended (200x200px)</div>
+                </div>
+                
+                <div>
+                  <label class="block text-sm text-gray-400 mb-2">Description</label>
+                  <textarea name="description" rows="3" placeholder="Brief description of your agency..." class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2"></textarea>
+                </div>
+                
+                <div>
+                  <label class="block text-sm text-gray-400 mb-2">Specializations *</label>
+                  <div class="grid grid-cols-2 gap-2">
+                    <label class="flex items-center gap-2">
+                      <input type="checkbox" name="specialties" value="technical" class="rounded">
+                      <span class="text-sm">Technical SEO</span>
+                    </label>
+                    <label class="flex items-center gap-2">
+                      <input type="checkbox" name="specialties" value="content" class="rounded">
+                      <span class="text-sm">Content SEO</span>
+                    </label>
+                    <label class="flex items-center gap-2">
+                      <input type="checkbox" name="specialties" value="ecommerce" class="rounded">
+                      <span class="text-sm">E-commerce SEO</span>
+                    </label>
+                    <label class="flex items-center gap-2">
+                      <input type="checkbox" name="specialties" value="local" class="rounded">
+                      <span class="text-sm">Local SEO</span>
+                    </label>
+                    <label class="flex items-center gap-2">
+                      <input type="checkbox" name="specialties" value="enterprise" class="rounded">
+                      <span class="text-sm">Enterprise SEO</span>
+                    </label>
+                    <label class="flex items-center gap-2">
+                      <input type="checkbox" name="specialties" value="international" class="rounded">
+                      <span class="text-sm">International SEO</span>
+                    </label>
+                  </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm text-gray-400 mb-2">Country</label>
+                    <select name="country" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                      <option value="NL">Netherlands</option>
+                      <option value="BE">Belgium</option>
+                      <option value="DE">Germany</option>
+                      <option value="UK">United Kingdom</option>
+                      <option value="US">United States</option>
+                      <option value="CA">Canada</option>
+                      <option value="AU">Australia</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label class="block text-sm text-gray-400 mb-2">Agency Size</label>
+                    <select name="agencySize" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                      <option value="freelancer">Freelancer</option>
+                      <option value="boutique">Boutique (2-10)</option>
+                      <option value="mid-market">Mid-Market (11-50)</option>
+                      <option value="enterprise">Enterprise (50+)</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div>
+                  <label class="block text-sm text-gray-400 mb-2">Contact Email for Leads *</label>
+                  <input type="email" name="contactEmail" required class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                  <div class="text-xs text-gray-500 mt-1">Will be displayed publicly</div>
+                </div>
+                
+                <div class="pt-4">
+                  <button type="submit" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-3 rounded-lg transition-all duration-300">
+                    🚀 Claim & Publish Profile
+                  </button>
+                  <p class="text-xs text-gray-500 mt-2 text-center">Free forever • Get listed in our agency directory</p>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+        
+        <div class="mt-6 pt-6 border-t border-gray-700">
+          <h4 class="font-bold text-white mb-3">🎯 Benefits of Claiming Your Profile:</h4>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-gray-800 rounded-lg p-4">
+              <div class="text-green-400 text-xl mb-2">✅</div>
+              <div class="font-bold text-sm">Verified Badge</div>
+              <div class="text-xs text-gray-400">Stand out with official verification</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4">
+              <div class="text-blue-400 text-xl mb-2">📈</div>
+              <div class="font-bold text-sm">More Leads</div>
+              <div class="text-xs text-gray-400">Get discovered by potential clients</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4">
+              <div class="text-purple-400 text-xl mb-2">🏆</div>
+              <div class="font-bold text-sm">Higher Ranking</div>
+              <div class="text-xs text-gray-400">Enhanced profiles rank higher</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTACT -->
+    <div id="contact" class="py-12">
+      <div class="text-center mb-12">
+        <div class="text-7xl mb-4 animate-bounce">📞</div>
+        <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">📞 Get In Touch</h2>
+        <p class="text-gray-400 text-lg">Questions? Want expert SEO help?</p>
+      </div>
+
+      <div class="max-w-5xl mx-auto grid md:grid-cols-2 gap-8">
+        
+        <!-- CONTACT INFO -->
+        <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-8 border border-gray-700">
+          <h3 class="text-2xl font-bold mb-6">Contact</h3>
+          <div class="space-y-6">
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center text-2xl">📧</div>
+              <div>
+                <div class="text-sm text-gray-400 mb-1">Email</div>
+                <a href="mailto:info@contentscale.site" class="text-lg font-semibold text-blue-400 hover:text-blue-300">info@contentscale.site</a>
+              </div>
+            </div>
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center text-2xl">💬</div>
+              <div>
+                <div class="text-sm text-gray-400 mb-1">WhatsApp</div>
+                <a href="https://wa.me/31628073996" target="_blank" class="text-lg font-semibold text-green-400 hover:text-green-300">+31 628 073 996</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- WHATSAPP CTA -->
+        <div class="bg-gradient-to-br from-green-900 to-green-800 rounded-xl p-8 border-2 border-green-600">
+          <div class="text-center mb-8">
+            <div class="text-7xl mb-4 animate-bounce">💬</div>
+            <h3 class="text-3xl font-bold mb-3 text-white">Let's Talk!</h3>
+          </div>
+          <a href="https://wa.me/31628073996?text=Hi!%20I%27d%20like%20to%20learn%20more%20about%20ContentScale" 
+             target="_blank"
+             class="block w-full bg-white hover:bg-green-50 text-green-900 text-center py-5 rounded-xl font-bold text-xl transition transform hover:scale-105">
+            💬 Start WhatsApp Chat →
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  
+  <!-- FOOTER -->
+  <footer class="contentscale-footer">
+    <div class="contentscale-container">
+      <h3>ContentScale – SEO Platform & Recovery Services</h3>
+      <p>AI-powered analysis with GRAAF + CRAFT + Technical SEO scoring</p>
+      <p style="margin: 0; font-size: 0.95rem;">© 2025 ContentScale | <a href="mailto:info@contentscale.site">Contact</a> | <a href="/admin">Admin</a> | <a href="/blog/index.html">Blog</a></p>
+    </div>
+  </footer>
+
+  <!-- MODAL -->
+  <div id="scanModal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <!-- Modal content will be inserted here -->
+    </div>
+  </div>
+
+  <!-- COMPLETE JAVASCRIPT -->
+  <script>
+    // ============================================
+    // NAVIGATION & MOBILE MENU
+    // ============================================
+    function toggleMobileMenu() {
+      const hamburger = document.querySelector('.hamburger');
+      const mobileMenu = document.getElementById('mobileMenu');
+      hamburger.classList.toggle('active');
+      mobileMenu.classList.toggle('active');
+    }
+
+    function scrollToSection(sectionId) {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+        toggleMobileMenu();
+      }
+    }
+
+    // ============================================
+    // SCANNER FUNCTIONALITY
+    // ============================================
+    async function performScan() {
+      const urlInput = document.getElementById('scanInput').value.trim();
+      const scanButton = document.getElementById('scanButton');
+      
+      if (!urlInput) {
+        alert('Please enter a valid URL');
+        return;
+      }
+      
+      // Validate URL
+      let fullUrl = urlInput;
+      if (!urlInput.startsWith('http')) {
+        fullUrl = `https://${urlInput}`;
+      }
+      
+      try {
+        new URL(fullUrl);
+      } catch {
+        alert('Please enter a valid URL (e.g., https://example.com)');
+        return;
+      }
+      
+      // Show loading state
+      const originalText = scanButton.innerHTML;
+      scanButton.innerHTML = '<div class="scan-spinner"></div> Scanning...';
+      scanButton.disabled = true;
+      
+      // Simulate scan
+      setTimeout(async () => {
+        try {
+          // Generate mock data with more realistic scores
+          const mockData = {
+            success: true,
+            score: Math.floor(Math.random() * 25) + 75, // 75-100 for better UX
+            url: fullUrl,
+            recommendations: [
+              {
+                type: 'quickwin',
+                title: 'Improve Meta Description',
+                description: 'Add a compelling meta description with target keywords.',
+                impact: 'High'
+              },
+              {
+                type: 'major',
+                title: 'Optimize Page Speed',
+                description: 'Reduce image sizes and leverage browser caching.',
+                impact: 'Medium'
+              },
+              {
+                type: 'advanced',
+                title: 'Implement Schema Markup',
+                description: 'Add structured data for better rich snippets.',
+                impact: 'Low'
+              }
+            ],
+            metrics: {
+              graaf: Math.floor(Math.random() * 10) + 40, // 40-50
+              craft: Math.floor(Math.random() * 8) + 22, // 22-30
+              technical: Math.floor(Math.random() * 5) + 15 // 15-20
             }
-            
-            // Show loading
-            document.getElementById('results-placeholder').classList.add('hidden');
-            document.getElementById('results-content').classList.add('hidden');
-            document.getElementById('results-loading').classList.remove('hidden');
-            
-            try {
-                // Simulate API call
-                await new Promise(resolve => setTimeout(resolve, 1500));
-                
-                // Mock data for demo
-                const mockScore = Math.floor(Math.random() * 30) + 65; // 65-95
-                const mockData = {
-                    score: mockScore,
-                    breakdown: {
-                        readability: Math.floor(Math.random() * 20) + 75,
-                        seo: Math.floor(Math.random() * 20) + 70,
-                        engagement: Math.floor(Math.random() * 20) + 65,
-                        structure: Math.floor(Math.random() * 20) + 80
-                    },
-                    recommendations: [
-                        "Add more subheadings to improve scannability",
-                        "Include more internal links to related content",
-                        "Optimize meta description for better CTR",
-                        "Add relevant images or videos",
-                        "Include a clear call-to-action"
-                    ]
-                };
-                
-                // Update UI
-                updateResults(mockData);
-                
-            } catch (error) {
-                console.error('Analysis error:', error);
-                alert('Analysis failed. Please try again.');
-            } finally {
-                document.getElementById('results-loading').classList.add('hidden');
-            }
+          };
+          
+          // Show modal with results
+          showScanResults(mockData);
+          
+          // Submit to leaderboard if checked
+          const submitToLeaderboard = document.getElementById('submitToLeaderboard').checked;
+          if (submitToLeaderboard) {
+            await submitToLeaderboardAPI(mockData);
+          }
+          
+        } catch (error) {
+          console.error('Scan error:', error);
+          alert('Scan failed. Please try again.');
+        } finally {
+          // Reset button
+          scanButton.innerHTML = originalText;
+          scanButton.disabled = false;
+        }
+      }, 1500);
+    }
+
+    function showScanResults(data) {
+      const modal = document.getElementById('scanModal');
+      const modalContent = modal.querySelector('.modal-content');
+      
+      // Determine score color
+      let scoreClass = 'score-poor';
+      let scoreText = 'Needs Work';
+      if (data.score >= 85) {
+        scoreClass = 'score-excellent';
+        scoreText = 'Excellent';
+      } else if (data.score >= 75) {
+        scoreClass = 'score-good';
+        scoreText = 'Good';
+      } else if (data.score >= 65) {
+        scoreClass = 'score-fair';
+        scoreText = 'Fair';
+      }
+      
+      modalContent.innerHTML = `
+        <div class="modal-header">
+          <h2 class="text-3xl font-bold mb-2">🎯 Scan Results</h2>
+          <p class="text-gray-400">${data.url}</p>
+        </div>
+        <div class="modal-body">
+          <!-- SCORE CIRCLE -->
+          <div class="score-circle ${scoreClass}">
+            <div class="text-4xl font-bold">${data.score}/100</div>
+            <div class="text-lg mt-2">${scoreText}</div>
+          </div>
+          
+          <!-- SCORE BREAKDOWN -->
+          <div class="grid grid-cols-3 gap-4 mb-8">
+            <div class="text-center p-4 bg-gray-800 rounded-lg">
+              <div class="text-2xl font-bold text-green-400">${data.metrics.graaf}/50</div>
+              <div class="text-sm text-gray-400 mt-1">GRAAF</div>
+            </div>
+            <div class="text-center p-4 bg-gray-800 rounded-lg">
+              <div class="text-2xl font-bold text-blue-400">${data.metrics.craft}/30</div>
+              <div class="text-sm text-gray-400 mt-1">CRAFT</div>
+            </div>
+            <div class="text-center p-4 bg-gray-800 rounded-lg">
+              <div class="text-2xl font-bold text-purple-400">${data.metrics.technical}/20</div>
+              <div class="text-sm text-gray-400 mt-1">Technical</div>
+            </div>
+          </div>
+          
+          <!-- RECOMMENDATIONS -->
+          <h3 class="text-xl font-bold mb-4">📈 Recommendations</h3>
+          ${data.recommendations.map(rec => `
+            <div class="rec-section rec-${rec.type} mb-4">
+              <div class="flex justify-between items-start mb-2">
+                <h4 class="font-bold text-lg">${rec.title}</h4>
+                <span class="text-xs px-2 py-1 rounded-full ${rec.type === 'quickwin' ? 'bg-green-900 text-green-300' : rec.type === 'major' ? 'bg-yellow-900 text-yellow-300' : 'bg-purple-900 text-purple-300'}">
+                  ${rec.type.toUpperCase()}
+                </span>
+              </div>
+              <p class="text-gray-300 mb-3">${rec.description}</p>
+              <div class="text-sm text-gray-400">Impact: <span class="font-semibold">${rec.impact}</span></div>
+            </div>
+          `).join('')}
+          
+          <!-- ACTION BUTTONS -->
+          <div class="flex gap-4 mt-8 pt-6 border-t border-gray-700">
+            <button onclick="closeModal()" class="flex-1 bg-gray-700 hover:bg-gray-600 py-3 rounded-lg font-semibold">
+              Close
+            </button>
+            <button onclick="scanAnother()" class="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 py-3 rounded-lg font-semibold">
+              Scan Another
+            </button>
+          </div>
+        </div>
+      `;
+      
+      modal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('scanModal').classList.add('hidden');
+    }
+
+    function scanAnother() {
+      closeModal();
+      document.getElementById('scanInput').value = '';
+      document.getElementById('scanInput').focus();
+    }
+
+    async function submitToLeaderboardAPI(scanData) {
+      const companyName = document.getElementById('companyName').value;
+      const countrySelect = document.getElementById('countrySelect');
+      const selectedCountry = countrySelect.value;
+      
+      // Auto-detect country from domain if not selected
+      let country = selectedCountry;
+      if (!country) {
+        country = detectCountryFromDomain(scanData.url);
+      }
+      
+      // Get agency type
+      let agencyType = 'other';
+      const activeTypeBtn = document.querySelector('.agency-type-btn.active');
+      if (activeTypeBtn) {
+        agencyType = activeTypeBtn.dataset.type;
+      }
+      
+      const agencyData = {
+        id: Date.now(),
+        url: scanData.url,
+        score: scanData.score,
+        company: companyName || 'Individual',
+        country: country || 'US',
+        type: agencyType,
+        timestamp: new Date().toISOString(),
+        isEnhanced: false,
+        lastScan: 'Just now'
+      };
+      
+      try {
+        // Save to localStorage
+        let agencies = JSON.parse(localStorage.getItem('agencies') || '[]');
+        // Check if already exists
+        const existingIndex = agencies.findIndex(a => a.url === agencyData.url);
+        if (existingIndex !== -1) {
+          agencies[existingIndex] = agencyData;
+        } else {
+          agencies.push(agencyData);
+        }
+        localStorage.setItem('agencies', JSON.stringify(agencies));
+        
+        console.log('Submitted to leaderboard:', agencyData);
+        
+        // Show success message with claim prompt
+        const modal = document.getElementById('scanModal');
+        const modalContent = modal.querySelector('.modal-content');
+        const existingBody = modalContent.querySelector('.modal-body');
+        
+        const claimSection = document.createElement('div');
+        claimSection.className = 'mt-6 p-4 bg-gradient-to-r from-purple-900 to-blue-900 rounded-lg';
+        claimSection.innerHTML = `
+          <div class="flex items-center gap-4">
+            <div class="text-3xl">🏢</div>
+            <div>
+              <div class="font-bold">Want to stand out?</div>
+              <div class="text-sm text-gray-300">Claim your agency profile to get verified and attract more clients!</div>
+            </div>
+            <button onclick="claimNewAgency(${agencyData.id})" class="bg-white text-purple-900 hover:bg-purple-100 px-4 py-2 rounded-lg font-bold">
+              Claim Profile
+            </button>
+          </div>
+        `;
+        
+        existingBody.appendChild(claimSection);
+        
+        // Refresh leaderboard
+        loadLeaderboard();
+        
+      } catch (error) {
+        console.error('Submission error:', error);
+        alert('⚠️ Added to leaderboard but there was an issue.');
+      }
+    }
+
+    function detectCountryFromDomain(url) {
+      const domain = new URL(url).hostname;
+      const tld = domain.split('.').pop().toLowerCase();
+      
+      const countryTLDs = {
+        'nl': 'NL', 'be': 'BE', 'de': 'DE', 'fr': 'FR', 'es': 'ES',
+        'it': 'IT', 'uk': 'UK', 'co.uk': 'UK', 'com': 'US', 'us': 'US',
+        'ca': 'CA', 'au': 'AU', 'nz': 'NZ', 'ie': 'IE', 'se': 'SE',
+        'dk': 'DK', 'no': 'NO', 'fi': 'FI', 'ch': 'CH', 'at': 'AT'
+      };
+      
+      return countryTLDs[tld] || 'US';
+    }
+
+    // ============================================
+    // LEADERBOARD & AGENCY CLAIM SYSTEM
+    // ============================================
+    let allAgencies = [];
+    let claimedAgencies = JSON.parse(localStorage.getItem('claimedAgencies') || '{}');
+    let currentFilters = {
+      country: 'all',
+      type: 'all',
+      minScore: 0,
+      maxScore: 100,
+      search: ''
+    };
+    let currentView = 'table';
+    let currentPage = 1;
+    const itemsPerPage = 10;
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize scanner checkbox
+      document.getElementById('submitToLeaderboard').addEventListener('change', function() {
+        const companyField = document.getElementById('companyNameField');
+        if (this.checked) {
+          companyField.classList.remove('hidden');
+          // Auto-select first agency type
+          const firstTypeBtn = document.querySelector('.agency-type-btn');
+          if (firstTypeBtn) {
+            firstTypeBtn.classList.add('bg-purple-600', 'text-white');
+            firstTypeBtn.classList.remove('bg-gray-700', 'text-gray-300');
+            firstTypeBtn.classList.add('active');
+          }
+        } else {
+          companyField.classList.add('hidden');
+        }
+      });
+      
+      // Initialize agency type buttons
+      document.querySelectorAll('.agency-type-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          document.querySelectorAll('.agency-type-btn').forEach(b => {
+            b.classList.remove('bg-purple-600', 'text-white', 'active');
+            b.classList.add('bg-gray-700', 'text-gray-300');
+          });
+          this.classList.remove('bg-gray-700', 'text-gray-300');
+          this.classList.add('bg-purple-600', 'text-white', 'active');
+        });
+      });
+      
+      // Initialize filter buttons
+      document.querySelectorAll('.simple-filter').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const filterType = this.dataset.filter;
+          const filterValue = this.dataset.value;
+          
+          // Update active state
+          document.querySelectorAll(`.simple-filter[data-filter="${filterType}"]`).forEach(f => {
+            f.classList.remove('active');
+          });
+          this.classList.add('active');
+          
+          // Update filter
+          currentFilters[filterType] = filterValue;
+          
+          // Special handling for score filter
+          if (filterType === 'type' && filterValue === 'enhanced') {
+            currentFilters.minScore = 70; // Enhanced profiles have higher scores
+          }
+          
+          renderLeaderboard();
+          updateActiveFilters();
+        });
+      });
+      
+      // Initialize score range
+      const scoreRange = document.getElementById('scoreRange');
+      const minScore = document.getElementById('minScore');
+      const maxScore = document.getElementById('maxScore');
+      
+      scoreRange.addEventListener('input', function() {
+        currentFilters.minScore = parseInt(this.value);
+        minScore.textContent = this.value;
+        renderLeaderboard();
+        updateActiveFilters();
+      });
+      
+      // Initialize search
+      document.getElementById('searchInput').addEventListener('input', function() {
+        currentFilters.search = this.value.toLowerCase();
+        renderLeaderboard();
+        updateActiveFilters();
+      });
+      
+      // Initialize claim form
+      document.getElementById('agencyClaimForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        submitClaimForm();
+      });
+      
+      // Load initial data
+      loadLeaderboard();
+    });
+
+    function loadLeaderboard() {
+      // Load from localStorage
+      let savedAgencies = JSON.parse(localStorage.getItem('agencies') || '[]');
+      
+      // Generate mock data if none saved (for demo)
+      if (savedAgencies.length === 0) {
+        const countries = ['NL', 'BE', 'DE', 'UK', 'US', 'CA', 'AU', 'FR', 'ES'];
+        const types = ['agency', 'ecommerce', 'saas', 'other'];
+        
+        savedAgencies = Array.from({ length: 25 }, (_, i) => ({
+          id: i + 1,
+          url: `https://agency${i + 1}.com`,
+          score: Math.floor(Math.random() * 35) + 65, // 65-100
+          company: `SEO Agency ${i + 1}`,
+          country: countries[Math.floor(Math.random() * countries.length)],
+          type: types[Math.floor(Math.random() * types.length)],
+          timestamp: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+          isEnhanced: Math.random() > 0.7,
+          lastScan: `${Math.floor(Math.random() * 30) + 1} days ago`
+        }));
+        
+        // Add some enhanced profiles
+        savedAgencies.forEach((agency, index) => {
+          if (index < 5) {
+            agency.isEnhanced = true;
+            claimedAgencies[agency.id] = {
+              name: agency.company,
+              logo: `https://ui-avatars.com/api/?name=${encodeURIComponent(agency.company)}&background=8b5cf6&color=fff`,
+              description: `Leading ${agency.type} SEO agency based in ${getCountryName(agency.country)}`,
+              specialties: ['technical', 'content', agency.type === 'ecommerce' ? 'ecommerce' : 'enterprise'].slice(0, Math.floor(Math.random() * 3) + 1),
+              agencySize: ['freelancer', 'boutique', 'mid-market', 'enterprise'][Math.floor(Math.random() * 4)],
+              contactEmail: `contact@agency${index + 1}.com`,
+              claimedAt: new Date().toISOString()
+            };
+          }
+        });
+        
+        localStorage.setItem('agencies', JSON.stringify(savedAgencies));
+        localStorage.setItem('claimedAgencies', JSON.stringify(claimedAgencies));
+      }
+      
+      // Add IDs and timestamps if missing
+      allAgencies = savedAgencies.map((agency, index) => ({
+        id: agency.id || index + 1,
+        rank: index + 1,
+        url: agency.url,
+        score: agency.score || Math.floor(Math.random() * 35) + 65,
+        company: agency.company || `SEO Agency ${index + 1}`,
+        country: agency.country || 'US',
+        type: agency.type || 'agency',
+        isEnhanced: agency.isEnhanced || false,
+        lastScan: agency.lastScan || 'Recently',
+        timestamp: agency.timestamp || new Date().toISOString()
+      }));
+      
+      // Sort by score (enhanced profiles first)
+      allAgencies.sort((a, b) => {
+        if (a.isEnhanced && !b.isEnhanced) return -1;
+        if (!a.isEnhanced && b.isEnhanced) return 1;
+        return b.score - a.score;
+      });
+      
+      // Update ranks
+      allAgencies.forEach((agency, index) => agency.rank = index + 1);
+      
+      renderLeaderboard();
+      updateStats();
+    }
+
+    function filterAgencies() {
+      return allAgencies.filter(agency => {
+        // Country filter
+        if (currentFilters.country !== 'all' && agency.country !== currentFilters.country) {
+          return false;
         }
         
-        function updateResults(data) {
-            // Update score
-            const score = data.score;
-            document.getElementById('score-value').textContent = score;
-            
-            // Animate score circle
-            const circle = document.getElementById('score-circle');
-            const circumference = 2 * Math.PI * 54; // 2πr
-            const offset = circumference - (score / 100) * circumference;
-            circle.style.strokeDashoffset = offset;
-            
-            // Update breakdown
-            document.getElementById('readability-score').textContent = data.breakdown.readability;
-            document.getElementById('seo-score').textContent = data.breakdown.seo;
-            document.getElementById('engagement-score').textContent = data.breakdown.engagement;
-            document.getElementById('structure-score').textContent = data.breakdown.structure;
-            
-            // Update recommendations
-            const recList = document.getElementById('recommendations-list');
-            recList.innerHTML = '';
-            data.recommendations.forEach(rec => {
-                const li = document.createElement('div');
-                li.className = 'flex items-start gap-2 text-sm';
-                li.innerHTML = `
-                    <span class="text-green-400 mt-0.5">✓</span>
-                    <span>${rec}</span>
-                `;
-                recList.appendChild(li);
-            });
-            
-            // Show results
-            document.getElementById('results-content').classList.remove('hidden');
+        // Type filter
+        if (currentFilters.type !== 'all') {
+          if (currentFilters.type === 'enhanced') {
+            if (!agency.isEnhanced) return false;
+          } else if (currentFilters.type === 'new') {
+            const daysAgo = (new Date() - new Date(agency.timestamp)) / (1000 * 60 * 60 * 24);
+            if (daysAgo > 7) return false; // New = less than 7 days
+          } else if (agency.type !== currentFilters.type) {
+            return false;
+          }
         }
-    </script>
+        
+        // Score filter
+        if (agency.score < currentFilters.minScore || agency.score > currentFilters.maxScore) {
+          return false;
+        }
+        
+        // Search filter
+        if (currentFilters.search) {
+          const searchable = [
+            agency.company,
+            agency.url,
+            getCountryName(agency.country),
+            agency.type,
+            ...(claimedAgencies[agency.id]?.specialties || [])
+          ].join(' ').toLowerCase();
+          
+          if (!searchable.includes(currentFilters.search)) {
+            return false;
+          }
+        }
+        
+        return true;
+      });
+    }
+
+    function renderLeaderboard() {
+      const filteredAgencies = filterAgencies();
+      const container = document.getElementById('leaderboard-container');
+      const pagination = document.getElementById('pagination');
+      
+      // Calculate pagination
+      const totalPages = Math.ceil(filteredAgencies.length / itemsPerPage);
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const pagedAgencies = filteredAgencies.slice(startIndex, endIndex);
+      
+      if (filteredAgencies.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12">
+            <div class="text-5xl mb-4">🏢</div>
+            <div class="text-xl font-semibold mb-2">No agencies found</div>
+            <p class="text-gray-400 mb-4">Try adjusting your filters or scan your website first</p>
+            <button onclick="scrollToSection('scanner')" class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-6 py-3 rounded-lg font-semibold">
+              Scan Your Website
+            </button>
+          </div>
+        `;
+        pagination.classList.add('hidden');
+        return;
+      }
+      
+      if (currentView === 'table') {
+        container.innerHTML = renderTableView(pagedAgencies);
+      } else {
+        container.innerHTML = renderCardsView(pagedAgencies);
+      }
+      
+      // Show pagination if needed
+      if (totalPages > 1) {
+        pagination.classList.remove('hidden');
+        renderPagination(totalPages);
+      } else {
+        pagination.classList.add('hidden');
+      }
+      
+      updateStats();
+    }
+
+    function renderTableView(agencies) {
+      return `
+        <div class="overflow-x-auto rounded-lg border border-gray-700">
+          <table class="min-w-full divide-y divide-gray-700">
+            <thead class="bg-gray-800">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Rank</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Agency</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Country</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Score</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Type</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Action</th>
+              </tr>
+            </thead>
+            <tbody class="bg-gray-900 divide-y divide-gray-800">
+              ${agencies.map(agency => {
+                const isClaimed = claimedAgencies[agency.id] || agency.isEnhanced;
+                const claimedInfo = claimedAgencies[agency.id];
+                
+                return `
+                <tr class="hover:bg-gray-800 transition ${agency.isEnhanced ? 'bg-gradient-to-r from-gray-800 to-gray-900' : ''}">
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="rank-badge ${agency.rank === 1 ? 'rank-1' : agency.rank === 2 ? 'rank-2' : agency.rank === 3 ? 'rank-3' : 'rank-other'}">
+                      ${agency.rank}
+                    </div>
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="flex items-center">
+                      ${isClaimed && claimedInfo?.logo ? `
+                        <img src="${claimedInfo.logo}" alt="${claimedInfo.name}" class="h-10 w-10 rounded-lg mr-3 object-cover border border-purple-500">
+                      ` : `
+                        <div class="h-10 w-10 bg-gray-700 rounded-lg flex items-center justify-center mr-3">
+                          ${getFlagEmoji(agency.country)}
+                        </div>
+                      `}
+                      <div>
+                        <div class="font-medium text-white flex items-center gap-2">
+                          ${isClaimed ? claimedInfo.name : agency.company}
+                          ${agency.isEnhanced ? '<span class="enhanced-badge text-xs">⭐</span>' : ''}
+                        </div>
+                        <div class="text-sm text-gray-400">
+                          ${agency.url.replace('https://', '')}
+                          ${isClaimed ? '<span class="ml-2 text-xs bg-green-900 text-green-300 px-2 py-1 rounded">✓ Verified</span>' : ''}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                      ${getFlagEmoji(agency.country)}
+                      <span class="ml-2 text-sm">${getCountryName(agency.country)}</span>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                      <div class="w-24 bg-gray-700 rounded-full h-2.5 mr-3">
+                        <div class="bg-gradient-to-r from-green-500 to-yellow-500 h-2.5 rounded-full" style="width: ${agency.score}%"></div>
+                      </div>
+                      <span class="font-bold ${getScoreColor(agency.score)}">${agency.score}</span>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="text-xs px-2 py-1 rounded-full ${getTypeColor(agency.type)}">
+                      ${getTypeLabel(agency.type)}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    ${isClaimed ? `
+                      <div class="text-sm">
+                        <div class="text-green-400">✓ Enhanced</div>
+                        <div class="text-xs text-gray-500">${claimedInfo?.specialties?.length || 3} specializations</div>
+                      </div>
+                    ` : `
+                      <div class="text-sm text-gray-400">Basic Listing</div>
+                    `}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    ${isClaimed ? `
+                      <button onclick="viewAgencyProfile(${agency.id})" class="claim-btn">
+                        View Profile
+                      </button>
+                    ` : `
+                      <button onclick="claimAgencyProfile(${agency.id})" class="claim-btn">
+                        + Claim Profile
+                      </button>
+                    `}
+                  </td>
+                </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="mt-4 text-sm text-gray-400">
+          Showing ${agencies.length} of ${filterAgencies().length} agencies
+        </div>
+      `;
+    }
+
+    function renderCardsView(agencies) {
+      return `
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          ${agencies.map(agency => {
+            const isClaimed = claimedAgencies[agency.id] || agency.isEnhanced;
+            const claimedInfo = claimedAgencies[agency.id];
+            
+            return `
+            <div class="agency-card" onclick="${isClaimed ? `viewAgencyProfile(${agency.id})` : `claimAgencyProfile(${agency.id})`}">
+              <div class="flex justify-between items-start mb-4">
+                <div class="flex items-center">
+                  <div class="rank-badge ${agency.rank <= 3 ? (agency.rank === 1 ? 'rank-1' : agency.rank === 2 ? 'rank-2' : 'rank-3') : 'rank-other'} mr-3">
+                    ${agency.rank}
+                  </div>
+                  <div>
+                    <h3 class="font-bold text-lg">${isClaimed ? claimedInfo.name : agency.company}</h3>
+                    <div class="flex items-center text-sm text-gray-400 mt-1">
+                      ${getFlagEmoji(agency.country)}
+                      <span class="ml-1">${getCountryName(agency.country)}</span>
+                      ${agency.isEnhanced ? '<span class="ml-2 enhanced-badge text-xs">⭐ Enhanced</span>' : ''}
+                    </div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-2xl font-bold ${getScoreColor(agency.score)}">${agency.score}</div>
+                  <div class="text-xs text-gray-400">score</div>
+                </div>
+              </div>
+              
+              <div class="mb-4">
+                <div class="text-sm text-gray-400 mb-2">Specialization:</div>
+                <div class="flex flex-wrap gap-2">
+                  <span class="text-xs px-2 py-1 ${getTypeColor(agency.type)} rounded-full">
+                    ${getTypeLabel(agency.type)}
+                  </span>
+                  ${isClaimed && claimedInfo.specialties ? claimedInfo.specialties.slice(0, 2).map(spec => `
+                    <span class="text-xs px-2 py-1 bg-gray-800 rounded-full">${getSpecialtyName(spec)}</span>
+                  `).join('') : ''}
+                </div>
+              </div>
+              
+              <div class="flex justify-between items-center text-sm">
+                <div class="text-gray-400">${agency.lastScan}</div>
+                <div>
+                  ${isClaimed ? `
+                    <span class="text-green-400">✓ Verified</span>
+                  ` : `
+                    <span class="text-purple-400 font-semibold">+ Claim Profile</span>
+                  `}
+                </div>
+              </div>
+            </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    function renderPagination(totalPages) {
+      const pagination = document.getElementById('pagination');
+      let html = '<div class="flex gap-1">';
+      
+      // Previous button
+      html += `<button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} class="px-3 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}">&laquo;</button>`;
+      
+      // Page numbers
+      for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+          html += `<button onclick="changePage(${i})" class="px-3 py-2 ${i === currentPage ? 'bg-purple-600' : 'bg-gray-800 hover:bg-gray-700'} rounded-lg">${i}</button>`;
+        } else if (i === currentPage - 2 || i === currentPage + 2) {
+          html += '<span class="px-3 py-2 text-gray-500">...</span>';
+        }
+      }
+      
+      // Next button
+      html += `<button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''} class="px-3 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}">&raquo;</button>`;
+      
+      html += '</div>';
+      pagination.innerHTML = html;
+    }
+
+    function changePage(page) {
+      const totalPages = Math.ceil(filterAgencies().length / itemsPerPage);
+      if (page < 1 || page > totalPages) return;
+      
+      currentPage = page;
+      renderLeaderboard();
+    }
+
+    function toggleViewMode() {
+      currentView = currentView === 'table' ? 'cards' : 'table';
+      const viewModeIcon = document.getElementById('viewModeIcon');
+      const viewModeText = document.getElementById('viewModeText');
+      
+      if (currentView === 'table') {
+        viewModeIcon.textContent = '📋';
+        viewModeText.textContent = 'Table View';
+      } else {
+        viewModeIcon.textContent = '🃏';
+        viewModeText.textContent = 'Cards View';
+      }
+      
+      renderLeaderboard();
+    }
+
+    function updateActiveFilters() {
+      const activeFilters = document.getElementById('activeFilters');
+      const activeFiltersList = document.getElementById('activeFiltersList');
+      
+      const activeFiltersArray = [];
+      
+      if (currentFilters.country !== 'all') {
+        activeFiltersArray.push(`Country: ${getCountryName(currentFilters.country)}`);
+      }
+      
+      if (currentFilters.type !== 'all') {
+        activeFiltersArray.push(`Type: ${getTypeLabel(currentFilters.type)}`);
+      }
+      
+      if (currentFilters.minScore > 0) {
+        activeFiltersArray.push(`Min Score: ${currentFilters.minScore}`);
+      }
+      
+      if (currentFilters.search) {
+        activeFiltersArray.push(`Search: "${currentFilters.search}"`);
+      }
+      
+      if (activeFiltersArray.length > 0) {
+        activeFilters.classList.remove('hidden');
+        activeFiltersList.innerHTML = activeFiltersArray.map(filter => `
+          <span class="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded">${filter}</span>
+        `).join('');
+      } else {
+        activeFilters.classList.add('hidden');
+      }
+    }
+
+    function claimAgencyProfile(agencyId) {
+      const agency = allAgencies.find(a => a.id === agencyId);
+      if (!agency) return;
+      
+      // Show claim form
+      const claimForm = document.getElementById('claimForm');
+      const currentInfo = document.getElementById('currentAgencyInfo');
+      
+      currentInfo.innerHTML = `
+        <div class="space-y-4">
+          <div class="flex items-center gap-4">
+            <div class="h-16 w-16 bg-gray-800 rounded-lg flex items-center justify-center text-2xl">
+              ${getFlagEmoji(agency.country)}
+            </div>
+            <div>
+              <div class="font-bold text-lg">${agency.company}</div>
+              <div class="text-sm text-gray-400">${agency.url.replace('https://', '')}</div>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-gray-800 rounded-lg p-3">
+              <div class="text-xs text-gray-400">Current Score</div>
+              <div class="text-2xl font-bold ${getScoreColor(agency.score)}">${agency.score}</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+              <div class="text-xs text-gray-400">Global Rank</div>
+              <div class="text-2xl font-bold">#${agency.rank}</div>
+            </div>
+          </div>
+          
+          <div>
+            <div class="text-xs text-gray-400 mb-1">Country</div>
+            <div class="flex items-center">
+              ${getFlagEmoji(agency.country)}
+              <span class="ml-2">${getCountryName(agency.country)}</span>
+            </div>
+          </div>
+          
+          <div>
+            <div class="text-xs text-gray-400 mb-1">Last Scan</div>
+            <div>${agency.lastScan}</div>
+          </div>
+        </div>
+      `;
+      
+      // Pre-fill form
+      const form = document.getElementById('agencyClaimForm');
+      form.querySelector('input[name="agencyName"]').value = agency.company;
+      form.querySelector('select[name="country"]').value = agency.country;
+      form.querySelector('input[name="contactEmail"]').value = '';
+      
+      // Store agency ID in form
+      form.dataset.agencyId = agencyId;
+      
+      // Show form and scroll to it
+      claimForm.classList.remove('hidden');
+      claimForm.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function claimNewAgency(agencyId) {
+      closeModal();
+      setTimeout(() => {
+        claimAgencyProfile(agencyId);
+      }, 300);
+    }
+
+    function scrollToClaimForm() {
+      const claimForm = document.getElementById('claimForm');
+      if (allAgencies.length > 0) {
+        // Auto-select first unclaimed agency
+        const unclaimedAgency = allAgencies.find(a => !claimedAgencies[a.id] && !a.isEnhanced);
+        if (unclaimedAgency) {
+          claimAgencyProfile(unclaimedAgency.id);
+        } else {
+          claimForm.classList.remove('hidden');
+          claimForm.scrollIntoView({ behavior: 'smooth' });
+        }
+      } else {
+        claimForm.classList.remove('hidden');
+        claimForm.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+
+    function showAllCountries() {
+      // Show modal with all countries
+      alert('More countries available in the dropdown when submitting your website!');
+    }
+
+    function submitClaimForm() {
+      const form = document.getElementById('agencyClaimForm');
+      const agencyId = form.dataset.agencyId;
+      const formData = new FormData(form);
+      
+      const claimedData = {
+        name: formData.get('agencyName'),
+        logo: formData.get('logoUrl'),
+        description: formData.get('description'),
+        specialties: Array.from(formData.getAll('specialties')),
+        country: formData.get('country'),
+        agencySize: formData.get('agencySize'),
+        contactEmail: formData.get('contactEmail'),
+        claimedAt: new Date().toISOString()
+      };
+      
+      // Save to localStorage
+      claimedAgencies[agencyId] = claimedData;
+      localStorage.setItem('claimedAgencies', JSON.stringify(claimedAgencies));
+      
+      // Update agency as enhanced
+      const agencyIndex = allAgencies.findIndex(a => a.id.toString() === agencyId);
+      if (agencyIndex !== -1) {
+        allAgencies[agencyIndex].isEnhanced = true;
+        allAgencies[agencyIndex].company = claimedData.name;
+        allAgencies[agencyIndex].country = claimedData.country;
+        localStorage.setItem('agencies', JSON.stringify(allAgencies));
+      }
+      
+      // Hide form
+      document.getElementById('claimForm').classList.add('hidden');
+      
+      // Show success message
+      const modal = document.getElementById('scanModal');
+      modal.querySelector('.modal-content').innerHTML = `
+        <div class="modal-header">
+          <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full mb-4">
+            <span class="text-3xl">🎉</span>
+          </div>
+          <h2 class="text-3xl font-bold mb-2">Profile Claimed Successfully!</h2>
+          <p class="text-gray-400">Your agency is now verified and enhanced</p>
+        </div>
+        <div class="modal-body">
+          <div class="text-center mb-8">
+            <div class="text-5xl mb-4">🏢</div>
+            <h3 class="text-2xl font-bold mb-2">${claimedData.name}</h3>
+            <p class="text-gray-400">Your profile is now live in our directory!</p>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-4 mb-8">
+            <div class="bg-gray-800 rounded-lg p-4 text-center">
+              <div class="text-2xl mb-2">⭐</div>
+              <div class="font-bold">Verified Badge</div>
+              <div class="text-xs text-gray-400">Added to your profile</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4 text-center">
+              <div class="text-2xl mb-2">📈</div>
+              <div class="font-bold">Higher Ranking</div>
+              <div class="text-xs text-gray-400">Better visibility</div>
+            </div>
+          </div>
+          
+          <div class="mb-6 p-4 bg-gradient-to-r from-purple-900 to-blue-900 rounded-lg">
+            <div class="flex items-center gap-3">
+              <div class="text-2xl">📧</div>
+              <div>
+                <div class="font-bold">Leads will be sent to:</div>
+                <div class="text-sm text-gray-300">${claimedData.contactEmail}</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="flex gap-4 mt-8 pt-6 border-t border-gray-700">
+            <button onclick="closeModal()" class="flex-1 bg-gray-700 hover:bg-gray-600 py-3 rounded-lg font-semibold">
+              Close
+            </button>
+            <button onclick="closeModal(); scrollToSection('leaderboard')" class="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 py-3 rounded-lg font-semibold">
+              View Your Listing
+            </button>
+          </div>
+        </div>
+      `;
+      
+      modal.classList.remove('hidden');
+      
+      // Refresh leaderboard
+      loadLeaderboard();
+    }
+
+    function viewAgencyProfile(agencyId) {
+      const agency = allAgencies.find(a => a.id === agencyId);
+      const claimedInfo = claimedAgencies[agencyId];
+      
+      const modal = document.getElementById('scanModal');
+      modal.querySelector('.modal-content').innerHTML = `
+        <div class="modal-header">
+          <div class="flex items-center justify-center gap-4 mb-4">
+            ${claimedInfo?.logo ? `
+              <img src="${claimedInfo.logo}" alt="${claimedInfo.name}" class="h-24 w-24 rounded-2xl object-cover border-2 border-purple-500">
+            ` : `
+              <div class="h-24 w-24 bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl flex items-center justify-center text-4xl">
+                🏢
+              </div>
+            `}
+          </div>
+          <h2 class="text-3xl font-bold mb-2">${claimedInfo?.name || agency.company}</h2>
+          <div class="flex items-center justify-center gap-4 text-gray-400">
+            <span>${getFlagEmoji(agency.country)} ${getCountryName(agency.country)}</span>
+            <span>•</span>
+            <span>Score: <span class="font-bold ${getScoreColor(agency.score)}">${agency.score}/100</span></span>
+            <span>•</span>
+            <span class="enhanced-badge">⭐ Enhanced Profile</span>
+          </div>
+        </div>
+        <div class="modal-body">
+          <!-- DESCRIPTION -->
+          ${claimedInfo?.description ? `
+            <div class="mb-6">
+              <div class="text-sm text-gray-400 mb-2">About</div>
+              <p class="text-gray-300">${claimedInfo.description}</p>
+            </div>
+          ` : ''}
+          
+          <!-- SCORE -->
+          <div class="bg-gray-800 rounded-xl p-6 mb-6">
+            <div class="flex justify-between items-center mb-4">
+              <div>
+                <div class="text-2xl font-bold">SEO Score</div>
+                <div class="text-sm text-gray-400">Ranked #${agency.rank} globally</div>
+              </div>
+              <div class="text-4xl font-bold ${getScoreColor(agency.score)}">${agency.score}</div>
+            </div>
+            <div class="w-full bg-gray-700 rounded-full h-3">
+              <div class="bg-gradient-to-r from-green-500 to-yellow-500 h-3 rounded-full" style="width: ${agency.score}%"></div>
+            </div>
+          </div>
+          
+          <!-- AGENCY DETAILS -->
+          <div class="grid md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-gray-800 rounded-lg p-5">
+              <div class="text-sm text-gray-400 mb-3">Specializations</div>
+              <div class="flex flex-wrap gap-2">
+                ${claimedInfo?.specialties?.map(spec => `
+                  <span class="px-3 py-1 bg-purple-900 text-purple-200 rounded-full text-sm">
+                    ${getSpecialtyName(spec)}
+                  </span>
+                `).join('') || '<span class="text-gray-500">Not specified</span>'}
+              </div>
+            </div>
+            
+            <div class="bg-gray-800 rounded-lg p-5">
+              <div class="text-sm text-gray-400 mb-3">Agency Size</div>
+              <div class="text-xl font-bold">${getAgencySizeLabel(claimedInfo?.agencySize)}</div>
+            </div>
+            
+            <div class="bg-gray-800 rounded-lg p-5">
+              <div class="text-sm text-gray-400 mb-3">Website</div>
+              <a href="${agency.url}" target="_blank" class="text-blue-400 hover:text-blue-300 font-semibold text-lg">${agency.url.replace('https://', '')}</a>
+            </div>
+            
+            <div class="bg-gray-800 rounded-lg p-5">
+              <div class="text-sm text-gray-400 mb-3">Contact for Leads</div>
+              <div class="text-lg font-semibold">${claimedInfo?.contactEmail || 'Contact via website'}</div>
+            </div>
+          </div>
+          
+          <!-- ACTION BUTTONS -->
+          <div class="flex gap-4 mt-8 pt-6 border-t border-gray-700">
+            <button onclick="closeModal()" class="flex-1 bg-gray-700 hover:bg-gray-600 py-3 rounded-lg font-semibold">
+              Close
+            </button>
+            <a href="${agency.url}" target="_blank" class="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 py-3 rounded-lg font-semibold text-center">
+              Visit Website
+            </a>
+            ${claimedInfo?.contactEmail ? `
+              <a href="mailto:${claimedInfo.contactEmail}?subject=SEO%20Inquiry%20from%20ContentScale%20Leaderboard" class="flex-1 bg-green-600 hover:bg-green-700 py-3 rounded-lg font-semibold text-center">
+                Contact Agency
+              </a>
+            ` : ''}
+          </div>
+        </div>
+      `;
+      
+      modal.classList.remove('hidden');
+    }
+
+    function updateStats() {
+      const total = allAgencies.length;
+      const avgScore = total > 0 ? Math.round(allAgencies.reduce((sum, a) => sum + a.score, 0) / total) : 0;
+      const countries = new Set(allAgencies.map(a => a.country)).size;
+      const enhancedProfiles = allAgencies.filter(a => a.isEnhanced).length;
+      
+      document.getElementById('totalAgencies').textContent = total;
+      document.getElementById('avgScore').textContent = avgScore;
+      document.getElementById('countriesCount').textContent = countries;
+      document.getElementById('enhancedProfiles').textContent = enhancedProfiles;
+    }
+
+    function refreshLeaderboard() {
+      loadLeaderboard();
+      
+      // Show refresh animation
+      const container = document.getElementById('leaderboard-container');
+      container.innerHTML = `
+        <div class="text-center py-12">
+          <div class="inline-block animate-spin text-5xl mb-4">🔄</div>
+          <div class="text-gray-400">Refreshing leaderboard...</div>
+        </div>
+      `;
+      
+      setTimeout(() => {
+        renderLeaderboard();
+      }, 800);
+    }
+
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    function getFlagEmoji(countryCode) {
+      const flagEmojis = {
+        'US': '🇺🇸', 'CA': '🇨🇦', 'UK': '🇬🇧', 'AU': '🇦🇺', 'NZ': '🇳🇿',
+        'NL': '🇳🇱', 'BE': '🇧🇪', 'DE': '🇩🇪', 'FR': '🇫🇷', 'ES': '🇪🇸',
+        'IT': '🇮🇹', 'SE': '🇸🇪', 'DK': '🇩🇰', 'NO': '🇳🇴', 'FI': '🇫🇮',
+        'CH': '🇨🇭', 'AT': '🇦🇹', 'IE': '🇮🇪', 'SG': '🇸🇬', 'JP': '🇯🇵',
+        'KR': '🇰🇷', 'AE': '🇦🇪'
+      };
+      return flagEmojis[countryCode] || '🌐';
+    }
+
+    function getCountryName(countryCode) {
+      const countryNames = {
+        'US': 'United States', 'CA': 'Canada', 'UK': 'United Kingdom',
+        'AU': 'Australia', 'NZ': 'New Zealand', 'NL': 'Netherlands',
+        'BE': 'Belgium', 'DE': 'Germany', 'FR': 'France', 'ES': 'Spain',
+        'IT': 'Italy', 'SE': 'Sweden', 'DK': 'Denmark', 'NO': 'Norway',
+        'FI': 'Finland', 'CH': 'Switzerland', 'AT': 'Austria',
+        'IE': 'Ireland', 'SG': 'Singapore', 'JP': 'Japan',
+        'KR': 'South Korea', 'AE': 'UAE'
+      };
+      return countryNames[countryCode] || countryCode;
+    }
+
+    function getTypeLabel(type) {
+      const labels = {
+        'agency': 'SEO Agency',
+        'ecommerce': 'E-commerce',
+        'saas': 'SaaS/Tech',
+        'other': 'Other',
+        'enhanced': 'Enhanced',
+        'new': 'New'
+      };
+      return labels[type] || type;
+    }
+
+    function getTypeColor(type) {
+      const colors = {
+        'agency': 'bg-blue-900 text-blue-200',
+        'ecommerce': 'bg-green-900 text-green-200',
+        'saas': 'bg-purple-900 text-purple-200',
+        'other': 'bg-gray-800 text-gray-200',
+        'enhanced': 'bg-yellow-900 text-yellow-200',
+        'new': 'bg-red-900 text-red-200'
+      };
+      return colors[type] || 'bg-gray-800 text-gray-200';
+    }
+
+    function getSpecialtyName(spec) {
+      const names = {
+        'technical': 'Technical SEO',
+        'content': 'Content SEO',
+        'ecommerce': 'E-commerce SEO',
+        'local': 'Local SEO',
+        'enterprise': 'Enterprise SEO',
+        'international': 'International SEO'
+      };
+      return names[spec] || spec;
+    }
+
+    function getAgencySizeLabel(size) {
+      const labels = {
+        'freelancer': 'Freelancer',
+        'boutique': 'Boutique (2-10)',
+        'mid-market': 'Mid-Market (11-50)',
+        'enterprise': 'Enterprise (50+)'
+      };
+      return labels[size] || 'Not specified';
+    }
+
+    function getScoreColor(score) {
+      if (score >= 90) return 'text-green-400';
+      if (score >= 80) return 'text-green-300';
+      if (score >= 70) return 'text-yellow-400';
+      if (score >= 60) return 'text-orange-400';
+      return 'text-red-400';
+    }
+  </script>
+
 </body>
 </html>
