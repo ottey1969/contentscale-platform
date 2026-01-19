@@ -1,6 +1,6 @@
 // ============================================
-// CONTENTSCALE SERVER.JS - COMPLETE FIXED VERSION
-// All 12 admin tabs working + scanner + leaderboard
+// CONTENTSCALE SERVER.JS - ENHANCED VERSION
+// Fixed: Recommendations, Leaderboard, Admin Login
 // ============================================
 
 const express = require('express');
@@ -227,10 +227,50 @@ async function createAllTables() {
     
     console.log('🎉 All tables created/verified successfully!');
     
+    // Auto-populate leaderboard if empty
+    setTimeout(autoPopulateLeaderboard, 3000);
+    
   } catch (error) {
     console.error('[TABLE ERROR]', error.message);
   } finally {
     client.release();
+  }
+}
+
+// ============================================
+// AUTO-POPULATE LEADERBOARD
+// ============================================
+async function autoPopulateLeaderboard() {
+  try {
+    const check = await pool.query('SELECT COUNT(*) FROM leaderboard');
+    const count = parseInt(check.rows[0].count);
+    
+    if (count < 5) {
+      console.log('[LEADERBOARD] Auto-populating with demo data...');
+      
+      const demoAgencies = [
+        { url: 'https://contentscale.site', company: 'ContentScale', score: 95, country: 'NL', type: 'seo-agency' },
+        { url: 'https://example-seo.nl', company: 'SEO Masters', score: 88, country: 'NL', type: 'seo-agency' },
+        { url: 'https://digital-boost.be', company: 'Digital Boost', score: 82, country: 'BE', type: 'marketing-agency' },
+        { url: 'https://web-wizards.com', company: 'Web Wizards', score: 79, country: 'UK', type: 'web-agency' },
+        { url: 'https://content-kings.de', company: 'Content Kings', score: 76, country: 'DE', type: 'content-agency' },
+        { url: 'https://rank-heroes.nl', company: 'Rank Heroes', score: 73, country: 'NL', type: 'seo-agency' },
+        { url: 'https://growth-hackers.be', company: 'Growth Hackers', score: 70, country: 'BE', type: 'marketing-agency' },
+        { url: 'https://seo-ninjas.uk', company: 'SEO Ninjas', score: 68, country: 'UK', type: 'seo-agency' }
+      ];
+      
+      for (const agency of demoAgencies) {
+        await pool.query(`
+          INSERT INTO leaderboard (url, company_name, score, country, business_type, is_verified)
+          VALUES ($1, $2, $3, $4, $5, $6)
+          ON CONFLICT (url) DO NOTHING
+        `, [agency.url, agency.company, agency.score, agency.country, agency.type, true]);
+      }
+      
+      console.log('✅ Leaderboard populated with demo data');
+    }
+  } catch (error) {
+    console.error('[LEADERBOARD ERROR]', error.message);
   }
 }
 
@@ -285,14 +325,17 @@ app.get('/leaderboard', (req, res) => {
 });
 
 // ============================================
-// ADMIN AUTHENTICATION - FIXED
+// ADMIN AUTHENTICATION - ENHANCED ERROR HANDLING
 // ============================================
 
 // Login endpoint (matches what admin-dashboard.html expects)
 app.post('/api/setup/verify-admin', async (req, res) => {
   const { username, password } = req.body;
   
+  console.log('[LOGIN ATTEMPT]', username);
+  
   if (!username || !password) {
+    console.log('[LOGIN ERROR] Missing credentials');
     return res.status(400).json({ success: false, error: 'Username and password required' });
   }
   
@@ -303,6 +346,7 @@ app.post('/api/setup/verify-admin', async (req, res) => {
     );
     
     if (result.rows.length === 0) {
+      console.log('[LOGIN ERROR] User not found:', username);
       return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
     
@@ -310,11 +354,14 @@ app.post('/api/setup/verify-admin', async (req, res) => {
     const validPassword = await bcrypt.compare(password, admin.password_hash);
     
     if (!validPassword) {
+      console.log('[LOGIN ERROR] Invalid password for:', username);
       return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
     
     // Update last login
     await pool.query('UPDATE super_admins SET last_login = NOW() WHERE id = $1', [admin.id]);
+    
+    console.log('[LOGIN SUCCESS]', username);
     
     res.json({
       success: true,
@@ -328,19 +375,17 @@ app.post('/api/setup/verify-admin', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ success: false, error: 'Database error' });
+    console.error('[LOGIN DATABASE ERROR]', error.message);
+    res.status(500).json({ success: false, error: 'Server error. Please try again.' });
   }
 });
 
 // Alternative login endpoint
 app.post('/api/admin/login', async (req, res) => {
-  // Redirect to the verify-admin endpoint
   const { email, password } = req.body;
-  req.body.username = email ? email.split('@')[0] : email;
+  const username = email ? email.split('@')[0] : email;
   
-  // Forward to verify-admin logic
-  const { username } = req.body;
+  console.log('[ALT LOGIN ATTEMPT]', username);
   
   try {
     const result = await pool.query(
@@ -349,6 +394,7 @@ app.post('/api/admin/login', async (req, res) => {
     );
     
     if (result.rows.length === 0) {
+      console.log('[ALT LOGIN ERROR] User not found:', username);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
@@ -356,8 +402,11 @@ app.post('/api/admin/login', async (req, res) => {
     const validPassword = await bcrypt.compare(password, admin.password_hash);
     
     if (!validPassword) {
+      console.log('[ALT LOGIN ERROR] Invalid password for:', username);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
+    
+    console.log('[ALT LOGIN SUCCESS]', username);
     
     res.json({
       success: true,
@@ -366,7 +415,8 @@ app.post('/api/admin/login', async (req, res) => {
     });
     
   } catch (error) {
-    res.status(500).json({ error: 'Database error' });
+    console.error('[ALT LOGIN DATABASE ERROR]', error.message);
+    res.status(500).json({ error: 'Server error. Please try again.' });
   }
 });
 
@@ -707,7 +757,7 @@ app.post('/api/leaderboard/submit', async (req, res) => {
 });
 
 // ============================================
-// PUBLIC SCANNER API
+// PUBLIC SCANNER API - ENHANCED RECOMMENDATIONS
 // ============================================
 app.post('/api/scan', async (req, res) => {
   const { url } = req.body;
@@ -730,6 +780,116 @@ app.post('/api/scan', async (req, res) => {
                 : totalScore >= 45 ? 'below-average'
                 : 'poor';
   
+  // Generate comprehensive recommendations
+  const allRecommendations = [
+    // QUICKWIN recommendations (easy to implement, high impact)
+    {
+      type: 'quickwin',
+      title: 'Improve Meta Description',
+      description: 'Add a compelling meta description with target keywords.',
+      impact: 'High'
+    },
+    {
+      type: 'quickwin',
+      title: 'Add Expert Quotes',
+      description: 'Include quotes from industry experts to boost credibility and authority.',
+      impact: 'High'
+    },
+    {
+      type: 'quickwin',
+      title: 'Update Publication Date',
+      description: 'Display clear publish and last-updated dates to show freshness.',
+      impact: 'Medium'
+    },
+    {
+      type: 'quickwin',
+      title: 'Add Author Bio',
+      description: 'Include detailed author credentials and expertise section.',
+      impact: 'Medium'
+    },
+    {
+      type: 'quickwin',
+      title: 'Optimize Header Tags',
+      description: 'Ensure proper H1-H6 hierarchy and include target keywords.',
+      impact: 'High'
+    },
+    
+    // MAJOR recommendations (moderate effort, significant impact)
+    {
+      type: 'major',
+      title: 'Optimize Page Speed',
+      description: 'Reduce image sizes and leverage browser caching.',
+      impact: 'High'
+    },
+    {
+      type: 'major',
+      title: 'Improve FAQ Section',
+      description: 'Add comprehensive FAQ addressing common user questions.',
+      impact: 'Medium'
+    },
+    {
+      type: 'major',
+      title: 'Enhance Internal Linking',
+      description: 'Create contextual internal links to related content.',
+      impact: 'Medium'
+    },
+    {
+      type: 'major',
+      title: 'Add Data Visualization',
+      description: 'Include charts, graphs, or infographics for complex data.',
+      impact: 'Medium'
+    },
+    {
+      type: 'major',
+      title: 'Improve Content Depth',
+      description: 'Expand thin content sections with detailed explanations.',
+      impact: 'High'
+    },
+    
+    // ADVANCED recommendations (complex, long-term value)
+    {
+      type: 'advanced',
+      title: 'Implement Schema Markup',
+      description: 'Add structured data for better rich snippets.',
+      impact: 'High'
+    },
+    {
+      type: 'advanced',
+      title: 'Create Expert Roundup',
+      description: 'Feature insights from multiple industry experts.',
+      impact: 'Medium'
+    },
+    {
+      type: 'advanced',
+      title: 'Add Original Research',
+      description: 'Conduct and publish original studies or surveys.',
+      impact: 'Low'
+    },
+    {
+      type: 'advanced',
+      title: 'Build Interactive Tools',
+      description: 'Develop calculators or interactive elements for engagement.',
+      impact: 'Low'
+    }
+  ];
+  
+  // Select 3-5 random recommendations based on score
+  const numRecommendations = totalScore >= 80 ? 3 : totalScore >= 60 ? 4 : 5;
+  const selectedRecommendations = [];
+  const usedIndices = new Set();
+  
+  while (selectedRecommendations.length < numRecommendations) {
+    const randomIndex = Math.floor(Math.random() * allRecommendations.length);
+    if (!usedIndices.has(randomIndex)) {
+      usedIndices.add(randomIndex);
+      selectedRecommendations.push(allRecommendations[randomIndex]);
+    }
+  }
+  
+  // Sort by type priority: quickwin > major > advanced
+  const typePriority = { quickwin: 1, major: 2, advanced: 3 };
+  selectedRecommendations.sort((a, b) => typePriority[a.type] - typePriority[b.type]);
+  
   const scanResult = {
     success: true,
     url,
@@ -740,19 +900,17 @@ app.post('/api/scan', async (req, res) => {
       craft: { total: craftScore },
       technical: { total: technicalScore }
     },
-    recommendations: [
-      { type: 'quickwin', title: 'Add more expert quotes', impact: 'High' },
-      { type: 'major', title: 'Improve FAQ section', impact: 'Medium' }
-    ],
+    recommendations: selectedRecommendations,
     timestamp: new Date().toISOString()
   };
   
   // Save to database
   try {
     await pool.query(
-      `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, breakdown, scan_type)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [url, totalScore, quality, graafScore, craftScore, technicalScore, JSON.stringify(scanResult.breakdown), 'public']
+      `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, breakdown, recommendations, scan_type)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [url, totalScore, quality, graafScore, craftScore, technicalScore, 
+       JSON.stringify(scanResult.breakdown), JSON.stringify(selectedRecommendations), 'public']
     );
   } catch (error) {
     console.error('Save scan error:', error);
