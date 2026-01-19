@@ -1282,8 +1282,21 @@
       updateStats();
     }
 
-    function renderTableView(agencies) {
-      return `
+function renderTableView(agencies) {
+  // ✅ FIX: Add safe defaults
+  const safeAgencies = (agencies || []).map(agency => ({
+    id: agency.id || 0,
+    rank: agency.rank || 0,
+    name: agency.name || agency.company_name || agency.company || 'Unknown Agency',
+    url: agency.url || '#',
+    score: agency.score || 0,
+    country: agency.country || 'US',
+    type: agency.type || agency.business_type || 'other',
+    isEnhanced: agency.isEnhanced || agency.is_enhanced || false,
+    lastScan: agency.lastScan || agency.last_scan || 'Recently'
+  }));
+  
+  return `
         <div class="overflow-x-auto rounded-lg border border-gray-700">
           <table class="min-w-full divide-y divide-gray-700">
             <thead class="bg-gray-800">
