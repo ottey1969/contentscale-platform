@@ -1233,11 +1233,16 @@ app.post('/api/leaderboard/submit', async (req, res) => {
     
     const leaderboardEntryId = leaderboardResult.rows[0].id;
     
-    await pool.query(`
-      INSERT INTO submission_logs 
-      (url, company_name, ip_address, country, score, submitted_via, status, leaderboard_entry_id)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-    `, [url, company_name, ip, country, score, 'api', 'approved', leaderboardEntryId]);
+    // Try to log submission (optional - won't crash if table doesn't exist)
+    try {
+      await pool.query(`
+        INSERT INTO submission_logs 
+        (url, company_name, ip_address, country, score, submitted_via, status, leaderboard_entry_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `, [url, company_name, ip, country, score, 'api', 'approved', leaderboardEntryId]);
+    } catch (logError) {
+      console.log('Note: submission_logs table not found, skipping log');
+    }
     
     const today_date = new Date().toISOString().split('T')[0];
     await pool.query(`
@@ -1329,14 +1334,174 @@ app.post('/api/scan', async (req, res) => {
     const totalScore = graafScore + craftScore + technicalScore;
     const quality = totalScore >= 90 ? 'excellent' : totalScore >= 75 ? 'good' : totalScore >= 60 ? 'average' : totalScore >= 45 ? 'below-average' : 'poor';
     
+    // Extended recommendations with actionable details
     const recommendations = [];
-    if (!metaDesc) recommendations.push({type: 'quickwin', title: 'Add Meta Description', description: 'Missing meta description. Add 150-160 characters describing page content.', impact: 'High'});
-    if (h1s !== 1) recommendations.push({type: 'quickwin', title: 'Fix H1 Tags', description: `Found ${h1s} H1 tags. Each page should have exactly ONE H1.`, impact: 'High'});
-    if (!hasQuotes) recommendations.push({type: 'major', title: 'Add Expert Quotes', description: 'Include 2-3 expert quotes to boost credibility', impact: 'High'});
-    if (!hasStats) recommendations.push({type: 'major', title: 'Add Statistics', description: 'Include research data and verified statistics', impact: 'High'});
-    if (wordCount < 500) recommendations.push({type: 'major', title: 'Expand Content', description: `Current: ${wordCount} words. Target: 1000+`, impact: 'Medium'});
-    if (!hasViewport) recommendations.push({type: 'major', title: 'Add Mobile Viewport', description: 'Add meta viewport tag for mobile responsiveness', impact: 'High'});
-    if (!hasSchema) recommendations.push({type: 'major', title: 'Add Schema Markup', description: 'Implement JSON-LD schema for rich snippets', impact: 'Medium'});
+    
+    // GRAAF Framework Recommendations
+    if (!hasQuotes) {
+      recommendations.push({
+        type: 'major',
+        category: 'GRAAF - Credibility',
+        title: 'Add Expert Quotes',
+        description: 'Include 2-3 expert quotes to boost credibility',
+        impact: 'High',
+        points: '+8 points',
+        howToFix: '1. Interview industry experts\n2. Add quotes with full attribution (name, title, company)\n3. Use phrases like "According to [Name], [Title] at [Company]"',
+        example: '"According to John Smith, SEO Director at TechCorp, content quality is the #1 ranking factor in 2025."'
+      });
+    }
+    
+    if (!hasStats) {
+      recommendations.push({
+        type: 'major',
+        category: 'GRAAF - Accuracy',
+        title: 'Add Statistics & Data',
+        description: 'Include research data and verified statistics',
+        impact: 'High',
+        points: '+8 points',
+        howToFix: '1. Find recent research (2024-2025)\n2. Add specific numbers and percentages\n3. Cite sources for all statistics',
+        example: '"According to a 2025 study by HubSpot, 67% of marketers say content quality improved rankings."'
+      });
+    }
+    
+    if (!hasFreshDates) {
+      recommendations.push({
+        type: 'major',
+        category: 'GRAAF - Freshness',
+        title: 'Add Freshness Signals',
+        description: 'Include 2025 dates and current month references',
+        impact: 'Medium',
+        points: '+6 points',
+        howToFix: '1. Add "Updated January 2025" badge\n2. Reference current events\n3. Use "2025" in H2/H3 headings',
+        example: 'Title: "SEO Best Practices for 2025" instead of "SEO Best Practices"'
+      });
+    }
+    
+    if (!hasAuthor) {
+      recommendations.push({
+        type: 'major',
+        category: 'GRAAF - Credibility',
+        title: 'Add Author Bio',
+        description: 'Display author credentials and expertise',
+        impact: 'High',
+        points: '+8 points',
+        howToFix: '1. Add author name and photo\n2. Include credentials and experience\n3. Add social proof (LinkedIn, certifications)',
+        example: 'Written by Jane Doe, SEO Specialist with 10+ years experience, Google Analytics Certified'
+      });
+    }
+    
+    if (wordCount < 500) {
+      recommendations.push({
+        type: 'major',
+        category: 'GRAAF - Actionability',
+        title: 'Expand Content Length',
+        description: `Current: ${wordCount} words. Target: 1000+ words`,
+        impact: 'Medium',
+        points: '+10 points',
+        howToFix: '1. Add step-by-step guides\n2. Include real examples\n3. Add case studies\n4. Create FAQ section',
+        example: 'Add 5-7 detailed how-to steps with screenshots'
+      });
+    }
+    
+    // CRAFT Framework Recommendations
+    if (h1s !== 1) {
+      recommendations.push({
+        type: 'quickwin',
+        category: 'CRAFT - Format',
+        title: 'Fix H1 Tags',
+        description: `Found ${h1s} H1 tags. Each page should have exactly ONE H1`,
+        impact: 'High',
+        points: h1s === 0 ? '+6 points' : '+4 points',
+        howToFix: h1s === 0 
+          ? '1. Add one <h1> tag at the top of your page\n2. Include your target keyword\n3. Make it 50-60 characters'
+          : '1. Keep only the main page title as H1\n2. Change other H1s to H2 or H3\n3. Maintain heading hierarchy',
+        example: '<h1>Ultimate Guide to SEO Content in 2025</h1>'
+      });
+    }
+    
+    if (h2h3s < 5) {
+      recommendations.push({
+        type: 'quickwin',
+        category: 'CRAFT - Format',
+        title: 'Add More Subheadings',
+        description: `Found ${h2h3s} H2/H3 tags. Add 5+ subheadings for better structure`,
+        impact: 'Medium',
+        points: '+5 points',
+        howToFix: '1. Break content into sections\n2. Use H2 for main sections\n3. Use H3 for sub-sections\n4. Include keywords in headings',
+        example: '<h2>What is SEO Content?</h2>\n<h3>Key Components of SEO Content</h3>'
+      });
+    }
+    
+    if (!hasLists) {
+      recommendations.push({
+        type: 'quickwin',
+        category: 'CRAFT - Format',
+        title: 'Add Lists for Scannability',
+        description: 'No lists found. Add bullet points or numbered lists',
+        impact: 'Medium',
+        points: '+4 points',
+        howToFix: '1. Convert long paragraphs to lists\n2. Use numbered lists for steps\n3. Use bullet points for features',
+        example: '<ul>\n  <li>Benefit 1: Improved rankings</li>\n  <li>Benefit 2: More traffic</li>\n</ul>'
+      });
+    }
+    
+    // Technical SEO Recommendations
+    if (!metaDesc) {
+      recommendations.push({
+        type: 'quickwin',
+        category: 'Technical SEO',
+        title: 'Add Meta Description',
+        description: 'Missing meta description. Critical for click-through rate',
+        impact: 'High',
+        points: '+2 points',
+        howToFix: '1. Write 150-160 characters\n2. Include target keyword\n3. Add compelling call-to-action',
+        example: '<meta name="description" content="Learn SEO content creation with our proven 2025 framework. Boost rankings by 67% in 90 days. Start today!">'
+      });
+    }
+    
+    if (!hasViewport) {
+      recommendations.push({
+        type: 'quickwin',
+        category: 'Technical SEO',
+        title: 'Add Mobile Viewport',
+        description: 'Missing viewport meta tag for mobile responsiveness',
+        impact: 'High',
+        points: '+3 points',
+        howToFix: '1. Add viewport meta tag to <head>\n2. Test on mobile devices\n3. Ensure responsive design',
+        example: '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
+      });
+    }
+    
+    if (!hasSchema) {
+      recommendations.push({
+        type: 'major',
+        category: 'Technical SEO',
+        title: 'Add Schema Markup',
+        description: 'Implement JSON-LD schema for rich snippets',
+        impact: 'Medium',
+        points: '+3 points',
+        howToFix: '1. Add Article schema\n2. Add FAQPage schema if you have FAQs\n3. Add HowTo schema for guides\n4. Test with Google Rich Results Test',
+        example: '<script type="application/ld+json">\n{\n  "@context": "https://schema.org",\n  "@type": "Article",\n  "headline": "Your Title"\n}\n</script>'
+      });
+    }
+    
+    if (allImages > 0 && imagesWithAlt < allImages) {
+      const missingAlt = allImages - imagesWithAlt;
+      recommendations.push({
+        type: 'quickwin',
+        category: 'Technical SEO',
+        title: 'Add Alt Text to Images',
+        description: `${missingAlt} of ${allImages} images missing alt text`,
+        impact: 'Medium',
+        points: '+2 points',
+        howToFix: '1. Add descriptive alt text to every image\n2. Include keywords naturally\n3. Describe image content for accessibility',
+        example: '<img src="chart.jpg" alt="SEO ranking factors chart showing top 10 metrics for 2025">'
+      });
+    }
+    
+    // Priority order
+    const quickWins = recommendations.filter(r => r.type === 'quickwin');
+    const majorImprovements = recommendations.filter(r => r.type === 'major');
     
     const scanResult = {
       success: true,
@@ -1345,11 +1510,68 @@ app.post('/api/scan', async (req, res) => {
       quality,
       metrics: {graaf: graafScore, craft: craftScore, technical: technicalScore},
       breakdown: {
-        graaf: {total: graafScore, max: 50, percentage: Math.round((graafScore / 50) * 100)},
-        craft: {total: craftScore, max: 30, percentage: Math.round((craftScore / 30) * 100)},
-        technical: {total: technicalScore, max: 20, percentage: Math.round((technicalScore / 20) * 100)}
+        graaf: {
+          total: graafScore, 
+          max: 50, 
+          percentage: Math.round((graafScore / 50) * 100),
+          items: {
+            credibility: hasQuotes && hasAuthor ? 16 : hasQuotes ? 8 : hasAuthor ? 8 : 0,
+            relevance: Math.min(18, Math.floor(wordCount / 100)),
+            accuracy: hasStats ? 8 : 0,
+            freshness: hasFreshDates ? 8 : 2
+          }
+        },
+        craft: {
+          total: craftScore, 
+          max: 30, 
+          percentage: Math.round((craftScore / 30) * 100),
+          items: {
+            headingStructure: h1s === 1 ? 8 : h1s > 1 ? 4 : 2,
+            subheadings: Math.min(10, h2h3s * 2),
+            paragraphs: Math.min(8, Math.floor(paragraphs / 3)),
+            lists: hasLists ? 4 : 0
+          }
+        },
+        technical: {
+          total: technicalScore, 
+          max: 20, 
+          percentage: Math.round((technicalScore / 20) * 100),
+          items: {
+            metaDescription: metaDesc && metaDesc.length > 50 ? 4 : 2,
+            title: title && title.length > 30 ? 4 : 2,
+            imageAlt: allImages > 0 ? Math.min(4, Math.floor((imagesWithAlt / allImages) * 4)) : 0,
+            viewport: hasViewport ? 3 : 0,
+            schema: hasSchema ? 3 : 0
+          }
+        }
       },
-      recommendations,
+      recommendations: {
+        all: recommendations,
+        quickWins: quickWins,
+        majorImprovements: majorImprovements,
+        totalRecommendations: recommendations.length,
+        potentialScoreIncrease: recommendations.reduce((sum, r) => {
+          const points = parseInt(r.points.match(/\d+/)?.[0] || 0);
+          return sum + points;
+        }, 0)
+      },
+      details: {
+        wordCount,
+        h1Count: h1s,
+        h2h3Count: h2h3s,
+        paragraphCount: paragraphs,
+        imageCount: allImages,
+        imagesWithAlt: imagesWithAlt,
+        hasQuotes,
+        hasStats,
+        hasFreshDates,
+        hasAuthor,
+        hasLists,
+        hasViewport,
+        hasSchema,
+        metaDescription: metaDesc ? metaDesc.substring(0, 160) : null,
+        title: title
+      },
       timestamp: new Date().toISOString()
     };
     
@@ -1357,7 +1579,7 @@ app.post('/api/scan', async (req, res) => {
       await pool.query(
         `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, breakdown, recommendations, scan_type)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [url, totalScore, quality, graafScore, craftScore, technicalScore, JSON.stringify(scanResult.breakdown), JSON.stringify(recommendations), 'public']
+        [url, totalScore, quality, graafScore, craftScore, technicalScore, JSON.stringify(scanResult.breakdown), JSON.stringify(scanResult.recommendations), 'public']
       );
       console.log(`✅ Scan saved: ${url} (Score: ${totalScore})`);
     } catch (error) {
@@ -1368,6 +1590,105 @@ app.post('/api/scan', async (req, res) => {
     
   } catch (error) {
     console.error('Scan error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
+// EXPORT SCAN RESULTS
+// ============================================
+app.get('/api/export/scan/:format', async (req, res) => {
+  try {
+    const { format } = req.params;
+    const { url, score, recommendations } = req.query;
+    
+    if (!url || !score) {
+      return res.status(400).json({ error: 'URL and score required' });
+    }
+    
+    const parsedRecommendations = recommendations ? JSON.parse(decodeURIComponent(recommendations)) : [];
+    
+    if (format === 'csv') {
+      // Generate CSV
+      let csv = 'Category,Title,Description,Impact,Points,How to Fix\n';
+      
+      if (parsedRecommendations.all) {
+        parsedRecommendations.all.forEach(rec => {
+          const howToFix = (rec.howToFix || '').replace(/\n/g, ' ').replace(/"/g, '""');
+          csv += `"${rec.category}","${rec.title}","${rec.description}","${rec.impact}","${rec.points}","${howToFix}"\n`;
+        });
+      }
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="contentscale-scan-${Date.now()}.csv"`);
+      res.send(csv);
+      
+    } else if (format === 'json') {
+      // Generate JSON
+      const exportData = {
+        url: decodeURIComponent(url),
+        score: parseInt(score),
+        recommendations: parsedRecommendations,
+        exportedAt: new Date().toISOString(),
+        generatedBy: 'ContentScale SEO Scanner'
+      };
+      
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="contentscale-scan-${Date.now()}.json"`);
+      res.json(exportData);
+      
+    } else if (format === 'txt') {
+      // Generate TXT report
+      let txt = `ContentScale SEO Scan Report\n`;
+      txt += `${'='.repeat(50)}\n\n`;
+      txt += `URL: ${decodeURIComponent(url)}\n`;
+      txt += `Score: ${score}/100\n`;
+      txt += `Scanned: ${new Date().toISOString()}\n\n`;
+      
+      if (parsedRecommendations.quickWins && parsedRecommendations.quickWins.length > 0) {
+        txt += `QUICK WINS (${parsedRecommendations.quickWins.length})\n`;
+        txt += `${'-'.repeat(50)}\n`;
+        parsedRecommendations.quickWins.forEach((rec, i) => {
+          txt += `\n${i + 1}. ${rec.title} (${rec.points})\n`;
+          txt += `   Category: ${rec.category}\n`;
+          txt += `   Impact: ${rec.impact}\n`;
+          txt += `   ${rec.description}\n`;
+          if (rec.howToFix) {
+            txt += `   How to fix:\n`;
+            txt += `   ${rec.howToFix.replace(/\n/g, '\n   ')}\n`;
+          }
+        });
+        txt += `\n`;
+      }
+      
+      if (parsedRecommendations.majorImprovements && parsedRecommendations.majorImprovements.length > 0) {
+        txt += `\nMAJOR IMPROVEMENTS (${parsedRecommendations.majorImprovements.length})\n`;
+        txt += `${'-'.repeat(50)}\n`;
+        parsedRecommendations.majorImprovements.forEach((rec, i) => {
+          txt += `\n${i + 1}. ${rec.title} (${rec.points})\n`;
+          txt += `   Category: ${rec.category}\n`;
+          txt += `   Impact: ${rec.impact}\n`;
+          txt += `   ${rec.description}\n`;
+          if (rec.howToFix) {
+            txt += `   How to fix:\n`;
+            txt += `   ${rec.howToFix.replace(/\n/g, '\n   ')}\n`;
+          }
+        });
+      }
+      
+      txt += `\n${'='.repeat(50)}\n`;
+      txt += `Generated by ContentScale - https://contentscale.site\n`;
+      
+      res.setHeader('Content-Type', 'text/plain');
+      res.setHeader('Content-Disposition', `attachment; filename="contentscale-scan-${Date.now()}.txt"`);
+      res.send(txt);
+      
+    } else {
+      res.status(400).json({ error: 'Invalid format. Use: csv, json, or txt' });
+    }
+    
+  } catch (error) {
+    console.error('Export error:', error);
     res.status(500).json({ error: error.message });
   }
 });
