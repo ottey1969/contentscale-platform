@@ -641,13 +641,13 @@ app.get('/api/leaderboard', async (req, res) => {
       SELECT 
         id,
         ROW_NUMBER() OVER (ORDER BY score DESC) as rank,
-        COALESCE(company_name, 'Unknown') as name,
+        COALESCE(company_name, 'Unknown') as company_name,
         url,
         score,
         COALESCE(country, 'NL') as country,
         COALESCE(business_type, 'agency') as type,
-        COALESCE(is_verified, false) as "isEnhanced",
-        COALESCE(last_scan, created_at) as "lastScan"
+        COALESCE(is_claimed, false) as is_claimed,
+        COALESCE(created_at, NOW()) as created_at
       FROM leaderboard 
       WHERE score IS NOT NULL
       ORDER BY score DESC 
@@ -656,14 +656,14 @@ app.get('/api/leaderboard', async (req, res) => {
     
     res.json({
       success: true,
-      agencies: result.rows,
+      entries: result.rows,
       total: result.rows.length,
       averageScore: result.rows.length > 0 
         ? Math.round(result.rows.reduce((sum, r) => sum + (r.score || 0), 0) / result.rows.length)
         : 0
     });
   } catch (error) {
-    res.json({ success: false, agencies: [], total: 0, averageScore: 0 });
+    res.json({ success: true, entries: [], total: 0, averageScore: 0 });
   }
 });
 
