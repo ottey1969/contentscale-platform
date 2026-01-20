@@ -435,5 +435,102 @@
             loadLeaderboard('Netherlands');
         });
     </script>
+    <!-- Jouw bestaande HTML -->
+    </div>
+  </main>
+  
+  <!-- ⬇️ PLAK HIER (download leaderboard-auto-refresh-simple.html) -->
+  <script>
+  const REFRESH_INTERVAL = 5000;
+  let refreshTimer = null;
+  let lastData = [];
+
+  async function autoUpdateLeaderboard() {
+    try {
+      const response = await fetch('/api/leaderboard');
+      const data = await response.json();
+      
+      if (data.success && data.entries) {
+        const changed = JSON.stringify(lastData) !== JSON.stringify(data.entries);
+        
+        if (changed) {
+          console.log('🔄 Leaderboard updated!');
+          
+          const container = document.getElementById('leaderboard-entries') ||
+                           document.querySelector('.leaderboard-container') ||
+                           document.querySelector('tbody');
+          
+          if (container) {
+            container.style.opacity = '0.5';
+            
+            setTimeout(() => {
+              renderLeaderboard(data.entries, container);
+              container.style.opacity = '1';
+              showNotification('Leaderboard updated!');
+            }, 200);
+          }
+          
+          lastData = data.entries;
+        }
+      }
+    } catch (error) {
+      console.error('Auto-refresh error:', error);
+    }
+    
+    refreshTimer = setTimeout(autoUpdateLeaderboard, REFRESH_INTERVAL);
+  }
+
+  function renderLeaderboard(entries, container) {
+    container.innerHTML = entries.map((entry, i) => {
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+      
+      return `
+        <div class="leaderboard-row">
+          <div>${medal} #${entry.rank}</div>
+          <div>${entry.company_name || 'Unknown'}</div>
+          <div><a href="${entry.url}" target="_blank">${entry.url}</a></div>
+          <div>${entry.score}/100</div>
+          <div>${entry.country}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function showNotification(msg) {
+    let notif = document.getElementById('auto-notif');
+    
+    if (!notif) {
+      notif = document.createElement('div');
+      notif.id = 'auto-notif';
+      notif.style.cssText = 'position:fixed;top:20px;right:20px;background:#10b981;color:white;padding:12px 24px;border-radius:8px;z-index:9999;opacity:0;transition:opacity 0.3s';
+      document.body.appendChild(notif);
+    }
+    
+    notif.textContent = msg;
+    notif.style.opacity = '1';
+    setTimeout(() => notif.style.opacity = '0', 2000);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('✅ Auto-refresh started');
+    
+    fetch('/api/leaderboard')
+      .then(r => r.json())
+      .then(d => { if (d.success) lastData = d.entries; });
+    
+    refreshTimer = setTimeout(autoUpdateLeaderboard, REFRESH_INTERVAL);
+  });
+
+  window.addEventListener('beforeunload', () => {
+    if (refreshTimer) clearTimeout(refreshTimer);
+  });
+  </script>
+
+  <div id="live-indicator" style="position:fixed;bottom:20px;right:20px;background:rgba(0,0,0,0.7);color:#10b981;padding:8px 16px;border-radius:6px;font-size:12px;z-index:9998;">
+    🟢 Live
+  </div>
+  
+</body> <!-- ⬅️ Sluitende body tag -->
+</html>
 </body>
 </html>
