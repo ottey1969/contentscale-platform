@@ -3,26 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <!-- ✅ ADD THESE LINES -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <!-- ✅ END -->
   
-  <title>Super Admin Dashboard - ContentScale</title>
+  <title>Admin Dashboard - ContentScale</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    .tab-button {
-      transition: all 0.2s;
-    }
-    .tab-button.active {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-    }
-    .stat-card {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
+    .tab-button { transition: all 0.2s; }
+    .tab-button.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+    .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen">
@@ -33,30 +23,20 @@
       <div class="flex items-center justify-center mb-6">
         <span class="text-4xl">👑</span>
         <h1 class="text-2xl font-bold ml-3 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-          Super Admin Dashboard
+          Admin Panel
         </h1>
       </div>
-      <p class="text-gray-400 text-center mb-6">ContentScale Platform Control Center</p>
       
       <div id="login-error" class="hidden mb-4 p-3 bg-red-900 border border-red-700 rounded text-red-200 text-sm"></div>
       
       <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-300 mb-2">Username</label>
-          <input type="text" id="login-username" 
-            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
-            placeholder="Enter username">
-        </div>
+        <input type="text" id="login-username" placeholder="Username (ot)" 
+          class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white">
         
-        <div>
-          <label class="block text-sm font-medium text-gray-300 mb-2">Password</label>
-          <input type="password" id="login-password" 
-            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
-            placeholder="Enter password">
-        </div>
+        <input type="password" id="login-password" placeholder="Password" 
+          class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white">
         
-        <button onclick="login()" id="login-btn"
-          class="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg font-semibold transition-all transform hover:scale-105">
+        <button onclick="adminLogin()" class="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg font-semibold">
           Login
         </button>
       </div>
@@ -68,23 +48,8 @@
     <!-- Header -->
     <header class="bg-gray-800 border-b border-gray-700 sticky top-0 z-50">
       <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-        <div class="flex items-center space-x-3">
-          <span class="text-3xl">👑</span>
-          <div>
-            <h1 class="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              Super Admin Dashboard
-            </h1>
-            <p class="text-xs text-gray-400">ContentScale Platform Control Center</p>
-          </div>
-        </div>
-        <div class="flex items-center space-x-4">
-          <span class="text-sm text-gray-400">
-            Logged in as: <span class="text-blue-400 font-semibold" id="admin-username"></span>
-          </span>
-          <button onclick="logout()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold transition-all">
-            Logout
-          </button>
-        </div>
+        <h1 class="text-xl font-bold">👑 Admin Dashboard</h1>
+        <button onclick="adminLogout()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">Logout</button>
       </div>
     </header>
 
@@ -92,777 +57,241 @@
     <nav class="bg-gray-800 border-b border-gray-700 sticky top-[73px] z-40">
       <div class="max-w-7xl mx-auto px-4">
         <div class="flex space-x-1 overflow-x-auto">
-          <button onclick="switchTab('overview')" class="tab-button active px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap">
-            📊 Overview
-          </button>
-          <button onclick="switchTab('admins')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            👥 Admins
-          </button>
-          <button onclick="switchTab('agencies')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🏢 Agencies
-          </button>
-          <button onclick="switchTab('clients')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            👤 All Clients
-          </button>
-          <button onclick="switchTab('scans')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🔍 All Scans
-          </button>
-          <button onclick="switchTab('share-links')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🔗 Share Links
-          </button>
-          <button onclick="switchTab('leaderboard')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🏆 Leaderboard
-          </button>
-          <button onclick="switchTab('lead-scanner')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🎯 Lead Scanner
-          </button>
-          <button onclick="switchTab('contentscore')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            📊 ContentScore
-          </button>
-          <button onclick="switchTab('code-generators')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🎨 Code Generators
-          </button>
-          <button onclick="switchTab('ltd-codes')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            💰 LTD Codes
-          </button>
-          <button onclick="switchTab('settings')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            ⚙️ Settings
-          </button>
-          <button onclick="switchTab('handleiding')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            📚 Handleiding
-          </button>
+          <button onclick="switchAdminTab('overview')" class="tab-button active px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap">📊 Overview</button>
+          <button onclick="switchAdminTab('admins')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">👥 Admins</button>
+          <button onclick="switchAdminTab('agencies')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">🏢 Agencies</button>
+          <button onclick="switchAdminTab('clients')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">👤 Clients</button>
+          <button onclick="switchAdminTab('scans')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">🔍 Scans</button>
+          <button onclick="switchAdminTab('share-links')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">🔗 Share Links</button>
+          <button onclick="switchAdminTab('leaderboard')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">🏆 Leaderboard</button>
+          <button onclick="switchAdminTab('lead-scanner')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">🎯 Lead Scanner</button>
+          <button onclick="switchAdminTab('claims')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">✅ Approve Claims</button>
         </div>
       </div>
     </nav>
 
-    <!-- Tab Content -->
+    <!-- Content -->
     <main class="max-w-7xl mx-auto px-4 py-8">
       
-      <!-- Overview Tab -->
+      <!-- OVERVIEW TAB -->
       <div id="tab-overview" class="tab-content">
         <h2 class="text-2xl font-bold mb-6">Platform Overview</h2>
         
-        <!-- Stats Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div class="stat-card p-6 rounded-lg shadow-lg text-white">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm opacity-90">Total Agencies</p>
-                <p class="text-3xl font-bold mt-2" id="stat-total-agencies">-</p>
-              </div>
-              <span class="text-5xl opacity-50">🏢</span>
-            </div>
+            <p class="text-sm opacity-90">Total Agencies</p>
+            <p class="text-3xl font-bold mt-2" id="stat-agencies">-</p>
           </div>
-          
           <div class="stat-card p-6 rounded-lg shadow-lg text-white">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm opacity-90">Total Clients</p>
-                <p class="text-3xl font-bold mt-2" id="stat-total-clients">-</p>
-              </div>
-              <span class="text-5xl opacity-50">👥</span>
-            </div>
+            <p class="text-sm opacity-90">Total Clients</p>
+            <p class="text-3xl font-bold mt-2" id="stat-clients">-</p>
           </div>
-          
           <div class="stat-card p-6 rounded-lg shadow-lg text-white">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm opacity-90">Total Scans</p>
-                <p class="text-3xl font-bold mt-2" id="stat-total-scans">-</p>
-              </div>
-              <span class="text-5xl opacity-50">🔍</span>
-            </div>
+            <p class="text-sm opacity-90">Total Scans</p>
+            <p class="text-3xl font-bold mt-2" id="stat-scans">-</p>
           </div>
-          
           <div class="stat-card p-6 rounded-lg shadow-lg text-white">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm opacity-90">Active Helpers</p>
-                <p class="text-3xl font-bold mt-2" id="stat-active-helpers">-</p>
-              </div>
-              <span class="text-5xl opacity-50">🤝</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="bg-gray-800 rounded-lg p-6 shadow-lg mb-8">
-          <h3 class="text-xl font-bold mb-4">Quick Actions</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <button onclick="switchTab('agencies')" class="p-4 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-all">
-              ➕ Add Agency
-            </button>
-            <button onclick="switchTab('admins')" class="p-4 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all">
-              👤 Add Helper
-            </button>
-            <button onclick="switchTab('share-links')" class="p-4 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all">
-              🔗 Create Share Link
-            </button>
-            <button onclick="switchTab('leaderboard')" class="p-4 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold transition-all">
-              🎯 Scan Leads
-            </button>
-          </div>
-        </div>
-
-        <!-- Platform Health -->
-        <div class="bg-gray-800 rounded-lg p-6 shadow-lg">
-          <h3 class="text-xl font-bold mb-4">Platform Health</h3>
-          <div class="space-y-3">
-            <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
-              <span>Database Connection</span>
-              <span class="text-green-400 font-semibold">✅ Connected</span>
-            </div>
-            <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
-              <span>API Status</span>
-              <span class="text-green-400 font-semibold">✅ Operational</span>
-            </div>
-            <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
-              <span>Auto-Scan Service</span>
-              <span class="text-yellow-400 font-semibold">⏸️ Paused</span>
-            </div>
-            <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
-              <span>Last Backup</span>
-              <span class="text-gray-400">2 hours ago</span>
-            </div>
+            <p class="text-sm opacity-90">Leaderboard Entries</p>
+            <p class="text-3xl font-bold mt-2" id="stat-leaderboard">-</p>
           </div>
         </div>
       </div>
 
-      <!-- Agencies Tab -->
+      <!-- ADMINS TAB -->
+      <div id="tab-admins" class="tab-content hidden">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold">Admin & Helpers</h2>
+          <button onclick="showAdminModal()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">➕ Add Admin</button>
+        </div>
+        <div id="admins-table" class="bg-gray-800 rounded-lg overflow-hidden">
+          <table class="w-full">
+            <thead class="bg-gray-700"><tr><th class="px-4 py-3 text-left">Username</th><th class="px-4 py-3 text-left">Name</th><th class="px-4 py-3 text-left">Email</th><th class="px-4 py-3 text-left">Role</th><th class="px-4 py-3 text-left">Status</th><th class="px-4 py-3 text-left">Actions</th></tr></thead>
+            <tbody id="admins-tbody" class="divide-y divide-gray-700"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- AGENCIES TAB -->
       <div id="tab-agencies" class="tab-content hidden">
         <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">All Agencies</h2>
-          <button onclick="showAddAgencyModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-all">
-            ➕ Add Agency
-          </button>
+          <h2 class="text-2xl font-bold">Agencies</h2>
+          <button onclick="showAgencyModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">➕ Add Agency</button>
         </div>
-
-        <div id="agencies-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading agencies...</p>
-        </div>
-
-        <div id="agencies-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Name</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Domain</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Country</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Plan</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Clients</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Scans</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="agencies-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
+        <div id="agencies-table" class="bg-gray-800 rounded-lg overflow-hidden">
+          <table class="w-full">
+            <thead class="bg-gray-700"><tr><th class="px-4 py-3 text-left">Name</th><th class="px-4 py-3 text-left">Domain</th><th class="px-4 py-3 text-left">Country</th><th class="px-4 py-3 text-left">Plan</th><th class="px-4 py-3 text-left">Clients</th><th class="px-4 py-3 text-left">Actions</th></tr></thead>
+            <tbody id="agencies-tbody" class="divide-y divide-gray-700"></tbody>
+          </table>
         </div>
       </div>
 
-      <!-- Clients Tab -->
+      <!-- CLIENTS TAB -->
       <div id="tab-clients" class="tab-content hidden">
         <h2 class="text-2xl font-bold mb-6">All Clients</h2>
-
-        <div id="clients-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading clients...</p>
-        </div>
-
-        <div id="clients-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Client URL</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Agency</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Scans</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Last Scan</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="clients-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
+        <div id="clients-table" class="bg-gray-800 rounded-lg overflow-hidden">
+          <table class="w-full">
+            <thead class="bg-gray-700"><tr><th class="px-4 py-3 text-left">URL</th><th class="px-4 py-3 text-left">Agency</th><th class="px-4 py-3 text-left">Scans</th><th class="px-4 py-3 text-left">Actions</th></tr></thead>
+            <tbody id="clients-tbody" class="divide-y divide-gray-700"></tbody>
+          </table>
         </div>
       </div>
 
-      <!-- Scans Tab -->
+      <!-- SCANS TAB -->
       <div id="tab-scans" class="tab-content hidden">
         <h2 class="text-2xl font-bold mb-6">All Scans</h2>
-
-        <div id="scans-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading scans...</p>
-        </div>
-
-        <div id="scans-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">URL</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Score</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Quality</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Agency/Client</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Type</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Date</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="scans-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
+        <div id="scans-table" class="bg-gray-800 rounded-lg overflow-hidden">
+          <table class="w-full">
+            <thead class="bg-gray-700"><tr><th class="px-4 py-3 text-left">URL</th><th class="px-4 py-3 text-left">Score</th><th class="px-4 py-3 text-left">Quality</th><th class="px-4 py-3 text-left">Date</th><th class="px-4 py-3 text-left">Actions</th></tr></thead>
+            <tbody id="scans-tbody" class="divide-y divide-gray-700"></tbody>
+          </table>
         </div>
       </div>
 
-      <!-- Share Links Tab -->
+      <!-- SHARE LINKS TAB -->
       <div id="tab-share-links" class="tab-content hidden">
         <div class="flex justify-between items-center mb-6">
           <h2 class="text-2xl font-bold">Share Links</h2>
-          <button onclick="showCreateShareLinkModal()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all">
-            ➕ Create Share Link
-          </button>
+          <button onclick="showShareLinkModal()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold">➕ Create Link</button>
         </div>
-
-        <div id="share-links-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading share links...</p>
-        </div>
-
-        <div id="share-links-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Client</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Email</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Usage</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Expires</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="share-links-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
+        <div id="share-links-table" class="bg-gray-800 rounded-lg overflow-hidden">
+          <table class="w-full">
+            <thead class="bg-gray-700"><tr><th class="px-4 py-3 text-left">Email</th><th class="px-4 py-3 text-left">Usage</th><th class="px-4 py-3 text-left">Expires</th><th class="px-4 py-3 text-left">Status</th><th class="px-4 py-3 text-left">Actions</th></tr></thead>
+            <tbody id="share-links-tbody" class="divide-y divide-gray-700"></tbody>
+          </table>
         </div>
       </div>
 
-      <!-- Leaderboard Tab -->
+      <!-- LEADERBOARD TAB -->
       <div id="tab-leaderboard" class="tab-content hidden">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">Global Leaderboard Management</h2>
-          <button onclick="scanAllAgencies()" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold transition-all">
-            🔍 Scan Alle Agencies Nu
-          </button>
-        </div>
-
-        <div class="mb-4 flex gap-4">
-          <input type="text" id="leaderboard-search" placeholder="Search by URL, company, or score..." 
-            class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-          <button onclick="searchLeaderboard()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
-            Search
-          </button>
-        </div>
-
-        <div id="leaderboard-list" class="bg-gray-800 rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Rank</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Company</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">URL</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Score</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Country</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="leaderboard-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
+        <h2 class="text-2xl font-bold mb-6">Global Leaderboard</h2>
+        <div id="leaderboard-table" class="bg-gray-800 rounded-lg overflow-hidden">
+          <table class="w-full">
+            <thead class="bg-gray-700"><tr><th class="px-4 py-3 text-left">Rank</th><th class="px-4 py-3 text-left">Company</th><th class="px-4 py-3 text-left">URL</th><th class="px-4 py-3 text-left">Score</th><th class="px-4 py-3 text-left">Actions</th></tr></thead>
+            <tbody id="leaderboard-tbody" class="divide-y divide-gray-700"></tbody>
+          </table>
         </div>
       </div>
 
-      <!-- Admins Tab -->
-      <div id="tab-admins" class="tab-content hidden">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">Admin & Helper Management</h2>
-          <button onclick="showAddAdminModal()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all">
-            ➕ Add Admin/Helper
-          </button>
-        </div>
-
-        <div id="admins-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading admins...</p>
-        </div>
-
-        <div id="admins-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Username</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Full Name</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Email</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Role</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Created</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Last Login</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="admins-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
+      <!-- LEAD SCANNER TAB -->
       <div id="tab-lead-scanner" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">Lead Scanner</h2>
-        <p class="text-gray-400">Coming soon...</p>
-      </div>
-
-      <div id="tab-contentscore" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">ContentScore Tool</h2>
-        <iframe src="/seo-contentscore" class="w-full h-screen border-0 rounded-lg"></iframe>
-      </div>
-
-      <!-- ==================== CODE GENERATORS TAB - 6-IN-1 COMPLETE ==================== -->
-      <div id="tab-code-generators" class="tab-content hidden">
-        <iframe src="/contentscale-complete-generator.html" style="width:100%; height:100vh; border:none; border-radius:8px;"></iframe>
-      </div>
-
-      <div id="tab-ltd-codes" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">LTD Codes</h2>
-        <p class="text-gray-400">Coming soon...</p>
-      </div>
-
-      <div id="tab-settings" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">Platform Settings</h2>
+        <h2 class="text-2xl font-bold mb-6">🎯 Lead Scanner</h2>
         
-        <div class="space-y-6">
+        <div class="bg-gray-800 rounded-lg p-6 mb-6">
+          <h3 class="text-xl font-bold mb-4">Add Websites to Scan</h3>
           
-          <!-- Auto-Scan Settings -->
-          <div class="bg-gray-800 rounded-lg p-6">
-            <h3 class="text-xl font-bold mb-4">🔄 Auto-Scan Service</h3>
-            <p class="text-gray-400 mb-4">Automatically scan agencies on a schedule</p>
-            
-            <div class="space-y-4">
-              <div class="flex items-center justify-between p-4 bg-gray-700 rounded-lg">
-                <div>
-                  <p class="font-semibold">Auto-Scan Enabled</p>
-                  <p class="text-sm text-gray-400">Scan all agencies daily at 3:00 AM</p>
-                </div>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" id="auto-scan-enabled" class="sr-only peer" onchange="toggleAutoScan()">
-                  <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
-              
-              <div>
-                <label class="block text-sm font-medium mb-2">Scan Frequency</label>
-                <select id="scan-frequency" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                </select>
-              </div>
-              
-              <button onclick="saveAutoScanSettings()" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
-                💾 Save Auto-Scan Settings
-              </button>
-            </div>
-          </div>
-          
-          <!-- Backup Settings -->
-          <div class="bg-gray-800 rounded-lg p-6">
-            <h3 class="text-xl font-bold mb-4">💾 Backup & Export</h3>
-            
-            <div class="space-y-4">
-              <div class="flex items-center justify-between p-4 bg-gray-700 rounded-lg">
-                <div>
-                  <p class="font-semibold">Last Backup</p>
-                  <p class="text-sm text-gray-400" id="last-backup-time">Never</p>
-                </div>
-                <button onclick="createBackup()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
-                  Create Backup Now
-                </button>
-              </div>
-              
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <button onclick="exportAgencies()" class="p-4 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
-                  📊 Export Agencies
-                </button>
-                <button onclick="exportClients()" class="p-4 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold">
-                  👥 Export Clients
-                </button>
-                <button onclick="exportScans()" class="p-4 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold">
-                  🔍 Export Scans
-                </button>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium mb-2">Single URL</label>
+              <div class="flex gap-2">
+                <input type="text" id="lead-url" placeholder="https://example.com" class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                <button onclick="scanLeadSingle()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">Scan</button>
               </div>
             </div>
-          </div>
-          
-          <!-- Platform Info -->
-          <div class="bg-gray-800 rounded-lg p-6">
-            <h3 class="text-xl font-bold mb-4">ℹ️ Platform Information</h3>
             
-            <div class="space-y-3">
-              <div class="flex justify-between p-3 bg-gray-700 rounded">
-                <span class="text-gray-400">Platform Version</span>
-                <span class="font-semibold">2.0.0</span>
-              </div>
-              <div class="flex justify-between p-3 bg-gray-700 rounded">
-                <span class="text-gray-400">API Version</span>
-                <span class="font-semibold">v1</span>
-              </div>
-              <div class="flex justify-between p-3 bg-gray-700 rounded">
-                <span class="text-gray-400">Database Status</span>
-                <span class="text-green-400 font-semibold">✅ Connected</span>
-              </div>
-              <div class="flex justify-between p-3 bg-gray-700 rounded">
-                <span class="text-gray-400">Environment</span>
-                <span class="font-semibold">Production</span>
-              </div>
+            <div class="border-t border-gray-700 pt-4">
+              <label class="block text-sm font-medium mb-2">Bulk URLs (paste or upload CSV)</label>
+              <textarea id="lead-urls-bulk" placeholder="https://website1.com&#10;https://website2.com&#10;https://website3.com" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white h-32"></textarea>
+              <button onclick="scanLeadBulk()" class="mt-2 px-6 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">Scan All</button>
+            </div>
+            
+            <div class="border-t border-gray-700 pt-4">
+              <label class="block text-sm font-medium mb-2">CSV Upload</label>
+              <input type="file" id="lead-csv" accept=".csv" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+              <button onclick="scanLeadCSV()" class="mt-2 px-6 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold">Upload CSV</button>
             </div>
           </div>
-          
-          <!-- Danger Zone -->
-          <div class="bg-red-900 bg-opacity-20 border border-red-700 rounded-lg p-6">
-            <h3 class="text-xl font-bold mb-4 text-red-400">⚠️ Danger Zone</h3>
-            
-            <div class="space-y-4">
-              <div class="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
-                <div>
-                  <p class="font-semibold text-red-400">Clear All Cache</p>
-                  <p class="text-sm text-gray-400">Remove all cached scan results</p>
-                </div>
-                <button onclick="clearCache()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">
-                  Clear Cache
-                </button>
-              </div>
-              
-              <div class="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
-                <div>
-                  <p class="font-semibold text-red-400">Reset Platform Statistics</p>
-                  <p class="text-sm text-gray-400">Reset all counters and stats (WARNING: Cannot be undone!)</p>
-                </div>
-                <button onclick="resetStats()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">
-                  Reset Stats
-                </button>
-              </div>
-            </div>
-          </div>
-          
+        </div>
+
+        <h3 class="text-xl font-bold mb-4">Scan Queue</h3>
+        <div id="lead-queue" class="bg-gray-800 rounded-lg">
+          <div id="queue-empty" class="p-6 text-center text-gray-400">No leads in queue</div>
+          <table id="queue-table" class="w-full hidden">
+            <thead class="bg-gray-700"><tr><th class="px-4 py-3 text-left">URL</th><th class="px-4 py-3 text-left">Status</th><th class="px-4 py-3 text-left">Score</th><th class="px-4 py-3 text-left">Actions</th></tr></thead>
+            <tbody id="queue-tbody" class="divide-y divide-gray-700"></tbody>
+          </table>
         </div>
       </div>
 
-      <div id="tab-handleiding" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">📚 Handleiding - ContentScale Platform</h2>
-        
-        <div class="space-y-6">
-          
-          <!-- Quick Start -->
-          <div class="bg-gray-800 rounded-lg p-6">
-            <h3 class="text-xl font-bold mb-4">🚀 Quick Start Guide</h3>
-            <div class="space-y-3 text-gray-300">
-              <p><strong>Welkom bij het ContentScale Super Admin Dashboard!</strong></p>
-              <p>Dit platform geeft je volledige controle over alle agencies, clients, scans en share links.</p>
-              
-              <div class="mt-4 p-4 bg-blue-900 bg-opacity-30 border border-blue-700 rounded-lg">
-                <p class="font-semibold mb-2">🎯 Belangrijkste functies:</p>
-                <ul class="list-disc list-inside space-y-1 text-sm">
-                  <li>Beheer agencies en hun toegang</li>
-                  <li>Monitor alle scans en scores</li>
-                  <li>Creëer share links voor prospects</li>
-                  <li>Beheer de global leaderboard</li>
-                  <li>Genereer code voor badges en banners</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Overview Tab -->
-          <div class="bg-gray-800 rounded-lg p-6">
-            <h3 class="text-xl font-bold mb-4">📊 Overview Tab</h3>
-            <div class="space-y-2 text-gray-300">
-              <p><strong>Doel:</strong> Platform-wide statistieken en quick actions.</p>
-              
-              <p class="mt-3"><strong>Wat zie je hier:</strong></p>
-              <ul class="list-disc list-inside ml-4 space-y-1">
-                <li><strong>Total Agencies:</strong> Aantal actieve agencies in het platform</li>
-                <li><strong>Total Clients:</strong> Totaal aantal clients van alle agencies</li>
-                <li><strong>Total Scans:</strong> Alle uitgevoerde scans</li>
-                <li><strong>Active Helpers:</strong> Aantal actieve admin/helper accounts</li>
-              </ul>
-              
-              <p class="mt-3"><strong>Quick Actions:</strong></p>
-              <ul class="list-disc list-inside ml-4 space-y-1">
-                <li>Add Agency - Snel een nieuwe agency toevoegen</li>
-                <li>Add Helper - Nieuwe admin/helper account aanmaken</li>
-                <li>Create Share Link - Share link voor prospects</li>
-                <li>Scan Leads - Leaderboard scanning starten</li>
-              </ul>
-            </div>
-          </div>
-
-          <!-- Code Generators Tab INFO -->
-          <div class="bg-gray-800 rounded-lg p-6">
-            <h2 class="text-xl font-bold mb-4">🎨 Code Generators Tab - NIEUW!</h2>
-            <div class="space-y-2 text-gray-300">
-              <p><strong>Doel:</strong> 6-in-1 Code Generator Tool voor alle marketing materiaal</p>
-              
-              <p class="mt-3"><strong>Beschikbare Generators:</strong></p>
-              <ul class="list-disc list-inside ml-4 space-y-1">
-                <li><strong>📊 Results Card:</strong> Scan resultaat badges voor op je website</li>
-                <li><strong>⬆️ Top Banner Bar:</strong> Sticky banner bovenaan de pagina</li>
-                <li><strong>⬇️ Bottom Footer Bar:</strong> Sticky bar onderaan de pagina</li>
-                <li><strong>⭐ Combined Bars:</strong> Top + Bottom bar gecombineerd</li>
-                <li><strong>💜 Purple CTA Box:</strong> Eye-catching call-to-action box</li>
-                <li><strong>📜 Scrolling Banner:</strong> Animerende top banner</li>
-              </ul>
-              
-              <p class="mt-3"><strong>Hoe te gebruiken:</strong></p>
-              <ol class="list-decimal list-inside ml-4 space-y-1">
-                <li>Klik op de "🎨 Code Generators" tab</li>
-                <li>Kies de generator die je wilt gebruiken</li>
-                <li>Pas de settings aan (score, tekst, kleuren, etc.)</li>
-                <li>Bekijk live preview</li>
-                <li>Klik "📋 Copy" om de HTML code te kopiëren</li>
-                <li>Plak de code in je website</li>
-              </ol>
-
-              <div class="mt-4 p-4 bg-green-900 bg-opacity-30 border border-green-700 rounded-lg">
-                <p class="font-semibold mb-2">✨ PRO TIP:</p>
-                <p class="text-sm">Gebruik de "Combined Bars" voor maximale conversie (40-50% CTR)!</p>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Support -->
-          <div class="bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg p-6">
-            <h3 class="text-xl font-bold mb-4">💬 Support & Contact</h3>
-            <div class="space-y-3 text-gray-200">
-              <p><strong>Hulp nodig?</strong></p>
-              <p>Als je vragen hebt of problemen tegenkomt, neem dan contact op:</p>
-              
-              <div class="mt-4 space-y-2">
-                <p>📧 Email: support@contentscale.com</p>
-                <p>💬 WhatsApp: [Your WhatsApp Number]</p>
-                <p>🌐 Website: https://contentscale.com</p>
-              </div>
-              
-              <div class="mt-4 p-4 bg-black bg-opacity-30 rounded-lg">
-                <p class="text-sm"><strong>⚡ Pro Tip:</strong> De nieuwe Code Generators tab heeft ALLES wat je nodig hebt om leads te genereren!</p>
-              </div>
-            </div>
-          </div>
-          
+      <!-- CLAIMS TAB -->
+      <div id="tab-claims" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">✅ Approve Agency Claims</h2>
+        <div id="claims-table" class="bg-gray-800 rounded-lg overflow-hidden">
+          <table class="w-full">
+            <thead class="bg-gray-700"><tr><th class="px-4 py-3 text-left">Company Name</th><th class="px-4 py-3 text-left">URL</th><th class="px-4 py-3 text-left">Contact Email</th><th class="px-4 py-3 text-left">Submitted</th><th class="px-4 py-3 text-left">Actions</th></tr></thead>
+            <tbody id="claims-tbody" class="divide-y divide-gray-700"></tbody>
+          </table>
         </div>
       </div>
 
     </main>
   </div>
 
-  <!-- Add Agency Modal -->
-  <div id="modal-add-agency" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-    <div class="bg-gray-800 rounded-lg p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-      <div class="flex justify-between items-center mb-6">
-        <h3 class="text-2xl font-bold">Add New Agency</h3>
-        <button onclick="closeModal('modal-add-agency')" class="text-gray-400 hover:text-white text-2xl">&times;</button>
-      </div>
-
+  <!-- MODALS -->
+  <div id="modal-admin" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-lg p-8 max-w-md w-full mx-4">
+      <h3 class="text-2xl font-bold mb-6">Add Admin/Helper</h3>
       <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium mb-2">Agency Name *</label>
-          <input type="text" id="agency-name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium mb-2">Domain *</label>
-          <input type="text" id="agency-domain" placeholder="example.com" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium mb-2">Country *</label>
-          <select id="agency-country" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-            <option value="NL">Netherlands</option>
-            <option value="BE">Belgium</option>
-            <option value="DE">Germany</option>
-            <option value="UK">United Kingdom</option>
-            <option value="US">United States</option>
-            <option value="OTHER">Other</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium mb-2">Plan *</label>
-          <select id="agency-plan" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-            <option value="free">Free</option>
-            <option value="basic">Basic</option>
-            <option value="pro">Pro</option>
-            <option value="enterprise">Enterprise</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium mb-2">Contact Person</label>
-          <input type="text" id="agency-contact-person" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium mb-2">Contact Email</label>
-          <input type="email" id="agency-contact-email" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        </div>
-
-        <div class="flex gap-4 mt-6">
-          <button onclick="submitAddAgency()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
-            Create Agency
-          </button>
-          <button onclick="closeModal('modal-add-agency')" class="flex-1 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
-            Cancel
-          </button>
+        <input type="text" id="admin-username" placeholder="Username" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="password" id="admin-password" placeholder="Password (min 8)" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <select id="admin-role" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+          <option value="">Select Role</option>
+          <option value="super_admin">👑 Super Admin</option>
+          <option value="helper">🤝 Helper</option>
+        </select>
+        <input type="text" id="admin-fullname" placeholder="Full Name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="email" id="admin-email" placeholder="Email" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <div class="flex gap-4">
+          <button onclick="submitAdmin()" class="flex-1 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">Create</button>
+          <button onclick="closeAdminModal('modal-admin')" class="flex-1 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg">Cancel</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Create Share Link Modal -->
-  <div id="modal-create-share-link" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-    <div class="bg-gray-800 rounded-lg p-8 max-w-2xl w-full mx-4">
-      <div class="flex justify-between items-center mb-6">
-        <h3 class="text-2xl font-bold">Create Share Link</h3>
-        <button onclick="closeModal('modal-create-share-link')" class="text-gray-400 hover:text-white text-2xl">&times;</button>
-      </div>
-
+  <div id="modal-agency" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-lg p-8 max-w-md w-full mx-4">
+      <h3 class="text-2xl font-bold mb-6">Add Agency</h3>
       <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium mb-2">Client Email *</label>
-          <input type="email" id="share-client-email" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium mb-2">Client Name</label>
-          <input type="text" id="share-client-name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium mb-2">Company</label>
-          <input type="text" id="share-client-company" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium mb-2">Scans Limit *</label>
-          <input type="number" id="share-scans-limit" value="5" min="1" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium mb-2">Valid For (Days) *</label>
-          <input type="number" id="share-valid-days" value="30" min="1" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        </div>
-
-        <div class="flex gap-4 mt-6">
-          <button onclick="submitCreateShareLink()" class="flex-1 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold">
-            Create Link
-          </button>
-          <button onclick="closeModal('modal-create-share-link')" class="flex-1 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
-            Cancel
-          </button>
+        <input type="text" id="agency-name" placeholder="Agency Name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="text" id="agency-domain" placeholder="Domain (example.com)" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <select id="agency-country" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+          <option value="NL">🇳🇱 Netherlands</option>
+          <option value="BE">🇧🇪 Belgium</option>
+          <option value="DE">🇩🇪 Germany</option>
+          <option value="UK">🇬🇧 UK</option>
+          <option value="US">🇺🇸 USA</option>
+        </select>
+        <div class="flex gap-4">
+          <button onclick="submitAgency()" class="flex-1 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">Create</button>
+          <button onclick="closeAdminModal('modal-agency')" class="flex-1 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg">Cancel</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Add Admin/Helper Modal -->
-  <div id="modal-add-admin" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-    <div class="bg-gray-800 rounded-lg p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-      <div class="flex justify-between items-center mb-6">
-        <h3 class="text-2xl font-bold">Add Admin/Helper</h3>
-        <button onclick="closeModal('modal-add-admin')" class="text-gray-400 hover:text-white text-2xl">&times;</button>
-      </div>
-
+  <div id="modal-sharelink" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-lg p-8 max-w-md w-full mx-4">
+      <h3 class="text-2xl font-bold mb-6">Create Share Link</h3>
       <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium mb-2">Username *</label>
-          <input type="text" id="admin-username" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium mb-2">Password *</label>
-          <input type="password" id="admin-password" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-          <p class="text-xs text-gray-400 mt-1">Minimum 8 characters</p>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium mb-2">Role *</label>
-          <select id="admin-role" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-            <option value="">-- Select Role --</option>
-            <option value="super_admin">👑 Super Admin (Full Access)</option>
-            <option value="admin">🔑 Admin (Management Access)</option>
-            <option value="helper">🤝 Helper (Limited Access)</option>
-            <option value="sales">💼 Sales (Client Management)</option>
-            <option value="support">🎧 Support (Customer Service)</option>
-            <option value="analyst">📊 Analyst (View Only)</option>
-          </select>
-        </div> 
-        
-        <div>
-          <label class="block text-sm font-medium mb-2">Full Name</label>
-          <input type="text" id="admin-full-name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium mb-2">Email</label>
-          <input type="email" id="admin-email" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        </div>
-
-        <div class="bg-blue-900 border border-blue-700 rounded-lg p-4 mt-4">
-          <p class="text-sm text-blue-200">
-            <strong>Helper Role:</strong> Can view data and perform basic tasks<br>
-            <strong>Super Admin Role:</strong> Full platform control including user management
-          </p>
-        </div>
-
-        <div class="flex gap-4 mt-6">
-          <button onclick="submitAddAdmin()" class="flex-1 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
-            Create Admin/Helper
-          </button>
-          <button onclick="closeModal('modal-add-admin')" class="flex-1 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
-            Cancel
-          </button>
+        <input type="email" id="sharelink-email" placeholder="Client Email" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="text" id="sharelink-name" placeholder="Client Name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="number" id="sharelink-limit" value="5" min="1" placeholder="Scans Limit" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="number" id="sharelink-days" value="30" min="1" placeholder="Valid Days" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <div class="flex gap-4">
+          <button onclick="submitShareLink()" class="flex-1 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold">Create</button>
+          <button onclick="closeAdminModal('modal-sharelink')" class="flex-1 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg">Cancel</button>
         </div>
       </div>
     </div>
   </div>
-  
-  <script>window.ADMIN_VERSION = '2.3.0';</script>
-  
+
   <script>
-    // ==========================================
-    // AUTHENTICATION
-    // ==========================================
-    async function login() {
+    // ============================================
+    // ADMIN AUTHENTICATION
+    // ============================================
+    async function adminLogin() {
       const username = document.getElementById('login-username').value;
       const password = document.getElementById('login-password').value;
-      const errorDiv = document.getElementById('login-error');
-      
-      if (!username || !password) {
-        errorDiv.textContent = 'Please enter username and password';
-        errorDiv.classList.remove('hidden');
-        return;
-      }
       
       try {
         const response = await fetch('/api/setup/verify-admin', {
@@ -875,220 +304,265 @@
         
         if (data.success) {
           localStorage.setItem('admin_id', data.admin_id);
-          sessionStorage.setItem('superadmin_logged_in', 'true');
-          sessionStorage.setItem('superadmin_username', data.admin.username);
-          
-          // ✅ FORCE PAGE RELOAD WITH CACHE BUSTER
-          window.location.href = '/admin?v=' + Date.now();
+          sessionStorage.setItem('admin_logged_in', 'true');
+          document.getElementById('login-screen').classList.add('hidden');
+          document.getElementById('main-dashboard').classList.remove('hidden');
+          loadAllData();
         } else {
-          errorDiv.textContent = data.error || 'Login failed';
-          errorDiv.classList.remove('hidden');
+          document.getElementById('login-error').textContent = data.error || 'Login failed';
+          document.getElementById('login-error').classList.remove('hidden');
         }
       } catch (error) {
         console.error('Login error:', error);
-        errorDiv.textContent = 'Connection error';
-        errorDiv.classList.remove('hidden');
+        alert('Connection error');
       }
     }
 
-    function logout() {
+    function adminLogout() {
       localStorage.removeItem('admin_id');
-      sessionStorage.removeItem('superadmin_logged_in');
-      sessionStorage.removeItem('superadmin_username');
+      sessionStorage.removeItem('admin_logged_in');
       location.reload();
     }
 
-    // Check login on page load
-    if (sessionStorage.getItem('superadmin_logged_in') === 'true') {
-      // ✅ CHECK IF URL HAS CACHE BUSTER
-      if (!window.location.search.includes('?v=')) {
-        window.location.href = '/admin?v=' + Date.now();
-      } else {
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('main-dashboard').classList.remove('hidden');
-        document.getElementById('admin-username').textContent = sessionStorage.getItem('superadmin_username');
-        loadOverview();
-      }
+    // Check login on load
+    if (sessionStorage.getItem('admin_logged_in') === 'true') {
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('main-dashboard').classList.remove('hidden');
+      loadAllData();
     }
 
-    // ==========================================
+    // ============================================
     // TAB SWITCHING
-    // ==========================================
-    function switchTab(tabName) {
-      // Hide all tabs
-      document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.add('hidden');
-      });
-      
-      // Remove active class from all buttons
-      document.querySelectorAll('.tab-button').forEach(btn => {
-        btn.classList.remove('active');
-      });
-      
-      // Show selected tab
+    // ============================================
+    function switchAdminTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+      document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
       document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+      event.target.classList.add('active');
       
-      // ✅ FIX: Find button by onclick attribute instead of using event
-      document.querySelectorAll('.tab-button').forEach(btn => {
-        if (btn.getAttribute('onclick').includes(`'${tabName}'`)) {
-          btn.classList.add('active');
-        }
-      });
-      
-      // Load data for specific tabs
-      if (tabName === 'overview') loadOverview();
+      // Load tab data
       if (tabName === 'admins') loadAdmins();
       if (tabName === 'agencies') loadAgencies();
       if (tabName === 'clients') loadClients();
       if (tabName === 'scans') loadScans();
       if (tabName === 'share-links') loadShareLinks();
       if (tabName === 'leaderboard') loadLeaderboard();
+      if (tabName === 'claims') loadClaims();
     }
 
-    // ==========================================
-    // ADMINS TAB - GEFIXTE VERSIE
-    // ==========================================
+    // ============================================
+    // DATA LOADING FUNCTIONS
+    // ============================================
+    async function loadAllData() {
+      loadStats();
+      loadAdmins();
+      loadAgencies();
+      loadClients();
+      loadScans();
+      loadShareLinks();
+      loadLeaderboard();
+    }
+
+    async function loadStats() {
+      try {
+        const response = await fetch('/api/admin/stats', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        if (data.success) {
+          document.getElementById('stat-agencies').textContent = data.stats.total_agencies;
+          document.getElementById('stat-clients').textContent = data.stats.total_clients;
+          document.getElementById('stat-scans').textContent = data.stats.total_scans;
+          document.getElementById('stat-leaderboard').textContent = data.stats.total_scans || '-';
+        }
+      } catch (error) {
+        console.error('Stats error:', error);
+      }
+    }
+
     async function loadAdmins() {
-      document.getElementById('admins-loading').classList.remove('hidden');
-      document.getElementById('admins-list').classList.add('hidden');
-      
       try {
         const response = await fetch('/api/admins', {
           headers: { 'x-admin-key': localStorage.getItem('admin_id') }
         });
-        
-        if (!response.ok) throw new Error('Failed to load admins');
-        
         const data = await response.json();
+        const tbody = document.getElementById('admins-tbody');
+        tbody.innerHTML = '';
         
-        if (data.success) {
-          const tbody = document.getElementById('admins-tbody');
-          tbody.innerHTML = '';
-          
+        if (data.success && data.admins) {
           data.admins.forEach(admin => {
-            const roleColors = {
-              'super_admin': 'bg-purple-600',
-              'helper': 'bg-blue-600',
-              'admin': 'bg-green-600'
-            };
-            
-            const roleColor = roleColors[admin.role] || 'bg-gray-600';
-            
-            const row = `
+            tbody.innerHTML += `
               <tr>
-                <td class="px-4 py-3 font-semibold">${admin.username}</td>
+                <td class="px-4 py-3">${admin.username || '-'}</td>
                 <td class="px-4 py-3">${admin.full_name || '-'}</td>
-                <td class="px-4 py-3 text-sm">${admin.email || '-'}</td>
-                <td class="px-4 py-3">
-                  <span class="px-2 py-1 ${roleColor} rounded text-xs font-semibold">
-                    ${admin.role.replace('_', ' ').toUpperCase()}
-                  </span>
-                </td>
-                <td class="px-4 py-3">
-                  ${admin.is_active 
-                    ? '<span class="text-green-400">✅ Active</span>' 
-                    : '<span class="text-red-400">❌ Inactive</span>'}
-                </td>
-                <td class="px-4 py-3 text-sm">${new Date(admin.created_at).toLocaleDateString()}</td>
-                <td class="px-4 py-3 text-sm">${admin.last_login ? new Date(admin.last_login).toLocaleDateString() : 'Never'}</td>
-                <td class="px-4 py-3">
-                  <button onclick="deleteAdmin('${admin.id}')" class="text-red-400 hover:text-red-300">
-                    🗑️ Delete
-                  </button>
-                </td>
+                <td class="px-4 py-3">${admin.email || '-'}</td>
+                <td class="px-4 py-3"><span class="px-2 py-1 bg-purple-600 rounded text-xs">${admin.role}</span></td>
+                <td class="px-4 py-3">${admin.is_active ? '<span class="text-green-400">✅</span>' : '<span class="text-red-400">❌</span>'}</td>
+                <td class="px-4 py-3"><button onclick="deleteItem('admins', ${admin.id})" class="text-red-400">🗑️</button></td>
               </tr>
             `;
-            tbody.innerHTML += row;
           });
-          
-          document.getElementById('admins-loading').classList.add('hidden');
-          document.getElementById('admins-list').classList.remove('hidden');
         }
       } catch (error) {
-        console.error('Error loading admins:', error);
-        document.getElementById('admins-loading').innerHTML = '<p class="text-red-400">Error loading admins</p>';
+        console.error('Admins error:', error);
       }
     }
 
-    // ✅ GEFIXTE submitAddAdmin() FUNCTIE
-    async function submitAddAdmin() {
-      console.log('🧪 DEBUG: submitAddAdmin functie gestart');
-      
-      // VEILIG ELEMENTEN OPHALEN
-      function getElementSafely(id) {
-        const element = document.getElementById(id);
-        if (!element) {
-          console.error(`❌ Element niet gevonden: ${id}`);
-          return null;
-        }
-        return element;
-      }
-      
-      // Alle elementen ophalen
-      const usernameEl = getElementSafely('admin-username');
-      const passwordEl = getElementSafely('admin-password');
-      const roleEl = getElementSafely('admin-role');
-      const fullNameEl = getElementSafely('admin-full-name');
-      const emailEl = getElementSafely('admin-email');
-      
-      // Check of verplichte velden bestaan
-      if (!usernameEl || !passwordEl || !roleEl) {
-        alert('❌ FOUT: Formulier velden niet gevonden. Herlaad de pagina.');
-        console.error('Missende velden:', { 
-          username: !usernameEl, 
-          password: !passwordEl, 
-          role: !roleEl 
+    async function loadAgencies() {
+      try {
+        const response = await fetch('/api/super-admin/agencies', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
         });
-        return;
+        const data = await response.json();
+        const tbody = document.getElementById('agencies-tbody');
+        tbody.innerHTML = '';
+        
+        if (data.success && data.agencies) {
+          data.agencies.forEach(agency => {
+            tbody.innerHTML += `
+              <tr>
+                <td class="px-4 py-3">${agency.name || '-'}</td>
+                <td class="px-4 py-3">${agency.domain || '-'}</td>
+                <td class="px-4 py-3">${agency.country || '-'}</td>
+                <td class="px-4 py-3"><span class="px-2 py-1 bg-blue-600 rounded text-xs">${agency.plan}</span></td>
+                <td class="px-4 py-3">${agency.client_count || 0}</td>
+                <td class="px-4 py-3"><button onclick="deleteItem('agencies', ${agency.id})" class="text-red-400">🗑️</button></td>
+              </tr>
+            `;
+          });
+        }
+      } catch (error) {
+        console.error('Agencies error:', error);
       }
-      
-      // VEILIG WAARDEN OPHALEN
-      const username = usernameEl.value ? usernameEl.value.trim() : '';
-      const password = passwordEl.value ? passwordEl.value.trim() : '';
-      const role = roleEl.value || '';
-      const full_name = fullNameEl && fullNameEl.value ? fullNameEl.value.trim() : '';
-      const email = emailEl && emailEl.value ? emailEl.value.trim() : '';
-      
-      console.log('Ingetypte waarden:', {
-        username: username,
-        password: '***' + password.length + ' tekens',
-        role: role,
-        full_name: full_name,
-        email: email
-      });
-      
-      // VALIDATIE
-      if (!username || username.length < 3) {
-        alert('❌ Gebruikersnaam moet minstens 3 tekens hebben');
-        usernameEl.focus();
-        return;
+    }
+
+    async function loadClients() {
+      try {
+        const response = await fetch('/api/admin/clients', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        const tbody = document.getElementById('clients-tbody');
+        tbody.innerHTML = '';
+        
+        if (data.success && data.clients) {
+          data.clients.forEach(client => {
+            tbody.innerHTML += `
+              <tr>
+                <td class="px-4 py-3 text-blue-400">${client.url || '-'}</td>
+                <td class="px-4 py-3">${client.agency_name || '-'}</td>
+                <td class="px-4 py-3">${client.scan_count || 0}</td>
+                <td class="px-4 py-3"><button onclick="deleteItem('clients', ${client.id})" class="text-red-400">🗑️</button></td>
+              </tr>
+            `;
+          });
+        }
+      } catch (error) {
+        console.error('Clients error:', error);
       }
-      
-      if (!password || password.length < 8) {
-        alert('❌ Wachtwoord moet minstens 8 tekens hebben');
-        passwordEl.focus();
-        return;
+    }
+
+    async function loadScans() {
+      try {
+        const response = await fetch('/api/admin/scans', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        const tbody = document.getElementById('scans-tbody');
+        tbody.innerHTML = '';
+        
+        if (data.success && data.scans) {
+          data.scans.forEach(scan => {
+            tbody.innerHTML += `
+              <tr>
+                <td class="px-4 py-3 text-blue-400 text-sm">${scan.url ? scan.url.substring(0, 40) : '-'}...</td>
+                <td class="px-4 py-3 font-bold">${scan.score || '-'}/100</td>
+                <td class="px-4 py-3"><span class="px-2 py-1 bg-gray-700 rounded text-xs">${scan.quality || '-'}</span></td>
+                <td class="px-4 py-3 text-sm">${scan.created_at ? new Date(scan.created_at).toLocaleDateString() : '-'}</td>
+                <td class="px-4 py-3"><button onclick="deleteItem('scans', ${scan.id})" class="text-red-400">🗑️</button></td>
+              </tr>
+            `;
+          });
+        }
+      } catch (error) {
+        console.error('Scans error:', error);
       }
-      
-      if (!role) {
-        alert('❌ Selecteer een rol voor de admin/helper');
-        roleEl.focus();
-        return;
+    }
+
+    async function loadShareLinks() {
+      try {
+        const response = await fetch('/api/admin/share-links', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        const tbody = document.getElementById('share-links-tbody');
+        tbody.innerHTML = '';
+        
+        if (data.success && data.share_links) {
+          data.share_links.forEach(link => {
+            tbody.innerHTML += `
+              <tr>
+                <td class="px-4 py-3">${link.client_email || '-'}</td>
+                <td class="px-4 py-3">${link.scans_used || 0}/${link.scans_limit || 5}</td>
+                <td class="px-4 py-3 text-sm">${link.expires_at ? new Date(link.expires_at).toLocaleDateString() : '-'}</td>
+                <td class="px-4 py-3"><span class="px-2 py-1 ${link.status === 'active' ? 'bg-green-900' : 'bg-red-900'} rounded text-xs">${link.status}</span></td>
+                <td class="px-4 py-3"><button onclick="deleteShareLink('${link.share_code}')" class="text-red-400">🗑️</button></td>
+              </tr>
+            `;
+          });
+        }
+      } catch (error) {
+        console.error('Share links error:', error);
       }
-      
-      // Voorbereiden voor API
+    }
+
+    async function loadLeaderboard() {
+      try {
+        const response = await fetch('/api/admin/leaderboard', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        const tbody = document.getElementById('leaderboard-tbody');
+        tbody.innerHTML = '';
+        
+        if (data.success && data.entries) {
+          data.entries.forEach(entry => {
+            const medals = ['🥇', '🥈', '🥉'];
+            const medal = entry.rank <= 3 ? medals[entry.rank - 1] : '';
+            
+            tbody.innerHTML += `
+              <tr>
+                <td class="px-4 py-3 font-bold">${medal} #${entry.rank}</td>
+                <td class="px-4 py-3">${entry.company_name || '-'}</td>
+                <td class="px-4 py-3 text-blue-400 text-sm">${entry.url ? entry.url.substring(0, 40) : '-'}</td>
+                <td class="px-4 py-3 font-bold">${entry.score}/100</td>
+                <td class="px-4 py-3"><button onclick="deleteItem('leaderboard', ${entry.id})" class="text-red-400">🗑️</button></td>
+              </tr>
+            `;
+          });
+        }
+      } catch (error) {
+        console.error('Leaderboard error:', error);
+      }
+    }
+
+    async function loadClaims() {
+      alert('Claims functionality coming soon!');
+    }
+
+    // ============================================
+    // SUBMIT FUNCTIONS
+    // ============================================
+    async function submitAdmin() {
       const formData = {
-        username: username,
-        password: password,
-        role: role,
-        full_name: full_name,
-        email: email
+        username: document.getElementById('admin-username').value,
+        password: document.getElementById('admin-password').value,
+        role: document.getElementById('admin-role').value,
+        full_name: document.getElementById('admin-fullname').value,
+        email: document.getElementById('admin-email').value
       };
       
-      console.log('Versturen naar API:', formData);
-      
       try {
-        // Versturen naar server
         const response = await fetch('/api/admins', {
           method: 'POST',
           headers: {
@@ -1099,148 +573,24 @@
         });
         
         const data = await response.json();
-        console.log('API antwoord:', data);
-        
         if (data.success) {
-          alert('✅ Admin/Helper succesvol aangemaakt!');
-          
-          // Modal sluiten
-          document.getElementById('modal-add-admin').classList.add('hidden');
-          
-          // Formulier leegmaken
-          usernameEl.value = '';
-          passwordEl.value = '';
-          roleEl.value = '';
-          if (fullNameEl) fullNameEl.value = '';
-          if (emailEl) emailEl.value = '';
-          
-          // Admin lijst verversen
-          loadAdmins();
-          
-        } else {
-          alert('❌ Fout van server: ' + (data.error || 'Onbekende fout'));
-        }
-        
-      } catch (error) {
-        console.error('NETWERK FOUT:', error);
-        alert('❌ Netwerk fout: Kon geen admin aanmaken. Check je internet verbinding.');
-      }
-    }
-
-    async function deleteAdmin(adminId) {
-      if (!confirm('Are you sure you want to delete this admin/helper?')) return;
-      
-      try {
-        const response = await fetch(`/api/admins/${adminId}`, {
-          method: 'DELETE',
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          alert('Admin/Helper deleted successfully!');
+          alert('✅ Admin created!');
+          closeAdminModal('modal-admin');
           loadAdmins();
         } else {
-          alert('Error: ' + data.error);
+          alert('❌ Error: ' + (data.error || 'Failed'));
         }
       } catch (error) {
-        console.error('Error deleting admin:', error);
-        alert('Failed to delete admin/helper');
+        alert('Connection error');
       }
     }
 
-    // ✅ GEFIXTE showAddAdminModal() FUNCTIE
-    function showAddAdminModal() {
-      console.log('🟢 showAddAdminModal aangeroepen');
-      const modal = document.getElementById('modal-add-admin');
-      if (modal) {
-        modal.classList.remove('hidden');
-        console.log('✅ Modal zichtbaar gemaakt');
-      } else {
-        console.error('❌ Modal niet gevonden!');
-      }
-    }
-
-    // ==========================================
-    // OVERVIEW TAB
-    // ==========================================
-    async function loadOverview() {
-      try {
-        const response = await fetch('/api/admin/stats', {
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          document.getElementById('stat-total-agencies').textContent = data.stats.total_agencies;
-          document.getElementById('stat-total-clients').textContent = data.stats.total_clients;
-          document.getElementById('stat-total-scans').textContent = data.stats.total_scans;
-          document.getElementById('stat-active-helpers').textContent = data.stats.active_helpers;
-        }
-      } catch (error) {
-        console.error('Error loading overview:', error);
-      }
-    }
-
-    // ==========================================
-    // AGENCIES TAB
-    // ==========================================
-    async function loadAgencies() {
-      document.getElementById('agencies-loading').classList.remove('hidden');
-      document.getElementById('agencies-list').classList.add('hidden');
-      
-      try {
-        const response = await fetch('/api/super-admin/agencies', {
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        
-        if (!response.ok) throw new Error('Failed to load agencies');
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          const tbody = document.getElementById('agencies-tbody');
-          tbody.innerHTML = '';
-          
-          data.agencies.forEach(agency => {
-            const row = `
-              <tr>
-                <td class="px-4 py-3">${agency.name}</td>
-                <td class="px-4 py-3">${agency.domain}</td>
-                <td class="px-4 py-3">${agency.country}</td>
-                <td class="px-4 py-3"><span class="px-2 py-1 bg-blue-600 rounded text-xs">${agency.plan}</span></td>
-                <td class="px-4 py-3">${agency.client_count || 0}</td>
-                <td class="px-4 py-3">${agency.total_scans || 0}</td>
-                <td class="px-4 py-3">
-                  ${agency.is_active ? '<span class="text-green-400">✅ Active</span>' : '<span class="text-red-400">❌ Inactive</span>'}
-                </td>
-                <td class="px-4 py-3">
-                  <button onclick="deleteAgency(${agency.id})" class="text-red-400 hover:text-red-300">🗑️ Delete</button>
-                </td>
-              </tr>
-            `;
-            tbody.innerHTML += row;
-          });
-          
-          document.getElementById('agencies-loading').classList.add('hidden');
-          document.getElementById('agencies-list').classList.remove('hidden');
-        }
-      } catch (error) {
-        console.error('Error loading agencies:', error);
-        document.getElementById('agencies-loading').innerHTML = '<p class="text-red-400">Error loading agencies</p>';
-      }
-    }
-
-    async function submitAddAgency() {
+    async function submitAgency() {
       const formData = {
         name: document.getElementById('agency-name').value,
         domain: document.getElementById('agency-domain').value,
         country: document.getElementById('agency-country').value,
-        plan: document.getElementById('agency-plan').value,
-        contact_person: document.getElementById('agency-contact-person').value,
-        contact_email: document.getElementById('agency-contact-email').value
+        plan: 'free'
       };
       
       try {
@@ -1254,245 +604,24 @@
         });
         
         const data = await response.json();
-        
         if (data.success) {
-          alert('Agency created successfully!');
-          closeModal('modal-add-agency');
+          alert('✅ Agency created!');
+          closeAdminModal('modal-agency');
           loadAgencies();
         } else {
-          alert('Error: ' + data.error);
+          alert('❌ Error: ' + (data.error || 'Failed'));
         }
       } catch (error) {
-        console.error('Error creating agency:', error);
-        alert('Failed to create agency');
+        alert('Connection error');
       }
     }
 
-    async function deleteAgency(id) {
-      if (!confirm('Are you sure you want to delete this agency?')) return;
-      
-      try {
-        const response = await fetch(`/api/agencies/${id}`, {
-          method: 'DELETE',
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          alert('Agency deleted successfully!');
-          loadAgencies();
-        } else {
-          alert('Error: ' + data.error);
-        }
-      } catch (error) {
-        console.error('Error deleting agency:', error);
-        alert('Failed to delete agency');
-      }
-    }
-
-    // ==========================================
-    // CLIENTS TAB
-    // ==========================================
-    async function loadClients() {
-      document.getElementById('clients-loading').classList.remove('hidden');
-      document.getElementById('clients-list').classList.add('hidden');
-      
-      try {
-        const response = await fetch('/api/admin/clients', {
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          const tbody = document.getElementById('clients-tbody');
-          tbody.innerHTML = '';
-          
-          data.clients.forEach(client => {
-            const row = `
-              <tr>
-                <td class="px-4 py-3 text-blue-400">${client.url}</td>
-                <td class="px-4 py-3">${client.agency_name || '-'}</td>
-                <td class="px-4 py-3">${client.scan_count || 0}</td>
-                <td class="px-4 py-3">${client.created_at ? new Date(client.created_at).toLocaleDateString() : 'Never'}</td>
-                <td class="px-4 py-3">
-                  <button onclick="deleteClient(${client.id})" class="text-red-400 hover:text-red-300">🗑️ Delete</button>
-                </td>
-              </tr>
-            `;
-            tbody.innerHTML += row;
-          });
-          
-          document.getElementById('clients-loading').classList.add('hidden');
-          document.getElementById('clients-list').classList.remove('hidden');
-        }
-      } catch (error) {
-        console.error('Error loading clients:', error);
-        document.getElementById('clients-loading').innerHTML = '<p class="text-red-400">Error loading clients</p>';
-      }
-    }
-
-    async function deleteClient(id) {
-      if (!confirm('Delete this client and all associated scans?')) return;
-      
-      try {
-        const response = await fetch(`/api/admin/clients/${id}`, {
-          method: 'DELETE',
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          alert('Client deleted successfully!');
-          loadClients();
-        } else {
-          alert('Error: ' + data.error);
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to delete client');
-      }
-    }
-
-    // ==========================================
-    // SCANS TAB
-    // ==========================================
-    async function loadScans() {
-      document.getElementById('scans-loading').classList.remove('hidden');
-      document.getElementById('scans-list').classList.add('hidden');
-      
-      try {
-        const response = await fetch('/api/admin/scans', {
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          const tbody = document.getElementById('scans-tbody');
-          tbody.innerHTML = '';
-          
-          data.scans.forEach(scan => {
-            const qualityColors = {
-              excellent: 'text-green-400',
-              good: 'text-blue-400',
-              average: 'text-yellow-400',
-              'below-average': 'text-orange-400',
-              poor: 'text-red-400'
-            };
-            
-            const displayClient = scan.agency_name || (scan.client_url ? scan.client_url.substring(0, 30) + '...' : '-');
-            
-            const row = `
-              <tr>
-                <td class="px-4 py-3 text-blue-400 text-sm">${scan.url.substring(0, 50)}...</td>
-                <td class="px-4 py-3 font-bold">${scan.score}/100</td>
-                <td class="px-4 py-3 ${qualityColors[scan.quality] || 'text-gray-400'}">${scan.quality}</td>
-                <td class="px-4 py-3 text-sm">${displayClient}</td>
-                <td class="px-4 py-3"><span class="px-2 py-1 bg-gray-700 rounded text-xs">${scan.scan_type}</span></td>
-                <td class="px-4 py-3 text-sm">${new Date(scan.created_at).toLocaleDateString()}</td>
-                <td class="px-4 py-3">
-                  <button onclick="deleteScan(${scan.id})" class="text-red-400 hover:text-red-300">🗑️</button>
-                </td>
-              </tr>
-            `;
-            tbody.innerHTML += row;
-          });
-          
-          document.getElementById('scans-loading').classList.add('hidden');
-          document.getElementById('scans-list').classList.remove('hidden');
-        }
-      } catch (error) {
-        console.error('Error loading scans:', error);
-        document.getElementById('scans-loading').innerHTML = '<p class="text-red-400">Error loading scans</p>';
-      }
-    }
-
-    async function deleteScan(id) {
-      if (!confirm('Delete this scan?')) return;
-      
-      try {
-        const response = await fetch(`/api/admin/scans/${id}`, {
-          method: 'DELETE',
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          loadScans();
-        } else {
-          alert('Error: ' + data.error);
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to delete scan');
-      }
-    }
-
-    // ==========================================
-    // SHARE LINKS TAB
-    // ==========================================
-    async function loadShareLinks() {
-      document.getElementById('share-links-loading').classList.remove('hidden');
-      document.getElementById('share-links-list').classList.add('hidden');
-      
-      try {
-        const response = await fetch('/api/admin/share-links', {
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          const tbody = document.getElementById('share-links-tbody');
-          tbody.innerHTML = '';
-          
-          data.share_links.forEach(link => {
-            const statusColors = {
-              active: 'text-green-400',
-              expired: 'text-red-400',
-              limit_reached: 'text-orange-400',
-              inactive: 'text-gray-400'
-            };
-            
-            const shareUrl = `${window.location.origin}/scan-with-link/${link.share_code}`;
-            
-            const row = `
-              <tr>
-                <td class="px-4 py-3">${link.client_name || '-'}</td>
-                <td class="px-4 py-3 text-sm">${link.client_email}</td>
-                <td class="px-4 py-3">${link.scans_used}/${link.scans_limit}</td>
-                <td class="px-4 py-3 text-sm">${new Date(link.expires_at).toLocaleDateString()}</td>
-                <td class="px-4 py-3 ${statusColors[link.status]}">${link.status}</td>
-                <td class="px-4 py-3 space-x-2">
-                  <button onclick="window.open('${shareUrl}', '_blank')" class="text-blue-400 hover:text-blue-300" title="View">👁️</button>
-                  <button onclick="copyShareUrl('${shareUrl}')" class="text-green-400 hover:text-green-300" title="Copy URL">📋</button>
-                  <button onclick="deleteShareLink('${link.share_code}')" class="text-red-400 hover:text-red-300" title="Delete">🗑️</button>
-                </td>
-              </tr>
-            `;
-            tbody.innerHTML += row;
-          });
-          
-          document.getElementById('share-links-loading').classList.add('hidden');
-          document.getElementById('share-links-list').classList.remove('hidden');
-        }
-      } catch (error) {
-        console.error('Error loading share links:', error);
-        document.getElementById('share-links-loading').innerHTML = '<p class="text-red-400">Error loading share links</p>';
-      }
-    }
-
-    async function submitCreateShareLink() {
+    async function submitShareLink() {
       const formData = {
-        client_email: document.getElementById('share-client-email').value,
-        client_name: document.getElementById('share-client-name').value,
-        client_company: document.getElementById('share-client-company').value,
-        scans_limit: parseInt(document.getElementById('share-scans-limit').value),
-        valid_days: parseInt(document.getElementById('share-valid-days').value)
+        client_email: document.getElementById('sharelink-email').value,
+        client_name: document.getElementById('sharelink-name').value,
+        scans_limit: parseInt(document.getElementById('sharelink-limit').value),
+        valid_days: parseInt(document.getElementById('sharelink-days').value)
       };
       
       try {
@@ -1506,24 +635,46 @@
         });
         
         const data = await response.json();
-        
         if (data.success) {
-          alert('Share link created! URL copied to clipboard.');
+          alert('✅ Share link created!\nURL: ' + data.share_url);
           navigator.clipboard.writeText(data.share_url);
-          closeModal('modal-create-share-link');
+          closeAdminModal('modal-sharelink');
           loadShareLinks();
         } else {
-          alert('Error: ' + data.error);
+          alert('❌ Error');
         }
       } catch (error) {
-        console.error('Error creating share link:', error);
-        alert('Failed to create share link');
+        alert('Connection error');
       }
     }
 
-    function copyShareUrl(url) {
-      navigator.clipboard.writeText(url);
-      alert('URL copied to clipboard!');
+    // ============================================
+    // DELETE & MODAL FUNCTIONS
+    // ============================================
+    async function deleteItem(type, id) {
+      if (!confirm('Delete this item?')) return;
+      
+      const endpoints = {
+        admins: `/api/admins/${id}`,
+        agencies: `/api/agencies/${id}`,
+        clients: `/api/admin/clients/${id}`,
+        scans: `/api/admin/scans/${id}`,
+        leaderboard: `/api/admin/leaderboard/${id}`
+      };
+      
+      try {
+        const response = await fetch(endpoints[type], {
+          method: 'DELETE',
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        if (response.ok) {
+          alert('✅ Deleted!');
+          loadAllData();
+        }
+      } catch (error) {
+        alert('Error deleting');
+      }
     }
 
     async function deleteShareLink(code) {
@@ -1535,228 +686,122 @@
           headers: { 'x-admin-key': localStorage.getItem('admin_id') }
         });
         
-        const data = await response.json();
-        
-        if (data.success) {
-          alert('Share link deleted!');
+        if (response.ok) {
+          alert('✅ Deleted!');
           loadShareLinks();
-        } else {
-          alert('Error: ' + data.error);
         }
       } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to delete share link');
+        alert('Error deleting');
       }
     }
 
-    // ==========================================
-    // LEADERBOARD TAB
-    // ==========================================
-    async function loadLeaderboard() {
-      try {
-        const response = await fetch('/api/admin/leaderboard', {
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          displayLeaderboardResults(data.entries);
-        }
-      } catch (error) {
-        console.error('Error loading leaderboard:', error);
-      }
+    function showAdminModal() { document.getElementById('modal-admin').classList.remove('hidden'); }
+    function showAgencyModal() { document.getElementById('modal-agency').classList.remove('hidden'); }
+    function showShareLinkModal() { document.getElementById('modal-sharelink').classList.remove('hidden'); }
+    function closeAdminModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+    // ============================================
+    // LEAD SCANNER FUNCTIONS
+    // ============================================
+    const leadQueue = [];
+
+    async function scanLeadSingle() {
+      const url = document.getElementById('lead-url').value;
+      if (!url) return alert('Enter a URL');
+      addToQueue(url);
+      document.getElementById('lead-url').value = '';
     }
 
-    async function searchLeaderboard() {
-      const query = document.getElementById('leaderboard-search').value;
+    async function scanLeadBulk() {
+      const urls = document.getElementById('lead-urls-bulk').value.split('\n').filter(u => u.trim());
+      urls.forEach(url => addToQueue(url.trim()));
+      document.getElementById('lead-urls-bulk').value = '';
+    }
+
+    function scanLeadCSV() {
+      const file = document.getElementById('lead-csv').files[0];
+      if (!file) return;
       
-      if (!query) {
-        loadLeaderboard();
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const csv = e.target.result;
+        const urls = csv.split('\n').map(line => line.trim()).filter(u => u && u !== 'url');
+        urls.forEach(url => addToQueue(url));
+      };
+      reader.readAsText(file);
+    }
+
+    function addToQueue(url) {
+      if (!url.startsWith('http')) url = 'https://' + url;
+      leadQueue.push({ url, status: 'pending', score: null });
+      updateQueue();
+    }
+
+    async function updateQueue() {
+      const queueEmpty = document.getElementById('queue-empty');
+      const queueTable = document.getElementById('queue-table');
+      const tbody = document.getElementById('queue-tbody');
+      
+      if (leadQueue.length === 0) {
+        queueEmpty.classList.remove('hidden');
+        queueTable.classList.add('hidden');
         return;
       }
       
-      try {
-        const response = await fetch(`/api/admin/leaderboard/search?q=${encodeURIComponent(query)}`, {
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          displayLeaderboardResults(data.entries);
-        }
-      } catch (error) {
-        console.error('Error searching leaderboard:', error);
-      }
-    }
-
-    function displayLeaderboardResults(entries) {
-      const tbody = document.getElementById('leaderboard-tbody');
+      queueEmpty.classList.add('hidden');
+      queueTable.classList.remove('hidden');
       tbody.innerHTML = '';
       
-      entries.forEach(entry => {
-        const medals = ['🥇', '🥈', '🥉'];
-        const medal = entry.rank <= 3 ? medals[entry.rank - 1] : '';
-        
-        const row = `
+      leadQueue.forEach((lead, index) => {
+        tbody.innerHTML += `
           <tr>
-            <td class="px-4 py-3 font-bold">${medal} #${entry.rank}</td>
-            <td class="px-4 py-3">${entry.company_name || '-'}</td>
-            <td class="px-4 py-3 text-blue-400 text-sm">${entry.url.substring(0, 50)}...</td>
-            <td class="px-4 py-3 font-bold">${entry.score}/100</td>
-            <td class="px-4 py-3">${entry.country}</td>
+            <td class="px-4 py-3 text-sm">${lead.url}</td>
+            <td class="px-4 py-3">${lead.status}</td>
+            <td class="px-4 py-3">${lead.score ? lead.score + '/100' : '-'}</td>
             <td class="px-4 py-3">
-              <button onclick="deleteLeaderboardEntry(${entry.id})" class="text-red-400 hover:text-red-300">🗑️ Delete</button>
+              <button onclick="processLead(${index})" class="text-blue-400 text-sm mr-2">Scan</button>
+              <button onclick="removeFromQueue(${index})" class="text-red-400 text-sm">Remove</button>
             </td>
           </tr>
         `;
-        tbody.innerHTML += row;
       });
     }
 
-    async function deleteLeaderboardEntry(id) {
-      if (!confirm('Delete this leaderboard entry?')) return;
+    async function processLead(index) {
+      const lead = leadQueue[index];
+      lead.status = 'scanning...';
+      updateQueue();
       
       try {
-        const response = await fetch(`/api/admin/leaderboard/${id}`, {
-          method: 'DELETE',
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          alert('Entry deleted!');
-          loadLeaderboard();
-        } else {
-          alert('Error: ' + data.error);
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to delete entry');
-      }
-    }
-
-    async function scanAllAgencies() {
-      if (!confirm('This will scan all agencies and add them to the leaderboard. Continue?')) return;
-      
-      alert('Scanning started! This may take a few minutes...');
-      
-      try {
-        const response = await fetch('/api/admin/scan-all-agencies', {
+        const response = await fetch('/api/scan', {
           method: 'POST',
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: lead.url })
         });
         
         const data = await response.json();
+        lead.score = data.score;
+        lead.status = data.quality;
         
-        if (data.success) {
-          alert(`Scan complete!\nSuccess: ${data.successCount}\nFailed: ${data.failCount}`);
-          loadLeaderboard();
-        } else {
-          alert('Error: ' + data.error);
-        }
+        // Submit to leaderboard
+        await fetch('/api/leaderboard/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: lead.url, score: data.score })
+        });
+        
       } catch (error) {
-        console.error('Error:', error);
-        alert('Scan failed');
-      }
-    }
-
-    // ==========================================
-    // MODAL HELPERS
-    // ==========================================
-    function showAddAgencyModal() {
-      document.getElementById('modal-add-agency').classList.remove('hidden');
-    }
-
-    function showCreateShareLinkModal() {
-      document.getElementById('modal-create-share-link').classList.remove('hidden');
-    }
-
-    function closeModal(modalId) {
-      document.getElementById(modalId).classList.add('hidden');
-    }
-
-    // ==========================================
-    // SETTINGS TAB
-    // ==========================================
-    function toggleAutoScan() {
-      const enabled = document.getElementById('auto-scan-enabled').checked;
-      console.log('Auto-scan:', enabled ? 'enabled' : 'disabled');
-    }
-    
-    function saveAutoScanSettings() {
-      const enabled = document.getElementById('auto-scan-enabled').checked;
-      const frequency = document.getElementById('scan-frequency').value;
-      
-      alert(`Auto-scan settings saved!\nEnabled: ${enabled}\nFrequency: ${frequency}`);
-    }
-    
-    function createBackup() {
-      const now = new Date().toISOString();
-      document.getElementById('last-backup-time').textContent = new Date().toLocaleString();
-      alert('Backup created successfully!');
-    }
-    
-    function exportAgencies() {
-      alert('Exporting agencies to CSV...');
-    }
-    
-    function exportClients() {
-      alert('Exporting clients to CSV...');
-    }
-    
-    function exportScans() {
-      alert('Exporting scans to CSV...');
-    }
-    
-    function clearCache() {
-      if (!confirm('Are you sure you want to clear all cached scan results?')) return;
-      alert('Cache cleared!');
-    }
-    
-    function resetStats() {
-      if (!confirm('⚠️ WARNING: This will reset ALL platform statistics!\n\nThis action CANNOT be undone!\n\nAre you absolutely sure?')) return;
-      alert('Statistics reset!');
-    }
-
-    // ==========================================
-    // DEBUG FUNCTIES (TESTEN IN CONSOLE)
-    // ==========================================
-    
-    function testAdminFormulier() {
-      console.log('🧪 TEST: Admin formulier controleren');
-      
-      // Check modal
-      const modal = document.getElementById('modal-add-admin');
-      console.log('1. Modal gevonden?', modal ? '✅ JA' : '❌ NEE');
-      
-      // Check alle velden
-      const velden = [
-        'admin-username',
-        'admin-password', 
-        'admin-role',
-        'admin-full-name',
-        'admin-email'
-      ];
-      
-      velden.forEach(id => {
-        const el = document.getElementById(id);
-        console.log(`2. ${id}:`, el ? '✅ Gevonden' : '❌ Niet gevonden');
-      });
-      
-      // Toon modal voor test
-      if (modal) {
-        modal.classList.remove('hidden');
-        console.log('3. Modal nu zichtbaar gemaakt');
+        lead.status = 'error';
       }
       
-      return 'Test voltooid! Check de Console (F12)';
+      updateQueue();
+    }
+
+    function removeFromQueue(index) {
+      leadQueue.splice(index, 1);
+      updateQueue();
     }
   </script>
-
-  <script src="/admin-tabs-fix.js"></script>
   
 </body>
 </html>
