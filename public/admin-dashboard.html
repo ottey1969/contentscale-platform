@@ -122,6 +122,9 @@
           <button onclick="switchTab('opt-out')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
             🚫 Opt-Out Management
           </button>
+          <button onclick="switchTab('claims')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
+            🏢 Claims Management
+          </button>
           <button onclick="switchTab('lead-scanner')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
             🎯 Lead Scanner
           </button>
@@ -460,6 +463,129 @@ ContentScale Team</textarea>
         </div>
       </div>
 
+      <!-- CLAIMS MANAGEMENT TAB -->
+      <div id="tab-claims" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">🏢 Claims Management</h2>
+
+        <!-- Stats Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div class="bg-gradient-to-br from-purple-900 to-purple-800 rounded-lg p-4">
+            <div class="text-sm text-purple-200">Pending Claims</div>
+            <div class="text-3xl font-bold mt-2" id="pending-claims-count">0</div>
+          </div>
+          <div class="bg-gradient-to-br from-green-900 to-green-800 rounded-lg p-4">
+            <div class="text-sm text-green-200">Approved Claims</div>
+            <div class="text-3xl font-bold mt-2" id="approved-claims-count">0</div>
+          </div>
+          <div class="bg-gradient-to-br from-blue-900 to-blue-800 rounded-lg p-4">
+            <div class="text-sm text-blue-200">Total Claimed</div>
+            <div class="text-3xl font-bold mt-2" id="total-claimed-count">0</div>
+          </div>
+          <div class="bg-gradient-to-br from-orange-900 to-orange-800 rounded-lg p-4">
+            <div class="text-sm text-orange-200">Unclaimed Profiles</div>
+            <div class="text-3xl font-bold mt-2" id="unclaimed-profiles-count">0</div>
+          </div>
+        </div>
+
+        <!-- PENDING CLAIMS -->
+        <div class="bg-gray-800 rounded-lg p-6 mb-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold">⏳ Pending Claims</h3>
+            <button onclick="loadClaims()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm">
+              🔄 Refresh
+            </button>
+          </div>
+          
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-700">
+                <tr>
+                  <th class="px-4 py-3 text-left text-sm">Date</th>
+                  <th class="px-4 py-3 text-left text-sm">Agency Name</th>
+                  <th class="px-4 py-3 text-left text-sm">URL</th>
+                  <th class="px-4 py-3 text-left text-sm">Contact Email</th>
+                  <th class="px-4 py-3 text-left text-sm">Country</th>
+                  <th class="px-4 py-3 text-left text-sm">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="pending-claims-tbody" class="divide-y divide-gray-700">
+                <tr>
+                  <td colspan="6" class="px-4 py-8 text-center text-gray-400">
+                    No pending claims
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- APPROVED CLAIMS -->
+        <div class="bg-gray-800 rounded-lg p-6 mb-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold">✅ Approved Claims</h3>
+            <div class="flex gap-2">
+              <button onclick="exportClaimedProfiles()" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm">
+                📊 Export CSV
+              </button>
+              <button onclick="emailAllClaimedAgencies()" class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm">
+                📧 Email All
+              </button>
+            </div>
+          </div>
+          
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-700">
+                <tr>
+                  <th class="px-4 py-3 text-left text-sm">Agency</th>
+                  <th class="px-4 py-3 text-left text-sm">URL</th>
+                  <th class="px-4 py-3 text-left text-sm">Score</th>
+                  <th class="px-4 py-3 text-left text-sm">Contact</th>
+                  <th class="px-4 py-3 text-left text-sm">Claimed On</th>
+                  <th class="px-4 py-3 text-left text-sm">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="approved-claims-tbody" class="divide-y divide-gray-700">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- UNCLAIMED PROFILES -->
+        <div class="bg-gray-800 rounded-lg p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold">📋 Unclaimed Profiles</h3>
+            <button onclick="emailUnclaimedAgencies()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold">
+              📧 Send Claim Invites
+            </button>
+          </div>
+          
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-700">
+                <tr>
+                  <th class="px-4 py-3 text-left text-sm"><input type="checkbox" id="unclaimed-select-all" onchange="toggleSelectAllUnclaimed()"></th>
+                  <th class="px-4 py-3 text-left text-sm">Company</th>
+                  <th class="px-4 py-3 text-left text-sm">URL</th>
+                  <th class="px-4 py-3 text-left text-sm">Score</th>
+                  <th class="px-4 py-3 text-left text-sm">Country</th>
+                  <th class="px-4 py-3 text-left text-sm">Added</th>
+                  <th class="px-4 py-3 text-left text-sm">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="unclaimed-tbody" class="divide-y divide-gray-700">
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mt-4 flex gap-2">
+            <button onclick="emailSelectedUnclaimed()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
+              📧 Email Selected
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- AGENCIES TAB (existing, just adding claimed status column) -->
       <div id="tab-agencies" class="tab-content hidden">
         <div class="flex justify-between items-center mb-6">
@@ -651,6 +777,14 @@ ContentScale Team</textarea>
       document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
       document.getElementById(`tab-${tabName}`).classList.remove('hidden');
       event.target.classList.add('active');
+      
+      if (tabName === 'admins') loadAdmins();
+      if (tabName === 'agencies') loadAgencies();
+      if (tabName === 'clients') loadClients();
+      if (tabName === 'scans') loadScans();
+      if (tabName === 'share-links') loadShareLinks();
+      if (tabName === 'leaderboard') loadLeaderboard();
+      if (tabName === 'claims') loadClaims();
     }
 
     // ==========================================
@@ -744,6 +878,316 @@ ContentScale Team</textarea>
       } catch (error) {
         alert('Error');
       }
+    }
+
+    // ==========================================
+    // CLAIMS MANAGEMENT FUNCTIONS
+    // ==========================================
+    async function loadClaims() {
+      try {
+        // Load pending claims
+        const pendingResponse = await fetch('/api/admin/claims/pending', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const pendingData = await pendingResponse.json();
+        
+        if (pendingData.success) {
+          renderPendingClaims(pendingData.claims || []);
+          document.getElementById('pending-claims-count').textContent = pendingData.claims?.length || 0;
+        }
+        
+        // Load approved claims
+        const approvedResponse = await fetch('/api/admin/claims/approved', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const approvedData = await approvedResponse.json();
+        
+        if (approvedData.success) {
+          renderApprovedClaims(approvedData.claims || []);
+          document.getElementById('approved-claims-count').textContent = approvedData.claims?.length || 0;
+          document.getElementById('total-claimed-count').textContent = approvedData.claims?.length || 0;
+        }
+        
+        // Load unclaimed profiles
+        loadUnclaimedProfiles();
+        
+      } catch (error) {
+        console.error('Claims load error:', error);
+      }
+    }
+
+    function renderPendingClaims(claims) {
+      const tbody = document.getElementById('pending-claims-tbody');
+      
+      if (!claims || claims.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="px-4 py-8 text-center text-gray-400">
+              No pending claims
+            </td>
+          </tr>
+        `;
+        return;
+      }
+      
+      tbody.innerHTML = claims.map(claim => `
+        <tr>
+          <td class="px-4 py-3 text-sm">${new Date(claim.submitted_at).toLocaleDateString()}</td>
+          <td class="px-4 py-3 font-semibold">${claim.agency_name}</td>
+          <td class="px-4 py-3 text-sm text-blue-400">${claim.url}</td>
+          <td class="px-4 py-3 text-sm">${claim.contact_email}</td>
+          <td class="px-4 py-3">${claim.country}</td>
+          <td class="px-4 py-3">
+            <div class="flex gap-2">
+              <button onclick="approveClaim(${claim.id})" class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm">
+                ✅ Approve
+              </button>
+              <button onclick="rejectClaim(${claim.id})" class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm">
+                ❌ Reject
+              </button>
+              <button onclick="viewClaimDetails(${claim.id})" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm">
+                👁️ View
+              </button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderApprovedClaims(claims) {
+      const tbody = document.getElementById('approved-claims-tbody');
+      
+      if (!claims || claims.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="px-4 py-8 text-center text-gray-400">
+              No approved claims yet
+            </td>
+          </tr>
+        `;
+        return;
+      }
+      
+      tbody.innerHTML = claims.map(claim => `
+        <tr>
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-3">
+              ${claim.logo_url ? `
+                <img src="${claim.logo_url}" alt="${claim.agency_name}" class="w-10 h-10 rounded object-cover">
+              ` : `
+                <div class="w-10 h-10 bg-gray-700 rounded flex items-center justify-center text-xl">🏢</div>
+              `}
+              <div>
+                <div class="font-semibold">${claim.agency_name}</div>
+                <div class="text-xs text-green-400">✓ Verified</div>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3 text-sm text-blue-400">${claim.url}</td>
+          <td class="px-4 py-3">
+            <span class="px-2 py-1 ${claim.score >= 85 ? 'bg-green-900 text-green-300' : claim.score >= 75 ? 'bg-blue-900 text-blue-300' : 'bg-yellow-900 text-yellow-300'} rounded text-sm font-bold">
+              ${claim.score}
+            </span>
+          </td>
+          <td class="px-4 py-3 text-sm">${claim.contact_email}</td>
+          <td class="px-4 py-3 text-sm">${new Date(claim.approved_at).toLocaleDateString()}</td>
+          <td class="px-4 py-3">
+            <div class="flex gap-2">
+              <button onclick="viewClaimDetails(${claim.id})" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm">
+                View
+              </button>
+              <button onclick="revokeClaim(${claim.id})" class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm">
+                Revoke
+              </button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function loadUnclaimedProfiles() {
+      try {
+        const response = await fetch('/api/admin/leaderboard?unclaimed=true', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          renderUnclaimedProfiles(data.entries || []);
+          document.getElementById('unclaimed-profiles-count').textContent = data.entries?.length || 0;
+        }
+      } catch (error) {
+        console.error('Unclaimed load error:', error);
+      }
+    }
+
+    function renderUnclaimedProfiles(profiles) {
+      const tbody = document.getElementById('unclaimed-tbody');
+      
+      if (!profiles || profiles.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="px-4 py-8 text-center text-gray-400">
+              All profiles are claimed! 🎉
+            </td>
+          </tr>
+        `;
+        return;
+      }
+      
+      tbody.innerHTML = profiles.map(profile => `
+        <tr>
+          <td class="px-4 py-3">
+            <input type="checkbox" class="unclaimed-checkbox" value="${profile.id}">
+          </td>
+          <td class="px-4 py-3 font-semibold">${profile.company_name || 'Unknown'}</td>
+          <td class="px-4 py-3 text-sm text-blue-400">${profile.url}</td>
+          <td class="px-4 py-3">
+            <span class="px-2 py-1 ${profile.score >= 85 ? 'bg-green-900 text-green-300' : 'bg-yellow-900 text-yellow-300'} rounded text-sm font-bold">
+              ${profile.score}
+            </span>
+          </td>
+          <td class="px-4 py-3">${profile.country}</td>
+          <td class="px-4 py-3 text-sm">${new Date(profile.created_at).toLocaleDateString()}</td>
+          <td class="px-4 py-3">
+            <button onclick="sendClaimInvite('${profile.url}')" class="px-3 py-1 bg-purple-600 hover:bg-purple-700 rounded text-sm">
+              📧 Send Invite
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function approveClaim(claimId) {
+      if (!confirm('Approve this claim?')) return;
+      
+      try {
+        const response = await fetch(`/api/admin/claims/approve/${claimId}`, {
+          method: 'POST',
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          alert('✅ Claim approved! Agency is now verified.');
+          loadClaims();
+          loadLeaderboard();
+        }
+      } catch (error) {
+        alert('Error approving claim');
+      }
+    }
+
+    async function rejectClaim(claimId) {
+      const reason = prompt('Reason for rejection (optional):');
+      
+      try {
+        const response = await fetch(`/api/admin/claims/reject/${claimId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          },
+          body: JSON.stringify({ reason })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          alert('Claim rejected');
+          loadClaims();
+        }
+      } catch (error) {
+        alert('Error rejecting claim');
+      }
+    }
+
+    async function revokeClaim(claimId) {
+      if (!confirm('Revoke this claim? The profile will return to unclaimed status.')) return;
+      
+      try {
+        const response = await fetch(`/api/admin/claims/revoke/${claimId}`, {
+          method: 'POST',
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        if (response.ok) {
+          alert('Claim revoked');
+          loadClaims();
+          loadLeaderboard();
+        }
+      } catch (error) {
+        alert('Error');
+      }
+    }
+
+    function viewClaimDetails(claimId) {
+      alert(`View claim details for ID: ${claimId}\n\nThis would show full claim info in a modal.`);
+    }
+
+    async function sendClaimInvite(url) {
+      try {
+        const response = await fetch('/api/admin/emails/claim-invite', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          },
+          body: JSON.stringify({ url })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          alert('✅ Claim invite sent!');
+        }
+      } catch (error) {
+        alert('Error sending invite');
+      }
+    }
+
+    function toggleSelectAllUnclaimed() {
+      const isChecked = document.getElementById('unclaimed-select-all').checked;
+      document.querySelectorAll('.unclaimed-checkbox').forEach(cb => cb.checked = isChecked);
+    }
+
+    async function emailSelectedUnclaimed() {
+      const selected = Array.from(document.querySelectorAll('.unclaimed-checkbox:checked'));
+      if (selected.length === 0) return alert('Select profiles first');
+      
+      if (!confirm(`Send claim invites to ${selected.length} agencies?`)) return;
+      
+      try {
+        const response = await fetch('/api/admin/emails/bulk-claim-invites', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          },
+          body: JSON.stringify({
+            agency_ids: selected.map(cb => cb.value)
+          })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          alert(`✅ Sent ${data.count} emails!`);
+        }
+      } catch (error) {
+        alert('Error');
+      }
+    }
+
+    async function emailUnclaimedAgencies() {
+      switchTab('email-notifications');
+      document.getElementById('bulk-email-recipients').value = 'unclaimed';
+    }
+
+    async function emailAllClaimedAgencies() {
+      switchTab('email-notifications');
+      document.getElementById('bulk-email-recipients').value = 'claimed';
+    }
+
+    function exportClaimedProfiles() {
+      alert('Export claimed profiles to CSV');
     }
 
     // ==========================================
