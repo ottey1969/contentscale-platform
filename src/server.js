@@ -3,15 +3,6 @@
 // No warnings, proper SSL handling
 // ============================================
 
-// Suppress Node.js warnings silently
-process.on('warning', (warning) => {
-  // Silently ignore TLS/SSL warnings
-  if (warning.name === 'SecurityWarning' || warning.name === 'DeprecationWarning') {
-    return;
-  }
-  console.warn(warning);
-});
-
 const express = require('express');
 const path = require('path');
 const bcrypt = require('bcrypt');
@@ -22,14 +13,36 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ============================================
-// DATABASE CONFIGURATION - PROPER SSL HANDLING
+// DATABASE CONFIGURATION - AVOID SSL WARNINGS
 // ============================================
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://localhost/contentscale',
-  ssl: process.env.NODE_ENV === 'production' ? { 
-    rejectUnauthorized: false
-  } : false
-});
+let dbConfig;
+
+if (process.env.DATABASE_URL) {
+  // Parse URL manually to avoid pg-connection-string warnings
+  const url = new URL(process.env.DATABASE_URL);
+  
+  dbConfig = {
+    user: url.username,
+    password: url.password,
+    host: url.hostname,
+    port: url.port || 5432,
+    database: url.pathname.slice(1),
+    ssl: process.env.NODE_ENV === 'production' ? { 
+      rejectUnauthorized: false
+    } : false
+  };
+} else {
+  dbConfig = {
+    host: 'localhost',
+    database: 'contentscale',
+    user: 'postgres',
+    password: 'postgres',
+    port: 5432,
+    ssl: false
+  };
+}
+
+const pool = new Pool(dbConfig);
 
 // Test database connection
 pool.connect((err, client, release) => {
