@@ -1187,7 +1187,6 @@
     // ============================================
     // EXPORT FUNCTIONS
     // ============================================
-    let lastScanData = null;
 
     function exportToCSV() {
       if (!lastScanData) {
@@ -1480,7 +1479,42 @@ Generated: ${new Date().toLocaleString()}
       loadLeaderboard();
     });
 
+    // 🔥 FIXED: Now fetches from /api/leaderboard!
     function loadLeaderboard() {
+      // 🔥 FIX: Try to fetch from API first (admin data synced here!)
+      fetch('/api/leaderboard')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.entries && data.entries.length > 0) {
+            // Use API data - synced with admin!
+            let savedAgencies = data.entries.map((entry, index) => ({
+              id: entry.id,
+              rank: index + 1,
+              url: entry.url,
+              score: entry.score,
+              company: entry.company_name,
+              country: entry.country,
+              type: entry.type || 'agency',
+              timestamp: entry.created_at || new Date().toISOString(),
+              isEnhanced: entry.is_claimed || false,
+              lastScan: 'Recently'
+            }));
+            allAgencies = savedAgencies;
+            console.log('✅ Loaded from API:', savedAgencies.length, 'agencies');
+            renderLeaderboard();
+            updateStats();
+          } else {
+            console.log('⚠️ API empty, using localStorage');
+            loadFromLocalStorageData();
+          }
+        })
+        .catch(err => {
+          console.log('API failed, using localStorage fallback:', err);
+          loadFromLocalStorageData();
+        });
+    }
+
+    function loadFromLocalStorageData() {
       // Load from localStorage
       let savedAgencies = JSON.parse(localStorage.getItem('agencies') || '[]');
       
@@ -1546,7 +1580,6 @@ Generated: ${new Date().toLocaleString()}
       allAgencies.forEach((agency, index) => agency.rank = index + 1);
       
       renderLeaderboard();
-      updateStats();
     }
 
     function filterAgencies() {
