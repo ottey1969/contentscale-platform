@@ -210,6 +210,12 @@
             <tbody id="queue-tbody" class="divide-y divide-gray-700"></tbody>
           </table>
         </div>
+
+        <!-- Export Buttons for Queue -->
+        <div class="mt-4 flex gap-2">
+          <button onclick="exportLeadQueueToCSV()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-sm">📊 Export CSV</button>
+          <button onclick="exportLeadQueueToJSON()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold text-sm">📄 Export JSON</button>
+        </div>
       </div>
 
       <!-- CLAIMS TAB -->
@@ -800,6 +806,51 @@
     function removeFromQueue(index) {
       leadQueue.splice(index, 1);
       updateQueue();
+    }
+
+    // ============================================
+    // LEAD SCANNER EXPORT FUNCTIONS
+    // ============================================
+    function exportLeadQueueToCSV() {
+      if (leadQueue.length === 0) {
+        alert('No leads to export');
+        return;
+      }
+
+      const csv = [
+        ['URL', 'Status', 'Score', 'Quality', 'Date'],
+        ...leadQueue.map(lead => [
+          lead.url,
+          lead.status,
+          lead.score || '',
+          lead.quality || '',
+          new Date().toLocaleDateString()
+        ])
+      ].map(row => row.map(cell => '"' + (cell || '').replace(/"/g, '""') + '"').join(',')).join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `lead-scan-results-${new Date().getTime()}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    }
+
+    function exportLeadQueueToJSON() {
+      if (leadQueue.length === 0) {
+        alert('No leads to export');
+        return;
+      }
+
+      const json = JSON.stringify(leadQueue, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `lead-scan-results-${new Date().getTime()}.json`;
+      a.click();
+      window.URL.revokeObjectURL(url);
     }
   </script>
   
