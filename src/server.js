@@ -283,6 +283,61 @@ async function createAllTables() {
         leaderboard_entry_id INT
       )
     `);
+
+    // CLAIM PROFILE TABLES
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS profile_claims (
+        id SERIAL PRIMARY KEY,
+        url TEXT NOT NULL,
+        name TEXT,
+        logo_url TEXT,
+        description TEXT,
+        specializations JSONB,
+        country TEXT,
+        agency_size TEXT,
+        contact_email TEXT,
+        status TEXT DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT NOW(),
+        reviewed_at TIMESTAMP,
+        reviewed_by TEXT
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS email_templates (
+        id SERIAL PRIMARY KEY,
+        name TEXT UNIQUE NOT NULL,
+        subject TEXT NOT NULL,
+        body TEXT NOT NULL,
+        variables JSONB,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS email_logs (
+        id SERIAL PRIMARY KEY,
+        to_email TEXT NOT NULL,
+        subject TEXT,
+        template_used TEXT,
+        status TEXT DEFAULT 'sent',
+        sent_at TIMESTAMP DEFAULT NOW(),
+        error_message TEXT
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS optout_requests (
+        id SERIAL PRIMARY KEY,
+        url TEXT NOT NULL UNIQUE,
+        reason TEXT,
+        token TEXT UNIQUE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        processed BOOLEAN DEFAULT FALSE,
+        processed_at TIMESTAMP
+      )
+    `);
     
     // DATABASE MIGRATIONS
     await client.query(`ALTER TABLE super_admins ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
@@ -295,6 +350,13 @@ async function createAllTables() {
     await client.query(`ALTER TABLE scans ADD COLUMN IF NOT EXISTS recommendations JSONB DEFAULT '[]'`);
     await client.query(`ALTER TABLE scans ADD COLUMN IF NOT EXISTS client_url TEXT`);
     await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE`);
+    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS claimed BOOLEAN DEFAULT FALSE`);
+    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS logo_url TEXT`);
+    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS description TEXT`);
+    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS specializations JSONB`);
+    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS agency_size TEXT`);
+    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS contact_email TEXT`);
+    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS verified BOOLEAN DEFAULT FALSE`);
     
     // DEFAULT SETTINGS
     const defaultSettings = [
@@ -310,6 +372,102 @@ async function createAllTables() {
         ON CONFLICT (key) DO NOTHING
       `, [key, value]);
     }
+
+    // INSERT DEFAULT EMAIL TEMPLATES
+    await client.query(`
+      INSERT INTO email_templates (name, subject, body, variables) VALUES
+      (
+        'leaderboard_addition',
+        'You''re on the ContentScale SEO Agency Leaderboard! 🏆',
+        '<html>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2 style="color: #2563eb;">Congratulations {agency_name}! 🎉</h2>
+    
+    <p>Your agency has been added to the <strong>ContentScale SEO Agency Leaderboard</strong>.</p>
+    
+    <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+      <h3 style="margin-top: 0;">Your Current Ranking:</h3>
+      <ul style="list-style: none; padding: 0;">
+        <li>📊 <strong>Score:</strong> {score}/100</li>
+        <li>🏅 <strong>Position:</strong> #{position} in {country}</li>
+        <li>🌐 <strong>URL Scanned:</strong> <a href="{url}">{url}</a></li>
+      </ul>
+    </div>
+    
+    <h3>Want to claim your profile?</h3>
+    <p>Add your logo, description, and specializations to stand out:</p>
+    <p style="text-align: center;">
+      <a href="{claim_url}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+        Claim Your Profile
+      </a>
+    </p>
+    
+    <h3>Want to improve your ranking?</h3>
+    <p>Optimize your content using our GRAAF Framework:</p>
+    <ul>
+      <li><strong>G</strong>enuinely Credible</li>
+      <li><strong>R</strong>elevance</li>
+      <li><strong>A</strong>ctionability</li>
+      <li><strong>A</strong>ccuracy</li>
+      <li><strong>F</strong>reshness</li>
+    </ul>
+    
+    <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #666;">
+      Don''t want to be listed? <a href="{optout_url}">Click here to opt-out</a>
+    </p>
+    
+    <p style="font-size: 14px; color: #666;">
+      Best regards,<br>
+      <strong>Ottmar Francisca</strong><br>
+      ContentScale - GRAAF Framework Creator<br>
+      <a href="https://contentscale.site">contentscale.site</a>
+    </p>
+  </div>
+</body>
+</html>',
+        '{"agency_name": "text", "score": "number", "position": "number", "country": "text", "url": "text", "claim_url": "text", "optout_url": "text"}'::jsonb
+      ),
+      (
+        'claim_approved',
+        'Your ContentScale Profile Has Been Approved! ✅',
+        '<html>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2 style="color: #10b981;">Profile Approved! ✅</h2>
+    
+    <p>Hi {agency_name},</p>
+    
+    <p>Great news! Your profile claim has been approved and is now live on the leaderboard.</p>
+    
+    <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+      <h3 style="margin-top: 0;">Your Profile:</h3>
+      <ul style="list-style: none; padding: 0;">
+        <li>✅ <strong>Status:</strong> Verified</li>
+        <li>🏢 <strong>Name:</strong> {agency_name}</li>
+        <li>🌐 <strong>URL:</strong> <a href="{url}">{url}</a></li>
+        <li>🎯 <strong>Specializations:</strong> {specializations}</li>
+      </ul>
+    </div>
+    
+    <p style="text-align: center;">
+      <a href="{leaderboard_url}" style="display: inline-block; background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+        View Your Profile
+      </a>
+    </p>
+    
+    <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #666;">
+      Best regards,<br>
+      <strong>Ottmar Francisca</strong><br>
+      ContentScale
+    </p>
+  </div>
+</body>
+</html>',
+        '{"agency_name": "text", "url": "text", "specializations": "text", "leaderboard_url": "text"}'::jsonb
+      )
+      ON CONFLICT (name) DO NOTHING
+    `);
     
     // CREATE INDEXES
     await client.query('CREATE INDEX IF NOT EXISTS idx_scans_created ON scans(created_at DESC)');
@@ -317,6 +475,11 @@ async function createAllTables() {
     await client.query('CREATE INDEX IF NOT EXISTS idx_agencies_domain ON agencies(domain)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_blocked_url ON leaderboard_blocks(url)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_submission_ip_date ON submission_limits(ip_address, submission_date)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_claims_status ON profile_claims(status)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_claims_email ON profile_claims(contact_email)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_claims_url ON profile_claims(url)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_optout_url ON optout_requests(url)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_optout_token ON optout_requests(token)');
     
     console.log('✅ All database tables ready');
     
@@ -1067,6 +1230,562 @@ app.post('/api/scan', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// ============================================
+// CLAIM PROFILE & EMAIL ENDPOINTS
+// ============================================
+
+// Fill email template with variables
+function fillEmailTemplate(template, variables) {
+  let filled = template;
+  Object.keys(variables).forEach(key => {
+    const regex = new RegExp(`{${key}}`, 'g');
+    filled = filled.replace(regex, variables[key] || '');
+  });
+  return filled;
+}
+
+// Send email (mock version - logs to console and database)
+async function sendEmail(to, subject, html, templateName = null) {
+  try {
+    // Log email to database
+    await pool.query(
+      `INSERT INTO email_logs (to_email, subject, template_used, status, sent_at) 
+       VALUES ($1, $2, $3, 'sent', NOW())`,
+      [to, subject, templateName]
+    );
+    
+    // For development: log to console
+    console.log('📧 EMAIL SENT:', {
+      to,
+      subject,
+      template: templateName,
+      preview: html.substring(0, 100) + '...'
+    });
+    
+    // Uncomment this to send real emails via nodemailer:
+    /*
+    await emailTransporter.sendMail({
+      from: process.env.EMAIL_FROM || 'ContentScale <noreply@contentscale.site>',
+      to,
+      subject,
+      html
+    });
+    */
+    
+    return { success: true };
+  } catch (error) {
+    // Log failed email
+    await pool.query(
+      `INSERT INTO email_logs (to_email, subject, template_used, status, error_message, sent_at) 
+       VALUES ($1, $2, $3, 'failed', $4, NOW())`,
+      [to, subject, templateName, error.message]
+    );
+    
+    console.error('❌ EMAIL ERROR:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Generate unique opt-out token
+function generateOptOutToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+// Submit profile claim
+app.post('/api/claim-profile', async (req, res) => {
+  try {
+    const { 
+      url, 
+      name, 
+      logo_url, 
+      description, 
+      specializations, 
+      country, 
+      agency_size, 
+      contact_email 
+    } = req.body;
+    
+    // Validation
+    if (!url || !name || !contact_email) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'URL, name, and contact email are required' 
+      });
+    }
+    
+    // Check if already claimed
+    const existing = await pool.query(
+      'SELECT * FROM profile_claims WHERE url = $1 AND status != $2',
+      [url, 'rejected']
+    );
+    
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'This profile has already been claimed and is pending review' 
+      });
+    }
+    
+    // Insert claim
+    const result = await pool.query(
+      `INSERT INTO profile_claims 
+      (url, name, logo_url, description, specializations, country, agency_size, contact_email, status, created_at) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', NOW()) 
+      RETURNING *`,
+      [
+        url, 
+        name, 
+        logo_url, 
+        description, 
+        JSON.stringify(specializations), 
+        country, 
+        agency_size, 
+        contact_email
+      ]
+    );
+    
+    // Send confirmation email
+    const emailTemplate = await pool.query(
+      'SELECT * FROM email_templates WHERE name = $1',
+      ['claim_submitted']
+    );
+    
+    if (emailTemplate.rows.length > 0) {
+      const html = fillEmailTemplate(emailTemplate.rows[0].body, {
+        agency_name: name,
+        url: url
+      });
+      
+      await sendEmail(
+        contact_email,
+        emailTemplate.rows[0].subject,
+        html,
+        'claim_submitted'
+      );
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Profile claim submitted! We will review within 24 hours.',
+      claim_id: result.rows[0].id 
+    });
+    
+  } catch (error) {
+    console.error('Claim profile error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// Public opt-out
+app.post('/api/optout', async (req, res) => {
+  try {
+    const { token, reason } = req.body;
+    
+    if (!token) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Token is required' 
+      });
+    }
+    
+    // Find opt-out request by token
+    const result = await pool.query(
+      `UPDATE optout_requests 
+       SET processed = true, processed_at = NOW() 
+       WHERE token = $1 AND processed = false 
+       RETURNING url`,
+      [token]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Invalid or already processed opt-out token' 
+      });
+    }
+    
+    const url = result.rows[0].url;
+    
+    // Remove from leaderboard
+    await pool.query('DELETE FROM leaderboard WHERE url = $1', [url]);
+    
+    res.json({ 
+      success: true, 
+      message: 'You have been successfully removed from the leaderboard' 
+    });
+    
+  } catch (error) {
+    console.error('Opt-out error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// Get pending claims
+app.get('/api/admin/claims/pending', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM profile_claims 
+       WHERE status = 'pending' 
+       ORDER BY created_at DESC`
+    );
+    
+    res.json({ 
+      success: true, 
+      claims: result.rows 
+    });
+    
+  } catch (error) {
+    console.error('Get claims error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// Approve claim
+app.post('/api/admin/claims/approve/:claim_id', async (req, res) => {
+  try {
+    const { claim_id } = req.params;
+    
+    // Get claim details
+    const claim = await pool.query(
+      'SELECT * FROM profile_claims WHERE id = $1',
+      [claim_id]
+    );
+    
+    if (claim.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Claim not found' 
+      });
+    }
+    
+    const claimData = claim.rows[0];
+    
+    // Update claim status
+    await pool.query(
+      `UPDATE profile_claims 
+       SET status = 'approved', reviewed_at = NOW() 
+       WHERE id = $1`,
+      [claim_id]
+    );
+    
+    // Update leaderboard entry
+    await pool.query(
+      `UPDATE leaderboard 
+       SET claimed = true,
+           logo_url = $1,
+           description = $2,
+           specializations = $3,
+           agency_size = $4,
+           contact_email = $5,
+           verified = true
+       WHERE url = $6`,
+      [
+        claimData.logo_url,
+        claimData.description,
+        claimData.specializations,
+        claimData.agency_size,
+        claimData.contact_email,
+        claimData.url
+      ]
+    );
+    
+    // Send approval email
+    const emailTemplate = await pool.query(
+      'SELECT * FROM email_templates WHERE name = $1',
+      ['claim_approved']
+    );
+    
+    if (emailTemplate.rows.length > 0 && claimData.contact_email) {
+      const html = fillEmailTemplate(emailTemplate.rows[0].body, {
+        agency_name: claimData.name,
+        url: claimData.url,
+        specializations: JSON.parse(claimData.specializations || '[]').join(', '),
+        leaderboard_url: `${process.env.BASE_URL || 'https://contentscale.site'}/leaderboard`
+      });
+      
+      await sendEmail(
+        claimData.contact_email,
+        emailTemplate.rows[0].subject,
+        html,
+        'claim_approved'
+      );
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Claim approved and profile updated' 
+    });
+    
+  } catch (error) {
+    console.error('Approve claim error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// Reject claim
+app.post('/api/admin/claims/reject/:claim_id', async (req, res) => {
+  try {
+    const { claim_id } = req.params;
+    const { reason } = req.body;
+    
+    await pool.query(
+      `UPDATE profile_claims 
+       SET status = 'rejected', reviewed_at = NOW() 
+       WHERE id = $1`,
+      [claim_id]
+    );
+    
+    res.json({ 
+      success: true, 
+      message: 'Claim rejected' 
+    });
+    
+  } catch (error) {
+    console.error('Reject claim error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// Get email templates
+app.get('/api/admin/email-templates', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM email_templates ORDER BY name'
+    );
+    
+    res.json({ 
+      success: true, 
+      templates: result.rows 
+    });
+    
+  } catch (error) {
+    console.error('Get templates error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// Send bulk emails
+app.post('/api/admin/send-bulk-email', async (req, res) => {
+  try {
+    const { template_name, recipients } = req.body;
+    
+    // Get template
+    const template = await pool.query(
+      'SELECT * FROM email_templates WHERE name = $1',
+      [template_name]
+    );
+    
+    if (template.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Template not found' 
+      });
+    }
+    
+    const emailTemplate = template.rows[0];
+    let sent = 0;
+    let failed = 0;
+    
+    // Send to each recipient
+    for (const recipient of recipients) {
+      const html = fillEmailTemplate(emailTemplate.body, recipient.variables || {});
+      
+      const result = await sendEmail(
+        recipient.email,
+        emailTemplate.subject,
+        html,
+        template_name
+      );
+      
+      if (result.success) {
+        sent++;
+      } else {
+        failed++;
+      }
+      
+      // Small delay to avoid rate limits
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    res.json({ 
+      success: true, 
+      message: `Emails sent: ${sent}, Failed: ${failed}`,
+      sent,
+      failed
+    });
+    
+  } catch (error) {
+    console.error('Bulk email error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// Create opt-out request (admin manually adds agency to optout)
+app.post('/api/admin/optout/create', async (req, res) => {
+  try {
+    const { url, reason } = req.body;
+    
+    if (!url) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'URL is required' 
+      });
+    }
+    
+    const token = generateOptOutToken();
+    
+    await pool.query(
+      `INSERT INTO optout_requests (url, reason, token, created_at, processed, processed_at) 
+       VALUES ($1, $2, $3, NOW(), true, NOW())`,
+      [url, reason || 'Admin request', token]
+    );
+    
+    // Remove from leaderboard
+    await pool.query('DELETE FROM leaderboard WHERE url = $1', [url]);
+    
+    res.json({ 
+      success: true, 
+      message: 'Agency removed from leaderboard' 
+    });
+    
+  } catch (error) {
+    console.error('Create opt-out error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// Get all opt-out requests
+app.get('/api/admin/optouts', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM optout_requests 
+       ORDER BY created_at DESC 
+       LIMIT 100`
+    );
+    
+    res.json({ 
+      success: true, 
+      requests: result.rows 
+    });
+    
+  } catch (error) {
+    console.error('Get opt-outs error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// Get email logs
+app.get('/api/admin/email-logs', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 100;
+    
+    const result = await pool.query(
+      `SELECT * FROM email_logs 
+       ORDER BY sent_at DESC 
+       LIMIT $1`,
+      [limit]
+    );
+    
+    res.json({ 
+      success: true, 
+      logs: result.rows 
+    });
+    
+  } catch (error) {
+    console.error('Get email logs error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// Send leaderboard addition email (helper function)
+async function sendLeaderboardAdditionEmail(agencyData) {
+  try {
+    const template = await pool.query(
+      'SELECT * FROM email_templates WHERE name = $1',
+      ['leaderboard_addition']
+    );
+    
+    if (template.rows.length === 0) {
+      console.log('❌ Template "leaderboard_addition" not found');
+      return;
+    }
+    
+    const optoutToken = generateOptOutToken();
+    
+    // Create opt-out request
+    await pool.query(
+      `INSERT INTO optout_requests (url, token, created_at, processed) 
+       VALUES ($1, $2, NOW(), false)`,
+      [agencyData.url, optoutToken]
+    );
+    
+    const variables = {
+      agency_name: agencyData.name || 'Agency',
+      score: agencyData.score || 0,
+      position: agencyData.position || '?',
+      country: agencyData.country || 'Global',
+      url: agencyData.url,
+      claim_url: `${process.env.BASE_URL || 'https://contentscale.site'}/leaderboard?claim=${encodeURIComponent(agencyData.url)}`,
+      optout_url: `${process.env.BASE_URL || 'https://contentscale.site'}/optout?token=${optoutToken}`
+    };
+    
+    const html = fillEmailTemplate(template.rows[0].body, variables);
+    
+    // Try to find email for this agency
+    let toEmail = agencyData.contact_email;
+    
+    if (!toEmail) {
+      // Try to extract from URL or use placeholder
+      console.log(`⚠️ No email found for ${agencyData.url}, skipping email`);
+      return;
+    }
+    
+    await sendEmail(
+      toEmail,
+      template.rows[0].subject,
+      html,
+      'leaderboard_addition'
+    );
+    
+    console.log(`✅ Leaderboard addition email sent to ${toEmail}`);
+    
+  } catch (error) {
+    console.error('❌ Error sending leaderboard addition email:', error);
+  }
+}
+
+console.log('✅ Claim Profile & Email endpoints loaded');
 
 // ============================================
 // HEALTH CHECK
