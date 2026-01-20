@@ -1718,7 +1718,7 @@ Generated: ${new Date().toLocaleString()}
                       `}
                       <div>
                         <div class="font-medium text-white flex items-center gap-2">
-                          ${isClaimed ? claimedInfo.name : agency.company}
+                          ${isClaimed && claimedInfo ? claimedInfo.name : agency.company}
                           ${agency.isEnhanced ? '<span class="enhanced-badge text-xs">⭐</span>' : ''}
                         </div>
                         <div class="text-sm text-gray-400">
@@ -1808,7 +1808,7 @@ Generated: ${new Date().toLocaleString()}
                     ${agency.rank}
                   </div>
                   <div>
-                    <h3 class="font-bold text-lg">${isClaimed ? claimedInfo.name : agency.company}</h3>
+                    <h3 class="font-bold text-lg">${isClaimed && claimedInfo ? claimedInfo.name : agency.company}</h3>
                     <div class="flex items-center text-sm text-gray-400 mt-1">
                       ${getFlagEmoji(agency.country)}
                       <span class="ml-1">${getCountryName(agency.country)}</span>
