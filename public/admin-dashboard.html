@@ -289,6 +289,7 @@
             <table class="w-full">
               <thead class="bg-gray-700">
                 <tr>
+                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="client-select-all" onchange="toggleSelectAllClients()"></th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Client URL</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Agency</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Scans</th>
@@ -304,6 +305,7 @@
 
         <!-- Export Buttons -->
         <div class="mt-4 flex gap-2">
+          <button onclick="deleteSelectedClients()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
           <button onclick="exportClientsToCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">📊 Export CSV</button>
           <button onclick="exportClientsToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
         </div>
@@ -323,6 +325,7 @@
             <table class="w-full">
               <thead class="bg-gray-700">
                 <tr>
+                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="scan-select-all" onchange="toggleSelectAllScans()"></th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">URL</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Score</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Quality</th>
@@ -340,6 +343,7 @@
 
         <!-- Export Buttons -->
         <div class="mt-4 flex gap-2">
+          <button onclick="deleteSelectedScans()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
           <button onclick="exportScansToCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">📊 Export CSV</button>
           <button onclick="exportScansToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
         </div>
@@ -364,6 +368,7 @@
             <table class="w-full">
               <thead class="bg-gray-700">
                 <tr>
+                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="sharelink-select-all" onchange="toggleSelectAllShareLinks()"></th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Client</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Email</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Usage</th>
@@ -376,6 +381,11 @@
               </tbody>
             </table>
           </div>
+        </div>
+
+        <!-- Export Buttons -->
+        <div class="mt-4 flex gap-2">
+          <button onclick="deleteSelectedShareLinks()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
         </div>
       </div>
 
@@ -401,6 +411,7 @@
             <table class="w-full">
               <thead class="bg-gray-700">
                 <tr>
+                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="leaderboard-select-all" onchange="toggleSelectAllLeaderboard()"></th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Rank</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Company</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">URL</th>
@@ -417,6 +428,7 @@
 
         <!-- Export Buttons -->
         <div class="mt-4 flex gap-2">
+          <button onclick="deleteSelectedLeaderboard()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
           <button onclick="exportLeaderboardToCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">📊 Export CSV</button>
           <button onclick="exportLeaderboardToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
         </div>
@@ -681,6 +693,32 @@
               </ol>
             </div>
           </div>
+
+          <!-- Bulk Delete Feature -->
+          <div class="bg-gray-800 rounded-lg p-6">
+            <h3 class="text-xl font-bold mb-4">🗑️ Bulk Delete - NIEUW!</h3>
+            <div class="space-y-2 text-gray-300">
+              <p><strong>Doel:</strong> Verwijder meerdere items tegelijk met checkboxes</p>
+              
+              <p class="mt-3"><strong>Beschikbaar in:</strong></p>
+              <ul class="list-disc list-inside ml-4 space-y-1">
+                <li><strong>Agencies:</strong> Selecteer en verwijder meerdere agencies</li>
+                <li><strong>Clients:</strong> Selecteer en verwijder meerdere clients</li>
+                <li><strong>Scans:</strong> Selecteer en verwijder meerdere scans</li>
+                <li><strong>Share Links:</strong> Selecteer en verwijder meerdere links</li>
+                <li><strong>Leaderboard:</strong> Selecteer en verwijder meerdere entries</li>
+              </ul>
+              
+              <p class="mt-3"><strong>Hoe te gebruiken:</strong></p>
+              <ol class="list-decimal list-inside ml-4 space-y-1">
+                <li>Ga naar de gewenste tab</li>
+                <li>Vink de checkbox aan bij items die je wilt verwijderen</li>
+                <li>Of vink de header checkbox aan voor select all</li>
+                <li>Klik op "🗑️ Delete Selected"</li>
+                <li>Bevestig de actie</li>
+              </ol>
+            </div>
+          </div>
           
           <!-- Support -->
           <div class="bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg p-6">
@@ -933,6 +971,7 @@
           data.clients.forEach(client => {
             tbody.innerHTML += `
               <tr>
+                <td class="px-4 py-3"><input type="checkbox" class="client-checkbox" value="${client.id}"></td>
                 <td class="px-4 py-3 text-blue-400">${client.url}</td>
                 <td class="px-4 py-3">${client.agency_name || '-'}</td>
                 <td class="px-4 py-3">${client.scan_count || 0}</td>
@@ -963,6 +1002,7 @@
           data.scans.forEach(scan => {
             tbody.innerHTML += `
               <tr>
+                <td class="px-4 py-3"><input type="checkbox" class="scan-checkbox" value="${scan.id}"></td>
                 <td class="px-4 py-3 text-blue-400 text-sm">${scan.url ? scan.url.substring(0, 40) : '-'}...</td>
                 <td class="px-4 py-3 font-bold">${scan.score || '-'}/100</td>
                 <td class="px-4 py-3"><span class="px-2 py-1 bg-gray-700 rounded text-xs">${scan.quality || '-'}</span></td>
@@ -994,6 +1034,7 @@
           data.share_links.forEach(link => {
             tbody.innerHTML += `
               <tr>
+                <td class="px-4 py-3"><input type="checkbox" class="sharelink-checkbox" value="${link.share_code}"></td>
                 <td class="px-4 py-3">${link.client_name || '-'}</td>
                 <td class="px-4 py-3">${link.client_email}</td>
                 <td class="px-4 py-3">${link.scans_used || 0}/${link.scans_limit || 5}</td>
@@ -1028,6 +1069,7 @@
             
             tbody.innerHTML += `
               <tr>
+                <td class="px-4 py-3"><input type="checkbox" class="leaderboard-checkbox" value="${entry.id}"></td>
                 <td class="px-4 py-3 font-bold">${medal} #${entry.rank}</td>
                 <td class="px-4 py-3">${entry.company_name || '-'}</td>
                 <td class="px-4 py-3 text-blue-400 text-sm">${entry.url ? entry.url.substring(0, 40) : '-'}</td>
@@ -1048,9 +1090,8 @@
     // ==========================================
     function exportToCSV(filename, data) {
       const csv = [
-        Object.keys(data[0] || {})
+        Object.keys(data[0] || {}).join(',')
       ].concat(data.map(row => Object.values(row).map(cell => '"' + (cell || '').toString().replace(/"/g, '""') + '"').join(',')))
-       .map(e => e.join ? e.join('\n') : e)
        .join('\n');
 
       const blob = new Blob([csv], { type: 'text/csv' });
@@ -1111,6 +1152,80 @@
 
     function exportLeadQueueToJSON() {
       exportToJSON(`lead-queue-${Date.now()}.json`, leadQueue);
+    }
+
+    // ==========================================
+    // BULK SELECT & DELETE FUNCTIONS
+    // ==========================================
+    
+    // Agencies
+    function toggleSelectAllAgencies() {
+      const isChecked = document.getElementById('agency-select-all').checked;
+      document.querySelectorAll('.agency-checkbox').forEach(cb => cb.checked = isChecked);
+    }
+
+    function deleteSelectedAgencies() {
+      const selected = Array.from(document.querySelectorAll('.agency-checkbox:checked')).map(cb => cb.value);
+      if (selected.length === 0) return alert('Please select agencies to delete');
+      if (!confirm(`Delete ${selected.length} agencies?`)) return;
+      selected.forEach(id => deleteItem('agencies', id));
+      setTimeout(() => loadAgencies(), 500);
+    }
+
+    // Clients
+    function toggleSelectAllClients() {
+      const isChecked = document.getElementById('client-select-all').checked;
+      document.querySelectorAll('.client-checkbox').forEach(cb => cb.checked = isChecked);
+    }
+
+    function deleteSelectedClients() {
+      const selected = Array.from(document.querySelectorAll('.client-checkbox:checked')).map(cb => cb.value);
+      if (selected.length === 0) return alert('Please select clients to delete');
+      if (!confirm(`Delete ${selected.length} clients?`)) return;
+      selected.forEach(id => deleteItem('clients', id));
+      setTimeout(() => loadClients(), 500);
+    }
+
+    // Scans
+    function toggleSelectAllScans() {
+      const isChecked = document.getElementById('scan-select-all').checked;
+      document.querySelectorAll('.scan-checkbox').forEach(cb => cb.checked = isChecked);
+    }
+
+    function deleteSelectedScans() {
+      const selected = Array.from(document.querySelectorAll('.scan-checkbox:checked')).map(cb => cb.value);
+      if (selected.length === 0) return alert('Please select scans to delete');
+      if (!confirm(`Delete ${selected.length} scans?`)) return;
+      selected.forEach(id => deleteItem('scans', id));
+      setTimeout(() => loadScans(), 500);
+    }
+
+    // Share Links
+    function toggleSelectAllShareLinks() {
+      const isChecked = document.getElementById('sharelink-select-all').checked;
+      document.querySelectorAll('.sharelink-checkbox').forEach(cb => cb.checked = isChecked);
+    }
+
+    function deleteSelectedShareLinks() {
+      const selected = Array.from(document.querySelectorAll('.sharelink-checkbox:checked')).map(cb => cb.value);
+      if (selected.length === 0) return alert('Please select share links to delete');
+      if (!confirm(`Delete ${selected.length} share links?`)) return;
+      selected.forEach(code => deleteShareLink(code));
+      setTimeout(() => loadShareLinks(), 500);
+    }
+
+    // Leaderboard
+    function toggleSelectAllLeaderboard() {
+      const isChecked = document.getElementById('leaderboard-select-all').checked;
+      document.querySelectorAll('.leaderboard-checkbox').forEach(cb => cb.checked = isChecked);
+    }
+
+    function deleteSelectedLeaderboard() {
+      const selected = Array.from(document.querySelectorAll('.leaderboard-checkbox:checked')).map(cb => cb.value);
+      if (selected.length === 0) return alert('Please select leaderboard entries to delete');
+      if (!confirm(`Delete ${selected.length} leaderboard entries?`)) return;
+      selected.forEach(id => deleteItem('leaderboard', id));
+      setTimeout(() => loadLeaderboard(), 500);
     }
 
     // ==========================================
@@ -1232,28 +1347,6 @@
       } catch (error) {
         alert('Error');
       }
-    }
-
-    // ============================================
-    // BULK DELETE FUNCTIONS
-    // ============================================
-    function toggleSelectAllAgencies() {
-      const isChecked = document.getElementById('agency-select-all').checked;
-      document.querySelectorAll('.agency-checkbox').forEach(cb => cb.checked = isChecked);
-    }
-
-    function deleteSelectedAgencies() {
-      const selected = Array.from(document.querySelectorAll('.agency-checkbox:checked')).map(cb => cb.value);
-      
-      if (selected.length === 0) {
-        alert('Please select agencies to delete');
-        return;
-      }
-      
-      if (!confirm(`Delete ${selected.length} agencies?`)) return;
-      
-      selected.forEach(id => deleteItem('agencies', id));
-      setTimeout(() => loadAgencies(), 500);
     }
 
     async function deleteShareLink(code) {
@@ -1401,7 +1494,6 @@
         const data = await response.json();
         if (data.success) {
           allLeaderboard = data.entries;
-          // Re-render table
           loadLeaderboard();
         }
       } catch (error) {
