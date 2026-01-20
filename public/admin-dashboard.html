@@ -119,11 +119,11 @@
           <button onclick="switchTab('email-notifications')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
             📧 Email & Notifications
           </button>
-          <button onclick="switchTab('opt-out')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🚫 Opt-Out Management
-          </button>
           <button onclick="switchTab('claims')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
             🏢 Claims Management
+          </button>
+          <button onclick="switchTab('opt-out')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
+            🚫 Opt-Out
           </button>
           <button onclick="switchTab('lead-scanner')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
             🎯 Lead Scanner
@@ -189,10 +189,10 @@
           <div class="stat-card p-6 rounded-lg shadow-lg text-white">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-sm opacity-90">Emails Sent</p>
-                <p class="text-3xl font-bold mt-2" id="stat-emails-sent">-</p>
+                <p class="text-sm opacity-90">Active Helpers</p>
+                <p class="text-3xl font-bold mt-2" id="stat-active-helpers">-</p>
               </div>
-              <span class="text-5xl opacity-50">📧</span>
+              <span class="text-5xl opacity-50">🤝</span>
             </div>
           </div>
         </div>
@@ -204,13 +204,13 @@
             <button onclick="switchTab('agencies')" class="p-4 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-all">
               ➕ Add Agency
             </button>
-            <button onclick="switchTab('email-notifications')" class="p-4 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all">
-              📧 Send Email Blast
+            <button onclick="switchTab('admins')" class="p-4 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all">
+              👤 Add Helper
             </button>
             <button onclick="switchTab('share-links')" class="p-4 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all">
               🔗 Create Share Link
             </button>
-            <button onclick="switchTab('lead-scanner')" class="p-4 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold transition-all">
+            <button onclick="switchTab('leaderboard')" class="p-4 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold transition-all">
               🎯 Scan Leads
             </button>
           </div>
@@ -225,8 +225,8 @@
               <span class="text-green-400 font-semibold">✅ Connected</span>
             </div>
             <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
-              <span>Email Service</span>
-              <span class="text-green-400 font-semibold">✅ Active</span>
+              <span>API Status</span>
+              <span class="text-green-400 font-semibold">✅ Operational</span>
             </div>
             <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
               <span>Auto-Scan Service</span>
@@ -240,353 +240,43 @@
         </div>
       </div>
 
-      <!-- EMAIL & NOTIFICATIONS TAB -->
-      <div id="tab-email-notifications" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">📧 Email & Notifications</h2>
-
-        <!-- Email Templates -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          
-          <!-- New Agency Added Email -->
-          <div class="bg-gray-800 rounded-lg p-6">
-            <h3 class="text-xl font-bold mb-4">📨 New Agency Added to Leaderboard</h3>
-            <p class="text-gray-400 text-sm mb-4">Sent when a new agency is added to the public leaderboard</p>
-            
-            <div class="space-y-3">
-              <div>
-                <label class="block text-sm mb-2">Subject</label>
-                <input type="text" id="email-subject-new-agency" value="You're now on the ContentScale SEO Leaderboard! 🎉" 
-                  class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-              </div>
-              
-              <div>
-                <label class="block text-sm mb-2">Message Template</label>
-                <textarea id="email-body-new-agency" rows="8" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">Hi {agency_name},
-
-Great news! Your agency is now featured on the ContentScale SEO Leaderboard.
-
-🏆 Your Score: {score}/100
-🌍 Your Ranking: #{rank} in {country}
-
-Want to claim your profile and attract more clients?
-👉 {claim_url}
-
-Benefits of claiming:
-✅ Add your logo and description
-✅ Highlight your specializations  
-✅ Get verified badge
-✅ Receive direct client inquiries
-
-Claim your profile now: {claim_url}
-
-Best regards,
-ContentScale Team</textarea>
-              </div>
-
-              <button onclick="testEmailTemplate('new-agency')" class="w-full py-2 bg-blue-600 hover:bg-blue-700 rounded-lg">
-                📤 Send Test Email
-              </button>
-            </div>
-          </div>
-
-          <!-- Profile Claimed Email -->
-          <div class="bg-gray-800 rounded-lg p-6">
-            <h3 class="text-xl font-bold mb-4">✅ Profile Claimed Confirmation</h3>
-            <p class="text-gray-400 text-sm mb-4">Sent when agency claims their profile</p>
-            
-            <div class="space-y-3">
-              <div>
-                <label class="block text-sm mb-2">Subject</label>
-                <input type="text" id="email-subject-claimed" value="Profile Claimed Successfully! Welcome to ContentScale" 
-                  class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-              </div>
-              
-              <div>
-                <label class="block text-sm mb-2">Message Template</label>
-                <textarea id="email-body-claimed" rows="8" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">Hi {agency_name},
-
-Welcome to ContentScale! Your profile is now claimed and verified.
-
-Your enhanced profile includes:
-✅ Custom logo and branding
-✅ Agency description
-✅ Specialization tags
-✅ Direct contact email
-
-Next steps:
-1. Share your profile: {profile_url}
-2. Add our badge to your website
-3. Improve your score with our recommendations
-
-View your profile: {profile_url}
-
-Questions? Reply to this email anytime.
-
-Best regards,
-ContentScale Team</textarea>
-              </div>
-
-              <button onclick="testEmailTemplate('claimed')" class="w-full py-2 bg-green-600 hover:bg-green-700 rounded-lg">
-                📤 Send Test Email
-              </button>
-            </div>
-          </div>
-
+      <!-- Admins Tab -->
+      <div id="tab-admins" class="tab-content hidden">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold">Admin & Helper Management</h2>
+          <button onclick="showAddAdminModal()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all">
+            ➕ Add Admin/Helper
+          </button>
         </div>
 
-        <!-- Bulk Email Sender -->
-        <div class="bg-gray-800 rounded-lg p-6">
-          <h3 class="text-xl font-bold mb-4">📬 Send Bulk Email</h3>
-          
-          <div class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm mb-2">Recipients</label>
-                <select id="bulk-email-recipients" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-                  <option value="all-leaderboard">All Leaderboard Agencies</option>
-                  <option value="unclaimed">Unclaimed Profiles Only</option>
-                  <option value="claimed">Claimed Profiles Only</option>
-                  <option value="top-10">Top 10 Agencies</option>
-                  <option value="country-nl">Netherlands Only</option>
-                  <option value="country-be">Belgium Only</option>
-                </select>
-              </div>
-              
-              <div>
-                <label class="block text-sm mb-2">Email Template</label>
-                <select id="bulk-email-template" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-                  <option value="new-agency">New Agency Added</option>
-                  <option value="claimed">Profile Claimed</option>
-                  <option value="custom">Custom Message</option>
-                </select>
-              </div>
-            </div>
-
-            <div id="custom-email-section" class="hidden space-y-3">
-              <input type="text" id="custom-email-subject" placeholder="Email Subject" 
-                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-              <textarea id="custom-email-body" rows="6" placeholder="Email message..." 
-                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"></textarea>
-            </div>
-
-            <div class="flex gap-4">
-              <button onclick="previewBulkEmail()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
-                👁️ Preview Email
-              </button>
-              <button onclick="sendBulkEmail()" class="flex-1 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
-                📧 Send to All Recipients
-              </button>
-            </div>
-          </div>
+        <div id="admins-loading" class="text-center py-12">
+          <div class="inline-block animate-spin text-4xl">⏳</div>
+          <p class="text-gray-400 mt-4">Loading admins...</p>
         </div>
 
-        <!-- Email Log -->
-        <div class="bg-gray-800 rounded-lg p-6 mt-6">
-          <h3 class="text-xl font-bold mb-4">📋 Email History</h3>
+        <div id="admins-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full">
               <thead class="bg-gray-700">
                 <tr>
-                  <th class="px-4 py-3 text-left text-sm">Date</th>
-                  <th class="px-4 py-3 text-left text-sm">Subject</th>
-                  <th class="px-4 py-3 text-left text-sm">Recipients</th>
-                  <th class="px-4 py-3 text-left text-sm">Status</th>
-                  <th class="px-4 py-3 text-left text-sm">Opens</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Username</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Full Name</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Email</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Role</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Created</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Last Login</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
                 </tr>
               </thead>
-              <tbody id="email-log-tbody" class="divide-y divide-gray-700">
-                <tr>
-                  <td class="px-4 py-3 text-sm">2026-01-20 10:30</td>
-                  <td class="px-4 py-3">You're on the Leaderboard!</td>
-                  <td class="px-4 py-3">45 agencies</td>
-                  <td class="px-4 py-3"><span class="px-2 py-1 bg-green-900 rounded text-xs">✅ Sent</span></td>
-                  <td class="px-4 py-3">32 (71%)</td>
-                </tr>
+              <tbody id="admins-tbody" class="divide-y divide-gray-700">
               </tbody>
             </table>
           </div>
         </div>
       </div>
 
-      <!-- OPT-OUT MANAGEMENT TAB -->
-      <div id="tab-opt-out" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">🚫 Opt-Out Management</h2>
-
-        <div class="bg-gray-800 rounded-lg p-6 mb-6">
-          <h3 class="text-xl font-bold mb-4">ℹ️ How Opt-Out Works</h3>
-          <div class="space-y-2 text-gray-300">
-            <p>• Agencies can opt-out from appearing on the public leaderboard</p>
-            <p>• Opt-out requests are processed immediately</p>
-            <p>• Agency data is hidden but kept in the database for admin purposes</p>
-            <p>• Opt-out link is included in all automated emails</p>
-          </div>
-        </div>
-
-        <!-- Opt-Out Requests -->
-        <div class="bg-gray-800 rounded-lg p-6">
-          <h3 class="text-xl font-bold mb-4">📋 Opt-Out Requests</h3>
-          
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm">Date</th>
-                  <th class="px-4 py-3 text-left text-sm">Agency/URL</th>
-                  <th class="px-4 py-3 text-left text-sm">Reason</th>
-                  <th class="px-4 py-3 text-left text-sm">Status</th>
-                  <th class="px-4 py-3 text-left text-sm">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="optout-tbody" class="divide-y divide-gray-700">
-                <tr>
-                  <td class="px-4 py-3 text-sm" colspan="5" class="text-center text-gray-400">
-                    No opt-out requests
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Manual Opt-Out -->
-        <div class="bg-gray-800 rounded-lg p-6 mt-6">
-          <h3 class="text-xl font-bold mb-4">➕ Manually Add Opt-Out</h3>
-          <p class="text-gray-400 text-sm mb-4">Use this if an agency requests removal via email/phone</p>
-          
-          <div class="flex gap-4">
-            <input type="text" id="manual-optout-url" placeholder="Agency website URL" 
-              class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-            <button onclick="manualOptOut()" class="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">
-              Remove from Leaderboard
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- CLAIMS MANAGEMENT TAB -->
-      <div id="tab-claims" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">🏢 Claims Management</h2>
-
-        <!-- Stats Overview -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div class="bg-gradient-to-br from-purple-900 to-purple-800 rounded-lg p-4">
-            <div class="text-sm text-purple-200">Pending Claims</div>
-            <div class="text-3xl font-bold mt-2" id="pending-claims-count">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-green-900 to-green-800 rounded-lg p-4">
-            <div class="text-sm text-green-200">Approved Claims</div>
-            <div class="text-3xl font-bold mt-2" id="approved-claims-count">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-blue-900 to-blue-800 rounded-lg p-4">
-            <div class="text-sm text-blue-200">Total Claimed</div>
-            <div class="text-3xl font-bold mt-2" id="total-claimed-count">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-orange-900 to-orange-800 rounded-lg p-4">
-            <div class="text-sm text-orange-200">Unclaimed Profiles</div>
-            <div class="text-3xl font-bold mt-2" id="unclaimed-profiles-count">0</div>
-          </div>
-        </div>
-
-        <!-- PENDING CLAIMS -->
-        <div class="bg-gray-800 rounded-lg p-6 mb-6">
-          <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xl font-bold">⏳ Pending Claims</h3>
-            <button onclick="loadClaims()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm">
-              🔄 Refresh
-            </button>
-          </div>
-          
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm">Date</th>
-                  <th class="px-4 py-3 text-left text-sm">Agency Name</th>
-                  <th class="px-4 py-3 text-left text-sm">URL</th>
-                  <th class="px-4 py-3 text-left text-sm">Contact Email</th>
-                  <th class="px-4 py-3 text-left text-sm">Country</th>
-                  <th class="px-4 py-3 text-left text-sm">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="pending-claims-tbody" class="divide-y divide-gray-700">
-                <tr>
-                  <td colspan="6" class="px-4 py-8 text-center text-gray-400">
-                    No pending claims
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- APPROVED CLAIMS -->
-        <div class="bg-gray-800 rounded-lg p-6 mb-6">
-          <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xl font-bold">✅ Approved Claims</h3>
-            <div class="flex gap-2">
-              <button onclick="exportClaimedProfiles()" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm">
-                📊 Export CSV
-              </button>
-              <button onclick="emailAllClaimedAgencies()" class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm">
-                📧 Email All
-              </button>
-            </div>
-          </div>
-          
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm">Agency</th>
-                  <th class="px-4 py-3 text-left text-sm">URL</th>
-                  <th class="px-4 py-3 text-left text-sm">Score</th>
-                  <th class="px-4 py-3 text-left text-sm">Contact</th>
-                  <th class="px-4 py-3 text-left text-sm">Claimed On</th>
-                  <th class="px-4 py-3 text-left text-sm">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="approved-claims-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- UNCLAIMED PROFILES -->
-        <div class="bg-gray-800 rounded-lg p-6">
-          <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xl font-bold">📋 Unclaimed Profiles</h3>
-            <button onclick="emailUnclaimedAgencies()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold">
-              📧 Send Claim Invites
-            </button>
-          </div>
-          
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm"><input type="checkbox" id="unclaimed-select-all" onchange="toggleSelectAllUnclaimed()"></th>
-                  <th class="px-4 py-3 text-left text-sm">Company</th>
-                  <th class="px-4 py-3 text-left text-sm">URL</th>
-                  <th class="px-4 py-3 text-left text-sm">Score</th>
-                  <th class="px-4 py-3 text-left text-sm">Country</th>
-                  <th class="px-4 py-3 text-left text-sm">Added</th>
-                  <th class="px-4 py-3 text-left text-sm">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="unclaimed-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
-
-          <div class="mt-4 flex gap-2">
-            <button onclick="emailSelectedUnclaimed()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
-              📧 Email Selected
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- AGENCIES TAB (existing, just adding claimed status column) -->
+      <!-- Agencies Tab -->
       <div id="tab-agencies" class="tab-content hidden">
         <div class="flex justify-between items-center mb-6">
           <h2 class="text-2xl font-bold">All Agencies</h2>
@@ -609,8 +299,9 @@ ContentScale Team</textarea>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Name</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Domain</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Country</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Claimed</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Plan</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Clients</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Scans</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
                 </tr>
@@ -621,26 +312,131 @@ ContentScale Team</textarea>
           </div>
         </div>
 
-        <!-- Export Buttons -->
         <div class="mt-4 flex gap-2">
           <button onclick="deleteSelectedAgencies()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
-          <button onclick="emailSelectedAgencies()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📧 Email Selected</button>
           <button onclick="exportAgenciesToCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">📊 Export CSV</button>
+          <button onclick="exportAgenciesToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
         </div>
       </div>
 
-      <!-- LEADERBOARD TAB (existing, add email column) -->
+      <!-- Clients Tab -->
+      <div id="tab-clients" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">All Clients</h2>
+
+        <div id="clients-loading" class="text-center py-12">
+          <div class="inline-block animate-spin text-4xl">⏳</div>
+          <p class="text-gray-400 mt-4">Loading clients...</p>
+        </div>
+
+        <div id="clients-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-700">
+                <tr>
+                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="client-select-all" onchange="toggleSelectAllClients()"></th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Client URL</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Agency</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Scans</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Last Scan</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="clients-tbody" class="divide-y divide-gray-700">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="mt-4 flex gap-2">
+          <button onclick="deleteSelectedClients()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
+          <button onclick="exportClientsToCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">📊 Export CSV</button>
+          <button onclick="exportClientsToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
+        </div>
+      </div>
+
+      <!-- Scans Tab -->
+      <div id="tab-scans" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">All Scans</h2>
+
+        <div id="scans-loading" class="text-center py-12">
+          <div class="inline-block animate-spin text-4xl">⏳</div>
+          <p class="text-gray-400 mt-4">Loading scans...</p>
+        </div>
+
+        <div id="scans-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-700">
+                <tr>
+                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="scan-select-all" onchange="toggleSelectAllScans()"></th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">URL</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Score</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Quality</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Agency/Client</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Type</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Date</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="scans-tbody" class="divide-y divide-gray-700">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="mt-4 flex gap-2">
+          <button onclick="deleteSelectedScans()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
+          <button onclick="exportScansToCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">📊 Export CSV</button>
+          <button onclick="exportScansToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
+        </div>
+      </div>
+
+      <!-- Share Links Tab -->
+      <div id="tab-share-links" class="tab-content hidden">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold">Share Links</h2>
+          <button onclick="showCreateShareLinkModal()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all">
+            ➕ Create Share Link
+          </button>
+        </div>
+
+        <div id="share-links-loading" class="text-center py-12">
+          <div class="inline-block animate-spin text-4xl">⏳</div>
+          <p class="text-gray-400 mt-4">Loading share links...</p>
+        </div>
+
+        <div id="share-links-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-700">
+                <tr>
+                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="sharelink-select-all" onchange="toggleSelectAllShareLinks()"></th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Client</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Email</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Usage</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Expires</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="share-links-tbody" class="divide-y divide-gray-700">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="mt-4 flex gap-2">
+          <button onclick="deleteSelectedShareLinks()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
+        </div>
+      </div>
+
+      <!-- Leaderboard Tab -->
       <div id="tab-leaderboard" class="tab-content hidden">
         <div class="flex justify-between items-center mb-6">
           <h2 class="text-2xl font-bold">Global Leaderboard Management</h2>
-          <div class="flex gap-2">
-            <button onclick="emailAllLeaderboard()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
-              📧 Email All
-            </button>
-            <button onclick="scanAllAgencies()" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold transition-all">
-              🔍 Scan All
-            </button>
-          </div>
+          <button onclick="scanAllAgencies()" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold transition-all">
+            🔍 Scan Alle Agencies Nu
+          </button>
         </div>
 
         <div class="mb-4 flex gap-4">
@@ -661,8 +457,7 @@ ContentScale Team</textarea>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Company</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">URL</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Score</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Claimed</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Email</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Country</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
                 </tr>
               </thead>
@@ -672,67 +467,205 @@ ContentScale Team</textarea>
           </div>
         </div>
 
-        <!-- Export Buttons -->
         <div class="mt-4 flex gap-2">
           <button onclick="deleteSelectedLeaderboard()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
           <button onclick="exportLeaderboardToCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">📊 Export CSV</button>
+          <button onclick="exportLeaderboardToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
         </div>
       </div>
 
-      <!-- REMAINING TABS (keeping all existing tabs) -->
-      <div id="tab-admins" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">Admin Management</h2>
-        <p class="text-gray-400">Admin management content...</p>
+      <!-- EMAIL & NOTIFICATIONS TAB -->
+      <div id="tab-email-notifications" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">📧 Email & Notifications</h2>
+        <div class="bg-gray-800 rounded-lg p-6">
+          <h3 class="text-xl font-bold mb-4">Send Bulk Email</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm mb-2">Recipients</label>
+              <select id="bulk-email-recipients" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                <option value="all-leaderboard">All Leaderboard Agencies</option>
+                <option value="unclaimed">Unclaimed Profiles Only</option>
+                <option value="claimed">Claimed Profiles Only</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm mb-2">Subject</label>
+              <input type="text" id="bulk-email-subject" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+            </div>
+            <div>
+              <label class="block text-sm mb-2">Message</label>
+              <textarea id="bulk-email-body" rows="6" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"></textarea>
+            </div>
+            <button onclick="sendBulkEmail()" class="w-full py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
+              📧 Send to All Recipients
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div id="tab-clients" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">All Clients</h2>
-        <p class="text-gray-400">Clients content...</p>
+      <!-- CLAIMS MANAGEMENT TAB -->
+      <div id="tab-claims" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">🏢 Claims Management</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div class="bg-gradient-to-br from-purple-900 to-purple-800 rounded-lg p-4">
+            <div class="text-sm text-purple-200">Pending Claims</div>
+            <div class="text-3xl font-bold mt-2" id="pending-claims-count">0</div>
+          </div>
+          <div class="bg-gradient-to-br from-green-900 to-green-800 rounded-lg p-4">
+            <div class="text-sm text-green-200">Approved Claims</div>
+            <div class="text-3xl font-bold mt-2" id="approved-claims-count">0</div>
+          </div>
+          <div class="bg-gradient-to-br from-blue-900 to-blue-800 rounded-lg p-4">
+            <div class="text-sm text-blue-200">Total Claimed</div>
+            <div class="text-3xl font-bold mt-2" id="total-claimed-count">0</div>
+          </div>
+          <div class="bg-gradient-to-br from-orange-900 to-orange-800 rounded-lg p-4">
+            <div class="text-sm text-orange-200">Unclaimed Profiles</div>
+            <div class="text-3xl font-bold mt-2" id="unclaimed-profiles-count">0</div>
+          </div>
+        </div>
+
+        <div class="bg-gray-800 rounded-lg p-6">
+          <h3 class="text-xl font-bold mb-4">⏳ Pending Claims</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-700">
+                <tr>
+                  <th class="px-4 py-3 text-left text-sm">Agency Name</th>
+                  <th class="px-4 py-3 text-left text-sm">URL</th>
+                  <th class="px-4 py-3 text-left text-sm">Email</th>
+                  <th class="px-4 py-3 text-left text-sm">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="pending-claims-tbody" class="divide-y divide-gray-700">
+                <tr>
+                  <td colspan="4" class="px-4 py-8 text-center text-gray-400">No pending claims</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
-      <div id="tab-scans" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">All Scans</h2>
-        <p class="text-gray-400">Scans content...</p>
+      <!-- OPT-OUT TAB -->
+      <div id="tab-opt-out" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">🚫 Opt-Out Management</h2>
+        <div class="bg-gray-800 rounded-lg p-6">
+          <h3 class="text-xl font-bold mb-4">Manual Opt-Out</h3>
+          <div class="flex gap-4">
+            <input type="text" id="manual-optout-url" placeholder="Agency website URL" 
+              class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+            <button onclick="manualOptOut()" class="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">
+              Remove from Leaderboard
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div id="tab-share-links" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">Share Links</h2>
-        <p class="text-gray-400">Share links content...</p>
-      </div>
-
+      <!-- Lead Scanner Tab -->
       <div id="tab-lead-scanner" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">Lead Scanner</h2>
-        <p class="text-gray-400">Lead scanner content...</p>
+        <h2 class="text-2xl font-bold mb-6">🎯 Lead Scanner</h2>
+        <p class="text-gray-400">Lead scanner functionality...</p>
       </div>
 
+      <!-- ContentScore Tab -->
       <div id="tab-contentscore" class="tab-content hidden">
         <h2 class="text-2xl font-bold mb-6">ContentScore Tool</h2>
         <iframe src="/seo-contentscore" class="w-full h-screen border-0 rounded-lg"></iframe>
       </div>
 
+      <!-- Code Generators Tab -->
       <div id="tab-code-generators" class="tab-content hidden">
         <iframe src="/contentscale-complete-generator.html" style="width:100%; height:100vh; border:none; border-radius:8px;"></iframe>
       </div>
 
+      <!-- LTD Codes Tab -->
       <div id="tab-ltd-codes" class="tab-content hidden">
         <h2 class="text-2xl font-bold mb-6">LTD Codes</h2>
         <p class="text-gray-400">Coming soon...</p>
       </div>
 
+      <!-- Settings Tab -->
       <div id="tab-settings" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">Settings</h2>
+        <h2 class="text-2xl font-bold mb-6">Platform Settings</h2>
         <p class="text-gray-400">Settings content...</p>
       </div>
 
+      <!-- Handleiding Tab -->
       <div id="tab-handleiding" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">Handleiding</h2>
+        <h2 class="text-2xl font-bold mb-6">📚 Handleiding</h2>
         <p class="text-gray-400">Guide content...</p>
       </div>
 
     </main>
   </div>
 
-  <script>
+  <!-- MODALS -->
+  <div id="modal-add-agency" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-lg p-8 max-w-2xl w-full mx-4">
+      <h3 class="text-2xl font-bold mb-6">Add New Agency</h3>
+      <div class="space-y-4">
+        <input type="text" id="agency-name" placeholder="Agency Name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="text" id="agency-domain" placeholder="Domain (example.com)" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <select id="agency-country" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+          <option value="NL">🇳🇱 Netherlands</option>
+          <option value="BE">🇧🇪 Belgium</option>
+          <option value="DE">🇩🇪 Germany</option>
+        </select>
+        <div class="flex gap-4">
+          <button onclick="submitAddAgency()" class="flex-1 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">Create</button>
+          <button onclick="closeModal('modal-add-agency')" class="flex-1 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-create-share-link" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-lg p-8 max-w-2xl w-full mx-4">
+      <h3 class="text-2xl font-bold mb-6">Create Share Link</h3>
+      <div class="space-y-4">
+        <input type="email" id="share-client-email" placeholder="Client Email" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="text" id="share-client-name" placeholder="Client Name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="number" id="share-scans-limit" value="5" min="1" placeholder="Scans Limit" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="number" id="share-valid-days" value="30" min="1" placeholder="Valid Days" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <div class="flex gap-4">
+          <button onclick="submitCreateShareLink()" class="flex-1 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold">Create</button>
+          <button onclick="closeModal('modal-create-share-link')" class="flex-1 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-add-admin" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-lg p-8 max-w-2xl w-full mx-4">
+      <h3 class="text-2xl font-bold mb-6">Add Admin/Helper</h3>
+      <div class="space-y-4">
+        <input type="text" id="admin-username" placeholder="Username" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="password" id="admin-password" placeholder="Password (min 8)" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <select id="admin-role" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+          <option value="">Select Role</option>
+          <option value="super_admin">👑 Super Admin</option>
+          <option value="helper">🤝 Helper</option>
+        </select>
+        <input type="text" id="admin-full-name" placeholder="Full Name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="email" id="admin-email" placeholder="Email" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <div class="flex gap-4">
+          <button onclick="submitAddAdmin()" class="flex-1 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">Create</button>
+          <button onclick="closeModal('modal-add-admin')" class="flex-1 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+    // ✅ GLOBAL DATA STORES FOR EXPORT
+    let allAgencies = [];
+    let allClients = [];
+    let allScans = [];
+    let allLeaderboard = [];
+    let leadQueue = [];
+
     // ==========================================
     // LOGIN & AUTH
     // ==========================================
@@ -756,7 +689,7 @@ ContentScale Team</textarea>
           document.getElementById('admin-username').textContent = data.admin.username;
           loadAllData();
         } else {
-          alert('❌ Login failed');
+          alert('❌ ' + (data.error || 'Login failed'));
         }
       } catch (error) {
         alert('Connection error');
@@ -767,6 +700,13 @@ ContentScale Team</textarea>
       localStorage.removeItem('admin_id');
       sessionStorage.removeItem('admin_logged_in');
       location.reload();
+    }
+
+    // Check login
+    if (sessionStorage.getItem('admin_logged_in') === 'true') {
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('main-dashboard').classList.remove('hidden');
+      loadAllData();
     }
 
     // ==========================================
@@ -788,38 +728,534 @@ ContentScale Team</textarea>
     }
 
     // ==========================================
-    // EMAIL FUNCTIONS
+    // DATA LOADING
     // ==========================================
-    function testEmailTemplate(type) {
-      const subject = document.getElementById(`email-subject-${type}`).value;
-      const body = document.getElementById(`email-body-${type}`).value;
-      
-      const testData = {
-        agency_name: 'Test Agency',
-        score: 85,
-        rank: 5,
-        country: 'Netherlands',
-        claim_url: 'https://contentscale.site/claim/ABC123',
-        profile_url: 'https://contentscale.site/agency/test-agency'
+    async function loadAllData() {
+      loadStats();
+      loadAdmins();
+      loadAgencies();
+      loadClients();
+      loadScans();
+      loadShareLinks();
+      loadLeaderboard();
+      loadClaims();
+    }
+
+    async function loadStats() {
+      try {
+        const response = await fetch('/api/admin/stats', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        if (data.success) {
+          document.getElementById('stat-total-agencies').textContent = data.stats.total_agencies;
+          document.getElementById('stat-total-clients').textContent = data.stats.total_clients;
+          document.getElementById('stat-total-scans').textContent = data.stats.total_scans;
+          document.getElementById('stat-active-helpers').textContent = data.stats.active_helpers;
+        }
+      } catch (error) {
+        console.error('Stats error:', error);
+      }
+    }
+
+    async function loadAdmins() {
+      try {
+        const response = await fetch('/api/admins', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        const tbody = document.getElementById('admins-tbody');
+        tbody.innerHTML = '';
+        
+        if (data.success && data.admins) {
+          data.admins.forEach(admin => {
+            tbody.innerHTML += `
+              <tr>
+                <td class="px-4 py-3">${admin.username}</td>
+                <td class="px-4 py-3">${admin.full_name || '-'}</td>
+                <td class="px-4 py-3">${admin.email || '-'}</td>
+                <td class="px-4 py-3"><span class="px-2 py-1 bg-purple-600 rounded text-xs">${admin.role}</span></td>
+                <td class="px-4 py-3">${admin.is_active ? '✅' : '❌'}</td>
+                <td class="px-4 py-3">${admin.created_at ? new Date(admin.created_at).toLocaleDateString() : '-'}</td>
+                <td class="px-4 py-3">${admin.last_login ? new Date(admin.last_login).toLocaleDateString() : 'Never'}</td>
+                <td class="px-4 py-3"><button onclick="deleteItem('admins', ${admin.id})" class="text-red-400">🗑️</button></td>
+              </tr>
+            `;
+          });
+          document.getElementById('admins-loading').classList.add('hidden');
+          document.getElementById('admins-list').classList.remove('hidden');
+        }
+      } catch (error) {
+        console.error('Admins error:', error);
+      }
+    }
+
+    async function loadAgencies() {
+      try {
+        const response = await fetch('/api/super-admin/agencies', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        const tbody = document.getElementById('agencies-tbody');
+        tbody.innerHTML = '';
+        
+        if (data.success && data.agencies) {
+          allAgencies = data.agencies;
+          data.agencies.forEach(agency => {
+            const row = `
+              <tr>
+                <td class="px-4 py-3"><input type="checkbox" class="agency-checkbox" value="${agency.id}"></td>
+                <td class="px-4 py-3">${agency.name}</td>
+                <td class="px-4 py-3">${agency.domain}</td>
+                <td class="px-4 py-3">${agency.country}</td>
+                <td class="px-4 py-3"><span class="px-2 py-1 bg-blue-600 rounded text-xs">${agency.plan}</span></td>
+                <td class="px-4 py-3">${agency.client_count || 0}</td>
+                <td class="px-4 py-3">${agency.total_scans || 0}</td>
+                <td class="px-4 py-3">${agency.is_active ? '✅' : '❌'}</td>
+                <td class="px-4 py-3"><button onclick="deleteItem('agencies', ${agency.id})" class="text-red-400">🗑️</button></td>
+              </tr>
+            `;
+            tbody.innerHTML += row;
+          });
+          document.getElementById('agencies-loading').classList.add('hidden');
+          document.getElementById('agencies-list').classList.remove('hidden');
+        }
+      } catch (error) {
+        console.error('Agencies error:', error);
+      }
+    }
+
+    async function loadClients() {
+      try {
+        const response = await fetch('/api/admin/clients', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        const tbody = document.getElementById('clients-tbody');
+        tbody.innerHTML = '';
+        
+        if (data.success && data.clients) {
+          allClients = data.clients;
+          data.clients.forEach(client => {
+            tbody.innerHTML += `
+              <tr>
+                <td class="px-4 py-3"><input type="checkbox" class="client-checkbox" value="${client.id}"></td>
+                <td class="px-4 py-3 text-blue-400">${client.url}</td>
+                <td class="px-4 py-3">${client.agency_name || '-'}</td>
+                <td class="px-4 py-3">${client.scan_count || 0}</td>
+                <td class="px-4 py-3">${client.created_at ? new Date(client.created_at).toLocaleDateString() : '-'}</td>
+                <td class="px-4 py-3"><button onclick="deleteItem('clients', ${client.id})" class="text-red-400">🗑️</button></td>
+              </tr>
+            `;
+          });
+          document.getElementById('clients-loading').classList.add('hidden');
+          document.getElementById('clients-list').classList.remove('hidden');
+        }
+      } catch (error) {
+        console.error('Clients error:', error);
+      }
+    }
+
+    async function loadScans() {
+      try {
+        const response = await fetch('/api/admin/scans', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        const tbody = document.getElementById('scans-tbody');
+        tbody.innerHTML = '';
+        
+        if (data.success && data.scans) {
+          allScans = data.scans;
+          data.scans.forEach(scan => {
+            tbody.innerHTML += `
+              <tr>
+                <td class="px-4 py-3"><input type="checkbox" class="scan-checkbox" value="${scan.id}"></td>
+                <td class="px-4 py-3 text-blue-400 text-sm">${scan.url ? scan.url.substring(0, 40) : '-'}...</td>
+                <td class="px-4 py-3 font-bold">${scan.score || '-'}/100</td>
+                <td class="px-4 py-3"><span class="px-2 py-1 bg-gray-700 rounded text-xs">${scan.quality || '-'}</span></td>
+                <td class="px-4 py-3 text-sm">${scan.agency_name || '-'}</td>
+                <td class="px-4 py-3"><span class="px-2 py-1 bg-gray-700 rounded text-xs">${scan.scan_type}</span></td>
+                <td class="px-4 py-3 text-sm">${scan.created_at ? new Date(scan.created_at).toLocaleDateString() : '-'}</td>
+                <td class="px-4 py-3"><button onclick="deleteItem('scans', ${scan.id})" class="text-red-400">🗑️</button></td>
+              </tr>
+            `;
+          });
+          document.getElementById('scans-loading').classList.add('hidden');
+          document.getElementById('scans-list').classList.remove('hidden');
+        }
+      } catch (error) {
+        console.error('Scans error:', error);
+      }
+    }
+
+    async function loadShareLinks() {
+      try {
+        const response = await fetch('/api/admin/share-links', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        const tbody = document.getElementById('share-links-tbody');
+        tbody.innerHTML = '';
+        
+        if (data.success && data.share_links) {
+          data.share_links.forEach(link => {
+            tbody.innerHTML += `
+              <tr>
+                <td class="px-4 py-3"><input type="checkbox" class="sharelink-checkbox" value="${link.share_code}"></td>
+                <td class="px-4 py-3">${link.client_name || '-'}</td>
+                <td class="px-4 py-3">${link.client_email}</td>
+                <td class="px-4 py-3">${link.scans_used || 0}/${link.scans_limit || 5}</td>
+                <td class="px-4 py-3 text-sm">${link.expires_at ? new Date(link.expires_at).toLocaleDateString() : '-'}</td>
+                <td class="px-4 py-3"><span class="px-2 py-1 ${link.status === 'active' ? 'bg-green-900' : 'bg-red-900'} rounded text-xs">${link.status}</span></td>
+                <td class="px-4 py-3"><button onclick="deleteShareLink('${link.share_code}')" class="text-red-400">🗑️</button></td>
+              </tr>
+            `;
+          });
+          document.getElementById('share-links-loading').classList.add('hidden');
+          document.getElementById('share-links-list').classList.remove('hidden');
+        }
+      } catch (error) {
+        console.error('Share links error:', error);
+      }
+    }
+
+    async function loadLeaderboard() {
+      try {
+        const response = await fetch('/api/admin/leaderboard', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        const tbody = document.getElementById('leaderboard-tbody');
+        tbody.innerHTML = '';
+        
+        if (data.success && data.entries) {
+          allLeaderboard = data.entries;
+          data.entries.forEach(entry => {
+            const medals = ['🥇', '🥈', '🥉'];
+            const medal = entry.rank <= 3 ? medals[entry.rank - 1] : '';
+            
+            tbody.innerHTML += `
+              <tr>
+                <td class="px-4 py-3"><input type="checkbox" class="leaderboard-checkbox" value="${entry.id}"></td>
+                <td class="px-4 py-3 font-bold">${medal} #${entry.rank}</td>
+                <td class="px-4 py-3">${entry.company_name || '-'}</td>
+                <td class="px-4 py-3 text-blue-400 text-sm">${entry.url ? entry.url.substring(0, 40) : '-'}</td>
+                <td class="px-4 py-3 font-bold">${entry.score}/100</td>
+                <td class="px-4 py-3">${entry.country}</td>
+                <td class="px-4 py-3"><button onclick="deleteItem('leaderboard', ${entry.id})" class="text-red-400">🗑️</button></td>
+              </tr>
+            `;
+          });
+        }
+      } catch (error) {
+        console.error('Leaderboard error:', error);
+      }
+    }
+
+    async function loadClaims() {
+      try {
+        const response = await fetch('/api/admin/claims/pending', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          document.getElementById('pending-claims-count').textContent = data.claims?.length || 0;
+          document.getElementById('approved-claims-count').textContent = 0;
+          document.getElementById('total-claimed-count').textContent = 0;
+          document.getElementById('unclaimed-profiles-count').textContent = 0;
+        }
+      } catch (error) {
+        console.error('Claims error:', error);
+      }
+    }
+
+    // ==========================================
+    // EXPORT FUNCTIONS
+    // ==========================================
+    function exportToCSV(filename, data) {
+      const csv = [
+        Object.keys(data[0] || {}).join(',')
+      ].concat(data.map(row => Object.values(row).map(cell => '"' + (cell || '').toString().replace(/"/g, '""') + '"').join(',')))
+       .join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    }
+
+    function exportToJSON(filename, data) {
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    }
+
+    function exportAgenciesToCSV() {
+      exportToCSV(`agencies-${Date.now()}.csv`, allAgencies);
+    }
+
+    function exportAgenciesToJSON() {
+      exportToJSON(`agencies-${Date.now()}.json`, allAgencies);
+    }
+
+    function exportClientsToCSV() {
+      exportToCSV(`clients-${Date.now()}.csv`, allClients);
+    }
+
+    function exportClientsToJSON() {
+      exportToJSON(`clients-${Date.now()}.json`, allClients);
+    }
+
+    function exportScansToCSV() {
+      exportToCSV(`scans-${Date.now()}.csv`, allScans);
+    }
+
+    function exportScansToJSON() {
+      exportToJSON(`scans-${Date.now()}.json`, allScans);
+    }
+
+    function exportLeaderboardToCSV() {
+      exportToCSV(`leaderboard-${Date.now()}.csv`, allLeaderboard);
+    }
+
+    function exportLeaderboardToJSON() {
+      exportToJSON(`leaderboard-${Date.now()}.json`, allLeaderboard);
+    }
+
+    function exportLeadQueueToCSV() {
+      exportToCSV(`lead-queue-${Date.now()}.csv`, leadQueue);
+    }
+
+    function exportLeadQueueToJSON() {
+      exportToJSON(`lead-queue-${Date.now()}.json`, leadQueue);
+    }
+
+    // ==========================================
+    // BULK SELECT & DELETE FUNCTIONS
+    // ==========================================
+    
+    // Agencies
+    function toggleSelectAllAgencies() {
+      const isChecked = document.getElementById('agency-select-all').checked;
+      document.querySelectorAll('.agency-checkbox').forEach(cb => cb.checked = isChecked);
+    }
+
+    function deleteSelectedAgencies() {
+      const selected = Array.from(document.querySelectorAll('.agency-checkbox:checked')).map(cb => cb.value);
+      if (selected.length === 0) return alert('Please select agencies to delete');
+      if (!confirm(`Delete ${selected.length} agencies?`)) return;
+      selected.forEach(id => deleteItem('agencies', id));
+      setTimeout(() => loadAgencies(), 500);
+    }
+
+    // Clients
+    function toggleSelectAllClients() {
+      const isChecked = document.getElementById('client-select-all').checked;
+      document.querySelectorAll('.client-checkbox').forEach(cb => cb.checked = isChecked);
+    }
+
+    function deleteSelectedClients() {
+      const selected = Array.from(document.querySelectorAll('.client-checkbox:checked')).map(cb => cb.value);
+      if (selected.length === 0) return alert('Please select clients to delete');
+      if (!confirm(`Delete ${selected.length} clients?`)) return;
+      selected.forEach(id => deleteItem('clients', id));
+      setTimeout(() => loadClients(), 500);
+    }
+
+    // Scans
+    function toggleSelectAllScans() {
+      const isChecked = document.getElementById('scan-select-all').checked;
+      document.querySelectorAll('.scan-checkbox').forEach(cb => cb.checked = isChecked);
+    }
+
+    function deleteSelectedScans() {
+      const selected = Array.from(document.querySelectorAll('.scan-checkbox:checked')).map(cb => cb.value);
+      if (selected.length === 0) return alert('Please select scans to delete');
+      if (!confirm(`Delete ${selected.length} scans?`)) return;
+      selected.forEach(id => deleteItem('scans', id));
+      setTimeout(() => loadScans(), 500);
+    }
+
+    // Share Links
+    function toggleSelectAllShareLinks() {
+      const isChecked = document.getElementById('sharelink-select-all').checked;
+      document.querySelectorAll('.sharelink-checkbox').forEach(cb => cb.checked = isChecked);
+    }
+
+    function deleteSelectedShareLinks() {
+      const selected = Array.from(document.querySelectorAll('.sharelink-checkbox:checked')).map(cb => cb.value);
+      if (selected.length === 0) return alert('Please select share links to delete');
+      if (!confirm(`Delete ${selected.length} share links?`)) return;
+      selected.forEach(code => deleteShareLink(code));
+      setTimeout(() => loadShareLinks(), 500);
+    }
+
+    // Leaderboard
+    function toggleSelectAllLeaderboard() {
+      const isChecked = document.getElementById('leaderboard-select-all').checked;
+      document.querySelectorAll('.leaderboard-checkbox').forEach(cb => cb.checked = isChecked);
+    }
+
+    function deleteSelectedLeaderboard() {
+      const selected = Array.from(document.querySelectorAll('.leaderboard-checkbox:checked')).map(cb => cb.value);
+      if (selected.length === 0) return alert('Please select leaderboard entries to delete');
+      if (!confirm(`Delete ${selected.length} leaderboard entries?`)) return;
+      selected.forEach(id => deleteItem('leaderboard', id));
+      setTimeout(() => loadLeaderboard(), 500);
+    }
+
+    // ==========================================
+    // CRUD OPERATIONS
+    // ==========================================
+    async function submitAddAgency() {
+      const formData = {
+        name: document.getElementById('agency-name').value,
+        domain: document.getElementById('agency-domain').value,
+        country: document.getElementById('agency-country').value,
+        plan: 'free'
       };
       
-      let filledBody = body;
-      Object.keys(testData).forEach(key => {
-        filledBody = filledBody.replace(new RegExp(`{${key}}`, 'g'), testData[key]);
-      });
+      try {
+        const response = await fetch('/api/agencies', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          },
+          body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          alert('✅ Agency created!');
+          closeModal('modal-add-agency');
+          loadAgencies();
+        } else {
+          alert('❌ ' + (data.error || 'Failed'));
+        }
+      } catch (error) {
+        alert('Error');
+      }
+    }
+
+    async function submitCreateShareLink() {
+      const formData = {
+        client_email: document.getElementById('share-client-email').value,
+        client_name: document.getElementById('share-client-name').value,
+        scans_limit: parseInt(document.getElementById('share-scans-limit').value),
+        valid_days: parseInt(document.getElementById('share-valid-days').value)
+      };
       
-      alert(`📧 Test Email Preview:\n\nSubject: ${subject}\n\n${filledBody}`);
+      try {
+        const response = await fetch('/api/admin/share-links/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          },
+          body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          alert('✅ Link created!\n' + data.share_url);
+          navigator.clipboard.writeText(data.share_url);
+          closeModal('modal-create-share-link');
+          loadShareLinks();
+        }
+      } catch (error) {
+        alert('Error');
+      }
     }
 
-    function previewBulkEmail() {
-      const recipients = document.getElementById('bulk-email-recipients').value;
-      const template = document.getElementById('bulk-email-template').value;
-      alert(`Preview for ${recipients} using template: ${template}`);
+    async function submitAddAdmin() {
+      const formData = {
+        username: document.getElementById('admin-username').value,
+        password: document.getElementById('admin-password').value,
+        role: document.getElementById('admin-role').value,
+        full_name: document.getElementById('admin-full-name').value,
+        email: document.getElementById('admin-email').value
+      };
+      
+      try {
+        const response = await fetch('/api/admins', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          },
+          body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          alert('✅ Admin created!');
+          closeModal('modal-add-admin');
+          loadAdmins();
+        } else {
+          alert('❌ ' + (data.error || 'Failed'));
+        }
+      } catch (error) {
+        alert('Error');
+      }
     }
 
+    async function deleteItem(type, id) {
+      if (!confirm('Delete this item?')) return;
+      
+      const endpoints = {
+        admins: `/api/admins/${id}`,
+        agencies: `/api/agencies/${id}`,
+        clients: `/api/admin/clients/${id}`,
+        scans: `/api/admin/scans/${id}`,
+        leaderboard: `/api/admin/leaderboard/${id}`
+      };
+      
+      try {
+        const response = await fetch(endpoints[type], {
+          method: 'DELETE',
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        if (response.ok) {
+          loadAllData();
+        }
+      } catch (error) {
+        alert('Error');
+      }
+    }
+
+    async function deleteShareLink(code) {
+      if (!confirm('Delete this link?')) return;
+      
+      try {
+        await fetch(`/api/admin/share-links/${code}`, {
+          method: 'DELETE',
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        loadShareLinks();
+      } catch (error) {
+        alert('Error');
+      }
+    }
+
+    // ==========================================
+    // EMAIL FUNCTIONS
+    // ==========================================
     async function sendBulkEmail() {
       const recipients = document.getElementById('bulk-email-recipients').value;
-      const template = document.getElementById('bulk-email-template').value;
+      const subject = document.getElementById('bulk-email-subject').value;
+      const body = document.getElementById('bulk-email-body').value;
       
       if (!confirm(`Send email to ${recipients}?`)) return;
       
@@ -830,7 +1266,7 @@ ContentScale Team</textarea>
             'Content-Type': 'application/json',
             'x-admin-key': localStorage.getItem('admin_id')
           },
-          body: JSON.stringify({ recipients, template })
+          body: JSON.stringify({ recipients, subject, body })
         });
         
         const data = await response.json();
@@ -840,19 +1276,6 @@ ContentScale Team</textarea>
       } catch (error) {
         alert('Error sending emails');
       }
-    }
-
-    function emailSelectedAgencies() {
-      const selected = Array.from(document.querySelectorAll('.agency-checkbox:checked'));
-      if (selected.length === 0) return alert('Select agencies first');
-      
-      switchTab('email-notifications');
-      document.getElementById('bulk-email-recipients').value = 'custom';
-    }
-
-    function emailAllLeaderboard() {
-      switchTab('email-notifications');
-      document.getElementById('bulk-email-recipients').value = 'all-leaderboard';
     }
 
     // ==========================================
@@ -881,331 +1304,49 @@ ContentScale Team</textarea>
     }
 
     // ==========================================
-    // CLAIMS MANAGEMENT FUNCTIONS
+    // HELPERS
     // ==========================================
-    async function loadClaims() {
-      try {
-        // Load pending claims
-        const pendingResponse = await fetch('/api/admin/claims/pending', {
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        const pendingData = await pendingResponse.json();
-        
-        if (pendingData.success) {
-          renderPendingClaims(pendingData.claims || []);
-          document.getElementById('pending-claims-count').textContent = pendingData.claims?.length || 0;
-        }
-        
-        // Load approved claims
-        const approvedResponse = await fetch('/api/admin/claims/approved', {
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        const approvedData = await approvedResponse.json();
-        
-        if (approvedData.success) {
-          renderApprovedClaims(approvedData.claims || []);
-          document.getElementById('approved-claims-count').textContent = approvedData.claims?.length || 0;
-          document.getElementById('total-claimed-count').textContent = approvedData.claims?.length || 0;
-        }
-        
-        // Load unclaimed profiles
-        loadUnclaimedProfiles();
-        
-      } catch (error) {
-        console.error('Claims load error:', error);
-      }
+    function showAddAgencyModal() {
+      document.getElementById('modal-add-agency').classList.remove('hidden');
     }
 
-    function renderPendingClaims(claims) {
-      const tbody = document.getElementById('pending-claims-tbody');
-      
-      if (!claims || claims.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="6" class="px-4 py-8 text-center text-gray-400">
-              No pending claims
-            </td>
-          </tr>
-        `;
+    function showCreateShareLinkModal() {
+      document.getElementById('modal-create-share-link').classList.remove('hidden');
+    }
+
+    function showAddAdminModal() {
+      document.getElementById('modal-add-admin').classList.remove('hidden');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+    }
+
+    async function searchLeaderboard() {
+      const query = document.getElementById('leaderboard-search').value;
+      if (!query) {
+        loadLeaderboard();
         return;
       }
       
-      tbody.innerHTML = claims.map(claim => `
-        <tr>
-          <td class="px-4 py-3 text-sm">${new Date(claim.submitted_at).toLocaleDateString()}</td>
-          <td class="px-4 py-3 font-semibold">${claim.agency_name}</td>
-          <td class="px-4 py-3 text-sm text-blue-400">${claim.url}</td>
-          <td class="px-4 py-3 text-sm">${claim.contact_email}</td>
-          <td class="px-4 py-3">${claim.country}</td>
-          <td class="px-4 py-3">
-            <div class="flex gap-2">
-              <button onclick="approveClaim(${claim.id})" class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm">
-                ✅ Approve
-              </button>
-              <button onclick="rejectClaim(${claim.id})" class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm">
-                ❌ Reject
-              </button>
-              <button onclick="viewClaimDetails(${claim.id})" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm">
-                👁️ View
-              </button>
-            </div>
-          </td>
-        </tr>
-      `).join('');
-    }
-
-    function renderApprovedClaims(claims) {
-      const tbody = document.getElementById('approved-claims-tbody');
-      
-      if (!claims || claims.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="6" class="px-4 py-8 text-center text-gray-400">
-              No approved claims yet
-            </td>
-          </tr>
-        `;
-        return;
-      }
-      
-      tbody.innerHTML = claims.map(claim => `
-        <tr>
-          <td class="px-4 py-3">
-            <div class="flex items-center gap-3">
-              ${claim.logo_url ? `
-                <img src="${claim.logo_url}" alt="${claim.agency_name}" class="w-10 h-10 rounded object-cover">
-              ` : `
-                <div class="w-10 h-10 bg-gray-700 rounded flex items-center justify-center text-xl">🏢</div>
-              `}
-              <div>
-                <div class="font-semibold">${claim.agency_name}</div>
-                <div class="text-xs text-green-400">✓ Verified</div>
-              </div>
-            </div>
-          </td>
-          <td class="px-4 py-3 text-sm text-blue-400">${claim.url}</td>
-          <td class="px-4 py-3">
-            <span class="px-2 py-1 ${claim.score >= 85 ? 'bg-green-900 text-green-300' : claim.score >= 75 ? 'bg-blue-900 text-blue-300' : 'bg-yellow-900 text-yellow-300'} rounded text-sm font-bold">
-              ${claim.score}
-            </span>
-          </td>
-          <td class="px-4 py-3 text-sm">${claim.contact_email}</td>
-          <td class="px-4 py-3 text-sm">${new Date(claim.approved_at).toLocaleDateString()}</td>
-          <td class="px-4 py-3">
-            <div class="flex gap-2">
-              <button onclick="viewClaimDetails(${claim.id})" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm">
-                View
-              </button>
-              <button onclick="revokeClaim(${claim.id})" class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm">
-                Revoke
-              </button>
-            </div>
-          </td>
-        </tr>
-      `).join('');
-    }
-
-    async function loadUnclaimedProfiles() {
       try {
-        const response = await fetch('/api/admin/leaderboard?unclaimed=true', {
+        const response = await fetch(`/api/admin/leaderboard/search?q=${encodeURIComponent(query)}`, {
           headers: { 'x-admin-key': localStorage.getItem('admin_id') }
         });
         const data = await response.json();
-        
         if (data.success) {
-          renderUnclaimedProfiles(data.entries || []);
-          document.getElementById('unclaimed-profiles-count').textContent = data.entries?.length || 0;
-        }
-      } catch (error) {
-        console.error('Unclaimed load error:', error);
-      }
-    }
-
-    function renderUnclaimedProfiles(profiles) {
-      const tbody = document.getElementById('unclaimed-tbody');
-      
-      if (!profiles || profiles.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="7" class="px-4 py-8 text-center text-gray-400">
-              All profiles are claimed! 🎉
-            </td>
-          </tr>
-        `;
-        return;
-      }
-      
-      tbody.innerHTML = profiles.map(profile => `
-        <tr>
-          <td class="px-4 py-3">
-            <input type="checkbox" class="unclaimed-checkbox" value="${profile.id}">
-          </td>
-          <td class="px-4 py-3 font-semibold">${profile.company_name || 'Unknown'}</td>
-          <td class="px-4 py-3 text-sm text-blue-400">${profile.url}</td>
-          <td class="px-4 py-3">
-            <span class="px-2 py-1 ${profile.score >= 85 ? 'bg-green-900 text-green-300' : 'bg-yellow-900 text-yellow-300'} rounded text-sm font-bold">
-              ${profile.score}
-            </span>
-          </td>
-          <td class="px-4 py-3">${profile.country}</td>
-          <td class="px-4 py-3 text-sm">${new Date(profile.created_at).toLocaleDateString()}</td>
-          <td class="px-4 py-3">
-            <button onclick="sendClaimInvite('${profile.url}')" class="px-3 py-1 bg-purple-600 hover:bg-purple-700 rounded text-sm">
-              📧 Send Invite
-            </button>
-          </td>
-        </tr>
-      `).join('');
-    }
-
-    async function approveClaim(claimId) {
-      if (!confirm('Approve this claim?')) return;
-      
-      try {
-        const response = await fetch(`/api/admin/claims/approve/${claimId}`, {
-          method: 'POST',
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-          alert('✅ Claim approved! Agency is now verified.');
-          loadClaims();
+          allLeaderboard = data.entries;
           loadLeaderboard();
         }
       } catch (error) {
-        alert('Error approving claim');
+        console.error('Search error:', error);
       }
     }
 
-    async function rejectClaim(claimId) {
-      const reason = prompt('Reason for rejection (optional):');
-      
-      try {
-        const response = await fetch(`/api/admin/claims/reject/${claimId}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-admin-key': localStorage.getItem('admin_id')
-          },
-          body: JSON.stringify({ reason })
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-          alert('Claim rejected');
-          loadClaims();
-        }
-      } catch (error) {
-        alert('Error rejecting claim');
-      }
+    function scanAllAgencies() {
+      if (!confirm('Scan all agencies?')) return;
+      alert('Scan started!');
     }
-
-    async function revokeClaim(claimId) {
-      if (!confirm('Revoke this claim? The profile will return to unclaimed status.')) return;
-      
-      try {
-        const response = await fetch(`/api/admin/claims/revoke/${claimId}`, {
-          method: 'POST',
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        
-        if (response.ok) {
-          alert('Claim revoked');
-          loadClaims();
-          loadLeaderboard();
-        }
-      } catch (error) {
-        alert('Error');
-      }
-    }
-
-    function viewClaimDetails(claimId) {
-      alert(`View claim details for ID: ${claimId}\n\nThis would show full claim info in a modal.`);
-    }
-
-    async function sendClaimInvite(url) {
-      try {
-        const response = await fetch('/api/admin/emails/claim-invite', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-admin-key': localStorage.getItem('admin_id')
-          },
-          body: JSON.stringify({ url })
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-          alert('✅ Claim invite sent!');
-        }
-      } catch (error) {
-        alert('Error sending invite');
-      }
-    }
-
-    function toggleSelectAllUnclaimed() {
-      const isChecked = document.getElementById('unclaimed-select-all').checked;
-      document.querySelectorAll('.unclaimed-checkbox').forEach(cb => cb.checked = isChecked);
-    }
-
-    async function emailSelectedUnclaimed() {
-      const selected = Array.from(document.querySelectorAll('.unclaimed-checkbox:checked'));
-      if (selected.length === 0) return alert('Select profiles first');
-      
-      if (!confirm(`Send claim invites to ${selected.length} agencies?`)) return;
-      
-      try {
-        const response = await fetch('/api/admin/emails/bulk-claim-invites', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-admin-key': localStorage.getItem('admin_id')
-          },
-          body: JSON.stringify({
-            agency_ids: selected.map(cb => cb.value)
-          })
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-          alert(`✅ Sent ${data.count} emails!`);
-        }
-      } catch (error) {
-        alert('Error');
-      }
-    }
-
-    async function emailUnclaimedAgencies() {
-      switchTab('email-notifications');
-      document.getElementById('bulk-email-recipients').value = 'unclaimed';
-    }
-
-    async function emailAllClaimedAgencies() {
-      switchTab('email-notifications');
-      document.getElementById('bulk-email-recipients').value = 'claimed';
-    }
-
-    function exportClaimedProfiles() {
-      alert('Export claimed profiles to CSV');
-    }
-
-    // ==========================================
-    // PLACEHOLDERS
-    // ==========================================
-    function loadAllData() {
-      console.log('Loading all data...');
-    }
-
-    function toggleSelectAllAgencies() {}
-    function deleteSelectedAgencies() {}
-    function toggleSelectAllLeaderboard() {}
-    function deleteSelectedLeaderboard() {}
-    function exportAgenciesToCSV() {}
-    function exportLeaderboardToCSV() {}
-    function showAddAgencyModal() {}
-    function searchLeaderboard() {}
-    function scanAllAgencies() {}
   </script>
   
 </body>
