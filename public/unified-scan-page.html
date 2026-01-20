@@ -995,11 +995,11 @@
       lastScanData = {
         url: data.url,
         score: data.score,
-        quality: data.quality,
+        quality: data.score >= 85 ? 'Excellent' : data.score >= 75 ? 'Good' : data.score >= 65 ? 'Fair' : 'Needs Work',
         metrics: {
-          graaf: data.breakdown.graaf.total,
-          craft: data.breakdown.craft.total,
-          technical: data.breakdown.technical.total
+          graaf: data.metrics.graaf,
+          craft: data.metrics.craft,
+          technical: data.metrics.technical
         },
         recommendations: data.recommendations,
         timestamp: new Date().toISOString()
