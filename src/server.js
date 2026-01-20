@@ -1,6 +1,5 @@
 // ============================================
-// CONTENTSCALE SERVER.JS - CLEAN & SECURE
-// No warnings, proper SSL handling
+// CONTENTSCALE SERVER.JS - COMPLETE WITH SECURITY
 // ============================================
 
 const express = require('express');
@@ -13,12 +12,11 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ============================================
-// DATABASE CONFIGURATION - AVOID SSL WARNINGS
+// DATABASE CONFIGURATION
 // ============================================
 let dbConfig;
 
 if (process.env.DATABASE_URL) {
-  // Parse URL manually to avoid pg-connection-string warnings
   const url = new URL(process.env.DATABASE_URL);
   
   dbConfig = {
@@ -173,6 +171,13 @@ async function createAllTables() {
         country VARCHAR(10) DEFAULT 'NL',
         business_type VARCHAR(50),
         is_verified BOOLEAN DEFAULT FALSE,
+        is_opted_out BOOLEAN DEFAULT FALSE,
+        opted_out_at TIMESTAMP,
+        opted_out_reason VARCHAR(255),
+        submitted_via_share_link BOOLEAN DEFAULT FALSE,
+        share_link_id UUID,
+        submission_ip VARCHAR(50),
+        admin_verified BOOLEAN DEFAULT FALSE,
         last_scan TIMESTAMP DEFAULT NOW(),
         created_at TIMESTAMP DEFAULT NOW()
       )
@@ -216,6 +221,68 @@ async function createAllTables() {
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
+
+    // SECURITY TABLES
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS leaderboard_blocks (
+        id SERIAL PRIMARY KEY,
+        url VARCHAR(255) UNIQUE NOT NULL,
+        domain VARCHAR(255),
+        reason VARCHAR(255) NOT NULL,
+        blocked_by VARCHAR(100),
+        blocked_at TIMESTAMP DEFAULT NOW(),
+        expires_at TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS submission_limits (
+        id SERIAL PRIMARY KEY,
+        ip_address VARCHAR(50) NOT NULL,
+        submission_date DATE NOT NULL,
+        submission_count INT DEFAULT 1,
+        last_submitted_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(ip_address, submission_date)
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS admin_share_links (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        created_by VARCHAR(100) NOT NULL,
+        link_type VARCHAR(50) DEFAULT 'verify',
+        target_url VARCHAR(255),
+        target_company VARCHAR(255),
+        verification_token VARCHAR(255) UNIQUE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        expires_at TIMESTAMP,
+        used_count INT DEFAULT 0,
+        max_uses INT DEFAULT 10,
+        is_active BOOLEAN DEFAULT TRUE
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS submission_logs (
+        id SERIAL PRIMARY KEY,
+        url VARCHAR(255) NOT NULL,
+        company_name VARCHAR(255),
+        ip_address VARCHAR(50) NOT NULL,
+        country VARCHAR(10),
+        score INT,
+        graaf_score INT,
+        craft_score INT,
+        technical_score INT,
+        submitted_via VARCHAR(50) DEFAULT 'api',
+        share_link_id UUID,
+        status VARCHAR(50) DEFAULT 'pending',
+        rejection_reason VARCHAR(255),
+        submitted_at TIMESTAMP DEFAULT NOW(),
+        admin_reviewed_at TIMESTAMP,
+        admin_reviewed_by VARCHAR(100),
+        leaderboard_entry_id INT
+      )
+    `);
     
     // DATABASE MIGRATIONS
     await client.query(`ALTER TABLE super_admins ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
@@ -248,10 +315,11 @@ async function createAllTables() {
     await client.query('CREATE INDEX IF NOT EXISTS idx_scans_created ON scans(created_at DESC)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_leaderboard_score ON leaderboard(score DESC)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_agencies_domain ON agencies(domain)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_blocked_url ON leaderboard_blocks(url)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_submission_ip_date ON submission_limits(ip_address, submission_date)');
     
     console.log('✅ All database tables ready');
     
-    // Auto-populate leaderboard if empty
     setTimeout(autoPopulateLeaderboard, 500);
     
   } catch (error) {
@@ -599,6 +667,7 @@ app.get('/api/admin/leaderboard', async (req, res) => {
     const result = await pool.query(`
       SELECT *, ROW_NUMBER() OVER (ORDER BY score DESC) as rank 
       FROM leaderboard 
+      WHERE is_opted_out = FALSE
       ORDER BY score DESC 
       LIMIT 100
     `);
@@ -614,7 +683,7 @@ app.get('/api/admin/leaderboard/search', async (req, res) => {
     const result = await pool.query(`
       SELECT *, ROW_NUMBER() OVER (ORDER BY score DESC) as rank 
       FROM leaderboard 
-      WHERE url ILIKE $1 OR company_name ILIKE $1
+      WHERE (url ILIKE $1 OR company_name ILIKE $1) AND is_opted_out = FALSE
       ORDER BY score DESC
     `, [`%${q}%`]);
     res.json({ success: true, entries: result.rows });
@@ -633,6 +702,40 @@ app.delete('/api/admin/leaderboard/:id', async (req, res) => {
 });
 
 // ============================================
+// BULK DELETE LEADERBOARD ENTRIES
+// ============================================
+app.post('/api/admin/leaderboard/bulk-delete', async (req, res) => {
+  try {
+    const { ids } = req.body;
+    
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'No IDs provided' });
+    }
+    
+    const validIds = ids.map(id => parseInt(id)).filter(id => !isNaN(id));
+    
+    if (validIds.length === 0) {
+      return res.status(400).json({ error: 'Invalid IDs' });
+    }
+    
+    const result = await pool.query(
+      `DELETE FROM leaderboard WHERE id = ANY($1::int[])`,
+      [validIds]
+    );
+    
+    res.json({
+      success: true,
+      deleted: result.rowCount,
+      message: `Deleted ${result.rowCount} entries`
+    });
+    
+  } catch (error) {
+    console.error('Bulk delete error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
 // PUBLIC LEADERBOARD API
 // ============================================
 app.get('/api/leaderboard', async (req, res) => {
@@ -646,10 +749,10 @@ app.get('/api/leaderboard', async (req, res) => {
         score,
         COALESCE(country, 'NL') as country,
         COALESCE(business_type, 'agency') as type,
-        COALESCE(is_claimed, false) as is_claimed,
+        COALESCE(is_verified, false) as is_claimed,
         COALESCE(created_at, NOW()) as created_at
       FROM leaderboard 
-      WHERE score IS NOT NULL
+      WHERE score IS NOT NULL AND is_opted_out = FALSE
       ORDER BY score DESC 
       LIMIT 50
     `);
@@ -667,26 +770,188 @@ app.get('/api/leaderboard', async (req, res) => {
   }
 });
 
-app.post('/api/leaderboard/submit', async (req, res) => {
-  const { url, score, company, country, type } = req.body;
-  
-  if (!url || score === undefined) {
-    return res.status(400).json({ error: 'URL and score required' });
-  }
-  
+// ============================================
+// CHECK IF URL IS BLOCKED
+// ============================================
+app.get('/api/leaderboard/check-status/:encodedUrl', async (req, res) => {
   try {
+    const url = decodeURIComponent(req.params.encodedUrl);
+    
+    const result = await pool.query(`
+      SELECT id, reason FROM leaderboard_blocks 
+      WHERE url = $1 AND (expires_at IS NULL OR expires_at > NOW())
+    `, [url]);
+    
+    if (result.rows.length > 0) {
+      res.json({
+        blocked: true,
+        reason: result.rows[0].reason
+      });
+    } else {
+      res.json({ blocked: false });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
+// OPT-OUT ENDPOINT
+// ============================================
+app.post('/api/leaderboard/opt-out', async (req, res) => {
+  try {
+    const { url, reason } = req.body;
+    
+    if (!url) {
+      return res.status(400).json({ error: 'URL required' });
+    }
+    
+    const exists = await pool.query(
+      'SELECT id FROM leaderboard_blocks WHERE url = $1',
+      [url]
+    );
+    
+    if (exists.rows.length > 0) {
+      return res.status(400).json({ error: 'Already opted out' });
+    }
+    
     await pool.query(`
-      INSERT INTO leaderboard (url, score, company_name, country, business_type)
+      INSERT INTO leaderboard_blocks (url, reason, blocked_by)
+      VALUES ($1, $2, $3)
+    `, [url, reason || 'User requested removal', 'user']);
+    
+    await pool.query(`
+      UPDATE leaderboard 
+      SET is_opted_out = TRUE, opted_out_at = NOW(), opted_out_reason = $2
+      WHERE url = $1
+    `, [url, reason || 'User requested removal']);
+    
+    res.json({
+      success: true,
+      message: 'Your URL has been removed from the leaderboard'
+    });
+    
+  } catch (error) {
+    console.error('Opt-out error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
+// IP RATE LIMIT CHECK
+// ============================================
+async function checkIPLimit(ip) {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const result = await pool.query(`
+      SELECT submission_count FROM submission_limits 
+      WHERE ip_address = $1 AND submission_date = $2
+    `, [ip, today]);
+    
+    if (result.rows.length > 0) {
+      const count = result.rows[0].submission_count;
+      const MAX_PER_DAY = 3;
+      
+      if (count >= MAX_PER_DAY) {
+        return { limited: true, count, max: MAX_PER_DAY };
+      }
+      
+      return { limited: false, count };
+    }
+    
+    return { limited: false, count: 0 };
+  } catch (error) {
+    console.error('Rate limit check error:', error);
+    return { limited: false, count: 0 };
+  }
+}
+
+// ============================================
+// GET CLIENT IP
+// ============================================
+function getClientIP(req) {
+  return (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '0.0.0.0').split(',')[0].trim();
+}
+
+// ============================================
+// LEADERBOARD SUBMIT (WITH SECURITY)
+// ============================================
+app.post('/api/leaderboard/submit', async (req, res) => {
+  try {
+    const { url, score, company_name, country } = req.body;
+    const ip = getClientIP(req);
+    
+    if (!url || score === undefined) {
+      return res.status(400).json({ error: 'URL and score required' });
+    }
+    
+    const blocked = await pool.query(`
+      SELECT id FROM leaderboard_blocks 
+      WHERE url = $1 AND (expires_at IS NULL OR expires_at > NOW())
+    `, [url]);
+    
+    if (blocked.rows.length > 0) {
+      return res.status(403).json({ 
+        error: 'This URL cannot be submitted to the leaderboard'
+      });
+    }
+    
+    const limitCheck = await checkIPLimit(ip);
+    if (limitCheck.limited) {
+      return res.status(429).json({
+        error: `Rate limit exceeded: ${limitCheck.count}/${limitCheck.max} submissions today`,
+        retryAfter: '24 hours'
+      });
+    }
+    
+    const today = new Date().toISOString().split('T')[0];
+    const duplicate = await pool.query(`
+      SELECT id FROM leaderboard 
+      WHERE url = $1 AND DATE(created_at) = $2
+    `, [url, today]);
+    
+    if (duplicate.rows.length > 0) {
+      return res.status(400).json({ 
+        error: 'This URL already submitted today. Max 1 submission per URL per day' 
+      });
+    }
+    
+    const leaderboardResult = await pool.query(`
+      INSERT INTO leaderboard (url, score, company_name, country, submission_ip)
       VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT (url) DO UPDATE SET 
         score = EXCLUDED.score,
         company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
         last_scan = NOW()
-    `, [url, score, company || null, country || 'NL', type || 'agency']);
+      RETURNING id
+    `, [url, score, company_name || null, country || 'NL', ip]);
     
-    res.json({ success: true });
+    const leaderboardEntryId = leaderboardResult.rows[0].id;
+    
+    await pool.query(`
+      INSERT INTO submission_logs 
+      (url, company_name, ip_address, country, score, submitted_via, status, leaderboard_entry_id)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `, [url, company_name, ip, country, score, 'api', 'approved', leaderboardEntryId]);
+    
+    const today_date = new Date().toISOString().split('T')[0];
+    await pool.query(`
+      INSERT INTO submission_limits (ip_address, submission_date, submission_count)
+      VALUES ($1, $2, 1)
+      ON CONFLICT (ip_address, submission_date) DO UPDATE
+      SET submission_count = submission_count + 1, last_submitted_at = NOW()
+    `, [ip, today_date]);
+    
+    res.json({
+      success: true,
+      leaderboardEntryId,
+      message: 'Added to leaderboard!'
+    });
+    
   } catch (error) {
-    res.status(500).json({ error: 'Database error' });
+    console.error('Submit error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -703,7 +968,6 @@ app.post('/api/scan', async (req, res) => {
   try {
     console.log(`🔍 Scanning: ${url}`);
     
-    // FETCH ACTUAL HTML
     const response = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (ContentScale Scanner)' },
       timeout: 10000
@@ -715,7 +979,6 @@ app.post('/api/scan', async (req, res) => {
     
     const html = await response.text();
     
-    // ANALYZE GRAAF (50 pts max)
     let graafScore = 0;
     const hasQuotes = /says|according to|expert|quote|told us|founder|ceo|director/gi.test(html);
     graafScore += hasQuotes ? 8 : 0;
@@ -730,7 +993,6 @@ app.post('/api/scan', async (req, res) => {
     graafScore += Math.min(18, Math.floor(wordCount / 100));
     graafScore = Math.min(50, graafScore);
     
-    // ANALYZE CRAFT (30 pts max)
     let craftScore = 0;
     const h1s = (html.match(/<h1[^>]*>/gi) || []).length;
     craftScore += h1s === 1 ? 8 : h1s > 1 ? 4 : 2;
@@ -742,7 +1004,6 @@ app.post('/api/scan', async (req, res) => {
     craftScore += hasLists ? 4 : 0;
     craftScore = Math.min(30, craftScore);
     
-    // ANALYZE TECHNICAL (20 pts max)
     let technicalScore = 0;
     const metaDescMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
     const metaDesc = metaDescMatch ? metaDescMatch[1] : null;
@@ -761,11 +1022,9 @@ app.post('/api/scan', async (req, res) => {
     technicalScore += hasSchema ? 3 : 0;
     technicalScore = Math.min(20, technicalScore);
     
-    // CALCULATE TOTAL
     const totalScore = graafScore + craftScore + technicalScore;
     const quality = totalScore >= 90 ? 'excellent' : totalScore >= 75 ? 'good' : totalScore >= 60 ? 'average' : totalScore >= 45 ? 'below-average' : 'poor';
     
-    // GENERATE RECOMMENDATIONS
     const recommendations = [];
     if (!metaDesc) recommendations.push({type: 'quickwin', title: 'Add Meta Description', description: 'Missing meta description. Add 150-160 characters describing page content.', impact: 'High'});
     if (h1s !== 1) recommendations.push({type: 'quickwin', title: 'Fix H1 Tags', description: `Found ${h1s} H1 tags. Each page should have exactly ONE H1.`, impact: 'High'});
@@ -790,7 +1049,6 @@ app.post('/api/scan', async (req, res) => {
       timestamp: new Date().toISOString()
     };
     
-    // SAVE TO DATABASE
     try {
       await pool.query(
         `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, breakdown, recommendations, scan_type)
