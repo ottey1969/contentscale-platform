@@ -700,63 +700,115 @@ app.post('/api/scan', async (req, res) => {
     return res.status(400).json({ error: 'URL required' });
   }
   
-  // Generate deterministic scores
-  const urlHash = url.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const seed = urlHash % 100;
-  
-  const graafScore = 35 + ((seed + 7) % 15);
-  const craftScore = 20 + ((seed + 13) % 10);
-  const technicalScore = 12 + ((seed + 19) % 8);
-  const totalScore = graafScore + craftScore + technicalScore;
-  
-  const quality = totalScore >= 90 ? 'excellent' 
-                : totalScore >= 75 ? 'good'
-                : totalScore >= 60 ? 'average'
-                : totalScore >= 45 ? 'below-average'
-                : 'poor';
-  
-  // Quick recommendations
-  const recommendations = [
-    { type: 'quickwin', title: 'Improve Meta Description', description: 'Add compelling meta description with keywords', impact: 'High' },
-    { type: 'quickwin', title: 'Add Expert Quotes', description: 'Include 2-3 industry expert quotes', impact: 'High' },
-    { type: 'major', title: 'Optimize Page Speed', description: 'Reduce load time to under 2.5 seconds', impact: 'High' },
-    { type: 'major', title: 'Expand FAQ Section', description: 'Add 8-12 Q&A pairs with schema markup', impact: 'Medium' },
-    { type: 'advanced', title: 'Schema Markup', description: 'Implement comprehensive JSON-LD schema', impact: 'High' }
-  ];
-  
-  const scanResult = {
-    success: true,
-    url,
-    score: totalScore,
-    quality,
-    breakdown: {
-      graaf: { total: graafScore, max: 50, percentage: Math.round((graafScore / 50) * 100) },
-      craft: { total: craftScore, max: 30, percentage: Math.round((craftScore / 30) * 100) },
-      technical: { total: technicalScore, max: 20, percentage: Math.round((technicalScore / 20) * 100) }
-    },
-    recommendations,
-    timestamp: new Date().toISOString()
-  };
-  
-  // Save to database
   try {
-    await pool.query(
-      `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, breakdown, recommendations, scan_type)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [url, totalScore, quality, graafScore, craftScore, technicalScore, 
-       JSON.stringify(scanResult.breakdown), JSON.stringify(recommendations), 'public']
-    );
+    console.log(`🔍 Scanning: ${url}`);
+    
+    // FETCH ACTUAL HTML
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (ContentScale Scanner)' },
+      timeout: 10000
+    });
+    
+    if (!response.ok) {
+      return res.status(400).json({ error: 'Cannot fetch URL' });
+    }
+    
+    const html = await response.text();
+    
+    // ANALYZE GRAAF (50 pts max)
+    let graafScore = 0;
+    const hasQuotes = /says|according to|expert|quote|told us|founder|ceo|director/gi.test(html);
+    graafScore += hasQuotes ? 8 : 0;
+    const hasStats = /\d+%|\d+ studies|\d+ research|research shows|\d+ data/gi.test(html);
+    graafScore += hasStats ? 8 : 0;
+    const hasFreshDates = /202[4-5]|january|february|march|april|may|june|july|august|september|october|november|december/gi.test(html);
+    graafScore += hasFreshDates ? 8 : 2;
+    const hasAuthor = /author|by |written by|published by|contributor/gi.test(html);
+    graafScore += hasAuthor ? 8 : 0;
+    const textContent = html.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(w => w.length > 0);
+    const wordCount = textContent.length;
+    graafScore += Math.min(18, Math.floor(wordCount / 100));
+    graafScore = Math.min(50, graafScore);
+    
+    // ANALYZE CRAFT (30 pts max)
+    let craftScore = 0;
+    const h1s = (html.match(/<h1[^>]*>/gi) || []).length;
+    craftScore += h1s === 1 ? 8 : h1s > 1 ? 4 : 2;
+    const h2h3s = (html.match(/<h2[^>]*>|<h3[^>]*>/gi) || []).length;
+    craftScore += Math.min(10, h2h3s * 2);
+    const paragraphs = (html.match(/<p[^>]*>/gi) || []).length;
+    craftScore += Math.min(8, Math.floor(paragraphs / 3));
+    const hasLists = /<ul[^>]*>|<ol[^>]*>/gi.test(html);
+    craftScore += hasLists ? 4 : 0;
+    craftScore = Math.min(30, craftScore);
+    
+    // ANALYZE TECHNICAL (20 pts max)
+    let technicalScore = 0;
+    const metaDescMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
+    const metaDesc = metaDescMatch ? metaDescMatch[1] : null;
+    technicalScore += metaDesc && metaDesc.length > 50 ? 4 : 2;
+    const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
+    const title = titleMatch ? titleMatch[1] : null;
+    technicalScore += title && title.length > 30 ? 4 : 2;
+    const allImages = (html.match(/<img[^>]*>/gi) || []).length;
+    const imagesWithAlt = (html.match(/<img[^>]*alt="/gi) || []).length;
+    if (allImages > 0) {
+      technicalScore += Math.min(4, Math.floor((imagesWithAlt / allImages) * 4));
+    }
+    const hasViewport = /<meta\s+name="viewport"/gi.test(html);
+    technicalScore += hasViewport ? 3 : 0;
+    const hasSchema = /"@context"|"@type"/gi.test(html);
+    technicalScore += hasSchema ? 3 : 0;
+    technicalScore = Math.min(20, technicalScore);
+    
+    // CALCULATE TOTAL
+    const totalScore = graafScore + craftScore + technicalScore;
+    const quality = totalScore >= 90 ? 'excellent' : totalScore >= 75 ? 'good' : totalScore >= 60 ? 'average' : totalScore >= 45 ? 'below-average' : 'poor';
+    
+    // GENERATE RECOMMENDATIONS
+    const recommendations = [];
+    if (!metaDesc) recommendations.push({type: 'quickwin', title: 'Add Meta Description', description: 'Missing meta description. Add 150-160 characters describing page content.', impact: 'High'});
+    if (h1s !== 1) recommendations.push({type: 'quickwin', title: 'Fix H1 Tags', description: `Found ${h1s} H1 tags. Each page should have exactly ONE H1.`, impact: 'High'});
+    if (!hasQuotes) recommendations.push({type: 'major', title: 'Add Expert Quotes', description: 'Include 2-3 expert quotes to boost credibility', impact: 'High'});
+    if (!hasStats) recommendations.push({type: 'major', title: 'Add Statistics', description: 'Include research data and verified statistics', impact: 'High'});
+    if (wordCount < 500) recommendations.push({type: 'major', title: 'Expand Content', description: `Current: ${wordCount} words. Target: 1000+`, impact: 'Medium'});
+    if (!hasViewport) recommendations.push({type: 'major', title: 'Add Mobile Viewport', description: 'Add meta viewport tag for mobile responsiveness', impact: 'High'});
+    if (!hasSchema) recommendations.push({type: 'major', title: 'Add Schema Markup', description: 'Implement JSON-LD schema for rich snippets', impact: 'Medium'});
+    
+    const scanResult = {
+      success: true,
+      url,
+      score: totalScore,
+      quality,
+      metrics: {graaf: graafScore, craft: craftScore, technical: technicalScore},
+      breakdown: {
+        graaf: {total: graafScore, max: 50, percentage: Math.round((graafScore / 50) * 100)},
+        craft: {total: craftScore, max: 30, percentage: Math.round((craftScore / 30) * 100)},
+        technical: {total: technicalScore, max: 20, percentage: Math.round((technicalScore / 20) * 100)}
+      },
+      recommendations,
+      timestamp: new Date().toISOString()
+    };
+    
+    // SAVE TO DATABASE
+    try {
+      await pool.query(
+        `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, breakdown, recommendations, scan_type)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [url, totalScore, quality, graafScore, craftScore, technicalScore, JSON.stringify(scanResult.breakdown), JSON.stringify(recommendations), 'public']
+      );
+      console.log(`✅ Scan saved: ${url} (Score: ${totalScore})`);
+    } catch (error) {
+      console.error('DB save error:', error);
+    }
+    
+    res.json(scanResult);
+    
   } catch (error) {
-    // Silently fail, still return results
+    console.error('Scan error:', error);
+    res.status(500).json({ error: error.message });
   }
-  
-  setTimeout(() => res.json(scanResult), 800);
 });
-
-// ============================================
-// HEALTH CHECK
-// ============================================
-app.get('/api/health', async (req, res) => {
   try {
     await pool.query('SELECT 1');
     res.json({ status: 'healthy', database: 'connected' });
