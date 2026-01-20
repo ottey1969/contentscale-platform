@@ -798,26 +798,39 @@
       scanButton.innerHTML = '<div class="scan-spinner"></div> Scanning...';
       scanButton.disabled = true;
       
-      // Simulate scan
-      setTimeout(async () => {
-        try {
-          // Generate mock data with more realistic scores
-          const mockData = {
-            success: true,
-            score: Math.floor(Math.random() * 25) + 75, // 75-100 for better UX
-            url: fullUrl,
-            recommendations: [
-              // QUICK WINS (High Impact, Low Effort)
-              {
-                type: 'quickwin',
-                title: 'Optimize Meta Descriptions',
-                description: 'Your meta descriptions are missing or too short. Meta descriptions should be 150-160 characters and include your target keywords to improve click-through rates.',
-                impact: 'High',
-                action: 'Add unique, keyword-rich meta descriptions to all pages. Current average CTR impact: +5-10%'
-              },
-              {
-                type: 'quickwin',
-                title: 'Fix Missing H1 Tags',
+      try {
+        // 🔥 CALL REAL API ENDPOINT!
+        const response = await fetch('/api/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: fullUrl })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          console.log('✅ Real scan result:', data);
+          showScanResults(data);
+          
+          // Submit to leaderboard if checked
+          const submitToLeaderboard = document.getElementById('submitToLeaderboard').checked;
+          if (submitToLeaderboard) {
+            await submitToLeaderboardAPI(data);
+          }
+        } else {
+          alert('❌ Scan failed: ' + (data.error || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('Scan error:', error);
+        alert('❌ Scan failed. Please try again.');
+      } finally {
+        // Reset button
+        scanButton.innerHTML = originalText;
+        scanButton.disabled = false;
+      }
+    }
+
+    function showScanResults(data) {
                 description: 'Multiple pages lack proper H1 tag hierarchy. Each page should have exactly one H1 tag containing your primary keyword.',
                 impact: 'High',
                 action: 'Audit all pages and ensure each has a single, descriptive H1 tag'
