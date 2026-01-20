@@ -1172,7 +1172,7 @@
       allAgencies = savedAgencies.map((agency, index) => ({
         id: agency.id || index + 1,
         rank: index + 1,
-        url: agency.url,
+        url: agency.url || '#',
         score: agency.score || Math.floor(Math.random() * 35) + 65,
         company: agency.company || `SEO Agency ${index + 1}`,
         country: agency.country || 'US',
@@ -1282,21 +1282,20 @@
       updateStats();
     }
 
-function renderTableView(agencies) {
-  // ✅ FIX: Add safe defaults
-  const safeAgencies = (agencies || []).map(agency => ({
-    id: agency.id || 0,
-    rank: agency.rank || 0,
-    name: agency.name || agency.company_name || agency.company || 'Unknown Agency',
-    url: agency.url || '#',
-    score: agency.score || 0,
-    country: agency.country || 'US',
-    type: agency.type || agency.business_type || 'other',
-    isEnhanced: agency.isEnhanced || agency.is_enhanced || false,
-    lastScan: agency.lastScan || agency.last_scan || 'Recently'
-  }));
-  
-  return `
+    function renderTableView(agencies) {
+      const safeAgencies = (agencies || []).map(agency => ({
+        id: agency?.id || 0,
+        rank: agency?.rank || 0,
+        company: agency?.company || 'Unknown Agency',
+        url: agency?.url || '#',
+        score: agency?.score || 0,
+        country: agency?.country || 'US',
+        type: agency?.type || 'other',
+        isEnhanced: agency?.isEnhanced || false,
+        lastScan: agency?.lastScan || 'Recently'
+      }));
+      
+      return `
         <div class="overflow-x-auto rounded-lg border border-gray-700">
           <table class="min-w-full divide-y divide-gray-700">
             <thead class="bg-gray-800">
@@ -1311,7 +1310,7 @@ function renderTableView(agencies) {
               </tr>
             </thead>
             <tbody class="bg-gray-900 divide-y divide-gray-800">
-              ${agencies.map(agency => {
+              ${safeAgencies.map(agency => {
                 const isClaimed = claimedAgencies[agency.id] || agency.isEnhanced;
                 const claimedInfo = claimedAgencies[agency.id];
                 
@@ -1391,28 +1390,27 @@ function renderTableView(agencies) {
         </div>
         
         <div class="mt-4 text-sm text-gray-400">
-          Showing ${agencies.length} of ${filterAgencies().length} agencies
+          Showing ${safeAgencies.length} of ${filterAgencies().length} agencies
         </div>
       `;
     }
 
-  function renderCardsView(agencies) {
-  // ✅ FIX: Add safe defaults
-  const safeAgencies = (agencies || []).map(agency => ({
-    id: agency.id || 0,
-    rank: agency.rank || 0,
-    name: agency.name || agency.company_name || agency.company || 'Unknown Agency',
-    url: agency.url || '#',
-    score: agency.score || 0,
-    country: agency.country || 'US',
-    type: agency.type || agency.business_type || 'other',
-    isEnhanced: agency.isEnhanced || agency.is_enhanced || false,
-    lastScan: agency.lastScan || agency.last_scan || 'Recently'
-  }));
-  
-  return `
+    function renderCardsView(agencies) {
+      const safeAgencies = (agencies || []).map(agency => ({
+        id: agency?.id || 0,
+        rank: agency?.rank || 0,
+        company: agency?.company || 'Unknown Agency',
+        url: agency?.url || '#',
+        score: agency?.score || 0,
+        country: agency?.country || 'US',
+        type: agency?.type || 'other',
+        isEnhanced: agency?.isEnhanced || false,
+        lastScan: agency?.lastScan || 'Recently'
+      }));
+      
+      return `
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          ${agencies.map(agency => {
+          ${safeAgencies.map(agency => {
             const isClaimed = claimedAgencies[agency.id] || agency.isEnhanced;
             const claimedInfo = claimedAgencies[agency.id];
             
