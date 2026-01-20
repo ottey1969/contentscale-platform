@@ -21,6 +21,11 @@
     .stat-card {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     }
+    input[type="checkbox"] {
+      cursor: pointer;
+      width: 18px;
+      height: 18px;
+    }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen">
@@ -1239,6 +1244,7 @@
 
     function deleteSelectedAgencies() {
       const selected = Array.from(document.querySelectorAll('.agency-checkbox:checked')).map(cb => cb.value);
+      
       if (selected.length === 0) {
         alert('Please select agencies to delete');
         return;
@@ -1246,17 +1252,8 @@
       
       if (!confirm(`Delete ${selected.length} agencies?`)) return;
       
-      selected.forEach(id => {
-        fetch(`/api/agencies/${id}`, {
-          method: 'DELETE',
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        }).catch(e => console.error(e));
-      });
-      
-      setTimeout(() => {
-        loadAgencies();
-        loadStats();
-      }, 500);
+      selected.forEach(id => deleteItem('agencies', id));
+      setTimeout(() => loadAgencies(), 500);
     }
 
     async function deleteShareLink(code) {
