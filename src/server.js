@@ -899,6 +899,147 @@ app.post('/api/admin/leaderboard/bulk-delete', async (req, res) => {
 });
 
 // ============================================
+// SCAN ALL AGENCIES IN LEADERBOARD
+// ============================================
+app.post('/api/admin/scan-all-agencies', async (req, res) => {
+  try {
+    // Get all agencies from leaderboard
+    const result = await pool.query(`
+      SELECT id, url, company_name 
+      FROM leaderboard 
+      WHERE is_opted_out = FALSE 
+      ORDER BY id
+    `);
+    
+    const agencies = result.rows;
+    
+    if (agencies.length === 0) {
+      return res.json({ 
+        success: true, 
+        message: 'No agencies to scan',
+        scanned: 0,
+        failed: 0
+      });
+    }
+    
+    let scanned = 0;
+    let failed = 0;
+    const updates = [];
+    
+    console.log(`🔄 Starting scan of ${agencies.length} agencies...`);
+    
+    // Scan each agency
+    for (const agency of agencies) {
+      try {
+        console.log(`🔍 Scanning: ${agency.url}`);
+        
+        const response = await fetch(agency.url, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (ContentScale Scanner)' },
+          timeout: 10000
+        });
+        
+        if (!response.ok) {
+          console.log(`❌ Failed to fetch: ${agency.url}`);
+          failed++;
+          continue;
+        }
+        
+        const html = await response.text();
+        
+        // Calculate GRAAF score
+        let graafScore = 0;
+        const hasQuotes = /says|according to|expert|quote|told us|founder|ceo|director/gi.test(html);
+        graafScore += hasQuotes ? 8 : 0;
+        const hasStats = /\d+%|\d+ studies|\d+ research|research shows|\d+ data/gi.test(html);
+        graafScore += hasStats ? 8 : 0;
+        const hasFreshDates = /202[4-5]|january|february|march|april|may|june|july|august|september|october|november|december/gi.test(html);
+        graafScore += hasFreshDates ? 8 : 2;
+        const hasAuthor = /author|by |written by|published by|contributor/gi.test(html);
+        graafScore += hasAuthor ? 8 : 0;
+        const textContent = html.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(w => w.length > 0);
+        const wordCount = textContent.length;
+        graafScore += Math.min(18, Math.floor(wordCount / 100));
+        graafScore = Math.min(50, graafScore);
+        
+        // Calculate CRAFT score
+        let craftScore = 0;
+        const h1s = (html.match(/<h1[^>]*>/gi) || []).length;
+        craftScore += h1s === 1 ? 8 : h1s > 1 ? 4 : 2;
+        const h2h3s = (html.match(/<h2[^>]*>|<h3[^>]*>/gi) || []).length;
+        craftScore += Math.min(10, h2h3s * 2);
+        const paragraphs = (html.match(/<p[^>]*>/gi) || []).length;
+        craftScore += Math.min(8, Math.floor(paragraphs / 3));
+        const hasLists = /<ul[^>]*>|<ol[^>]*>/gi.test(html);
+        craftScore += hasLists ? 4 : 0;
+        craftScore = Math.min(30, craftScore);
+        
+        // Calculate Technical score
+        let technicalScore = 0;
+        const metaDescMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
+        const metaDesc = metaDescMatch ? metaDescMatch[1] : null;
+        technicalScore += metaDesc && metaDesc.length > 50 ? 4 : 2;
+        const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
+        const title = titleMatch ? titleMatch[1] : null;
+        technicalScore += title && title.length > 30 ? 4 : 2;
+        const allImages = (html.match(/<img[^>]*>/gi) || []).length;
+        const imagesWithAlt = (html.match(/<img[^>]*alt="/gi) || []).length;
+        if (allImages > 0) {
+          technicalScore += Math.min(4, Math.floor((imagesWithAlt / allImages) * 4));
+        }
+        const hasViewport = /<meta\s+name="viewport"/gi.test(html);
+        technicalScore += hasViewport ? 3 : 0;
+        const hasSchema = /"@context"|"@type"/gi.test(html);
+        technicalScore += hasSchema ? 3 : 0;
+        technicalScore = Math.min(20, technicalScore);
+        
+        const totalScore = graafScore + craftScore + technicalScore;
+        
+        // Update leaderboard
+        await pool.query(`
+          UPDATE leaderboard 
+          SET score = $1, last_scan = NOW() 
+          WHERE id = $2
+        `, [totalScore, agency.id]);
+        
+        updates.push({
+          url: agency.url,
+          company_name: agency.company_name,
+          score: totalScore
+        });
+        
+        scanned++;
+        console.log(`✅ Updated: ${agency.url} - Score: ${totalScore}`);
+        
+        // Small delay to avoid overwhelming the server
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+      } catch (error) {
+        console.error(`❌ Error scanning ${agency.url}:`, error.message);
+        failed++;
+      }
+    }
+    
+    console.log(`✅ Scan complete: ${scanned} scanned, ${failed} failed`);
+    
+    res.json({
+      success: true,
+      message: `Scanned ${scanned} agencies, ${failed} failed`,
+      scanned,
+      failed,
+      total: agencies.length,
+      updates
+    });
+    
+  } catch (error) {
+    console.error('Scan all agencies error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// ============================================
 // PUBLIC LEADERBOARD API
 // ============================================
 app.get('/api/leaderboard', async (req, res) => {
