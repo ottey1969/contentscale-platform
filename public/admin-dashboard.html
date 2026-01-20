@@ -245,6 +245,7 @@
             <table class="w-full">
               <thead class="bg-gray-700">
                 <tr>
+                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="agency-select-all" onchange="toggleSelectAllAgencies()"></th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Name</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Domain</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Country</th>
@@ -263,6 +264,7 @@
 
         <!-- Export Buttons -->
         <div class="mt-4 flex gap-2">
+          <button onclick="deleteSelectedAgencies()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
           <button onclick="exportAgenciesToCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">📊 Export CSV</button>
           <button onclick="exportAgenciesToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
         </div>
@@ -889,8 +891,9 @@
         if (data.success && data.agencies) {
           allAgencies = data.agencies;
           data.agencies.forEach(agency => {
-            tbody.innerHTML += `
+            const row = `
               <tr>
+                <td class="px-4 py-3"><input type="checkbox" class="agency-checkbox" value="${agency.id}"></td>
                 <td class="px-4 py-3">${agency.name}</td>
                 <td class="px-4 py-3">${agency.domain}</td>
                 <td class="px-4 py-3">${agency.country}</td>
@@ -901,6 +904,7 @@
                 <td class="px-4 py-3"><button onclick="deleteItem('agencies', ${agency.id})" class="text-red-400">🗑️</button></td>
               </tr>
             `;
+            tbody.innerHTML += row;
           });
           document.getElementById('agencies-loading').classList.add('hidden');
           document.getElementById('agencies-list').classList.remove('hidden');
@@ -1223,6 +1227,36 @@
       } catch (error) {
         alert('Error');
       }
+    }
+
+    // ============================================
+    // BULK DELETE FUNCTIONS
+    // ============================================
+    function toggleSelectAllAgencies() {
+      const isChecked = document.getElementById('agency-select-all').checked;
+      document.querySelectorAll('.agency-checkbox').forEach(cb => cb.checked = isChecked);
+    }
+
+    function deleteSelectedAgencies() {
+      const selected = Array.from(document.querySelectorAll('.agency-checkbox:checked')).map(cb => cb.value);
+      if (selected.length === 0) {
+        alert('Please select agencies to delete');
+        return;
+      }
+      
+      if (!confirm(`Delete ${selected.length} agencies?`)) return;
+      
+      selected.forEach(id => {
+        fetch(`/api/agencies/${id}`, {
+          method: 'DELETE',
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        }).catch(e => console.error(e));
+      });
+      
+      setTimeout(() => {
+        loadAgencies();
+        loadStats();
+      }, 500);
     }
 
     async function deleteShareLink(code) {
