@@ -113,9 +113,51 @@
       border: 2px solid #374151;
       box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
     }
+
+    /* STICKY NAV */
+    .sticky-nav {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: linear-gradient(to right, rgb(31, 41, 55), rgb(17, 24, 39));
+      border-bottom: 2px solid rgb(55, 65, 81);
+    }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100">
+
+  <!-- STICKY NAVIGATION BAR -->
+  <nav class="sticky-nav">
+    <div class="max-w-7xl mx-auto px-6 py-4">
+      <div class="flex items-center justify-between flex-wrap gap-4">
+        <!-- Logo -->
+        <div class="flex items-center gap-2">
+          <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+            ContentScale
+          </div>
+        </div>
+        
+        <!-- Navigation Links -->
+        <div class="flex items-center gap-1 flex-wrap justify-end">
+          <a href="/" class="px-4 py-2 text-gray-300 hover:text-white font-semibold transition-all border-b-2 border-transparent hover:border-purple-400">
+            🏠 Home
+          </a>
+          <a href="#scanner" class="px-4 py-2 text-gray-300 hover:text-white font-semibold transition-all border-b-2 border-transparent hover:border-purple-400">
+            🔍 Scanner
+          </a>
+          <a href="#top3Container" class="px-4 py-2 text-gray-300 hover:text-white font-semibold transition-all border-b-2 border-transparent hover:border-purple-400">
+            🏆 Leaderboard
+          </a>
+          <a href="/blog" class="px-4 py-2 text-gray-300 hover:text-white font-semibold transition-all border-b-2 border-transparent hover:border-purple-400">
+            📝 Blog
+          </a>
+          <a href="https://wa.me/31628073996?text=Hi%20Ot!%20I%20want%20to%20learn%20more%20about%20ContentScale%20SEO%20recovery%20services." target="_blank" class="px-4 py-2 ml-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold rounded-lg transition-all whitespace-nowrap">
+            💬 WhatsApp
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
 
   <div class="max-w-7xl mx-auto p-6">
     
@@ -128,7 +170,7 @@
     </div>
 
     <!-- ✅ REAL SCANNER SECTION -->
-    <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-8 mb-8 border-2 border-purple-600">
+    <div id="scanner" class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-8 mb-8 border-2 border-purple-600">
       <div class="text-center mb-6">
         <h2 class="text-3xl font-bold mb-2">🚀 Scan Your Website</h2>
         <p class="text-gray-300">Get your AI-Era SEO score instantly!</p>
@@ -307,6 +349,16 @@
           </p>
         </form>
       </div>
+    </div>
+
+    <!-- WHATSAPP CTA - Bottom Banner -->
+    <div class="mt-12 bg-gradient-to-r from-green-900 to-emerald-900 rounded-xl p-8 text-center border-2 border-green-600">
+      <h3 class="text-2xl font-bold mb-3">💬 Need Expert Help?</h3>
+      <p class="text-gray-300 mb-6">Talk directly to Ot about your SEO recovery strategy</p>
+      <a href="https://wa.me/31628073996?text=Hi%20Ot!%20I%20need%20help%20with%20my%20SEO%20recovery%20strategy." target="_blank" class="inline-block bg-white text-green-600 hover:bg-gray-100 px-8 py-4 rounded-lg font-bold text-lg transition-all">
+        💬 Start WhatsApp Chat
+      </a>
+      <p class="text-xs text-gray-400 mt-3">Usually responds within 1 hour 🚀</p>
     </div>
 
   </div>
