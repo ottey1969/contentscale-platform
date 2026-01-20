@@ -1002,15 +1002,32 @@
             </div>
           </div>
           
+          <!-- 🔥 SUBMIT TO LEADERBOARD - INSIDE MODAL FOR VISIBILITY -->
+          <div class="mt-8 p-4 bg-purple-900 bg-opacity-30 border border-purple-500 rounded-lg">
+            <label class="flex items-center gap-3 cursor-pointer mb-4">
+              <input type="checkbox" id="modalSubmitToLeaderboard" class="w-5 h-5 rounded border-purple-500 text-purple-600">
+              <span class="text-sm font-semibold">🏆 Add to Leaderboard & Claim Profile</span>
+            </label>
+            
+            <div id="modalCompanyFields" class="hidden space-y-3">
+              <input type="text" id="modalCompanyName" placeholder="Your Company Name" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg text-sm">
+              <select id="modalCountrySelect" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg text-sm">
+                <option value="">Select Country...</option>
+                <option value="NL">🇳🇱 Netherlands</option>
+                <option value="BE">🇧🇪 Belgium</option>
+                <option value="DE">🇩🇪 Germany</option>
+                <option value="FR">🇫🇷 France</option>
+                <option value="UK">🇬🇧 United Kingdom</option>
+                <option value="US">🇺🇸 United States</option>
+              </select>
+              <button onclick="submitModalToLeaderboard()" class="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 py-2 rounded-lg font-semibold text-sm">
+                ✅ Add to Leaderboard
+              </button>
+            </div>
+          </div>
+
           <!-- ACTION BUTTONS -->
           <div class="flex gap-4 mt-8 pt-6 border-t border-gray-700">
-            <button onclick="closeModal()" class="flex-1 bg-gray-700 hover:bg-gray-600 py-3 rounded-lg font-semibold">
-              Close
-            </button>
-            <button onclick="scanAnother()" class="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 py-3 rounded-lg font-semibold">
-              Scan Another
-            </button>
-          </div>
         </div>
       `;
       
@@ -1025,6 +1042,61 @@
       closeModal();
       document.getElementById('scanInput').value = '';
       document.getElementById('scanInput').focus();
+    }
+
+    // 🔥 MODAL LEADERBOARD SUBMISSION
+    document.addEventListener('DOMContentLoaded', function() {
+      const modalCheckbox = document.getElementById('modalSubmitToLeaderboard');
+      const modalFields = document.getElementById('modalCompanyFields');
+      
+      if (modalCheckbox) {
+        modalCheckbox.addEventListener('change', function() {
+          if (this.checked) {
+            modalFields.classList.remove('hidden');
+          } else {
+            modalFields.classList.add('hidden');
+          }
+        });
+      }
+    });
+
+    async function submitModalToLeaderboard() {
+      const companyName = document.getElementById('modalCompanyName').value || 'Unknown Company';
+      const country = document.getElementById('modalCountrySelect').value || 'NL';
+      
+      if (!lastScanData) {
+        alert('No scan data to submit');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/leaderboard/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: lastScanData.url,
+            score: lastScanData.score,
+            company_name: companyName,
+            country: country,
+            graaf_score: lastScanData.metrics.graaf,
+            craft_score: lastScanData.metrics.craft,
+            technical_score: lastScanData.metrics.technical
+          })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          alert('✅ Added to leaderboard! Refresh to see it.');
+          closeModal();
+          // Reload leaderboard
+          loadLeaderboard();
+        } else {
+          alert('❌ Error: ' + (data.error || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('Submit error:', error);
+        alert('❌ Submission failed');
+      }
     }
 
     // ============================================
