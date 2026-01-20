@@ -769,6 +769,8 @@
     // ============================================
     // SCANNER FUNCTIONALITY
     // ============================================
+    let lastScanData = null;
+    // ============================================
     async function performScan() {
       const urlInput = document.getElementById('scanInput').value.trim();
       const scanButton = document.getElementById('scanButton');
@@ -989,6 +991,20 @@
       const modal = document.getElementById('scanModal');
       const modalContent = modal.querySelector('.modal-content');
       
+      // Save for export
+      lastScanData = {
+        url: data.url,
+        score: data.score,
+        quality: data.quality,
+        metrics: {
+          graaf: data.breakdown.graaf.total,
+          craft: data.breakdown.craft.total,
+          technical: data.breakdown.technical.total
+        },
+        recommendations: data.recommendations,
+        timestamp: new Date().toISOString()
+      };
+      
       // Determine score color
       let scoreClass = 'score-poor';
       let scoreText = 'Needs Work';
@@ -1124,6 +1140,25 @@
             `).join('')}
           </div>
           
+          <!-- EXPORT SECTION -->
+          <div class="mb-8 p-4 bg-gray-800 rounded-lg border-2 border-green-600">
+            <h4 class="font-bold text-lg text-green-400 mb-4">📥 Export Results</h4>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <button onclick="exportToCSV()" class="p-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-sm flex items-center justify-center gap-2">
+                📊 CSV
+              </button>
+              <button onclick="exportToJSON()" class="p-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold text-sm flex items-center justify-center gap-2">
+                📄 JSON
+              </button>
+              <button onclick="copyToClipboard()" class="p-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold text-sm flex items-center justify-center gap-2">
+                📋 Copy
+              </button>
+              <button onclick="shareResults()" class="p-3 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold text-sm flex items-center justify-center gap-2">
+                🔗 Share
+              </button>
+            </div>
+          </div>
+          
           <!-- ACTION BUTTONS -->
           <div class="flex gap-4 mt-8 pt-6 border-t border-gray-700">
             <button onclick="closeModal()" class="flex-1 bg-gray-700 hover:bg-gray-600 py-3 rounded-lg font-semibold">
@@ -1147,6 +1182,112 @@
       closeModal();
       document.getElementById('scanInput').value = '';
       document.getElementById('scanInput').focus();
+    }
+
+    // ============================================
+    // EXPORT FUNCTIONS
+    // ============================================
+    let lastScanData = null;
+
+    function exportToCSV() {
+      if (!lastScanData) {
+        alert('No scan data available');
+        return;
+      }
+
+      const data = lastScanData;
+      const csv = [
+        ['ContentScale SEO Report'],
+        [''],
+        ['URL', data.url],
+        ['Score', data.score + '/100'],
+        ['Quality', data.quality],
+        [''],
+        ['BREAKDOWN'],
+        ['GRAAF', data.metrics.graaf + '/50'],
+        ['CRAFT', data.metrics.craft + '/30'],
+        ['Technical SEO', data.metrics.technical + '/20'],
+        [''],
+        ['RECOMMENDATIONS'],
+        ...data.recommendations.map(r => [r.title, r.description, r.impact])
+      ].map(row => row.map(cell => '"' + (cell || '').replace(/"/g, '""') + '"').join(',')).join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `scan-report-${new Date().getTime()}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    }
+
+    function exportToJSON() {
+      if (!lastScanData) {
+        alert('No scan data available');
+        return;
+      }
+
+      const json = JSON.stringify(lastScanData, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `scan-report-${new Date().getTime()}.json`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    }
+
+    function copyToClipboard() {
+      if (!lastScanData) {
+        alert('No scan data available');
+        return;
+      }
+
+      const text = `
+📊 SEO SCAN REPORT - ContentScale
+
+🎯 URL: ${lastScanData.url}
+📈 Score: ${lastScanData.score}/100
+✅ Quality: ${lastScanData.quality}
+
+📋 BREAKDOWN:
+• GRAAF: ${lastScanData.metrics.graaf}/50
+• CRAFT: ${lastScanData.metrics.craft}/30
+• Technical: ${lastScanData.metrics.technical}/20
+
+📌 TOP RECOMMENDATIONS:
+${lastScanData.recommendations.slice(0, 5).map((r, i) => `${i + 1}. ${r.title} (${r.impact} impact)`).join('\n')}
+
+Generated: ${new Date().toLocaleString()}
+      `.trim();
+
+      navigator.clipboard.writeText(text).then(() => {
+        alert('✅ Report copied to clipboard!');
+      }).catch(() => {
+        alert('Failed to copy');
+      });
+    }
+
+    function shareResults() {
+      if (!lastScanData) {
+        alert('No scan data available');
+        return;
+      }
+
+      const text = `Check out this website's SEO score: ${lastScanData.score}/100 on ContentScale! 🚀`;
+      const url = `https://contentscale.site?scan=${encodeURIComponent(lastScanData.url)}`;
+
+      if (navigator.share) {
+        navigator.share({
+          title: 'ContentScale SEO Report',
+          text: text,
+          url: url
+        }).catch(err => console.log('Error sharing:', err));
+      } else {
+        // Fallback - copy share link
+        navigator.clipboard.writeText(url);
+        alert('✅ Share link copied:\n' + url);
+      }
     }
 
     async function submitToLeaderboardAPI(scanData) {
