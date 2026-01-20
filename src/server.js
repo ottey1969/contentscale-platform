@@ -809,6 +809,11 @@ app.post('/api/scan', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// ============================================
+// HEALTH CHECK
+// ============================================
+app.get('/api/health', async (req, res) => {
   try {
     await pool.query('SELECT 1');
     res.json({ status: 'healthy', database: 'connected' });
