@@ -122,6 +122,21 @@
       background: linear-gradient(to right, rgb(31, 41, 55), rgb(17, 24, 39));
       border-bottom: 2px solid rgb(55, 65, 81);
     }
+
+    /* Text truncation voor blog preview cards */
+    .line-clamp-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .line-clamp-3 {
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100">
@@ -312,6 +327,79 @@
         </button>
       </div>
     </div>
+
+    <!-- 📚 BLOG PREVIEW SECTION - NIEUWE TOEVOEGING -->
+    <div class="mt-16 mb-12">
+      <!-- Section Header -->
+      <div class="text-center mb-10">
+        <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+          📚 SEO Recovery Insights
+        </h2>
+        <p class="text-xl text-gray-400">Real case studies, expert guides & proven strategies</p>
+      </div>
+      
+      <!-- Blog Posts Grid -->
+      <div class="grid md:grid-cols-3 gap-6 mb-8">
+        
+        <!-- POST 1: Featured GRAAF Guide -->
+        <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border-2 border-yellow-600 hover:border-yellow-400 transition-all cursor-pointer" onclick="window.location.href='/blog/graaf-framework-guide'">
+          <div class="mb-3">
+            <span class="inline-block px-3 py-1 bg-purple-600 text-white text-xs font-bold rounded-full">📚 GUIDE</span>
+            <span class="ml-2 text-yellow-400 text-xs font-bold">⭐ FEATURED</span>
+          </div>
+          <h3 class="text-xl font-bold mb-3 line-clamp-2">The Complete GRAAF Framework Guide: Score 95+ in 2025</h3>
+          <p class="text-gray-400 text-sm mb-4 line-clamp-3">
+            Master the GRAAF Framework - the proprietary methodology that helped 200+ businesses recover their SEO traffic.
+          </p>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-gray-500">⏱️ 12 min read</span>
+            <span class="text-purple-400 font-semibold text-sm hover:text-purple-300">Read More →</span>
+          </div>
+        </div>
+
+        <!-- POST 2: Case Study -->
+        <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border-2 border-gray-700 hover:border-purple-600 transition-all cursor-pointer" onclick="window.location.href='/blog/ecommerce-seo-recovery'">
+          <div class="mb-3">
+            <span class="inline-block px-3 py-1 bg-green-600 text-white text-xs font-bold rounded-full">📊 CASE STUDY</span>
+          </div>
+          <h3 class="text-xl font-bold mb-3 line-clamp-2">From 62 to 96: E-commerce Store's SEO Comeback Story</h3>
+          <p class="text-gray-400 text-sm mb-4 line-clamp-3">
+            How a Belgian e-commerce store recovered from Google's March 2024 algorithm update and reached top 3 rankings.
+          </p>
+          <div class="flex items-center justify-between">
+            <div class="flex gap-2 text-xs">
+              <span class="text-green-400">✅ 96/100</span>
+              <span class="text-blue-400">📈 +89%</span>
+            </div>
+            <span class="text-purple-400 font-semibold text-sm hover:text-purple-300">Read More →</span>
+          </div>
+        </div>
+
+        <!-- POST 3: Quick Tips -->
+        <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border-2 border-gray-700 hover:border-purple-600 transition-all cursor-pointer" onclick="window.location.href='/blog/ai-content-optimization-tips'">
+          <div class="mb-3">
+            <span class="inline-block px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">💡 TIPS</span>
+          </div>
+          <h3 class="text-xl font-bold mb-3 line-clamp-2">10 AI Content Optimization Tips That Actually Work in 2025</h3>
+          <p class="text-gray-400 text-sm mb-4 line-clamp-3">
+            Quick wins for improving your content quality score. Actionable tips you can implement today.
+          </p>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-gray-500">⏱️ 6 min read</span>
+            <span class="text-purple-400 font-semibold text-sm hover:text-purple-300">Read More →</span>
+          </div>
+        </div>
+
+      </div>
+      
+      <!-- View All Button -->
+      <div class="text-center">
+        <a href="/blog" class="inline-block bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-8 py-4 rounded-lg font-bold text-lg transition-all">
+          📝 View All Articles →
+        </a>
+      </div>
+    </div>
+    <!-- EINDE BLOG PREVIEW SECTION -->
 
     <!-- CLAIM FORM -->
     <div id="claim-form" class="bg-gray-800 rounded-xl p-8 border-2 border-purple-600">
@@ -1034,9 +1122,9 @@
 ✅ Quality: ${lastScanData.quality}
 
 📋 BREAKDOWN:
-• GRAAF: ${lastScanData.metrics.graaf}/50
-• CRAFT: ${lastScanData.metrics.craft}/30
-• Technical: ${lastScanData.metrics.technical}/20
+- GRAAF: ${lastScanData.metrics.graaf}/50
+- CRAFT: ${lastScanData.metrics.craft}/30
+- Technical: ${lastScanData.metrics.technical}/20
 
 📌 TOP RECOMMENDATIONS:
 ${lastScanData.recommendations.slice(0, 5).map((r, i) => `${i + 1}. ${r.title} (${r.impact} impact)`).join('\n')}
