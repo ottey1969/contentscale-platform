@@ -33,7 +33,6 @@
     .filter-btn:hover { background: #4b5563; color: white; }
     .filter-btn.active { background: #8b5cf6; color: white; border-color: #a78bfa; }
 
-    /* Text truncation */
     .line-clamp-2 {
       display: -webkit-box;
       -webkit-line-clamp: 2;
@@ -62,7 +61,7 @@
           <a href="/#scanner" class="nav-link">🔍 Scanner</a>
           <a href="/#leaderboard" class="nav-link">🏆 Leaderboard</a>
           <a href="/#pricing" class="nav-link">💰 Pricing</a>
-          <a href="/blog" class="nav-link active">📝 Blog</a>
+          <a href="/blog/index.html" class="nav-link active">📝 Blog</a>
           <a href="/contact-form" class="nav-link">📞 Contact</a>
         </div>
       </div>
@@ -162,7 +161,6 @@
     let currentCategory = 'all';
     let allPosts = [];
     
-    // Laad blog posts van JSON
     async function loadBlogPosts() {
       try {
         const response = await fetch('/blog/blog-posts.json');
@@ -172,25 +170,18 @@
         }
         
         const data = await response.json();
-        
-        // Sorteer op datum (nieuwste eerst)
         allPosts = data.posts.sort((a, b) => new Date(b.date) - new Date(a.date));
-        
-        // Find featured post
         const featuredPost = allPosts.find(p => p.featured === true);
         
-        // Render featured
         if (featuredPost) {
           renderFeaturedPost(featuredPost);
         }
         
-        // Render other posts (niet featured)
         const otherPosts = allPosts.filter(p => p.featured !== true);
         renderOtherPosts(otherPosts);
         
       } catch (error) {
         console.error('Error loading blog posts:', error);
-        // Fallback: toon error message
         document.getElementById('featured-post-container').innerHTML = '<p class="text-red-400">Error loading posts. Please refresh the page.</p>';
       }
     }
@@ -290,7 +281,6 @@
     function filterCategory(category) {
       currentCategory = category;
       
-      // Update active button
       document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.classList.remove('active');
         if (btn.textContent.toLowerCase().includes(category) || (category === 'all' && btn.textContent === 'All Posts')) {
@@ -322,7 +312,6 @@
         }
       });
       
-      // Show/hide no results message
       const noResults = document.getElementById('no-results');
       const blogGrid = document.getElementById('blog-grid');
       
@@ -335,12 +324,10 @@
       }
     }
     
-    // Load on page load
     document.addEventListener('DOMContentLoaded', function() {
       loadBlogPosts();
     });
     
-    // Analytics tracking (optional - add Google Analytics later)
     document.addEventListener('click', function(e) {
       const card = e.target.closest('.blog-card');
       if (card) {
