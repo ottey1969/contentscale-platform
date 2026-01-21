@@ -1,0 +1,113 @@
+{
+  "posts": [
+    {
+      "id": "dutch-seo-agency-case-study",
+      "title": "How a Top Dutch SEO Agency Reached 97/100 Score & Doubled Traffic",
+      "slug": "top-seo-agency-success-story",
+      "description": "Real case study with screenshots: Amsterdam SEO agency transformed their strategy using GRAAF + CRAFT, achieving 127% traffic growth in 90 days.",
+      "category": ["agency", "case-study"],
+      "date": "2026-01-05",
+      "readTime": "8 min read",
+      "author": "Ot van ContentScale",
+      "featured": true,
+      "metrics": {
+        "score": "97/100",
+        "traffic": "+127%",
+        "revenue": "+€45K"
+      },
+      "image": "images/dutch-seo-agency-featured.jpg"
+    },
+    {
+      "id": "graaf-framework-guide",
+      "title": "The Complete GRAAF Framework Guide: Score 95+ in 2025",
+      "slug": "graaf-framework-guide",
+      "description": "Master the GRAAF Framework - the proprietary methodology that helped 200+ businesses recover their SEO traffic.",
+      "category": ["guide"],
+      "date": "2026-01-02",
+      "readTime": "12 min read",
+      "author": "Ot van ContentScale",
+      "featured": false,
+      "metrics": {
+        "framework": "50 Points",
+        "businesses": "200+"
+      }
+    },
+    {
+      "id": "ecommerce-seo-recovery",
+      "title": "From 62 to 96: E-commerce Store's SEO Comeback Story",
+      "slug": "ecommerce-seo-recovery",
+      "description": "How a Belgian e-commerce store recovered from Google's March 2024 algorithm update and reached top 3 rankings.",
+      "category": ["case-study"],
+      "date": "2026-01-04",
+      "readTime": "10 min read",
+      "author": "Ot van ContentScale",
+      "featured": false,
+      "metrics": {
+        "score": "96/100",
+        "revenue": "+89%",
+        "days": "42 Days"
+      }
+    },
+    {
+      "id": "craft-methodology",
+      "title": "CRAFT Methodology: The Missing 30 Points in Your SEO Score",
+      "slug": "craft-methodology-explained",
+      "description": "Deep dive into the CRAFT framework (Clarity, Readability, Audience-fit, Flow, Tone).",
+      "category": ["guide"],
+      "date": "2026-01-03",
+      "readTime": "15 min read",
+      "author": "Ot van ContentScale",
+      "featured": false,
+      "metrics": {
+        "points": "30/100",
+        "examples": "30+"
+      }
+    },
+    {
+      "id": "ai-content-tips",
+      "title": "10 AI Content Optimization Tips That Actually Work in 2025",
+      "slug": "ai-content-optimization-tips",
+      "description": "Quick wins for improving your content quality score. Actionable tips you can implement today.",
+      "category": ["tips"],
+      "date": "2024-12-30",
+      "readTime": "6 min read",
+      "author": "Ot van ContentScale",
+      "featured": false,
+      "metrics": {
+        "type": "Quick Wins",
+        "impact": "Immediate"
+      }
+    },
+    {
+      "id": "google-algorithm-update-jan-2025",
+      "title": "Google Algorithm Update January 2025: What Changed?",
+      "slug": "google-algorithm-update-january-2025",
+      "description": "Breaking down the latest Google algorithm changes and what they mean for your content strategy.",
+      "category": ["news"],
+      "date": "2026-01-01",
+      "readTime": "7 min read",
+      "author": "Ot van ContentScale",
+      "featured": false,
+      "metrics": {
+        "sites": "150+",
+        "type": "Breaking News"
+      }
+    },
+    {
+      "id": "saas-seo-transformation",
+      "title": "How a German SaaS Startup Achieved 94/100 Score Pre-Launch",
+      "slug": "saas-company-seo-transformation",
+      "description": "Content-first SEO strategy that helped a Berlin-based SaaS company rank #1 before product launch.",
+      "category": ["case-study"],
+      "date": "2024-12-28",
+      "readTime": "9 min read",
+      "author": "Ot van ContentScale",
+      "featured": false,
+      "metrics": {
+        "score": "94/100",
+        "visitors": "10K",
+        "months": "4 Months"
+      }
+    }
+  ]
+}
