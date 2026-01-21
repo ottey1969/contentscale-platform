@@ -13,6 +13,95 @@
       position: relative;
       overflow: hidden;
     }
+    /* PRICING CARDS - FIXED BUTTON ALIGNMENT */
+    .pricing-card {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 2px solid #334155;
+      border-radius: 16px;
+      padding: 32px;
+      transition: all 0.3s;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-height: 550px;
+    }
+    
+    .pricing-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(139, 92, 246, 0.3);
+      border-color: #8b5cf6;
+    }
+    
+    .pricing-card.popular {
+      border-color: #fbbf24;
+      background: linear-gradient(135deg, #1e293b 0%, #2d1f08 100%);
+    }
+    
+    .pricing-card.popular::before {
+      content: '⭐ MOST POPULAR';
+      position: absolute;
+      top: -12px;
+      right: 24px;
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      color: #1e293b;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    
+    .price-tag {
+      font-size: 48px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .price-period {
+      color: #9ca3af;
+      font-size: 16px;
+    }
+    
+    .feature-list {
+      list-style: none;
+      padding: 0;
+      margin: 24px 0;
+      flex-grow: 1;
+    }
+    
+    .feature-list li {
+      padding: 12px 0;
+      border-bottom: 1px solid #374151;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .feature-list li:last-child {
+      border-bottom: none;
+    }
+    
+    .feature-icon {
+      font-size: 18px;
+    }
+    
+    .pricing-button {
+      margin-top: auto !important;
+      width: 100%;
+      padding: 16px 24px !important;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 16px;
+      transition: all 0.3s;
+      border: none;
+      cursor: pointer;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
     
     .stat-card::before {
       content: '';
@@ -23,6 +112,95 @@
       height: 200%;
       background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
     }
+    /* PRICING CARDS - FIXED BUTTON ALIGNMENT */
+    .pricing-card {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 2px solid #334155;
+      border-radius: 16px;
+      padding: 32px;
+      transition: all 0.3s;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-height: 550px;
+    }
+    
+    .pricing-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(139, 92, 246, 0.3);
+      border-color: #8b5cf6;
+    }
+    
+    .pricing-card.popular {
+      border-color: #fbbf24;
+      background: linear-gradient(135deg, #1e293b 0%, #2d1f08 100%);
+    }
+    
+    .pricing-card.popular::before {
+      content: '⭐ MOST POPULAR';
+      position: absolute;
+      top: -12px;
+      right: 24px;
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      color: #1e293b;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    
+    .price-tag {
+      font-size: 48px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .price-period {
+      color: #9ca3af;
+      font-size: 16px;
+    }
+    
+    .feature-list {
+      list-style: none;
+      padding: 0;
+      margin: 24px 0;
+      flex-grow: 1;
+    }
+    
+    .feature-list li {
+      padding: 12px 0;
+      border-bottom: 1px solid #374151;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .feature-list li:last-child {
+      border-bottom: none;
+    }
+    
+    .feature-icon {
+      font-size: 18px;
+    }
+    
+    .pricing-button {
+      margin-top: auto !important;
+      width: 100%;
+      padding: 16px 24px !important;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 16px;
+      transition: all 0.3s;
+      border: none;
+      cursor: pointer;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
     
     .stat-card-alt { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
     .stat-card-green { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
@@ -32,6 +210,95 @@
       background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
       border: 2px solid;
       transition: all 0.3s;
+    }
+    /* PRICING CARDS - FIXED BUTTON ALIGNMENT */
+    .pricing-card {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 2px solid #334155;
+      border-radius: 16px;
+      padding: 32px;
+      transition: all 0.3s;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-height: 550px;
+    }
+    
+    .pricing-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(139, 92, 246, 0.3);
+      border-color: #8b5cf6;
+    }
+    
+    .pricing-card.popular {
+      border-color: #fbbf24;
+      background: linear-gradient(135deg, #1e293b 0%, #2d1f08 100%);
+    }
+    
+    .pricing-card.popular::before {
+      content: '⭐ MOST POPULAR';
+      position: absolute;
+      top: -12px;
+      right: 24px;
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      color: #1e293b;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    
+    .price-tag {
+      font-size: 48px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .price-period {
+      color: #9ca3af;
+      font-size: 16px;
+    }
+    
+    .feature-list {
+      list-style: none;
+      padding: 0;
+      margin: 24px 0;
+      flex-grow: 1;
+    }
+    
+    .feature-list li {
+      padding: 12px 0;
+      border-bottom: 1px solid #374151;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .feature-list li:last-child {
+      border-bottom: none;
+    }
+    
+    .feature-icon {
+      font-size: 18px;
+    }
+    
+    .pricing-button {
+      margin-top: auto !important;
+      width: 100%;
+      padding: 16px 24px !important;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 16px;
+      transition: all 0.3s;
+      border: none;
+      cursor: pointer;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     
     .featured-1 { border-color: #fbbf24; }
@@ -483,7 +750,7 @@
             <li><span class="feature-icon">✅</span> Leaderboard access</li>
           </ul>
           
-          <button onclick="scrollToScanner()" class="w-full bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 py-3 rounded-lg font-bold transition-all">
+          <button onclick="scrollToScanner()" class="w-full pricing-button bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500">
             Start Free
           </button>
         </div>
@@ -505,7 +772,7 @@
             <li><span class="feature-icon">✅</span> Export reports (CSV/JSON)</li>
           </ul>
           
-          <button onclick="whatsappPricing('Starter')" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 py-3 rounded-lg font-bold transition-all">
+          <button onclick="whatsappPricing('Starter')" class="w-full pricing-button bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
             Get Started
           </button>
         </div>
@@ -527,7 +794,7 @@
             <li><span class="feature-icon">✅</span> All Starter features</li>
           </ul>
           
-          <button onclick="whatsappPricing('Pro')" class="w-full bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 py-3 rounded-lg font-bold transition-all">
+          <button onclick="whatsappPricing('Pro')" class="w-full pricing-button bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700">
             Most Popular
           </button>
         </div>
@@ -549,7 +816,7 @@
             <li><span class="feature-icon">✅</span> Account manager</li>
           </ul>
           
-          <button onclick="whatsappPricing('Agency')" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 py-3 rounded-lg font-bold transition-all">
+          <button onclick="whatsappPricing('Agency')" class="w-full pricing-button bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
             Contact Sales
           </button>
         </div>
