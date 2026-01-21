@@ -1,4 +1,4 @@
-<!DOCTYPE html>  
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -8,7 +8,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <style>
-    /* STATS CARDS - Gradient & Visual */
     .stat-card {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       position: relative;
@@ -29,7 +28,6 @@
     .stat-card-green { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
     .stat-card-yellow { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); }
     
-    /* FEATURED AGENCIES - Top 3 */
     .featured-agency {
       background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
       border: 2px solid;
@@ -45,7 +43,6 @@
       box-shadow: 0 20px 40px rgba(0,0,0,0.3);
     }
     
-    /* FILTERS - Collapsible */
     .filter-panel {
       max-height: 0;
       overflow: hidden;
@@ -56,7 +53,6 @@
       max-height: 500px;
     }
     
-    /* AGENCY CARD */
     .agency-card {
       background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
       border: 1px solid #334155;
@@ -70,7 +66,6 @@
       box-shadow: 0 10px 25px rgba(139, 92, 246, 0.2);
     }
 
-    /* SCANNER */
     @keyframes spin { 
       0% { transform: rotate(0deg); } 
       100% { transform: rotate(360deg); } 
@@ -88,7 +83,6 @@
       vertical-align: middle; 
     }
 
-    /* MODAL */
     .modal-overlay {
       position: fixed;
       top: 0;
@@ -114,7 +108,6 @@
       box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
     }
 
-    /* STICKY NAV */
     .sticky-nav {
       position: sticky;
       top: 0;
@@ -123,7 +116,6 @@
       border-bottom: 2px solid rgb(55, 65, 81);
     }
 
-    /* Text truncation voor blog preview cards */
     .line-clamp-2 {
       display: -webkit-box;
       -webkit-line-clamp: 2;
@@ -137,6 +129,76 @@
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
+
+    /* PRICING CARDS */
+    .pricing-card {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 2px solid #334155;
+      border-radius: 16px;
+      padding: 32px;
+      transition: all 0.3s;
+      position: relative;
+    }
+    
+    .pricing-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(139, 92, 246, 0.3);
+      border-color: #8b5cf6;
+    }
+    
+    .pricing-card.popular {
+      border-color: #fbbf24;
+      background: linear-gradient(135deg, #1e293b 0%, #2d1f08 100%);
+    }
+    
+    .pricing-card.popular::before {
+      content: '⭐ MOST POPULAR';
+      position: absolute;
+      top: -12px;
+      right: 24px;
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      color: #1e293b;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    
+    .price-tag {
+      font-size: 48px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .price-period {
+      color: #9ca3af;
+      font-size: 16px;
+    }
+    
+    .feature-list {
+      list-style: none;
+      padding: 0;
+      margin: 24px 0;
+    }
+    
+    .feature-list li {
+      padding: 12px 0;
+      border-bottom: 1px solid #374151;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .feature-list li:last-child {
+      border-bottom: none;
+    }
+    
+    .feature-icon {
+      font-size: 18px;
+    }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100">
@@ -145,14 +207,12 @@
   <nav class="sticky-nav">
     <div class="max-w-7xl mx-auto px-6 py-4">
       <div class="flex items-center justify-between flex-wrap gap-4">
-        <!-- Logo -->
         <div class="flex items-center gap-2">
           <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
             ContentScale
           </div>
         </div>
         
-        <!-- Navigation Links -->
         <div class="flex items-center gap-1 flex-wrap justify-end">
           <a href="/" class="px-4 py-2 text-gray-300 hover:text-white font-semibold transition-all border-b-2 border-transparent hover:border-purple-400">
             🏠 Home
@@ -162,6 +222,9 @@
           </a>
           <a href="#top3Container" class="px-4 py-2 text-gray-300 hover:text-white font-semibold transition-all border-b-2 border-transparent hover:border-purple-400">
             🏆 Leaderboard
+          </a>
+          <a href="#pricing" class="px-4 py-2 text-gray-300 hover:text-white font-semibold transition-all border-b-2 border-transparent hover:border-purple-400">
+            💰 Pricing
           </a>
           <a href="/blog/index.html" class="px-4 py-2 text-gray-300 hover:text-white font-semibold transition-all border-b-2 border-transparent hover:border-purple-400">
             📝 Blog
@@ -184,7 +247,7 @@
       <p class="text-xl text-gray-300">Find & compare top SEO agencies worldwide</p>
     </div>
 
-    <!-- ✅ REAL SCANNER SECTION -->
+    <!-- SCANNER SECTION -->
     <div id="scanner" class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-8 mb-8 border-2 border-purple-600">
       <div class="text-center mb-6">
         <h2 class="text-3xl font-bold mb-2">🚀 Scan Your Website</h2>
@@ -237,7 +300,7 @@
       </button>
     </div>
 
-    <!-- ✅ REAL STATS WITH LIVE DATA -->
+    <!-- STATS WITH LIVE DATA -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
       <div class="stat-card rounded-xl p-5 text-white relative">
         <div class="relative z-10">
@@ -272,7 +335,7 @@
       </div>
     </div>
 
-    <!-- ✅ REAL TOP 3 FEATURED AGENCIES -->
+    <!-- TOP 3 FEATURED AGENCIES -->
     <div class="mb-10" id="top3Container">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-2xl font-bold text-yellow-400">🏆 Top 3 Agencies</h2>
@@ -296,7 +359,6 @@
       </button>
       
       <div id="filter-panel" class="filter-panel mt-4">
-        <!-- Country Filter -->
         <div class="mb-4">
           <div class="text-xs text-gray-400 mb-2">Country:</div>
           <div class="flex flex-wrap gap-2" id="countryFilters">
@@ -304,7 +366,6 @@
           </div>
         </div>
         
-        <!-- Search -->
         <div>
           <input type="text" id="searchInput" placeholder="Search agencies..." 
             oninput="filterAgencies()"
@@ -313,7 +374,7 @@
       </div>
     </div>
 
-    <!-- ✅ REAL OTHER AGENCIES (Rank 4+) - 2 Columns -->
+    <!-- OTHER AGENCIES (Rank 4+) -->
     <div class="mb-6">
       <h2 class="text-2xl font-bold mb-4">Other Top Agencies</h2>
       
@@ -328,9 +389,8 @@
       </div>
     </div>
 
-    <!-- 📚 BLOG PREVIEW SECTION - NIEUWE TOEVOEGING -->
+    <!-- BLOG PREVIEW SECTION -->
     <div class="mt-16 mb-12">
-      <!-- Section Header -->
       <div class="text-center mb-10">
         <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
           📚 SEO Recovery Insights
@@ -338,10 +398,8 @@
         <p class="text-xl text-gray-400">Real case studies, expert guides & proven strategies</p>
       </div>
       
-      <!-- Blog Posts Grid -->
       <div class="grid md:grid-cols-3 gap-6 mb-8">
         
-        <!-- POST 1: Featured GRAAF Guide -->
         <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border-2 border-yellow-600 hover:border-yellow-400 transition-all cursor-pointer" onclick="window.location.href='/blog/graaf-framework-guide'">
           <div class="mb-3">
             <span class="inline-block px-3 py-1 bg-purple-600 text-white text-xs font-bold rounded-full">📚 GUIDE</span>
@@ -357,7 +415,6 @@
           </div>
         </div>
 
-        <!-- POST 2: Case Study -->
         <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border-2 border-gray-700 hover:border-purple-600 transition-all cursor-pointer" onclick="window.location.href='/blog/ecommerce-seo-recovery'">
           <div class="mb-3">
             <span class="inline-block px-3 py-1 bg-green-600 text-white text-xs font-bold rounded-full">📊 CASE STUDY</span>
@@ -375,7 +432,6 @@
           </div>
         </div>
 
-        <!-- POST 3: Quick Tips -->
         <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border-2 border-gray-700 hover:border-purple-600 transition-all cursor-pointer" onclick="window.location.href='/blog/ai-content-optimization-tips'">
           <div class="mb-3">
             <span class="inline-block px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">💡 TIPS</span>
@@ -392,17 +448,152 @@
 
       </div>
       
-      <!-- View All Button -->
       <div class="text-center">
         <a href="/blog/index.html" class="inline-block bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-8 py-4 rounded-lg font-bold text-lg transition-all">
           📝 View All Articles →
         </a>
       </div>
     </div>
-    <!-- EINDE BLOG PREVIEW SECTION -->
+
+    <!-- 💰 PRICING SECTION -->
+    <div id="pricing" class="py-16">
+      <div class="text-center mb-12">
+        <h2 class="text-5xl font-bold mb-4 bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
+          💰 Simple, Transparent Pricing
+        </h2>
+        <p class="text-xl text-gray-400">Choose the plan that fits your scanning needs</p>
+      </div>
+
+      <!-- 4 PRICING TIERS -->
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        
+        <!-- FREE PLAN -->
+        <div class="pricing-card">
+          <div class="mb-6">
+            <h3 class="text-2xl font-bold mb-2">FREE</h3>
+            <div class="price-tag">€0</div>
+            <div class="price-period">forever</div>
+          </div>
+          
+          <ul class="feature-list">
+            <li><span class="feature-icon">✅</span> 3 scans/day</li>
+            <li><span class="feature-icon">✅</span> Email required</li>
+            <li><span class="feature-icon">✅</span> Basic score breakdown</li>
+            <li><span class="feature-icon">✅</span> Community support</li>
+            <li><span class="feature-icon">✅</span> Leaderboard access</li>
+          </ul>
+          
+          <button onclick="scrollToScanner()" class="w-full bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 py-3 rounded-lg font-bold transition-all">
+            Start Free
+          </button>
+        </div>
+
+        <!-- STARTER PLAN -->
+        <div class="pricing-card">
+          <div class="mb-6">
+            <h3 class="text-2xl font-bold mb-2">STARTER</h3>
+            <div class="price-tag">€7</div>
+            <div class="price-period">/month</div>
+            <div class="text-xs text-green-400 mt-2">€67/year (save 20%)</div>
+          </div>
+          
+          <ul class="feature-list">
+            <li><span class="feature-icon">✅</span> 30 scans/month</li>
+            <li><span class="feature-icon">✅</span> Score + AI prompts</li>
+            <li><span class="feature-icon">✅</span> Email support</li>
+            <li><span class="feature-icon">✅</span> Leaderboard submission</li>
+            <li><span class="feature-icon">✅</span> Export reports (CSV/JSON)</li>
+          </ul>
+          
+          <button onclick="whatsappPricing('Starter')" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 py-3 rounded-lg font-bold transition-all">
+            Get Started
+          </button>
+        </div>
+
+        <!-- PRO PLAN (POPULAR) -->
+        <div class="pricing-card popular">
+          <div class="mb-6">
+            <h3 class="text-2xl font-bold mb-2">PRO</h3>
+            <div class="price-tag">€27</div>
+            <div class="price-period">/month</div>
+            <div class="text-xs text-green-400 mt-2">€259/year (save 20%)</div>
+          </div>
+          
+          <ul class="feature-list">
+            <li><span class="feature-icon">✅</span> 100 scans/month</li>
+            <li><span class="feature-icon">✅</span> Priority support</li>
+            <li><span class="feature-icon">✅</span> WhatsApp access to Ot</li>
+            <li><span class="feature-icon">✅</span> Advanced analytics</li>
+            <li><span class="feature-icon">✅</span> All Starter features</li>
+          </ul>
+          
+          <button onclick="whatsappPricing('Pro')" class="w-full bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 py-3 rounded-lg font-bold transition-all">
+            Most Popular
+          </button>
+        </div>
+
+        <!-- AGENCY PLAN -->
+        <div class="pricing-card">
+          <div class="mb-6">
+            <h3 class="text-2xl font-bold mb-2">AGENCY</h3>
+            <div class="price-tag">€97</div>
+            <div class="price-period">/month</div>
+            <div class="text-xs text-green-400 mt-2">€929/year (save 20%)</div>
+          </div>
+          
+          <ul class="feature-list">
+            <li><span class="feature-icon">✅</span> 500 scans/month</li>
+            <li><span class="feature-icon">✅</span> White-label</li>
+            <li><span class="feature-icon">✅</span> Client dashboard</li>
+            <li><span class="feature-icon">✅</span> API access</li>
+            <li><span class="feature-icon">✅</span> Account manager</li>
+          </ul>
+          
+          <button onclick="whatsappPricing('Agency')" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 py-3 rounded-lg font-bold transition-all">
+            Contact Sales
+          </button>
+        </div>
+
+      </div>
+
+      <!-- LIFETIME DEAL BANNER -->
+      <div class="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-2xl p-8 text-center">
+        <div class="text-6xl mb-4">💎</div>
+        <h3 class="text-4xl font-bold text-gray-900 mb-3">Lifetime Deal Coming Soon!</h3>
+        <p class="text-xl text-gray-800 mb-6">Pay once, scan forever. Limited spots available.</p>
+        
+        <div class="bg-gray-900 bg-opacity-20 rounded-xl p-6 mb-6 max-w-3xl mx-auto">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-gray-900">
+            <div class="bg-white bg-opacity-30 rounded-lg p-4">
+              <div class="text-sm font-bold mb-1">Tier 1</div>
+              <div class="text-3xl font-bold">€49</div>
+              <div class="text-xs">50 scans/month • Lifetime</div>
+            </div>
+            <div class="bg-white bg-opacity-30 rounded-lg p-4">
+              <div class="text-sm font-bold mb-1">Tier 2</div>
+              <div class="text-3xl font-bold">€99</div>
+              <div class="text-xs">150 scans/month • Lifetime</div>
+            </div>
+            <div class="bg-white bg-opacity-30 rounded-lg p-4">
+              <div class="text-sm font-bold mb-1">Tier 3</div>
+              <div class="text-3xl font-bold">€199</div>
+              <div class="text-xs">400 scans/month • Lifetime</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-sm text-gray-800 mb-6 max-w-2xl mx-auto">
+          <strong>Note:</strong> Lifetime deals offer incredible value but exclude white-label, API access, and enterprise features. Perfect for individuals and small teams!
+        </div>
+
+        <button onclick="notifyLTD()" class="inline-block bg-gray-900 text-yellow-400 hover:bg-gray-800 px-8 py-4 rounded-lg font-bold text-lg transition-all">
+          🔔 Notify Me When Available
+        </button>
+      </div>
+    </div>
 
     <!-- CLAIM FORM -->
-    <div id="claim-form" class="bg-gray-800 rounded-xl p-8 border-2 border-purple-600">
+    <div id="claim-form" class="bg-gray-800 rounded-xl p-8 border-2 border-purple-600 mt-16">
       <div class="text-center mb-6">
         <h2 class="text-3xl font-bold mb-2">🏢 Claim Your Agency Profile</h2>
         <p class="text-gray-400">Get verified, add your details, and attract more clients</p>
@@ -439,7 +630,7 @@
       </div>
     </div>
 
-    <!-- WHATSAPP CTA - Bottom Banner -->
+    <!-- WHATSAPP CTA -->
     <div class="mt-12 bg-gradient-to-r from-green-900 to-emerald-900 rounded-xl p-8 text-center border-2 border-green-600">
       <h3 class="text-2xl font-bold mb-3">💬 Need Expert Help?</h3>
       <p class="text-gray-300 mb-6">Talk directly to Ot about your SEO recovery strategy</p>
@@ -459,25 +650,16 @@
   </div>
 
   <script>
-    // ==========================================
-    // GLOBAL STATE
-    // ==========================================
     let allAgencies = [];
     let filteredAgencies = [];
     let currentFilter = 'all';
     let displayedCount = 10;
     let lastScanData = null;
 
-    // ==========================================
-    // INITIALIZATION
-    // ==========================================
     document.addEventListener('DOMContentLoaded', function() {
       loadLeaderboard();
     });
 
-    // ==========================================
-    // SCANNER FUNCTIONALITY
-    // ==========================================
     function toggleCompanyField() {
       const checkbox = document.getElementById('submitToLeaderboard');
       const field = document.getElementById('companyNameField');
@@ -498,7 +680,6 @@
         return;
       }
       
-      // Validate URL
       let fullUrl = urlInput;
       if (!urlInput.startsWith('http')) {
         fullUrl = `https://${urlInput}`;
@@ -511,13 +692,11 @@
         return;
       }
       
-      // Show loading state
       const originalText = scanButton.innerHTML;
       scanButton.innerHTML = '<div class="scan-spinner"></div> Scanning...';
       scanButton.disabled = true;
       
       try {
-        // 🔥 REAL API CALL
         const response = await fetch('/api/scan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -530,7 +709,6 @@
           lastScanData = data;
           showScanResults(data);
           
-          // Submit to leaderboard if checked
           const submitToLeaderboard = document.getElementById('submitToLeaderboard').checked;
           if (submitToLeaderboard) {
             await submitToLeaderboardAPI(data);
@@ -547,296 +725,12 @@
       }
     }
 
-    function showScanResults(data) {
-      const modal = document.getElementById('scanModal');
-      const modalContent = modal.querySelector('.modal-content');
-      
-      // Save for export
-      lastScanData = {
-        url: data.url,
-        score: data.score,
-        quality: data.score >= 85 ? 'Excellent' : data.score >= 75 ? 'Good' : data.score >= 65 ? 'Fair' : 'Needs Work',
-        metrics: {
-          graaf: data.metrics.graaf,
-          craft: data.metrics.craft,
-          technical: data.metrics.technical
-        },
-        recommendations: data.recommendations,
-        timestamp: new Date().toISOString()
-      };
-      
-      let scoreClass = 'text-red-400';
-      let scoreText = 'Needs Work';
-      if (data.score >= 85) {
-        scoreClass = 'text-green-400';
-        scoreText = 'Excellent';
-      } else if (data.score >= 75) {
-        scoreClass = 'text-blue-400';
-        scoreText = 'Good';
-      } else if (data.score >= 65) {
-        scoreClass = 'text-yellow-400';
-        scoreText = 'Fair';
-      }
-      
-      // Group recommendations by type
-      const quickWins = data.recommendations.filter(r => r.type === 'quickwin');
-      const major = data.recommendations.filter(r => r.type === 'major');
-      const advanced = data.recommendations.filter(r => r.type === 'advanced');
-      
-      modalContent.innerHTML = `
-        <div class="p-8 max-h-[90vh] overflow-y-auto">
-          <div class="text-center mb-6">
-            <h2 class="text-3xl font-bold mb-2">🎯 Scan Results</h2>
-            <p class="text-gray-400">${data.url}</p>
-          </div>
-          
-          <!-- SCORE CIRCLE -->
-          <div class="text-center mb-6">
-            <div class="inline-block px-8 py-6 bg-gray-800 rounded-2xl border-4 ${scoreClass.replace('text-', 'border-')}">
-              <div class="text-5xl font-bold ${scoreClass}">${data.score}/100</div>
-              <div class="text-lg mt-2 text-gray-300">${scoreText}</div>
-            </div>
-          </div>
-          
-          <!-- SCORE BREAKDOWN -->
-          <div class="grid grid-cols-3 gap-4 mb-8">
-            <div class="text-center p-4 bg-gray-800 rounded-lg">
-              <div class="text-2xl font-bold text-green-400">${data.metrics.graaf}/50</div>
-              <div class="text-sm text-gray-400 mt-1">GRAAF</div>
-            </div>
-            <div class="text-center p-4 bg-gray-800 rounded-lg">
-              <div class="text-2xl font-bold text-blue-400">${data.metrics.craft}/30</div>
-              <div class="text-sm text-gray-400 mt-1">CRAFT</div>
-            </div>
-            <div class="text-center p-4 bg-gray-800 rounded-lg">
-              <div class="text-2xl font-bold text-purple-400">${data.metrics.technical}/20</div>
-              <div class="text-sm text-gray-400 mt-1">Technical</div>
-            </div>
-          </div>
-          
-          <!-- RECOMMENDATIONS -->
-          <h3 class="text-xl font-bold mb-6">📈 Recommendations (${data.recommendations.length} total)</h3>
-          
-          <!-- QUICK WINS -->
-          ${quickWins.length > 0 ? `
-          <div class="mb-8">
-            <div class="flex items-center gap-3 mb-4 pb-3 border-b-2 border-green-600">
-              <span class="text-2xl">⚡</span>
-              <div>
-                <h4 class="font-bold text-lg text-green-400">Quick Wins (High Impact, Low Effort)</h4>
-                <p class="text-xs text-gray-400">${quickWins.length} recommendations</p>
-              </div>
-            </div>
-            ${quickWins.map(rec => `
-              <div class="bg-gray-800 bg-opacity-50 border-l-4 border-green-600 rounded-lg p-4 mb-4">
-                <div class="flex justify-between items-start mb-2">
-                  <div>
-                    <h4 class="font-bold text-lg">${rec.title}</h4>
-                    <p class="text-gray-300 text-sm mt-1">${rec.description}</p>
-                  </div>
-                </div>
-                <div class="mt-3 pt-3 border-t border-gray-700">
-                  <div class="text-sm text-gray-400 mb-2">
-                    <span class="font-semibold">Impact:</span> <span class="text-green-400">${rec.impact}</span>
-                  </div>
-                  <div class="bg-gray-900 rounded p-3">
-                    <div class="text-xs text-gray-500 mb-1">✓ Action Required:</div>
-                    <div class="text-sm text-gray-200">${rec.action}</div>
-                  </div>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-          ` : ''}
-          
-          <!-- MAJOR IMPROVEMENTS -->
-          ${major.length > 0 ? `
-          <div class="mb-8">
-            <div class="flex items-center gap-3 mb-4 pb-3 border-b-2 border-yellow-600">
-              <span class="text-2xl">📊</span>
-              <div>
-                <h4 class="font-bold text-lg text-yellow-400">Major Improvements (Medium Impact, Medium Effort)</h4>
-                <p class="text-xs text-gray-400">${major.length} recommendations</p>
-              </div>
-            </div>
-            ${major.map(rec => `
-              <div class="bg-gray-800 bg-opacity-50 border-l-4 border-yellow-600 rounded-lg p-4 mb-4">
-                <div class="flex justify-between items-start mb-2">
-                  <div>
-                    <h4 class="font-bold text-lg">${rec.title}</h4>
-                    <p class="text-gray-300 text-sm mt-1">${rec.description}</p>
-                  </div>
-                </div>
-                <div class="mt-3 pt-3 border-t border-gray-700">
-                  <div class="text-sm text-gray-400 mb-2">
-                    <span class="font-semibold">Impact:</span> <span class="text-yellow-400">${rec.impact}</span>
-                  </div>
-                  <div class="bg-gray-900 rounded p-3">
-                    <div class="text-xs text-gray-500 mb-1">✓ Action Required:</div>
-                    <div class="text-sm text-gray-200">${rec.action}</div>
-                  </div>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-          ` : ''}
-          
-          <!-- ADVANCED IMPROVEMENTS -->
-          ${advanced.length > 0 ? `
-          <div class="mb-8">
-            <div class="flex items-center gap-3 mb-4 pb-3 border-b-2 border-purple-600">
-              <span class="text-2xl">🚀</span>
-              <div>
-                <h4 class="font-bold text-lg text-purple-400">Advanced Improvements (Longer Term)</h4>
-                <p class="text-xs text-gray-400">${advanced.length} recommendations</p>
-              </div>
-            </div>
-            ${advanced.map(rec => `
-              <div class="bg-gray-800 bg-opacity-50 border-l-4 border-purple-600 rounded-lg p-4 mb-4">
-                <div class="flex justify-between items-start mb-2">
-                  <div>
-                    <h4 class="font-bold text-lg">${rec.title}</h4>
-                    <p class="text-gray-300 text-sm mt-1">${rec.description}</p>
-                  </div>
-                </div>
-                <div class="mt-3 pt-3 border-t border-gray-700">
-                  <div class="text-sm text-gray-400 mb-2">
-                    <span class="font-semibold">Impact:</span> <span class="text-purple-400">${rec.impact}</span>
-                  </div>
-                  <div class="bg-gray-900 rounded p-3">
-                    <div class="text-xs text-gray-500 mb-1">✓ Action Required:</div>
-                    <div class="text-sm text-gray-200">${rec.action}</div>
-                  </div>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-          ` : ''}
-          
-          <!-- EXPORT SECTION -->
-          <div class="mb-8 p-4 bg-gray-800 rounded-lg border-2 border-green-600">
-            <h4 class="font-bold text-lg text-green-400 mb-4">📥 Export Results</h4>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <button onclick="exportToCSV()" class="p-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-sm flex items-center justify-center gap-2">
-                📊 CSV
-              </button>
-              <button onclick="exportToJSON()" class="p-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold text-sm flex items-center justify-center gap-2">
-                📄 JSON
-              </button>
-              <button onclick="copyToClipboard()" class="p-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold text-sm flex items-center justify-center gap-2">
-                📋 Copy
-              </button>
-              <button onclick="shareResults()" class="p-3 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold text-sm flex items-center justify-center gap-2">
-                🔗 Share
-              </button>
-            </div>
-          </div>
-          
-          <!-- CONTENTSCALE PROMOTION -->
-          <div class="mb-8 p-6 bg-gradient-to-r from-purple-900 to-blue-900 rounded-lg border-2 border-purple-500">
-            <div class="flex items-start gap-4">
-              <div class="text-4xl">🎁</div>
-              <div class="flex-1">
-                <h4 class="font-bold text-xl mb-2">Want a FULL Recovery Plan?</h4>
-                <p class="text-gray-300 text-sm mb-4">
-                  Get a comprehensive SEO recovery strategy with actionable steps, AI-powered prompts, and expert guidance - completely FREE!
-                </p>
-                <div class="grid md:grid-cols-3 gap-3 mb-4">
-                  <div class="flex items-center gap-2 text-sm">
-                    <span class="text-green-400">✓</span>
-                    <span>GRAAF Framework Analysis</span>
-                  </div>
-                  <div class="flex items-center gap-2 text-sm">
-                    <span class="text-green-400">✓</span>
-                    <span>AI Content Prompts</span>
-                  </div>
-                  <div class="flex items-center gap-2 text-sm">
-                    <span class="text-green-400">✓</span>
-                    <span>Recovery Roadmap</span>
-                  </div>
-                </div>
-                <a href="https://contentscale.site" target="_blank" class="inline-block bg-white text-purple-900 hover:bg-gray-100 px-6 py-3 rounded-lg font-bold transition-all">
-                  🚀 Get Your FREE Recovery Plan →
-                </a>
-                <p class="text-xs text-gray-400 mt-3">
-                  No credit card required • Instant access • Expert SEO recovery service
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <!-- ACTION BUTTONS -->
-          <div class="flex gap-4 mt-6 pt-6 border-t border-gray-700">
-            <button onclick="closeModal()" class="flex-1 bg-gray-700 hover:bg-gray-600 py-3 rounded-lg font-semibold">
-              Close
-            </button>
-            <button onclick="scanAnother()" class="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 py-3 rounded-lg font-semibold">
-              Scan Another
-            </button>
-          </div>
-        </div>
-      `;
-      
-      modal.classList.remove('hidden');
-    }
-
     function closeModal() {
       document.getElementById('scanModal').classList.add('hidden');
     }
 
-    function scanAnother() {
-      closeModal();
-      document.getElementById('scanInput').value = '';
-      document.getElementById('scanInput').focus();
-    }
-
-    async function submitToLeaderboardAPI(scanData) {
-      const companyName = document.getElementById('companyName').value;
-      const country = document.getElementById('countrySelect').value || detectCountryFromDomain(scanData.url);
-      
-      try {
-        const response = await fetch('/api/leaderboard/submit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            url: scanData.url,
-            score: scanData.score,
-            company_name: companyName || 'Unknown',
-            country: country,
-            graaf_score: scanData.metrics.graaf,
-            craft_score: scanData.metrics.craft,
-            technical_score: scanData.metrics.technical
-          })
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-          console.log('✅ Submitted to leaderboard');
-          loadLeaderboard(); // Reload leaderboard
-        }
-      } catch (error) {
-        console.error('Submit error:', error);
-      }
-    }
-
-    function detectCountryFromDomain(url) {
-      const domain = new URL(url).hostname;
-      const tld = domain.split('.').pop().toLowerCase();
-      
-      const countryTLDs = {
-        'nl': 'NL', 'be': 'BE', 'de': 'DE', 'fr': 'FR', 'uk': 'UK',
-        'com': 'US', 'us': 'US', 'ca': 'CA', 'au': 'AU'
-      };
-      
-      return countryTLDs[tld] || 'US';
-    }
-
-    // ==========================================
-    // LEADERBOARD FUNCTIONALITY
-    // ==========================================
     async function loadLeaderboard() {
       try {
-        // 🔥 REAL API CALL
         const response = await fetch('/api/leaderboard');
         const data = await response.json();
         
@@ -862,13 +756,11 @@
         }
       } catch (error) {
         console.error('Leaderboard load error:', error);
-        // Show mock data on error
         showMockData();
       }
     }
 
     function showMockData() {
-      // Fallback mock data for demo
       allAgencies = Array.from({ length: 10 }, (_, i) => ({
         id: i + 1,
         rank: i + 1,
@@ -947,7 +839,6 @@
         </div>
       `).join('');
       
-      // Show/hide load more button
       const loadMoreContainer = document.getElementById('loadMoreContainer');
       if (displayedCount >= filteredAgencies.length) {
         loadMoreContainer.classList.add('hidden');
@@ -1013,157 +904,6 @@
       document.getElementById('enhancedProfiles').textContent = enhanced;
     }
 
-    function viewAgencyProfile(id) {
-      const agency = allAgencies.find(a => a.id === id);
-      if (!agency) return;
-      
-      alert(`View profile for: ${agency.company}\nScore: ${agency.score}/100\nCountry: ${getCountryName(agency.country)}`);
-      // TODO: Show full profile modal
-    }
-
-    // ==========================================
-    // CLAIM FORM
-    // ==========================================
-    async function submitClaim(event) {
-      event.preventDefault();
-      
-      const formData = new FormData(event.target);
-      const data = {
-        agency_name: formData.get('agencyName'),
-        contact_email: formData.get('contactEmail'),
-        url: formData.get('websiteUrl'),
-        country: formData.get('country'),
-        description: formData.get('description')
-      };
-      
-      try {
-        const response = await fetch('/api/claim-profile', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        
-        const result = await response.json();
-        if (result.success) {
-          alert('✅ Profile claim submitted! We\'ll review and verify your profile soon.');
-          event.target.reset();
-        } else {
-          alert('❌ Claim failed: ' + (result.error || 'Unknown error'));
-        }
-      } catch (error) {
-        console.error('Claim error:', error);
-        alert('❌ Submission failed. Please try again.');
-      }
-    }
-
-    // ==========================================
-    // EXPORT & SHARE FUNCTIONS
-    // ==========================================
-    function exportToCSV() {
-      if (!lastScanData) {
-        alert('No scan data available');
-        return;
-      }
-
-      const data = lastScanData;
-      const csv = [
-        ['ContentScale SEO Report'],
-        [''],
-        ['URL', data.url],
-        ['Score', data.score + '/100'],
-        ['Quality', data.quality],
-        [''],
-        ['BREAKDOWN'],
-        ['GRAAF', data.metrics.graaf + '/50'],
-        ['CRAFT', data.metrics.craft + '/30'],
-        ['Technical SEO', data.metrics.technical + '/20'],
-        [''],
-        ['RECOMMENDATIONS'],
-        ['Title', 'Description', 'Impact', 'Action'],
-        ...data.recommendations.map(r => [r.title, r.description, r.impact, r.action])
-      ].map(row => row.map(cell => '"' + (cell || '').replace(/"/g, '""') + '"').join(',')).join('\n');
-
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `seo-report-${new Date().getTime()}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    }
-
-    function exportToJSON() {
-      if (!lastScanData) {
-        alert('No scan data available');
-        return;
-      }
-
-      const json = JSON.stringify(lastScanData, null, 2);
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `seo-report-${new Date().getTime()}.json`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    }
-
-    function copyToClipboard() {
-      if (!lastScanData) {
-        alert('No scan data available');
-        return;
-      }
-
-      const text = `
-📊 SEO SCAN REPORT - ContentScale
-
-🎯 URL: ${lastScanData.url}
-📈 Score: ${lastScanData.score}/100
-✅ Quality: ${lastScanData.quality}
-
-📋 BREAKDOWN:
-- GRAAF: ${lastScanData.metrics.graaf}/50
-- CRAFT: ${lastScanData.metrics.craft}/30
-- Technical: ${lastScanData.metrics.technical}/20
-
-📌 TOP RECOMMENDATIONS:
-${lastScanData.recommendations.slice(0, 5).map((r, i) => `${i + 1}. ${r.title} (${r.impact} impact)`).join('\n')}
-
-Generated: ${new Date(lastScanData.timestamp).toLocaleString()}
-      `.trim();
-
-      navigator.clipboard.writeText(text).then(() => {
-        alert('✅ Report copied to clipboard!');
-      }).catch(() => {
-        alert('Failed to copy');
-      });
-    }
-
-    function shareResults() {
-      if (!lastScanData) {
-        alert('No scan data available');
-        return;
-      }
-
-      const text = `Check out this website's SEO score: ${lastScanData.score}/100 on ContentScale! 🚀`;
-      const url = `https://contentscale.site?scan=${encodeURIComponent(lastScanData.url)}`;
-
-      if (navigator.share) {
-        navigator.share({
-          title: 'ContentScale SEO Report',
-          text: text,
-          url: url
-        }).catch(err => console.log('Error sharing:', err));
-      } else {
-        // Fallback - copy share link
-        navigator.clipboard.writeText(url);
-        alert('✅ Share link copied:\n' + url);
-      }
-    }
-
-    // ==========================================
-    // HELPERS
-    // ==========================================
     function toggleFilters() {
       const panel = document.getElementById('filter-panel');
       const icon = document.getElementById('filter-icon');
@@ -1181,6 +921,25 @@ Generated: ${new Date(lastScanData.timestamp).toLocaleString()}
     
     function scrollToClaimForm() {
       document.getElementById('claim-form').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function scrollToScanner() {
+      document.getElementById('scanner').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function whatsappPricing(plan) {
+      const url = `https://wa.me/31628073996?text=Hi%20Ot!%20I'm%20interested%20in%20the%20${plan}%20plan.%20Can%20you%20tell%20me%20more?`;
+      window.open(url, '_blank');
+    }
+
+    function notifyLTD() {
+      const email = prompt('Enter your email to get notified when Lifetime Deals launch:');
+      if (email && email.includes('@')) {
+        alert('✅ Thanks! We\'ll notify you at ' + email + ' when LTD launches!');
+        // TODO: Save email to backend
+      } else if (email) {
+        alert('Please enter a valid email address');
+      }
     }
 
     function getFlagEmoji(countryCode) {
