@@ -90,133 +90,19 @@
       </div>
     </div>
 
-    <!-- FEATURED POST -->
+    <!-- FEATURED POST (dynamisch geladen) -->
     <div id="featured-section" class="mb-12">
       <h2 class="text-2xl font-bold mb-6 text-yellow-400">⭐ Featured Article</h2>
-      <div class="blog-card featured relative" onclick="window.location.href='/blog/graaf-framework-guide'">
-        <div class="mb-4">
-          <span class="category-badge cat-guide">Guide</span>
-          <span class="text-sm text-gray-500">📅 January 2, 2025 • ⏱️ 12 min read</span>
-        </div>
-        <h3 class="text-3xl font-bold mb-3">The Complete GRAAF Framework Guide: Score 95+ in 2025</h3>
-        <p class="text-gray-400 mb-4 leading-relaxed">
-          Master the GRAAF Framework (Genuinely Credible, Relevance, Actionability, Accuracy, Freshness) - the proprietary methodology that helped 200+ businesses recover their SEO traffic. Learn the exact strategies to optimize your content for AI-era search.
-        </p>
-        <div class="flex items-center gap-3">
-          <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%238b5cf6'/%3E%3Ctext x='20' y='26' text-anchor='middle' fill='white' font-size='16' font-weight='bold'%3EO%3C/text%3E%3C/svg%3E" class="w-10 h-10 rounded-full">
-          <div>
-            <div class="font-bold text-sm">Ot van ContentScale</div>
-            <div class="text-xs text-gray-500">Founder & SEO Recovery Expert</div>
-          </div>
-        </div>
+      <div id="featured-post-container">
+        <!-- JavaScript laadt featured post hier -->
       </div>
     </div>
 
-    <!-- BLOG POSTS GRID -->
+    <!-- BLOG POSTS GRID (dynamisch geladen) -->
     <div id="blog-grid">
       <h2 class="text-2xl font-bold mb-6">Latest Articles</h2>
       <div class="grid md:grid-cols-2 gap-6" id="posts-container">
-        
-        <!-- POST 1: Agency Spotlight -->
-        <div class="blog-card" data-category="agency case-study" onclick="window.location.href='/blog/top-seo-agency-success-story'">
-          <div class="mb-3">
-            <span class="category-badge cat-agency">Agency Spotlight</span>
-            <span class="category-badge cat-case-study">Case Study</span>
-            <div class="text-sm text-gray-500 mt-2">📅 January 5, 2025 • ⏱️ 8 min read</div>
-          </div>
-          <h3 class="text-2xl font-bold mb-3">How [Top SEO Agency] Reached 97/100 Score & Doubled Traffic</h3>
-          <p class="text-gray-400 mb-4">
-            Inside look at how a leading Dutch SEO agency transformed their content strategy using the GRAAF + CRAFT methodology. Real metrics, real results: +127% organic traffic in 90 days.
-          </p>
-          <div class="flex items-center gap-2 text-sm">
-            <span class="text-green-400">✅ 97/100 Score</span>
-            <span class="text-blue-400">📈 +127% Traffic</span>
-            <span class="text-purple-400">⏱️ 90 Days</span>
-          </div>
-        </div>
-
-        <!-- POST 2: E-commerce Success -->
-        <div class="blog-card" data-category="case-study" onclick="window.location.href='/blog/ecommerce-seo-recovery'">
-          <div class="mb-3">
-            <span class="category-badge cat-case-study">Case Study</span>
-            <div class="text-sm text-gray-500 mt-2">📅 January 4, 2025 • ⏱️ 10 min read</div>
-          </div>
-          <h3 class="text-2xl font-bold mb-3">From 62 to 96: E-commerce Store's SEO Comeback Story</h3>
-          <p class="text-gray-400 mb-4">
-            How a Belgian e-commerce store recovered from Google's March 2024 algorithm update and reached the top 3 rankings. Complete breakdown of the 6-week recovery process.
-          </p>
-          <div class="flex items-center gap-2 text-sm">
-            <span class="text-green-400">✅ 96/100 Score</span>
-            <span class="text-blue-400">📈 +89% Revenue</span>
-            <span class="text-purple-400">⏱️ 42 Days</span>
-          </div>
-        </div>
-
-        <!-- POST 3: CRAFT Methodology -->
-        <div class="blog-card" data-category="guide" onclick="window.location.href='/blog/craft-methodology-explained'">
-          <div class="mb-3">
-            <span class="category-badge cat-guide">Guide</span>
-            <div class="text-sm text-gray-500 mt-2">📅 January 3, 2025 • ⏱️ 15 min read</div>
-          </div>
-          <h3 class="text-2xl font-bold mb-3">CRAFT Methodology: The Missing 30 Points in Your SEO Score</h3>
-          <p class="text-gray-400 mb-4">
-            Deep dive into the CRAFT framework (Clarity, Readability, Audience-fit, Flow, Tone). Learn how to optimize the 30-point segment that most SEO tools ignore.
-          </p>
-          <div class="flex items-center gap-2 text-sm">
-            <span class="text-purple-400">📚 Advanced Guide</span>
-            <span class="text-blue-400">💡 30+ Examples</span>
-          </div>
-        </div>
-
-        <!-- POST 4: AI Content Tips -->
-        <div class="blog-card" data-category="tips" onclick="window.location.href='/blog/ai-content-optimization-tips'">
-          <div class="mb-3">
-            <span class="category-badge cat-tips">Tips & Tricks</span>
-            <div class="text-sm text-gray-500 mt-2">📅 December 30, 2024 • ⏱️ 6 min read</div>
-          </div>
-          <h3 class="text-2xl font-bold mb-3">10 AI Content Optimization Tips That Actually Work in 2025</h3>
-          <p class="text-gray-400 mb-4">
-            Quick wins for improving your content quality score. Actionable tips you can implement today to see results within 48 hours.
-          </p>
-          <div class="flex items-center gap-2 text-sm">
-            <span class="text-green-400">⚡ Quick Wins</span>
-            <span class="text-blue-400">📈 Immediate Impact</span>
-          </div>
-        </div>
-
-        <!-- POST 5: Algorithm Update -->
-        <div class="blog-card" data-category="news" onclick="window.location.href='/blog/google-algorithm-update-january-2025'">
-          <div class="mb-3">
-            <span class="category-badge cat-news">News & Updates</span>
-            <div class="text-sm text-gray-500 mt-2">📅 January 1, 2025 • ⏱️ 7 min read</div>
-          </div>
-          <h3 class="text-2xl font-bold mb-3">Google Algorithm Update January 2025: What Changed?</h3>
-          <p class="text-gray-400 mb-4">
-            Breaking down the latest Google algorithm changes and what they mean for your content strategy. Data from 150+ websites analyzed.
-          </p>
-          <div class="flex items-center gap-2 text-sm">
-            <span class="text-red-400">🔥 Breaking News</span>
-            <span class="text-blue-400">📊 Data-Driven</span>
-          </div>
-        </div>
-
-        <!-- POST 6: SaaS Success -->
-        <div class="blog-card" data-category="case-study" onclick="window.location.href='/blog/saas-company-seo-transformation'">
-          <div class="mb-3">
-            <span class="category-badge cat-case-study">Case Study</span>
-            <div class="text-sm text-gray-500 mt-2">📅 December 28, 2024 • ⏱️ 9 min read</div>
-          </div>
-          <h3 class="text-2xl font-bold mb-3">How a German SaaS Startup Achieved 94/100 Score Pre-Launch</h3>
-          <p class="text-gray-400 mb-4">
-            Content-first SEO strategy that helped a Berlin-based SaaS company rank #1 before product launch. 0 to 10K monthly visitors in 4 months.
-          </p>
-          <div class="flex items-center gap-2 text-sm">
-            <span class="text-green-400">✅ 94/100 Score</span>
-            <span class="text-blue-400">📈 10K Visitors</span>
-            <span class="text-purple-400">⏱️ 4 Months</span>
-          </div>
-        </div>
-
+        <!-- JavaScript laadt posts hier -->
       </div>
     </div>
 
@@ -252,14 +138,131 @@
       <p>
         <a href="https://app.contentscale.site" class="text-purple-400 hover:text-purple-300">Scanner</a> • 
         <a href="https://wa.me/31628073996" class="text-green-400 hover:text-green-300">WhatsApp</a> •
-        <a href="/cdn-cgi/l/email-protection#137a7d757c53707c7d67767d676070727f763d607a6776" class="text-blue-400 hover:text-blue-300">Email</a>
+        <a href="mailto:info@contentscale.site" class="text-blue-400 hover:text-blue-300">Email</a>
       </p>
     </div>
 
   </div>
 
-  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  <script>
     let currentCategory = 'all';
+    let allPosts = [];
+    
+    // Laad blog posts van JSON
+    async function loadBlogPosts() {
+      try {
+        const response = await fetch('/blog/blog-posts.json');
+        const data = await response.json();
+        
+        // Sorteer op datum (nieuwste eerst)
+        allPosts = data.posts.sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        // Find featured post
+        const featuredPost = allPosts.find(p => p.featured === true);
+        
+        // Render featured
+        if (featuredPost) {
+          renderFeaturedPost(featuredPost);
+        }
+        
+        // Render other posts (niet featured)
+        const otherPosts = allPosts.filter(p => p.featured !== true);
+        renderOtherPosts(otherPosts);
+        
+      } catch (error) {
+        console.error('Error loading blog posts:', error);
+      }
+    }
+
+    function renderFeaturedPost(post) {
+      const container = document.getElementById('featured-post-container');
+      
+      const categoryBadges = post.category.map(cat => {
+        const catClass = cat === 'guide' ? 'cat-guide' : 
+                         cat === 'case-study' ? 'cat-case-study' :
+                         cat === 'tips' ? 'cat-tips' :
+                         cat === 'news' ? 'cat-news' :
+                         cat === 'agency' ? 'cat-agency' : 'cat-guide';
+        const catLabel = cat.replace('-', ' ').toUpperCase();
+        return `<span class="category-badge ${catClass}">${catLabel}</span>`;
+      }).join(' ');
+      
+      container.innerHTML = `
+        <div class="blog-card featured relative" onclick="window.location.href='/blog/${post.slug}'">
+          <div class="mb-4">
+            ${categoryBadges}
+            <span class="text-sm text-gray-500">📅 ${formatDate(post.date)} • ⏱️ ${post.readTime}</span>
+          </div>
+          <h3 class="text-3xl font-bold mb-3">${post.title}</h3>
+          <p class="text-gray-400 mb-4 leading-relaxed">
+            ${post.description}
+          </p>
+          <div class="flex items-center gap-3">
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%238b5cf6'/%3E%3Ctext x='20' y='26' text-anchor='middle' fill='white' font-size='16' font-weight='bold'%3EO%3C/text%3E%3C/svg%3E" class="w-10 h-10 rounded-full">
+            <div>
+              <div class="font-bold text-sm">${post.author}</div>
+              <div class="text-xs text-gray-500">Founder & SEO Recovery Expert</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderOtherPosts(posts) {
+      const container = document.getElementById('posts-container');
+      
+      container.innerHTML = posts.map(post => {
+        const categoryBadges = post.category.map(cat => {
+          const catClass = cat === 'guide' ? 'cat-guide' : 
+                           cat === 'case-study' ? 'cat-case-study' :
+                           cat === 'tips' ? 'cat-tips' :
+                           cat === 'news' ? 'cat-news' :
+                           cat === 'agency' ? 'cat-agency' : 'cat-guide';
+          const catLabel = cat.replace('-', ' ').toUpperCase();
+          return `<span class="category-badge ${catClass}">${catLabel}</span>`;
+        }).join(' ');
+        
+        const metricsHTML = Object.entries(post.metrics || {}).map(([key, value]) => {
+          const icon = key === 'score' ? '✅' : 
+                       key === 'traffic' ? '📈' : 
+                       key === 'revenue' ? '💰' :
+                       key === 'days' ? '⏱️' :
+                       key === 'points' ? '📚' :
+                       key === 'examples' ? '💡' :
+                       key === 'visitors' ? '📈' :
+                       key === 'months' ? '⏱️' :
+                       key === 'sites' ? '📊' :
+                       key === 'type' ? '⚡' : '🎯';
+          const colorClass = key === 'score' ? 'text-green-400' : 
+                             key === 'traffic' || key === 'revenue' || key === 'visitors' ? 'text-blue-400' : 
+                             key === 'type' && (value === 'Quick Wins' || value === 'Breaking News') ? 'text-red-400' :
+                             'text-purple-400';
+          return `<span class="${colorClass}">${icon} ${value}</span>`;
+        }).join(' ');
+        
+        return `
+          <div class="blog-card" data-category="${post.category.join(' ')}" onclick="window.location.href='/blog/${post.slug}'">
+            <div class="mb-3">
+              ${categoryBadges}
+              <div class="text-sm text-gray-500 mt-2">📅 ${formatDate(post.date)} • ⏱️ ${post.readTime}</div>
+            </div>
+            <h3 class="text-2xl font-bold mb-3">${post.title}</h3>
+            <p class="text-gray-400 mb-4">
+              ${post.description}
+            </p>
+            <div class="flex items-center gap-2 text-sm flex-wrap">
+              ${metricsHTML}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      const options = { month: 'long', day: 'numeric', year: 'numeric' };
+      return date.toLocaleDateString('en-US', options);
+    }
     
     function filterCategory(category) {
       currentCategory = category;
@@ -309,7 +312,18 @@
       }
     }
     
+    // Load on page load
+    loadBlogPosts();
+    
     // Analytics tracking (optional - add Google Analytics later)
-    document.querySelectorAll('.blog-card').forEach(card => {
-      card.addEventListener('click', function() {
-        const title = this.querySelector('h3').textContent;
+    document.addEventListener('click', function(e) {
+      const card = e.target.closest('.blog-card');
+      if (card) {
+        const title = card.querySelector('h3')?.textContent;
+        console.log('Blog card clicked:', title);
+      }
+    });
+  </script>
+
+</body>
+</html>
