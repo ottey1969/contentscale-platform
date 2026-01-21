@@ -26,6 +26,23 @@
       width: 18px;
       height: 18px;
     }
+    .blog-card {
+      transition: all 0.2s;
+    }
+    .blog-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+    }
+    .category-tag {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 9999px;
+    }
+    .category-agency { background: #3b82f6; }
+    .category-case-study { background: #10b981; }
+    .category-guide { background: #8b5cf6; }
+    .category-tips { background: #f59e0b; }
+    .category-news { background: #ef4444; }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen">
@@ -115,6 +132,9 @@
           </button>
           <button onclick="switchTab('leaderboard')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
             🏆 Leaderboard
+          </button>
+          <button onclick="switchTab('blog')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
+            📝 Blog
           </button>
           <button onclick="switchTab('email-notifications')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
             📧 Email & Notifications
@@ -474,6 +494,118 @@
         </div>
       </div>
 
+      <!-- BLOG MANAGEMENT TAB -->
+      <div id="tab-blog" class="tab-content hidden">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold">📝 Blog Management</h2>
+          <div class="flex gap-3">
+            <button onclick="refreshBlogPosts()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition-all">
+              🔄 Refresh
+            </button>
+            <button onclick="showAddBlogModal()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all">
+              ➕ New Blog Post
+            </button>
+          </div>
+        </div>
+
+        <!-- Blog Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div class="bg-gradient-to-br from-blue-900 to-blue-800 rounded-lg p-4">
+            <div class="text-sm text-blue-200">Total Posts</div>
+            <div class="text-3xl font-bold mt-2" id="blog-total-posts">0</div>
+          </div>
+          <div class="bg-gradient-to-br from-green-900 to-green-800 rounded-lg p-4">
+            <div class="text-sm text-green-200">Featured</div>
+            <div class="text-3xl font-bold mt-2" id="blog-featured-posts">0</div>
+          </div>
+          <div class="bg-gradient-to-br from-purple-900 to-purple-800 rounded-lg p-4">
+            <div class="text-sm text-purple-200">Case Studies</div>
+            <div class="text-3xl font-bold mt-2" id="blog-case-studies">0</div>
+          </div>
+          <div class="bg-gradient-to-br from-orange-900 to-orange-800 rounded-lg p-4">
+            <div class="text-sm text-orange-200">Guides</div>
+            <div class="text-3xl font-bold mt-2" id="blog-guides">0</div>
+          </div>
+        </div>
+
+        <!-- Filter & Search -->
+        <div class="bg-gray-800 rounded-lg p-4 mb-6">
+          <div class="flex flex-wrap gap-4 items-center">
+            <div class="flex-1 min-w-[200px]">
+              <input type="text" id="blog-search" placeholder="Search posts by title, slug, or description..." 
+                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                onkeyup="filterBlogPosts()">
+            </div>
+            <div>
+              <select id="blog-category-filter" class="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" onchange="filterBlogPosts()">
+                <option value="">All Categories</option>
+                <option value="case-study">📊 Case Studies</option>
+                <option value="guide">📚 Guides</option>
+                <option value="tips">💡 Tips</option>
+                <option value="news">📰 News</option>
+                <option value="agency">🏢 Agency</option>
+              </select>
+            </div>
+            <div>
+              <select id="blog-featured-filter" class="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" onchange="filterBlogPosts()">
+                <option value="">All Posts</option>
+                <option value="featured">⭐ Featured Only</option>
+                <option value="not-featured">Regular Only</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Blog Posts Loading -->
+        <div id="blog-loading" class="text-center py-12">
+          <div class="inline-block animate-spin text-4xl">⏳</div>
+          <p class="text-gray-400 mt-4">Loading blog posts...</p>
+        </div>
+
+        <!-- Blog Posts Grid -->
+        <div id="blog-posts-grid" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <!-- Posts will be inserted here -->
+        </div>
+
+        <!-- Blog Posts Table View -->
+        <div id="blog-posts-table" class="hidden bg-gray-800 rounded-lg overflow-hidden mb-6">
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-700">
+                <tr>
+                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="blog-select-all" onchange="toggleSelectAllBlogPosts()"></th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Title</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Category</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Date</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Read Time</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Featured</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="blog-posts-tbody" class="divide-y divide-gray-700">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- View Toggle & Actions -->
+        <div class="flex justify-between items-center">
+          <div class="flex gap-2">
+            <button onclick="setBlogView('grid')" id="blog-view-grid" class="px-4 py-2 bg-purple-600 rounded-lg font-semibold">
+              📊 Grid View
+            </button>
+            <button onclick="setBlogView('table')" id="blog-view-table" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
+              📋 Table View
+            </button>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="deleteSelectedBlogPosts()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
+            <button onclick="exportBlogPostsToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
+            <button onclick="downloadBlogJSON()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">💾 Download blog-posts.json</button>
+          </div>
+        </div>
+      </div>
+
       <!-- EMAIL & NOTIFICATIONS TAB -->
       <div id="tab-email-notifications" class="tab-content hidden">
         <h2 class="text-2xl font-bold mb-6">📧 Email & Notifications</h2>
@@ -658,6 +790,114 @@
     </div>
   </div>
 
+  <!-- Blog Post Modal -->
+  <div id="modal-blog-post" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 overflow-y-auto">
+    <div class="bg-gray-800 rounded-lg p-8 max-w-4xl w-full mx-4 my-8">
+      <h3 class="text-2xl font-bold mb-6" id="blog-modal-title">Add New Blog Post</h3>
+      <div class="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm text-gray-400 mb-1">Post ID (unique)</label>
+            <input type="text" id="blog-post-id" placeholder="my-post-slug" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+          </div>
+          <div>
+            <label class="block text-sm text-gray-400 mb-1">Slug (URL)</label>
+            <input type="text" id="blog-post-slug" placeholder="my-post-slug" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm text-gray-400 mb-1">Title</label>
+          <input type="text" id="blog-post-title" placeholder="Post Title" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        </div>
+        
+        <div>
+          <label class="block text-sm text-gray-400 mb-1">Description</label>
+          <textarea id="blog-post-description" rows="3" placeholder="Short description..." class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"></textarea>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm text-gray-400 mb-1">Category</label>
+            <select id="blog-post-category" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" multiple>
+              <option value="case-study">📊 Case Study</option>
+              <option value="guide">📚 Guide</option>
+              <option value="tips">💡 Tips</option>
+              <option value="news">📰 News</option>
+              <option value="agency">🏢 Agency</option>
+            </select>
+            <p class="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple</p>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-400 mb-1">Date</label>
+            <input type="date" id="blog-post-date" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+          </div>
+          <div>
+            <label class="block text-sm text-gray-400 mb-1">Read Time</label>
+            <input type="text" id="blog-post-readtime" placeholder="8 min read" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm text-gray-400 mb-1">Author</label>
+            <input type="text" id="blog-post-author" placeholder="Ot van ContentScale" value="Ot van ContentScale" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+          </div>
+          <div>
+            <label class="block text-sm text-gray-400 mb-1">Image Path</label>
+            <input type="text" id="blog-post-image" placeholder="images/post-image.jpg" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-4">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="blog-post-featured" class="w-5 h-5">
+            <span>⭐ Featured Post</span>
+          </label>
+        </div>
+        
+        <div class="border-t border-gray-700 pt-4">
+          <h4 class="font-semibold mb-3">📊 Metrics (Optional)</h4>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Metric 1 Key</label>
+              <input type="text" id="blog-metric-1-key" placeholder="score" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Metric 1 Value</label>
+              <input type="text" id="blog-metric-1-value" placeholder="97/100" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Metric 2 Key</label>
+              <input type="text" id="blog-metric-2-key" placeholder="traffic" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Metric 2 Value</label>
+              <input type="text" id="blog-metric-2-value" placeholder="+127%" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Metric 3 Key</label>
+              <input type="text" id="blog-metric-3-key" placeholder="revenue" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Metric 3 Value</label>
+              <input type="text" id="blog-metric-3-value" placeholder="+€45K" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+            </div>
+          </div>
+        </div>
+        
+        <div class="flex gap-4 pt-4">
+          <button onclick="submitBlogPost()" class="flex-1 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">💾 Save Post</button>
+          <button onclick="closeModal('modal-blog-post')" class="flex-1 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     // ✅ GLOBAL DATA STORES FOR EXPORT
     let allAgencies = [];
@@ -665,6 +905,9 @@
     let allScans = [];
     let allLeaderboard = [];
     let leadQueue = [];
+    let allBlogPosts = [];
+    let currentBlogView = 'grid';
+    let editingBlogPostId = null;
 
     // ==========================================
     // LOGIN & AUTH
@@ -725,6 +968,7 @@
       if (tabName === 'share-links') loadShareLinks();
       if (tabName === 'leaderboard') loadLeaderboard();
       if (tabName === 'claims') loadClaims();
+      if (tabName === 'blog') loadBlogPosts();
     }
 
     // ==========================================
@@ -739,6 +983,7 @@
       loadShareLinks();
       loadLeaderboard();
       loadClaims();
+      loadBlogPosts();
     }
 
     async function loadStats() {
@@ -969,6 +1214,364 @@
       } catch (error) {
         console.error('Claims error:', error);
       }
+    }
+
+    // ==========================================
+    // BLOG MANAGEMENT FUNCTIONS
+    // ==========================================
+    async function loadBlogPosts() {
+      document.getElementById('blog-loading').classList.remove('hidden');
+      document.getElementById('blog-posts-grid').classList.add('hidden');
+      document.getElementById('blog-posts-table').classList.add('hidden');
+      
+      try {
+        const response = await fetch('/blog/blog-posts.json');
+        const data = await response.json();
+        
+        if (data.posts) {
+          allBlogPosts = data.posts;
+          updateBlogStats();
+          renderBlogPosts();
+        }
+      } catch (error) {
+        console.error('Blog posts error:', error);
+        // If file doesn't exist, start with empty array
+        allBlogPosts = [];
+        updateBlogStats();
+        renderBlogPosts();
+      }
+      
+      document.getElementById('blog-loading').classList.add('hidden');
+    }
+
+    function refreshBlogPosts() {
+      loadBlogPosts();
+    }
+
+    function updateBlogStats() {
+      document.getElementById('blog-total-posts').textContent = allBlogPosts.length;
+      document.getElementById('blog-featured-posts').textContent = allBlogPosts.filter(p => p.featured).length;
+      document.getElementById('blog-case-studies').textContent = allBlogPosts.filter(p => p.category && p.category.includes('case-study')).length;
+      document.getElementById('blog-guides').textContent = allBlogPosts.filter(p => p.category && p.category.includes('guide')).length;
+    }
+
+    function renderBlogPosts() {
+      const filteredPosts = getFilteredBlogPosts();
+      
+      if (currentBlogView === 'grid') {
+        renderBlogGrid(filteredPosts);
+        document.getElementById('blog-posts-grid').classList.remove('hidden');
+        document.getElementById('blog-posts-table').classList.add('hidden');
+      } else {
+        renderBlogTable(filteredPosts);
+        document.getElementById('blog-posts-table').classList.remove('hidden');
+        document.getElementById('blog-posts-grid').classList.add('hidden');
+      }
+    }
+
+    function getFilteredBlogPosts() {
+      const searchTerm = document.getElementById('blog-search').value.toLowerCase();
+      const categoryFilter = document.getElementById('blog-category-filter').value;
+      const featuredFilter = document.getElementById('blog-featured-filter').value;
+      
+      return allBlogPosts.filter(post => {
+        // Search filter
+        const matchesSearch = !searchTerm || 
+          post.title.toLowerCase().includes(searchTerm) ||
+          post.slug.toLowerCase().includes(searchTerm) ||
+          post.description.toLowerCase().includes(searchTerm);
+        
+        // Category filter
+        const matchesCategory = !categoryFilter || 
+          (post.category && post.category.includes(categoryFilter));
+        
+        // Featured filter
+        const matchesFeatured = !featuredFilter ||
+          (featuredFilter === 'featured' && post.featured) ||
+          (featuredFilter === 'not-featured' && !post.featured);
+        
+        return matchesSearch && matchesCategory && matchesFeatured;
+      });
+    }
+
+    function filterBlogPosts() {
+      renderBlogPosts();
+    }
+
+    function renderBlogGrid(posts) {
+      const grid = document.getElementById('blog-posts-grid');
+      grid.innerHTML = '';
+      
+      if (posts.length === 0) {
+        grid.innerHTML = '<div class="col-span-3 text-center py-12 text-gray-400">No blog posts found</div>';
+        return;
+      }
+      
+      posts.forEach(post => {
+        const categoryTags = (post.category || []).map(cat => 
+          `<span class="category-tag category-${cat}">${cat}</span>`
+        ).join(' ');
+        
+        const metricsHtml = post.metrics ? Object.entries(post.metrics).map(([key, value]) => 
+          `<div class="text-center">
+            <div class="text-lg font-bold text-green-400">${value}</div>
+            <div class="text-xs text-gray-400">${key}</div>
+          </div>`
+        ).join('') : '';
+        
+        grid.innerHTML += `
+          <div class="blog-card bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
+            <div class="p-4">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex gap-1">${categoryTags}</div>
+                ${post.featured ? '<span class="text-yellow-400">⭐</span>' : ''}
+              </div>
+              <h3 class="font-bold text-lg mb-2 line-clamp-2">${post.title}</h3>
+              <p class="text-gray-400 text-sm mb-3 line-clamp-2">${post.description}</p>
+              
+              ${metricsHtml ? `<div class="flex justify-around py-3 border-t border-b border-gray-700 mb-3">${metricsHtml}</div>` : ''}
+              
+              <div class="flex items-center justify-between text-xs text-gray-500">
+                <span>📅 ${post.date}</span>
+                <span>⏱️ ${post.readTime}</span>
+              </div>
+              
+              <div class="flex gap-2 mt-4">
+                <button onclick="editBlogPost('${post.id}')" class="flex-1 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm font-semibold">✏️ Edit</button>
+                <button onclick="deleteBlogPost('${post.id}')" class="py-2 px-3 bg-red-600 hover:bg-red-700 rounded text-sm">🗑️</button>
+                <button onclick="previewBlogPost('${post.slug}')" class="py-2 px-3 bg-gray-600 hover:bg-gray-700 rounded text-sm">👁️</button>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function renderBlogTable(posts) {
+      const tbody = document.getElementById('blog-posts-tbody');
+      tbody.innerHTML = '';
+      
+      if (posts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">No blog posts found</td></tr>';
+        return;
+      }
+      
+      posts.forEach(post => {
+        const categoryTags = (post.category || []).map(cat => 
+          `<span class="category-tag category-${cat}">${cat}</span>`
+        ).join(' ');
+        
+        tbody.innerHTML += `
+          <tr>
+            <td class="px-4 py-3"><input type="checkbox" class="blog-checkbox" value="${post.id}"></td>
+            <td class="px-4 py-3">
+              <div class="font-semibold">${post.title.substring(0, 50)}${post.title.length > 50 ? '...' : ''}</div>
+              <div class="text-xs text-gray-400">${post.slug}</div>
+            </td>
+            <td class="px-4 py-3">${categoryTags}</td>
+            <td class="px-4 py-3 text-sm">${post.date}</td>
+            <td class="px-4 py-3 text-sm">${post.readTime}</td>
+            <td class="px-4 py-3">${post.featured ? '⭐' : '-'}</td>
+            <td class="px-4 py-3">
+              <div class="flex gap-1">
+                <button onclick="editBlogPost('${post.id}')" class="text-blue-400 hover:text-blue-300">✏️</button>
+                <button onclick="deleteBlogPost('${post.id}')" class="text-red-400 hover:text-red-300">🗑️</button>
+                <button onclick="previewBlogPost('${post.slug}')" class="text-gray-400 hover:text-gray-300">👁️</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    function setBlogView(view) {
+      currentBlogView = view;
+      document.getElementById('blog-view-grid').className = view === 'grid' 
+        ? 'px-4 py-2 bg-purple-600 rounded-lg font-semibold'
+        : 'px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold';
+      document.getElementById('blog-view-table').className = view === 'table'
+        ? 'px-4 py-2 bg-purple-600 rounded-lg font-semibold'
+        : 'px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold';
+      renderBlogPosts();
+    }
+
+    function showAddBlogModal() {
+      editingBlogPostId = null;
+      document.getElementById('blog-modal-title').textContent = 'Add New Blog Post';
+      clearBlogForm();
+      document.getElementById('blog-post-date').value = new Date().toISOString().split('T')[0];
+      document.getElementById('modal-blog-post').classList.remove('hidden');
+    }
+
+    function editBlogPost(postId) {
+      const post = allBlogPosts.find(p => p.id === postId);
+      if (!post) return;
+      
+      editingBlogPostId = postId;
+      document.getElementById('blog-modal-title').textContent = 'Edit Blog Post';
+      
+      // Fill form
+      document.getElementById('blog-post-id').value = post.id;
+      document.getElementById('blog-post-slug').value = post.slug;
+      document.getElementById('blog-post-title').value = post.title;
+      document.getElementById('blog-post-description').value = post.description;
+      document.getElementById('blog-post-date').value = post.date;
+      document.getElementById('blog-post-readtime').value = post.readTime;
+      document.getElementById('blog-post-author').value = post.author;
+      document.getElementById('blog-post-image').value = post.image || '';
+      document.getElementById('blog-post-featured').checked = post.featured;
+      
+      // Set categories
+      const categorySelect = document.getElementById('blog-post-category');
+      Array.from(categorySelect.options).forEach(opt => {
+        opt.selected = post.category && post.category.includes(opt.value);
+      });
+      
+      // Set metrics
+      if (post.metrics) {
+        const metricEntries = Object.entries(post.metrics);
+        if (metricEntries[0]) {
+          document.getElementById('blog-metric-1-key').value = metricEntries[0][0];
+          document.getElementById('blog-metric-1-value').value = metricEntries[0][1];
+        }
+        if (metricEntries[1]) {
+          document.getElementById('blog-metric-2-key').value = metricEntries[1][0];
+          document.getElementById('blog-metric-2-value').value = metricEntries[1][1];
+        }
+        if (metricEntries[2]) {
+          document.getElementById('blog-metric-3-key').value = metricEntries[2][0];
+          document.getElementById('blog-metric-3-value').value = metricEntries[2][1];
+        }
+      }
+      
+      document.getElementById('modal-blog-post').classList.remove('hidden');
+    }
+
+    function clearBlogForm() {
+      document.getElementById('blog-post-id').value = '';
+      document.getElementById('blog-post-slug').value = '';
+      document.getElementById('blog-post-title').value = '';
+      document.getElementById('blog-post-description').value = '';
+      document.getElementById('blog-post-readtime').value = '';
+      document.getElementById('blog-post-author').value = 'Ot van ContentScale';
+      document.getElementById('blog-post-image').value = '';
+      document.getElementById('blog-post-featured').checked = false;
+      document.getElementById('blog-metric-1-key').value = '';
+      document.getElementById('blog-metric-1-value').value = '';
+      document.getElementById('blog-metric-2-key').value = '';
+      document.getElementById('blog-metric-2-value').value = '';
+      document.getElementById('blog-metric-3-key').value = '';
+      document.getElementById('blog-metric-3-value').value = '';
+      
+      const categorySelect = document.getElementById('blog-post-category');
+      Array.from(categorySelect.options).forEach(opt => opt.selected = false);
+    }
+
+    function submitBlogPost() {
+      const post = {
+        id: document.getElementById('blog-post-id').value,
+        title: document.getElementById('blog-post-title').value,
+        slug: document.getElementById('blog-post-slug').value,
+        description: document.getElementById('blog-post-description').value,
+        category: Array.from(document.getElementById('blog-post-category').selectedOptions).map(o => o.value),
+        date: document.getElementById('blog-post-date').value,
+        readTime: document.getElementById('blog-post-readtime').value,
+        author: document.getElementById('blog-post-author').value,
+        featured: document.getElementById('blog-post-featured').checked,
+        image: document.getElementById('blog-post-image').value || undefined
+      };
+      
+      // Build metrics object
+      const metrics = {};
+      const m1k = document.getElementById('blog-metric-1-key').value;
+      const m1v = document.getElementById('blog-metric-1-value').value;
+      const m2k = document.getElementById('blog-metric-2-key').value;
+      const m2v = document.getElementById('blog-metric-2-value').value;
+      const m3k = document.getElementById('blog-metric-3-key').value;
+      const m3v = document.getElementById('blog-metric-3-value').value;
+      
+      if (m1k && m1v) metrics[m1k] = m1v;
+      if (m2k && m2v) metrics[m2k] = m2v;
+      if (m3k && m3v) metrics[m3k] = m3v;
+      
+      if (Object.keys(metrics).length > 0) {
+        post.metrics = metrics;
+      }
+      
+      // Validation
+      if (!post.id || !post.title || !post.slug) {
+        alert('Please fill in ID, Title, and Slug');
+        return;
+      }
+      
+      if (editingBlogPostId) {
+        // Update existing
+        const index = allBlogPosts.findIndex(p => p.id === editingBlogPostId);
+        if (index !== -1) {
+          allBlogPosts[index] = post;
+        }
+      } else {
+        // Check for duplicate ID
+        if (allBlogPosts.some(p => p.id === post.id)) {
+          alert('A post with this ID already exists');
+          return;
+        }
+        allBlogPosts.unshift(post); // Add to beginning
+      }
+      
+      closeModal('modal-blog-post');
+      updateBlogStats();
+      renderBlogPosts();
+      
+      alert('✅ Blog post saved!\n\nNote: To persist changes, click "Download blog-posts.json" and upload it to your server.');
+    }
+
+    function deleteBlogPost(postId) {
+      if (!confirm('Delete this blog post?')) return;
+      
+      allBlogPosts = allBlogPosts.filter(p => p.id !== postId);
+      updateBlogStats();
+      renderBlogPosts();
+      
+      alert('✅ Post deleted from local data.\n\nNote: Download the updated JSON to persist changes.');
+    }
+
+    function toggleSelectAllBlogPosts() {
+      const isChecked = document.getElementById('blog-select-all').checked;
+      document.querySelectorAll('.blog-checkbox').forEach(cb => cb.checked = isChecked);
+    }
+
+    function deleteSelectedBlogPosts() {
+      const selected = Array.from(document.querySelectorAll('.blog-checkbox:checked')).map(cb => cb.value);
+      if (selected.length === 0) return alert('Please select posts to delete');
+      if (!confirm(`Delete ${selected.length} blog posts?`)) return;
+      
+      allBlogPosts = allBlogPosts.filter(p => !selected.includes(p.id));
+      updateBlogStats();
+      renderBlogPosts();
+      
+      alert('✅ Posts deleted from local data.\n\nNote: Download the updated JSON to persist changes.');
+    }
+
+    function previewBlogPost(slug) {
+      window.open(`/blog/${slug}`, '_blank');
+    }
+
+    function exportBlogPostsToJSON() {
+      exportToJSON(`blog-posts-backup-${Date.now()}.json`, { posts: allBlogPosts });
+    }
+
+    function downloadBlogJSON() {
+      const json = JSON.stringify({ posts: allBlogPosts }, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'blog-posts.json';
+      a.click();
+      window.URL.revokeObjectURL(url);
+      
+      alert('✅ blog-posts.json downloaded!\n\nUpload this file to /blog/blog-posts.json on your server.');
     }
 
     // ==========================================
