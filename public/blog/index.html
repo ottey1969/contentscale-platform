@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ContentScale Blog - AI SEO & Content Optimization Tips</title>
+  <meta name="description" content="Learn how to optimize your content for AI-era SEO. Case studies, guides, and tips from ContentScale experts. GRAAF Framework, CRAFT methodology, and more.">
+  <meta name="keywords" content="SEO blog, content optimization, AI SEO, GRAAF framework, content marketing, SEO case studies">
+  <link rel="canonical" href="https://app.contentscale.site/blog/">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .nav-bar { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-bottom: 2px solid #374151; position: sticky; top: 0; z-index: 1000; }
+    .nav-link { color: #9ca3af; padding: 12px 20px; font-weight: 600; transition: all 0.3s; border-bottom: 3px solid transparent; cursor: pointer; text-decoration: none; }
+    .nav-link:hover { color: white; border-bottom-color: #8b5cf6; }
+    .nav-link.active { color: white; border-bottom-color: #8b5cf6; }
+    
+    .blog-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid #334155; border-radius: 16px; padding: 24px; transition: all 0.3s; cursor: pointer; }
+    .blog-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(139, 92, 246, 0.3); border-color: #8b5cf6; }
+    .blog-card.featured { border-color: #f59e0b; background: linear-gradient(135deg, #1e293b 0%, #2d1f08 100%); }
+    .blog-card.featured::before { content: '⭐ FEATURED'; position: absolute; top: -12px; right: 24px; background: linear-gradient(135deg, #f59e0b 0%, #eab308 100%); color: #1e293b; padding: 6px 16px; border-radius: 20px; font-size: 11px; font-weight: 800; }
+    
+    .category-badge { display: inline-block; padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; margin-right: 8px; }
+    .cat-guide { background: #8b5cf6; color: white; }
+    .cat-case-study { background: #10b981; color: white; }
+    .cat-tips { background: #3b82f6; color: white; }
+    .cat-news { background: #f59e0b; color: white; }
+    .cat-agency { background: #ec4899; color: white; }
+    
+    .search-box { background: #1f2937; border: 2px solid #374151; border-radius: 12px; padding: 12px 20px; color: white; width: 100%; }
+    .search-box:focus { outline: none; border-color: #8b5cf6; }
+    
+    .filter-btn { background: #374151; color: #9ca3af; padding: 8px 16px; border-radius: 8px; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; font-size: 14px; font-weight: 600; margin: 4px; }
+    .filter-btn:hover { background: #4b5563; color: white; }
+    .filter-btn.active { background: #8b5cf6; color: white; border-color: #a78bfa; }
+
+    /* Text truncation */
+    .line-clamp-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .line-clamp-3 {
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-gray-100">
+
+  <!-- NAVIGATION -->
+  <nav class="nav-bar">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">ContentScale</div>
+        </div>
+        <div class="flex items-center gap-1">
+          <a href="/" class="nav-link">🏠 Home</a>
+          <a href="/#scanner" class="nav-link">🔍 Scanner</a>
+          <a href="/#leaderboard" class="nav-link">🏆 Leaderboard</a>
+          <a href="/#pricing" class="nav-link">💰 Pricing</a>
+          <a href="/blog" class="nav-link active">📝 Blog</a>
+          <a href="/contact-form" class="nav-link">📞 Contact</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-6xl mx-auto px-6 py-12">
+    
+    <!-- HEADER -->
+    <div class="text-center mb-12">
+      <h1 class="text-5xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+        ContentScale Blog
+      </h1>
+      <p class="text-xl text-gray-400 mb-6">
+        AI-Era SEO Strategies, Case Studies & Expert Tips
+      </p>
+      <div class="max-w-xl mx-auto">
+        <input 
+          type="text" 
+          id="searchBox" 
+          class="search-box" 
+          placeholder="🔍 Search articles..."
+          onkeyup="filterBlogs()">
+      </div>
+    </div>
+
+    <!-- CATEGORIES FILTER -->
+    <div class="mb-8 text-center">
+      <div class="mb-3">
+        <span class="text-sm text-gray-500 uppercase font-bold">Filter by Category:</span>
+      </div>
+      <div class="flex flex-wrap justify-center">
+        <button class="filter-btn active" onclick="filterCategory('all')">All Posts</button>
+        <button class="filter-btn" onclick="filterCategory('guide')">📚 Guides</button>
+        <button class="filter-btn" onclick="filterCategory('case-study')">📊 Case Studies</button>
+        <button class="filter-btn" onclick="filterCategory('agency')">🏢 Agency Spotlights</button>
+        <button class="filter-btn" onclick="filterCategory('tips')">💡 Tips & Tricks</button>
+        <button class="filter-btn" onclick="filterCategory('news')">📰 News & Updates</button>
+      </div>
+    </div>
+
+    <!-- FEATURED POST (dynamisch geladen) -->
+    <div id="featured-section" class="mb-12">
+      <h2 class="text-2xl font-bold mb-6 text-yellow-400">⭐ Featured Article</h2>
+      <div id="featured-post-container">
+        <!-- JavaScript laadt featured post hier -->
+      </div>
+    </div>
+
+    <!-- BLOG POSTS GRID (dynamisch geladen) -->
+    <div id="blog-grid">
+      <h2 class="text-2xl font-bold mb-6">Latest Articles</h2>
+      <div class="grid md:grid-cols-2 gap-6" id="posts-container">
+        <!-- JavaScript laadt posts hier -->
+      </div>
+    </div>
+
+    <!-- NO RESULTS -->
+    <div id="no-results" class="hidden text-center py-12">
+      <div class="text-6xl mb-4">🔍</div>
+      <h3 class="text-2xl font-bold mb-2">No Articles Found</h3>
+      <p class="text-gray-400 mb-6">Try different keywords or browse all posts</p>
+      <button onclick="filterCategory('all'); document.getElementById('searchBox').value=''" class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-bold transition">
+        Show All Posts
+      </button>
+    </div>
+
+    <!-- CTA SECTION -->
+    <div class="mt-16 bg-gradient-to-r from-purple-900 to-blue-900 rounded-lg p-8 text-center border border-purple-700">
+      <h3 class="text-3xl font-bold mb-3">Want to Improve Your Content Score?</h3>
+      <p class="text-lg text-gray-300 mb-6">
+        Get your free AI-powered content analysis in 30 seconds, or talk to Ot directly for expert guidance.
+      </p>
+      <div class="flex flex-col md:flex-row gap-4 justify-center">
+        <a href="/#scanner" class="inline-block bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-8 py-4 rounded-lg font-bold text-lg transition">
+          🚀 Scan Your Website Free
+        </a>
+        <a href="https://wa.me/31628073996?text=Hi%20Ot!%20I%20read%20your%20blog%20and%20want%20to%20improve%20my%20content%20score.%20Can%20we%20talk?" target="_blank" class="inline-block bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-8 py-4 rounded-lg font-bold text-lg transition">
+          💬 WhatsApp Ot
+        </a>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="text-center text-gray-500 text-sm mt-12 pt-8 border-t border-gray-800">
+      <p class="mb-2">ContentScale Blog © 2025 • AI-Powered SEO Recovery</p>
+      <p>
+        <a href="https://app.contentscale.site" class="text-purple-400 hover:text-purple-300">Scanner</a> • 
+        <a href="https://wa.me/31628073996" class="text-green-400 hover:text-green-300">WhatsApp</a> •
+        <a href="mailto:info@contentscale.site" class="text-blue-400 hover:text-blue-300">Email</a>
+      </p>
+    </div>
+
+  </div>
+
+  <script>
+    let currentCategory = 'all';
+    let allPosts = [];
+    
+    // Laad blog posts van JSON
+    async function loadBlogPosts() {
+      try {
+        const response = await fetch('/blog/blog-posts.json');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Sorteer op datum (nieuwste eerst)
+        allPosts = data.posts.sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        // Find featured post
+        const featuredPost = allPosts.find(p => p.featured === true);
+        
+        // Render featured
+        if (featuredPost) {
+          renderFeaturedPost(featuredPost);
+        }
+        
+        // Render other posts (niet featured)
+        const otherPosts = allPosts.filter(p => p.featured !== true);
+        renderOtherPosts(otherPosts);
+        
+      } catch (error) {
+        console.error('Error loading blog posts:', error);
+        // Fallback: toon error message
+        document.getElementById('featured-post-container').innerHTML = '<p class="text-red-400">Error loading posts. Please refresh the page.</p>';
+      }
+    }
+
+    function renderFeaturedPost(post) {
+      const container = document.getElementById('featured-post-container');
+      
+      const categoryBadges = post.category.map(cat => {
+        const catClass = cat === 'guide' ? 'cat-guide' : 
+                         cat === 'case-study' ? 'cat-case-study' :
+                         cat === 'tips' ? 'cat-tips' :
+                         cat === 'news' ? 'cat-news' :
+                         cat === 'agency' ? 'cat-agency' : 'cat-guide';
+        const catLabel = cat.replace('-', ' ').toUpperCase();
+        return `<span class="category-badge ${catClass}">${catLabel}</span>`;
+      }).join(' ');
+      
+      container.innerHTML = `
+        <div class="blog-card featured relative" onclick="window.location.href='/blog/${post.slug}'">
+          <div class="mb-4">
+            ${categoryBadges}
+            <span class="text-sm text-gray-500">📅 ${formatDate(post.date)} • ⏱️ ${post.readTime}</span>
+          </div>
+          <h3 class="text-3xl font-bold mb-3">${post.title}</h3>
+          <p class="text-gray-400 mb-4 leading-relaxed">
+            ${post.description}
+          </p>
+          <div class="flex items-center gap-3">
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%238b5cf6'/%3E%3Ctext x='20' y='26' text-anchor='middle' fill='white' font-size='16' font-weight='bold'%3EO%3C/text%3E%3C/svg%3E" class="w-10 h-10 rounded-full">
+            <div>
+              <div class="font-bold text-sm">${post.author}</div>
+              <div class="text-xs text-gray-500">Founder & SEO Recovery Expert</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderOtherPosts(posts) {
+      const container = document.getElementById('posts-container');
+      
+      container.innerHTML = posts.map(post => {
+        const categoryBadges = post.category.map(cat => {
+          const catClass = cat === 'guide' ? 'cat-guide' : 
+                           cat === 'case-study' ? 'cat-case-study' :
+                           cat === 'tips' ? 'cat-tips' :
+                           cat === 'news' ? 'cat-news' :
+                           cat === 'agency' ? 'cat-agency' : 'cat-guide';
+          const catLabel = cat.replace('-', ' ').toUpperCase();
+          return `<span class="category-badge ${catClass}">${catLabel}</span>`;
+        }).join(' ');
+        
+        const metricsHTML = Object.entries(post.metrics || {}).map(([key, value]) => {
+          const icon = key === 'score' ? '✅' : 
+                       key === 'traffic' ? '📈' : 
+                       key === 'revenue' ? '💰' :
+                       key === 'days' ? '⏱️' :
+                       key === 'points' ? '📚' :
+                       key === 'examples' ? '💡' :
+                       key === 'visitors' ? '📈' :
+                       key === 'months' ? '⏱️' :
+                       key === 'sites' ? '📊' :
+                       key === 'businesses' ? '🏢' :
+                       key === 'framework' ? '🎯' :
+                       key === 'type' ? '⚡' : '🎯';
+          const colorClass = key === 'score' ? 'text-green-400' : 
+                             key === 'traffic' || key === 'revenue' || key === 'visitors' ? 'text-blue-400' : 
+                             key === 'type' && (value === 'Quick Wins' || value === 'Breaking News') ? 'text-red-400' :
+                             'text-purple-400';
+          return `<span class="${colorClass}">${icon} ${value}</span>`;
+        }).join(' ');
+        
+        return `
+          <div class="blog-card" data-category="${post.category.join(' ')}" onclick="window.location.href='/blog/${post.slug}'">
+            <div class="mb-3">
+              ${categoryBadges}
+              <div class="text-sm text-gray-500 mt-2">📅 ${formatDate(post.date)} • ⏱️ ${post.readTime}</div>
+            </div>
+            <h3 class="text-2xl font-bold mb-3">${post.title}</h3>
+            <p class="text-gray-400 mb-4">
+              ${post.description}
+            </p>
+            <div class="flex items-center gap-2 text-sm flex-wrap">
+              ${metricsHTML}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      const options = { month: 'long', day: 'numeric', year: 'numeric' };
+      return date.toLocaleDateString('en-US', options);
+    }
+    
+    function filterCategory(category) {
+      currentCategory = category;
+      
+      // Update active button
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.textContent.toLowerCase().includes(category) || (category === 'all' && btn.textContent === 'All Posts')) {
+          btn.classList.add('active');
+        }
+      });
+      
+      filterBlogs();
+    }
+    
+    function filterBlogs() {
+      const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+      const posts = document.querySelectorAll('#posts-container .blog-card');
+      let visibleCount = 0;
+      
+      posts.forEach(post => {
+        const categories = post.dataset.category || '';
+        const title = post.querySelector('h3').textContent.toLowerCase();
+        const description = post.querySelector('p').textContent.toLowerCase();
+        
+        const matchesCategory = currentCategory === 'all' || categories.includes(currentCategory);
+        const matchesSearch = !searchTerm || title.includes(searchTerm) || description.includes(searchTerm);
+        
+        if (matchesCategory && matchesSearch) {
+          post.style.display = 'block';
+          visibleCount++;
+        } else {
+          post.style.display = 'none';
+        }
+      });
+      
+      // Show/hide no results message
+      const noResults = document.getElementById('no-results');
+      const blogGrid = document.getElementById('blog-grid');
+      
+      if (visibleCount === 0) {
+        noResults.classList.remove('hidden');
+        blogGrid.classList.add('hidden');
+      } else {
+        noResults.classList.add('hidden');
+        blogGrid.classList.remove('hidden');
+      }
+    }
+    
+    // Load on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      loadBlogPosts();
+    });
+    
+    // Analytics tracking (optional - add Google Analytics later)
+    document.addEventListener('click', function(e) {
+      const card = e.target.closest('.blog-card');
+      if (card) {
+        const title = card.querySelector('h3')?.textContent;
+        console.log('Blog card clicked:', title);
+      }
+    });
+  </script>
+
+</body>
+</html>
