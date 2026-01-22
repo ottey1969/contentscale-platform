@@ -1579,8 +1579,7 @@ app.post('/api/scan', async (req, res) => {
       await pool.query(
         `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, breakdown, recommendations, scan_type)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [url, totalScore, quality, graafScore, craftScore, technicalScore, JSON.stringify(scanResult.breakdown), JSON.stringify(scanResult.recommendations), 'public']
-      );
+[url, totalScore, quality, graafScore, craftScore, technicalScore, JSON.stringify(scanResult.breakdown), JSON.stringify(scanResult.recommendations), 'manual']      );
       console.log(`✅ Scan saved: ${url} (Score: ${totalScore})`);
     } catch (error) {
       console.error('DB save error:', error);
