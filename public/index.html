@@ -1225,6 +1225,122 @@
       };
       return names[countryCode] || countryCode;
     }
+    // ============================================
+// SCANNER FIX - ADD MISSING FUNCTIONS
+// ============================================
+
+function showScanResults(data) {
+  const modal = document.getElementById('scanModal');
+  const modalContent = modal.querySelector('.modal-content');
+  
+  // Build quality badge
+  let qualityClass = 'bg-red-600';
+  let qualityText = data.quality || 'Poor';
+  
+  if (data.score >= 90) {
+    qualityClass = 'bg-green-600';
+    qualityText = 'Excellent';
+  } else if (data.score >= 75) {
+    qualityClass = 'bg-blue-600';
+    qualityText = 'Good';
+  } else if (data.score >= 60) {
+    qualityClass = 'bg-yellow-600';
+    qualityText = 'Average';
+  }
+  
+  // Build recommendations HTML
+  let recommendationsHtml = '';
+  if (data.recommendations && data.recommendations.all && data.recommendations.all.length > 0) {
+    recommendationsHtml = `
+      <div class="mt-6">
+        <h3 class="text-xl font-bold mb-4">🎯 Recommendations</h3>
+        <div class="space-y-3">
+          ${data.recommendations.all.slice(0, 5).map(rec => `
+            <div class="bg-gray-700 p-4 rounded-lg">
+              <div class="flex items-center justify-between mb-2">
+                <span class="font-bold">${rec.title}</span>
+                <span class="text-sm px-2 py-1 rounded ${rec.impact === 'High' ? 'bg-red-600' : rec.impact === 'Medium' ? 'bg-yellow-600' : 'bg-blue-600'}">${rec.impact}</span>
+              </div>
+              <p class="text-sm text-gray-300 mb-2">${rec.description}</p>
+              ${rec.howToFix ? `<div class="text-xs text-gray-400 bg-gray-800 p-2 rounded mt-2">${rec.howToFix.split('\n')[0]}</div>` : ''}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+  
+  // Build modal content
+  modalContent.innerHTML = `
+    <div class="p-8">
+      <div class="flex justify-between items-start mb-6">
+        <h2 class="text-3xl font-bold">Scan Results</h2>
+        <button onclick="closeModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+      </div>
+      
+      <div class="text-center mb-6">
+        <div class="text-6xl font-bold mb-2">
+          <span class="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">${data.score}</span>
+          <span class="text-gray-400 text-2xl">/100</span>
+        </div>
+        <div class="inline-block px-4 py-2 ${qualityClass} rounded-full font-bold">
+          ${qualityText}
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-3 gap-4 mb-6">
+        <div class="bg-gray-700 p-4 rounded-lg text-center">
+          <div class="text-sm text-gray-400 mb-1">GRAAF Score</div>
+          <div class="text-2xl font-bold text-purple-400">${data.metrics?.graaf || 0}/50</div>
+        </div>
+        <div class="bg-gray-700 p-4 rounded-lg text-center">
+          <div class="text-sm text-gray-400 mb-1">CRAFT Score</div>
+          <div class="text-2xl font-bold text-blue-400">${data.metrics?.craft || 0}/30</div>
+        </div>
+        <div class="bg-gray-700 p-4 rounded-lg text-center">
+          <div class="text-sm text-gray-400 mb-1">Technical</div>
+          <div class="text-2xl font-bold text-green-400">${data.metrics?.technical || 0}/20</div>
+        </div>
+      </div>
+      
+      ${recommendationsHtml}
+      
+      <div class="mt-6 pt-6 border-t border-gray-700">
+        <div class="flex gap-3">
+          <button onclick="closeModal()" class="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
+            Close
+          </button>
+          <button onclick="downloadScanReport()" class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
+            📊 Download Report
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  modal.classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('scanModal').classList.add('hidden');
+}
+
+function downloadScanReport() {
+  if (!lastScanData) {
+    alert('No scan data available');
+    return;
+  }
+  
+  // Export as JSON
+  const dataStr = JSON.stringify(lastScanData, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(dataBlob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `scan-report-${Date.now()}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
   </script>
 
 </body>
