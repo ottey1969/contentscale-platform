@@ -1080,6 +1080,35 @@
       };
       return names[countryCode] || countryCode;
     }
+
+    function viewAgencyProfile(id) {
+      console.log('View agency profile:', id);
+    }
+
+    async function submitToLeaderboardAPI(scanData) {
+      const companyName = document.getElementById('companyName').value;
+      const country = document.getElementById('countrySelect').value;
+      
+      try {
+        await fetch('/api/leaderboard/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: scanData.url,
+            score: scanData.score,
+            company_name: companyName,
+            country: country || 'NL'
+          })
+        });
+      } catch (error) {
+        console.error('Leaderboard submit error:', error);
+      }
+    }
+
+    function submitClaim(e) {
+      e.preventDefault();
+      alert('Claim submitted! We will review within 24 hours.');
+    }
   </script>
 
 </body>
