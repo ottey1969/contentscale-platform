@@ -143,6 +143,33 @@ async function createAllTables() {
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
+
+    // SCANS TABLE
+await client.query(`
+  CREATE TABLE IF NOT EXISTS scans (
+    id SERIAL PRIMARY KEY,
+    url TEXT NOT NULL,
+    score INTEGER,
+    quality VARCHAR(50),
+    graaf_score INTEGER,
+    craft_score INTEGER,
+    technical_score INTEGER,
+    breakdown JSONB,
+    recommendations JSONB DEFAULT '[]',
+    agency_id INTEGER REFERENCES agencies(id) ON DELETE SET NULL,
+    client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL,
+    client_url TEXT,
+    scan_type VARCHAR(50) DEFAULT 'manual',
+    ip_address TEXT,
+    user_agent TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+  )
+`);
+
+// FIX: Remove the problematic CHECK constraint
+await client.query(`
+  ALTER TABLE scans DROP CONSTRAINT IF EXISTS scans_scan_type_check
+`).catch(e => console.log('Constraint already removed or does not exist'));
     
     // SHARE LINKS TABLE
     await client.query(`
