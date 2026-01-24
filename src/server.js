@@ -1234,8 +1234,8 @@ async function performScan(url, res, clientIP, addToLeaderboard, isLeadScanner) 
     technical_score += Math.min(metaCount, 5);
     
     // Internal links (5 points)
-    const domain = urlObj.hostname;
-    const internalLinkRegex = new RegExp(`href=["'](?:https?:\\/\\/${domain}|\\/)[^"']*["']`, 'gi');
+    let domain = urlObj.hostname.replace('www.', ''); // Extract domain once
+    const internalLinkRegex = new RegExp(`href=["'](?:https?:\\/\\/${urlObj.hostname}|\\/)[^"']*["']`, 'gi');
     const internalLinks = (htmlContent.match(internalLinkRegex) || []).length;
     technical_score += Math.min(Math.floor(internalLinks / 3), 5);
     
@@ -1262,15 +1262,7 @@ async function performScan(url, res, clientIP, addToLeaderboard, isLeadScanner) 
 
     console.log('✅ Real scan completed:', url, 'Score:', total_score);
     
-    // Extract domain from successful scan
-    let domain = '';
-    try {
-      domain = urlObj.hostname.replace('www.', '');
-    } catch (e) {
-      domain = url.replace('www.', '').split('/')[0];
-    }
-
-    // Save to scan_history
+    // Save to scan_history (domain already extracted above)
     db.run(
       `INSERT INTO scan_history (url, domain, score, graaf_score, craft_score, technical_score, ip_address, scan_date) 
        VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
