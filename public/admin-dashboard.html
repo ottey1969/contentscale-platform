@@ -1353,7 +1353,7 @@
                 <td class="px-4 py-3 text-sm">${scan.agency_name || '-'}</td>
                 <td class="px-4 py-3"><span class="px-2 py-1 bg-gray-700 rounded text-xs">${scan.scan_type}</span></td>
                 <td class="px-4 py-3 text-sm">${scan.created_at ? new Date(scan.created_at).toLocaleDateString() : '-'}</td>
-                <td class="px-4 py-3"><button onclick="deleteItem('scans', ${scan.id})" class="text-red-400">🗑️</button></td>
+                <td class="px-4 py-3"><button onclick="deleteItem('scans', ${scan.id})" class="text-red-400 hover:text-red-300">🗑️</button></td>
               </tr>
             `;
           });
@@ -1419,7 +1419,7 @@
                 <td class="px-4 py-3 text-blue-400 text-sm">${entry.url ? entry.url.substring(0, 40) : '-'}</td>
                 <td class="px-4 py-3 font-bold">${entry.score}/100</td>
                 <td class="px-4 py-3">${entry.country}</td>
-                <td class="px-4 py-3"><button onclick="deleteItem('leaderboard', ${entry.id})" class="text-red-400">🗑️</button></td>
+                <td class="px-4 py-3"><button onclick="deleteItem('leaderboard', ${entry.id})" class="text-red-400 hover:text-red-300">🗑️</button></td>
               </tr>
             `;
           });
@@ -2318,11 +2318,38 @@
     }
 
     function deleteSelectedScans() {
-      const selected = Array.from(document.querySelectorAll('.scan-checkbox:checked')).map(cb => cb.value);
+      const selected = Array.from(document.querySelectorAll('.scan-checkbox:checked')).map(cb => parseInt(cb.value));
       if (selected.length === 0) return alert('Please select scans to delete');
       if (!confirm(`Delete ${selected.length} scans?`)) return;
-      selected.forEach(id => deleteItem('scans', id));
-      setTimeout(() => loadScans(), 500);
+      
+      let deleted = 0;
+      let failed = 0;
+      
+      selected.forEach(async (id) => {
+        try {
+          const response = await fetch(`/api/admin/scans/${id}`, {
+            method: 'DELETE',
+            headers: { 
+              'x-admin-key': localStorage.getItem('admin_id'),
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (response.ok) {
+            deleted++;
+          } else {
+            failed++;
+          }
+        } catch (error) {
+          failed++;
+        }
+      });
+      
+      setTimeout(() => {
+        alert(`✅ Deleted: ${deleted}\n❌ Failed: ${failed}`);
+        loadScans();
+        loadStats();
+      }, 1000);
     }
 
     function toggleSelectAllShareLinks() {
@@ -2344,11 +2371,38 @@
     }
 
     function deleteSelectedLeaderboard() {
-      const selected = Array.from(document.querySelectorAll('.leaderboard-checkbox:checked')).map(cb => cb.value);
+      const selected = Array.from(document.querySelectorAll('.leaderboard-checkbox:checked')).map(cb => parseInt(cb.value));
       if (selected.length === 0) return alert('Please select leaderboard entries to delete');
       if (!confirm(`Delete ${selected.length} leaderboard entries?`)) return;
-      selected.forEach(id => deleteItem('leaderboard', id));
-      setTimeout(() => loadLeaderboard(), 500);
+      
+      let deleted = 0;
+      let failed = 0;
+      
+      selected.forEach(async (id) => {
+        try {
+          const response = await fetch(`/api/admin/leaderboard/${id}`, {
+            method: 'DELETE',
+            headers: { 
+              'x-admin-key': localStorage.getItem('admin_id'),
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (response.ok) {
+            deleted++;
+          } else {
+            failed++;
+          }
+        } catch (error) {
+          failed++;
+        }
+      });
+      
+      setTimeout(() => {
+        alert(`✅ Deleted: ${deleted}\n❌ Failed: ${failed}`);
+        loadLeaderboard();
+        loadStats();
+      }, 1000);
     }
 
     // ==========================================
@@ -2461,14 +2515,21 @@
       try {
         const response = await fetch(endpoints[type], {
           method: 'DELETE',
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+          headers: { 
+            'x-admin-key': localStorage.getItem('admin_id'),
+            'Content-Type': 'application/json'
+          }
         });
         
         if (response.ok) {
+          alert('✅ Deleted!');
           loadAllData();
+        } else {
+          const data = await response.json();
+          alert('❌ Failed: ' + (data.error || 'Unknown error'));
         }
       } catch (error) {
-        alert('Error');
+        alert('❌ Error: ' + error.message);
       }
     }
 
@@ -2534,6 +2595,7 @@
         if (response.ok) {
           alert('✅ Agency removed from leaderboard');
           document.getElementById('manual-optout-url').value = '';
+          loadLeaderboard();
         }
       } catch (error) {
         alert('Error');
