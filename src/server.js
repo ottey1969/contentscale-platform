@@ -292,10 +292,10 @@ async function performScan(url, res, clientIP, addToLeaderboard, isLeadScanner) 
     technical_score += technical_details.links;
     
     // Heading hierarchy (4 points)
-    const hasH1 = /<h1[^>]*>/i.test(htmlContent);
+    const hasH1Tag = /<h1[^>]*>/i.test(htmlContent);
     const h1Count = (htmlContent.match(/<h1[^>]*>/gi) || []).length;
     const h2Count = (htmlContent.match(/<h2[^>]*>/gi) || []).length;
-    const properH1 = hasH1 && h1Count === 1;
+    const properH1 = hasH1Tag && h1Count === 1;
     
     technical_details.headings = Math.min(
       (properH1 ? 2 : 0) +
