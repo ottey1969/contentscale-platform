@@ -435,6 +435,42 @@ app.post('/api/scan', async (req, res) => {
   }
 });
 
+app.post('/api/scan-free', async (req, res) => {
+  try {
+    const { url } = req.body;
+    
+    if (!url) {
+      return res.status(400).json({ success: false, error: 'URL is required' });
+    }
+    
+    const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const scanResult = await performScan(url, res, clientIP, true, false);
+    
+    res.json(scanResult);
+  } catch (error) {
+    console.error('Scan error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/scan-agency', async (req, res) => {
+  try {
+    const { url, agencyId } = req.body;
+    
+    if (!url) {
+      return res.status(400).json({ success: false, error: 'URL is required' });
+    }
+    
+    const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const scanResult = await performScan(url, res, clientIP, true, false);
+    
+    res.json(scanResult);
+  } catch (error) {
+    console.error('Scan error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ============================================
 // ADMIN ENDPOINTS
 // ============================================
@@ -561,7 +597,38 @@ app.delete('/api/admin/share-links/:code', async (req, res) => {
   }
 });
 
-// Get leaderboard
+// PUBLIC LEADERBOARD ENDPOINTS
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT ROW_NUMBER() OVER (ORDER BY score DESC) as rank, *
+      FROM leaderboard
+      ORDER BY score DESC
+      LIMIT 100
+    `);
+    res.json({ success: true, entries: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/leaderboard/:country', async (req, res) => {
+  try {
+    const { country } = req.params;
+    const result = await pool.query(`
+      SELECT ROW_NUMBER() OVER (ORDER BY score DESC) as rank, *
+      FROM leaderboard
+      WHERE LOWER(country) = LOWER($1)
+      ORDER BY score DESC
+      LIMIT 100
+    `, [country]);
+    res.json({ success: true, entries: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ADMIN LEADERBOARD ENDPOINT
 app.get('/api/admin/leaderboard', async (req, res) => {
   try {
     const result = await pool.query(`
@@ -654,12 +721,26 @@ app.get('/health', async (req, res) => {
 // ============================================
 // SERVE HTML PAGES
 // ============================================
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
 app.get('/admin-dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/admin-dashboard.html'));
 });
 
 app.get('/seo-contentscore', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/seo-contentscore.html'));
+});
+
+// 404 handler for API routes
+app.use('/api/*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'API endpoint not found',
+    path: req.path,
+    method: req.method
+  });
 });
 
 // ============================================
