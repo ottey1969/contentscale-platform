@@ -982,6 +982,7 @@
       <div class="space-y-4">
         <input type="email" id="share-client-email" placeholder="Client Email" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
         <input type="text" id="share-client-name" placeholder="Client Name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="text" id="share-client-company" placeholder="Company Name (Optional)" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
         <input type="number" id="share-scans-limit" value="5" min="1" placeholder="Scans Limit" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
         <input type="number" id="share-valid-days" value="30" min="1" placeholder="Valid Days" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
         <div class="flex gap-4">
@@ -2440,12 +2441,32 @@
     }
 
     async function submitCreateShareLink() {
+      const email = document.getElementById('share-client-email').value;
+      const name = document.getElementById('share-client-name').value;
+      const company = document.getElementById('share-client-company')?.value || '';
+      const scansLimit = parseInt(document.getElementById('share-scans-limit').value);
+      const validDays = parseInt(document.getElementById('share-valid-days').value);
+      
+      // Validatie
+      if (!email || !name) {
+        alert('❌ Email and name are required');
+        return;
+      }
+      
+      if (!email.includes('@')) {
+        alert('❌ Invalid email address');
+        return;
+      }
+      
       const formData = {
-        client_email: document.getElementById('share-client-email').value,
-        client_name: document.getElementById('share-client-name').value,
-        scans_limit: parseInt(document.getElementById('share-scans-limit').value),
-        valid_days: parseInt(document.getElementById('share-valid-days').value)
+        client_email: email,
+        client_name: name,
+        client_company: company,
+        scans_limit: scansLimit || 5,
+        valid_days: validDays || 30
       };
+      
+      console.log('Creating share link:', formData);
       
       try {
         const response = await fetch('/api/admin/share-links/create', {
@@ -2458,14 +2479,27 @@
         });
         
         const data = await response.json();
+        console.log('Response:', data);
+        
         if (data.success) {
-          alert('✅ Link created!\n' + data.share_url);
+          alert('✅ Link created!\n\n' + data.share_url);
           navigator.clipboard.writeText(data.share_url);
           closeModal('modal-create-share-link');
+          
+          // Clear form
+          document.getElementById('share-client-email').value = '';
+          document.getElementById('share-client-name').value = '';
+          if (document.getElementById('share-client-company')) {
+            document.getElementById('share-client-company').value = '';
+          }
+          
           loadShareLinks();
+        } else {
+          alert('❌ Failed to create link:\n' + (data.error || 'Unknown error'));
         }
       } catch (error) {
-        alert('Error');
+        console.error('Create share link error:', error);
+        alert('❌ Error creating share link: ' + error.message);
       }
     }
 
@@ -2534,16 +2568,32 @@
     }
 
     async function deleteShareLink(code) {
+      if (!code || code === 'undefined') {
+        alert('❌ Invalid share link code');
+        return;
+      }
+      
       if (!confirm('Delete this link?')) return;
       
       try {
-        await fetch(`/api/admin/share-links/${code}`, {
+        const response = await fetch(`/api/admin/share-links/${code}`, {
           method: 'DELETE',
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+          headers: { 
+            'x-admin-key': localStorage.getItem('admin_id'),
+            'Content-Type': 'application/json'
+          }
         });
-        loadShareLinks();
+        
+        if (response.ok) {
+          alert('✅ Share link deleted!');
+          loadShareLinks();
+        } else {
+          const data = await response.json();
+          alert('❌ Failed to delete: ' + (data.error || 'Unknown error'));
+        }
       } catch (error) {
-        alert('Error');
+        console.error('Delete error:', error);
+        alert('❌ Error deleting share link');
       }
     }
 
