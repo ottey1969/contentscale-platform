@@ -144,32 +144,10 @@ async function createAllTables() {
       )
     `);
 
-    // SCANS TABLE
-await client.query(`
-  CREATE TABLE IF NOT EXISTS scans (
-    id SERIAL PRIMARY KEY,
-    url TEXT NOT NULL,
-    score INTEGER,
-    quality VARCHAR(50),
-    graaf_score INTEGER,
-    craft_score INTEGER,
-    technical_score INTEGER,
-    breakdown JSONB,
-    recommendations JSONB DEFAULT '[]',
-    agency_id INTEGER REFERENCES agencies(id) ON DELETE SET NULL,
-    client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL,
-    client_url TEXT,
-    scan_type VARCHAR(50) DEFAULT 'manual',
-    ip_address TEXT,
-    user_agent TEXT,
-    created_at TIMESTAMP DEFAULT NOW()
-  )
-`);
-
-// FIX: Remove the problematic CHECK constraint
-await client.query(`
-  ALTER TABLE scans DROP CONSTRAINT IF EXISTS scans_scan_type_check
-`).catch(e => console.log('Constraint already removed or does not exist'));
+    // FIX: Remove the problematic CHECK constraint
+    await client.query(`
+      ALTER TABLE scans DROP CONSTRAINT IF EXISTS scans_scan_type_check
+    `).catch(e => console.log('Constraint already removed or does not exist'));
     
     // SHARE LINKS TABLE
     await client.query(`
@@ -1606,7 +1584,8 @@ app.post('/api/scan', async (req, res) => {
       await pool.query(
         `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, breakdown, recommendations, scan_type)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-[url, totalScore, quality, graafScore, craftScore, technicalScore, JSON.stringify(scanResult.breakdown), JSON.stringify(scanResult.recommendations), 'manual']      );
+        [url, totalScore, quality, graafScore, craftScore, technicalScore, JSON.stringify(scanResult.breakdown), JSON.stringify(scanResult.recommendations), 'manual']
+      );
       console.log(`✅ Scan saved: ${url} (Score: ${totalScore})`);
     } catch (error) {
       console.error('DB save error:', error);
