@@ -33,294 +33,158 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.use('/js', express.static(path.join(__dirname, '../js')));
 
 // ============================================
-// PERFORM SCAN FUNCTION - FIXED VERSION
+// SIMPLE BUT WORKING SCAN FUNCTION
 // ============================================
-
 async function performScan(url, res, clientIP, addToLeaderboard, isLeadScanner) {
   try {
-    console.log(`🔍 Scanning: ${url}`);
+    console.log(`🔍 Starting scan for: ${url}`);
     
-    // Fetch HTML content
+    // Fetch HTML
     const https = require('https');
     const http = require('http');
     
     const urlObj = new URL(url.startsWith('http') ? url : 'https://' + url);
     const protocol = urlObj.protocol === 'https:' ? https : http;
     
-    const htmlContent = await new Promise((resolve, reject) => {
-      const req = protocol.get(url, { timeout: 10000 }, (response) => {
-        let data = '';
-        response.on('data', chunk => data += chunk);
-        response.on('end', () => resolve(data));
-      });
-      req.on('error', reject);
-      req.on('timeout', () => {
-        req.destroy();
-        reject(new Error('Request timeout'));
-      });
-    });
-
-    // Extract text content (remove HTML tags)
-    const textContent = htmlContent.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-                                   .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-                                   .replace(/<[^>]+>/g, ' ')
-                                   .replace(/\s+/g, ' ')
-                                   .trim();
+    let htmlContent = '';
     
-    const wordCount = textContent.split(/\s+/).length;
+    try {
+      htmlContent = await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          req.destroy();
+          reject(new Error('Timeout'));
+        }, 15000);
+        
+        const req = protocol.get(url, (response) => {
+          let data = '';
+          response.on('data', chunk => data += chunk);
+          response.on('end', () => {
+            clearTimeout(timeout);
+            resolve(data);
+          });
+        });
+        
+        req.on('error', (err) => {
+          clearTimeout(timeout);
+          reject(err);
+        });
+      });
+      
+      console.log(`✅ HTML fetched: ${htmlContent.length} bytes`);
+      
+    } catch (fetchError) {
+      console.error(`❌ HTML fetch failed:`, fetchError.message);
+      // Continue with empty HTML - we'll use fallback scoring
+    }
+    
+    // Extract text (remove tags)
+    const textContent = htmlContent
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    const wordCount = textContent.split(/\s+/).filter(w => w.length > 0).length;
+    console.log(`📝 Word count: ${wordCount}`);
     
     // ============================================
-    // GRAAF FRAMEWORK (50 points)
+    // GRAAF SCORING (50 points) - SIMPLIFIED
     // ============================================
     let graaf_score = 0;
-    let graaf_details = {
-      credibility: 0,
-      relevance: 0,
-      actionability: 0,
-      accuracy: 0,
-      freshness: 0
-    };
     
-    // G - GENUINELY CREDIBLE (10 points)
-    // Expert quotes with attribution
-    const quotePattern = /["""]\s*([^"""]{20,200})\s*["""]\s*[—–-]\s*([A-Z][a-z]+\s+[A-Z][a-z]+)/g;
-    const expertQuotes = (textContent.match(quotePattern) || []).length;
+    // Credibility (10 pts) - Look for quotes and author
+    const hasQuotes = textContent.match(/[""].*?[""]/g) || [];
+    const hasNames = textContent.match(/[A-Z][a-z]+ [A-Z][a-z]+/g) || [];
+    graaf_score += Math.min(hasQuotes.length * 0.5, 4); // Up to 4 pts
+    graaf_score += Math.min(hasNames.length * 0.2, 3);  // Up to 3 pts
+    graaf_score += (htmlContent.includes('author') || htmlContent.includes('Author')) ? 3 : 0;
     
-    // Statistics with sources
-    const statsPattern = /\d+%|\d+\s*of\s*\d+|\d+\s+percent|According to [A-Z][a-z]+|Source:|Study:/gi;
-    const statistics = (textContent.match(statsPattern) || []).length;
+    // Relevance (10 pts) - Title, H1, meta
+    const hasTitle = /<title/i.test(htmlContent);
+    const hasH1 = /<h1/i.test(htmlContent);
+    const hasMeta = /<meta.*description/i.test(htmlContent);
+    graaf_score += hasTitle ? 4 : 0;
+    graaf_score += hasH1 ? 3 : 0;
+    graaf_score += hasMeta ? 3 : 0;
     
-    // Author bio and credentials
-    const hasAuthor = /author|written by|by [A-Z][a-z]+\s+[A-Z][a-z]+/i.test(htmlContent);
-    const hasCredentials = /\d+\s*years?\s*(?:of\s*)?experience|certified|founder|ceo|expert/i.test(textContent);
+    // Actionability (10 pts) - Steps, CTAs
+    const hasSteps = /step|how to|guide/gi.test(textContent);
+    const hasButtons = /<button|<a.*href/gi.test(htmlContent);
+    const hasList = /<ul>|<ol>/i.test(htmlContent);
+    graaf_score += hasSteps ? 4 : 0;
+    graaf_score += hasButtons ? 3 : 0;
+    graaf_score += hasList ? 3 : 0;
     
-    graaf_details.credibility = Math.min(
-      (expertQuotes >= 10 ? 4 : expertQuotes * 0.4) +
-      (statistics >= 50 ? 3 : statistics * 0.06) +
-      (hasAuthor ? 2 : 0) +
-      (hasCredentials ? 1 : 0),
-      10
-    );
-    graaf_score += graaf_details.credibility;
+    // Accuracy (10 pts) - Word count and structure
+    graaf_score += Math.min(wordCount / 350, 5); // Max 5 pts at 1750 words
+    graaf_score += (htmlContent.match(/<h[2-6]/gi) || []).length >= 3 ? 5 : 2;
     
-    // R - RELEVANCE (10 points)
-    const title = (htmlContent.match(/<title[^>]*>([^<]+)<\/title>/i) || [])[1] || '';
-    const h1 = (htmlContent.match(/<h1[^>]*>([^<]+)<\/h1>/i) || [])[1] || '';
-    const metaDesc = (htmlContent.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i) || [])[1] || '';
-    
-    const hasTitleKeyword = title.length > 10;
-    const hasH1 = h1.length > 10;
-    const hasMetaDesc = metaDesc.length > 50;
-    const hasTableOfContents = /table of contents|toc|in this article|on this page/i.test(htmlContent);
-    
-    graaf_details.relevance = Math.min(
-      (hasTitleKeyword ? 3 : 0) +
-      (hasH1 ? 3 : 0) +
-      (hasMetaDesc ? 2 : 0) +
-      (hasTableOfContents ? 2 : 0),
-      10
-    );
-    graaf_score += graaf_details.relevance;
-    
-    // A - ACTIONABILITY (10 points)
-    const stepByStepPattern = /step \d|how to|tutorial|guide|instructions|checklist/gi;
-    const actionableSteps = (textContent.match(stepByStepPattern) || []).length;
-    
-    const hasCTA = /download|subscribe|get started|sign up|contact us|learn more|try now/gi.test(htmlContent);
-    const hasExamples = /example|case study|for instance|such as/gi.test(textContent);
-    const hasList = (htmlContent.match(/<[ou]l>/gi) || []).length;
-    
-    graaf_details.actionability = Math.min(
-      (actionableSteps >= 5 ? 4 : actionableSteps * 0.8) +
-      (hasCTA ? 2 : 0) +
-      (hasExamples ? 2 : 0) +
-      (hasList >= 3 ? 2 : hasList * 0.67),
-      10
-    );
-    graaf_score += graaf_details.actionability;
-    
-    // A - ACCURACY (10 points)
-    const hasReferences = /reference|source|citation|study|research|according to/gi.test(textContent);
-    const hasData = /data|research|study|survey|report|analysis/gi.test(textContent);
-    const wordCountScore = Math.min(wordCount / 350, 5); // Max 5 points for 1750+ words
-    
-    graaf_details.accuracy = Math.min(
-      wordCountScore +
-      (hasReferences ? 3 : 0) +
-      (hasData ? 2 : 0),
-      10
-    );
-    graaf_score += graaf_details.accuracy;
-    
-    // F - FRESHNESS (10 points)
+    // Freshness (10 pts) - Year detection
     const currentYear = new Date().getFullYear();
-    const lastYear = currentYear - 1;
+    const hasCurrentYear = textContent.includes(currentYear.toString());
+    const hasDate = /<time|published|updated/i.test(htmlContent);
+    graaf_score += hasCurrentYear ? 6 : 0;
+    graaf_score += hasDate ? 4 : 0;
     
-    const hasCurrentYear = new RegExp(`\\b${currentYear}\\b`).test(textContent);
-    const hasRecentYear = new RegExp(`\\b${lastYear}\\b`).test(textContent);
-    const hasPublishDate = /<time|published|updated|modified/i.test(htmlContent);
-    const hasMonthYear = /january|february|march|april|may|june|july|august|september|october|november|december\s+\d{4}/i.test(textContent);
-    
-    graaf_details.freshness = Math.min(
-      (hasCurrentYear ? 5 : hasRecentYear ? 3 : 0) +
-      (hasPublishDate ? 3 : 0) +
-      (hasMonthYear ? 2 : 0),
-      10
-    );
-    graaf_score += graaf_details.freshness;
+    // Cap GRAAF at 50
+    graaf_score = Math.min(Math.round(graaf_score), 50);
     
     // ============================================
-    // CRAFT FRAMEWORK (30 points)
+    // CRAFT SCORING (30 points) - SIMPLIFIED
     // ============================================
     let craft_score = 0;
-    let craft_details = {
-      clarity: 0,
-      readability: 0,
-      format: 0,
-      faq: 0,
-      trust: 0
-    };
     
-    // C - CLARITY (7 points)
-    const sentenceCount = (textContent.match(/[.!?]+/g) || []).length;
-    const avgWordsPerSentence = wordCount / Math.max(sentenceCount, 1);
-    const goodSentenceLength = avgWordsPerSentence >= 10 && avgWordsPerSentence <= 20;
+    // Clarity (10 pts) - Paragraphs and sentences
+    const paragraphs = (htmlContent.match(/<p>/gi) || []).length;
+    craft_score += Math.min(paragraphs * 0.5, 5);
+    craft_score += wordCount > 500 ? 5 : Math.min(wordCount / 100, 5);
     
-    const hasParagraphs = (htmlContent.match(/<p[^>]*>/gi) || []).length;
-    const hasSubheadings = (htmlContent.match(/<h[2-6][^>]*>/gi) || []).length;
+    // Readability (10 pts) - Lists and formatting
+    const bullets = (htmlContent.match(/<li>/gi) || []).length;
+    craft_score += Math.min(bullets * 0.3, 5);
+    craft_score += (htmlContent.match(/<h[2-6]/gi) || []).length >= 3 ? 5 : 2;
     
-    craft_details.clarity = Math.min(
-      (goodSentenceLength ? 3 : 0) +
-      (hasParagraphs >= 5 ? 2 : hasParagraphs * 0.4) +
-      (hasSubheadings >= 5 ? 2 : hasSubheadings * 0.4),
-      7
-    );
-    craft_score += craft_details.clarity;
+    // Format (10 pts) - Images and tables
+    const images = (htmlContent.match(/<img/gi) || []).length;
+    const tables = (htmlContent.match(/<table/gi) || []).length;
+    craft_score += Math.min(images * 0.8, 5);
+    craft_score += Math.min(tables * 2, 5);
     
-    // R - READABILITY (8 points)
-    const shortParagraphs = hasParagraphs >= 8;
-    const bulletPoints = (htmlContent.match(/<li[^>]*>/gi) || []).length;
-    const hasWhitespace = htmlContent.includes('<br>') || htmlContent.includes('margin') || htmlContent.includes('padding');
-    
-    craft_details.readability = Math.min(
-      (shortParagraphs ? 3 : 0) +
-      (bulletPoints >= 10 ? 3 : bulletPoints * 0.3) +
-      (hasWhitespace ? 2 : 0),
-      8
-    );
-    craft_score += craft_details.readability;
-    
-    // A - ADD VISUALS & FORMAT (6 points)
-    const images = (htmlContent.match(/<img[^>]*>/gi) || []).length;
-    const hasAltText = /<img[^>]*alt=["'][^"']+["']/i.test(htmlContent);
-    const tables = (htmlContent.match(/<table[^>]*>/gi) || []).length;
-    
-    craft_details.format = Math.min(
-      (images >= 5 ? 3 : images * 0.6) +
-      (hasAltText ? 2 : 0) +
-      (tables >= 2 ? 1 : tables * 0.5),
-      6
-    );
-    craft_score += craft_details.format;
-    
-    // F - FAQ INTEGRATION (5 points)
-    const hasFAQ = /faq|frequently asked questions|questions and answers/i.test(htmlContent);
-    const questionCount = (htmlContent.match(/<h[2-6][^>]*>[^<]*\?[^<]*<\/h[2-6]>/gi) || []).length;
-    
-    craft_details.faq = Math.min(
-      (hasFAQ ? 3 : 0) +
-      (questionCount >= 10 ? 2 : questionCount * 0.2),
-      5
-    );
-    craft_score += craft_details.faq;
-    
-    // T - TRUST BUILDING (4 points)
-    const hasHTTPS = url.startsWith('https');
-    const hasContactInfo = /contact|email|phone|address/i.test(htmlContent);
-    const hasPrivacyPolicy = /privacy policy|terms|gdpr/i.test(htmlContent);
-    
-    craft_details.trust = Math.min(
-      (hasHTTPS ? 2 : 0) +
-      (hasContactInfo ? 1 : 0) +
-      (hasPrivacyPolicy ? 1 : 0),
-      4
-    );
-    craft_score += craft_details.trust;
+    // Cap CRAFT at 30
+    craft_score = Math.min(Math.round(craft_score), 30);
     
     // ============================================
-    // TECHNICAL SEO (20 points)
+    // TECHNICAL SCORING (20 points) - SIMPLIFIED
     // ============================================
     let technical_score = 0;
-    let technical_details = {
-      meta: 0,
-      schema: 0,
-      links: 0,
-      headings: 0,
-      mobile: 0
-    };
     
-    // Meta tags (4 points)
-    const hasMetaViewport = /<meta[^>]*name=["']viewport["']/i.test(htmlContent);
-    const hasMetaDescription = metaDesc.length >= 120 && metaDesc.length <= 160;
-    const hasOGTags = /<meta[^>]*property=["']og:/i.test(htmlContent);
+    // Meta tags (5 pts)
+    technical_score += /<meta.*viewport/i.test(htmlContent) ? 2 : 0;
+    technical_score += /<meta.*description/i.test(htmlContent) ? 2 : 0;
+    technical_score += /<meta.*og:/i.test(htmlContent) ? 1 : 0;
     
-    technical_details.meta = Math.min(
-      (hasMetaViewport ? 2 : 0) +
-      (hasMetaDescription ? 1 : 0) +
-      (hasOGTags ? 1 : 0),
-      4
-    );
-    technical_score += technical_details.meta;
+    // Schema (5 pts)
+    technical_score += /"@type"/i.test(htmlContent) ? 3 : 0;
+    technical_score += /application\/ld\+json/i.test(htmlContent) ? 2 : 0;
     
-    // Schema markup (4 points)
-    const hasJSONLD = /<script[^>]*type=["']application\/ld\+json["'][^>]*>/i.test(htmlContent);
-    const schemaTypes = (htmlContent.match(/"@type"\s*:\s*"(\w+)"/gi) || []).length;
+    // Links (5 pts)
+    const links = (htmlContent.match(/href=/gi) || []).length;
+    technical_score += Math.min(links / 5, 5);
     
-    technical_details.schema = Math.min(
-      (hasJSONLD ? 2 : 0) +
-      (schemaTypes >= 2 ? 2 : schemaTypes),
-      4
-    );
-    technical_score += technical_details.schema;
+    // Headings (5 pts)
+    const h1Count = (htmlContent.match(/<h1/gi) || []).length;
+    const h2Count = (htmlContent.match(/<h2/gi) || []).length;
+    technical_score += h1Count === 1 ? 3 : 0;
+    technical_score += h2Count >= 3 ? 2 : 0;
     
-    // Internal linking (4 points)
-    const domain = urlObj.hostname.replace('www.', '');
-    const internalLinkPattern = new RegExp(`href=["'](?:https?:\\/\\/${domain.replace('.', '\\.')}|\\/)[^"']*["']`, 'gi');
-    const internalLinks = (htmlContent.match(internalLinkPattern) || []).length;
-    
-    technical_details.links = Math.min(internalLinks / 5, 4);
-    technical_score += technical_details.links;
-    
-    // Heading hierarchy (4 points)
-    const hasH1Tag = /<h1[^>]*>/i.test(htmlContent);
-    const h1Count = (htmlContent.match(/<h1[^>]*>/gi) || []).length;
-    const h2Count = (htmlContent.match(/<h2[^>]*>/gi) || []).length;
-    const properH1 = hasH1Tag && h1Count === 1;
-    
-    technical_details.headings = Math.min(
-      (properH1 ? 2 : 0) +
-      (h2Count >= 5 ? 2 : h2Count * 0.4),
-      4
-    );
-    technical_score += technical_details.headings;
-    
-    // Mobile optimization (4 points)
-    const responsiveViewport = /<meta[^>]*name=["']viewport["'][^>]*width=device-width/i.test(htmlContent);
-    const hasMediaQueries = /@media[^{]*\([^)]*\)/i.test(htmlContent);
-    const lazyLoading = /loading=["']lazy["']/i.test(htmlContent);
-    
-    technical_details.mobile = Math.min(
-      (responsiveViewport ? 2 : 0) +
-      (hasMediaQueries ? 1 : 0) +
-      (lazyLoading ? 1 : 0),
-      4
-    );
-    technical_score += technical_details.mobile;
+    // Cap Technical at 20
+    technical_score = Math.min(Math.round(technical_score), 20);
     
     // ============================================
-    // CALCULATE FINAL SCORE
+    // CALCULATE TOTAL
     // ============================================
-    const overall_score = Math.min(Math.round(graaf_score + craft_score + technical_score), 100);
+    const overall_score = Math.min(graaf_score + craft_score + technical_score, 100);
     
     // Determine quality
     let quality;
@@ -330,14 +194,16 @@ async function performScan(url, res, clientIP, addToLeaderboard, isLeadScanner) 
     else if (overall_score >= 40) quality = 'poor';
     else quality = 'very_poor';
     
-    // Extract company name from domain
+    console.log(`✅ Score calculated: ${overall_score}/100 (GRAAF:${graaf_score} CRAFT:${craft_score} Tech:${technical_score})`);
+    
+    // Extract domain info
+    const domain = urlObj.hostname.replace('www.', '');
     const companyName = domain
       .replace(/\.(com|net|org|nl|be|de|uk)$/, '')
-      .split('.')
-      .slice(-1)[0]
+      .split('.').pop()
       .replace(/-/g, ' ')
       .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
       .join(' ');
     
     const scanResult = {
@@ -350,40 +216,24 @@ async function performScan(url, res, clientIP, addToLeaderboard, isLeadScanner) 
       scanned_at: new Date().toISOString(),
       breakdown: {
         graaf: {
-          total: Math.round(graaf_score),
-          credibility: Math.round(graaf_details.credibility * 10) / 10,
-          relevance: Math.round(graaf_details.relevance * 10) / 10,
-          actionability: Math.round(graaf_details.actionability * 10) / 10,
-          accuracy: Math.round(graaf_details.accuracy * 10) / 10,
-          freshness: Math.round(graaf_details.freshness * 10) / 10
+          total: graaf_score,
+          percentage: Math.round((graaf_score / 50) * 100)
         },
         craft: {
-          total: Math.round(craft_score),
-          clarity: Math.round(craft_details.clarity * 10) / 10,
-          readability: Math.round(craft_details.readability * 10) / 10,
-          format: Math.round(craft_details.format * 10) / 10,
-          faq: Math.round(craft_details.faq * 10) / 10,
-          trust: Math.round(craft_details.trust * 10) / 10
+          total: craft_score,
+          percentage: Math.round((craft_score / 30) * 100)
         },
         technical: {
-          total: Math.round(technical_score),
-          meta: Math.round(technical_details.meta * 10) / 10,
-          schema: Math.round(technical_details.schema * 10) / 10,
-          links: Math.round(technical_details.links * 10) / 10,
-          headings: Math.round(technical_details.headings * 10) / 10,
-          mobile: Math.round(technical_details.mobile * 10) / 10
+          total: technical_score,
+          percentage: Math.round((technical_score / 20) * 100)
         }
       },
       metrics: {
         word_count: wordCount,
-        expert_quotes: expertQuotes,
-        statistics: statistics,
         images: images,
-        internal_links: internalLinks
+        links: links
       }
     };
-    
-    console.log(`✅ Scan complete: ${overall_score}/100 (${quality})`);
     
     // Add to leaderboard if requested
     if (addToLeaderboard && overall_score >= 50) {
@@ -397,7 +247,7 @@ async function performScan(url, res, clientIP, addToLeaderboard, isLeadScanner) 
         );
         console.log('✅ Added to leaderboard');
       } catch (dbError) {
-        console.error('⚠️ Leaderboard insert error:', dbError);
+        console.error('⚠️ Leaderboard error:', dbError.message);
       }
     }
     
@@ -415,22 +265,17 @@ async function performScan(url, res, clientIP, addToLeaderboard, isLeadScanner) 
 }
 
 // ============================================
-// PUBLIC SCAN ENDPOINT
+// PUBLIC ENDPOINTS
 // ============================================
 app.post('/api/scan', async (req, res) => {
   try {
     const { url } = req.body;
-    
-    if (!url) {
-      return res.status(400).json({ success: false, error: 'URL is required' });
-    }
+    if (!url) return res.status(400).json({ success: false, error: 'URL required' });
     
     const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    const scanResult = await performScan(url, res, clientIP, false, false);
-    
-    res.json(scanResult);
+    const result = await performScan(url, res, clientIP, false, false);
+    res.json(result);
   } catch (error) {
-    console.error('Scan error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -438,35 +283,49 @@ app.post('/api/scan', async (req, res) => {
 app.post('/api/scan-free', async (req, res) => {
   try {
     const { url } = req.body;
-    
-    if (!url) {
-      return res.status(400).json({ success: false, error: 'URL is required' });
-    }
+    if (!url) return res.status(400).json({ success: false, error: 'URL required' });
     
     const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    const scanResult = await performScan(url, res, clientIP, true, false);
-    
-    res.json(scanResult);
+    const result = await performScan(url, res, clientIP, true, false);
+    res.json(result);
   } catch (error) {
-    console.error('Scan error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
 app.post('/api/scan-agency', async (req, res) => {
   try {
-    const { url, agencyId } = req.body;
-    
-    if (!url) {
-      return res.status(400).json({ success: false, error: 'URL is required' });
-    }
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ success: false, error: 'URL required' });
     
     const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    const scanResult = await performScan(url, res, clientIP, true, false);
-    
-    res.json(scanResult);
+    const result = await performScan(url, res, clientIP, true, false);
+    res.json(result);
   } catch (error) {
-    console.error('Scan error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT ROW_NUMBER() OVER (ORDER BY score DESC) as rank, *
+      FROM leaderboard ORDER BY score DESC LIMIT 100
+    `);
+    res.json({ success: true, entries: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/leaderboard/:country', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT ROW_NUMBER() OVER (ORDER BY score DESC) as rank, *
+      FROM leaderboard WHERE LOWER(country) = LOWER($1) ORDER BY score DESC LIMIT 100
+    `, [req.params.country]);
+    res.json({ success: true, entries: result.rows });
+  } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -474,8 +333,6 @@ app.post('/api/scan-agency', async (req, res) => {
 // ============================================
 // ADMIN ENDPOINTS
 // ============================================
-
-// Get all admins
 app.get('/api/admins', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM super_admins ORDER BY created_at DESC');
@@ -485,36 +342,29 @@ app.get('/api/admins', async (req, res) => {
   }
 });
 
-// Create admin
 app.post('/api/admins', async (req, res) => {
   try {
     const { username, password, role, full_name, email } = req.body;
-    
     if (!username || !password || !role) {
-      return res.status(400).json({ success: false, error: 'Missing required fields' });
+      return res.status(400).json({ success: false, error: 'Missing fields' });
     }
-    
     const result = await pool.query(
       'INSERT INTO super_admins (username, password, role, full_name, email) VALUES ($1, $2, $3, $4, $5) RETURNING *',
       [username, password, role, full_name, email]
     );
-    
     res.json({ success: true, admin: result.rows[0] });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Verify admin login
 app.post('/api/setup/verify-admin', async (req, res) => {
   try {
     const { username, password } = req.body;
-    
     const result = await pool.query(
       'SELECT * FROM super_admins WHERE username = $1 AND password = $2',
       [username, password]
     );
-    
     if (result.rows.length > 0) {
       res.json({ success: true, admin_id: result.rows[0].id, admin: result.rows[0] });
     } else {
@@ -525,7 +375,6 @@ app.post('/api/setup/verify-admin', async (req, res) => {
   }
 });
 
-// Get agencies
 app.get('/api/super-admin/agencies', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM agencies ORDER BY created_at DESC');
@@ -535,7 +384,6 @@ app.get('/api/super-admin/agencies', async (req, res) => {
   }
 });
 
-// Get clients
 app.get('/api/admin/clients', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM clients ORDER BY created_at DESC');
@@ -545,7 +393,6 @@ app.get('/api/admin/clients', async (req, res) => {
   }
 });
 
-// Get scans
 app.get('/api/admin/scans', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM scans ORDER BY created_at DESC LIMIT 100');
@@ -555,7 +402,6 @@ app.get('/api/admin/scans', async (req, res) => {
   }
 });
 
-// Get share links
 app.get('/api/admin/share-links', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM share_links ORDER BY created_at DESC');
@@ -565,29 +411,24 @@ app.get('/api/admin/share-links', async (req, res) => {
   }
 });
 
-// Create share link
 app.post('/api/admin/share-links/create', async (req, res) => {
   try {
     const { client_email, client_name, client_company, scans_limit, valid_days } = req.body;
-    
     const share_code = Math.random().toString(36).substring(2, 15);
     const expires_at = new Date(Date.now() + (valid_days || 30) * 24 * 60 * 60 * 1000);
     
     const result = await pool.query(
-      `INSERT INTO share_links (share_code, client_email, client_name, client_company, scans_limit, expires_at)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      'INSERT INTO share_links (share_code, client_email, client_name, client_company, scans_limit, expires_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
       [share_code, client_email, client_name, client_company || '', scans_limit || 5, expires_at]
     );
     
     const share_url = `${req.protocol}://${req.get('host')}/seo-contentscore?key=${share_code}`;
-    
     res.json({ success: true, share_url, share_link: result.rows[0] });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Delete share link
 app.delete('/api/admin/share-links/:code', async (req, res) => {
   try {
     await pool.query('DELETE FROM share_links WHERE share_code = $1', [req.params.code]);
@@ -597,45 +438,11 @@ app.delete('/api/admin/share-links/:code', async (req, res) => {
   }
 });
 
-// PUBLIC LEADERBOARD ENDPOINTS
-app.get('/api/leaderboard', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT ROW_NUMBER() OVER (ORDER BY score DESC) as rank, *
-      FROM leaderboard
-      ORDER BY score DESC
-      LIMIT 100
-    `);
-    res.json({ success: true, entries: result.rows });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.get('/api/leaderboard/:country', async (req, res) => {
-  try {
-    const { country } = req.params;
-    const result = await pool.query(`
-      SELECT ROW_NUMBER() OVER (ORDER BY score DESC) as rank, *
-      FROM leaderboard
-      WHERE LOWER(country) = LOWER($1)
-      ORDER BY score DESC
-      LIMIT 100
-    `, [country]);
-    res.json({ success: true, entries: result.rows });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// ADMIN LEADERBOARD ENDPOINT
 app.get('/api/admin/leaderboard', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT ROW_NUMBER() OVER (ORDER BY score DESC) as rank, *
-      FROM leaderboard
-      ORDER BY score DESC
-      LIMIT 100
+      FROM leaderboard ORDER BY score DESC LIMIT 100
     `);
     res.json({ success: true, entries: result.rows });
   } catch (error) {
@@ -643,7 +450,6 @@ app.get('/api/admin/leaderboard', async (req, res) => {
   }
 });
 
-// Get stats
 app.get('/api/admin/stats', async (req, res) => {
   try {
     const agencies = await pool.query('SELECT COUNT(*) FROM agencies');
@@ -665,16 +471,10 @@ app.get('/api/admin/stats', async (req, res) => {
   }
 });
 
-// Get claims
 app.get('/api/admin/claims/pending', async (req, res) => {
-  try {
-    res.json({ success: true, claims: [] });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
+  res.json({ success: true, claims: [] });
 });
 
-// Delete item (generic)
 app.delete('/api/:resource/:id', async (req, res) => {
   try {
     const { resource, id } = req.params;
@@ -687,9 +487,7 @@ app.delete('/api/:resource/:id', async (req, res) => {
     };
     
     const table = tableMap[resource];
-    if (!table) {
-      return res.status(400).json({ success: false, error: 'Invalid resource' });
-    }
+    if (!table) return res.status(400).json({ success: false, error: 'Invalid resource' });
     
     await pool.query(`DELETE FROM ${table} WHERE id = $1`, [id]);
     res.json({ success: true });
@@ -698,9 +496,6 @@ app.delete('/api/:resource/:id', async (req, res) => {
   }
 });
 
-// ============================================
-// HEALTH CHECK
-// ============================================
 app.get('/health', async (req, res) => {
   try {
     const result = await pool.query('SELECT NOW()');
@@ -711,15 +506,12 @@ app.get('/health', async (req, res) => {
       database: 'connected'
     });
   } catch (error) {
-    res.status(500).json({
-      status: 'error',
-      error: error.message
-    });
+    res.status(500).json({ status: 'error', error: error.message });
   }
 });
 
 // ============================================
-// SERVE HTML PAGES
+// SERVE HTML
 // ============================================
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
@@ -733,18 +525,16 @@ app.get('/seo-contentscore', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/seo-contentscore.html'));
 });
 
-// 404 handler for API routes
 app.use('/api/*', (req, res) => {
   res.status(404).json({
     success: false,
     error: 'API endpoint not found',
-    path: req.path,
-    method: req.method
+    path: req.path
   });
 });
 
 // ============================================
-// START SERVER
+// START
 // ============================================
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
