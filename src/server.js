@@ -187,7 +187,8 @@ app.get('/', (req, res) => {
 });
 
 app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin-dashboard.html'));
+  // Simply serve admin.html (Railway/Node will find it in public folder)
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
 app.get('/lead-scanner', (req, res) => {
