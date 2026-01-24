@@ -13,7 +13,6 @@
       position: relative;
       overflow: hidden;
     }
-    /* PRICING CARDS - FIXED BUTTON ALIGNMENT */
     .pricing-card {
       background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
       border: 2px solid #334155;
@@ -112,95 +111,6 @@
       height: 200%;
       background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
     }
-    /* PRICING CARDS - FIXED BUTTON ALIGNMENT */
-    .pricing-card {
-      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-      border: 2px solid #334155;
-      border-radius: 16px;
-      padding: 32px;
-      transition: all 0.3s;
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      min-height: 550px;
-    }
-    
-    .pricing-card:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 20px 40px rgba(139, 92, 246, 0.3);
-      border-color: #8b5cf6;
-    }
-    
-    .pricing-card.popular {
-      border-color: #fbbf24;
-      background: linear-gradient(135deg, #1e293b 0%, #2d1f08 100%);
-    }
-    
-    .pricing-card.popular::before {
-      content: '⭐ MOST POPULAR';
-      position: absolute;
-      top: -12px;
-      right: 24px;
-      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-      color: #1e293b;
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 800;
-    }
-    
-    .price-tag {
-      font-size: 48px;
-      font-weight: 800;
-      background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    
-    .price-period {
-      color: #9ca3af;
-      font-size: 16px;
-    }
-    
-    .feature-list {
-      list-style: none;
-      padding: 0;
-      margin: 24px 0;
-      flex-grow: 1;
-    }
-    
-    .feature-list li {
-      padding: 12px 0;
-      border-bottom: 1px solid #374151;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    
-    .feature-list li:last-child {
-      border-bottom: none;
-    }
-    
-    .feature-icon {
-      font-size: 18px;
-    }
-    
-    .pricing-button {
-      margin-top: auto !important;
-      width: 100%;
-      padding: 16px 24px !important;
-      border-radius: 8px;
-      font-weight: 700;
-      font-size: 16px;
-      transition: all 0.3s;
-      border: none;
-      cursor: pointer;
-      height: 56px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
     
     .stat-card-alt { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
     .stat-card-green { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
@@ -210,95 +120,6 @@
       background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
       border: 2px solid;
       transition: all 0.3s;
-    }
-    /* PRICING CARDS - FIXED BUTTON ALIGNMENT */
-    .pricing-card {
-      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-      border: 2px solid #334155;
-      border-radius: 16px;
-      padding: 32px;
-      transition: all 0.3s;
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      min-height: 550px;
-    }
-    
-    .pricing-card:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 20px 40px rgba(139, 92, 246, 0.3);
-      border-color: #8b5cf6;
-    }
-    
-    .pricing-card.popular {
-      border-color: #fbbf24;
-      background: linear-gradient(135deg, #1e293b 0%, #2d1f08 100%);
-    }
-    
-    .pricing-card.popular::before {
-      content: '⭐ MOST POPULAR';
-      position: absolute;
-      top: -12px;
-      right: 24px;
-      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-      color: #1e293b;
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 800;
-    }
-    
-    .price-tag {
-      font-size: 48px;
-      font-weight: 800;
-      background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    
-    .price-period {
-      color: #9ca3af;
-      font-size: 16px;
-    }
-    
-    .feature-list {
-      list-style: none;
-      padding: 0;
-      margin: 24px 0;
-      flex-grow: 1;
-    }
-    
-    .feature-list li {
-      padding: 12px 0;
-      border-bottom: 1px solid #374151;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    
-    .feature-list li:last-child {
-      border-bottom: none;
-    }
-    
-    .feature-icon {
-      font-size: 18px;
-    }
-    
-    .pricing-button {
-      margin-top: auto !important;
-      width: 100%;
-      padding: 16px 24px !important;
-      border-radius: 8px;
-      font-weight: 700;
-      font-size: 16px;
-      transition: all 0.3s;
-      border: none;
-      cursor: pointer;
-      height: 56px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
     }
     
     .featured-1 { border-color: #fbbf24; }
@@ -395,76 +216,6 @@
       -webkit-line-clamp: 3;
       -webkit-box-orient: vertical;
       overflow: hidden;
-    }
-
-    /* PRICING CARDS */
-    .pricing-card {
-      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-      border: 2px solid #334155;
-      border-radius: 16px;
-      padding: 32px;
-      transition: all 0.3s;
-      position: relative;
-    }
-    
-    .pricing-card:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 20px 40px rgba(139, 92, 246, 0.3);
-      border-color: #8b5cf6;
-    }
-    
-    .pricing-card.popular {
-      border-color: #fbbf24;
-      background: linear-gradient(135deg, #1e293b 0%, #2d1f08 100%);
-    }
-    
-    .pricing-card.popular::before {
-      content: '⭐ MOST POPULAR';
-      position: absolute;
-      top: -12px;
-      right: 24px;
-      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-      color: #1e293b;
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 800;
-    }
-    
-    .price-tag {
-      font-size: 48px;
-      font-weight: 800;
-      background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    
-    .price-period {
-      color: #9ca3af;
-      font-size: 16px;
-    }
-    
-    .feature-list {
-      list-style: none;
-      padding: 0;
-      margin: 24px 0;
-    }
-    
-    .feature-list li {
-      padding: 12px 0;
-      border-bottom: 1px solid #374151;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    
-    .feature-list li:last-child {
-      border-bottom: none;
-    }
-    
-    .feature-icon {
-      font-size: 18px;
     }
   </style>
 </head>
@@ -992,8 +743,113 @@
       }
     }
 
+    function showScanResults(data) {
+      const modal = document.getElementById('scanModal');
+      const modalContent = modal.querySelector('.modal-content');
+      
+      let qualityClass = 'bg-red-600';
+      let qualityText = data.quality || 'Poor';
+      
+      if (data.score >= 90) {
+        qualityClass = 'bg-green-600';
+        qualityText = 'Excellent';
+      } else if (data.score >= 75) {
+        qualityClass = 'bg-blue-600';
+        qualityText = 'Good';
+      } else if (data.score >= 60) {
+        qualityClass = 'bg-yellow-600';
+        qualityText = 'Average';
+      }
+      
+      let recommendationsHtml = '';
+      if (data.recommendations && data.recommendations.all && data.recommendations.all.length > 0) {
+        recommendationsHtml = `
+          <div class="mt-6">
+            <h3 class="text-xl font-bold mb-4">🎯 Recommendations</h3>
+            <div class="space-y-3">
+              ${data.recommendations.all.slice(0, 5).map(rec => `
+                <div class="bg-gray-700 p-4 rounded-lg">
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="font-bold">${rec.title}</span>
+                    <span class="text-sm px-2 py-1 rounded ${rec.impact === 'High' ? 'bg-red-600' : rec.impact === 'Medium' ? 'bg-yellow-600' : 'bg-blue-600'}">${rec.impact}</span>
+                  </div>
+                  <p class="text-sm text-gray-300 mb-2">${rec.description}</p>
+                  ${rec.howToFix ? `<div class="text-xs text-gray-400 bg-gray-800 p-2 rounded mt-2">${rec.howToFix.split('\n')[0]}</div>` : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+      
+      modalContent.innerHTML = `
+        <div class="p-8">
+          <div class="flex justify-between items-start mb-6">
+            <h2 class="text-3xl font-bold">Scan Results</h2>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+          </div>
+          
+          <div class="text-center mb-6">
+            <div class="text-6xl font-bold mb-2">
+              <span class="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">${data.score}</span>
+              <span class="text-gray-400 text-2xl">/100</span>
+            </div>
+            <div class="inline-block px-4 py-2 ${qualityClass} rounded-full font-bold">
+              ${qualityText}
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-3 gap-4 mb-6">
+            <div class="bg-gray-700 p-4 rounded-lg text-center">
+              <div class="text-sm text-gray-400 mb-1">GRAAF Score</div>
+              <div class="text-2xl font-bold text-purple-400">${data.metrics?.graaf || 0}/50</div>
+            </div>
+            <div class="bg-gray-700 p-4 rounded-lg text-center">
+              <div class="text-sm text-gray-400 mb-1">CRAFT Score</div>
+              <div class="text-2xl font-bold text-blue-400">${data.metrics?.craft || 0}/30</div>
+            </div>
+            <div class="bg-gray-700 p-4 rounded-lg text-center">
+              <div class="text-sm text-gray-400 mb-1">Technical</div>
+              <div class="text-2xl font-bold text-green-400">${data.metrics?.technical || 0}/20</div>
+            </div>
+          </div>
+          
+          ${recommendationsHtml}
+          
+          <div class="mt-6 pt-6 border-t border-gray-700">
+            <div class="flex gap-3">
+              <button onclick="closeModal()" class="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
+                Close
+              </button>
+              <button onclick="downloadScanReport()" class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
+                📊 Download Report
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      modal.classList.remove('hidden');
+    }
+
     function closeModal() {
       document.getElementById('scanModal').classList.add('hidden');
+    }
+
+    function downloadScanReport() {
+      if (!lastScanData) {
+        alert('No scan data available');
+        return;
+      }
+      
+      const dataStr = JSON.stringify(lastScanData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `scan-report-${Date.now()}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
     }
 
     async function loadLeaderboard() {
@@ -1203,7 +1059,6 @@
       const email = prompt('Enter your email to get notified when Lifetime Deals launch:');
       if (email && email.includes('@')) {
         alert('✅ Thanks! We\'ll notify you at ' + email + ' when LTD launches!');
-        // TODO: Save email to backend
       } else if (email) {
         alert('Please enter a valid email address');
       }
@@ -1225,122 +1080,6 @@
       };
       return names[countryCode] || countryCode;
     }
-    // ============================================
-// SCANNER FIX - ADD MISSING FUNCTIONS
-// ============================================
-
-function showScanResults(data) {
-  const modal = document.getElementById('scanModal');
-  const modalContent = modal.querySelector('.modal-content');
-  
-  // Build quality badge
-  let qualityClass = 'bg-red-600';
-  let qualityText = data.quality || 'Poor';
-  
-  if (data.score >= 90) {
-    qualityClass = 'bg-green-600';
-    qualityText = 'Excellent';
-  } else if (data.score >= 75) {
-    qualityClass = 'bg-blue-600';
-    qualityText = 'Good';
-  } else if (data.score >= 60) {
-    qualityClass = 'bg-yellow-600';
-    qualityText = 'Average';
-  }
-  
-  // Build recommendations HTML
-  let recommendationsHtml = '';
-  if (data.recommendations && data.recommendations.all && data.recommendations.all.length > 0) {
-    recommendationsHtml = `
-      <div class="mt-6">
-        <h3 class="text-xl font-bold mb-4">🎯 Recommendations</h3>
-        <div class="space-y-3">
-          ${data.recommendations.all.slice(0, 5).map(rec => `
-            <div class="bg-gray-700 p-4 rounded-lg">
-              <div class="flex items-center justify-between mb-2">
-                <span class="font-bold">${rec.title}</span>
-                <span class="text-sm px-2 py-1 rounded ${rec.impact === 'High' ? 'bg-red-600' : rec.impact === 'Medium' ? 'bg-yellow-600' : 'bg-blue-600'}">${rec.impact}</span>
-              </div>
-              <p class="text-sm text-gray-300 mb-2">${rec.description}</p>
-              ${rec.howToFix ? `<div class="text-xs text-gray-400 bg-gray-800 p-2 rounded mt-2">${rec.howToFix.split('\n')[0]}</div>` : ''}
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
-  }
-  
-  // Build modal content
-  modalContent.innerHTML = `
-    <div class="p-8">
-      <div class="flex justify-between items-start mb-6">
-        <h2 class="text-3xl font-bold">Scan Results</h2>
-        <button onclick="closeModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
-      </div>
-      
-      <div class="text-center mb-6">
-        <div class="text-6xl font-bold mb-2">
-          <span class="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">${data.score}</span>
-          <span class="text-gray-400 text-2xl">/100</span>
-        </div>
-        <div class="inline-block px-4 py-2 ${qualityClass} rounded-full font-bold">
-          ${qualityText}
-        </div>
-      </div>
-      
-      <div class="grid grid-cols-3 gap-4 mb-6">
-        <div class="bg-gray-700 p-4 rounded-lg text-center">
-          <div class="text-sm text-gray-400 mb-1">GRAAF Score</div>
-          <div class="text-2xl font-bold text-purple-400">${data.metrics?.graaf || 0}/50</div>
-        </div>
-        <div class="bg-gray-700 p-4 rounded-lg text-center">
-          <div class="text-sm text-gray-400 mb-1">CRAFT Score</div>
-          <div class="text-2xl font-bold text-blue-400">${data.metrics?.craft || 0}/30</div>
-        </div>
-        <div class="bg-gray-700 p-4 rounded-lg text-center">
-          <div class="text-sm text-gray-400 mb-1">Technical</div>
-          <div class="text-2xl font-bold text-green-400">${data.metrics?.technical || 0}/20</div>
-        </div>
-      </div>
-      
-      ${recommendationsHtml}
-      
-      <div class="mt-6 pt-6 border-t border-gray-700">
-        <div class="flex gap-3">
-          <button onclick="closeModal()" class="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
-            Close
-          </button>
-          <button onclick="downloadScanReport()" class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
-            📊 Download Report
-          </button>
-        </div>
-      </div>
-    </div>
-  `;
-  
-  modal.classList.remove('hidden');
-}
-
-function closeModal() {
-  document.getElementById('scanModal').classList.add('hidden');
-}
-
-function downloadScanReport() {
-  if (!lastScanData) {
-    alert('No scan data available');
-    return;
-  }
-  
-  // Export as JSON
-  const dataStr = JSON.stringify(lastScanData, null, 2);
-  const dataBlob = new Blob([dataStr], { type: 'application/json' });
-  const url = URL.createObjectURL(dataBlob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `scan-report-${Date.now()}.json`;
-  link.click();
-  URL.revokeObjectURL(url);
-}
   </script>
 
 </body>
