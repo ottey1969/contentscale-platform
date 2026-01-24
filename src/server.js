@@ -1282,8 +1282,15 @@ app.post('/api/scan', async (req, res) => {
   try {
     console.log(`🔍 Scanning: ${url}`);
     
+    // ADD CACHE-BUSTING HEADERS
     const response = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (ContentScale Scanner)' },
+      headers: { 
+        'User-Agent': 'Mozilla/5.0 (ContentScale Scanner)',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      },
+      cache: 'no-store',
       timeout: 10000
     });
     
