@@ -10,7 +10,25 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
+
+// Static files - try multiple locations for Railway
+const fs = require('fs');
+const possiblePublicPaths = [
+  path.join(__dirname, 'public'),      // /app/src/public
+  path.join(__dirname, '..', 'public'), // /app/public (RAILWAY!)
+  'public'                              // relative
+];
+
+let publicPath = possiblePublicPaths[0];
+for (const testPath of possiblePublicPaths) {
+  if (fs.existsSync(testPath)) {
+    publicPath = testPath;
+    console.log('✅ Found public folder at:', publicPath);
+    break;
+  }
+}
+
+app.use(express.static(publicPath));
 
 // Database
 const db = new sqlite3.Database('./contentscale.db', (err) => {
@@ -179,28 +197,70 @@ function getClientIP(req) {
 }
 
 // ============================================
-// HTML ROUTES
+// HTML ROUTES WITH AUTO-DETECTION
 // ============================================
 
+function sendFileWithFallback(res, filename, fallbackMessage) {
+  // Use the publicPath we found earlier
+  const filePath = path.join(publicPath, filename);
+  
+  if (fs.existsSync(filePath)) {
+    console.log(`✅ Serving ${filename} from: ${filePath}`);
+    return res.sendFile(filePath);
+  }
+  
+  console.error(`❌ ${filename} not found at: ${filePath}`);
+  res.status(404).send(`
+    <html>
+      <head>
+        <title>File Not Found - ContentScale</title>
+        <style>
+          body { font-family: Arial; max-width: 600px; margin: 50px auto; padding: 20px; background: #1a1a2e; color: #eee; }
+          h1 { color: #ff6b6b; }
+          .info { background: #16213e; padding: 15px; border-radius: 8px; margin: 20px 0; }
+          code { background: #0f3460; padding: 3px 8px; border-radius: 4px; }
+          a { color: #4ecca3; text-decoration: none; }
+          a:hover { text-decoration: underline; }
+        </style>
+      </head>
+      <body>
+        <h1>❌ ${fallbackMessage}</h1>
+        <div class="info">
+          <p><strong>File:</strong> <code>${filename}</code></p>
+          <p><strong>Looked at:</strong> <code>${filePath}</code></p>
+          <p><strong>Public folder:</strong> <code>${publicPath}</code></p>
+          <p><strong>Server directory:</strong> <code>${__dirname}</code></p>
+        </div>
+        <h3>🔧 Quick Fix:</h3>
+        <p>Upload <code>${filename}</code> to your public folder and redeploy.</p>
+        <h3>📊 Working API Routes:</h3>
+        <ul>
+          <li><a href="/api/leaderboard">GET /api/leaderboard</a></li>
+          <li><a href="/api/admin/stats">GET /api/admin/stats</a></li>
+        </ul>
+      </body>
+    </html>
+  `);
+}
+
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  sendFileWithFallback(res, 'index.html', 'Scanner Homepage Not Found');
 });
 
 app.get('/admin', (req, res) => {
-  // Simply serve admin.html (Railway/Node will find it in public folder)
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+  sendFileWithFallback(res, 'admin.html', 'Admin Dashboard Not Found');
 });
 
 app.get('/lead-scanner', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'lead-scanner.html'));
+  sendFileWithFallback(res, 'lead-scanner.html', 'Lead Scanner Not Found');
 });
 
 app.get('/scanner', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'scanner.html'));
+  sendFileWithFallback(res, 'scanner.html', 'Content Scanner Not Found');
 });
 
 app.get('/share/:token', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'scanner.html'));
+  sendFileWithFallback(res, 'scanner.html', 'Share Link Scanner Not Found');
 });
 
 // ============================================
@@ -1069,59 +1129,217 @@ app.post('/api/scan', (req, res) => {
   }
 });
 
-function performScan(url, res, clientIP, addToLeaderboard, isLeadScanner) {
-  // Mock scoring
-  const graaf_score = Math.floor(Math.random() * 50) + 1;
-  const craft_score = Math.floor(Math.random() * 30) + 1;
-  const technical_score = Math.floor(Math.random() * 20) + 1;
-  const total_score = graaf_score + craft_score + technical_score;
-
-  const result = {
-    success: true,
-    url,
-    score: total_score,
-    breakdown: {
-      graaf: graaf_score,
-      craft: craft_score,
-      technical: technical_score
-    },
-    scansRemaining: addToLeaderboard ? (isLeadScanner ? 10 : 3) - checkDailyScanLimit(clientIP, isLeadScanner).count : null,
-    timestamp: new Date().toISOString()
-  };
-
-  // Extract domain
-  let domain = '';
+async function performScan(url, res, clientIP, addToLeaderboard, isLeadScanner) {
   try {
+    // Fetch and analyze the actual URL
+    const https = require('https');
+    const http = require('http');
+    
     const urlObj = new URL(url.startsWith('http') ? url : 'https://' + url);
-    domain = urlObj.hostname.replace('www.', '');
-  } catch (e) {
-    domain = url.replace('www.', '').split('/')[0];
-  }
+    const protocol = urlObj.protocol === 'https:' ? https : http;
+    
+    // Fetch HTML content
+    const htmlContent = await new Promise((resolve, reject) => {
+      const req = protocol.get(url, { timeout: 10000 }, (response) => {
+        let data = '';
+        response.on('data', chunk => data += chunk);
+        response.on('end', () => resolve(data));
+      });
+      req.on('error', reject);
+      req.on('timeout', () => {
+        req.destroy();
+        reject(new Error('Request timeout'));
+      });
+    });
 
-  // Save to scan_history
-  db.run(
-    `INSERT INTO scan_history (url, domain, score, graaf_score, craft_score, technical_score, ip_address, scan_date) 
-     VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-    [url, domain, total_score, graaf_score, craft_score, technical_score, clientIP],
-    function(err) {
-      if (err) console.error('Scan history save error:', err);
+    // GRAAF SCORING (50 points max)
+    let graaf_score = 0;
+    
+    // G - Genuinely Credible (10 points)
+    const hasAuthor = /<meta[^>]*name=["']author["'][^>]*>/i.test(htmlContent) || 
+                     /by\s+[\w\s]+/i.test(htmlContent);
+    const hasDate = /<time/i.test(htmlContent) || 
+                   /<meta[^>]*property=["']article:published_time["'][^>]*>/i.test(htmlContent);
+    const hasSources = (htmlContent.match(/https?:\/\//g) || []).length > 5;
+    graaf_score += hasAuthor ? 4 : 0;
+    graaf_score += hasDate ? 3 : 0;
+    graaf_score += hasSources ? 3 : 0;
+    
+    // R - Relevance (10 points)
+    const titleMatch = htmlContent.match(/<title[^>]*>([^<]+)<\/title>/i);
+    const h1Match = htmlContent.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+    const hasTitle = titleMatch && titleMatch[1].length > 10;
+    const hasH1 = h1Match && h1Match[1].length > 10;
+    const hasDescription = /<meta[^>]*name=["']description["'][^>]*>/i.test(htmlContent);
+    graaf_score += hasTitle ? 4 : 0;
+    graaf_score += hasH1 ? 3 : 0;
+    graaf_score += hasDescription ? 3 : 0;
+    
+    // A - Actionability (10 points)
+    const hasCTA = /button|download|subscribe|contact|buy|get started/i.test(htmlContent);
+    const hasLinks = (htmlContent.match(/<a /g) || []).length > 10;
+    const hasForm = /<form/i.test(htmlContent);
+    graaf_score += hasCTA ? 4 : 0;
+    graaf_score += hasLinks ? 3 : 0;
+    graaf_score += hasForm ? 3 : 0;
+    
+    // A - Accuracy (10 points)
+    const wordCount = htmlContent.replace(/<[^>]*>/g, '').split(/\s+/).length;
+    const hasSubstantialContent = wordCount > 300;
+    const hasStructure = (htmlContent.match(/<h[2-6]/g) || []).length > 3;
+    graaf_score += hasSubstantialContent ? 5 : Math.min(Math.floor(wordCount / 100), 5);
+    graaf_score += hasStructure ? 5 : 0;
+    
+    // F - Freshness (10 points)
+    const currentYear = new Date().getFullYear();
+    const lastYear = currentYear - 1;
+    const hasCurrentYear = new RegExp(currentYear.toString()).test(htmlContent);
+    const hasRecentYear = new RegExp(lastYear.toString()).test(htmlContent);
+    const hasUpdatedDate = /<meta[^>]*property=["']article:modified_time["'][^>]*>/i.test(htmlContent);
+    graaf_score += hasCurrentYear ? 5 : (hasRecentYear ? 3 : 0);
+    graaf_score += hasUpdatedDate ? 5 : 0;
+
+    // CRAFT SCORING (30 points max)
+    let craft_score = 0;
+    
+    // Clarity (10 points)
+    const hasCleanHTML = !/<table.*<table/s.test(htmlContent);
+    const hasParagraphs = (htmlContent.match(/<p>/g) || []).length > 5;
+    craft_score += hasCleanHTML ? 5 : 0;
+    craft_score += hasParagraphs ? 5 : 0;
+    
+    // Readability (10 points)
+    const avgWordsPerSentence = wordCount / Math.max((htmlContent.match(/\./g) || []).length, 1);
+    const goodReadability = avgWordsPerSentence < 25;
+    const hasLists = /<ul>|<ol>/i.test(htmlContent);
+    craft_score += goodReadability ? 5 : 0;
+    craft_score += hasLists ? 5 : 0;
+    
+    // Format & Trust (10 points)
+    const hasImages = /<img/i.test(htmlContent);
+    const hasHTTPS = url.startsWith('https');
+    craft_score += hasImages ? 5 : 0;
+    craft_score += hasHTTPS ? 5 : 0;
+
+    // TECHNICAL SCORING (20 points max)
+    let technical_score = 0;
+    
+    // Schema markup (5 points)
+    const hasSchema = /"@type":|"@context"/i.test(htmlContent);
+    technical_score += hasSchema ? 5 : 0;
+    
+    // Meta tags (5 points)
+    const hasMetaTags = /<meta/gi.test(htmlContent);
+    const metaCount = (htmlContent.match(/<meta/gi) || []).length;
+    technical_score += Math.min(metaCount, 5);
+    
+    // Internal links (5 points)
+    const domain = urlObj.hostname;
+    const internalLinkRegex = new RegExp(`href=["'](?:https?:\\/\\/${domain}|\\/)[^"']*["']`, 'gi');
+    const internalLinks = (htmlContent.match(internalLinkRegex) || []).length;
+    technical_score += Math.min(Math.floor(internalLinks / 3), 5);
+    
+    // Performance indicators (5 points)
+    const hasCDN = /cdn\.|cloudflare|cloudfront/i.test(htmlContent);
+    const hasOptimizedImages = /loading=["']lazy["']/i.test(htmlContent);
+    technical_score += hasCDN ? 3 : 0;
+    technical_score += hasOptimizedImages ? 2 : 0;
+
+    const total_score = Math.min(graaf_score + craft_score + technical_score, 100);
+
+    const result = {
+      success: true,
+      url,
+      score: total_score,
+      breakdown: {
+        graaf: graaf_score,
+        craft: craft_score,
+        technical: technical_score
+      },
+      scansRemaining: addToLeaderboard ? (isLeadScanner ? 10 : 3) - checkDailyScanLimit(clientIP, isLeadScanner).count : null,
+      timestamp: new Date().toISOString()
+    };
+
+    console.log('✅ Real scan completed:', url, 'Score:', total_score);
+    
+    // Extract domain from successful scan
+    let domain = '';
+    try {
+      domain = urlObj.hostname.replace('www.', '');
+    } catch (e) {
+      domain = url.replace('www.', '').split('/')[0];
     }
-  );
 
-  // Auto-submit to leaderboard if good score
-  if (addToLeaderboard && total_score >= 80) {
+    // Save to scan_history
     db.run(
-      `INSERT INTO leaderboard (domain, company, score, scan_date, updated_at)
-       VALUES (?, 'Anonymous', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-       ON CONFLICT(domain) DO UPDATE SET 
-         score = CASE WHEN excluded.score > score THEN excluded.score ELSE score END,
-         scan_date = CASE WHEN excluded.score > score THEN CURRENT_TIMESTAMP ELSE scan_date END,
-         updated_at = CURRENT_TIMESTAMP`,
-      [domain, total_score]
+      `INSERT INTO scan_history (url, domain, score, graaf_score, craft_score, technical_score, ip_address, scan_date) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      [url, domain, total_score, graaf_score, craft_score, technical_score, clientIP],
+      function(err) {
+        if (err) console.error('Scan history save error:', err);
+      }
     );
-  }
 
-  res.json(result);
+    // Auto-submit to leaderboard if good score
+    if (addToLeaderboard && total_score >= 70) {
+      db.run(
+        `INSERT INTO leaderboard (domain, company, score, scan_date, updated_at)
+         VALUES (?, 'Anonymous', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+         ON CONFLICT(domain) DO UPDATE SET 
+           score = CASE WHEN excluded.score > score THEN excluded.score ELSE score END,
+           scan_date = CASE WHEN excluded.score > score THEN CURRENT_TIMESTAMP ELSE scan_date END,
+           updated_at = CURRENT_TIMESTAMP`,
+        [domain, total_score],
+        function(err) {
+          if (err) console.error('Leaderboard update error:', err);
+          else console.log('✅ Added to leaderboard:', domain, total_score);
+        }
+      );
+    }
+
+    return res.json(result);
+    
+  } catch (error) {
+    console.error('❌ Scan error:', error.message);
+    
+    // Fallback to basic scoring if fetch fails
+    const result = {
+      success: true,
+      url,
+      score: 50,
+      breakdown: {
+        graaf: 25,
+        craft: 15,
+        technical: 10
+      },
+      scansRemaining: addToLeaderboard ? (isLeadScanner ? 10 : 3) - checkDailyScanLimit(clientIP, isLeadScanner).count : null,
+      timestamp: new Date().toISOString(),
+      error: 'Could not fetch URL: ' + error.message
+    };
+
+    console.log('⚠️ Fallback score:', url, 'Error:', error.message);
+
+    // Extract domain for fallback
+    let domain = '';
+    try {
+      const urlObj = new URL(url.startsWith('http') ? url : 'https://' + url);
+      domain = urlObj.hostname.replace('www.', '');
+    } catch (e) {
+      domain = url.replace('www.', '').split('/')[0];
+    }
+
+    // Save fallback to scan_history
+    db.run(
+      `INSERT INTO scan_history (url, domain, score, graaf_score, craft_score, technical_score, ip_address, scan_date) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      [url, domain, result.score, result.breakdown.graaf, result.breakdown.craft, result.breakdown.technical, clientIP],
+      function(err) {
+        if (err) console.error('Scan history save error:', err);
+      }
+    );
+
+    return res.json(result);
+  }
 }
 
 // ============================================
