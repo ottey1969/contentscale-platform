@@ -690,6 +690,9 @@
     }
 
     async function performScan() {
+      // RESET PREVIOUS SCAN DATA
+      lastScanData = null;
+      
       const urlInput = document.getElementById('scanInput').value.trim();
       const scanButton = document.getElementById('scanButton');
       
@@ -747,6 +750,8 @@
       const modal = document.getElementById('scanModal');
       const modalContent = modal.querySelector('.modal-content');
       
+      console.log('SCAN DATA:', data); // Debug log
+      
       let qualityClass = 'bg-red-600';
       let qualityText = data.quality || 'Poor';
       
@@ -761,23 +766,73 @@
         qualityText = 'Average';
       }
       
+      // BUILD RECOMMENDATIONS HTML - FIXED VERSION
       let recommendationsHtml = '';
-      if (data.recommendations && data.recommendations.all && data.recommendations.all.length > 0) {
+      
+      // Check all possible paths for recommendations
+      const recs = data.recommendations?.all || data.recommendations || [];
+      
+      console.log('RECOMMENDATIONS:', recs); // Debug log
+      
+      if (recs && recs.length > 0) {
         recommendationsHtml = `
           <div class="mt-6">
-            <h3 class="text-xl font-bold mb-4">🎯 Recommendations</h3>
-            <div class="space-y-3">
-              ${data.recommendations.all.slice(0, 5).map(rec => `
-                <div class="bg-gray-700 p-4 rounded-lg">
-                  <div class="flex items-center justify-between mb-2">
-                    <span class="font-bold">${rec.title}</span>
-                    <span class="text-sm px-2 py-1 rounded ${rec.impact === 'High' ? 'bg-red-600' : rec.impact === 'Medium' ? 'bg-yellow-600' : 'bg-blue-600'}">${rec.impact}</span>
+            <h3 class="text-xl font-bold mb-4">🎯 Top ${Math.min(5, recs.length)} Recommendations</h3>
+            <div class="space-y-3 max-h-96 overflow-y-auto">
+              ${recs.slice(0, 10).map(rec => `
+                <div class="bg-gray-700 p-4 rounded-lg border-l-4 ${
+                  rec.impact === 'High' ? 'border-red-500' : 
+                  rec.impact === 'Medium' ? 'border-yellow-500' : 
+                  'border-blue-500'
+                }">
+                  <div class="flex items-start justify-between mb-2">
+                    <div class="flex-1">
+                      <div class="flex items-center gap-2 mb-1">
+                        <span class="font-bold text-white">${rec.title}</span>
+                        <span class="text-xs px-2 py-1 rounded ${
+                          rec.impact === 'High' ? 'bg-red-600' : 
+                          rec.impact === 'Medium' ? 'bg-yellow-600' : 
+                          'bg-blue-600'
+                        }">${rec.impact || 'Medium'}</span>
+                        <span class="text-xs px-2 py-1 rounded bg-green-600">${rec.points || '+0'}</span>
+                      </div>
+                      <div class="text-xs text-gray-400 mb-2">${rec.category || 'General'}</div>
+                    </div>
                   </div>
-                  <p class="text-sm text-gray-300 mb-2">${rec.description}</p>
-                  ${rec.howToFix ? `<div class="text-xs text-gray-400 bg-gray-800 p-2 rounded mt-2">${rec.howToFix.split('\n')[0]}</div>` : ''}
+                  <p class="text-sm text-gray-300 mb-3">${rec.description || ''}</p>
+                  ${rec.howToFix ? `
+                    <details class="mt-2">
+                      <summary class="text-xs text-purple-400 cursor-pointer hover:text-purple-300">
+                        💡 How to fix (click to expand)
+                      </summary>
+                      <div class="text-xs text-gray-400 bg-gray-800 p-3 rounded mt-2 whitespace-pre-line">${rec.howToFix}</div>
+                    </details>
+                  ` : ''}
+                  ${rec.example ? `
+                    <details class="mt-2">
+                      <summary class="text-xs text-blue-400 cursor-pointer hover:text-blue-300">
+                        📝 Example code (click to expand)
+                      </summary>
+                      <div class="text-xs text-gray-400 bg-gray-900 p-3 rounded mt-2 font-mono overflow-x-auto">${rec.example}</div>
+                    </details>
+                  ` : ''}
                 </div>
               `).join('')}
             </div>
+            
+            ${recs.length > 10 ? `
+              <div class="mt-3 text-center text-sm text-gray-400">
+                Showing 10 of ${recs.length} recommendations. Download full report for all details.
+              </div>
+            ` : ''}
+          </div>
+        `;
+      } else {
+        recommendationsHtml = `
+          <div class="mt-6 p-4 bg-green-900 bg-opacity-20 border border-green-600 rounded-lg">
+            <p class="text-green-400 text-center">
+              ✅ <strong>Excellent!</strong> No major recommendations. Your content is well-optimized!
+            </p>
           </div>
         `;
       }
@@ -785,7 +840,10 @@
       modalContent.innerHTML = `
         <div class="p-8">
           <div class="flex justify-between items-start mb-6">
-            <h2 class="text-3xl font-bold">Scan Results</h2>
+            <div>
+              <h2 class="text-3xl font-bold mb-2">Scan Results</h2>
+              <p class="text-sm text-gray-400">${data.url || 'Unknown URL'}</p>
+            </div>
             <button onclick="closeModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
           </div>
           
@@ -803,14 +861,17 @@
             <div class="bg-gray-700 p-4 rounded-lg text-center">
               <div class="text-sm text-gray-400 mb-1">GRAAF Score</div>
               <div class="text-2xl font-bold text-purple-400">${data.metrics?.graaf || 0}/50</div>
+              <div class="text-xs text-gray-500 mt-1">${data.breakdown?.graaf?.percentage || 0}%</div>
             </div>
             <div class="bg-gray-700 p-4 rounded-lg text-center">
               <div class="text-sm text-gray-400 mb-1">CRAFT Score</div>
               <div class="text-2xl font-bold text-blue-400">${data.metrics?.craft || 0}/30</div>
+              <div class="text-xs text-gray-500 mt-1">${data.breakdown?.craft?.percentage || 0}%</div>
             </div>
             <div class="bg-gray-700 p-4 rounded-lg text-center">
               <div class="text-sm text-gray-400 mb-1">Technical</div>
               <div class="text-2xl font-bold text-green-400">${data.metrics?.technical || 0}/20</div>
+              <div class="text-xs text-gray-500 mt-1">${data.breakdown?.technical?.percentage || 0}%</div>
             </div>
           </div>
           
@@ -822,7 +883,7 @@
                 Close
               </button>
               <button onclick="downloadScanReport()" class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
-                📊 Download Report
+                📊 Download Full Report
               </button>
             </div>
           </div>
