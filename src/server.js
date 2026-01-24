@@ -1,1144 +1,52 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const bodyParser = require('body-parser');
 const cors = require('cors');
-const bcrypt = require('bcrypt');
+const path = require('path');
+const { Pool } = require('pg');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Database connection
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+
+// Test database connection
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) {
+    console.error('❌ Database connection error:', err);
+  } else {
+    console.log(`✅ Database connected at ${res.rows[0].now}`);
+    console.log(`🚀 Server starting on port ${PORT}`);
+  }
+});
+
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// Static files - try multiple locations for Railway
-const fs = require('fs');
-const possiblePublicPaths = [
-  path.join(__dirname, 'public'),      // /app/src/public
-  path.join(__dirname, '..', 'public'), // /app/public (RAILWAY!)
-  'public'                              // relative
-];
-
-let publicPath = possiblePublicPaths[0];
-for (const testPath of possiblePublicPaths) {
-  if (fs.existsSync(testPath)) {
-    publicPath = testPath;
-    console.log('✅ Found public folder at:', publicPath);
-    break;
-  }
-}
-
-app.use(express.static(publicPath));
-
-// Database
-const db = new sqlite3.Database('./contentscale.db', (err) => {
-  if (err) {
-    console.error('Database error:', err);
-  } else {
-    console.log('✅ Database connected');
-  }
-});
+// Serve static files
+app.use(express.static(path.join(__dirname, '../public')));
+app.use('/js', express.static(path.join(__dirname, '../js')));
 
 // ============================================
-// DATABASE TABLES
+// PERFORM SCAN FUNCTION - FIXED VERSION
 // ============================================
-
-// Super admins
-db.run(`CREATE TABLE IF NOT EXISTS super_admins (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  email TEXT UNIQUE NOT NULL,
-  password_hash TEXT NOT NULL,
-  name TEXT NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-)`);
-
-// Agencies
-db.run(`CREATE TABLE IF NOT EXISTS agencies (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
-  contact_email TEXT UNIQUE NOT NULL,
-  phone TEXT,
-  website TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-)`);
-
-// Clients
-db.run(`CREATE TABLE IF NOT EXISTS clients (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  agency_id INTEGER,
-  name TEXT NOT NULL,
-  email TEXT NOT NULL,
-  website TEXT,
-  industry TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (agency_id) REFERENCES agencies(id) ON DELETE CASCADE
-)`);
-
-// Scans
-db.run(`CREATE TABLE IF NOT EXISTS scans (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  client_id INTEGER,
-  url TEXT NOT NULL,
-  score INTEGER NOT NULL,
-  graaf_score INTEGER,
-  craft_score INTEGER,
-  technical_score INTEGER,
-  scan_data TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL
-)`);
-
-// Share links - FIX: Ensure client_company column exists
-db.run(`CREATE TABLE IF NOT EXISTS share_links (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  token TEXT UNIQUE NOT NULL,
-  client_email TEXT NOT NULL,
-  client_name TEXT NOT NULL,
-  client_company TEXT,
-  scans_limit INTEGER DEFAULT 3,
-  scans_used INTEGER DEFAULT 0,
-  valid_days INTEGER DEFAULT 7,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  expires_at DATETIME NOT NULL,
-  is_active BOOLEAN DEFAULT 1
-)`, (err) => {
-  if (!err) {
-    // Check if client_company column exists, add if not
-    db.all("PRAGMA table_info(share_links)", (err, columns) => {
-      if (!err && columns) {
-        const hasClientCompany = columns.some(col => col.name === 'client_company');
-        if (!hasClientCompany) {
-          db.run("ALTER TABLE share_links ADD COLUMN client_company TEXT", (alterErr) => {
-            if (!alterErr) console.log('✅ Added client_company to share_links');
-          });
-        }
-      }
-    });
-  }
-});
-
-// Leaderboard
-db.run(`CREATE TABLE IF NOT EXISTS leaderboard (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  domain TEXT UNIQUE NOT NULL,
-  company TEXT,
-  score INTEGER NOT NULL,
-  scan_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-  opt_out BOOLEAN DEFAULT 0,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-)`);
-
-// Scan history
-db.run(`CREATE TABLE IF NOT EXISTS scan_history (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  url TEXT NOT NULL,
-  domain TEXT NOT NULL,
-  score INTEGER NOT NULL,
-  graaf_score INTEGER,
-  craft_score INTEGER,
-  technical_score INTEGER,
-  ip_address TEXT,
-  user_agent TEXT,
-  scan_date DATETIME DEFAULT CURRENT_TIMESTAMP
-)`);
-
-// ============================================
-// DAILY SCAN LIMITS
-// ============================================
-
-const dailyScanLimits = new Map();
-const leadScannerLimits = new Map();
-
-function checkDailyScanLimit(ip, isLeadScanner = false) {
-  const today = new Date().toISOString().split('T')[0];
-  const storage = isLeadScanner ? leadScannerLimits : dailyScanLimits;
-  const limit = isLeadScanner ? 10 : 3; // Lead scanner: 10/day, Regular: 3/day
-  
-  if (!storage.has(ip)) {
-    storage.set(ip, { date: today, count: 0 });
-  }
-  
-  const record = storage.get(ip);
-  
-  if (record.date !== today) {
-    record.date = today;
-    record.count = 0;
-  }
-  
-  return {
-    count: record.count,
-    limit: limit,
-    exceeded: record.count >= limit
-  };
-}
-
-function incrementScanLimit(ip, isLeadScanner = false) {
-  const today = new Date().toISOString().split('T')[0];
-  const storage = isLeadScanner ? leadScannerLimits : dailyScanLimits;
-  
-  if (!storage.has(ip)) {
-    storage.set(ip, { date: today, count: 1 });
-  } else {
-    const record = storage.get(ip);
-    if (record.date === today) {
-      record.count++;
-    } else {
-      record.date = today;
-      record.count = 1;
-    }
-  }
-}
-
-function getClientIP(req) {
-  return req.headers['x-forwarded-for']?.split(',')[0].trim() || 
-         req.headers['x-real-ip'] || 
-         req.socket.remoteAddress || 
-         'unknown';
-}
-
-// ============================================
-// HTML ROUTES WITH AUTO-DETECTION
-// ============================================
-
-function sendFileWithFallback(res, filename, fallbackMessage) {
-  // Use the publicPath we found earlier
-  const filePath = path.join(publicPath, filename);
-  
-  if (fs.existsSync(filePath)) {
-    console.log(`✅ Serving ${filename} from: ${filePath}`);
-    return res.sendFile(filePath);
-  }
-  
-  console.error(`❌ ${filename} not found at: ${filePath}`);
-  res.status(404).send(`
-    <html>
-      <head>
-        <title>File Not Found - ContentScale</title>
-        <style>
-          body { font-family: Arial; max-width: 600px; margin: 50px auto; padding: 20px; background: #1a1a2e; color: #eee; }
-          h1 { color: #ff6b6b; }
-          .info { background: #16213e; padding: 15px; border-radius: 8px; margin: 20px 0; }
-          code { background: #0f3460; padding: 3px 8px; border-radius: 4px; }
-          a { color: #4ecca3; text-decoration: none; }
-          a:hover { text-decoration: underline; }
-        </style>
-      </head>
-      <body>
-        <h1>❌ ${fallbackMessage}</h1>
-        <div class="info">
-          <p><strong>File:</strong> <code>${filename}</code></p>
-          <p><strong>Looked at:</strong> <code>${filePath}</code></p>
-          <p><strong>Public folder:</strong> <code>${publicPath}</code></p>
-          <p><strong>Server directory:</strong> <code>${__dirname}</code></p>
-        </div>
-        <h3>🔧 Quick Fix:</h3>
-        <p>Upload <code>${filename}</code> to your public folder and redeploy.</p>
-        <h3>📊 Working API Routes:</h3>
-        <ul>
-          <li><a href="/api/leaderboard">GET /api/leaderboard</a></li>
-          <li><a href="/api/admin/stats">GET /api/admin/stats</a></li>
-        </ul>
-      </body>
-    </html>
-  `);
-}
-
-app.get('/', (req, res) => {
-  sendFileWithFallback(res, 'index.html', 'Scanner Homepage Not Found');
-});
-
-app.get('/admin', (req, res) => {
-  sendFileWithFallback(res, 'admin-dashboard.html', 'Admin Dashboard Not Found');
-});
-
-app.get('/lead-scanner', (req, res) => {
-  sendFileWithFallback(res, 'lead-scanner.html', 'Lead Scanner Not Found');
-});
-
-app.get('/scanner', (req, res) => {
-  sendFileWithFallback(res, 'scanner.html', 'Content Scanner Not Found');
-});
-
-app.get('/share/:token', (req, res) => {
-  sendFileWithFallback(res, 'scanner.html', 'Share Link Scanner Not Found');
-});
-
-// ============================================
-// ADMIN LOGIN
-// ============================================
-
-app.post('/api/admin/login', async (req, res) => {
-  const { email, password } = req.body;
-  
-  if (!email || !password) {
-    return res.status(400).json({ success: false, error: 'Email and password required' });
-  }
-
-  db.get('SELECT * FROM super_admins WHERE email = ?', [email], async (err, admin) => {
-    if (err) {
-      return res.status(500).json({ success: false, error: 'Database error' });
-    }
-    
-    if (!admin) {
-      return res.status(401).json({ success: false, error: 'Invalid credentials' });
-    }
-
-    try {
-      const match = await bcrypt.compare(password, admin.password_hash);
-      if (!match) {
-        return res.status(401).json({ success: false, error: 'Invalid credentials' });
-      }
-
-      res.json({
-        success: true,
-        admin: {
-          id: admin.id,
-          email: admin.email,
-          name: admin.name
-        }
-      });
-    } catch (error) {
-      res.status(500).json({ success: false, error: 'Authentication error' });
-    }
-  });
-});
-
-// ============================================
-// ADMIN STATS
-// ============================================
-
-app.get('/api/admin/stats', (req, res) => {
-  const stats = {};
-
-  db.get('SELECT COUNT(*) as count FROM agencies', (err, result) => {
-    stats.totalAgencies = result ? result.count : 0;
-
-    db.get('SELECT COUNT(*) as count FROM clients', (err, result) => {
-      stats.totalClients = result ? result.count : 0;
-
-      db.get('SELECT COUNT(*) as count FROM scans', (err, result) => {
-        stats.totalScans = result ? result.count : 0;
-
-        db.get('SELECT AVG(score) as avg FROM scans', (err, result) => {
-          stats.averageScore = result && result.avg ? Math.round(result.avg) : 0;
-
-          res.json({ success: true, stats });
-        });
-      });
-    });
-  });
-});
-
-// ============================================
-// ADMINS CRUD - FIX #2
-// ============================================
-
-app.get('/api/admins', (req, res) => {
-  db.all('SELECT id, email, name, created_at FROM super_admins ORDER BY created_at DESC', (err, rows) => {
-    if (err) {
-      return res.status(500).json({ success: false, error: 'Database error' });
-    }
-    res.json({ success: true, admins: rows || [] });
-  });
-});
-
-// FIX #2: Admin creation - proper field validation
-app.post('/api/admins', async (req, res) => {
-  const { email, password, name } = req.body;
-
-  console.log('Creating admin:', { email, name, hasPassword: !!password });
-
-  // Validate all fields
-  if (!email || !password || !name) {
-    return res.status(400).json({ 
-      success: false, 
-      error: 'All fields required: email, password, name',
-      missing: {
-        email: !email,
-        password: !password,
-        name: !name
-      }
-    });
-  }
-
-  if (password.length < 6) {
-    return res.status(400).json({ 
-      success: false, 
-      error: 'Password must be at least 6 characters' 
-    });
-  }
-
-  try {
-    const password_hash = await bcrypt.hash(password, 10);
-    
-    db.run(
-      'INSERT INTO super_admins (email, password_hash, name) VALUES (?, ?, ?)',
-      [email, password_hash, name],
-      function(err) {
-        if (err) {
-          console.error('Admin creation error:', err);
-          if (err.message.includes('UNIQUE')) {
-            return res.status(400).json({ success: false, error: 'Email already exists' });
-          }
-          return res.status(500).json({ success: false, error: 'Database error: ' + err.message });
-        }
-        
-        console.log('✅ Admin created successfully, ID:', this.lastID);
-        res.json({ 
-          success: true, 
-          admin: { 
-            id: this.lastID, 
-            email, 
-            name 
-          } 
-        });
-      }
-    );
-  } catch (error) {
-    console.error('Password hashing error:', error);
-    res.status(500).json({ success: false, error: 'Password hashing error' });
-  }
-});
-
-app.delete('/api/admins/:id', (req, res) => {
-  const { id } = req.params;
-  
-  db.run('DELETE FROM super_admins WHERE id = ?', [id], function(err) {
-    if (err) {
-      return res.status(500).json({ success: false, error: 'Database error' });
-    }
-    if (this.changes === 0) {
-      return res.status(404).json({ success: false, error: 'Admin not found' });
-    }
-    res.json({ success: true });
-  });
-});
-
-// ============================================
-// AGENCIES CRUD - FIX #3
-// ============================================
-
-app.get('/api/agencies', (req, res) => {
-  db.all('SELECT * FROM agencies ORDER BY created_at DESC', (err, rows) => {
-    if (err) {
-      return res.status(500).json({ success: false, error: 'Database error' });
-    }
-    res.json({ success: true, agencies: rows || [] });
-  });
-});
-
-// FIX #3: Agency creation - proper validation and error handling
-app.post('/api/agencies', (req, res) => {
-  const { name, contact_email, phone, website } = req.body;
-
-  console.log('Creating agency:', { name, contact_email, phone, website });
-
-  if (!name || !contact_email) {
-    return res.status(400).json({ 
-      success: false, 
-      error: 'Name and contact email are required',
-      missing: {
-        name: !name,
-        contact_email: !contact_email
-      }
-    });
-  }
-
-  // Email validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(contact_email)) {
-    return res.status(400).json({ 
-      success: false, 
-      error: 'Invalid email format' 
-    });
-  }
-
-  db.run(
-    'INSERT INTO agencies (name, contact_email, phone, website) VALUES (?, ?, ?, ?)',
-    [name, contact_email, phone || null, website || null],
-    function(err) {
-      if (err) {
-        console.error('Agency creation error:', err);
-        if (err.message.includes('UNIQUE')) {
-          return res.status(400).json({ 
-            success: false, 
-            error: 'Email already exists. Please use a different email.' 
-          });
-        }
-        return res.status(500).json({ 
-          success: false, 
-          error: 'Database error: ' + err.message 
-        });
-      }
-      
-      console.log('✅ Agency created successfully, ID:', this.lastID);
-      res.json({ 
-        success: true, 
-        agency: { 
-          id: this.lastID, 
-          name, 
-          contact_email, 
-          phone, 
-          website 
-        } 
-      });
-    }
-  );
-});
-
-app.put('/api/agencies/:id', (req, res) => {
-  const { id } = req.params;
-  const { name, contact_email, phone, website } = req.body;
-
-  if (!name || !contact_email) {
-    return res.status(400).json({ success: false, error: 'Name and contact email required' });
-  }
-
-  db.run(
-    'UPDATE agencies SET name = ?, contact_email = ?, phone = ?, website = ? WHERE id = ?',
-    [name, contact_email, phone, website, id],
-    function(err) {
-      if (err) {
-        if (err.message.includes('UNIQUE')) {
-          return res.status(400).json({ success: false, error: 'Email already exists' });
-        }
-        return res.status(500).json({ success: false, error: 'Database error' });
-      }
-      if (this.changes === 0) {
-        return res.status(404).json({ success: false, error: 'Agency not found' });
-      }
-      res.json({ success: true });
-    }
-  );
-});
-
-app.delete('/api/agencies/:id', (req, res) => {
-  const { id } = req.params;
-  
-  db.run('DELETE FROM agencies WHERE id = ?', [id], function(err) {
-    if (err) {
-      return res.status(500).json({ success: false, error: 'Database error' });
-    }
-    if (this.changes === 0) {
-      return res.status(404).json({ success: false, error: 'Agency not found' });
-    }
-    res.json({ success: true });
-  });
-});
-
-// ============================================
-// CLIENTS CRUD
-// ============================================
-
-app.get('/api/clients', (req, res) => {
-  const query = `
-    SELECT c.*, a.name as agency_name 
-    FROM clients c
-    LEFT JOIN agencies a ON c.agency_id = a.id
-    ORDER BY c.created_at DESC
-  `;
-  
-  db.all(query, (err, rows) => {
-    if (err) {
-      return res.status(500).json({ success: false, error: 'Database error' });
-    }
-    res.json({ success: true, clients: rows || [] });
-  });
-});
-
-app.post('/api/clients', (req, res) => {
-  const { agency_id, name, email, website, industry } = req.body;
-
-  if (!name || !email) {
-    return res.status(400).json({ success: false, error: 'Name and email required' });
-  }
-
-  db.run(
-    'INSERT INTO clients (agency_id, name, email, website, industry) VALUES (?, ?, ?, ?, ?)',
-    [agency_id || null, name, email, website, industry],
-    function(err) {
-      if (err) {
-        return res.status(500).json({ success: false, error: 'Database error' });
-      }
-      res.json({ 
-        success: true, 
-        client: { id: this.lastID, agency_id, name, email, website, industry } 
-      });
-    }
-  );
-});
-
-app.put('/api/clients/:id', (req, res) => {
-  const { id } = req.params;
-  const { agency_id, name, email, website, industry } = req.body;
-
-  if (!name || !email) {
-    return res.status(400).json({ success: false, error: 'Name and email required' });
-  }
-
-  db.run(
-    'UPDATE clients SET agency_id = ?, name = ?, email = ?, website = ?, industry = ? WHERE id = ?',
-    [agency_id || null, name, email, website, industry, id],
-    function(err) {
-      if (err) {
-        return res.status(500).json({ success: false, error: 'Database error' });
-      }
-      if (this.changes === 0) {
-        return res.status(404).json({ success: false, error: 'Client not found' });
-      }
-      res.json({ success: true });
-    }
-  );
-});
-
-app.delete('/api/clients/:id', (req, res) => {
-  const { id } = req.params;
-  
-  db.run('DELETE FROM clients WHERE id = ?', [id], function(err) {
-    if (err) {
-      return res.status(500).json({ success: false, error: 'Database error' });
-    }
-    if (this.changes === 0) {
-      return res.status(404).json({ success: false, error: 'Client not found' });
-    }
-    res.json({ success: true });
-  });
-});
-
-// ============================================
-// SCANS - FIX #4
-// ============================================
-
-// FIX #4: All scans endpoint
-app.get('/api/scans', (req, res) => {
-  const query = `
-    SELECT s.*, c.name as client_name, c.email as client_email
-    FROM scans s
-    LEFT JOIN clients c ON s.client_id = c.id
-    ORDER BY s.created_at DESC
-  `;
-  
-  db.all(query, (err, rows) => {
-    if (err) {
-      console.error('Get scans error:', err);
-      return res.status(500).json({ success: false, error: 'Database error' });
-    }
-    console.log('✅ Retrieved', rows.length, 'scans');
-    res.json({ success: true, scans: rows || [] });
-  });
-});
-
-app.get('/api/scans/client/:clientId', (req, res) => {
-  const { clientId } = req.params;
-  
-  db.all(
-    'SELECT * FROM scans WHERE client_id = ? ORDER BY created_at DESC',
-    [clientId],
-    (err, rows) => {
-      if (err) {
-        return res.status(500).json({ success: false, error: 'Database error' });
-      }
-      res.json({ success: true, scans: rows || [] });
-    }
-  );
-});
-
-app.delete('/api/scans/:id', (req, res) => {
-  const { id } = req.params;
-  
-  db.run('DELETE FROM scans WHERE id = ?', [id], function(err) {
-    if (err) {
-      return res.status(500).json({ success: false, error: 'Database error' });
-    }
-    if (this.changes === 0) {
-      return res.status(404).json({ success: false, error: 'Scan not found' });
-    }
-    res.json({ success: true });
-  });
-});
-
-// ============================================
-// SHARE LINKS - FIX #5
-// ============================================
-
-app.get('/api/admin/share-links', (req, res) => {
-  db.all(
-    'SELECT * FROM share_links ORDER BY created_at DESC',
-    (err, rows) => {
-      if (err) {
-        console.error('Get share links error:', err);
-        return res.status(500).json({ success: false, error: 'Database error' });
-      }
-      res.json({ success: true, shareLinks: rows || [] });
-    }
-  );
-});
-
-// FIX #5: Create share link with client_company
-app.post('/api/admin/share-links/create', (req, res) => {
-  const { client_email, client_name, client_company, scans_limit, valid_days } = req.body;
-
-  console.log('📝 Creating share link:', { 
-    client_email, 
-    client_name, 
-    client_company, 
-    scans_limit, 
-    valid_days 
-  });
-
-  if (!client_email || !client_name) {
-    return res.status(400).json({ 
-      success: false, 
-      error: 'Client email and name are required' 
-    });
-  }
-
-  const token = require('crypto').randomBytes(16).toString('hex');
-  const expires_at = new Date();
-  expires_at.setDate(expires_at.getDate() + (valid_days || 7));
-
-  const sql = `INSERT INTO share_links 
-    (token, client_email, client_name, client_company, scans_limit, scans_used, valid_days, expires_at, is_active) 
-    VALUES (?, ?, ?, ?, ?, 0, ?, ?, 1)`;
-  
-  const params = [
-    token, 
-    client_email, 
-    client_name, 
-    client_company || null, 
-    scans_limit || 3, 
-    valid_days || 7, 
-    expires_at.toISOString()
-  ];
-
-  db.run(sql, params, function(err) {
-    if (err) {
-      console.error('❌ Share link creation error:', err);
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Database error: ' + err.message 
-      });
-    }
-
-    const shareUrl = `${req.protocol}://${req.get('host')}/share/${token}`;
-    
-    console.log('✅ Share link created successfully, ID:', this.lastID);
-    res.json({ 
-      success: true, 
-      shareLink: {
-        id: this.lastID,
-        token,
-        client_email,
-        client_name,
-        client_company,
-        scans_limit: scans_limit || 3,
-        scans_used: 0,
-        valid_days: valid_days || 7,
-        expires_at: expires_at.toISOString(),
-        is_active: 1,
-        url: shareUrl
-      }
-    });
-  });
-});
-
-// FIX #5: Delete share link
-app.delete('/api/admin/share-links/:id', (req, res) => {
-  const { id } = req.params;
-
-  console.log('🗑️ Deleting share link ID:', id);
-  
-  db.run('DELETE FROM share_links WHERE id = ?', [id], function(err) {
-    if (err) {
-      console.error('❌ Delete error:', err);
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Database error: ' + err.message 
-      });
-    }
-    
-    if (this.changes === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Share link not found' 
-      });
-    }
-    
-    console.log('✅ Share link deleted');
-    res.json({ success: true, message: 'Share link deleted' });
-  });
-});
-
-app.get('/api/share-links/verify/:token', (req, res) => {
-  const { token } = req.params;
-
-  db.get(
-    `SELECT * FROM share_links 
-     WHERE token = ? AND is_active = 1 AND datetime(expires_at) > datetime('now')`,
-    [token],
-    (err, link) => {
-      if (err) {
-        return res.status(500).json({ success: false, error: 'Database error' });
-      }
-
-      if (!link) {
-        return res.status(404).json({ 
-          success: false, 
-          error: 'Invalid or expired link' 
-        });
-      }
-
-      if (link.scans_used >= link.scans_limit) {
-        return res.status(403).json({ 
-          success: false, 
-          error: 'Scan limit reached' 
-        });
-      }
-
-      res.json({ 
-        success: true, 
-        shareLink: {
-          client_name: link.client_name,
-          client_company: link.client_company,
-          scans_remaining: link.scans_limit - link.scans_used,
-          scans_limit: link.scans_limit
-        }
-      });
-    }
-  );
-});
-
-// ============================================
-// LEADERBOARD - FIX #6 & #7
-// ============================================
-
-app.get('/api/admin/leaderboard', (req, res) => {
-  db.all(
-    'SELECT * FROM leaderboard ORDER BY score DESC, updated_at DESC',
-    (err, rows) => {
-      if (err) {
-        return res.status(500).json({ success: false, error: 'Database error' });
-      }
-      res.json({ success: true, entries: rows || [] });
-    }
-  );
-});
-
-// FIX #7: Leaderboard - DISTINCT domains, highest score only
-app.get('/api/leaderboard', (req, res) => {
-  const limit = parseInt(req.query.limit) || 100;
-  
-  // Get UNIQUE domains with HIGHEST score only
-  const query = `
-    SELECT 
-      domain,
-      company,
-      MAX(score) as score,
-      MAX(scan_date) as scan_date,
-      updated_at
-    FROM leaderboard 
-    WHERE opt_out = 0
-    GROUP BY domain
-    ORDER BY score DESC, updated_at DESC
-    LIMIT ?
-  `;
-  
-  db.all(query, [limit], (err, rows) => {
-    if (err) {
-      console.error('Leaderboard error:', err);
-      return res.status(500).json({ success: false, error: 'Database error' });
-    }
-    console.log('✅ Leaderboard:', rows.length, 'unique domains');
-    res.json({ success: true, leaderboard: rows || [] });
-  });
-});
-
-app.post('/api/leaderboard/submit', (req, res) => {
-  const { domain, company, score } = req.body;
-
-  if (!domain || !score) {
-    return res.status(400).json({ 
-      success: false, 
-      error: 'Domain and score required' 
-    });
-  }
-
-  db.get('SELECT * FROM leaderboard WHERE domain = ?', [domain], (err, existing) => {
-    if (err) {
-      return res.status(500).json({ success: false, error: 'Database error' });
-    }
-
-    if (existing) {
-      // Update ONLY if new score is HIGHER
-      if (score > existing.score) {
-        db.run(
-          `UPDATE leaderboard 
-           SET score = ?, company = ?, scan_date = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP 
-           WHERE domain = ?`,
-          [score, company || existing.company, domain],
-          function(err) {
-            if (err) {
-              return res.status(500).json({ success: false, error: 'Database error' });
-            }
-            console.log('✅ Leaderboard updated:', domain, score);
-            res.json({ 
-              success: true, 
-              message: 'Score updated (improved)',
-              improved: true
-            });
-          }
-        );
-      } else {
-        res.json({ 
-          success: true, 
-          message: 'Score not improved',
-          improved: false
-        });
-      }
-    } else {
-      // New entry
-      db.run(
-        `INSERT INTO leaderboard (domain, company, score, scan_date, updated_at) 
-         VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-        [domain, company || 'Anonymous', score],
-        function(err) {
-          if (err) {
-            return res.status(500).json({ success: false, error: 'Database error' });
-          }
-          console.log('✅ Leaderboard new entry:', domain, score);
-          res.json({ 
-            success: true, 
-            message: 'Added to leaderboard',
-            improved: true
-          });
-        }
-      );
-    }
-  });
-});
-
-// FIX #6: Opt-out endpoint (was 404)
-app.post('/api/optout', (req, res) => {
-  const { domain } = req.body;
-
-  console.log('🚫 Opt-out request for domain:', domain);
-
-  if (!domain) {
-    return res.status(400).json({ 
-      success: false, 
-      error: 'Domain is required' 
-    });
-  }
-
-  db.run(
-    'UPDATE leaderboard SET opt_out = 1 WHERE domain = ?',
-    [domain],
-    function(err) {
-      if (err) {
-        console.error('Opt-out error:', err);
-        return res.status(500).json({ success: false, error: 'Database error' });
-      }
-
-      if (this.changes === 0) {
-        return res.status(404).json({ 
-          success: false, 
-          error: 'Domain not found on leaderboard' 
-        });
-      }
-
-      console.log('✅ Domain opted out:', domain);
-      res.json({ 
-        success: true, 
-        message: 'Successfully opted out from leaderboard' 
-      });
-    }
-  );
-});
-
-app.delete('/api/admin/leaderboard/:id', (req, res) => {
-  const { id } = req.params;
-  
-  db.run('DELETE FROM leaderboard WHERE id = ?', [id], function(err) {
-    if (err) {
-      return res.status(500).json({ success: false, error: 'Database error' });
-    }
-    if (this.changes === 0) {
-      return res.status(404).json({ success: false, error: 'Entry not found' });
-    }
-    res.json({ success: true });
-  });
-});
-
-app.put('/api/admin/leaderboard/:id/opt-out', (req, res) => {
-  const { id } = req.params;
-  const { opt_out } = req.body;
-  
-  db.run(
-    'UPDATE leaderboard SET opt_out = ? WHERE id = ?',
-    [opt_out ? 1 : 0, id],
-    function(err) {
-      if (err) {
-        return res.status(500).json({ success: false, error: 'Database error' });
-      }
-      if (this.changes === 0) {
-        return res.status(404).json({ success: false, error: 'Entry not found' });
-      }
-      res.json({ success: true });
-    }
-  );
-});
-
-app.post('/api/claim-leaderboard', (req, res) => {
-  const { domain, company, email } = req.body;
-
-  if (!domain || !company || !email) {
-    return res.status(400).json({ 
-      success: false, 
-      error: 'Domain, company, and email required' 
-    });
-  }
-
-  db.get('SELECT * FROM leaderboard WHERE domain = ?', [domain], (err, entry) => {
-    if (err) {
-      return res.status(500).json({ success: false, error: 'Database error' });
-    }
-
-    if (!entry) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Domain not found on leaderboard' 
-      });
-    }
-
-    db.run(
-      'UPDATE leaderboard SET company = ? WHERE domain = ?',
-      [company, domain],
-      function(err) {
-        if (err) {
-          return res.status(500).json({ success: false, error: 'Database error' });
-        }
-
-        console.log('📧 Claim email should be sent to:', email, 'for domain:', domain);
-
-        res.json({ 
-          success: true, 
-          message: 'Leaderboard entry claimed' 
-        });
-      }
-    );
-  });
-});
-
-// ============================================
-// SCAN ENDPOINT - FIX #1 & #9
-// ============================================
-
-app.post('/api/scan', (req, res) => {
-  const { url, shareToken, source } = req.body;
-
-  if (!url) {
-    return res.status(400).json({ 
-      success: false, 
-      error: 'URL is required' 
-    });
-  }
-
-  const clientIP = getClientIP(req);
-  const isLeadScanner = source === 'lead-scanner';
-
-  console.log('🔍 Scan request:', { url, source, isLeadScanner, ip: clientIP });
-
-  // Check daily limit (skip for share tokens)
-  if (!shareToken) {
-    const limitCheck = checkDailyScanLimit(clientIP, isLeadScanner);
-    
-    if (limitCheck.exceeded) {
-      // FIX #1: Better daily limit message with WhatsApp, Calendly, and reset info
-      const limit = isLeadScanner ? 10 : 3;
-      const resetTime = new Date();
-      resetTime.setHours(24, 0, 0, 0);
-      
-      return res.status(429).json({
-        success: false,
-        error: 'daily_limit_reached',
-        message: `You've reached your daily limit of ${limit} free scans.`,
-        details: {
-          scansUsed: limitCheck.count,
-          dailyLimit: limit,
-          resetTime: resetTime.toISOString(),
-          resetMessage: 'Your scan limit resets tomorrow at midnight UTC'
-        },
-        upgradeOptions: {
-          whatsapp: {
-            text: '💬 Chat with Ottmar on WhatsApp',
-            url: 'https://wa.me/31628073996?text=Hi! I need more scans for my website',
-            action: 'Get instant help'
-          },
-          calendly: {
-            text: '📅 Book a free consultation',
-            url: 'https://calendly.com/contentscale/consultation',
-            action: 'Schedule 30-min call'
-          },
-          services: {
-            text: '🚀 View all services & pricing',
-            url: 'https://contentscale.site/services',
-            action: 'See packages'
-          }
-        }
-      });
-    }
-  }
-
-  // Process share token if provided
-  if (shareToken) {
-    db.get(
-      `SELECT * FROM share_links 
-       WHERE token = ? AND is_active = 1 AND datetime(expires_at) > datetime('now')`,
-      [shareToken],
-      (err, link) => {
-        if (err || !link) {
-          return res.status(403).json({ 
-            success: false, 
-            error: 'Invalid or expired share link' 
-          });
-        }
-
-        if (link.scans_used >= link.scans_limit) {
-          return res.status(403).json({ 
-            success: false, 
-            error: 'Share link scan limit reached',
-            contact: {
-              whatsapp: 'https://wa.me/31628073996',
-              calendly: 'https://calendly.com/contentscale/consultation'
-            }
-          });
-        }
-
-        db.run(
-          'UPDATE share_links SET scans_used = scans_used + 1 WHERE token = ?',
-          [shareToken]
-        );
-
-        performScan(url, res, clientIP, false, isLeadScanner);
-      }
-    );
-  } else {
-    // Regular scan
-    incrementScanLimit(clientIP, isLeadScanner);
-    performScan(url, res, clientIP, true, isLeadScanner);
-  }
-});
 
 async function performScan(url, res, clientIP, addToLeaderboard, isLeadScanner) {
   try {
-    // Fetch and analyze the actual URL
+    console.log(`🔍 Scanning: ${url}`);
+    
+    // Fetch HTML content
     const https = require('https');
     const http = require('http');
     
     const urlObj = new URL(url.startsWith('http') ? url : 'https://' + url);
     const protocol = urlObj.protocol === 'https:' ? https : http;
     
-    // Fetch HTML content
     const htmlContent = await new Promise((resolve, reject) => {
       const req = protocol.get(url, { timeout: 10000 }, (response) => {
         let data = '';
@@ -1152,271 +60,614 @@ async function performScan(url, res, clientIP, addToLeaderboard, isLeadScanner) 
       });
     });
 
-    // GRAAF SCORING (50 points max)
+    // Extract text content (remove HTML tags)
+    const textContent = htmlContent.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+                                   .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                                   .replace(/<[^>]+>/g, ' ')
+                                   .replace(/\s+/g, ' ')
+                                   .trim();
+    
+    const wordCount = textContent.split(/\s+/).length;
+    
+    // ============================================
+    // GRAAF FRAMEWORK (50 points)
+    // ============================================
     let graaf_score = 0;
+    let graaf_details = {
+      credibility: 0,
+      relevance: 0,
+      actionability: 0,
+      accuracy: 0,
+      freshness: 0
+    };
     
-    // G - Genuinely Credible (10 points)
-    const hasAuthor = /<meta[^>]*name=["']author["'][^>]*>/i.test(htmlContent) || 
-                     /by\s+[\w\s]+/i.test(htmlContent);
-    const hasDate = /<time/i.test(htmlContent) || 
-                   /<meta[^>]*property=["']article:published_time["'][^>]*>/i.test(htmlContent);
-    const hasSources = (htmlContent.match(/https?:\/\//g) || []).length > 5;
-    graaf_score += hasAuthor ? 4 : 0;
-    graaf_score += hasDate ? 3 : 0;
-    graaf_score += hasSources ? 3 : 0;
+    // G - GENUINELY CREDIBLE (10 points)
+    // Expert quotes with attribution
+    const quotePattern = /["""]\s*([^"""]{20,200})\s*["""]\s*[—–-]\s*([A-Z][a-z]+\s+[A-Z][a-z]+)/g;
+    const expertQuotes = (textContent.match(quotePattern) || []).length;
     
-    // R - Relevance (10 points)
-    const titleMatch = htmlContent.match(/<title[^>]*>([^<]+)<\/title>/i);
-    const h1Match = htmlContent.match(/<h1[^>]*>([^<]+)<\/h1>/i);
-    const hasTitle = titleMatch && titleMatch[1].length > 10;
-    const hasH1 = h1Match && h1Match[1].length > 10;
-    const hasDescription = /<meta[^>]*name=["']description["'][^>]*>/i.test(htmlContent);
-    graaf_score += hasTitle ? 4 : 0;
-    graaf_score += hasH1 ? 3 : 0;
-    graaf_score += hasDescription ? 3 : 0;
+    // Statistics with sources
+    const statsPattern = /\d+%|\d+\s*of\s*\d+|\d+\s+percent|According to [A-Z][a-z]+|Source:|Study:/gi;
+    const statistics = (textContent.match(statsPattern) || []).length;
     
-    // A - Actionability (10 points)
-    const hasCTA = /button|download|subscribe|contact|buy|get started/i.test(htmlContent);
-    const hasLinks = (htmlContent.match(/<a /g) || []).length > 10;
-    const hasForm = /<form/i.test(htmlContent);
-    graaf_score += hasCTA ? 4 : 0;
-    graaf_score += hasLinks ? 3 : 0;
-    graaf_score += hasForm ? 3 : 0;
+    // Author bio and credentials
+    const hasAuthor = /author|written by|by [A-Z][a-z]+\s+[A-Z][a-z]+/i.test(htmlContent);
+    const hasCredentials = /\d+\s*years?\s*(?:of\s*)?experience|certified|founder|ceo|expert/i.test(textContent);
     
-    // A - Accuracy (10 points)
-    const wordCount = htmlContent.replace(/<[^>]*>/g, '').split(/\s+/).length;
-    const hasSubstantialContent = wordCount > 300;
-    const hasStructure = (htmlContent.match(/<h[2-6]/g) || []).length > 3;
-    graaf_score += hasSubstantialContent ? 5 : Math.min(Math.floor(wordCount / 100), 5);
-    graaf_score += hasStructure ? 5 : 0;
+    graaf_details.credibility = Math.min(
+      (expertQuotes >= 10 ? 4 : expertQuotes * 0.4) +
+      (statistics >= 50 ? 3 : statistics * 0.06) +
+      (hasAuthor ? 2 : 0) +
+      (hasCredentials ? 1 : 0),
+      10
+    );
+    graaf_score += graaf_details.credibility;
     
-    // F - Freshness (10 points)
+    // R - RELEVANCE (10 points)
+    const title = (htmlContent.match(/<title[^>]*>([^<]+)<\/title>/i) || [])[1] || '';
+    const h1 = (htmlContent.match(/<h1[^>]*>([^<]+)<\/h1>/i) || [])[1] || '';
+    const metaDesc = (htmlContent.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i) || [])[1] || '';
+    
+    const hasTitleKeyword = title.length > 10;
+    const hasH1 = h1.length > 10;
+    const hasMetaDesc = metaDesc.length > 50;
+    const hasTableOfContents = /table of contents|toc|in this article|on this page/i.test(htmlContent);
+    
+    graaf_details.relevance = Math.min(
+      (hasTitleKeyword ? 3 : 0) +
+      (hasH1 ? 3 : 0) +
+      (hasMetaDesc ? 2 : 0) +
+      (hasTableOfContents ? 2 : 0),
+      10
+    );
+    graaf_score += graaf_details.relevance;
+    
+    // A - ACTIONABILITY (10 points)
+    const stepByStepPattern = /step \d|how to|tutorial|guide|instructions|checklist/gi;
+    const actionableSteps = (textContent.match(stepByStepPattern) || []).length;
+    
+    const hasCTA = /download|subscribe|get started|sign up|contact us|learn more|try now/gi.test(htmlContent);
+    const hasExamples = /example|case study|for instance|such as/gi.test(textContent);
+    const hasList = (htmlContent.match(/<[ou]l>/gi) || []).length;
+    
+    graaf_details.actionability = Math.min(
+      (actionableSteps >= 5 ? 4 : actionableSteps * 0.8) +
+      (hasCTA ? 2 : 0) +
+      (hasExamples ? 2 : 0) +
+      (hasList >= 3 ? 2 : hasList * 0.67),
+      10
+    );
+    graaf_score += graaf_details.actionability;
+    
+    // A - ACCURACY (10 points)
+    const hasReferences = /reference|source|citation|study|research|according to/gi.test(textContent);
+    const hasData = /data|research|study|survey|report|analysis/gi.test(textContent);
+    const wordCountScore = Math.min(wordCount / 350, 5); // Max 5 points for 1750+ words
+    
+    graaf_details.accuracy = Math.min(
+      wordCountScore +
+      (hasReferences ? 3 : 0) +
+      (hasData ? 2 : 0),
+      10
+    );
+    graaf_score += graaf_details.accuracy;
+    
+    // F - FRESHNESS (10 points)
     const currentYear = new Date().getFullYear();
     const lastYear = currentYear - 1;
-    const hasCurrentYear = new RegExp(currentYear.toString()).test(htmlContent);
-    const hasRecentYear = new RegExp(lastYear.toString()).test(htmlContent);
-    const hasUpdatedDate = /<meta[^>]*property=["']article:modified_time["'][^>]*>/i.test(htmlContent);
-    graaf_score += hasCurrentYear ? 5 : (hasRecentYear ? 3 : 0);
-    graaf_score += hasUpdatedDate ? 5 : 0;
-
-    // CRAFT SCORING (30 points max)
-    let craft_score = 0;
     
-    // Clarity (10 points)
-    const hasCleanHTML = !/<table.*<table/s.test(htmlContent);
-    const hasParagraphs = (htmlContent.match(/<p>/g) || []).length > 5;
-    craft_score += hasCleanHTML ? 5 : 0;
-    craft_score += hasParagraphs ? 5 : 0;
+    const hasCurrentYear = new RegExp(`\\b${currentYear}\\b`).test(textContent);
+    const hasRecentYear = new RegExp(`\\b${lastYear}\\b`).test(textContent);
+    const hasPublishDate = /<time|published|updated|modified/i.test(htmlContent);
+    const hasMonthYear = /january|february|march|april|may|june|july|august|september|october|november|december\s+\d{4}/i.test(textContent);
     
-    // Readability (10 points)
-    const avgWordsPerSentence = wordCount / Math.max((htmlContent.match(/\./g) || []).length, 1);
-    const goodReadability = avgWordsPerSentence < 25;
-    const hasLists = /<ul>|<ol>/i.test(htmlContent);
-    craft_score += goodReadability ? 5 : 0;
-    craft_score += hasLists ? 5 : 0;
-    
-    // Format & Trust (10 points)
-    const hasImages = /<img/i.test(htmlContent);
-    const hasHTTPS = url.startsWith('https');
-    craft_score += hasImages ? 5 : 0;
-    craft_score += hasHTTPS ? 5 : 0;
-
-    // TECHNICAL SCORING (20 points max)
-    let technical_score = 0;
-    
-    // Schema markup (5 points)
-    const hasSchema = /"@type":|"@context"/i.test(htmlContent);
-    technical_score += hasSchema ? 5 : 0;
-    
-    // Meta tags (5 points)
-    const hasMetaTags = /<meta/gi.test(htmlContent);
-    const metaCount = (htmlContent.match(/<meta/gi) || []).length;
-    technical_score += Math.min(metaCount, 5);
-    
-    // Internal links (5 points)
-    let domain = urlObj.hostname.replace('www.', ''); // Extract domain once
-    const internalLinkRegex = new RegExp(`href=["'](?:https?:\\/\\/${urlObj.hostname}|\\/)[^"']*["']`, 'gi');
-    const internalLinks = (htmlContent.match(internalLinkRegex) || []).length;
-    technical_score += Math.min(Math.floor(internalLinks / 3), 5);
-    
-    // Performance indicators (5 points)
-    const hasCDN = /cdn\.|cloudflare|cloudfront/i.test(htmlContent);
-    const hasOptimizedImages = /loading=["']lazy["']/i.test(htmlContent);
-    technical_score += hasCDN ? 3 : 0;
-    technical_score += hasOptimizedImages ? 2 : 0;
-
-    const total_score = Math.min(graaf_score + craft_score + technical_score, 100);
-
-    const result = {
-      success: true,
-      url,
-      score: total_score,
-      breakdown: {
-        graaf: graaf_score,
-        craft: craft_score,
-        technical: technical_score
-      },
-      scansRemaining: addToLeaderboard ? (isLeadScanner ? 10 : 3) - checkDailyScanLimit(clientIP, isLeadScanner).count : null,
-      timestamp: new Date().toISOString()
-    };
-
-    console.log('✅ Real scan completed:', url, 'Score:', total_score);
-    
-    // Save to scan_history (domain already extracted above)
-    db.run(
-      `INSERT INTO scan_history (url, domain, score, graaf_score, craft_score, technical_score, ip_address, scan_date) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-      [url, domain, total_score, graaf_score, craft_score, technical_score, clientIP],
-      function(err) {
-        if (err) console.error('Scan history save error:', err);
-      }
+    graaf_details.freshness = Math.min(
+      (hasCurrentYear ? 5 : hasRecentYear ? 3 : 0) +
+      (hasPublishDate ? 3 : 0) +
+      (hasMonthYear ? 2 : 0),
+      10
     );
-
-    // Auto-submit to leaderboard if good score
-    if (addToLeaderboard && total_score >= 70) {
-      db.run(
-        `INSERT INTO leaderboard (domain, company, score, scan_date, updated_at)
-         VALUES (?, 'Anonymous', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-         ON CONFLICT(domain) DO UPDATE SET 
-           score = CASE WHEN excluded.score > score THEN excluded.score ELSE score END,
-           scan_date = CASE WHEN excluded.score > score THEN CURRENT_TIMESTAMP ELSE scan_date END,
-           updated_at = CURRENT_TIMESTAMP`,
-        [domain, total_score],
-        function(err) {
-          if (err) console.error('Leaderboard update error:', err);
-          else console.log('✅ Added to leaderboard:', domain, total_score);
+    graaf_score += graaf_details.freshness;
+    
+    // ============================================
+    // CRAFT FRAMEWORK (30 points)
+    // ============================================
+    let craft_score = 0;
+    let craft_details = {
+      clarity: 0,
+      readability: 0,
+      format: 0,
+      faq: 0,
+      trust: 0
+    };
+    
+    // C - CLARITY (7 points)
+    const sentenceCount = (textContent.match(/[.!?]+/g) || []).length;
+    const avgWordsPerSentence = wordCount / Math.max(sentenceCount, 1);
+    const goodSentenceLength = avgWordsPerSentence >= 10 && avgWordsPerSentence <= 20;
+    
+    const hasParagraphs = (htmlContent.match(/<p[^>]*>/gi) || []).length;
+    const hasSubheadings = (htmlContent.match(/<h[2-6][^>]*>/gi) || []).length;
+    
+    craft_details.clarity = Math.min(
+      (goodSentenceLength ? 3 : 0) +
+      (hasParagraphs >= 5 ? 2 : hasParagraphs * 0.4) +
+      (hasSubheadings >= 5 ? 2 : hasSubheadings * 0.4),
+      7
+    );
+    craft_score += craft_details.clarity;
+    
+    // R - READABILITY (8 points)
+    const shortParagraphs = hasParagraphs >= 8;
+    const bulletPoints = (htmlContent.match(/<li[^>]*>/gi) || []).length;
+    const hasWhitespace = htmlContent.includes('<br>') || htmlContent.includes('margin') || htmlContent.includes('padding');
+    
+    craft_details.readability = Math.min(
+      (shortParagraphs ? 3 : 0) +
+      (bulletPoints >= 10 ? 3 : bulletPoints * 0.3) +
+      (hasWhitespace ? 2 : 0),
+      8
+    );
+    craft_score += craft_details.readability;
+    
+    // A - ADD VISUALS & FORMAT (6 points)
+    const images = (htmlContent.match(/<img[^>]*>/gi) || []).length;
+    const hasAltText = /<img[^>]*alt=["'][^"']+["']/i.test(htmlContent);
+    const tables = (htmlContent.match(/<table[^>]*>/gi) || []).length;
+    
+    craft_details.format = Math.min(
+      (images >= 5 ? 3 : images * 0.6) +
+      (hasAltText ? 2 : 0) +
+      (tables >= 2 ? 1 : tables * 0.5),
+      6
+    );
+    craft_score += craft_details.format;
+    
+    // F - FAQ INTEGRATION (5 points)
+    const hasFAQ = /faq|frequently asked questions|questions and answers/i.test(htmlContent);
+    const questionCount = (htmlContent.match(/<h[2-6][^>]*>[^<]*\?[^<]*<\/h[2-6]>/gi) || []).length;
+    
+    craft_details.faq = Math.min(
+      (hasFAQ ? 3 : 0) +
+      (questionCount >= 10 ? 2 : questionCount * 0.2),
+      5
+    );
+    craft_score += craft_details.faq;
+    
+    // T - TRUST BUILDING (4 points)
+    const hasHTTPS = url.startsWith('https');
+    const hasContactInfo = /contact|email|phone|address/i.test(htmlContent);
+    const hasPrivacyPolicy = /privacy policy|terms|gdpr/i.test(htmlContent);
+    
+    craft_details.trust = Math.min(
+      (hasHTTPS ? 2 : 0) +
+      (hasContactInfo ? 1 : 0) +
+      (hasPrivacyPolicy ? 1 : 0),
+      4
+    );
+    craft_score += craft_details.trust;
+    
+    // ============================================
+    // TECHNICAL SEO (20 points)
+    // ============================================
+    let technical_score = 0;
+    let technical_details = {
+      meta: 0,
+      schema: 0,
+      links: 0,
+      headings: 0,
+      mobile: 0
+    };
+    
+    // Meta tags (4 points)
+    const hasMetaViewport = /<meta[^>]*name=["']viewport["']/i.test(htmlContent);
+    const hasMetaDescription = metaDesc.length >= 120 && metaDesc.length <= 160;
+    const hasOGTags = /<meta[^>]*property=["']og:/i.test(htmlContent);
+    
+    technical_details.meta = Math.min(
+      (hasMetaViewport ? 2 : 0) +
+      (hasMetaDescription ? 1 : 0) +
+      (hasOGTags ? 1 : 0),
+      4
+    );
+    technical_score += technical_details.meta;
+    
+    // Schema markup (4 points)
+    const hasJSONLD = /<script[^>]*type=["']application\/ld\+json["'][^>]*>/i.test(htmlContent);
+    const schemaTypes = (htmlContent.match(/"@type"\s*:\s*"(\w+)"/gi) || []).length;
+    
+    technical_details.schema = Math.min(
+      (hasJSONLD ? 2 : 0) +
+      (schemaTypes >= 2 ? 2 : schemaTypes),
+      4
+    );
+    technical_score += technical_details.schema;
+    
+    // Internal linking (4 points)
+    const domain = urlObj.hostname.replace('www.', '');
+    const internalLinkPattern = new RegExp(`href=["'](?:https?:\\/\\/${domain.replace('.', '\\.')}|\\/)[^"']*["']`, 'gi');
+    const internalLinks = (htmlContent.match(internalLinkPattern) || []).length;
+    
+    technical_details.links = Math.min(internalLinks / 5, 4);
+    technical_score += technical_details.links;
+    
+    // Heading hierarchy (4 points)
+    const hasH1 = /<h1[^>]*>/i.test(htmlContent);
+    const h1Count = (htmlContent.match(/<h1[^>]*>/gi) || []).length;
+    const h2Count = (htmlContent.match(/<h2[^>]*>/gi) || []).length;
+    const properH1 = hasH1 && h1Count === 1;
+    
+    technical_details.headings = Math.min(
+      (properH1 ? 2 : 0) +
+      (h2Count >= 5 ? 2 : h2Count * 0.4),
+      4
+    );
+    technical_score += technical_details.headings;
+    
+    // Mobile optimization (4 points)
+    const responsiveViewport = /<meta[^>]*name=["']viewport["'][^>]*width=device-width/i.test(htmlContent);
+    const hasMediaQueries = /@media[^{]*\([^)]*\)/i.test(htmlContent);
+    const lazyLoading = /loading=["']lazy["']/i.test(htmlContent);
+    
+    technical_details.mobile = Math.min(
+      (responsiveViewport ? 2 : 0) +
+      (hasMediaQueries ? 1 : 0) +
+      (lazyLoading ? 1 : 0),
+      4
+    );
+    technical_score += technical_details.mobile;
+    
+    // ============================================
+    // CALCULATE FINAL SCORE
+    // ============================================
+    const overall_score = Math.min(Math.round(graaf_score + craft_score + technical_score), 100);
+    
+    // Determine quality
+    let quality;
+    if (overall_score >= 90) quality = 'excellent';
+    else if (overall_score >= 75) quality = 'good';
+    else if (overall_score >= 60) quality = 'average';
+    else if (overall_score >= 40) quality = 'poor';
+    else quality = 'very_poor';
+    
+    // Extract company name from domain
+    const companyName = domain
+      .replace(/\.(com|net|org|nl|be|de|uk)$/, '')
+      .split('.')
+      .slice(-1)[0]
+      .replace(/-/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+    
+    const scanResult = {
+      success: true,
+      score: overall_score,
+      quality: quality,
+      url: url,
+      domain: domain,
+      company_name: companyName,
+      scanned_at: new Date().toISOString(),
+      breakdown: {
+        graaf: {
+          total: Math.round(graaf_score),
+          credibility: Math.round(graaf_details.credibility * 10) / 10,
+          relevance: Math.round(graaf_details.relevance * 10) / 10,
+          actionability: Math.round(graaf_details.actionability * 10) / 10,
+          accuracy: Math.round(graaf_details.accuracy * 10) / 10,
+          freshness: Math.round(graaf_details.freshness * 10) / 10
+        },
+        craft: {
+          total: Math.round(craft_score),
+          clarity: Math.round(craft_details.clarity * 10) / 10,
+          readability: Math.round(craft_details.readability * 10) / 10,
+          format: Math.round(craft_details.format * 10) / 10,
+          faq: Math.round(craft_details.faq * 10) / 10,
+          trust: Math.round(craft_details.trust * 10) / 10
+        },
+        technical: {
+          total: Math.round(technical_score),
+          meta: Math.round(technical_details.meta * 10) / 10,
+          schema: Math.round(technical_details.schema * 10) / 10,
+          links: Math.round(technical_details.links * 10) / 10,
+          headings: Math.round(technical_details.headings * 10) / 10,
+          mobile: Math.round(technical_details.mobile * 10) / 10
         }
-      );
+      },
+      metrics: {
+        word_count: wordCount,
+        expert_quotes: expertQuotes,
+        statistics: statistics,
+        images: images,
+        internal_links: internalLinks
+      }
+    };
+    
+    console.log(`✅ Scan complete: ${overall_score}/100 (${quality})`);
+    
+    // Add to leaderboard if requested
+    if (addToLeaderboard && overall_score >= 50) {
+      try {
+        await pool.query(
+          `INSERT INTO leaderboard (url, domain, company_name, score, country, scanned_at)
+           VALUES ($1, $2, $3, $4, $5, $6)
+           ON CONFLICT (domain) 
+           DO UPDATE SET score = EXCLUDED.score, scanned_at = EXCLUDED.scanned_at`,
+          [url, domain, companyName, overall_score, 'netherlands', new Date()]
+        );
+        console.log('✅ Added to leaderboard');
+      } catch (dbError) {
+        console.error('⚠️ Leaderboard insert error:', dbError);
+      }
     }
-
-    return res.json(result);
+    
+    return scanResult;
     
   } catch (error) {
-    console.error('❌ Scan error:', error.message);
-    
-    // Fallback to basic scoring if fetch fails
-    const result = {
-      success: true,
-      url,
-      score: 50,
-      breakdown: {
-        graaf: 25,
-        craft: 15,
-        technical: 10
-      },
-      scansRemaining: addToLeaderboard ? (isLeadScanner ? 10 : 3) - checkDailyScanLimit(clientIP, isLeadScanner).count : null,
-      timestamp: new Date().toISOString(),
-      error: 'Could not fetch URL: ' + error.message
+    console.error('❌ Scan error:', error);
+    return {
+      success: false,
+      error: error.message,
+      score: 0,
+      quality: 'error'
     };
-
-    console.log('⚠️ Fallback score:', url, 'Error:', error.message);
-
-    // Extract domain for fallback
-    let domain = '';
-    try {
-      const urlObj = new URL(url.startsWith('http') ? url : 'https://' + url);
-      domain = urlObj.hostname.replace('www.', '');
-    } catch (e) {
-      domain = url.replace('www.', '').split('/')[0];
-    }
-
-    // Save fallback to scan_history
-    db.run(
-      `INSERT INTO scan_history (url, domain, score, graaf_score, craft_score, technical_score, ip_address, scan_date) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-      [url, domain, result.score, result.breakdown.graaf, result.breakdown.craft, result.breakdown.technical, clientIP],
-      function(err) {
-        if (err) console.error('Scan history save error:', err);
-      }
-    );
-
-    return res.json(result);
   }
 }
 
 // ============================================
-// EMAIL NOTIFICATIONS - FIX #10
+// PUBLIC SCAN ENDPOINT
 // ============================================
-
-// FIX #10: Email notification endpoint
-app.post('/api/admin/send-notification', (req, res) => {
-  const { email, subject, message, type } = req.body;
-
-  if (!email || !subject || !message) {
-    return res.status(400).json({
-      success: false,
-      error: 'Email, subject, and message required'
-    });
+app.post('/api/scan', async (req, res) => {
+  try {
+    const { url } = req.body;
+    
+    if (!url) {
+      return res.status(400).json({ success: false, error: 'URL is required' });
+    }
+    
+    const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const scanResult = await performScan(url, res, clientIP, false, false);
+    
+    res.json(scanResult);
+  } catch (error) {
+    console.error('Scan error:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
-
-  // TODO: Implement with SendGrid/Mailgun/Nodemailer
-  console.log('📧 EMAIL NOTIFICATION:', {
-    to: email,
-    subject,
-    message,
-    type: type || 'general'
-  });
-
-  // Mock success
-  res.json({
-    success: true,
-    message: 'Email notification logged (not yet sent)',
-    implementation: 'TODO: Configure SendGrid/Mailgun for production'
-  });
 });
 
-app.post('/api/admin/send-batch-notification', (req, res) => {
-  const { recipients, subject, message } = req.body;
+// ============================================
+// ADMIN ENDPOINTS
+// ============================================
 
-  if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
-    return res.status(400).json({
-      success: false,
-      error: 'Recipients array required'
+// Get all admins
+app.get('/api/admins', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM super_admins ORDER BY created_at DESC');
+    res.json({ success: true, admins: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Create admin
+app.post('/api/admins', async (req, res) => {
+  try {
+    const { username, password, role, full_name, email } = req.body;
+    
+    if (!username || !password || !role) {
+      return res.status(400).json({ success: false, error: 'Missing required fields' });
+    }
+    
+    const result = await pool.query(
+      'INSERT INTO super_admins (username, password, role, full_name, email) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [username, password, role, full_name, email]
+    );
+    
+    res.json({ success: true, admin: result.rows[0] });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Verify admin login
+app.post('/api/setup/verify-admin', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    const result = await pool.query(
+      'SELECT * FROM super_admins WHERE username = $1 AND password = $2',
+      [username, password]
+    );
+    
+    if (result.rows.length > 0) {
+      res.json({ success: true, admin_id: result.rows[0].id, admin: result.rows[0] });
+    } else {
+      res.status(401).json({ success: false, error: 'Invalid credentials' });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get agencies
+app.get('/api/super-admin/agencies', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM agencies ORDER BY created_at DESC');
+    res.json({ success: true, agencies: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get clients
+app.get('/api/admin/clients', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM clients ORDER BY created_at DESC');
+    res.json({ success: true, clients: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get scans
+app.get('/api/admin/scans', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM scans ORDER BY created_at DESC LIMIT 100');
+    res.json({ success: true, scans: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get share links
+app.get('/api/admin/share-links', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM share_links ORDER BY created_at DESC');
+    res.json({ success: true, share_links: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Create share link
+app.post('/api/admin/share-links/create', async (req, res) => {
+  try {
+    const { client_email, client_name, client_company, scans_limit, valid_days } = req.body;
+    
+    const share_code = Math.random().toString(36).substring(2, 15);
+    const expires_at = new Date(Date.now() + (valid_days || 30) * 24 * 60 * 60 * 1000);
+    
+    const result = await pool.query(
+      `INSERT INTO share_links (share_code, client_email, client_name, client_company, scans_limit, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [share_code, client_email, client_name, client_company || '', scans_limit || 5, expires_at]
+    );
+    
+    const share_url = `${req.protocol}://${req.get('host')}/seo-contentscore?key=${share_code}`;
+    
+    res.json({ success: true, share_url, share_link: result.rows[0] });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Delete share link
+app.delete('/api/admin/share-links/:code', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM share_links WHERE share_code = $1', [req.params.code]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get leaderboard
+app.get('/api/admin/leaderboard', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT ROW_NUMBER() OVER (ORDER BY score DESC) as rank, *
+      FROM leaderboard
+      ORDER BY score DESC
+      LIMIT 100
+    `);
+    res.json({ success: true, entries: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get stats
+app.get('/api/admin/stats', async (req, res) => {
+  try {
+    const agencies = await pool.query('SELECT COUNT(*) FROM agencies');
+    const clients = await pool.query('SELECT COUNT(*) FROM clients');
+    const scans = await pool.query('SELECT COUNT(*) FROM scans');
+    const helpers = await pool.query('SELECT COUNT(*) FROM super_admins WHERE role = $1', ['helper']);
+    
+    res.json({
+      success: true,
+      stats: {
+        total_agencies: agencies.rows[0].count,
+        total_clients: clients.rows[0].count,
+        total_scans: scans.rows[0].count,
+        active_helpers: helpers.rows[0].count
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get claims
+app.get('/api/admin/claims/pending', async (req, res) => {
+  try {
+    res.json({ success: true, claims: [] });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Delete item (generic)
+app.delete('/api/:resource/:id', async (req, res) => {
+  try {
+    const { resource, id } = req.params;
+    const tableMap = {
+      'admins': 'super_admins',
+      'agencies': 'agencies',
+      'clients': 'clients',
+      'scans': 'scans',
+      'leaderboard': 'leaderboard'
+    };
+    
+    const table = tableMap[resource];
+    if (!table) {
+      return res.status(400).json({ success: false, error: 'Invalid resource' });
+    }
+    
+    await pool.query(`DELETE FROM ${table} WHERE id = $1`, [id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// HEALTH CHECK
+// ============================================
+app.get('/health', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT NOW()');
+    res.json({
+      status: 'ok',
+      timestamp: result.rows[0].now,
+      port: PORT,
+      database: 'connected'
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      error: error.message
     });
   }
+});
 
-  console.log('📧 BATCH EMAIL:', {
-    count: recipients.length,
-    subject,
-    message
-  });
+// ============================================
+// SERVE HTML PAGES
+// ============================================
+app.get('/admin-dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/admin-dashboard.html'));
+});
 
-  res.json({
-    success: true,
-    sent: recipients.length,
-    message: 'Batch emails logged (not yet sent)',
-    implementation: 'TODO: Configure email service'
-  });
+app.get('/seo-contentscore', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/seo-contentscore.html'));
 });
 
 // ============================================
 // START SERVER
 // ============================================
-
 app.listen(PORT, () => {
-  console.log(`
-╔══════════════════════════════════════════════╗
-║   🚀 CONTENTSCALE PLATFORM - ALL BUGS FIXED  ║
-╠══════════════════════════════════════════════╣
-║   Port: ${PORT}                             ║
-║   Database: SQLite (contentscale.db)         ║
-╠══════════════════════════════════════════════╣
-║   FIXES COMPLETED:                           ║
-║   ✅ #1  Daily limit message (WhatsApp)      ║
-║   ✅ #2  Admin creation (field validation)   ║
-║   ✅ #3  Agency creation (email validation)  ║
-║   ✅ #4  All scans endpoint working          ║
-║   ✅ #5  Share links create/delete fixed     ║
-║   ✅ #6  Opt-out endpoint (was 404)          ║
-║   ✅ #7  Leaderboard DISTINCT domains        ║
-║   ✅ #9  Lead scanner separate limit (10/d)  ║
-║   ✅ #10 Email notifications documented      ║
-╠══════════════════════════════════════════════╣
-║   Routes:                                    ║
-║   📊 /admin              - Admin dashboard   ║
-║   🔍 /scanner            - Content scanner   ║
-║   📈 /lead-scanner       - Lead scanner      ║
-║   🔗 /share/:token       - Share links       ║
-╚══════════════════════════════════════════════╝
-  `);
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
+
+module.exports = app;
