@@ -338,9 +338,14 @@
       <div id="tab-agencies" class="tab-content hidden">
         <div class="flex justify-between items-center mb-6">
           <h2 class="text-2xl font-bold">All Agencies</h2>
-          <button onclick="showAddAgencyModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-all">
-            ➕ Add Agency
-          </button>
+          <div class="flex gap-3">
+            <button onclick="loadAgencies()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition-all">
+              🔄 Refresh
+            </button>
+            <button onclick="showAddAgencyModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-all">
+              ➕ Add Agency
+            </button>
+          </div>
         </div>
 
         <div id="agencies-loading" class="text-center py-12">
@@ -361,6 +366,7 @@
                   <th class="px-4 py-3 text-left text-sm font-semibold">Clients</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Scans</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Admin URL</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
                 </tr>
               </thead>
@@ -453,9 +459,14 @@
       <div id="tab-share-links" class="tab-content hidden">
         <div class="flex justify-between items-center mb-6">
           <h2 class="text-2xl font-bold">Share Links</h2>
-          <button onclick="showCreateShareLinkModal()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all">
-            ➕ Create Share Link
-          </button>
+          <div class="flex gap-3">
+            <button onclick="loadShareLinks()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition-all">
+              🔄 Refresh
+            </button>
+            <button onclick="showCreateShareLinkModal()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all">
+              ➕ Create Share Link
+            </button>
+          </div>
         </div>
 
         <div id="share-links-loading" class="text-center py-12">
@@ -471,6 +482,7 @@
                   <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="sharelink-select-all" onchange="toggleSelectAllShareLinks()"></th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Client</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Email</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Share URL</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Usage</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Expires</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
@@ -487,642 +499,7 @@
           <button onclick="deleteSelectedShareLinks()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
         </div>
       </div>
-
-      <!-- Leaderboard Tab -->
-      <div id="tab-leaderboard" class="tab-content hidden">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">Global Leaderboard Management</h2>
-          <button onclick="scanAllAgencies()" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold transition-all">
-            🔍 Scan Alle Agencies Nu
-          </button>
-        </div>
-
-        <div class="mb-4 flex gap-4">
-          <input type="text" id="leaderboard-search" placeholder="Search by URL, company, or score..." 
-            class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-          <button onclick="searchLeaderboard()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
-            Search
-          </button>
-        </div>
-
-        <div id="leaderboard-list" class="bg-gray-800 rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="leaderboard-select-all" onchange="toggleSelectAllLeaderboard()"></th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Rank</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Company</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">URL</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Score</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Country</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="leaderboard-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="mt-4 flex gap-2">
-          <button onclick="deleteSelectedLeaderboard()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
-          <button onclick="exportLeaderboardToCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">📊 Export CSV</button>
-          <button onclick="exportLeaderboardToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
-        </div>
-      </div>
-
-      <!-- BLOG MANAGEMENT TAB -->
-      <div id="tab-blog" class="tab-content hidden">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">📝 Blog Management</h2>
-          <div class="flex gap-3">
-            <button onclick="refreshBlogPosts()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition-all">
-              🔄 Refresh
-            </button>
-            <button onclick="showAddBlogModal()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all">
-              ➕ New Blog Post
-            </button>
-          </div>
-        </div>
-
-        <!-- Blog Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div class="bg-gradient-to-br from-blue-900 to-blue-800 rounded-lg p-4">
-            <div class="text-sm text-blue-200">Total Posts</div>
-            <div class="text-3xl font-bold mt-2" id="blog-total-posts">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-green-900 to-green-800 rounded-lg p-4">
-            <div class="text-sm text-green-200">Featured</div>
-            <div class="text-3xl font-bold mt-2" id="blog-featured-posts">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-purple-900 to-purple-800 rounded-lg p-4">
-            <div class="text-sm text-purple-200">Case Studies</div>
-            <div class="text-3xl font-bold mt-2" id="blog-case-studies">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-orange-900 to-orange-800 rounded-lg p-4">
-            <div class="text-sm text-orange-200">Guides</div>
-            <div class="text-3xl font-bold mt-2" id="blog-guides">0</div>
-          </div>
-        </div>
-
-        <!-- Filter & Search -->
-        <div class="bg-gray-800 rounded-lg p-4 mb-6">
-          <div class="flex flex-wrap gap-4 items-center">
-            <div class="flex-1 min-w-[200px]">
-              <input type="text" id="blog-search" placeholder="Search posts by title, slug, or description..." 
-                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                onkeyup="filterBlogPosts()">
-            </div>
-            <div>
-              <select id="blog-category-filter" class="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" onchange="filterBlogPosts()">
-                <option value="">All Categories</option>
-                <option value="case-study">📊 Case Studies</option>
-                <option value="guide">📚 Guides</option>
-                <option value="tips">💡 Tips</option>
-                <option value="news">📰 News</option>
-                <option value="agency">🏢 Agency</option>
-              </select>
-            </div>
-            <div>
-              <select id="blog-featured-filter" class="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" onchange="filterBlogPosts()">
-                <option value="">All Posts</option>
-                <option value="featured">⭐ Featured Only</option>
-                <option value="not-featured">Regular Only</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <!-- Blog Posts Loading -->
-        <div id="blog-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading blog posts...</p>
-        </div>
-
-        <!-- Blog Posts Grid -->
-        <div id="blog-posts-grid" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-          <!-- Posts will be inserted here -->
-        </div>
-
-        <!-- Blog Posts Table View -->
-        <div id="blog-posts-table" class="hidden bg-gray-800 rounded-lg overflow-hidden mb-6">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="blog-select-all" onchange="toggleSelectAllBlogPosts()"></th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Title</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Category</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Date</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Read Time</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Featured</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="blog-posts-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- View Toggle & Actions -->
-        <div class="flex justify-between items-center">
-          <div class="flex gap-2">
-            <button onclick="setBlogView('grid')" id="blog-view-grid" class="px-4 py-2 bg-purple-600 rounded-lg font-semibold">
-              📊 Grid View
-            </button>
-            <button onclick="setBlogView('table')" id="blog-view-table" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
-              📋 Table View
-            </button>
-          </div>
-          <div class="flex gap-2">
-            <button onclick="deleteSelectedBlogPosts()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
-            <button onclick="exportBlogPostsToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
-            <button onclick="downloadBlogJSON()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">💾 Download blog-posts.json</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- EMAIL & NOTIFICATIONS TAB -->
-      <div id="tab-email-notifications" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">📧 Email & Notifications</h2>
-        <div class="bg-gray-800 rounded-lg p-6">
-          <h3 class="text-xl font-bold mb-4">Send Bulk Email</h3>
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm mb-2">Recipients</label>
-              <select id="bulk-email-recipients" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-                <option value="all-leaderboard">All Leaderboard Agencies</option>
-                <option value="unclaimed">Unclaimed Profiles Only</option>
-                <option value="claimed">Claimed Profiles Only</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm mb-2">Subject</label>
-              <input type="text" id="bulk-email-subject" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-            </div>
-            <div>
-              <label class="block text-sm mb-2">Message</label>
-              <textarea id="bulk-email-body" rows="6" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"></textarea>
-            </div>
-            <button onclick="sendBulkEmail()" class="w-full py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
-              📧 Send to All Recipients
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- CLAIMS MANAGEMENT TAB -->
-      <div id="tab-claims" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">🏢 Claims Management</h2>
-        
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div class="bg-gradient-to-br from-purple-900 to-purple-800 rounded-lg p-4">
-            <div class="text-sm text-purple-200">Pending Claims</div>
-            <div class="text-3xl font-bold mt-2" id="pending-claims-count">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-green-900 to-green-800 rounded-lg p-4">
-            <div class="text-sm text-green-200">Approved Claims</div>
-            <div class="text-3xl font-bold mt-2" id="approved-claims-count">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-blue-900 to-blue-800 rounded-lg p-4">
-            <div class="text-sm text-blue-200">Total Claimed</div>
-            <div class="text-3xl font-bold mt-2" id="total-claimed-count">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-orange-900 to-orange-800 rounded-lg p-4">
-            <div class="text-sm text-orange-200">Unclaimed Profiles</div>
-            <div class="text-3xl font-bold mt-2" id="unclaimed-profiles-count">0</div>
-          </div>
-        </div>
-
-        <div class="bg-gray-800 rounded-lg p-6">
-          <h3 class="text-xl font-bold mb-4">⏳ Pending Claims</h3>
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm">Agency Name</th>
-                  <th class="px-4 py-3 text-left text-sm">URL</th>
-                  <th class="px-4 py-3 text-left text-sm">Email</th>
-                  <th class="px-4 py-3 text-left text-sm">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="pending-claims-tbody" class="divide-y divide-gray-700">
-                <tr>
-                  <td colspan="4" class="px-4 py-8 text-center text-gray-400">No pending claims</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- OPT-OUT TAB -->
-      <div id="tab-opt-out" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">🚫 Opt-Out Management</h2>
-        <div class="bg-gray-800 rounded-lg p-6">
-          <h3 class="text-xl font-bold mb-4">Manual Opt-Out</h3>
-          <div class="flex gap-4">
-            <input type="text" id="manual-optout-url" placeholder="Agency website URL" 
-              class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-            <button onclick="manualOptOut()" class="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">
-              Remove from Leaderboard
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 🎯 LEAD SCANNER TAB - COMPLETE FUNCTIONALITY -->
-      <div id="tab-lead-scanner" class="tab-content hidden">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">🎯 Lead Scanner</h2>
-          <div class="flex gap-3">
-            <button onclick="clearLeadQueue()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition-all">
-              🗑️ Clear Queue
-            </button>
-            <button onclick="exportLeadQueueToCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all">
-              📊 Export CSV
-            </button>
-          </div>
-        </div>
-
-        <!-- Lead Scanner Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div class="bg-gradient-to-br from-purple-900 to-purple-800 rounded-lg p-4">
-            <div class="text-sm text-purple-200">URLs in Queue</div>
-            <div class="text-3xl font-bold mt-2" id="lead-queue-count">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-blue-900 to-blue-800 rounded-lg p-4">
-            <div class="text-sm text-blue-200">Scanned Today</div>
-            <div class="text-3xl font-bold mt-2" id="lead-scanned-today">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-green-900 to-green-800 rounded-lg p-4">
-            <div class="text-sm text-green-200">High Score Leads</div>
-            <div class="text-3xl font-bold mt-2" id="lead-high-score">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-orange-900 to-orange-800 rounded-lg p-4">
-            <div class="text-sm text-orange-200">Low Score Leads</div>
-            <div class="text-3xl font-bold mt-2" id="lead-low-score">0</div>
-          </div>
-        </div>
-
-        <!-- URL Input Section -->
-        <div class="bg-gray-800 rounded-lg p-6 mb-6">
-          <h3 class="text-xl font-bold mb-4">📥 Add URLs to Scan</h3>
-          
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Single URL Input -->
-            <div>
-              <label class="block text-sm text-gray-400 mb-2">Single URL</label>
-              <div class="flex gap-2">
-                <input type="text" id="lead-single-url" placeholder="https://example.com" 
-                  class="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
-                <button onclick="addSingleLeadUrl()" class="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold whitespace-nowrap">
-                  ➕ Add
-                </button>
-              </div>
-            </div>
-            
-            <!-- Bulk URL Input -->
-            <div>
-              <label class="block text-sm text-gray-400 mb-2">Bulk URLs (one per line)</label>
-              <div class="flex gap-2">
-                <textarea id="lead-bulk-urls" rows="3" placeholder="https://site1.com&#10;https://site2.com&#10;https://site3.com" 
-                  class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white resize-none"></textarea>
-                <button onclick="addBulkLeadUrls()" class="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold whitespace-nowrap h-fit">
-                  ➕ Add All
-                </button>
-              </div>
-            </div>
-          </div>
-          
-          <!-- File Upload -->
-          <div class="mt-4 pt-4 border-t border-gray-700">
-            <label class="block text-sm text-gray-400 mb-2">Upload CSV/TXT file with URLs</label>
-            <div class="flex gap-4 items-center">
-              <input type="file" id="lead-file-upload" accept=".csv,.txt" onchange="handleLeadFileUpload(event)"
-                class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-purple-600 file:text-white file:cursor-pointer">
-              <span class="text-xs text-gray-500">Supported: .csv, .txt</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Scan Controls -->
-        <div class="bg-gray-800 rounded-lg p-6 mb-6" id="lead-scan-controls">
-          <div class="flex flex-wrap items-center justify-between gap-4">
-            <div class="flex items-center gap-4">
-              <h3 class="text-xl font-bold">🔍 Scan Queue</h3>
-              <span class="text-sm text-gray-400">(<span id="lead-pending-count">0</span> pending)</span>
-            </div>
-            
-            <div class="flex gap-3">
-              <select id="lead-scan-speed" class="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-                <option value="slow">🐢 Slow (5s delay)</option>
-                <option value="normal" selected>⚡ Normal (2s delay)</option>
-                <option value="fast">🚀 Fast (1s delay)</option>
-              </select>
-              
-              <button onclick="startLeadScanning()" id="lead-start-btn" class="px-6 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all">
-                ▶️ Start Scanning
-              </button>
-              <button onclick="pauseLeadScanning()" id="lead-pause-btn" class="px-6 py-2 bg-yellow-600 hover:bg-yellow-700 rounded-lg font-semibold transition-all hidden">
-                ⏸️ Pause
-              </button>
-              <button onclick="stopLeadScanning()" id="lead-stop-btn" class="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold transition-all hidden">
-                ⏹️ Stop
-              </button>
-            </div>
-          </div>
-          
-          <!-- Progress Bar -->
-          <div id="lead-progress-container" class="hidden mt-4">
-            <div class="flex justify-between text-sm text-gray-400 mb-2">
-              <span>Progress: <span id="lead-progress-text">0/0</span></span>
-              <span id="lead-progress-percent">0%</span>
-            </div>
-            <div class="scan-progress">
-              <div class="scan-progress-bar" id="lead-progress-bar" style="width: 0%"></div>
-            </div>
-            <div class="mt-2 text-sm text-gray-400">
-              Currently scanning: <span id="lead-current-url" class="text-blue-400">-</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Filter & Search -->
-        <div class="bg-gray-800 rounded-lg p-4 mb-6">
-          <div class="flex flex-wrap gap-4 items-center">
-            <div class="flex-1 min-w-[200px]">
-              <input type="text" id="lead-search" placeholder="Search leads by URL, company name..." 
-                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                onkeyup="filterLeads()">
-            </div>
-            <div>
-              <select id="lead-status-filter" class="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" onchange="filterLeads()">
-                <option value="">All Status</option>
-                <option value="pending">⏳ Pending</option>
-                <option value="scanned">✅ Scanned</option>
-                <option value="error">❌ Error</option>
-              </select>
-            </div>
-            <div>
-              <select id="lead-score-filter" class="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" onchange="filterLeads()">
-                <option value="">All Scores</option>
-                <option value="high">🟢 High (80+)</option>
-                <option value="medium">🟡 Medium (50-79)</option>
-                <option value="low">🔴 Low (&lt;50)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <!-- Lead Results Table -->
-        <div class="bg-gray-800 rounded-lg overflow-hidden mb-6">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="lead-select-all" onchange="toggleSelectAllLeads()"></th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">URL</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Company</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Score</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Scanned</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="lead-results-tbody" class="divide-y divide-gray-700">
-                <tr>
-                  <td colspan="7" class="px-4 py-12 text-center text-gray-400">
-                    <div class="text-4xl mb-3">🎯</div>
-                    <div>No leads in queue. Add URLs above to get started!</div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Bulk Actions -->
-        <div class="flex flex-wrap gap-3">
-          <button onclick="deleteSelectedLeads()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">
-            🗑️ Delete Selected
-          </button>
-          <button onclick="rescanSelectedLeads()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
-            🔄 Rescan Selected
-          </button>
-          <button onclick="addSelectedToLeaderboard()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
-            🏆 Add to Leaderboard
-          </button>
-          <button onclick="exportLeadQueueToCSV()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold">
-            📊 Export CSV
-          </button>
-          <button onclick="exportLeadQueueToJSON()" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold">
-            📄 Export JSON
-          </button>
-        </div>
-      </div>
-
-      <!-- ContentScore Tab -->
-      <div id="tab-contentscore" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">ContentScore Tool</h2>
-        <iframe src="/seo-contentscore" class="w-full h-screen border-0 rounded-lg"></iframe>
-      </div>
-
-      <!-- Code Generators Tab -->
-      <div id="tab-code-generators" class="tab-content hidden">
-        <iframe src="/contentscale-complete-generator.html" style="width:100%; height:100vh; border:none; border-radius:8px;"></iframe>
-      </div>
-
-      <!-- LTD Codes Tab -->
-      <div id="tab-ltd-codes" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">LTD Codes</h2>
-        <p class="text-gray-400">Coming soon...</p>
-      </div>
-
-      <!-- Settings Tab -->
-      <div id="tab-settings" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">Platform Settings</h2>
-        <p class="text-gray-400">Settings content...</p>
-      </div>
-
-      <!-- Handleiding Tab -->
-      <div id="tab-handleiding" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">📚 Handleiding</h2>
-        <p class="text-gray-400">Guide content...</p>
-      </div>
-
-    </main>
-  </div>
-
-  <!-- MODALS -->
-  <div id="modal-add-agency" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-    <div class="bg-gray-800 rounded-lg p-8 max-w-2xl w-full mx-4">
-      <h3 class="text-2xl font-bold mb-6">Add New Agency</h3>
-      <div class="space-y-4">
-        <input type="text" id="agency-name" placeholder="Agency Name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <input type="text" id="agency-domain" placeholder="Domain (example.com)" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <select id="agency-country" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-          <option value="NL">🇳🇱 Netherlands</option>
-          <option value="BE">🇧🇪 Belgium</option>
-          <option value="DE">🇩🇪 Germany</option>
-        </select>
-        <div class="flex gap-4">
-          <button onclick="submitAddAgency()" class="flex-1 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">Create</button>
-          <button onclick="closeModal('modal-add-agency')" class="flex-1 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="modal-create-share-link" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-    <div class="bg-gray-800 rounded-lg p-8 max-w-2xl w-full mx-4">
-      <h3 class="text-2xl font-bold mb-6">Create Share Link</h3>
-      <div class="space-y-4">
-        <input type="email" id="share-client-email" placeholder="Client Email" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <input type="text" id="share-client-name" placeholder="Client Name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <input type="text" id="share-client-company" placeholder="Company Name (Optional)" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <input type="number" id="share-scans-limit" value="5" min="1" placeholder="Scans Limit" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <input type="number" id="share-valid-days" value="30" min="1" placeholder="Valid Days" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <div class="flex gap-4">
-          <button onclick="submitCreateShareLink()" class="flex-1 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold">Create</button>
-          <button onclick="closeModal('modal-create-share-link')" class="flex-1 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="modal-add-admin" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-    <div class="bg-gray-800 rounded-lg p-8 max-w-2xl w-full mx-4">
-      <h3 class="text-2xl font-bold mb-6">Add Admin/Helper</h3>
-      <div class="space-y-4">
-        <input type="text" id="admin-username" placeholder="Username" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <input type="password" id="admin-password" placeholder="Password (min 8)" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <select id="admin-role" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-          <option value="">Select Role</option>
-          <option value="super_admin">👑 Super Admin</option>
-          <option value="helper">🤝 Helper</option>
-        </select>
-        <input type="text" id="admin-full-name" placeholder="Full Name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <input type="email" id="admin-email" placeholder="Email" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <div class="flex gap-4">
-          <button onclick="submitAddAdmin()" class="flex-1 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">Create</button>
-          <button onclick="closeModal('modal-add-admin')" class="flex-1 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Blog Post Modal -->
-  <div id="modal-blog-post" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 overflow-y-auto">
-    <div class="bg-gray-800 rounded-lg p-8 max-w-4xl w-full mx-4 my-8">
-      <h3 class="text-2xl font-bold mb-6" id="blog-modal-title">Add New Blog Post</h3>
-      <div class="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm text-gray-400 mb-1">Post ID (unique)</label>
-            <input type="text" id="blog-post-id" placeholder="my-post-slug" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-          </div>
-          <div>
-            <label class="block text-sm text-gray-400 mb-1">Slug (URL)</label>
-            <input type="text" id="blog-post-slug" placeholder="my-post-slug" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-          </div>
-        </div>
-        
-        <div>
-          <label class="block text-sm text-gray-400 mb-1">Title</label>
-          <input type="text" id="blog-post-title" placeholder="Post Title" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        </div>
-        
-        <div>
-          <label class="block text-sm text-gray-400 mb-1">Description</label>
-          <textarea id="blog-post-description" rows="3" placeholder="Short description..." class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"></textarea>
-        </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label class="block text-sm text-gray-400 mb-1">Category</label>
-            <select id="blog-post-category" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" multiple>
-              <option value="case-study">📊 Case Study</option>
-              <option value="guide">📚 Guide</option>
-              <option value="tips">💡 Tips</option>
-              <option value="news">📰 News</option>
-              <option value="agency">🏢 Agency</option>
-            </select>
-            <p class="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple</p>
-          </div>
-          <div>
-            <label class="block text-sm text-gray-400 mb-1">Date</label>
-            <input type="date" id="blog-post-date" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-          </div>
-          <div>
-            <label class="block text-sm text-gray-400 mb-1">Read Time</label>
-            <input type="text" id="blog-post-readtime" placeholder="8 min read" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-          </div>
-        </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm text-gray-400 mb-1">Author</label>
-            <input type="text" id="blog-post-author" placeholder="Ot van ContentScale" value="Ot van ContentScale" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-          </div>
-          <div>
-            <label class="block text-sm text-gray-400 mb-1">Image Path</label>
-            <input type="text" id="blog-post-image" placeholder="images/post-image.jpg" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-          </div>
-        </div>
-        
-        <div class="flex items-center gap-4">
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" id="blog-post-featured" class="w-5 h-5">
-            <span>⭐ Featured Post</span>
-          </label>
-        </div>
-        
-        <div class="border-t border-gray-700 pt-4">
-          <h4 class="font-semibold mb-3">📊 Metrics (Optional)</h4>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label class="block text-sm text-gray-400 mb-1">Metric 1 Key</label>
-              <input type="text" id="blog-metric-1-key" placeholder="score" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-            </div>
-            <div>
-              <label class="block text-sm text-gray-400 mb-1">Metric 1 Value</label>
-              <input type="text" id="blog-metric-1-value" placeholder="97/100" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-            </div>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
-            <div>
-              <label class="block text-sm text-gray-400 mb-1">Metric 2 Key</label>
-              <input type="text" id="blog-metric-2-key" placeholder="traffic" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-            </div>
-            <div>
-              <label class="block text-sm text-gray-400 mb-1">Metric 2 Value</label>
-              <input type="text" id="blog-metric-2-value" placeholder="+127%" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-            </div>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
-            <div>
-              <label class="block text-sm text-gray-400 mb-1">Metric 3 Key</label>
-              <input type="text" id="blog-metric-3-key" placeholder="revenue" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-            </div>
-            <div>
-              <label class="block text-sm text-gray-400 mb-1">Metric 3 Value</label>
-              <input type="text" id="blog-metric-3-value" placeholder="+€45K" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-            </div>
-          </div>
-        </div>
-        
-        <div class="flex gap-4 pt-4">
-          <button onclick="submitBlogPost()" class="flex-1 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">💾 Save Post</button>
-          <button onclick="closeModal('modal-blog-post')" class="flex-1 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
+      <script>
     // ✅ GLOBAL DATA STORES FOR EXPORT
     let allAgencies = [];
     let allClients = [];
@@ -1289,6 +666,14 @@
                 <td class="px-4 py-3">${agency.client_count || 0}</td>
                 <td class="px-4 py-3">${agency.total_scans || 0}</td>
                 <td class="px-4 py-3">${agency.is_active ? '✅' : '❌'}</td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-2">
+                    <input type="text" value="https://app.contentscale.site/agency-admin?key=${agency.admin_key}" 
+                      readonly class="flex-1 px-2 py-1 bg-gray-700 text-xs rounded text-blue-400"
+                      id="agency-url-${agency.admin_key}">
+                    <button onclick="copyAgencyUrl('${agency.admin_key}')" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs">📋</button>
+                  </div>
+                </td>
                 <td class="px-4 py-3"><button onclick="deleteItem('agencies', ${agency.id})" class="text-red-400">🗑️</button></td>
               </tr>
             `;
@@ -1379,13 +764,21 @@
           data.share_links.forEach(link => {
             tbody.innerHTML += `
               <tr>
-                <td class="px-4 py-3"><input type="checkbox" class="sharelink-checkbox" value="${link.share_code}"></td>
+                <td class="px-4 py-3"><input type="checkbox" class="sharelink-checkbox" value="${link.token}"></td>
                 <td class="px-4 py-3">${link.client_name || '-'}</td>
                 <td class="px-4 py-3">${link.client_email}</td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-2">
+                    <input type="text" value="https://contentscale-platform-production.up.railway.app/seo-contentscore?key=${link.token}" 
+                      readonly class="flex-1 px-2 py-1 bg-gray-700 text-xs rounded text-blue-400"
+                      id="share-url-${link.token}">
+                    <button onclick="copyShareUrl('${link.token}')" class="px-2 py-1 bg-purple-600 hover:bg-purple-700 rounded text-xs">📋</button>
+                  </div>
+                </td>
                 <td class="px-4 py-3">${link.scans_used || 0}/${link.scans_limit || 5}</td>
                 <td class="px-4 py-3 text-sm">${link.expires_at ? new Date(link.expires_at).toLocaleDateString() : '-'}</td>
                 <td class="px-4 py-3"><span class="px-2 py-1 ${link.status === 'active' ? 'bg-green-900' : 'bg-red-900'} rounded text-xs">${link.status}</span></td>
-                <td class="px-4 py-3"><button onclick="deleteShareLink('${link.share_code}')" class="text-red-400">🗑️</button></td>
+                <td class="px-4 py-3"><button onclick="deleteShareLink('${link.token}')" class="text-red-400">🗑️</button></td>
               </tr>
             `;
           });
@@ -1449,838 +842,204 @@
     }
 
     // ==========================================
-    // 🎯 LEAD SCANNER FUNCTIONS
+    // ✅ COPY URL FUNCTIONS - CRITICAL FIX
     // ==========================================
-    
-    function loadLeadQueueFromStorage() {
-      const stored = localStorage.getItem('leadQueue');
-      if (stored) {
-        try {
-          leadQueue = JSON.parse(stored);
-        } catch (e) {
-          leadQueue = [];
-        }
-      }
-      updateLeadScannerUI();
+    function copyShareUrl(token) {
+      const input = document.getElementById(`share-url-${token}`);
+      input.select();
+      document.execCommand('copy');
+      alert('✅ Share URL copied to clipboard!');
     }
-    
-    function saveLeadQueueToStorage() {
-      localStorage.setItem('leadQueue', JSON.stringify(leadQueue));
+
+    function copyAgencyUrl(adminKey) {
+      const input = document.getElementById(`agency-url-${adminKey}`);
+      input.select();
+      document.execCommand('copy');
+      alert('✅ Agency Admin URL copied to clipboard!');
     }
-    
-    function addSingleLeadUrl() {
-      const url = document.getElementById('lead-single-url').value.trim();
-      if (!url) {
-        alert('Please enter a URL');
-        return;
-      }
-      
-      addUrlToQueue(url);
-      document.getElementById('lead-single-url').value = '';
-      updateLeadScannerUI();
-    }
-    
-    function addBulkLeadUrls() {
-      const textarea = document.getElementById('lead-bulk-urls');
-      const urls = textarea.value.split('\n').map(u => u.trim()).filter(u => u.length > 0);
-      
-      if (urls.length === 0) {
-        alert('Please enter at least one URL');
-        return;
-      }
-      
-      urls.forEach(url => addUrlToQueue(url));
-      textarea.value = '';
-      updateLeadScannerUI();
-      alert(`✅ Added ${urls.length} URLs to queue`);
-    }
-    
-    function handleLeadFileUpload(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const content = e.target.result;
-        let urls = [];
-        
-        if (file.name.endsWith('.csv')) {
-          // Parse CSV - assume first column is URL
-          const lines = content.split('\n');
-          urls = lines.map(line => {
-            const parts = line.split(',');
-            return parts[0].trim().replace(/"/g, '');
-          }).filter(url => url && url.startsWith('http'));
-        } else {
-          // Plain text - one URL per line
-          urls = content.split('\n').map(u => u.trim()).filter(u => u.startsWith('http'));
-        }
-        
-        urls.forEach(url => addUrlToQueue(url));
-        updateLeadScannerUI();
-        alert(`✅ Imported ${urls.length} URLs from file`);
-        event.target.value = '';
+
+    // ==========================================
+    // CRUD OPERATIONS
+    // ==========================================
+    async function submitAddAgency() {
+      const formData = {
+        name: document.getElementById('agency-name').value,
+        domain: document.getElementById('agency-domain').value,
+        country: document.getElementById('agency-country').value,
+        plan: 'free'
       };
-      reader.readAsText(file);
-    }
-    
-    function addUrlToQueue(url) {
-      // Normalize URL
-      let normalizedUrl = url;
-      if (!url.startsWith('http')) {
-        normalizedUrl = 'https://' + url;
-      }
-      
-      // Check if already in queue
-      if (leadQueue.some(lead => lead.url === normalizedUrl)) {
-        return; // Skip duplicates
-      }
-      
-      leadQueue.push({
-        id: Date.now() + Math.random(),
-        url: normalizedUrl,
-        company: extractDomainName(normalizedUrl),
-        score: null,
-        status: 'pending',
-        scannedAt: null,
-        error: null
-      });
-      
-      saveLeadQueueToStorage();
-    }
-    
-    function extractDomainName(url) {
-      try {
-        const hostname = new URL(url).hostname;
-        return hostname.replace('www.', '').split('.')[0];
-      } catch {
-        return 'Unknown';
-      }
-    }
-    
-    function updateLeadScannerUI() {
-      // Update stats
-      const pendingCount = leadQueue.filter(l => l.status === 'pending').length;
-      const scannedCount = leadQueue.filter(l => l.status === 'scanned').length;
-      const highScoreCount = leadQueue.filter(l => l.score >= 80).length;
-      const lowScoreCount = leadQueue.filter(l => l.score !== null && l.score < 50).length;
-      
-      document.getElementById('lead-queue-count').textContent = leadQueue.length;
-      document.getElementById('lead-scanned-today').textContent = scannedCount;
-      document.getElementById('lead-high-score').textContent = highScoreCount;
-      document.getElementById('lead-low-score').textContent = lowScoreCount;
-      document.getElementById('lead-pending-count').textContent = pendingCount;
-      
-      // Render table
-      renderLeadTable();
-    }
-    
-    function renderLeadTable() {
-      const tbody = document.getElementById('lead-results-tbody');
-      const filteredLeads = getFilteredLeads();
-      
-      if (filteredLeads.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="7" class="px-4 py-12 text-center text-gray-400">
-              <div class="text-4xl mb-3">🎯</div>
-              <div>No leads in queue. Add URLs above to get started!</div>
-            </td>
-          </tr>
-        `;
-        return;
-      }
-      
-      tbody.innerHTML = filteredLeads.map(lead => {
-        const scoreClass = lead.score >= 80 ? 'score-high' : lead.score >= 50 ? 'score-medium' : lead.score !== null ? 'score-low' : '';
-        const statusIcon = lead.status === 'scanned' ? '✅' : lead.status === 'error' ? '❌' : '⏳';
-        const statusClass = lead.status === 'scanned' ? 'text-green-400' : lead.status === 'error' ? 'text-red-400' : 'text-yellow-400';
-        
-        return `
-          <tr class="hover:bg-gray-700">
-            <td class="px-4 py-3"><input type="checkbox" class="lead-checkbox" value="${lead.id}"></td>
-            <td class="px-4 py-3">
-              <a href="${lead.url}" target="_blank" class="text-blue-400 hover:text-blue-300 text-sm">
-                ${lead.url.length > 40 ? lead.url.substring(0, 40) + '...' : lead.url}
-              </a>
-            </td>
-            <td class="px-4 py-3 text-sm">${lead.company || '-'}</td>
-            <td class="px-4 py-3">
-              ${lead.score !== null ? `<span class="score-badge ${scoreClass}">${lead.score}/100</span>` : '-'}
-            </td>
-            <td class="px-4 py-3">
-              <span class="${statusClass}">${statusIcon} ${lead.status}</span>
-              ${lead.error ? `<div class="text-xs text-red-400">${lead.error}</div>` : ''}
-            </td>
-            <td class="px-4 py-3 text-xs text-gray-400">
-              ${lead.scannedAt ? new Date(lead.scannedAt).toLocaleString() : '-'}
-            </td>
-            <td class="px-4 py-3">
-              <div class="flex gap-1">
-                <button onclick="rescanLead('${lead.id}')" class="text-blue-400 hover:text-blue-300" title="Rescan">🔄</button>
-                <button onclick="deleteLead('${lead.id}')" class="text-red-400 hover:text-red-300" title="Delete">🗑️</button>
-                ${lead.score !== null ? `<button onclick="addLeadToLeaderboard('${lead.id}')" class="text-green-400 hover:text-green-300" title="Add to Leaderboard">🏆</button>` : ''}
-              </div>
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
-    
-    function getFilteredLeads() {
-      const searchTerm = document.getElementById('lead-search')?.value?.toLowerCase() || '';
-      const statusFilter = document.getElementById('lead-status-filter')?.value || '';
-      const scoreFilter = document.getElementById('lead-score-filter')?.value || '';
-      
-      return leadQueue.filter(lead => {
-        const matchesSearch = !searchTerm || 
-          lead.url.toLowerCase().includes(searchTerm) ||
-          (lead.company && lead.company.toLowerCase().includes(searchTerm));
-        
-        const matchesStatus = !statusFilter || lead.status === statusFilter;
-        
-        let matchesScore = true;
-        if (scoreFilter === 'high') matchesScore = lead.score >= 80;
-        else if (scoreFilter === 'medium') matchesScore = lead.score >= 50 && lead.score < 80;
-        else if (scoreFilter === 'low') matchesScore = lead.score !== null && lead.score < 50;
-        
-        return matchesSearch && matchesStatus && matchesScore;
-      });
-    }
-    
-    function filterLeads() {
-      renderLeadTable();
-    }
-    
-    function startLeadScanning() {
-      const pendingLeads = leadQueue.filter(l => l.status === 'pending');
-      if (pendingLeads.length === 0) {
-        alert('No pending URLs to scan');
-        return;
-      }
-      
-      leadScannerActive = true;
-      leadScannerPaused = false;
-      currentLeadIndex = 0;
-      
-      // Update UI
-      document.getElementById('lead-start-btn').classList.add('hidden');
-      document.getElementById('lead-pause-btn').classList.remove('hidden');
-      document.getElementById('lead-stop-btn').classList.remove('hidden');
-      document.getElementById('lead-progress-container').classList.remove('hidden');
-      document.getElementById('lead-scan-controls').classList.add('scanning-active');
-      
-      // Get scan delay
-      const speed = document.getElementById('lead-scan-speed').value;
-      const delay = speed === 'slow' ? 5000 : speed === 'fast' ? 1000 : 2000;
-      
-      scanNextLead(delay);
-    }
-    
-    async function scanNextLead(delay) {
-      if (!leadScannerActive || leadScannerPaused) return;
-      
-      const pendingLeads = leadQueue.filter(l => l.status === 'pending');
-      if (pendingLeads.length === 0) {
-        stopLeadScanning();
-        alert('✅ All URLs have been scanned!');
-        return;
-      }
-      
-      const lead = pendingLeads[0];
-      const totalPending = leadQueue.filter(l => l.status === 'pending').length;
-      const totalScanned = leadQueue.filter(l => l.status !== 'pending').length;
-      const total = leadQueue.length;
-      
-      // Update progress
-      document.getElementById('lead-current-url').textContent = lead.url;
-      document.getElementById('lead-progress-text').textContent = `${totalScanned}/${total}`;
-      document.getElementById('lead-progress-percent').textContent = `${Math.round((totalScanned / total) * 100)}%`;
-      document.getElementById('lead-progress-bar').style.width = `${(totalScanned / total) * 100}%`;
       
       try {
-        // Perform scan
-        const response = await fetch('/api/scan', {
+        const response = await fetch('/api/agencies', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: lead.url })
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          },
+          body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          alert('✅ Agency created!');
+          closeModal('modal-add-agency');
+          loadAgencies();
+        } else {
+          alert('❌ ' + (data.error || 'Failed'));
+        }
+      } catch (error) {
+        alert('Error');
+      }
+    }
+
+    async function submitCreateShareLink() {
+      const email = document.getElementById('share-client-email').value;
+      const name = document.getElementById('share-client-name').value;
+      const company = document.getElementById('share-client-company')?.value || '';
+      const scansLimit = parseInt(document.getElementById('share-scans-limit').value);
+      const validDays = parseInt(document.getElementById('share-valid-days').value);
+      
+      if (!email || !name) {
+        alert('❌ Email and name are required');
+        return;
+      }
+      
+      if (!email.includes('@')) {
+        alert('❌ Invalid email address');
+        return;
+      }
+      
+      const formData = {
+        client_email: email,
+        client_name: name,
+        client_company: company,
+        scans_limit: scansLimit || 5,
+        valid_days: validDays || 30
+      };
+      
+      try {
+        const response = await fetch('/api/admin/share-links/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          },
+          body: JSON.stringify(formData)
         });
         
         const data = await response.json();
         
         if (data.success) {
-          lead.score = data.score || data.overall_score || 0;
-          lead.status = 'scanned';
-          lead.scannedAt = new Date().toISOString();
-          lead.company = data.company_name || lead.company;
+          alert('✅ Link created!\n\n' + data.share_url);
+          navigator.clipboard.writeText(data.share_url);
+          closeModal('modal-create-share-link');
+          
+          document.getElementById('share-client-email').value = '';
+          document.getElementById('share-client-name').value = '';
+          if (document.getElementById('share-client-company')) {
+            document.getElementById('share-client-company').value = '';
+          }
+          
+          loadShareLinks();
         } else {
-          lead.status = 'error';
-          lead.error = data.error || 'Scan failed';
+          alert('❌ Failed to create link:\n' + (data.error || 'Unknown error'));
         }
       } catch (error) {
-        lead.status = 'error';
-        lead.error = 'Network error';
-      }
-      
-      saveLeadQueueToStorage();
-      updateLeadScannerUI();
-      
-      // Continue with next
-      setTimeout(() => scanNextLead(delay), delay);
-    }
-    
-    function pauseLeadScanning() {
-      leadScannerPaused = !leadScannerPaused;
-      
-      if (leadScannerPaused) {
-        document.getElementById('lead-pause-btn').textContent = '▶️ Resume';
-        document.getElementById('lead-scan-controls').classList.remove('scanning-active');
-      } else {
-        document.getElementById('lead-pause-btn').textContent = '⏸️ Pause';
-        document.getElementById('lead-scan-controls').classList.add('scanning-active');
-        
-        const speed = document.getElementById('lead-scan-speed').value;
-        const delay = speed === 'slow' ? 5000 : speed === 'fast' ? 1000 : 2000;
-        scanNextLead(delay);
+        alert('❌ Error creating share link: ' + error.message);
       }
     }
-    
-    function stopLeadScanning() {
-      leadScannerActive = false;
-      leadScannerPaused = false;
-      
-      document.getElementById('lead-start-btn').classList.remove('hidden');
-      document.getElementById('lead-pause-btn').classList.add('hidden');
-      document.getElementById('lead-pause-btn').textContent = '⏸️ Pause';
-      document.getElementById('lead-stop-btn').classList.add('hidden');
-      document.getElementById('lead-progress-container').classList.add('hidden');
-      document.getElementById('lead-scan-controls').classList.remove('scanning-active');
-    }
-    
-    function clearLeadQueue() {
-      if (!confirm('Clear all leads from queue?')) return;
-      leadQueue = [];
-      saveLeadQueueToStorage();
-      updateLeadScannerUI();
-    }
-    
-    function deleteLead(id) {
-      leadQueue = leadQueue.filter(l => l.id != id);
-      saveLeadQueueToStorage();
-      updateLeadScannerUI();
-    }
-    
-    function rescanLead(id) {
-      const lead = leadQueue.find(l => l.id == id);
-      if (lead) {
-        lead.status = 'pending';
-        lead.score = null;
-        lead.scannedAt = null;
-        lead.error = null;
-        saveLeadQueueToStorage();
-        updateLeadScannerUI();
-      }
-    }
-    
-    async function addLeadToLeaderboard(id) {
-      const lead = leadQueue.find(l => l.id == id);
-      if (!lead || lead.score === null) return;
+
+    async function submitAddAdmin() {
+      const formData = {
+        username: document.getElementById('admin-username').value,
+        password: document.getElementById('admin-password').value,
+        role: document.getElementById('admin-role').value,
+        full_name: document.getElementById('admin-full-name').value,
+        email: document.getElementById('admin-email').value
+      };
       
       try {
-        const response = await fetch('/api/leaderboard/submit', {
+        const response = await fetch('/api/admins', {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             'x-admin-key': localStorage.getItem('admin_id')
           },
-          body: JSON.stringify({
-            url: lead.url,
-            score: lead.score,
-            company_name: lead.company
-          })
+          body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          alert('✅ Admin created!');
+          closeModal('modal-add-admin');
+          loadAdmins();
+        } else {
+          alert('❌ ' + (data.error || 'Failed'));
+        }
+      } catch (error) {
+        alert('Error');
+      }
+    }
+
+    async function deleteItem(type, id) {
+      if (!confirm('Delete this item?')) return;
+      
+      const endpoints = {
+        admins: `/api/admins/${id}`,
+        agencies: `/api/agencies/${id}`,
+        clients: `/api/admin/clients/${id}`,
+        scans: `/api/admin/scans/${id}`,
+        leaderboard: `/api/admin/leaderboard/${id}`
+      };
+      
+      try {
+        const response = await fetch(endpoints[type], {
+          method: 'DELETE',
+          headers: { 
+            'x-admin-key': localStorage.getItem('admin_id'),
+            'Content-Type': 'application/json'
+          }
         });
         
         if (response.ok) {
-          alert('✅ Added to leaderboard!');
+          alert('✅ Deleted!');
+          loadAllData();
         } else {
-          alert('❌ Failed to add to leaderboard');
+          const data = await response.json();
+          alert('❌ Failed: ' + (data.error || 'Unknown error'));
         }
       } catch (error) {
-        alert('❌ Error adding to leaderboard');
+        alert('❌ Error: ' + error.message);
       }
     }
-    
-    function toggleSelectAllLeads() {
-      const isChecked = document.getElementById('lead-select-all').checked;
-      document.querySelectorAll('.lead-checkbox').forEach(cb => cb.checked = isChecked);
-    }
-    
-    function deleteSelectedLeads() {
-      const selected = Array.from(document.querySelectorAll('.lead-checkbox:checked')).map(cb => cb.value);
-      if (selected.length === 0) return alert('Please select leads to delete');
-      if (!confirm(`Delete ${selected.length} leads?`)) return;
-      
-      leadQueue = leadQueue.filter(l => !selected.includes(String(l.id)));
-      saveLeadQueueToStorage();
-      updateLeadScannerUI();
-    }
-    
-    function rescanSelectedLeads() {
-      const selected = Array.from(document.querySelectorAll('.lead-checkbox:checked')).map(cb => cb.value);
-      if (selected.length === 0) return alert('Please select leads to rescan');
-      
-      selected.forEach(id => {
-        const lead = leadQueue.find(l => l.id == id);
-        if (lead) {
-          lead.status = 'pending';
-          lead.score = null;
-          lead.scannedAt = null;
-          lead.error = null;
-        }
-      });
-      
-      saveLeadQueueToStorage();
-      updateLeadScannerUI();
-      alert(`✅ ${selected.length} leads queued for rescan`);
-    }
-    
-    async function addSelectedToLeaderboard() {
-      const selected = Array.from(document.querySelectorAll('.lead-checkbox:checked')).map(cb => cb.value);
-      if (selected.length === 0) return alert('Please select leads to add');
-      
-      const scannedLeads = selected.map(id => leadQueue.find(l => l.id == id)).filter(l => l && l.score !== null);
-      
-      if (scannedLeads.length === 0) {
-        alert('No scanned leads selected');
+
+    async function deleteShareLink(code) {
+      if (!code || code === 'undefined') {
+        alert('❌ Invalid share link code');
         return;
       }
       
-      for (const lead of scannedLeads) {
-        await addLeadToLeaderboard(lead.id);
-      }
-      
-      alert(`✅ Added ${scannedLeads.length} leads to leaderboard`);
-    }
-
-    // ==========================================
-    // BLOG MANAGEMENT FUNCTIONS
-    // ==========================================
-    async function loadBlogPosts() {
-      document.getElementById('blog-loading').classList.remove('hidden');
-      document.getElementById('blog-posts-grid').classList.add('hidden');
-      document.getElementById('blog-posts-table').classList.add('hidden');
+      if (!confirm('Delete this link?')) return;
       
       try {
-        const response = await fetch('/blog/blog-posts.json');
-        const data = await response.json();
+        const response = await fetch(`/api/admin/share-links/${code}`, {
+          method: 'DELETE',
+          headers: { 
+            'x-admin-key': localStorage.getItem('admin_id'),
+            'Content-Type': 'application/json'
+          }
+        });
         
-        if (data.posts) {
-          allBlogPosts = data.posts;
-          updateBlogStats();
-          renderBlogPosts();
+        if (response.ok) {
+          alert('✅ Share link deleted!');
+          loadShareLinks();
+        } else {
+          const data = await response.json();
+          alert('❌ Failed to delete: ' + (data.error || 'Unknown error'));
         }
       } catch (error) {
-        console.error('Blog posts error:', error);
-        allBlogPosts = [];
-        updateBlogStats();
-        renderBlogPosts();
+        alert('❌ Error deleting share link');
       }
-      
-      document.getElementById('blog-loading').classList.add('hidden');
-    }
-
-    function refreshBlogPosts() {
-      loadBlogPosts();
-    }
-
-    function updateBlogStats() {
-      document.getElementById('blog-total-posts').textContent = allBlogPosts.length;
-      document.getElementById('blog-featured-posts').textContent = allBlogPosts.filter(p => p.featured).length;
-      document.getElementById('blog-case-studies').textContent = allBlogPosts.filter(p => p.category && p.category.includes('case-study')).length;
-      document.getElementById('blog-guides').textContent = allBlogPosts.filter(p => p.category && p.category.includes('guide')).length;
-    }
-
-    function renderBlogPosts() {
-      const filteredPosts = getFilteredBlogPosts();
-      
-      if (currentBlogView === 'grid') {
-        renderBlogGrid(filteredPosts);
-        document.getElementById('blog-posts-grid').classList.remove('hidden');
-        document.getElementById('blog-posts-table').classList.add('hidden');
-      } else {
-        renderBlogTable(filteredPosts);
-        document.getElementById('blog-posts-table').classList.remove('hidden');
-        document.getElementById('blog-posts-grid').classList.add('hidden');
-      }
-    }
-
-    function getFilteredBlogPosts() {
-      const searchTerm = document.getElementById('blog-search').value.toLowerCase();
-      const categoryFilter = document.getElementById('blog-category-filter').value;
-      const featuredFilter = document.getElementById('blog-featured-filter').value;
-      
-      return allBlogPosts.filter(post => {
-        const matchesSearch = !searchTerm || 
-          post.title.toLowerCase().includes(searchTerm) ||
-          post.slug.toLowerCase().includes(searchTerm) ||
-          post.description.toLowerCase().includes(searchTerm);
-        
-        const matchesCategory = !categoryFilter || 
-          (post.category && post.category.includes(categoryFilter));
-        
-        const matchesFeatured = !featuredFilter ||
-          (featuredFilter === 'featured' && post.featured) ||
-          (featuredFilter === 'not-featured' && !post.featured);
-        
-        return matchesSearch && matchesCategory && matchesFeatured;
-      });
-    }
-
-    function filterBlogPosts() {
-      renderBlogPosts();
-    }
-
-    function renderBlogGrid(posts) {
-      const grid = document.getElementById('blog-posts-grid');
-      grid.innerHTML = '';
-      
-      if (posts.length === 0) {
-        grid.innerHTML = '<div class="col-span-3 text-center py-12 text-gray-400">No blog posts found</div>';
-        return;
-      }
-      
-      posts.forEach(post => {
-        const categoryTags = (post.category || []).map(cat => 
-          `<span class="category-tag category-${cat}">${cat}</span>`
-        ).join(' ');
-        
-        const metricsHtml = post.metrics ? Object.entries(post.metrics).map(([key, value]) => 
-          `<div class="text-center">
-            <div class="text-lg font-bold text-green-400">${value}</div>
-            <div class="text-xs text-gray-400">${key}</div>
-          </div>`
-        ).join('') : '';
-        
-        grid.innerHTML += `
-          <div class="blog-card bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
-            <div class="p-4">
-              <div class="flex items-center justify-between mb-2">
-                <div class="flex gap-1">${categoryTags}</div>
-                ${post.featured ? '<span class="text-yellow-400">⭐</span>' : ''}
-              </div>
-              <h3 class="font-bold text-lg mb-2 line-clamp-2">${post.title}</h3>
-              <p class="text-gray-400 text-sm mb-3 line-clamp-2">${post.description}</p>
-              
-              ${metricsHtml ? `<div class="flex justify-around py-3 border-t border-b border-gray-700 mb-3">${metricsHtml}</div>` : ''}
-              
-              <div class="flex items-center justify-between text-xs text-gray-500">
-                <span>📅 ${post.date}</span>
-                <span>⏱️ ${post.readTime}</span>
-              </div>
-              
-              <div class="flex gap-2 mt-4">
-                <button onclick="editBlogPost('${post.id}')" class="flex-1 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm font-semibold">✏️ Edit</button>
-                <button onclick="deleteBlogPost('${post.id}')" class="py-2 px-3 bg-red-600 hover:bg-red-700 rounded text-sm">🗑️</button>
-                <button onclick="previewBlogPost('${post.slug}')" class="py-2 px-3 bg-gray-600 hover:bg-gray-700 rounded text-sm">👁️</button>
-              </div>
-            </div>
-          </div>
-        `;
-      });
-    }
-
-    function renderBlogTable(posts) {
-      const tbody = document.getElementById('blog-posts-tbody');
-      tbody.innerHTML = '';
-      
-      if (posts.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">No blog posts found</td></tr>';
-        return;
-      }
-      
-      posts.forEach(post => {
-        const categoryTags = (post.category || []).map(cat => 
-          `<span class="category-tag category-${cat}">${cat}</span>`
-        ).join(' ');
-        
-        tbody.innerHTML += `
-          <tr>
-            <td class="px-4 py-3"><input type="checkbox" class="blog-checkbox" value="${post.id}"></td>
-            <td class="px-4 py-3">
-              <div class="font-semibold">${post.title.substring(0, 50)}${post.title.length > 50 ? '...' : ''}</div>
-              <div class="text-xs text-gray-400">${post.slug}</div>
-            </td>
-            <td class="px-4 py-3">${categoryTags}</td>
-            <td class="px-4 py-3 text-sm">${post.date}</td>
-            <td class="px-4 py-3 text-sm">${post.readTime}</td>
-            <td class="px-4 py-3">${post.featured ? '⭐' : '-'}</td>
-            <td class="px-4 py-3">
-              <div class="flex gap-1">
-                <button onclick="editBlogPost('${post.id}')" class="text-blue-400 hover:text-blue-300">✏️</button>
-                <button onclick="deleteBlogPost('${post.id}')" class="text-red-400 hover:text-red-300">🗑️</button>
-                <button onclick="previewBlogPost('${post.slug}')" class="text-gray-400 hover:text-gray-300">👁️</button>
-              </div>
-            </td>
-          </tr>
-        `;
-      });
-    }
-
-    function setBlogView(view) {
-      currentBlogView = view;
-      document.getElementById('blog-view-grid').className = view === 'grid' 
-        ? 'px-4 py-2 bg-purple-600 rounded-lg font-semibold'
-        : 'px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold';
-      document.getElementById('blog-view-table').className = view === 'table'
-        ? 'px-4 py-2 bg-purple-600 rounded-lg font-semibold'
-        : 'px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold';
-      renderBlogPosts();
-    }
-
-    function showAddBlogModal() {
-      editingBlogPostId = null;
-      document.getElementById('blog-modal-title').textContent = 'Add New Blog Post';
-      clearBlogForm();
-      document.getElementById('blog-post-date').value = new Date().toISOString().split('T')[0];
-      document.getElementById('modal-blog-post').classList.remove('hidden');
-    }
-
-    function editBlogPost(postId) {
-      const post = allBlogPosts.find(p => p.id === postId);
-      if (!post) return;
-      
-      editingBlogPostId = postId;
-      document.getElementById('blog-modal-title').textContent = 'Edit Blog Post';
-      
-      document.getElementById('blog-post-id').value = post.id;
-      document.getElementById('blog-post-slug').value = post.slug;
-      document.getElementById('blog-post-title').value = post.title;
-      document.getElementById('blog-post-description').value = post.description;
-      document.getElementById('blog-post-date').value = post.date;
-      document.getElementById('blog-post-readtime').value = post.readTime;
-      document.getElementById('blog-post-author').value = post.author;
-      document.getElementById('blog-post-image').value = post.image || '';
-      document.getElementById('blog-post-featured').checked = post.featured;
-      
-      const categorySelect = document.getElementById('blog-post-category');
-      Array.from(categorySelect.options).forEach(opt => {
-        opt.selected = post.category && post.category.includes(opt.value);
-      });
-      
-      if (post.metrics) {
-        const metricEntries = Object.entries(post.metrics);
-        if (metricEntries[0]) {
-          document.getElementById('blog-metric-1-key').value = metricEntries[0][0];
-          document.getElementById('blog-metric-1-value').value = metricEntries[0][1];
-        }
-        if (metricEntries[1]) {
-          document.getElementById('blog-metric-2-key').value = metricEntries[1][0];
-          document.getElementById('blog-metric-2-value').value = metricEntries[1][1];
-        }
-        if (metricEntries[2]) {
-          document.getElementById('blog-metric-3-key').value = metricEntries[2][0];
-          document.getElementById('blog-metric-3-value').value = metricEntries[2][1];
-        }
-      }
-      
-      document.getElementById('modal-blog-post').classList.remove('hidden');
-    }
-
-    function clearBlogForm() {
-      document.getElementById('blog-post-id').value = '';
-      document.getElementById('blog-post-slug').value = '';
-      document.getElementById('blog-post-title').value = '';
-      document.getElementById('blog-post-description').value = '';
-      document.getElementById('blog-post-readtime').value = '';
-      document.getElementById('blog-post-author').value = 'Ot van ContentScale';
-      document.getElementById('blog-post-image').value = '';
-      document.getElementById('blog-post-featured').checked = false;
-      document.getElementById('blog-metric-1-key').value = '';
-      document.getElementById('blog-metric-1-value').value = '';
-      document.getElementById('blog-metric-2-key').value = '';
-      document.getElementById('blog-metric-2-value').value = '';
-      document.getElementById('blog-metric-3-key').value = '';
-      document.getElementById('blog-metric-3-value').value = '';
-      
-      const categorySelect = document.getElementById('blog-post-category');
-      Array.from(categorySelect.options).forEach(opt => opt.selected = false);
-    }
-
-    function submitBlogPost() {
-      const post = {
-        id: document.getElementById('blog-post-id').value,
-        title: document.getElementById('blog-post-title').value,
-        slug: document.getElementById('blog-post-slug').value,
-        description: document.getElementById('blog-post-description').value,
-        category: Array.from(document.getElementById('blog-post-category').selectedOptions).map(o => o.value),
-        date: document.getElementById('blog-post-date').value,
-        readTime: document.getElementById('blog-post-readtime').value,
-        author: document.getElementById('blog-post-author').value,
-        featured: document.getElementById('blog-post-featured').checked,
-        image: document.getElementById('blog-post-image').value || undefined
-      };
-      
-      const metrics = {};
-      const m1k = document.getElementById('blog-metric-1-key').value;
-      const m1v = document.getElementById('blog-metric-1-value').value;
-      const m2k = document.getElementById('blog-metric-2-key').value;
-      const m2v = document.getElementById('blog-metric-2-value').value;
-      const m3k = document.getElementById('blog-metric-3-key').value;
-      const m3v = document.getElementById('blog-metric-3-value').value;
-      
-      if (m1k && m1v) metrics[m1k] = m1v;
-      if (m2k && m2v) metrics[m2k] = m2v;
-      if (m3k && m3v) metrics[m3k] = m3v;
-      
-      if (Object.keys(metrics).length > 0) {
-        post.metrics = metrics;
-      }
-      
-      if (!post.id || !post.title || !post.slug) {
-        alert('Please fill in ID, Title, and Slug');
-        return;
-      }
-      
-      if (editingBlogPostId) {
-        const index = allBlogPosts.findIndex(p => p.id === editingBlogPostId);
-        if (index !== -1) {
-          allBlogPosts[index] = post;
-        }
-      } else {
-        if (allBlogPosts.some(p => p.id === post.id)) {
-          alert('A post with this ID already exists');
-          return;
-        }
-        allBlogPosts.unshift(post);
-      }
-      
-      closeModal('modal-blog-post');
-      updateBlogStats();
-      renderBlogPosts();
-      
-      alert('✅ Blog post saved!\n\nNote: To persist changes, click "Download blog-posts.json" and upload it to your server.');
-    }
-
-    function deleteBlogPost(postId) {
-      if (!confirm('Delete this blog post?')) return;
-      
-      allBlogPosts = allBlogPosts.filter(p => p.id !== postId);
-      updateBlogStats();
-      renderBlogPosts();
-      
-      alert('✅ Post deleted from local data.\n\nNote: Download the updated JSON to persist changes.');
-    }
-
-    function toggleSelectAllBlogPosts() {
-      const isChecked = document.getElementById('blog-select-all').checked;
-      document.querySelectorAll('.blog-checkbox').forEach(cb => cb.checked = isChecked);
-    }
-
-    function deleteSelectedBlogPosts() {
-      const selected = Array.from(document.querySelectorAll('.blog-checkbox:checked')).map(cb => cb.value);
-      if (selected.length === 0) return alert('Please select posts to delete');
-      if (!confirm(`Delete ${selected.length} blog posts?`)) return;
-      
-      allBlogPosts = allBlogPosts.filter(p => !selected.includes(p.id));
-      updateBlogStats();
-      renderBlogPosts();
-      
-      alert('✅ Posts deleted from local data.\n\nNote: Download the updated JSON to persist changes.');
-    }
-
-    function previewBlogPost(slug) {
-      window.open(`/blog/${slug}`, '_blank');
-    }
-
-    function exportBlogPostsToJSON() {
-      exportToJSON(`blog-posts-backup-${Date.now()}.json`, { posts: allBlogPosts });
-    }
-
-    function downloadBlogJSON() {
-      const json = JSON.stringify({ posts: allBlogPosts }, null, 2);
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'blog-posts.json';
-      a.click();
-      window.URL.revokeObjectURL(url);
-      
-      alert('✅ blog-posts.json downloaded!\n\nUpload this file to /blog/blog-posts.json on your server.');
-    }
-
-    // ==========================================
-    // EXPORT FUNCTIONS
-    // ==========================================
-    function exportToCSV(filename, data) {
-      if (!data || data.length === 0) {
-        alert('No data to export');
-        return;
-      }
-      
-      const csv = [
-        Object.keys(data[0] || {}).join(',')
-      ].concat(data.map(row => Object.values(row).map(cell => '"' + (cell || '').toString().replace(/"/g, '""') + '"').join(',')))
-       .join('\n');
-
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    }
-
-    function exportToJSON(filename, data) {
-      const json = JSON.stringify(data, null, 2);
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    }
-
-    function exportAgenciesToCSV() {
-      exportToCSV(`agencies-${Date.now()}.csv`, allAgencies);
-    }
-
-    function exportAgenciesToJSON() {
-      exportToJSON(`agencies-${Date.now()}.json`, allAgencies);
-    }
-
-    function exportClientsToCSV() {
-      exportToCSV(`clients-${Date.now()}.csv`, allClients);
-    }
-
-    function exportClientsToJSON() {
-      exportToJSON(`clients-${Date.now()}.json`, allClients);
-    }
-
-    function exportScansToCSV() {
-      exportToCSV(`scans-${Date.now()}.csv`, allScans);
-    }
-
-    function exportScansToJSON() {
-      exportToJSON(`scans-${Date.now()}.json`, allScans);
-    }
-
-    function exportLeaderboardToCSV() {
-      exportToCSV(`leaderboard-${Date.now()}.csv`, allLeaderboard);
-    }
-
-    function exportLeaderboardToJSON() {
-      exportToJSON(`leaderboard-${Date.now()}.json`, allLeaderboard);
-    }
-
-    function exportLeadQueueToCSV() {
-      exportToCSV(`lead-queue-${Date.now()}.csv`, leadQueue);
-    }
-
-    function exportLeadQueueToJSON() {
-      exportToJSON(`lead-queue-${Date.now()}.json`, leadQueue);
     }
 
     // ==========================================
@@ -2407,249 +1166,77 @@
     }
 
     // ==========================================
-    // CRUD OPERATIONS
+    // EXPORT FUNCTIONS
     // ==========================================
-    async function submitAddAgency() {
-      const formData = {
-        name: document.getElementById('agency-name').value,
-        domain: document.getElementById('agency-domain').value,
-        country: document.getElementById('agency-country').value,
-        plan: 'free'
-      };
-      
-      try {
-        const response = await fetch('/api/agencies', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-admin-key': localStorage.getItem('admin_id')
-          },
-          body: JSON.stringify(formData)
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-          alert('✅ Agency created!');
-          closeModal('modal-add-agency');
-          loadAgencies();
-        } else {
-          alert('❌ ' + (data.error || 'Failed'));
-        }
-      } catch (error) {
-        alert('Error');
-      }
-    }
-
-    async function submitCreateShareLink() {
-      const email = document.getElementById('share-client-email').value;
-      const name = document.getElementById('share-client-name').value;
-      const company = document.getElementById('share-client-company')?.value || '';
-      const scansLimit = parseInt(document.getElementById('share-scans-limit').value);
-      const validDays = parseInt(document.getElementById('share-valid-days').value);
-      
-      // Validatie
-      if (!email || !name) {
-        alert('❌ Email and name are required');
+    function exportToCSV(filename, data) {
+      if (!data || data.length === 0) {
+        alert('No data to export');
         return;
       }
       
-      if (!email.includes('@')) {
-        alert('❌ Invalid email address');
-        return;
-      }
-      
-      const formData = {
-        client_email: email,
-        client_name: name,
-        client_company: company,
-        scans_limit: scansLimit || 5,
-        valid_days: validDays || 30
-      };
-      
-      console.log('Creating share link:', formData);
-      
-      try {
-        const response = await fetch('/api/admin/share-links/create', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-admin-key': localStorage.getItem('admin_id')
-          },
-          body: JSON.stringify(formData)
-        });
-        
-        const data = await response.json();
-        console.log('Response:', data);
-        
-        if (data.success) {
-          alert('✅ Link created!\n\n' + data.share_url);
-          navigator.clipboard.writeText(data.share_url);
-          closeModal('modal-create-share-link');
-          
-          // Clear form
-          document.getElementById('share-client-email').value = '';
-          document.getElementById('share-client-name').value = '';
-          if (document.getElementById('share-client-company')) {
-            document.getElementById('share-client-company').value = '';
-          }
-          
-          loadShareLinks();
-        } else {
-          alert('❌ Failed to create link:\n' + (data.error || 'Unknown error'));
-        }
-      } catch (error) {
-        console.error('Create share link error:', error);
-        alert('❌ Error creating share link: ' + error.message);
-      }
+      const csv = [
+        Object.keys(data[0] || {}).join(',')
+      ].concat(data.map(row => Object.values(row).map(cell => '"' + (cell || '').toString().replace(/"/g, '""') + '"').join(',')))
+       .join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      window.URL.revokeObjectURL(url);
     }
 
-    async function submitAddAdmin() {
-      const formData = {
-        username: document.getElementById('admin-username').value,
-        password: document.getElementById('admin-password').value,
-        role: document.getElementById('admin-role').value,
-        full_name: document.getElementById('admin-full-name').value,
-        email: document.getElementById('admin-email').value
-      };
-      
-      try {
-        const response = await fetch('/api/admins', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-admin-key': localStorage.getItem('admin_id')
-          },
-          body: JSON.stringify(formData)
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-          alert('✅ Admin created!');
-          closeModal('modal-add-admin');
-          loadAdmins();
-        } else {
-          alert('❌ ' + (data.error || 'Failed'));
-        }
-      } catch (error) {
-        alert('Error');
-      }
+    function exportToJSON(filename, data) {
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      window.URL.revokeObjectURL(url);
     }
 
-    async function deleteItem(type, id) {
-      if (!confirm('Delete this item?')) return;
-      
-      const endpoints = {
-        admins: `/api/admins/${id}`,
-        agencies: `/api/agencies/${id}`,
-        clients: `/api/admin/clients/${id}`,
-        scans: `/api/admin/scans/${id}`,
-        leaderboard: `/api/admin/leaderboard/${id}`
-      };
-      
-      try {
-        const response = await fetch(endpoints[type], {
-          method: 'DELETE',
-          headers: { 
-            'x-admin-key': localStorage.getItem('admin_id'),
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (response.ok) {
-          alert('✅ Deleted!');
-          loadAllData();
-        } else {
-          const data = await response.json();
-          alert('❌ Failed: ' + (data.error || 'Unknown error'));
-        }
-      } catch (error) {
-        alert('❌ Error: ' + error.message);
-      }
+    function exportAgenciesToCSV() {
+      exportToCSV(`agencies-${Date.now()}.csv`, allAgencies);
     }
 
-    async function deleteShareLink(code) {
-      if (!code || code === 'undefined') {
-        alert('❌ Invalid share link code');
-        return;
-      }
-      
-      if (!confirm('Delete this link?')) return;
-      
-      try {
-        const response = await fetch(`/api/admin/share-links/${code}`, {
-          method: 'DELETE',
-          headers: { 
-            'x-admin-key': localStorage.getItem('admin_id'),
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (response.ok) {
-          alert('✅ Share link deleted!');
-          loadShareLinks();
-        } else {
-          const data = await response.json();
-          alert('❌ Failed to delete: ' + (data.error || 'Unknown error'));
-        }
-      } catch (error) {
-        console.error('Delete error:', error);
-        alert('❌ Error deleting share link');
-      }
+    function exportAgenciesToJSON() {
+      exportToJSON(`agencies-${Date.now()}.json`, allAgencies);
     }
 
-    // ==========================================
-    // EMAIL FUNCTIONS
-    // ==========================================
-    async function sendBulkEmail() {
-      const recipients = document.getElementById('bulk-email-recipients').value;
-      const subject = document.getElementById('bulk-email-subject').value;
-      const body = document.getElementById('bulk-email-body').value;
-      
-      if (!confirm(`Send email to ${recipients}?`)) return;
-      
-      try {
-        const response = await fetch('/api/admin/emails/bulk', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-admin-key': localStorage.getItem('admin_id')
-          },
-          body: JSON.stringify({ recipients, subject, body })
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-          alert(`✅ Sent ${data.count} emails!`);
-        }
-      } catch (error) {
-        alert('Error sending emails');
-      }
+    function exportClientsToCSV() {
+      exportToCSV(`clients-${Date.now()}.csv`, allClients);
     }
 
-    // ==========================================
-    // OPT-OUT FUNCTIONS
-    // ==========================================
-    async function manualOptOut() {
-      const url = document.getElementById('manual-optout-url').value;
-      if (!url) return alert('Enter URL');
-      
-      if (!confirm(`Remove ${url} from leaderboard?`)) return;
-      
-      try {
-        const response = await fetch('/api/optout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url, reason: 'Manual admin removal' })
-        });
-        
-        if (response.ok) {
-          alert('✅ Agency removed from leaderboard');
-          document.getElementById('manual-optout-url').value = '';
-          loadLeaderboard();
-        }
-      } catch (error) {
-        alert('Error');
-      }
+    function exportClientsToJSON() {
+      exportToJSON(`clients-${Date.now()}.json`, allClients);
+    }
+
+    function exportScansToCSV() {
+      exportToCSV(`scans-${Date.now()}.csv`, allScans);
+    }
+
+    function exportScansToJSON() {
+      exportToJSON(`scans-${Date.now()}.json`, allScans);
+    }
+
+    function exportLeaderboardToCSV() {
+      exportToCSV(`leaderboard-${Date.now()}.csv`, allLeaderboard);
+    }
+
+    function exportLeaderboardToJSON() {
+      exportToJSON(`leaderboard-${Date.now()}.json`, allLeaderboard);
+    }
+
+    function exportLeadQueueToCSV() {
+      exportToCSV(`lead-queue-${Date.now()}.csv`, leadQueue);
+    }
+
+    function exportLeadQueueToJSON() {
+      exportToJSON(`lead-queue-${Date.now()}.json`, leadQueue);
     }
 
     // ==========================================
@@ -2696,9 +1283,12 @@
       if (!confirm('Scan all agencies?')) return;
       alert('Scan started!');
     }
+
+    // Placeholder functions for features not yet implemented
+    function loadBlogPosts() {}
+    function loadLeadQueueFromStorage() {}
+    function updateLeadScannerUI() {}
   </script>
-  <!-- ⬇️ AUTO-REFRESH SCRIPT ONLY -->
-  <script src="/js/admin-leaderboard-auto-refresh.js"></script>
 
 </body>
 </html>
