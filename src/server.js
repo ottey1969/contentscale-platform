@@ -851,9 +851,9 @@ app.post('/api/admin/share-links/create', async (req, res) => {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + (valid_days || 30));
     
-    await pool.query(
-      `INSERT INTO share_links (share_code, client_email, client_name, client_company, scans_limit, scans_used, expires_at, status, created_at)
-       VALUES ($1, $2, $3, $4, $5, 0, $6, 'active', NOW())`,
+   await pool.query(
+      `INSERT INTO share_links (token, client_email, client_name, client_company, scans_limit, scans_used, expires_at)
+       VALUES ($1, $2, $3, $4, $5, 0, $6)`,
       [shareCode, client_email, client_name, client_company || '', scans_limit || 5, expiresAt]
     );
     
