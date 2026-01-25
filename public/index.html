@@ -709,12 +709,45 @@ function toggleRankings() {
 // Load All Rankings from API
 async function loadAllRankings() {
   try {
+    console.log('🔍 Loading rankings...');
+    
     const response = await fetch('/api/leaderboard');
     const data = await response.json();
     
-    if (data.success && data.leaderboard) {
-      // Filter out top 3 (they're already shown in cards)
-      allRankings = data.leaderboard.filter(entry => entry.rank > 3);
+    console.log('📊 Rankings API Response:', data);
+    
+    const entries = data.entries || data.leaderboard || [];
+    
+    if (data.success && entries.length > 0) {
+      const rankedEntries = entries.map((entry, index) => ({
+        ...entry,
+        rank: index + 1,
+        company_name: entry.company_name || 'Unknown',
+        created_at: entry.created_at || new Date().toISOString()
+      }));
+      
+      allRankings = rankedEntries.filter(entry => entry.rank > 3);
+      
+      console.log('✅ Rankings loaded:', allRankings.length, 'agencies (rank 4+)');
+      
+      document.getElementById('total-count').textContent = allRankings.length;
+      
+      if (allRankings.length > 0) {
+        loadNextBatch();
+      } else {
+        document.getElementById('total-count').textContent = 0;
+        showNoMoreMessage();
+      }
+    } else {
+      console.warn('⚠️ No entries found');
+      document.getElementById('total-count').textContent = 0;
+      showNoMoreMessage();
+    }
+  } catch (error) {
+    console.error('❌ Rankings load error:', error);
+  }
+}
+  
       
       // Update total count
       document.getElementById('total-count').textContent = allRankings.length;
