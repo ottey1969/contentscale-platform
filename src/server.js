@@ -649,16 +649,19 @@ app.get('/api/admins', async (req, res) => {
 app.post('/api/admins', async (req, res) => {
   const { username, password, role, full_name, email } = req.body;
   
-  if (!username || !password || !role) {
-    return res.status(400).json({ success: false, error: 'Required fields missing' });
+  // Use email as username if username not provided
+  const finalUsername = username || email?.split('@')[0] || `user_${Date.now()}`;
+  
+  if (!password || !role) {
+    return res.status(400).json({ success: false, error: 'Password and role are required' });
   }
   
   try {
     // NO BCRYPT - Store password directly
-    const result = await pool.query(
+const result = await pool.query(
       `INSERT INTO super_admins (username, password_hash, full_name, email, role, is_active) 
        VALUES ($1, $2, $3, $4, $5, TRUE) RETURNING id`,
-      [username, password, full_name || null, email || null, role]
+      [finalUsername, password, full_name || null, email || null, role]
     );
     
     res.json({ success: true, admin_id: result.rows[0].id });
