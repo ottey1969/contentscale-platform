@@ -1435,10 +1435,49 @@ function loadMoreRankings() {
       `).join('');
     }
 
-    function renderOtherAgencies() {
-      return;
-      }
-      const others = filteredAgencies.slice(3, displayedCount);
+   function renderOtherAgencies() {
+  const container = document.getElementById('otherAgenciesGrid');
+  
+  if (!container) {
+    return;
+  }
+  
+  const others = filteredAgencies.slice(3, displayedCount);
+  
+  container.innerHTML = others.map(agency => `
+    <div class="agency-card rounded-xl p-5" onclick="viewAgencyProfile(${agency.id})">
+      <div class="flex items-start justify-between mb-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center font-bold">
+            #${agency.rank}
+          </div>
+          <div>
+            <h3 class="text-lg font-bold">${agency.company}</h3>
+            <div class="text-xs text-gray-500">${getFlagEmoji(agency.country)} ${getCountryName(agency.country)}</div>
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="text-2xl font-bold text-purple-400">${agency.score}</div>
+          <div class="text-xs text-gray-500">/100</div>
+        </div>
+      </div>
+      <p class="text-gray-400 text-sm mb-3">${agency.description || 'Professional SEO services for businesses worldwide.'}</p>
+      <div class="flex items-center justify-between">
+        <span class="text-xs text-gray-500">${agency.isEnhanced ? '✓ Verified' : 'Basic'}</span>
+        <button class="px-3 py-1 bg-purple-600 hover:bg-purple-700 rounded text-sm font-semibold">View</button>
+      </div>
+    </div>
+  `).join('');
+  
+  const loadMoreContainer = document.getElementById('loadMoreContainer');
+  if (loadMoreContainer) {
+    if (displayedCount >= filteredAgencies.length) {
+      loadMoreContainer.classList.add('hidden');
+    } else {
+      loadMoreContainer.classList.remove('hidden');
+    }
+  }
+}
       
       container.innerHTML = others.map(agency => `
         <div class="agency-card rounded-xl p-5" onclick="viewAgencyProfile(${agency.id})">
