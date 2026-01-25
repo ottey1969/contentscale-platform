@@ -707,12 +707,15 @@ app.post('/api/agencies', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Name and domain required' });
   }
   
+  // Strip https:// and http:// from domain
+  const cleanDomain = domain.replace(/^https?:\/\//, '');
+  
   try {
     const adminKey = crypto.randomBytes(16).toString('hex');
     const result = await pool.query(
       `INSERT INTO agencies (name, domain, country, plan, contact_person, contact_email, admin_key, url, is_active)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE) RETURNING id`,
-      [name, domain, country || 'NL', plan || 'free', contact_person, contact_email, adminKey, `https://${domain}`]
+[name, cleanDomain, country || 'NL', plan || 'free', contact_person, contact_email, adminKey, `https://${cleanDomain}`]
     );
     
     res.json({ success: true, agency_id: result.rows[0].id, admin_key: adminKey });
