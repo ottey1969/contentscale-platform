@@ -392,20 +392,461 @@
       </div>
     </div>
 
-    <!-- OTHER AGENCIES (Rank 4+) -->
-    <div class="mb-6">
-      <h2 class="text-2xl font-bold mb-4">Other Top Agencies</h2>
-      
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4" id="otherAgenciesGrid">
-        <!-- Dynamically loaded -->
-      </div>
-      
-      <div class="text-center mt-6" id="loadMoreContainer">
-        <button onclick="loadMoreAgencies()" class="px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition-all">
-          Load More Agencies →
-        </button>
-      </div>
+  <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- LEADERBOARD UPDATE: ADD THIS AFTER TOP 3 CARDS SECTION                     -->
+<!-- Place this code RIGHT AFTER the closing </div> of your Top 3 Agencies       -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+
+<style>
+/* Complete Rankings Section Styles */
+.complete-rankings-section {
+  margin-top: 60px;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 20px;
+}
+
+.rankings-toggle-btn {
+  width: 100%;
+  padding: 20px;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 2px solid #334155;
+  border-radius: 12px;
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.rankings-toggle-btn:hover {
+  border-color: #8b5cf6;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+}
+
+.rankings-toggle-btn .arrow {
+  transition: transform 0.3s;
+}
+
+.rankings-toggle-btn.active .arrow {
+  transform: rotate(180deg);
+}
+
+.rankings-table-container {
+  margin-top: 20px;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 2px solid #334155;
+  border-radius: 12px;
+  overflow: hidden;
+  display: none;
+}
+
+.rankings-table-container.show {
+  display: block;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rankings-header {
+  padding: 20px;
+  background: rgba(139, 92, 246, 0.1);
+  border-bottom: 2px solid #334155;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.rankings-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.rankings-table thead {
+  background: rgba(15, 23, 42, 0.8);
+  border-bottom: 2px solid #334155;
+}
+
+.rankings-table th {
+  padding: 16px 12px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.rankings-table th:first-child {
+  text-align: center;
+  width: 80px;
+}
+
+.rankings-table tbody tr {
+  border-bottom: 1px solid #334155;
+  transition: all 0.2s;
+}
+
+.rankings-table tbody tr:hover {
+  background: rgba(139, 92, 246, 0.05);
+}
+
+.rankings-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.rankings-table td {
+  padding: 16px 12px;
+  font-size: 14px;
+  color: #e2e8f0;
+}
+
+.rankings-table td:first-child {
+  text-align: center;
+  font-weight: 700;
+  color: #94a3b8;
+  font-size: 16px;
+}
+
+.rank-number {
+  display: inline-block;
+  min-width: 40px;
+}
+
+.company-name {
+  font-weight: 600;
+  color: white;
+}
+
+.domain-link {
+  color: #60a5fa;
+  text-decoration: none;
+  font-size: 13px;
+  transition: color 0.2s;
+}
+
+.domain-link:hover {
+  color: #93c5fd;
+  text-decoration: underline;
+}
+
+.score-cell {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.score-high { color: #10b981; }
+.score-medium { color: #f59e0b; }
+.score-low { color: #ef4444; }
+
+.date-cell {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.load-more-container {
+  padding: 30px;
+  text-align: center;
+  border-top: 2px solid #334155;
+}
+
+.load-more-btn {
+  padding: 14px 32px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.load-more-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4);
+}
+
+.load-more-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.no-more-text {
+  color: #64748b;
+  font-size: 14px;
+  font-style: italic;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .rankings-table {
+    font-size: 12px;
+  }
+  
+  .rankings-table th,
+  .rankings-table td {
+    padding: 12px 8px;
+  }
+  
+  .rankings-table th:first-child,
+  .rankings-table td:first-child {
+    width: 60px;
+  }
+  
+  .domain-link {
+    font-size: 11px;
+    word-break: break-all;
+  }
+  
+  .score-cell {
+    font-size: 14px;
+  }
+  
+  .date-cell {
+    font-size: 11px;
+  }
+}
+</style>
+
+<!-- Complete Rankings Section HTML -->
+<div class="complete-rankings-section">
+  
+  <!-- Toggle Button -->
+  <button class="rankings-toggle-btn" onclick="toggleRankings()" id="rankings-toggle">
+    <span>📊 Show All Rankings</span>
+    <span class="arrow">▼</span>
+  </button>
+  
+  <!-- Rankings Table Container -->
+  <div class="rankings-table-container" id="rankings-container">
+    
+    <!-- Header -->
+    <div class="rankings-header">
+      <span id="rankings-count-text">Showing 1-20 of <span id="total-count">0</span> agencies</span>
     </div>
+    
+    <!-- Table -->
+    <table class="rankings-table">
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Company</th>
+          <th>Website</th>
+          <th>Score</th>
+          <th>Added</th>
+        </tr>
+      </thead>
+      <tbody id="rankings-tbody">
+        <!-- Rows will be inserted here by JavaScript -->
+      </tbody>
+    </table>
+    
+    <!-- Load More Button -->
+    <div class="load-more-container" id="load-more-container">
+      <button class="load-more-btn" onclick="loadMoreRankings()" id="load-more-btn">
+        <span>⬇️ Load Next 20</span>
+      </button>
+    </div>
+    
+  </div>
+  
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// LEADERBOARD RANKINGS JAVASCRIPT
+// ═══════════════════════════════════════════════════════════════════════════
+
+let allRankings = [];
+let displayedRankings = [];
+let currentOffset = 0;
+const ITEMS_PER_LOAD = 20;
+let isRankingsVisible = false;
+
+// Toggle Rankings Visibility
+function toggleRankings() {
+  const container = document.getElementById('rankings-container');
+  const button = document.getElementById('rankings-toggle');
+  
+  isRankingsVisible = !isRankingsVisible;
+  
+  if (isRankingsVisible) {
+    container.classList.add('show');
+    button.classList.add('active');
+    button.innerHTML = '<span>📊 Hide Rankings</span><span class="arrow">▼</span>';
+    
+    // Load rankings if not loaded yet
+    if (allRankings.length === 0) {
+      loadAllRankings();
+    }
+  } else {
+    container.classList.remove('show');
+    button.classList.remove('active');
+    button.innerHTML = '<span>📊 Show All Rankings</span><span class="arrow">▼</span>';
+  }
+}
+
+// Load All Rankings from API
+async function loadAllRankings() {
+  try {
+    const response = await fetch('/api/leaderboard');
+    const data = await response.json();
+    
+    if (data.success && data.leaderboard) {
+      // Filter out top 3 (they're already shown in cards)
+      allRankings = data.leaderboard.filter(entry => entry.rank > 3);
+      
+      // Update total count
+      document.getElementById('total-count').textContent = allRankings.length;
+      
+      // Load first batch
+      loadNextBatch();
+    }
+  } catch (error) {
+    console.error('Error loading rankings:', error);
+  }
+}
+
+// Load Next Batch of 20
+function loadNextBatch() {
+  const nextBatch = allRankings.slice(currentOffset, currentOffset + ITEMS_PER_LOAD);
+  
+  if (nextBatch.length === 0) {
+    // No more items
+    showNoMoreMessage();
+    return;
+  }
+  
+  // Append to displayed rankings
+  displayedRankings = displayedRankings.concat(nextBatch);
+  
+  // Render rows
+  renderRankings(nextBatch);
+  
+  // Update offset
+  currentOffset += ITEMS_PER_LOAD;
+  
+  // Update count text
+  updateCountText();
+  
+  // Check if more items available
+  if (currentOffset >= allRankings.length) {
+    showNoMoreMessage();
+  }
+}
+
+// Render Rankings Rows
+function renderRankings(rankings) {
+  const tbody = document.getElementById('rankings-tbody');
+  
+  rankings.forEach(entry => {
+    const row = createRankingRow(entry);
+    tbody.insertAdjacentHTML('beforeend', row);
+  });
+}
+
+// Create Single Ranking Row HTML
+function createRankingRow(entry) {
+  const scoreClass = entry.score >= 80 ? 'score-high' : entry.score >= 50 ? 'score-medium' : 'score-low';
+  const domain = extractDomain(entry.url);
+  const dateFormatted = formatDate(entry.created_at);
+  
+  return `
+    <tr>
+      <td><span class="rank-number">${entry.rank}</span></td>
+      <td>
+        <div class="company-name">${entry.company_name || 'Unknown'}</div>
+        <div class="domain-link">${domain}</div>
+      </td>
+      <td>
+        <a href="${entry.url}" target="_blank" class="domain-link">${domain}</a>
+      </td>
+      <td class="score-cell ${scoreClass}">${entry.score}/100</td>
+      <td class="date-cell">${dateFormatted}</td>
+    </tr>
+  `;
+}
+
+// Extract Domain from URL (Privacy: no paths)
+function extractDomain(url) {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname.replace('www.', '');
+  } catch {
+    return url;
+  }
+}
+
+// Format Date (Short English: "22 Jan")
+function formatDate(dateString) {
+  if (!dateString) return '-';
+  
+  try {
+    const date = new Date(dateString);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const day = date.getDate();
+    const month = months[date.getMonth()];
+    
+    return `${day} ${month}`;
+  } catch {
+    return '-';
+  }
+}
+
+// Update Count Text
+function updateCountText() {
+  const showing = displayedRankings.length;
+  const total = allRankings.length;
+  document.getElementById('rankings-count-text').innerHTML = 
+    `Showing 1-${showing} of <span id="total-count">${total}</span> agencies`;
+}
+
+// Show "No More" Message
+function showNoMoreMessage() {
+  const container = document.getElementById('load-more-container');
+  container.innerHTML = `
+    <p class="no-more-text">✓ All agencies loaded (${allRankings.length} total)</p>
+  `;
+}
+
+// Load More Button Handler
+function loadMoreRankings() {
+  const button = document.getElementById('load-more-btn');
+  button.disabled = true;
+  button.innerHTML = '<span>⏳ Loading...</span>';
+  
+  setTimeout(() => {
+    loadNextBatch();
+    button.disabled = false;
+    button.innerHTML = '<span>⬇️ Load Next 20</span>';
+  }, 300);
+}
+
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- END OF LEADERBOARD UPDATE                                                  -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
 
     <!-- BLOG PREVIEW SECTION -->
     <div class="mt-16 mb-12">
