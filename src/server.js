@@ -51,7 +51,7 @@ pool.connect((err, client, release) => {
     release();
     setTimeout(createAllTables, 1000);
   }
-});
+}); 
 
 // ============================================
 // CREATE ALL TABLES
