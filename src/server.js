@@ -781,6 +781,27 @@ app.delete('/api/admin/scans/:id', async (req, res) => {
   }
 });
 
+app.patch('/api/scans/:id/company', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { company_name } = req.body;
+    
+    if (!company_name) {
+      return res.status(400).json({ success: false, error: 'Company name required' });
+    }
+    
+    await pool.query(
+      'UPDATE scans SET company_name = $1 WHERE id = $2',
+      [company_name, id]
+    );
+    
+    res.json({ success: true, message: 'Company name updated' });
+  } catch (error) {
+    console.error('Update company name error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ============================================
 // SHARE LINKS ENDPOINTS
 // ============================================
