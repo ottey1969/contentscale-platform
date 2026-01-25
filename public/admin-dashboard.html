@@ -527,6 +527,7 @@
                   <th class="px-4 py-3 text-left text-sm font-semibold">URL</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Score</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Country</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Added Date</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
                 </tr>
               </thead>
@@ -1039,6 +1040,19 @@
             const medals = ['🥇', '🥈', '🥉'];
             const medal = entry.rank <= 3 ? medals[entry.rank - 1] : '';
             
+            // Format date
+            let addedDate = '-';
+            if (entry.created_at) {
+              const date = new Date(entry.created_at);
+              addedDate = date.toLocaleString('nl-NL', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+              });
+            }
+            
             tbody.innerHTML += `
               <tr>
                 <td class="px-4 py-3"><input type="checkbox" class="leaderboard-checkbox" value="${entry.id}"></td>
@@ -1047,6 +1061,7 @@
                 <td class="px-4 py-3 text-blue-400 text-sm">${entry.url ? entry.url.substring(0, 40) : '-'}</td>
                 <td class="px-4 py-3 font-bold">${entry.score}/100</td>
                 <td class="px-4 py-3">${entry.country}</td>
+                <td class="px-4 py-3 text-sm text-gray-400">${addedDate}</td>
                 <td class="px-4 py-3"><button onclick="deleteItem('leaderboard', ${entry.id})" class="text-red-400 hover:text-red-300">🗑️</button></td>
               </tr>
             `;
