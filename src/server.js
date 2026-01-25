@@ -677,8 +677,9 @@ app.delete('/api/admins/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM super_admins WHERE id = $1', [req.params.id]);
     res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Database error' });
+} catch (error) {
+    console.error('Agency creation error:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
