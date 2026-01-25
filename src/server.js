@@ -650,7 +650,26 @@ app.post('/api/admins', async (req, res) => {
   const { username, password, role, full_name, email } = req.body;
   
   // Use email as username if username not provided
-  const finalUsername = username || email?.split('@')[0] || `user_${Date.now()}`;
+ // Use email as username if username not provided
+  let finalUsername = username;
+  
+  if (!finalUsername && email) {
+    finalUsername = email.split('@')[0];
+    
+    // Check if username exists, if so add timestamp
+    const existing = await pool.query(
+      'SELECT id FROM super_admins WHERE username = $1',
+      [finalUsername]
+    );
+    
+    if (existing.rows.length > 0) {
+      finalUsername = `${finalUsername}_${Date.now()}`;
+    }
+  }
+  
+  if (!finalUsername) {
+    finalUsername = `user_${Date.now()}`;
+  }
   
   if (!password || !role) {
     return res.status(400).json({ success: false, error: 'Password and role are required' });
