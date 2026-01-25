@@ -1,10 +1,10 @@
 // ============================================
-// CONTENTSCALE SERVER.JS - COMPLETE WITH SECURITY
+// CONTENTSCALE SERVER.JS - COMPLETE WITHOUT BCRYPT
 // ============================================
 
 const express = require('express');
 const path = require('path');
-const bcrypt = require('bcrypt');
+// BCRYPT REMOVED FOR RAILWAY COMPATIBILITY
 const crypto = require('crypto');
 const { Pool } = require('pg');
 
@@ -75,13 +75,12 @@ async function createAllTables() {
       )
     `);
     
-    // Create default super admin if not exists
+    // Create default super admin if not exists - NO BCRYPT
     const adminCheck = await client.query('SELECT COUNT(*) FROM super_admins WHERE username = $1', ['ot']);
     if (parseInt(adminCheck.rows[0].count) === 0) {
-      const hash = await bcrypt.hash('admin123', 10);
       await client.query(
         'INSERT INTO super_admins (username, password_hash, full_name, role) VALUES ($1, $2, $3, $4)',
-        ['ot', hash, 'Super Admin', 'super_admin']
+        ['ot', 'admin123', 'Super Admin', 'super_admin']
       );
     }
     
@@ -565,7 +564,7 @@ app.get('/seo-contentscore', (req, res) => {
 });
 
 // ============================================
-// ADMIN LOGIN
+// ADMIN LOGIN - NO BCRYPT
 // ============================================
 app.post('/api/setup/verify-admin', async (req, res) => {
   const { username, password } = req.body;
@@ -585,9 +584,9 @@ app.post('/api/setup/verify-admin', async (req, res) => {
     }
     
     const admin = result.rows[0];
-    const validPassword = await bcrypt.compare(password, admin.password_hash);
     
-    if (!validPassword) {
+    // NO BCRYPT - Direct password comparison
+    if (password !== admin.password_hash) {
       return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
     
@@ -655,11 +654,11 @@ app.post('/api/admins', async (req, res) => {
   }
   
   try {
-    const hash = await bcrypt.hash(password, 10);
+    // NO BCRYPT - Store password directly
     const result = await pool.query(
-      `INSERT INTO super_admins (username, password_hash, full_name, email, role) 
-       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-      [username, hash, full_name || null, email || null, role]
+      `INSERT INTO super_admins (username, password_hash, full_name, email, role, is_active) 
+       VALUES ($1, $2, $3, $4, $5, TRUE) RETURNING id`,
+      [username, password, full_name || null, email || null, role]
     );
     
     res.json({ success: true, admin_id: result.rows[0].id });
@@ -708,8 +707,8 @@ app.post('/api/agencies', async (req, res) => {
   try {
     const adminKey = crypto.randomBytes(16).toString('hex');
     const result = await pool.query(
-      `INSERT INTO agencies (name, domain, country, plan, contact_person, contact_email, admin_key, url)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+      `INSERT INTO agencies (name, domain, country, plan, contact_person, contact_email, admin_key, url, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE) RETURNING id`,
       [name, domain, country || 'NL', plan || 'free', contact_person, contact_email, adminKey, `https://${domain}`]
     );
     
@@ -827,9 +826,9 @@ app.post('/api/admin/share-links/create', async (req, res) => {
     expiresAt.setDate(expiresAt.getDate() + (valid_days || 30));
     
     await pool.query(
-      `INSERT INTO share_links (share_code, client_email, client_name, client_company, scans_limit, expires_at)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [shareCode, client_email, client_name, client_company, scans_limit || 5, expiresAt]
+      `INSERT INTO share_links (share_code, client_email, client_name, client_company, scans_limit, scans_used, expires_at, status, created_at)
+       VALUES ($1, $2, $3, $4, $5, 0, $6, 'active', NOW())`,
+      [shareCode, client_email, client_name, client_company || '', scans_limit || 5, expiresAt]
     );
     
     const shareUrl = `${req.protocol}://${req.get('host')}/scan-with-link/${shareCode}`;
