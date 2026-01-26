@@ -1578,5 +1578,147 @@
     }
   </script>
 
+  function submitClaim(e) {
+      e.preventDefault();
+      alert('Claim submitted! We will review within 24 hours.');
+    }
+
+    // ============================================
+    // FREELANCER DIRECTORY - VOEG HIER TOE!
+    // ============================================
+    
+    async function loadFreelancers() {
+      try {
+        const response = await fetch('/api/freelancers');
+        const data = await response.json();
+        
+        if (data.success && data.freelancers.length > 0) {
+          renderFreelancers(data.freelancers);
+        } else {
+          document.getElementById('freelancers-grid').innerHTML = `
+            <div class="col-span-full text-center text-gray-500 py-8">
+              No freelancers listed yet. Be the first!
+            </div>
+          `;
+        }
+      } catch (error) {
+        console.error('Load freelancers error:', error);
+        document.getElementById('freelancers-grid').innerHTML = `
+          <div class="col-span-full text-center text-red-500 py-8">
+            Failed to load freelancers
+          </div>
+        `;
+      }
+    }
+
+    function renderFreelancers(freelancers) {
+      const grid = document.getElementById('freelancers-grid');
+      
+      grid.innerHTML = freelancers.map(f => `
+        <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border-2 ${f.is_featured ? 'border-yellow-500' : 'border-gray-700'} hover:border-purple-500 transition-all">
+          ${f.is_featured ? '<div class="text-xs px-2 py-1 bg-yellow-500 text-gray-900 rounded-full font-bold inline-block mb-3">⭐ FEATURED</div>' : ''}
+          
+          <div class="flex items-start gap-4 mb-4">
+            ${f.profile_photo_url 
+              ? `<img src="${f.profile_photo_url}" class="w-16 h-16 rounded-full object-cover" alt="${f.name}">`
+              : `<div class="w-16 h-16 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-2xl font-bold">${f.name.charAt(0)}</div>`
+            }
+            <div class="flex-1">
+              <h3 class="text-xl font-bold mb-1">${f.name}</h3>
+              <p class="text-sm text-purple-400 mb-2">${f.title}</p>
+            </div>
+          </div>
+          
+          ${f.has_score ? `
+            <div class="inline-block px-3 py-1 rounded-full text-sm font-bold mb-3 ${
+              f.score >= 80 ? 'bg-green-900 text-green-400' : 
+              f.score >= 60 ? 'bg-yellow-900 text-yellow-400' : 
+              'bg-gray-700 text-gray-400'
+            }">
+              ✅ Writing Score: ${f.score}/100
+            </div>
+          ` : ''}
+          
+          <p class="text-sm text-gray-400 mb-4 line-clamp-3">${f.bio}</p>
+          
+          <div class="flex items-center gap-3 mb-4 text-xs text-gray-500 flex-wrap">
+            ${f.location ? `<span>📍 ${f.location}</span>` : ''}
+            ${f.linkedin_url ? `<a href="${f.linkedin_url}" target="_blank" class="text-blue-400 hover:underline">🔗 LinkedIn</a>` : ''}
+            ${f.portfolio_url ? `<a href="${f.portfolio_url}" target="_blank" class="text-blue-400 hover:underline">💼 Portfolio</a>` : ''}
+          </div>
+          
+          <button onclick="contactFreelancer('${f.email}', '${f.name}')" class="w-full bg-purple-600 hover:bg-purple-700 py-2 rounded-lg font-semibold transition-all">
+            💬 Contact ${f.name.split(' ')[0]}
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function openFreelancerSignup() {
+      document.getElementById('freelancerModal').classList.remove('hidden');
+    }
+
+    function closeFreelancerModal() {
+      document.getElementById('freelancerModal').classList.add('hidden');
+    }
+
+    async function submitFreelancerApplication(e) {
+      e.preventDefault();
+      
+      const form = e.target;
+      const btn = document.getElementById('freelancerSubmitBtn');
+      const formData = new FormData(form);
+      
+      const data = {
+        name: formData.get('name'),
+        email: formData.get('email'),
+        title: formData.get('title'),
+        bio: formData.get('bio'),
+        linkedin_url: formData.get('linkedin_url'),
+        portfolio_url: formData.get('portfolio_url'),
+        website_url: formData.get('website_url'),
+        location: formData.get('location'),
+        country: formData.get('country')
+      };
+      
+      btn.disabled = true;
+      btn.textContent = '⏳ Submitting...';
+      
+      try {
+        const response = await fetch('/api/freelancers/apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          alert('✅ Application submitted! We will contact you within 24 hours at ' + data.email);
+          closeFreelancerModal();
+          form.reset();
+        } else {
+          alert('❌ ' + (result.error || 'Application failed'));
+        }
+      } catch (error) {
+        console.error('Submit error:', error);
+        alert('❌ Application failed. Please try again.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '📝 Submit Application';
+      }
+    }
+
+    function contactFreelancer(email, name) {
+      const subject = encodeURIComponent(`Inquiry from ContentScale Directory`);
+      const body = encodeURIComponent(`Hi ${name},\n\nI found your profile on ContentScale and I'm interested in discussing a potential project.\n\n`);
+      window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+    }
+
+  </script>
+
+</body>
+</html>
+
 </body>
 </html>
