@@ -650,7 +650,6 @@ app.post('/api/admins', async (req, res) => {
   const { username, password, role, full_name, email } = req.body;
   
   // Use email as username if username not provided
- // Use email as username if username not provided
   let finalUsername = username;
   
   if (!finalUsername && email) {
@@ -677,7 +676,7 @@ app.post('/api/admins', async (req, res) => {
   
   try {
     // NO BCRYPT - Store password directly
-const result = await pool.query(
+    const result = await pool.query(
       `INSERT INTO super_admins (username, password_hash, full_name, email, role, is_active) 
        VALUES ($1, $2, $3, $4, $5, TRUE) RETURNING id`,
       [finalUsername, password, full_name || null, email || null, role]
@@ -696,9 +695,8 @@ app.delete('/api/admins/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM super_admins WHERE id = $1', [req.params.id]);
     res.json({ success: true });
-} catch (error) {
-    console.error('Agency creation error:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Database error' });
   }
 });
 
@@ -732,7 +730,7 @@ app.post('/api/agencies', async (req, res) => {
   
   try {
     const adminKey = crypto.randomBytes(16).toString('hex');
-   const result = await pool.query(
+    const result = await pool.query(
       `INSERT INTO agencies (name, domain, country, plan, contact_person, contact_email, admin_key)
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
       [name, domain, country || 'NL', plan || 'free', contact_person, contact_email, adminKey]
@@ -883,7 +881,6 @@ app.post('/api/freelancers/submit-test', async (req, res) => {
 // ============================================
 
 // Get all freelancers (ADMIN)
-// Get all freelancers (ADMIN - TODO: Add auth later)
 app.get('/api/admin/freelancers', async (req, res) => {
   try {
     const result = await pool.query(`
@@ -901,7 +898,7 @@ app.get('/api/admin/freelancers', async (req, res) => {
   }
 });
 
-// Approve freelancer & activate (ADMIN - TODO: Add auth later)
+// Approve freelancer & activate (ADMIN)
 app.post('/api/admin/freelancers/:id/approve', async (req, res) => {
   const { id } = req.params;
   const { subscription_months } = req.body;
@@ -927,7 +924,7 @@ app.post('/api/admin/freelancers/:id/approve', async (req, res) => {
   }
 });
 
-// Review writing test & assign score (ADMIN - TODO: Add auth later)
+// Review writing test & assign score (ADMIN)
 app.post('/api/admin/freelancers/:id/review-test', async (req, res) => {
   const { id } = req.params;
   const { score } = req.body;
@@ -955,7 +952,7 @@ app.post('/api/admin/freelancers/:id/review-test', async (req, res) => {
   }
 });
 
-// Toggle featured status (ADMIN - TODO: Add auth later)
+// Toggle featured status (ADMIN)
 app.post('/api/admin/freelancers/:id/toggle-featured', async (req, res) => {
   const { id } = req.params;
   
@@ -972,113 +969,8 @@ app.post('/api/admin/freelancers/:id/toggle-featured', async (req, res) => {
   }
 });
 
-// Update display order (ADMIN - TODO: Add auth later)
-app.post('/api/admin/freelancers/:id/order', async (req, res) => {
-  const { id } = req.params;
-  const { order } = req.body;
-  
-  try {
-    await pool.query(`
-      UPDATE freelancers 
-      SET display_order = $1
-      WHERE id = $2
-    `, [order, id]);
-    
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update order' });
-  }
-});
-
-try {
-    const result = await pool.query(`
-      SELECT * FROM freelancers 
-      ORDER BY created_at DESC
-    `);
-    
-    res.json({
-      success: true,
-      freelancers: result.rows
-    });
-  } catch (error) {
-    console.error('Admin get freelancers error:', error);
-    res.status(500).json({ error: 'Failed to load' });
-  }
-});
-
-// Approve freelancer & activate (ADMIN)
-app.post('/api/admin/freelancers/:id/approve', isAdmin, async (req, res) => {
-  const { id } = req.params;
-  const { subscription_months } = req.body; // 1 or 12
-  
-  try {
-    const expiresAt = new Date();
-    expiresAt.setMonth(expiresAt.getMonth() + (subscription_months || 1));
-    
-    await pool.query(`
-      UPDATE freelancers 
-      SET 
-        status = 'active',
-        payment_status = 'paid',
-        subscription_expires_at = $1,
-        updated_at = NOW()
-      WHERE id = $2
-    `, [expiresAt, id]);
-    
-    res.json({ success: true, message: 'Freelancer activated' });
-  } catch (error) {
-    console.error('Approve error:', error);
-    res.status(500).json({ error: 'Failed to approve' });
-  }
-});
-
-// Review writing test & assign score (ADMIN)
-app.post('/api/admin/freelancers/:id/review-test', isAdmin, async (req, res) => {
-  const { id } = req.params;
-  const { score } = req.body; // 0-100
-  
-  if (score < 0 || score > 100) {
-    return res.status(400).json({ error: 'Score must be 0-100' });
-  }
-  
-  try {
-    await pool.query(`
-      UPDATE freelancers 
-      SET 
-        score = $1,
-        has_score = true,
-        test_reviewed_at = NOW()
-      WHERE id = $2
-    `, [score, id]);
-    
-    console.log(`✅ Score assigned: ${score} for freelancer #${id}`);
-    
-    res.json({ success: true, message: 'Score assigned' });
-  } catch (error) {
-    console.error('Review test error:', error);
-    res.status(500).json({ error: 'Failed to assign score' });
-  }
-});
-
-// Toggle featured status (ADMIN)
-app.post('/api/admin/freelancers/:id/toggle-featured', isAdmin, async (req, res) => {
-  const { id } = req.params;
-  
-  try {
-    await pool.query(`
-      UPDATE freelancers 
-      SET is_featured = NOT is_featured
-      WHERE id = $1
-    `, [id]);
-    
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to toggle' });
-  }
-});
-
 // Update display order (ADMIN)
-app.post('/api/admin/freelancers/:id/order', isAdmin, async (req, res) => {
+app.post('/api/admin/freelancers/:id/order', async (req, res) => {
   const { id } = req.params;
   const { order } = req.body;
   
@@ -1193,9 +1085,9 @@ app.post('/api/admin/share-links/create', async (req, res) => {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + (valid_days || 30));
     
-   await pool.query(
-      `INSERT INTO share_links (token, client_email, client_name, client_company, scans_limit, scans_used, expires_at)
-       VALUES ($1, $2, $3, $4, $5, 0, $6)`,
+    await pool.query(
+      `INSERT INTO share_links (share_code, client_email, client_name, client_company, scans_limit, scans_used, expires_at, status)
+       VALUES ($1, $2, $3, $4, $5, 0, $6, 'active')`,
       [shareCode, client_email, client_name, client_company || '', scans_limit || 5, expiresAt]
     );
     
