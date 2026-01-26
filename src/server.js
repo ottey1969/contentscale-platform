@@ -1087,26 +1087,26 @@ app.post('/api/admin/share-links/create', async (req, res) => {
     
     await pool.query(
       `INSERT INTO share_links (token, client_email, client_name, client_company, scans_limit, scans_used, expires_at, valid_days, status, is_active)
-       VALUES ($1, $2, $3, $4, $5, 0, $6, $7, 'active', true)`,
+       VALUES ($1, $2, $3, $4, $5, 0, $6, $7, 'active', true)`,  // ← 'is_active' toegevoegd
       [
-        shareCode,                      // $1 - token (niet share_code!)
-        client_email,                   // $2
-        client_name || null,            // $3
-        client_company || null,         // $4
-        scans_limit || 5,               // $5
-        expiresAt,                      // $6
-        valid_days || 30,               // $7 - valid_days toevoegen
+        shareCode,
+        client_email,
+        client_name || null,
+        client_company || null,
+        scans_limit || 5,
+        expiresAt,
+        valid_days || 30,
       ]
     );
     
     const shareUrl = `${req.protocol}://${req.get('host')}/scan-with-link/${shareCode}`;
     res.json({ success: true, share_code: shareCode, share_url: shareUrl });
   } catch (error) {
-    console.error('Share link creation error:', error); // Log de error
+    console.error('Share link creation error:', error);
     res.status(500).json({ 
       success: false, 
       error: 'Database error',
-      details: error.message // Voeg meer details toe
+      details: error.message
     });
   }
 });
