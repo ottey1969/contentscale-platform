@@ -180,7 +180,7 @@
       background: rgba(0, 0, 0, 0.85);
       display: flex;
       align-items: center;
-      justify-center;
+      justify-content: center;
       z-index: 2000;
       padding: 20px;
     }
@@ -613,8 +613,6 @@
       </div>
     </div>
 
-
-
 <!-- FREELANCER DIRECTORY -->
 <div class="mt-20 mb-12">
   <div class="text-center mb-10">
@@ -738,14 +736,6 @@
     </div>
   </div>
 </div>
-
-
-
-
-    
-
-
-
 
     
     <div class="mt-16 mb-12">
@@ -993,6 +983,7 @@
 
     document.addEventListener('DOMContentLoaded', function() {
       loadLeaderboard();
+      loadFreelancers();
     });
 
     function toggleCompanyField() {
@@ -1576,15 +1567,9 @@
       e.preventDefault();
       alert('Claim submitted! We will review within 24 hours.');
     }
-  </script>
-
-  function submitClaim(e) {
-      e.preventDefault();
-      alert('Claim submitted! We will review within 24 hours.');
-    }
 
     // ============================================
-    // FREELANCER DIRECTORY - VOEG HIER TOE!
+    // FREELANCER DIRECTORY
     // ============================================
     
     async function loadFreelancers() {
@@ -1714,11 +1699,6 @@
       const body = encodeURIComponent(`Hi ${name},\n\nI found your profile on ContentScale and I'm interested in discussing a potential project.\n\n`);
       window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
     }
-
   </script>
-
-</body>
-</html>
-
 </body>
 </html>
