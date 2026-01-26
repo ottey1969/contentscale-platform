@@ -996,27 +996,31 @@
         tbody.innerHTML = '';
         
         if (data.success && data.share_links) {
-          data.share_links.forEach(link => {
-            tbody.innerHTML += `
-              <tr>
-                <td class="px-4 py-3"><input type="checkbox" class="sharelink-checkbox" value="${link.token}"></td>
-                <td class="px-4 py-3">${link.client_name || '-'}</td>
-                <td class="px-4 py-3">${link.client_email}</td>
-                <td class="px-4 py-3">
-                  <div class="flex items-center gap-2">
-                    <input type="text" value="https://contentscale-platform-production.up.railway.app/seo-contentscore?key=${link.token}" 
-                      readonly class="flex-1 px-2 py-1 bg-gray-700 text-xs rounded text-blue-400"
-                      id="share-url-${link.token}">
-                    <button onclick="copyShareUrl('${link.token}')" class="px-2 py-1 bg-purple-600 hover:bg-purple-700 rounded text-xs">📋</button>
-                  </div>
-                </td>
-                <td class="px-4 py-3">${link.scans_used || 0}/${link.scans_limit || 5}</td>
-                <td class="px-4 py-3 text-sm">${link.expires_at ? new Date(link.expires_at).toLocaleDateString() : '-'}</td>
-                <td class="px-4 py-3"><span class="px-2 py-1 ${link.status === 'active' ? 'bg-green-900' : 'bg-red-900'} rounded text-xs">${link.status}</span></td>
-                <td class="px-4 py-3"><button onclick="deleteShareLink('${link.token}')" class="text-red-400">🗑️</button></td>
-              </tr>
-            `;
-          });
+         data.share_links.forEach(link => {
+  tbody.innerHTML += `
+    <tr>
+      <td class="px-4 py-3"><input type="checkbox" class="sharelink-checkbox" value="${link.token}"></td>
+      <td class="px-4 py-3">${link.client_name || '-'}</td>
+      <td class="px-4 py-3">${link.client_email}</td>
+      <td class="px-4 py-3">${link.scans_used || 0}/${link.scans_limit || 5}</td>
+      <td class="px-4 py-3 text-sm">${link.expires_at ? new Date(link.expires_at).toLocaleDateString() : '-'}</td>
+      <td class="px-4 py-3">
+        <span class="px-2 py-1 ${link.is_active ? 'bg-green-900' : 'bg-red-900'} rounded text-xs">
+          ${link.is_active ? 'active' : 'inactive'}
+        </span>
+      </td>
+      <td class="px-4 py-3">
+        <button onclick="toggleShareLinkStatus('${link.token}')" 
+          class="px-3 py-1 ${link.is_active ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} rounded text-sm">
+          ${link.is_active ? 'Deactivate' : 'Activate'}
+        </button>
+        <button onclick="deleteShareLink('${link.token}')" class="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-sm ml-2">
+          🗑️
+        </button>
+      </td>
+    </tr>
+  `;
+});
           document.getElementById('share-links-loading').classList.add('hidden');
           document.getElementById('share-links-list').classList.remove('hidden');
         }
@@ -1024,6 +1028,32 @@
         console.error('Share links error:', error);
       }
     }
+
+    // NIEUWE FUNCTIE: toggleShareLinkStatus
+async function toggleShareLinkStatus(shareCode) {
+  if (!confirm('Are you sure you want to toggle the status of this share link?')) return;
+  
+  try {
+    const response = await fetch(`/api/admin/share-links/${shareCode}/toggle-status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-key': localStorage.getItem('admin_id')
+      }
+    });
+    
+    const data = await response.json();
+    if (data.success) {
+      alert(`✅ Share link ${data.is_active ? 'activated' : 'deactivated'}!`);
+      loadShareLinks(); // Herlaad de lijst
+    } else {
+      alert('❌ Error: ' + (data.error || 'Failed to update status'));
+    }
+  } catch (error) {
+    console.error('Toggle error:', error);
+    alert('Error updating status: ' + error.message);
+  }
+}
 
     async function loadLeaderboard() {
       try {
