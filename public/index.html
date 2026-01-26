@@ -1251,7 +1251,7 @@
         const entries = allAgencies;
         
         if (entries.length > 0) {
-          allRankings = entries.filter(entry => entry.rank > 3);
+          allRankings = entries;
           
           document.getElementById('total-count').textContent = allRankings.length;
           
