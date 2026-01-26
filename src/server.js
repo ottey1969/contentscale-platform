@@ -1107,9 +1107,34 @@ app.post('/api/admin/share-links/create', async (req, res) => {
       success: false, 
       error: 'Database error',
       details: error.message
-    });
+    });    
   }
 });
+
+
+// Voeg dit toe voor testen (ergens in server.js):
+app.get('/api/test-share-status', async (req, res) => {
+  try {
+    // Test: pak een willekeurige share link
+    const result = await pool.query(
+      'SELECT token, client_email, is_active FROM share_links LIMIT 1'
+    );
+    
+    if (result.rows.length === 0) {
+      return res.json({ message: 'No share links found' });
+    }
+    
+    res.json({
+      test: 'Share links status test',
+      found_link: result.rows[0],
+      has_is_active_column: true
+    });
+    
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 app.delete('/api/admin/share-links/:code', async (req, res) => {
   try {
@@ -1117,6 +1142,37 @@ app.delete('/api/admin/share-links/:code', async (req, res) => {
     await pool.query('DELETE FROM share_links WHERE token = $1', [req.params.code]);
     res.json({ success: true });
   } catch (error) {
+    res.status(500).json({ success: false, error: 'Database error' });
+  }
+});
+
+app.put('/api/admin/share-links/:code/toggle-status', async (req, res) => {
+  try {
+    const { code } = req.params;
+    
+    // Toggle de huidige status
+    const result = await pool.query(
+      `UPDATE share_links 
+       SET is_active = NOT is_active 
+       WHERE token = $1 
+       RETURNING token, client_email, is_active`,
+      [code]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Share link not found' });
+    }
+    
+    const newStatus = result.rows[0].is_active;
+    
+    res.json({ 
+      success: true, 
+      message: `Share link ${newStatus ? 'activated' : 'deactivated'}`,
+      is_active: newStatus
+    });
+    
+  } catch (error) {
+    console.error('Toggle status error:', error);
     res.status(500).json({ success: false, error: 'Database error' });
   }
 });
