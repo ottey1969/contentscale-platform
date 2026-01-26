@@ -883,8 +883,114 @@ app.post('/api/freelancers/submit-test', async (req, res) => {
 // ============================================
 
 // Get all freelancers (ADMIN)
-app.get('/api/admin/freelancers', isAdmin, async (req, res) => {
+// Get all freelancers (ADMIN - TODO: Add auth later)
+app.get('/api/admin/freelancers', async (req, res) => {
   try {
+    const result = await pool.query(`
+      SELECT * FROM freelancers 
+      ORDER BY created_at DESC
+    `);
+    
+    res.json({
+      success: true,
+      freelancers: result.rows
+    });
+  } catch (error) {
+    console.error('Admin get freelancers error:', error);
+    res.status(500).json({ error: 'Failed to load' });
+  }
+});
+
+// Approve freelancer & activate (ADMIN - TODO: Add auth later)
+app.post('/api/admin/freelancers/:id/approve', async (req, res) => {
+  const { id } = req.params;
+  const { subscription_months } = req.body;
+  
+  try {
+    const expiresAt = new Date();
+    expiresAt.setMonth(expiresAt.getMonth() + (subscription_months || 1));
+    
+    await pool.query(`
+      UPDATE freelancers 
+      SET 
+        status = 'active',
+        payment_status = 'paid',
+        subscription_expires_at = $1,
+        updated_at = NOW()
+      WHERE id = $2
+    `, [expiresAt, id]);
+    
+    res.json({ success: true, message: 'Freelancer activated' });
+  } catch (error) {
+    console.error('Approve error:', error);
+    res.status(500).json({ error: 'Failed to approve' });
+  }
+});
+
+// Review writing test & assign score (ADMIN - TODO: Add auth later)
+app.post('/api/admin/freelancers/:id/review-test', async (req, res) => {
+  const { id } = req.params;
+  const { score } = req.body;
+  
+  if (score < 0 || score > 100) {
+    return res.status(400).json({ error: 'Score must be 0-100' });
+  }
+  
+  try {
+    await pool.query(`
+      UPDATE freelancers 
+      SET 
+        score = $1,
+        has_score = true,
+        test_reviewed_at = NOW()
+      WHERE id = $2
+    `, [score, id]);
+    
+    console.log(`✅ Score assigned: ${score} for freelancer #${id}`);
+    
+    res.json({ success: true, message: 'Score assigned' });
+  } catch (error) {
+    console.error('Review test error:', error);
+    res.status(500).json({ error: 'Failed to assign score' });
+  }
+});
+
+// Toggle featured status (ADMIN - TODO: Add auth later)
+app.post('/api/admin/freelancers/:id/toggle-featured', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    await pool.query(`
+      UPDATE freelancers 
+      SET is_featured = NOT is_featured
+      WHERE id = $1
+    `, [id]);
+    
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to toggle' });
+  }
+});
+
+// Update display order (ADMIN - TODO: Add auth later)
+app.post('/api/admin/freelancers/:id/order', async (req, res) => {
+  const { id } = req.params;
+  const { order } = req.body;
+  
+  try {
+    await pool.query(`
+      UPDATE freelancers 
+      SET display_order = $1
+      WHERE id = $2
+    `, [order, id]);
+    
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update order' });
+  }
+});
+
+try {
     const result = await pool.query(`
       SELECT * FROM freelancers 
       ORDER BY created_at DESC
