@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SEO Agencies Directory - ContentScale</title>
+  <title>SEO Agencies & Freelancers Directory - ContentScale</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
@@ -455,7 +455,7 @@
     
     <div class="text-center mb-8">
       <h1 class="text-5xl font-bold mb-3 bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
-        🏆 SEO Agencies Directory
+        🏆 SEO Agencies & Freelancers Directory
       </h1>
       <p class="text-xl text-gray-300">Find & compare top SEO agencies worldwide</p>
     </div>
@@ -612,6 +612,142 @@
         </div>
       </div>
     </div>
+
+
+
+<!-- FREELANCER DIRECTORY -->
+<div class="mt-20 mb-12">
+  <div class="text-center mb-10">
+    <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+      💼 Hire SEO Freelancers
+    </h2>
+    <p class="text-xl text-gray-400">Verified independent SEO experts • Scored via writing test</p>
+  </div>
+
+  <!-- Freelancer Grid -->
+  <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8" id="freelancers-grid">
+    <!-- Loading state -->
+    <div class="col-span-full text-center text-gray-500">
+      Loading freelancers...
+    </div>
+  </div>
+
+  <!-- CTA for Freelancers -->
+  <div class="bg-gradient-to-r from-purple-900 to-pink-900 rounded-2xl p-8 text-center border-2 border-purple-500">
+    <div class="text-5xl mb-4">💼</div>
+    <h3 class="text-3xl font-bold mb-3">Are You a Freelance SEO Expert?</h3>
+    <p class="text-xl text-gray-300 mb-6">Get listed, take our writing test, and attract clients</p>
+    
+    <div class="grid md:grid-cols-3 gap-4 max-w-3xl mx-auto mb-6">
+      <div class="bg-white bg-opacity-10 rounded-lg p-4">
+        <div class="text-2xl font-bold text-purple-400">€29/month</div>
+        <div class="text-sm text-gray-400">or €290/year</div>
+      </div>
+      <div class="bg-white bg-opacity-10 rounded-lg p-4">
+        <div class="text-2xl font-bold text-green-400">Writing Test</div>
+        <div class="text-sm text-gray-400">Get scored 0-100</div>
+      </div>
+      <div class="bg-white bg-opacity-10 rounded-lg p-4">
+        <div class="text-2xl font-bold text-yellow-400">⭐ Featured</div>
+        <div class="text-sm text-gray-400">Top placement</div>
+      </div>
+    </div>
+
+    <div class="text-sm text-gray-400 mb-6">
+      ✅ Profile with bio & links • ✅ Original writing test • ✅ Public score display • ✅ Direct client contact
+    </div>
+
+    <button onclick="openFreelancerSignup()" class="inline-block bg-white text-purple-600 hover:bg-gray-100 px-8 py-4 rounded-lg font-bold text-lg transition-all">
+      🚀 Apply Now
+    </button>
+    
+    <p class="text-xs text-gray-500 mt-4">
+      Limited spots available • Quality over quantity
+    </p>
+  </div>
+</div>
+
+<!-- FREELANCER SIGNUP MODAL -->
+<div id="freelancerModal" class="modal-overlay hidden">
+  <div class="modal-content max-w-2xl">
+    <div class="p-8">
+      <div class="flex justify-between items-start mb-6">
+        <div>
+          <h2 class="text-3xl font-bold mb-2">Apply as Freelancer</h2>
+          <p class="text-sm text-gray-400">We'll review your application within 24 hours</p>
+        </div>
+        <button onclick="closeFreelancerModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+      </div>
+      
+      <form id="freelancerForm" onsubmit="submitFreelancerApplication(event)">
+        <div class="grid md:grid-cols-2 gap-4 mb-4">
+          <input type="text" name="name" placeholder="Full Name *" required 
+            class="px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg">
+          <input type="email" name="email" placeholder="Email *" required 
+            class="px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg">
+        </div>
+        
+        <input type="text" name="title" placeholder="Your Title (e.g., SEO Specialist) *" required 
+          class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg mb-4">
+        
+        <textarea name="bio" rows="4" placeholder="Short bio (max 500 characters) *" required maxlength="500"
+          class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg mb-4"></textarea>
+        
+        <div class="grid md:grid-cols-2 gap-4 mb-4">
+          <input type="url" name="linkedin_url" placeholder="LinkedIn URL *" required 
+            class="px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg">
+          <input type="url" name="portfolio_url" placeholder="Portfolio URL (optional)" 
+            class="px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg">
+        </div>
+        
+        <div class="grid md:grid-cols-2 gap-4 mb-4">
+          <input type="text" name="location" placeholder="City, Country *" required 
+            class="px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg">
+          <select name="country" required class="px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg">
+            <option value="">Select Country *</option>
+            <option value="NL">🇳🇱 Netherlands</option>
+            <option value="BE">🇧🇪 Belgium</option>
+            <option value="DE">🇩🇪 Germany</option>
+            <option value="FR">🇫🇷 France</option>
+            <option value="UK">🇬🇧 United Kingdom</option>
+            <option value="US">🇺🇸 United States</option>
+            <option value="Other">🌍 Other</option>
+          </select>
+        </div>
+        
+        <div class="bg-blue-900 bg-opacity-20 border border-blue-500 rounded-lg p-4 mb-6">
+          <p class="text-sm text-blue-300">
+            <strong>What happens next?</strong><br>
+            1. We review your application (24h)<br>
+            2. You receive payment details (€29/month or €290/year)<br>
+            3. After payment, you get a writing test prompt<br>
+            4. We score your writing (0-100) and publish your profile<br>
+            5. Clients can contact you directly!
+          </p>
+        </div>
+        
+        <button type="submit" id="freelancerSubmitBtn" 
+          class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 py-4 rounded-lg font-bold text-lg transition-all">
+          📝 Submit Application
+        </button>
+        
+        <p class="text-center text-xs text-gray-500 mt-3">
+          By applying, you agree to our terms. We store: name, email, bio, links.
+        </p>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+
+
+    
+
+
+
+
+    
     <div class="mt-16 mb-12">
       <div class="text-center mb-10">
         <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
