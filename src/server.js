@@ -1079,34 +1079,47 @@ app.post('/api/admin/share-links/create', async (req, res) => {
   if (!client_email) {
     return res.status(400).json({ success: false, error: 'Email required' });
   }
-  
+
   try {
     const shareCode = crypto.randomBytes(8).toString('hex');
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + (valid_days || 30));
     
     await pool.query(
-      `INSERT INTO share_links (share_code, client_email, client_name, client_company, scans_limit, scans_used, expires_at, status)
-       VALUES ($1, $2, $3, $4, $5, 0, $6, 'active')`,
-      [shareCode, client_email, client_name, client_company || '', scans_limit || 5, expiresAt]
+      `INSERT INTO share_links (token, client_email, client_name, client_company, scans_limit, scans_used, expires_at, valid_days, status, is_active)
+       VALUES ($1, $2, $3, $4, $5, 0, $6, $7, 'active', true)`,
+      [
+        shareCode,                      // $1 - token (niet share_code!)
+        client_email,                   // $2
+        client_name || null,            // $3
+        client_company || null,         // $4
+        scans_limit || 5,               // $5
+        expiresAt,                      // $6
+        valid_days || 30,               // $7 - valid_days toevoegen
+      ]
     );
     
     const shareUrl = `${req.protocol}://${req.get('host')}/scan-with-link/${shareCode}`;
     res.json({ success: true, share_code: shareCode, share_url: shareUrl });
   } catch (error) {
-    res.status(500).json({ success: false, error: 'Database error' });
+    console.error('Share link creation error:', error); // Log de error
+    res.status(500).json({ 
+      success: false, 
+      error: 'Database error',
+      details: error.message // Voeg meer details toe
+    });
   }
 });
 
 app.delete('/api/admin/share-links/:code', async (req, res) => {
   try {
-    await pool.query('DELETE FROM share_links WHERE share_code = $1', [req.params.code]);
+    // Wijzig: WHERE token = $1 (niet share_code!)
+    await pool.query('DELETE FROM share_links WHERE token = $1', [req.params.code]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Database error' });
   }
 });
-
 // ============================================
 // LEADERBOARD ENDPOINTS
 // ============================================
