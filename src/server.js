@@ -2904,6 +2904,25 @@ app.delete('/api/admin/notifications/clear-read', async (req, res) => {
   }
 });
 
+// Clear all read notifications
+app.delete('/api/admin/notifications/clear-read', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM notifications WHERE is_read = TRUE');
+    
+    res.json({ 
+      success: true, 
+      message: 'All read notifications cleared'
+    });
+    
+  } catch (error) {
+    console.error('Clear read error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 // ============================================
 // HEALTH CHECK
 // ============================================
