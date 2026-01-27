@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -21,18 +20,6 @@
     .stat-card {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     }
-    input[type="checkbox"] {
-      cursor: pointer;
-      width: 18px;
-      height: 18px;
-    }
-    .blog-card {
-      transition: all 0.2s;
-    }
-    .blog-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-    }
     .category-tag {
       font-size: 10px;
       padding: 2px 8px;
@@ -44,7 +31,29 @@
     .category-tips { background: #f59e0b; }
     .category-news { background: #ef4444; }
     
-    /* Lead Scanner Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    
+    .modal-content {
+      background: #1f2937;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
     .lead-card {
       background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
       border: 1px solid #334155;
@@ -54,32 +63,12 @@
       border-color: #8b5cf6;
       transform: translateY(-2px);
     }
-    .score-badge {
-      font-size: 14px;
-      font-weight: bold;
-      padding: 4px 12px;
-      border-radius: 20px;
-    }
-    .score-high { background: #10b981; color: white; }
-    .score-medium { background: #f59e0b; color: white; }
-    .score-low { background: #ef4444; color: white; }
-    .scan-progress {
-      height: 8px;
-      background: #374151;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    .scan-progress-bar {
-      height: 100%;
-      background: linear-gradient(90deg, #8b5cf6 0%, #3b82f6 100%);
-      transition: width 0.3s;
-    }
-    @keyframes pulse-glow {
-      0%, 100% { box-shadow: 0 0 5px rgba(139, 92, 246, 0.5); }
-      50% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.8); }
-    }
     .scanning-active {
-      animation: pulse-glow 1.5s infinite;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
     }
   </style>
 </head>
@@ -114,7 +103,7 @@
         </div>
         
         <button onclick="login()" id="login-btn"
-          class="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg font-semibold transition-all transform hover:scale-105">
+          class="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg font-semibold transition-all">
           Login
         </button>
       </div>
@@ -153,53 +142,23 @@
           <button onclick="switchTab('overview')" class="tab-button active px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap">
             📊 Overview
           </button>
-          <button onclick="switchTab('admins')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
+          <button onclick="switchTab('admins')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap">
             👥 Admins
           </button>
-          <button onclick="switchTab('agencies')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
+          <button onclick="switchTab('agencies')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap">
             🏢 Agencies
           </button>
-          <button onclick="switchTab('clients')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            👤 All Clients
+          <button onclick="switchTab('clients')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap">
+            👤 Clients
           </button>
-          <button onclick="switchTab('scans')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🔍 All Scans
+          <button onclick="switchTab('scans')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap">
+            🔍 Scans
           </button>
-          <button onclick="switchTab('share-links')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🔗 Share Links
-          </button>
-          <button onclick="switchTab('leaderboard')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🏆 Leaderboard
-          </button>
-          <button onclick="switchTab('blog')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            📝 Blog
-          </button>
-          <button onclick="switchTab('email-notifications')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            📧 Email & Notifications
-          </button>
-          <button onclick="switchTab('claims')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🏢 Claims Management
-          </button>
-          <button onclick="switchTab('opt-out')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🚫 Opt-Out
-          </button>
-          <button onclick="switchTab('lead-scanner')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
+          <button onclick="switchTab('lead-scanner')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap">
             🎯 Lead Scanner
           </button>
-          <button onclick="switchTab('contentscore')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            📊 ContentScore
-          </button>
-          <button onclick="switchTab('code-generators')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🎨 Code Generators
-          </button>
-          <button onclick="switchTab('ltd-codes')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            💰 LTD Codes
-          </button>
-          <button onclick="switchTab('settings')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
+          <button onclick="switchTab('settings')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap">
             ⚙️ Settings
-          </button>
-          <button onclick="switchTab('handleiding')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            📚 Handleiding
           </button>
         </div>
       </div>
@@ -218,7 +177,7 @@
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm opacity-90">Total Agencies</p>
-                <p class="text-3xl font-bold mt-2" id="stat-total-agencies">-</p>
+                <p class="text-3xl font-bold mt-2">24</p>
               </div>
               <span class="text-5xl opacity-50">🏢</span>
             </div>
@@ -228,7 +187,7 @@
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm opacity-90">Total Clients</p>
-                <p class="text-3xl font-bold mt-2" id="stat-total-clients">-</p>
+                <p class="text-3xl font-bold mt-2">1,248</p>
               </div>
               <span class="text-5xl opacity-50">👥</span>
             </div>
@@ -238,7 +197,7 @@
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm opacity-90">Total Scans</p>
-                <p class="text-3xl font-bold mt-2" id="stat-total-scans">-</p>
+                <p class="text-3xl font-bold mt-2">8,942</p>
               </div>
               <span class="text-5xl opacity-50">🔍</span>
             </div>
@@ -248,7 +207,7 @@
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm opacity-90">Active Helpers</p>
-                <p class="text-3xl font-bold mt-2" id="stat-active-helpers">-</p>
+                <p class="text-3xl font-bold mt-2">3</p>
               </div>
               <span class="text-5xl opacity-50">🤝</span>
             </div>
@@ -258,41 +217,43 @@
         <!-- Quick Actions -->
         <div class="bg-gray-800 rounded-lg p-6 shadow-lg mb-8">
           <h3 class="text-xl font-bold mb-4">Quick Actions</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <button onclick="switchTab('agencies')" class="p-4 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-all">
               ➕ Add Agency
             </button>
             <button onclick="switchTab('admins')" class="p-4 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all">
               👤 Add Helper
             </button>
-            <button onclick="switchTab('share-links')" class="p-4 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all">
-              🔗 Create Share Link
-            </button>
-            <button onclick="switchTab('lead-scanner')" class="p-4 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold transition-all">
+            <button onclick="switchTab('lead-scanner')" class="p-4 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all">
               🎯 Scan Leads
             </button>
           </div>
         </div>
 
-        <!-- Platform Health -->
+        <!-- Recent Activity -->
         <div class="bg-gray-800 rounded-lg p-6 shadow-lg">
-          <h3 class="text-xl font-bold mb-4">Platform Health</h3>
+          <h3 class="text-xl font-bold mb-4">Recent Activity</h3>
           <div class="space-y-3">
             <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
-              <span>Database Connection</span>
-              <span class="text-green-400 font-semibold">✅ Connected</span>
+              <div class="flex items-center space-x-3">
+                <span class="text-green-400">✓</span>
+                <span>New agency "Digital Solutions" registered</span>
+              </div>
+              <span class="text-gray-400 text-sm">10 min ago</span>
             </div>
             <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
-              <span>API Status</span>
-              <span class="text-green-400 font-semibold">✅ Operational</span>
+              <div class="flex items-center space-x-3">
+                <span class="text-blue-400">🔍</span>
+                <span>Bulk scan completed - 142 leads processed</span>
+              </div>
+              <span class="text-gray-400 text-sm">1 hour ago</span>
             </div>
             <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
-              <span>Auto-Scan Service</span>
-              <span class="text-yellow-400 font-semibold">⏸️ Paused</span>
-            </div>
-            <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
-              <span>Last Backup</span>
-              <span class="text-gray-400">2 hours ago</span>
+              <div class="flex items-center space-x-3">
+                <span class="text-yellow-400">⚠️</span>
+                <span>System backup scheduled for maintenance</span>
+              </div>
+              <span class="text-gray-400 text-sm">3 hours ago</span>
             </div>
           </div>
         </div>
@@ -307,27 +268,42 @@
           </button>
         </div>
 
-        <div id="admins-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading admins...</p>
-        </div>
-
-        <div id="admins-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
+        <div class="bg-gray-800 rounded-lg overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full">
               <thead class="bg-gray-700">
                 <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Username</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Full Name</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Email</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Role</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Created</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Last Login</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                  <th class="px-4 py-3 text-left">Username</th>
+                  <th class="px-4 py-3 text-left">Full Name</th>
+                  <th class="px-4 py-3 text-left">Email</th>
+                  <th class="px-4 py-3 text-left">Role</th>
+                  <th class="px-4 py-3 text-left">Status</th>
+                  <th class="px-4 py-3 text-left">Actions</th>
                 </tr>
               </thead>
-              <tbody id="admins-tbody" class="divide-y divide-gray-700">
+              <tbody class="divide-y divide-gray-700">
+                <tr>
+                  <td class="px-4 py-3">superadmin</td>
+                  <td class="px-4 py-3">System Super Admin</td>
+                  <td class="px-4 py-3">admin@contentscale.com</td>
+                  <td class="px-4 py-3"><span class="px-2 py-1 bg-purple-600 rounded text-xs">superadmin</span></td>
+                  <td class="px-4 py-3"><span class="px-2 py-1 bg-green-600 rounded text-xs">active</span></td>
+                  <td class="px-4 py-3">
+                    <button class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm mr-2">Edit</button>
+                    <button class="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-sm">Reset Pass</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3">helper1</td>
+                  <td class="px-4 py-3">John Doe</td>
+                  <td class="px-4 py-3">john@contentscale.com</td>
+                  <td class="px-4 py-3"><span class="px-2 py-1 bg-green-600 rounded text-xs">helper</span></td>
+                  <td class="px-4 py-3"><span class="px-2 py-1 bg-green-600 rounded text-xs">active</span></td>
+                  <td class="px-4 py-3">
+                    <button class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm mr-2">Edit</button>
+                    <button class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm">Disable</button>
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -339,47 +315,51 @@
         <div class="flex justify-between items-center mb-6">
           <h2 class="text-2xl font-bold">All Agencies</h2>
           <div class="flex gap-3">
-            <button onclick="loadAgencies()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition-all">
-              🔄 Refresh
-            </button>
             <button onclick="showAddAgencyModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-all">
               ➕ Add Agency
             </button>
           </div>
         </div>
 
-        <div id="agencies-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading agencies...</p>
-        </div>
-
-        <div id="agencies-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
+        <div class="bg-gray-800 rounded-lg overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full">
               <thead class="bg-gray-700">
                 <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="agency-select-all" onchange="toggleSelectAllAgencies()"></th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Name</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Domain</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Country</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Plan</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Clients</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Scans</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Admin URL</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                  <th class="px-4 py-3 text-left">Name</th>
+                  <th class="px-4 py-3 text-left">Domain</th>
+                  <th class="px-4 py-3 text-left">Plan</th>
+                  <th class="px-4 py-3 text-left">Clients</th>
+                  <th class="px-4 py-3 text-left">Status</th>
+                  <th class="px-4 py-3 text-left">Actions</th>
                 </tr>
               </thead>
-              <tbody id="agencies-tbody" class="divide-y divide-gray-700">
+              <tbody class="divide-y divide-gray-700">
+                <tr>
+                  <td class="px-4 py-3">Digital Solutions</td>
+                  <td class="px-4 py-3">digitalsolutions.com</td>
+                  <td class="px-4 py-3"><span class="px-2 py-1 bg-purple-600 rounded text-xs">Pro</span></td>
+                  <td class="px-4 py-3">142</td>
+                  <td class="px-4 py-3"><span class="px-2 py-1 bg-green-600 rounded text-xs">Active</span></td>
+                  <td class="px-4 py-3">
+                    <button class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm mr-2">View</button>
+                    <button class="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 rounded text-sm">Edit</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3">Web Masters</td>
+                  <td class="px-4 py-3">webmasters.io</td>
+                  <td class="px-4 py-3"><span class="px-2 py-1 bg-blue-600 rounded text-xs">Business</span></td>
+                  <td class="px-4 py-3">89</td>
+                  <td class="px-4 py-3"><span class="px-2 py-1 bg-green-600 rounded text-xs">Active</span></td>
+                  <td class="px-4 py-3">
+                    <button class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm mr-2">View</button>
+                    <button class="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 rounded text-sm">Edit</button>
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
-        </div>
-
-        <div class="mt-4 flex gap-2">
-          <button onclick="deleteSelectedAgencies()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
-          <button onclick="exportAgenciesToCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">📊 Export CSV</button>
-          <button onclick="exportAgenciesToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
         </div>
       </div>
 
@@ -387,34 +367,40 @@
       <div id="tab-clients" class="tab-content hidden">
         <h2 class="text-2xl font-bold mb-6">All Clients</h2>
 
-        <div id="clients-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading clients...</p>
-        </div>
-
-        <div id="clients-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
+        <div class="bg-gray-800 rounded-lg overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full">
               <thead class="bg-gray-700">
                 <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="client-select-all" onchange="toggleSelectAllClients()"></th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Client URL</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Agency</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Scans</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Last Scan</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                  <th class="px-4 py-3 text-left">Client URL</th>
+                  <th class="px-4 py-3 text-left">Agency</th>
+                  <th class="px-4 py-3 text-left">Scans</th>
+                  <th class="px-4 py-3 text-left">Last Scan</th>
+                  <th class="px-4 py-3 text-left">Actions</th>
                 </tr>
               </thead>
-              <tbody id="clients-tbody" class="divide-y divide-gray-700">
+              <tbody class="divide-y divide-gray-700">
+                <tr>
+                  <td class="px-4 py-3">https://example.com</td>
+                  <td class="px-4 py-3">Digital Solutions</td>
+                  <td class="px-4 py-3">24</td>
+                  <td class="px-4 py-3">2024-03-20</td>
+                  <td class="px-4 py-3">
+                    <button class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm">View Scans</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3">https://testwebsite.org</td>
+                  <td class="px-4 py-3">Web Masters</td>
+                  <td class="px-4 py-3">15</td>
+                  <td class="px-4 py-3">2024-03-19</td>
+                  <td class="px-4 py-3">
+                    <button class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm">View Scans</button>
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
-        </div>
-
-        <div class="mt-4 flex gap-2">
-          <button onclick="deleteSelectedClients()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
-          <button onclick="exportClientsToCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">📊 Export CSV</button>
-          <button onclick="exportClientsToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
         </div>
       </div>
 
@@ -422,323 +408,40 @@
       <div id="tab-scans" class="tab-content hidden">
         <h2 class="text-2xl font-bold mb-6">All Scans</h2>
 
-        <div id="scans-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading scans...</p>
-        </div>
-
-        <div id="scans-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
+        <div class="bg-gray-800 rounded-lg overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full">
               <thead class="bg-gray-700">
                 <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="scan-select-all" onchange="toggleSelectAllScans()"></th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">URL</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Score</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Quality</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Agency/Client</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Type</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Date</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                  <th class="px-4 py-3 text-left">URL</th>
+                  <th class="px-4 py-3 text-left">Score</th>
+                  <th class="px-4 py-3 text-left">Agency</th>
+                  <th class="px-4 py-3 text-left">Date</th>
+                  <th class="px-4 py-3 text-left">Actions</th>
                 </tr>
               </thead>
-              <tbody id="scans-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="mt-4 flex gap-2">
-          <button onclick="deleteSelectedScans()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
-          <button onclick="exportScansToCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">📊 Export CSV</button>
-          <button onclick="exportScansToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
-        </div>
-      </div>
-
-      <!-- Share Links Tab -->
-      <div id="tab-share-links" class="tab-content hidden">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">Share Links</h2>
-          <div class="flex gap-3">
-            <button onclick="loadShareLinks()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition-all">
-              🔄 Refresh
-            </button>
-            <button onclick="showCreateShareLinkModal()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all">
-              ➕ Create Share Link
-            </button>
-          </div>
-        </div>
-
-        <div id="share-links-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading share links...</p>
-        </div>
-
-        <div id="share-links-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
+              <tbody class="divide-y divide-gray-700">
                 <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="sharelink-select-all" onchange="toggleSelectAllShareLinks()"></th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Client</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Email</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Share URL</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Usage</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Expires</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                  <td class="px-4 py-3">https://example.com</td>
+                  <td class="px-4 py-3"><span class="px-2 py-1 bg-green-600 rounded">78</span></td>
+                  <td class="px-4 py-3">Digital Solutions</td>
+                  <td class="px-4 py-3">2024-03-20 14:30</td>
+                  <td class="px-4 py-3">
+                    <button class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm">View Details</button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody id="share-links-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="mt-4 flex gap-2">
-          <button onclick="deleteSelectedShareLinks()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
-        </div>
-      </div>
-      <!-- Leaderboard Tab -->
-      <div id="tab-leaderboard" class="tab-content hidden">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">Global Leaderboard Management</h2>
-          <button onclick="scanAllAgencies()" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold transition-all">
-            🔍 Scan Alle Agencies Nu
-          </button>
-        </div>
-
-        <div class="mb-4 flex gap-4">
-          <input type="text" id="leaderboard-search" placeholder="Search by URL, company, or score..." 
-            class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-          <button onclick="searchLeaderboard()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
-            Search
-          </button>
-        </div>
-
-        <div id="leaderboard-list" class="bg-gray-800 rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
                 <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="leaderboard-select-all" onchange="toggleSelectAllLeaderboard()"></th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Rank</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Company</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">URL</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Score</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Country</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Added Date</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                  <td class="px-4 py-3">https://testwebsite.org</td>
+                  <td class="px-4 py-3"><span class="px-2 py-1 bg-yellow-600 rounded">65</span></td>
+                  <td class="px-4 py-3">Web Masters</td>
+                  <td class="px-4 py-3">2024-03-19 11:20</td>
+                  <td class="px-4 py-3">
+                    <button class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm">View Details</button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody id="leaderboard-tbody" class="divide-y divide-gray-700">
               </tbody>
             </table>
           </div>
-        </div>
-
-        <div class="mt-4 flex gap-2">
-          <button onclick="deleteSelectedLeaderboard()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
-          <button onclick="exportLeaderboardToCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">📊 Export CSV</button>
-          <button onclick="exportLeaderboardToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
-        </div>
-      </div>
-
-      <!-- Blog Tab -->
-      <div id="tab-blog" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">📝 Blog Management</h2>
-        <p class="text-gray-400">Blog management coming soon...</p>
-      </div>
-
-      <!-- Email & Notifications Tab -->
-      <div id="tab-email-notifications" class="tab-content hidden">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">🔔 Notifications</h2>
-          <div class="flex gap-2">
-            <button onclick="markAllNotificationsRead()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold text-sm">
-              ✅ Mark All Read
-            </button>
-            <button onclick="clearReadNotifications()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold text-sm">
-              🗑️ Clear Read
-            </button>
-            <button onclick="showCreateNotificationModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-sm">
-              ➕ Create Notification
-            </button>
-          </div>
-        </div>
-
-        <!-- Notification Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div class="bg-gradient-to-br from-purple-900 to-purple-800 rounded-lg p-4">
-            <div class="text-sm text-purple-200">📨 Total</div>
-            <div class="text-3xl font-bold mt-2" id="notification-total-count">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-red-900 to-red-800 rounded-lg p-4">
-            <div class="text-sm text-red-200">🔴 Unread</div>
-            <div class="text-3xl font-bold mt-2" id="notification-unread-count">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-yellow-900 to-yellow-800 rounded-lg p-4">
-            <div class="text-sm text-yellow-200">⚠️ High Priority</div>
-            <div class="text-3xl font-bold mt-2" id="notification-high-count">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-blue-900 to-blue-800 rounded-lg p-4">
-            <div class="text-sm text-blue-200">📅 Last 7 Days</div>
-            <div class="text-3xl font-bold mt-2" id="notification-recent-count">0</div>
-          </div>
-        </div>
-
-        <!-- Filter & Search -->
-        <div class="flex gap-4 mb-6">
-          <select id="notification-filter" onchange="loadNotifications()" class="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-            <option value="all">All Notifications</option>
-            <option value="unread">Unread Only</option>
-            <option value="read">Read Only</option>
-            <option value="high">High Priority</option>
-            <option value="system">System</option>
-            <option value="user">User Created</option>
-          </select>
-          
-          <input type="text" id="notification-search" placeholder="Search notifications..." 
-            onkeyup="searchNotifications()"
-            class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        </div>
-
-        <!-- Notifications List -->
-        <div id="notifications-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading notifications...</p>
-        </div>
-
-        <div id="notifications-list" class="hidden space-y-4">
-          <!-- Notifications will be loaded here -->
-        </div>
-
-        <div id="no-notifications" class="hidden text-center py-12 text-gray-400">
-          No notifications found.
-        </div>
-      </div>
-
-      <!-- Claims Management Tab -->
-      <div id="tab-claims" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">🏢
-                <!-- Claims Management Tab -->
-      <div id="tab-claims" class="tab-content hidden">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">🏢 Claims Management</h2>
-          <div class="flex gap-3">
-            <button onclick="loadClaims()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition-all">
-              🔄 Refresh Claims
-            </button>
-            <button onclick="showAddClaimModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-all">
-              ➕ Add Manual Claim
-            </button>
-          </div>
-        </div>
-
-        <!-- Claims Filter -->
-        <div class="flex gap-4 mb-6">
-          <select id="claims-filter" onchange="filterClaims()" class="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-            <option value="all">All Claims</option>
-            <option value="pending">Pending</option>
-            <option value="verified">Verified</option>
-            <option value="rejected">Rejected</option>
-            <option value="expired">Expired</option>
-          </select>
-          
-          <input type="text" id="claims-search" placeholder="Search by URL, company, or email..." 
-            onkeyup="searchClaims()"
-            class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        </div>
-
-        <div id="claims-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading claims...</p>
-        </div>
-
-        <div id="claims-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="claim-select-all" onchange="toggleSelectAllClaims()"></th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Company</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">URL</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Claimant Email</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Verification Method</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Submitted</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Expires</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="claims-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="mt-4 flex gap-2">
-          <button onclick="approveSelectedClaims()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">✅ Approve Selected</button>
-          <button onclick="rejectSelectedClaims()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">❌ Reject Selected</button>
-          <button onclick="deleteSelectedClaims()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
-          <button onclick="exportClaimsToCSV()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📊 Export CSV</button>
-        </div>
-      </div>
-
-      <!-- Opt-Out Tab -->
-      <div id="tab-opt-out" class="tab-content hidden">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">🚫 Opt-Out Requests</h2>
-          <button onclick="loadOptOutRequests()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition-all">
-            🔄 Refresh
-          </button>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div class="bg-red-900/50 border border-red-700 rounded-lg p-4">
-            <div class="text-sm text-red-300">Pending Requests</div>
-            <div class="text-3xl font-bold mt-2" id="optout-pending-count">0</div>
-          </div>
-          <div class="bg-yellow-900/50 border border-yellow-700 rounded-lg p-4">
-            <div class="text-sm text-yellow-300">Processing</div>
-            <div class="text-3xl font-bold mt-2" id="optout-processing-count">0</div>
-          </div>
-          <div class="bg-green-900/50 border border-green-700 rounded-lg p-4">
-            <div class="text-sm text-green-300">Completed</div>
-            <div class="text-3xl font-bold mt-2" id="optout-completed-count">0</div>
-          </div>
-        </div>
-
-        <div id="optout-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading opt-out requests...</p>
-        </div>
-
-        <div id="optout-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="optout-select-all" onchange="toggleSelectAllOptOut()"></th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Request ID</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Company/URL</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Contact Email</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Reason</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Submitted</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="optout-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="mt-4 flex gap-2">
-          <button onclick="approveSelectedOptOut()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">✅ Approve Selected</button>
-          <button onclick="rejectSelectedOptOut()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">❌ Reject Selected</button>
-          <button onclick="deleteSelectedOptOut()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
         </div>
       </div>
 
@@ -746,7 +449,7 @@
       <div id="tab-lead-scanner" class="tab-content hidden">
         <div class="flex justify-between items-center mb-6">
           <h2 class="text-2xl font-bold">🎯 Lead Scanner</h2>
-          <button onclick="startBulkScan()" class="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-lg font-semibold transition-all scanning-active">
+          <button onclick="startBulkScan()" class="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-lg font-semibold transition-all">
             🚀 Start Bulk Scan
           </button>
         </div>
@@ -798,66 +501,100 @@
         </div>
 
         <!-- Lead List -->
-        <div id="leads-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading leads...</p>
+        <div id="leads-list" class="space-y-4">
+          <div class="lead-card rounded-lg p-4">
+            <div class="flex justify-between items-start mb-3">
+              <div>
+                <h4 class="font-bold text-lg">Example Company</h4>
+                <p class="text-gray-400 text-sm">https://example.com</p>
+              </div>
+              <span class="px-3 py-1 bg-green-600 rounded-full text-sm">Score: 85</span>
+            </div>
+            <div class="grid grid-cols-2 gap-4 mb-3">
+              <div>
+                <p class="text-gray-400 text-sm">Industry</p>
+                <p class="font-medium">Technology</p>
+              </div>
+              <div>
+                <p class="text-gray-400 text-sm">Country</p>
+                <p class="font-medium">United States</p>
+              </div>
+            </div>
+            <div class="flex justify-between">
+              <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm">View Details</button>
+              <button class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm">Add to Agency</button>
+            </div>
+          </div>
         </div>
-
-        <div id="leads-list" class="hidden space-y-4">
-          <!-- Leads will be loaded here dynamically -->
-        </div>
-      </div>
-
-      <!-- Add the remaining tabs here (ContentScore, Code Generators, LTD Codes, Settings, Handleiding) -->
-      <!-- ContentScore Tab -->
-      <div id="tab-contentscore" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">📊 ContentScore Algorithm Management</h2>
-        <p class="text-gray-400">ContentScore management coming soon...</p>
-      </div>
-
-      <!-- Code Generators Tab -->
-      <div id="tab-code-generators" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">🎨 Code Generators</h2>
-        <p class="text-gray-400">Code generators management coming soon...</p>
-      </div>
-
-      <!-- LTD Codes Tab -->
-      <div id="tab-ltd-codes" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">💰 Lifetime Deal Codes</h2>
-        <p class="text-gray-400">LTD codes management coming soon...</p>
       </div>
 
       <!-- Settings Tab -->
       <div id="tab-settings" class="tab-content hidden">
         <h2 class="text-2xl font-bold mb-6">⚙️ Platform Settings</h2>
-        <p class="text-gray-400">Platform settings coming soon...</p>
-      </div>
+        
+        <div class="bg-gray-800 rounded-lg p-6 mb-6">
+          <h3 class="text-lg font-bold mb-4">General Settings</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="flex items-center space-x-3">
+                <input type="checkbox" class="w-5 h-5" checked>
+                <span>Enable email notifications</span>
+              </label>
+            </div>
+            <div>
+              <label class="flex items-center space-x-3">
+                <input type="checkbox" class="w-5 h-5" checked>
+                <span>Auto-backup database</span>
+              </label>
+            </div>
+            <div>
+              <label class="flex items-center space-x-3">
+                <input type="checkbox" class="w-5 h-5">
+                <span>Maintenance mode</span>
+              </label>
+            </div>
+          </div>
+        </div>
 
-      <!-- Handleiding Tab -->
-      <div id="tab-handleiding" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">📚 Handleiding (Documentation)</h2>
-        <p class="text-gray-400">Documentation coming soon...</p>
+        <div class="bg-gray-800 rounded-lg p-6">
+          <h3 class="text-lg font-bold mb-4">API Configuration</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">API Base URL</label>
+              <input type="text" value="https://api.contentscale.com/v1" 
+                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">API Key</label>
+              <div class="flex gap-2">
+                <input type="password" value="sk_live_1234567890abcdef" 
+                  class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                <button class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg">Show</button>
+              </div>
+            </div>
+            <button class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">Save Settings</button>
+          </div>
+        </div>
       </div>
     </main>
   </div>
 
-  <!-- Add Modals and other UI components here -->
   <!-- Add Admin Modal -->
-  <div id="add-admin-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center">
-    <div class="bg-gray-800 rounded-lg p-8 w-full max-w-md mx-4">
+  <div id="add-admin-modal" class="modal-overlay hidden">
+    <div class="modal-content">
       <h3 class="text-xl font-bold mb-4">Add New Admin/Helper</h3>
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-300 mb-2">Username</label>
-          <input type="text" id="new-admin-username" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+          <input type="text" id="new-admin-username" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="johndoe">
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-300 mb-2">Email</label>
-          <input type="email" id="new-admin-email" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+          <input type="email" id="new-admin-email" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="john@example.com">
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-300 mb-2">Full Name</label>
-          <input type="text" id="new-admin-fullname" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+          <input type="text" id="new-admin-fullname" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="John Doe">
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-300 mb-2">Role</label>
@@ -867,24 +604,51 @@
             <option value="superadmin">Super Admin</option>
           </select>
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-300 mb-2">Temporary Password</label>
-          <input type="text" id="new-admin-password" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" value="temp123">
-        </div>
       </div>
       <div class="flex justify-end gap-3 mt-6">
         <button onclick="closeAddAdminModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg">Cancel</button>
-        <button onclick="createNewAdmin()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg">Create</button>
+        <button onclick="createNewAdmin()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg">Create Admin</button>
       </div>
     </div>
   </div>
 
-  <!-- Add other modals as needed -->
+  <!-- Add Agency Modal -->
+  <div id="add-agency-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h3 class="text-xl font-bold mb-4">Add New Agency</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">Agency Name</label>
+          <input type="text" id="new-agency-name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="Digital Solutions">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">Domain</label>
+          <input type="text" id="new-agency-domain" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="digitalsolutions.com">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">Plan</label>
+          <select id="new-agency-plan" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+            <option value="starter">Starter</option>
+            <option value="pro">Pro</option>
+            <option value="business">Business</option>
+            <option value="enterprise">Enterprise</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">Admin Email</label>
+          <input type="email" id="new-agency-email" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="admin@agency.com">
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 mt-6">
+        <button onclick="closeAddAgencyModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg">Cancel</button>
+        <button onclick="createNewAgency()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg">Create Agency</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     // Global state
     let currentUser = null;
-    let selectedTab = 'overview';
     
     // Tab switching
     function switchTab(tabName) {
@@ -908,21 +672,9 @@
         }
       });
       
-      selectedTab = tabName;
-      
-      // Load data for the tab if needed
-      if (tabName === 'admins') {
-        loadAdmins();
-      } else if (tabName === 'agencies') {
-        loadAgencies();
-      } else if (tabName === 'clients') {
-        loadClients();
-      } else if (tabName === 'scans') {
-        loadScans();
-      } else if (tabName === 'share-links') {
-        loadShareLinks();
-      } else if (tabName === 'email-notifications') {
-        loadNotifications();
+      // Update lead scanner stats if on that tab
+      if (tabName === 'lead-scanner') {
+        updateLeadScannerStats();
       }
     }
     
@@ -933,18 +685,8 @@
         'agencies': '🏢',
         'clients': '👤',
         'scans': '🔍',
-        'share-links': '🔗',
-        'leaderboard': '🏆',
-        'blog': '📝',
-        'email-notifications': '📧',
-        'claims': '🏢',
-        'opt-out': '🚫',
         'lead-scanner': '🎯',
-        'contentscore': '📊',
-        'code-generators': '🎨',
-        'ltd-codes': '💰',
-        'settings': '⚙️',
-        'handleiding': '📚'
+        'settings': '⚙️'
       };
       return emojiMap[tabName] || '📄';
     }
@@ -953,7 +695,6 @@
     function login() {
       const username = document.getElementById('login-username').value;
       const password = document.getElementById('login-password').value;
-      const loginBtn = document.getElementById('login-btn');
       const errorDiv = document.getElementById('login-error');
       
       // Simple validation
@@ -963,234 +704,138 @@
         return;
       }
       
-      // Simulate login - In production, this would be an API call
-      loginBtn.disabled = true;
-      loginBtn.textContent = 'Logging in...';
-      
       // For demo purposes, accept any login
-      setTimeout(() => {
-        currentUser = {
-          username: username,
-          role: 'superadmin'
-        };
-        
-        // Update UI
-        document.getElementById('admin-username').textContent = username;
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('main-dashboard').classList.remove('hidden');
-        
-        // Load initial data
-        loadOverviewStats();
-        
-        // Reset login form
-        loginBtn.disabled = false;
-        loginBtn.textContent = 'Login';
-        errorDiv.classList.add('hidden');
-      }, 1000);
+      currentUser = {
+        username: username,
+        role: 'superadmin'
+      };
+      
+      // Update UI
+      document.getElementById('admin-username').textContent = username;
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('main-dashboard').classList.remove('hidden');
+      
+      // Reset login form
+      document.getElementById('login-username').value = '';
+      document.getElementById('login-password').value = '';
+      errorDiv.classList.add('hidden');
     }
     
     function logout() {
       currentUser = null;
-      document.getElementById('login-username').value = '';
-      document.getElementById('login-password').value = '';
       document.getElementById('login-screen').classList.remove('hidden');
       document.getElementById('main-dashboard').classList.add('hidden');
     }
     
-    // Load overview statistics
-    async function loadOverviewStats() {
-      try {
-        // Simulate API call
-        setTimeout(() => {
-          document.getElementById('stat-total-agencies').textContent = '24';
-          document.getElementById('stat-total-clients').textContent = '1,248';
-          document.getElementById('stat-total-scans').textContent = '8,942';
-          document.getElementById('stat-active-helpers').textContent = '3';
-        }, 500);
-      } catch (error) {
-        console.error('Error loading overview stats:', error);
-      }
-    }
-    
-    // Admin management functions
-    function loadAdmins() {
-      const loading = document.getElementById('admins-loading');
-      const list = document.getElementById('admins-list');
-      const tbody = document.getElementById('admins-tbody');
-      
-      loading.classList.remove('hidden');
-      list.classList.add('hidden');
-      
-      // Simulate API call
-      setTimeout(() => {
-        const admins = [
-          {
-            id: 1,
-            username: 'superadmin',
-            fullName: 'System Super Admin',
-            email: 'admin@contentscale.com',
-            role: 'superadmin',
-            status: 'active',
-            created: '2024-01-15',
-            lastLogin: '2024-03-20'
-          },
-          {
-            id: 2,
-            username: 'helper1',
-            fullName: 'John Doe',
-            email: 'john@contentscale.com',
-            role: 'helper',
-            status: 'active',
-            created: '2024-02-01',
-            lastLogin: '2024-03-19'
-          },
-          {
-            id: 3,
-            username: 'helper2',
-            fullName: 'Jane Smith',
-            email: 'jane@contentscale.com',
-            role: 'helper',
-            status: 'inactive',
-            created: '2024-02-15',
-            lastLogin: '2024-03-10'
-          }
-        ];
-        
-        tbody.innerHTML = '';
-        admins.forEach(admin => {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td class="px-4 py-3">${admin.username}</td>
-            <td class="px-4 py-3">${admin.fullName}</td>
-            <td class="px-4 py-3">${admin.email}</td>
-            <td class="px-4 py-3">
-              <span class="px-2 py-1 rounded text-xs ${admin.role === 'superadmin' ? 'bg-purple-600' : admin.role === 'admin' ? 'bg-blue-600' : 'bg-green-600'}">
-                ${admin.role}
-              </span>
-            </td>
-            <td class="px-4 py-3">
-              <span class="px-2 py-1 rounded text-xs ${admin.status === 'active' ? 'bg-green-600' : 'bg-red-600'}">
-                ${admin.status}
-              </span>
-            </td>
-            <td class="px-4 py-3">${admin.created}</td>
-            <td class="px-4 py-3">${admin.lastLogin}</td>
-            <td class="px-4 py-3">
-              <button class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm mr-2">Edit</button>
-              <button class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm">Delete</button>
-            </td>
-          `;
-          tbody.appendChild(row);
-        });
-        
-        loading.classList.add('hidden');
-        list.classList.remove('hidden');
-      }, 1000);
-    }
-    
+    // Modal functions
     function showAddAdminModal() {
       document.getElementById('add-admin-modal').classList.remove('hidden');
     }
     
     function closeAddAdminModal() {
       document.getElementById('add-admin-modal').classList.add('hidden');
+      // Clear form
+      document.getElementById('new-admin-username').value = '';
+      document.getElementById('new-admin-email').value = '';
+      document.getElementById('new-admin-fullname').value = '';
+      document.getElementById('new-admin-role').value = 'helper';
     }
     
     function createNewAdmin() {
-      // Implementation for creating new admin
-      alert('Admin creation functionality would be implemented here');
+      const username = document.getElementById('new-admin-username').value;
+      const email = document.getElementById('new-admin-email').value;
+      const fullName = document.getElementById('new-admin-fullname').value;
+      const role = document.getElementById('new-admin-role').value;
+      
+      if (!username || !email || !fullName) {
+        alert('Please fill in all fields');
+        return;
+      }
+      
+      alert(`New ${role} created:\nUsername: ${username}\nEmail: ${email}\nName: ${fullName}`);
       closeAddAdminModal();
     }
     
-    // Agency management functions
-    function loadAgencies() {
-      const loading = document.getElementById('agencies-loading');
-      const list = document.getElementById('agencies-list');
-      
-      loading.classList.remove('hidden');
-      list.classList.add('hidden');
-      
-      // Simulate loading
-      setTimeout(() => {
-        loading.classList.add('hidden');
-        list.classList.remove('hidden');
-      }, 1000);
-    }
-    
     function showAddAgencyModal() {
-      alert('Add agency modal would open here');
+      document.getElementById('add-agency-modal').classList.remove('hidden');
     }
     
-    // Other tab loading functions
-    function loadClients() {
-      const loading = document.getElementById('clients-loading');
-      const list = document.getElementById('clients-list');
+    function closeAddAgencyModal() {
+      document.getElementById('add-agency-modal').classList.add('hidden');
+      // Clear form
+      document.getElementById('new-agency-name').value = '';
+      document.getElementById('new-agency-domain').value = '';
+      document.getElementById('new-agency-plan').value = 'starter';
+      document.getElementById('new-agency-email').value = '';
+    }
+    
+    function createNewAgency() {
+      const name = document.getElementById('new-agency-name').value;
+      const domain = document.getElementById('new-agency-domain').value;
+      const plan = document.getElementById('new-agency-plan').value;
+      const email = document.getElementById('new-agency-email').value;
       
-      loading.classList.remove('hidden');
-      list.classList.add('hidden');
+      if (!name || !domain || !email) {
+        alert('Please fill in all required fields');
+        return;
+      }
       
+      alert(`New agency created:\nName: ${name}\nDomain: ${domain}\nPlan: ${plan}\nAdmin Email: ${email}`);
+      closeAddAgencyModal();
+    }
+    
+    // Lead Scanner functions
+    function updateLeadScannerStats() {
+      // Simulate updating stats
+      document.getElementById('lead-total-scanned').textContent = '1,248';
+      document.getElementById('lead-high-quality').textContent = '342';
+      document.getElementById('lead-in-progress').textContent = '0';
+      document.getElementById('lead-today-scans').textContent = '24';
+    }
+    
+    function startBulkScan() {
+      const threshold = document.getElementById('quality-threshold').value;
+      const maxResults = document.getElementById('max-results').value;
+      const delay = document.getElementById('scan-delay').value;
+      
+      const btn = event.target;
+      const originalText = btn.textContent;
+      
+      btn.textContent = '⏳ Scanning...';
+      btn.disabled = true;
+      btn.classList.add('scanning-active');
+      
+      // Simulate scan process
       setTimeout(() => {
-        loading.classList.add('hidden');
-        list.classList.remove('hidden');
-      }, 1000);
+        btn.textContent = '✅ Scan Complete!';
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.disabled = false;
+          btn.classList.remove('scanning-active');
+          
+          // Update stats
+          updateLeadScannerStats();
+          
+          // Show success message
+          alert(`Bulk scan completed!\nThreshold: ${threshold}+\nMax Results: ${maxResults}\nNew leads found: 42`);
+        }, 2000);
+      }, 3000);
     }
     
-    function loadScans() {
-      const loading = document.getElementById('scans-loading');
-      const list = document.getElementById('scans-list');
-      
-      loading.classList.remove('hidden');
-      list.classList.add('hidden');
-      
-      setTimeout(() => {
-        loading.classList.add('hidden');
-        list.classList.remove('hidden');
-      }, 1000);
-    }
+    // Close modals on ESC key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeAddAdminModal();
+        closeAddAgencyModal();
+      }
+    });
     
-    function loadShareLinks() {
-      const loading = document.getElementById('share-links-loading');
-      const list = document.getElementById('share-links-list');
-      
-      loading.classList.remove('hidden');
-      list.classList.add('hidden');
-      
-      setTimeout(() => {
-        loading.classList.add('hidden');
-        list.classList.remove('hidden');
-      }, 1000);
-    }
-    
-    function loadNotifications() {
-      const loading = document.getElementById('notifications-loading');
-      const list = document.getElementById('notifications-list');
-      const noNotifications = document.getElementById('no-notifications');
-      
-      loading.classList.remove('hidden');
-      list.classList.add('hidden');
-      noNotifications.classList.add('hidden');
-      
-      setTimeout(() => {
-        loading.classList.add('hidden');
-        noNotifications.classList.remove('hidden');
-      }, 1000);
-    }
-    
-    // Selection functions
-    function toggleSelectAllAgencies() {
-      const checkboxes = document.querySelectorAll('#agencies-tbody input[type="checkbox"]');
-      const selectAll = document.getElementById('agency-select-all').checked;
-      
-      checkboxes.forEach(checkbox => {
-        checkbox.checked = selectAll;
-      });
-    }
-    
-    // Add similar functions for other tables
-    
-    // Initialize on page load
-    document.addEventListener('DOMContentLoaded', () => {
-      // Set up any initial state
+    // Close modals when clicking outside
+    document.addEventListener('click', (e) => {
+      if (e.target.classList.contains('modal-overlay')) {
+        closeAddAdminModal();
+        closeAddAgencyModal();
+      }
     });
   </script>
 </body>
