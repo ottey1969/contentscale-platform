@@ -343,6 +343,23 @@ async function createAllTables() {
       )
     `);
     
+    // NOTIFICATIONS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        type VARCHAR(50) NOT NULL DEFAULT 'system',
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        link VARCHAR(500),
+        priority VARCHAR(20) DEFAULT 'normal',
+        is_read BOOLEAN DEFAULT FALSE,
+        created_by VARCHAR(100),
+        created_for VARCHAR(100) DEFAULT 'admin',
+        created_at TIMESTAMP DEFAULT NOW(),
+        read_at TIMESTAMP
+      )
+    `);
+    
     // DATABASE MIGRATIONS
     await client.query(`ALTER TABLE super_admins ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
     await client.query(`ALTER TABLE super_admins ADD COLUMN IF NOT EXISTS last_login TIMESTAMP`);
@@ -484,6 +501,9 @@ async function createAllTables() {
     await client.query('CREATE INDEX IF NOT EXISTS idx_claims_url ON profile_claims(url)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_optout_url ON optout_requests(url)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_optout_token ON optout_requests(token)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at DESC)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(is_read)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_notifications_priority ON notifications(priority)');
     
     console.log('✅ All database tables ready');
     
@@ -2685,7 +2705,204 @@ async function sendLeaderboardAdditionEmail(agencyData) {
   }
 }
 
-console.log('✅ Claim Profile & Email endpoints loaded');
+// ============================================
+// NOTIFICATION ENDPOINTS
+// ============================================
+
+// Get all notifications
+app.get('/api/admin/notifications', async (req, res) => {
+  try {
+    const filter = req.query.filter || 'all';
+    let query = 'SELECT * FROM notifications';
+    let params = [];
+    
+    if (filter !== 'all') {
+      switch(filter) {
+        case 'unread':
+          query += ' WHERE is_read = FALSE';
+          break;
+        case 'read':
+          query += ' WHERE is_read = TRUE';
+          break;
+        case 'high':
+          query += ' WHERE priority IN ($1, $2)';
+          params = ['high', 'urgent'];
+          break;
+        case 'system':
+          query += ' WHERE type = $1';
+          params = ['system'];
+          break;
+        case 'user':
+          query += ' WHERE type != $1';
+          params = ['system'];
+          break;
+      }
+    }
+    
+    query += ' ORDER BY created_at DESC LIMIT 100';
+    
+    const result = await pool.query(query, params);
+    
+    res.json({ 
+      success: true, 
+      notifications: result.rows 
+    });
+    
+  } catch (error) {
+    console.error('Get notifications error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// Get unread notifications count
+app.get('/api/admin/notifications/unread-count', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT COUNT(*) as count FROM notifications WHERE is_read = FALSE`
+    );
+    
+    res.json({ 
+      success: true, 
+      count: parseInt(result.rows[0].count) || 0
+    });
+    
+  } catch (error) {
+    res.json({ success: true, count: 0 });
+  }
+});
+
+// Mark notification as read
+app.post('/api/admin/notifications/:id/read', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    await pool.query(
+      `UPDATE notifications 
+       SET is_read = TRUE, read_at = NOW() 
+       WHERE id = $1`,
+      [id]
+    );
+    
+    res.json({ 
+      success: true, 
+      message: 'Notification marked as read'
+    });
+    
+  } catch (error) {
+    console.error('Mark read error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// Mark all notifications as read
+app.post('/api/admin/notifications/mark-all-read', async (req, res) => {
+  try {
+    await pool.query(
+      `UPDATE notifications 
+       SET is_read = TRUE, read_at = NOW() 
+       WHERE is_read = FALSE`
+    );
+    
+    res.json({ 
+      success: true, 
+      message: 'All notifications marked as read'
+    });
+    
+  } catch (error) {
+    console.error('Mark all read error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// Create new notification
+app.post('/api/admin/notifications', async (req, res) => {
+  try {
+    const { type, title, message, link, priority, created_for } = req.body;
+    
+    if (!title || !message) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Title and message are required' 
+      });
+    }
+    
+    const result = await pool.query(
+      `INSERT INTO notifications (type, title, message, link, priority, created_for, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+       RETURNING *`,
+      [
+        type || 'system',
+        title,
+        message,
+        link || null,
+        priority || 'normal',
+        created_for || 'admin'
+      ]
+    );
+    
+    res.json({ 
+      success: true, 
+      notification: result.rows[0],
+      message: 'Notification created'
+    });
+    
+  } catch (error) {
+    console.error('Create notification error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// Delete notification
+app.delete('/api/admin/notifications/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    await pool.query('DELETE FROM notifications WHERE id = $1', [id]);
+    
+    res.json({ 
+      success: true, 
+      message: 'Notification deleted'
+    });
+    
+  } catch (error) {
+    console.error('Delete notification error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// Clear all read notifications
+app.delete('/api/admin/notifications/clear-read', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM notifications WHERE is_read = TRUE');
+    
+    res.json({ 
+      success: true, 
+      message: 'All read notifications cleared'
+    });
+    
+  } catch (error) {
+    console.error('Clear read error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
 
 // ============================================
 // HEALTH CHECK
