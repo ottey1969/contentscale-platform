@@ -552,72 +552,1022 @@
 
       <!-- Email & Notifications Tab -->
       <div id="tab-email-notifications" class="tab-content hidden">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">🔔 Notifications</h2>
-          <div class="flex gap-2">
-            <button onclick="markAllNotificationsRead()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold text-sm">
-              ✅ Mark All Read
+        <h2 class="text-2xl font-bold mb-6">📧 Email & Notifications</h2>
+        <div class="bg-gray-800 rounded-lg p-6">
+          <h3 class="text-xl font-bold mb-4">Send Bulk Email</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm mb-2">Recipients</label>
+              <select id="bulk-email-recipients" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                <option value="all-leaderboard">All Leaderboard Agencies</option>
+                <option value="unclaimed">Unclaimed Profiles Only</option>
+                <option value="claimed">Claimed Profiles Only</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm mb-2">Subject</label>
+              <input type="text" id="bulk-email-subject" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+            </div>
+            <div>
+              <label class="block text-sm mb-2">Message</label>
+              <textarea id="bulk-email-body" rows="6" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"></textarea>
+            </div>
+            <button onclick="sendBulkEmail()" class="w-full py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
+              📧 Send to All Recipients
             </button>
-            <button onclick="clearReadNotifications()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold text-sm">
-              🗑️ Clear Read
-            </button>
-            <button onclick="showCreateNotificationModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-sm">
-              ➕ Create Notification
-            </button>
           </div>
-        </div>
-
-        <!-- Notification Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div class="bg-gradient-to-br from-purple-900 to-purple-800 rounded-lg p-4">
-            <div class="text-sm text-purple-200">📨 Total</div>
-            <div class="text-3xl font-bold mt-2" id="notification-total-count">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-red-900 to-red-800 rounded-lg p-4">
-            <div class="text-sm text-red-200">🔴 Unread</div>
-            <div class="text-3xl font-bold mt-2" id="notification-unread-count">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-yellow-900 to-yellow-800 rounded-lg p-4">
-            <div class="text-sm text-yellow-200">⚠️ High Priority</div>
-            <div class="text-3xl font-bold mt-2" id="notification-high-count">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-blue-900 to-blue-800 rounded-lg p-4">
-            <div class="text-sm text-blue-200">📅 Last 7 Days</div>
-            <div class="text-3xl font-bold mt-2" id="notification-recent-count">0</div>
-          </div>
-        </div>
-
-        <!-- Filter & Search -->
-        <div class="flex gap-4 mb-6">
-          <select id="notification-filter" onchange="loadNotifications()" class="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-            <option value="all">All Notifications</option>
-            <option value="unread">Unread Only</option>
-            <option value="read">Read Only</option>
-            <option value="high">High Priority</option>
-            <option value="system">System</option>
-            <option value="user">User Created</option>
-          </select>
-          
-          <input type="text" id="notification-search" placeholder="Search notifications..." 
-            onkeyup="searchNotifications()"
-            class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        </div>
-
-        <!-- Notifications List -->
-        <div id="notifications-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading notifications...</p>
-        </div>
-
-        <div id="notifications-list" class="hidden space-y-4">
-          <!-- Notifications will be loaded here -->
-        </div>
-
-        <div id="no-notifications" class="hidden text-center py-12 text-gray-400">
-          No notifications found.
         </div>
       </div>
 
       <!-- Claims Management Tab -->
       <div id="tab-claims" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">🏢
+        <h2 class="text-2xl font-bold mb-6">🏢 Claims Management</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div class="bg-gradient-to-br from-purple-900 to-purple-800 rounded-lg p-4">
+            <div class="text-sm text-purple-200">Pending Claims</div>
+            <div class="text-3xl font-bold mt-2" id="pending-claims-count">0</div>
+          </div>
+          <div class="bg-gradient-to-br from-green-900 to-green-800 rounded-lg p-4">
+            <div class="text-sm text-green-200">Approved Claims</div>
+            <div class="text-3xl font-bold mt-2" id="approved-claims-count">0</div>
+          </div>
+          <div class="bg-gradient-to-br from-blue-900 to-blue-800 rounded-lg p-4">
+            <div class="text-sm text-blue-200">Total Claimed</div>
+            <div class="text-3xl font-bold mt-2" id="total-claimed-count">0</div>
+          </div>
+          <div class="bg-gradient-to-br from-orange-900 to-orange-800 rounded-lg p-4">
+            <div class="text-sm text-orange-200">Unclaimed Profiles</div>
+            <div class="text-3xl font-bold mt-2" id="unclaimed-profiles-count">0</div>
+          </div>
+        </div>
+
+        <div class="bg-gray-800 rounded-lg p-6">
+          <h3 class="text-xl font-bold mb-4">⏳ Pending Claims</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-700">
+                <tr>
+                  <th class="px-4 py-3 text-left text-sm">Agency Name</th>
+                  <th class="px-4 py-3 text-left text-sm">URL</th>
+                  <th class="px-4 py-3 text-left text-sm">Email</th>
+                  <th class="px-4 py-3 text-left text-sm">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="pending-claims-tbody" class="divide-y divide-gray-700">
+                <tr>
+                  <td colspan="4" class="px-4 py-8 text-center text-gray-400">No pending claims</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Opt-Out Tab -->
+      <div id="tab-opt-out" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">🚫 Opt-Out Management</h2>
+        <div class="bg-gray-800 rounded-lg p-6">
+          <h3 class="text-xl font-bold mb-4">Manual Opt-Out</h3>
+          <div class="flex gap-4">
+            <input type="text" id="manual-optout-url" placeholder="Agency website URL" 
+              class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+            <button onclick="manualOptOut()" class="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">
+              Remove from Leaderboard
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lead Scanner Tab -->
+      <div id="tab-lead-scanner" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">🎯 Lead Scanner</h2>
+        <p class="text-gray-400">Lead scanner coming soon...</p>
+      </div>
+
+      <!-- ContentScore Tab -->
+      <div id="tab-contentscore" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">ContentScore Tool</h2>
+        <iframe src="/seo-contentscore" class="w-full h-screen border-0 rounded-lg"></iframe>
+      </div>
+
+      <!-- Code Generators Tab -->
+      <div id="tab-code-generators" class="tab-content hidden">
+        <iframe src="/contentscale-complete-generator.html" style="width:100%; height:100vh; border:none; border-radius:8px;"></iframe>
+      </div>
+
+      <!-- LTD Codes Tab -->
+      <div id="tab-ltd-codes" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">LTD Codes</h2>
+        <p class="text-gray-400">Coming soon...</p>
+      </div>
+
+      <!-- Settings Tab -->
+      <div id="tab-settings" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">Platform Settings</h2>
+        <p class="text-gray-400">Settings content...</p>
+      </div>
+
+      <!-- Handleiding Tab -->
+      <div id="tab-handleiding" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">📚 Handleiding</h2>
+        <p class="text-gray-400">Guide content...</p>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- MODALS -->
+  <div id="modal-add-agency" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-lg p-8 max-w-2xl w-full mx-4">
+      <h3 class="text-2xl font-bold mb-6">Add New Agency</h3>
+      <div class="space-y-4">
+        <input type="text" id="agency-name" placeholder="Agency Name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="text" id="agency-domain" placeholder="Domain (example.com)" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <select id="agency-country" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+          <option value="NL">🇳🇱 Netherlands</option>
+          <option value="BE">🇧🇪 Belgium</option>
+          <option value="DE">🇩🇪 Germany</option>
+        </select>
+        <div class="flex gap-4">
+          <button onclick="submitAddAgency()" class="flex-1 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">Create</button>
+          <button onclick="closeModal('modal-add-agency')" class="flex-1 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-create-share-link" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-lg p-8 max-w-2xl w-full mx-4">
+      <h3 class="text-2xl font-bold mb-6">Create Share Link</h3>
+      <div class="space-y-4">
+        <input type="email" id="share-client-email" placeholder="Client Email" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="text" id="share-client-name" placeholder="Client Name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="text" id="share-client-company" placeholder="Company Name (Optional)" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="number" id="share-scans-limit" value="5" min="1" placeholder="Scans Limit" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="number" id="share-valid-days" value="30" min="1" placeholder="Valid Days" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <div class="flex gap-4">
+          <button onclick="submitCreateShareLink()" class="flex-1 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold">Create</button>
+          <button onclick="closeModal('modal-create-share-link')" class="flex-1 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-add-admin" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-lg p-8 max-w-2xl w-full mx-4">
+      <h3 class="text-2xl font-bold mb-6">Add Admin/Helper</h3>
+      <div class="space-y-4">
+        <input type="text" id="admin-username" placeholder="Username" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="password" id="admin-password" placeholder="Password (min 8)" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <select id="admin-role" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+          <option value="">Select Role</option>
+          <option value="super_admin">👑 Super Admin</option>
+          <option value="helper">🤝 Helper</option>
+        </select>
+        <input type="text" id="admin-full-name" placeholder="Full Name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="email" id="admin-email" placeholder="Email" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <div class="flex gap-4">
+          <button onclick="submitAddAdmin()" class="flex-1 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">Create</button>
+          <button onclick="closeModal('modal-add-admin')" class="flex-1 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    // ✅ GLOBAL DATA STORES FOR EXPORT
+    let allAgencies = [];
+    let allClients = [];
+    let allScans = [];
+    let allLeaderboard = [];
+    let leadQueue = [];
+    let allBlogPosts = [];
+    let currentBlogView = 'grid';
+    let editingBlogPostId = null;
+    
+    // Lead Scanner State
+    let leadScannerActive = false;
+    let leadScannerPaused = false;
+    let leadScannerInterval = null;
+    let currentLeadIndex = 0;
+
+    // ==========================================
+    // LOGIN & AUTH
+    // ==========================================
+    async function login() {
+      const username = document.getElementById('login-username').value;
+      const password = document.getElementById('login-password').value;
+      
+      try {
+        const response = await fetch('/api/setup/verify-admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          localStorage.setItem('admin_id', data.admin_id);
+          sessionStorage.setItem('admin_logged_in', 'true');
+          document.getElementById('login-screen').classList.add('hidden');
+          document.getElementById('main-dashboard').classList.remove('hidden');
+          document.getElementById('admin-username').textContent = data.admin.username;
+          loadAllData();
+        } else {
+          alert('❌ ' + (data.error || 'Login failed'));
+        }
+      } catch (error) {
+        alert('Connection error');
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('admin_id');
+      sessionStorage.removeItem('admin_logged_in');
+      location.reload();
+    }
+
+    // Check login
+    if (sessionStorage.getItem('admin_logged_in') === 'true') {
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('main-dashboard').classList.remove('hidden');
+      loadAllData();
+    }
+
+    // ==========================================
+    // TAB SWITCHING
+    // ==========================================
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+      document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+      document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+      event.target.classList.add('active');
+      
+      if (tabName === 'admins') loadAdmins();
+      if (tabName === 'agencies') loadAgencies();
+      if (tabName === 'clients') loadClients();
+      if (tabName === 'scans') loadScans();
+      if (tabName === 'share-links') loadShareLinks();
+      if (tabName === 'leaderboard') loadLeaderboard();
+      if (tabName === 'claims') loadClaims();
+      if (tabName === 'blog') loadBlogPosts();
+      if (tabName === 'lead-scanner') updateLeadScannerUI();
+    }
+
+    // ==========================================
+    // DATA LOADING
+    // ==========================================
+    async function loadAllData() {
+      loadStats();
+      loadAdmins();
+      loadAgencies();
+      loadClients();
+      loadScans();
+      loadShareLinks();
+      loadLeaderboard();
+      loadClaims();
+      loadBlogPosts();
+      loadLeadQueueFromStorage();
+    }
+
+    async function loadStats() {
+      try {
+        const response = await fetch('/api/admin/stats', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        if (data.success) {
+          document.getElementById('stat-total-agencies').textContent = data.stats.total_agencies;
+          document.getElementById('stat-total-clients').textContent = data.stats.total_clients;
+          document.getElementById('stat-total-scans').textContent = data.stats.total_scans;
+          document.getElementById('stat-active-helpers').textContent = data.stats.active_helpers;
+        }
+      } catch (error) {
+        console.error('Stats error:', error);
+      }
+    }
+
+    async function loadAdmins() {
+      try {
+        const response = await fetch('/api/admins', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        const tbody = document.getElementById('admins-tbody');
+        tbody.innerHTML = '';
+        
+        if (data.success && data.admins) {
+          data.admins.forEach(admin => {
+            tbody.innerHTML += `
+              <tr>
+                <td class="px-4 py-3">${admin.username}</td>
+                <td class="px-4 py-3">${admin.full_name || '-'}</td>
+                <td class="px-4 py-3">${admin.email || '-'}</td>
+                <td class="px-4 py-3"><span class="px-2 py-1 bg-purple-600 rounded text-xs">${admin.role}</span></td>
+                <td class="px-4 py-3">${admin.is_active ? '✅' : '❌'}</td>
+                <td class="px-4 py-3">${admin.created_at ? new Date(admin.created_at).toLocaleDateString() : '-'}</td>
+                <td class="px-4 py-3">${admin.last_login ? new Date(admin.last_login).toLocaleDateString() : 'Never'}</td>
+                <td class="px-4 py-3"><button onclick="deleteItem('admins', ${admin.id})" class="text-red-400">🗑️</button></td>
+              </tr>
+            `;
+          });
+          document.getElementById('admins-loading').classList.add('hidden');
+          document.getElementById('admins-list').classList.remove('hidden');
+        }
+      } catch (error) {
+        console.error('Admins error:', error);
+      }
+    }
+
+    async function loadAgencies() {
+      try {
+        const response = await fetch('/api/super-admin/agencies', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        const tbody = document.getElementById('agencies-tbody');
+        tbody.innerHTML = '';
+        
+        if (data.success && data.agencies) {
+          allAgencies = data.agencies;
+          data.agencies.forEach(agency => {
+            const row = `
+              <tr>
+                <td class="px-4 py-3"><input type="checkbox" class="agency-checkbox" value="${agency.id}"></td>
+                <td class="px-4 py-3">${agency.name}</td>
+                <td class="px-4 py-3">${agency.domain}</td>
+                <td class="px-4 py-3">${agency.country}</td>
+                <td class="px-4 py-3"><span class="px-2 py-1 bg-blue-600 rounded text-xs">${agency.plan}</span></td>
+                <td class="px-4 py-3">${agency.client_count || 0}</td>
+                <td class="px-4 py-3">${agency.total_scans || 0}</td>
+                <td class="px-4 py-3">${agency.is_active ? '✅' : '❌'}</td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-2">
+                    <input type="text" value="https://app.contentscale.site/agency-admin?key=${agency.admin_key}" 
+                      readonly class="flex-1 px-2 py-1 bg-gray-700 text-xs rounded text-blue-400"
+                      id="agency-url-${agency.admin_key}">
+                    <button onclick="copyAgencyUrl('${agency.admin_key}')" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs">📋</button>
+                  </div>
+                </td>
+                <td class="px-4 py-3"><button onclick="deleteItem('agencies', ${agency.id})" class="text-red-400">🗑️</button></td>
+              </tr>
+            `;
+            tbody.innerHTML += row;
+          });
+          document.getElementById('agencies-loading').classList.add('hidden');
+          document.getElementById('agencies-list').classList.remove('hidden');
+        }
+      } catch (error) {
+        console.error('Agencies error:', error);
+      }
+    }
+
+    async function loadClients() {
+      try {
+        const response = await fetch('/api/admin/clients', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        const tbody = document.getElementById('clients-tbody');
+        tbody.innerHTML = '';
+        
+        if (data.success && data.clients) {
+          allClients = data.clients;
+          data.clients.forEach(client => {
+            tbody.innerHTML += `
+              <tr>
+                <td class="px-4 py-3"><input type="checkbox" class="client-checkbox" value="${client.id}"></td>
+                <td class="px-4 py-3 text-blue-400">${client.url}</td>
+                <td class="px-4 py-3">${client.agency_name || '-'}</td>
+                <td class="px-4 py-3">${client.scan_count || 0}</td>
+                <td class="px-4 py-3">${client.created_at ? new Date(client.created_at).toLocaleDateString() : '-'}</td>
+                <td class="px-4 py-3"><button onclick="deleteItem('clients', ${client.id})" class="text-red-400">🗑️</button></td>
+              </tr>
+            `;
+          });
+          document.getElementById('clients-loading').classList.add('hidden');
+          document.getElementById('clients-list').classList.remove('hidden');
+        }
+      } catch (error) {
+        console.error('Clients error:', error);
+      }
+    }
+
+    async function loadScans() {
+      try {
+        const response = await fetch('/api/admin/scans', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        const tbody = document.getElementById('scans-tbody');
+        tbody.innerHTML = '';
+        
+        if (data.success && data.scans) {
+          allScans = data.scans;
+          data.scans.forEach(scan => {
+            tbody.innerHTML += `
+              <tr>
+                <td class="px-4 py-3"><input type="checkbox" class="scan-checkbox" value="${scan.id}"></td>
+                <td class="px-4 py-3 text-blue-400 text-sm">${scan.url ? scan.url.substring(0, 40) : '-'}...</td>
+                <td class="px-4 py-3 font-bold">${scan.score || '-'}/100</td>
+                <td class="px-4 py-3"><span class="px-2 py-1 bg-gray-700 rounded text-xs">${scan.quality || '-'}</span></td>
+                <td class="px-4 py-3 text-sm">${scan.agency_name || '-'}</td>
+                <td class="px-4 py-3"><span class="px-2 py-1 bg-gray-700 rounded text-xs">${scan.scan_type}</span></td>
+                <td class="px-4 py-3 text-sm">${scan.created_at ? new Date(scan.created_at).toLocaleDateString() : '-'}</td>
+                <td class="px-4 py-3"><button onclick="deleteItem('scans', ${scan.id})" class="text-red-400 hover:text-red-300">🗑️</button></td>
+              </tr>
+            `;
+          });
+          document.getElementById('scans-loading').classList.add('hidden');
+          document.getElementById('scans-list').classList.remove('hidden');
+        }
+      } catch (error) {
+        console.error('Scans error:', error);
+      }
+    }
+
+    async function loadShareLinks() {
+      try {
+        const response = await fetch('/api/admin/share-links', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        const tbody = document.getElementById('share-links-tbody');
+        tbody.innerHTML = '';
+        
+        if (data.success && data.share_links) {
+         data.share_links.forEach(link => {
+  tbody.innerHTML += `
+    <tr>
+      <td class="px-4 py-3"><input type="checkbox" class="sharelink-checkbox" value="${link.token}"></td>
+      <td class="px-4 py-3">${link.client_name || '-'}</td>
+      <td class="px-4 py-3">${link.client_email}</td>
+      <td class="px-4 py-3">${link.scans_used || 0}/${link.scans_limit || 5}</td>
+      <td class="px-4 py-3 text-sm">${link.expires_at ? new Date(link.expires_at).toLocaleDateString() : '-'}</td>
+      <td class="px-4 py-3">
+        <span class="px-2 py-1 ${link.is_active ? 'bg-green-900' : 'bg-red-900'} rounded text-xs">
+          ${link.is_active ? 'active' : 'inactive'}
+        </span>
+      </td>
+      <td class="px-4 py-3">
+        <button onclick="toggleShareLinkStatus('${link.token}')" 
+          class="px-3 py-1 ${link.is_active ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} rounded text-sm">
+          ${link.is_active ? 'Deactivate' : 'Activate'}
+        </button>
+        <button onclick="deleteShareLink('${link.token}')" class="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-sm ml-2">
+          🗑️
+        </button>
+      </td>
+    </tr>
+  `;
+});
+          document.getElementById('share-links-loading').classList.add('hidden');
+          document.getElementById('share-links-list').classList.remove('hidden');
+        }
+      } catch (error) {
+        console.error('Share links error:', error);
+      }
+    }
+
+    // NIEUWE FUNCTIE: toggleShareLinkStatus
+async function toggleShareLinkStatus(shareCode) {
+  if (!confirm('Are you sure you want to toggle the status of this share link?')) return;
+  
+  try {
+    const response = await fetch(`/api/admin/share-links/${shareCode}/toggle-status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-key': localStorage.getItem('admin_id')
+      }
+    });
+    
+    const data = await response.json();
+    if (data.success) {
+      alert(`✅ Share link ${data.is_active ? 'activated' : 'deactivated'}!`);
+      loadShareLinks(); // Herlaad de lijst
+    } else {
+      alert('❌ Error: ' + (data.error || 'Failed to update status'));
+    }
+  } catch (error) {
+    console.error('Toggle error:', error);
+    alert('Error updating status: ' + error.message);
+  }
+}
+
+    async function loadLeaderboard() {
+      try {
+        const response = await fetch('/api/admin/leaderboard', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        const tbody = document.getElementById('leaderboard-tbody');
+        tbody.innerHTML = '';
+        
+        if (data.success && data.entries) {
+          allLeaderboard = data.entries;
+          data.entries.forEach(entry => {
+            const medals = ['🥇', '🥈', '🥉'];
+            const medal = entry.rank <= 3 ? medals[entry.rank - 1] : '';
+            
+            // Format date
+            let addedDate = '-';
+            if (entry.created_at) {
+              const date = new Date(entry.created_at);
+              addedDate = date.toLocaleString('nl-NL', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+              });
+            }
+            
+            tbody.innerHTML += `
+              <tr>
+                <td class="px-4 py-3"><input type="checkbox" class="leaderboard-checkbox" value="${entry.id}"></td>
+                <td class="px-4 py-3 font-bold">${medal} #${entry.rank}</td>
+                <td class="px-4 py-3">${entry.company_name || '-'}</td>
+                <td class="px-4 py-3 text-blue-400 text-sm">${entry.url ? entry.url.substring(0, 40) : '-'}</td>
+                <td class="px-4 py-3 font-bold">${entry.score}/100</td>
+                <td class="px-4 py-3">${entry.country}</td>
+                <td class="px-4 py-3 text-sm text-gray-400">${addedDate}</td>
+                <td class="px-4 py-3"><button onclick="deleteItem('leaderboard', ${entry.id})" class="text-red-400 hover:text-red-300">🗑️</button></td>
+              </tr>
+            `;
+          });
+        }
+      } catch (error) {
+        console.error('Leaderboard error:', error);
+      }
+    }
+
+    async function loadClaims() {
+      try {
+        const response = await fetch('/api/admin/claims/pending', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          document.getElementById('pending-claims-count').textContent = data.claims?.length || 0;
+          document.getElementById('approved-claims-count').textContent = 0;
+          document.getElementById('total-claimed-count').textContent = 0;
+          document.getElementById('unclaimed-profiles-count').textContent = 0;
+        }
+      } catch (error) {
+        console.error('Claims error:', error);
+      }
+    }
+
+    // ==========================================
+    // ✅ COPY URL FUNCTIONS - CRITICAL FIX
+    // ==========================================
+    function copyShareUrl(token) {
+      const input = document.getElementById(`share-url-${token}`);
+      input.select();
+      document.execCommand('copy');
+      alert('✅ Share URL copied to clipboard!');
+    }
+
+    function copyAgencyUrl(adminKey) {
+      const input = document.getElementById(`agency-url-${adminKey}`);
+      input.select();
+      document.execCommand('copy');
+      alert('✅ Agency Admin URL copied to clipboard!');
+    }
+
+    // ==========================================
+    // CRUD OPERATIONS
+    // ==========================================
+    async function submitAddAgency() {
+      const formData = {
+        name: document.getElementById('agency-name').value,
+        domain: document.getElementById('agency-domain').value,
+        country: document.getElementById('agency-country').value,
+        plan: 'free'
+      };
+      
+      try {
+        const response = await fetch('/api/agencies', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          },
+          body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          alert('✅ Agency created!');
+          closeModal('modal-add-agency');
+          loadAgencies();
+        } else {
+          alert('❌ ' + (data.error || 'Failed'));
+        }
+      } catch (error) {
+        alert('Error');
+      }
+    }
+
+    async function submitCreateShareLink() {
+      const email = document.getElementById('share-client-email').value;
+      const name = document.getElementById('share-client-name').value;
+      const company = document.getElementById('share-client-company')?.value || '';
+      const scansLimit = parseInt(document.getElementById('share-scans-limit').value);
+      const validDays = parseInt(document.getElementById('share-valid-days').value);
+      
+      if (!email || !name) {
+        alert('❌ Email and name are required');
+        return;
+      }
+      
+      if (!email.includes('@')) {
+        alert('❌ Invalid email address');
+        return;
+      }
+      
+      const formData = {
+        client_email: email,
+        client_name: name,
+        client_company: company,
+        scans_limit: scansLimit || 5,
+        valid_days: validDays || 30
+      };
+      
+      try {
+        const response = await fetch('/api/admin/share-links/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          },
+          body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          alert('✅ Link created!\n\n' + data.share_url);
+          navigator.clipboard.writeText(data.share_url);
+          closeModal('modal-create-share-link');
+          
+          document.getElementById('share-client-email').value = '';
+          document.getElementById('share-client-name').value = '';
+          if (document.getElementById('share-client-company')) {
+            document.getElementById('share-client-company').value = '';
+          }
+          
+          loadShareLinks();
+        } else {
+          alert('❌ Failed to create link:\n' + (data.error || 'Unknown error'));
+        }
+      } catch (error) {
+        alert('❌ Error creating share link: ' + error.message);
+      }
+    }
+
+    async function submitAddAdmin() {
+      const formData = {
+        username: document.getElementById('admin-username').value,
+        password: document.getElementById('admin-password').value,
+        role: document.getElementById('admin-role').value,
+        full_name: document.getElementById('admin-full-name').value,
+        email: document.getElementById('admin-email').value
+      };
+      
+      try {
+        const response = await fetch('/api/admins', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          },
+          body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          alert('✅ Admin created!');
+          closeModal('modal-add-admin');
+          loadAdmins();
+        } else {
+          alert('❌ ' + (data.error || 'Failed'));
+        }
+      } catch (error) {
+        alert('Error');
+      }
+    }
+
+    async function deleteItem(type, id) {
+      if (!confirm('Delete this item?')) return;
+      
+      const endpoints = {
+        admins: `/api/admins/${id}`,
+        agencies: `/api/agencies/${id}`,
+        clients: `/api/admin/clients/${id}`,
+        scans: `/api/admin/scans/${id}`,
+        leaderboard: `/api/admin/leaderboard/${id}`
+      };
+      
+      try {
+        const response = await fetch(endpoints[type], {
+          method: 'DELETE',
+          headers: { 
+            'x-admin-key': localStorage.getItem('admin_id'),
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          alert('✅ Deleted!');
+          loadAllData();
+        } else {
+          const data = await response.json();
+          alert('❌ Failed: ' + (data.error || 'Unknown error'));
+        }
+      } catch (error) {
+        alert('❌ Error: ' + error.message);
+      }
+    }
+
+    async function deleteShareLink(code) {
+      if (!code || code === 'undefined') {
+        alert('❌ Invalid share link code');
+        return;
+      }
+      
+      if (!confirm('Delete this link?')) return;
+      
+      try {
+        const response = await fetch(`/api/admin/share-links/${code}`, {
+          method: 'DELETE',
+          headers: { 
+            'x-admin-key': localStorage.getItem('admin_id'),
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          alert('✅ Share link deleted!');
+          loadShareLinks();
+        } else {
+          const data = await response.json();
+          alert('❌ Failed to delete: ' + (data.error || 'Unknown error'));
+        }
+      } catch (error) {
+        alert('❌ Error deleting share link');
+      }
+    }
+
+    // ==========================================
+    // BULK SELECT & DELETE FUNCTIONS
+    // ==========================================
+    
+    function toggleSelectAllAgencies() {
+      const isChecked = document.getElementById('agency-select-all').checked;
+      document.querySelectorAll('.agency-checkbox').forEach(cb => cb.checked = isChecked);
+    }
+
+    function deleteSelectedAgencies() {
+      const selected = Array.from(document.querySelectorAll('.agency-checkbox:checked')).map(cb => cb.value);
+      if (selected.length === 0) return alert('Please select agencies to delete');
+      if (!confirm(`Delete ${selected.length} agencies?`)) return;
+      selected.forEach(id => deleteItem('agencies', id));
+      setTimeout(() => loadAgencies(), 500);
+    }
+
+    function toggleSelectAllClients() {
+      const isChecked = document.getElementById('client-select-all').checked;
+      document.querySelectorAll('.client-checkbox').forEach(cb => cb.checked = isChecked);
+    }
+
+    function deleteSelectedClients() {
+      const selected = Array.from(document.querySelectorAll('.client-checkbox:checked')).map(cb => cb.value);
+      if (selected.length === 0) return alert('Please select clients to delete');
+      if (!confirm(`Delete ${selected.length} clients?`)) return;
+      selected.forEach(id => deleteItem('clients', id));
+      setTimeout(() => loadClients(), 500);
+    }
+
+    function toggleSelectAllScans() {
+      const isChecked = document.getElementById('scan-select-all').checked;
+      document.querySelectorAll('.scan-checkbox').forEach(cb => cb.checked = isChecked);
+    }
+
+    function deleteSelectedScans() {
+      const selected = Array.from(document.querySelectorAll('.scan-checkbox:checked')).map(cb => parseInt(cb.value));
+      if (selected.length === 0) return alert('Please select scans to delete');
+      if (!confirm(`Delete ${selected.length} scans?`)) return;
+      
+      let deleted = 0;
+      let failed = 0;
+      
+      selected.forEach(async (id) => {
+        try {
+          const response = await fetch(`/api/admin/scans/${id}`, {
+            method: 'DELETE',
+            headers: { 
+              'x-admin-key': localStorage.getItem('admin_id'),
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (response.ok) {
+            deleted++;
+          } else {
+            failed++;
+          }
+        } catch (error) {
+          failed++;
+        }
+      });
+      
+      setTimeout(() => {
+        alert(`✅ Deleted: ${deleted}\n❌ Failed: ${failed}`);
+        loadScans();
+        loadStats();
+      }, 1000);
+    }
+
+    function toggleSelectAllShareLinks() {
+      const isChecked = document.getElementById('sharelink-select-all').checked;
+      document.querySelectorAll('.sharelink-checkbox').forEach(cb => cb.checked = isChecked);
+    }
+
+    function deleteSelectedShareLinks() {
+      const selected = Array.from(document.querySelectorAll('.sharelink-checkbox:checked')).map(cb => cb.value);
+      if (selected.length === 0) return alert('Please select share links to delete');
+      if (!confirm(`Delete ${selected.length} share links?`)) return;
+      selected.forEach(code => deleteShareLink(code));
+      setTimeout(() => loadShareLinks(), 500);
+    }
+
+    function toggleSelectAllLeaderboard() {
+      const isChecked = document.getElementById('leaderboard-select-all').checked;
+      document.querySelectorAll('.leaderboard-checkbox').forEach(cb => cb.checked = isChecked);
+    }
+
+    function deleteSelectedLeaderboard() {
+      const selected = Array.from(document.querySelectorAll('.leaderboard-checkbox:checked')).map(cb => parseInt(cb.value));
+      if (selected.length === 0) return alert('Please select leaderboard entries to delete');
+      if (!confirm(`Delete ${selected.length} leaderboard entries?`)) return;
+      
+      let deleted = 0;
+      let failed = 0;
+      
+      selected.forEach(async (id) => {
+        try {
+          const response = await fetch(`/api/admin/leaderboard/${id}`, {
+            method: 'DELETE',
+            headers: { 
+              'x-admin-key': localStorage.getItem('admin_id'),
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (response.ok) {
+            deleted++;
+          } else {
+            failed++;
+          }
+        } catch (error) {
+          failed++;
+        }
+      });
+      
+      setTimeout(() => {
+        alert(`✅ Deleted: ${deleted}\n❌ Failed: ${failed}`);
+        loadLeaderboard();
+        loadStats();
+      }, 1000);
+    }
+
+    // ==========================================
+    // EXPORT FUNCTIONS
+    // ==========================================
+    function exportToCSV(filename, data) {
+      if (!data || data.length === 0) {
+        alert('No data to export');
+        return;
+      }
+      
+      const csv = [
+        Object.keys(data[0] || {}).join(',')
+      ].concat(data.map(row => Object.values(row).map(cell => '"' + (cell || '').toString().replace(/"/g, '""') + '"').join(',')))
+       .join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    }
+
+    function exportToJSON(filename, data) {
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    }
+
+    function exportAgenciesToCSV() {
+      exportToCSV(`agencies-${Date.now()}.csv`, allAgencies);
+    }
+
+    function exportAgenciesToJSON() {
+      exportToJSON(`agencies-${Date.now()}.json`, allAgencies);
+    }
+
+    function exportClientsToCSV() {
+      exportToCSV(`clients-${Date.now()}.csv`, allClients);
+    }
+
+    function exportClientsToJSON() {
+      exportToJSON(`clients-${Date.now()}.json`, allClients);
+    }
+
+    function exportScansToCSV() {
+      exportToCSV(`scans-${Date.now()}.csv`, allScans);
+    }
+
+    function exportScansToJSON() {
+      exportToJSON(`scans-${Date.now()}.json`, allScans);
+    }
+
+    function exportLeaderboardToCSV() {
+      exportToCSV(`leaderboard-${Date.now()}.csv`, allLeaderboard);
+    }
+
+    function exportLeaderboardToJSON() {
+      exportToJSON(`leaderboard-${Date.now()}.json`, allLeaderboard);
+    }
+
+    function exportLeadQueueToCSV() {
+      exportToCSV(`lead-queue-${Date.now()}.csv`, leadQueue);
+    }
+
+    function exportLeadQueueToJSON() {
+      exportToJSON(`lead-queue-${Date.now()}.json`, leadQueue);
+    }
+
+    // ==========================================
+    // HELPERS
+    // ==========================================
+    function showAddAgencyModal() {
+      document.getElementById('modal-add-agency').classList.remove('hidden');
+    }
+
+    function showCreateShareLinkModal() {
+      document.getElementById('modal-create-share-link').classList.remove('hidden');
+    }
+
+    function showAddAdminModal() {
+      document.getElementById('modal-add-admin').classList.remove('hidden');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+    }
+
+    async function searchLeaderboard() {
+      const query = document.getElementById('leaderboard-search').value;
+      if (!query) {
+        loadLeaderboard();
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/admin/leaderboard/search?q=${encodeURIComponent(query)}`, {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        if (data.success) {
+          allLeaderboard = data.entries;
+          loadLeaderboard();
+        }
+      } catch (error) {
+        console.error('Search error:', error);
+      }
+    }
+
+    function scanAllAgencies() {
+      if (!confirm('Scan all agencies?')) return;
+      alert('Scan started!');
+    }
+
+    // Placeholder functions for features not yet implemented
+    function loadBlogPosts() {}
+    function loadLeadQueueFromStorage() {}
+    function updateLeadScannerUI() {}
+  </script>
+
+</body>
+</html>
