@@ -501,7 +501,7 @@
           <button onclick="deleteSelectedShareLinks()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
         </div>
       </div>
-      <!-- Leaderboard Tab -->
+      <!-- ✅ Leaderboard Tab - MET PENDING SUBMISSIONS -->
       <div id="tab-leaderboard" class="tab-content hidden">
         <div class="flex justify-between items-center mb-6">
           <h2 class="text-2xl font-bold">Global Leaderboard Management</h2>
@@ -510,6 +510,34 @@
           </button>
         </div>
 
+        <!-- ✅ PENDING SUBMISSIONS SECTIE -->
+        <div id="pending-submissions-section" class="mb-8 hidden">
+          <div class="bg-yellow-900 bg-opacity-20 border border-yellow-600 rounded-lg p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-xl font-bold text-yellow-400">⏳ Pending Submissions</h3>
+              <span id="pending-count-badge" class="px-3 py-1 bg-yellow-600 rounded-full text-sm font-bold">0</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead class="bg-gray-700 bg-opacity-50">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-sm font-semibold">Company</th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold">URL</th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold">Score</th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold">Country</th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold">IP Address</th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold">Submitted</th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="pending-submissions-tbody" class="divide-y divide-gray-700">
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- SEARCH -->
         <div class="mb-4 flex gap-4">
           <input type="text" id="leaderboard-search" placeholder="Search by URL, company, or score..." 
             class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
@@ -518,24 +546,29 @@
           </button>
         </div>
 
-        <div id="leaderboard-list" class="bg-gray-800 rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="leaderboard-select-all" onchange="toggleSelectAllLeaderboard()"></th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Rank</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Company</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">URL</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Score</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Country</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Added Date</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="leaderboard-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
+        <!-- ✅ APPROVED ENTRIES -->
+        <div class="bg-gray-800 rounded-lg p-4 mb-4">
+          <h3 class="text-lg font-bold text-green-400 mb-4">✅ Approved Entries</h3>
+          <div id="leaderboard-list" class="bg-gray-800 rounded-lg overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead class="bg-gray-700">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="leaderboard-select-all" onchange="toggleSelectAllLeaderboard()"></th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold">Rank</th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold">Company</th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold">URL</th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold">Score</th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold">Country</th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold">Added Date</th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="leaderboard-tbody" class="divide-y divide-gray-700">
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -581,11 +614,10 @@
         </div>
       </div>
 
-      <!-- Freelancers Tab - NIEUWE TAB! -->
+      <!-- Freelancers Tab -->
       <div id="tab-freelancers" class="tab-content hidden">
         <h2 class="text-2xl font-bold mb-6">💼 Freelancer Management</h2>
         
-        <!-- Stats Cards -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div class="bg-gradient-to-br from-purple-900 to-purple-800 rounded-lg p-4">
             <div class="text-sm text-purple-200">Pending Applications</div>
@@ -605,7 +637,6 @@
           </div>
         </div>
 
-        <!-- Freelancers Table -->
         <div class="bg-gray-800 rounded-lg p-6">
           <div class="flex justify-between items-center mb-4">
             <h3 class="text-xl font-bold">All Freelancers</h3>
@@ -983,6 +1014,7 @@
         console.error('Agencies error:', error);
       }
     }
+
     async function loadClients() {
       try {
         const response = await fetch('/api/admin/clients', {
@@ -1115,6 +1147,7 @@
       }
     }
 
+    // ✅ UPDATED LEADERBOARD - LAADT OOK PENDING
     async function loadLeaderboard() {
       try {
         const response = await fetch('/api/admin/leaderboard', {
@@ -1126,9 +1159,14 @@
         
         if (data.success && data.entries) {
           allLeaderboard = data.entries;
-          data.entries.forEach(entry => {
+          
+          // Filter alleen approved voor de hoofdtabel
+          const approvedEntries = data.entries.filter(e => e.status === 'approved');
+          
+          approvedEntries.forEach((entry, index) => {
+            const rank = index + 1;
             const medals = ['🥇', '🥈', '🥉'];
-            const medal = entry.rank <= 3 ? medals[entry.rank - 1] : '';
+            const medal = rank <= 3 ? medals[rank - 1] : '';
             
             let addedDate = '-';
             if (entry.created_at) {
@@ -1145,19 +1183,148 @@
             tbody.innerHTML += `
               <tr>
                 <td class="px-4 py-3"><input type="checkbox" class="leaderboard-checkbox" value="${entry.id}"></td>
-                <td class="px-4 py-3 font-bold">${medal} #${entry.rank}</td>
+                <td class="px-4 py-3 font-bold">${medal} #${rank}</td>
                 <td class="px-4 py-3">${entry.company_name || '-'}</td>
                 <td class="px-4 py-3 text-blue-400 text-sm">${entry.url ? entry.url.substring(0, 40) : '-'}</td>
                 <td class="px-4 py-3 font-bold">${entry.score}/100</td>
                 <td class="px-4 py-3">${entry.country}</td>
+                <td class="px-4 py-3"><span class="px-2 py-1 bg-green-900 text-green-300 rounded text-xs">✅ Approved</span></td>
                 <td class="px-4 py-3 text-sm text-gray-400">${addedDate}</td>
                 <td class="px-4 py-3"><button onclick="deleteItem('leaderboard', ${entry.id})" class="text-red-400 hover:text-red-300">🗑️</button></td>
               </tr>
             `;
           });
         }
+        
+        // Laad ook pending submissions
+        loadPendingSubmissions();
+        
       } catch (error) {
         console.error('Leaderboard error:', error);
+      }
+    }
+
+    // ✅ NIEUW: LOAD PENDING SUBMISSIONS
+    async function loadPendingSubmissions() {
+      try {
+        const response = await fetch('/api/admin/leaderboard/pending', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        const tbody = document.getElementById('pending-submissions-tbody');
+        const section = document.getElementById('pending-submissions-section');
+        const badge = document.getElementById('pending-count-badge');
+        
+        tbody.innerHTML = '';
+        
+        if (data.success && data.pending && data.pending.length > 0) {
+          // Toon de sectie als er pending items zijn
+          section.classList.remove('hidden');
+          badge.textContent = data.pending.length;
+          
+          data.pending.forEach(entry => {
+            let submittedDate = '-';
+            if (entry.created_at) {
+              const date = new Date(entry.created_at);
+              submittedDate = date.toLocaleString('nl-NL', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+              });
+            }
+            
+            tbody.innerHTML += `
+              <tr class="bg-yellow-900 bg-opacity-10">
+                <td class="px-4 py-3 font-semibold">${entry.company_name || '-'}</td>
+                <td class="px-4 py-3">
+                  <a href="${entry.url}" target="_blank" class="text-blue-400 hover:underline text-sm">${entry.url ? entry.url.substring(0, 45) : '-'}</a>
+                </td>
+                <td class="px-4 py-3 font-bold text-yellow-400">${entry.score}/100</td>
+                <td class="px-4 py-3">${entry.country}</td>
+                <td class="px-4 py-3 text-sm text-gray-400">${entry.submission_ip || '-'}</td>
+                <td class="px-4 py-3 text-sm text-gray-400">${submittedDate}</td>
+                <td class="px-4 py-3">
+                  <div class="flex gap-2">
+                    <button onclick="approveLeaderboardEntry(${entry.id})" 
+                      class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm font-semibold transition-all">
+                      ✅ Approve
+                    </button>
+                    <button onclick="rejectLeaderboardEntry(${entry.id})" 
+                      class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm font-semibold transition-all">
+                      ❌ Reject
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            `;
+          });
+        } else {
+          // Verberg de sectie als er geen pending items zijn
+          section.classList.add('hidden');
+        }
+        
+      } catch (error) {
+        console.error('Pending submissions error:', error);
+      }
+    }
+
+    // ✅ NIEUW: APPROVE LEADERBOARD ENTRY
+    async function approveLeaderboardEntry(id) {
+      if (!confirm('Approve deze submission? Ze wordt direct zichtbaar op de public leaderboard.')) return;
+      
+      try {
+        const response = await fetch(`/api/admin/leaderboard/${id}/approve`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          },
+          body: JSON.stringify({ admin_username: 'ot' })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          alert(`✅ Approved! ${data.entry?.company_name || ''} is nu zichtbaar op de leaderboard.`);
+          loadLeaderboard();
+        } else {
+          alert('❌ Error: ' + (data.error || 'Failed to approve'));
+        }
+      } catch (error) {
+        console.error('Approve error:', error);
+        alert('❌ Error bij approven');
+      }
+    }
+
+    // ✅ NIEUW: REJECT LEADERBOARD ENTRY
+    async function rejectLeaderboardEntry(id) {
+      const reason = prompt('Reden voor rejection (optioneel):', 'Spam/abuse');
+      if (reason === null) return; // User clicked Cancel
+      
+      try {
+        const response = await fetch(`/api/admin/leaderboard/${id}/reject`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          },
+          body: JSON.stringify({ 
+            reason: reason || 'Rejected by admin',
+            admin_username: 'ot' 
+          })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          alert(`❌ Rejected! ${data.entry?.company_name || ''} is verwijderd.`);
+          loadLeaderboard();
+        } else {
+          alert('❌ Error: ' + (data.error || 'Failed to reject'));
+        }
+      } catch (error) {
+        console.error('Reject error:', error);
+        alert('❌ Error bij rejecting');
       }
     }
 
@@ -1180,7 +1347,7 @@
     }
 
     // ==========================================
-    // FREELANCERS MANAGEMENT - NIEUWE FUNCTIES!
+    // FREELANCERS MANAGEMENT
     // ==========================================
 
     async function loadFreelancersAdmin() {
@@ -1769,6 +1936,7 @@
       loadLeaderboard();
       loadStats();
     }
+
     // ==========================================
     // EXPORT FUNCTIONS
     // ==========================================
