@@ -1528,43 +1528,48 @@
       console.log('View agency profile:', id);
     }
 
-    async function submitToLeaderboardAPI(scanData) {
-      const companyName = document.getElementById('companyName').value;
-      const country = document.getElementById('countrySelect').value;
+   async function submitToLeaderboardAPI(scanData) {
+  const companyName = document.getElementById('companyName').value;
+  const country = document.getElementById('countrySelect').value;
+  
+  let domain = '';
+  try {
+    const urlObj = new URL(scanData.url);
+    domain = urlObj.hostname.replace('www.', '');
+  } catch (e) {
+    domain = scanData.url;
+  }
+  
+  const finalCompanyName = companyName.trim() || domain;
+  
+  try {
+    const response = await fetch('/api/leaderboard/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: scanData.url,
+        score: scanData.score,
+        company_name: finalCompanyName,
+        country: country || 'NL',
+        status: 'pending'  // ✅ NIEUWE PARAMETER - wacht op admin approval
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      // ✅ Nieuwe melding voor user
+      alert('✅ Leaderboard submission sent for review! We will approve it within 24 hours.');
       
-      let domain = '';
-      try {
-        const urlObj = new URL(scanData.url);
-        domain = urlObj.hostname.replace('www.', '');
-      } catch (e) {
-        domain = scanData.url;
-      }
-      
-      const finalCompanyName = companyName.trim() || domain;
-      
-      try {
-        const response = await fetch('/api/leaderboard/submit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            url: scanData.url,
-            score: scanData.score,
-            company_name: finalCompanyName,
-            country: country || 'NL'
-          })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-          setTimeout(() => {
-            loadLeaderboard();
-          }, 1000);
-        }
-      } catch (error) {
-        console.error('Leaderboard submit error:', error);
-      }
+      // ❌ NIET direct reloaden want submission is nog pending
+      // setTimeout(() => {
+      //   loadLeaderboard();
+      // }, 1000);
     }
+  } catch (error) {
+    console.error('Leaderboard submit error:', error);
+  }
+}
 
     function submitClaim(e) {
       e.preventDefault();
