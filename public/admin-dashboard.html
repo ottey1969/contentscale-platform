@@ -983,7 +983,6 @@
         console.error('Agencies error:', error);
       }
     }
-
     async function loadClients() {
       try {
         const response = await fetch('/api/admin/clients', {
@@ -1680,45 +1679,41 @@
     }
 
     async function deleteSelectedScans() {
-  const selected = Array.from(document.querySelectorAll('.scan-checkbox:checked')).map(cb => parseInt(cb.value));
-  if (selected.length === 0) return alert('Please select scans to delete');
-  if (!confirm(`Delete ${selected.length} scans?`)) return;
-  
-  let deleted = 0;
-  let failed = 0;
-  
-  // Show progress alert
-  alert(`⏳ Deleting ${selected.length} scans... Please wait.`);
-  
-  // Use Promise.all to wait for all deletes
-  const deletePromises = selected.map(async (id) => {
-    try {
-      const response = await fetch(`/api/admin/scans/${id}`, {
-        method: 'DELETE',
-        headers: { 
-          'x-admin-key': localStorage.getItem('admin_id'),
-          'Content-Type': 'application/json'
+      const selected = Array.from(document.querySelectorAll('.scan-checkbox:checked')).map(cb => parseInt(cb.value));
+      if (selected.length === 0) return alert('Please select scans to delete');
+      if (!confirm(`Delete ${selected.length} scans?`)) return;
+      
+      let deleted = 0;
+      let failed = 0;
+      
+      alert(`⏳ Deleting ${selected.length} scans... Please wait.`);
+      
+      const deletePromises = selected.map(async (id) => {
+        try {
+          const response = await fetch(`/api/admin/scans/${id}`, {
+            method: 'DELETE',
+            headers: { 
+              'x-admin-key': localStorage.getItem('admin_id'),
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (response.ok) {
+            deleted++;
+          } else {
+            failed++;
+          }
+        } catch (error) {
+          failed++;
         }
       });
       
-      if (response.ok) {
-        deleted++;
-      } else {
-        failed++;
-      }
-    } catch (error) {
-      failed++;
+      await Promise.all(deletePromises);
+      
+      alert(`✅ Deleted: ${deleted}\n❌ Failed: ${failed}`);
+      loadScans();
+      loadStats();
     }
-  });
-  
-  // Wait for ALL deletes to finish
-  await Promise.all(deletePromises);
-  
-  // Now show results
-  alert(`✅ Deleted: ${deleted}\n❌ Failed: ${failed}`);
-  loadScans();
-  loadStats();
-}
 
     function toggleSelectAllShareLinks() {
       const isChecked = document.getElementById('sharelink-select-all').checked;
@@ -1738,167 +1733,40 @@
       document.querySelectorAll('.leaderboard-checkbox').forEach(cb => cb.checked = isChecked);
     }
 
-    async function deleteSelectedScans() {
-  const selected = Array.from(document.querySelectorAll('.scan-checkbox:checked')).map(cb => parseInt(cb.value));
-  if (selected.length === 0) return alert('Please select scans to delete');
-  if (!confirm(`Delete ${selected.length} scans?`)) return;
-  
-  let deleted = 0;
-  let failed = 0;
-  
-  alert(`⏳ Deleting ${selected.length} scans... Please wait.`);
-  
-  const deletePromises = selected.map(async (id) => {
-    try {
-      const response = await fetch(`/api/admin/scans/${id}`, {
-        method: 'DELETE',
-        headers: { 
-          'x-admin-key': localStorage.getItem('admin_id'),
-          'Content-Type': 'application/json'
+    async function deleteSelectedLeaderboard() {
+      const selected = Array.from(document.querySelectorAll('.leaderboard-checkbox:checked')).map(cb => parseInt(cb.value));
+      if (selected.length === 0) return alert('Please select leaderboard entries to delete');
+      if (!confirm(`Delete ${selected.length} leaderboard entries?`)) return;
+      
+      let deleted = 0;
+      let failed = 0;
+      
+      alert(`⏳ Deleting ${selected.length} entries... Please wait.`);
+      
+      const deletePromises = selected.map(async (id) => {
+        try {
+          const response = await fetch(`/api/admin/leaderboard/${id}`, {
+            method: 'DELETE',
+            headers: { 
+              'x-admin-key': localStorage.getItem('admin_id'),
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (response.ok) {
+            deleted++;
+          } else {
+            failed++;
+          }
+        } catch (error) {
+          failed++;
         }
       });
       
-      if (response.ok) {
-        deleted++;
-      } else {
-        failed++;
-      }
-    } catch (error) {
-      failed++;
-    }
-  });
-  
-  await Promise.all(deletePromises);
-  
-  alert(`✅ Deleted: ${deleted}\n❌ Failed: ${failed}`);
-  loadScans();
-  loadStats();
-}
-
-    // ==========================================
-    // EXPORT FUNCTIONS
-    // ==========================================
-    function exportToCSV(filename, data) {
-      if (!data || data.length === 0) {
-        alert('No data to export');
-        return;
-      }
+      await Promise.all(deletePromises);
       
-      const csv = [
-        Object.keys(data[0] || {}).join(',')
-      ].concat(data.map(row => Object.values(row).map(cell => '"' + (cell || '').toString().replace(/"/g, '""') + '"').join(',')))
-       .join('\n');
-
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      window.URL.revokeObjectURL(url);
+      alert(`✅ Deleted: ${deleted}\n❌ Failed: ${failed}`);
+      loadLeaderboard();
+      loadStats();
     }
-
-    function exportToJSON(filename, data) {
-      const json = JSON.stringify(data, null, 2);
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    }
-
-    function exportAgenciesToCSV() {
-      exportToCSV(`agencies-${Date.now()}.csv`, allAgencies);
-    }
-
-    function exportAgenciesToJSON() {
-      exportToJSON(`agencies-${Date.now()}.json`, allAgencies);
-    }
-
-    function exportClientsToCSV() {
-      exportToCSV(`clients-${Date.now()}.csv`, allClients);
-    }
-
-    function exportClientsToJSON() {
-      exportToJSON(`clients-${Date.now()}.json`, allClients);
-    }
-
-    function exportScansToCSV() {
-      exportToCSV(`scans-${Date.now()}.csv`, allScans);
-    }
-
-    function exportScansToJSON() {
-      exportToJSON(`scans-${Date.now()}.json`, allScans);
-    }
-
-    function exportLeaderboardToCSV() {
-      exportToCSV(`leaderboard-${Date.now()}.csv`, allLeaderboard);
-    }
-
-    function exportLeaderboardToJSON() {
-      exportToJSON(`leaderboard-${Date.now()}.json`, allLeaderboard);
-    }
-
-    function exportLeadQueueToCSV() {
-      exportToCSV(`lead-queue-${Date.now()}.csv`, leadQueue);
-    }
-
-    function exportLeadQueueToJSON() {
-      exportToJSON(`lead-queue-${Date.now()}.json`, leadQueue);
-    }
-
-    // ==========================================
-    // HELPERS
-    // ==========================================
-    function showAddAgencyModal() {
-      document.getElementById('modal-add-agency').classList.remove('hidden');
-    }
-
-    function showCreateShareLinkModal() {
-      document.getElementById('modal-create-share-link').classList.remove('hidden');
-    }
-
-    function showAddAdminModal() {
-      document.getElementById('modal-add-admin').classList.remove('hidden');
-    }
-
-    function closeModal(id) {
-      document.getElementById(id).classList.add('hidden');
-    }
-
-    async function searchLeaderboard() {
-      const query = document.getElementById('leaderboard-search').value;
-      if (!query) {
-        loadLeaderboard();
-        return;
-      }
-      
-      try {
-        const response = await fetch(`/api/admin/leaderboard/search?q=${encodeURIComponent(query)}`, {
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        const data = await response.json();
-        if (data.success) {
-          allLeaderboard = data.entries;
-          loadLeaderboard();
-        }
-      } catch (error) {
-        console.error('Search error:', error);
-      }
-    }
-
-    function scanAllAgencies() {
-      if (!confirm('Scan all agencies?')) return;
-      alert('Scan started!');
-    }
-
-    // Placeholder functions for features not yet implemented
-    function loadBlogPosts() {}
-    function loadLeadQueueFromStorage() {}
-    function updateLeadScannerUI() {}
-  </script>
-
-</body>
-</html>
+    
