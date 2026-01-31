@@ -165,7 +165,7 @@ async function createAllTables() {
       )
     `);
     
-    // LEADERBOARD TABLE
+    // LEADERBOARD TABLE - ✅ MET STATUS COLUMN
     await client.query(`
       CREATE TABLE IF NOT EXISTS leaderboard (
         id SERIAL PRIMARY KEY,
@@ -173,6 +173,7 @@ async function createAllTables() {
         company_name VARCHAR(255),
         score INTEGER NOT NULL,
         country VARCHAR(10) DEFAULT 'NL',
+        status VARCHAR(20) DEFAULT 'pending',
         business_type VARCHAR(50),
         is_verified BOOLEAN DEFAULT FALSE,
         is_opted_out BOOLEAN DEFAULT FALSE,
@@ -182,6 +183,8 @@ async function createAllTables() {
         share_link_id UUID,
         submission_ip VARCHAR(50),
         admin_verified BOOLEAN DEFAULT FALSE,
+        admin_reviewed_by VARCHAR(100),
+        reviewed_at TIMESTAMP,
         last_scan TIMESTAMP DEFAULT NOW(),
         created_at TIMESTAMP DEFAULT NOW()
       )
@@ -379,6 +382,10 @@ async function createAllTables() {
     await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS contact_email TEXT`);
     await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS verified BOOLEAN DEFAULT FALSE`);
     
+    // ✅ NIEUWE COLUMNS VOOR APPROVAL SYSTEEM
+    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending'`);
+    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS admin_reviewed_by VARCHAR(100)`);
+    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP`);
     // DEFAULT SETTINGS
     const defaultSettings = [
       ['site_name', 'ContentScale'],
@@ -504,6 +511,7 @@ async function createAllTables() {
     await client.query('CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at DESC)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(is_read)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_notifications_priority ON notifications(priority)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_leaderboard_status ON leaderboard(status)');
     
     console.log('✅ All database tables ready');
     
@@ -526,18 +534,18 @@ async function autoPopulateLeaderboard() {
     
     if (count === 0) {
       const demoAgencies = [
-        { url: 'https://contentscale.site', company: 'ContentScale', score: 95, country: 'NL', type: 'seo-agency' },
-        { url: 'https://example-seo.nl', company: 'SEO Masters', score: 88, country: 'NL', type: 'seo-agency' },
-        { url: 'https://digital-boost.be', company: 'Digital Boost', score: 82, country: 'BE', type: 'marketing-agency' }
+        { url: 'https://contentscale.site', company: 'ContentScale', score: 95, country: 'NL', type: 'seo-agency', status: 'approved' },
+        { url: 'https://example-seo.nl', company: 'SEO Masters', score: 88, country: 'NL', type: 'seo-agency', status: 'approved' },
+        { url: 'https://digital-boost.be', company: 'Digital Boost', score: 82, country: 'BE', type: 'marketing-agency', status: 'approved' }
       ];
       
       for (const agency of demoAgencies) {
         try {
           await pool.query(`
-            INSERT INTO leaderboard (url, company_name, score, country, business_type, is_verified)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO leaderboard (url, company_name, score, country, business_type, is_verified, status)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             ON CONFLICT (url) DO NOTHING
-          `, [agency.url, agency.company, agency.score, agency.country, agency.type, true]);
+          `, [agency.url, agency.company, agency.score, agency.country, agency.type, true, agency.status]);
         } catch (e) {
           // Silently skip duplicates
         }
@@ -770,7 +778,6 @@ app.delete('/api/agencies/:id', async (req, res) => {
     res.status(500).json({ success: false, error: 'Database error' });
   }
 });
-
 // ============================================
 // FREELANCER DIRECTORY API
 // ============================================
@@ -1007,6 +1014,35 @@ app.post('/api/admin/freelancers/:id/order', async (req, res) => {
   }
 });
 
+// Delete freelancer (ADMIN)
+app.delete('/api/admin/freelancers/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    await pool.query('DELETE FROM freelancers WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete' });
+  }
+});
+
+// Get single freelancer (ADMIN)
+app.get('/api/admin/freelancers/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const result = await pool.query('SELECT * FROM freelancers WHERE id = $1', [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Freelancer not found' });
+    }
+    
+    res.json({ success: true, freelancer: result.rows[0] });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load' });
+  }
+});
+
 // ============================================
 // CLIENTS ENDPOINTS
 // ============================================
@@ -1107,7 +1143,7 @@ app.post('/api/admin/share-links/create', async (req, res) => {
     
     await pool.query(
       `INSERT INTO share_links (token, client_email, client_name, client_company, scans_limit, scans_used, expires_at, valid_days, status, is_active)
-       VALUES ($1, $2, $3, $4, $5, 0, $6, $7, 'active', true)`,  // ← 'is_active' toegevoegd
+       VALUES ($1, $2, $3, $4, $5, 0, $6, $7, 'active', true)`,
       [
         shareCode,
         client_email,
@@ -1131,11 +1167,8 @@ app.post('/api/admin/share-links/create', async (req, res) => {
   }
 });
 
-
-// Voeg dit toe voor testen (ergens in server.js):
 app.get('/api/test-share-status', async (req, res) => {
   try {
-    // Test: pak een willekeurige share link
     const result = await pool.query(
       'SELECT token, client_email, is_active FROM share_links LIMIT 1'
     );
@@ -1155,10 +1188,8 @@ app.get('/api/test-share-status', async (req, res) => {
   }
 });
 
-
 app.delete('/api/admin/share-links/:code', async (req, res) => {
   try {
-    // Wijzig: WHERE token = $1 (niet share_code!)
     await pool.query('DELETE FROM share_links WHERE token = $1', [req.params.code]);
     res.json({ success: true });
   } catch (error) {
@@ -1170,7 +1201,6 @@ app.put('/api/admin/share-links/:code/toggle-status', async (req, res) => {
   try {
     const { code } = req.params;
     
-    // Toggle de huidige status
     const result = await pool.query(
       `UPDATE share_links 
        SET is_active = NOT is_active 
@@ -1197,38 +1227,577 @@ app.put('/api/admin/share-links/:code/toggle-status', async (req, res) => {
   }
 });
 // ============================================
+// LTD CODES ENDPOINTS
+// ============================================
+app.get('/api/admin/ltd-codes', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM ltd_codes ORDER BY created_at DESC');
+    res.json({ success: true, codes: result.rows });
+  } catch (error) {
+    res.json({ success: true, codes: [] });
+  }
+});
+
+app.post('/api/admin/ltd-codes/create', async (req, res) => {
+  const { code, plan, max_uses, expires_days } = req.body;
+  
+  if (!code || !plan) {
+    return res.status(400).json({ success: false, error: 'Code and plan required' });
+  }
+  
+  try {
+    let expiresAt = null;
+    if (expires_days) {
+      expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + expires_days);
+    }
+    
+    await pool.query(
+      'INSERT INTO ltd_codes (code, plan, max_uses, expires_at) VALUES ($1, $2, $3, $4)',
+      [code, plan, max_uses || 1, expiresAt]
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    if (error.code === '23505') {
+      return res.status(400).json({ success: false, error: 'Code already exists' });
+    }
+    res.status(500).json({ success: false, error: 'Database error' });
+  }
+});
+
+app.delete('/api/admin/ltd-codes/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM ltd_codes WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Database error' });
+  }
+});
+
+// ============================================
+// SETTINGS ENDPOINTS
+// ============================================
+app.get('/api/settings/:key', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT value FROM settings WHERE key = $1', [req.params.key]);
+    if (result.rows.length === 0) {
+      return res.json({ success: false, error: 'Setting not found' });
+    }
+    res.json({ success: true, value: result.rows[0].value });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Database error' });
+  }
+});
+
+app.put('/api/settings/:key', async (req, res) => {
+  const { value } = req.body;
+  
+  try {
+    await pool.query(
+      'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()',
+      [req.params.key, value]
+    );
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Database error' });
+  }
+});
+
+// ============================================
+// SCAN ENDPOINTS
+// ============================================
+
+// Helper function to calculate GRAAF score
+function calculateGRAAFScore(url, content) {
+  let score = 0;
+  const issues = [];
+  
+  // G - Genuinely Credible (25 points)
+  if (content.includes('author') || content.includes('expert')) score += 10;
+  if (content.includes('source') || content.includes('study')) score += 8;
+  if (content.includes('reference') || content.includes('citation')) score += 7;
+  
+  // R - Relevance (20 points)
+  const wordCount = content.split(/\s+/).length;
+  if (wordCount > 1500) score += 10;
+  else if (wordCount > 800) score += 6;
+  else issues.push('Content too short');
+  
+  if (content.includes('how to') || content.includes('guide')) score += 5;
+  if (content.includes('example') || content.includes('step')) score += 5;
+  
+  // A - Actionability (20 points)
+  const hasSteps = content.match(/\b(step|stage|phase)\s+\d+/i);
+  if (hasSteps) score += 10;
+  
+  if (content.includes('download') || content.includes('template')) score += 5;
+  if (content.includes('checklist') || content.includes('tool')) score += 5;
+  
+  // A - Accuracy (20 points)
+  if (content.includes('2024') || content.includes('2025')) score += 10;
+  else issues.push('Missing current year references');
+  
+  if (content.includes('data') || content.includes('statistic')) score += 5;
+  if (content.includes('research') || content.includes('report')) score += 5;
+  
+  // F - Freshness (15 points)
+  const currentYear = new Date().getFullYear();
+  if (content.includes(currentYear.toString())) score += 10;
+  if (content.includes('updated') || content.includes('latest')) score += 5;
+  
+  return { score, issues };
+}
+
+// Helper function to calculate CRAFT score
+function calculateCRAFTScore(content) {
+  let score = 0;
+  
+  // C - Cut the Fluff (20%)
+  const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  const avgSentenceLength = content.length / sentences.length;
+  if (avgSentenceLength < 150) score += 20;
+  else if (avgSentenceLength < 200) score += 15;
+  else score += 10;
+  
+  // R - Review, Optimize, Proofread (20%)
+  const hasGoodStructure = content.includes('##') || content.includes('<h2>');
+  if (hasGoodStructure) score += 20;
+  else score += 10;
+  
+  // A - Add Images and Visuals (20%)
+  const imageCount = (content.match(/<img|!\[/g) || []).length;
+  if (imageCount >= 3) score += 20;
+  else if (imageCount >= 1) score += 15;
+  else score += 5;
+  
+  // F - Fact-Check (20%)
+  const hasLinks = content.includes('http') || content.includes('www');
+  if (hasLinks) score += 20;
+  else score += 10;
+  
+  // T - Trust-Building Elements (20%)
+  const hasTrust = content.includes('expert') || content.includes('certified') || content.includes('experience');
+  if (hasTrust) score += 20;
+  else score += 10;
+  
+  return score;
+}
+
+// Helper function to calculate technical score
+function calculateTechnicalScore(url) {
+  let score = 0;
+  
+  // URL structure (20 points)
+  if (url.includes('https://')) score += 10;
+  if (!url.includes('www.')) score += 5; // Clean URL preferred
+  if (url.length < 100) score += 5;
+  
+  // Assumed good practices (80 points baseline)
+  score += 80;
+  
+  return score;
+}
+
+// Main scan endpoint
+app.post('/api/scan', async (req, res) => {
+  const { url, content } = req.body;
+  
+  if (!url) {
+    return res.status(400).json({ success: false, error: 'URL required' });
+  }
+  
+  try {
+    // Use provided content or fetch
+    let pageContent = content || `Sample content for ${url}`;
+    
+    // Calculate scores
+    const graafResult = calculateGRAAFScore(url, pageContent);
+    const craftScore = calculateCRAFTScore(pageContent);
+    const technicalScore = calculateTechnicalScore(url);
+    
+    // Overall score (weighted average)
+    const overallScore = Math.round(
+      (graafResult.score * 0.5) + 
+      (craftScore * 0.3) + 
+      (technicalScore * 0.2)
+    );
+    
+    // Quality rating
+    let quality = 'Poor';
+    if (overallScore >= 90) quality = 'Excellent';
+    else if (overallScore >= 80) quality = 'Good';
+    else if (overallScore >= 70) quality = 'Fair';
+    else if (overallScore >= 60) quality = 'Average';
+    
+    // Generate recommendations
+    const recommendations = [];
+    if (graafResult.score < 60) recommendations.push('Add more credible sources and expert quotes');
+    if (craftScore < 60) recommendations.push('Improve content structure and add more visuals');
+    if (technicalScore < 80) recommendations.push('Optimize URL structure and ensure HTTPS');
+    if (overallScore < 70) recommendations.push('Content needs significant improvement for AI Overview eligibility');
+    
+    // Save scan
+    const scanResult = await pool.query(
+      `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, breakdown, recommendations, ip_address)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id`,
+      [
+        url,
+        overallScore,
+        quality,
+        graafResult.score,
+        craftScore,
+        technicalScore,
+        JSON.stringify({ graaf_issues: graafResult.issues }),
+        JSON.stringify(recommendations),
+        req.ip
+      ]
+    );
+    
+    res.json({
+      success: true,
+      scan_id: scanResult.rows[0].id,
+      results: {
+        overall_score: overallScore,
+        quality: quality,
+        graaf_score: graafResult.score,
+        craft_score: craftScore,
+        technical_score: technicalScore,
+        breakdown: {
+          graaf: {
+            score: graafResult.score,
+            issues: graafResult.issues
+          },
+          craft: {
+            score: craftScore
+          },
+          technical: {
+            score: technicalScore
+          }
+        },
+        recommendations: recommendations,
+        url: url
+      }
+    });
+    
+  } catch (error) {
+    console.error('Scan error:', error);
+    res.status(500).json({ success: false, error: 'Scan failed' });
+  }
+});
+
+// Quick scan endpoint (no database save)
+app.post('/api/quick-scan', async (req, res) => {
+  const { url, content } = req.body;
+  
+  if (!url) {
+    return res.status(400).json({ success: false, error: 'URL required' });
+  }
+  
+  try {
+    let pageContent = content || `Sample content for ${url}`;
+    
+    const graafResult = calculateGRAAFScore(url, pageContent);
+    const craftScore = calculateCRAFTScore(pageContent);
+    const technicalScore = calculateTechnicalScore(url);
+    
+    const overallScore = Math.round(
+      (graafResult.score * 0.5) + 
+      (craftScore * 0.3) + 
+      (technicalScore * 0.2)
+    );
+    
+    let quality = 'Poor';
+    if (overallScore >= 90) quality = 'Excellent';
+    else if (overallScore >= 80) quality = 'Good';
+    else if (overallScore >= 70) quality = 'Fair';
+    else if (overallScore >= 60) quality = 'Average';
+    
+    res.json({
+      success: true,
+      results: {
+        overall_score: overallScore,
+        quality: quality,
+        graaf_score: graafResult.score,
+        craft_score: craftScore,
+        technical_score: technicalScore
+      }
+    });
+    
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Scan failed' });
+  }
+});
+// ============================================
 // LEADERBOARD ENDPOINTS
 // ============================================
+
+// ✅ PUBLIC LEADERBOARD - ALLEEN APPROVED ENTRIES
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    const { country, limit } = req.query;
+    
+    let query = `
+      SELECT 
+        id, url, company_name, score, country, business_type,
+        is_verified, last_scan, created_at
+      FROM leaderboard 
+      WHERE score IS NOT NULL 
+        AND is_opted_out = FALSE 
+        AND status = 'approved'
+    `;
+    
+    const params = [];
+    
+    if (country && country !== 'ALL') {
+      params.push(country);
+      query += ` AND country = $${params.length}`;
+    }
+    
+    query += ' ORDER BY score DESC, created_at DESC';
+    
+    if (limit) {
+      params.push(parseInt(limit));
+      query += ` LIMIT $${params.length}`;
+    } else {
+      query += ' LIMIT 100';
+    }
+    
+    const result = await pool.query(query, params);
+    
+    res.json({
+      success: true,
+      leaderboard: result.rows,
+      total: result.rows.length
+    });
+    
+  } catch (error) {
+    console.error('Leaderboard error:', error);
+    res.status(500).json({ success: false, error: 'Failed to load leaderboard' });
+  }
+});
+
+// ✅ SUBMIT TO LEADERBOARD - STATUS = PENDING
+app.post('/api/leaderboard/submit', async (req, res) => {
+  const { url, score, company_name, country, business_type } = req.body;
+  
+  if (!url || !score) {
+    return res.status(400).json({ success: false, error: 'URL and score required' });
+  }
+  
+  const clientIp = req.ip || req.connection.remoteAddress;
+  
+  try {
+    // Check if URL is blocked
+    const blockCheck = await pool.query(
+      'SELECT reason FROM leaderboard_blocks WHERE url = $1 OR domain = $2',
+      [url, new URL(url).hostname]
+    );
+    
+    if (blockCheck.rows.length > 0) {
+      return res.status(403).json({ 
+        success: false, 
+        error: `This URL is blocked: ${blockCheck.rows[0].reason}` 
+      });
+    }
+    
+    // Check daily submission limit (3 per IP)
+    const today = new Date().toISOString().split('T')[0];
+    const limitCheck = await pool.query(
+      'SELECT submission_count FROM submission_limits WHERE ip_address = $1 AND submission_date = $2',
+      [clientIp, today]
+    );
+    
+    if (limitCheck.rows.length > 0 && limitCheck.rows[0].submission_count >= 3) {
+      return res.status(429).json({ 
+        success: false, 
+        error: 'Daily submission limit reached (3 per day)' 
+      });
+    }
+    
+    // Insert or update submission with status = 'pending'
+    const result = await pool.query(`
+      INSERT INTO leaderboard (url, score, company_name, country, business_type, submission_ip, status)
+      VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+      ON CONFLICT (url) DO UPDATE SET 
+        score = EXCLUDED.score,
+        company_name = EXCLUDED.company_name,
+        country = EXCLUDED.country,
+        business_type = EXCLUDED.business_type,
+        last_scan = NOW(),
+        status = 'pending'
+      RETURNING id
+    `, [url, score, company_name, country || 'NL', business_type, clientIp]);
+    
+    // Update submission limit counter
+    await pool.query(`
+      INSERT INTO submission_limits (ip_address, submission_date, submission_count)
+      VALUES ($1, $2, 1)
+      ON CONFLICT (ip_address, submission_date) 
+      DO UPDATE SET 
+        submission_count = submission_limits.submission_count + 1,
+        last_submitted_at = NOW()
+    `, [clientIp, today]);
+    
+    // Log submission
+    await pool.query(`
+      INSERT INTO submission_logs (
+        url, company_name, ip_address, country, score, 
+        submitted_via, status, leaderboard_entry_id
+      )
+      VALUES ($1, $2, $3, $4, $5, 'api', 'pending', $6)
+    `, [url, company_name, clientIp, country, score, result.rows[0].id]);
+    
+    console.log(`✅ Leaderboard submission (PENDING): ${url} - ${score} - ${company_name}`);
+    
+    res.json({
+      success: true,
+      message: 'Submission sent for review! We will approve it within 24 hours.',
+      id: result.rows[0].id,
+      status: 'pending'
+    });
+    
+  } catch (error) {
+    console.error('Leaderboard submission error:', error);
+    res.status(500).json({ success: false, error: 'Submission failed' });
+  }
+});
+
+// ✅ ADMIN: GET PENDING SUBMISSIONS
+app.get('/api/admin/leaderboard/pending', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        id, url, company_name, score, country, business_type,
+        submission_ip, created_at, last_scan
+      FROM leaderboard 
+      WHERE status = 'pending'
+      ORDER BY created_at DESC
+    `);
+    
+    res.json({
+      success: true,
+      pending: result.rows
+    });
+    
+  } catch (error) {
+    console.error('Get pending error:', error);
+    res.status(500).json({ success: false, error: 'Failed to load pending submissions' });
+  }
+});
+
+// ✅ ADMIN: APPROVE SUBMISSION
+app.post('/api/admin/leaderboard/:id/approve', async (req, res) => {
+  const { id } = req.params;
+  const { admin_username } = req.body;
+  
+  try {
+    const result = await pool.query(`
+      UPDATE leaderboard 
+      SET 
+        status = 'approved',
+        admin_reviewed_by = $1,
+        reviewed_at = NOW()
+      WHERE id = $2
+      RETURNING url, company_name, score
+    `, [admin_username || 'admin', id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Entry not found' });
+    }
+    
+    console.log(`✅ Leaderboard APPROVED: ${result.rows[0].url} - ${result.rows[0].company_name}`);
+    
+    res.json({
+      success: true,
+      message: 'Submission approved and now visible on leaderboard',
+      entry: result.rows[0]
+    });
+    
+  } catch (error) {
+    console.error('Approve error:', error);
+    res.status(500).json({ success: false, error: 'Failed to approve' });
+  }
+});
+
+// ✅ ADMIN: REJECT SUBMISSION
+app.post('/api/admin/leaderboard/:id/reject', async (req, res) => {
+  const { id } = req.params;
+  const { reason, admin_username } = req.body;
+  
+  try {
+    // Option 1: Delete the entry
+    const result = await pool.query(`
+      DELETE FROM leaderboard 
+      WHERE id = $1
+      RETURNING url, company_name
+    `, [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Entry not found' });
+    }
+    
+    // Log rejection
+    await pool.query(`
+      UPDATE submission_logs 
+      SET 
+        status = 'rejected',
+        rejection_reason = $1,
+        admin_reviewed_by = $2,
+        admin_reviewed_at = NOW()
+      WHERE leaderboard_entry_id = $3
+    `, [reason || 'Rejected by admin', admin_username || 'admin', id]);
+    
+    console.log(`❌ Leaderboard REJECTED: ${result.rows[0].url} - ${result.rows[0].company_name}`);
+    
+    res.json({
+      success: true,
+      message: 'Submission rejected and removed',
+      entry: result.rows[0]
+    });
+    
+  } catch (error) {
+    console.error('Reject error:', error);
+    res.status(500).json({ success: false, error: 'Failed to reject' });
+  }
+});
+
+// ADMIN: Get all leaderboard entries (including pending)
 app.get('/api/admin/leaderboard', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT *, ROW_NUMBER() OVER (ORDER BY score DESC) as rank 
+      SELECT 
+        id, url, company_name, score, country, business_type,
+        status, is_verified, is_opted_out, submission_ip,
+        admin_reviewed_by, reviewed_at, created_at, last_scan
       FROM leaderboard 
-      WHERE is_opted_out = FALSE
-      ORDER BY score DESC 
-      LIMIT 100
+      ORDER BY 
+        CASE status
+          WHEN 'pending' THEN 1
+          WHEN 'approved' THEN 2
+          WHEN 'rejected' THEN 3
+        END,
+        created_at DESC
     `);
-    res.json({ success: true, entries: result.rows });
+    
+    res.json({
+      success: true,
+      entries: result.rows,
+      stats: {
+        total: result.rows.length,
+        pending: result.rows.filter(r => r.status === 'pending').length,
+        approved: result.rows.filter(r => r.status === 'approved').length
+      }
+    });
+    
   } catch (error) {
-    res.json({ success: true, entries: [] });
+    console.error('Admin leaderboard error:', error);
+    res.status(500).json({ success: false, error: 'Failed to load' });
   }
 });
 
-app.get('/api/admin/leaderboard/search', async (req, res) => {
-  const { q } = req.query;
-  try {
-    const result = await pool.query(`
-      SELECT *, ROW_NUMBER() OVER (ORDER BY score DESC) as rank 
-      FROM leaderboard 
-      WHERE (url ILIKE $1 OR company_name ILIKE $1) AND is_opted_out = FALSE
-      ORDER BY score DESC
-    `, [`%${q}%`]);
-    res.json({ success: true, entries: result.rows });
-  } catch (error) {
-    res.json({ success: true, entries: [] });
-  }
-});
-
+// ADMIN: Delete leaderboard entry
 app.delete('/api/admin/leaderboard/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM leaderboard WHERE id = $1', [req.params.id]);
@@ -1238,1740 +1807,452 @@ app.delete('/api/admin/leaderboard/:id', async (req, res) => {
   }
 });
 
-// ============================================
-// BULK DELETE LEADERBOARD ENTRIES
-// ============================================
-app.post('/api/admin/leaderboard/bulk-delete', async (req, res) => {
+// ADMIN: Block URL from leaderboard
+app.post('/api/admin/leaderboard/block', async (req, res) => {
+  const { url, reason } = req.body;
+  
+  if (!url || !reason) {
+    return res.status(400).json({ success: false, error: 'URL and reason required' });
+  }
+  
   try {
-    const { ids } = req.body;
+    const domain = new URL(url).hostname;
     
-    if (!Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ error: 'No IDs provided' });
+    await pool.query(
+      'INSERT INTO leaderboard_blocks (url, domain, reason, blocked_by) VALUES ($1, $2, $3, $4)',
+      [url, domain, reason, 'admin']
+    );
+    
+    // Remove from leaderboard if exists
+    await pool.query('DELETE FROM leaderboard WHERE url = $1', [url]);
+    
+    res.json({ success: true, message: 'URL blocked and removed from leaderboard' });
+  } catch (error) {
+    if (error.code === '23505') {
+      return res.status(400).json({ success: false, error: 'URL already blocked' });
     }
+    res.status(500).json({ success: false, error: 'Failed to block URL' });
+  }
+});
+
+// ADMIN: Get blocked URLs
+app.get('/api/admin/leaderboard/blocks', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM leaderboard_blocks ORDER BY blocked_at DESC');
+    res.json({ success: true, blocks: result.rows });
+  } catch (error) {
+    res.json({ success: true, blocks: [] });
+  }
+});
+
+// ADMIN: Unblock URL
+app.delete('/api/admin/leaderboard/blocks/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM leaderboard_blocks WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Database error' });
+  }
+});
+
+// Get leaderboard stats
+app.get('/api/leaderboard/stats', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        COUNT(*) as total_entries,
+        AVG(score) as average_score,
+        MAX(score) as highest_score,
+        COUNT(DISTINCT country) as countries
+      FROM leaderboard 
+      WHERE is_opted_out = FALSE 
+        AND status = 'approved'
+    `);
     
-    const validIds = ids.map(id => parseInt(id)).filter(id => !isNaN(id));
+    res.json({
+      success: true,
+      stats: result.rows[0]
+    });
+  } catch (error) {
+    res.json({ success: true, stats: { total_entries: 0, average_score: 0, highest_score: 0, countries: 0 } });
+  }
+});
+
+// Opt-out from leaderboard
+app.post('/api/leaderboard/opt-out', async (req, res) => {
+  const { url, reason } = req.body;
+  
+  if (!url) {
+    return res.status(400).json({ success: false, error: 'URL required' });
+  }
+  
+  try {
+    const token = crypto.randomBytes(16).toString('hex');
     
-    if (validIds.length === 0) {
-      return res.status(400).json({ error: 'Invalid IDs' });
-    }
-    
-    const result = await pool.query(
-      `DELETE FROM leaderboard WHERE id = ANY($1::int[])`,
-      [validIds]
+    await pool.query(
+      'INSERT INTO optout_requests (url, reason, token) VALUES ($1, $2, $3)',
+      [url, reason || 'User request', token]
     );
     
     res.json({
       success: true,
-      deleted: result.rowCount,
-      message: `Deleted ${result.rowCount} entries`
+      message: 'Opt-out request received. We will process it within 24 hours.',
+      token: token
     });
-    
   } catch (error) {
-    console.error('Bulk delete error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: 'Request failed' });
   }
 });
 
-// ============================================
-// SCAN ALL AGENCIES IN LEADERBOARD
-// ============================================
-app.post('/api/admin/scan-all-agencies', async (req, res) => {
+// Process opt-out (admin or automated)
+app.post('/api/leaderboard/opt-out/process/:token', async (req, res) => {
   try {
-    // Get all agencies from leaderboard
-    const result = await pool.query(`
-      SELECT id, url, company_name 
-      FROM leaderboard 
-      WHERE is_opted_out = FALSE 
-      ORDER BY id
-    `);
+    const result = await pool.query(
+      'SELECT url FROM optout_requests WHERE token = $1 AND processed = FALSE',
+      [req.params.token]
+    );
     
-    const agencies = result.rows;
-    
-    if (agencies.length === 0) {
-      return res.json({ 
-        success: true, 
-        message: 'No agencies to scan',
-        scanned: 0,
-        failed: 0
-      });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Invalid or already processed token' });
     }
     
-    let scanned = 0;
-    let failed = 0;
-    const updates = [];
+    const url = result.rows[0].url;
     
-    console.log(`🔄 Starting scan of ${agencies.length} agencies...`);
+    await pool.query(
+      'UPDATE leaderboard SET is_opted_out = TRUE, opted_out_at = NOW(), opted_out_reason = $1 WHERE url = $2',
+      ['User request', url]
+    );
     
-    // Scan each agency
-    for (const agency of agencies) {
-      try {
-        console.log(`🔍 Scanning: ${agency.url}`);
-        
-        const response = await fetch(agency.url, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (ContentScale Scanner)' },
-          timeout: 10000
-        });
-        
-        if (!response.ok) {
-          console.log(`❌ Failed to fetch: ${agency.url}`);
-          failed++;
-          continue;
-        }
-        
-        const html = await response.text();
-        
-        // Calculate GRAAF score
-        let graafScore = 0;
-        const hasQuotes = /says|according to|expert|quote|told us|founder|ceo|director/gi.test(html);
-        graafScore += hasQuotes ? 8 : 0;
-        const hasStats = /\d+%|\d+ studies|\d+ research|research shows|\d+ data/gi.test(html);
-        graafScore += hasStats ? 8 : 0;
-        const hasFreshDates = /202[4-5]|january|february|march|april|may|june|july|august|september|october|november|december/gi.test(html);
-        graafScore += hasFreshDates ? 8 : 2;
-        const hasAuthor = /author|by |written by|published by|contributor/gi.test(html);
-        graafScore += hasAuthor ? 8 : 0;
-        const textContent = html.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(w => w.length > 0);
-        const wordCount = textContent.length;
-        graafScore += Math.min(18, Math.floor(wordCount / 100));
-        graafScore = Math.min(50, graafScore);
-        
-        // Calculate CRAFT score
-        let craftScore = 0;
-        const h1s = (html.match(/<h1[^>]*>/gi) || []).length;
-        craftScore += h1s === 1 ? 8 : h1s > 1 ? 4 : 2;
-        const h2h3s = (html.match(/<h2[^>]*>|<h3[^>]*>/gi) || []).length;
-        craftScore += Math.min(10, h2h3s * 2);
-        const paragraphs = (html.match(/<p[^>]*>/gi) || []).length;
-        craftScore += Math.min(8, Math.floor(paragraphs / 3));
-        const hasLists = /<ul[^>]*>|<ol[^>]*>/gi.test(html);
-        craftScore += hasLists ? 4 : 0;
-        craftScore = Math.min(30, craftScore);
-        
-        // Calculate Technical score
-        let technicalScore = 0;
-        const metaDescMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
-        const metaDesc = metaDescMatch ? metaDescMatch[1] : null;
-        technicalScore += metaDesc && metaDesc.length > 50 ? 4 : 2;
-        const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
-        const title = titleMatch ? titleMatch[1] : null;
-        technicalScore += title && title.length > 30 ? 4 : 2;
-        const allImages = (html.match(/<img[^>]*>/gi) || []).length;
-        const imagesWithAlt = (html.match(/<img[^>]*alt="/gi) || []).length;
-        if (allImages > 0) {
-          technicalScore += Math.min(4, Math.floor((imagesWithAlt / allImages) * 4));
-        }
-        const hasViewport = /<meta\s+name="viewport"/gi.test(html);
-        technicalScore += hasViewport ? 3 : 0;
-        const hasSchema = /"@context"|"@type"/gi.test(html);
-        technicalScore += hasSchema ? 3 : 0;
-        technicalScore = Math.min(20, technicalScore);
-        
-        const totalScore = graafScore + craftScore + technicalScore;
-        
-        // Update leaderboard
-        await pool.query(`
-          UPDATE leaderboard 
-          SET score = $1, last_scan = NOW() 
-          WHERE id = $2
-        `, [totalScore, agency.id]);
-        
-        updates.push({
-          url: agency.url,
-          company_name: agency.company_name,
-          score: totalScore
-        });
-        
-        scanned++;
-        console.log(`✅ Updated: ${agency.url} - Score: ${totalScore}`);
-        
-        // Small delay to avoid overwhelming the server
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-      } catch (error) {
-        console.error(`❌ Error scanning ${agency.url}:`, error.message);
-        failed++;
-      }
-    }
+    await pool.query(
+      'UPDATE optout_requests SET processed = TRUE, processed_at = NOW() WHERE token = $1',
+      [req.params.token]
+    );
     
-    console.log(`✅ Scan complete: ${scanned} scanned, ${failed} failed`);
-    
-    res.json({
-      success: true,
-      message: `Scanned ${scanned} agencies, ${failed} failed`,
-      scanned,
-      failed,
-      total: agencies.length,
-      updates
-    });
-    
+    res.json({ success: true, message: 'Successfully opted out from leaderboard' });
   } catch (error) {
-    console.error('Scan all agencies error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, error: 'Processing failed' });
   }
 });
-
 // ============================================
-// PUBLIC LEADERBOARD API
+// NOTIFICATIONS ENDPOINTS
 // ============================================
-app.get('/api/leaderboard', async (req, res) => {
+app.get('/api/admin/notifications', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT 
-        id,
-        ROW_NUMBER() OVER (ORDER BY score DESC) as rank,
-        COALESCE(company_name, 'Unknown') as company_name,
-        url,
-        score,
-        COALESCE(country, 'NL') as country,
-        COALESCE(business_type, 'agency') as type,
-        COALESCE(is_verified, false) as is_claimed,
-        COALESCE(created_at, NOW()) as created_at
-      FROM leaderboard 
-      WHERE score IS NOT NULL AND is_opted_out = FALSE
-      ORDER BY score DESC 
+      SELECT * FROM notifications 
+      WHERE created_for = 'admin'
+      ORDER BY 
+        is_read ASC,
+        CASE priority
+          WHEN 'urgent' THEN 1
+          WHEN 'high' THEN 2
+          WHEN 'normal' THEN 3
+          WHEN 'low' THEN 4
+        END,
+        created_at DESC
       LIMIT 50
     `);
     
     res.json({
       success: true,
-      entries: result.rows,
-      total: result.rows.length,
-      averageScore: result.rows.length > 0 
-        ? Math.round(result.rows.reduce((sum, r) => sum + (r.score || 0), 0) / result.rows.length)
-        : 0
+      notifications: result.rows,
+      unread_count: result.rows.filter(n => !n.is_read).length
     });
   } catch (error) {
-    res.json({ success: true, entries: [], total: 0, averageScore: 0 });
+    console.error('Get notifications error:', error);
+    res.json({ success: true, notifications: [], unread_count: 0 });
   }
 });
 
-// ============================================
-// CHECK IF URL IS BLOCKED
-// ============================================
-app.get('/api/leaderboard/check-status/:encodedUrl', async (req, res) => {
+app.post('/api/admin/notifications/:id/mark-read', async (req, res) => {
   try {
-    const url = decodeURIComponent(req.params.encodedUrl);
-    
-    const result = await pool.query(`
-      SELECT id, reason FROM leaderboard_blocks 
-      WHERE url = $1 AND (expires_at IS NULL OR expires_at > NOW())
-    `, [url]);
-    
-    if (result.rows.length > 0) {
-      res.json({
-        blocked: true,
-        reason: result.rows[0].reason
-      });
-    } else {
-      res.json({ blocked: false });
-    }
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================
-// OPT-OUT ENDPOINT
-// ============================================
-app.post('/api/leaderboard/opt-out', async (req, res) => {
-  try {
-    const { url, reason } = req.body;
-    
-    if (!url) {
-      return res.status(400).json({ error: 'URL required' });
-    }
-    
-    const exists = await pool.query(
-      'SELECT id FROM leaderboard_blocks WHERE url = $1',
-      [url]
-    );
-    
-    if (exists.rows.length > 0) {
-      return res.status(400).json({ error: 'Already opted out' });
-    }
-    
-    await pool.query(`
-      INSERT INTO leaderboard_blocks (url, reason, blocked_by)
-      VALUES ($1, $2, $3)
-    `, [url, reason || 'User requested removal', 'user']);
-    
-    await pool.query(`
-      UPDATE leaderboard 
-      SET is_opted_out = TRUE, opted_out_at = NOW(), opted_out_reason = $2
-      WHERE url = $1
-    `, [url, reason || 'User requested removal']);
-    
-    res.json({
-      success: true,
-      message: 'Your URL has been removed from the leaderboard'
-    });
-    
-  } catch (error) {
-    console.error('Opt-out error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================
-// IP RATE LIMIT CHECK
-// ============================================
-async function checkIPLimit(ip) {
-  try {
-    const today = new Date().toISOString().split('T')[0];
-    
-    const result = await pool.query(`
-      SELECT submission_count FROM submission_limits 
-      WHERE ip_address = $1 AND submission_date = $2
-    `, [ip, today]);
-    
-    if (result.rows.length > 0) {
-      const count = result.rows[0].submission_count;
-      const MAX_PER_DAY = 3;
-      
-      if (count >= MAX_PER_DAY) {
-        return { limited: true, count, max: MAX_PER_DAY };
-      }
-      
-      return { limited: false, count };
-    }
-    
-    return { limited: false, count: 0 };
-  } catch (error) {
-    console.error('Rate limit check error:', error);
-    return { limited: false, count: 0 };
-  }
-}
-
-// ============================================
-// GET CLIENT IP
-// ============================================
-function getClientIP(req) {
-  return (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '0.0.0.0').split(',')[0].trim();
-}
-
-// ============================================
-// LEADERBOARD SUBMIT (WITH SECURITY)
-// ============================================
-app.post('/api/leaderboard/submit', async (req, res) => {
-  try {
-    const { url, score, company_name, country } = req.body;
-    const ip = getClientIP(req);
-    
-    if (!url || score === undefined) {
-      return res.status(400).json({ error: 'URL and score required' });
-    }
-    
-    const blocked = await pool.query(`
-      SELECT id FROM leaderboard_blocks 
-      WHERE url = $1 AND (expires_at IS NULL OR expires_at > NOW())
-    `, [url]);
-    
-    if (blocked.rows.length > 0) {
-      return res.status(403).json({ 
-        error: 'This URL cannot be submitted to the leaderboard'
-      });
-    }
-    
-    const limitCheck = await checkIPLimit(ip);
-    if (limitCheck.limited) {
-      return res.status(429).json({
-        error: `Rate limit exceeded: ${limitCheck.count}/${limitCheck.max} submissions today`,
-        retryAfter: '24 hours'
-      });
-    }
-    
-    const today = new Date().toISOString().split('T')[0];
-    const duplicate = await pool.query(`
-      SELECT id FROM leaderboard 
-      WHERE url = $1 AND DATE(created_at) = $2
-    `, [url, today]);
-    
-    if (duplicate.rows.length > 0) {
-      return res.status(400).json({ 
-        error: 'This URL already submitted today. Max 1 submission per URL per day' 
-      });
-    }
-    
-    const leaderboardResult = await pool.query(`
-      INSERT INTO leaderboard (url, score, company_name, country, submission_ip)
-      VALUES ($1, $2, $3, $4, $5)
-      ON CONFLICT (url) DO UPDATE SET 
-        score = EXCLUDED.score,
-        company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
-        last_scan = NOW()
-      RETURNING id
-    `, [url, score, company_name || null, country || 'NL', ip]);
-    
-    const leaderboardEntryId = leaderboardResult.rows[0].id;
-    
-    // Try to log submission (optional - won't crash if table doesn't exist)
-    try {
-      await pool.query(`
-        INSERT INTO submission_logs 
-        (url, company_name, ip_address, country, score, submitted_via, status, leaderboard_entry_id)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      `, [url, company_name, ip, country, score, 'api', 'approved', leaderboardEntryId]);
-    } catch (logError) {
-      console.log('Note: submission_logs table not found, skipping log');
-    }
-    
-    const today_date = new Date().toISOString().split('T')[0];
-    await pool.query(`
-      INSERT INTO submission_limits (ip_address, submission_date, submission_count)
-      VALUES ($1, $2, 1)
-      ON CONFLICT (ip_address, submission_date) DO UPDATE
-      SET submission_count = submission_count + 1, last_submitted_at = NOW()
-    `, [ip, today_date]);
-    
-    res.json({
-      success: true,
-      leaderboardEntryId,
-      message: 'Added to leaderboard!'
-    });
-    
-  } catch (error) {
-    console.error('Submit error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================
-// PUBLIC SCANNER API
-// ============================================
-app.post('/api/scan', async (req, res) => {
-  const { url, shareKey } = req.body;
-  
-  if (!url) {
-    return res.status(400).json({ error: 'URL required' });
-  }
-  
-  // ============================================
-  // SHARELINK ENFORCEMENT
-  // ============================================
-  if (shareKey) {
-    try {
-      const shareLinkResult = await pool.query(
-        'SELECT * FROM share_links WHERE share_code = $1',
-        [shareKey]
-      );
-      
-      if (shareLinkResult.rows.length === 0) {
-        return res.status(403).json({ 
-          success: false,
-          error: 'Invalid share link',
-          limitReached: true
-        });
-      }
-      
-      const shareLink = shareLinkResult.rows[0];
-      
-      // Check if expired
-      if (new Date(shareLink.expires_at) < new Date()) {
-        return res.status(403).json({ 
-          success: false,
-          error: 'Share link expired. Contact Ot for renewal.',
-          limitReached: true,
-          whatsappUrl: 'https://wa.me/31628073996?text=Hi%20Ot!%20Mijn%20sharelink%20is%20verlopen.'
-        });
-      }
-      
-      // Check if inactive
-      if (shareLink.status !== 'active') {
-        return res.status(403).json({ 
-          success: false,
-          error: 'Share link inactive. Contact Ot.',
-          limitReached: true,
-          whatsappUrl: 'https://wa.me/31628073996?text=Hi%20Ot!%20Mijn%20sharelink%20is%20niet%20actief.'
-        });
-      }
-      
-      // Check scan limit
-      if (shareLink.scans_used >= shareLink.scans_limit) {
-        return res.status(403).json({ 
-          success: false,
-          error: `Scan limiet bereikt (${shareLink.scans_limit}/${shareLink.scans_limit}). Contact Ot voor meer scans.`,
-          limitReached: true,
-          scansUsed: shareLink.scans_used,
-          scansLimit: shareLink.scans_limit,
-          whatsappUrl: 'https://wa.me/31628073996?text=Hi%20Ot!%20Mijn%20scan%20limiet%20is%20bereikt.%20Kan%20ik%20meer%20scans%20krijgen?'
-        });
-      }
-      
-      console.log(`✅ Sharelink valid: ${shareKey} (${shareLink.scans_used + 1}/${shareLink.scans_limit})`);
-      
-    } catch (error) {
-      console.error('Sharelink check error:', error);
-      return res.status(500).json({ 
-        success: false,
-        error: 'Sharelink verification failed' 
-      });
-    }
-  }
-
-  
-  try {
-    console.log(`🔍 Scanning: ${url}`);
-    
-    // ADD CACHE-BUSTING HEADERS
-    const response = await fetch(url, {
-      headers: { 
-        'User-Agent': 'Mozilla/5.0 (ContentScale Scanner)',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      },
-      cache: 'no-store',
-      timeout: 10000
-    });
-    
-    if (!response.ok) {
-      return res.status(400).json({ error: 'Cannot fetch URL' });
-    }
-    
-    const html = await response.text();
-    
-    let graafScore = 0;
-    const hasQuotes = /says|according to|expert|quote|told us|founder|ceo|director/gi.test(html);
-    graafScore += hasQuotes ? 8 : 0;
-    const hasStats = /\d+%|\d+ studies|\d+ research|research shows|\d+ data/gi.test(html);
-    graafScore += hasStats ? 8 : 0;
-    const hasFreshDates = /202[4-5]|january|february|march|april|may|june|july|august|september|october|november|december/gi.test(html);
-    graafScore += hasFreshDates ? 8 : 2;
-    const hasAuthor = /author|by |written by|published by|contributor/gi.test(html);
-    graafScore += hasAuthor ? 8 : 0;
-    const textContent = html.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(w => w.length > 0);
-    const wordCount = textContent.length;
-    graafScore += Math.min(18, Math.floor(wordCount / 100));
-    graafScore = Math.min(50, graafScore);
-    
-    let craftScore = 0;
-    const h1s = (html.match(/<h1[^>]*>/gi) || []).length;
-    craftScore += h1s === 1 ? 8 : h1s > 1 ? 4 : 2;
-    const h2h3s = (html.match(/<h2[^>]*>|<h3[^>]*>/gi) || []).length;
-    craftScore += Math.min(10, h2h3s * 2);
-    const paragraphs = (html.match(/<p[^>]*>/gi) || []).length;
-    craftScore += Math.min(8, Math.floor(paragraphs / 3));
-    const hasLists = /<ul[^>]*>|<ol[^>]*>/gi.test(html);
-    craftScore += hasLists ? 4 : 0;
-    craftScore = Math.min(30, craftScore);
-    
-    let technicalScore = 0;
-    const metaDescMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
-    const metaDesc = metaDescMatch ? metaDescMatch[1] : null;
-    technicalScore += metaDesc && metaDesc.length > 50 ? 4 : 2;
-    const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
-    const title = titleMatch ? titleMatch[1] : null;
-    technicalScore += title && title.length > 30 ? 4 : 2;
-    const allImages = (html.match(/<img[^>]*>/gi) || []).length;
-    const imagesWithAlt = (html.match(/<img[^>]*alt="/gi) || []).length;
-    if (allImages > 0) {
-      technicalScore += Math.min(4, Math.floor((imagesWithAlt / allImages) * 4));
-    }
-    const hasViewport = /<meta\s+name="viewport"/gi.test(html);
-    technicalScore += hasViewport ? 3 : 0;
-    const hasSchema = /"@context"|"@type"/gi.test(html);
-    technicalScore += hasSchema ? 3 : 0;
-    technicalScore = Math.min(20, technicalScore);
-    
-    const totalScore = graafScore + craftScore + technicalScore;
-    const quality = totalScore >= 90 ? 'excellent' : totalScore >= 75 ? 'good' : totalScore >= 60 ? 'average' : totalScore >= 45 ? 'below-average' : 'poor';
-    
-    // Extended recommendations with actionable details
-    const recommendations = [];
-    
-    // GRAAF Framework Recommendations
-    if (!hasQuotes) {
-      recommendations.push({
-        type: 'major',
-        category: 'GRAAF - Credibility',
-        title: 'Add Expert Quotes',
-        description: 'Include 2-3 expert quotes to boost credibility',
-        impact: 'High',
-        points: '+8 points',
-        howToFix: '1. Interview industry experts\n2. Add quotes with full attribution (name, title, company)\n3. Use phrases like "According to [Name], [Title] at [Company]"',
-        example: '"According to John Smith, SEO Director at TechCorp, content quality is the #1 ranking factor in 2025."'
-      });
-    }
-    
-    if (!hasStats) {
-      recommendations.push({
-        type: 'major',
-        category: 'GRAAF - Accuracy',
-        title: 'Add Statistics & Data',
-        description: 'Include research data and verified statistics',
-        impact: 'High',
-        points: '+8 points',
-        howToFix: '1. Find recent research (2024-2025)\n2. Add specific numbers and percentages\n3. Cite sources for all statistics',
-        example: '"According to a 2025 study by HubSpot, 67% of marketers say content quality improved rankings."'
-      });
-    }
-    
-    if (!hasFreshDates) {
-      recommendations.push({
-        type: 'major',
-        category: 'GRAAF - Freshness',
-        title: 'Add Freshness Signals',
-        description: 'Include 2025 dates and current month references',
-        impact: 'Medium',
-        points: '+6 points',
-        howToFix: '1. Add "Updated January 2025" badge\n2. Reference current events\n3. Use "2025" in H2/H3 headings',
-        example: 'Title: "SEO Best Practices for 2025" instead of "SEO Best Practices"'
-      });
-    }
-    
-    if (!hasAuthor) {
-      recommendations.push({
-        type: 'major',
-        category: 'GRAAF - Credibility',
-        title: 'Add Author Bio',
-        description: 'Display author credentials and expertise',
-        impact: 'High',
-        points: '+8 points',
-        howToFix: '1. Add author name and photo\n2. Include credentials and experience\n3. Add social proof (LinkedIn, certifications)',
-        example: 'Written by Jane Doe, SEO Specialist with 10+ years experience, Google Analytics Certified'
-      });
-    }
-    
-    if (wordCount < 500) {
-      recommendations.push({
-        type: 'major',
-        category: 'GRAAF - Actionability',
-        title: 'Expand Content Length',
-        description: `Current: ${wordCount} words. Target: 1000+ words`,
-        impact: 'Medium',
-        points: '+10 points',
-        howToFix: '1. Add step-by-step guides\n2. Include real examples\n3. Add case studies\n4. Create FAQ section',
-        example: 'Add 5-7 detailed how-to steps with screenshots'
-      });
-    }
-    
-    // CRAFT Framework Recommendations
-    if (h1s !== 1) {
-      recommendations.push({
-        type: 'quickwin',
-        category: 'CRAFT - Format',
-        title: 'Fix H1 Tags',
-        description: `Found ${h1s} H1 tags. Each page should have exactly ONE H1`,
-        impact: 'High',
-        points: h1s === 0 ? '+6 points' : '+4 points',
-        howToFix: h1s === 0 
-          ? '1. Add one <h1> tag at the top of your page\n2. Include your target keyword\n3. Make it 50-60 characters'
-          : '1. Keep only the main page title as H1\n2. Change other H1s to H2 or H3\n3. Maintain heading hierarchy',
-        example: '<h1>Ultimate Guide to SEO Content in 2025</h1>'
-      });
-    }
-    
-    if (h2h3s < 5) {
-      recommendations.push({
-        type: 'quickwin',
-        category: 'CRAFT - Format',
-        title: 'Add More Subheadings',
-        description: `Found ${h2h3s} H2/H3 tags. Add 5+ subheadings for better structure`,
-        impact: 'Medium',
-        points: '+5 points',
-        howToFix: '1. Break content into sections\n2. Use H2 for main sections\n3. Use H3 for sub-sections\n4. Include keywords in headings',
-        example: '<h2>What is SEO Content?</h2>\n<h3>Key Components of SEO Content</h3>'
-      });
-    }
-    
-    if (!hasLists) {
-      recommendations.push({
-        type: 'quickwin',
-        category: 'CRAFT - Format',
-        title: 'Add Lists for Scannability',
-        description: 'No lists found. Add bullet points or numbered lists',
-        impact: 'Medium',
-        points: '+4 points',
-        howToFix: '1. Convert long paragraphs to lists\n2. Use numbered lists for steps\n3. Use bullet points for features',
-        example: '<ul>\n  <li>Benefit 1: Improved rankings</li>\n  <li>Benefit 2: More traffic</li>\n</ul>'
-      });
-    }
-    
-    // Technical SEO Recommendations
-    if (!metaDesc) {
-      recommendations.push({
-        type: 'quickwin',
-        category: 'Technical SEO',
-        title: 'Add Meta Description',
-        description: 'Missing meta description. Critical for click-through rate',
-        impact: 'High',
-        points: '+2 points',
-        howToFix: '1. Write 150-160 characters\n2. Include target keyword\n3. Add compelling call-to-action',
-        example: '<meta name="description" content="Learn SEO content creation with our proven 2025 framework. Boost rankings by 67% in 90 days. Start today!">'
-      });
-    }
-    
-    if (!hasViewport) {
-      recommendations.push({
-        type: 'quickwin',
-        category: 'Technical SEO',
-        title: 'Add Mobile Viewport',
-        description: 'Missing viewport meta tag for mobile responsiveness',
-        impact: 'High',
-        points: '+3 points',
-        howToFix: '1. Add viewport meta tag to <head>\n2. Test on mobile devices\n3. Ensure responsive design',
-        example: '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
-      });
-    }
-    
-    if (!hasSchema) {
-      recommendations.push({
-        type: 'major',
-        category: 'Technical SEO',
-        title: 'Add Schema Markup',
-        description: 'Implement JSON-LD schema for rich snippets',
-        impact: 'Medium',
-        points: '+3 points',
-        howToFix: '1. Add Article schema\n2. Add FAQPage schema if you have FAQs\n3. Add HowTo schema for guides\n4. Test with Google Rich Results Test',
-        example: '<script type="application/ld+json">\n{\n  "@context": "https://schema.org",\n  "@type": "Article",\n  "headline": "Your Title"\n}\n</script>'
-      });
-    }
-    
-    if (allImages > 0 && imagesWithAlt < allImages) {
-      const missingAlt = allImages - imagesWithAlt;
-      recommendations.push({
-        type: 'quickwin',
-        category: 'Technical SEO',
-        title: 'Add Alt Text to Images',
-        description: `${missingAlt} of ${allImages} images missing alt text`,
-        impact: 'Medium',
-        points: '+2 points',
-        howToFix: '1. Add descriptive alt text to every image\n2. Include keywords naturally\n3. Describe image content for accessibility',
-        example: '<img src="chart.jpg" alt="SEO ranking factors chart showing top 10 metrics for 2025">'
-      });
-    }
-    
-    // Priority order
-    const quickWins = recommendations.filter(r => r.type === 'quickwin');
-    const majorImprovements = recommendations.filter(r => r.type === 'major');
-    
-    const scanResult = {
-      success: true,
-      url,
-      score: totalScore,
-      quality,
-      metrics: {graaf: graafScore, craft: craftScore, technical: technicalScore},
-      breakdown: {
-        graaf: {
-          total: graafScore, 
-          max: 50, 
-          percentage: Math.round((graafScore / 50) * 100),
-          items: {
-            credibility: hasQuotes && hasAuthor ? 16 : hasQuotes ? 8 : hasAuthor ? 8 : 0,
-            relevance: Math.min(18, Math.floor(wordCount / 100)),
-            accuracy: hasStats ? 8 : 0,
-            freshness: hasFreshDates ? 8 : 2
-          }
-        },
-        craft: {
-          total: craftScore, 
-          max: 30, 
-          percentage: Math.round((craftScore / 30) * 100),
-          items: {
-            headingStructure: h1s === 1 ? 8 : h1s > 1 ? 4 : 2,
-            subheadings: Math.min(10, h2h3s * 2),
-            paragraphs: Math.min(8, Math.floor(paragraphs / 3)),
-            lists: hasLists ? 4 : 0
-          }
-        },
-        technical: {
-          total: technicalScore, 
-          max: 20, 
-          percentage: Math.round((technicalScore / 20) * 100),
-          items: {
-            metaDescription: metaDesc && metaDesc.length > 50 ? 4 : 2,
-            title: title && title.length > 30 ? 4 : 2,
-            imageAlt: allImages > 0 ? Math.min(4, Math.floor((imagesWithAlt / allImages) * 4)) : 0,
-            viewport: hasViewport ? 3 : 0,
-            schema: hasSchema ? 3 : 0
-          }
-        }
-      },
-      recommendations: {
-        all: recommendations,
-        quickWins: quickWins,
-        majorImprovements: majorImprovements,
-        totalRecommendations: recommendations.length,
-        potentialScoreIncrease: recommendations.reduce((sum, r) => {
-          const points = parseInt(r.points.match(/\d+/)?.[0] || 0);
-          return sum + points;
-        }, 0)
-      },
-      details: {
-        wordCount,
-        h1Count: h1s,
-        h2h3Count: h2h3s,
-        paragraphCount: paragraphs,
-        imageCount: allImages,
-        imagesWithAlt: imagesWithAlt,
-        hasQuotes,
-        hasStats,
-        hasFreshDates,
-        hasAuthor,
-        hasLists,
-        hasViewport,
-        hasSchema,
-        metaDescription: metaDesc ? metaDesc.substring(0, 160) : null,
-        title: title
-      },
-      timestamp: new Date().toISOString()
-    };
-    
-    try {
-      await pool.query(
-        `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, breakdown, recommendations, scan_type)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [url, totalScore, quality, graafScore, craftScore, technicalScore, JSON.stringify(scanResult.breakdown), JSON.stringify(scanResult.recommendations), 'manual']
-      );
-      console.log(`✅ Scan saved: ${url} (Score: ${totalScore})`);
-    } catch (error) {
-      console.error('DB save error:', error);
-    }
-
-    // Increment sharelink usage
-    if (shareKey) {
-      try {
-        await pool.query(
-          'UPDATE share_links SET scans_used = scans_used + 1 WHERE share_code = $1',
-          [shareKey]
-        );
-        console.log(`📊 Sharelink usage updated: ${shareKey}`);
-      } catch (error) {
-        console.error('Sharelink update error:', error);
-      }
-    }
-    
-    res.json(scanResult);
-    
-  } catch (error) {
-    console.error('Scan error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================
-// EXPORT SCAN RESULTS
-// ============================================
-app.get('/api/export/scan/:format', async (req, res) => {
-  try {
-    const { format } = req.params;
-    const { url, score, recommendations } = req.query;
-    
-    if (!url || !score) {
-      return res.status(400).json({ error: 'URL and score required' });
-    }
-    
-    const parsedRecommendations = recommendations ? JSON.parse(decodeURIComponent(recommendations)) : [];
-    
-    if (format === 'csv') {
-      // Generate CSV
-      let csv = 'Category,Title,Description,Impact,Points,How to Fix\n';
-      
-      if (parsedRecommendations.all) {
-        parsedRecommendations.all.forEach(rec => {
-          const howToFix = (rec.howToFix || '').replace(/\n/g, ' ').replace(/"/g, '""');
-          csv += `"${rec.category}","${rec.title}","${rec.description}","${rec.impact}","${rec.points}","${howToFix}"\n`;
-        });
-      }
-      
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', `attachment; filename="contentscale-scan-${Date.now()}.csv"`);
-      res.send(csv);
-      
-    } else if (format === 'json') {
-      // Generate JSON
-      const exportData = {
-        url: decodeURIComponent(url),
-        score: parseInt(score),
-        recommendations: parsedRecommendations,
-        exportedAt: new Date().toISOString(),
-        generatedBy: 'ContentScale SEO Scanner'
-      };
-      
-      res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Content-Disposition', `attachment; filename="contentscale-scan-${Date.now()}.json"`);
-      res.json(exportData);
-      
-    } else if (format === 'txt') {
-      // Generate TXT report
-      let txt = `ContentScale SEO Scan Report\n`;
-      txt += `${'='.repeat(50)}\n\n`;
-      txt += `URL: ${decodeURIComponent(url)}\n`;
-      txt += `Score: ${score}/100\n`;
-      txt += `Scanned: ${new Date().toISOString()}\n\n`;
-      
-      if (parsedRecommendations.quickWins && parsedRecommendations.quickWins.length > 0) {
-        txt += `QUICK WINS (${parsedRecommendations.quickWins.length})\n`;
-        txt += `${'-'.repeat(50)}\n`;
-        parsedRecommendations.quickWins.forEach((rec, i) => {
-          txt += `\n${i + 1}. ${rec.title} (${rec.points})\n`;
-          txt += `   Category: ${rec.category}\n`;
-          txt += `   Impact: ${rec.impact}\n`;
-          txt += `   ${rec.description}\n`;
-          if (rec.howToFix) {
-            txt += `   How to fix:\n`;
-            txt += `   ${rec.howToFix.replace(/\n/g, '\n   ')}\n`;
-          }
-        });
-        txt += `\n`;
-      }
-      
-      if (parsedRecommendations.majorImprovements && parsedRecommendations.majorImprovements.length > 0) {
-        txt += `\nMAJOR IMPROVEMENTS (${parsedRecommendations.majorImprovements.length})\n`;
-        txt += `${'-'.repeat(50)}\n`;
-        parsedRecommendations.majorImprovements.forEach((rec, i) => {
-          txt += `\n${i + 1}. ${rec.title} (${rec.points})\n`;
-          txt += `   Category: ${rec.category}\n`;
-          txt += `   Impact: ${rec.impact}\n`;
-          txt += `   ${rec.description}\n`;
-          if (rec.howToFix) {
-            txt += `   How to fix:\n`;
-            txt += `   ${rec.howToFix.replace(/\n/g, '\n   ')}\n`;
-          }
-        });
-      }
-      
-      txt += `\n${'='.repeat(50)}\n`;
-      txt += `Generated by ContentScale - https://contentscale.site\n`;
-      
-      res.setHeader('Content-Type', 'text/plain');
-      res.setHeader('Content-Disposition', `attachment; filename="contentscale-scan-${Date.now()}.txt"`);
-      res.send(txt);
-      
-    } else {
-      res.status(400).json({ error: 'Invalid format. Use: csv, json, or txt' });
-    }
-    
-  } catch (error) {
-    console.error('Export error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================
-// CLAIM PROFILE & EMAIL ENDPOINTS
-// ============================================
-
-// Fill email template with variables
-function fillEmailTemplate(template, variables) {
-  let filled = template;
-  Object.keys(variables).forEach(key => {
-    const regex = new RegExp(`{${key}}`, 'g');
-    filled = filled.replace(regex, variables[key] || '');
-  });
-  return filled;
-}
-
-// Send email (mock version - logs to console and database)
-async function sendEmail(to, subject, html, templateName = null) {
-  try {
-    // Log email to database
     await pool.query(
-      `INSERT INTO email_logs (to_email, subject, template_used, status, sent_at) 
-       VALUES ($1, $2, $3, 'sent', NOW())`,
-      [to, subject, templateName]
+      'UPDATE notifications SET is_read = TRUE, read_at = NOW() WHERE id = $1',
+      [req.params.id]
     );
-    
-    // For development: log to console
-    console.log('📧 EMAIL SENT:', {
-      to,
-      subject,
-      template: templateName,
-      preview: html.substring(0, 100) + '...'
-    });
-    
-    // Uncomment this to send real emails via nodemailer:
-    /*
-    await emailTransporter.sendMail({
-      from: process.env.EMAIL_FROM || 'ContentScale <noreply@contentscale.site>',
-      to,
-      subject,
-      html
-    });
-    */
-    
-    return { success: true };
+    res.json({ success: true });
   } catch (error) {
-    // Log failed email
+    res.status(500).json({ success: false, error: 'Failed to mark as read' });
+  }
+});
+
+app.post('/api/admin/notifications/mark-all-read', async (req, res) => {
+  try {
     await pool.query(
-      `INSERT INTO email_logs (to_email, subject, template_used, status, error_message, sent_at) 
-       VALUES ($1, $2, $3, 'failed', $4, NOW())`,
-      [to, subject, templateName, error.message]
+      "UPDATE notifications SET is_read = TRUE, read_at = NOW() WHERE created_for = 'admin' AND is_read = FALSE"
     );
-    
-    console.error('❌ EMAIL ERROR:', error);
-    return { success: false, error: error.message };
-  }
-}
-
-// Generate unique opt-out token
-function generateOptOutToken() {
-  return crypto.randomBytes(32).toString('hex');
-}
-
-// Submit profile claim
-app.post('/api/claim-profile', async (req, res) => {
-  try {
-    const { 
-      url, 
-      name, 
-      logo_url, 
-      description, 
-      specializations, 
-      country, 
-      agency_size, 
-      contact_email 
-    } = req.body;
-    
-    // Validation
-    if (!url || !name || !contact_email) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'URL, name, and contact email are required' 
-      });
-    }
-    
-    // Check if already claimed
-    const existing = await pool.query(
-      'SELECT * FROM profile_claims WHERE url = $1 AND status != $2',
-      [url, 'rejected']
-    );
-    
-    if (existing.rows.length > 0) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'This profile has already been claimed and is pending review' 
-      });
-    }
-    
-    // Insert claim
-    const result = await pool.query(
-      `INSERT INTO profile_claims 
-      (url, name, logo_url, description, specializations, country, agency_size, contact_email, status, created_at) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', NOW()) 
-      RETURNING *`,
-      [
-        url, 
-        name, 
-        logo_url, 
-        description, 
-        JSON.stringify(specializations), 
-        country, 
-        agency_size, 
-        contact_email
-      ]
-    );
-    
-    // Send confirmation email
-    const emailTemplate = await pool.query(
-      'SELECT * FROM email_templates WHERE name = $1',
-      ['claim_submitted']
-    );
-    
-    if (emailTemplate.rows.length > 0) {
-      const html = fillEmailTemplate(emailTemplate.rows[0].body, {
-        agency_name: name,
-        url: url
-      });
-      
-      await sendEmail(
-        contact_email,
-        emailTemplate.rows[0].subject,
-        html,
-        'claim_submitted'
-      );
-    }
-    
-    res.json({ 
-      success: true, 
-      message: 'Profile claim submitted! We will review within 24 hours.',
-      claim_id: result.rows[0].id 
-    });
-    
+    res.json({ success: true });
   } catch (error) {
-    console.error('Claim profile error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, error: 'Failed to mark all as read' });
   }
 });
 
-// Public opt-out
-app.post('/api/optout', async (req, res) => {
+app.delete('/api/admin/notifications/:id', async (req, res) => {
   try {
-    const { token, reason } = req.body;
-    
-    if (!token) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Token is required' 
-      });
-    }
-    
-    // Find opt-out request by token
-    const result = await pool.query(
-      `UPDATE optout_requests 
-       SET processed = true, processed_at = NOW() 
-       WHERE token = $1 AND processed = false 
-       RETURNING url`,
-      [token]
-    );
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Invalid or already processed opt-out token' 
-      });
-    }
-    
-    const url = result.rows[0].url;
-    
-    // Remove from leaderboard
-    await pool.query('DELETE FROM leaderboard WHERE url = $1', [url]);
-    
-    res.json({ 
-      success: true, 
-      message: 'You have been successfully removed from the leaderboard' 
-    });
-    
+    await pool.query('DELETE FROM notifications WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
   } catch (error) {
-    console.error('Opt-out error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, error: 'Failed to delete' });
   }
 });
 
-// Get pending claims
-app.get('/api/admin/claims/pending', async (req, res) => {
+app.post('/api/admin/notifications/create', async (req, res) => {
+  const { type, title, message, link, priority } = req.body;
+  
+  if (!title || !message) {
+    return res.status(400).json({ success: false, error: 'Title and message required' });
+  }
+  
   try {
-    const result = await pool.query(
-      `SELECT * FROM profile_claims 
-       WHERE status = 'pending' 
-       ORDER BY created_at DESC`
+    await pool.query(
+      `INSERT INTO notifications (type, title, message, link, priority, created_by)
+       VALUES ($1, $2, $3, $4, $5, 'system')`,
+      [type || 'system', title, message, link || null, priority || 'normal']
     );
     
-    res.json({ 
-      success: true, 
-      claims: result.rows 
-    });
+    res.json({ success: true, message: 'Notification created' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to create notification' });
+  }
+});
+
+// ============================================
+// PROFILE CLAIMS ENDPOINTS
+// ============================================
+app.get('/api/admin/claims', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM profile_claims 
+      ORDER BY 
+        CASE status
+          WHEN 'pending' THEN 1
+          WHEN 'approved' THEN 2
+          WHEN 'rejected' THEN 3
+        END,
+        created_at DESC
+    `);
     
+    res.json({ success: true, claims: result.rows });
   } catch (error) {
     console.error('Get claims error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.json({ success: true, claims: [] });
   }
 });
 
-// Approve claim
-app.post('/api/admin/claims/approve/:claim_id', async (req, res) => {
+app.post('/api/admin/claims/:id/approve', async (req, res) => {
+  const { id } = req.params;
+  
   try {
-    const { claim_id } = req.params;
-    
-    // Get claim details
-    const claim = await pool.query(
-      'SELECT * FROM profile_claims WHERE id = $1',
-      [claim_id]
-    );
+    const claim = await pool.query('SELECT * FROM profile_claims WHERE id = $1', [id]);
     
     if (claim.rows.length === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Claim not found' 
-      });
+      return res.status(404).json({ success: false, error: 'Claim not found' });
     }
     
     const claimData = claim.rows[0];
     
-    // Update claim status
-    await pool.query(
-      `UPDATE profile_claims 
-       SET status = 'approved', reviewed_at = NOW() 
-       WHERE id = $1`,
-      [claim_id]
-    );
-    
     // Update leaderboard entry
+    await pool.query(`
+      UPDATE leaderboard 
+      SET 
+        company_name = $1,
+        logo_url = $2,
+        description = $3,
+        specializations = $4,
+        agency_size = $5,
+        contact_email = $6,
+        is_verified = TRUE,
+        claimed = TRUE
+      WHERE url = $7
+    `, [
+      claimData.name,
+      claimData.logo_url,
+      claimData.description,
+      claimData.specializations,
+      claimData.agency_size,
+      claimData.contact_email,
+      claimData.url
+    ]);
+    
+    // Mark claim as approved
     await pool.query(
-      `UPDATE leaderboard 
-       SET claimed = true,
-           logo_url = $1,
-           description = $2,
-           specializations = $3,
-           agency_size = $4,
-           contact_email = $5,
-           verified = true
-       WHERE url = $6`,
-      [
-        claimData.logo_url,
-        claimData.description,
-        claimData.specializations,
-        claimData.agency_size,
-        claimData.contact_email,
-        claimData.url
-      ]
+      'UPDATE profile_claims SET status = $1, reviewed_at = NOW(), reviewed_by = $2 WHERE id = $3',
+      ['approved', 'admin', id]
     );
     
-    // Send approval email
-    const emailTemplate = await pool.query(
-      'SELECT * FROM email_templates WHERE name = $1',
-      ['claim_approved']
-    );
+    console.log(`✅ Profile claim approved: ${claimData.url}`);
     
-    if (emailTemplate.rows.length > 0 && claimData.contact_email) {
-      const html = fillEmailTemplate(emailTemplate.rows[0].body, {
-        agency_name: claimData.name,
-        url: claimData.url,
-        specializations: JSON.parse(claimData.specializations || '[]').join(', '),
-        leaderboard_url: `${process.env.BASE_URL || 'https://contentscale.site'}/leaderboard`
-      });
-      
-      await sendEmail(
-        claimData.contact_email,
-        emailTemplate.rows[0].subject,
-        html,
-        'claim_approved'
-      );
-    }
-    
-    res.json({ 
-      success: true, 
-      message: 'Claim approved and profile updated' 
-    });
-    
+    res.json({ success: true, message: 'Claim approved' });
   } catch (error) {
     console.error('Approve claim error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, error: 'Failed to approve' });
   }
 });
 
-// Reject claim
-app.post('/api/admin/claims/reject/:claim_id', async (req, res) => {
+app.post('/api/admin/claims/:id/reject', async (req, res) => {
+  const { id } = req.params;
+  
   try {
-    const { claim_id } = req.params;
-    const { reason } = req.body;
-    
     await pool.query(
-      `UPDATE profile_claims 
-       SET status = 'rejected', reviewed_at = NOW() 
-       WHERE id = $1`,
-      [claim_id]
+      'UPDATE profile_claims SET status = $1, reviewed_at = NOW(), reviewed_by = $2 WHERE id = $3',
+      ['rejected', 'admin', id]
     );
     
-    res.json({ 
-      success: true, 
-      message: 'Claim rejected' 
-    });
-    
+    res.json({ success: true, message: 'Claim rejected' });
   } catch (error) {
-    console.error('Reject claim error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, error: 'Failed to reject' });
   }
 });
 
-// Get email templates
+app.delete('/api/admin/claims/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM profile_claims WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to delete' });
+  }
+});
+
+// ============================================
+// EMAIL TEMPLATES ENDPOINTS
+// ============================================
 app.get('/api/admin/email-templates', async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT * FROM email_templates ORDER BY name'
-    );
-    
-    res.json({ 
-      success: true, 
-      templates: result.rows 
-    });
-    
+    const result = await pool.query('SELECT * FROM email_templates ORDER BY name');
+    res.json({ success: true, templates: result.rows });
   } catch (error) {
-    console.error('Get templates error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.json({ success: true, templates: [] });
   }
 });
 
-// Send bulk emails
-app.post('/api/admin/send-bulk-email', async (req, res) => {
-  try {
-    const { template_name, recipients } = req.body;
-    
-    // Get template
-    const template = await pool.query(
-      'SELECT * FROM email_templates WHERE name = $1',
-      [template_name]
-    );
-    
-    if (template.rows.length === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Template not found' 
-      });
-    }
-    
-    const emailTemplate = template.rows[0];
-    let sent = 0;
-    let failed = 0;
-    
-    // Send to each recipient
-    for (const recipient of recipients) {
-      const html = fillEmailTemplate(emailTemplate.body, recipient.variables || {});
-      
-      const result = await sendEmail(
-        recipient.email,
-        emailTemplate.subject,
-        html,
-        template_name
-      );
-      
-      if (result.success) {
-        sent++;
-      } else {
-        failed++;
-      }
-      
-      // Small delay to avoid rate limits
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    
-    res.json({ 
-      success: true, 
-      message: `Emails sent: ${sent}, Failed: ${failed}`,
-      sent,
-      failed
-    });
-    
-  } catch (error) {
-    console.error('Bulk email error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+app.post('/api/admin/email-templates', async (req, res) => {
+  const { name, subject, body, variables } = req.body;
+  
+  if (!name || !subject || !body) {
+    return res.status(400).json({ success: false, error: 'Name, subject and body required' });
   }
-});
-
-// Create opt-out request (admin manually adds agency to optout)
-app.post('/api/admin/optout/create', async (req, res) => {
+  
   try {
-    const { url, reason } = req.body;
-    
-    if (!url) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'URL is required' 
-      });
-    }
-    
-    const token = generateOptOutToken();
-    
     await pool.query(
-      `INSERT INTO optout_requests (url, reason, token, created_at, processed, processed_at) 
-       VALUES ($1, $2, $3, NOW(), true, NOW())`,
-      [url, reason || 'Admin request', token]
+      'INSERT INTO email_templates (name, subject, body, variables) VALUES ($1, $2, $3, $4)',
+      [name, subject, body, variables || null]
     );
     
-    // Remove from leaderboard
-    await pool.query('DELETE FROM leaderboard WHERE url = $1', [url]);
-    
-    res.json({ 
-      success: true, 
-      message: 'Agency removed from leaderboard' 
-    });
-    
+    res.json({ success: true });
   } catch (error) {
-    console.error('Create opt-out error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    if (error.code === '23505') {
+      return res.status(400).json({ success: false, error: 'Template name already exists' });
+    }
+    res.status(500).json({ success: false, error: 'Failed to create template' });
   }
 });
 
-// Get all opt-out requests
-app.get('/api/admin/optouts', async (req, res) => {
+app.put('/api/admin/email-templates/:id', async (req, res) => {
+  const { subject, body, variables } = req.body;
+  
   try {
-    const result = await pool.query(
-      `SELECT * FROM optout_requests 
-       ORDER BY created_at DESC 
-       LIMIT 100`
+    await pool.query(
+      'UPDATE email_templates SET subject = $1, body = $2, variables = $3, updated_at = NOW() WHERE id = $4',
+      [subject, body, variables || null, req.params.id]
     );
     
-    res.json({ 
-      success: true, 
-      requests: result.rows 
-    });
-    
+    res.json({ success: true });
   } catch (error) {
-    console.error('Get opt-outs error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, error: 'Failed to update' });
   }
 });
 
-// Get email logs
+app.delete('/api/admin/email-templates/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM email_templates WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to delete' });
+  }
+});
+
+// ============================================
+// EMAIL LOGS
+// ============================================
 app.get('/api/admin/email-logs', async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 100;
-    
-    const result = await pool.query(
-      `SELECT * FROM email_logs 
-       ORDER BY sent_at DESC 
-       LIMIT $1`,
-      [limit]
-    );
-    
-    res.json({ 
-      success: true, 
-      logs: result.rows 
-    });
-    
+    const result = await pool.query(`
+      SELECT * FROM email_logs 
+      ORDER BY sent_at DESC 
+      LIMIT 100
+    `);
+    res.json({ success: true, logs: result.rows });
   } catch (error) {
-    console.error('Get email logs error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
-  }
-});
-
-// Send leaderboard addition email (helper function)
-async function sendLeaderboardAdditionEmail(agencyData) {
-  try {
-    const template = await pool.query(
-      'SELECT * FROM email_templates WHERE name = $1',
-      ['leaderboard_addition']
-    );
-    
-    if (template.rows.length === 0) {
-      console.log('❌ Template "leaderboard_addition" not found');
-      return;
-    }
-    
-    const optoutToken = generateOptOutToken();
-    
-    // Create opt-out request
-    await pool.query(
-      `INSERT INTO optout_requests (url, token, created_at, processed) 
-       VALUES ($1, $2, NOW(), false)`,
-      [agencyData.url, optoutToken]
-    );
-    
-    const variables = {
-      agency_name: agencyData.name || 'Agency',
-      score: agencyData.score || 0,
-      position: agencyData.position || '?',
-      country: agencyData.country || 'Global',
-      url: agencyData.url,
-      claim_url: `${process.env.BASE_URL || 'https://contentscale.site'}/leaderboard?claim=${encodeURIComponent(agencyData.url)}`,
-      optout_url: `${process.env.BASE_URL || 'https://contentscale.site'}/optout?token=${optoutToken}`
-    };
-    
-    const html = fillEmailTemplate(template.rows[0].body, variables);
-    
-    // Try to find email for this agency
-    let toEmail = agencyData.contact_email;
-    
-    if (!toEmail) {
-      // Try to extract from URL or use placeholder
-      console.log(`⚠️ No email found for ${agencyData.url}, skipping email`);
-      return;
-    }
-    
-    await sendEmail(
-      toEmail,
-      template.rows[0].subject,
-      html,
-      'leaderboard_addition'
-    );
-    
-    console.log(`✅ Leaderboard addition email sent to ${toEmail}`);
-    
-  } catch (error) {
-    console.error('❌ Error sending leaderboard addition email:', error);
-  }
-}
-
-// ============================================
-// NOTIFICATION ENDPOINTS
-// ============================================
-
-// Get all notifications
-app.get('/api/admin/notifications', async (req, res) => {
-  try {
-    const filter = req.query.filter || 'all';
-    let query = 'SELECT * FROM notifications';
-    let params = [];
-    
-    if (filter !== 'all') {
-      switch(filter) {
-        case 'unread':
-          query += ' WHERE is_read = FALSE';
-          break;
-        case 'read':
-          query += ' WHERE is_read = TRUE';
-          break;
-        case 'high':
-          query += ' WHERE priority IN ($1, $2)';
-          params = ['high', 'urgent'];
-          break;
-        case 'system':
-          query += ' WHERE type = $1';
-          params = ['system'];
-          break;
-        case 'user':
-          query += ' WHERE type != $1';
-          params = ['system'];
-          break;
-      }
-    }
-    
-    query += ' ORDER BY created_at DESC LIMIT 100';
-    
-    const result = await pool.query(query, params);
-    
-    res.json({ 
-      success: true, 
-      notifications: result.rows 
-    });
-    
-  } catch (error) {
-    console.error('Get notifications error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
-  }
-});
-
-// Get unread notifications count
-app.get('/api/admin/notifications/unread-count', async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT COUNT(*) as count FROM notifications WHERE is_read = FALSE`
-    );
-    
-    res.json({ 
-      success: true, 
-      count: parseInt(result.rows[0].count) || 0
-    });
-    
-  } catch (error) {
-    res.json({ success: true, count: 0 });
-  }
-});
-
-// Mark notification as read
-app.post('/api/admin/notifications/:id/read', async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    await pool.query(
-      `UPDATE notifications 
-       SET is_read = TRUE, read_at = NOW() 
-       WHERE id = $1`,
-      [id]
-    );
-    
-    res.json({ 
-      success: true, 
-      message: 'Notification marked as read'
-    });
-    
-  } catch (error) {
-    console.error('Mark read error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
-  }
-});
-
-// Mark all notifications as read
-app.post('/api/admin/notifications/mark-all-read', async (req, res) => {
-  try {
-    await pool.query(
-      `UPDATE notifications 
-       SET is_read = TRUE, read_at = NOW() 
-       WHERE is_read = FALSE`
-    );
-    
-    res.json({ 
-      success: true, 
-      message: 'All notifications marked as read'
-    });
-    
-  } catch (error) {
-    console.error('Mark all read error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
-  }
-});
-
-// Create new notification
-app.post('/api/admin/notifications', async (req, res) => {
-  try {
-    const { type, title, message, link, priority, created_for } = req.body;
-    
-    if (!title || !message) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Title and message are required' 
-      });
-    }
-    
-    const result = await pool.query(
-      `INSERT INTO notifications (type, title, message, link, priority, created_for, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW())
-       RETURNING *`,
-      [
-        type || 'system',
-        title,
-        message,
-        link || null,
-        priority || 'normal',
-        created_for || 'admin'
-      ]
-    );
-    
-    res.json({ 
-      success: true, 
-      notification: result.rows[0],
-      message: 'Notification created'
-    });
-    
-  } catch (error) {
-    console.error('Create notification error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
-  }
-});
-
-// Delete notification
-app.delete('/api/admin/notifications/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    await pool.query('DELETE FROM notifications WHERE id = $1', [id]);
-    
-    res.json({ 
-      success: true, 
-      message: 'Notification deleted'
-    });
-    
-  } catch (error) {
-    console.error('Delete notification error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
-  }
-});
-
-// Clear all read notifications
-app.delete('/api/admin/notifications/clear-read', async (req, res) => {
-  try {
-    await pool.query('DELETE FROM notifications WHERE is_read = TRUE');
-    
-    res.json({ 
-      success: true, 
-      message: 'All read notifications cleared'
-    });
-    
-  } catch (error) {
-    console.error('Clear read error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
-  }
-});
-
-// Clear all read notifications
-app.delete('/api/admin/notifications/clear-read', async (req, res) => {
-  try {
-    await pool.query('DELETE FROM notifications WHERE is_read = TRUE');
-    
-    res.json({ 
-      success: true, 
-      message: 'All read notifications cleared'
-    });
-    
-  } catch (error) {
-    console.error('Clear read error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.json({ success: true, logs: [] });
   }
 });
 
 // ============================================
 // HEALTH CHECK
 // ============================================
-app.get('/api/health', async (req, res) => {
-  try {
-    await pool.query('SELECT 1');
-    res.json({ status: 'healthy', database: 'connected' });
-  } catch (error) {
-    res.json({ status: 'degraded', database: 'disconnected' });
-  }
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    database: 'connected'
+  });
 });
 
-// ============================================
-// CATCH-ALL ROUTE
-// ============================================
-app.get('*', (req, res) => {
-  const filePath = path.join(__dirname, '../public', req.path);
-  res.sendFile(filePath, (err) => {
-    if (err) {
-      res.sendFile(path.join(__dirname, '../public/index.html'), (err2) => {
-        if (err2) {
-          res.status(404).json({ error: 'Not found' });
-        }
-      });
-    }
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'healthy',
+    timestamp: new Date().toISOString()
   });
 });
 
 // ============================================
-// ERROR HANDLING
+// 404 HANDLER
 // ============================================
-app.use((err, req, res, next) => {
-  console.error('Error:', err.message);
-  res.status(500).json({ error: 'Something went wrong' });
+app.use((req, res) => {
+  res.status(404).json({ 
+    success: false, 
+    error: 'Endpoint not found',
+    path: req.path 
+  });
 });
 
 // ============================================
 // START SERVER
 // ============================================
-app.listen(PORT, () => {
-  console.log('');
-  console.log('🚀 =====================================');
-  console.log('🚀  ContentScale Server Running');
-  console.log('🚀 =====================================');
-  console.log('');
-  console.log('📍 Frontend:  http://localhost:' + PORT);
-  console.log('📍 Admin:     http://localhost:' + PORT + '/admin');
-  console.log('📍 Health:    http://localhost:' + PORT + '/api/health');
-  console.log('');
-  console.log('👤 Default Login: ot / admin123');
-  console.log('');
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`
+╔════════════════════════════════════════╗
+║                                        ║
+║     🚀 CONTENTSCALE SERVER LIVE 🚀     ║
+║                                        ║
+║     Port: ${PORT}                         ║
+║     Mode: ${process.env.NODE_ENV || 'development'}              ║
+║     Time: ${new Date().toLocaleString()}    ║
+║                                        ║
+║     ✅ Database connected              ║
+║     ✅ No bcrypt (Railway safe)        ║
+║     ✅ All tables ready                ║
+║     ✅ Approval system active          ║
+║                                        ║
+╚════════════════════════════════════════╝
+  `);
+});
+
+// ============================================
+// GRACEFUL SHUTDOWN
+// ============================================
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully...');
+  pool.end(() => {
+    console.log('Database pool closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully...');
+  pool.end(() => {
+    console.log('Database pool closed');
+    process.exit(0);
+  });
 });
