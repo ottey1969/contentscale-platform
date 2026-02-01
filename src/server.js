@@ -359,6 +359,35 @@ async function createAllTables() {
         read_at TIMESTAMP
       )
     `);
+
+    // FREELANCERS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS freelancers (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        title VARCHAR(255),
+        bio TEXT,
+        profile_photo_url TEXT,
+        linkedin_url TEXT,
+        portfolio_url TEXT,
+        website_url TEXT,
+        location VARCHAR(255),
+        country VARCHAR(10),
+        status VARCHAR(50) DEFAULT 'pending',
+        payment_status VARCHAR(50) DEFAULT 'unpaid',
+        subscription_expires_at TIMESTAMP,
+        writing_sample TEXT,
+        test_submitted_at TIMESTAMP,
+        test_reviewed_at TIMESTAMP,
+        has_score BOOLEAN DEFAULT FALSE,
+        score INTEGER,
+        is_featured BOOLEAN DEFAULT FALSE,
+        display_order INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
     
     // DATABASE MIGRATIONS
     await client.query(`ALTER TABLE super_admins ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
@@ -753,11 +782,12 @@ app.post('/api/agencies', async (req, res) => {
     const result = await pool.query(
       `INSERT INTO agencies (name, domain, country, plan, contact_person, contact_email, admin_key)
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-      [name, domain, country || 'NL', plan || 'free', contact_person, contact_email, adminKey]
+      [name, cleanDomain, country || 'NL', plan || 'free', contact_person || null, contact_email || null, adminKey]
     );
     
     res.json({ success: true, agency_id: result.rows[0].id, admin_key: adminKey });
   } catch (error) {
+    console.error('Agency creation error:', error.message);
     res.status(500).json({ success: false, error: 'Database error' });
   }
 });
@@ -842,8 +872,6 @@ app.post('/api/freelancers/apply', async (req, res) => {
     
     console.log(`✅ Freelancer application: ${name} (${email})`);
     
-    // TODO: Send email to Ot about new application
-    
     res.json({
       success: true,
       message: 'Application received! We will contact you within 24 hours with payment details.',
@@ -883,8 +911,6 @@ app.post('/api/freelancers/submit-test', async (req, res) => {
     }
     
     console.log(`✅ Writing test submitted: ${email}`);
-    
-    // TODO: Notify Ot to review
     
     res.json({
       success: true,
@@ -1007,6 +1033,16 @@ app.post('/api/admin/freelancers/:id/order', async (req, res) => {
   }
 });
 
+// DELETE freelancer (ADMIN)
+app.delete('/api/admin/freelancers/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM freelancers WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete' });
+  }
+});
+
 // ============================================
 // CLIENTS ENDPOINTS
 // ============================================
@@ -1106,16 +1142,15 @@ app.post('/api/admin/share-links/create', async (req, res) => {
     expiresAt.setDate(expiresAt.getDate() + (valid_days || 30));
     
     await pool.query(
-      `INSERT INTO share_links (token, client_email, client_name, client_company, scans_limit, scans_used, expires_at, valid_days, status, is_active)
-       VALUES ($1, $2, $3, $4, $5, 0, $6, $7, 'active', true)`,  // ← 'is_active' toegevoegd
+      `INSERT INTO share_links (share_code, client_email, client_name, client_company, scans_limit, scans_used, expires_at, status)
+       VALUES ($1, $2, $3, $4, $5, 0, $6, 'active')`,
       [
         shareCode,
         client_email,
         client_name || null,
         client_company || null,
         scans_limit || 5,
-        expiresAt,
-        valid_days || 30,
+        expiresAt
       ]
     );
     
@@ -1131,35 +1166,9 @@ app.post('/api/admin/share-links/create', async (req, res) => {
   }
 });
 
-
-// Voeg dit toe voor testen (ergens in server.js):
-app.get('/api/test-share-status', async (req, res) => {
-  try {
-    // Test: pak een willekeurige share link
-    const result = await pool.query(
-      'SELECT token, client_email, is_active FROM share_links LIMIT 1'
-    );
-    
-    if (result.rows.length === 0) {
-      return res.json({ message: 'No share links found' });
-    }
-    
-    res.json({
-      test: 'Share links status test',
-      found_link: result.rows[0],
-      has_is_active_column: true
-    });
-    
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-
 app.delete('/api/admin/share-links/:code', async (req, res) => {
   try {
-    // Wijzig: WHERE token = $1 (niet share_code!)
-    await pool.query('DELETE FROM share_links WHERE token = $1', [req.params.code]);
+    await pool.query('DELETE FROM share_links WHERE share_code = $1', [req.params.code]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Database error' });
@@ -1170,12 +1179,11 @@ app.put('/api/admin/share-links/:code/toggle-status', async (req, res) => {
   try {
     const { code } = req.params;
     
-    // Toggle de huidige status
     const result = await pool.query(
       `UPDATE share_links 
-       SET is_active = NOT is_active 
-       WHERE token = $1 
-       RETURNING token, client_email, is_active`,
+       SET status = CASE WHEN status = 'active' THEN 'inactive' ELSE 'active' END
+       WHERE share_code = $1 
+       RETURNING share_code, client_email, status`,
       [code]
     );
     
@@ -1183,12 +1191,12 @@ app.put('/api/admin/share-links/:code/toggle-status', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Share link not found' });
     }
     
-    const newStatus = result.rows[0].is_active;
+    const newStatus = result.rows[0].status;
     
     res.json({ 
       success: true, 
-      message: `Share link ${newStatus ? 'activated' : 'deactivated'}`,
-      is_active: newStatus
+      message: `Share link ${newStatus === 'active' ? 'activated' : 'deactivated'}`,
+      is_active: newStatus === 'active'
     });
     
   } catch (error) {
@@ -1196,6 +1204,7 @@ app.put('/api/admin/share-links/:code/toggle-status', async (req, res) => {
     res.status(500).json({ success: false, error: 'Database error' });
   }
 });
+
 // ============================================
 // LEADERBOARD ENDPOINTS
 // ============================================
@@ -1277,7 +1286,6 @@ app.post('/api/admin/leaderboard/bulk-delete', async (req, res) => {
 // ============================================
 app.post('/api/admin/scan-all-agencies', async (req, res) => {
   try {
-    // Get all agencies from leaderboard
     const result = await pool.query(`
       SELECT id, url, company_name 
       FROM leaderboard 
@@ -1302,18 +1310,27 @@ app.post('/api/admin/scan-all-agencies', async (req, res) => {
     
     console.log(`🔄 Starting scan of ${agencies.length} agencies...`);
     
-    // Scan each agency
     for (const agency of agencies) {
       try {
         console.log(`🔍 Scanning: ${agency.url}`);
         
+        // ✅ FIX: AbortController timeout instead of invalid timeout option
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
+        
         const response = await fetch(agency.url, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (ContentScale Scanner)' },
-          timeout: 10000
+          signal: controller.signal,
+          headers: { 
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+          },
+          redirect: 'follow'
         });
         
+        clearTimeout(timeoutId);
+        
         if (!response.ok) {
-          console.log(`❌ Failed to fetch: ${agency.url}`);
+          console.log(`❌ Failed to fetch: ${agency.url} (HTTP ${response.status})`);
           failed++;
           continue;
         }
@@ -1326,7 +1343,7 @@ app.post('/api/admin/scan-all-agencies', async (req, res) => {
         graafScore += hasQuotes ? 8 : 0;
         const hasStats = /\d+%|\d+ studies|\d+ research|research shows|\d+ data/gi.test(html);
         graafScore += hasStats ? 8 : 0;
-        const hasFreshDates = /202[4-5]|january|february|march|april|may|june|july|august|september|october|november|december/gi.test(html);
+        const hasFreshDates = /202[4-6]|january|february|march|april|may|june|july|august|september|october|november|december/gi.test(html);
         graafScore += hasFreshDates ? 8 : 2;
         const hasAuthor = /author|by |written by|published by|contributor/gi.test(html);
         graafScore += hasAuthor ? 8 : 0;
@@ -1368,7 +1385,6 @@ app.post('/api/admin/scan-all-agencies', async (req, res) => {
         
         const totalScore = graafScore + craftScore + technicalScore;
         
-        // Update leaderboard
         await pool.query(`
           UPDATE leaderboard 
           SET score = $1, last_scan = NOW() 
@@ -1384,11 +1400,14 @@ app.post('/api/admin/scan-all-agencies', async (req, res) => {
         scanned++;
         console.log(`✅ Updated: ${agency.url} - Score: ${totalScore}`);
         
-        // Small delay to avoid overwhelming the server
         await new Promise(resolve => setTimeout(resolve, 500));
         
       } catch (error) {
-        console.error(`❌ Error scanning ${agency.url}:`, error.message);
+        if (error.name === 'AbortError') {
+          console.error(`⏱️ Timeout scanning ${agency.url}`);
+        } else {
+          console.error(`❌ Error scanning ${agency.url}:`, error.message);
+        }
         failed++;
       }
     }
@@ -1607,7 +1626,6 @@ app.post('/api/leaderboard/submit', async (req, res) => {
     
     const leaderboardEntryId = leaderboardResult.rows[0].id;
     
-    // Try to log submission (optional - won't crash if table doesn't exist)
     try {
       await pool.query(`
         INSERT INTO submission_logs 
@@ -1615,7 +1633,7 @@ app.post('/api/leaderboard/submit', async (req, res) => {
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       `, [url, company_name, ip, country, score, 'api', 'approved', leaderboardEntryId]);
     } catch (logError) {
-      console.log('Note: submission_logs table not found, skipping log');
+      console.log('Note: submission_logs insert skipped');
     }
     
     const today_date = new Date().toISOString().split('T')[0];
@@ -1639,13 +1657,19 @@ app.post('/api/leaderboard/submit', async (req, res) => {
 });
 
 // ============================================
-// PUBLIC SCANNER API
+// PUBLIC SCANNER API - ✅ FIXED: proper AbortController timeout
 // ============================================
 app.post('/api/scan', async (req, res) => {
   const { url, shareKey } = req.body;
   
   if (!url) {
-    return res.status(400).json({ error: 'URL required' });
+    return res.status(400).json({ success: false, error: 'URL required' });
+  }
+  
+  // Validate URL format
+  let scanUrl = url;
+  if (!scanUrl.startsWith('http://') && !scanUrl.startsWith('https://')) {
+    scanUrl = 'https://' + scanUrl;
   }
   
   // ============================================
@@ -1668,7 +1692,6 @@ app.post('/api/scan', async (req, res) => {
       
       const shareLink = shareLinkResult.rows[0];
       
-      // Check if expired
       if (new Date(shareLink.expires_at) < new Date()) {
         return res.status(403).json({ 
           success: false,
@@ -1678,7 +1701,6 @@ app.post('/api/scan', async (req, res) => {
         });
       }
       
-      // Check if inactive
       if (shareLink.status !== 'active') {
         return res.status(403).json({ 
           success: false,
@@ -1688,7 +1710,6 @@ app.post('/api/scan', async (req, res) => {
         });
       }
       
-      // Check scan limit
       if (shareLink.scans_used >= shareLink.scans_limit) {
         return res.status(403).json({ 
           success: false,
@@ -1711,34 +1732,66 @@ app.post('/api/scan', async (req, res) => {
     }
   }
 
-  
   try {
-    console.log(`🔍 Scanning: ${url}`);
+    console.log(`🔍 Scanning: ${scanUrl}`);
     
-    // ADD CACHE-BUSTING HEADERS
-    const response = await fetch(url, {
-      headers: { 
-        'User-Agent': 'Mozilla/5.0 (ContentScale Scanner)',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      },
-      cache: 'no-store',
-      timeout: 10000
-    });
+    // ✅ FIX: Use AbortController for timeout (Node 18 native fetch does NOT support timeout option)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
+    let response;
+    try {
+      response = await fetch(scanUrl, {
+        signal: controller.signal,
+        headers: { 
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        },
+        redirect: 'follow'
+      });
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        console.error(`⏱️ Scan timeout: ${scanUrl}`);
+        return res.status(408).json({ 
+          success: false, 
+          error: 'Scan timed out — the target URL took too long to respond (15s). Try again or check the URL.' 
+        });
+      }
+      console.error(`❌ Fetch failed for ${scanUrl}:`, fetchError.message);
+      return res.status(400).json({ 
+        success: false, 
+        error: `Cannot reach URL: ${fetchError.message}` 
+      });
+    }
+    
+    clearTimeout(timeoutId);
     
     if (!response.ok) {
-      return res.status(400).json({ error: 'Cannot fetch URL' });
+      console.error(`❌ HTTP ${response.status} for ${scanUrl}`);
+      return res.status(400).json({ 
+        success: false, 
+        error: `Cannot fetch URL — server returned HTTP ${response.status}` 
+      });
     }
     
     const html = await response.text();
+    console.log(`✅ Fetched ${html.length} bytes from ${scanUrl}`);
     
+    // ============================================
+    // SCORING LOGIC
+    // ============================================
+    
+    // GRAAF Score (max 50)
     let graafScore = 0;
     const hasQuotes = /says|according to|expert|quote|told us|founder|ceo|director/gi.test(html);
     graafScore += hasQuotes ? 8 : 0;
     const hasStats = /\d+%|\d+ studies|\d+ research|research shows|\d+ data/gi.test(html);
     graafScore += hasStats ? 8 : 0;
-    const hasFreshDates = /202[4-5]|january|february|march|april|may|june|july|august|september|october|november|december/gi.test(html);
+    const hasFreshDates = /202[4-6]|january|february|march|april|may|june|july|august|september|october|november|december/gi.test(html);
     graafScore += hasFreshDates ? 8 : 2;
     const hasAuthor = /author|by |written by|published by|contributor/gi.test(html);
     graafScore += hasAuthor ? 8 : 0;
@@ -1747,6 +1800,7 @@ app.post('/api/scan', async (req, res) => {
     graafScore += Math.min(18, Math.floor(wordCount / 100));
     graafScore = Math.min(50, graafScore);
     
+    // CRAFT Score (max 30)
     let craftScore = 0;
     const h1s = (html.match(/<h1[^>]*>/gi) || []).length;
     craftScore += h1s === 1 ? 8 : h1s > 1 ? 4 : 2;
@@ -1758,6 +1812,7 @@ app.post('/api/scan', async (req, res) => {
     craftScore += hasLists ? 4 : 0;
     craftScore = Math.min(30, craftScore);
     
+    // Technical Score (max 20)
     let technicalScore = 0;
     const metaDescMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
     const metaDesc = metaDescMatch ? metaDescMatch[1] : null;
@@ -1779,10 +1834,11 @@ app.post('/api/scan', async (req, res) => {
     const totalScore = graafScore + craftScore + technicalScore;
     const quality = totalScore >= 90 ? 'excellent' : totalScore >= 75 ? 'good' : totalScore >= 60 ? 'average' : totalScore >= 45 ? 'below-average' : 'poor';
     
-    // Extended recommendations with actionable details
+    // ============================================
+    // RECOMMENDATIONS
+    // ============================================
     const recommendations = [];
     
-    // GRAAF Framework Recommendations
     if (!hasQuotes) {
       recommendations.push({
         type: 'major',
@@ -1814,11 +1870,11 @@ app.post('/api/scan', async (req, res) => {
         type: 'major',
         category: 'GRAAF - Freshness',
         title: 'Add Freshness Signals',
-        description: 'Include 2025 dates and current month references',
+        description: 'Include 2025/2026 dates and current month references',
         impact: 'Medium',
         points: '+6 points',
-        howToFix: '1. Add "Updated January 2025" badge\n2. Reference current events\n3. Use "2025" in H2/H3 headings',
-        example: 'Title: "SEO Best Practices for 2025" instead of "SEO Best Practices"'
+        howToFix: '1. Add "Updated [Month] 2026" badge\n2. Reference current events\n3. Use "2026" in H2/H3 headings',
+        example: 'Title: "SEO Best Practices for 2026" instead of "SEO Best Practices"'
       });
     }
     
@@ -1848,7 +1904,6 @@ app.post('/api/scan', async (req, res) => {
       });
     }
     
-    // CRAFT Framework Recommendations
     if (h1s !== 1) {
       recommendations.push({
         type: 'quickwin',
@@ -1860,7 +1915,7 @@ app.post('/api/scan', async (req, res) => {
         howToFix: h1s === 0 
           ? '1. Add one <h1> tag at the top of your page\n2. Include your target keyword\n3. Make it 50-60 characters'
           : '1. Keep only the main page title as H1\n2. Change other H1s to H2 or H3\n3. Maintain heading hierarchy',
-        example: '<h1>Ultimate Guide to SEO Content in 2025</h1>'
+        example: '<h1>Ultimate Guide to SEO Content in 2026</h1>'
       });
     }
     
@@ -1890,7 +1945,6 @@ app.post('/api/scan', async (req, res) => {
       });
     }
     
-    // Technical SEO Recommendations
     if (!metaDesc) {
       recommendations.push({
         type: 'quickwin',
@@ -1900,7 +1954,7 @@ app.post('/api/scan', async (req, res) => {
         impact: 'High',
         points: '+2 points',
         howToFix: '1. Write 150-160 characters\n2. Include target keyword\n3. Add compelling call-to-action',
-        example: '<meta name="description" content="Learn SEO content creation with our proven 2025 framework. Boost rankings by 67% in 90 days. Start today!">'
+        example: '<meta name="description" content="Learn SEO content creation with our proven 2026 framework. Boost rankings by 67% in 90 days. Start today!">'
       });
     }
     
@@ -1940,20 +1994,22 @@ app.post('/api/scan', async (req, res) => {
         impact: 'Medium',
         points: '+2 points',
         howToFix: '1. Add descriptive alt text to every image\n2. Include keywords naturally\n3. Describe image content for accessibility',
-        example: '<img src="chart.jpg" alt="SEO ranking factors chart showing top 10 metrics for 2025">'
+        example: '<img src="chart.jpg" alt="SEO ranking factors chart showing top 10 metrics for 2026">'
       });
     }
     
-    // Priority order
     const quickWins = recommendations.filter(r => r.type === 'quickwin');
     const majorImprovements = recommendations.filter(r => r.type === 'major');
     
+    // ============================================
+    // BUILD RESPONSE — flat structure matching frontend expectations
+    // ============================================
     const scanResult = {
       success: true,
-      url,
+      url: scanUrl,
       score: totalScore,
       quality,
-      metrics: {graaf: graafScore, craft: craftScore, technical: technicalScore},
+      metrics: { graaf: graafScore, craft: craftScore, technical: technicalScore },
       breakdown: {
         graaf: {
           total: graafScore, 
@@ -2020,15 +2076,16 @@ app.post('/api/scan', async (req, res) => {
       timestamp: new Date().toISOString()
     };
     
+    // Save scan to database (non-blocking — won't crash scan on DB error)
     try {
       await pool.query(
         `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, breakdown, recommendations, scan_type)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [url, totalScore, quality, graafScore, craftScore, technicalScore, JSON.stringify(scanResult.breakdown), JSON.stringify(scanResult.recommendations), 'manual']
+        [scanUrl, totalScore, quality, graafScore, craftScore, technicalScore, JSON.stringify(scanResult.breakdown), JSON.stringify(scanResult.recommendations), 'manual']
       );
-      console.log(`✅ Scan saved: ${url} (Score: ${totalScore})`);
-    } catch (error) {
-      console.error('DB save error:', error);
+      console.log(`✅ Scan saved: ${scanUrl} (Score: ${totalScore})`);
+    } catch (dbError) {
+      console.error('DB save error (non-fatal):', dbError.message);
     }
 
     // Increment sharelink usage
@@ -2048,7 +2105,7 @@ app.post('/api/scan', async (req, res) => {
     
   } catch (error) {
     console.error('Scan error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -2067,7 +2124,6 @@ app.get('/api/export/scan/:format', async (req, res) => {
     const parsedRecommendations = recommendations ? JSON.parse(decodeURIComponent(recommendations)) : [];
     
     if (format === 'csv') {
-      // Generate CSV
       let csv = 'Category,Title,Description,Impact,Points,How to Fix\n';
       
       if (parsedRecommendations.all) {
@@ -2082,7 +2138,6 @@ app.get('/api/export/scan/:format', async (req, res) => {
       res.send(csv);
       
     } else if (format === 'json') {
-      // Generate JSON
       const exportData = {
         url: decodeURIComponent(url),
         score: parseInt(score),
@@ -2096,7 +2151,6 @@ app.get('/api/export/scan/:format', async (req, res) => {
       res.json(exportData);
       
     } else if (format === 'txt') {
-      // Generate TXT report
       let txt = `ContentScale SEO Scan Report\n`;
       txt += `${'='.repeat(50)}\n\n`;
       txt += `URL: ${decodeURIComponent(url)}\n`;
@@ -2155,7 +2209,6 @@ app.get('/api/export/scan/:format', async (req, res) => {
 // CLAIM PROFILE & EMAIL ENDPOINTS
 // ============================================
 
-// Fill email template with variables
 function fillEmailTemplate(template, variables) {
   let filled = template;
   Object.keys(variables).forEach(key => {
@@ -2165,17 +2218,14 @@ function fillEmailTemplate(template, variables) {
   return filled;
 }
 
-// Send email (mock version - logs to console and database)
 async function sendEmail(to, subject, html, templateName = null) {
   try {
-    // Log email to database
     await pool.query(
       `INSERT INTO email_logs (to_email, subject, template_used, status, sent_at) 
        VALUES ($1, $2, $3, 'sent', NOW())`,
       [to, subject, templateName]
     );
     
-    // For development: log to console
     console.log('📧 EMAIL SENT:', {
       to,
       subject,
@@ -2183,50 +2233,30 @@ async function sendEmail(to, subject, html, templateName = null) {
       preview: html.substring(0, 100) + '...'
     });
     
-    // Uncomment this to send real emails via nodemailer:
-    /*
-    await emailTransporter.sendMail({
-      from: process.env.EMAIL_FROM || 'ContentScale <noreply@contentscale.site>',
-      to,
-      subject,
-      html
-    });
-    */
-    
     return { success: true };
   } catch (error) {
-    // Log failed email
     await pool.query(
       `INSERT INTO email_logs (to_email, subject, template_used, status, error_message, sent_at) 
        VALUES ($1, $2, $3, 'failed', $4, NOW())`,
       [to, subject, templateName, error.message]
-    );
+    ).catch(() => {});
     
     console.error('❌ EMAIL ERROR:', error);
     return { success: false, error: error.message };
   }
 }
 
-// Generate unique opt-out token
 function generateOptOutToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
-// Submit profile claim
 app.post('/api/claim-profile', async (req, res) => {
   try {
     const { 
-      url, 
-      name, 
-      logo_url, 
-      description, 
-      specializations, 
-      country, 
-      agency_size, 
-      contact_email 
+      url, name, logo_url, description, 
+      specializations, country, agency_size, contact_email 
     } = req.body;
     
-    // Validation
     if (!url || !name || !contact_email) {
       return res.status(400).json({ 
         success: false, 
@@ -2234,7 +2264,6 @@ app.post('/api/claim-profile', async (req, res) => {
       });
     }
     
-    // Check if already claimed
     const existing = await pool.query(
       'SELECT * FROM profile_claims WHERE url = $1 AND status != $2',
       [url, 'rejected']
@@ -2247,43 +2276,13 @@ app.post('/api/claim-profile', async (req, res) => {
       });
     }
     
-    // Insert claim
     const result = await pool.query(
       `INSERT INTO profile_claims 
       (url, name, logo_url, description, specializations, country, agency_size, contact_email, status, created_at) 
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', NOW()) 
       RETURNING *`,
-      [
-        url, 
-        name, 
-        logo_url, 
-        description, 
-        JSON.stringify(specializations), 
-        country, 
-        agency_size, 
-        contact_email
-      ]
+      [url, name, logo_url, description, JSON.stringify(specializations), country, agency_size, contact_email]
     );
-    
-    // Send confirmation email
-    const emailTemplate = await pool.query(
-      'SELECT * FROM email_templates WHERE name = $1',
-      ['claim_submitted']
-    );
-    
-    if (emailTemplate.rows.length > 0) {
-      const html = fillEmailTemplate(emailTemplate.rows[0].body, {
-        agency_name: name,
-        url: url
-      });
-      
-      await sendEmail(
-        contact_email,
-        emailTemplate.rows[0].subject,
-        html,
-        'claim_submitted'
-      );
-    }
     
     res.json({ 
       success: true, 
@@ -2293,26 +2292,18 @@ app.post('/api/claim-profile', async (req, res) => {
     
   } catch (error) {
     console.error('Claim profile error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Public opt-out
 app.post('/api/optout', async (req, res) => {
   try {
     const { token, reason } = req.body;
     
     if (!token) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Token is required' 
-      });
+      return res.status(400).json({ success: false, error: 'Token is required' });
     }
     
-    // Find opt-out request by token
     const result = await pool.query(
       `UPDATE optout_requests 
        SET processed = true, processed_at = NOW() 
@@ -2329,8 +2320,6 @@ app.post('/api/optout', async (req, res) => {
     }
     
     const url = result.rows[0].url;
-    
-    // Remove from leaderboard
     await pool.query('DELETE FROM leaderboard WHERE url = $1', [url]);
     
     res.json({ 
@@ -2340,238 +2329,130 @@ app.post('/api/optout', async (req, res) => {
     
   } catch (error) {
     console.error('Opt-out error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Get pending claims
 app.get('/api/admin/claims/pending', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT * FROM profile_claims 
-       WHERE status = 'pending' 
-       ORDER BY created_at DESC`
+      `SELECT * FROM profile_claims WHERE status = 'pending' ORDER BY created_at DESC`
     );
-    
-    res.json({ 
-      success: true, 
-      claims: result.rows 
-    });
-    
+    res.json({ success: true, claims: result.rows });
   } catch (error) {
-    console.error('Get claims error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Approve claim
 app.post('/api/admin/claims/approve/:claim_id', async (req, res) => {
   try {
     const { claim_id } = req.params;
     
-    // Get claim details
-    const claim = await pool.query(
-      'SELECT * FROM profile_claims WHERE id = $1',
-      [claim_id]
-    );
+    const claim = await pool.query('SELECT * FROM profile_claims WHERE id = $1', [claim_id]);
     
     if (claim.rows.length === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Claim not found' 
-      });
+      return res.status(404).json({ success: false, error: 'Claim not found' });
     }
     
     const claimData = claim.rows[0];
     
-    // Update claim status
     await pool.query(
-      `UPDATE profile_claims 
-       SET status = 'approved', reviewed_at = NOW() 
-       WHERE id = $1`,
+      `UPDATE profile_claims SET status = 'approved', reviewed_at = NOW() WHERE id = $1`,
       [claim_id]
     );
     
-    // Update leaderboard entry
     await pool.query(
       `UPDATE leaderboard 
-       SET claimed = true,
-           logo_url = $1,
-           description = $2,
-           specializations = $3,
-           agency_size = $4,
-           contact_email = $5,
-           verified = true
+       SET claimed = true, logo_url = $1, description = $2, specializations = $3, 
+           agency_size = $4, contact_email = $5, verified = true
        WHERE url = $6`,
-      [
-        claimData.logo_url,
-        claimData.description,
-        claimData.specializations,
-        claimData.agency_size,
-        claimData.contact_email,
-        claimData.url
-      ]
+      [claimData.logo_url, claimData.description, claimData.specializations, 
+       claimData.agency_size, claimData.contact_email, claimData.url]
     );
     
-    // Send approval email
-    const emailTemplate = await pool.query(
-      'SELECT * FROM email_templates WHERE name = $1',
-      ['claim_approved']
-    );
-    
-    if (emailTemplate.rows.length > 0 && claimData.contact_email) {
-      const html = fillEmailTemplate(emailTemplate.rows[0].body, {
-        agency_name: claimData.name,
-        url: claimData.url,
-        specializations: JSON.parse(claimData.specializations || '[]').join(', '),
-        leaderboard_url: `${process.env.BASE_URL || 'https://contentscale.site'}/leaderboard`
-      });
-      
-      await sendEmail(
-        claimData.contact_email,
-        emailTemplate.rows[0].subject,
-        html,
-        'claim_approved'
+    if (claimData.contact_email) {
+      const emailTemplate = await pool.query(
+        'SELECT * FROM email_templates WHERE name = $1', ['claim_approved']
       );
+      
+      if (emailTemplate.rows.length > 0) {
+        const html = fillEmailTemplate(emailTemplate.rows[0].body, {
+          agency_name: claimData.name,
+          url: claimData.url,
+          specializations: JSON.parse(claimData.specializations || '[]').join(', '),
+          leaderboard_url: `${process.env.BASE_URL || 'https://contentscale.site'}/leaderboard`
+        });
+        
+        await sendEmail(claimData.contact_email, emailTemplate.rows[0].subject, html, 'claim_approved');
+      }
     }
     
-    res.json({ 
-      success: true, 
-      message: 'Claim approved and profile updated' 
-    });
+    res.json({ success: true, message: 'Claim approved and profile updated' });
     
   } catch (error) {
     console.error('Approve claim error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Reject claim
 app.post('/api/admin/claims/reject/:claim_id', async (req, res) => {
   try {
     const { claim_id } = req.params;
-    const { reason } = req.body;
-    
     await pool.query(
-      `UPDATE profile_claims 
-       SET status = 'rejected', reviewed_at = NOW() 
-       WHERE id = $1`,
+      `UPDATE profile_claims SET status = 'rejected', reviewed_at = NOW() WHERE id = $1`,
       [claim_id]
     );
-    
-    res.json({ 
-      success: true, 
-      message: 'Claim rejected' 
-    });
-    
+    res.json({ success: true, message: 'Claim rejected' });
   } catch (error) {
-    console.error('Reject claim error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Get email templates
 app.get('/api/admin/email-templates', async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT * FROM email_templates ORDER BY name'
-    );
-    
-    res.json({ 
-      success: true, 
-      templates: result.rows 
-    });
-    
+    const result = await pool.query('SELECT * FROM email_templates ORDER BY name');
+    res.json({ success: true, templates: result.rows });
   } catch (error) {
-    console.error('Get templates error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Send bulk emails
 app.post('/api/admin/send-bulk-email', async (req, res) => {
   try {
     const { template_name, recipients } = req.body;
     
-    // Get template
     const template = await pool.query(
-      'SELECT * FROM email_templates WHERE name = $1',
-      [template_name]
+      'SELECT * FROM email_templates WHERE name = $1', [template_name]
     );
     
     if (template.rows.length === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Template not found' 
-      });
+      return res.status(404).json({ success: false, error: 'Template not found' });
     }
     
     const emailTemplate = template.rows[0];
     let sent = 0;
     let failed = 0;
     
-    // Send to each recipient
     for (const recipient of recipients) {
       const html = fillEmailTemplate(emailTemplate.body, recipient.variables || {});
-      
-      const result = await sendEmail(
-        recipient.email,
-        emailTemplate.subject,
-        html,
-        template_name
-      );
-      
-      if (result.success) {
-        sent++;
-      } else {
-        failed++;
-      }
-      
-      // Small delay to avoid rate limits
+      const result = await sendEmail(recipient.email, emailTemplate.subject, html, template_name);
+      if (result.success) { sent++; } else { failed++; }
       await new Promise(resolve => setTimeout(resolve, 100));
     }
     
-    res.json({ 
-      success: true, 
-      message: `Emails sent: ${sent}, Failed: ${failed}`,
-      sent,
-      failed
-    });
+    res.json({ success: true, message: `Emails sent: ${sent}, Failed: ${failed}`, sent, failed });
     
   } catch (error) {
-    console.error('Bulk email error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Create opt-out request (admin manually adds agency to optout)
 app.post('/api/admin/optout/create', async (req, res) => {
   try {
     const { url, reason } = req.body;
     
     if (!url) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'URL is required' 
-      });
+      return res.status(400).json({ success: false, error: 'URL is required' });
     }
     
     const token = generateOptOutToken();
@@ -2582,344 +2463,140 @@ app.post('/api/admin/optout/create', async (req, res) => {
       [url, reason || 'Admin request', token]
     );
     
-    // Remove from leaderboard
     await pool.query('DELETE FROM leaderboard WHERE url = $1', [url]);
     
-    res.json({ 
-      success: true, 
-      message: 'Agency removed from leaderboard' 
-    });
+    res.json({ success: true, message: 'Agency removed from leaderboard' });
     
   } catch (error) {
-    console.error('Create opt-out error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Get all opt-out requests
 app.get('/api/admin/optouts', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT * FROM optout_requests 
-       ORDER BY created_at DESC 
-       LIMIT 100`
+      `SELECT * FROM optout_requests ORDER BY created_at DESC LIMIT 100`
     );
-    
-    res.json({ 
-      success: true, 
-      requests: result.rows 
-    });
-    
+    res.json({ success: true, requests: result.rows });
   } catch (error) {
-    console.error('Get opt-outs error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Get email logs
 app.get('/api/admin/email-logs', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 100;
-    
     const result = await pool.query(
-      `SELECT * FROM email_logs 
-       ORDER BY sent_at DESC 
-       LIMIT $1`,
-      [limit]
+      `SELECT * FROM email_logs ORDER BY sent_at DESC LIMIT $1`, [limit]
     );
-    
-    res.json({ 
-      success: true, 
-      logs: result.rows 
-    });
-    
+    res.json({ success: true, logs: result.rows });
   } catch (error) {
-    console.error('Get email logs error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
-
-// Send leaderboard addition email (helper function)
-async function sendLeaderboardAdditionEmail(agencyData) {
-  try {
-    const template = await pool.query(
-      'SELECT * FROM email_templates WHERE name = $1',
-      ['leaderboard_addition']
-    );
-    
-    if (template.rows.length === 0) {
-      console.log('❌ Template "leaderboard_addition" not found');
-      return;
-    }
-    
-    const optoutToken = generateOptOutToken();
-    
-    // Create opt-out request
-    await pool.query(
-      `INSERT INTO optout_requests (url, token, created_at, processed) 
-       VALUES ($1, $2, NOW(), false)`,
-      [agencyData.url, optoutToken]
-    );
-    
-    const variables = {
-      agency_name: agencyData.name || 'Agency',
-      score: agencyData.score || 0,
-      position: agencyData.position || '?',
-      country: agencyData.country || 'Global',
-      url: agencyData.url,
-      claim_url: `${process.env.BASE_URL || 'https://contentscale.site'}/leaderboard?claim=${encodeURIComponent(agencyData.url)}`,
-      optout_url: `${process.env.BASE_URL || 'https://contentscale.site'}/optout?token=${optoutToken}`
-    };
-    
-    const html = fillEmailTemplate(template.rows[0].body, variables);
-    
-    // Try to find email for this agency
-    let toEmail = agencyData.contact_email;
-    
-    if (!toEmail) {
-      // Try to extract from URL or use placeholder
-      console.log(`⚠️ No email found for ${agencyData.url}, skipping email`);
-      return;
-    }
-    
-    await sendEmail(
-      toEmail,
-      template.rows[0].subject,
-      html,
-      'leaderboard_addition'
-    );
-    
-    console.log(`✅ Leaderboard addition email sent to ${toEmail}`);
-    
-  } catch (error) {
-    console.error('❌ Error sending leaderboard addition email:', error);
-  }
-}
 
 // ============================================
 // NOTIFICATION ENDPOINTS
 // ============================================
-
-// Get all notifications
 app.get('/api/admin/notifications', async (req, res) => {
   try {
     const filter = req.query.filter || 'all';
     let query = 'SELECT * FROM notifications';
     let params = [];
     
-    if (filter !== 'all') {
-      switch(filter) {
-        case 'unread':
-          query += ' WHERE is_read = FALSE';
-          break;
-        case 'read':
-          query += ' WHERE is_read = TRUE';
-          break;
-        case 'high':
-          query += ' WHERE priority IN ($1, $2)';
-          params = ['high', 'urgent'];
-          break;
-        case 'system':
-          query += ' WHERE type = $1';
-          params = ['system'];
-          break;
-        case 'user':
-          query += ' WHERE type != $1';
-          params = ['system'];
-          break;
-      }
+    if (filter === 'unread') {
+      query += ' WHERE is_read = FALSE';
+    } else if (filter === 'read') {
+      query += ' WHERE is_read = TRUE';
+    } else if (filter === 'high') {
+      query += ` WHERE priority IN ('high', 'urgent')`;
+    } else if (filter === 'system') {
+      query += ` WHERE type = 'system'`;
+    } else if (filter === 'user') {
+      query += ` WHERE type != 'system'`;
     }
     
     query += ' ORDER BY created_at DESC LIMIT 100';
     
     const result = await pool.query(query, params);
-    
-    res.json({ 
-      success: true, 
-      notifications: result.rows 
-    });
+    res.json({ success: true, notifications: result.rows });
     
   } catch (error) {
-    console.error('Get notifications error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Get unread notifications count
 app.get('/api/admin/notifications/unread-count', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT COUNT(*) as count FROM notifications WHERE is_read = FALSE`
     );
-    
-    res.json({ 
-      success: true, 
-      count: parseInt(result.rows[0].count) || 0
-    });
-    
+    res.json({ success: true, count: parseInt(result.rows[0].count) || 0 });
   } catch (error) {
     res.json({ success: true, count: 0 });
   }
 });
 
-// Mark notification as read
 app.post('/api/admin/notifications/:id/read', async (req, res) => {
   try {
-    const { id } = req.params;
-    
     await pool.query(
-      `UPDATE notifications 
-       SET is_read = TRUE, read_at = NOW() 
-       WHERE id = $1`,
-      [id]
+      `UPDATE notifications SET is_read = TRUE, read_at = NOW() WHERE id = $1`,
+      [req.params.id]
     );
-    
-    res.json({ 
-      success: true, 
-      message: 'Notification marked as read'
-    });
-    
+    res.json({ success: true, message: 'Notification marked as read' });
   } catch (error) {
-    console.error('Mark read error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Mark all notifications as read
 app.post('/api/admin/notifications/mark-all-read', async (req, res) => {
   try {
     await pool.query(
-      `UPDATE notifications 
-       SET is_read = TRUE, read_at = NOW() 
-       WHERE is_read = FALSE`
+      `UPDATE notifications SET is_read = TRUE, read_at = NOW() WHERE is_read = FALSE`
     );
-    
-    res.json({ 
-      success: true, 
-      message: 'All notifications marked as read'
-    });
-    
+    res.json({ success: true, message: 'All notifications marked as read' });
   } catch (error) {
-    console.error('Mark all read error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Create new notification
 app.post('/api/admin/notifications', async (req, res) => {
   try {
     const { type, title, message, link, priority, created_for } = req.body;
     
     if (!title || !message) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Title and message are required' 
-      });
+      return res.status(400).json({ success: false, error: 'Title and message are required' });
     }
     
     const result = await pool.query(
       `INSERT INTO notifications (type, title, message, link, priority, created_for, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, NOW())
        RETURNING *`,
-      [
-        type || 'system',
-        title,
-        message,
-        link || null,
-        priority || 'normal',
-        created_for || 'admin'
-      ]
+      [type || 'system', title, message, link || null, priority || 'normal', created_for || 'admin']
     );
     
-    res.json({ 
-      success: true, 
-      notification: result.rows[0],
-      message: 'Notification created'
-    });
+    res.json({ success: true, notification: result.rows[0], message: 'Notification created' });
     
   } catch (error) {
-    console.error('Create notification error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Delete notification
 app.delete('/api/admin/notifications/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    
-    await pool.query('DELETE FROM notifications WHERE id = $1', [id]);
-    
-    res.json({ 
-      success: true, 
-      message: 'Notification deleted'
-    });
-    
+    await pool.query('DELETE FROM notifications WHERE id = $1', [req.params.id]);
+    res.json({ success: true, message: 'Notification deleted' });
   } catch (error) {
-    console.error('Delete notification error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Clear all read notifications
 app.delete('/api/admin/notifications/clear-read', async (req, res) => {
   try {
     await pool.query('DELETE FROM notifications WHERE is_read = TRUE');
-    
-    res.json({ 
-      success: true, 
-      message: 'All read notifications cleared'
-    });
-    
+    res.json({ success: true, message: 'All read notifications cleared' });
   } catch (error) {
-    console.error('Clear read error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
-  }
-});
-
-// Clear all read notifications
-app.delete('/api/admin/notifications/clear-read', async (req, res) => {
-  try {
-    await pool.query('DELETE FROM notifications WHERE is_read = TRUE');
-    
-    res.json({ 
-      success: true, 
-      message: 'All read notifications cleared'
-    });
-    
-  } catch (error) {
-    console.error('Clear read error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
