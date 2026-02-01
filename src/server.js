@@ -42,6 +42,188 @@ if (process.env.DATABASE_URL) {
 
 const pool = new Pool(dbConfig);
 
+
+// ============================================
+// AI SCORING — CACHE + HELPERS
+// ============================================
+const scanCache = new Map();
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+
+function hashContent(html) {
+  return crypto.createHash('sha256').update(html).digest('hex');
+}
+
+function extractContentForAI(html) {
+  let processed = html;
+  // Preserve heading structure as markers
+  processed = processed.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, '\n[H1]: $1\n');
+  processed = processed.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, '\n[H2]: $1\n');
+  processed = processed.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, '\n[H3]: $1\n');
+  processed = processed.replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, '\n[H4]: $1\n');
+  // Mark list items
+  processed = processed.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '\n• $1\n');
+  // Strip remaining tags
+  processed = processed.replace(/<[^>]*>/g, ' ');
+  // Clean whitespace
+  processed = processed.replace(/[ \t]+/g, ' ').replace(/\n\s*\n/g, '\n').trim();
+  // Cap at 12K chars (token efficiency)
+  if (processed.length > 12000) {
+    processed = processed.substring(0, 12000) + '\n[...content truncated...]';
+  }
+  const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
+  const title = titleMatch ? titleMatch[1].trim() : '';
+  return { title, content: processed };
+}
+
+const AI_SCORING_PROMPT = `You are a strict SEO content quality scorer. Analyze the content below using the GRAAF and CRAFT frameworks.
+
+BE STRICT. Scores must be earned. A mediocre page scores 35-55 (GRAAF+CRAFT). Good = 60-70. Exceptional = 70+. Do NOT inflate.
+
+GRAAF SCORES (max 50 total):
+
+Credibility (max 16):
+  13-16: Multiple expert quotes with FULL attribution (name + title + company). Author has verifiable credentials and social proof.
+  9-12: At least one properly attributed quote. Author named with some credentials.
+  5-8: Quotes exist but attribution is vague (missing name or title). Or author mentioned without credentials.
+  0-4: No expert quotes at all. No identifiable author.
+
+Relevance (max 18):
+  15-18: Deep, specific, comprehensive. Unique insights not found elsewhere. 1500+ substantive words.
+  10-14: Good topical depth. Some original specificity. 800-1500 words.
+  5-9: Moderate coverage. Somewhat generic or surface-level. 400-800 words.
+  0-4: Thin or superficial content. Under 400 words or extremely generic.
+
+Accuracy (max 8):
+  7-8: Multiple statistics with clear, credible source citations. Data is recent and verifiable.
+  5-6: Some statistics present but sources are vague, missing, or hard to verify.
+  2-4: One or two numbers mentioned without real data or sourcing behind them.
+  0-1: No statistics, data, or factual claims with backing.
+
+Freshness (max 8):
+  7-8: Clear 2025-2026 publication or update dates. References current trends or events. Active freshness signals.
+  5-6: Some recent dates (2024-2025) present but not prominently displayed or inconsistent.
+  2-4: Dates present but older (2022-2023) or the content feels dated.
+  0-1: No date signals whatsoever, or content is clearly outdated.
+
+CRAFT SCORES (max 30 total):
+
+Heading Structure (max 8):
+  7-8: Single, clear H1 with strong primary keyword. Professional and descriptive title.
+  4-6: H1 is present but keyword usage is weak, or the title is generic/vague.
+  0-3: Multiple H1 tags, missing H1 entirely, or H1 is very poor.
+
+Subheadings (max 10):
+  8-10: 5 or more H2/H3 subheadings with a clear logical hierarchy. Keywords naturally included.
+  5-7: 3-4 subheadings present with a reasonable but imperfect structure.
+  2-4: Only 1-2 subheadings. Structure is minimal.
+  0-1: No subheadings at all.
+
+Paragraphs (max 8):
+  7-8: Well-structured paragraphs with good flow between ideas. Varied paragraph length. Easy to read.
+  4-6: Paragraphs are present but some are excessively long or the text feels choppy.
+  1-3: Very few paragraphs, or the text is a wall-of-text with no clear breaks.
+  0: No discernible paragraph structure.
+
+Lists (max 4):
+  3-4: Good, purposeful use of ordered or unordered lists that genuinely enhance scannability.
+  1-2: Some lists present but used minimally or ineffectively.
+  0: No lists anywhere in the content.
+
+CRITICAL RULES:
+- Score ONLY what is actually present in the content. Never assume, infer, or give benefit of the doubt.
+- Every sub-score MUST be a whole number within its stated maximum.
+- Generate exactly 3-6 recommendations targeting the weakest scoring areas.
+- Recommendations must be specific to THIS content, not generic advice.
+
+Return ONLY this JSON structure, no other text, no markdown fences:
+{
+  "graaf": { "credibility": N, "relevance": N, "accuracy": N, "freshness": N },
+  "craft": { "heading_structure": N, "subheadings": N, "paragraphs": N, "lists": N },
+  "recommendations": [
+    {
+      "type": "major or quickwin",
+      "category": "e.g. GRAAF - Credibility",
+      "title": "Short action title",
+      "description": "What is wrong or missing on this specific page",
+      "impact": "High or Medium or Low",
+      "points": "+N points",
+      "howToFix": "1. First step\n2. Second step\n3. Third step",
+      "example": "A concrete example of what good looks like"
+    }
+  ]
+}`;
+
+async function scoreWithAI(contentForAI) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 2000,
+        temperature: 0,
+        messages: [{
+          role: 'user',
+          content: AI_SCORING_PROMPT + '\n\nCONTENT TO SCORE:\nTitle: ' + contentForAI.title + '\n\n' + contentForAI.content
+        }]
+      })
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error('Anthropic ' + response.status + ': ' + errText.substring(0, 200));
+    }
+
+    const data = await response.json();
+    const text = data.content[0].text;
+
+    // Strip markdown fences if present
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON in AI response');
+
+    return JSON.parse(jsonMatch[0]);
+
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+}
+
+function validateAIScores(ai) {
+  if (!ai || !ai.graaf || !ai.craft) return false;
+
+  const checks = [
+    [ai.graaf.credibility, 0, 16],
+    [ai.graaf.relevance, 0, 18],
+    [ai.graaf.accuracy, 0, 8],
+    [ai.graaf.freshness, 0, 8],
+    [ai.craft.heading_structure, 0, 8],
+    [ai.craft.subheadings, 0, 10],
+    [ai.craft.paragraphs, 0, 8],
+    [ai.craft.lists, 0, 4]
+  ];
+
+  for (const [val, min, max] of checks) {
+    if (val === undefined || val === null) return false;
+    if (!Number.isInteger(val)) return false;
+    if (val < min || val > max) return false;
+  }
+
+  return true;
+}
+
+
+
 // Test database connection
 pool.connect((err, client, release) => {
   if (err) {
@@ -1282,7 +1464,7 @@ app.post('/api/admin/leaderboard/bulk-delete', async (req, res) => {
 });
 
 // ============================================
-// SCAN ALL AGENCIES IN LEADERBOARD
+// SCAN ALL AGENCIES IN LEADERBOARD — AI-POWERED
 // ============================================
 app.post('/api/admin/scan-all-agencies', async (req, res) => {
   try {
@@ -1292,9 +1474,9 @@ app.post('/api/admin/scan-all-agencies', async (req, res) => {
       WHERE is_opted_out = FALSE 
       ORDER BY id
     `);
-    
+
     const agencies = result.rows;
-    
+
     if (agencies.length === 0) {
       return res.json({ 
         success: true, 
@@ -1303,21 +1485,20 @@ app.post('/api/admin/scan-all-agencies', async (req, res) => {
         failed: 0
       });
     }
-    
+
     let scanned = 0;
     let failed = 0;
     const updates = [];
-    
-    console.log(`🔄 Starting scan of ${agencies.length} agencies...`);
-    
+
+    console.log(`🔄 Starting AI scan of ${agencies.length} agencies...`);
+
     for (const agency of agencies) {
       try {
         console.log(`🔍 Scanning: ${agency.url}`);
-        
-        // ✅ FIX: AbortController timeout instead of invalid timeout option
+
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 12000);
-        
+
         const response = await fetch(agency.url, {
           signal: controller.signal,
           headers: { 
@@ -1326,52 +1507,25 @@ app.post('/api/admin/scan-all-agencies', async (req, res) => {
           },
           redirect: 'follow'
         });
-        
+
         clearTimeout(timeoutId);
-        
+
         if (!response.ok) {
-          console.log(`❌ Failed to fetch: ${agency.url} (HTTP ${response.status})`);
+          console.log(`❌ Failed: ${agency.url} (HTTP ${response.status})`);
           failed++;
           continue;
         }
-        
+
         const html = await response.text();
-        
-        // Calculate GRAAF score
-        let graafScore = 0;
-        const hasQuotes = /says|according to|expert|quote|told us|founder|ceo|director/gi.test(html);
-        graafScore += hasQuotes ? 8 : 0;
-        const hasStats = /\d+%|\d+ studies|\d+ research|research shows|\d+ data/gi.test(html);
-        graafScore += hasStats ? 8 : 0;
-        const hasFreshDates = /202[4-6]|january|february|march|april|may|june|july|august|september|october|november|december/gi.test(html);
-        graafScore += hasFreshDates ? 8 : 2;
-        const hasAuthor = /author|by |written by|published by|contributor/gi.test(html);
-        graafScore += hasAuthor ? 8 : 0;
-        const textContent = html.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(w => w.length > 0);
-        const wordCount = textContent.length;
-        graafScore += Math.min(18, Math.floor(wordCount / 100));
-        graafScore = Math.min(50, graafScore);
-        
-        // Calculate CRAFT score
-        let craftScore = 0;
-        const h1s = (html.match(/<h1[^>]*>/gi) || []).length;
-        craftScore += h1s === 1 ? 8 : h1s > 1 ? 4 : 2;
-        const h2h3s = (html.match(/<h2[^>]*>|<h3[^>]*>/gi) || []).length;
-        craftScore += Math.min(10, h2h3s * 2);
-        const paragraphs = (html.match(/<p[^>]*>/gi) || []).length;
-        craftScore += Math.min(8, Math.floor(paragraphs / 3));
-        const hasLists = /<ul[^>]*>|<ol[^>]*>/gi.test(html);
-        craftScore += hasLists ? 4 : 0;
-        craftScore = Math.min(30, craftScore);
-        
-        // Calculate Technical score
+
+        // === TECHNICAL SCORE (regex — deterministic) ===
         let technicalScore = 0;
         const metaDescMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
         const metaDesc = metaDescMatch ? metaDescMatch[1] : null;
-        technicalScore += metaDesc && metaDesc.length > 50 ? 4 : 2;
+        technicalScore += metaDesc && metaDesc.length > 50 ? 4 : metaDesc ? 2 : 0;
         const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
-        const title = titleMatch ? titleMatch[1] : null;
-        technicalScore += title && title.length > 30 ? 4 : 2;
+        const pageTitle = titleMatch ? titleMatch[1] : null;
+        technicalScore += pageTitle && pageTitle.length > 30 ? 4 : pageTitle ? 2 : 0;
         const allImages = (html.match(/<img[^>]*>/gi) || []).length;
         const imagesWithAlt = (html.match(/<img[^>]*alt="/gi) || []).length;
         if (allImages > 0) {
@@ -1382,55 +1536,107 @@ app.post('/api/admin/scan-all-agencies', async (req, res) => {
         const hasSchema = /"@context"|"@type"/gi.test(html);
         technicalScore += hasSchema ? 3 : 0;
         technicalScore = Math.min(20, technicalScore);
-        
+
+        // === AI SCORING (GRAAF + CRAFT) with cache ===
+        let graafScore, craftScore;
+        const contentHash = hashContent(html);
+        const cached = scanCache.get(contentHash);
+
+        if (cached && (Date.now() - cached.timestamp) < CACHE_TTL_MS) {
+          graafScore = cached.graafScore;
+          craftScore = cached.craftScore;
+          console.log(`  📦 Cache hit: GRAAF=${graafScore} CRAFT=${craftScore}`);
+        } else {
+          try {
+            if (!process.env.ANTHROPIC_API_KEY) {
+              throw new Error('ANTHROPIC_API_KEY not set');
+            }
+            const contentForAI = extractContentForAI(html);
+            const aiResult = await scoreWithAI(contentForAI);
+
+            if (!validateAIScores(aiResult)) {
+              throw new Error('AI scores failed validation');
+            }
+
+            graafScore = aiResult.graaf.credibility + aiResult.graaf.relevance + aiResult.graaf.accuracy + aiResult.graaf.freshness;
+            craftScore = aiResult.craft.heading_structure + aiResult.craft.subheadings + aiResult.craft.paragraphs + aiResult.craft.lists;
+
+            scanCache.set(contentHash, {
+              graafScore, craftScore,
+              graafItems: aiResult.graaf,
+              craftItems: aiResult.craft,
+              recommendations: aiResult.recommendations || [],
+              timestamp: Date.now()
+            });
+
+            console.log(`  🤖 AI scored: GRAAF=${graafScore} CRAFT=${craftScore}`);
+
+          } catch (aiErr) {
+            console.log(`  ⚠️ AI fallback for ${agency.url}: ${aiErr.message}`);
+
+            // Regex fallback
+            const hasQuotes = /says|according to|expert|quote|told us|founder|ceo|director/gi.test(html);
+            const hasStats = /\d+%|\d+ studies|\d+ research|research shows|\d+ data/gi.test(html);
+            const hasFreshDates = /202[4-6]|january|february|march|april|may|june|july|august|september|october|november|december/gi.test(html);
+            const hasAuthor = /author|by |written by|published by|contributor/gi.test(html);
+            const textContent = html.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(w => w.length > 0);
+            const wordCount = textContent.length;
+
+            graafScore = 0;
+            graafScore += hasQuotes ? 8 : 0;
+            graafScore += hasStats ? 8 : 0;
+            graafScore += hasFreshDates ? 8 : 2;
+            graafScore += hasAuthor ? 8 : 0;
+            graafScore += Math.min(18, Math.floor(wordCount / 100));
+            graafScore = Math.min(50, graafScore);
+
+            const h1s = (html.match(/<h1[^>]*>/gi) || []).length;
+            const h2h3s = (html.match(/<h2[^>]*>|<h3[^>]*>/gi) || []).length;
+            const paragraphs = (html.match(/<p[^>]*>/gi) || []).length;
+            const hasLists = /<ul[^>]*>|<ol[^>]*>/gi.test(html);
+
+            craftScore = 0;
+            craftScore += h1s === 1 ? 8 : h1s > 1 ? 4 : 2;
+            craftScore += Math.min(10, h2h3s * 2);
+            craftScore += Math.min(8, Math.floor(paragraphs / 3));
+            craftScore += hasLists ? 4 : 0;
+            craftScore = Math.min(30, craftScore);
+          }
+        }
+
         const totalScore = graafScore + craftScore + technicalScore;
-        
+
         await pool.query(`
           UPDATE leaderboard 
-          SET score = $1, last_scan = NOW() 
-          WHERE id = $2
-        `, [totalScore, agency.id]);
-        
-        updates.push({
-          url: agency.url,
-          company_name: agency.company_name,
-          score: totalScore
-        });
-        
+          SET score = $1, last_scan = NOW(), company_name = COALESCE($2, company_name)
+          WHERE id = $3
+        `, [totalScore, agency.company_name, agency.id]);
+
+        updates.push({ id: agency.id, url: agency.url, score: totalScore });
         scanned++;
-        console.log(`✅ Updated: ${agency.url} - Score: ${totalScore}`);
-        
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
+
       } catch (error) {
-        if (error.name === 'AbortError') {
-          console.error(`⏱️ Timeout scanning ${agency.url}`);
-        } else {
-          console.error(`❌ Error scanning ${agency.url}:`, error.message);
-        }
+        console.log(`❌ Error scanning ${agency.url}: ${error.message}`);
         failed++;
       }
     }
-    
-    console.log(`✅ Scan complete: ${scanned} scanned, ${failed} failed`);
-    
+
+    console.log(`✅ Bulk scan complete: ${scanned} scanned, ${failed} failed`);
+
     res.json({
       success: true,
-      message: `Scanned ${scanned} agencies, ${failed} failed`,
       scanned,
       failed,
-      total: agencies.length,
-      updates
+      updates,
+      message: `Scanned ${scanned} agencies`
     });
-    
+
   } catch (error) {
-    console.error('Scan all agencies error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    console.error('Bulk scan error:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
+
 
 // ============================================
 // PUBLIC LEADERBOARD API
@@ -1657,21 +1863,20 @@ app.post('/api/leaderboard/submit', async (req, res) => {
 });
 
 // ============================================
-// PUBLIC SCANNER API - ✅ FIXED: proper AbortController timeout
+// PUBLIC SCANNER API — AI-POWERED SCORING
 // ============================================
 app.post('/api/scan', async (req, res) => {
   const { url, shareKey } = req.body;
-  
+
   if (!url) {
     return res.status(400).json({ success: false, error: 'URL required' });
   }
-  
-  // Validate URL format
+
   let scanUrl = url;
   if (!scanUrl.startsWith('http://') && !scanUrl.startsWith('https://')) {
     scanUrl = 'https://' + scanUrl;
   }
-  
+
   // ============================================
   // SHARELINK ENFORCEMENT
   // ============================================
@@ -1681,7 +1886,7 @@ app.post('/api/scan', async (req, res) => {
         'SELECT * FROM share_links WHERE share_code = $1',
         [shareKey]
       );
-      
+
       if (shareLinkResult.rows.length === 0) {
         return res.status(403).json({ 
           success: false,
@@ -1689,9 +1894,9 @@ app.post('/api/scan', async (req, res) => {
           limitReached: true
         });
       }
-      
+
       const shareLink = shareLinkResult.rows[0];
-      
+
       if (new Date(shareLink.expires_at) < new Date()) {
         return res.status(403).json({ 
           success: false,
@@ -1700,7 +1905,7 @@ app.post('/api/scan', async (req, res) => {
           whatsappUrl: 'https://wa.me/31628073996?text=Hi%20Ot!%20Mijn%20sharelink%20is%20verlopen.'
         });
       }
-      
+
       if (shareLink.status !== 'active') {
         return res.status(403).json({ 
           success: false,
@@ -1709,7 +1914,7 @@ app.post('/api/scan', async (req, res) => {
           whatsappUrl: 'https://wa.me/31628073996?text=Hi%20Ot!%20Mijn%20sharelink%20is%20niet%20actief.'
         });
       }
-      
+
       if (shareLink.scans_used >= shareLink.scans_limit) {
         return res.status(403).json({ 
           success: false,
@@ -1720,9 +1925,9 @@ app.post('/api/scan', async (req, res) => {
           whatsappUrl: 'https://wa.me/31628073996?text=Hi%20Ot!%20Mijn%20scan%20limiet%20is%20bereikt.%20Kan%20ik%20meer%20scans%20krijgen?'
         });
       }
-      
+
       console.log(`✅ Sharelink valid: ${shareKey} (${shareLink.scans_used + 1}/${shareLink.scans_limit})`);
-      
+
     } catch (error) {
       console.error('Sharelink check error:', error);
       return res.status(500).json({ 
@@ -1734,11 +1939,11 @@ app.post('/api/scan', async (req, res) => {
 
   try {
     console.log(`🔍 Scanning: ${scanUrl}`);
-    
-    // ✅ FIX: Use AbortController for timeout (Node 18 native fetch does NOT support timeout option)
+
+    // === FETCH HTML ===
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-    
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     let response;
     try {
       response = await fetch(scanUrl, {
@@ -1767,9 +1972,9 @@ app.post('/api/scan', async (req, res) => {
         error: `Cannot reach URL: ${fetchError.message}` 
       });
     }
-    
+
     clearTimeout(timeoutId);
-    
+
     if (!response.ok) {
       console.error(`❌ HTTP ${response.status} for ${scanUrl}`);
       return res.status(400).json({ 
@@ -1777,269 +1982,233 @@ app.post('/api/scan', async (req, res) => {
         error: `Cannot fetch URL — server returned HTTP ${response.status}` 
       });
     }
-    
+
     const html = await response.text();
     console.log(`✅ Fetched ${html.length} bytes from ${scanUrl}`);
-    
-    // ============================================
-    // SCORING LOGIC
-    // ============================================
-    
-    // GRAAF Score (max 50)
-    let graafScore = 0;
-    const hasQuotes = /says|according to|expert|quote|told us|founder|ceo|director/gi.test(html);
-    graafScore += hasQuotes ? 8 : 0;
-    const hasStats = /\d+%|\d+ studies|\d+ research|research shows|\d+ data/gi.test(html);
-    graafScore += hasStats ? 8 : 0;
-    const hasFreshDates = /202[4-6]|january|february|march|april|may|june|july|august|september|october|november|december/gi.test(html);
-    graafScore += hasFreshDates ? 8 : 2;
-    const hasAuthor = /author|by |written by|published by|contributor/gi.test(html);
-    graafScore += hasAuthor ? 8 : 0;
-    const textContent = html.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(w => w.length > 0);
-    const wordCount = textContent.length;
-    graafScore += Math.min(18, Math.floor(wordCount / 100));
-    graafScore = Math.min(50, graafScore);
-    
-    // CRAFT Score (max 30)
-    let craftScore = 0;
-    const h1s = (html.match(/<h1[^>]*>/gi) || []).length;
-    craftScore += h1s === 1 ? 8 : h1s > 1 ? 4 : 2;
-    const h2h3s = (html.match(/<h2[^>]*>|<h3[^>]*>/gi) || []).length;
-    craftScore += Math.min(10, h2h3s * 2);
-    const paragraphs = (html.match(/<p[^>]*>/gi) || []).length;
-    craftScore += Math.min(8, Math.floor(paragraphs / 3));
-    const hasLists = /<ul[^>]*>|<ol[^>]*>/gi.test(html);
-    craftScore += hasLists ? 4 : 0;
-    craftScore = Math.min(30, craftScore);
-    
-    // Technical Score (max 20)
+
+    // === TECHNICAL SCORE (regex — always deterministic) ===
     let technicalScore = 0;
+
     const metaDescMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
     const metaDesc = metaDescMatch ? metaDescMatch[1] : null;
-    technicalScore += metaDesc && metaDesc.length > 50 ? 4 : 2;
+    technicalScore += metaDesc && metaDesc.length > 50 ? 4 : metaDesc ? 2 : 0;
+
     const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
     const title = titleMatch ? titleMatch[1] : null;
-    technicalScore += title && title.length > 30 ? 4 : 2;
+    technicalScore += title && title.length > 30 ? 4 : title ? 2 : 0;
+
     const allImages = (html.match(/<img[^>]*>/gi) || []).length;
     const imagesWithAlt = (html.match(/<img[^>]*alt="/gi) || []).length;
     if (allImages > 0) {
       technicalScore += Math.min(4, Math.floor((imagesWithAlt / allImages) * 4));
     }
+
     const hasViewport = /<meta\s+name="viewport"/gi.test(html);
     technicalScore += hasViewport ? 3 : 0;
+
     const hasSchema = /"@context"|"@type"/gi.test(html);
     technicalScore += hasSchema ? 3 : 0;
     technicalScore = Math.min(20, technicalScore);
-    
+
+    // === HTML DETAILS (for response metadata — always computed) ===
+    const textContent = html.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(w => w.length > 0);
+    const wordCount = textContent.length;
+    const h1s = (html.match(/<h1[^>]*>/gi) || []).length;
+    const h2h3s = (html.match(/<h2[^>]*>|<h3[^>]*>/gi) || []).length;
+    const paragraphs = (html.match(/<p[^>]*>/gi) || []).length;
+    const hasLists = /<ul[^>]*>|<ol[^>]*>/gi.test(html);
+    const hasQuotes = /says|according to|expert|quote|told us|founder|ceo|director/gi.test(html);
+    const hasStats = /\d+%|\d+ studies|\d+ research|research shows|\d+ data/gi.test(html);
+    const hasFreshDates = /202[4-6]|january|february|march|april|may|june|july|august|september|october|november|december/gi.test(html);
+    const hasAuthor = /author|by |written by|published by|contributor/gi.test(html);
+
+    // === AI SCORING (GRAAF + CRAFT) — temp:0 = deterministic ===
+    // Same HTML content → same content hash → same cache hit → same score, always.
+    const contentHash = hashContent(html);
+    let graafScore, craftScore, graafItems, craftItems, aiRecommendations, scoringMethod;
+
+    const cached = scanCache.get(contentHash);
+    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL_MS) {
+      console.log(`📦 Cache hit for ${scanUrl}`);
+      graafScore = cached.graafScore;
+      craftScore = cached.craftScore;
+      graafItems = cached.graafItems;
+      craftItems = cached.craftItems;
+      aiRecommendations = cached.recommendations;
+      scoringMethod = 'ai-cached';
+    } else {
+      try {
+        if (!process.env.ANTHROPIC_API_KEY) {
+          throw new Error('ANTHROPIC_API_KEY not configured');
+        }
+
+        const contentForAI = extractContentForAI(html);
+        console.log(`🤖 AI scoring ${scanUrl}...`);
+        const aiResult = await scoreWithAI(contentForAI);
+
+        if (!validateAIScores(aiResult)) {
+          throw new Error('AI scores failed validation');
+        }
+
+        // Normalize: ensure integers, clamp to max
+        graafItems = {
+          credibility: Math.min(16, Math.max(0, Math.round(aiResult.graaf.credibility))),
+          relevance: Math.min(18, Math.max(0, Math.round(aiResult.graaf.relevance))),
+          accuracy: Math.min(8, Math.max(0, Math.round(aiResult.graaf.accuracy))),
+          freshness: Math.min(8, Math.max(0, Math.round(aiResult.graaf.freshness)))
+        };
+        craftItems = {
+          headingStructure: Math.min(8, Math.max(0, Math.round(aiResult.craft.heading_structure))),
+          subheadings: Math.min(10, Math.max(0, Math.round(aiResult.craft.subheadings))),
+          paragraphs: Math.min(8, Math.max(0, Math.round(aiResult.craft.paragraphs))),
+          lists: Math.min(4, Math.max(0, Math.round(aiResult.craft.lists)))
+        };
+
+        graafScore = graafItems.credibility + graafItems.relevance + graafItems.accuracy + graafItems.freshness;
+        craftScore = craftItems.headingStructure + craftItems.subheadings + craftItems.paragraphs + craftItems.lists;
+        aiRecommendations = Array.isArray(aiResult.recommendations) ? aiResult.recommendations : [];
+        scoringMethod = 'ai';
+
+        // Cache — keyed by content hash, so same page content = same score forever
+        scanCache.set(contentHash, {
+          graafScore, craftScore, graafItems, craftItems,
+          recommendations: aiRecommendations,
+          timestamp: Date.now()
+        });
+
+        console.log(`✅ AI scored: GRAAF=${graafScore} CRAFT=${craftScore} (${scoringMethod})`);
+
+      } catch (aiError) {
+        console.error(`⚠️ AI scoring failed, using regex fallback: ${aiError.message}`);
+        scoringMethod = 'fallback';
+
+        // === REGEX FALLBACK for GRAAF ===
+        graafItems = {
+          credibility: (hasQuotes ? 8 : 0) + (hasAuthor ? 8 : 0),
+          relevance: Math.min(18, Math.floor(wordCount / 100)),
+          accuracy: hasStats ? 8 : 0,
+          freshness: hasFreshDates ? 8 : 2
+        };
+        graafScore = graafItems.credibility + graafItems.relevance + graafItems.accuracy + graafItems.freshness;
+        graafScore = Math.min(50, graafScore);
+
+        // === REGEX FALLBACK for CRAFT ===
+        craftItems = {
+          headingStructure: h1s === 1 ? 8 : h1s > 1 ? 4 : 2,
+          subheadings: Math.min(10, h2h3s * 2),
+          paragraphs: Math.min(8, Math.floor(paragraphs / 3)),
+          lists: hasLists ? 4 : 0
+        };
+        craftScore = craftItems.headingStructure + craftItems.subheadings + craftItems.paragraphs + craftItems.lists;
+        craftScore = Math.min(30, craftScore);
+
+        aiRecommendations = [];
+      }
+    }
+
     const totalScore = graafScore + craftScore + technicalScore;
     const quality = totalScore >= 90 ? 'excellent' : totalScore >= 75 ? 'good' : totalScore >= 60 ? 'average' : totalScore >= 45 ? 'below-average' : 'poor';
-    
-    // ============================================
-    // RECOMMENDATIONS
-    // ============================================
-    const recommendations = [];
-    
-    if (!hasQuotes) {
-      recommendations.push({
-        type: 'major',
-        category: 'GRAAF - Credibility',
-        title: 'Add Expert Quotes',
-        description: 'Include 2-3 expert quotes to boost credibility',
-        impact: 'High',
-        points: '+8 points',
-        howToFix: '1. Interview industry experts\n2. Add quotes with full attribution (name, title, company)\n3. Use phrases like "According to [Name], [Title] at [Company]"',
-        example: '"According to John Smith, SEO Director at TechCorp, content quality is the #1 ranking factor in 2025."'
-      });
-    }
-    
-    if (!hasStats) {
-      recommendations.push({
-        type: 'major',
-        category: 'GRAAF - Accuracy',
-        title: 'Add Statistics & Data',
-        description: 'Include research data and verified statistics',
-        impact: 'High',
-        points: '+8 points',
-        howToFix: '1. Find recent research (2024-2025)\n2. Add specific numbers and percentages\n3. Cite sources for all statistics',
-        example: '"According to a 2025 study by HubSpot, 67% of marketers say content quality improved rankings."'
-      });
-    }
-    
-    if (!hasFreshDates) {
-      recommendations.push({
-        type: 'major',
-        category: 'GRAAF - Freshness',
-        title: 'Add Freshness Signals',
-        description: 'Include 2025/2026 dates and current month references',
-        impact: 'Medium',
-        points: '+6 points',
-        howToFix: '1. Add "Updated [Month] 2026" badge\n2. Reference current events\n3. Use "2026" in H2/H3 headings',
-        example: 'Title: "SEO Best Practices for 2026" instead of "SEO Best Practices"'
-      });
-    }
-    
-    if (!hasAuthor) {
-      recommendations.push({
-        type: 'major',
-        category: 'GRAAF - Credibility',
-        title: 'Add Author Bio',
-        description: 'Display author credentials and expertise',
-        impact: 'High',
-        points: '+8 points',
-        howToFix: '1. Add author name and photo\n2. Include credentials and experience\n3. Add social proof (LinkedIn, certifications)',
-        example: 'Written by Jane Doe, SEO Specialist with 10+ years experience, Google Analytics Certified'
-      });
-    }
-    
-    if (wordCount < 500) {
-      recommendations.push({
-        type: 'major',
-        category: 'GRAAF - Actionability',
-        title: 'Expand Content Length',
-        description: `Current: ${wordCount} words. Target: 1000+ words`,
-        impact: 'Medium',
-        points: '+10 points',
-        howToFix: '1. Add step-by-step guides\n2. Include real examples\n3. Add case studies\n4. Create FAQ section',
-        example: 'Add 5-7 detailed how-to steps with screenshots'
-      });
-    }
-    
-    if (h1s !== 1) {
-      recommendations.push({
-        type: 'quickwin',
-        category: 'CRAFT - Format',
-        title: 'Fix H1 Tags',
-        description: `Found ${h1s} H1 tags. Each page should have exactly ONE H1`,
-        impact: 'High',
-        points: h1s === 0 ? '+6 points' : '+4 points',
-        howToFix: h1s === 0 
-          ? '1. Add one <h1> tag at the top of your page\n2. Include your target keyword\n3. Make it 50-60 characters'
-          : '1. Keep only the main page title as H1\n2. Change other H1s to H2 or H3\n3. Maintain heading hierarchy',
-        example: '<h1>Ultimate Guide to SEO Content in 2026</h1>'
-      });
-    }
-    
-    if (h2h3s < 5) {
-      recommendations.push({
-        type: 'quickwin',
-        category: 'CRAFT - Format',
-        title: 'Add More Subheadings',
-        description: `Found ${h2h3s} H2/H3 tags. Add 5+ subheadings for better structure`,
-        impact: 'Medium',
-        points: '+5 points',
-        howToFix: '1. Break content into sections\n2. Use H2 for main sections\n3. Use H3 for sub-sections\n4. Include keywords in headings',
-        example: '<h2>What is SEO Content?</h2>\n<h3>Key Components of SEO Content</h3>'
-      });
-    }
-    
-    if (!hasLists) {
-      recommendations.push({
-        type: 'quickwin',
-        category: 'CRAFT - Format',
-        title: 'Add Lists for Scannability',
-        description: 'No lists found. Add bullet points or numbered lists',
-        impact: 'Medium',
-        points: '+4 points',
-        howToFix: '1. Convert long paragraphs to lists\n2. Use numbered lists for steps\n3. Use bullet points for features',
-        example: '<ul>\n  <li>Benefit 1: Improved rankings</li>\n  <li>Benefit 2: More traffic</li>\n</ul>'
-      });
-    }
-    
+
+    // === TECHNICAL RECOMMENDATIONS (always regex — binary checks) ===
+    const techRecommendations = [];
+
     if (!metaDesc) {
-      recommendations.push({
+      techRecommendations.push({
         type: 'quickwin',
         category: 'Technical SEO',
         title: 'Add Meta Description',
-        description: 'Missing meta description. Critical for click-through rate',
+        description: 'Missing meta description. Critical for search click-through rate.',
         impact: 'High',
+        points: '+4 points',
+        howToFix: '1. Write a 150-160 character description\n2. Include your primary target keyword\n3. Add a compelling call-to-action',
+        example: '<meta name="description" content="Learn proven SEO content strategies with our framework. Boost organic rankings in 90 days. Start your free audit today.">'
+      });
+    } else if (metaDesc.length <= 50) {
+      techRecommendations.push({
+        type: 'quickwin',
+        category: 'Technical SEO',
+        title: 'Expand Meta Description',
+        description: `Current meta description is only ${metaDesc.length} characters. Aim for 150-160.`,
+        impact: 'Medium',
         points: '+2 points',
-        howToFix: '1. Write 150-160 characters\n2. Include target keyword\n3. Add compelling call-to-action',
-        example: '<meta name="description" content="Learn SEO content creation with our proven 2026 framework. Boost rankings by 67% in 90 days. Start today!">'
+        howToFix: '1. Rewrite to 150-160 characters\n2. Include target keyword near the start\n3. End with a clear call-to-action',
+        example: '<meta name="description" content="[Your keyword] guide covering [topic]. Includes [specific value]. [Call to action] — start today.">'
       });
     }
-    
+
     if (!hasViewport) {
-      recommendations.push({
+      techRecommendations.push({
         type: 'quickwin',
         category: 'Technical SEO',
         title: 'Add Mobile Viewport',
-        description: 'Missing viewport meta tag for mobile responsiveness',
+        description: 'Missing viewport meta tag. Required for proper mobile rendering.',
         impact: 'High',
         points: '+3 points',
-        howToFix: '1. Add viewport meta tag to <head>\n2. Test on mobile devices\n3. Ensure responsive design',
+        howToFix: '1. Add the viewport meta tag inside your <head>\n2. Test the page on mobile devices\n3. Verify responsive layout works correctly',
         example: '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
       });
     }
-    
+
     if (!hasSchema) {
-      recommendations.push({
-        type: 'major',
+      techRecommendations.push({
+        type: 'quickwin',
         category: 'Technical SEO',
         title: 'Add Schema Markup',
-        description: 'Implement JSON-LD schema for rich snippets',
+        description: 'No structured data (JSON-LD) found. Schema enables rich snippets in search results.',
         impact: 'Medium',
         points: '+3 points',
-        howToFix: '1. Add Article schema\n2. Add FAQPage schema if you have FAQs\n3. Add HowTo schema for guides\n4. Test with Google Rich Results Test',
-        example: '<script type="application/ld+json">\n{\n  "@context": "https://schema.org",\n  "@type": "Article",\n  "headline": "Your Title"\n}\n</script>'
+        howToFix: '1. Add Article or HowTo schema as JSON-LD\n2. Include headline, author, and datePublished\n3. Test with Google Rich Results Test',
+        example: '<script type="application/ld+json">{ "@context": "https://schema.org", "@type": "Article", "headline": "Your Title", "author": { "@type": "Person", "name": "Author Name" } }</script>'
       });
     }
-    
+
     if (allImages > 0 && imagesWithAlt < allImages) {
-      const missingAlt = allImages - imagesWithAlt;
-      recommendations.push({
+      const missing = allImages - imagesWithAlt;
+      techRecommendations.push({
         type: 'quickwin',
         category: 'Technical SEO',
         title: 'Add Alt Text to Images',
-        description: `${missingAlt} of ${allImages} images missing alt text`,
+        description: `${missing} of ${allImages} images are missing alt text. Required for accessibility and image search.`,
         impact: 'Medium',
         points: '+2 points',
-        howToFix: '1. Add descriptive alt text to every image\n2. Include keywords naturally\n3. Describe image content for accessibility',
-        example: '<img src="chart.jpg" alt="SEO ranking factors chart showing top 10 metrics for 2026">'
+        howToFix: '1. Add descriptive alt text to every image\n2. Include relevant keywords naturally\n3. Describe what the image actually shows',
+        example: '<img src="seo-chart.jpg" alt="SEO ranking improvement chart showing 40% traffic increase over 90 days">'
       });
     }
-    
-    const quickWins = recommendations.filter(r => r.type === 'quickwin');
-    const majorImprovements = recommendations.filter(r => r.type === 'major');
-    
-    // ============================================
-    // BUILD RESPONSE — flat structure matching frontend expectations
-    // ============================================
+
+    // === MERGE AI + TECHNICAL RECOMMENDATIONS ===
+    const allRecommendations = [...(aiRecommendations || []), ...techRecommendations];
+    const quickWins = allRecommendations.filter(r => r.type === 'quickwin');
+    const majorImprovements = allRecommendations.filter(r => r.type === 'major');
+
+    // === BUILD RESPONSE (structure unchanged for frontend compatibility) ===
     const scanResult = {
       success: true,
       url: scanUrl,
       score: totalScore,
       quality,
+      scoring_method: scoringMethod,
       metrics: { graaf: graafScore, craft: craftScore, technical: technicalScore },
       breakdown: {
         graaf: {
-          total: graafScore, 
-          max: 50, 
+          total: graafScore,
+          max: 50,
           percentage: Math.round((graafScore / 50) * 100),
-          items: {
-            credibility: hasQuotes && hasAuthor ? 16 : hasQuotes ? 8 : hasAuthor ? 8 : 0,
-            relevance: Math.min(18, Math.floor(wordCount / 100)),
-            accuracy: hasStats ? 8 : 0,
-            freshness: hasFreshDates ? 8 : 2
-          }
+          items: graafItems
         },
         craft: {
-          total: craftScore, 
-          max: 30, 
+          total: craftScore,
+          max: 30,
           percentage: Math.round((craftScore / 30) * 100),
-          items: {
-            headingStructure: h1s === 1 ? 8 : h1s > 1 ? 4 : 2,
-            subheadings: Math.min(10, h2h3s * 2),
-            paragraphs: Math.min(8, Math.floor(paragraphs / 3)),
-            lists: hasLists ? 4 : 0
-          }
+          items: craftItems
         },
         technical: {
-          total: technicalScore, 
-          max: 20, 
+          total: technicalScore,
+          max: 20,
           percentage: Math.round((technicalScore / 20) * 100),
           items: {
-            metaDescription: metaDesc && metaDesc.length > 50 ? 4 : 2,
-            title: title && title.length > 30 ? 4 : 2,
+            metaDescription: metaDesc && metaDesc.length > 50 ? 4 : metaDesc ? 2 : 0,
+            title: title && title.length > 30 ? 4 : title ? 2 : 0,
             imageAlt: allImages > 0 ? Math.min(4, Math.floor((imagesWithAlt / allImages) * 4)) : 0,
             viewport: hasViewport ? 3 : 0,
             schema: hasSchema ? 3 : 0
@@ -2047,13 +2216,13 @@ app.post('/api/scan', async (req, res) => {
         }
       },
       recommendations: {
-        all: recommendations,
+        all: allRecommendations,
         quickWins: quickWins,
         majorImprovements: majorImprovements,
-        totalRecommendations: recommendations.length,
-        potentialScoreIncrease: recommendations.reduce((sum, r) => {
-          const points = parseInt(r.points.match(/\d+/)?.[0] || 0);
-          return sum + points;
+        totalRecommendations: allRecommendations.length,
+        potentialScoreIncrease: allRecommendations.reduce((sum, r) => {
+          const pts = parseInt((r.points || '0').match(/\d+/)?.[0] || 0);
+          return sum + pts;
         }, 0)
       },
       details: {
@@ -2062,7 +2231,7 @@ app.post('/api/scan', async (req, res) => {
         h2h3Count: h2h3s,
         paragraphCount: paragraphs,
         imageCount: allImages,
-        imagesWithAlt: imagesWithAlt,
+        imagesWithAlt,
         hasQuotes,
         hasStats,
         hasFreshDates,
@@ -2075,15 +2244,15 @@ app.post('/api/scan', async (req, res) => {
       },
       timestamp: new Date().toISOString()
     };
-    
-    // Save scan to database (non-blocking — won't crash scan on DB error)
+
+    // Save to DB (non-blocking)
     try {
       await pool.query(
         `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, breakdown, recommendations, scan_type)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
         [scanUrl, totalScore, quality, graafScore, craftScore, technicalScore, JSON.stringify(scanResult.breakdown), JSON.stringify(scanResult.recommendations), 'manual']
       );
-      console.log(`✅ Scan saved: ${scanUrl} (Score: ${totalScore})`);
+      console.log(`✅ Scan saved: ${scanUrl} (Score: ${totalScore}, Method: ${scoringMethod})`);
     } catch (dbError) {
       console.error('DB save error (non-fatal):', dbError.message);
     }
@@ -2100,14 +2269,15 @@ app.post('/api/scan', async (req, res) => {
         console.error('Sharelink update error:', error);
       }
     }
-    
+
     res.json(scanResult);
-    
+
   } catch (error) {
     console.error('Scan error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
+
 
 // ============================================
 // EXPORT SCAN RESULTS
