@@ -1,2258 +1,1750 @@
-// ============================================
-// CONTENTSCALE SERVER.JS - COMPLETE WITHOUT BCRYPT
-// ============================================
 
-const express = require('express');
-const path = require('path');
-// BCRYPT REMOVED FOR RAILWAY COMPATIBILITY
-const crypto = require('crypto');
-const { Pool } = require('pg');
 
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-// ============================================
-// DATABASE CONFIGURATION
-// ============================================
-let dbConfig;
-
-if (process.env.DATABASE_URL) {
-  const url = new URL(process.env.DATABASE_URL);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GRAAF Framework Scanner for SEO Agencies & Freelancers 2026</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
-  dbConfig = {
-    user: url.username,
-    password: url.password,
-    host: url.hostname,
-    port: url.port || 5432,
-    database: url.pathname.slice(1),
-    ssl: process.env.NODE_ENV === 'production' ? { 
-      rejectUnauthorized: false
-    } : false
-  };
-} else {
-  dbConfig = {
-    host: 'localhost',
-    database: 'contentscale',
-    user: 'postgres',
-    password: 'postgres',
-    port: 5432,
-    ssl: false
-  };
-}
-
-const pool = new Pool(dbConfig);
-
-// Test database connection
-pool.connect((err, client, release) => {
-  if (err) {
-    console.error('❌ Database connection error:', err.message);
-  } else {
-    console.log('✅ Database connected');
-    release();
-    setTimeout(createAllTables, 1000);
-  }
-}); 
-
-// ============================================
-// CREATE ALL TABLES
-// ============================================
-async function createAllTables() {
-  const client = await pool.connect();
-  
-  try {
-    // SUPER ADMINS TABLE
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS super_admins (
-        id SERIAL PRIMARY KEY,
-        username VARCHAR(100) UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
-        full_name VARCHAR(255),
-        email VARCHAR(255),
-        role VARCHAR(50) DEFAULT 'admin',
-        is_active BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMP DEFAULT NOW(),
-        last_login TIMESTAMP
-      )
-    `);
-    
-    // Create default super admin if not exists - NO BCRYPT
-    const adminCheck = await client.query('SELECT COUNT(*) FROM super_admins WHERE username = $1', ['ot']);
-    if (parseInt(adminCheck.rows[0].count) === 0) {
-      await client.query(
-        'INSERT INTO super_admins (username, password_hash, full_name, role) VALUES ($1, $2, $3, $4)',
-        ['ot', 'admin123', 'Super Admin', 'super_admin']
-      );
+  <style>
+    .stat-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      position: relative;
+      overflow: hidden;
+    }
+    .pricing-card {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 2px solid #334155;
+      border-radius: 16px;
+      padding: 32px;
+      transition: all 0.3s;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-height: 550px;
     }
     
-    // AGENCIES TABLE
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS agencies (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        domain VARCHAR(255) NOT NULL,
-        url TEXT,
-        country VARCHAR(10) DEFAULT 'NL',
-        plan VARCHAR(50) DEFAULT 'free',
-        contact_person VARCHAR(255),
-        contact_email VARCHAR(255),
-        admin_key VARCHAR(100) UNIQUE,
-        score INTEGER,
-        company_name TEXT,
-        country_code VARCHAR(2),
-        business_type VARCHAR(50),
-        is_enhanced BOOLEAN DEFAULT FALSE,
-        is_active BOOLEAN DEFAULT TRUE,
-        last_scan TIMESTAMP,
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
+    .pricing-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(139, 92, 246, 0.3);
+      border-color: #8b5cf6;
+    }
     
-    // CLIENTS TABLE
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS clients (
-        id SERIAL PRIMARY KEY,
-        agency_id INTEGER REFERENCES agencies(id) ON DELETE CASCADE,
-        url TEXT NOT NULL,
-        name VARCHAR(255),
-        email VARCHAR(255),
-        scan_count INTEGER DEFAULT 0,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
+    .pricing-card.popular {
+      border-color: #fbbf24;
+      background: linear-gradient(135deg, #1e293b 0%, #2d1f08 100%);
+    }
     
-    // SCANS TABLE
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS scans (
-        id SERIAL PRIMARY KEY,
-        url TEXT NOT NULL,
-        score INTEGER,
-        quality VARCHAR(50),
-        graaf_score INTEGER,
-        craft_score INTEGER,
-        technical_score INTEGER,
-        breakdown JSONB,
-        recommendations JSONB DEFAULT '[]',
-        agency_id INTEGER REFERENCES agencies(id) ON DELETE SET NULL,
-        client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL,
-        client_url TEXT,
-        scan_type VARCHAR(50) DEFAULT 'manual',
-        ip_address TEXT,
-        user_agent TEXT,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-
-    // FIX: Remove the problematic CHECK constraint
-    await client.query(`
-      ALTER TABLE scans DROP CONSTRAINT IF EXISTS scans_scan_type_check
-    `).catch(e => console.log('Constraint already removed or does not exist'));
+    .pricing-card.popular::before {
+      content: '⭐ MOST POPULAR';
+      position: absolute;
+      top: -12px;
+      right: 24px;
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      color: #1e293b;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 800;
+    }
     
-    // SHARE LINKS TABLE
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS share_links (
-        id SERIAL PRIMARY KEY,
-        share_code VARCHAR(100) UNIQUE NOT NULL,
-        agency_id INTEGER REFERENCES agencies(id) ON DELETE CASCADE,
-        client_email VARCHAR(255) NOT NULL,
-        client_name VARCHAR(255),
-        client_company VARCHAR(255),
-        scans_limit INTEGER DEFAULT 5,
-        scans_used INTEGER DEFAULT 0,
-        expires_at TIMESTAMP NOT NULL,
-        status VARCHAR(50) DEFAULT 'active',
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
+    .price-tag {
+      font-size: 48px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
     
-    // LEADERBOARD TABLE - ✅ MET STATUS COLUMN
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS leaderboard (
-        id SERIAL PRIMARY KEY,
-        url TEXT NOT NULL UNIQUE,
-        company_name VARCHAR(255),
-        score INTEGER NOT NULL,
-        country VARCHAR(10) DEFAULT 'NL',
-        status VARCHAR(20) DEFAULT 'pending',
-        business_type VARCHAR(50),
-        is_verified BOOLEAN DEFAULT FALSE,
-        is_opted_out BOOLEAN DEFAULT FALSE,
-        opted_out_at TIMESTAMP,
-        opted_out_reason VARCHAR(255),
-        submitted_via_share_link BOOLEAN DEFAULT FALSE,
-        share_link_id UUID,
-        submission_ip VARCHAR(50),
-        admin_verified BOOLEAN DEFAULT FALSE,
-        admin_reviewed_by VARCHAR(100),
-        reviewed_at TIMESTAMP,
-        last_scan TIMESTAMP DEFAULT NOW(),
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
+    .price-period {
+      color: #9ca3af;
+      font-size: 16px;
+    }
     
-    // AGENCY CLAIMS TABLE
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS agency_claims (
-        id SERIAL PRIMARY KEY,
-        agency_id INTEGER REFERENCES agencies(id) ON DELETE CASCADE,
-        claimed_name TEXT NOT NULL,
-        logo_url TEXT,
-        description TEXT,
-        contact_email TEXT NOT NULL,
-        agency_size VARCHAR(50),
-        specialties JSONB DEFAULT '[]',
-        is_verified BOOLEAN DEFAULT FALSE,
-        claimed_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
+    .feature-list {
+      list-style: none;
+      padding: 0;
+      margin: 24px 0;
+      flex-grow: 1;
+    }
     
-    // LTD CODES TABLE
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS ltd_codes (
-        id SERIAL PRIMARY KEY,
-        code VARCHAR(50) UNIQUE NOT NULL,
-        plan VARCHAR(50) NOT NULL,
-        max_uses INTEGER DEFAULT 1,
-        times_used INTEGER DEFAULT 0,
-        is_active BOOLEAN DEFAULT TRUE,
-        expires_at TIMESTAMP,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
+    .feature-list li {
+      padding: 12px 0;
+      border-bottom: 1px solid #374151;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
     
-    // SETTINGS TABLE
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS settings (
-        key VARCHAR(100) PRIMARY KEY,
-        value TEXT,
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-
-    // SECURITY TABLES
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS leaderboard_blocks (
-        id SERIAL PRIMARY KEY,
-        url VARCHAR(255) UNIQUE NOT NULL,
-        domain VARCHAR(255),
-        reason VARCHAR(255) NOT NULL,
-        blocked_by VARCHAR(100),
-        blocked_at TIMESTAMP DEFAULT NOW(),
-        expires_at TIMESTAMP
-      )
-    `);
-
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS submission_limits (
-        id SERIAL PRIMARY KEY,
-        ip_address VARCHAR(50) NOT NULL,
-        submission_date DATE NOT NULL,
-        submission_count INT DEFAULT 1,
-        last_submitted_at TIMESTAMP DEFAULT NOW(),
-        UNIQUE(ip_address, submission_date)
-      )
-    `);
-
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS admin_share_links (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        created_by VARCHAR(100) NOT NULL,
-        link_type VARCHAR(50) DEFAULT 'verify',
-        target_url VARCHAR(255),
-        target_company VARCHAR(255),
-        verification_token VARCHAR(255) UNIQUE,
-        created_at TIMESTAMP DEFAULT NOW(),
-        expires_at TIMESTAMP,
-        used_count INT DEFAULT 0,
-        max_uses INT DEFAULT 10,
-        is_active BOOLEAN DEFAULT TRUE
-      )
-    `);
-
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS submission_logs (
-        id SERIAL PRIMARY KEY,
-        url VARCHAR(255) NOT NULL,
-        company_name VARCHAR(255),
-        ip_address VARCHAR(50) NOT NULL,
-        country VARCHAR(10),
-        score INT,
-        graaf_score INT,
-        craft_score INT,
-        technical_score INT,
-        submitted_via VARCHAR(50) DEFAULT 'api',
-        share_link_id UUID,
-        status VARCHAR(50) DEFAULT 'pending',
-        rejection_reason VARCHAR(255),
-        submitted_at TIMESTAMP DEFAULT NOW(),
-        admin_reviewed_at TIMESTAMP,
-        admin_reviewed_by VARCHAR(100),
-        leaderboard_entry_id INT
-      )
-    `);
-
-    // CLAIM PROFILE TABLES
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS profile_claims (
-        id SERIAL PRIMARY KEY,
-        url TEXT NOT NULL,
-        name TEXT,
-        logo_url TEXT,
-        description TEXT,
-        specializations JSONB,
-        country TEXT,
-        agency_size TEXT,
-        contact_email TEXT,
-        status TEXT DEFAULT 'pending',
-        created_at TIMESTAMP DEFAULT NOW(),
-        reviewed_at TIMESTAMP,
-        reviewed_by TEXT
-      )
-    `);
-
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS email_templates (
-        id SERIAL PRIMARY KEY,
-        name TEXT UNIQUE NOT NULL,
-        subject TEXT NOT NULL,
-        body TEXT NOT NULL,
-        variables JSONB,
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS email_logs (
-        id SERIAL PRIMARY KEY,
-        to_email TEXT NOT NULL,
-        subject TEXT,
-        template_used TEXT,
-        status TEXT DEFAULT 'sent',
-        sent_at TIMESTAMP DEFAULT NOW(),
-        error_message TEXT
-      )
-    `);
-
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS optout_requests (
-        id SERIAL PRIMARY KEY,
-        url TEXT NOT NULL UNIQUE,
-        reason TEXT,
-        token TEXT UNIQUE,
-        created_at TIMESTAMP DEFAULT NOW(),
-        processed BOOLEAN DEFAULT FALSE,
-        processed_at TIMESTAMP
-      )
-    `);
+    .feature-list li:last-child {
+      border-bottom: none;
+    }
     
-    // NOTIFICATIONS TABLE
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS notifications (
-        id SERIAL PRIMARY KEY,
-        type VARCHAR(50) NOT NULL DEFAULT 'system',
-        title VARCHAR(255) NOT NULL,
-        message TEXT NOT NULL,
-        link VARCHAR(500),
-        priority VARCHAR(20) DEFAULT 'normal',
-        is_read BOOLEAN DEFAULT FALSE,
-        created_by VARCHAR(100),
-        created_for VARCHAR(100) DEFAULT 'admin',
-        created_at TIMESTAMP DEFAULT NOW(),
-        read_at TIMESTAMP
-      )
-    `);
+    .feature-icon {
+      font-size: 18px;
+    }
     
-    // DATABASE MIGRATIONS
-    await client.query(`ALTER TABLE super_admins ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
-    await client.query(`ALTER TABLE super_admins ADD COLUMN IF NOT EXISTS last_login TIMESTAMP`);
-    await client.query(`ALTER TABLE agencies ADD COLUMN IF NOT EXISTS is_enhanced BOOLEAN DEFAULT FALSE`);
-    await client.query(`ALTER TABLE agencies ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
-    await client.query(`ALTER TABLE agencies ADD COLUMN IF NOT EXISTS last_scan TIMESTAMP`);
-    await client.query(`ALTER TABLE agencies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`);
-    await client.query(`ALTER TABLE agencies ADD COLUMN IF NOT EXISTS company_name TEXT`);
-    await client.query(`ALTER TABLE scans ADD COLUMN IF NOT EXISTS recommendations JSONB DEFAULT '[]'`);
-    await client.query(`ALTER TABLE scans ADD COLUMN IF NOT EXISTS client_url TEXT`);
-    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE`);
-    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS claimed BOOLEAN DEFAULT FALSE`);
-    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS logo_url TEXT`);
-    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS description TEXT`);
-    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS specializations JSONB`);
-    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS agency_size TEXT`);
-    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS contact_email TEXT`);
-    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS verified BOOLEAN DEFAULT FALSE`);
+    .pricing-button {
+      margin-top: auto !important;
+      width: 100%;
+      padding: 16px 24px !important;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 16px;
+      transition: all 0.3s;
+      border: none;
+      cursor: pointer;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
     
-    // ✅ NIEUWE COLUMNS VOOR APPROVAL SYSTEEM
-    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending'`);
-    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS admin_reviewed_by VARCHAR(100)`);
-    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP`);
-    // DEFAULT SETTINGS
-    const defaultSettings = [
-      ['site_name', 'ContentScale'],
-      ['contact_email', 'info@contentscale.site'],
-      ['whatsapp_number', '+31628073996'],
-      ['auto_scan_enabled', 'false']
-    ];
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    }
     
-    for (const [key, value] of defaultSettings) {
-      await client.query(`
-        INSERT INTO settings (key, value) VALUES ($1, $2)
-        ON CONFLICT (key) DO NOTHING
-      `, [key, value]);
+    .stat-card-alt { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+    .stat-card-green { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    .stat-card-yellow { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); }
+    
+    .featured-agency {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 2px solid;
+      transition: all 0.3s;
+    }
+    
+    .featured-1 { border-color: #fbbf24; }
+    .featured-2 { border-color: #94a3b8; }
+    .featured-3 { border-color: #f97316; }
+    
+    .featured-agency:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    }
+    
+    .filter-panel {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out;
+    }
+    
+    .filter-panel.open {
+      max-height: 500px;
+    }
+    
+    .agency-card {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 1px solid #334155;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    
+    .agency-card:hover {
+      transform: translateY(-4px);
+      border-color: #8b5cf6;
+      box-shadow: 0 10px 25px rgba(139, 92, 246, 0.2);
     }
 
-    // INSERT DEFAULT EMAIL TEMPLATES
-    await client.query(`
-      INSERT INTO email_templates (name, subject, body, variables) VALUES
-      (
-        'leaderboard_addition',
-        'You''re on the ContentScale SEO Agency Leaderboard! 🏆',
-        '<html>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-  <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-    <h2 style="color: #2563eb;">Congratulations {agency_name}! 🎉</h2>
+    @keyframes spin { 
+      0% { transform: rotate(0deg); } 
+      100% { transform: rotate(360deg); } 
+    }
     
-    <p>Your agency has been added to the <strong>ContentScale SEO Agency Leaderboard</strong>.</p>
-    
-    <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-      <h3 style="margin-top: 0;">Your Current Ranking:</h3>
-      <ul style="list-style: none; padding: 0;">
-        <li>📊 <strong>Score:</strong> {score}/100</li>
-        <li>🏅 <strong>Position:</strong> #{position} in {country}</li>
-        <li>🌐 <strong>URL Scanned:</strong> <a href="{url}">{url}</a></li>
-      </ul>
-    </div>
-    
-    <h3>Want to claim your profile?</h3>
-    <p>Add your logo, description, and specializations to stand out:</p>
-    <p style="text-align: center;">
-      <a href="{claim_url}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-        Claim Your Profile
-      </a>
-    </p>
-    
-    <h3>Want to improve your ranking?</h3>
-    <p>Optimize your content using our GRAAF Framework:</p>
-    <ul>
-      <li><strong>G</strong>enuinely Credible</li>
-      <li><strong>R</strong>elevance</li>
-      <li><strong>A</strong>ctionability</li>
-      <li><strong>A</strong>ccuracy</li>
-      <li><strong>F</strong>reshness</li>
-    </ul>
-    
-    <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #666;">
-      Don''t want to be listed? <a href="{optout_url}">Click here to opt-out</a>
-    </p>
-    
-    <p style="font-size: 14px; color: #666;">
-      Best regards,<br>
-      <strong>Ottmar Francisca</strong><br>
-      ContentScale - GRAAF Framework Creator<br>
-      <a href="https://contentscale.site">contentscale.site</a>
-    </p>
-  </div>
-</body>
-</html>',
-        '{"agency_name": "text", "score": "number", "position": "number", "country": "text", "url": "text", "claim_url": "text", "optout_url": "text"}'::jsonb
-      ),
-      (
-        'claim_approved',
-        'Your ContentScale Profile Has Been Approved! ✅',
-        '<html>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-  <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-    <h2 style="color: #10b981;">Profile Approved! ✅</h2>
-    
-    <p>Hi {agency_name},</p>
-    
-    <p>Great news! Your profile claim has been approved and is now live on the leaderboard.</p>
-    
-    <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-      <h3 style="margin-top: 0;">Your Profile:</h3>
-      <ul style="list-style: none; padding: 0;">
-        <li>✅ <strong>Status:</strong> Verified</li>
-        <li>🏢 <strong>Name:</strong> {agency_name}</li>
-        <li>🌐 <strong>URL:</strong> <a href="{url}">{url}</a></li>
-        <li>🎯 <strong>Specializations:</strong> {specializations}</li>
-      </ul>
-    </div>
-    
-    <p style="text-align: center;">
-      <a href="{leaderboard_url}" style="display: inline-block; background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-        View Your Profile
-      </a>
-    </p>
-    
-    <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #666;">
-      Best regards,<br>
-      <strong>Ottmar Francisca</strong><br>
-      ContentScale
-    </p>
-  </div>
-</body>
-</html>',
-        '{"agency_name": "text", "url": "text", "specializations": "text", "leaderboard_url": "text"}'::jsonb
-      )
-      ON CONFLICT (name) DO NOTHING
-    `);
-    
-    // CREATE INDEXES
-    await client.query('CREATE INDEX IF NOT EXISTS idx_scans_created ON scans(created_at DESC)');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_leaderboard_score ON leaderboard(score DESC)');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_agencies_domain ON agencies(domain)');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_blocked_url ON leaderboard_blocks(url)');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_submission_ip_date ON submission_limits(ip_address, submission_date)');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_claims_status ON profile_claims(status)');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_claims_email ON profile_claims(contact_email)');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_claims_url ON profile_claims(url)');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_optout_url ON optout_requests(url)');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_optout_token ON optout_requests(token)');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at DESC)');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(is_read)');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_notifications_priority ON notifications(priority)');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_leaderboard_status ON leaderboard(status)');
-    
-    console.log('✅ All database tables ready');
-    
-    setTimeout(autoPopulateLeaderboard, 500);
-    
-  } catch (error) {
-    console.error('❌ Database error:', error.message);
-  } finally {
-    client.release();
-  }
-}
+    .scan-spinner { 
+      display: inline-block; 
+      width: 18px; 
+      height: 18px; 
+      border: 3px solid rgba(255, 255, 255, 0.3); 
+      border-top-color: white; 
+      border-radius: 50%; 
+      animation: spin 0.8s linear infinite; 
+      margin-right: 10px; 
+      vertical-align: middle; 
+    }
 
-// ============================================
-// AUTO-POPULATE LEADERBOARD
-// ============================================
-async function autoPopulateLeaderboard() {
-  try {
-    const check = await pool.query('SELECT COUNT(*) FROM leaderboard');
-    const count = parseInt(check.rows[0].count);
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 20px;
+    }
+
+    .modal-content {
+      background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+      border-radius: 20px;
+      max-width: 900px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      border: 2px solid #374151;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .sticky-nav {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: linear-gradient(to right, rgb(31, 41, 55), rgb(17, 24, 39));
+      border-bottom: 2px solid rgb(55, 65, 81);
+    }
+
+    .line-clamp-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .line-clamp-3 {
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .complete-rankings-section {
+      margin-top: 60px;
+      max-width: 1200px;
+      margin-left: auto;
+      margin-right: auto;
+      padding: 0 20px;
+    }
+
+    .rankings-toggle-btn {
+      width: 100%;
+      padding: 20px;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 2px solid #334155;
+      border-radius: 12px;
+      color: white;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .rankings-toggle-btn:hover {
+      border-color: #8b5cf6;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+    }
+
+    .rankings-toggle-btn .arrow {
+      transition: transform 0.3s;
+    }
+
+    .rankings-toggle-btn.active .arrow {
+      transform: rotate(180deg);
+    }
+
+    .rankings-table-container {
+      margin-top: 20px;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 2px solid #334155;
+      border-radius: 12px;
+      overflow: hidden;
+      display: none;
+    }
+
+    .rankings-table-container.show {
+      display: block;
+      animation: slideDown 0.3s ease-out;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .rankings-header {
+      padding: 20px;
+      background: rgba(139, 92, 246, 0.1);
+      border-bottom: 2px solid #334155;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 14px;
+    }
+
+    .rankings-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .rankings-table thead {
+      background: rgba(15, 23, 42, 0.8);
+      border-bottom: 2px solid #334155;
+    }
+
+    .rankings-table th {
+      padding: 16px 12px;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .rankings-table th:first-child {
+      text-align: center;
+      width: 80px;
+    }
+
+    .rankings-table tbody tr {
+      border-bottom: 1px solid #334155;
+      transition: all 0.2s;
+    }
+
+    .rankings-table tbody tr:hover {
+      background: rgba(139, 92, 246, 0.05);
+    }
+
+    .rankings-table tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    .rankings-table td {
+      padding: 16px 12px;
+      font-size: 14px;
+      color: #e2e8f0;
+    }
+
+    .rankings-table td:first-child {
+      text-align: center;
+      font-weight: 700;
+      color: #94a3b8;
+      font-size: 16px;
+    }
+
+    .rank-number {
+      display: inline-block;
+      min-width: 40px;
+    }
+
+    .company-name {
+      font-weight: 600;
+      color: white;
+    }
+
+    .domain-link {
+      color: #60a5fa;
+      text-decoration: none;
+      font-size: 13px;
+      transition: color 0.2s;
+    }
+
+    .domain-link:hover {
+      color: #93c5fd;
+      text-decoration: underline;
+    }
+
+    .score-cell { font-weight: 700; font-size: 16px; }
+    .score-high { color: #10b981; }
+    .score-medium { color: #f59e0b; }
+    .score-low { color: #ef4444; }
+
+    .date-cell {
+      color: #94a3b8;
+      font-size: 13px;
+    }
+
+    .load-more-container {
+      padding: 30px;
+      text-align: center;
+      border-top: 2px solid #334155;
+    }
+
+    .load-more-btn {
+      padding: 14px 32px;
+      background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .load-more-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4);
+    }
+
+    .load-more-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .no-more-text {
+      color: #64748b;
+      font-size: 14px;
+      font-style: italic;
+    }
+
+    @media (max-width: 768px) {
+      .rankings-table { font-size: 12px; }
+      .rankings-table th, .rankings-table td { padding: 12px 8px; }
+      .rankings-table th:first-child, .rankings-table td:first-child { width: 60px; }
+      .domain-link { font-size: 11px; word-break: break-all; }
+      .score-cell { font-size: 14px; }
+      .date-cell { font-size: 11px; }
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-gray-100">
+
+  <nav class="sticky-nav">
+    <div class="max-w-7xl mx-auto px-6 py-4">
+      <div class="flex items-center justify-between flex-wrap gap-4">
+        <div class="flex items-center gap-2">
+          <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+            ContentScale
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-1 flex-wrap justify-end">
+          <a href="/" class="px-4 py-2 text-gray-300 hover:text-white font-semibold transition-all border-b-2 border-transparent hover:border-purple-400">
+            🏠 Home
+          </a>
+          <a href="#scanner" class="px-4 py-2 text-gray-300 hover:text-white font-semibold transition-all border-b-2 border-transparent hover:border-purple-400">
+            🔍 Scanner
+          </a>
+          <a href="#top3Container" class="px-4 py-2 text-gray-300 hover:text-white font-semibold transition-all border-b-2 border-transparent hover:border-purple-400">
+            🏆 Leaderboard
+          </a>
+          <a href="#pricing" class="px-4 py-2 text-gray-300 hover:text-white font-semibold transition-all border-b-2 border-transparent hover:border-purple-400">
+            💰 Pricing
+          </a>
+          <a href="/blog/index.html" class="px-4 py-2 text-gray-300 hover:text-white font-semibold transition-all border-b-2 border-transparent hover:border-purple-400">
+            📝 Blog
+          </a>
+          <a href="https://wa.me/31628073996?text=Hi%20Ot!%20I%20want%20to%20learn%20more%20about%20ContentScale%20SEO%20recovery%20services." target="_blank" class="px-4 py-2 ml-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold rounded-lg transition-all whitespace-nowrap">
+            💬 WhatsApp
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-7xl mx-auto p-6">
     
-    if (count === 0) {
-      const demoAgencies = [
-        { url: 'https://contentscale.site', company: 'ContentScale', score: 95, country: 'NL', type: 'seo-agency', status: 'approved' },
-        { url: 'https://example-seo.nl', company: 'SEO Masters', score: 88, country: 'NL', type: 'seo-agency', status: 'approved' },
-        { url: 'https://digital-boost.be', company: 'Digital Boost', score: 82, country: 'BE', type: 'marketing-agency', status: 'approved' }
-      ];
+    <div class="text-center mb-8">
+      <h1 class="text-5xl font-bold mb-3 bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
+        🏆 GRAAF Framework Scanner for SEO Agencies & Freelancers 2026</h1>
+      <p class="text-xl text-gray-300">Find & compare top SEO agencies worldwide</p>
+    </div>
+
+    <div id="scanner" class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-8 mb-8 border-2 border-purple-600">
+      <div class="text-center mb-6">
+        <h2 class="text-3xl font-bold mb-2">🚀 UNDER CONSTRUCTION</h2>
+        <p class="text-gray-300">Get your AI-Era SEO score instantly!</p>
+      </div>
       
-      for (const agency of demoAgencies) {
-        try {
-          await pool.query(`
-            INSERT INTO leaderboard (url, company_name, score, country, business_type, is_verified, status)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            ON CONFLICT (url) DO NOTHING
-          `, [agency.url, agency.company, agency.score, agency.country, agency.type, true, agency.status]);
-        } catch (e) {
-          // Silently skip duplicates
-        }
+      <div class="max-w-3xl mx-auto">
+        <div class="flex flex-col sm:flex-row gap-3">
+          <input type="text" id="scanInput" placeholder="https://yourwebsite.com" 
+            class="flex-1 bg-gray-700 text-white px-6 py-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg">
+          <button onclick="performScan()" id="scanButton" class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-8 py-4 rounded-lg font-bold text-lg transition-all whitespace-nowrap">
+           UNDER CONSTRUCTION
+          </button>
+        </div>
+        
+        <div class="mt-4 flex items-center justify-center gap-6">
+          <label class="inline-flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+            <input type="checkbox" id="submitToLeaderboard" class="rounded" onchange="toggleCompanyField()">
+            📊 Submit to leaderboard (optional)
+          </label>
+        </div>
+
+        <div id="companyNameField" class="hidden mt-4">
+          <input type="text" id="companyName" placeholder="Company name (optional)" 
+            class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg text-sm mb-3">
+          
+          <select id="countrySelect" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg text-sm">
+            <option value="">Auto-detect from domain</option>
+            <option value="NL">🇳🇱 Netherlands</option>
+            <option value="BE">🇧🇪 Belgium</option>
+            <option value="DE">🇩🇪 Germany</option>
+            <option value="FR">🇫🇷 France</option>
+            <option value="UK">🇬🇧 United Kingdom</option>
+            <option value="US">🇺🇸 United States</option>
+            <option value="CA">🇨🇦 Canada</option>
+            <option value="AU">🇦🇺 Australia</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-purple-900 bg-opacity-20 border-l-4 border-purple-500 rounded-lg p-3 mb-6 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-lg">🏢</span>
+        <span class="text-sm"><strong>Agency owner?</strong> Claim your free verified listing</span>
+      </div>
+      <button onclick="scrollToClaimForm()" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all">
+        Claim Profile
+      </button>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div class="stat-card rounded-xl p-5 text-white relative">
+        <div class="relative z-10">
+          <div class="text-4xl mb-2">🏢</div>
+          <div class="text-3xl font-bold" id="totalAgencies">0</div>
+          <div class="text-sm opacity-90">Agencies Listed</div>
+        </div>
+      </div>
+      
+      <div class="stat-card-alt stat-card rounded-xl p-5 text-white relative">
+        <div class="relative z-10">
+          <div class="text-4xl mb-2">📊</div>
+          <div class="text-3xl font-bold" id="avgScore">0</div>
+          <div class="text-sm opacity-90">Avg. Score</div>
+        </div>
+      </div>
+      
+      <div class="stat-card-green stat-card rounded-xl p-5 text-white relative">
+        <div class="relative z-10">
+          <div class="text-4xl mb-2">🌍</div>
+          <div class="text-3xl font-bold" id="countriesCount">0</div>
+          <div class="text-sm opacity-90">Countries</div>
+        </div>
+      </div>
+      
+      <div class="stat-card-yellow stat-card rounded-xl p-5 text-gray-900 relative">
+        <div class="relative z-10">
+          <div class="text-4xl mb-2">⭐</div>
+          <div class="text-3xl font-bold" id="enhancedProfiles">0</div>
+          <div class="text-sm opacity-90">Verified Agencies</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mb-10" id="top3Container">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-2xl font-bold text-yellow-400">🏆 Top 3 Agencies</h2>
+        <span class="text-sm text-gray-400">Based on GRAAF + CRAFT + Technical SEO score</span>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="top3Grid">
+      </div>
+    </div>
+
+    <div class="bg-gray-800 rounded-lg p-4 mb-6">
+      <button onclick="toggleFilters()" class="w-full flex items-center justify-between text-left">
+        <div class="flex items-center gap-2">
+          <i class="fas fa-filter text-purple-400"></i>
+          <span class="font-semibold">Filters</span>
+          <span class="text-xs text-gray-400">(Click to expand)</span>
+        </div>
+        <i class="fas fa-chevron-down" id="filter-icon"></i>
+      </button>
+      
+      <div id="filter-panel" class="filter-panel mt-4">
+        <div class="mb-4">
+          <div class="text-xs text-gray-400 mb-2">Country:</div>
+          <div class="flex flex-wrap gap-2" id="countryFilters">
+          </div>
+        </div>
+        
+        <div>
+          <input type="text" id="searchInput" placeholder="Search agencies..." 
+            oninput="filterAgencies()"
+            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400">
+        </div>
+      </div>
+    </div>
+
+    <div class="complete-rankings-section">
+      <button class="rankings-toggle-btn" onclick="toggleRankings()" id="rankings-toggle">
+        <span>📊 Show All Rankings</span>
+        <span class="arrow">▼</span>
+      </button>
+      
+      <div class="rankings-table-container" id="rankings-container">
+        <div class="rankings-header">
+          <span id="rankings-count-text">Showing 1-20 of <span id="total-count">0</span> agencies</span>
+        </div>
+        
+        <table class="rankings-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Company</th>
+              <th>Website</th>
+              <th>Score</th>
+              <th>Added</th>
+            </tr>
+          </thead>
+          <tbody id="rankings-tbody">
+          </tbody>
+        </table>
+        
+        <div class="load-more-container" id="load-more-container">
+          <button class="load-more-btn" onclick="loadMoreRankings()" id="load-more-btn">
+            <span>⬇️ Load Next 20</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+<!-- FREELANCER DIRECTORY -->
+<div class="mt-20 mb-12">
+  <div class="text-center mb-10">
+    <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+      💼 Hire SEO Freelancers
+    </h2>
+    <p class="text-xl text-gray-400">Verified independent SEO experts • Scored via writing test</p>
+  </div>
+
+  <!-- Freelancer Grid -->
+  <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8" id="freelancers-grid">
+    <!-- Loading state -->
+    <div class="col-span-full text-center text-gray-500">
+      Loading freelancers...
+    </div>
+  </div>
+
+  <!-- CTA for Freelancers -->
+  <div class="bg-gradient-to-r from-purple-900 to-pink-900 rounded-2xl p-8 text-center border-2 border-purple-500">
+    <div class="text-5xl mb-4">💼</div>
+    <h3 class="text-3xl font-bold mb-3">Are You a Freelance SEO Expert?</h3>
+    <p class="text-xl text-gray-300 mb-6">Get listed, take our writing test, and attract clients</p>
+    
+    <div class="grid md:grid-cols-3 gap-4 max-w-3xl mx-auto mb-6">
+      <div class="bg-white bg-opacity-10 rounded-lg p-4">
+        <div class="text-2xl font-bold text-purple-400">€29/month</div>
+        <div class="text-sm text-gray-400">or €290/year</div>
+      </div>
+      <div class="bg-white bg-opacity-10 rounded-lg p-4">
+        <div class="text-2xl font-bold text-green-400">Writing Test</div>
+        <div class="text-sm text-gray-400">Get scored 0-100</div>
+      </div>
+      <div class="bg-white bg-opacity-10 rounded-lg p-4">
+        <div class="text-2xl font-bold text-yellow-400">⭐ Featured</div>
+        <div class="text-sm text-gray-400">Top placement</div>
+      </div>
+    </div>
+
+    <div class="text-sm text-gray-400 mb-6">
+      ✅ Profile with bio & links • ✅ Original writing test • ✅ Public score display • ✅ Direct client contact
+    </div>
+
+    <button onclick="openFreelancerSignup()" class="inline-block bg-white text-purple-600 hover:bg-gray-100 px-8 py-4 rounded-lg font-bold text-lg transition-all">
+      🚀 Apply Now
+    </button>
+    
+    <p class="text-xs text-gray-500 mt-4">
+      Limited spots available • Quality over quantity
+    </p>
+  </div>
+</div>
+
+<!-- FREELANCER SIGNUP MODAL -->
+<div id="freelancerModal" class="modal-overlay hidden">
+  <div class="modal-content max-w-2xl">
+    <div class="p-8">
+      <div class="flex justify-between items-start mb-6">
+        <div>
+          <h2 class="text-3xl font-bold mb-2">Apply as Freelancer</h2>
+          <p class="text-sm text-gray-400">We'll review your application within 24 hours</p>
+        </div>
+        <button onclick="closeFreelancerModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+      </div>
+      
+      <form id="freelancerForm" onsubmit="submitFreelancerApplication(event)">
+        <div class="grid md:grid-cols-2 gap-4 mb-4">
+          <input type="text" name="name" placeholder="Full Name *" required 
+            class="px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg">
+          <input type="email" name="email" placeholder="Email *" required 
+            class="px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg">
+        </div>
+        
+        <input type="text" name="title" placeholder="Your Title (e.g., SEO Specialist) *" required 
+          class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg mb-4">
+        
+        <textarea name="bio" rows="4" placeholder="Short bio (max 500 characters) *" required maxlength="500"
+          class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg mb-4"></textarea>
+        
+        <div class="grid md:grid-cols-2 gap-4 mb-4">
+          <input type="url" name="linkedin_url" placeholder="LinkedIn URL *" required 
+            class="px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg">
+          <input type="url" name="portfolio_url" placeholder="Portfolio URL (optional)" 
+            class="px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg">
+        </div>
+        
+        <div class="grid md:grid-cols-2 gap-4 mb-4">
+          <input type="text" name="location" placeholder="City, Country *" required 
+            class="px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg">
+          <select name="country" required class="px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg">
+            <option value="">Select Country *</option>
+            <option value="NL">🇳🇱 Netherlands</option>
+            <option value="BE">🇧🇪 Belgium</option>
+            <option value="DE">🇩🇪 Germany</option>
+            <option value="FR">🇫🇷 France</option>
+            <option value="UK">🇬🇧 United Kingdom</option>
+            <option value="US">🇺🇸 United States</option>
+            <option value="Other">🌍 Other</option>
+          </select>
+        </div>
+        
+        <div class="bg-blue-900 bg-opacity-20 border border-blue-500 rounded-lg p-4 mb-6">
+          <p class="text-sm text-blue-300">
+            <strong>What happens next?</strong><br>
+            1. We review your application (24h)<br>
+            2. You receive payment details (€29/month or €290/year)<br>
+            3. After payment, you get a writing test<br>
+            4. We score your writing (0-100) and publish your profile<br>
+            5. (Hint: https://contentscale.site/graaf-framework/)<br>
+            6. (Hint: https://contentscale.site/craft-framework/)<br>
+            5. Clients can contact you directly!
+          </p>
+        </div>
+        
+        <button type="submit" id="freelancerSubmitBtn" 
+          class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 py-4 rounded-lg font-bold text-lg transition-all">
+          📝 Submit Application
+        </button>
+        
+        <p class="text-center text-xs text-gray-500 mt-3">
+          By applying, you agree to our terms. We store: name, email, bio, links.
+        </p>
+      </form>
+    </div>
+  </div>
+</div>
+
+    
+    <div class="mt-16 mb-12">
+      <div class="text-center mb-10">
+        <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+          📚 SEO Recovery Insights
+        </h2>
+        <p class="text-xl text-gray-400">Real case studies, expert guides & proven strategies</p>
+      </div>
+      
+      <div class="grid md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border-2 border-yellow-600 hover:border-yellow-400 transition-all cursor-pointer" onclick="window.location.href='/blog/graaf-framework-guide'">
+          <div class="mb-3">
+            <span class="inline-block px-3 py-1 bg-purple-600 text-white text-xs font-bold rounded-full">📚 GUIDE</span>
+            <span class="ml-2 text-yellow-400 text-xs font-bold">⭐ FEATURED</span>
+          </div>
+          <h3 class="text-xl font-bold mb-3 line-clamp-2">The Complete GRAAF Framework Guide: Score 95+ in 2025</h3>
+          <p class="text-gray-400 text-sm mb-4 line-clamp-3">
+            Master the GRAAF Framework - the proprietary methodology that helped 200+ businesses recover their SEO traffic.
+          </p>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-gray-500">⏱️ 12 min read</span>
+            <span class="text-purple-400 font-semibold text-sm hover:text-purple-300">Read More →</span>
+          </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border-2 border-gray-700 hover:border-purple-600 transition-all cursor-pointer" onclick="window.location.href='/blog/ecommerce-seo-recovery'">
+          <div class="mb-3">
+            <span class="inline-block px-3 py-1 bg-green-600 text-white text-xs font-bold rounded-full">📊 CASE STUDY</span>
+          </div>
+          <h3 class="text-xl font-bold mb-3 line-clamp-2">From 62 to 96: E-commerce Store's SEO Comeback Story</h3>
+          <p class="text-gray-400 text-sm mb-4 line-clamp-3">
+            How a Belgian e-commerce store recovered from Google's March 2024 algorithm update and reached top 3 rankings.
+          </p>
+          <div class="flex items-center justify-between">
+            <div class="flex gap-2 text-xs">
+              <span class="text-green-400">✅ 96/100</span>
+              <span class="text-blue-400">📈 +89%</span>
+            </div>
+            <span class="text-purple-400 font-semibold text-sm hover:text-purple-300">Read More →</span>
+          </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border-2 border-gray-700 hover:border-purple-600 transition-all cursor-pointer" onclick="window.location.href='/blog/ai-content-optimization-tips'">
+          <div class="mb-3">
+            <span class="inline-block px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">💡 TIPS</span>
+          </div>
+          <h3 class="text-xl font-bold mb-3 line-clamp-2">10 AI Content Optimization Tips That Actually Work in 2025</h3>
+          <p class="text-gray-400 text-sm mb-4 line-clamp-3">
+            Quick wins for improving your content quality score. Actionable tips you can implement today.
+          </p>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-gray-500">⏱️ 6 min read</span>
+            <span class="text-purple-400 font-semibold text-sm hover:text-purple-300">Read More →</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="text-center">
+        <a href="/blog/index.html" class="inline-block bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-8 py-4 rounded-lg font-bold text-lg transition-all">
+          📝 View All Articles →
+        </a>
+      </div>
+    </div>
+
+
+    
+
+    <div id="pricing" class="py-16">
+  <div class="text-center mb-12">
+    <h2 class="text-5xl font-bold mb-4 bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
+      💰 Simple, Transparent Pricing For Scanning
+    </h2>
+    <p class="text-xl text-gray-400">Choose the plan that fits your scanning needs</p>
+  </div>
+
+<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12 max-w-5xl mx-auto">
+  
+    <!-- FREE PLAN -->
+    <div class="pricing-card">
+      <div class="mb-6">
+        <h3 class="text-2xl font-bold mb-2">FREE Starter</h3>
+        <div class="price-tag">€0</div>
+        <div class="price-period">forever</div>
+      </div>
+      
+      <ul class="feature-list">
+        <li><span class="feature-icon">✅</span> 3 scans/day</li>
+        <li><span class="feature-icon">✅</span> Basic score</li>
+        <li><span class="feature-icon">✅</span> Leaderboard access</li>
+        <li><span class="feature-icon">✅</span> Community support</li>
+      </ul>
+      
+      <button onclick="scrollToScanner()" class="w-full pricing-button bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500">
+        Start Free
+      </button>
+    </div>
+
+    <!-- PRO PLAN (POPULAR) -->
+    <div class="pricing-card popular">
+      <div class="mb-6">
+        <h3 class="text-2xl font-bold mb-2">PRO</h3>
+        <div class="price-tag">€27</div>
+        <div class="price-period">/month</div>
+        <div class="text-xs text-green-400 mt-2">€259/year (save 20%)</div>
+      </div>
+      
+      <ul class="feature-list">
+        <li><span class="feature-icon">✅</span> 100 scans/month</li>
+        <li><span class="feature-icon">✅</span> Priority support</li>
+        <li><span class="feature-icon">✅</span> WhatsApp Ottmar</li>
+        <li><span class="feature-icon">✅</span> Leaderboard access</li>
+      </ul>
+      
+      <button onclick="whatsappPricing('Pro')" class="w-full pricing-button bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700">
+        Most Popular
+      </button>
+    </div>
+
+    <!-- AGENCY PLAN -->
+    <div class="pricing-card">
+      <div class="mb-6">
+        <h3 class="text-2xl font-bold mb-2">AGENCY</h3>
+        <div class="price-tag">€97</div>
+        <div class="price-period">/month</div>
+        <div class="text-xs text-green-400 mt-2">€929/year (save 20%)</div>
+      </div>
+      
+      <ul class="feature-list">
+        <li><span class="feature-icon">✅</span> 500 scans/month</li>
+        <li><span class="feature-icon">✅</span> White-label</li>
+        <li><span class="feature-icon">✅</span> Client dashboard</li>
+        <li><span class="feature-icon">✅</span> API access</li>
+      </ul>
+      
+      <button onclick="whatsappPricing('Agency')" class="w-full pricing-button bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
+        Contact Sales
+      </button>
+    </div>
+  </div>
+      
+
+  <!-- LIFETIME DEAL BANNER -->
+
+      <div class="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-2xl p-8 text-center">
+        <div class="text-6xl mb-4">💎</div>
+        <h3 class="text-4xl font-bold text-gray-900 mb-3">Lifetime Deal Coming Soon!</h3>
+        <p class="text-xl text-gray-800 mb-6">Pay once, scan forever. Limited spots available.</p>
+        
+        <div class="bg-gray-900 bg-opacity-20 rounded-xl p-6 mb-6 max-w-3xl mx-auto">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-gray-900">
+            <div class="bg-white bg-opacity-30 rounded-lg p-4">
+              <div class="text-sm font-bold mb-1">Tier 1</div>
+              <div class="text-3xl font-bold">€49</div>
+              <div class="text-xs">50 scans/month • Lifetime</div>
+            </div>
+            <div class="bg-white bg-opacity-30 rounded-lg p-4">
+              <div class="text-sm font-bold mb-1">Tier 2</div>
+              <div class="text-3xl font-bold">€99</div>
+              <div class="text-xs">150 scans/month • Lifetime</div>
+            </div>
+            <div class="bg-white bg-opacity-30 rounded-lg p-4">
+              <div class="text-sm font-bold mb-1">Tier 3</div>
+              <div class="text-3xl font-bold">€199</div>
+              <div class="text-xs">400 scans/month • Lifetime</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-sm text-gray-800 mb-6 max-w-2xl mx-auto">
+          <strong>Note:</strong> Lifetime deals offer incredible value but exclude white-label, API access, and enterprise features. Perfect for individuals and small teams!
+        </div>
+
+        <button onclick="notifyLTD()" class="inline-block bg-gray-900 text-yellow-400 hover:bg-gray-800 px-8 py-4 rounded-lg font-bold text-lg transition-all">
+          🔔 Notify Me When Available
+        </button>
+      </div>
+    </div>
+
+    <div id="claim-form" class="bg-gray-800 rounded-xl p-8 border-2 border-purple-600 mt-16">
+      <div class="text-center mb-6">
+        <h2 class="text-3xl font-bold mb-2">🏢 Claim Your Agency Profile</h2>
+        <p class="text-gray-400">Get verified, add your details, and attract more clients</p>
+      </div>
+      
+      <div class="max-w-2xl mx-auto">
+        <form id="claimForm" onsubmit="submitClaim(event)">
+          <div class="grid md:grid-cols-2 gap-4 mb-4">
+            <input type="text" name="agencyName" placeholder="Agency Name" required class="px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg">
+            <input type="email" name="contactEmail" placeholder="Contact Email" required class="px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg">
+          </div>
+          <div class="grid md:grid-cols-2 gap-4 mb-4">
+            <input type="url" name="websiteUrl" placeholder="Website URL" required class="px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg">
+            <select name="country" required class="px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg">
+              <option value="">Select Country</option>
+              <option value="NL">🇳🇱 Netherlands</option>
+              <option value="BE">🇧🇪 Belgium</option>
+              <option value="DE">🇩🇪 Germany</option>
+              <option value="FR">🇫🇷 France</option>
+              <option value="UK">🇬🇧 UK</option>
+              <option value="US">🇺🇸 USA</option>
+            </select>
+          </div>
+          <textarea name="description" rows="3" placeholder="Brief description..." class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg mb-4"></textarea>
+          
+          <button type="submit" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 py-4 rounded-lg font-bold text-lg transition-all">
+            🚀 Claim Profile (Free)
+          </button>
+          
+          <p class="text-center text-xs text-gray-500 mt-3">
+            Free forever • Get verified badge • Attract more clients
+          </p>
+        </form>
+      </div>
+    </div>
+
+    <div class="mt-12 bg-gradient-to-r from-green-900 to-emerald-900 rounded-xl p-8 text-center border-2 border-green-600">
+      <h3 class="text-2xl font-bold mb-3">💬 Need Expert Help?</h3>
+      <p class="text-gray-300 mb-6">Talk directly to Ot about your SEO recovery strategy</p>
+      <a href="https://wa.me/31628073996?text=Hi%20Ot!%20I%20need%20help%20with%20my%20SEO%20recovery%20strategy." target="_blank" class="inline-block bg-white text-green-600 hover:bg-gray-100 px-8 py-4 rounded-lg font-bold text-lg transition-all">
+        💬 Start WhatsApp Chat
+      </a>
+      <p class="text-xs text-gray-400 mt-3">Usually responds within 1 hour 🚀</p>
+    </div>
+
+  </div>
+
+  <div id="scanModal" class="modal-overlay hidden">
+    <div class="modal-content">
+    </div>
+  </div>
+
+  <script>
+    let allAgencies = [];
+    let filteredAgencies = [];
+    let currentFilter = 'all';
+    let displayedCount = 10;
+    let lastScanData = null;
+
+    let allRankings = [];
+    let displayedRankings = [];
+    let currentOffset = 0;
+    const ITEMS_PER_LOAD = 20;
+    let isRankingsVisible = false;
+
+    document.addEventListener('DOMContentLoaded', function() {
+      loadLeaderboard();
+      loadFreelancers();
+    });
+
+    function toggleCompanyField() {
+      const checkbox = document.getElementById('submitToLeaderboard');
+      const field = document.getElementById('companyNameField');
+      
+      if (checkbox.checked) {
+        field.classList.remove('hidden');
+      } else {
+        field.classList.add('hidden');
       }
     }
-  } catch (error) {
-    console.error('Leaderboard error:', error.message);
-  }
-}
 
-// ============================================
-// MIDDLEWARE
-// ============================================
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// CORS
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-admin-key');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  if (req.method === 'OPTIONS') return res.sendStatus(200);
-  next();
-});
-
-// ============================================
-// STATIC FILES
-// ============================================
-app.use(express.static('public'));
-
-// ============================================
-// HTML ROUTES
-// ============================================
-app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/admin-dashboard.html'));
-});
-
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
-});
-
-app.get('/seo-contentscore', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/unified-scan-page.html'));
-});
-
-// ============================================
-// ADMIN LOGIN - NO BCRYPT
-// ============================================
-app.post('/api/setup/verify-admin', async (req, res) => {
-  const { username, password } = req.body;
-  
-  if (!username || !password) {
-    return res.status(400).json({ success: false, error: 'Credentials required' });
-  }
-  
-  try {
-    const result = await pool.query(
-      'SELECT * FROM super_admins WHERE username = $1 AND is_active = TRUE',
-      [username]
-    );
-    
-    if (result.rows.length === 0) {
-      return res.status(401).json({ success: false, error: 'Invalid credentials' });
-    }
-    
-    const admin = result.rows[0];
-    
-    // NO BCRYPT - Direct password comparison
-    if (password !== admin.password_hash) {
-      return res.status(401).json({ success: false, error: 'Invalid credentials' });
-    }
-    
-    // Update last login
-    await pool.query('UPDATE super_admins SET last_login = NOW() WHERE id = $1', [admin.id]);
-    
-    res.json({
-      success: true,
-      admin_id: admin.id,
-      admin: {
-        id: admin.id,
-        username: admin.username,
-        full_name: admin.full_name,
-        role: admin.role
+    async function performScan() {
+      lastScanData = null;
+      
+      const urlInput = document.getElementById('scanInput').value.trim();
+      const scanButton = document.getElementById('scanButton');
+      
+      if (!urlInput) {
+        alert('Please enter a valid URL');
+        return;
       }
-    });
-    
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Server error' });
-  }
-});
-
-// ============================================
-// ADMIN STATS
-// ============================================
-app.get('/api/admin/stats', async (req, res) => {
-  try {
-    const [agencies, clients, scans] = await Promise.all([
-      pool.query('SELECT COUNT(*) FROM agencies').catch(e => ({ rows: [{ count: '0' }] })),
-      pool.query('SELECT COUNT(*) FROM clients').catch(e => ({ rows: [{ count: '0' }] })),
-      pool.query('SELECT COUNT(*) FROM scans').catch(e => ({ rows: [{ count: '0' }] }))
-    ]);
-    
-    res.json({
-      success: true,
-      stats: {
-        total_agencies: parseInt(agencies.rows[0].count) || 0,
-        total_clients: parseInt(clients.rows[0].count) || 0,
-        total_scans: parseInt(scans.rows[0].count) || 0,
-        active_helpers: 0
+      
+      let fullUrl = urlInput;
+      if (!urlInput.startsWith('http')) {
+        fullUrl = `https://${urlInput}`;
       }
-    });
-  } catch (error) {
-    res.json({ success: true, stats: { total_agencies: 0, total_clients: 0, total_scans: 0, active_helpers: 0 } });
-  }
-});
-
-// ============================================
-// ADMINS ENDPOINTS
-// ============================================
-app.get('/api/admins', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM super_admins ORDER BY created_at DESC');
-    res.json({ success: true, admins: result.rows });
-  } catch (error) {
-    res.json({ success: true, admins: [] });
-  }
-});
-
-app.post('/api/admins', async (req, res) => {
-  const { username, password, role, full_name, email } = req.body;
-  
-  // Use email as username if username not provided
-  let finalUsername = username;
-  
-  if (!finalUsername && email) {
-    finalUsername = email.split('@')[0];
-    
-    // Check if username exists, if so add timestamp
-    const existing = await pool.query(
-      'SELECT id FROM super_admins WHERE username = $1',
-      [finalUsername]
-    );
-    
-    if (existing.rows.length > 0) {
-      finalUsername = `${finalUsername}_${Date.now()}`;
-    }
-  }
-  
-  if (!finalUsername) {
-    finalUsername = `user_${Date.now()}`;
-  }
-  
-  if (!password || !role) {
-    return res.status(400).json({ success: false, error: 'Password and role are required' });
-  }
-  
-  try {
-    // NO BCRYPT - Store password directly
-    const result = await pool.query(
-      `INSERT INTO super_admins (username, password_hash, full_name, email, role, is_active) 
-       VALUES ($1, $2, $3, $4, $5, TRUE) RETURNING id`,
-      [finalUsername, password, full_name || null, email || null, role]
-    );
-    
-    res.json({ success: true, admin_id: result.rows[0].id });
-  } catch (error) {
-    if (error.code === '23505') {
-      return res.status(400).json({ success: false, error: 'Username exists' });
-    }
-    res.status(500).json({ success: false, error: 'Database error' });
-  }
-});
-
-app.delete('/api/admins/:id', async (req, res) => {
-  try {
-    await pool.query('DELETE FROM super_admins WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Database error' });
-  }
-});
-
-// ============================================
-// AGENCIES ENDPOINTS
-// ============================================
-app.get('/api/super-admin/agencies', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT a.*, 
-        (SELECT COUNT(*) FROM clients WHERE agency_id = a.id) as client_count,
-        (SELECT COUNT(*) FROM scans WHERE agency_id = a.id) as total_scans
-      FROM agencies a 
-      ORDER BY a.created_at DESC
-    `);
-    res.json({ success: true, agencies: result.rows });
-  } catch (error) {
-    res.json({ success: true, agencies: [] });
-  }
-});
-
-app.post('/api/agencies', async (req, res) => {
-  const { name, domain, country, plan, contact_person, contact_email } = req.body;
-  
-  if (!name || !domain) {
-    return res.status(400).json({ success: false, error: 'Name and domain required' });
-  }
-  
-  // Strip https:// and http:// from domain
-  const cleanDomain = domain.replace(/^https?:\/\//, '');
-  
-  try {
-    const adminKey = crypto.randomBytes(16).toString('hex');
-    const result = await pool.query(
-      `INSERT INTO agencies (name, domain, country, plan, contact_person, contact_email, admin_key)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-      [name, domain, country || 'NL', plan || 'free', contact_person, contact_email, adminKey]
-    );
-    
-    res.json({ success: true, agency_id: result.rows[0].id, admin_key: adminKey });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Database error' });
-  }
-});
-
-app.delete('/api/agencies/:id', async (req, res) => {
-  try {
-    await pool.query('DELETE FROM agencies WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Database error' });
-  }
-});
-// ============================================
-// FREELANCER DIRECTORY API
-// ============================================
-
-// Get all active freelancers (PUBLIC)
-app.get('/api/freelancers', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT 
-        id, name, title, bio, profile_photo_url, 
-        linkedin_url, portfolio_url, website_url,
-        location, country, has_score, score, is_featured
-      FROM freelancers 
-      WHERE status = 'active' 
-        AND payment_status = 'paid'
-        AND (subscription_expires_at IS NULL OR subscription_expires_at > NOW())
-      ORDER BY 
-        is_featured DESC,
-        display_order ASC,
-        score DESC NULLS LAST,
-        created_at DESC
-    `);
-    
-    res.json({
-      success: true,
-      freelancers: result.rows
-    });
-  } catch (error) {
-    console.error('Get freelancers error:', error);
-    res.status(500).json({ error: 'Failed to load freelancers' });
-  }
-});
-
-// Submit freelancer application (PUBLIC)
-app.post('/api/freelancers/apply', async (req, res) => {
-  const { 
-    name, email, title, bio, 
-    linkedin_url, portfolio_url, website_url,
-    location, country 
-  } = req.body;
-  
-  if (!name || !email || !title || !bio) {
-    return res.status(400).json({ error: 'Required fields missing' });
-  }
-  
-  try {
-    // Check if email already exists
-    const existing = await pool.query(
-      'SELECT id FROM freelancers WHERE email = $1',
-      [email]
-    );
-    
-    if (existing.rows.length > 0) {
-      return res.status(400).json({ 
-        error: 'Email already registered. Contact support if you need help.' 
-      });
-    }
-    
-    // Insert freelancer
-    const result = await pool.query(`
-      INSERT INTO freelancers (
-        name, email, title, bio, 
-        linkedin_url, portfolio_url, website_url,
-        location, country, status, payment_status
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'unpaid')
-      RETURNING id
-    `, [name, email, title, bio, linkedin_url, portfolio_url, website_url, location, country]);
-    
-    console.log(`✅ Freelancer application: ${name} (${email})`);
-    
-    // TODO: Send email to Ot about new application
-    
-    res.json({
-      success: true,
-      message: 'Application received! We will contact you within 24 hours with payment details.',
-      id: result.rows[0].id
-    });
-  } catch (error) {
-    console.error('Freelancer apply error:', error);
-    res.status(500).json({ error: 'Application failed' });
-  }
-});
-
-// Submit writing test (AFTER PAYMENT)
-app.post('/api/freelancers/submit-test', async (req, res) => {
-  const { email, writing_sample } = req.body;
-  
-  if (!email || !writing_sample) {
-    return res.status(400).json({ error: 'Email and writing sample required' });
-  }
-  
-  try {
-    const result = await pool.query(`
-      UPDATE freelancers 
-      SET 
-        writing_sample = $1,
-        test_submitted_at = NOW(),
-        has_score = false
-      WHERE email = $2 
-        AND status = 'active'
-        AND payment_status = 'paid'
-      RETURNING id
-    `, [writing_sample, email]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ 
-        error: 'Freelancer not found or payment not completed' 
-      });
-    }
-    
-    console.log(`✅ Writing test submitted: ${email}`);
-    
-    // TODO: Notify Ot to review
-    
-    res.json({
-      success: true,
-      message: 'Writing test submitted! Your score will be reviewed within 48 hours.'
-    });
-  } catch (error) {
-    console.error('Submit test error:', error);
-    res.status(500).json({ error: 'Submission failed' });
-  }
-});
-
-// ============================================
-// ADMIN: Manage Freelancers
-// ============================================
-
-// Get all freelancers (ADMIN)
-app.get('/api/admin/freelancers', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT * FROM freelancers 
-      ORDER BY created_at DESC
-    `);
-    
-    res.json({
-      success: true,
-      freelancers: result.rows
-    });
-  } catch (error) {
-    console.error('Admin get freelancers error:', error);
-    res.status(500).json({ error: 'Failed to load' });
-  }
-});
-
-// Approve freelancer & activate (ADMIN)
-app.post('/api/admin/freelancers/:id/approve', async (req, res) => {
-  const { id } = req.params;
-  const { subscription_months } = req.body;
-  
-  try {
-    const expiresAt = new Date();
-    expiresAt.setMonth(expiresAt.getMonth() + (subscription_months || 1));
-    
-    await pool.query(`
-      UPDATE freelancers 
-      SET 
-        status = 'active',
-        payment_status = 'paid',
-        subscription_expires_at = $1,
-        updated_at = NOW()
-      WHERE id = $2
-    `, [expiresAt, id]);
-    
-    res.json({ success: true, message: 'Freelancer activated' });
-  } catch (error) {
-    console.error('Approve error:', error);
-    res.status(500).json({ error: 'Failed to approve' });
-  }
-});
-
-// Review writing test & assign score (ADMIN)
-app.post('/api/admin/freelancers/:id/review-test', async (req, res) => {
-  const { id } = req.params;
-  const { score } = req.body;
-  
-  if (score < 0 || score > 100) {
-    return res.status(400).json({ error: 'Score must be 0-100' });
-  }
-  
-  try {
-    await pool.query(`
-      UPDATE freelancers 
-      SET 
-        score = $1,
-        has_score = true,
-        test_reviewed_at = NOW()
-      WHERE id = $2
-    `, [score, id]);
-    
-    console.log(`✅ Score assigned: ${score} for freelancer #${id}`);
-    
-    res.json({ success: true, message: 'Score assigned' });
-  } catch (error) {
-    console.error('Review test error:', error);
-    res.status(500).json({ error: 'Failed to assign score' });
-  }
-});
-
-// Toggle featured status (ADMIN)
-app.post('/api/admin/freelancers/:id/toggle-featured', async (req, res) => {
-  const { id } = req.params;
-  
-  try {
-    await pool.query(`
-      UPDATE freelancers 
-      SET is_featured = NOT is_featured
-      WHERE id = $1
-    `, [id]);
-    
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to toggle' });
-  }
-});
-
-// Update display order (ADMIN)
-app.post('/api/admin/freelancers/:id/order', async (req, res) => {
-  const { id } = req.params;
-  const { order } = req.body;
-  
-  try {
-    await pool.query(`
-      UPDATE freelancers 
-      SET display_order = $1
-      WHERE id = $2
-    `, [order, id]);
-    
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update order' });
-  }
-});
-
-// Delete freelancer (ADMIN)
-app.delete('/api/admin/freelancers/:id', async (req, res) => {
-  const { id } = req.params;
-  
-  try {
-    await pool.query('DELETE FROM freelancers WHERE id = $1', [id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to delete' });
-  }
-});
-
-// Get single freelancer (ADMIN)
-app.get('/api/admin/freelancers/:id', async (req, res) => {
-  const { id } = req.params;
-  
-  try {
-    const result = await pool.query('SELECT * FROM freelancers WHERE id = $1', [id]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Freelancer not found' });
-    }
-    
-    res.json({ success: true, freelancer: result.rows[0] });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to load' });
-  }
-});
-
-// ============================================
-// CLIENTS ENDPOINTS
-// ============================================
-app.get('/api/admin/clients', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT c.*, a.name as agency_name 
-      FROM clients c 
-      LEFT JOIN agencies a ON c.agency_id = a.id 
-      ORDER BY c.created_at DESC
-    `);
-    res.json({ success: true, clients: result.rows });
-  } catch (error) {
-    res.json({ success: true, clients: [] });
-  }
-});
-
-app.delete('/api/admin/clients/:id', async (req, res) => {
-  try {
-    await pool.query('DELETE FROM clients WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Database error' });
-  }
-});
-
-// ============================================
-// SCANS ENDPOINTS
-// ============================================
-app.get('/api/admin/scans', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT s.*, a.name as agency_name 
-      FROM scans s 
-      LEFT JOIN agencies a ON s.agency_id = a.id 
-      ORDER BY s.created_at DESC 
-      LIMIT 100
-    `);
-    res.json({ success: true, scans: result.rows });
-  } catch (error) {
-    res.json({ success: true, scans: [] });
-  }
-});
-
-app.delete('/api/admin/scans/:id', async (req, res) => {
-  try {
-    await pool.query('DELETE FROM scans WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Database error' });
-  }
-});
-
-app.patch('/api/scans/:id/company', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { company_name } = req.body;
-    
-    if (!company_name) {
-      return res.status(400).json({ success: false, error: 'Company name required' });
-    }
-    
-    await pool.query(
-      'UPDATE scans SET company_name = $1 WHERE id = $2',
-      [company_name, id]
-    );
-    
-    res.json({ success: true, message: 'Company name updated' });
-  } catch (error) {
-    console.error('Update company name error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// ============================================
-// SHARE LINKS ENDPOINTS
-// ============================================
-app.get('/api/admin/share-links', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM share_links ORDER BY created_at DESC');
-    res.json({ success: true, share_links: result.rows });
-  } catch (error) {
-    res.json({ success: true, share_links: [] });
-  }
-});
-
-app.post('/api/admin/share-links/create', async (req, res) => {
-  const { client_email, client_name, client_company, scans_limit, valid_days } = req.body;
-  
-  if (!client_email) {
-    return res.status(400).json({ success: false, error: 'Email required' });
-  }
-
-  try {
-    const shareCode = crypto.randomBytes(8).toString('hex');
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + (valid_days || 30));
-    
-    await pool.query(
-      `INSERT INTO share_links (token, client_email, client_name, client_company, scans_limit, scans_used, expires_at, valid_days, status, is_active)
-       VALUES ($1, $2, $3, $4, $5, 0, $6, $7, 'active', true)`,
-      [
-        shareCode,
-        client_email,
-        client_name || null,
-        client_company || null,
-        scans_limit || 5,
-        expiresAt,
-        valid_days || 30,
-      ]
-    );
-    
-    const shareUrl = `${req.protocol}://${req.get('host')}/scan-with-link/${shareCode}`;
-    res.json({ success: true, share_code: shareCode, share_url: shareUrl });
-  } catch (error) {
-    console.error('Share link creation error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Database error',
-      details: error.message
-    });    
-  }
-});
-
-app.get('/api/test-share-status', async (req, res) => {
-  try {
-    const result = await pool.query(
-      'SELECT token, client_email, is_active FROM share_links LIMIT 1'
-    );
-    
-    if (result.rows.length === 0) {
-      return res.json({ message: 'No share links found' });
-    }
-    
-    res.json({
-      test: 'Share links status test',
-      found_link: result.rows[0],
-      has_is_active_column: true
-    });
-    
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.delete('/api/admin/share-links/:code', async (req, res) => {
-  try {
-    await pool.query('DELETE FROM share_links WHERE token = $1', [req.params.code]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Database error' });
-  }
-});
-
-app.put('/api/admin/share-links/:code/toggle-status', async (req, res) => {
-  try {
-    const { code } = req.params;
-    
-    const result = await pool.query(
-      `UPDATE share_links 
-       SET is_active = NOT is_active 
-       WHERE token = $1 
-       RETURNING token, client_email, is_active`,
-      [code]
-    );
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Share link not found' });
-    }
-    
-    const newStatus = result.rows[0].is_active;
-    
-    res.json({ 
-      success: true, 
-      message: `Share link ${newStatus ? 'activated' : 'deactivated'}`,
-      is_active: newStatus
-    });
-    
-  } catch (error) {
-    console.error('Toggle status error:', error);
-    res.status(500).json({ success: false, error: 'Database error' });
-  }
-});
-// ============================================
-// LTD CODES ENDPOINTS
-// ============================================
-app.get('/api/admin/ltd-codes', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM ltd_codes ORDER BY created_at DESC');
-    res.json({ success: true, codes: result.rows });
-  } catch (error) {
-    res.json({ success: true, codes: [] });
-  }
-});
-
-app.post('/api/admin/ltd-codes/create', async (req, res) => {
-  const { code, plan, max_uses, expires_days } = req.body;
-  
-  if (!code || !plan) {
-    return res.status(400).json({ success: false, error: 'Code and plan required' });
-  }
-  
-  try {
-    let expiresAt = null;
-    if (expires_days) {
-      expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + expires_days);
-    }
-    
-    await pool.query(
-      'INSERT INTO ltd_codes (code, plan, max_uses, expires_at) VALUES ($1, $2, $3, $4)',
-      [code, plan, max_uses || 1, expiresAt]
-    );
-    
-    res.json({ success: true });
-  } catch (error) {
-    if (error.code === '23505') {
-      return res.status(400).json({ success: false, error: 'Code already exists' });
-    }
-    res.status(500).json({ success: false, error: 'Database error' });
-  }
-});
-
-app.delete('/api/admin/ltd-codes/:id', async (req, res) => {
-  try {
-    await pool.query('DELETE FROM ltd_codes WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Database error' });
-  }
-});
-
-// ============================================
-// SETTINGS ENDPOINTS
-// ============================================
-app.get('/api/settings/:key', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT value FROM settings WHERE key = $1', [req.params.key]);
-    if (result.rows.length === 0) {
-      return res.json({ success: false, error: 'Setting not found' });
-    }
-    res.json({ success: true, value: result.rows[0].value });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Database error' });
-  }
-});
-
-app.put('/api/settings/:key', async (req, res) => {
-  const { value } = req.body;
-  
-  try {
-    await pool.query(
-      'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()',
-      [req.params.key, value]
-    );
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Database error' });
-  }
-});
-
-// ============================================
-// SCAN ENDPOINTS
-// ============================================
-
-// Helper function to calculate GRAAF score
-function calculateGRAAFScore(url, content) {
-  let score = 0;
-  const issues = [];
-  
-  // G - Genuinely Credible (25 points)
-  if (content.includes('author') || content.includes('expert')) score += 10;
-  if (content.includes('source') || content.includes('study')) score += 8;
-  if (content.includes('reference') || content.includes('citation')) score += 7;
-  
-  // R - Relevance (20 points)
-  const wordCount = content.split(/\s+/).length;
-  if (wordCount > 1500) score += 10;
-  else if (wordCount > 800) score += 6;
-  else issues.push('Content too short');
-  
-  if (content.includes('how to') || content.includes('guide')) score += 5;
-  if (content.includes('example') || content.includes('step')) score += 5;
-  
-  // A - Actionability (20 points)
-  const hasSteps = content.match(/\b(step|stage|phase)\s+\d+/i);
-  if (hasSteps) score += 10;
-  
-  if (content.includes('download') || content.includes('template')) score += 5;
-  if (content.includes('checklist') || content.includes('tool')) score += 5;
-  
-  // A - Accuracy (20 points)
-  if (content.includes('2024') || content.includes('2025')) score += 10;
-  else issues.push('Missing current year references');
-  
-  if (content.includes('data') || content.includes('statistic')) score += 5;
-  if (content.includes('research') || content.includes('report')) score += 5;
-  
-  // F - Freshness (15 points)
-  const currentYear = new Date().getFullYear();
-  if (content.includes(currentYear.toString())) score += 10;
-  if (content.includes('updated') || content.includes('latest')) score += 5;
-  
-  return { score, issues };
-}
-
-// Helper function to calculate CRAFT score
-function calculateCRAFTScore(content) {
-  let score = 0;
-  
-  // C - Cut the Fluff (20%)
-  const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 0);
-  const avgSentenceLength = content.length / sentences.length;
-  if (avgSentenceLength < 150) score += 20;
-  else if (avgSentenceLength < 200) score += 15;
-  else score += 10;
-  
-  // R - Review, Optimize, Proofread (20%)
-  const hasGoodStructure = content.includes('##') || content.includes('<h2>');
-  if (hasGoodStructure) score += 20;
-  else score += 10;
-  
-  // A - Add Images and Visuals (20%)
-  const imageCount = (content.match(/<img|!\[/g) || []).length;
-  if (imageCount >= 3) score += 20;
-  else if (imageCount >= 1) score += 15;
-  else score += 5;
-  
-  // F - Fact-Check (20%)
-  const hasLinks = content.includes('http') || content.includes('www');
-  if (hasLinks) score += 20;
-  else score += 10;
-  
-  // T - Trust-Building Elements (20%)
-  const hasTrust = content.includes('expert') || content.includes('certified') || content.includes('experience');
-  if (hasTrust) score += 20;
-  else score += 10;
-  
-  return score;
-}
-
-// Helper function to calculate technical score
-function calculateTechnicalScore(url) {
-  let score = 0;
-  
-  // URL structure (20 points)
-  if (url.includes('https://')) score += 10;
-  if (!url.includes('www.')) score += 5; // Clean URL preferred
-  if (url.length < 100) score += 5;
-  
-  // Assumed good practices (80 points baseline)
-  score += 80;
-  
-  return score;
-}
-
-// Main scan endpoint
-app.post('/api/scan', async (req, res) => {
-  const { url, content } = req.body;
-  
-  if (!url) {
-    return res.status(400).json({ success: false, error: 'URL required' });
-  }
-  
-  try {
-    // Use provided content or fetch
-    let pageContent = content || `Sample content for ${url}`;
-    
-    // Calculate scores
-    const graafResult = calculateGRAAFScore(url, pageContent);
-    const craftScore = calculateCRAFTScore(pageContent);
-    const technicalScore = calculateTechnicalScore(url);
-    
-    // Overall score (weighted average)
-    const overallScore = Math.round(
-      (graafResult.score * 0.5) + 
-      (craftScore * 0.3) + 
-      (technicalScore * 0.2)
-    );
-    
-    // Quality rating
-    let quality = 'Poor';
-    if (overallScore >= 90) quality = 'Excellent';
-    else if (overallScore >= 80) quality = 'Good';
-    else if (overallScore >= 70) quality = 'Fair';
-    else if (overallScore >= 60) quality = 'Average';
-    
-    // Generate recommendations
-    const recommendations = [];
-    if (graafResult.score < 60) recommendations.push('Add more credible sources and expert quotes');
-    if (craftScore < 60) recommendations.push('Improve content structure and add more visuals');
-    if (technicalScore < 80) recommendations.push('Optimize URL structure and ensure HTTPS');
-    if (overallScore < 70) recommendations.push('Content needs significant improvement for AI Overview eligibility');
-    
-    // Save scan
-    const scanResult = await pool.query(
-      `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, breakdown, recommendations, ip_address)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-       RETURNING id`,
-      [
-        url,
-        overallScore,
-        quality,
-        graafResult.score,
-        craftScore,
-        technicalScore,
-        JSON.stringify({ graaf_issues: graafResult.issues }),
-        JSON.stringify(recommendations),
-        req.ip
-      ]
-    );
-    
-    res.json({
-      success: true,
-      scan_id: scanResult.rows[0].id,
-      results: {
-        overall_score: overallScore,
-        quality: quality,
-        graaf_score: graafResult.score,
-        craft_score: craftScore,
-        technical_score: technicalScore,
-        breakdown: {
-          graaf: {
-            score: graafResult.score,
-            issues: graafResult.issues
-          },
-          craft: {
-            score: craftScore
-          },
-          technical: {
-            score: technicalScore
+      
+      try {
+        new URL(fullUrl);
+      } catch {
+        alert('Please enter a valid URL (e.g., https://example.com)');
+        return;
+      }
+      
+      const originalText = scanButton.innerHTML;
+      scanButton.innerHTML = '<div class="scan-spinner"></div> Scanning...';
+      scanButton.disabled = true;
+      
+      try {
+        const response = await fetch('/api/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: fullUrl })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          lastScanData = data;
+          showScanResults(data);
+          
+          const submitToLeaderboard = document.getElementById('submitToLeaderboard').checked;
+          if (submitToLeaderboard) {
+            await submitToLeaderboardAPI(data);
           }
-        },
-        recommendations: recommendations,
-        url: url
+        } else {
+          alert('❌ Scan failed: ' + (data.error || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('Scan error:', error);
+        alert('❌ Scan failed. Please try again.');
+      } finally {
+        scanButton.innerHTML = originalText;
+        scanButton.disabled = false;
       }
-    });
-    
-  } catch (error) {
-    console.error('Scan error:', error);
-    res.status(500).json({ success: false, error: 'Scan failed' });
-  }
-});
+    }
 
-// Quick scan endpoint (no database save)
-app.post('/api/quick-scan', async (req, res) => {
-  const { url, content } = req.body;
-  
-  if (!url) {
-    return res.status(400).json({ success: false, error: 'URL required' });
-  }
-  
-  try {
-    let pageContent = content || `Sample content for ${url}`;
-    
-    const graafResult = calculateGRAAFScore(url, pageContent);
-    const craftScore = calculateCRAFTScore(pageContent);
-    const technicalScore = calculateTechnicalScore(url);
-    
-    const overallScore = Math.round(
-      (graafResult.score * 0.5) + 
-      (craftScore * 0.3) + 
-      (technicalScore * 0.2)
-    );
-    
-    let quality = 'Poor';
-    if (overallScore >= 90) quality = 'Excellent';
-    else if (overallScore >= 80) quality = 'Good';
-    else if (overallScore >= 70) quality = 'Fair';
-    else if (overallScore >= 60) quality = 'Average';
-    
-    res.json({
-      success: true,
-      results: {
-        overall_score: overallScore,
-        quality: quality,
-        graaf_score: graafResult.score,
-        craft_score: craftScore,
-        technical_score: technicalScore
+    function showScanResults(data) {
+      const modal = document.getElementById('scanModal');
+      const modalContent = modal.querySelector('.modal-content');
+      
+      let qualityClass = 'bg-red-600';
+      let qualityText = data.quality || 'Poor';
+      
+      if (data.score >= 90) {
+        qualityClass = 'bg-green-600';
+        qualityText = 'Excellent';
+      } else if (data.score >= 75) {
+        qualityClass = 'bg-blue-600';
+        qualityText = 'Good';
+      } else if (data.score >= 60) {
+        qualityClass = 'bg-yellow-600';
+        qualityText = 'Average';
       }
-    });
-    
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Scan failed' });
-  }
-});
-// ============================================
-// LEADERBOARD ENDPOINTS
-// ============================================
-
-// ✅ PUBLIC LEADERBOARD - ALLEEN APPROVED ENTRIES
-app.get('/api/leaderboard', async (req, res) => {
-  try {
-    const { country, limit } = req.query;
-    
-    let query = `
-      SELECT 
-        id, url, company_name, score, country, business_type,
-        is_verified, last_scan, created_at
-      FROM leaderboard 
-      WHERE score IS NOT NULL 
-        AND is_opted_out = FALSE 
-        AND status = 'approved'
-    `;
-    
-    const params = [];
-    
-    if (country && country !== 'ALL') {
-      params.push(country);
-      query += ` AND country = $${params.length}`;
+      
+      let recommendationsHtml = '';
+      const recs = data.recommendations?.all || data.recommendations || [];
+      
+      if (recs && recs.length > 0) {
+        recommendationsHtml = `
+          <div class="mt-6">
+            <h3 class="text-xl font-bold mb-4">🎯 Top ${Math.min(5, recs.length)} Recommendations</h3>
+            <div class="space-y-3 max-h-96 overflow-y-auto">
+              ${recs.slice(0, 10).map(rec => `
+                <div class="bg-gray-700 p-4 rounded-lg border-l-4 ${
+                  rec.impact === 'High' ? 'border-red-500' : 
+                  rec.impact === 'Medium' ? 'border-yellow-500' : 
+                  'border-blue-500'
+                }">
+                  <div class="flex items-start justify-between mb-2">
+                    <div class="flex-1">
+                      <div class="flex items-center gap-2 mb-1">
+                        <span class="font-bold text-white">${rec.title}</span>
+                        <span class="text-xs px-2 py-1 rounded ${
+                          rec.impact === 'High' ? 'bg-red-600' : 
+                          rec.impact === 'Medium' ? 'bg-yellow-600' : 
+                          'bg-blue-600'
+                        }">${rec.impact || 'Medium'}</span>
+                        <span class="text-xs px-2 py-1 rounded bg-green-600">${rec.points || '+0'}</span>
+                      </div>
+                      <div class="text-xs text-gray-400 mb-2">${rec.category || 'General'}</div>
+                    </div>
+                  </div>
+                  <p class="text-sm text-gray-300 mb-3">${rec.description || ''}</p>
+                  ${rec.howToFix ? `
+                    <details class="mt-2">
+                      <summary class="text-xs text-purple-400 cursor-pointer hover:text-purple-300">
+                        💡 How to fix (click to expand)
+                      </summary>
+                      <div class="text-xs text-gray-400 bg-gray-800 p-3 rounded mt-2 whitespace-pre-line">${rec.howToFix}</div>
+                    </details>
+                  ` : ''}
+                  ${rec.example ? `
+                    <details class="mt-2">
+                      <summary class="text-xs text-blue-400 cursor-pointer hover:text-blue-300">
+                        📝 Example code (click to expand)
+                      </summary>
+                      <div class="text-xs text-gray-400 bg-gray-900 p-3 rounded mt-2 font-mono overflow-x-auto">${rec.example}</div>
+                    </details>
+                  ` : ''}
+                </div>
+              `).join('')}
+            </div>
+            
+            ${recs.length > 10 ? `
+              <div class="mt-3 text-center text-sm text-gray-400">
+                Showing 10 of ${recs.length} recommendations. Download full report for all details.
+              </div>
+            ` : ''}
+          </div>
+        `;
+      } else {
+        recommendationsHtml = `
+          <div class="mt-6 p-4 bg-green-900 bg-opacity-20 border border-green-600 rounded-lg">
+            <p class="text-green-400 text-center">
+              ✅ <strong>Excellent!</strong> No major recommendations. Your content is well-optimized!
+            </p>
+          </div>
+        `;
+      }
+      
+      modalContent.innerHTML = `
+        <div class="p-8">
+          <div class="flex justify-between items-start mb-6">
+            <div>
+              <h2 class="text-3xl font-bold mb-2">Scan Results</h2>
+              <p class="text-sm text-gray-400">${data.url || 'Unknown URL'}</p>
+            </div>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+          </div>
+          
+          <div class="text-center mb-6">
+            <div class="text-6xl font-bold mb-2">
+              <span class="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">${data.score}</span>
+              <span class="text-gray-400 text-2xl">/100</span>
+            </div>
+            <div class="inline-block px-4 py-2 ${qualityClass} rounded-full font-bold">
+              ${qualityText}
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-3 gap-4 mb-6">
+            <div class="bg-gray-700 p-4 rounded-lg text-center">
+              <div class="text-sm text-gray-400 mb-1">GRAAF Score</div>
+              <div class="text-2xl font-bold text-purple-400">${data.metrics?.graaf || 0}/50</div>
+              <div class="text-xs text-gray-500 mt-1">${data.breakdown?.graaf?.percentage || 0}%</div>
+            </div>
+            <div class="bg-gray-700 p-4 rounded-lg text-center">
+              <div class="text-sm text-gray-400 mb-1">CRAFT Score</div>
+              <div class="text-2xl font-bold text-blue-400">${data.metrics?.craft || 0}/30</div>
+              <div class="text-xs text-gray-500 mt-1">${data.breakdown?.craft?.percentage || 0}%</div>
+            </div>
+            <div class="bg-gray-700 p-4 rounded-lg text-center">
+              <div class="text-sm text-gray-400 mb-1">Technical</div>
+              <div class="text-2xl font-bold text-green-400">${data.metrics?.technical || 0}/20</div>
+              <div class="text-xs text-gray-500 mt-1">${data.breakdown?.technical?.percentage || 0}%</div>
+            </div>
+          </div>
+          
+          ${recommendationsHtml}
+          
+          <div class="mt-6 pt-6 border-t border-gray-700">
+            <div class="flex gap-3">
+              <button onclick="closeModal()" class="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
+                Close
+              </button>
+              <button onclick="downloadScanReport()" class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
+                📊 Download Full Report
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      modal.classList.remove('hidden');
     }
-    
-    query += ' ORDER BY score DESC, created_at DESC';
-    
-    if (limit) {
-      params.push(parseInt(limit));
-      query += ` LIMIT $${params.length}`;
-    } else {
-      query += ' LIMIT 100';
-    }
-    
-    const result = await pool.query(query, params);
-    
-    res.json({
-      success: true,
-      leaderboard: result.rows,
-      total: result.rows.length
-    });
-    
-  } catch (error) {
-    console.error('Leaderboard error:', error);
-    res.status(500).json({ success: false, error: 'Failed to load leaderboard' });
-  }
-});
 
-// ✅ SUBMIT TO LEADERBOARD - STATUS = PENDING
-app.post('/api/leaderboard/submit', async (req, res) => {
-  const { url, score, company_name, country, business_type } = req.body;
-  
-  if (!url || !score) {
-    return res.status(400).json({ success: false, error: 'URL and score required' });
-  }
-  
-  const clientIp = req.ip || req.connection.remoteAddress;
-  
-  try {
-    // Check if URL is blocked
-    const blockCheck = await pool.query(
-      'SELECT reason FROM leaderboard_blocks WHERE url = $1 OR domain = $2',
-      [url, new URL(url).hostname]
-    );
-    
-    if (blockCheck.rows.length > 0) {
-      return res.status(403).json({ 
-        success: false, 
-        error: `This URL is blocked: ${blockCheck.rows[0].reason}` 
+    function closeModal() {
+      document.getElementById('scanModal').classList.add('hidden');
+    }
+
+    function downloadScanReport() {
+      if (!lastScanData) {
+        alert('No scan data available');
+        return;
+      }
+      
+      const dataStr = JSON.stringify(lastScanData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `scan-report-${Date.now()}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function loadLeaderboard() {
+      try {
+        const response = await fetch('/api/leaderboard');
+        const data = await response.json();
+        
+        if (data.success && data.entries) {
+          allAgencies = data.entries.map((entry, index) => ({
+            id: entry.id,
+            rank: index + 1,
+            url: entry.url,
+            score: entry.score,
+            company: entry.company_name || 'Unknown',
+            country: entry.country || 'US',
+            type: entry.type || 'agency',
+            isEnhanced: entry.is_claimed || false,
+            contactEmail: entry.contact_email,
+            logo: entry.logo_url,
+            description: entry.description,
+            timestamp: entry.created_at
+          }));
+          
+          filteredAgencies = [...allAgencies];
+          renderLeaderboard();
+          updateStats();
+        }
+      } catch (error) {
+        console.error('Leaderboard load error:', error);
+      }
+    }
+
+    function renderLeaderboard() {
+      renderTop3();
+      renderCountryFilters();
+    }
+
+    function renderTop3() {
+      const container = document.getElementById('top3Grid');
+      const top3 = filteredAgencies.slice(0, 3);
+      
+      const medals = ['🥇', '🥈', '🥉'];
+      const classes = ['featured-1', 'featured-2', 'featured-3'];
+      const colors = ['text-yellow-400', 'text-gray-400', 'text-orange-400'];
+      
+      container.innerHTML = top3.map((agency, index) => `
+        <div class="featured-agency ${classes[index]} rounded-xl p-6 text-center">
+          <div class="text-6xl mb-4">${medals[index]}</div>
+          <div class="text-sm text-gray-400 mb-2">#${agency.rank} Worldwide</div>
+          <h3 class="text-xl font-bold mb-3">${agency.company}</h3>
+          <div class="inline-block px-4 py-2 bg-gray-800 bg-opacity-50 rounded-full mb-4">
+            <span class="text-3xl font-bold ${colors[index]}">${agency.score}</span>
+            <span class="text-sm text-gray-400">/100</span>
+          </div>
+          <div class="text-sm text-gray-400 mb-4">${getFlagEmoji(agency.country)} ${getCountryName(agency.country)}</div>
+          <button onclick="viewAgencyProfile(${agency.id})" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 py-2 rounded-lg font-semibold transition-all">
+            View Profile
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function renderCountryFilters() {
+      const countries = [...new Set(allAgencies.map(a => a.country))];
+      const container = document.getElementById('countryFilters');
+      
+      container.innerHTML = `
+        <button onclick="setCountryFilter('all')" class="px-3 py-1 ${currentFilter === 'all' ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'} rounded-full text-sm">
+          🌍 All
+        </button>
+        ${countries.map(country => `
+          <button onclick="setCountryFilter('${country}')" class="px-3 py-1 ${currentFilter === country ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'} rounded-full text-sm">
+            ${getFlagEmoji(country)} ${country}
+          </button>
+        `).join('')}
+      `;
+    }
+
+    function setCountryFilter(country) {
+      currentFilter = country;
+      filterAgencies();
+    }
+
+    function filterAgencies() {
+      const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+      
+      filteredAgencies = allAgencies.filter(agency => {
+        const matchesCountry = currentFilter === 'all' || agency.country === currentFilter;
+        const matchesSearch = !searchQuery || 
+          agency.company.toLowerCase().includes(searchQuery) ||
+          agency.url.toLowerCase().includes(searchQuery);
+        
+        return matchesCountry && matchesSearch;
+      });
+      
+      renderLeaderboard();
+    }
+
+    function updateStats() {
+      document.getElementById('totalAgencies').textContent = allAgencies.length;
+      
+      const avgScore = allAgencies.length > 0 
+        ? Math.round(allAgencies.reduce((sum, a) => sum + a.score, 0) / allAgencies.length)
+        : 0;
+      document.getElementById('avgScore').textContent = avgScore;
+      
+      const countries = new Set(allAgencies.map(a => a.country)).size;
+      document.getElementById('countriesCount').textContent = countries;
+      
+      const enhanced = allAgencies.filter(a => a.isEnhanced).length;
+      document.getElementById('enhancedProfiles').textContent = enhanced;
+    }
+
+    function toggleFilters() {
+      const panel = document.getElementById('filter-panel');
+      const icon = document.getElementById('filter-icon');
+      
+      panel.classList.toggle('open');
+      
+      if (panel.classList.contains('open')) {
+        icon.classList.remove('fa-chevron-down');
+        icon.classList.add('fa-chevron-up');
+      } else {
+        icon.classList.remove('fa-chevron-up');
+        icon.classList.add('fa-chevron-down');
+      }
+    }
+    function toggleRankings() {
+      const container = document.getElementById('rankings-container');
+      const button = document.getElementById('rankings-toggle');
+      
+      isRankingsVisible = !isRankingsVisible;
+      
+      if (isRankingsVisible) {
+        container.classList.add('show');
+        button.classList.add('active');
+        button.innerHTML = '<span>📊 Hide Rankings</span><span class="arrow">▼</span>';
+        
+        if (allRankings.length === 0) {
+          loadAllRankings();
+        }
+      } else {
+        container.classList.remove('show');
+        button.classList.remove('active');
+        button.innerHTML = '<span>📊 Show All Rankings</span><span class="arrow">▼</span>';
+      }
+    }
+
+    async function loadAllRankings() {
+      try {
+        const entries = allAgencies;
+        
+        if (entries.length > 0) {
+          allRankings = entries;
+          
+          document.getElementById('total-count').textContent = allRankings.length;
+          
+          if (allRankings.length > 0) {
+            loadNextBatch();
+          } else {
+            showNoMoreMessage();
+          }
+        } else {
+          showNoMoreMessage();
+        }
+      } catch (error) {
+        console.error('Rankings load error:', error);
+      }
+    }
+
+    function loadNextBatch() {
+      const nextBatch = allRankings.slice(currentOffset, currentOffset + ITEMS_PER_LOAD);
+      
+      if (nextBatch.length === 0) {
+        showNoMoreMessage();
+        return;
+      }
+      
+      displayedRankings = displayedRankings.concat(nextBatch);
+      
+      renderRankings(nextBatch);
+      
+      currentOffset += ITEMS_PER_LOAD;
+      
+      updateCountText();
+      
+      if (currentOffset >= allRankings.length) {
+        showNoMoreMessage();
+      }
+    }
+
+    function renderRankings(rankings) {
+      const tbody = document.getElementById('rankings-tbody');
+      
+      rankings.forEach(entry => {
+        const row = createRankingRow(entry);
+        tbody.insertAdjacentHTML('beforeend', row);
       });
     }
-    
-    // Check daily submission limit (3 per IP)
-    const today = new Date().toISOString().split('T')[0];
-    const limitCheck = await pool.query(
-      'SELECT submission_count FROM submission_limits WHERE ip_address = $1 AND submission_date = $2',
-      [clientIp, today]
-    );
-    
-    if (limitCheck.rows.length > 0 && limitCheck.rows[0].submission_count >= 3) {
-      return res.status(429).json({ 
-        success: false, 
-        error: 'Daily submission limit reached (3 per day)' 
-      });
+
+    function createRankingRow(entry) {
+      const scoreClass = entry.score >= 80 ? 'score-high' : entry.score >= 50 ? 'score-medium' : 'score-low';
+      const domain = extractDomain(entry.url);
+      const dateFormatted = formatDate(entry.timestamp);
+      
+      return `
+        <tr>
+          <td><span class="rank-number">${entry.rank}</span></td>
+          <td>
+            <div class="company-name">${entry.company || 'Unknown'}</div>
+            <div class="domain-link">${domain}</div>
+          </td>
+          <td>
+            <a href="${entry.url}" target="_blank" class="domain-link">${domain}</a>
+          </td>
+          <td class="score-cell ${scoreClass}">${entry.score}/100</td>
+          <td class="date-cell">${dateFormatted}</td>
+        </tr>
+      `;
     }
-    
-    // Insert or update submission with status = 'pending'
-    const result = await pool.query(`
-      INSERT INTO leaderboard (url, score, company_name, country, business_type, submission_ip, status)
-      VALUES ($1, $2, $3, $4, $5, $6, 'pending')
-      ON CONFLICT (url) DO UPDATE SET 
-        score = EXCLUDED.score,
-        company_name = EXCLUDED.company_name,
-        country = EXCLUDED.country,
-        business_type = EXCLUDED.business_type,
-        last_scan = NOW(),
-        status = 'pending'
-      RETURNING id
-    `, [url, score, company_name, country || 'NL', business_type, clientIp]);
-    
-    // Update submission limit counter
-    await pool.query(`
-      INSERT INTO submission_limits (ip_address, submission_date, submission_count)
-      VALUES ($1, $2, 1)
-      ON CONFLICT (ip_address, submission_date) 
-      DO UPDATE SET 
-        submission_count = submission_limits.submission_count + 1,
-        last_submitted_at = NOW()
-    `, [clientIp, today]);
-    
-    // Log submission
-    await pool.query(`
-      INSERT INTO submission_logs (
-        url, company_name, ip_address, country, score, 
-        submitted_via, status, leaderboard_entry_id
-      )
-      VALUES ($1, $2, $3, $4, $5, 'api', 'pending', $6)
-    `, [url, company_name, clientIp, country, score, result.rows[0].id]);
-    
-    console.log(`✅ Leaderboard submission (PENDING): ${url} - ${score} - ${company_name}`);
-    
-    res.json({
-      success: true,
-      message: 'Submission sent for review! We will approve it within 24 hours.',
-      id: result.rows[0].id,
-      status: 'pending'
-    });
-    
-  } catch (error) {
-    console.error('Leaderboard submission error:', error);
-    res.status(500).json({ success: false, error: 'Submission failed' });
-  }
-});
 
-// ✅ ADMIN: GET PENDING SUBMISSIONS
-app.get('/api/admin/leaderboard/pending', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT 
-        id, url, company_name, score, country, business_type,
-        submission_ip, created_at, last_scan
-      FROM leaderboard 
-      WHERE status = 'pending'
-      ORDER BY created_at DESC
-    `);
-    
-    res.json({
-      success: true,
-      pending: result.rows
-    });
-    
-  } catch (error) {
-    console.error('Get pending error:', error);
-    res.status(500).json({ success: false, error: 'Failed to load pending submissions' });
-  }
-});
-
-// ✅ ADMIN: APPROVE SUBMISSION
-app.post('/api/admin/leaderboard/:id/approve', async (req, res) => {
-  const { id } = req.params;
-  const { admin_username } = req.body;
-  
-  try {
-    const result = await pool.query(`
-      UPDATE leaderboard 
-      SET 
-        status = 'approved',
-        admin_reviewed_by = $1,
-        reviewed_at = NOW()
-      WHERE id = $2
-      RETURNING url, company_name, score
-    `, [admin_username || 'admin', id]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Entry not found' });
-    }
-    
-    console.log(`✅ Leaderboard APPROVED: ${result.rows[0].url} - ${result.rows[0].company_name}`);
-    
-    res.json({
-      success: true,
-      message: 'Submission approved and now visible on leaderboard',
-      entry: result.rows[0]
-    });
-    
-  } catch (error) {
-    console.error('Approve error:', error);
-    res.status(500).json({ success: false, error: 'Failed to approve' });
-  }
-});
-
-// ✅ ADMIN: REJECT SUBMISSION
-app.post('/api/admin/leaderboard/:id/reject', async (req, res) => {
-  const { id } = req.params;
-  const { reason, admin_username } = req.body;
-  
-  try {
-    // Option 1: Delete the entry
-    const result = await pool.query(`
-      DELETE FROM leaderboard 
-      WHERE id = $1
-      RETURNING url, company_name
-    `, [id]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Entry not found' });
-    }
-    
-    // Log rejection
-    await pool.query(`
-      UPDATE submission_logs 
-      SET 
-        status = 'rejected',
-        rejection_reason = $1,
-        admin_reviewed_by = $2,
-        admin_reviewed_at = NOW()
-      WHERE leaderboard_entry_id = $3
-    `, [reason || 'Rejected by admin', admin_username || 'admin', id]);
-    
-    console.log(`❌ Leaderboard REJECTED: ${result.rows[0].url} - ${result.rows[0].company_name}`);
-    
-    res.json({
-      success: true,
-      message: 'Submission rejected and removed',
-      entry: result.rows[0]
-    });
-    
-  } catch (error) {
-    console.error('Reject error:', error);
-    res.status(500).json({ success: false, error: 'Failed to reject' });
-  }
-});
-
-// ADMIN: Get all leaderboard entries (including pending)
-app.get('/api/admin/leaderboard', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT 
-        id, url, company_name, score, country, business_type,
-        status, is_verified, is_opted_out, submission_ip,
-        admin_reviewed_by, reviewed_at, created_at, last_scan
-      FROM leaderboard 
-      ORDER BY 
-        CASE status
-          WHEN 'pending' THEN 1
-          WHEN 'approved' THEN 2
-          WHEN 'rejected' THEN 3
-        END,
-        created_at DESC
-    `);
-    
-    res.json({
-      success: true,
-      entries: result.rows,
-      stats: {
-        total: result.rows.length,
-        pending: result.rows.filter(r => r.status === 'pending').length,
-        approved: result.rows.filter(r => r.status === 'approved').length
+    function extractDomain(url) {
+      try {
+        const urlObj = new URL(url);
+        return urlObj.hostname.replace('www.', '');
+      } catch {
+        return url;
       }
-    });
-    
-  } catch (error) {
-    console.error('Admin leaderboard error:', error);
-    res.status(500).json({ success: false, error: 'Failed to load' });
-  }
-});
-
-// ADMIN: Delete leaderboard entry
-app.delete('/api/admin/leaderboard/:id', async (req, res) => {
-  try {
-    await pool.query('DELETE FROM leaderboard WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Database error' });
-  }
-});
-
-// ADMIN: Block URL from leaderboard
-app.post('/api/admin/leaderboard/block', async (req, res) => {
-  const { url, reason } = req.body;
-  
-  if (!url || !reason) {
-    return res.status(400).json({ success: false, error: 'URL and reason required' });
-  }
-  
-  try {
-    const domain = new URL(url).hostname;
-    
-    await pool.query(
-      'INSERT INTO leaderboard_blocks (url, domain, reason, blocked_by) VALUES ($1, $2, $3, $4)',
-      [url, domain, reason, 'admin']
-    );
-    
-    // Remove from leaderboard if exists
-    await pool.query('DELETE FROM leaderboard WHERE url = $1', [url]);
-    
-    res.json({ success: true, message: 'URL blocked and removed from leaderboard' });
-  } catch (error) {
-    if (error.code === '23505') {
-      return res.status(400).json({ success: false, error: 'URL already blocked' });
     }
-    res.status(500).json({ success: false, error: 'Failed to block URL' });
-  }
-});
 
-// ADMIN: Get blocked URLs
-app.get('/api/admin/leaderboard/blocks', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM leaderboard_blocks ORDER BY blocked_at DESC');
-    res.json({ success: true, blocks: result.rows });
-  } catch (error) {
-    res.json({ success: true, blocks: [] });
-  }
-});
+    function formatDate(dateString) {
+      if (!dateString) return '-';
+      
+      try {
+        const date = new Date(dateString);
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const day = date.getDate();
+        const month = months[date.getMonth()];
+        
+        return `${day} ${month}`;
+      } catch {
+        return '-';
+      }
+    }
 
-// ADMIN: Unblock URL
-app.delete('/api/admin/leaderboard/blocks/:id', async (req, res) => {
-  try {
-    await pool.query('DELETE FROM leaderboard_blocks WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Database error' });
-  }
-});
+    function updateCountText() {
+      const showing = displayedRankings.length;
+      const total = allRankings.length;
+      document.getElementById('rankings-count-text').innerHTML = 
+        `Showing 1-${showing} of <span id="total-count">${total}</span> agencies`;
+    }
 
-// Get leaderboard stats
-app.get('/api/leaderboard/stats', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT 
-        COUNT(*) as total_entries,
-        AVG(score) as average_score,
-        MAX(score) as highest_score,
-        COUNT(DISTINCT country) as countries
-      FROM leaderboard 
-      WHERE is_opted_out = FALSE 
-        AND status = 'approved'
-    `);
-    
-    res.json({
-      success: true,
-      stats: result.rows[0]
-    });
-  } catch (error) {
-    res.json({ success: true, stats: { total_entries: 0, average_score: 0, highest_score: 0, countries: 0 } });
-  }
-});
+    function showNoMoreMessage() {
+      const container = document.getElementById('load-more-container');
+      container.innerHTML = `
+        <p class="no-more-text">✓ All agencies loaded (${allRankings.length} total)</p>
+      `;
+    }
 
-// Opt-out from leaderboard
-app.post('/api/leaderboard/opt-out', async (req, res) => {
-  const { url, reason } = req.body;
-  
-  if (!url) {
-    return res.status(400).json({ success: false, error: 'URL required' });
-  }
-  
-  try {
-    const token = crypto.randomBytes(16).toString('hex');
-    
-    await pool.query(
-      'INSERT INTO optout_requests (url, reason, token) VALUES ($1, $2, $3)',
-      [url, reason || 'User request', token]
-    );
-    
-    res.json({
-      success: true,
-      message: 'Opt-out request received. We will process it within 24 hours.',
-      token: token
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Request failed' });
-  }
-});
-
-// Process opt-out (admin or automated)
-app.post('/api/leaderboard/opt-out/process/:token', async (req, res) => {
-  try {
-    const result = await pool.query(
-      'SELECT url FROM optout_requests WHERE token = $1 AND processed = FALSE',
-      [req.params.token]
-    );
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Invalid or already processed token' });
+    function loadMoreRankings() {
+      const button = document.getElementById('load-more-btn');
+      button.disabled = true;
+      button.innerHTML = '<span>⏳ Loading...</span>';
+      
+      setTimeout(() => {
+        loadNextBatch();
+        button.disabled = false;
+        button.innerHTML = '<span>⬇️ Load Next 20</span>';
+      }, 300);
     }
     
-    const url = result.rows[0].url;
-    
-    await pool.query(
-      'UPDATE leaderboard SET is_opted_out = TRUE, opted_out_at = NOW(), opted_out_reason = $1 WHERE url = $2',
-      ['User request', url]
-    );
-    
-    await pool.query(
-      'UPDATE optout_requests SET processed = TRUE, processed_at = NOW() WHERE token = $1',
-      [req.params.token]
-    );
-    
-    res.json({ success: true, message: 'Successfully opted out from leaderboard' });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Processing failed' });
-  }
-});
-// ============================================
-// NOTIFICATIONS ENDPOINTS
-// ============================================
-app.get('/api/admin/notifications', async (req, res) => {
+    function scrollToClaimForm() {
+      document.getElementById('claim-form').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function scrollToScanner() {
+      document.getElementById('scanner').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function whatsappPricing(plan) {
+      const url = `https://wa.me/31628073996?text=Hi%20Ot!%20I'm%20interested%20in%20the%20${plan}%20plan.%20Can%20you%20tell%20me%20more?`;
+      window.open(url, '_blank');
+    }
+
+    function notifyLTD() {
+      const email = prompt('Enter your email to get notified when Lifetime Deals launch:');
+      if (email && email.includes('@')) {
+        alert('✅ Thanks! We\'ll notify you at ' + email + ' when LTD launches!');
+      } else if (email) {
+        alert('Please enter a valid email address');
+      }
+    }
+
+    function getFlagEmoji(countryCode) {
+      const flags = {
+        'NL': '🇳🇱', 'BE': '🇧🇪', 'DE': '🇩🇪', 'FR': '🇫🇷', 'UK': '🇬🇧',
+        'US': '🇺🇸', 'CA': '🇨🇦', 'AU': '🇦🇺', 'ES': '🇪🇸', 'IT': '🇮🇹'
+      };
+      return flags[countryCode] || '🌐';
+    }
+
+    function getCountryName(countryCode) {
+      const names = {
+        'NL': 'Netherlands', 'BE': 'Belgium', 'DE': 'Germany', 'FR': 'France',
+        'UK': 'United Kingdom', 'US': 'United States', 'CA': 'Canada',
+        'AU': 'Australia', 'ES': 'Spain', 'IT': 'Italy'
+      };
+      return names[countryCode] || countryCode;
+    }
+
+    function viewAgencyProfile(id) {
+      console.log('View agency profile:', id);
+    }
+
+   async function submitToLeaderboardAPI(scanData) {
+  const companyName = document.getElementById('companyName').value;
+  const country = document.getElementById('countrySelect').value;
+  
+  let domain = '';
   try {
-    const result = await pool.query(`
-      SELECT * FROM notifications 
-      WHERE created_for = 'admin'
-      ORDER BY 
-        is_read ASC,
-        CASE priority
-          WHEN 'urgent' THEN 1
-          WHEN 'high' THEN 2
-          WHEN 'normal' THEN 3
-          WHEN 'low' THEN 4
-        END,
-        created_at DESC
-      LIMIT 50
-    `);
-    
-    res.json({
-      success: true,
-      notifications: result.rows,
-      unread_count: result.rows.filter(n => !n.is_read).length
+    const urlObj = new URL(scanData.url);
+    domain = urlObj.hostname.replace('www.', '');
+  } catch (e) {
+    domain = scanData.url;
+  }
+  
+  const finalCompanyName = companyName.trim() || domain;
+  
+  try {
+    const response = await fetch('/api/leaderboard/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: scanData.url,
+        score: scanData.score,
+        company_name: finalCompanyName,
+        country: country || 'NL',
+        status: 'pending'  // ✅ NIEUWE PARAMETER - wacht op admin approval
+      })
     });
-  } catch (error) {
-    console.error('Get notifications error:', error);
-    res.json({ success: true, notifications: [], unread_count: 0 });
-  }
-});
-
-app.post('/api/admin/notifications/:id/mark-read', async (req, res) => {
-  try {
-    await pool.query(
-      'UPDATE notifications SET is_read = TRUE, read_at = NOW() WHERE id = $1',
-      [req.params.id]
-    );
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to mark as read' });
-  }
-});
-
-app.post('/api/admin/notifications/mark-all-read', async (req, res) => {
-  try {
-    await pool.query(
-      "UPDATE notifications SET is_read = TRUE, read_at = NOW() WHERE created_for = 'admin' AND is_read = FALSE"
-    );
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to mark all as read' });
-  }
-});
-
-app.delete('/api/admin/notifications/:id', async (req, res) => {
-  try {
-    await pool.query('DELETE FROM notifications WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to delete' });
-  }
-});
-
-app.post('/api/admin/notifications/create', async (req, res) => {
-  const { type, title, message, link, priority } = req.body;
-  
-  if (!title || !message) {
-    return res.status(400).json({ success: false, error: 'Title and message required' });
-  }
-  
-  try {
-    await pool.query(
-      `INSERT INTO notifications (type, title, message, link, priority, created_by)
-       VALUES ($1, $2, $3, $4, $5, 'system')`,
-      [type || 'system', title, message, link || null, priority || 'normal']
-    );
     
-    res.json({ success: true, message: 'Notification created' });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to create notification' });
-  }
-});
-
-// ============================================
-// PROFILE CLAIMS ENDPOINTS
-// ============================================
-app.get('/api/admin/claims', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT * FROM profile_claims 
-      ORDER BY 
-        CASE status
-          WHEN 'pending' THEN 1
-          WHEN 'approved' THEN 2
-          WHEN 'rejected' THEN 3
-        END,
-        created_at DESC
-    `);
+    const result = await response.json();
     
-    res.json({ success: true, claims: result.rows });
-  } catch (error) {
-    console.error('Get claims error:', error);
-    res.json({ success: true, claims: [] });
-  }
-});
-
-app.post('/api/admin/claims/:id/approve', async (req, res) => {
-  const { id } = req.params;
-  
-  try {
-    const claim = await pool.query('SELECT * FROM profile_claims WHERE id = $1', [id]);
-    
-    if (claim.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Claim not found' });
+    if (result.success) {
+      // ✅ Nieuwe melding voor user
+      alert('✅ Leaderboard submission sent for review! We will approve it within 24 hours.');
+      
+      // ❌ NIET direct reloaden want submission is nog pending
+      // setTimeout(() => {
+      //   loadLeaderboard();
+      // }, 1000);
     }
-    
-    const claimData = claim.rows[0];
-    
-    // Update leaderboard entry
-    await pool.query(`
-      UPDATE leaderboard 
-      SET 
-        company_name = $1,
-        logo_url = $2,
-        description = $3,
-        specializations = $4,
-        agency_size = $5,
-        contact_email = $6,
-        is_verified = TRUE,
-        claimed = TRUE
-      WHERE url = $7
-    `, [
-      claimData.name,
-      claimData.logo_url,
-      claimData.description,
-      claimData.specializations,
-      claimData.agency_size,
-      claimData.contact_email,
-      claimData.url
-    ]);
-    
-    // Mark claim as approved
-    await pool.query(
-      'UPDATE profile_claims SET status = $1, reviewed_at = NOW(), reviewed_by = $2 WHERE id = $3',
-      ['approved', 'admin', id]
-    );
-    
-    console.log(`✅ Profile claim approved: ${claimData.url}`);
-    
-    res.json({ success: true, message: 'Claim approved' });
   } catch (error) {
-    console.error('Approve claim error:', error);
-    res.status(500).json({ success: false, error: 'Failed to approve' });
+    console.error('Leaderboard submit error:', error);
   }
-});
+}
 
-app.post('/api/admin/claims/:id/reject', async (req, res) => {
-  const { id } = req.params;
-  
-  try {
-    await pool.query(
-      'UPDATE profile_claims SET status = $1, reviewed_at = NOW(), reviewed_by = $2 WHERE id = $3',
-      ['rejected', 'admin', id]
-    );
-    
-    res.json({ success: true, message: 'Claim rejected' });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to reject' });
-  }
-});
-
-app.delete('/api/admin/claims/:id', async (req, res) => {
-  try {
-    await pool.query('DELETE FROM profile_claims WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to delete' });
-  }
-});
-
-// ============================================
-// EMAIL TEMPLATES ENDPOINTS
-// ============================================
-app.get('/api/admin/email-templates', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM email_templates ORDER BY name');
-    res.json({ success: true, templates: result.rows });
-  } catch (error) {
-    res.json({ success: true, templates: [] });
-  }
-});
-
-app.post('/api/admin/email-templates', async (req, res) => {
-  const { name, subject, body, variables } = req.body;
-  
-  if (!name || !subject || !body) {
-    return res.status(400).json({ success: false, error: 'Name, subject and body required' });
-  }
-  
-  try {
-    await pool.query(
-      'INSERT INTO email_templates (name, subject, body, variables) VALUES ($1, $2, $3, $4)',
-      [name, subject, body, variables || null]
-    );
-    
-    res.json({ success: true });
-  } catch (error) {
-    if (error.code === '23505') {
-      return res.status(400).json({ success: false, error: 'Template name already exists' });
+    function submitClaim(e) {
+      e.preventDefault();
+      alert('Claim submitted! We will review within 24 hours.');
     }
-    res.status(500).json({ success: false, error: 'Failed to create template' });
-  }
-});
 
-app.put('/api/admin/email-templates/:id', async (req, res) => {
-  const { subject, body, variables } = req.body;
-  
-  try {
-    await pool.query(
-      'UPDATE email_templates SET subject = $1, body = $2, variables = $3, updated_at = NOW() WHERE id = $4',
-      [subject, body, variables || null, req.params.id]
-    );
+    // ============================================
+    // FREELANCER DIRECTORY
+    // ============================================
     
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to update' });
-  }
-});
+    async function loadFreelancers() {
+      try {
+        const response = await fetch('/api/freelancers');
+        const data = await response.json();
+        
+        if (data.success && data.freelancers.length > 0) {
+          renderFreelancers(data.freelancers);
+        } else {
+          document.getElementById('freelancers-grid').innerHTML = `
+            <div class="col-span-full text-center text-gray-500 py-8">
+              No freelancers listed yet. Be the first!
+            </div>
+          `;
+        }
+      } catch (error) {
+        console.error('Load freelancers error:', error);
+        document.getElementById('freelancers-grid').innerHTML = `
+          <div class="col-span-full text-center text-red-500 py-8">
+            Failed to load freelancers
+          </div>
+        `;
+      }
+    }
 
-app.delete('/api/admin/email-templates/:id', async (req, res) => {
-  try {
-    await pool.query('DELETE FROM email_templates WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to delete' });
-  }
-});
+    function renderFreelancers(freelancers) {
+      const grid = document.getElementById('freelancers-grid');
+      
+      grid.innerHTML = freelancers.map(f => `
+        <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border-2 ${f.is_featured ? 'border-yellow-500' : 'border-gray-700'} hover:border-purple-500 transition-all">
+          ${f.is_featured ? '<div class="text-xs px-2 py-1 bg-yellow-500 text-gray-900 rounded-full font-bold inline-block mb-3">⭐ FEATURED</div>' : ''}
+          
+          <div class="flex items-start gap-4 mb-4">
+            ${f.profile_photo_url 
+              ? `<img src="${f.profile_photo_url}" class="w-16 h-16 rounded-full object-cover" alt="${f.name}">`
+              : `<div class="w-16 h-16 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-2xl font-bold">${f.name.charAt(0)}</div>`
+            }
+            <div class="flex-1">
+              <h3 class="text-xl font-bold mb-1">${f.name}</h3>
+              <p class="text-sm text-purple-400 mb-2">${f.title}</p>
+            </div>
+          </div>
+          
+          ${f.has_score ? `
+            <div class="inline-block px-3 py-1 rounded-full text-sm font-bold mb-3 ${
+              f.score >= 80 ? 'bg-green-900 text-green-400' : 
+              f.score >= 60 ? 'bg-yellow-900 text-yellow-400' : 
+              'bg-gray-700 text-gray-400'
+            }">
+              ✅ Writing Score: ${f.score}/100
+            </div>
+          ` : ''}
+          
+          <p class="text-sm text-gray-400 mb-4 line-clamp-3">${f.bio}</p>
+          
+          <div class="flex items-center gap-3 mb-4 text-xs text-gray-500 flex-wrap">
+            ${f.location ? `<span>📍 ${f.location}</span>` : ''}
+            ${f.linkedin_url ? `<a href="${f.linkedin_url}" target="_blank" class="text-blue-400 hover:underline">🔗 LinkedIn</a>` : ''}
+            ${f.portfolio_url ? `<a href="${f.portfolio_url}" target="_blank" class="text-blue-400 hover:underline">💼 Portfolio</a>` : ''}
+          </div>
+          
+          <button onclick="contactFreelancer('${f.email}', '${f.name}')" class="w-full bg-purple-600 hover:bg-purple-700 py-2 rounded-lg font-semibold transition-all">
+            💬 Contact ${f.name.split(' ')[0]}
+          </button>
+        </div>
+      `).join('');
+    }
 
-// ============================================
-// EMAIL LOGS
-// ============================================
-app.get('/api/admin/email-logs', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT * FROM email_logs 
-      ORDER BY sent_at DESC 
-      LIMIT 100
-    `);
-    res.json({ success: true, logs: result.rows });
-  } catch (error) {
-    res.json({ success: true, logs: [] });
-  }
-});
+    function openFreelancerSignup() {
+      document.getElementById('freelancerModal').classList.remove('hidden');
+    }
 
-// ============================================
-// HEALTH CHECK
-// ============================================
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    database: 'connected'
-  });
-});
+    function closeFreelancerModal() {
+      document.getElementById('freelancerModal').classList.add('hidden');
+    }
 
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'healthy',
-    timestamp: new Date().toISOString()
-  });
-});
+    async function submitFreelancerApplication(e) {
+      e.preventDefault();
+      
+      const form = e.target;
+      const btn = document.getElementById('freelancerSubmitBtn');
+      const formData = new FormData(form);
+      
+      const data = {
+        name: formData.get('name'),
+        email: formData.get('email'),
+        title: formData.get('title'),
+        bio: formData.get('bio'),
+        linkedin_url: formData.get('linkedin_url'),
+        portfolio_url: formData.get('portfolio_url'),
+        website_url: formData.get('website_url'),
+        location: formData.get('location'),
+        country: formData.get('country')
+      };
+      
+      btn.disabled = true;
+      btn.textContent = '⏳ Submitting...';
+      
+      try {
+        const response = await fetch('/api/freelancers/apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          alert('✅ Application submitted! We will contact you within 24 hours at ' + data.email);
+          closeFreelancerModal();
+          form.reset();
+        } else {
+          alert('❌ ' + (result.error || 'Application failed'));
+        }
+      } catch (error) {
+        console.error('Submit error:', error);
+        alert('❌ Application failed. Please try again.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '📝 Submit Application';
+      }
+    }
 
-// ============================================
-// 404 HANDLER
-// ============================================
-app.use((req, res) => {
-  res.status(404).json({ 
-    success: false, 
-    error: 'Endpoint not found',
-    path: req.path 
-  });
-});
+    function contactFreelancer(email, name) {
+      const subject = encodeURIComponent(`Inquiry from ContentScale Directory`);
+      const body = encodeURIComponent(`Hi ${name},\n\nI found your profile on ContentScale and I'm interested in discussing a potential project.\n\n`);
+      window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+    }
+  </script>
+  <!-- Footer -->
+   <CENTER><footer>
+        <div class="container">
+            <h3>ContentScale – Expert SEO Traffic Recovery Services</h3>
+            <p>
+                Specializing in GRAAF Framework implementation, AI Overviews optimization, and international SEO expansion.
+            </p>
+            <p>
+                Serving Netherlands (Amsterdam, Rotterdam, The Hague, Utrecht), Belgium (Brussels, Antwerp, Ghent), Germany (Berlin, Munich, Hamburg), UK (London, Manchester, Edinburgh), and 45+ countries worldwide with 24/7 emergency support.
+            </p>
+            
+            <div style="margin: 40px 0;">
+                <h4 style="color: white; margin-bottom: 16px;">Popular Resources:</h4>
+                <p style="line-height: 2;">
+                    <a href="https://contentscale.site/traffic-drop-recovery/">Traffic Drop Recovery</a> |
+                    <a href="https://contentscale.site/ai-overview-optimization/">AI Overview Optimization</a> |
+                    <a href="https://contentscale.site/international-seo/">International SEO</a> |
+                    <a href="https://contentscale.site/seo-contentscore/">SEO ContentScore Tool</a> |
+                    <a href="https://contentscale.site/graaf-framework/">GRAAF Framework</a>
+                </p>
+            </div>
 
-// ============================================
-// START SERVER
-// ============================================
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`
-╔════════════════════════════════════════╗
-║                                        ║
-║     🚀 CONTENTSCALE SERVER LIVE 🚀     ║
-║                                        ║
-║     Port: ${PORT}                         ║
-║     Mode: ${process.env.NODE_ENV || 'development'}              ║
-║     Time: ${new Date().toLocaleString()}    ║
-║                                        ║
-║     ✅ Database connected              ║
-║     ✅ No bcrypt (Railway safe)        ║
-║     ✅ All tables ready                ║
-║     ✅ Approval system active          ║
-║                                        ║
-╚════════════════════════════════════════╝
-  `);
-});
-
-// ============================================
-// GRACEFUL SHUTDOWN
-// ============================================
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully...');
-  pool.end(() => {
-    console.log('Database pool closed');
-    process.exit(0);
-  });
-});
-
-process.on('SIGINT', () => {
-  console.log('SIGINT received, shutting down gracefully...');
-  pool.end(() => {
-    console.log('Database pool closed');
-    process.exit(0);
-  });
-});
+            <div class="footer-bottom">
+                <p>
+                    © 2025 ContentScale. All rights reserved. |
+                    <a href="https://contentscale.site/privacy-policy/">Privacy Policy</a> |
+                    <a href="https://contentscale.site/contact/">Contact</a> |
+                    <a href="https://contentscale.site/services/">Services</a>
+                </p>
+                <p style="margin-top: 16px;">
+                    <strong>Connect:</strong>
+                    <a href="https://linkedin.com/in/ottmar-joseph-gregory-francisca" target="_blank" rel="noopener">LinkedIn</a> |
+                    <a href="https://wa.me/31628073996" target="_blank" rel="noopener">WhatsApp (24/7)</a> |
+                    <a href="mailto:hello@contentscale.site">Email</a>
+                </p>
+            </div>
+        </div>
+    </footer></CENTER>
+</body>
+</html>
