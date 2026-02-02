@@ -1120,6 +1120,100 @@ async function toggleShareLinkStatus(shareCode) {
       }
     }
 
+    async function loadPendingLeaderboard() {
+  const response = await fetch('/api/admin/leaderboard/pending');
+  const data = await response.json();
+  
+  const container = document.getElementById('pending-leaderboard-container');
+  
+  if (!data.pending || data.pending.length === 0) {
+    container.innerHTML = '<div class="text-gray-500">No pending submissions</div>';
+    return;
+  }
+  
+  container.innerHTML = data.pending.map(entry => {
+    const mismatch = entry.country !== entry.auto_detected_country && 
+                     entry.auto_detected_country !== 'Unknown';
+    
+    return `
+      <div class="bg-gray-800 p-4 rounded mb-4 border-2 ${mismatch ? 'border-red-500' : 'border-gray-700'}">
+        
+        ${mismatch ? `<div class="text-red-400 mb-2">⚠️ COUNTRY MISMATCH</div>` : ''}
+        
+        <h3 class="text-xl font-bold">${entry.company_name || 'Unknown'}</h3>
+        <p class="text-sm text-gray-400">${entry.url}</p>
+        <p class="text-lg">Score: ${entry.score}/100</p>
+        
+        <div class="mt-4 bg-gray-900 p-3 rounded">
+          <div class="mb-2">
+            <span class="text-gray-400">User claimed:</span>
+            <span class="${mismatch ? 'text-red-400' : 'text-green-400'} font-bold">
+              ${entry.country}
+            </span>
+          </div>
+          <div class="mb-2">
+            <span class="text-gray-400">Auto-detected:</span>
+            <span class="text-blue-400 font-bold">${entry.auto_detected_country}</span>
+          </div>
+          
+          <label class="text-xs text-gray-400">Final Country:</label>
+          <select id="country-${entry.id}" class="w-full p-2 bg-gray-700 rounded">
+            <option value="${entry.auto_detected_country}" selected>
+              ${entry.auto_detected_country} (Auto-detected ✅)
+            </option>
+            ${entry.country !== entry.auto_detected_country ? `
+              <option value="${entry.country}">${entry.country} (User claimed)</option>
+            ` : ''}
+            <option value="Netherlands">🇳🇱 Netherlands</option>
+            <option value="Belgium">🇧🇪 Belgium</option>
+            <option value="Germany">🇩🇪 Germany</option>
+            <option value="France">🇫🇷 France</option>
+            <option value="United Kingdom">🇬🇧 United Kingdom</option>
+            <option value="United States">🇺🇸 United States</option>
+          </select>
+        </div>
+        
+        <div class="flex gap-2 mt-4">
+          <button onclick="approveEntry(${entry.id})" class="bg-green-600 px-4 py-2 rounded flex-1">
+            ✅ Approve
+          </button>
+          <button onclick="rejectEntry(${entry.id})" class="bg-red-600 px-4 py-2 rounded flex-1">
+            ❌ Reject
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function approveEntry(id) {
+  const finalCountry = document.getElementById(`country-${id}`).value;
+  
+  const response = await fetch(`/api/admin/leaderboard/${id}/approve`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ final_country: finalCountry })
+  });
+  
+  const result = await response.json();
+  
+  if (result.success) {
+    alert(`✅ Approved with country: ${finalCountry}`);
+    loadPendingLeaderboard();
+  }
+}
+
+async function rejectEntry(id) {
+  if (!confirm('Reject this submission?')) return;
+  
+  await fetch(`/api/admin/leaderboard/${id}/reject`, { method: 'POST' });
+  alert('✅ Rejected');
+  loadPendingLeaderboard();
+}
+
+// Call when page loads
+loadPendingLeaderboard();
+
     // ==========================================
     // ✅ COPY URL FUNCTIONS - CRITICAL FIX
     // ==========================================
