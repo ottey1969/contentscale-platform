@@ -1,6 +1,3 @@
-
-
-
 // ============================================
 // CONTENTSCALE SERVER.JS - COMPLETE WITHOUT BCRYPT
 // ============================================
@@ -78,67 +75,73 @@ function extractContentForAI(html) {
   return { title, content: processed };
 }
 
-const AI_SCORING_PROMPT = `You are a strict SEO content quality scorer. Analyze the content below using the GRAAF and CRAFT frameworks.
+const AI_SCORING_PROMPT = `You are an SEO content quality scorer. Analyze the content using GRAAF and CRAFT frameworks. Be fair but honest.
 
-BE STRICT. Scores must be earned. A mediocre page scores 35-55 (GRAAF+CRAFT). Good = 60-70. Exceptional = 70+. Do NOT inflate.
+CONTENT FORMAT: You'll see markers like [H1], [H2], [H3], and • for lists. These ARE structure - count them.
+
+SCORING EXPECTATIONS:
+- Professional content with good structure: 60-75
+- Exceptional content with expertise: 75-85
+- Thin or keyword-stuffed content: 35-50
 
 GRAAF SCORES (max 50 total):
 
 Credibility (max 16):
-  13-16: Multiple expert quotes with FULL attribution (name + title + company). Author has verifiable credentials and social proof.
-  9-12: At least one properly attributed quote. Author named with some credentials.
-  5-8: Quotes exist but attribution is vague (missing name or title). Or author mentioned without credentials.
-  0-4: No expert quotes at all. No identifiable author.
+  12-16: Clear author name OR expert quotes with attribution. E-E-A-T signals present.
+  8-11: Some authority indicators (author, credentials, or quotes) but incomplete.
+  4-7: Generic authority claims ("experts say") without specifics.
+  0-3: No credibility signals at all.
 
 Relevance (max 18):
-  15-18: Deep, specific, comprehensive. Unique insights not found elsewhere. 1500+ substantive words.
-  10-14: Good topical depth. Some original specificity. 800-1500 words.
-  5-9: Moderate coverage. Somewhat generic or surface-level. 400-800 words.
-  0-4: Thin or superficial content. Under 400 words or extremely generic.
+  14-18: 1000+ words, topic-focused, specific details, actionable insights.
+  10-13: 600-1000 words, good coverage, some depth.
+  5-9: 300-600 words, basic coverage, somewhat generic.
+  0-4: Under 300 words or extremely thin content.
 
 Accuracy (max 8):
-  7-8: Multiple statistics with clear, credible source citations. Data is recent and verifiable.
-  5-6: Some statistics present but sources are vague, missing, or hard to verify.
-  2-4: One or two numbers mentioned without real data or sourcing behind them.
-  0-1: No statistics, data, or factual claims with backing.
+  6-8: Specific data points (percentages, numbers) mentioned with some sourcing.
+  4-5: Data mentioned but sources unclear or generic ("studies show").
+  2-3: Vague claims without data.
+  0-1: No factual claims or data whatsoever.
 
 Freshness (max 8):
-  7-8: Clear 2025-2026 publication or update dates. References current trends or events. Active freshness signals.
-  5-6: Some recent dates (2024-2025) present but not prominently displayed or inconsistent.
-  2-4: Dates present but older (2022-2023) or the content feels dated.
-  0-1: No date signals whatsoever, or content is clearly outdated.
+  6-8: 2025-2026 dates OR clearly current content (events, trends).
+  4-5: 2024 dates OR seems recent but no explicit markers.
+  2-3: Older dates (2022-2023) or feels dated.
+  0-1: No dates or very outdated.
 
 CRAFT SCORES (max 30 total):
 
 Heading Structure (max 8):
-  7-8: Single, clear H1 with strong primary keyword. Professional and descriptive title.
-  4-6: H1 is present but keyword usage is weak, or the title is generic/vague.
-  0-3: Multiple H1 tags, missing H1 entirely, or H1 is very poor.
+  6-8: ONE [H1] present with clear topic. Professional title.
+  3-5: [H1] exists but weak, generic, or multiple H1s.
+  0-2: No [H1] or completely broken heading structure.
 
 Subheadings (max 10):
-  8-10: 5 or more H2/H3 subheadings with a clear logical hierarchy. Keywords naturally included.
-  5-7: 3-4 subheadings present with a reasonable but imperfect structure.
-  2-4: Only 1-2 subheadings. Structure is minimal.
-  0-1: No subheadings at all.
+  8-10: 5+ [H2] or [H3] markers. Clear content hierarchy.
+  5-7: 3-4 [H2]/[H3] markers. Decent structure.
+  2-4: Only 1-2 [H2]/[H3] markers. Minimal structure.
+  0-1: No [H2]/[H3] markers at all.
 
 Paragraphs (max 8):
-  7-8: Well-structured paragraphs with good flow between ideas. Varied paragraph length. Easy to read.
-  4-6: Paragraphs are present but some are excessively long or the text feels choppy.
-  1-3: Very few paragraphs, or the text is a wall-of-text with no clear breaks.
-  0: No discernible paragraph structure.
+  6-8: Content has clear breaks between ideas. Good readability flow.
+  4-5: Some paragraph breaks but could be better structured.
+  1-3: Long blocks of text without clear separation.
+  0: Complete wall of text.
 
 Lists (max 4):
-  3-4: Good, purposeful use of ordered or unordered lists that genuinely enhance scannability.
-  1-2: Some lists present but used minimally or ineffectively.
-  0: No lists anywhere in the content.
+  3-4: 3+ bullet points (•) used effectively for scannability.
+  1-2: 1-2 bullet points present but minimal use.
+  0: No bullet points (•) anywhere.
 
 CRITICAL RULES:
-- Score ONLY what is actually present in the content. Never assume, infer, or give benefit of the doubt.
-- Every sub-score MUST be a whole number within its stated maximum.
-- Generate exactly 3-6 recommendations targeting the weakest scoring areas.
-- Recommendations must be specific to THIS content, not generic advice.
+- Count [H1], [H2], [H3], [H4] markers as actual headings
+- Count • symbols as list items
+- Be realistic: most professional pages score 55-75, not 30 or 95
+- If content is clearly structured with headings and lists, CRAFT should be at least 15/30
+- Every score MUST be a whole number within its max
 
-Return ONLY this JSON structure, no other text, no markdown fences:
+Return ONLY this JSON structure, no other text:
 {
   "graaf": { "credibility": N, "relevance": N, "accuracy": N, "freshness": N },
   "craft": { "heading_structure": N, "subheadings": N, "paragraphs": N, "lists": N },
@@ -147,18 +150,20 @@ Return ONLY this JSON structure, no other text, no markdown fences:
       "type": "major or quickwin",
       "category": "e.g. GRAAF - Credibility",
       "title": "Short action title",
-      "description": "What is wrong or missing on this specific page",
+      "description": "What is wrong or missing",
       "impact": "High or Medium or Low",
       "points": "+N points",
-      "howToFix": "1. First step\n2. Second step\n3. Third step",
-      "example": "A concrete example of what good looks like"
+      "howToFix": "1. Step\\n2. Step\\n3. Step",
+      "example": "Concrete example"
     }
   ]
 }`;
 
+
+
 async function scoreWithAI(contentForAI) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s for Railway network
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -592,6 +597,26 @@ async function createAllTables() {
     await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS agency_size TEXT`);
     await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS contact_email TEXT`);
     await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS verified BOOLEAN DEFAULT FALSE`);
+    
+    // SHARE_LINKS TABLE MIGRATIONS - migrate old schema (token) to new schema (share_code)
+    await client.query(`
+      DO $$ 
+      BEGIN
+        -- Rename token column to share_code if it exists
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'share_links' AND column_name = 'token'
+        ) AND NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'share_links' AND column_name = 'share_code'
+        ) THEN
+          ALTER TABLE share_links RENAME COLUMN token TO share_code;
+        END IF;
+      END $$;
+    `).catch(e => console.log('share_links migration skipped:', e.message));
+    
+    await client.query(`ALTER TABLE share_links ADD COLUMN IF NOT EXISTS agency_id INTEGER REFERENCES agencies(id) ON DELETE CASCADE`).catch(e => {});
+    await client.query(`ALTER TABLE share_links ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active'`).catch(e => {});
     
     // DEFAULT SETTINGS
     const defaultSettings = [
@@ -1317,6 +1342,8 @@ app.get('/api/admin/share-links', async (req, res) => {
 app.post('/api/admin/share-links/create', async (req, res) => {
   const { client_email, client_name, client_company, scans_limit, valid_days } = req.body;
   
+  console.log('📋 Creating share link:', { client_email, client_name, scans_limit, valid_days });
+  
   if (!client_email) {
     return res.status(400).json({ success: false, error: 'Email required' });
   }
@@ -1325,6 +1352,8 @@ app.post('/api/admin/share-links/create', async (req, res) => {
     const shareCode = crypto.randomBytes(8).toString('hex');
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + (valid_days || 30));
+    
+    console.log('🔑 Generated share code:', shareCode, 'expires:', expiresAt);
     
     await pool.query(
       `INSERT INTO share_links (share_code, client_email, client_name, client_company, scans_limit, scans_used, expires_at, status)
@@ -1339,24 +1368,36 @@ app.post('/api/admin/share-links/create', async (req, res) => {
       ]
     );
     
+    console.log('✅ Share link created successfully');
     const shareUrl = `${req.protocol}://${req.get('host')}/scan-with-link/${shareCode}`;
     res.json({ success: true, share_code: shareCode, share_url: shareUrl });
   } catch (error) {
-    console.error('Share link creation error:', error);
+    console.error('❌ Share link creation error:', error.message);
+    console.error('Full error:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Database error',
-      details: error.message
+      error: 'Database error: ' + error.message,
+      hint: error.hint || null
     });    
   }
 });
 
 app.delete('/api/admin/share-links/:code', async (req, res) => {
   try {
-    await pool.query('DELETE FROM share_links WHERE share_code = $1', [req.params.code]);
+    console.log('🗑️ Deleting share link:', req.params.code);
+    const result = await pool.query('DELETE FROM share_links WHERE share_code = $1 RETURNING id', [req.params.code]);
+    
+    if (result.rowCount === 0) {
+      console.log('⚠️ Share link not found:', req.params.code);
+      return res.status(404).json({ success: false, error: 'Share link not found' });
+    }
+    
+    console.log('✅ Share link deleted');
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ success: false, error: 'Database error' });
+    console.error('❌ Share link delete error:', error.message);
+    console.error('Full error:', error);
+    res.status(500).json({ success: false, error: 'Database error: ' + error.message });
   }
 });
 
@@ -1467,6 +1508,94 @@ app.post('/api/admin/leaderboard/bulk-delete', async (req, res) => {
 });
 
 // ============================================
+// LEADERBOARD APPROVAL SYSTEM
+// ============================================
+
+// Get pending submissions (awaiting admin approval)
+app.get('/api/admin/leaderboard/pending', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        id,
+        url,
+        company_name,
+        score,
+        country,
+        submission_ip,
+        created_at
+      FROM leaderboard 
+      WHERE admin_verified = FALSE AND is_opted_out = FALSE
+      ORDER BY created_at DESC
+    `);
+    
+    res.json({
+      success: true,
+      pending: result.rows,
+      count: result.rows.length
+    });
+  } catch (error) {
+    console.error('Get pending error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Approve a leaderboard submission
+app.post('/api/admin/leaderboard/:id/approve', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await pool.query(`
+      UPDATE leaderboard 
+      SET admin_verified = TRUE 
+      WHERE id = $1 
+      RETURNING id, url, company_name, score
+    `, [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Entry not found' });
+    }
+    
+    console.log('✅ Approved leaderboard entry:', result.rows[0]);
+    
+    res.json({
+      success: true,
+      entry: result.rows[0],
+      message: 'Entry approved and now visible on public leaderboard'
+    });
+  } catch (error) {
+    console.error('Approve error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Reject a leaderboard submission (delete it)
+app.post('/api/admin/leaderboard/:id/reject', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await pool.query(`
+      DELETE FROM leaderboard 
+      WHERE id = $1 
+      RETURNING url, company_name
+    `, [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Entry not found' });
+    }
+    
+    console.log('❌ Rejected leaderboard entry:', result.rows[0]);
+    
+    res.json({
+      success: true,
+      message: 'Entry rejected and removed'
+    });
+  } catch (error) {
+    console.error('Reject error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
 // SCAN ALL AGENCIES IN LEADERBOARD — AI-POWERED
 // ============================================
 app.post('/api/admin/scan-all-agencies', async (req, res) => {
@@ -1564,6 +1693,12 @@ app.post('/api/admin/scan-all-agencies', async (req, res) => {
             graafScore = aiResult.graaf.credibility + aiResult.graaf.relevance + aiResult.graaf.accuracy + aiResult.graaf.freshness;
             craftScore = aiResult.craft.heading_structure + aiResult.craft.subheadings + aiResult.craft.paragraphs + aiResult.craft.lists;
 
+            // Sanity check: if scores are unrealistically low, use regex fallback
+            if (craftScore < 10 || graafScore < 20) {
+              console.log(`  ⚠️ AI scores suspiciously low (GRAAF=${graafScore}, CRAFT=${craftScore}), using regex fallback`);
+              throw new Error('AI scores too low - likely extraction issue');
+            }
+
             scanCache.set(contentHash, {
               graafScore, craftScore,
               graafItems: aiResult.graaf,
@@ -1658,7 +1793,9 @@ app.get('/api/leaderboard', async (req, res) => {
         COALESCE(is_verified, false) as is_claimed,
         COALESCE(created_at, NOW()) as created_at
       FROM leaderboard 
-      WHERE score IS NOT NULL AND is_opted_out = FALSE
+      WHERE score IS NOT NULL 
+        AND is_opted_out = FALSE 
+        AND admin_verified = TRUE
       ORDER BY score DESC 
       LIMIT 50
     `);
@@ -1824,12 +1961,13 @@ app.post('/api/leaderboard/submit', async (req, res) => {
     }
     
     const leaderboardResult = await pool.query(`
-      INSERT INTO leaderboard (url, score, company_name, country, submission_ip)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO leaderboard (url, score, company_name, country, submission_ip, admin_verified)
+      VALUES ($1, $2, $3, $4, $5, FALSE)
       ON CONFLICT (url) DO UPDATE SET 
         score = EXCLUDED.score,
         company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
-        last_scan = NOW()
+        last_scan = NOW(),
+        admin_verified = FALSE
       RETURNING id
     `, [url, score, company_name || null, country || 'NL', ip]);
     
@@ -1850,13 +1988,14 @@ app.post('/api/leaderboard/submit', async (req, res) => {
       INSERT INTO submission_limits (ip_address, submission_date, submission_count)
       VALUES ($1, $2, 1)
       ON CONFLICT (ip_address, submission_date) DO UPDATE
-      SET submission_count = submission_count + 1, last_submitted_at = NOW()
+      SET submission_count = submission_limits.submission_count + 1, last_submitted_at = NOW()
     `, [ip, today_date]);
     
     res.json({
       success: true,
       leaderboardEntryId,
-      message: 'Added to leaderboard!'
+      message: 'Submission received! Your entry will appear on the leaderboard once approved by our team.',
+      pending_approval: true
     });
     
   } catch (error) {
@@ -2069,6 +2208,13 @@ app.post('/api/scan', async (req, res) => {
 
         graafScore = graafItems.credibility + graafItems.relevance + graafItems.accuracy + graafItems.freshness;
         craftScore = craftItems.headingStructure + craftItems.subheadings + craftItems.paragraphs + craftItems.lists;
+        
+        // Sanity check: if scores are unrealistically low, use regex fallback
+        if (craftScore < 10 || graafScore < 20) {
+          console.log(`  ⚠️ AI scores suspiciously low (GRAAF=${graafScore}, CRAFT=${craftScore}), using regex fallback`);
+          throw new Error('AI scores too low - likely extraction issue');
+        }
+        
         aiRecommendations = Array.isArray(aiResult.recommendations) ? aiResult.recommendations : [];
         scoringMethod = 'ai';
 
@@ -2111,6 +2257,13 @@ app.post('/api/scan', async (req, res) => {
 
     const totalScore = graafScore + craftScore + technicalScore;
     const quality = totalScore >= 90 ? 'excellent' : totalScore >= 75 ? 'good' : totalScore >= 60 ? 'average' : totalScore >= 45 ? 'below-average' : 'poor';
+
+    console.log(`\n🎯 SCAN COMPLETE: ${scanUrl}`);
+    console.log(`   Method: ${scoringMethod.toUpperCase()}`);
+    console.log(`   Score: ${totalScore}/100 (${quality})`);
+    console.log(`   └─ GRAAF: ${graafScore}/50 (${scoringMethod === 'fallback' ? 'regex' : 'AI'})`);
+    console.log(`   └─ CRAFT: ${craftScore}/30 (${scoringMethod === 'fallback' ? 'regex' : 'AI'})`);
+    console.log(`   └─ Technical: ${technicalScore}/20 (regex)\n`);
 
     // === TECHNICAL RECOMMENDATIONS (always regex — binary checks) ===
     const techRecommendations = [];
