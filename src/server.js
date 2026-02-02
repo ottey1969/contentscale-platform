@@ -111,7 +111,7 @@ async function fetchWithPuppeteer(url) {
     });
     
     // Wait a bit for any dynamic content
-    await page.waitForTimeout(1000);
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Extract content intelligently from the DOM
     const content = await page.evaluate(() => {
@@ -535,7 +535,7 @@ pool.connect((err, client, release) => {
     release();
     setTimeout(createAllTables, 1000);
   }
-}); 
+});
 
 // ============================================
 // CREATE ALL TABLES
@@ -1127,7 +1127,6 @@ app.get('/', (req, res) => {
 app.get('/seo-contentscore', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/unified-scan-page.html'));
 });
-
 // ============================================
 // ADMIN LOGIN - NO BCRYPT
 // ============================================
@@ -1736,7 +1735,6 @@ app.put('/api/admin/share-links/:code/toggle-status', async (req, res) => {
     res.status(500).json({ success: false, error: 'Database error' });
   }
 });
-
 // ============================================
 // LEADERBOARD ENDPOINTS
 // ============================================
@@ -1840,16 +1838,6 @@ app.get('/api/admin/leaderboard/pending', async (req, res) => {
 });
 
 // Approve a leaderboard submission
-// ============================================
-// COMPLETE WORKING APPROVE ENDPOINT
-// Copy this ENTIRE block to replace your broken one
-// ============================================
-
-// DELETE YOUR BROKEN APPROVE ENDPOINT
-// (from line ~1170-1200, starting with app.post('/api/admin/leaderboard/:id/approve')
-// 
-// PASTE THIS COMPLETE VERSION:
-
 app.post('/api/admin/leaderboard/:id/approve', async (req, res) => {
   try {
     const { id } = req.params;
@@ -1868,16 +1856,6 @@ app.post('/api/admin/leaderboard/:id/approve', async (req, res) => {
     
     const params = final_country ? [id, final_country] : [id];
     const result = await pool.query(updateQuery, params);
-
-// ============================================
-// HOW TO USE THIS:
-// ============================================
-// 1. Find your approve endpoint in server.js (around line 1170-1200)
-// 2. DELETE the entire broken endpoint
-// 3. PASTE this complete version
-// 4. SAVE
-// 5. RESTART server
-// ============================================
     
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Entry not found' });
@@ -2228,11 +2206,16 @@ async function checkIPLimit(ip) {
 function getClientIP(req) {
   return (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '0.0.0.0').split(',')[0].trim();
 }
+
+// ============================================
+// COUNTRY AUTO-DETECTION FUNCTION
+// ============================================
 function detectCountryFromUrl(url) {
   try {
     const urlObj = new URL(url);
     const hostname = urlObj.hostname.toLowerCase();
     
+    // Check TLD
     if (hostname.endsWith('.nl')) return 'Netherlands';
     if (hostname.endsWith('.be')) return 'Belgium';
     if (hostname.endsWith('.de')) return 'Germany';
@@ -2243,13 +2226,31 @@ function detectCountryFromUrl(url) {
     if (hostname.endsWith('.au')) return 'Australia';
     if (hostname.endsWith('.es')) return 'Spain';
     if (hostname.endsWith('.it')) return 'Italy';
+    if (hostname.endsWith('.pt')) return 'Portugal';
+    if (hostname.endsWith('.se')) return 'Sweden';
+    if (hostname.endsWith('.no')) return 'Norway';
+    if (hostname.endsWith('.dk')) return 'Denmark';
+    if (hostname.endsWith('.fi')) return 'Finland';
+    if (hostname.endsWith('.at')) return 'Austria';
+    if (hostname.endsWith('.ch')) return 'Switzerland';
+    if (hostname.endsWith('.pl')) return 'Poland';
+    if (hostname.endsWith('.ie')) return 'Ireland';
+    if (hostname.endsWith('.nz')) return 'New Zealand';
     
+    // Check subdomain patterns (e.g., nl.example.com)
     const parts = hostname.split('.');
     if (parts.length > 2) {
       const subdomain = parts[0];
       if (subdomain === 'nl') return 'Netherlands';
       if (subdomain === 'be') return 'Belgium';
       if (subdomain === 'de') return 'Germany';
+      if (subdomain === 'fr') return 'France';
+      if (subdomain === 'uk') return 'United Kingdom';
+      if (subdomain === 'us') return 'United States';
+      if (subdomain === 'ca') return 'Canada';
+      if (subdomain === 'au') return 'Australia';
+      if (subdomain === 'es') return 'Spain';
+      if (subdomain === 'it') return 'Italy';
     }
     
     return 'Unknown';
@@ -2259,7 +2260,7 @@ function detectCountryFromUrl(url) {
 }
 
 // ============================================
-// LEADERBOARD SUBMIT (WITH SECURITY)
+// LEADERBOARD SUBMIT (WITH SECURITY + COUNTRY AUTO-DETECTION)
 // ============================================
 app.post('/api/leaderboard/submit', async (req, res) => {
   try {
@@ -2270,9 +2271,11 @@ app.post('/api/leaderboard/submit', async (req, res) => {
       return res.status(400).json({ error: 'URL and score required' });
     }
 
+    // Auto-detect country from URL
     const auto_detected_country = detectCountryFromUrl(url);
-console.log(`🌍 Country: User="${country || 'None'}", Detected="${auto_detected_country}"`);
+    console.log(`🌍 Country: User="${country || 'None'}", Detected="${auto_detected_country}"`);
     
+    // Check if URL is blocked
     const blocked = await pool.query(`
       SELECT id FROM leaderboard_blocks 
       WHERE url = $1 AND (expires_at IS NULL OR expires_at > NOW())
@@ -2284,19 +2287,21 @@ console.log(`🌍 Country: User="${country || 'None'}", Detected="${auto_detecte
       });
     }
     
+    // Check IP rate limit
     const limitCheck = await checkIPLimit(ip);
-if (limitCheck.limited) {
-  return res.status(429).json({
-    success: false,
-    error: 'You have used all 3 free scans today.',
-    message: 'You have 3 free scans per day. Contact Ot @ WhatsApp +31628073996 if you need more.',
-    whatsappUrl: 'https://wa.me/31628073996?text=Hi%20Ot!%20I%20need%20more%20scans.',
-    scansUsed: limitCheck.count,
-    scansLimit: limitCheck.max,
-    retryAfter: '24 hours'
-  });
-}
+    if (limitCheck.limited) {
+      return res.status(429).json({
+        success: false,
+        error: 'You have used all 3 free scans today.',
+        message: 'You have 3 free scans per day. Contact Ot @ WhatsApp +31628073996 if you need more.',
+        whatsappUrl: 'https://wa.me/31628073996?text=Hi%20Ot!%20I%20need%20more%20scans.',
+        scansUsed: limitCheck.count,
+        scansLimit: limitCheck.max,
+        retryAfter: '24 hours'
+      });
+    }
     
+    // Check for duplicate submission today
     const today = new Date().toISOString().split('T')[0];
     const duplicate = await pool.query(`
       SELECT id FROM leaderboard 
@@ -2309,23 +2314,25 @@ if (limitCheck.limited) {
       });
     }
     
-   const leaderboardResult = await pool.query(`
-  INSERT INTO leaderboard (
-    url, score, company_name, country, auto_detected_country, submission_ip, admin_verified
-  )
-  VALUES ($1, $2, $3, $4, $5, $6, FALSE)
-  ON CONFLICT (url) DO UPDATE SET 
-    score = EXCLUDED.score,
-    company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
-    country = EXCLUDED.country,
-    auto_detected_country = EXCLUDED.auto_detected_country,
-    last_scan = NOW(),
-    admin_verified = FALSE
-  RETURNING id
-`, [url, score, company_name || null, country || 'Unknown', auto_detected_country, ip]);
+    // Insert into leaderboard with country auto-detection
+    const leaderboardResult = await pool.query(`
+      INSERT INTO leaderboard (
+        url, score, company_name, country, auto_detected_country, submission_ip, admin_verified
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, FALSE)
+      ON CONFLICT (url) DO UPDATE SET 
+        score = EXCLUDED.score,
+        company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
+        country = EXCLUDED.country,
+        auto_detected_country = EXCLUDED.auto_detected_country,
+        last_scan = NOW(),
+        admin_verified = FALSE
+      RETURNING id
+    `, [url, score, company_name || null, country || 'Unknown', auto_detected_country, ip]);
     
     const leaderboardEntryId = leaderboardResult.rows[0].id;
     
+    // Log submission
     try {
       await pool.query(`
         INSERT INTO submission_logs 
@@ -2336,6 +2343,7 @@ if (limitCheck.limited) {
       console.log('Note: submission_logs insert skipped');
     }
     
+    // Update rate limit counter
     const today_date = new Date().toISOString().split('T')[0];
     await pool.query(`
       INSERT INTO submission_limits (ip_address, submission_date, submission_count)
@@ -2356,7 +2364,6 @@ if (limitCheck.limited) {
     res.status(500).json({ error: error.message });
   }
 });
-
 // ============================================
 // PUBLIC SCANNER API — AI-POWERED SCORING
 // ============================================
@@ -2749,8 +2756,6 @@ app.post('/api/scan', async (req, res) => {
     }
   }
 });
-
-
 // ============================================
 // EXPORT SCAN RESULTS
 // ============================================
