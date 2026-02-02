@@ -66,9 +66,9 @@ function extractContentForAI(html) {
   processed = processed.replace(/<[^>]*>/g, ' ');
   // Clean whitespace
   processed = processed.replace(/[ \t]+/g, ' ').replace(/\n\s*\n/g, '\n').trim();
-  // Cap at 12K chars (token efficiency)
-  if (processed.length > 12000) {
-    processed = processed.substring(0, 12000) + '\n[...content truncated...]';
+  // Cap at 30K chars (captures full content for most pages)
+  if (processed.length > 30000) {
+    processed = processed.substring(0, 30000) + '\n[...content truncated...]';
   }
   const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
   const title = titleMatch ? titleMatch[1].trim() : '';
@@ -1728,12 +1728,6 @@ app.post('/api/admin/scan-all-agencies', async (req, res) => {
             graafScore = aiResult.graaf.credibility + aiResult.graaf.relevance + aiResult.graaf.accuracy + aiResult.graaf.freshness;
             craftScore = aiResult.craft.heading_structure + aiResult.craft.subheadings + aiResult.craft.paragraphs + aiResult.craft.lists;
 
-            // Sanity check: if scores are unrealistically low, use regex fallback
-            if (craftScore < 10 || graafScore < 20) {
-              console.log(`  ⚠️ AI scores suspiciously low (GRAAF=${graafScore}, CRAFT=${craftScore}), using regex fallback`);
-              throw new Error('AI scores too low - likely extraction issue');
-            }
-
             scanCache.set(contentHash, {
               graafScore, craftScore,
               graafItems: aiResult.graaf,
@@ -2243,12 +2237,6 @@ app.post('/api/scan', async (req, res) => {
 
         graafScore = graafItems.credibility + graafItems.relevance + graafItems.accuracy + graafItems.freshness;
         craftScore = craftItems.headingStructure + craftItems.subheadings + craftItems.paragraphs + craftItems.lists;
-        
-        // Sanity check: if scores are unrealistically low, use regex fallback
-        if (craftScore < 10 || graafScore < 20) {
-          console.log(`  ⚠️ AI scores suspiciously low (GRAAF=${graafScore}, CRAFT=${craftScore}), using regex fallback`);
-          throw new Error('AI scores too low - likely extraction issue');
-        }
         
         aiRecommendations = Array.isArray(aiResult.recommendations) ? aiResult.recommendations : [];
         scoringMethod = 'ai';
