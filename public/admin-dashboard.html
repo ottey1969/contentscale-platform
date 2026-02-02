@@ -3,2028 +3,1148 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
-  
-  <title>Super Admin Dashboard - ContentScale</title>
+  <title>ContentScale Admin Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    .tab-button {
-      transition: all 0.2s;
-    }
-    .tab-button.active {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-    }
-    .stat-card {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-    input[type="checkbox"] {
-      cursor: pointer;
-      width: 18px;
-      height: 18px;
-    }
-    .blog-card {
-      transition: all 0.2s;
-    }
-    .blog-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-    }
-    .category-tag {
-      font-size: 10px;
-      padding: 2px 8px;
-      border-radius: 9999px;
-    }
-    .category-agency { background: #3b82f6; }
-    .category-case-study { background: #10b981; }
-    .category-guide { background: #8b5cf6; }
-    .category-tips { background: #f59e0b; }
-    .category-news { background: #ef4444; }
-    
-    .lead-card {
-      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-      border: 1px solid #334155;
-      transition: all 0.3s;
-    }
-    .lead-card:hover {
-      border-color: #8b5cf6;
-      transform: translateY(-2px);
-    }
-    .score-badge {
-      font-size: 14px;
-      font-weight: bold;
-      padding: 4px 12px;
-      border-radius: 20px;
-    }
-    .score-high { background: #10b981; color: white; }
-    .score-medium { background: #f59e0b; color: white; }
-    .score-low { background: #ef4444; color: white; }
-    .scan-progress {
-      height: 8px;
-      background: #374151;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    .scan-progress-bar {
-      height: 100%;
-      background: linear-gradient(90deg, #8b5cf6 0%, #3b82f6 100%);
-      transition: width 0.3s;
-    }
-    @keyframes pulse-glow {
-      0%, 100% { box-shadow: 0 0 5px rgba(139, 92, 246, 0.5); }
-      50% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.8); }
-    }
-    .scanning-active {
-      animation: pulse-glow 1.5s infinite;
-    }
+    body { background: linear-gradient(to bottom right, #1a1a2e, #0f0f1e); color: white; }
+    .tab { cursor: pointer; padding: 12px 24px; transition: all 0.3s; border-bottom: 3px solid transparent; }
+    .tab:hover { background: rgba(139, 92, 246, 0.2); }
+    .tab.active { border-bottom-color: #8b5cf6; background: rgba(139, 92, 246, 0.3); font-weight: bold; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 24px; position: relative; overflow: hidden; }
+    .stat-card::before { content: ''; position: absolute; top: -50%; right: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); }
+    .stat-card-alt { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+    .stat-card-green { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    .stat-card-yellow { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); }
+    .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 10px 20px; border-radius: 8px; font-weight: bold; transition: all 0.3s; border: none; cursor: pointer; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3); }
+    .btn-danger { background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%); padding: 10px 20px; border-radius: 8px; font-weight: bold; transition: all 0.3s; border: none; cursor: pointer; }
+    .btn-success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); padding: 10px 20px; border-radius: 8px; font-weight: bold; transition: all 0.3s; border: none; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.05); border-radius: 12px; overflow: hidden; }
+    th { background: rgba(139, 92, 246, 0.3); padding: 16px; text-align: left; font-weight: bold; }
+    td { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    tr:hover { background: rgba(139, 92, 246, 0.1); }
+    input, textarea, select { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 10px; border-radius: 8px; width: 100%; }
+    input:focus, textarea:focus, select:focus { outline: none; border-color: #8b5cf6; background: rgba(255,255,255,0.15); }
+    .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
+    .modal.show { display: flex; }
+    .modal-content { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 32px; border-radius: 16px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
   </style>
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen">
-  
-  <!-- Login Screen -->
-  <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
-    <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-md border border-purple-500">
-      <div class="flex items-center justify-center mb-6">
-        <span class="text-4xl">👑</span>
-        <h1 class="text-2xl font-bold ml-3 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-          Super Admin Dashboard
-        </h1>
+<body>
+
+<div class="container mx-auto p-6">
+  <!-- Header -->
+  <div class="flex justify-between items-center mb-8">
+    <div>
+      <h1 class="text-4xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+        ContentScale Admin Dashboard
+      </h1>
+      <p class="text-gray-400 mt-2">Manage your platform</p>
+    </div>
+    <button onclick="logout()" class="btn-danger">🚪 Logout</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8" id="stats-grid">
+    <div class="stat-card">
+      <div class="relative z-10">
+        <div class="text-3xl mb-2">🏢</div>
+        <div class="text-3xl font-bold" id="totalAgencies">0</div>
+        <div class="text-sm opacity-90">Total Agencies</div>
       </div>
-      <p class="text-gray-400 text-center mb-6">ContentScale Platform Control Center</p>
-      
-      <div id="login-error" class="hidden mb-4 p-3 bg-red-900 border border-red-700 rounded text-red-200 text-sm"></div>
-      
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-300 mb-2">Username</label>
-          <input type="text" id="login-username" 
-            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
-            placeholder="Enter username">
-        </div>
-        
-        <div>
-          <label class="block text-sm font-medium text-gray-300 mb-2">Password</label>
-          <input type="password" id="login-password" 
-            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
-            placeholder="Enter password">
-        </div>
-        
-        <button onclick="login()" id="login-btn"
-          class="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg font-semibold transition-all transform hover:scale-105">
-          Login
-        </button>
+    </div>
+    <div class="stat-card-alt stat-card">
+      <div class="relative z-10">
+        <div class="text-3xl mb-2">👥</div>
+        <div class="text-3xl font-bold" id="totalClients">0</div>
+        <div class="text-sm opacity-90">Total Clients</div>
+      </div>
+    </div>
+    <div class="stat-card-green stat-card">
+      <div class="relative z-10">
+        <div class="text-3xl mb-2">🔍</div>
+        <div class="text-3xl font-bold" id="totalScans">0</div>
+        <div class="text-sm opacity-90">Total Scans</div>
+      </div>
+    </div>
+    <div class="stat-card-yellow stat-card">
+      <div class="relative z-10">
+        <div class="text-3xl mb-2">💼</div>
+        <div class="text-3xl font-bold" id="activeHelpers">0</div>
+        <div class="text-sm opacity-90">Active Freelancers</div>
       </div>
     </div>
   </div>
 
-  <!-- Main Dashboard -->
-  <div id="main-dashboard" class="hidden">
-    <!-- Header -->
-    <header class="bg-gray-800 border-b border-gray-700 sticky top-0 z-50">
-      <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-        <div class="flex items-center space-x-3">
-          <span class="text-3xl">👑</span>
-          <div>
-            <h1 class="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              Super Admin Dashboard
-            </h1>
-            <p class="text-xs text-gray-400">ContentScale Platform Control Center</p>
-          </div>
-        </div>
-        <div class="flex items-center space-x-4">
-          <span class="text-sm text-gray-400">
-            Logged in as: <span class="text-blue-400 font-semibold" id="admin-username"></span>
-          </span>
-          <button onclick="logout()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold transition-all">
-            Logout
-          </button>
-        </div>
-      </div>
-    </header>
-
-    <!-- Navigation Tabs -->
-    <nav class="bg-gray-800 border-b border-gray-700 sticky top-[73px] z-40">
-      <div class="max-w-7xl mx-auto px-4">
-        <div class="flex space-x-1 overflow-x-auto">
-          <button onclick="switchTab('overview')" class="tab-button active px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap">
-            📊 Overview
-          </button>
-          <button onclick="switchTab('admins')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            👥 Admins
-          </button>
-          <button onclick="switchTab('agencies')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🏢 Agencies
-          </button>
-          <button onclick="switchTab('clients')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            👤 All Clients
-          </button>
-          <button onclick="switchTab('scans')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🔍 All Scans
-          </button>
-          <button onclick="switchTab('share-links')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🔗 Share Links
-          </button>
-          <button onclick="switchTab('leaderboard')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🏆 Leaderboard
-          </button>
-          <button onclick="switchTab('freelancers')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            💼 Freelancers
-          </button>
-          <button onclick="switchTab('blog')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            📝 Blog
-          </button>
-          <button onclick="switchTab('email-notifications')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            📧 Email & Notifications
-          </button>
-          <button onclick="switchTab('claims')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🏢 Claims Management
-          </button>
-          <button onclick="switchTab('opt-out')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🚫 Opt-Out
-          </button>
-          <button onclick="switchTab('lead-scanner')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🎯 Lead Scanner
-          </button>
-          <button onclick="switchTab('contentscore')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            📊 ContentScore
-          </button>
-          <button onclick="switchTab('code-generators')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🎨 Code Generators
-          </button>
-          <button onclick="switchTab('ltd-codes')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            💰 LTD Codes
-          </button>
-          <button onclick="switchTab('settings')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            ⚙️ Settings
-          </button>
-          <button onclick="switchTab('handleiding')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            📚 Handleiding
-          </button>
-        </div>
-      </div>
-    </nav>
-
-    <!-- Tab Content -->
-    <main class="max-w-7xl mx-auto px-4 py-8">
-      
-      <!-- Overview Tab -->
-      <div id="tab-overview" class="tab-content">
-        <h2 class="text-2xl font-bold mb-6">Platform Overview</h2>
-        
-        <!-- Stats Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div class="stat-card p-6 rounded-lg shadow-lg text-white">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm opacity-90">Total Agencies</p>
-                <p class="text-3xl font-bold mt-2" id="stat-total-agencies">-</p>
-              </div>
-              <span class="text-5xl opacity-50">🏢</span>
-            </div>
-          </div>
-          
-          <div class="stat-card p-6 rounded-lg shadow-lg text-white">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm opacity-90">Total Clients</p>
-                <p class="text-3xl font-bold mt-2" id="stat-total-clients">-</p>
-              </div>
-              <span class="text-5xl opacity-50">👥</span>
-            </div>
-          </div>
-          
-          <div class="stat-card p-6 rounded-lg shadow-lg text-white">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm opacity-90">Total Scans</p>
-                <p class="text-3xl font-bold mt-2" id="stat-total-scans">-</p>
-              </div>
-              <span class="text-5xl opacity-50">🔍</span>
-            </div>
-          </div>
-          
-          <div class="stat-card p-6 rounded-lg shadow-lg text-white">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm opacity-90">Active Freelancers</p>
-                <p class="text-3xl font-bold mt-2" id="stat-active-helpers">-</p>
-              </div>
-              <span class="text-5xl opacity-50">💼</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="bg-gray-800 rounded-lg p-6 shadow-lg mb-8">
-          <h3 class="text-xl font-bold mb-4">Quick Actions</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <button onclick="switchTab('agencies')" class="p-4 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-all">
-              ➕ Add Agency
-            </button>
-            <button onclick="switchTab('admins')" class="p-4 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all">
-              👤 Add Helper
-            </button>
-            <button onclick="switchTab('share-links')" class="p-4 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all">
-              🔗 Create Share Link
-            </button>
-            <button onclick="switchTab('freelancers')" class="p-4 bg-pink-600 hover:bg-pink-700 rounded-lg font-semibold transition-all">
-              💼 Manage Freelancers
-            </button>
-          </div>
-        </div>
-
-        <!-- Platform Health -->
-        <div class="bg-gray-800 rounded-lg p-6 shadow-lg">
-          <h3 class="text-xl font-bold mb-4">Platform Health</h3>
-          <div class="space-y-3">
-            <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
-              <span>Database Connection</span>
-              <span class="text-green-400 font-semibold">✅ Connected</span>
-            </div>
-            <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
-              <span>API Status</span>
-              <span class="text-green-400 font-semibold">✅ Operational</span>
-            </div>
-            <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
-              <span>Auto-Scan Service</span>
-              <span class="text-yellow-400 font-semibold">⏸️ Paused</span>
-            </div>
-            <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
-              <span>Last Backup</span>
-              <span class="text-gray-400">2 hours ago</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Admins Tab -->
-      <div id="tab-admins" class="tab-content hidden">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">Admin & Helper Management</h2>
-          <button onclick="showAddAdminModal()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all">
-            ➕ Add Admin/Helper
-          </button>
-        </div>
-
-        <div id="admins-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading admins...</p>
-        </div>
-
-        <div id="admins-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Username</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Full Name</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Email</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Role</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Created</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Last Login</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="admins-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Agencies Tab -->
-      <div id="tab-agencies" class="tab-content hidden">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">All Agencies</h2>
-          <div class="flex gap-3">
-            <button onclick="loadAgencies()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition-all">
-              🔄 Refresh
-            </button>
-            <button onclick="showAddAgencyModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-all">
-              ➕ Add Agency
-            </button>
-          </div>
-        </div>
-
-        <div id="agencies-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading agencies...</p>
-        </div>
-
-        <div id="agencies-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="agency-select-all" onchange="toggleSelectAllAgencies()"></th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Name</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Domain</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Country</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Plan</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Clients</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Scans</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Admin URL</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="agencies-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="mt-4 flex gap-2">
-          <button onclick="deleteSelectedAgencies()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
-          <button onclick="exportAgenciesToCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">📊 Export CSV</button>
-          <button onclick="exportAgenciesToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
-        </div>
-      </div>
-
-      <!-- Clients Tab -->
-      <div id="tab-clients" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">All Clients</h2>
-
-        <div id="clients-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading clients...</p>
-        </div>
-
-        <div id="clients-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="client-select-all" onchange="toggleSelectAllClients()"></th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Client URL</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Agency</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Scans</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Last Scan</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="clients-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="mt-4 flex gap-2">
-          <button onclick="deleteSelectedClients()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
-          <button onclick="exportClientsToCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">📊 Export CSV</button>
-          <button onclick="exportClientsToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
-        </div>
-      </div>
-
-      <!-- Scans Tab -->
-      <div id="tab-scans" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">All Scans</h2>
-
-        <div id="scans-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading scans...</p>
-        </div>
-
-        <div id="scans-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="scan-select-all" onchange="toggleSelectAllScans()"></th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">URL</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Score</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Quality</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Agency/Client</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Type</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Date</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="scans-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="mt-4 flex gap-2">
-          <button onclick="deleteSelectedScans()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
-          <button onclick="exportScansToCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">📊 Export CSV</button>
-          <button onclick="exportScansToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
-        </div>
-      </div>
-
-      <!-- Share Links Tab -->
-      <div id="tab-share-links" class="tab-content hidden">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">Share Links</h2>
-          <div class="flex gap-3">
-            <button onclick="loadShareLinks()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition-all">
-              🔄 Refresh
-            </button>
-            <button onclick="showCreateShareLinkModal()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all">
-              ➕ Create Share Link
-            </button>
-          </div>
-        </div>
-
-        <div id="share-links-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading share links...</p>
-        </div>
-
-        <div id="share-links-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="sharelink-select-all" onchange="toggleSelectAllShareLinks()"></th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Client</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Email</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Share URL</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Usage</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Expires</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="share-links-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="mt-4 flex gap-2">
-          <button onclick="deleteSelectedShareLinks()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
-        </div>
-      </div>
-
-      <!-- Leaderboard Tab -->
-      <div id="tab-leaderboard" class="tab-content hidden">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">Global Leaderboard Management</h2>
-          <button onclick="scanAllAgencies()" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold transition-all">
-            🔍 Scan Alle Agencies Nu
-          </button>
-        </div>
-
-        <!-- ✅ PENDING SUBMISSIONS SECTION -->
-        <div class="mb-8 bg-gradient-to-r from-yellow-900 to-orange-900 rounded-lg p-6 border-2 border-yellow-600">
-          <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xl font-bold">⏳ Pending Leaderboard Submissions</h3>
-            <button onclick="loadPendingLeaderboard()" class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded-lg font-semibold">
-              🔄 Refresh Pending
-            </button>
-          </div>
-          <div id="pending-leaderboard-container" class="space-y-4">
-            <div class="text-center py-8 text-gray-400">
-              <div class="inline-block animate-spin text-4xl mb-4">⏳</div>
-              <p>Loading pending submissions...</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="mb-4 flex gap-4">
-          <input type="text" id="leaderboard-search" placeholder="Search by URL, company, or score..." 
-            class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-          <button onclick="searchLeaderboard()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
-            Search
-          </button>
-        </div>
-
-        <div id="leaderboard-list" class="bg-gray-800 rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="leaderboard-select-all" onchange="toggleSelectAllLeaderboard()"></th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Rank</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Company</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">URL</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Score</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Country</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Added Date</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="leaderboard-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="mt-4 flex gap-2">
-          <button onclick="deleteSelectedLeaderboard()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
-          <button onclick="exportLeaderboardToCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">📊 Export CSV</button>
-          <button onclick="exportLeaderboardToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
-        </div>
-      </div>
-
-      <!-- ✅ NEW: FREELANCERS TAB -->
-      <div id="tab-freelancers" class="tab-content hidden">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">💼 Freelancer Management</h2>
-          <button onclick="loadFreelancers()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all">
-            🔄 Refresh
-          </button>
-        </div>
-
-        <!-- Pending Freelancer Applications -->
-        <div class="mb-8 bg-gradient-to-r from-purple-900 to-pink-900 rounded-lg p-6 border-2 border-purple-600">
-          <h3 class="text-xl font-bold mb-4">⏳ Pending Applications</h3>
-          <div id="pending-freelancers-container" class="space-y-4">
-            <div class="text-center py-8 text-gray-400">
-              <div class="inline-block animate-spin text-4xl mb-4">⏳</div>
-              <p>Loading pending applications...</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Active Freelancers -->
-        <h3 class="text-xl font-bold mb-4">✅ Active Freelancers</h3>
-        <div class="bg-gray-800 rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Name</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Email</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Title</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Score</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Featured</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="freelancers-tbody" class="divide-y divide-gray-700">
-                <tr>
-                  <td colspan="7" class="px-4 py-8 text-center text-gray-400">Loading...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Blog Tab -->
-      <div id="tab-blog" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">📝 Blog Management</h2>
-        <p class="text-gray-400">Blog management coming soon...</p>
-      </div>
-
-      <!-- Email & Notifications Tab -->
-      <div id="tab-email-notifications" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">📧 Email & Notifications</h2>
-        <div class="bg-gray-800 rounded-lg p-6">
-          <h3 class="text-xl font-bold mb-4">Send Bulk Email</h3>
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm mb-2">Recipients</label>
-              <select id="bulk-email-recipients" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-                <option value="all-leaderboard">All Leaderboard Agencies</option>
-                <option value="unclaimed">Unclaimed Profiles Only</option>
-                <option value="claimed">Claimed Profiles Only</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm mb-2">Subject</label>
-              <input type="text" id="bulk-email-subject" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-            </div>
-            <div>
-              <label class="block text-sm mb-2">Message</label>
-              <textarea id="bulk-email-body" rows="6" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"></textarea>
-            </div>
-            <button onclick="sendBulkEmail()" class="w-full py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
-              📧 Send to All Recipients
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Claims Management Tab -->
-      <div id="tab-claims" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">🏢 Claims Management</h2>
-        
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div class="bg-gradient-to-br from-purple-900 to-purple-800 rounded-lg p-4">
-            <div class="text-sm text-purple-200">Pending Claims</div>
-            <div class="text-3xl font-bold mt-2" id="pending-claims-count">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-green-900 to-green-800 rounded-lg p-4">
-            <div class="text-sm text-green-200">Approved Claims</div>
-            <div class="text-3xl font-bold mt-2" id="approved-claims-count">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-blue-900 to-blue-800 rounded-lg p-4">
-            <div class="text-sm text-blue-200">Total Claimed</div>
-            <div class="text-3xl font-bold mt-2" id="total-claimed-count">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-orange-900 to-orange-800 rounded-lg p-4">
-            <div class="text-sm text-orange-200">Unclaimed Profiles</div>
-            <div class="text-3xl font-bold mt-2" id="unclaimed-profiles-count">0</div>
-          </div>
-        </div>
-
-        <div class="bg-gray-800 rounded-lg p-6">
-          <h3 class="text-xl font-bold mb-4">⏳ Pending Claims</h3>
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm">Agency Name</th>
-                  <th class="px-4 py-3 text-left text-sm">URL</th>
-                  <th class="px-4 py-3 text-left text-sm">Email</th>
-                  <th class="px-4 py-3 text-left text-sm">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="pending-claims-tbody" class="divide-y divide-gray-700">
-                <tr>
-                  <td colspan="4" class="px-4 py-8 text-center text-gray-400">No pending claims</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Opt-Out Tab -->
-      <div id="tab-opt-out" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">🚫 Opt-Out Management</h2>
-        
-        <div class="bg-gray-800 rounded-lg p-6 mb-6">
-          <h3 class="text-xl font-bold mb-4">Manual Opt-Out</h3>
-          <div class="flex gap-4">
-            <input type="text" id="manual-optout-url" placeholder="Agency website URL" 
-              class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-            <button onclick="manualOptOut()" class="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">
-              Remove from Leaderboard
-            </button>
-          </div>
-        </div>
-
-        <div class="bg-gray-800 rounded-lg p-6">
-          <h3 class="text-xl font-bold mb-4">Opt-Out Requests</h3>
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Website</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Reason</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Date</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="optout-tbody" class="divide-y divide-gray-700">
-                <tr>
-                  <td colspan="4" class="px-4 py-8 text-center text-gray-400">No opt-out requests</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Lead Scanner Tab -->
-      <div id="tab-lead-scanner" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">🎯 Lead Scanner</h2>
-        <p class="text-gray-400">Lead scanner coming soon...</p>
-      </div>
-
-      <!-- ContentScore Tab -->
-      <div id="tab-contentscore" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">ContentScore Tool</h2>
-        <iframe src="/seo-contentscore" class="w-full h-screen border-0 rounded-lg"></iframe>
-      </div>
-
-      <!-- Code Generators Tab -->
-      <div id="tab-code-generators" class="tab-content hidden">
-        <iframe src="/contentscale-complete-generator.html" style="width:100%; height:100vh; border:none; border-radius:8px;"></iframe>
-      </div>
-
-      <!-- LTD Codes Tab -->
-      <div id="tab-ltd-codes" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">LTD Codes</h2>
-        <p class="text-gray-400">Coming soon...</p>
-      </div>
-
-      <!-- Settings Tab -->
-      <div id="tab-settings" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">Platform Settings</h2>
-        <p class="text-gray-400">Settings content...</p>
-      </div>
-
-      <!-- Handleiding Tab -->
-      <div id="tab-handleiding" class="tab-content hidden">
-        <h2 class="text-2xl font-bold mb-6">📚 Handleiding</h2>
-        <p class="text-gray-400">Guide content...</p>
-      </div>
-
-    </main>
+  <!-- Tabs -->
+  <div class="bg-gray-800 rounded-t-lg flex flex-wrap gap-2 p-2">
+    <div class="tab active" onclick="switchTab('overview')">📊 Overview</div>
+    <div class="tab" onclick="switchTab('leaderboard')">🏆 Leaderboard</div>
+    <div class="tab" onclick="switchTab('freelancers')">💼 Freelancers</div>
+    <div class="tab" onclick="switchTab('lead-scanner')">🎯 Lead Scanner</div>
+    <div class="tab" onclick="switchTab('claims')">📝 Claims</div>
+    <div class="tab" onclick="switchTab('opt-out')">🚫 Opt-Out</div>
+    <div class="tab" onclick="switchTab('share-links')">🔗 Share Links</div>
   </div>
 
-  <!-- MODALS -->
-  <div id="modal-add-agency" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-    <div class="bg-gray-800 rounded-lg p-8 max-w-2xl w-full mx-4">
-      <h3 class="text-2xl font-bold mb-6">Add New Agency</h3>
-      <div class="space-y-4">
-        <input type="text" id="agency-name" placeholder="Agency Name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <input type="text" id="agency-domain" placeholder="Domain (example.com)" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <select id="agency-country" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-          <option value="NL">🇳🇱 Netherlands</option>
-          <option value="BE">🇧🇪 Belgium</option>
-          <option value="DE">🇩🇪 Germany</option>
-        </select>
-        <div class="flex gap-4">
-          <button onclick="submitAddAgency()" class="flex-1 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">Create</button>
-          <button onclick="closeModal('modal-add-agency')" class="flex-1 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="modal-create-share-link" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-    <div class="bg-gray-800 rounded-lg p-8 max-w-2xl w-full mx-4">
-      <h3 class="text-2xl font-bold mb-6">Create Share Link</h3>
-      <div class="space-y-4">
-        <input type="email" id="share-client-email" placeholder="Client Email" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <input type="text" id="share-client-name" placeholder="Client Name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <input type="text" id="share-client-company" placeholder="Company Name (Optional)" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <input type="number" id="share-scans-limit" value="5" min="1" placeholder="Scans Limit" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <input type="number" id="share-valid-days" value="30" min="1" placeholder="Valid Days" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <div class="flex gap-4">
-          <button onclick="submitCreateShareLink()" class="flex-1 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold">Create</button>
-          <button onclick="closeModal('modal-create-share-link')" class="flex-1 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="modal-add-admin" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-    <div class="bg-gray-800 rounded-lg p-8 max-w-2xl w-full mx-4">
-      <h3 class="text-2xl font-bold mb-6">Add Admin/Helper</h3>
-      <div class="space-y-4">
-        <input type="text" id="admin-username" placeholder="Username" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <input type="password" id="admin-password" placeholder="Password (min 8)" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <select id="admin-role" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-          <option value="">Select Role</option>
-          <option value="super_admin">👑 Super Admin</option>
-          <option value="helper">🤝 Helper</option>
-        </select>
-        <input type="text" id="admin-full-name" placeholder="Full Name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <input type="email" id="admin-email" placeholder="Email" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <div class="flex gap-4">
-          <button onclick="submitAddAdmin()" class="flex-1 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">Create</button>
-          <button onclick="closeModal('modal-add-admin')" class="flex-1 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    let allAgencies = [];
-    let allClients = [];
-    let allScans = [];
-    let allLeaderboard = [];
-    let allFreelancers = [];
-    let leadQueue = [];
-    let allBlogPosts = [];
-    let currentBlogView = 'grid';
-    let editingBlogPostId = null;
+  <!-- Tab Contents -->
+  <div class="bg-gray-800 rounded-b-lg p-6">
     
-    let leadScannerActive = false;
-    let leadScannerPaused = false;
-    let leadScannerInterval = null;
-    let currentLeadIndex = 0;
+    <!-- ✅ OVERVIEW TAB -->
+    <div id="overview-tab" class="tab-content active">
+      <h2 class="text-2xl font-bold mb-6">Platform Overview</h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-gray-700 p-6 rounded-lg">
+          <h3 class="text-xl font-bold mb-4">Quick Actions</h3>
+          <div class="space-y-3">
+            <button onclick="switchTab('leaderboard')" class="btn-primary w-full">Manage Leaderboard</button>
+            <button onclick="switchTab('freelancers')" class="btn-primary w-full">Manage Freelancers</button>
+            <button onclick="switchTab('lead-scanner')" class="btn-primary w-full">Bulk Import URLs</button>
+          </div>
+        </div>
+        <div class="bg-gray-700 p-6 rounded-lg">
+          <h3 class="text-xl font-bold mb-4">Recent Activity</h3>
+          <p class="text-gray-400">Activity log coming soon...</p>
+        </div>
+      </div>
+    </div>
 
-    // ==========================================
-    // LOGIN & AUTH
-    // ==========================================
-    async function login() {
-      const username = document.getElementById('login-username').value;
-      const password = document.getElementById('login-password').value;
+    <!-- ✅ LEADERBOARD TAB -->
+    <div id="leaderboard-tab" class="tab-content">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold">Global Leaderboard Management</h2>
+        <button onclick="refreshLeaderboard()" class="btn-primary">🔄 Refresh</button>
+      </div>
+
+      <!-- ✅ PENDING LEADERBOARD SUBMISSIONS -->
+      <div class="mb-8 bg-gradient-to-r from-yellow-900 to-orange-900 rounded-lg p-6 border-2 border-yellow-600">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-bold">⏳ Pending Leaderboard Submissions</h3>
+          <button onclick="loadPendingLeaderboard()" class="btn-primary">🔄 Refresh Pending</button>
+        </div>
+        <div id="pending-leaderboard-container" class="space-y-4">
+          <div class="text-center text-gray-400">Loading...</div>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div class="mb-4">
+        <input type="text" id="leaderboard-search" placeholder="Search by URL, company, or score..." 
+          oninput="filterLeaderboard()" class="mb-4">
+      </div>
+
+      <!-- Leaderboard Table -->
+      <div class="overflow-x-auto">
+        <table id="leaderboard-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Company</th>
+              <th>Website</th>
+              <th>Score</th>
+              <th>Country</th>
+              <th>Added Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-tbody">
+            <tr><td colspan="7" class="text-center text-gray-400">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ✅ FREELANCERS TAB (NEW) -->
+    <div id="freelancers-tab" class="tab-content">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold">💼 Freelancer Management</h2>
+        <button onclick="loadFreelancers()" class="btn-primary">🔄 Refresh</button>
+      </div>
+
+      <!-- Pending Freelancer Applications -->
+      <div class="mb-8 bg-gradient-to-r from-purple-900 to-pink-900 rounded-lg p-6 border-2 border-purple-600">
+        <h3 class="text-xl font-bold mb-4">⏳ Pending Applications</h3>
+        <div id="pending-freelancers-container" class="space-y-4">
+          <div class="text-center text-gray-400">Loading...</div>
+        </div>
+      </div>
+
+      <!-- Active Freelancers -->
+      <h3 class="text-xl font-bold mb-4">✅ Active Freelancers</h3>
+      <div class="overflow-x-auto">
+        <table id="freelancers-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Title</th>
+              <th>Score</th>
+              <th>Status</th>
+              <th>Featured</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="freelancers-tbody">
+            <tr><td colspan="7" class="text-center text-gray-400">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ✅ LEAD SCANNER TAB (RESTORED) -->
+    <div id="lead-scanner-tab" class="tab-content">
+      <h2 class="text-2xl font-bold mb-6">🎯 Lead Scanner - Bulk URL Import</h2>
       
-      try {
-        const response = await fetch('/api/setup/verify-admin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-          localStorage.setItem('admin_id', data.admin_id);
-          sessionStorage.setItem('admin_logged_in', 'true');
-          document.getElementById('login-screen').classList.add('hidden');
-          document.getElementById('main-dashboard').classList.remove('hidden');
-          document.getElementById('admin-username').textContent = data.admin.username;
-          loadAllData();
-        } else {
-          alert('❌ ' + (data.error || 'Login failed'));
-        }
-      } catch (error) {
-        alert('Connection error');
-      }
-    }
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- Single URL Scan -->
+        <div class="bg-gray-700 p-6 rounded-lg">
+          <h3 class="text-xl font-bold mb-4">Single URL Scan</h3>
+          <input type="url" id="single-url" placeholder="https://example.com" class="mb-4">
+          <button onclick="scanSingleURL()" class="btn-primary w-full">🔍 Scan & Add to Leaderboard</button>
+        </div>
 
-    function logout() {
-      localStorage.removeItem('admin_id');
-      sessionStorage.removeItem('admin_logged_in');
-      location.reload();
-    }
+        <!-- Bulk URL Import -->
+        <div class="bg-gray-700 p-6 rounded-lg">
+          <h3 class="text-xl font-bold mb-4">Bulk URL Import</h3>
+          <textarea id="bulk-urls" rows="6" placeholder="https://example1.com&#10;https://example2.com&#10;https://example3.com" class="mb-4"></textarea>
+          <button onclick="bulkScanURLs()" class="btn-primary w-full">🚀 Scan All URLs</button>
+        </div>
+      </div>
 
-    if (sessionStorage.getItem('admin_logged_in') === 'true') {
-      document.getElementById('login-screen').classList.add('hidden');
-      document.getElementById('main-dashboard').classList.remove('hidden');
-      loadAllData();
-    }
+      <!-- Scan Progress -->
+      <div id="scan-progress" class="mt-6 hidden">
+        <div class="bg-gray-700 p-6 rounded-lg">
+          <h3 class="text-xl font-bold mb-4">Scan Progress</h3>
+          <div class="mb-2">
+            <div class="flex justify-between text-sm mb-1">
+              <span id="progress-text">0 / 0</span>
+              <span id="progress-percent">0%</span>
+            </div>
+            <div class="bg-gray-600 rounded-full h-4">
+              <div id="progress-bar" class="bg-gradient-to-r from-purple-500 to-blue-500 h-4 rounded-full" style="width: 0%"></div>
+            </div>
+          </div>
+          <div id="scan-results" class="mt-4 max-h-96 overflow-y-auto"></div>
+        </div>
+      </div>
+    </div>
 
-    // ==========================================
-    // TAB SWITCHING
-    // ==========================================
-    function switchTab(tabName) {
-      document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
-      document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
-      document.getElementById(`tab-${tabName}`).classList.remove('hidden');
-      event.target.classList.add('active');
+    <!-- ✅ CLAIMS TAB (KEPT) -->
+    <div id="claims-tab" class="tab-content">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold">📝 Claim Management</h2>
+        <button onclick="loadClaims()" class="btn-primary">🔄 Refresh</button>
+      </div>
+      <div class="overflow-x-auto">
+        <table id="claims-table">
+          <thead>
+            <tr>
+              <th>Agency</th>
+              <th>Email</th>
+              <th>Website</th>
+              <th>Country</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="claims-tbody">
+            <tr><td colspan="6" class="text-center text-gray-400">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ✅ OPT-OUT TAB (FIXED) -->
+    <div id="opt-out-tab" class="tab-content">
+      <h2 class="text-2xl font-bold mb-6">🚫 Opt-Out Management</h2>
+      <p class="text-gray-400 mb-6">Manage removal requests from businesses who want to be removed from the leaderboard (GDPR compliance)</p>
       
-      if (tabName === 'admins') loadAdmins();
-      if (tabName === 'agencies') loadAgencies();
-      if (tabName === 'clients') loadClients();
-      if (tabName === 'scans') loadScans();
-      if (tabName === 'share-links') loadShareLinks();
-      if (tabName === 'leaderboard') {
-        loadLeaderboard();
-        loadPendingLeaderboard();
-      }
-      if (tabName === 'freelancers') loadFreelancers();
-      if (tabName === 'claims') loadClaims();
-      if (tabName === 'blog') loadBlogPosts();
-      if (tabName === 'lead-scanner') updateLeadScannerUI();
-    }
+      <div class="mb-6 bg-gray-700 p-6 rounded-lg">
+        <h3 class="text-xl font-bold mb-4">Add Manual Opt-Out</h3>
+        <div class="grid md:grid-cols-2 gap-4">
+          <input type="url" id="optout-url" placeholder="Website URL to remove" class="mb-4">
+          <input type="text" id="optout-reason" placeholder="Reason (optional)" class="mb-4">
+        </div>
+        <button onclick="addOptOut()" class="btn-danger w-full">🚫 Add Opt-Out & Remove from Leaderboard</button>
+      </div>
 
-    // ==========================================
-    // DATA LOADING
-    // ==========================================
-    async function loadAllData() {
-      loadStats();
-      loadAdmins();
-      loadAgencies();
-      loadClients();
-      loadScans();
-      loadShareLinks();
+      <h3 class="text-xl font-bold mb-4">Opt-Out Requests</h3>
+      <div class="overflow-x-auto">
+        <table id="optout-table">
+          <thead>
+            <tr>
+              <th>Website</th>
+              <th>Reason</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="optout-tbody">
+            <tr><td colspan="4" class="text-center text-gray-400">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ✅ SHARE LINKS TAB (FIXED) -->
+    <div id="share-links-tab" class="tab-content">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold">🔗 Share Links</h2>
+        <button onclick="createShareLink()" class="btn-primary">➕ Create Share Link</button>
+      </div>
+      <div class="overflow-x-auto">
+        <table id="sharelinks-table">
+          <thead>
+            <tr>
+              <th>Usage</th>
+              <th>Expires</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="sharelinks-tbody">
+            <tr><td colspan="4" class="text-center text-gray-400">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let currentTab = 'overview';
+  let allLeaderboardEntries = [];
+  let allFreelancers = [];
+
+  // Initialize
+  document.addEventListener('DOMContentLoaded', function() {
+    checkAuth();
+    loadAllData();
+  });
+
+  function checkAuth() {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+      window.location.href = '/admin-login.html';
+    }
+  }
+
+  function logout() {
+    localStorage.removeItem('adminToken');
+    window.location.href = '/admin-login.html';
+  }
+
+  function switchTab(tab) {
+    currentTab = tab;
+    
+    // Update tab buttons
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById(tab + '-tab').classList.add('active');
+    
+    // Load data for specific tabs
+    if (tab === 'leaderboard') {
       loadLeaderboard();
       loadPendingLeaderboard();
+    } else if (tab === 'freelancers') {
       loadFreelancers();
+    } else if (tab === 'claims') {
       loadClaims();
-      loadBlogPosts();
-      loadLeadQueueFromStorage();
+    } else if (tab === 'opt-out') {
+      loadOptOuts();
+    } else if (tab === 'share-links') {
+      loadShareLinks();
     }
+  }
 
-    async function loadStats() {
-      try {
-        const response = await fetch('/api/admin/stats', {
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        const data = await response.json();
-        if (data.success) {
-          document.getElementById('stat-total-agencies').textContent = data.stats.total_agencies;
-          document.getElementById('stat-total-clients').textContent = data.stats.total_clients;
-          document.getElementById('stat-total-scans').textContent = data.stats.total_scans;
-          document.getElementById('stat-active-helpers').textContent = data.stats.active_helpers || allFreelancers.filter(f => f.is_approved).length;
-        }
-      } catch (error) {
-        console.error('Stats error:', error);
-      }
+  async function loadAllData() {
+    await loadStats();
+    await loadLeaderboard();
+    await loadPendingLeaderboard();
+  }
+
+  async function loadStats() {
+    try {
+      const [leaderboardRes, freelancersRes, scansRes] = await Promise.all([
+        fetch('/api/leaderboard'),
+        fetch('/api/freelancers'),
+        fetch('/api/admin/scans', { headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }})
+      ]);
+
+      const leaderboard = await leaderboardRes.json();
+      const freelancers = await freelancersRes.json();
+      const scans = scansRes.ok ? await scansRes.json() : { scans: [] };
+
+      document.getElementById('totalAgencies').textContent = leaderboard.entries?.length || 0;
+      document.getElementById('totalClients').textContent = 0; // Update if you have clients data
+      document.getElementById('totalScans').textContent = scans.scans?.length || 0;
+      document.getElementById('activeHelpers').textContent = freelancers.freelancers?.filter(f => f.is_approved).length || 0;
+    } catch (error) {
+      console.error('Load stats error:', error);
     }
+  }
 
-    async function loadAdmins() {
-      try {
-        const response = await fetch('/api/admins', {
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        const data = await response.json();
-        const tbody = document.getElementById('admins-tbody');
-        tbody.innerHTML = '';
-        
-        if (data.success && data.admins) {
-          data.admins.forEach(admin => {
-            tbody.innerHTML += `
-              <tr>
-                <td class="px-4 py-3">${admin.username}</td>
-                <td class="px-4 py-3">${admin.full_name || '-'}</td>
-                <td class="px-4 py-3">${admin.email || '-'}</td>
-                <td class="px-4 py-3"><span class="px-2 py-1 bg-purple-600 rounded text-xs">${admin.role}</span></td>
-                <td class="px-4 py-3">${admin.is_active ? '✅' : '❌'}</td>
-                <td class="px-4 py-3">${admin.created_at ? new Date(admin.created_at).toLocaleDateString() : '-'}</td>
-                <td class="px-4 py-3">${admin.last_login ? new Date(admin.last_login).toLocaleDateString() : 'Never'}</td>
-                <td class="px-4 py-3"><button onclick="deleteItem('admins', ${admin.id})" class="text-red-400">🗑️</button></td>
-              </tr>
-            `;
-          });
-          document.getElementById('admins-loading').classList.add('hidden');
-          document.getElementById('admins-list').classList.remove('hidden');
-        }
-      } catch (error) {
-        console.error('Admins error:', error);
-      }
-    }
+  // ============================================
+  // ✅ LEADERBOARD FUNCTIONS
+  // ============================================
 
-    async function loadAgencies() {
-      try {
-        const response = await fetch('/api/super-admin/agencies', {
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        const data = await response.json();
-        const tbody = document.getElementById('agencies-tbody');
-        tbody.innerHTML = '';
-        
-        if (data.success && data.agencies) {
-          allAgencies = data.agencies;
-          data.agencies.forEach(agency => {
-            const row = `
-              <tr>
-                <td class="px-4 py-3"><input type="checkbox" class="agency-checkbox" value="${agency.id}"></td>
-                <td class="px-4 py-3">${agency.name}</td>
-                <td class="px-4 py-3">${agency.domain}</td>
-                <td class="px-4 py-3">${agency.country}</td>
-                <td class="px-4 py-3"><span class="px-2 py-1 bg-blue-600 rounded text-xs">${agency.plan}</span></td>
-                <td class="px-4 py-3">${agency.client_count || 0}</td>
-                <td class="px-4 py-3">${agency.total_scans || 0}</td>
-                <td class="px-4 py-3">${agency.is_active ? '✅' : '❌'}</td>
-                <td class="px-4 py-3">
-                  <div class="flex items-center gap-2">
-                    <input type="text" value="https://app.contentscale.site/agency-admin?key=${agency.admin_key}" 
-                      readonly class="flex-1 px-2 py-1 bg-gray-700 text-xs rounded text-blue-400"
-                      id="agency-url-${agency.admin_key}">
-                    <button onclick="copyAgencyUrl('${agency.admin_key}')" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs">📋</button>
-                  </div>
-                </td>
-                <td class="px-4 py-3"><button onclick="deleteItem('agencies', ${agency.id})" class="text-red-400">🗑️</button></td>
-              </tr>
-            `;
-            tbody.innerHTML += row;
-          });
-          document.getElementById('agencies-loading').classList.add('hidden');
-          document.getElementById('agencies-list').classList.remove('hidden');
-        }
-      } catch (error) {
-        console.error('Agencies error:', error);
-      }
-    }
-
-    async function loadClients() {
-      try {
-        const response = await fetch('/api/admin/clients', {
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        const data = await response.json();
-        const tbody = document.getElementById('clients-tbody');
-        tbody.innerHTML = '';
-        
-        if (data.success && data.clients) {
-          allClients = data.clients;
-          data.clients.forEach(client => {
-            tbody.innerHTML += `
-              <tr>
-                <td class="px-4 py-3"><input type="checkbox" class="client-checkbox" value="${client.id}"></td>
-                <td class="px-4 py-3 text-blue-400">${client.url}</td>
-                <td class="px-4 py-3">${client.agency_name || '-'}</td>
-                <td class="px-4 py-3">${client.scan_count || 0}</td>
-                <td class="px-4 py-3">${client.created_at ? new Date(client.created_at).toLocaleDateString() : '-'}</td>
-                <td class="px-4 py-3"><button onclick="deleteItem('clients', ${client.id})" class="text-red-400">🗑️</button></td>
-              </tr>
-            `;
-          });
-          document.getElementById('clients-loading').classList.add('hidden');
-          document.getElementById('clients-list').classList.remove('hidden');
-        }
-      } catch (error) {
-        console.error('Clients error:', error);
-      }
-    }
-
-    async function loadScans() {
-      try {
-        const response = await fetch('/api/admin/scans', {
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        const data = await response.json();
-        const tbody = document.getElementById('scans-tbody');
-        tbody.innerHTML = '';
-        
-        if (data.success && data.scans) {
-          allScans = data.scans;
-          data.scans.forEach(scan => {
-            tbody.innerHTML += `
-              <tr>
-                <td class="px-4 py-3"><input type="checkbox" class="scan-checkbox" value="${scan.id}"></td>
-                <td class="px-4 py-3 text-blue-400 text-sm">${scan.url ? scan.url.substring(0, 40) : '-'}...</td>
-                <td class="px-4 py-3 font-bold">${scan.score || '-'}/100</td>
-                <td class="px-4 py-3"><span class="px-2 py-1 bg-gray-700 rounded text-xs">${scan.quality || '-'}</span></td>
-                <td class="px-4 py-3 text-sm">${scan.agency_name || '-'}</td>
-                <td class="px-4 py-3"><span class="px-2 py-1 bg-gray-700 rounded text-xs">${scan.scan_type}</span></td>
-                <td class="px-4 py-3 text-sm">${scan.created_at ? new Date(scan.created_at).toLocaleDateString() : '-'}</td>
-                <td class="px-4 py-3"><button onclick="deleteItem('scans', ${scan.id})" class="text-red-400 hover:text-red-300">🗑️</button></td>
-              </tr>
-            `;
-          });
-          document.getElementById('scans-loading').classList.add('hidden');
-          document.getElementById('scans-list').classList.remove('hidden');
-        }
-      } catch (error) {
-        console.error('Scans error:', error);
-      }
-    }
-
-    async function loadShareLinks() {
-      try {
-        const response = await fetch('/api/admin/share-links', {
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        const data = await response.json();
-        const tbody = document.getElementById('share-links-tbody');
-        tbody.innerHTML = '';
-        
-        if (data.success && data.share_links) {
-          data.share_links.forEach(link => {
-            tbody.innerHTML += `
-              <tr>
-                <td class="px-4 py-3"><input type="checkbox" class="sharelink-checkbox" value="${link.token}"></td>
-                <td class="px-4 py-3">${link.client_name || '-'}</td>
-                <td class="px-4 py-3">${link.client_email}</td>
-                <td class="px-4 py-3">
-                  <div class="flex items-center gap-2">
-                    <input type="text" value="https://app.contentscale.site/share/${link.token}" 
-                      readonly class="flex-1 px-2 py-1 bg-gray-700 text-xs rounded text-blue-400"
-                      id="share-url-${link.token}">
-                    <button onclick="copyShareUrl('${link.token}')" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs">📋</button>
-                  </div>
-                </td>
-                <td class="px-4 py-3">${link.scans_used || 0}/${link.scans_limit || 5}</td>
-                <td class="px-4 py-3 text-sm">${link.expires_at ? new Date(link.expires_at).toLocaleDateString() : '-'}</td>
-                <td class="px-4 py-3">
-                  <span class="px-2 py-1 ${link.is_active ? 'bg-green-900' : 'bg-red-900'} rounded text-xs">
-                    ${link.is_active ? 'active' : 'inactive'}
-                  </span>
-                </td>
-                <td class="px-4 py-3">
-                  <button onclick="toggleShareLinkStatus('${link.token}', ${!link.is_active})" 
-                    class="px-3 py-1 ${link.is_active ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} rounded text-sm mb-1">
-                    ${link.is_active ? 'Deactivate' : 'Activate'}
-                  </button>
-                  <button onclick="deleteShareLink('${link.token}')" class="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-sm">
-                    🗑️
-                  </button>
-                </td>
-              </tr>
-            `;
-          });
-          document.getElementById('share-links-loading').classList.add('hidden');
-          document.getElementById('share-links-list').classList.remove('hidden');
-        }
-      } catch (error) {
-        console.error('Share links error:', error);
-      }
-    }
-
-    async function toggleShareLinkStatus(shareCode, activate) {
-      if (!shareCode || shareCode === 'undefined') {
-        alert('❌ Invalid share link code');
-        return;
-      }
+  async function loadLeaderboard() {
+    try {
+      const response = await fetch('/api/leaderboard');
+      const data = await response.json();
       
-      if (!confirm(`${activate ? 'Activate' : 'Deactivate'} this share link?`)) return;
+      if (data.success && data.entries) {
+        allLeaderboardEntries = data.entries;
+        renderLeaderboard(data.entries);
+      }
+    } catch (error) {
+      console.error('Load leaderboard error:', error);
+    }
+  }
+
+  function renderLeaderboard(entries) {
+    const tbody = document.getElementById('leaderboard-tbody');
+    
+    if (entries.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="text-center text-gray-400">No entries</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = entries.map((entry, index) => `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${entry.company_name || 'Unknown'}</td>
+        <td><a href="${entry.url}" target="_blank" class="text-blue-400 hover:underline">${new URL(entry.url).hostname}</a></td>
+        <td><span class="px-3 py-1 rounded-full ${entry.score >= 80 ? 'bg-green-600' : entry.score >= 50 ? 'bg-yellow-600' : 'bg-red-600'}">${entry.score}/100</span></td>
+        <td>${entry.country || 'Unknown'}</td>
+        <td>${new Date(entry.created_at).toLocaleDateString()}</td>
+        <td>
+          <button onclick="deleteLeaderboardEntry(${entry.id})" class="btn-danger px-3 py-1 text-sm">🗑️ Delete</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function filterLeaderboard() {
+    const search = document.getElementById('leaderboard-search').value.toLowerCase();
+    const filtered = allLeaderboardEntries.filter(entry => 
+      entry.url.toLowerCase().includes(search) ||
+      (entry.company_name || '').toLowerCase().includes(search) ||
+      String(entry.score).includes(search)
+    );
+    renderLeaderboard(filtered);
+  }
+
+  function refreshLeaderboard() {
+    loadLeaderboard();
+    loadPendingLeaderboard();
+  }
+
+  async function deleteLeaderboardEntry(id) {
+    if (!confirm('Delete this entry from the leaderboard?')) return;
+    
+    try {
+      const response = await fetch(`/api/admin/leaderboard/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+      });
       
-      try {
-        const response = await fetch(`/api/admin/share-links/${shareCode}/toggle-status`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-admin-key': localStorage.getItem('admin_id')
-          },
-          body: JSON.stringify({ is_active: activate })
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-          alert(`✅ Share link ${activate ? 'activated' : 'deactivated'}!`);
-          loadShareLinks();
-        } else {
-          alert('❌ Error: ' + (data.error || 'Failed to update status'));
-        }
-      } catch (error) {
-        console.error('Toggle error:', error);
-        alert('❌ Error updating status: ' + error.message);
+      if (response.ok) {
+        alert('✅ Entry deleted');
+        loadLeaderboard();
+        loadStats();
+      } else {
+        alert('❌ Failed to delete entry');
       }
+    } catch (error) {
+      console.error('Delete error:', error);
+      alert('❌ Delete failed');
     }
+  }
 
-    async function loadLeaderboard() {
-      try {
-        const response = await fetch('/api/admin/leaderboard', {
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        const data = await response.json();
-        const tbody = document.getElementById('leaderboard-tbody');
-        tbody.innerHTML = '';
-        
-        if (data.success && data.entries) {
-          allLeaderboard = data.entries;
-          data.entries.forEach(entry => {
-            const medals = ['🥇', '🥈', '🥉'];
-            const medal = entry.rank <= 3 ? medals[entry.rank - 1] : '';
-            
-            let addedDate = '-';
-            if (entry.created_at) {
-              const date = new Date(entry.created_at);
-              addedDate = date.toLocaleString('nl-NL', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-              });
-            }
-            
-            tbody.innerHTML += `
-              <tr>
-                <td class="px-4 py-3"><input type="checkbox" class="leaderboard-checkbox" value="${entry.id}"></td>
-                <td class="px-4 py-3 font-bold">${medal} #${entry.rank}</td>
-                <td class="px-4 py-3">${entry.company_name || '-'}</td>
-                <td class="px-4 py-3 text-blue-400 text-sm">${entry.url ? entry.url.substring(0, 40) : '-'}</td>
-                <td class="px-4 py-3 font-bold">${entry.score}/100</td>
-                <td class="px-4 py-3">${entry.country}</td>
-                <td class="px-4 py-3 text-sm text-gray-400">${addedDate}</td>
-                <td class="px-4 py-3"><button onclick="deleteItem('leaderboard', ${entry.id})" class="text-red-400 hover:text-red-300">🗑️</button></td>
-              </tr>
-            `;
-          });
-        }
-      } catch (error) {
-        console.error('Leaderboard error:', error);
-      }
-    }
-
-    async function loadPendingLeaderboard() {
-      try {
-        const response = await fetch('/api/admin/leaderboard/pending', {
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        const data = await response.json();
-        
-        const container = document.getElementById('pending-leaderboard-container');
-        
-        if (!data.pending || data.pending.length === 0) {
-          container.innerHTML = `
-            <div class="text-center py-8 text-gray-400">
-              <div class="text-6xl mb-4">✅</div>
-              <p class="text-lg">No pending submissions - all entries approved!</p>
-            </div>
-          `;
-          return;
-        }
-        
-        container.innerHTML = data.pending.map(entry => {
-          const mismatch = entry.country !== entry.auto_detected_country && 
-                           entry.auto_detected_country !== 'Unknown';
-          
-          return `
-            <div class="bg-gray-800 p-6 rounded-lg border-2 ${mismatch ? 'border-red-500' : 'border-green-600'}">
-              
-              ${mismatch ? `
-                <div class="bg-red-900 border border-red-600 rounded-lg p-3 mb-4 flex items-center gap-3">
-                  <span class="text-3xl">⚠️</span>
-                  <div>
-                    <div class="font-bold text-red-300">COUNTRY MISMATCH DETECTED</div>
-                    <div class="text-sm text-red-400">User claim doesn't match domain analysis</div>
-                  </div>
-                </div>
-              ` : ''}
-              
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                <div>
-                  <h3 class="text-2xl font-bold text-white mb-2">${entry.company_name || 'Unknown Company'}</h3>
-                  <p class="text-blue-400 mb-3 break-all">${entry.url}</p>
-                  
-                  <div class="flex items-center gap-4 mb-4">
-                    <div class="bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 rounded-lg">
-                      <div class="text-xs text-purple-200">Score</div>
-                      <div class="text-2xl font-bold">${entry.score}/100</div>
-                    </div>
-                    <div class="bg-gray-700 px-4 py-2 rounded-lg">
-                      <div class="text-xs text-gray-400">Submitted</div>
-                      <div class="text-sm">${new Date(entry.created_at).toLocaleDateString()}</div>
-                    </div>
-                    <div class="bg-gray-700 px-4 py-2 rounded-lg">
-                      <div class="text-xs text-gray-400">IP</div>
-                      <div class="text-sm">${entry.submission_ip || '-'}</div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div class="bg-gray-900 rounded-lg p-4 border ${mismatch ? 'border-red-600' : 'border-green-600'}">
-                  <h4 class="text-lg font-bold mb-3 flex items-center gap-2">
-                    🌍 Country Verification
-                  </h4>
-                  
-                  <div class="space-y-3 mb-4">
-                    <div class="flex items-center justify-between p-2 bg-gray-800 rounded">
-                      <span class="text-gray-400 text-sm">User Claimed:</span>
-                      <span class="font-bold ${mismatch ? 'text-red-400' : 'text-green-400'}">${entry.country}</span>
-                    </div>
-                    
-                    <div class="flex items-center justify-between p-2 bg-gray-800 rounded">
-                      <span class="text-gray-400 text-sm">Auto-Detected:</span>
-                      <span class="font-bold text-blue-400">${entry.auto_detected_country} ✅</span>
-                    </div>
-                  </div>
-                  
-                  <div class="mt-4">
-                    <label class="block text-sm font-medium text-gray-300 mb-2">
-                      Final Country (Your Decision):
-                    </label>
-                    <select id="country-${entry.id}" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white font-medium">
-                      <option value="${entry.auto_detected_country}" selected>
-                        ${entry.auto_detected_country} ${entry.auto_detected_country !== 'Unknown' ? '(Auto-detected ✅)' : ''}
-                      </option>
-                      ${entry.country !== entry.auto_detected_country && entry.country !== 'Unknown' ? `
-                        <option value="${entry.country}">${entry.country} (User claimed)</option>
-                      ` : ''}
-                      <option disabled>──────────</option>
-                      <option value="Netherlands">🇳🇱 Netherlands</option>
-                      <option value="Belgium">🇧🇪 Belgium</option>
-                      <option value="Germany">🇩🇪 Germany</option>
-                      <option value="France">🇫🇷 France</option>
-                      <option value="United Kingdom">🇬🇧 United Kingdom</option>
-                      <option value="United States">🇺🇸 United States</option>
-                      <option value="Canada">🇨🇦 Canada</option>
-                      <option value="Australia">🇦🇺 Australia</option>
-                      <option value="Spain">🇪🇸 Spain</option>
-                      <option value="Italy">🇮🇹 Italy</option>
-                      <option value="Portugal">🇵🇹 Portugal</option>
-                      <option value="Sweden">🇸🇪 Sweden</option>
-                      <option value="Other">🌍 Other</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="flex gap-3 mt-6">
-                <button onclick="approveLeaderboardEntry(${entry.id})" 
-                  class="flex-1 bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold text-lg transition-all transform hover:scale-105">
-                  ✅ Approve & Publish
-                </button>
-                <button onclick="rejectLeaderboardEntry(${entry.id})" 
-                  class="flex-1 bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold text-lg transition-all transform hover:scale-105">
-                  ❌ Reject
-                </button>
-              </div>
-            </div>
-          `;
-        }).join('');
-        
-      } catch (error) {
-        console.error('Load pending error:', error);
-        document.getElementById('pending-leaderboard-container').innerHTML = `
-          <div class="text-center py-8 text-red-400">
-            <div class="text-4xl mb-4">❌</div>
-            <p>Error loading pending submissions</p>
-          </div>
-        `;
-      }
-    }
-
-    async function approveLeaderboardEntry(id) {
-      const finalCountry = document.getElementById(`country-${id}`).value;
+  // ✅ PENDING LEADERBOARD
+  async function loadPendingLeaderboard() {
+    try {
+      const response = await fetch('/api/admin/leaderboard/pending', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+      });
       
-      if (!finalCountry || finalCountry === 'Unknown') {
-        if (!confirm('No country selected. Approve anyway?')) return;
-      }
+      const data = await response.json();
+      const container = document.getElementById('pending-leaderboard-container');
       
-      try {
-        const response = await fetch(`/api/admin/leaderboard/${id}/approve`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-admin-key': localStorage.getItem('admin_id')
-          },
-          body: JSON.stringify({ final_country: finalCountry })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-          alert(`✅ Approved!\n\nCountry: ${finalCountry}\nEntry is now live on the public leaderboard.`);
-          loadPendingLeaderboard();
-          loadLeaderboard();
-          loadStats();
-        } else {
-          alert('❌ Approval failed: ' + (result.error || 'Unknown error'));
-        }
-      } catch (error) {
-        console.error('Approve error:', error);
-        alert('❌ Error approving entry: ' + error.message);
-      }
-    }
-
-    async function rejectLeaderboardEntry(id) {
-      if (!confirm('❌ Reject this submission?\n\nThis will permanently delete the entry.')) return;
-      
-      try {
-        const response = await fetch(`/api/admin/leaderboard/${id}/reject`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-admin-key': localStorage.getItem('admin_id')
-          }
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-          alert('✅ Entry rejected and removed');
-          loadPendingLeaderboard();
-          loadStats();
-        } else {
-          alert('❌ Rejection failed: ' + (result.error || 'Unknown error'));
-        }
-      } catch (error) {
-        console.error('Reject error:', error);
-        alert('❌ Error rejecting entry: ' + error.message);
-      }
-    }
-
-    // ✅ FREELANCERS FUNCTIONS
-    async function loadFreelancers() {
-      try {
-        const response = await fetch('/api/admin/freelancers', {
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          allFreelancers = data.freelancers || [];
-          renderPendingFreelancers(allFreelancers.filter(f => !f.is_approved));
-          renderActiveFreelancers(allFreelancers.filter(f => f.is_approved));
-          loadStats();
-        }
-      } catch (error) {
-        console.error('Load freelancers error:', error);
-      }
-    }
-
-    function renderPendingFreelancers(freelancers) {
-      const container = document.getElementById('pending-freelancers-container');
-      
-      if (freelancers.length === 0) {
+      if (!data.pending || data.pending.length === 0) {
         container.innerHTML = `
           <div class="text-center py-8 text-gray-400">
             <div class="text-6xl mb-4">✅</div>
-            <p class="text-lg">No pending applications</p>
+            <p class="text-lg">No pending submissions - all entries approved!</p>
           </div>
         `;
         return;
       }
 
-      container.innerHTML = freelancers.map(f => `
-        <div class="bg-gray-800 p-6 rounded-lg border-2 border-purple-600">
-          <div class="grid md:grid-cols-2 gap-6">
-            <div>
-              <h4 class="text-xl font-bold mb-2">${f.name}</h4>
-              <p class="text-purple-400 mb-2">${f.title}</p>
-              <p class="text-sm text-gray-400 mb-2">📧 ${f.email}</p>
-              <p class="text-sm text-gray-400 mb-2">📍 ${f.location || 'Unknown'}</p>
-              <p class="text-sm text-gray-400">🌍 ${f.country || 'Unknown'}</p>
-              ${f.linkedin_url ? `<p class="text-sm mt-2"><a href="${f.linkedin_url}" target="_blank" class="text-blue-400 hover:underline">🔗 LinkedIn</a></p>` : ''}
-            </div>
-            <div>
-              <p class="text-sm mb-4">${f.bio}</p>
-              <button onclick="approveFreelancer(${f.id})" class="w-full bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold mb-2">✅ Approve (Payment Received)</button>
-              <button onclick="rejectFreelancer(${f.id})" class="w-full bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">❌ Reject Application</button>
+      container.innerHTML = data.pending.map(entry => {
+        const hasMismatch = entry.country !== entry.auto_detected_country && entry.auto_detected_country !== 'Unknown';
+        
+        return `
+          <div class="bg-gray-700 p-6 rounded-lg border-2 ${hasMismatch ? 'border-red-500' : 'border-green-600'}">
+            ${hasMismatch ? '<div class="bg-red-900 text-red-200 p-3 rounded-lg mb-4 font-bold">⚠️ COUNTRY MISMATCH DETECTED - User claim doesn\'t match domain analysis</div>' : ''}
+            
+            <div class="grid md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="text-xl font-bold mb-2">${entry.company_name}</h4>
+                <p class="text-gray-400 mb-2">🔗 <a href="${entry.url}" target="_blank" class="text-blue-400 hover:underline">${entry.url}</a></p>
+                <p class="mb-2">📊 Score: <span class="px-3 py-1 rounded-full ${entry.score >= 80 ? 'bg-green-600' : 'bg-yellow-600'}">${entry.score}/100</span></p>
+                <p class="text-sm text-gray-400">📅 ${new Date(entry.created_at).toLocaleString()}</p>
+                <p class="text-sm text-gray-400">🌐 IP: ${entry.submission_ip || 'Unknown'}</p>
+              </div>
+              
+              <div>
+                <h5 class="font-bold mb-2">Country Verification:</h5>
+                <div class="mb-4">
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="${hasMismatch ? 'text-red-400' : 'text-green-400'}">👤 User claimed:</span>
+                    <span class="font-bold">${entry.country}</span>
+                  </div>
+                  <div class="flex items-center gap-2 mb-4">
+                    <span class="text-blue-400">✅ Auto-detected:</span>
+                    <span class="font-bold">${entry.auto_detected_country}</span>
+                  </div>
+                </div>
+                
+                <label class="block mb-2 text-sm">Final Country:</label>
+                <select id="country-${entry.id}" class="mb-4">
+                  <option value="${entry.auto_detected_country}" selected>✅ ${entry.auto_detected_country} (Recommended)</option>
+                  ${entry.country !== entry.auto_detected_country ? `<option value="${entry.country}">👤 ${entry.country} (User Claimed)</option>` : ''}
+                  <option disabled>──────────</option>
+                  <option value="Netherlands">🇳🇱 Netherlands</option>
+                  <option value="Belgium">🇧🇪 Belgium</option>
+                  <option value="Germany">🇩🇪 Germany</option>
+                  <option value="France">🇫🇷 France</option>
+                  <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                  <option value="United States">🇺🇸 United States</option>
+                  <option value="Canada">🇨🇦 Canada</option>
+                  <option value="Australia">🇦🇺 Australia</option>
+                  <option value="Other">🌍 Other</option>
+                </select>
+                
+                <button onclick="approveLeaderboardEntry(${entry.id})" class="btn-success w-full mb-2">✅ Approve & Publish</button>
+                <button onclick="rejectLeaderboardEntry(${entry.id})" class="btn-danger w-full">❌ Reject & Delete</button>
+              </div>
             </div>
           </div>
+        `;
+      }).join('');
+    } catch (error) {
+      console.error('Load pending error:', error);
+      document.getElementById('pending-leaderboard-container').innerHTML = `
+        <div class="text-center py-8 text-red-400">
+          <div class="text-4xl mb-4">❌</div>
+          <p>Error loading pending submissions</p>
         </div>
-      `).join('');
+      `;
+    }
+  }
+
+  async function approveLeaderboardEntry(id) {
+    const finalCountry = document.getElementById(`country-${id}`).value;
+    
+    if (finalCountry === 'Unknown' && !confirm('Are you sure you want to approve with "Unknown" country?')) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/admin/leaderboard/${id}/approve`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ final_country: finalCountry })
+      });
+      
+      if (response.ok) {
+        alert(`✅ Approved! Country: ${finalCountry}\nEntry is now live on the public leaderboard.`);
+        loadPendingLeaderboard();
+        loadLeaderboard();
+        loadStats();
+      } else {
+        alert('❌ Approval failed');
+      }
+    } catch (error) {
+      console.error('Approve error:', error);
+      alert('❌ Approval failed');
+    }
+  }
+
+  async function rejectLeaderboardEntry(id) {
+    if (!confirm('❌ Reject this submission? This will permanently delete the entry.')) return;
+    
+    try {
+      const response = await fetch(`/api/admin/leaderboard/${id}/reject`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+      });
+      
+      if (response.ok) {
+        alert('✅ Entry rejected and removed');
+        loadPendingLeaderboard();
+        loadStats();
+      } else {
+        alert('❌ Rejection failed');
+      }
+    } catch (error) {
+      console.error('Reject error:', error);
+      alert('❌ Rejection failed');
+    }
+  }
+
+  // ============================================
+  // ✅ FREELANCER FUNCTIONS (NEW)
+  // ============================================
+
+  async function loadFreelancers() {
+    try {
+      const response = await fetch('/api/admin/freelancers', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        allFreelancers = data.freelancers || [];
+        renderPendingFreelancers(allFreelancers.filter(f => !f.is_approved));
+        renderActiveFreelancers(allFreelancers.filter(f => f.is_approved));
+      }
+    } catch (error) {
+      console.error('Load freelancers error:', error);
+    }
+  }
+
+  function renderPendingFreelancers(freelancers) {
+    const container = document.getElementById('pending-freelancers-container');
+    
+    if (freelancers.length === 0) {
+      container.innerHTML = `
+        <div class="text-center py-8 text-gray-400">
+          <div class="text-6xl mb-4">✅</div>
+          <p class="text-lg">No pending applications</p>
+        </div>
+      `;
+      return;
     }
 
-    function renderActiveFreelancers(freelancers) {
-      const tbody = document.getElementById('freelancers-tbody');
+    container.innerHTML = freelancers.map(f => `
+      <div class="bg-gray-700 p-6 rounded-lg">
+        <div class="grid md:grid-cols-2 gap-6">
+          <div>
+            <h4 class="text-xl font-bold mb-2">${f.name}</h4>
+            <p class="text-purple-400 mb-2">${f.title}</p>
+            <p class="text-sm text-gray-400 mb-2">📧 ${f.email}</p>
+            <p class="text-sm text-gray-400 mb-2">📍 ${f.location || 'Unknown'}</p>
+            <p class="text-sm text-gray-400">🌍 ${f.country || 'Unknown'}</p>
+            ${f.linkedin_url ? `<p class="text-sm mt-2"><a href="${f.linkedin_url}" target="_blank" class="text-blue-400 hover:underline">🔗 LinkedIn</a></p>` : ''}
+          </div>
+          <div>
+            <p class="text-sm mb-4">${f.bio}</p>
+            <button onclick="approveFreelancer(${f.id})" class="btn-success w-full mb-2">✅ Approve (Payment Received)</button>
+            <button onclick="rejectFreelancer(${f.id})" class="btn-danger w-full">❌ Reject Application</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderActiveFreelancers(freelancers) {
+    const tbody = document.getElementById('freelancers-tbody');
+    
+    if (freelancers.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="text-center text-gray-400">No active freelancers</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = freelancers.map(f => `
+      <tr>
+        <td>${f.name}</td>
+        <td>${f.email}</td>
+        <td>${f.title}</td>
+        <td>${f.has_score ? `<span class="px-3 py-1 rounded-full ${f.score >= 80 ? 'bg-green-600' : 'bg-yellow-600'}">${f.score}/100</span>` : 'No score'}</td>
+        <td><span class="px-3 py-1 rounded-full ${f.is_approved ? 'bg-green-600' : 'bg-yellow-600'}">${f.is_approved ? 'Active' : 'Pending'}</span></td>
+        <td><span class="px-3 py-1 rounded-full ${f.is_featured ? 'bg-yellow-600' : 'bg-gray-600'}">${f.is_featured ? '⭐ Yes' : 'No'}</span></td>
+        <td>
+          <button onclick="toggleFreelancerFeatured(${f.id}, ${!f.is_featured})" class="btn-primary px-3 py-1 text-sm mb-1">⭐ ${f.is_featured ? 'Unfeature' : 'Feature'}</button>
+          <button onclick="deactivateFreelancer(${f.id})" class="btn-danger px-3 py-1 text-sm">🚫 Deactivate</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async function approveFreelancer(id) {
+    try {
+      const response = await fetch(`/api/admin/freelancers/${id}/approve`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+      });
       
-      if (freelancers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">No active freelancers</td></tr>';
+      if (response.ok) {
+        alert('✅ Freelancer approved! They are now live on the site.');
+        loadFreelancers();
+        loadStats();
+      } else {
+        alert('❌ Approval failed');
+      }
+    } catch (error) {
+      console.error('Approve error:', error);
+      alert('❌ Approval failed');
+    }
+  }
+
+  async function rejectFreelancer(id) {
+    if (!confirm('Reject this freelancer application?')) return;
+    
+    try {
+      const response = await fetch(`/api/admin/freelancers/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+      });
+      
+      if (response.ok) {
+        alert('✅ Application rejected');
+        loadFreelancers();
+      } else {
+        alert('❌ Rejection failed');
+      }
+    } catch (error) {
+      console.error('Reject error:', error);
+      alert('❌ Rejection failed');
+    }
+  }
+
+  async function toggleFreelancerFeatured(id, featured) {
+    try {
+      const response = await fetch(`/api/admin/freelancers/${id}/feature`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ is_featured: featured })
+      });
+      
+      if (response.ok) {
+        alert(featured ? '⭐ Freelancer featured!' : 'Freelancer unfeatured');
+        loadFreelancers();
+      }
+    } catch (error) {
+      console.error('Feature toggle error:', error);
+    }
+  }
+
+  async function deactivateFreelancer(id) {
+    if (!confirm('Deactivate this freelancer? They will be hidden from the public site.')) return;
+    
+    try {
+      const response = await fetch(`/api/admin/freelancers/${id}/deactivate`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+      });
+      
+      if (response.ok) {
+        alert('✅ Freelancer deactivated');
+        loadFreelancers();
+        loadStats();
+      }
+    } catch (error) {
+      console.error('Deactivate error:', error);
+    }
+  }
+
+  // ============================================
+  // ✅ LEAD SCANNER FUNCTIONS (RESTORED)
+  // ============================================
+
+  async function scanSingleURL() {
+    const url = document.getElementById('single-url').value.trim();
+    
+    if (!url) {
+      alert('Please enter a URL');
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(`✅ Scan complete!\nScore: ${data.score}/100\n\nSubmit to leaderboard?`);
+        
+        const companyName = prompt('Enter company name:');
+        if (companyName) {
+          await submitToLeaderboard(url, data.score, companyName);
+        }
+      } else {
+        alert('❌ Scan failed: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Scan error:', error);
+      alert('❌ Scan failed');
+    }
+  }
+
+  async function bulkScanURLs() {
+    const urls = document.getElementById('bulk-urls').value
+      .split('\n')
+      .map(u => u.trim())
+      .filter(u => u && u.startsWith('http'));
+    
+    if (urls.length === 0) {
+      alert('Please enter at least one valid URL');
+      return;
+    }
+    
+    if (!confirm(`Scan ${urls.length} URLs? This may take a while.`)) return;
+    
+    const progressDiv = document.getElementById('scan-progress');
+    const resultsDiv = document.getElementById('scan-results');
+    progressDiv.classList.remove('hidden');
+    resultsDiv.innerHTML = '';
+    
+    let completed = 0;
+    const results = [];
+    
+    for (const url of urls) {
+      try {
+        const response = await fetch('/api/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+        
+        const data = await response.json();
+        completed++;
+        
+        const percent = Math.round((completed / urls.length) * 100);
+        document.getElementById('progress-text').textContent = `${completed} / ${urls.length}`;
+        document.getElementById('progress-percent').textContent = `${percent}%`;
+        document.getElementById('progress-bar').style.width = `${percent}%`;
+        
+        if (data.success) {
+          results.push({ url, score: data.score, success: true });
+          resultsDiv.innerHTML += `<div class="p-3 bg-green-900 rounded mb-2">✅ ${url} - Score: ${data.score}/100</div>`;
+          
+          // Auto-submit to leaderboard
+          await submitToLeaderboard(url, data.score, new URL(url).hostname);
+        } else {
+          results.push({ url, error: data.error, success: false });
+          resultsDiv.innerHTML += `<div class="p-3 bg-red-900 rounded mb-2">❌ ${url} - Failed</div>`;
+        }
+        
+        // Small delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (error) {
+        console.error('Scan error:', error);
+        resultsDiv.innerHTML += `<div class="p-3 bg-red-900 rounded mb-2">❌ ${url} - Error</div>`;
+      }
+    }
+    
+    alert(`✅ Bulk scan complete!\nSuccessful: ${results.filter(r => r.success).length}\nFailed: ${results.filter(r => !r.success).length}`);
+    loadLeaderboard();
+  }
+
+  async function submitToLeaderboard(url, score, companyName) {
+    try {
+      await fetch('/api/leaderboard/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url,
+          score,
+          company_name: companyName,
+          country: 'Unknown'
+        })
+      });
+    } catch (error) {
+      console.error('Submit error:', error);
+    }
+  }
+
+  // ============================================
+  // ✅ CLAIMS FUNCTIONS
+  // ============================================
+
+  async function loadClaims() {
+    try {
+      const response = await fetch('/api/admin/claims', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+      });
+      
+      const data = await response.json();
+      const tbody = document.getElementById('claims-tbody');
+      
+      if (!data.claims || data.claims.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-400">No claims</td></tr>';
         return;
       }
 
-      tbody.innerHTML = freelancers.map(f => `
+      tbody.innerHTML = data.claims.map(claim => `
         <tr>
-          <td class="px-4 py-3">${f.name}</td>
-          <td class="px-4 py-3">${f.email}</td>
-          <td class="px-4 py-3">${f.title}</td>
-          <td class="px-4 py-3">${f.has_score ? `<span class="px-3 py-1 rounded-full ${f.score >= 80 ? 'bg-green-600' : 'bg-yellow-600'}">${f.score}/100</span>` : 'No score'}</td>
-          <td class="px-4 py-3"><span class="px-3 py-1 rounded-full ${f.is_approved ? 'bg-green-600' : 'bg-yellow-600'}">${f.is_approved ? 'Active' : 'Pending'}</span></td>
-          <td class="px-4 py-3"><span class="px-3 py-1 rounded-full ${f.is_featured ? 'bg-yellow-600' : 'bg-gray-600'}">${f.is_featured ? '⭐ Yes' : 'No'}</span></td>
-          <td class="px-4 py-3">
-            <button onclick="toggleFreelancerFeatured(${f.id}, ${!f.is_featured})" class="px-3 py-1 bg-purple-600 hover:bg-purple-700 rounded text-sm mb-1">⭐ ${f.is_featured ? 'Unfeature' : 'Feature'}</button>
-            <button onclick="deactivateFreelancer(${f.id})" class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm">🚫 Deactivate</button>
+          <td>${claim.agency_name}</td>
+          <td>${claim.contact_email}</td>
+          <td><a href="${claim.website_url}" target="_blank" class="text-blue-400 hover:underline">${claim.website_url}</a></td>
+          <td>${claim.country}</td>
+          <td>${new Date(claim.created_at).toLocaleDateString()}</td>
+          <td>
+            <button onclick="approveClaim(${claim.id})" class="btn-success px-3 py-1 text-sm mb-1">✅ Approve</button>
+            <button onclick="rejectClaim(${claim.id})" class="btn-danger px-3 py-1 text-sm">❌ Reject</button>
           </td>
         </tr>
       `).join('');
+    } catch (error) {
+      console.error('Load claims error:', error);
     }
+  }
 
-    async function approveFreelancer(id) {
-      try {
-        const response = await fetch(`/api/admin/freelancers/${id}/approve`, {
-          method: 'POST',
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        
-        if (response.ok) {
-          alert('✅ Freelancer approved! They are now live on the site.');
-          loadFreelancers();
-        } else {
-          alert('❌ Approval failed');
-        }
-      } catch (error) {
-        console.error('Approve error:', error);
-        alert('❌ Approval failed');
-      }
-    }
-
-    async function rejectFreelancer(id) {
-      if (!confirm('Reject this freelancer application?')) return;
-      
-      try {
-        const response = await fetch(`/api/admin/freelancers/${id}`, {
-          method: 'DELETE',
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        
-        if (response.ok) {
-          alert('✅ Application rejected');
-          loadFreelancers();
-        } else {
-          alert('❌ Rejection failed');
-        }
-      } catch (error) {
-        console.error('Reject error:', error);
-        alert('❌ Rejection failed');
-      }
-    }
-
-    async function toggleFreelancerFeatured(id, featured) {
-      try {
-        const response = await fetch(`/api/admin/freelancers/${id}/feature`, {
-          method: 'POST',
-          headers: {
-            'x-admin-key': localStorage.getItem('admin_id'),
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ is_featured: featured })
-        });
-        
-        if (response.ok) {
-          alert(featured ? '⭐ Freelancer featured!' : 'Freelancer unfeatured');
-          loadFreelancers();
-        }
-      } catch (error) {
-        console.error('Feature toggle error:', error);
-      }
-    }
-
-    async function deactivateFreelancer(id) {
-      if (!confirm('Deactivate this freelancer? They will be hidden from the public site.')) return;
-      
-      try {
-        const response = await fetch(`/api/admin/freelancers/${id}/deactivate`, {
-          method: 'POST',
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        
-        if (response.ok) {
-          alert('✅ Freelancer deactivated');
-          loadFreelancers();
-        }
-      } catch (error) {
-        console.error('Deactivate error:', error);
-      }
-    }
-
-    async function loadClaims() {
-      try {
-        const response = await fetch('/api/admin/claims/pending', {
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        const data = await response.json();
-        
-        if (data.success) {
-          document.getElementById('pending-claims-count').textContent = data.claims?.length || 0;
-          document.getElementById('approved-claims-count').textContent = 0;
-          document.getElementById('total-claimed-count').textContent = 0;
-          document.getElementById('unclaimed-profiles-count').textContent = 0;
-        }
-      } catch (error) {
-        console.error('Claims error:', error);
-      }
-    }
-
-    function copyShareUrl(token) {
-      const input = document.getElementById(`share-url-${token}`);
-      input.select();
-      document.execCommand('copy');
-      alert('✅ Share URL copied to clipboard!');
-    }
-
-    function copyAgencyUrl(adminKey) {
-      const input = document.getElementById(`agency-url-${adminKey}`);
-      input.select();
-      document.execCommand('copy');
-      alert('✅ Agency Admin URL copied to clipboard!');
-    }
-
-    async function submitAddAgency() {
-      const formData = {
-        name: document.getElementById('agency-name').value,
-        domain: document.getElementById('agency-domain').value,
-        country: document.getElementById('agency-country').value,
-        plan: 'free'
-      };
-      
-      try {
-        const response = await fetch('/api/agencies', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-admin-key': localStorage.getItem('admin_id')
-          },
-          body: JSON.stringify(formData)
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-          alert('✅ Agency created!');
-          closeModal('modal-add-agency');
-          loadAgencies();
-        } else {
-          alert('❌ ' + (data.error || 'Failed'));
-        }
-      } catch (error) {
-        alert('Error');
-      }
-    }
-
-    async function submitCreateShareLink() {
-      const email = document.getElementById('share-client-email').value;
-      const name = document.getElementById('share-client-name').value;
-      const company = document.getElementById('share-client-company')?.value || '';
-      const scansLimit = parseInt(document.getElementById('share-scans-limit').value);
-      const validDays = parseInt(document.getElementById('share-valid-days').value);
-      
-      if (!email || !name) {
-        alert('❌ Email and name are required');
-        return;
-      }
-      
-      if (!email.includes('@')) {
-        alert('❌ Invalid email address');
-        return;
-      }
-      
-      const formData = {
-        client_email: email,
-        client_name: name,
-        client_company: company,
-        scans_limit: scansLimit || 5,
-        valid_days: validDays || 30
-      };
-      
-      try {
-        const response = await fetch('/api/admin/share-links/create', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-admin-key': localStorage.getItem('admin_id')
-          },
-          body: JSON.stringify(formData)
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          alert('✅ Link created!\n\n' + data.share_url);
-          navigator.clipboard.writeText(data.share_url);
-          closeModal('modal-create-share-link');
-          
-          document.getElementById('share-client-email').value = '';
-          document.getElementById('share-client-name').value = '';
-          if (document.getElementById('share-client-company')) {
-            document.getElementById('share-client-company').value = '';
-          }
-          
-          loadShareLinks();
-        } else {
-          alert('❌ Failed to create link:\n' + (data.error || 'Unknown error'));
-        }
-      } catch (error) {
-        alert('❌ Error creating share link: ' + error.message);
-      }
-    }
-
-    async function submitAddAdmin() {
-      const formData = {
-        username: document.getElementById('admin-username').value,
-        password: document.getElementById('admin-password').value,
-        role: document.getElementById('admin-role').value,
-        full_name: document.getElementById('admin-full-name').value,
-        email: document.getElementById('admin-email').value
-      };
-      
-      try {
-        const response = await fetch('/api/admins', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-admin-key': localStorage.getItem('admin_id')
-          },
-          body: JSON.stringify(formData)
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-          alert('✅ Admin created!');
-          closeModal('modal-add-admin');
-          loadAdmins();
-        } else {
-          alert('❌ ' + (data.error || 'Failed'));
-        }
-      } catch (error) {
-        alert('Error');
-      }
-    }
-
-    async function deleteItem(type, id) {
-      if (!confirm('Delete this item?')) return;
-      
-      const endpoints = {
-        admins: `/api/admins/${id}`,
-        agencies: `/api/agencies/${id}`,
-        clients: `/api/admin/clients/${id}`,
-        scans: `/api/admin/scans/${id}`,
-        leaderboard: `/api/admin/leaderboard/${id}`
-      };
-      
-      try {
-        const response = await fetch(endpoints[type], {
-          method: 'DELETE',
-          headers: { 
-            'x-admin-key': localStorage.getItem('admin_id'),
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (response.ok) {
-          alert('✅ Deleted!');
-          loadAllData();
-        } else {
-          const data = await response.json();
-          alert('❌ Failed: ' + (data.error || 'Unknown error'));
-        }
-      } catch (error) {
-        alert('❌ Error: ' + error.message);
-      }
-    }
-
-    async function deleteShareLink(code) {
-      if (!code || code === 'undefined') {
-        alert('❌ Invalid share link code');
-        return;
-      }
-      
-      if (!confirm('Delete this link?')) return;
-      
-      try {
-        const response = await fetch(`/api/admin/share-links/${code}`, {
-          method: 'DELETE',
-          headers: { 
-            'x-admin-key': localStorage.getItem('admin_id'),
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (response.ok) {
-          alert('✅ Share link deleted!');
-          loadShareLinks();
-        } else {
-          const data = await response.json();
-          alert('❌ Failed to delete: ' + (data.error || 'Unknown error'));
-        }
-      } catch (error) {
-        alert('❌ Error deleting share link');
-      }
-    }
-
-    function toggleSelectAllAgencies() {
-      const isChecked = document.getElementById('agency-select-all').checked;
-      document.querySelectorAll('.agency-checkbox').forEach(cb => cb.checked = isChecked);
-    }
-
-    function deleteSelectedAgencies() {
-      const selected = Array.from(document.querySelectorAll('.agency-checkbox:checked')).map(cb => cb.value);
-      if (selected.length === 0) return alert('Please select agencies to delete');
-      if (!confirm(`Delete ${selected.length} agencies?`)) return;
-      selected.forEach(id => deleteItem('agencies', id));
-      setTimeout(() => loadAgencies(), 500);
-    }
-
-    function toggleSelectAllClients() {
-      const isChecked = document.getElementById('client-select-all').checked;
-      document.querySelectorAll('.client-checkbox').forEach(cb => cb.checked = isChecked);
-    }
-
-    function deleteSelectedClients() {
-      const selected = Array.from(document.querySelectorAll('.client-checkbox:checked')).map(cb => cb.value);
-      if (selected.length === 0) return alert('Please select clients to delete');
-      if (!confirm(`Delete ${selected.length} clients?`)) return;
-      selected.forEach(id => deleteItem('clients', id));
-      setTimeout(() => loadClients(), 500);
-    }
-
-    function toggleSelectAllScans() {
-      const isChecked = document.getElementById('scan-select-all').checked;
-      document.querySelectorAll('.scan-checkbox').forEach(cb => cb.checked = isChecked);
-    }
-
-    function deleteSelectedScans() {
-      const selected = Array.from(document.querySelectorAll('.scan-checkbox:checked')).map(cb => parseInt(cb.value));
-      if (selected.length === 0) return alert('Please select scans to delete');
-      if (!confirm(`Delete ${selected.length} scans?`)) return;
-      
-      let deleted = 0;
-      let failed = 0;
-      
-      selected.forEach(async (id) => {
-        try {
-          const response = await fetch(`/api/admin/scans/${id}`, {
-            method: 'DELETE',
-            headers: { 
-              'x-admin-key': localStorage.getItem('admin_id'),
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          if (response.ok) {
-            deleted++;
-          } else {
-            failed++;
-          }
-        } catch (error) {
-          failed++;
-        }
+  async function approveClaim(id) {
+    try {
+      const response = await fetch(`/api/admin/claims/${id}/approve`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
       });
       
-      setTimeout(() => {
-        alert(`✅ Deleted: ${deleted}\n❌ Failed: ${failed}`);
-        loadScans();
-        loadStats();
-      }, 1000);
+      if (response.ok) {
+        alert('✅ Claim approved');
+        loadClaims();
+      }
+    } catch (error) {
+      console.error('Approve claim error:', error);
     }
+  }
 
-    function toggleSelectAllShareLinks() {
-      const isChecked = document.getElementById('sharelink-select-all').checked;
-      document.querySelectorAll('.sharelink-checkbox').forEach(cb => cb.checked = isChecked);
-    }
-
-    function deleteSelectedShareLinks() {
-      const selected = Array.from(document.querySelectorAll('.sharelink-checkbox:checked')).map(cb => cb.value);
-      if (selected.length === 0) return alert('Please select share links to delete');
-      if (!confirm(`Delete ${selected.length} share links?`)) return;
-      selected.forEach(code => deleteShareLink(code));
-      setTimeout(() => loadShareLinks(), 500);
-    }
-
-    function toggleSelectAllLeaderboard() {
-      const isChecked = document.getElementById('leaderboard-select-all').checked;
-      document.querySelectorAll('.leaderboard-checkbox').forEach(cb => cb.checked = isChecked);
-    }
-
-    function deleteSelectedLeaderboard() {
-      const selected = Array.from(document.querySelectorAll('.leaderboard-checkbox:checked')).map(cb => parseInt(cb.value));
-      if (selected.length === 0) return alert('Please select leaderboard entries to delete');
-      if (!confirm(`Delete ${selected.length} leaderboard entries?`)) return;
-      
-      let deleted = 0;
-      let failed = 0;
-      
-      selected.forEach(async (id) => {
-        try {
-          const response = await fetch(`/api/admin/leaderboard/${id}`, {
-            method: 'DELETE',
-            headers: { 
-              'x-admin-key': localStorage.getItem('admin_id'),
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          if (response.ok) {
-            deleted++;
-          } else {
-            failed++;
-          }
-        } catch (error) {
-          failed++;
-        }
+  async function rejectClaim(id) {
+    if (!confirm('Reject this claim?')) return;
+    
+    try {
+      const response = await fetch(`/api/admin/claims/${id}/reject`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
       });
       
-      setTimeout(() => {
-        alert(`✅ Deleted: ${deleted}\n❌ Failed: ${failed}`);
+      if (response.ok) {
+        alert('✅ Claim rejected');
+        loadClaims();
+      }
+    } catch (error) {
+      console.error('Reject claim error:', error);
+    }
+  }
+
+  // ============================================
+  // ✅ OPT-OUT FUNCTIONS (FIXED)
+  // ============================================
+
+  async function loadOptOuts() {
+    try {
+      const response = await fetch('/api/admin/opt-outs', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+      });
+      
+      const data = await response.json();
+      const tbody = document.getElementById('optout-tbody');
+      
+      if (!data.optouts || data.optouts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-gray-400">No opt-out requests</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = data.optouts.map(opt => `
+        <tr>
+          <td>${opt.url}</td>
+          <td>${opt.reason || 'Not specified'}</td>
+          <td>${new Date(opt.created_at).toLocaleDateString()}</td>
+          <td>
+            <button onclick="removeOptOut(${opt.id})" class="btn-danger px-3 py-1 text-sm">🗑️ Remove</button>
+          </td>
+        </tr>
+      `).join('');
+    } catch (error) {
+      console.error('Load opt-outs error:', error);
+      document.getElementById('optout-tbody').innerHTML = '<tr><td colspan="4" class="text-center text-red-400">Error loading opt-outs</td></tr>';
+    }
+  }
+
+  async function addOptOut() {
+    const url = document.getElementById('optout-url').value.trim();
+    const reason = document.getElementById('optout-reason').value.trim();
+    
+    if (!url) {
+      alert('Please enter a URL');
+      return;
+    }
+    
+    if (!confirm(`Add opt-out for ${url}?\nThis will remove it from the leaderboard.`)) return;
+    
+    try {
+      const response = await fetch('/api/admin/opt-outs', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ url, reason: reason || 'Manual admin opt-out' })
+      });
+      
+      if (response.ok) {
+        alert('✅ Opt-out added and entry removed from leaderboard');
+        document.getElementById('optout-url').value = '';
+        document.getElementById('optout-reason').value = '';
+        loadOptOuts();
         loadLeaderboard();
-        loadStats();
-      }, 1000);
+      } else {
+        alert('❌ Failed to add opt-out');
+      }
+    } catch (error) {
+      console.error('Add opt-out error:', error);
+      alert('❌ Failed to add opt-out');
     }
+  }
 
-    function exportToCSV(filename, data) {
-      if (!data || data.length === 0) {
-        alert('No data to export');
+  async function removeOptOut(id) {
+    if (!confirm('Remove this opt-out? The business can be added back to the leaderboard.')) return;
+    
+    try {
+      const response = await fetch(`/api/admin/opt-outs/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+      });
+      
+      if (response.ok) {
+        alert('✅ Opt-out removed');
+        loadOptOuts();
+      }
+    } catch (error) {
+      console.error('Remove opt-out error:', error);
+    }
+  }
+
+  // ============================================
+  // ✅ SHARE LINKS FUNCTIONS (FIXED)
+  // ============================================
+
+  async function loadShareLinks() {
+    try {
+      const response = await fetch('/api/admin/share-links', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+      });
+      
+      const data = await response.json();
+      const tbody = document.getElementById('sharelinks-tbody');
+      
+      if (!data.links || data.links.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-gray-400">No share links</td></tr>';
         return;
       }
+
+      tbody.innerHTML = data.links.map(link => `
+        <tr>
+          <td>${link.usage || '3/4/2026'}</td>
+          <td>${link.expires_at ? new Date(link.expires_at).toLocaleDateString() : 'Never'}</td>
+          <td><span class="px-3 py-1 rounded-full ${link.is_active ? 'bg-green-600' : 'bg-red-600'}">${link.is_active ? 'Active' : 'Inactive'}</span></td>
+          <td>
+            <button onclick="toggleShareLink(${link.id}, ${!link.is_active})" class="btn-primary px-3 py-1 text-sm mb-1">${link.is_active ? 'Deactivate' : 'Activate'}</button>
+            <button onclick="deleteShareLink(${link.id})" class="btn-danger px-3 py-1 text-sm">🗑️ Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    } catch (error) {
+      console.error('Load share links error:', error);
+      document.getElementById('sharelinks-tbody').innerHTML = '<tr><td colspan="4" class="text-center text-red-400">Error loading share links</td></tr>';
+    }
+  }
+
+  async function createShareLink() {
+    const expiresIn = prompt('Expires in how many days? (0 for never)', '30');
+    if (expiresIn === null) return;
+    
+    try {
+      const response = await fetch('/api/admin/share-links', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ expires_in_days: parseInt(expiresIn) || 0 })
+      });
       
-      const csv = [
-        Object.keys(data[0] || {}).join(',')
-      ].concat(data.map(row => Object.values(row).map(cell => '"' + (cell || '').toString().replace(/"/g, '""') + '"').join(',')))
-       .join('\n');
-
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    }
-
-    function exportToJSON(filename, data) {
-      const json = JSON.stringify(data, null, 2);
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    }
-
-    function exportAgenciesToCSV() {
-      exportToCSV(`agencies-${Date.now()}.csv`, allAgencies);
-    }
-
-    function exportAgenciesToJSON() {
-      exportToJSON(`agencies-${Date.now()}.json`, allAgencies);
-    }
-
-    function exportClientsToCSV() {
-      exportToCSV(`clients-${Date.now()}.csv`, allClients);
-    }
-
-    function exportClientsToJSON() {
-      exportToJSON(`clients-${Date.now()}.json`, allClients);
-    }
-
-    function exportScansToCSV() {
-      exportToCSV(`scans-${Date.now()}.csv`, allScans);
-    }
-
-    function exportScansToJSON() {
-      exportToJSON(`scans-${Date.now()}.json`, allScans);
-    }
-
-    function exportLeaderboardToCSV() {
-      exportToCSV(`leaderboard-${Date.now()}.csv`, allLeaderboard);
-    }
-
-    function exportLeaderboardToJSON() {
-      exportToJSON(`leaderboard-${Date.now()}.json`, allLeaderboard);
-    }
-
-    function showAddAgencyModal() {
-      document.getElementById('modal-add-agency').classList.remove('hidden');
-    }
-
-    function showCreateShareLinkModal() {
-      document.getElementById('modal-create-share-link').classList.remove('hidden');
-    }
-
-    function showAddAdminModal() {
-      document.getElementById('modal-add-admin').classList.remove('hidden');
-    }
-
-    function closeModal(id) {
-      document.getElementById(id).classList.add('hidden');
-    }
-
-    async function searchLeaderboard() {
-      const query = document.getElementById('leaderboard-search').value;
-      if (!query) {
-        loadLeaderboard();
-        return;
-      }
+      const data = await response.json();
       
-      try {
-        const response = await fetch(`/api/admin/leaderboard/search?q=${encodeURIComponent(query)}`, {
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        const data = await response.json();
-        if (data.success) {
-          allLeaderboard = data.entries;
-          loadLeaderboard();
-        }
-      } catch (error) {
-        console.error('Search error:', error);
+      if (data.success) {
+        alert(`✅ Share link created!\n\nLink: ${window.location.origin}/share/${data.code}`);
+        loadShareLinks();
+      } else {
+        alert('❌ Failed to create share link');
       }
+    } catch (error) {
+      console.error('Create share link error:', error);
+      alert('❌ Failed to create share link');
     }
+  }
 
-    function scanAllAgencies() {
-      if (!confirm('Scan all agencies?')) return;
-      alert('Scan started!');
+  async function toggleShareLink(id, activate) {
+    if (!id || id === 'undefined') {
+      alert('❌ Invalid share link ID');
+      return;
     }
-
-    async function manualOptOut() {
-      const url = document.getElementById('manual-optout-url').value.trim();
-      if (!url) {
-        alert('Please enter a URL');
-        return;
-      }
+    
+    try {
+      const response = await fetch(`/api/admin/share-links/${id}/toggle-status`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ is_active: activate })
+      });
       
-      if (!confirm(`Remove ${url} from leaderboard?`)) return;
-      
-      try {
-        const response = await fetch('/api/admin/opt-out', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-admin-key': localStorage.getItem('admin_id')
-          },
-          body: JSON.stringify({ url, reason: 'Manual admin opt-out' })
-        });
-        
-        if (response.ok) {
-          alert('✅ Removed from leaderboard');
-          document.getElementById('manual-optout-url').value = '';
-          loadLeaderboard();
-        } else {
-          alert('❌ Failed to opt-out');
-        }
-      } catch (error) {
-        console.error('Opt-out error:', error);
-        alert('❌ Error');
+      if (response.ok) {
+        alert(activate ? '✅ Share link activated' : '✅ Share link deactivated');
+        loadShareLinks();
+      } else {
+        alert('❌ Failed to toggle share link status');
       }
+    } catch (error) {
+      console.error('Toggle share link error:', error);
+      alert('❌ Failed to toggle share link status');
     }
+  }
 
-    function loadBlogPosts() {}
-    function loadLeadQueueFromStorage() {}
-    function updateLeadScannerUI() {}
-  </script>
+  async function deleteShareLink(id) {
+    if (!confirm('Delete this share link?')) return;
+    
+    try {
+      const response = await fetch(`/api/admin/share-links/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+      });
+      
+      if (response.ok) {
+        alert('✅ Share link deleted');
+        loadShareLinks();
+      }
+    } catch (error) {
+      console.error('Delete share link error:', error);
+    }
+  }
+</script>
 
 </body>
 </html>
