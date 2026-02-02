@@ -1,3 +1,6 @@
+
+
+
 // ============================================
 // CONTENTSCALE SERVER.JS - COMPLETE WITHOUT BCRYPT
 // ============================================
@@ -155,7 +158,7 @@ Return ONLY this JSON structure, no other text, no markdown fences:
 
 async function scoreWithAI(contentForAI) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s for Railway network
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -589,26 +592,6 @@ async function createAllTables() {
     await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS agency_size TEXT`);
     await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS contact_email TEXT`);
     await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS verified BOOLEAN DEFAULT FALSE`);
-    
-    // SHARE_LINKS TABLE MIGRATIONS - migrate old schema (token) to new schema (share_code)
-    await client.query(`
-      DO $$ 
-      BEGIN
-        -- Rename token column to share_code if it exists
-        IF EXISTS (
-          SELECT 1 FROM information_schema.columns 
-          WHERE table_name = 'share_links' AND column_name = 'token'
-        ) AND NOT EXISTS (
-          SELECT 1 FROM information_schema.columns 
-          WHERE table_name = 'share_links' AND column_name = 'share_code'
-        ) THEN
-          ALTER TABLE share_links RENAME COLUMN token TO share_code;
-        END IF;
-      END $$;
-    `).catch(e => console.log('share_links migration skipped:', e.message));
-    
-    await client.query(`ALTER TABLE share_links ADD COLUMN IF NOT EXISTS agency_id INTEGER REFERENCES agencies(id) ON DELETE CASCADE`).catch(e => {});
-    await client.query(`ALTER TABLE share_links ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active'`).catch(e => {});
     
     // DEFAULT SETTINGS
     const defaultSettings = [
@@ -1334,8 +1317,6 @@ app.get('/api/admin/share-links', async (req, res) => {
 app.post('/api/admin/share-links/create', async (req, res) => {
   const { client_email, client_name, client_company, scans_limit, valid_days } = req.body;
   
-  console.log('📋 Creating share link:', { client_email, client_name, scans_limit, valid_days });
-  
   if (!client_email) {
     return res.status(400).json({ success: false, error: 'Email required' });
   }
@@ -1344,8 +1325,6 @@ app.post('/api/admin/share-links/create', async (req, res) => {
     const shareCode = crypto.randomBytes(8).toString('hex');
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + (valid_days || 30));
-    
-    console.log('🔑 Generated share code:', shareCode, 'expires:', expiresAt);
     
     await pool.query(
       `INSERT INTO share_links (share_code, client_email, client_name, client_company, scans_limit, scans_used, expires_at, status)
@@ -1360,36 +1339,24 @@ app.post('/api/admin/share-links/create', async (req, res) => {
       ]
     );
     
-    console.log('✅ Share link created successfully');
     const shareUrl = `${req.protocol}://${req.get('host')}/scan-with-link/${shareCode}`;
     res.json({ success: true, share_code: shareCode, share_url: shareUrl });
   } catch (error) {
-    console.error('❌ Share link creation error:', error.message);
-    console.error('Full error:', error);
+    console.error('Share link creation error:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Database error: ' + error.message,
-      hint: error.hint || null
+      error: 'Database error',
+      details: error.message
     });    
   }
 });
 
 app.delete('/api/admin/share-links/:code', async (req, res) => {
   try {
-    console.log('🗑️ Deleting share link:', req.params.code);
-    const result = await pool.query('DELETE FROM share_links WHERE share_code = $1 RETURNING id', [req.params.code]);
-    
-    if (result.rowCount === 0) {
-      console.log('⚠️ Share link not found:', req.params.code);
-      return res.status(404).json({ success: false, error: 'Share link not found' });
-    }
-    
-    console.log('✅ Share link deleted');
+    await pool.query('DELETE FROM share_links WHERE share_code = $1', [req.params.code]);
     res.json({ success: true });
   } catch (error) {
-    console.error('❌ Share link delete error:', error.message);
-    console.error('Full error:', error);
-    res.status(500).json({ success: false, error: 'Database error: ' + error.message });
+    res.status(500).json({ success: false, error: 'Database error' });
   }
 });
 
@@ -1495,94 +1462,6 @@ app.post('/api/admin/leaderboard/bulk-delete', async (req, res) => {
     
   } catch (error) {
     console.error('Bulk delete error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================
-// LEADERBOARD APPROVAL SYSTEM
-// ============================================
-
-// Get pending submissions (awaiting admin approval)
-app.get('/api/admin/leaderboard/pending', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT 
-        id,
-        url,
-        company_name,
-        score,
-        country,
-        submission_ip,
-        created_at
-      FROM leaderboard 
-      WHERE admin_verified = FALSE AND is_opted_out = FALSE
-      ORDER BY created_at DESC
-    `);
-    
-    res.json({
-      success: true,
-      pending: result.rows,
-      count: result.rows.length
-    });
-  } catch (error) {
-    console.error('Get pending error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Approve a leaderboard submission
-app.post('/api/admin/leaderboard/:id/approve', async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    const result = await pool.query(`
-      UPDATE leaderboard 
-      SET admin_verified = TRUE 
-      WHERE id = $1 
-      RETURNING id, url, company_name, score
-    `, [id]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Entry not found' });
-    }
-    
-    console.log('✅ Approved leaderboard entry:', result.rows[0]);
-    
-    res.json({
-      success: true,
-      entry: result.rows[0],
-      message: 'Entry approved and now visible on public leaderboard'
-    });
-  } catch (error) {
-    console.error('Approve error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Reject a leaderboard submission (delete it)
-app.post('/api/admin/leaderboard/:id/reject', async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    const result = await pool.query(`
-      DELETE FROM leaderboard 
-      WHERE id = $1 
-      RETURNING url, company_name
-    `, [id]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Entry not found' });
-    }
-    
-    console.log('❌ Rejected leaderboard entry:', result.rows[0]);
-    
-    res.json({
-      success: true,
-      message: 'Entry rejected and removed'
-    });
-  } catch (error) {
-    console.error('Reject error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1779,9 +1658,7 @@ app.get('/api/leaderboard', async (req, res) => {
         COALESCE(is_verified, false) as is_claimed,
         COALESCE(created_at, NOW()) as created_at
       FROM leaderboard 
-      WHERE score IS NOT NULL 
-        AND is_opted_out = FALSE 
-        AND admin_verified = TRUE
+      WHERE score IS NOT NULL AND is_opted_out = FALSE
       ORDER BY score DESC 
       LIMIT 50
     `);
@@ -1947,13 +1824,12 @@ app.post('/api/leaderboard/submit', async (req, res) => {
     }
     
     const leaderboardResult = await pool.query(`
-      INSERT INTO leaderboard (url, score, company_name, country, submission_ip, admin_verified)
-      VALUES ($1, $2, $3, $4, $5, FALSE)
+      INSERT INTO leaderboard (url, score, company_name, country, submission_ip)
+      VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT (url) DO UPDATE SET 
         score = EXCLUDED.score,
         company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
-        last_scan = NOW(),
-        admin_verified = FALSE
+        last_scan = NOW()
       RETURNING id
     `, [url, score, company_name || null, country || 'NL', ip]);
     
@@ -1974,14 +1850,13 @@ app.post('/api/leaderboard/submit', async (req, res) => {
       INSERT INTO submission_limits (ip_address, submission_date, submission_count)
       VALUES ($1, $2, 1)
       ON CONFLICT (ip_address, submission_date) DO UPDATE
-      SET submission_count = submission_limits.submission_count + 1, last_submitted_at = NOW()
+      SET submission_count = submission_count + 1, last_submitted_at = NOW()
     `, [ip, today_date]);
     
     res.json({
       success: true,
       leaderboardEntryId,
-      message: 'Submission received! Your entry will appear on the leaderboard once approved by our team.',
-      pending_approval: true
+      message: 'Added to leaderboard!'
     });
     
   } catch (error) {
@@ -2236,13 +2111,6 @@ app.post('/api/scan', async (req, res) => {
 
     const totalScore = graafScore + craftScore + technicalScore;
     const quality = totalScore >= 90 ? 'excellent' : totalScore >= 75 ? 'good' : totalScore >= 60 ? 'average' : totalScore >= 45 ? 'below-average' : 'poor';
-
-    console.log(`\n🎯 SCAN COMPLETE: ${scanUrl}`);
-    console.log(`   Method: ${scoringMethod.toUpperCase()}`);
-    console.log(`   Score: ${totalScore}/100 (${quality})`);
-    console.log(`   └─ GRAAF: ${graafScore}/50 (${scoringMethod === 'fallback' ? 'regex' : 'AI'})`);
-    console.log(`   └─ CRAFT: ${craftScore}/30 (${scoringMethod === 'fallback' ? 'regex' : 'AI'})`);
-    console.log(`   └─ Technical: ${technicalScore}/20 (regex)\n`);
 
     // === TECHNICAL RECOMMENDATIONS (always regex — binary checks) ===
     const techRecommendations = [];
@@ -2957,8 +2825,3 @@ app.listen(PORT, () => {
   console.log('👤 Default Login: ot / admin123');
   console.log('');
 });
-
-
-
-
-
