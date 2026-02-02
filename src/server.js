@@ -2285,12 +2285,17 @@ console.log(`🌍 Country: User="${country || 'None'}", Detected="${auto_detecte
     }
     
     const limitCheck = await checkIPLimit(ip);
-    if (limitCheck.limited) {
-      return res.status(429).json({
-        error: `Rate limit exceeded: ${limitCheck.count}/${limitCheck.max} submissions today`,
-        retryAfter: '24 hours'
-      });
-    }
+if (limitCheck.limited) {
+  return res.status(429).json({
+    success: false,
+    error: 'You have used all 3 free scans today.',
+    message: 'You have 3 free scans per day. Contact Ot @ WhatsApp +31628073996 if you need more.',
+    whatsappUrl: 'https://wa.me/31628073996?text=Hi%20Ot!%20I%20need%20more%20scans.',
+    scansUsed: limitCheck.count,
+    scansLimit: limitCheck.max,
+    retryAfter: '24 hours'
+  });
+}
     
     const today = new Date().toISOString().split('T')[0];
     const duplicate = await pool.query(`
