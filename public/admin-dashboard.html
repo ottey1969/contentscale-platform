@@ -499,6 +499,7 @@
           <button onclick="deleteSelectedShareLinks()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
         </div>
       </div>
+
       <!-- Leaderboard Tab -->
       <div id="tab-leaderboard" class="tab-content hidden">
         <div class="flex justify-between items-center mb-6">
@@ -506,6 +507,22 @@
           <button onclick="scanAllAgencies()" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold transition-all">
             🔍 Scan Alle Agencies Nu
           </button>
+        </div>
+
+        <!-- ✅ NEW: PENDING SUBMISSIONS SECTION -->
+        <div class="mb-8 bg-gradient-to-r from-yellow-900 to-orange-900 rounded-lg p-6 border-2 border-yellow-600">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold">⏳ Pending Leaderboard Submissions</h3>
+            <button onclick="loadPendingLeaderboard()" class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded-lg font-semibold">
+              🔄 Refresh Pending
+            </button>
+          </div>
+          <div id="pending-leaderboard-container" class="space-y-4">
+            <div class="text-center py-8 text-gray-400">
+              <div class="inline-block animate-spin text-4xl mb-4">⏳</div>
+              <p>Loading pending submissions...</p>
+            </div>
+          </div>
         </div>
 
         <div class="mb-4 flex gap-4">
@@ -734,6 +751,7 @@
       </div>
     </div>
   </div>
+
   <script>
     // ✅ GLOBAL DATA STORES FOR EXPORT
     let allAgencies = [];
@@ -808,7 +826,10 @@
       if (tabName === 'clients') loadClients();
       if (tabName === 'scans') loadScans();
       if (tabName === 'share-links') loadShareLinks();
-      if (tabName === 'leaderboard') loadLeaderboard();
+      if (tabName === 'leaderboard') {
+        loadLeaderboard();
+        loadPendingLeaderboard();
+      }
       if (tabName === 'claims') loadClaims();
       if (tabName === 'blog') loadBlogPosts();
       if (tabName === 'lead-scanner') updateLeadScannerUI();
@@ -825,6 +846,7 @@
       loadScans();
       loadShareLinks();
       loadLeaderboard();
+      loadPendingLeaderboard();
       loadClaims();
       loadBlogPosts();
       loadLeadQueueFromStorage();
@@ -1029,31 +1051,30 @@
       }
     }
 
-    // NIEUWE FUNCTIE: toggleShareLinkStatus
-async function toggleShareLinkStatus(shareCode) {
-  if (!confirm('Are you sure you want to toggle the status of this share link?')) return;
-  
-  try {
-    const response = await fetch(`/api/admin/share-links/${shareCode}/toggle-status`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-admin-key': localStorage.getItem('admin_id')
+    async function toggleShareLinkStatus(shareCode) {
+      if (!confirm('Are you sure you want to toggle the status of this share link?')) return;
+      
+      try {
+        const response = await fetch(`/api/admin/share-links/${shareCode}/toggle-status`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          }
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          alert(`✅ Share link ${data.is_active ? 'activated' : 'deactivated'}!`);
+          loadShareLinks();
+        } else {
+          alert('❌ Error: ' + (data.error || 'Failed to update status'));
+        }
+      } catch (error) {
+        console.error('Toggle error:', error);
+        alert('Error updating status: ' + error.message);
       }
-    });
-    
-    const data = await response.json();
-    if (data.success) {
-      alert(`✅ Share link ${data.is_active ? 'activated' : 'deactivated'}!`);
-      loadShareLinks(); // Herlaad de lijst
-    } else {
-      alert('❌ Error: ' + (data.error || 'Failed to update status'));
     }
-  } catch (error) {
-    console.error('Toggle error:', error);
-    alert('Error updating status: ' + error.message);
-  }
-}
 
     async function loadLeaderboard() {
       try {
@@ -1070,7 +1091,6 @@ async function toggleShareLinkStatus(shareCode) {
             const medals = ['🥇', '🥈', '🥉'];
             const medal = entry.rank <= 3 ? medals[entry.rank - 1] : '';
             
-            // Format date
             let addedDate = '-';
             if (entry.created_at) {
               const date = new Date(entry.created_at);
@@ -1120,102 +1140,201 @@ async function toggleShareLinkStatus(shareCode) {
       }
     }
 
+    // ==========================================
+    // ✅ NEW: PENDING LEADERBOARD APPROVAL
+    // ==========================================
     async function loadPendingLeaderboard() {
-  const response = await fetch('/api/admin/leaderboard/pending');
-  const data = await response.json();
-  
-  const container = document.getElementById('pending-leaderboard-container');
-  
-  if (!data.pending || data.pending.length === 0) {
-    container.innerHTML = '<div class="text-gray-500">No pending submissions</div>';
-    return;
-  }
-  
-  container.innerHTML = data.pending.map(entry => {
-    const mismatch = entry.country !== entry.auto_detected_country && 
-                     entry.auto_detected_country !== 'Unknown';
-    
-    return `
-      <div class="bg-gray-800 p-4 rounded mb-4 border-2 ${mismatch ? 'border-red-500' : 'border-gray-700'}">
+      try {
+        const response = await fetch('/api/admin/leaderboard/pending', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
         
-        ${mismatch ? `<div class="text-red-400 mb-2">⚠️ COUNTRY MISMATCH</div>` : ''}
+        const container = document.getElementById('pending-leaderboard-container');
         
-        <h3 class="text-xl font-bold">${entry.company_name || 'Unknown'}</h3>
-        <p class="text-sm text-gray-400">${entry.url}</p>
-        <p class="text-lg">Score: ${entry.score}/100</p>
+        if (!data.pending || data.pending.length === 0) {
+          container.innerHTML = `
+            <div class="text-center py-8 text-gray-400">
+              <div class="text-6xl mb-4">✅</div>
+              <p class="text-lg">No pending submissions - all entries approved!</p>
+            </div>
+          `;
+          return;
+        }
         
-        <div class="mt-4 bg-gray-900 p-3 rounded">
-          <div class="mb-2">
-            <span class="text-gray-400">User claimed:</span>
-            <span class="${mismatch ? 'text-red-400' : 'text-green-400'} font-bold">
-              ${entry.country}
-            </span>
-          </div>
-          <div class="mb-2">
-            <span class="text-gray-400">Auto-detected:</span>
-            <span class="text-blue-400 font-bold">${entry.auto_detected_country}</span>
-          </div>
+        container.innerHTML = data.pending.map(entry => {
+          const mismatch = entry.country !== entry.auto_detected_country && 
+                           entry.auto_detected_country !== 'Unknown';
           
-          <label class="text-xs text-gray-400">Final Country:</label>
-          <select id="country-${entry.id}" class="w-full p-2 bg-gray-700 rounded">
-            <option value="${entry.auto_detected_country}" selected>
-              ${entry.auto_detected_country} (Auto-detected ✅)
-            </option>
-            ${entry.country !== entry.auto_detected_country ? `
-              <option value="${entry.country}">${entry.country} (User claimed)</option>
-            ` : ''}
-            <option value="Netherlands">🇳🇱 Netherlands</option>
-            <option value="Belgium">🇧🇪 Belgium</option>
-            <option value="Germany">🇩🇪 Germany</option>
-            <option value="France">🇫🇷 France</option>
-            <option value="United Kingdom">🇬🇧 United Kingdom</option>
-            <option value="United States">🇺🇸 United States</option>
-          </select>
-        </div>
+          return `
+            <div class="bg-gray-800 p-6 rounded-lg border-2 ${mismatch ? 'border-red-500' : 'border-green-600'}">
+              
+              ${mismatch ? `
+                <div class="bg-red-900 border border-red-600 rounded-lg p-3 mb-4 flex items-center gap-3">
+                  <span class="text-3xl">⚠️</span>
+                  <div>
+                    <div class="font-bold text-red-300">COUNTRY MISMATCH DETECTED</div>
+                    <div class="text-sm text-red-400">User claim doesn't match domain analysis</div>
+                  </div>
+                </div>
+              ` : ''}
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <div>
+                  <h3 class="text-2xl font-bold text-white mb-2">${entry.company_name || 'Unknown Company'}</h3>
+                  <p class="text-blue-400 mb-3 break-all">${entry.url}</p>
+                  
+                  <div class="flex items-center gap-4 mb-4">
+                    <div class="bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 rounded-lg">
+                      <div class="text-xs text-purple-200">Score</div>
+                      <div class="text-2xl font-bold">${entry.score}/100</div>
+                    </div>
+                    <div class="bg-gray-700 px-4 py-2 rounded-lg">
+                      <div class="text-xs text-gray-400">Submitted</div>
+                      <div class="text-sm">${new Date(entry.created_at).toLocaleDateString()}</div>
+                    </div>
+                    <div class="bg-gray-700 px-4 py-2 rounded-lg">
+                      <div class="text-xs text-gray-400">IP</div>
+                      <div class="text-sm">${entry.submission_ip || '-'}</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="bg-gray-900 rounded-lg p-4 border ${mismatch ? 'border-red-600' : 'border-green-600'}">
+                  <h4 class="text-lg font-bold mb-3 flex items-center gap-2">
+                    🌍 Country Verification
+                  </h4>
+                  
+                  <div class="space-y-3 mb-4">
+                    <div class="flex items-center justify-between p-2 bg-gray-800 rounded">
+                      <span class="text-gray-400 text-sm">User Claimed:</span>
+                      <span class="font-bold ${mismatch ? 'text-red-400' : 'text-green-400'}">${entry.country}</span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between p-2 bg-gray-800 rounded">
+                      <span class="text-gray-400 text-sm">Auto-Detected:</span>
+                      <span class="font-bold text-blue-400">${entry.auto_detected_country} ✅</span>
+                    </div>
+                  </div>
+                  
+                  <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">
+                      Final Country (Your Decision):
+                    </label>
+                    <select id="country-${entry.id}" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white font-medium">
+                      <option value="${entry.auto_detected_country}" selected>
+                        ${entry.auto_detected_country} ${entry.auto_detected_country !== 'Unknown' ? '(Auto-detected ✅)' : ''}
+                      </option>
+                      ${entry.country !== entry.auto_detected_country && entry.country !== 'Unknown' ? `
+                        <option value="${entry.country}">${entry.country} (User claimed)</option>
+                      ` : ''}
+                      <option disabled>──────────</option>
+                      <option value="Netherlands">🇳🇱 Netherlands</option>
+                      <option value="Belgium">🇧🇪 Belgium</option>
+                      <option value="Germany">🇩🇪 Germany</option>
+                      <option value="France">🇫🇷 France</option>
+                      <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                      <option value="United States">🇺🇸 United States</option>
+                      <option value="Canada">🇨🇦 Canada</option>
+                      <option value="Australia">🇦🇺 Australia</option>
+                      <option value="Spain">🇪🇸 Spain</option>
+                      <option value="Italy">🇮🇹 Italy</option>
+                      <option value="Portugal">🇵🇹 Portugal</option>
+                      <option value="Sweden">🇸🇪 Sweden</option>
+                      <option value="Other">🌍 Other</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="flex gap-3 mt-6">
+                <button onclick="approveLeaderboardEntry(${entry.id})" 
+                  class="flex-1 bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold text-lg transition-all transform hover:scale-105">
+                  ✅ Approve & Publish
+                </button>
+                <button onclick="rejectLeaderboardEntry(${entry.id})" 
+                  class="flex-1 bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold text-lg transition-all transform hover:scale-105">
+                  ❌ Reject
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
         
-        <div class="flex gap-2 mt-4">
-          <button onclick="approveEntry(${entry.id})" class="bg-green-600 px-4 py-2 rounded flex-1">
-            ✅ Approve
-          </button>
-          <button onclick="rejectEntry(${entry.id})" class="bg-red-600 px-4 py-2 rounded flex-1">
-            ❌ Reject
-          </button>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
+      } catch (error) {
+        console.error('Load pending error:', error);
+        document.getElementById('pending-leaderboard-container').innerHTML = `
+          <div class="text-center py-8 text-red-400">
+            <div class="text-4xl mb-4">❌</div>
+            <p>Error loading pending submissions</p>
+          </div>
+        `;
+      }
+    }
 
-async function approveEntry(id) {
-  const finalCountry = document.getElementById(`country-${id}`).value;
-  
-  const response = await fetch(`/api/admin/leaderboard/${id}/approve`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ final_country: finalCountry })
-  });
-  
-  const result = await response.json();
-  
-  if (result.success) {
-    alert(`✅ Approved with country: ${finalCountry}`);
-    loadPendingLeaderboard();
-  }
-}
+    async function approveLeaderboardEntry(id) {
+      const finalCountry = document.getElementById(`country-${id}`).value;
+      
+      if (!finalCountry || finalCountry === 'Unknown') {
+        if (!confirm('No country selected. Approve anyway?')) return;
+      }
+      
+      try {
+        const response = await fetch(`/api/admin/leaderboard/${id}/approve`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          },
+          body: JSON.stringify({ final_country: finalCountry })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          alert(`✅ Approved!\n\nCountry: ${finalCountry}\nEntry is now live on the public leaderboard.`);
+          loadPendingLeaderboard();
+          loadLeaderboard();
+          loadStats();
+        } else {
+          alert('❌ Approval failed: ' + (result.error || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('Approve error:', error);
+        alert('❌ Error approving entry: ' + error.message);
+      }
+    }
 
-async function rejectEntry(id) {
-  if (!confirm('Reject this submission?')) return;
-  
-  await fetch(`/api/admin/leaderboard/${id}/reject`, { method: 'POST' });
-  alert('✅ Rejected');
-  loadPendingLeaderboard();
-}
-
-// Call when page loads
-loadPendingLeaderboard();
+    async function rejectLeaderboardEntry(id) {
+      if (!confirm('❌ Reject this submission?\n\nThis will permanently delete the entry.')) return;
+      
+      try {
+        const response = await fetch(`/api/admin/leaderboard/${id}/reject`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          alert('✅ Entry rejected and removed');
+          loadPendingLeaderboard();
+          loadStats();
+        } else {
+          alert('❌ Rejection failed: ' + (result.error || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('Reject error:', error);
+        alert('❌ Error rejecting entry: ' + error.message);
+      }
+    }
 
     // ==========================================
-    // ✅ COPY URL FUNCTIONS - CRITICAL FIX
+    // ✅ COPY URL FUNCTIONS
     // ==========================================
     function copyShareUrl(token) {
       const input = document.getElementById(`share-url-${token}`);
