@@ -891,6 +891,7 @@ async function createAllTables() {
     await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS agency_size TEXT`);
     await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS contact_email TEXT`);
     await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS verified BOOLEAN DEFAULT FALSE`);
+    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS auto_detected_country VARCHAR(100)`);
     
     // SHARE_LINKS TABLE MIGRATIONS - migrate old schema (token) to new schema (share_code)
     await client.query(`
@@ -1821,13 +1822,7 @@ app.get('/api/admin/leaderboard/pending', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
-        id,
-        url,
-        company_name,
-        score,
-        country,
-        submission_ip,
-        created_at
+        id, url, company_name, score, country, auto_detected_country, submission_ip, created_at
       FROM leaderboard 
       WHERE admin_verified = FALSE AND is_opted_out = FALSE
       ORDER BY created_at DESC
@@ -1848,13 +1843,31 @@ app.get('/api/admin/leaderboard/pending', async (req, res) => {
 app.post('/api/admin/leaderboard/:id/approve', async (req, res) => {
   try {
     const { id } = req.params;
+    const { final_country } = req.body;
     
-    const result = await pool.query(`
-      UPDATE leaderboard 
-      SET admin_verified = TRUE 
-      WHERE id = $1 
-      RETURNING id, url, company_name, score
-    `, [id]);
+    const updateQuery = final_country 
+      ? `UPDATE leaderboard SET admin_verified = TRUE, country = $2 WHERE id = $1 RETURNING *`
+      : `UPDATE leaderboard SET admin_verified = TRUE WHERE id = $1 RETURNING *`;
+    
+    const params = final_country ? [id, final_country] : [id];
+    const result = await pool.query(updateQuery, params);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Entry not found' });
+    }
+    
+    console.log('✅ Approved:', result.rows[0]);
+    
+    res.json({
+      success: true,
+      entry: result.rows[0],
+      message: 'Entry approved'
+    });
+  } catch (error) {
+    console.error('Approve error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
     
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Entry not found' });
@@ -2205,6 +2218,35 @@ async function checkIPLimit(ip) {
 function getClientIP(req) {
   return (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '0.0.0.0').split(',')[0].trim();
 }
+function detectCountryFromUrl(url) {
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname.toLowerCase();
+    
+    if (hostname.endsWith('.nl')) return 'Netherlands';
+    if (hostname.endsWith('.be')) return 'Belgium';
+    if (hostname.endsWith('.de')) return 'Germany';
+    if (hostname.endsWith('.fr')) return 'France';
+    if (hostname.endsWith('.co.uk') || hostname.endsWith('.uk')) return 'United Kingdom';
+    if (hostname.endsWith('.us')) return 'United States';
+    if (hostname.endsWith('.ca')) return 'Canada';
+    if (hostname.endsWith('.au')) return 'Australia';
+    if (hostname.endsWith('.es')) return 'Spain';
+    if (hostname.endsWith('.it')) return 'Italy';
+    
+    const parts = hostname.split('.');
+    if (parts.length > 2) {
+      const subdomain = parts[0];
+      if (subdomain === 'nl') return 'Netherlands';
+      if (subdomain === 'be') return 'Belgium';
+      if (subdomain === 'de') return 'Germany';
+    }
+    
+    return 'Unknown';
+  } catch {
+    return 'Unknown';
+  }
+}
 
 // ============================================
 // LEADERBOARD SUBMIT (WITH SECURITY)
@@ -2217,6 +2259,9 @@ app.post('/api/leaderboard/submit', async (req, res) => {
     if (!url || score === undefined) {
       return res.status(400).json({ error: 'URL and score required' });
     }
+
+    const auto_detected_country = detectCountryFromUrl(url);
+console.log(`🌍 Country: User="${country || 'None'}", Detected="${auto_detected_country}"`);
     
     const blocked = await pool.query(`
       SELECT id FROM leaderboard_blocks 
@@ -2249,16 +2294,20 @@ app.post('/api/leaderboard/submit', async (req, res) => {
       });
     }
     
-    const leaderboardResult = await pool.query(`
-      INSERT INTO leaderboard (url, score, company_name, country, submission_ip, admin_verified)
-      VALUES ($1, $2, $3, $4, $5, FALSE)
-      ON CONFLICT (url) DO UPDATE SET 
-        score = EXCLUDED.score,
-        company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
-        last_scan = NOW(),
-        admin_verified = FALSE
-      RETURNING id
-    `, [url, score, company_name || null, country || 'NL', ip]);
+   const leaderboardResult = await pool.query(`
+  INSERT INTO leaderboard (
+    url, score, company_name, country, auto_detected_country, submission_ip, admin_verified
+  )
+  VALUES ($1, $2, $3, $4, $5, $6, FALSE)
+  ON CONFLICT (url) DO UPDATE SET 
+    score = EXCLUDED.score,
+    company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
+    country = EXCLUDED.country,
+    auto_detected_country = EXCLUDED.auto_detected_country,
+    last_scan = NOW(),
+    admin_verified = FALSE
+  RETURNING id
+`, [url, score, company_name || null, country || 'Unknown', auto_detected_country, ip]);
     
     const leaderboardEntryId = leaderboardResult.rows[0].id;
     
