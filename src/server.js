@@ -642,6 +642,17 @@ async function createAllTables() {
     await client.query(`ALTER TABLE share_links ADD COLUMN IF NOT EXISTS agency_id INTEGER REFERENCES agencies(id) ON DELETE CASCADE`).catch(e => {});
     await client.query(`ALTER TABLE share_links ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active'`).catch(e => {});
     
+    // LEADERBOARD APPROVAL MIGRATION - auto-approve all existing entries
+    await client.query(`
+      UPDATE leaderboard 
+      SET admin_verified = TRUE 
+      WHERE admin_verified IS NULL OR admin_verified = FALSE
+    `).then(() => {
+      console.log('✅ Auto-approved all existing leaderboard entries');
+    }).catch(e => {
+      console.log('Leaderboard approval migration skipped:', e.message);
+    });
+    
     // DEFAULT SETTINGS
     const defaultSettings = [
       ['site_name', 'ContentScale'],
