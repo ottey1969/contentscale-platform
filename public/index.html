@@ -1739,43 +1739,43 @@
     }
 
     // ✅ UPDATED: WORKING CONTACT FREELANCER FUNCTION
-    function contactFreelancer(email, name) {
-      const modal = document.createElement('div');
-      modal.className = 'modal-overlay';
-      modal.innerHTML = `
-        <div class="modal-content max-w-md">
-          <div class="p-8">
-            <div class="flex justify-between items-start mb-6">
-              <div>
-                <h2 class="text-2xl font-bold mb-2">Contact ${name}</h2>
-                <p class="text-sm text-gray-400">Choose your preferred method</p>
-              </div>
-              <button onclick="this.closest('.modal-overlay').remove()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
-            </div>
-            
-            <div class="space-y-3">
-              <button onclick="contactViaEmail('${email}', '${name}')" class="w-full bg-blue-600 hover:bg-blue-700 py-4 rounded-lg font-bold text-lg transition-all flex items-center justify-center gap-2">
-                📧 Email ${name.split(' ')[0]}
-              </button>
-              
-              <button onclick="contactViaWhatsApp('${name}')" class="w-full bg-green-600 hover:bg-green-700 py-4 rounded-lg font-bold text-lg transition-all flex items-center justify-center gap-2">
-                💬 WhatsApp (via Ot)
-              </button>
-              
-              <button onclick="this.closest('.modal-overlay').remove()" class="w-full bg-gray-600 hover:bg-gray-700 py-3 rounded-lg font-semibold transition-all">
-                Cancel
-              </button>
-            </div>
-            
-            <p class="text-xs text-gray-500 text-center mt-4">
-              We'll help connect you with ${name.split(' ')[0]} quickly
-            </p>
+   // ✅ UPDATED: EMAIL-ONLY CONTACT (NO WHATSAPP)
+function contactFreelancer(email, name) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-content max-w-md">
+      <div class="p-8">
+        <div class="flex justify-between items-start mb-6">
+          <div>
+            <h2 class="text-2xl font-bold mb-2">Contact ${name}</h2>
+            <p class="text-sm text-gray-400">Send an email to get in touch</p>
           </div>
+          <button onclick="this.closest('.modal-overlay').remove()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
         </div>
-      `;
-      
-      document.body.appendChild(modal);
-    }
+        
+        <div class="space-y-3">
+          <button onclick="contactViaEmail('${email}', '${name}')" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 py-4 rounded-lg font-bold text-lg transition-all flex items-center justify-center gap-2">
+            📧 Send Email to ${name.split(' ')[0]}
+          </button>
+          
+          <button onclick="this.closest('.modal-overlay').remove()" class="w-full bg-gray-600 hover:bg-gray-700 py-3 rounded-lg font-semibold transition-all">
+            Cancel
+          </button>
+        </div>
+        
+        <p class="text-xs text-gray-500 text-center mt-4">
+          Your email client will open with a pre-filled message
+        </p>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+}
+
+// Remove this function - we don't need it anymore
+// function contactViaWhatsApp(freelancerName) { ... }
 
     function contactViaEmail(email, name) {
       const subject = encodeURIComponent(`Project Inquiry from ContentScale`);
