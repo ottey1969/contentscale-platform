@@ -175,7 +175,7 @@ async function scoreWithAI(contentForAI) {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'claude-3-5-haiku-20241022', // Faster than 4.5, better for Railway network
         max_tokens: 2000,
         temperature: 0,
         messages: [{
