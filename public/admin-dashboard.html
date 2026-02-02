@@ -922,22 +922,34 @@
       loadLeadQueueFromStorage();
     }
 
-    async function loadStats() {
-      try {
-        const response = await fetch('/api/admin/stats', {
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        const data = await response.json();
-        if (data.success) {
-          document.getElementById('stat-total-agencies').textContent = data.stats.total_agencies;
-          document.getElementById('stat-total-clients').textContent = data.stats.total_clients;
-          document.getElementById('stat-total-scans').textContent = data.stats.total_scans;
-          document.getElementById('stat-active-helpers').textContent = data.stats.active_helpers || allFreelancers.filter(f => f.is_approved).length;
-        }
-      } catch (error) {
-        console.error('Stats error:', error);
-      }
+   async function loadStats() {
+  try {
+    const response = await fetch('/api/admin/stats', {
+      headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+    });
+    const data = await response.json();
+    if (data.success) {
+      document.getElementById('stat-total-agencies').textContent = data.stats.total_agencies;
+      document.getElementById('stat-total-clients').textContent = data.stats.total_clients;
+      document.getElementById('stat-total-scans').textContent = data.stats.total_scans;
+      document.getElementById('stat-active-helpers').textContent = data.stats.active_helpers || 0;
     }
+    
+    // ✅ FREELANCERS COUNT SEPARATELY
+    try {
+      const freelancersResponse = await fetch('/api/freelancers');
+      const freelancersData = await freelancersResponse.json();
+      if (freelancersData.success && freelancersData.freelancers) {
+        const activeCount = freelancersData.freelancers.filter(f => f.is_approved).length;
+        document.getElementById('stat-active-helpers').textContent = activeCount;
+      }
+    } catch (error) {
+      console.error('Freelancers count error:', error);
+    }
+  } catch (error) {
+    console.error('Stats error:', error);
+  }
+}
 
     async function loadAdmins() {
       try {
