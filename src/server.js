@@ -1868,23 +1868,6 @@ app.post('/api/admin/leaderboard/:id/approve', async (req, res) => {
     
     const params = final_country ? [id, final_country] : [id];
     const result = await pool.query(updateQuery, params);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Entry not found' });
-    }
-    
-    console.log('✅ Approved leaderboard entry:', result.rows[0]);
-    
-    res.json({
-      success: true,
-      entry: result.rows[0],
-      message: 'Entry approved and now visible on public leaderboard'
-    });
-  } catch (error) {
-    console.error('Approve error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
 
 // ============================================
 // HOW TO USE THIS:
