@@ -163,7 +163,7 @@ Return ONLY this JSON structure, no other text:
 
 async function scoreWithAI(contentForAI) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s for Railway network
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s for Railway network
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -195,11 +195,35 @@ async function scoreWithAI(contentForAI) {
     const data = await response.json();
     const text = data.content[0].text;
 
-    // Strip markdown fences if present
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('No JSON in AI response');
-
-    return JSON.parse(jsonMatch[0]);
+    // Strip markdown fences aggressively
+    let cleanText = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+    
+    // Extract JSON object (first { to last })
+    const firstBrace = cleanText.indexOf('{');
+    const lastBrace = cleanText.lastIndexOf('}');
+    
+    if (firstBrace === -1 || lastBrace === -1) {
+      throw new Error('No JSON object found in AI response');
+    }
+    
+    cleanText = cleanText.substring(firstBrace, lastBrace + 1);
+    
+    // Try parsing - if it fails, attempt to fix common issues
+    try {
+      return JSON.parse(cleanText);
+    } catch (parseError) {
+      console.log('⚠️ JSON parse failed, attempting cleanup:', parseError.message);
+      
+      // Remove trailing commas before } or ]
+      cleanText = cleanText.replace(/,(\s*[}\]])/g, '$1');
+      
+      // Try again
+      try {
+        return JSON.parse(cleanText);
+      } catch (secondError) {
+        throw new Error('Invalid JSON from AI: ' + secondError.message);
+      }
+    }
 
   } catch (error) {
     clearTimeout(timeoutId);
@@ -2430,7 +2454,9 @@ app.post('/api/scan', async (req, res) => {
 
   } catch (error) {
     console.error('Scan error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, error: error.message });
+    }
   }
 });
 
