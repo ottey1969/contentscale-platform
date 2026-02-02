@@ -1840,14 +1840,31 @@ app.get('/api/admin/leaderboard/pending', async (req, res) => {
 });
 
 // Approve a leaderboard submission
+// ============================================
+// COMPLETE WORKING APPROVE ENDPOINT
+// Copy this ENTIRE block to replace your broken one
+// ============================================
+
+// DELETE YOUR BROKEN APPROVE ENDPOINT
+// (from line ~1170-1200, starting with app.post('/api/admin/leaderboard/:id/approve')
+// 
+// PASTE THIS COMPLETE VERSION:
+
 app.post('/api/admin/leaderboard/:id/approve', async (req, res) => {
   try {
     const { id } = req.params;
     const { final_country } = req.body;
     
+    // If admin provides final_country, use it. Otherwise keep existing.
     const updateQuery = final_country 
-      ? `UPDATE leaderboard SET admin_verified = TRUE, country = $2 WHERE id = $1 RETURNING *`
-      : `UPDATE leaderboard SET admin_verified = TRUE WHERE id = $1 RETURNING *`;
+      ? `UPDATE leaderboard 
+         SET admin_verified = TRUE, country = $2
+         WHERE id = $1 
+         RETURNING id, url, company_name, score, country`
+      : `UPDATE leaderboard 
+         SET admin_verified = TRUE 
+         WHERE id = $1 
+         RETURNING id, url, company_name, score, country`;
     
     const params = final_country ? [id, final_country] : [id];
     const result = await pool.query(updateQuery, params);
@@ -1856,18 +1873,28 @@ app.post('/api/admin/leaderboard/:id/approve', async (req, res) => {
       return res.status(404).json({ error: 'Entry not found' });
     }
     
-    console.log('✅ Approved:', result.rows[0]);
+    console.log('✅ Approved leaderboard entry:', result.rows[0]);
     
     res.json({
       success: true,
       entry: result.rows[0],
-      message: 'Entry approved'
+      message: 'Entry approved and now visible on public leaderboard'
     });
   } catch (error) {
     console.error('Approve error:', error);
     res.status(500).json({ error: error.message });
   }
 });
+
+// ============================================
+// HOW TO USE THIS:
+// ============================================
+// 1. Find your approve endpoint in server.js (around line 1170-1200)
+// 2. DELETE the entire broken endpoint
+// 3. PASTE this complete version
+// 4. SAVE
+// 5. RESTART server
+// ============================================
     
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Entry not found' });
