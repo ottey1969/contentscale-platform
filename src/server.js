@@ -55,23 +55,86 @@ function hashContent(html) {
 
 function extractContentForAI(html) {
   let processed = html;
-  // Preserve heading structure as markers
+  
+  // STEP 1: Remove complete noise sections
+  processed = processed.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+  processed = processed.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+  processed = processed.replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, '');
+  processed = processed.replace(/<!--[\s\S]*?-->/g, '');
+  
+  // STEP 2: Remove common boilerplate containers (but keep their content for now)
+  // Just strip the tags, preserve content inside
+  processed = processed.replace(/<nav[^>]*>/gi, '').replace(/<\/nav>/gi, '');
+  processed = processed.replace(/<header[^>]*>/gi, '').replace(/<\/header>/gi, '');
+  processed = processed.replace(/<footer[^>]*>/gi, '').replace(/<\/footer>/gi, '');
+  
+  // STEP 3: Try to isolate main content area
+  let mainContent = processed;
+  
+  // Priority 1: <main> tag
+  const mainMatch = processed.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
+  if (mainMatch) {
+    mainContent = mainMatch[1];
+  } else {
+    // Priority 2: <article> tags (concatenate all)
+    const articles = processed.match(/<article[^>]*>[\s\S]*?<\/article>/gi);
+    if (articles && articles.length > 0) {
+      mainContent = articles.join('\n\n');
+    } else {
+      // Priority 3: Divs with content-related classes
+      const contentDiv = processed.match(/<div[^>]*(?:class|id)=["'][^"']*(?:content|main|post|entry|article|body)[^"']*["'][^>]*>([\s\S]*?)<\/div>/i);
+      if (contentDiv) {
+        mainContent = contentDiv[1];
+      }
+      // Otherwise use everything (already stripped of script/style)
+    }
+  }
+  
+  processed = mainContent;
+  
+  // STEP 4: Extract structured elements with markers
+  // Preserve heading hierarchy
   processed = processed.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, '\n[H1]: $1\n');
   processed = processed.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, '\n[H2]: $1\n');
   processed = processed.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, '\n[H3]: $1\n');
   processed = processed.replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, '\n[H4]: $1\n');
+  
+  // Preserve paragraphs with line breaks
+  processed = processed.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, '\n$1\n');
+  
   // Mark list items
   processed = processed.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '\n• $1\n');
-  // Strip remaining tags
+  
+  // STEP 5: Strip all remaining HTML tags
   processed = processed.replace(/<[^>]*>/g, ' ');
-  // Clean whitespace
-  processed = processed.replace(/[ \t]+/g, ' ').replace(/\n\s*\n/g, '\n').trim();
-  // Cap at 30K chars (captures full content for most pages)
-  if (processed.length > 30000) {
-    processed = processed.substring(0, 30000) + '\n[...content truncated...]';
+  
+  // STEP 6: Decode HTML entities
+  processed = processed.replace(/&nbsp;/g, ' ')
+                       .replace(/&amp;/g, '&')
+                       .replace(/&lt;/g, '<')
+                       .replace(/&gt;/g, '>')
+                       .replace(/&quot;/g, '"')
+                       .replace(/&#39;/g, "'")
+                       .replace(/&mdash;/g, '—')
+                       .replace(/&ndash;/g, '–');
+  
+  // STEP 7: Clean excessive whitespace
+  processed = processed.replace(/[ \t]+/g, ' ')              // Multiple spaces → single space
+                       .replace(/\n\s*\n\s*\n/g, '\n\n')     // Multiple blank lines → double line break
+                       .trim();
+  
+  // STEP 8: Cap at 40K chars (increased from 30K for large pages)
+  if (processed.length > 40000) {
+    // Smart truncation: Keep first 35K + last 5K (preserves intro and conclusion)
+    const start = processed.substring(0, 35000);
+    const end = processed.substring(processed.length - 5000);
+    processed = start + '\n\n[...middle content truncated...]\n\n' + end;
   }
+  
+  // Extract title
   const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
   const title = titleMatch ? titleMatch[1].trim() : '';
+  
   return { title, content: processed };
 }
 
