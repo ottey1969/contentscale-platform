@@ -1,5 +1,5 @@
 // ============================================
-// CONTENTSCALE SERVER.JS - COMPLETE WITHOUT BCRYPT
+// CONTENTSCALE SERVER.JS - WITH PUPPETEER
 // ============================================
 
 const express = require('express');
@@ -7,9 +7,43 @@ const path = require('path');
 // BCRYPT REMOVED FOR RAILWAY COMPATIBILITY
 const crypto = require('crypto');
 const { Pool } = require('pg');
+const puppeteer = require('puppeteer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ============================================
+// PUPPETEER BROWSER INSTANCE (SINGLETON)
+// ============================================
+let browserInstance = null;
+
+async function getBrowser() {
+  if (!browserInstance) {
+    console.log('🚀 Launching Puppeteer browser...');
+    browserInstance = await puppeteer.launch({
+      headless: 'new',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--disable-gpu'
+      ],
+      timeout: 30000
+    });
+    console.log('✅ Puppeteer browser ready');
+  }
+  return browserInstance;
+}
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  if (browserInstance) {
+    console.log('🛑 Closing Puppeteer browser...');
+    await browserInstance.close();
+  }
+  process.exit(0);
+});
 
 // ============================================
 // DATABASE CONFIGURATION
@@ -53,8 +87,190 @@ function hashContent(html) {
   return crypto.createHash('sha256').update(html).digest('hex');
 }
 
+// ============================================
+// PUPPETEER-POWERED HTML FETCHER
+// ============================================
+async function fetchWithPuppeteer(url) {
+  let page = null;
+  try {
+    const browser = await getBrowser();
+    page = await browser.newPage();
+    
+    // Set viewport
+    await page.setViewport({ width: 1920, height: 1080 });
+    
+    // Set user agent
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    
+    console.log(`🌐 Puppeteer fetching: ${url}`);
+    
+    // Navigate with timeout
+    await page.goto(url, {
+      waitUntil: 'networkidle2',
+      timeout: 25000
+    });
+    
+    // Wait a bit for any dynamic content
+    await page.waitForTimeout(1000);
+    
+    // Extract content intelligently from the DOM
+    const content = await page.evaluate(() => {
+      // Helper to check if element is visible
+      function isVisible(el) {
+        const style = window.getComputedStyle(el);
+        return style.display !== 'none' && 
+               style.visibility !== 'hidden' && 
+               style.opacity !== '0' &&
+               el.offsetWidth > 0 && 
+               el.offsetHeight > 0;
+      }
+      
+      // Helper to get text with structure markers
+      function extractText(element, result = { text: '', headings: [] }) {
+        for (let node of element.childNodes) {
+          if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent.trim();
+            if (text) result.text += text + ' ';
+          } else if (node.nodeType === Node.ELEMENT_NODE) {
+            const tag = node.tagName.toLowerCase();
+            
+            if (!isVisible(node)) continue;
+            
+            // Skip script, style, nav, header, footer
+            if (['script', 'style', 'nav', 'header', 'footer', 'noscript'].includes(tag)) {
+              continue;
+            }
+            
+            // Handle headings
+            if (tag === 'h1') {
+              const text = node.textContent.trim();
+              if (text) {
+                result.text += `\n[H1]: ${text}\n`;
+                result.headings.push({ level: 1, text });
+              }
+            } else if (tag === 'h2') {
+              const text = node.textContent.trim();
+              if (text) {
+                result.text += `\n[H2]: ${text}\n`;
+                result.headings.push({ level: 2, text });
+              }
+            } else if (tag === 'h3') {
+              const text = node.textContent.trim();
+              if (text) {
+                result.text += `\n[H3]: ${text}\n`;
+                result.headings.push({ level: 3, text });
+              }
+            } else if (tag === 'h4') {
+              const text = node.textContent.trim();
+              if (text) {
+                result.text += `\n[H4]: ${text}\n`;
+                result.headings.push({ level: 4, text });
+              }
+            } else if (tag === 'p') {
+              const text = node.textContent.trim();
+              if (text) result.text += `\n${text}\n`;
+            } else if (tag === 'li') {
+              const text = node.textContent.trim();
+              if (text) result.text += `\n• ${text}\n`;
+            } else {
+              // Recurse for other elements
+              extractText(node, result);
+            }
+          }
+        }
+        return result;
+      }
+      
+      // Try to find main content area
+      let mainElement = document.querySelector('main') || 
+                       document.querySelector('article') ||
+                       document.querySelector('[role="main"]') ||
+                       document.querySelector('.content') ||
+                       document.querySelector('#content') ||
+                       document.body;
+      
+      const extracted = extractText(mainElement);
+      
+      return {
+        content: extracted.text,
+        title: document.title || '',
+        headingCount: extracted.headings.length
+      };
+    });
+    
+    await page.close();
+    console.log(`✅ Puppeteer extracted ${content.content.length} chars, ${content.headingCount} headings`);
+    
+    return {
+      success: true,
+      html: content.content, // Pre-extracted text with markers
+      title: content.title,
+      method: 'puppeteer'
+    };
+    
+  } catch (error) {
+    console.error(`❌ Puppeteer failed for ${url}:`, error.message);
+    if (page) await page.close().catch(() => {});
+    
+    // Fallback to regular fetch
+    return fetchWithFallback(url);
+  }
+}
+
+// Fallback to regular fetch if Puppeteer fails
+async function fetchWithFallback(url) {
+  console.log(`🔄 Falling back to regular fetch: ${url}`);
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      },
+      timeout: 15000
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    
+    const html = await response.text();
+    console.log(`✅ Fallback fetch: ${html.length} bytes`);
+    
+    return {
+      success: true,
+      html: html,
+      title: null,
+      method: 'fetch'
+    };
+  } catch (error) {
+    console.error(`❌ Fallback fetch failed:`, error.message);
+    throw error;
+  }
+}
+
 function extractContentForAI(html) {
   let processed = html;
+  
+  // Check if content is already extracted by Puppeteer (has [H1] markers, no HTML tags)
+  const isPuppeteerExtracted = processed.includes('[H1]') || processed.includes('[H2]') || !processed.includes('<');
+  
+  if (isPuppeteerExtracted) {
+    // Already extracted by Puppeteer - just clean and cap
+    console.log('📝 Using Puppeteer-extracted content');
+    processed = processed.replace(/[ \t]+/g, ' ')
+                       .replace(/\n\s*\n\s*\n/g, '\n\n')
+                       .trim();
+    
+    if (processed.length > 40000) {
+      const start = processed.substring(0, 35000);
+      const end = processed.substring(processed.length - 5000);
+      processed = start + '\n\n[...middle content truncated...]\n\n' + end;
+    }
+    
+    return { title: '', content: processed };
+  }
+  
+  // Otherwise, process raw HTML (fallback fetch)
+  console.log('📝 Processing raw HTML fallback');
   
   // STEP 1: Remove complete noise sections
   processed = processed.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
@@ -62,8 +278,7 @@ function extractContentForAI(html) {
   processed = processed.replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, '');
   processed = processed.replace(/<!--[\s\S]*?-->/g, '');
   
-  // STEP 2: Remove common boilerplate containers (but keep their content for now)
-  // Just strip the tags, preserve content inside
+  // STEP 2: Remove common boilerplate containers
   processed = processed.replace(/<nav[^>]*>/gi, '').replace(/<\/nav>/gi, '');
   processed = processed.replace(/<header[^>]*>/gi, '').replace(/<\/header>/gi, '');
   processed = processed.replace(/<footer[^>]*>/gi, '').replace(/<\/footer>/gi, '');
@@ -71,38 +286,29 @@ function extractContentForAI(html) {
   // STEP 3: Try to isolate main content area
   let mainContent = processed;
   
-  // Priority 1: <main> tag
   const mainMatch = processed.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
   if (mainMatch) {
     mainContent = mainMatch[1];
   } else {
-    // Priority 2: <article> tags (concatenate all)
     const articles = processed.match(/<article[^>]*>[\s\S]*?<\/article>/gi);
     if (articles && articles.length > 0) {
       mainContent = articles.join('\n\n');
     } else {
-      // Priority 3: Divs with content-related classes
       const contentDiv = processed.match(/<div[^>]*(?:class|id)=["'][^"']*(?:content|main|post|entry|article|body)[^"']*["'][^>]*>([\s\S]*?)<\/div>/i);
       if (contentDiv) {
         mainContent = contentDiv[1];
       }
-      // Otherwise use everything (already stripped of script/style)
     }
   }
   
   processed = mainContent;
   
   // STEP 4: Extract structured elements with markers
-  // Preserve heading hierarchy
   processed = processed.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, '\n[H1]: $1\n');
   processed = processed.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, '\n[H2]: $1\n');
   processed = processed.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, '\n[H3]: $1\n');
   processed = processed.replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, '\n[H4]: $1\n');
-  
-  // Preserve paragraphs with line breaks
   processed = processed.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, '\n$1\n');
-  
-  // Mark list items
   processed = processed.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '\n• $1\n');
   
   // STEP 5: Strip all remaining HTML tags
@@ -119,13 +325,12 @@ function extractContentForAI(html) {
                        .replace(/&ndash;/g, '–');
   
   // STEP 7: Clean excessive whitespace
-  processed = processed.replace(/[ \t]+/g, ' ')              // Multiple spaces → single space
-                       .replace(/\n\s*\n\s*\n/g, '\n\n')     // Multiple blank lines → double line break
+  processed = processed.replace(/[ \t]+/g, ' ')
+                       .replace(/\n\s*\n\s*\n/g, '\n\n')
                        .trim();
   
-  // STEP 8: Cap at 40K chars (increased from 30K for large pages)
+  // STEP 8: Cap at 40K chars
   if (processed.length > 40000) {
-    // Smart truncation: Keep first 35K + last 5K (preserves intro and conclusion)
     const start = processed.substring(0, 35000);
     const end = processed.substring(processed.length - 5000);
     processed = start + '\n\n[...middle content truncated...]\n\n' + end;
@@ -137,6 +342,8 @@ function extractContentForAI(html) {
   
   return { title, content: processed };
 }
+
+
 
 const AI_SCORING_PROMPT = `You are an SEO content quality scorer. Analyze the content using GRAAF and CRAFT frameworks. Be fair but honest.
 
@@ -1726,27 +1933,17 @@ app.post('/api/admin/scan-all-agencies', async (req, res) => {
       try {
         console.log(`🔍 Scanning: ${agency.url}`);
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 12000);
-
-        const response = await fetch(agency.url, {
-          signal: controller.signal,
-          headers: { 
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-          },
-          redirect: 'follow'
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          console.log(`❌ Failed: ${agency.url} (HTTP ${response.status})`);
+        // Use Puppeteer for accurate content extraction
+        const fetchResult = await fetchWithPuppeteer(agency.url);
+        
+        if (!fetchResult.success) {
+          console.log(`❌ Failed: ${agency.url}`);
           failed++;
           continue;
         }
 
-        const html = await response.text();
+        const html = fetchResult.html;
+        console.log(`✅ Fetched ${html.length} bytes from ${agency.url} (${fetchResult.method})`);
 
         // === TECHNICAL SCORE (regex — deterministic) ===
         let technicalScore = 0;
@@ -2174,51 +2371,18 @@ app.post('/api/scan', async (req, res) => {
   try {
     console.log(`🔍 Scanning: ${scanUrl}`);
 
-    // === FETCH HTML ===
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-    let response;
-    try {
-      response = await fetch(scanUrl, {
-        signal: controller.signal,
-        headers: { 
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.9',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache'
-        },
-        redirect: 'follow'
-      });
-    } catch (fetchError) {
-      clearTimeout(timeoutId);
-      if (fetchError.name === 'AbortError') {
-        console.error(`⏱️ Scan timeout: ${scanUrl}`);
-        return res.status(408).json({ 
-          success: false, 
-          error: 'Scan timed out — the target URL took too long to respond (15s). Try again or check the URL.' 
-        });
-      }
-      console.error(`❌ Fetch failed for ${scanUrl}:`, fetchError.message);
+    // === FETCH HTML WITH PUPPETEER ===
+    const fetchResult = await fetchWithPuppeteer(scanUrl);
+    
+    if (!fetchResult.success) {
       return res.status(400).json({ 
         success: false, 
-        error: `Cannot reach URL: ${fetchError.message}` 
+        error: `Cannot fetch URL: failed to load page` 
       });
     }
 
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      console.error(`❌ HTTP ${response.status} for ${scanUrl}`);
-      return res.status(400).json({ 
-        success: false, 
-        error: `Cannot fetch URL — server returned HTTP ${response.status}` 
-      });
-    }
-
-    const html = await response.text();
-    console.log(`✅ Fetched ${html.length} bytes from ${scanUrl}`);
+    const html = fetchResult.html;
+    console.log(`✅ Fetched ${html.length} bytes from ${scanUrl} (${fetchResult.method})`);
 
     // === TECHNICAL SCORE (regex — always deterministic) ===
     let technicalScore = 0;
