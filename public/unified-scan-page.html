@@ -406,6 +406,22 @@
       font-style: italic;
     }
 
+    /* ✅ PULSING BORDER ANIMATION */
+    @keyframes pulse-border {
+      0%, 100% { 
+        border-color: #8b5cf6;
+        box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7);
+      }
+      50% { 
+        border-color: #a78bfa;
+        box-shadow: 0 0 0 10px rgba(139, 92, 246, 0);
+      }
+    }
+
+    .pulse-border {
+      animation: pulse-border 2s infinite;
+    }
+
     @media (max-width: 768px) {
       .rankings-table { font-size: 12px; }
       .rankings-table th, .rankings-table td { padding: 12px 8px; }
@@ -461,7 +477,7 @@
 
     <div id="scanner" class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-8 mb-8 border-2 border-purple-600">
       <div class="text-center mb-6">
-        <h2 class="text-3xl font-bold mb-2">🚀 UNDER CONSTRUCTION</h2>
+        <h2 class="text-3xl font-bold mb-2">🚀 Free SEO Scanner</h2>
         <p class="text-gray-300">Get your AI-Era SEO score instantly!</p>
       </div>
       
@@ -470,7 +486,7 @@
           <input type="text" id="scanInput" placeholder="https://yourwebsite.com" 
             class="flex-1 bg-gray-700 text-white px-6 py-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg">
           <button onclick="performScan()" id="scanButton" class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-8 py-4 rounded-lg font-bold text-lg transition-all whitespace-nowrap">
-           UNDER CONSTRUCTION
+            🔍 Scan Now
           </button>
         </div>
       </div>
@@ -513,9 +529,9 @@
       
       <div class="stat-card-yellow stat-card rounded-xl p-5 text-gray-900 relative">
         <div class="relative z-10">
-          <div class="text-4xl mb-2">⭐</div>
-          <div class="text-3xl font-bold" id="enhancedProfiles">0</div>
-          <div class="text-sm opacity-90">Verified Agencies</div>
+          <div class="text-4xl mb-2">💼</div>
+          <div class="text-3xl font-bold" id="activeHelpers">0</div>
+          <div class="text-sm opacity-90">Active Freelancers</div>
         </div>
       </div>
     </div>
@@ -556,7 +572,7 @@
     </div>
 
     <div class="complete-rankings-section">
-      <button class="rankings-toggle-btn" onclick="toggleRankings()" id="rankings-toggle">
+      <button class="rankings-toggle-btn pulse-border" onclick="toggleRankings()" id="rankings-toggle">
         <span>📊 Show All Rankings</span>
         <span class="arrow">▼</span>
       </button>
@@ -640,7 +656,7 @@
   </div>
 </div>
 
-<!-- FREELANCER SIGNUP MODAL -->
+<!-- ✅ FIX 6: FREELANCER SIGNUP MODAL -->
 <div id="freelancerModal" class="modal-overlay hidden">
   <div class="modal-content max-w-2xl">
     <div class="p-8">
@@ -695,8 +711,6 @@
             2. You receive payment details (€29/month or €290/year)<br>
             3. After payment, you get a writing test<br>
             4. We score your writing (0-100) and publish your profile<br>
-            5. (Hint: https://contentscale.site/graaf-framework/)<br>
-            6. (Hint: https://contentscale.site/craft-framework/)<br>
             5. Clients can contact you directly!
           </p>
         </div>
@@ -940,8 +954,10 @@
 
   </div>
 
+  <!-- ✅ FIX 5: SCAN MODAL (MUST EXIST IN DOM) -->
   <div id="scanModal" class="modal-overlay hidden">
     <div class="modal-content">
+      <!-- Content dynamically inserted by showScanResults() -->
     </div>
   </div>
 
@@ -951,6 +967,7 @@
     let currentFilter = 'all';
     let displayedCount = 10;
     let lastScanData = null;
+    let allFreelancers = []; // ✅ FIX 3: Store freelancers globally
 
     let allRankings = [];
     let displayedRankings = [];
@@ -963,20 +980,28 @@
       loadFreelancers();
     });
 
+    // ✅ FIX 5: FIXED SCAN FUNCTION
     async function performScan() {
       lastScanData = null;
       
-      const urlInput = document.getElementById('scanInput').value.trim();
+      const urlInput = document.getElementById('scanInput');
       const scanButton = document.getElementById('scanButton');
       
-      if (!urlInput) {
+      if (!urlInput || !scanButton) {
+        console.error('Scan elements not found');
+        return;
+      }
+      
+      const url = urlInput.value.trim();
+      
+      if (!url) {
         alert('Please enter a valid URL');
         return;
       }
       
-      let fullUrl = urlInput;
-      if (!urlInput.startsWith('http')) {
-        fullUrl = `https://${urlInput}`;
+      let fullUrl = url;
+      if (!url.startsWith('http')) {
+        fullUrl = `https://${url}`;
       }
       
       try {
@@ -1014,9 +1039,19 @@
       }
     }
 
+    // ✅ FIX 5: FIXED SHOW SCAN RESULTS
     function showScanResults(data) {
       const modal = document.getElementById('scanModal');
+      if (!modal) {
+        console.error('Scan modal not found');
+        return;
+      }
+      
       const modalContent = modal.querySelector('.modal-content');
+      if (!modalContent) {
+        console.error('Modal content not found');
+        return;
+      }
       
       let qualityClass = 'bg-red-600';
       let qualityText = data.quality || 'Poor';
@@ -1138,7 +1173,6 @@
           
           ${recommendationsHtml}
           
-          <!-- ✅ LEADERBOARD SUBMISSION FORM (MOVED HERE - AFTER SCAN) -->
           <div class="mt-8 pt-6 border-t border-gray-700">
             <h3 class="text-xl font-bold mb-3">📊 Add to Leaderboard?</h3>
             <p class="text-sm text-gray-400 mb-4">Share your score publicly! We'll review and approve if it meets our criteria.</p>
@@ -1203,7 +1237,6 @@
       const statusDiv = document.getElementById('modalLeaderboardStatus');
       const btn = document.getElementById('modalLeaderboardBtn');
       
-      // Validate
       if (!companyName) {
         statusDiv.className = 'text-sm p-3 rounded-lg bg-red-900 text-red-300';
         statusDiv.textContent = '❌ Please enter your company/website name';
@@ -1218,7 +1251,6 @@
         return;
       }
       
-      // Disable button
       btn.disabled = true;
       btn.textContent = '⏳ Submitting...';
       
@@ -1241,7 +1273,6 @@
           statusDiv.textContent = '✅ Submitted! Your entry will appear on the leaderboard once Ot reviews and approves it.';
           statusDiv.classList.remove('hidden');
           
-          // Hide button after successful submit
           btn.style.display = 'none';
           document.getElementById('modalCompanyName').disabled = true;
           document.getElementById('modalCountrySelect').disabled = true;
@@ -1258,7 +1289,10 @@
     }
 
     function closeModal() {
-      document.getElementById('scanModal').classList.add('hidden');
+      const modal = document.getElementById('scanModal');
+      if (modal) {
+        modal.classList.add('hidden');
+      }
     }
 
     function downloadScanReport() {
@@ -1373,6 +1407,7 @@
       renderLeaderboard();
     }
 
+    // ✅ FIX 3: COUNT FREELANCERS FOR "ACTIVE HELPERS"
     function updateStats() {
       document.getElementById('totalAgencies').textContent = allAgencies.length;
       
@@ -1384,8 +1419,8 @@
       const countries = new Set(allAgencies.map(a => a.country)).size;
       document.getElementById('countriesCount').textContent = countries;
       
-      const enhanced = allAgencies.filter(a => a.isEnhanced).length;
-      document.getElementById('enhancedProfiles').textContent = enhanced;
+      // ✅ FIX 3: Count freelancers for "Active Helpers"
+      document.getElementById('activeHelpers').textContent = allFreelancers.length;
     }
 
     function toggleFilters() {
@@ -1402,6 +1437,7 @@
         icon.classList.add('fa-chevron-down');
       }
     }
+    
     function toggleRankings() {
       const container = document.getElementById('rankings-container');
       const button = document.getElementById('rankings-toggle');
@@ -1600,35 +1636,42 @@
     // FREELANCER DIRECTORY
     // ============================================
     
+    // ✅ FIX 3: STORE FREELANCERS GLOBALLY & UPDATE STATS
     async function loadFreelancers() {
       try {
         const response = await fetch('/api/freelancers');
         const data = await response.json();
         
         if (data.success && data.freelancers.length > 0) {
+          allFreelancers = data.freelancers; // ✅ Store globally
           renderFreelancers(data.freelancers);
+          updateStats(); // ✅ Update Active Helpers count
         } else {
+          allFreelancers = []; // ✅ Empty array
           document.getElementById('freelancers-grid').innerHTML = `
             <div class="col-span-full text-center text-gray-500 py-8">
               No freelancers listed yet. Be the first!
             </div>
           `;
+          updateStats(); // ✅ Update to show 0
         }
       } catch (error) {
         console.error('Load freelancers error:', error);
+        allFreelancers = []; // ✅ Empty on error
         document.getElementById('freelancers-grid').innerHTML = `
           <div class="col-span-full text-center text-red-500 py-8">
             Failed to load freelancers
           </div>
         `;
+        updateStats(); // ✅ Update to show 0
       }
     }
 
     function renderFreelancers(freelancers) {
       const grid = document.getElementById('freelancers-grid');
       
-      grid.innerHTML = freelancers.map(f => `
-        <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border-2 ${f.is_featured ? 'border-yellow-500' : 'border-gray-700'} hover:border-purple-500 transition-all">
+      grid.innerHTML = freelancers.map((f, index) => `
+        <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border-2 pulse-border hover:border-purple-400 transition-all">
           ${f.is_featured ? '<div class="text-xs px-2 py-1 bg-yellow-500 text-gray-900 rounded-full font-bold inline-block mb-3">⭐ FEATURED</div>' : ''}
           
           <div class="flex items-start gap-4 mb-4">
@@ -1660,19 +1703,42 @@
             ${f.portfolio_url ? `<a href="${f.portfolio_url}" target="_blank" class="text-blue-400 hover:underline">💼 Portfolio</a>` : ''}
           </div>
           
-          <button onclick="contactFreelancer('${f.email}', '${f.name}')" class="w-full bg-purple-600 hover:bg-purple-700 py-2 rounded-lg font-semibold transition-all">
+          <button onclick="handleContactClick(${index})" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 py-3 rounded-lg font-bold transition-all transform hover:scale-105">
             💬 Contact ${f.name.split(' ')[0]}
           </button>
         </div>
       `).join('');
+      
+      // ✅ Store freelancers for contact button
+      window.freelancersData = freelancers;
     }
 
+    // ✅ FIX 1 & 2: SAFE CONTACT HANDLER
+    function handleContactClick(index) {
+      const freelancer = window.freelancersData[index];
+      if (!freelancer) {
+        alert('❌ Freelancer data not found');
+        return;
+      }
+      
+      contactFreelancer(freelancer.email, freelancer.name);
+    }
+
+    // ✅ FIX 6: MODAL OPENING
     function openFreelancerSignup() {
-      document.getElementById('freelancerModal').classList.remove('hidden');
+      const modal = document.getElementById('freelancerModal');
+      if (modal) {
+        modal.classList.remove('hidden');
+      } else {
+        console.error('Freelancer modal not found');
+      }
     }
 
     function closeFreelancerModal() {
-      document.getElementById('freelancerModal').classList.add('hidden');
+      const modal = document.getElementById('freelancerModal');
+      if (modal) {
+        modal.classList.add('hidden');
+      }
     }
 
     async function submitFreelancerApplication(e) {
@@ -1689,7 +1755,6 @@
         bio: formData.get('bio'),
         linkedin_url: formData.get('linkedin_url'),
         portfolio_url: formData.get('portfolio_url'),
-        website_url: formData.get('website_url'),
         location: formData.get('location'),
         country: formData.get('country')
       };
@@ -1722,12 +1787,59 @@
       }
     }
 
+    // ✅ FIX 1 & 2: CONTACT MODAL WITH OT'S WHATSAPP & DIRECT EMAIL
     function contactFreelancer(email, name) {
-      const subject = encodeURIComponent(`Inquiry from ContentScale Directory`);
-      const body = encodeURIComponent(`Hi ${name},\n\nI found your profile on ContentScale and I'm interested in discussing a potential project.\n\n`);
+      const modal = document.createElement('div');
+      modal.className = 'modal-overlay';
+      modal.innerHTML = `
+        <div class="modal-content max-w-md">
+          <div class="p-8">
+            <div class="flex justify-between items-start mb-6">
+              <div>
+                <h2 class="text-2xl font-bold mb-2">Contact ${name}</h2>
+                <p class="text-sm text-gray-400">Choose your preferred method</p>
+              </div>
+              <button onclick="this.closest('.modal-overlay').remove()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            
+            <div class="space-y-3">
+              <button onclick="contactViaEmail('${email.replace(/'/g, "\\'")}', '${name.replace(/'/g, "\\'")}'); this.closest('.modal-overlay').remove();" class="w-full bg-blue-600 hover:bg-blue-700 py-4 rounded-lg font-bold text-lg transition-all flex items-center justify-center gap-2">
+                📧 Email ${name.split(' ')[0]} Directly
+              </button>
+              
+              <button onclick="contactViaWhatsAppOt('${name.replace(/'/g, "\\'")}'); this.closest('.modal-overlay').remove();" class="w-full bg-green-600 hover:bg-green-700 py-4 rounded-lg font-bold text-lg transition-all flex items-center justify-center gap-2">
+                💬 WhatsApp Ot (Quick Connect)
+              </button>
+              
+              <button onclick="this.closest('.modal-overlay').remove()" class="w-full bg-gray-600 hover:bg-gray-700 py-3 rounded-lg font-semibold transition-all">
+                Cancel
+              </button>
+            </div>
+            
+            <p class="text-xs text-gray-500 text-center mt-4">
+              Email goes directly to freelancer • WhatsApp connects via Ot
+            </p>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+    }
+
+    // ✅ FIX 2: EMAIL DIRECTLY TO FREELANCER
+    function contactViaEmail(email, name) {
+      const subject = encodeURIComponent(`Project Inquiry from ContentScale`);
+      const body = encodeURIComponent(`Hi ${name},\n\nI found your profile on ContentScale's Freelancer Directory and I'm interested in discussing a potential SEO project.\n\nCan we schedule a brief call to discuss?\n\nBest regards`);
       window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
     }
+
+    // ✅ FIX 1: WHATSAPP TO OT WITH FREELANCER NAME
+    function contactViaWhatsAppOt(freelancerName) {
+      const message = encodeURIComponent(`Hi Ot! I'd like to get in touch with ${freelancerName} from your Freelancer Directory. Can you help connect us?`);
+      window.open(`https://wa.me/31628073996?text=${message}`, '_blank');
+    }
   </script>
+  
   <!-- Footer -->
    <CENTER><footer>
         <div class="container">
