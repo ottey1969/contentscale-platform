@@ -337,94 +337,6 @@ function extractContentForAI(fetchResult) {
   return { title, content: processed };
 }
 
-// ============================================
-// PUBLIC SCANNER API — AI-POWERED SCORING (FIXED)
-// Uses rawHtml for technical checks, extractedContent for AI
-// ============================================
-app.post('/api/scan', async (req, res) => {
-  const { url, shareKey } = req.body;
-
-  if (!url) {
-    return res.status(400).json({ success: false, error: 'URL required' });
-  }
-
-  let scanUrl = url;
-  if (!scanUrl.startsWith('http://') && !scanUrl.startsWith('https://')) {
-    scanUrl = 'https://' + scanUrl;
-  }
-
-  // ============================================
-  // SHARELINK ENFORCEMENT
-  // ============================================
-  if (shareKey) {
-    try {
-      const shareLinkResult = await pool.query(
-        'SELECT * FROM share_links WHERE share_code = $1',
-        [shareKey]
-      );
-
-      if (shareLinkResult.rows.length === 0) {
-        return res.status(403).json({ 
-          success: false,
-          error: 'Invalid share link',
-          limitReached: true
-        });
-      }
-
-      const shareLink = shareLinkResult.rows[0];
-
-      if (new Date(shareLink.expires_at) < new Date()) {
-        return res.status(403).json({ 
-          success: false,
-          error: 'Share link expired. Contact Ot for renewal.',
-          limitReached: true,
-          whatsappUrl: 'https://wa.me/31628073996?text=Hi%20Ot!%20Mijn%20sharelink%20is%20verlopen.'
-        });
-      }
-
-      if (shareLink.status !== 'active') {
-        return res.status(403).json({ 
-          success: false,
-          error: 'Share link inactive. Contact Ot.',
-          limitReached: true,
-          whatsappUrl: 'https://wa.me/31628073996?text=Hi%20Ot!%20Mijn%20sharelink%20is%20niet%20actief.'
-        });
-      }
-
-      if (shareLink.scans_used >= shareLink.scans_limit) {
-        return res.status(403).json({ 
-          success: false,
-          error: `Scan limiet bereikt (${shareLink.scans_limit}/${shareLink.scans_limit}). Contact Ot voor meer scans.`,
-          limitReached: true,
-          scansUsed: shareLink.scans_used,
-          scansLimit: shareLink.scans_limit,
-          whatsappUrl: 'https://wa.me/31628073996?text=Hi%20Ot!%20Mijn%20scan%20limiet%20is%20bereikt.%20Kan%20ik%20meer%20scans%20krijgen?'
-        });
-      }
-
-      console.log(`✅ Sharelink valid: ${shareKey} (${shareLink.scans_used + 1}/${shareLink.scans_limit})`);
-
-    } catch (error) {
-      console.error('Sharelink check error:', error);
-      return res.status(500).json({ 
-        success: false,
-        error: 'Sharelink verification failed' 
-      });
-    }
-  }
-
-  try {
-    console.log(`🔍 Scanning: ${scanUrl}`);
-
-    // === FETCH WITH PUPPETEER (returns rawHtml + extractedContent) ===
-    const fetchResult = await fetchWithPuppeteer(scanUrl);
-    
-    if (!fetchResult.success) {
-      return res.status(400).json({ 
-        success: false, 
-        error: `Cannot fetch URL: failed to load page` 
-      });
-    }
 
     // ============================================
     // USE RAW HTML FOR TECHNICAL CHECKS
@@ -1459,6 +1371,96 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
+
+// ============================================
+// PUBLIC SCANNER API — AI-POWERED SCORING (FIXED)
+// Uses rawHtml for technical checks, extractedContent for AI
+// ============================================
+app.post('/api/scan', async (req, res) => {
+  const { url, shareKey } = req.body;
+
+  if (!url) {
+    return res.status(400).json({ success: false, error: 'URL required' });
+  }
+
+  let scanUrl = url;
+  if (!scanUrl.startsWith('http://') && !scanUrl.startsWith('https://')) {
+    scanUrl = 'https://' + scanUrl;
+  }
+
+  // ============================================
+  // SHARELINK ENFORCEMENT
+  // ============================================
+  if (shareKey) {
+    try {
+      const shareLinkResult = await pool.query(
+        'SELECT * FROM share_links WHERE share_code = $1',
+        [shareKey]
+      );
+
+      if (shareLinkResult.rows.length === 0) {
+        return res.status(403).json({ 
+          success: false,
+          error: 'Invalid share link',
+          limitReached: true
+        });
+      }
+
+      const shareLink = shareLinkResult.rows[0];
+
+      if (new Date(shareLink.expires_at) < new Date()) {
+        return res.status(403).json({ 
+          success: false,
+          error: 'Share link expired. Contact Ot for renewal.',
+          limitReached: true,
+          whatsappUrl: 'https://wa.me/31628073996?text=Hi%20Ot!%20Mijn%20sharelink%20is%20verlopen.'
+        });
+      }
+
+      if (shareLink.status !== 'active') {
+        return res.status(403).json({ 
+          success: false,
+          error: 'Share link inactive. Contact Ot.',
+          limitReached: true,
+          whatsappUrl: 'https://wa.me/31628073996?text=Hi%20Ot!%20Mijn%20sharelink%20is%20niet%20actief.'
+        });
+      }
+
+      if (shareLink.scans_used >= shareLink.scans_limit) {
+        return res.status(403).json({ 
+          success: false,
+          error: `Scan limiet bereikt (${shareLink.scans_limit}/${shareLink.scans_limit}). Contact Ot voor meer scans.`,
+          limitReached: true,
+          scansUsed: shareLink.scans_used,
+          scansLimit: shareLink.scans_limit,
+          whatsappUrl: 'https://wa.me/31628073996?text=Hi%20Ot!%20Mijn%20scan%20limiet%20is%20bereikt.%20Kan%20ik%20meer%20scans%20krijgen?'
+        });
+      }
+
+      console.log(`✅ Sharelink valid: ${shareKey} (${shareLink.scans_used + 1}/${shareLink.scans_limit})`);
+
+    } catch (error) {
+      console.error('Sharelink check error:', error);
+      return res.status(500).json({ 
+        success: false,
+        error: 'Sharelink verification failed' 
+      });
+    }
+  }
+
+  try {
+    console.log(`🔍 Scanning: ${scanUrl}`);
+
+    // === FETCH WITH PUPPETEER (returns rawHtml + extractedContent) ===
+    const fetchResult = await fetchWithPuppeteer(scanUrl);
+    
+    if (!fetchResult.success) {
+      return res.status(400).json({ 
+        success: false, 
+        error: `Cannot fetch URL: failed to load page` 
+      });
+    }
+
 
 // ============================================
 // STATIC FILES
