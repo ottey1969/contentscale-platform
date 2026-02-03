@@ -341,17 +341,8 @@ function extractContentForAI(fetchResult) {
 // PUBLIC SCANNER API — AI-POWERED SCORING (FIXED)
 // Uses rawHtml for technical checks, extractedContent for AI
 // ============================================
-app.post('/api/scan', async (req, res) => {
-  const { url, shareKey } = req.body;
 
-  if (!url) {
-    return res.status(400).json({ success: false, error: 'URL required' });
-  }
 
-  let scanUrl = url;
-  if (!scanUrl.startsWith('http://') && !scanUrl.startsWith('https://')) {
-    scanUrl = 'https://' + scanUrl;
-  }
 
   // ============================================
   // SHARELINK ENFORCEMENT
