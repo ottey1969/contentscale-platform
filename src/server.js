@@ -1033,4 +1033,3 @@ UPDATE 1 (Puppeteer functions) niet correct toegepast.
 
 ---
 
-**Als alles groen is, is de fix compleet! 🎉**
