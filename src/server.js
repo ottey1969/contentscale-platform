@@ -337,278 +337,7 @@ function extractContentForAI(fetchResult) {
   return { title, content: processed };
 }
 
-
-    // ============================================
-    // USE RAW HTML FOR TECHNICAL CHECKS
-    // ============================================
-    const rawHtml = fetchResult.rawHtml;
-    console.log(`✅ Fetched ${rawHtml.length} bytes from ${scanUrl} (${fetchResult.method})`);
-
-    // === TECHNICAL SCORE (regex on RAW HTML) ===
-    let technicalScore = 0;
-
-    const metaDescMatch = rawHtml.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
-    const metaDesc = metaDescMatch ? metaDescMatch[1] : null;
-    technicalScore += metaDesc && metaDesc.length > 50 ? 4 : metaDesc ? 2 : 0;
-
-    const titleMatch = rawHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
-    const title = titleMatch ? titleMatch[1] : null;
-    technicalScore += title && title.length > 30 ? 4 : title ? 2 : 0;
-
-    const allImages = (rawHtml.match(/<img[^>]*>/gi) || []).length;
-    const imagesWithAlt = (rawHtml.match(/<img[^>]*alt="/gi) || []).length;
-    if (allImages > 0) {
-      technicalScore += Math.min(4, Math.floor((imagesWithAlt / allImages) * 4));
-    }
-
-    const hasViewport = /<meta\s+name="viewport"/gi.test(rawHtml);
-    technicalScore += hasViewport ? 3 : 0;
-
-    const hasSchema = /"@context"|"@type"/gi.test(rawHtml);
-    technicalScore += hasSchema ? 3 : 0;
-    technicalScore = Math.min(20, technicalScore);
-
-    // === HTML DETAILS (for response metadata - from RAW HTML) ===
-    const textContent = rawHtml.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(w => w.length > 0);
-    const wordCount = textContent.length;
-    const h1s = (rawHtml.match(/<h1[^>]*>/gi) || []).length;
-    const h2h3s = (rawHtml.match(/<h2[^>]*>|<h3[^>]*>/gi) || []).length;
-    const paragraphs = (rawHtml.match(/<p[^>]*>/gi) || []).length;
-    const hasLists = /<ul[^>]*>|<ol[^>]*>/gi.test(rawHtml);
-    const hasQuotes = /says|according to|expert|quote|told us|founder|ceo|director/gi.test(rawHtml);
-    const hasStats = /\d+%|\d+ studies|\d+ research|research shows|\d+ data/gi.test(rawHtml);
-    const hasFreshDates = /202[4-6]|january|february|march|april|may|june|july|august|september|october|november|december/gi.test(rawHtml);
-    const hasAuthor = /author|by |written by|published by|contributor/gi.test(rawHtml);
-
-    // ============================================
-    // USE EXTRACTED CONTENT FOR AI SCORING
-    // ============================================
-    const contentHash = hashContent(rawHtml);
-    let graafScore, craftScore, graafItems, craftItems, aiRecommendations, scoringMethod;
-
-    const cached = scanCache.get(contentHash);
-    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL_MS) {
-      console.log(`📦 Cache hit for ${scanUrl}`);
-      graafScore = cached.graafScore;
-      craftScore = cached.craftScore;
-      graafItems = cached.graafItems;
-      craftItems = cached.craftItems;
-      aiRecommendations = cached.recommendations;
-      scoringMethod = 'ai-cached';
-    } else {
-      try {
-        if (!process.env.ANTHROPIC_API_KEY) {
-          throw new Error('ANTHROPIC_API_KEY not configured');
-        }
-
-        const contentForAI = extractContentForAI(fetchResult);
-        console.log(`🤖 AI scoring ${scanUrl}...`);
-        const aiResult = await scoreWithAI(contentForAI);
-
-        if (!validateAIScores(aiResult)) {
-          throw new Error('AI scores failed validation');
-        }
-
-        graafItems = {
-          credibility: Math.min(16, Math.max(0, Math.round(aiResult.graaf.credibility))),
-          relevance: Math.min(18, Math.max(0, Math.round(aiResult.graaf.relevance))),
-          accuracy: Math.min(8, Math.max(0, Math.round(aiResult.graaf.accuracy))),
-          freshness: Math.min(8, Math.max(0, Math.round(aiResult.graaf.freshness)))
-        };
-        craftItems = {
-          headingStructure: Math.min(8, Math.max(0, Math.round(aiResult.craft.heading_structure))),
-          subheadings: Math.min(10, Math.max(0, Math.round(aiResult.craft.subheadings))),
-          paragraphs: Math.min(8, Math.max(0, Math.round(aiResult.craft.paragraphs))),
-          lists: Math.min(4, Math.max(0, Math.round(aiResult.craft.lists)))
-        };
-
-        graafScore = graafItems.credibility + graafItems.relevance + graafItems.accuracy + graafItems.freshness;
-        craftScore = craftItems.headingStructure + craftItems.subheadings + craftItems.paragraphs + craftItems.lists;
-        
-        aiRecommendations = Array.isArray(aiResult.recommendations) ? aiResult.recommendations : [];
-        scoringMethod = 'ai';
-
-        scanCache.set(contentHash, {
-          graafScore, craftScore, graafItems, craftItems,
-          recommendations: aiRecommendations,
-          timestamp: Date.now()
-        });
-
-        console.log(`✅ AI scored: GRAAF=${graafScore} CRAFT=${craftScore} (${scoringMethod})`);
-
-      } catch (aiError) {
-        console.error(`⚠️ AI scoring failed, using regex fallback: ${aiError.message}`);
-        scoringMethod = 'fallback';
-
-        graafItems = {
-          credibility: (hasQuotes ? 8 : 0) + (hasAuthor ? 8 : 0),
-          relevance: Math.min(18, Math.floor(wordCount / 100)),
-          accuracy: hasStats ? 8 : 0,
-          freshness: hasFreshDates ? 8 : 2
-        };
-        graafScore = graafItems.credibility + graafItems.relevance + graafItems.accuracy + graafItems.freshness;
-        graafScore = Math.min(50, graafScore);
-
-        craftItems = {
-          headingStructure: h1s === 1 ? 8 : h1s > 1 ? 4 : 2,
-          subheadings: Math.min(10, h2h3s * 2),
-          paragraphs: Math.min(8, Math.floor(paragraphs / 3)),
-          lists: hasLists ? 4 : 0
-        };
-        craftScore = craftItems.headingStructure + craftItems.subheadings + craftItems.paragraphs + craftItems.lists;
-        craftScore = Math.min(30, craftScore);
-
-        aiRecommendations = [];
-      }
-    }
-
-    const totalScore = graafScore + craftScore + technicalScore;
-    const quality = totalScore >= 90 ? 'excellent' : totalScore >= 75 ? 'good' : totalScore >= 60 ? 'average' : totalScore >= 45 ? 'below-average' : 'poor';
-
-    console.log(`\n🎯 SCAN COMPLETE: ${scanUrl}`);
-    console.log(`   Method: ${scoringMethod.toUpperCase()}`);
-    console.log(`   Score: ${totalScore}/100 (${quality})`);
-    console.log(`   └─ GRAAF: ${graafScore}/50`);
-    console.log(`   └─ CRAFT: ${craftScore}/30`);
-    console.log(`   └─ Technical: ${technicalScore}/20\n`);
-
-    // === TECHNICAL RECOMMENDATIONS ===
-    const techRecommendations = [];
-
-    if (!metaDesc) {
-      techRecommendations.push({
-        type: 'quickwin',
-        category: 'Technical SEO',
-        title: 'Add Meta Description',
-        description: 'Missing meta description.',
-        impact: 'High',
-        points: '+4 points',
-        howToFix: '1. Write 150-160 chars\n2. Include keyword\n3. Add CTA',
-        example: '<meta name="description" content="...">'
-      });
-    }
-
-    if (!hasViewport) {
-      techRecommendations.push({
-        type: 'quickwin',
-        category: 'Technical SEO',
-        title: 'Add Mobile Viewport',
-        description: 'Missing viewport tag.',
-        impact: 'High',
-        points: '+3 points',
-        howToFix: '1. Add viewport tag\n2. Test mobile\n3. Verify responsive',
-        example: '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
-      });
-    }
-
-    if (!hasSchema) {
-      techRecommendations.push({
-        type: 'quickwin',
-        category: 'Technical SEO',
-        title: 'Add Schema Markup',
-        description: 'No structured data found.',
-        impact: 'Medium',
-        points: '+3 points',
-        howToFix: '1. Add JSON-LD schema\n2. Include author\n3. Test with Google',
-        example: '<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article"}</script>'
-      });
-    }
-
-    const allRecommendations = [...(aiRecommendations || []), ...techRecommendations];
-    const quickWins = allRecommendations.filter(r => r.type === 'quickwin');
-    const majorImprovements = allRecommendations.filter(r => r.type === 'major');
-
-    const scanResult = {
-      success: true,
-      url: scanUrl,
-      score: totalScore,
-      quality,
-      scoring_method: scoringMethod,
-      metrics: { graaf: graafScore, craft: craftScore, technical: technicalScore },
-      breakdown: {
-        graaf: {
-          total: graafScore,
-          max: 50,
-          percentage: Math.round((graafScore / 50) * 100),
-          items: graafItems
-        },
-        craft: {
-          total: craftScore,
-          max: 30,
-          percentage: Math.round((craftScore / 30) * 100),
-          items: craftItems
-        },
-        technical: {
-          total: technicalScore,
-          max: 20,
-          percentage: Math.round((technicalScore / 20) * 100),
-          items: {
-            metaDescription: metaDesc && metaDesc.length > 50 ? 4 : metaDesc ? 2 : 0,
-            title: title && title.length > 30 ? 4 : title ? 2 : 0,
-            imageAlt: allImages > 0 ? Math.min(4, Math.floor((imagesWithAlt / allImages) * 4)) : 0,
-            viewport: hasViewport ? 3 : 0,
-            schema: hasSchema ? 3 : 0
-          }
-        }
-      },
-      recommendations: {
-        all: allRecommendations,
-        quickWins: quickWins,
-        majorImprovements: majorImprovements,
-        totalRecommendations: allRecommendations.length,
-        potentialScoreIncrease: allRecommendations.reduce((sum, r) => {
-          const pts = parseInt((r.points || '0').match(/\d+/)?.[0] || 0);
-          return sum + pts;
-        }, 0)
-      },
-      details: {
-        wordCount,
-        h1Count: h1s,
-        h2h3Count: h2h3s,
-        paragraphCount: paragraphs,
-        imageCount: allImages,
-        imagesWithAlt,
-        hasQuotes,
-        hasStats,
-        hasFreshDates,
-        hasAuthor,
-        hasLists,
-        hasViewport,
-        hasSchema,
-        metaDescription: metaDesc ? metaDesc.substring(0, 160) : null,
-        title: title
-      },
-      timestamp: new Date().toISOString()
-    };
-
-    try {
-      await pool.query(
-        `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, breakdown, recommendations, scan_type)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [scanUrl, totalScore, quality, graafScore, craftScore, technicalScore, JSON.stringify(scanResult.breakdown), JSON.stringify(scanResult.recommendations), 'manual']
-      );
-    } catch (dbError) {
-      console.error('DB save error:', dbError.message);
-    }
-
-    if (shareKey) {
-      try {
-        await pool.query('UPDATE share_links SET scans_used = scans_used + 1 WHERE share_code = $1', [shareKey]);
-      } catch (error) {
-        console.error('Sharelink update error:', error);
-      }
-    }
-
-    res.json(scanResult);
-
-  } catch (error) {
-    console.error('Scan error:', error);
-    if (!res.headersSent) {
-      res.status(500).json({ success: false, error: error.message });
-    }
-  }
-});
-
+// AI Scoring prompt and function
 const AI_SCORING_PROMPT = `You are an SEO content quality scorer. Analyze the content using GRAAF and CRAFT frameworks. Be fair but honest.
 
 CONTENT FORMAT: You'll see markers like [H1], [H2], [H3], and • for lists. These ARE structure - count them.
@@ -692,8 +421,6 @@ Return ONLY this JSON structure, no other text:
     }
   ]
 }`;
-
-
 
 async function scoreWithAI(contentForAI) {
   const controller = new AbortController();
@@ -787,8 +514,6 @@ function validateAIScores(ai) {
 
   return true;
 }
-
-
 
 // Test database connection
 pool.connect((err, client, release) => {
@@ -1461,6 +1186,276 @@ app.post('/api/scan', async (req, res) => {
       });
     }
 
+    // ============================================
+    // USE RAW HTML FOR TECHNICAL CHECKS
+    // ============================================
+    const rawHtml = fetchResult.rawHtml;
+    console.log(`✅ Fetched ${rawHtml.length} bytes from ${scanUrl} (${fetchResult.method})`);
+
+    // === TECHNICAL SCORE (regex on RAW HTML) ===
+    let technicalScore = 0;
+
+    const metaDescMatch = rawHtml.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
+    const metaDesc = metaDescMatch ? metaDescMatch[1] : null;
+    technicalScore += metaDesc && metaDesc.length > 50 ? 4 : metaDesc ? 2 : 0;
+
+    const titleMatch = rawHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
+    const title = titleMatch ? titleMatch[1] : null;
+    technicalScore += title && title.length > 30 ? 4 : title ? 2 : 0;
+
+    const allImages = (rawHtml.match(/<img[^>]*>/gi) || []).length;
+    const imagesWithAlt = (rawHtml.match(/<img[^>]*alt="/gi) || []).length;
+    if (allImages > 0) {
+      technicalScore += Math.min(4, Math.floor((imagesWithAlt / allImages) * 4));
+    }
+
+    const hasViewport = /<meta\s+name="viewport"/gi.test(rawHtml);
+    technicalScore += hasViewport ? 3 : 0;
+
+    const hasSchema = /"@context"|"@type"/gi.test(rawHtml);
+    technicalScore += hasSchema ? 3 : 0;
+    technicalScore = Math.min(20, technicalScore);
+
+    // === HTML DETAILS (for response metadata - from RAW HTML) ===
+    const textContent = rawHtml.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(w => w.length > 0);
+    const wordCount = textContent.length;
+    const h1s = (rawHtml.match(/<h1[^>]*>/gi) || []).length;
+    const h2h3s = (rawHtml.match(/<h2[^>]*>|<h3[^>]*>/gi) || []).length;
+    const paragraphs = (rawHtml.match(/<p[^>]*>/gi) || []).length;
+    const hasLists = /<ul[^>]*>|<ol[^>]*>/gi.test(rawHtml);
+    const hasQuotes = /says|according to|expert|quote|told us|founder|ceo|director/gi.test(rawHtml);
+    const hasStats = /\d+%|\d+ studies|\d+ research|research shows|\d+ data/gi.test(rawHtml);
+    const hasFreshDates = /202[4-6]|january|february|march|april|may|june|july|august|september|october|november|december/gi.test(rawHtml);
+    const hasAuthor = /author|by |written by|published by|contributor/gi.test(rawHtml);
+
+    // ============================================
+    // USE EXTRACTED CONTENT FOR AI SCORING
+    // ============================================
+    const contentHash = hashContent(rawHtml);
+    let graafScore, craftScore, graafItems, craftItems, aiRecommendations, scoringMethod;
+
+    const cached = scanCache.get(contentHash);
+    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL_MS) {
+      console.log(`📦 Cache hit for ${scanUrl}`);
+      graafScore = cached.graafScore;
+      craftScore = cached.craftScore;
+      graafItems = cached.graafItems;
+      craftItems = cached.craftItems;
+      aiRecommendations = cached.recommendations;
+      scoringMethod = 'ai-cached';
+    } else {
+      try {
+        if (!process.env.ANTHROPIC_API_KEY) {
+          throw new Error('ANTHROPIC_API_KEY not configured');
+        }
+
+        const contentForAI = extractContentForAI(fetchResult);
+        console.log(`🤖 AI scoring ${scanUrl}...`);
+        const aiResult = await scoreWithAI(contentForAI);
+
+        if (!validateAIScores(aiResult)) {
+          throw new Error('AI scores failed validation');
+        }
+
+        graafItems = {
+          credibility: Math.min(16, Math.max(0, Math.round(aiResult.graaf.credibility))),
+          relevance: Math.min(18, Math.max(0, Math.round(aiResult.graaf.relevance))),
+          accuracy: Math.min(8, Math.max(0, Math.round(aiResult.graaf.accuracy))),
+          freshness: Math.min(8, Math.max(0, Math.round(aiResult.graaf.freshness)))
+        };
+        craftItems = {
+          headingStructure: Math.min(8, Math.max(0, Math.round(aiResult.craft.heading_structure))),
+          subheadings: Math.min(10, Math.max(0, Math.round(aiResult.craft.subheadings))),
+          paragraphs: Math.min(8, Math.max(0, Math.round(aiResult.craft.paragraphs))),
+          lists: Math.min(4, Math.max(0, Math.round(aiResult.craft.lists)))
+        };
+
+        graafScore = graafItems.credibility + graafItems.relevance + graafItems.accuracy + graafItems.freshness;
+        craftScore = craftItems.headingStructure + craftItems.subheadings + craftItems.paragraphs + craftItems.lists;
+        
+        aiRecommendations = Array.isArray(aiResult.recommendations) ? aiResult.recommendations : [];
+        scoringMethod = 'ai';
+
+        scanCache.set(contentHash, {
+          graafScore, craftScore, graafItems, craftItems,
+          recommendations: aiRecommendations,
+          timestamp: Date.now()
+        });
+
+        console.log(`✅ AI scored: GRAAF=${graafScore} CRAFT=${craftScore} (${scoringMethod})`);
+
+      } catch (aiError) {
+        console.error(`⚠️ AI scoring failed, using regex fallback: ${aiError.message}`);
+        scoringMethod = 'fallback';
+
+        graafItems = {
+          credibility: (hasQuotes ? 8 : 0) + (hasAuthor ? 8 : 0),
+          relevance: Math.min(18, Math.floor(wordCount / 100)),
+          accuracy: hasStats ? 8 : 0,
+          freshness: hasFreshDates ? 8 : 2
+        };
+        graafScore = graafItems.credibility + graafItems.relevance + graafItems.accuracy + graafItems.freshness;
+        graafScore = Math.min(50, graafScore);
+
+        craftItems = {
+          headingStructure: h1s === 1 ? 8 : h1s > 1 ? 4 : 2,
+          subheadings: Math.min(10, h2h3s * 2),
+          paragraphs: Math.min(8, Math.floor(paragraphs / 3)),
+          lists: hasLists ? 4 : 0
+        };
+        craftScore = craftItems.headingStructure + craftItems.subheadings + craftItems.paragraphs + craftItems.lists;
+        craftScore = Math.min(30, craftScore);
+
+        aiRecommendations = [];
+      }
+    }
+
+    const totalScore = graafScore + craftScore + technicalScore;
+    const quality = totalScore >= 90 ? 'excellent' : totalScore >= 75 ? 'good' : totalScore >= 60 ? 'average' : totalScore >= 45 ? 'below-average' : 'poor';
+
+    console.log(`\n🎯 SCAN COMPLETE: ${scanUrl}`);
+    console.log(`   Method: ${scoringMethod.toUpperCase()}`);
+    console.log(`   Score: ${totalScore}/100 (${quality})`);
+    console.log(`   └─ GRAAF: ${graafScore}/50`);
+    console.log(`   └─ CRAFT: ${craftScore}/30`);
+    console.log(`   └─ Technical: ${technicalScore}/20\n`);
+
+    // === TECHNICAL RECOMMENDATIONS ===
+    const techRecommendations = [];
+
+    if (!metaDesc) {
+      techRecommendations.push({
+        type: 'quickwin',
+        category: 'Technical SEO',
+        title: 'Add Meta Description',
+        description: 'Missing meta description.',
+        impact: 'High',
+        points: '+4 points',
+        howToFix: '1. Write 150-160 chars\n2. Include keyword\n3. Add CTA',
+        example: '<meta name="description" content="...">'
+      });
+    }
+
+    if (!hasViewport) {
+      techRecommendations.push({
+        type: 'quickwin',
+        category: 'Technical SEO',
+        title: 'Add Mobile Viewport',
+        description: 'Missing viewport tag.',
+        impact: 'High',
+        points: '+3 points',
+        howToFix: '1. Add viewport tag\n2. Test mobile\n3. Verify responsive',
+        example: '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
+      });
+    }
+
+    if (!hasSchema) {
+      techRecommendations.push({
+        type: 'quickwin',
+        category: 'Technical SEO',
+        title: 'Add Schema Markup',
+        description: 'No structured data found.',
+        impact: 'Medium',
+        points: '+3 points',
+        howToFix: '1. Add JSON-LD schema\n2. Include author\n3. Test with Google',
+        example: '<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article"}</script>'
+      });
+    }
+
+    const allRecommendations = [...(aiRecommendations || []), ...techRecommendations];
+    const quickWins = allRecommendations.filter(r => r.type === 'quickwin');
+    const majorImprovements = allRecommendations.filter(r => r.type === 'major');
+
+    const scanResult = {
+      success: true,
+      url: scanUrl,
+      score: totalScore,
+      quality,
+      scoring_method: scoringMethod,
+      metrics: { graaf: graafScore, craft: craftScore, technical: technicalScore },
+      breakdown: {
+        graaf: {
+          total: graafScore,
+          max: 50,
+          percentage: Math.round((graafScore / 50) * 100),
+          items: graafItems
+        },
+        craft: {
+          total: craftScore,
+          max: 30,
+          percentage: Math.round((craftScore / 30) * 100),
+          items: craftItems
+        },
+        technical: {
+          total: technicalScore,
+          max: 20,
+          percentage: Math.round((technicalScore / 20) * 100),
+          items: {
+            metaDescription: metaDesc && metaDesc.length > 50 ? 4 : metaDesc ? 2 : 0,
+            title: title && title.length > 30 ? 4 : title ? 2 : 0,
+            imageAlt: allImages > 0 ? Math.min(4, Math.floor((imagesWithAlt / allImages) * 4)) : 0,
+            viewport: hasViewport ? 3 : 0,
+            schema: hasSchema ? 3 : 0
+          }
+        }
+      },
+      recommendations: {
+        all: allRecommendations,
+        quickWins: quickWins,
+        majorImprovements: majorImprovements,
+        totalRecommendations: allRecommendations.length,
+        potentialScoreIncrease: allRecommendations.reduce((sum, r) => {
+          const pts = parseInt((r.points || '0').match(/\d+/)?.[0] || 0);
+          return sum + pts;
+        }, 0)
+      },
+      details: {
+        wordCount,
+        h1Count: h1s,
+        h2h3Count: h2h3s,
+        paragraphCount: paragraphs,
+        imageCount: allImages,
+        imagesWithAlt,
+        hasQuotes,
+        hasStats,
+        hasFreshDates,
+        hasAuthor,
+        hasLists,
+        hasViewport,
+        hasSchema,
+        metaDescription: metaDesc ? metaDesc.substring(0, 160) : null,
+        title: title
+      },
+      timestamp: new Date().toISOString()
+    };
+
+    try {
+      await pool.query(
+        `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, breakdown, recommendations, scan_type)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [scanUrl, totalScore, quality, graafScore, craftScore, technicalScore, JSON.stringify(scanResult.breakdown), JSON.stringify(scanResult.recommendations), 'manual']
+      );
+    } catch (dbError) {
+      console.error('DB save error:', dbError.message);
+    }
+
+    if (shareKey) {
+      try {
+        await pool.query('UPDATE share_links SET scans_used = scans_used + 1 WHERE share_code = $1', [shareKey]);
+      } catch (error) {
+        console.error('Sharelink update error:', error);
+      }
+    }
+
+    res.json(scanResult);
+
+  } catch (error) {
+    console.error('Scan error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+});
 
 // ============================================
 // STATIC FILES
@@ -2329,12 +2324,6 @@ app.post('/api/leaderboard/submit', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
-// ============================================
-// DEZE CODE KOMT UIT PART2-SCAN-ENDPOINT.js (VERKORT)
-// ============================================
-// [SKIP - Al toegevoegd in origineel bestand op lijn ~2800]
-// Vervang de volledige /api/scan endpoint met code uit PART2-SCAN-ENDPOINT.js
 
 // ============================================
 // EXPORT SCAN RESULTS
