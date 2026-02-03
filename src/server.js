@@ -263,8 +263,81 @@ function extractContentForAI(fetchResult) {
     
     return { title: fetchResult.title || '', content: processed };
   }
+  
+  // Otherwise, process raw HTML (fallback)
+  console.log('📝 Processing raw HTML fallback');
+  let processed = fetchResult.rawHtml;
+  
+  // Remove noise
+  processed = processed.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+  processed = processed.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+  processed = processed.replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, '');
+  processed = processed.replace(/<!--[\s\S]*?-->/g, '');
+  
+  processed = processed.replace(/<nav[^>]*>/gi, '').replace(/<\/nav>/gi, '');
+  processed = processed.replace(/<header[^>]*>/gi, '').replace(/<\/header>/gi, '');
+  processed = processed.replace(/<footer[^>]*>/gi, '').replace(/<\/footer>/gi, '');
+  
+  // Try to isolate main content
+  let mainContent = processed;
+  const mainMatch = processed.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
+  if (mainMatch) {
+    mainContent = mainMatch[1];
+  } else {
+    const articles = processed.match(/<article[^>]*>[\s\S]*?<\/article>/gi);
+    if (articles && articles.length > 0) {
+      mainContent = articles.join('\n\n');
+    } else {
+      const contentDiv = processed.match(/<div[^>]*(?:class|id)=["'][^"']*(?:content|main|post|entry|article|body)[^"']*["'][^>]*>([\s\S]*?)<\/div>/i);
+      if (contentDiv) {
+        mainContent = contentDiv[1];
+      }
+    }
+  }
+  
+  processed = mainContent;
+  
+  // Extract with markers
+  processed = processed.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, '\n[H1]: $1\n');
+  processed = processed.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, '\n[H2]: $1\n');
+  processed = processed.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, '\n[H3]: $1\n');
+  processed = processed.replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, '\n[H4]: $1\n');
+  processed = processed.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, '\n$1\n');
+  processed = processed.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '\n• $1\n');
+  
+  // Strip remaining tags
+  processed = processed.replace(/<[^>]*>/g, ' ');
+  
+  // Decode entities
+  processed = processed.replace(/&nbsp;/g, ' ')
+                       .replace(/&amp;/g, '&')
+                       .replace(/&lt;/g, '<')
+                       .replace(/&gt;/g, '>')
+                       .replace(/&quot;/g, '"')
+                       .replace(/&#39;/g, "'")
+                       .replace(/&mdash;/g, '—')
+                       .replace(/&ndash;/g, '–');
+  
+  // Clean whitespace
+  processed = processed.replace(/[ \t]+/g, ' ')
+                       .replace(/\n\s*\n\s*\n/g, '\n\n')
+                       .trim();
+  
+  // Cap at 40K
+  if (processed.length > 40000) {
+    const start = processed.substring(0, 35000);
+    const end = processed.substring(processed.length - 5000);
+    processed = start + '\n\n[...middle content truncated...]\n\n' + end;
+  }
+  
+  // Extract title
+  const titleMatch = fetchResult.rawHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
+  const title = titleMatch ? titleMatch[1].trim() : '';
+  
+  return { title, content: processed };
+}
 
-  // ============================================
+// ============================================
 // PUBLIC SCANNER API — AI-POWERED SCORING (FIXED)
 // Uses rawHtml for technical checks, extractedContent for AI
 // ============================================
@@ -659,79 +732,6 @@ app.post('/api/scan', async (req, res) => {
     }
   }
 });
-  
-  // Otherwise, process raw HTML (fallback)
-  console.log('📝 Processing raw HTML fallback');
-  let processed = fetchResult.rawHtml;
-  
-  // Remove noise
-  processed = processed.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
-  processed = processed.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
-  processed = processed.replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, '');
-  processed = processed.replace(/<!--[\s\S]*?-->/g, '');
-  
-  processed = processed.replace(/<nav[^>]*>/gi, '').replace(/<\/nav>/gi, '');
-  processed = processed.replace(/<header[^>]*>/gi, '').replace(/<\/header>/gi, '');
-  processed = processed.replace(/<footer[^>]*>/gi, '').replace(/<\/footer>/gi, '');
-  
-  // Try to isolate main content
-  let mainContent = processed;
-  const mainMatch = processed.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
-  if (mainMatch) {
-    mainContent = mainMatch[1];
-  } else {
-    const articles = processed.match(/<article[^>]*>[\s\S]*?<\/article>/gi);
-    if (articles && articles.length > 0) {
-      mainContent = articles.join('\n\n');
-    } else {
-      const contentDiv = processed.match(/<div[^>]*(?:class|id)=["'][^"']*(?:content|main|post|entry|article|body)[^"']*["'][^>]*>([\s\S]*?)<\/div>/i);
-      if (contentDiv) {
-        mainContent = contentDiv[1];
-      }
-    }
-  }
-  
-  processed = mainContent;
-  
-  // Extract with markers
-  processed = processed.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, '\n[H1]: $1\n');
-  processed = processed.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, '\n[H2]: $1\n');
-  processed = processed.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, '\n[H3]: $1\n');
-  processed = processed.replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, '\n[H4]: $1\n');
-  processed = processed.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, '\n$1\n');
-  processed = processed.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '\n• $1\n');
-  
-  // Strip remaining tags
-  processed = processed.replace(/<[^>]*>/g, ' ');
-  
-  // Decode entities
-  processed = processed.replace(/&nbsp;/g, ' ')
-                       .replace(/&amp;/g, '&')
-                       .replace(/&lt;/g, '<')
-                       .replace(/&gt;/g, '>')
-                       .replace(/&quot;/g, '"')
-                       .replace(/&#39;/g, "'")
-                       .replace(/&mdash;/g, '—')
-                       .replace(/&ndash;/g, '–');
-  
-  // Clean whitespace
-  processed = processed.replace(/[ \t]+/g, ' ')
-                       .replace(/\n\s*\n\s*\n/g, '\n\n')
-                       .trim();
-  
-  // Cap at 40K
-  if (processed.length > 40000) {
-    const start = processed.substring(0, 35000);
-    const end = processed.substring(processed.length - 5000);
-    processed = start + '\n\n[...middle content truncated...]\n\n' + end;
-  }
-  
-  // Extract title
-  const titleMatch = fetchResult.rawHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
-  const title = titleMatch ? titleMatch[1].trim() : '';
-  
-  return { title, content: processed };
-}
 
 const AI_SCORING_PROMPT = `You are an SEO content quality scorer. Analyze the content using GRAAF and CRAFT frameworks. Be fair but honest.
 
