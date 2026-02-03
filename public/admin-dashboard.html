@@ -756,179 +756,688 @@
       </div>
 
       <!-- Lead Scanner Tab (Enhanced from scanner 2) -->
-      // LEAD SCANNER - GOOGLE MAPS SCRAPING (NO API NEEDED)
-// Backend endpoint voor server.js
+<!-- ============================================
+     COMPLETE LEAD SCANNER TAB
+     Met Single URL scan + Google Maps scraping
+     Beide met editable fields!
+     ============================================ -->
 
-// Installeer: npm install puppeteer
-
-const puppeteer = require('puppeteer');
-
-// Lead Scanner endpoint - Google Maps scraping
-app.post('/api/admin/lead-scanner/google-maps', async (req, res) => {
-  const { google_maps_url } = req.body;
+<div id="tab-lead-scanner" class="tab-content hidden">
+  <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
   
-  if (!google_maps_url || !google_maps_url.includes('google.com/maps/search')) {
-    return res.json({ success: false, error: 'Invalid Google Maps URL' });
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-bold">🎯 Lead Scanner - Single + Google Maps Bulk</h2>
+    <button onclick="refreshLeadScanner()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
+      🔄 Refresh
+    </button>
+  </div>
+
+  <!-- Mode Selector -->
+  <div class="flex gap-4 mb-6">
+    <button onclick="switchLeadMode('single')" id="mode-single-btn" class="flex-1 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-lg font-bold text-lg transition-all">
+      🔍 Single URL Scan
+    </button>
+    <button onclick="switchLeadMode('google-maps')" id="mode-maps-btn" class="flex-1 py-4 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold text-lg transition-all">
+      🗺️ Google Maps Scraping
+    </button>
+  </div>
+
+  <!-- ============================================
+       SINGLE URL MODE
+       ============================================ -->
+  <div id="single-url-mode">
+    <div class="bg-gradient-to-r from-purple-900 to-blue-900 rounded-lg p-6 mb-6 border-2 border-purple-600">
+      <h3 class="text-xl font-bold mb-4">🔍 Scan Enkele URL</h3>
+      
+      <div class="grid md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium mb-2">Website URL *</label>
+          <input 
+            type="url" 
+            id="single-url-input" 
+            placeholder="https://example.com"
+            class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white"
+          >
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium mb-2">Bedrijfsnaam (optioneel)</label>
+          <input 
+            type="text" 
+            id="single-company-input" 
+            placeholder="Automatisch detecteren..."
+            class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white"
+          >
+        </div>
+      </div>
+
+      <button onclick="scanSingleURL()" id="scan-single-btn" class="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 rounded-lg font-bold text-lg transition-all">
+        🔍 Scan URL
+      </button>
+    </div>
+
+    <!-- Single Scan Result -->
+    <div id="single-scan-result" class="hidden bg-gray-800 rounded-lg p-6 mb-6 border-2 border-green-600">
+      <h3 class="text-xl font-bold mb-4">✅ Scan Compleet - Pas Gegevens Aan</h3>
+      
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="space-y-4">
+          <div class="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg p-4 text-center">
+            <div class="text-sm text-purple-200">SEO Score</div>
+            <div class="text-5xl font-bold mt-2" id="single-score-display">-</div>
+            <div class="text-sm text-purple-200 mt-1">/ 100</div>
+          </div>
+          
+          <div class="bg-gray-700 rounded-lg p-4">
+            <div class="text-sm text-gray-400 mb-1">Gescande URL</div>
+            <div class="text-sm text-blue-400 break-all" id="single-scanned-url">-</div>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium mb-2 text-yellow-400">Bedrijfsnaam *</label>
+            <input type="text" id="single-company-name" class="w-full px-4 py-3 bg-gray-700 border-2 border-yellow-500 rounded-lg text-white font-medium">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium mb-2 text-yellow-400">Land *</label>
+            <select id="single-country" class="w-full px-4 py-3 bg-gray-700 border-2 border-yellow-500 rounded-lg text-white font-medium">
+              <option value="">-- Selecteer Land --</option>
+              <option value="Netherlands">🇳🇱 Netherlands</option>
+              <option value="Belgium">🇧🇪 Belgium</option>
+              <option value="Germany">🇩🇪 Germany</option>
+              <option value="France">🇫🇷 France</option>
+              <option value="United Kingdom">🇬🇧 United Kingdom</option>
+              <option value="United States">🇺🇸 United States</option>
+              <option value="Canada">🇨🇦 Canada</option>
+              <option value="Australia">🇦🇺 Australia</option>
+              <option value="Spain">🇪🇸 Spain</option>
+              <option value="Italy">🇮🇹 Italy</option>
+              <option value="Other">🌍 Other</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium mb-2">SEO Score (van scan)</label>
+            <input type="number" id="single-score-input" readonly class="w-full px-4 py-3 bg-gray-600 border border-gray-500 rounded-lg text-white font-bold cursor-not-allowed">
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-4 mt-6">
+        <button onclick="addSingleToLeaderboard()" class="flex-1 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 rounded-lg font-bold text-lg">
+          ✅ Voeg Toe aan Leaderboard
+        </button>
+        <button onclick="cancelSingleScan()" class="px-6 py-4 bg-red-600 hover:bg-red-700 rounded-lg font-bold">
+          ❌ Annuleer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================
+       GOOGLE MAPS MODE
+       ============================================ -->
+  <div id="google-maps-mode" class="hidden">
+    <div class="bg-gradient-to-r from-orange-900 to-red-900 rounded-lg p-6 mb-6 border-2 border-orange-600">
+      <h3 class="text-xl font-bold mb-4">🗺️ Google Maps URL Scraping</h3>
+      
+      <p class="text-sm text-gray-300 mb-4">
+        Plak een Google Maps zoek-URL om automatisch alle bedrijven te vinden. Bijvoorbeeld:<br>
+        <code class="text-blue-400 text-xs">https://www.google.com/maps/search/seo+agency+new+york/@...</code>
+      </p>
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium mb-2">Google Maps Search URL *</label>
+        <input 
+          type="url" 
+          id="gmaps-url-input" 
+          placeholder="https://www.google.com/maps/search/seo+agency+amsterdam/@..."
+          class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white"
+        >
+      </div>
+
+      <button onclick="scrapeGoogleMaps()" id="scrape-gmaps-btn" class="w-full py-3 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 rounded-lg font-bold text-lg transition-all">
+        🗺️ Scrape Google Maps
+      </button>
+
+      <div class="mt-4 bg-gray-800 rounded-lg p-4">
+        <p class="text-xs text-gray-400">
+          <strong>Let op:</strong> Scraping duurt 30-60 seconden. Het script scrollt door de resultaten en haalt namen, websites, adressen en ratings op.
+        </p>
+      </div>
+    </div>
+
+    <!-- Scraped Leads List -->
+    <div id="gmaps-leads-container" class="hidden">
+      <div class="bg-gray-800 rounded-lg p-6 mb-4 border-2 border-green-600">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-bold">✅ <span id="gmaps-leads-count">0</span> Bedrijven Gevonden</h3>
+          <div class="flex gap-3">
+            <button onclick="scanAllGmapsLeads()" id="scan-all-gmaps-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
+              🔍 Scan Alle URLs
+            </button>
+            <button onclick="selectAllGmapsLeads()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
+              ✅ Selecteer Alles
+            </button>
+          </div>
+        </div>
+
+        <div id="gmaps-leads-list" class="space-y-3 max-h-96 overflow-y-auto">
+          <!-- Dynamically filled -->
+        </div>
+
+        <div class="mt-6 pt-6 border-t border-gray-700">
+          <button onclick="addSelectedGmapsToLeaderboard()" id="add-gmaps-btn" class="w-full py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 rounded-lg font-bold text-lg">
+            ✅ Voeg <span id="selected-gmaps-count">0</span> Geselecteerde Toe aan Leaderboard
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Additions -->
+  <div class="bg-gray-800 rounded-lg p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-xl font-bold">📊 Recent Toegevoegd aan Leaderboard</h3>
+      <button onclick="loadRecentLeads()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg text-sm font-semibold">
+        🔄 Refresh
+      </button>
+    </div>
+    
+    <div id="recent-leads-list" class="space-y-3">
+      <div class="text-center py-8 text-gray-400">
+        <div class="text-4xl mb-2">📋</div>
+        <p>Geen recente toevoegingen</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================
+     JAVASCRIPT
+     ============================================ -->
+<script>
+// Lead Scanner State
+let currentMode = 'single';
+let singleLeadData = null;
+let gmapsLeads = [];
+let selectedGmapsLeads = new Set();
+
+// Switch mode
+function switchLeadMode(mode) {
+  currentMode = mode;
+  
+  if (mode === 'single') {
+    document.getElementById('single-url-mode').classList.remove('hidden');
+    document.getElementById('google-maps-mode').classList.add('hidden');
+    document.getElementById('mode-single-btn').className = 'flex-1 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-lg font-bold text-lg transition-all';
+    document.getElementById('mode-maps-btn').className = 'flex-1 py-4 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold text-lg transition-all';
+  } else {
+    document.getElementById('single-url-mode').classList.add('hidden');
+    document.getElementById('google-maps-mode').classList.remove('hidden');
+    document.getElementById('mode-single-btn').className = 'flex-1 py-4 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold text-lg transition-all';
+    document.getElementById('mode-maps-btn').className = 'flex-1 py-4 bg-gradient-to-r from-orange-600 to-red-600 rounded-lg font-bold text-lg transition-all';
   }
+}
+
+// ============================================
+// SINGLE URL FUNCTIONS
+// ============================================
+
+async function scanSingleURL() {
+  const url = document.getElementById('single-url-input').value.trim();
+  const companyHint = document.getElementById('single-company-input').value.trim();
+  
+  if (!url) return alert('❌ Voer een URL in');
+  if (!url.startsWith('http')) return alert('❌ URL moet beginnen met http:// of https://');
+  
+  const btn = document.getElementById('scan-single-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="inline-block animate-spin mr-2">⏳</div> Scanning...';
   
   try {
-    console.log('🔍 Starting Google Maps scraping...');
-    
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--disable-gpu',
-        '--window-size=1920x1080'
-      ]
+    const response = await fetch('/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
     });
     
-    const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+    const data = await response.json();
     
-    console.log('📍 Loading Google Maps URL...');
-    await page.goto(google_maps_url, { 
-      waitUntil: 'networkidle2',
-      timeout: 30000 
-    });
-    
-    // Wait for results to load
-    await page.waitForTimeout(5000);
-    
-    // Scroll to load more results
-    console.log('📜 Scrolling to load results...');
-    for (let i = 0; i < 3; i++) {
-      await page.evaluate(() => {
-        const scrollableDiv = document.querySelector('[role="feed"]');
-        if (scrollableDiv) {
-          scrollableDiv.scrollTop = scrollableDiv.scrollHeight;
-        }
-      });
-      await page.waitForTimeout(2000);
+    if (data.success) {
+      singleLeadData = {
+        url: url,
+        score: data.score,
+        quality: data.quality || getQualityFromScore(data.score),
+        scanned_at: new Date().toISOString()
+      };
+      
+      showSingleScanResult(singleLeadData, companyHint);
+      
+      document.getElementById('single-url-input').value = '';
+      document.getElementById('single-company-input').value = '';
+    } else {
+      alert('❌ Scan mislukt: ' + (data.error || 'Onbekende fout'));
     }
-    
-    // Extract leads
-    console.log('📊 Extracting leads...');
-    const leads = await page.evaluate(() => {
-      const results = [];
-      const items = document.querySelectorAll('[role="article"]');
-      
-      items.forEach(item => {
-        try {
-          // Get company name
-          const nameEl = item.querySelector('[class*="fontHeadlineSmall"]');
-          const name = nameEl ? nameEl.textContent.trim() : null;
-          
-          // Get website
-          const linkEl = item.querySelector('a[data-value="Website"]');
-          const website = linkEl ? linkEl.href : null;
-          
-          // Get address
-          const addressEl = item.querySelector('[class*="fontBodyMedium"]:not([class*="fontHeadlineSmall"])');
-          const address = addressEl ? addressEl.textContent.trim() : null;
-          
-          // Get rating
-          const ratingEl = item.querySelector('[role="img"][aria-label*="stars"]');
-          const rating = ratingEl ? ratingEl.getAttribute('aria-label') : null;
-          
-          // Get phone
-          const phoneEl = item.querySelector('[data-tooltip*="Copy phone number"]');
-          const phone = phoneEl ? phoneEl.getAttribute('data-tooltip').replace('Copy phone number: ', '') : null;
-          
-          if (name && website) {
-            results.push({
-              name,
-              website,
-              address,
-              rating,
-              phone,
-              source: 'Google Maps',
-              scraped_at: new Date().toISOString()
-            });
-          }
-        } catch (err) {
-          console.error('Error extracting item:', err);
-        }
-      });
-      
-      return results;
-    });
-    
-    await browser.close();
-    
-    console.log(`✅ Found ${leads.length} leads`);
-    
-    // Save to database (optional)
-    // You can save to a 'leads' table if needed
-    
-    return res.json({
-      success: true,
-      leads: leads,
-      total: leads.length,
-      message: `Successfully scraped ${leads.length} leads from Google Maps`
-    });
-    
   } catch (error) {
-    console.error('❌ Google Maps scraping error:', error);
-    return res.json({
-      success: false,
-      error: error.message
-    });
+    console.error('Scan error:', error);
+    alert('❌ Netwerk fout bij scannen');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🔍 Scan URL';
   }
-});
+}
 
-// Bulk scan leads
-app.post('/api/admin/lead-scanner/bulk-scan', async (req, res) => {
-  const { leads } = req.body; // Array of { name, website }
+function showSingleScanResult(data, companyHint) {
+  document.getElementById('single-score-display').textContent = data.score;
+  document.getElementById('single-scanned-url').textContent = data.url;
+  document.getElementById('single-company-name').value = companyHint || extractDomainName(data.url);
+  document.getElementById('single-score-input').value = data.score;
+  document.getElementById('single-country').value = '';
   
-  if (!leads || !Array.isArray(leads)) {
-    return res.json({ success: false, error: 'Invalid leads array' });
+  document.getElementById('single-scan-result').classList.remove('hidden');
+  document.getElementById('single-scan-result').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function addSingleToLeaderboard() {
+  if (!singleLeadData) return alert('❌ Geen scan data');
+  
+  const companyName = document.getElementById('single-company-name').value.trim();
+  const country = document.getElementById('single-country').value;
+  
+  if (!companyName) {
+    alert('❌ Bedrijfsnaam is verplicht');
+    return document.getElementById('single-company-name').focus();
   }
   
-  const results = [];
+  if (!country) {
+    alert('❌ Land is verplicht');
+    return document.getElementById('single-country').focus();
+  }
   
-  for (const lead of leads) {
+  if (!confirm(`Voeg toe?\n\n${companyName}\n${country}\n${singleLeadData.score}/100`)) return;
+  
+  try {
+    const response = await fetch('/api/admin/leaderboard/add-direct', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-key': localStorage.getItem('admin_id')
+      },
+      body: JSON.stringify({
+        url: singleLeadData.url,
+        company_name: companyName,
+        country: country,
+        score: singleLeadData.score,
+        type: 'agency',
+        is_approved: true,
+        added_by_admin: true
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      alert(`✅ Toegevoegd!\n\n${companyName} - ${singleLeadData.score}/100`);
+      cancelSingleScan();
+      loadRecentLeads();
+      if (typeof loadLeaderboard === 'function') loadLeaderboard();
+    } else {
+      alert('❌ Fout: ' + (result.error || 'Onbekend'));
+    }
+  } catch (error) {
+    alert('❌ Netwerk fout');
+  }
+}
+
+function cancelSingleScan() {
+  singleLeadData = null;
+  document.getElementById('single-scan-result').classList.add('hidden');
+}
+
+// ============================================
+// GOOGLE MAPS FUNCTIONS
+// ============================================
+
+async function scrapeGoogleMaps() {
+  const url = document.getElementById('gmaps-url-input').value.trim();
+  
+  if (!url) return alert('❌ Voer een Google Maps URL in');
+  if (!url.includes('google.com/maps/search')) {
+    return alert('❌ Dit is geen Google Maps zoek-URL');
+  }
+  
+  const btn = document.getElementById('scrape-gmaps-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="inline-block animate-spin mr-2">⏳</div> Scraping... (30-60 sec)';
+  
+  try {
+    const response = await fetch('/api/admin/lead-scanner/google-maps', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-key': localStorage.getItem('admin_id')
+      },
+      body: JSON.stringify({ google_maps_url: url })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success && data.leads) {
+      gmapsLeads = data.leads;
+      renderGmapsLeads();
+      document.getElementById('gmaps-leads-container').classList.remove('hidden');
+      document.getElementById('gmaps-url-input').value = '';
+    } else {
+      alert('❌ Scraping mislukt: ' + (data.error || 'Geen resultaten'));
+    }
+  } catch (error) {
+    console.error('Scrape error:', error);
+    alert('❌ Netwerk fout bij scrapen');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🗺️ Scrape Google Maps';
+  }
+}
+
+function renderGmapsLeads() {
+  document.getElementById('gmaps-leads-count').textContent = gmapsLeads.length;
+  
+  const container = document.getElementById('gmaps-leads-list');
+  container.innerHTML = gmapsLeads.map((lead, index) => `
+    <div class="bg-gray-700 p-4 rounded-lg border-2 ${selectedGmapsLeads.has(index) ? 'border-green-500' : 'border-gray-600'}">
+      <div class="flex items-start gap-4">
+        <input 
+          type="checkbox" 
+          ${selectedGmapsLeads.has(index) ? 'checked' : ''}
+          onchange="toggleGmapsLead(${index})"
+          class="mt-1 w-5 h-5 cursor-pointer"
+        >
+        
+        <div class="flex-1">
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">Bedrijfsnaam *</label>
+              <input 
+                type="text" 
+                value="${lead.name || ''}"
+                onchange="updateGmapsLead(${index}, 'name', this.value)"
+                class="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded text-white text-sm"
+              >
+            </div>
+            
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">Land *</label>
+              <select 
+                onchange="updateGmapsLead(${index}, 'country', this.value)"
+                class="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded text-white text-sm"
+              >
+                <option value="">Selecteer...</option>
+                <option value="Netherlands">🇳🇱 Netherlands</option>
+                <option value="Belgium">🇧🇪 Belgium</option>
+                <option value="Germany">🇩🇪 Germany</option>
+                <option value="France">🇫🇷 France</option>
+                <option value="United Kingdom">🇬🇧 UK</option>
+                <option value="United States">🇺🇸 USA</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="mt-2 text-xs">
+            <p class="text-blue-400">${lead.website || 'Geen website'}</p>
+            ${lead.address ? `<p class="text-gray-400">${lead.address}</p>` : ''}
+            ${lead.rating ? `<p class="text-yellow-400">${lead.rating}</p>` : ''}
+            ${lead.score ? `<p class="text-green-400">Score: ${lead.score}/100</p>` : ''}
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+  
+  updateGmapsSelectedCount();
+}
+
+function toggleGmapsLead(index) {
+  if (selectedGmapsLeads.has(index)) {
+    selectedGmapsLeads.delete(index);
+  } else {
+    selectedGmapsLeads.add(index);
+  }
+  renderGmapsLeads();
+}
+
+function selectAllGmapsLeads() {
+  gmapsLeads.forEach((_, index) => selectedGmapsLeads.add(index));
+  renderGmapsLeads();
+}
+
+function updateGmapsLead(index, field, value) {
+  gmapsLeads[index][field] = value;
+}
+
+function updateGmapsSelectedCount() {
+  document.getElementById('selected-gmaps-count').textContent = selectedGmapsLeads.size;
+}
+
+async function scanAllGmapsLeads() {
+  if (!confirm(`Scan ${gmapsLeads.length} URLs? Dit duurt ${gmapsLeads.length * 2} seconden.`)) return;
+  
+  const btn = document.getElementById('scan-all-gmaps-btn');
+  btn.disabled = true;
+  
+  let scanned = 0;
+  for (let i = 0; i < gmapsLeads.length; i++) {
+    const lead = gmapsLeads[i];
+    if (!lead.website || lead.website === 'Geen website') continue;
+    
+    btn.textContent = `🔍 Scanning... ${i+1}/${gmapsLeads.length}`;
+    
     try {
-      // Scan each website
-      const scanResponse = await fetch('http://localhost:3000/api/scan', {
+      const response = await fetch('/api/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: lead.website })
       });
       
-      const scanData = await scanResponse.json();
-      
-      results.push({
-        name: lead.name,
-        website: lead.website,
-        score: scanData.score || 0,
-        scanned: scanData.success || false
+      const data = await response.json();
+      if (data.success) {
+        gmapsLeads[i].score = data.score;
+        scanned++;
+      }
+    } catch (error) {
+      console.error('Scan error:', error);
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+  
+  btn.disabled = false;
+  btn.textContent = '🔍 Scan Alle URLs';
+  alert(`✅ ${scanned}/${gmapsLeads.length} gescand!`);
+  renderGmapsLeads();
+}
+
+async function addSelectedGmapsToLeaderboard() {
+  const selected = Array.from(selectedGmapsLeads).map(i => gmapsLeads[i]);
+  
+  if (selected.length === 0) return alert('❌ Selecteer minimaal 1 lead');
+  
+  const incomplete = selected.filter(l => !l.name || !l.country);
+  if (incomplete.length > 0) {
+    return alert(`❌ ${incomplete.length} leads missen naam of land!`);
+  }
+  
+  if (!confirm(`Voeg ${selected.length} leads toe aan leaderboard?`)) return;
+  
+  const btn = document.getElementById('add-gmaps-btn');
+  btn.disabled = true;
+  
+  let added = 0;
+  for (const lead of selected) {
+    try {
+      const response = await fetch('/api/admin/leaderboard/add-direct', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-key': localStorage.getItem('admin_id')
+        },
+        body: JSON.stringify({
+          url: lead.website,
+          company_name: lead.name,
+          country: lead.country,
+          score: lead.score || 0,
+          type: 'agency',
+          is_approved: true,
+          added_by_admin: true
+        })
       });
       
-      // Small delay between scans
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-    } catch (err) {
-      results.push({
-        name: lead.name,
-        website: lead.website,
-        score: 0,
-        scanned: false,
-        error: err.message
-      });
+      if (response.ok) added++;
+    } catch (error) {
+      console.error('Add error:', error);
     }
   }
   
-  return res.json({
-    success: true,
-    results: results,
-    total: results.length,
-    successful: results.filter(r => r.scanned).length
-  });
-});
+  btn.disabled = false;
+  alert(`✅ ${added}/${selected.length} toegevoegd!`);
+  
+  gmapsLeads = [];
+  selectedGmapsLeads.clear();
+  document.getElementById('gmaps-leads-container').classList.add('hidden');
+  loadRecentLeads();
+  if (typeof loadLeaderboard === 'function') loadLeaderboard();
+}
+
+// ============================================
+// SHARED FUNCTIONS
+// ============================================
+
+function extractDomainName(url) {
+  try {
+    const domain = new URL(url).hostname.replace('www.', '');
+    const parts = domain.split('.');
+    return parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+  } catch {
+    return '';
+  }
+}
+
+function getQualityFromScore(score) {
+  if (score >= 90) return 'Excellent';
+  if (score >= 75) return 'Good';
+  if (score >= 60) return 'Average';
+  return 'Poor';
+}
+
+async function loadRecentLeads() {
+  try {
+    const response = await fetch('/api/admin/leaderboard/recent?limit=10', {
+      headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+    });
+    
+    const data = await response.json();
+    const container = document.getElementById('recent-leads-list');
+    
+    if (!data.success || !data.entries || data.entries.length === 0) {
+      container.innerHTML = '<div class="text-center py-8 text-gray-400"><div class="text-4xl mb-2">📋</div><p>Geen recente toevoegingen</p></div>';
+      return;
+    }
+    
+    container.innerHTML = data.entries.map(entry => {
+      const date = new Date(entry.created_at).toLocaleString('nl-NL', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      
+      return `
+        <div class="lead-card p-4 rounded-lg">
+          <div class="flex items-center justify-between">
+            <div class="flex-1">
+              <div class="flex items-center gap-3 mb-2">
+                <h4 class="text-lg font-bold">${entry.company_name || 'Unknown'}</h4>
+                <span class="score-badge ${entry.score >= 80 ? 'score-high' : entry.score >= 60 ? 'score-medium' : 'score-low'}">
+                  ${entry.score}/100
+                </span>
+                <span class="text-sm px-3 py-1 bg-gray-700 rounded-full">${entry.country}</span>
+              </div>
+              <p class="text-sm text-blue-400 mb-1">${entry.url}</p>
+              <p class="text-xs text-gray-500">${date}</p>
+            </div>
+            <button onclick="deleteLeaderboardEntry(${entry.id})" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold">
+              🗑️
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (error) {
+    console.error('Load recent error:', error);
+  }
+}
+
+async function deleteLeaderboardEntry(id) {
+  if (!confirm('Verwijder dit item?')) return;
+  
+  try {
+    const response = await fetch(`/api/admin/leaderboard/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'x-admin-key': localStorage.getItem('admin_id'),
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (response.ok) {
+      alert('✅ Verwijderd!');
+      loadRecentLeads();
+      if (typeof loadLeaderboard === 'function') loadLeaderboard();
+    }
+  } catch (error) {
+    console.error('Delete error:', error);
+  }
+}
+
+function refreshLeadScanner() {
+  cancelSingleScan();
+  gmapsLeads = [];
+  selectedGmapsLeads.clear();
+  document.getElementById('gmaps-leads-container').classList.add('hidden');
+  loadRecentLeads();
+  alert('✅ Refreshed!');
+}
+
+// Auto-load on tab open
+if (typeof loadRecentLeads === 'function') {
+  loadRecentLeads();
+}
+</script>
+
+<style>
+.lead-card {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid #334155;
+  transition: all 0.3s;
+}
+.lead-card:hover {
+  border-color: #8b5cf6;
+  transform: translateY(-2px);
+}
+.score-badge {
+  font-size: 14px;
+  font-weight: bold;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+.score-high { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; }
+.score-medium { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; }
+.score-low { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; }
+</style>
+      
         <div id="scan-progress-container" class="hidden bg-gray-800 rounded-lg p-6">
           <h3 class="text-xl font-bold mb-4">Scan Progress</h3>
           <div class="mb-4">
