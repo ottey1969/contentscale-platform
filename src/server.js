@@ -341,8 +341,17 @@ function extractContentForAI(fetchResult) {
 // PUBLIC SCANNER API — AI-POWERED SCORING (FIXED)
 // Uses rawHtml for technical checks, extractedContent for AI
 // ============================================
+app.post('/api/scan', async (req, res) => {
+  const { url, shareKey } = req.body;
 
+  if (!url) {
+    return res.status(400).json({ success: false, error: 'URL required' });
+  }
 
+  let scanUrl = url;
+  if (!scanUrl.startsWith('http://') && !scanUrl.startsWith('https://')) {
+    scanUrl = 'https://' + scanUrl;
+  }
 
   // ============================================
   // SHARELINK ENFORCEMENT
@@ -462,7 +471,7 @@ function extractContentForAI(fetchResult) {
     // ============================================
     // USE EXTRACTED CONTENT FOR AI SCORING
     // ============================================
-    const contentHash = hashContent(rawHtml);  // Still hash raw HTML for caching
+    const contentHash = hashContent(rawHtml);
     let graafScore, craftScore, graafItems, craftItems, aiRecommendations, scoringMethod;
 
     const cached = scanCache.get(contentHash);
@@ -480,7 +489,6 @@ function extractContentForAI(fetchResult) {
           throw new Error('ANTHROPIC_API_KEY not configured');
         }
 
-        // Extract content for AI (uses extractedContent if available, else processes rawHtml)
         const contentForAI = extractContentForAI(fetchResult);
         console.log(`🤖 AI scoring ${scanUrl}...`);
         const aiResult = await scoreWithAI(contentForAI);
@@ -520,7 +528,6 @@ function extractContentForAI(fetchResult) {
         console.error(`⚠️ AI scoring failed, using regex fallback: ${aiError.message}`);
         scoringMethod = 'fallback';
 
-        // === REGEX FALLBACK (uses RAW HTML) ===
         graafItems = {
           credibility: (hasQuotes ? 8 : 0) + (hasAuthor ? 8 : 0),
           relevance: Math.min(18, Math.floor(wordCount / 100)),
@@ -549,11 +556,11 @@ function extractContentForAI(fetchResult) {
     console.log(`\n🎯 SCAN COMPLETE: ${scanUrl}`);
     console.log(`   Method: ${scoringMethod.toUpperCase()}`);
     console.log(`   Score: ${totalScore}/100 (${quality})`);
-    console.log(`   └─ GRAAF: ${graafScore}/50 (${scoringMethod === 'fallback' ? 'regex' : 'AI'})`);
-    console.log(`   └─ CRAFT: ${craftScore}/30 (${scoringMethod === 'fallback' ? 'regex' : 'AI'})`);
-    console.log(`   └─ Technical: ${technicalScore}/20 (regex)\n`);
+    console.log(`   └─ GRAAF: ${graafScore}/50`);
+    console.log(`   └─ CRAFT: ${craftScore}/30`);
+    console.log(`   └─ Technical: ${technicalScore}/20\n`);
 
-    // === TECHNICAL RECOMMENDATIONS (based on RAW HTML) ===
+    // === TECHNICAL RECOMMENDATIONS ===
     const techRecommendations = [];
 
     if (!metaDesc) {
@@ -561,22 +568,11 @@ function extractContentForAI(fetchResult) {
         type: 'quickwin',
         category: 'Technical SEO',
         title: 'Add Meta Description',
-        description: 'Missing meta description. Critical for search click-through rate.',
+        description: 'Missing meta description.',
         impact: 'High',
         points: '+4 points',
-        howToFix: '1. Write a 150-160 character description\n2. Include your primary target keyword\n3. Add a compelling call-to-action',
-        example: '<meta name="description" content="Learn proven SEO content strategies with our framework. Boost organic rankings in 90 days. Start your free audit today.">'
-      });
-    } else if (metaDesc.length <= 50) {
-      techRecommendations.push({
-        type: 'quickwin',
-        category: 'Technical SEO',
-        title: 'Expand Meta Description',
-        description: `Current meta description is only ${metaDesc.length} characters. Aim for 150-160.`,
-        impact: 'Medium',
-        points: '+2 points',
-        howToFix: '1. Rewrite to 150-160 characters\n2. Include target keyword near the start\n3. End with a clear call-to-action',
-        example: '<meta name="description" content="[Your keyword] guide covering [topic]. Includes [specific value]. [Call to action] — start today.">'
+        howToFix: '1. Write 150-160 chars\n2. Include keyword\n3. Add CTA',
+        example: '<meta name="description" content="...">'
       });
     }
 
@@ -585,10 +581,10 @@ function extractContentForAI(fetchResult) {
         type: 'quickwin',
         category: 'Technical SEO',
         title: 'Add Mobile Viewport',
-        description: 'Missing viewport meta tag. Required for proper mobile rendering.',
+        description: 'Missing viewport tag.',
         impact: 'High',
         points: '+3 points',
-        howToFix: '1. Add the viewport meta tag inside your <head>\n2. Test the page on mobile devices\n3. Verify responsive layout works correctly',
+        howToFix: '1. Add viewport tag\n2. Test mobile\n3. Verify responsive',
         example: '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
       });
     }
@@ -598,34 +594,18 @@ function extractContentForAI(fetchResult) {
         type: 'quickwin',
         category: 'Technical SEO',
         title: 'Add Schema Markup',
-        description: 'No structured data (JSON-LD) found. Schema enables rich snippets in search results.',
+        description: 'No structured data found.',
         impact: 'Medium',
         points: '+3 points',
-        howToFix: '1. Add Article or HowTo schema as JSON-LD\n2. Include headline, author, and datePublished\n3. Test with Google Rich Results Test',
-        example: '<script type="application/ld+json">{ "@context": "https://schema.org", "@type": "Article", "headline": "Your Title", "author": { "@type": "Person", "name": "Author Name" } }</script>'
+        howToFix: '1. Add JSON-LD schema\n2. Include author\n3. Test with Google',
+        example: '<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article"}</script>'
       });
     }
 
-    if (allImages > 0 && imagesWithAlt < allImages) {
-      const missing = allImages - imagesWithAlt;
-      techRecommendations.push({
-        type: 'quickwin',
-        category: 'Technical SEO',
-        title: 'Add Alt Text to Images',
-        description: `${missing} of ${allImages} images are missing alt text. Required for accessibility and image search.`,
-        impact: 'Medium',
-        points: '+2 points',
-        howToFix: '1. Add descriptive alt text to every image\n2. Include relevant keywords naturally\n3. Describe what the image actually shows',
-        example: '<img src="seo-chart.jpg" alt="SEO ranking improvement chart showing 40% traffic increase over 90 days">'
-      });
-    }
-
-    // === MERGE AI + TECHNICAL RECOMMENDATIONS ===
     const allRecommendations = [...(aiRecommendations || []), ...techRecommendations];
     const quickWins = allRecommendations.filter(r => r.type === 'quickwin');
     const majorImprovements = allRecommendations.filter(r => r.type === 'major');
 
-    // === BUILD RESPONSE ===
     const scanResult = {
       success: true,
       url: scanUrl,
@@ -689,26 +669,19 @@ function extractContentForAI(fetchResult) {
       timestamp: new Date().toISOString()
     };
 
-    // Save to DB
     try {
       await pool.query(
         `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, breakdown, recommendations, scan_type)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
         [scanUrl, totalScore, quality, graafScore, craftScore, technicalScore, JSON.stringify(scanResult.breakdown), JSON.stringify(scanResult.recommendations), 'manual']
       );
-      console.log(`✅ Scan saved: ${scanUrl} (Score: ${totalScore}, Method: ${scoringMethod})`);
     } catch (dbError) {
-      console.error('DB save error (non-fatal):', dbError.message);
+      console.error('DB save error:', dbError.message);
     }
 
-    // Increment sharelink usage
     if (shareKey) {
       try {
-        await pool.query(
-          'UPDATE share_links SET scans_used = scans_used + 1 WHERE share_code = $1',
-          [shareKey]
-        );
-        console.log(`📊 Sharelink usage updated: ${shareKey}`);
+        await pool.query('UPDATE share_links SET scans_used = scans_used + 1 WHERE share_code = $1', [shareKey]);
       } catch (error) {
         console.error('Sharelink update error:', error);
       }
@@ -724,7 +697,7 @@ function extractContentForAI(fetchResult) {
   }
 });
 
-const AI_SCORING_PROMPT = `You are an SEO content quality scorer. Analyze the content using GRAAF and CRAFT frameworks. Be fair but honest.
+Analyze the content using GRAAF and CRAFT frameworks. Be fair but honest.
 
 CONTENT FORMAT: You'll see markers like [H1], [H2], [H3], and • for lists. These ARE structure - count them.
 
