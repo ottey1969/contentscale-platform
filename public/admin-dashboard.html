@@ -521,9 +521,9 @@
         </div>
 
         <div class="mt-4 flex gap-2">
-          <button onclick="deleteSelectedShareLinks()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
-        </div>
-      </div>
+  <button onclick="deleteSelectedShareLinks()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
+  <button onclick="deleteInvalidShareLinks()" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold">🧹 Clean Invalid Links</button>
+</div>
 
       <!-- Leaderboard Tab -->
       <div id="tab-leaderboard" class="tab-content hidden">
@@ -2037,7 +2037,7 @@
       }
     }
 
-    async function deleteShareLink(code) {
+  async function deleteShareLink(code) {
   // Extract token from the URL if needed
   let token = code;
   
@@ -2053,6 +2053,13 @@
   }
   
   if (!token || token === 'undefined' || token === '') {
+    // Try to get the row's data ID from a hidden field or data attribute
+    const row = document.querySelector(`[data-row-id="${code}"]`);
+    if (row && row.dataset.id) {
+      // Use the database ID instead
+      return deleteShareLinkById(row.dataset.id);
+    }
+    
     alert('❌ Invalid share link code');
     return;
   }
@@ -2061,6 +2068,31 @@
   
   try {
     const response = await fetch(`/api/admin/share-links/${token}`, {
+      method: 'DELETE',
+      headers: { 
+        'x-admin-key': localStorage.getItem('admin_id'),
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (response.ok) {
+      alert('✅ Share link deleted!');
+      loadShareLinks();
+    } else {
+      const data = await response.json();
+      alert('❌ Failed to delete: ' + (data.error || 'Unknown error'));
+    }
+  } catch (error) {
+    alert('❌ Error deleting share link');
+  }
+}
+
+// Helper function to delete by database ID
+async function deleteShareLinkById(id) {
+  if (!confirm('Delete this link?')) return;
+  
+  try {
+    const response = await fetch(`/api/admin/share-links-by-id/${id}`, {
       method: 'DELETE',
       headers: { 
         'x-admin-key': localStorage.getItem('admin_id'),
@@ -2278,6 +2310,8 @@
       document.getElementById(id).classList.add('hidden');
     }
 
+    
+
     async function searchLeaderboard() {
       const query = document.getElementById('leaderboard-search').value;
       if (!query) {
@@ -2335,6 +2369,74 @@
         alert('❌ Error');
       }
     }
+    async function deleteInvalidShareLinks() {
+  if (!confirm('❌ Delete all share links with invalid tokens?\n\nThis will remove all share links that have empty or undefined tokens.')) {
+    return;
+  }
+  
+  try {
+    // First, load current share links
+    const response = await fetch('/api/admin/share-links', {
+      headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+    });
+    const data = await response.json();
+    
+    if (!data.success || !data.share_links) {
+      alert('❌ Failed to load share links');
+      return;
+    }
+    
+    // Filter invalid links (those without tokens)
+    const invalidLinks = data.share_links.filter(link => !link.token || link.token === 'undefined');
+    
+    if (invalidLinks.length === 0) {
+      alert('✅ No invalid share links found!');
+      return;
+    }
+    
+    alert(`Found ${invalidLinks.length} invalid share links to delete.`);
+    
+    // Delete each invalid link
+    let deletedCount = 0;
+    let failedCount = 0;
+    
+    for (const link of invalidLinks) {
+      try {
+        // Try to delete using the DB ID if available
+        if (link.id) {
+          const deleteResponse = await fetch(`/api/admin/share-links/${link.id}`, {
+            method: 'DELETE',
+            headers: { 
+              'x-admin-key': localStorage.getItem('admin_id'),
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (deleteResponse.ok) {
+            deletedCount++;
+          } else {
+            failedCount++;
+          }
+        } else {
+          failedCount++; // No ID to delete with
+        }
+        
+        // Wait a bit between deletions
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        failedCount++;
+        console.error('Error deleting link:', error);
+      }
+    }
+    
+    alert(`✅ Cleanup Complete!\n\nDeleted: ${deletedCount} invalid links\nFailed: ${failedCount} links`);
+    loadShareLinks(); // Refresh the list
+    
+  } catch (error) {
+    console.error('Cleanup error:', error);
+    alert('❌ Error during cleanup: ' + error.message);
+  }
+}
 
     // Stub functions
     function loadBlogPosts() {}
