@@ -697,7 +697,7 @@ app.post('/api/scan', async (req, res) => {
   }
 });
 
-Analyze the content using GRAAF and CRAFT frameworks. Be fair but honest.
+const AI_SCORING_PROMPT = `You are an SEO content quality scorer. Analyze the content using GRAAF and CRAFT frameworks. Be fair but honest.
 
 CONTENT FORMAT: You'll see markers like [H1], [H2], [H3], and • for lists. These ARE structure - count them.
 
