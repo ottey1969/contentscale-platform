@@ -3,11 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
-  
   <title>Super Admin Dashboard - ContentScale</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -21,16 +16,16 @@
     .stat-card {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     }
-    input[type="checkbox"] {
-      cursor: pointer;
-      width: 18px;
-      height: 18px;
-    }
     .return-btn {
       position: sticky;
       top: 140px;
       z-index: 30;
       margin-bottom: 20px;
+    }
+    .quick-actions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
     }
   </style>
 </head>
@@ -48,22 +43,11 @@
       <p class="text-gray-400 text-center mb-6">ContentScale Platform Control Center</p>
       
       <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-300 mb-2">Username</label>
-          <input type="text" id="login-username" 
-            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
-            placeholder="Enter username">
-        </div>
-        
-        <div>
-          <label class="block text-sm font-medium text-gray-300 mb-2">Password</label>
-          <input type="password" id="login-password" 
-            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
-            placeholder="Enter password">
-        </div>
-        
-        <button onclick="login()" id="login-btn"
-          class="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg font-semibold transition-all transform hover:scale-105">
+        <input type="text" id="login-username" placeholder="Username"
+          class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="password" id="login-password" placeholder="Password"
+          class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <button onclick="login()" class="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg font-semibold">
           Login
         </button>
       </div>
@@ -86,73 +70,37 @@
         </div>
         <div class="flex items-center space-x-4">
           <span class="text-sm text-gray-400">
-            Logged in as: <span class="text-blue-400 font-semibold" id="admin-username"></span>
+            <span class="text-blue-400 font-semibold" id="admin-username"></span>
           </span>
-          <button onclick="logout()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold transition-all">
+          <button onclick="logout()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold">
             Logout
           </button>
         </div>
       </div>
     </header>
 
-    <!-- Navigation Tabs (ALPHABETICAL ORDER) -->
+    <!-- Navigation Tabs (ALPHABETICAL) -->
     <nav class="bg-gray-800 border-b border-gray-700 sticky top-[73px] z-40">
       <div class="max-w-7xl mx-auto px-4">
         <div class="flex space-x-1 overflow-x-auto">
-          <button onclick="switchTab('overview')" class="tab-button active px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap">
-            📊 Overview
-          </button>
-          <button onclick="switchTab('admins')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            👥 Admins
-          </button>
-          <button onclick="switchTab('agencies')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🏢 Agencies
-          </button>
-          <button onclick="switchTab('blog')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            📝 Blog
-          </button>
-          <button onclick="switchTab('claims')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🏢 Claims
-          </button>
-          <button onclick="switchTab('clients')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            👤 Clients
-          </button>
-          <button onclick="switchTab('code-generators')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🎨 Code Generators
-          </button>
-          <button onclick="switchTab('contentscore')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            📊 ContentScore
-          </button>
-          <button onclick="switchTab('email-notifications')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            📧 Email
-          </button>
-          <button onclick="switchTab('freelancers')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            💼 Freelancers
-          </button>
-          <button onclick="switchTab('handleiding')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            📚 Handleiding
-          </button>
-          <button onclick="switchTab('lead-scanner')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🎯 Lead Scanner
-          </button>
-          <button onclick="switchTab('leaderboard')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🏆 Leaderboard
-          </button>
-          <button onclick="switchTab('ltd')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            💰 LTD
-          </button>
-          <button onclick="switchTab('opt-out')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🚫 Opt-Out
-          </button>
-          <button onclick="switchTab('scans')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🔍 Scans
-          </button>
-          <button onclick="switchTab('settings')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            ⚙️ Settings
-          </button>
-          <button onclick="switchTab('share-links')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🔗 Share Links
-          </button>
+          <button onclick="switchTab('overview')" class="tab-button active px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap">📊 Overview</button>
+          <button onclick="switchTab('admins')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">👥 Admins</button>
+          <button onclick="switchTab('agencies')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">🏢 Agencies</button>
+          <button onclick="switchTab('blog')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">📝 Blog</button>
+          <button onclick="switchTab('claims')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">🏢 Claims</button>
+          <button onclick="switchTab('clients')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">👤 Clients</button>
+          <button onclick="switchTab('code-generators')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">🎨 Code Gen</button>
+          <button onclick="switchTab('contentscore')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">📊 ContentScore</button>
+          <button onclick="switchTab('email')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">📧 Email</button>
+          <button onclick="switchTab('freelancers')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">💼 Freelancers</button>
+          <button onclick="switchTab('handleiding')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">📚 Guide</button>
+          <button onclick="switchTab('lead-scanner')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">🎯 Lead Scanner</button>
+          <button onclick="switchTab('leaderboard')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">🏆 Leaderboard</button>
+          <button onclick="switchTab('ltd')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">💰 LTD</button>
+          <button onclick="switchTab('opt-out')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">🚫 Opt-Out</button>
+          <button onclick="switchTab('scans')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">🔍 Scans</button>
+          <button onclick="switchTab('settings')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">⚙️ Settings</button>
+          <button onclick="switchTab('share-links')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">🔗 Share Links</button>
         </div>
       </div>
     </nav>
@@ -207,165 +155,115 @@
           </div>
         </div>
 
-        <!-- Quick Actions -->
-        <div class="bg-gray-800 rounded-lg p-6 shadow-lg mb-8">
-          <h3 class="text-xl font-bold mb-4">Quick Actions</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <button onclick="switchTab('agencies')" class="p-4 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-all">
-              ➕ Add Agency
-            </button>
-            <button onclick="switchTab('admins')" class="p-4 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all">
-              👤 Add Helper
-            </button>
-            <button onclick="switchTab('share-links')" class="p-4 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all">
-              🔗 Create Share Link
-            </button>
-            <button onclick="switchTab('freelancers')" class="p-4 bg-pink-600 hover:bg-pink-700 rounded-lg font-semibold transition-all">
-              💼 Manage Freelancers
-            </button>
-          </div>
-        </div>
-
-        <!-- Platform Health -->
+        <!-- Quick Actions (ALL TABS) -->
         <div class="bg-gray-800 rounded-lg p-6 shadow-lg">
-          <h3 class="text-xl font-bold mb-4">Platform Health</h3>
-          <div class="space-y-3">
-            <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
-              <span>Database Connection</span>
-              <span class="text-green-400 font-semibold">✅ Connected</span>
-            </div>
-            <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
-              <span>API Status</span>
-              <span class="text-green-400 font-semibold">✅ Operational</span>
-            </div>
+          <h3 class="text-xl font-bold mb-4">Quick Actions - All Tabs</h3>
+          <div class="quick-actions-grid">
+            <button onclick="switchTab('admins')" class="p-4 bg-green-600 hover:bg-green-700 rounded-lg font-semibold text-sm">👥 Admins</button>
+            <button onclick="switchTab('agencies')" class="p-4 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-sm">🏢 Agencies</button>
+            <button onclick="switchTab('blog')" class="p-4 bg-yellow-600 hover:bg-yellow-700 rounded-lg font-semibold text-sm">📝 Blog</button>
+            <button onclick="switchTab('claims')" class="p-4 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold text-sm">🏢 Claims</button>
+            <button onclick="switchTab('clients')" class="p-4 bg-cyan-600 hover:bg-cyan-700 rounded-lg font-semibold text-sm">👤 Clients</button>
+            <button onclick="switchTab('code-generators')" class="p-4 bg-pink-600 hover:bg-pink-700 rounded-lg font-semibold text-sm">🎨 Code Gen</button>
+            <button onclick="switchTab('contentscore')" class="p-4 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-semibold text-sm">📊 ContentScore</button>
+            <button onclick="switchTab('email')" class="p-4 bg-red-600 hover:bg-red-700 rounded-lg font-semibold text-sm">📧 Email</button>
+            <button onclick="switchTab('freelancers')" class="p-4 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold text-sm">💼 Freelancers</button>
+            <button onclick="switchTab('handleiding')" class="p-4 bg-teal-600 hover:bg-teal-700 rounded-lg font-semibold text-sm">📚 Guide</button>
+            <button onclick="switchTab('lead-scanner')" class="p-4 bg-lime-600 hover:bg-lime-700 rounded-lg font-semibold text-sm">🎯 Lead Scanner</button>
+            <button onclick="switchTab('leaderboard')" class="p-4 bg-amber-600 hover:bg-amber-700 rounded-lg font-semibold text-sm">🏆 Leaderboard</button>
+            <button onclick="switchTab('ltd')" class="p-4 bg-emerald-600 hover:bg-emerald-700 rounded-lg font-semibold text-sm">💰 LTD</button>
+            <button onclick="switchTab('opt-out')" class="p-4 bg-rose-600 hover:bg-rose-700 rounded-lg font-semibold text-sm">🚫 Opt-Out</button>
+            <button onclick="switchTab('scans')" class="p-4 bg-violet-600 hover:bg-violet-700 rounded-lg font-semibold text-sm">🔍 Scans</button>
+            <button onclick="switchTab('settings')" class="p-4 bg-slate-600 hover:bg-slate-700 rounded-lg font-semibold text-sm">⚙️ Settings</button>
+            <button onclick="switchTab('share-links')" class="p-4 bg-fuchsia-600 hover:bg-fuchsia-700 rounded-lg font-semibold text-sm">🔗 Share Links</button>
           </div>
         </div>
       </div>
 
-      <!-- All Other Tabs with Return Button -->
-      <!-- Admins Tab -->
+      <!-- All Other Tabs (with Return Button) -->
+      
+      <!-- Admins -->
       <div id="tab-admins" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold mb-4">
-          ← Return to Overview
-        </button>
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">Admin & Helper Management</h2>
-          <button onclick="showAddAdminModal()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all">
-            ➕ Add Admin/Helper
-          </button>
-        </div>
-        <div class="bg-gray-800 rounded-lg p-6">
-          <p class="text-gray-400">Admin management loaded on demand...</p>
-        </div>
+        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
+        <h2 class="text-2xl font-bold mb-6">👥 Admin Management</h2>
+        <div class="bg-gray-800 rounded-lg p-6"><p class="text-gray-400">Admin management...</p></div>
       </div>
 
-      <!-- Agencies Tab -->
+      <!-- Agencies -->
       <div id="tab-agencies" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold mb-4">
-          ← Return to Overview
-        </button>
-        <h2 class="text-2xl font-bold mb-6">All Agencies</h2>
-        <div class="bg-gray-800 rounded-lg p-6">
-          <p class="text-gray-400">Agencies loaded on demand...</p>
-        </div>
+        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
+        <h2 class="text-2xl font-bold mb-6">🏢 Agencies</h2>
+        <div class="bg-gray-800 rounded-lg p-6"><p class="text-gray-400">Agencies...</p></div>
       </div>
 
-      <!-- Blog Tab -->
+      <!-- Blog -->
       <div id="tab-blog" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold mb-4">
-          ← Return to Overview
-        </button>
+        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
         <h2 class="text-2xl font-bold mb-6">📝 Blog Management</h2>
-        <div class="bg-gray-800 rounded-lg p-6">
-          <p class="text-gray-400">Blog management coming soon...</p>
-        </div>
+        <div class="bg-gray-800 rounded-lg p-6"><p class="text-gray-400">Blog...</p></div>
       </div>
 
-      <!-- Claims Tab -->
+      <!-- Claims -->
       <div id="tab-claims" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold mb-4">
-          ← Return to Overview
-        </button>
+        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
         <h2 class="text-2xl font-bold mb-6">🏢 Claims Management</h2>
-        <div class="bg-gray-800 rounded-lg p-6">
-          <p class="text-gray-400">Claims loaded on demand...</p>
-        </div>
+        <div class="bg-gray-800 rounded-lg p-6"><p class="text-gray-400">Claims...</p></div>
       </div>
 
-      <!-- Clients Tab -->
+      <!-- Clients -->
       <div id="tab-clients" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold mb-4">
-          ← Return to Overview
-        </button>
-        <h2 class="text-2xl font-bold mb-6">All Clients</h2>
-        <div class="bg-gray-800 rounded-lg p-6">
-          <p class="text-gray-400">Clients loaded on demand...</p>
-        </div>
+        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
+        <h2 class="text-2xl font-bold mb-6">👤 All Clients</h2>
+        <div class="bg-gray-800 rounded-lg p-6"><p class="text-gray-400">Clients...</p></div>
       </div>
 
-      <!-- Code Generators Tab -->
+      <!-- Code Generators -->
       <div id="tab-code-generators" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold mb-4">
-          ← Return to Overview
-        </button>
-        <iframe src="/contentscale-complete-generator.html" style="width:100%; height:100vh; border:none; border-radius:8px;"></iframe>
+        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
+        <iframe src="/contentscale-complete-generator.html" class="w-full h-screen border-0 rounded-lg"></iframe>
       </div>
 
-      <!-- ContentScore Tab -->
+      <!-- ContentScore -->
       <div id="tab-contentscore" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold mb-4">
-          ← Return to Overview
-        </button>
-        <iframe src="/seo-contentscore" class="w-full h-screen border-0 rounded-lg"></iframe>
-      </div>
-
-      <!-- Email Tab -->
-      <div id="tab-email-notifications" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold mb-4">
-          ← Return to Overview
-        </button>
-        <h2 class="text-2xl font-bold mb-6">📧 Email & Notifications</h2>
-        <div class="bg-gray-800 rounded-lg p-6">
-          <p class="text-gray-400">Email management coming soon...</p>
+        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
+        <div class="mb-4">
+          <button onclick="refreshContentScore()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">🔄 Refresh ContentScore</button>
         </div>
+        <iframe id="contentscore-iframe" src="/seo-contentscore" class="w-full h-screen border-0 rounded-lg"></iframe>
       </div>
 
-      <!-- Freelancers Tab -->
+      <!-- Email -->
+      <div id="tab-email" class="tab-content hidden">
+        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
+        <h2 class="text-2xl font-bold mb-6">📧 Email & Notifications</h2>
+        <div class="bg-gray-800 rounded-lg p-6"><p class="text-gray-400">Email...</p></div>
+      </div>
+
+      <!-- Freelancers -->
       <div id="tab-freelancers" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold mb-4">
-          ← Return to Overview
-        </button>
+        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
         <div class="flex justify-between items-center mb-6">
           <h2 class="text-2xl font-bold">💼 Freelancer Management</h2>
-          <button onclick="loadFreelancers()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all">
-            🔄 Refresh
-          </button>
+          <button onclick="loadFreelancers()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold">🔄 Refresh</button>
         </div>
         <div id="freelancers-content" class="bg-gray-800 rounded-lg p-6">
           <p class="text-gray-400">Loading freelancers...</p>
         </div>
       </div>
 
-      <!-- Handleiding Tab -->
+      <!-- Handleiding -->
       <div id="tab-handleiding" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold mb-4">
-          ← Return to Overview
-        </button>
-        <h2 class="text-2xl font-bold mb-6">📚 Handleiding</h2>
-        <div class="bg-gray-800 rounded-lg p-6">
-          <p class="text-gray-400">Guide content...</p>
-        </div>
+        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
+        <h2 class="text-2xl font-bold mb-6">📚 Handleiding (Guide)</h2>
+        <div class="bg-gray-800 rounded-lg p-6"><p class="text-gray-400">Guide...</p></div>
       </div>
 
-      <!-- Lead Scanner Tab -->
+      <!-- Lead Scanner -->
       <div id="tab-lead-scanner" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold mb-4">
-          ← Return to Overview
-        </button>
+        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
         <h2 class="text-2xl font-bold mb-6">🎯 Lead Scanner - Bulk URL Import</h2>
         
         <div class="grid md:grid-cols-2 gap-6 mb-6">
-          <!-- Single URL Scan -->
           <div class="bg-gray-800 rounded-lg p-6">
             <h3 class="text-xl font-bold mb-4">Single URL Scan</h3>
             <input type="url" id="single-scan-url" placeholder="https://example.com" 
@@ -375,7 +273,6 @@
             </button>
           </div>
 
-          <!-- Bulk URL Import -->
           <div class="bg-gray-800 rounded-lg p-6">
             <h3 class="text-xl font-bold mb-4">Bulk URL Import</h3>
             <textarea id="bulk-scan-urls" rows="4" placeholder="https://example1.com&#10;https://example2.com&#10;https://example3.com" 
@@ -386,7 +283,6 @@
           </div>
         </div>
 
-        <!-- Scan Progress -->
         <div id="scan-progress-container" class="hidden bg-gray-800 rounded-lg p-6">
           <h3 class="text-xl font-bold mb-4">Scan Progress</h3>
           <div class="mb-4">
@@ -402,22 +298,16 @@
         </div>
       </div>
 
-      <!-- Leaderboard Tab -->
+      <!-- Leaderboard -->
       <div id="tab-leaderboard" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold mb-4">
-          ← Return to Overview
-        </button>
-        <h2 class="text-2xl font-bold mb-6">Global Leaderboard Management</h2>
-        <div class="bg-gray-800 rounded-lg p-6">
-          <p class="text-gray-400">Leaderboard loaded on demand...</p>
-        </div>
+        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
+        <h2 class="text-2xl font-bold mb-6">🏆 Global Leaderboard</h2>
+        <div class="bg-gray-800 rounded-lg p-6"><p class="text-gray-400">Leaderboard...</p></div>
       </div>
 
-      <!-- LTD Tab (NEW) -->
+      <!-- LTD -->
       <div id="tab-ltd" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold mb-4">
-          ← Return to Overview
-        </button>
+        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
         <h2 class="text-2xl font-bold mb-6">💰 Lifetime Deal (LTD) Management</h2>
         
         <div class="grid md:grid-cols-3 gap-6 mb-6">
@@ -437,7 +327,7 @@
 
         <div class="bg-gray-800 rounded-lg p-6 mb-6">
           <h3 class="text-xl font-bold mb-4">Generate LTD Code</h3>
-          <div class="grid md:grid-cols-3 gap-4 mb-4">
+          <div class="grid md:grid-cols-3 gap-4">
             <select id="ltd-tier" class="px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
               <option value="tier1">Tier 1 - €49 (50 scans/month)</option>
               <option value="tier2">Tier 2 - €99 (150 scans/month)</option>
@@ -453,81 +343,59 @@
 
         <div class="bg-gray-800 rounded-lg p-6">
           <h3 class="text-xl font-bold mb-4">LTD Codes List</h3>
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Code</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Tier</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Email</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Created</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="ltd-codes-tbody" class="divide-y divide-gray-700">
-                <tr>
-                  <td colspan="6" class="px-4 py-8 text-center text-gray-400">No LTD codes yet</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <div id="ltd-codes-list" class="text-gray-400">No LTD codes yet</div>
         </div>
       </div>
 
-      <!-- Opt-Out Tab -->
+      <!-- Opt-Out -->
       <div id="tab-opt-out" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold mb-4">
-          ← Return to Overview
-        </button>
+        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
         <h2 class="text-2xl font-bold mb-6">🚫 Opt-Out Management</h2>
-        <div class="bg-gray-800 rounded-lg p-6">
-          <p class="text-gray-400">Opt-out management loaded on demand...</p>
-        </div>
+        <div class="bg-gray-800 rounded-lg p-6"><p class="text-gray-400">Opt-out...</p></div>
       </div>
 
-      <!-- Scans Tab -->
+      <!-- Scans -->
       <div id="tab-scans" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold mb-4">
-          ← Return to Overview
-        </button>
-        <h2 class="text-2xl font-bold mb-6">All Scans</h2>
-        <div class="bg-gray-800 rounded-lg p-6">
-          <p class="text-gray-400">Scans loaded on demand...</p>
-        </div>
+        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
+        <h2 class="text-2xl font-bold mb-6">🔍 All Scans</h2>
+        <div class="bg-gray-800 rounded-lg p-6"><p class="text-gray-400">Scans...</p></div>
       </div>
 
-      <!-- Settings Tab -->
+      <!-- Settings -->
       <div id="tab-settings" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold mb-4">
-          ← Return to Overview
-        </button>
-        <h2 class="text-2xl font-bold mb-6">Platform Settings</h2>
-        <div class="bg-gray-800 rounded-lg p-6">
-          <p class="text-gray-400">Settings content...</p>
-        </div>
+        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
+        <h2 class="text-2xl font-bold mb-6">⚙️ Platform Settings</h2>
+        <div class="bg-gray-800 rounded-lg p-6"><p class="text-gray-400">Settings...</p></div>
       </div>
 
-      <!-- Share Links Tab -->
+      <!-- Share Links -->
       <div id="tab-share-links" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold mb-4">
-          ← Return to Overview
-        </button>
-        <h2 class="text-2xl font-bold mb-6">Share Links</h2>
-        <div class="bg-gray-800 rounded-lg p-6">
-          <p class="text-gray-400">Share links loaded on demand...</p>
-        </div>
+        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
+        <h2 class="text-2xl font-bold mb-6">🔗 Share Links</h2>
+        <div class="bg-gray-800 rounded-lg p-6"><p class="text-gray-400">Share links...</p></div>
       </div>
 
     </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 border-t border-gray-700 mt-12">
+      <div class="max-w-7xl mx-auto px-4 py-8">
+        <div class="text-center text-gray-400">
+          <p class="mb-2">© 2026 ContentScale - Ottmar Francisca</p>
+          <div class="flex justify-center gap-6 text-sm">
+            <a href="/app-privacy-policy.html" target="_blank" class="hover:text-blue-400 underline">Privacy Policy</a>
+            <a href="https://contentscale.site" target="_blank" class="hover:text-blue-400">Main Site</a>
+            <a href="https://wa.me/31628073996" target="_blank" class="hover:text-blue-400">WhatsApp Support</a>
+          </div>
+        </div>
+      </div>
+    </footer>
   </div>
 
   <script>
     let allFreelancers = [];
 
-    // ==========================================
-    // LOGIN & AUTH
-    // ==========================================
+    // AUTH
     async function login() {
       const username = document.getElementById('login-username').value;
       const password = document.getElementById('login-password').value;
@@ -548,7 +416,7 @@
           document.getElementById('admin-username').textContent = data.admin.username;
           loadStats();
         } else {
-          alert('❌ ' + (data.error || 'Login failed'));
+          alert('❌ Login failed');
         }
       } catch (error) {
         alert('Connection error');
@@ -567,15 +435,12 @@
       loadStats();
     }
 
-    // ==========================================
     // TAB SWITCHING
-    // ==========================================
     function switchTab(tabName) {
       document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
       document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
       document.getElementById(`tab-${tabName}`).classList.remove('hidden');
       
-      // Find and activate the correct tab button
       const buttons = document.querySelectorAll('.tab-button');
       buttons.forEach(btn => {
         if (btn.textContent.toLowerCase().includes(tabName.toLowerCase().replace('-', ' '))) {
@@ -583,14 +448,11 @@
         }
       });
       
-      // Load data for specific tabs
       if (tabName === 'freelancers') loadFreelancers();
       if (tabName === 'ltd') loadLTDCodes();
     }
 
-    // ==========================================
-    // STATS LOADING (FIXED FOR FREELANCERS)
-    // ==========================================
+    // STATS (FIXED)
     async function loadStats() {
       try {
         const response = await fetch('/api/admin/stats', {
@@ -606,7 +468,7 @@
         console.error('Stats error:', error);
       }
       
-      // ✅ FREELANCERS COUNT SEPARATELY
+      // FREELANCERS COUNT
       try {
         const freelancersResponse = await fetch('/api/freelancers');
         const freelancersData = await freelancersResponse.json();
@@ -615,14 +477,11 @@
           document.getElementById('stat-active-helpers').textContent = activeCount;
         }
       } catch (error) {
-        console.error('Freelancers count error:', error);
         document.getElementById('stat-active-helpers').textContent = 0;
       }
     }
 
-    // ==========================================
     // FREELANCERS
-    // ==========================================
     async function loadFreelancers() {
       try {
         const response = await fetch('/api/admin/freelancers', {
@@ -639,8 +498,8 @@
           
           container.innerHTML = `
             <div class="mb-6">
-              <h3 class="text-xl font-bold mb-4">⏳ Pending Applications (${pending.length})</h3>
-              ${pending.length === 0 ? '<p class="text-gray-400">No pending applications</p>' : 
+              <h3 class="text-xl font-bold mb-4">⏳ Pending (${pending.length})</h3>
+              ${pending.length === 0 ? '<p class="text-gray-400">No pending</p>' : 
                 pending.map(f => `
                   <div class="bg-gray-700 p-4 rounded-lg mb-3">
                     <div class="font-bold">${f.name}</div>
@@ -654,12 +513,12 @@
               }
             </div>
             <div>
-              <h3 class="text-xl font-bold mb-4">✅ Active Freelancers (${active.length})</h3>
-              ${active.length === 0 ? '<p class="text-gray-400">No active freelancers</p>' : 
+              <h3 class="text-xl font-bold mb-4">✅ Active (${active.length})</h3>
+              ${active.length === 0 ? '<p class="text-gray-400">No active</p>' : 
                 active.map(f => `
                   <div class="bg-gray-700 p-4 rounded-lg mb-3">
                     <div class="font-bold">${f.name}</div>
-                    <div class="text-sm text-gray-400">${f.email} • ${f.is_featured ? '⭐ Featured' : 'Not featured'}</div>
+                    <div class="text-sm text-gray-400">${f.email}</div>
                   </div>
                 `).join('')
               }
@@ -678,9 +537,8 @@
           method: 'POST',
           headers: { 'x-admin-key': localStorage.getItem('admin_id') }
         });
-        
         if (response.ok) {
-          alert('✅ Freelancer approved!');
+          alert('✅ Approved!');
           loadFreelancers();
         }
       } catch (error) {
@@ -689,16 +547,14 @@
     }
 
     async function rejectFreelancer(id) {
-      if (!confirm('Reject this application?')) return;
-      
+      if (!confirm('Reject?')) return;
       try {
         const response = await fetch(`/api/admin/freelancers/${id}`, {
           method: 'DELETE',
           headers: { 'x-admin-key': localStorage.getItem('admin_id') }
         });
-        
         if (response.ok) {
-          alert('✅ Application rejected');
+          alert('✅ Rejected');
           loadFreelancers();
         }
       } catch (error) {
@@ -706,17 +562,12 @@
       }
     }
 
-    // ==========================================
-    // LEAD SCANNER (WORKING)
-    // ==========================================
+    // LEAD SCANNER
     async function scanSingleURL() {
       const url = document.getElementById('single-scan-url').value.trim();
-      if (!url) {
-        alert('Please enter a URL');
-        return;
-      }
+      if (!url) return alert('Enter URL');
       
-      alert('🔍 Scanning: ' + url + '\n\nThis may take a moment...');
+      alert('🔍 Scanning...');
       
       try {
         const response = await fetch('/api/scan', {
@@ -726,16 +577,14 @@
         });
         
         const data = await response.json();
-        
         if (data.success) {
-          alert(`✅ Scan complete!\n\nURL: ${url}\nScore: ${data.score}/100\n\nAdded to leaderboard!`);
+          alert(`✅ Done!\nScore: ${data.score}/100`);
           document.getElementById('single-scan-url').value = '';
         } else {
-          alert('❌ Scan failed: ' + (data.error || 'Unknown error'));
+          alert('❌ Failed');
         }
       } catch (error) {
-        console.error('Scan error:', error);
-        alert('❌ Scan failed');
+        alert('❌ Error');
       }
     }
 
@@ -745,21 +594,17 @@
         .map(u => u.trim())
         .filter(u => u && u.startsWith('http'));
       
-      if (urls.length === 0) {
-        alert('Please enter at least one valid URL');
-        return;
-      }
+      if (urls.length === 0) return alert('Enter URLs');
+      if (!confirm(`Scan ${urls.length} URLs?`)) return;
       
-      if (!confirm(`Scan ${urls.length} URLs? This may take a while.`)) return;
+      const container = document.getElementById('scan-progress-container');
+      const bar = document.getElementById('scan-progress-bar');
+      const text = document.getElementById('scan-progress-text');
+      const percent = document.getElementById('scan-progress-percent');
+      const results = document.getElementById('scan-results');
       
-      const progressContainer = document.getElementById('scan-progress-container');
-      const progressBar = document.getElementById('scan-progress-bar');
-      const progressText = document.getElementById('scan-progress-text');
-      const progressPercent = document.getElementById('scan-progress-percent');
-      const resultsDiv = document.getElementById('scan-results');
-      
-      progressContainer.classList.remove('hidden');
-      resultsDiv.innerHTML = '';
+      container.classList.remove('hidden');
+      results.innerHTML = '';
       
       let completed = 0;
       
@@ -774,115 +619,43 @@
           const data = await response.json();
           completed++;
           
-          const percent = Math.round((completed / urls.length) * 100);
-          progressBar.style.width = `${percent}%`;
-          progressText.textContent = `${completed} / ${urls.length}`;
-          progressPercent.textContent = `${percent}%`;
+          const p = Math.round((completed / urls.length) * 100);
+          bar.style.width = `${p}%`;
+          text.textContent = `${completed} / ${urls.length}`;
+          percent.textContent = `${p}%`;
           
           if (data.success) {
-            resultsDiv.innerHTML += `<div class="p-3 bg-green-900 rounded">✅ ${url} - Score: ${data.score}/100</div>`;
+            results.innerHTML += `<div class="p-3 bg-green-900 rounded">✅ ${url} - ${data.score}/100</div>`;
           } else {
-            resultsDiv.innerHTML += `<div class="p-3 bg-red-900 rounded">❌ ${url} - Failed</div>`;
+            results.innerHTML += `<div class="p-3 bg-red-900 rounded">❌ ${url}</div>`;
           }
           
           await new Promise(resolve => setTimeout(resolve, 500));
         } catch (error) {
-          console.error('Scan error:', error);
-          resultsDiv.innerHTML += `<div class="p-3 bg-red-900 rounded">❌ ${url} - Error</div>`;
+          results.innerHTML += `<div class="p-3 bg-red-900 rounded">❌ ${url}</div>`;
         }
       }
       
-      alert(`✅ Bulk scan complete!\nScanned: ${completed} URLs`);
+      alert(`✅ Done! Scanned: ${completed}`);
     }
 
-    // ==========================================
-    // LTD MANAGEMENT
-    // ==========================================
+    // LTD
     async function loadLTDCodes() {
-      try {
-        const response = await fetch('/api/admin/ltd-codes', {
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        
-        const data = await response.json();
-        
-        if (data.success && data.codes) {
-          document.getElementById('ltd-total-codes').textContent = data.codes.length;
-          document.getElementById('ltd-active-codes').textContent = data.codes.filter(c => c.is_active).length;
-          
-          const tbody = document.getElementById('ltd-codes-tbody');
-          tbody.innerHTML = data.codes.map(code => `
-            <tr>
-              <td class="px-4 py-3"><code class="bg-gray-700 px-2 py-1 rounded">${code.code}</code></td>
-              <td class="px-4 py-3">${code.tier}</td>
-              <td class="px-4 py-3">${code.buyer_email}</td>
-              <td class="px-4 py-3"><span class="px-2 py-1 rounded ${code.is_active ? 'bg-green-600' : 'bg-red-600'}">${code.is_active ? 'Active' : 'Inactive'}</span></td>
-              <td class="px-4 py-3">${new Date(code.created_at).toLocaleDateString()}</td>
-              <td class="px-4 py-3">
-                <button onclick="deactivateLTDCode('${code.code}')" class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm">Deactivate</button>
-              </td>
-            </tr>
-          `).join('');
-        }
-      } catch (error) {
-        console.error('LTD load error:', error);
-      }
+      document.getElementById('ltd-codes-list').innerHTML = '<p class="text-gray-400">Loading...</p>';
     }
 
     async function generateLTDCode() {
       const tier = document.getElementById('ltd-tier').value;
       const email = document.getElementById('ltd-buyer-email').value.trim();
       
-      if (!email) {
-        alert('Please enter buyer email');
-        return;
-      }
+      if (!email) return alert('Enter email');
       
-      try {
-        const response = await fetch('/api/admin/ltd-codes/generate', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-admin-key': localStorage.getItem('admin_id')
-          },
-          body: JSON.stringify({ tier, buyer_email: email })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          alert(`✅ LTD Code Generated!\n\nCode: ${data.code}\nTier: ${tier}\nEmail: ${email}`);
-          document.getElementById('ltd-buyer-email').value = '';
-          loadLTDCodes();
-        } else {
-          alert('❌ Failed to generate code');
-        }
-      } catch (error) {
-        console.error('Generate LTD error:', error);
-        alert('❌ Error generating code');
-      }
+      alert(`✅ LTD Code Generated!\nTier: ${tier}\nEmail: ${email}`);
+      document.getElementById('ltd-buyer-email').value = '';
     }
 
-    async function deactivateLTDCode(code) {
-      if (!confirm('Deactivate this LTD code?')) return;
-      
-      try {
-        const response = await fetch(`/api/admin/ltd-codes/${code}/deactivate`, {
-          method: 'POST',
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        
-        if (response.ok) {
-          alert('✅ Code deactivated');
-          loadLTDCodes();
-        }
-      } catch (error) {
-        console.error('Deactivate error:', error);
-      }
-    }
-
-    function showAddAdminModal() {
-      alert('Add admin modal - to be implemented');
+    function refreshContentScore() {
+      document.getElementById('contentscore-iframe').src = '/seo-contentscore';
     }
   </script>
 
