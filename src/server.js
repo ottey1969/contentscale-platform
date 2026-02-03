@@ -76,21 +76,7 @@ if (process.env.DATABASE_URL) {
 
 const pool = new Pool(dbConfig);
 
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
-// CLEAR CACHE ON STARTUP
-scanCache.clear();
-console.log('🧹 Cache cleared on startup');
-
-// ============================================
-// AI SCORING — CACHE + HELPERS
-// ============================================
-const scanCache = new Map();
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
-
-function hashContent(html) {
-  return crypto.createHash('sha256').update(html).digest('hex');
-}
 
 // ============================================
 // PUPPETEER-POWERED HTML FETCHER (FIXED VERSION)
