@@ -263,6 +263,402 @@ function extractContentForAI(fetchResult) {
     
     return { title: fetchResult.title || '', content: processed };
   }
+
+  // ============================================
+// PUBLIC SCANNER API — AI-POWERED SCORING (FIXED)
+// Uses rawHtml for technical checks, extractedContent for AI
+// ============================================
+app.post('/api/scan', async (req, res) => {
+  const { url, shareKey } = req.body;
+
+  if (!url) {
+    return res.status(400).json({ success: false, error: 'URL required' });
+  }
+
+  let scanUrl = url;
+  if (!scanUrl.startsWith('http://') && !scanUrl.startsWith('https://')) {
+    scanUrl = 'https://' + scanUrl;
+  }
+
+  // ============================================
+  // SHARELINK ENFORCEMENT
+  // ============================================
+  if (shareKey) {
+    try {
+      const shareLinkResult = await pool.query(
+        'SELECT * FROM share_links WHERE share_code = $1',
+        [shareKey]
+      );
+
+      if (shareLinkResult.rows.length === 0) {
+        return res.status(403).json({ 
+          success: false,
+          error: 'Invalid share link',
+          limitReached: true
+        });
+      }
+
+      const shareLink = shareLinkResult.rows[0];
+
+      if (new Date(shareLink.expires_at) < new Date()) {
+        return res.status(403).json({ 
+          success: false,
+          error: 'Share link expired. Contact Ot for renewal.',
+          limitReached: true,
+          whatsappUrl: 'https://wa.me/31628073996?text=Hi%20Ot!%20Mijn%20sharelink%20is%20verlopen.'
+        });
+      }
+
+      if (shareLink.status !== 'active') {
+        return res.status(403).json({ 
+          success: false,
+          error: 'Share link inactive. Contact Ot.',
+          limitReached: true,
+          whatsappUrl: 'https://wa.me/31628073996?text=Hi%20Ot!%20Mijn%20sharelink%20is%20niet%20actief.'
+        });
+      }
+
+      if (shareLink.scans_used >= shareLink.scans_limit) {
+        return res.status(403).json({ 
+          success: false,
+          error: `Scan limiet bereikt (${shareLink.scans_limit}/${shareLink.scans_limit}). Contact Ot voor meer scans.`,
+          limitReached: true,
+          scansUsed: shareLink.scans_used,
+          scansLimit: shareLink.scans_limit,
+          whatsappUrl: 'https://wa.me/31628073996?text=Hi%20Ot!%20Mijn%20scan%20limiet%20is%20bereikt.%20Kan%20ik%20meer%20scans%20krijgen?'
+        });
+      }
+
+      console.log(`✅ Sharelink valid: ${shareKey} (${shareLink.scans_used + 1}/${shareLink.scans_limit})`);
+
+    } catch (error) {
+      console.error('Sharelink check error:', error);
+      return res.status(500).json({ 
+        success: false,
+        error: 'Sharelink verification failed' 
+      });
+    }
+  }
+
+  try {
+    console.log(`🔍 Scanning: ${scanUrl}`);
+
+    // === FETCH WITH PUPPETEER (returns rawHtml + extractedContent) ===
+    const fetchResult = await fetchWithPuppeteer(scanUrl);
+    
+    if (!fetchResult.success) {
+      return res.status(400).json({ 
+        success: false, 
+        error: `Cannot fetch URL: failed to load page` 
+      });
+    }
+
+    // ============================================
+    // USE RAW HTML FOR TECHNICAL CHECKS
+    // ============================================
+    const rawHtml = fetchResult.rawHtml;
+    console.log(`✅ Fetched ${rawHtml.length} bytes from ${scanUrl} (${fetchResult.method})`);
+
+    // === TECHNICAL SCORE (regex on RAW HTML) ===
+    let technicalScore = 0;
+
+    const metaDescMatch = rawHtml.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
+    const metaDesc = metaDescMatch ? metaDescMatch[1] : null;
+    technicalScore += metaDesc && metaDesc.length > 50 ? 4 : metaDesc ? 2 : 0;
+
+    const titleMatch = rawHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
+    const title = titleMatch ? titleMatch[1] : null;
+    technicalScore += title && title.length > 30 ? 4 : title ? 2 : 0;
+
+    const allImages = (rawHtml.match(/<img[^>]*>/gi) || []).length;
+    const imagesWithAlt = (rawHtml.match(/<img[^>]*alt="/gi) || []).length;
+    if (allImages > 0) {
+      technicalScore += Math.min(4, Math.floor((imagesWithAlt / allImages) * 4));
+    }
+
+    const hasViewport = /<meta\s+name="viewport"/gi.test(rawHtml);
+    technicalScore += hasViewport ? 3 : 0;
+
+    const hasSchema = /"@context"|"@type"/gi.test(rawHtml);
+    technicalScore += hasSchema ? 3 : 0;
+    technicalScore = Math.min(20, technicalScore);
+
+    // === HTML DETAILS (for response metadata - from RAW HTML) ===
+    const textContent = rawHtml.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(w => w.length > 0);
+    const wordCount = textContent.length;
+    const h1s = (rawHtml.match(/<h1[^>]*>/gi) || []).length;
+    const h2h3s = (rawHtml.match(/<h2[^>]*>|<h3[^>]*>/gi) || []).length;
+    const paragraphs = (rawHtml.match(/<p[^>]*>/gi) || []).length;
+    const hasLists = /<ul[^>]*>|<ol[^>]*>/gi.test(rawHtml);
+    const hasQuotes = /says|according to|expert|quote|told us|founder|ceo|director/gi.test(rawHtml);
+    const hasStats = /\d+%|\d+ studies|\d+ research|research shows|\d+ data/gi.test(rawHtml);
+    const hasFreshDates = /202[4-6]|january|february|march|april|may|june|july|august|september|october|november|december/gi.test(rawHtml);
+    const hasAuthor = /author|by |written by|published by|contributor/gi.test(rawHtml);
+
+    // ============================================
+    // USE EXTRACTED CONTENT FOR AI SCORING
+    // ============================================
+    const contentHash = hashContent(rawHtml);  // Still hash raw HTML for caching
+    let graafScore, craftScore, graafItems, craftItems, aiRecommendations, scoringMethod;
+
+    const cached = scanCache.get(contentHash);
+    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL_MS) {
+      console.log(`📦 Cache hit for ${scanUrl}`);
+      graafScore = cached.graafScore;
+      craftScore = cached.craftScore;
+      graafItems = cached.graafItems;
+      craftItems = cached.craftItems;
+      aiRecommendations = cached.recommendations;
+      scoringMethod = 'ai-cached';
+    } else {
+      try {
+        if (!process.env.ANTHROPIC_API_KEY) {
+          throw new Error('ANTHROPIC_API_KEY not configured');
+        }
+
+        // Extract content for AI (uses extractedContent if available, else processes rawHtml)
+        const contentForAI = extractContentForAI(fetchResult);
+        console.log(`🤖 AI scoring ${scanUrl}...`);
+        const aiResult = await scoreWithAI(contentForAI);
+
+        if (!validateAIScores(aiResult)) {
+          throw new Error('AI scores failed validation');
+        }
+
+        graafItems = {
+          credibility: Math.min(16, Math.max(0, Math.round(aiResult.graaf.credibility))),
+          relevance: Math.min(18, Math.max(0, Math.round(aiResult.graaf.relevance))),
+          accuracy: Math.min(8, Math.max(0, Math.round(aiResult.graaf.accuracy))),
+          freshness: Math.min(8, Math.max(0, Math.round(aiResult.graaf.freshness)))
+        };
+        craftItems = {
+          headingStructure: Math.min(8, Math.max(0, Math.round(aiResult.craft.heading_structure))),
+          subheadings: Math.min(10, Math.max(0, Math.round(aiResult.craft.subheadings))),
+          paragraphs: Math.min(8, Math.max(0, Math.round(aiResult.craft.paragraphs))),
+          lists: Math.min(4, Math.max(0, Math.round(aiResult.craft.lists)))
+        };
+
+        graafScore = graafItems.credibility + graafItems.relevance + graafItems.accuracy + graafItems.freshness;
+        craftScore = craftItems.headingStructure + craftItems.subheadings + craftItems.paragraphs + craftItems.lists;
+        
+        aiRecommendations = Array.isArray(aiResult.recommendations) ? aiResult.recommendations : [];
+        scoringMethod = 'ai';
+
+        scanCache.set(contentHash, {
+          graafScore, craftScore, graafItems, craftItems,
+          recommendations: aiRecommendations,
+          timestamp: Date.now()
+        });
+
+        console.log(`✅ AI scored: GRAAF=${graafScore} CRAFT=${craftScore} (${scoringMethod})`);
+
+      } catch (aiError) {
+        console.error(`⚠️ AI scoring failed, using regex fallback: ${aiError.message}`);
+        scoringMethod = 'fallback';
+
+        // === REGEX FALLBACK (uses RAW HTML) ===
+        graafItems = {
+          credibility: (hasQuotes ? 8 : 0) + (hasAuthor ? 8 : 0),
+          relevance: Math.min(18, Math.floor(wordCount / 100)),
+          accuracy: hasStats ? 8 : 0,
+          freshness: hasFreshDates ? 8 : 2
+        };
+        graafScore = graafItems.credibility + graafItems.relevance + graafItems.accuracy + graafItems.freshness;
+        graafScore = Math.min(50, graafScore);
+
+        craftItems = {
+          headingStructure: h1s === 1 ? 8 : h1s > 1 ? 4 : 2,
+          subheadings: Math.min(10, h2h3s * 2),
+          paragraphs: Math.min(8, Math.floor(paragraphs / 3)),
+          lists: hasLists ? 4 : 0
+        };
+        craftScore = craftItems.headingStructure + craftItems.subheadings + craftItems.paragraphs + craftItems.lists;
+        craftScore = Math.min(30, craftScore);
+
+        aiRecommendations = [];
+      }
+    }
+
+    const totalScore = graafScore + craftScore + technicalScore;
+    const quality = totalScore >= 90 ? 'excellent' : totalScore >= 75 ? 'good' : totalScore >= 60 ? 'average' : totalScore >= 45 ? 'below-average' : 'poor';
+
+    console.log(`\n🎯 SCAN COMPLETE: ${scanUrl}`);
+    console.log(`   Method: ${scoringMethod.toUpperCase()}`);
+    console.log(`   Score: ${totalScore}/100 (${quality})`);
+    console.log(`   └─ GRAAF: ${graafScore}/50 (${scoringMethod === 'fallback' ? 'regex' : 'AI'})`);
+    console.log(`   └─ CRAFT: ${craftScore}/30 (${scoringMethod === 'fallback' ? 'regex' : 'AI'})`);
+    console.log(`   └─ Technical: ${technicalScore}/20 (regex)\n`);
+
+    // === TECHNICAL RECOMMENDATIONS (based on RAW HTML) ===
+    const techRecommendations = [];
+
+    if (!metaDesc) {
+      techRecommendations.push({
+        type: 'quickwin',
+        category: 'Technical SEO',
+        title: 'Add Meta Description',
+        description: 'Missing meta description. Critical for search click-through rate.',
+        impact: 'High',
+        points: '+4 points',
+        howToFix: '1. Write a 150-160 character description\n2. Include your primary target keyword\n3. Add a compelling call-to-action',
+        example: '<meta name="description" content="Learn proven SEO content strategies with our framework. Boost organic rankings in 90 days. Start your free audit today.">'
+      });
+    } else if (metaDesc.length <= 50) {
+      techRecommendations.push({
+        type: 'quickwin',
+        category: 'Technical SEO',
+        title: 'Expand Meta Description',
+        description: `Current meta description is only ${metaDesc.length} characters. Aim for 150-160.`,
+        impact: 'Medium',
+        points: '+2 points',
+        howToFix: '1. Rewrite to 150-160 characters\n2. Include target keyword near the start\n3. End with a clear call-to-action',
+        example: '<meta name="description" content="[Your keyword] guide covering [topic]. Includes [specific value]. [Call to action] — start today.">'
+      });
+    }
+
+    if (!hasViewport) {
+      techRecommendations.push({
+        type: 'quickwin',
+        category: 'Technical SEO',
+        title: 'Add Mobile Viewport',
+        description: 'Missing viewport meta tag. Required for proper mobile rendering.',
+        impact: 'High',
+        points: '+3 points',
+        howToFix: '1. Add the viewport meta tag inside your <head>\n2. Test the page on mobile devices\n3. Verify responsive layout works correctly',
+        example: '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
+      });
+    }
+
+    if (!hasSchema) {
+      techRecommendations.push({
+        type: 'quickwin',
+        category: 'Technical SEO',
+        title: 'Add Schema Markup',
+        description: 'No structured data (JSON-LD) found. Schema enables rich snippets in search results.',
+        impact: 'Medium',
+        points: '+3 points',
+        howToFix: '1. Add Article or HowTo schema as JSON-LD\n2. Include headline, author, and datePublished\n3. Test with Google Rich Results Test',
+        example: '<script type="application/ld+json">{ "@context": "https://schema.org", "@type": "Article", "headline": "Your Title", "author": { "@type": "Person", "name": "Author Name" } }</script>'
+      });
+    }
+
+    if (allImages > 0 && imagesWithAlt < allImages) {
+      const missing = allImages - imagesWithAlt;
+      techRecommendations.push({
+        type: 'quickwin',
+        category: 'Technical SEO',
+        title: 'Add Alt Text to Images',
+        description: `${missing} of ${allImages} images are missing alt text. Required for accessibility and image search.`,
+        impact: 'Medium',
+        points: '+2 points',
+        howToFix: '1. Add descriptive alt text to every image\n2. Include relevant keywords naturally\n3. Describe what the image actually shows',
+        example: '<img src="seo-chart.jpg" alt="SEO ranking improvement chart showing 40% traffic increase over 90 days">'
+      });
+    }
+
+    // === MERGE AI + TECHNICAL RECOMMENDATIONS ===
+    const allRecommendations = [...(aiRecommendations || []), ...techRecommendations];
+    const quickWins = allRecommendations.filter(r => r.type === 'quickwin');
+    const majorImprovements = allRecommendations.filter(r => r.type === 'major');
+
+    // === BUILD RESPONSE ===
+    const scanResult = {
+      success: true,
+      url: scanUrl,
+      score: totalScore,
+      quality,
+      scoring_method: scoringMethod,
+      metrics: { graaf: graafScore, craft: craftScore, technical: technicalScore },
+      breakdown: {
+        graaf: {
+          total: graafScore,
+          max: 50,
+          percentage: Math.round((graafScore / 50) * 100),
+          items: graafItems
+        },
+        craft: {
+          total: craftScore,
+          max: 30,
+          percentage: Math.round((craftScore / 30) * 100),
+          items: craftItems
+        },
+        technical: {
+          total: technicalScore,
+          max: 20,
+          percentage: Math.round((technicalScore / 20) * 100),
+          items: {
+            metaDescription: metaDesc && metaDesc.length > 50 ? 4 : metaDesc ? 2 : 0,
+            title: title && title.length > 30 ? 4 : title ? 2 : 0,
+            imageAlt: allImages > 0 ? Math.min(4, Math.floor((imagesWithAlt / allImages) * 4)) : 0,
+            viewport: hasViewport ? 3 : 0,
+            schema: hasSchema ? 3 : 0
+          }
+        }
+      },
+      recommendations: {
+        all: allRecommendations,
+        quickWins: quickWins,
+        majorImprovements: majorImprovements,
+        totalRecommendations: allRecommendations.length,
+        potentialScoreIncrease: allRecommendations.reduce((sum, r) => {
+          const pts = parseInt((r.points || '0').match(/\d+/)?.[0] || 0);
+          return sum + pts;
+        }, 0)
+      },
+      details: {
+        wordCount,
+        h1Count: h1s,
+        h2h3Count: h2h3s,
+        paragraphCount: paragraphs,
+        imageCount: allImages,
+        imagesWithAlt,
+        hasQuotes,
+        hasStats,
+        hasFreshDates,
+        hasAuthor,
+        hasLists,
+        hasViewport,
+        hasSchema,
+        metaDescription: metaDesc ? metaDesc.substring(0, 160) : null,
+        title: title
+      },
+      timestamp: new Date().toISOString()
+    };
+
+    // Save to DB
+    try {
+      await pool.query(
+        `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, breakdown, recommendations, scan_type)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [scanUrl, totalScore, quality, graafScore, craftScore, technicalScore, JSON.stringify(scanResult.breakdown), JSON.stringify(scanResult.recommendations), 'manual']
+      );
+      console.log(`✅ Scan saved: ${scanUrl} (Score: ${totalScore}, Method: ${scoringMethod})`);
+    } catch (dbError) {
+      console.error('DB save error (non-fatal):', dbError.message);
+    }
+
+    // Increment sharelink usage
+    if (shareKey) {
+      try {
+        await pool.query(
+          'UPDATE share_links SET scans_used = scans_used + 1 WHERE share_code = $1',
+          [shareKey]
+        );
+        console.log(`📊 Sharelink usage updated: ${shareKey}`);
+      } catch (error) {
+        console.error('Sharelink update error:', error);
+      }
+    }
+
+    res.json(scanResult);
+
+  } catch (error) {
+    console.error('Scan error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+});
   
   // Otherwise, process raw HTML (fallback)
   console.log('📝 Processing raw HTML fallback');
