@@ -756,30 +756,179 @@
       </div>
 
       <!-- Lead Scanner Tab (Enhanced from scanner 2) -->
-      <div id="tab-lead-scanner" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
-        <h2 class="text-2xl font-bold mb-6">🎯 Lead Scanner - Bulk URL Import</h2>
-        
-        <div class="grid md:grid-cols-2 gap-6 mb-6">
-          <div class="bg-gray-800 rounded-lg p-6">
-            <h3 class="text-xl font-bold mb-4">Single URL Scan</h3>
-            <input type="url" id="single-scan-url" placeholder="https://example.com" 
-              class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white mb-4">
-            <button onclick="scanSingleURL()" class="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold">
-              🔍 Scan & Add to Leaderboard
-            </button>
-          </div>
+      // LEAD SCANNER - GOOGLE MAPS SCRAPING (NO API NEEDED)
+// Backend endpoint voor server.js
 
-          <div class="bg-gray-800 rounded-lg p-6">
-            <h3 class="text-xl font-bold mb-4">Bulk URL Import</h3>
-            <textarea id="bulk-scan-urls" rows="4" placeholder="https://example1.com&#10;https://example2.com&#10;https://example3.com" 
-              class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white mb-4"></textarea>
-            <button onclick="bulkScanURLs()" class="w-full px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-bold">
-              🚀 Scan All URLs
-            </button>
-          </div>
-        </div>
+// Installeer: npm install puppeteer
 
+const puppeteer = require('puppeteer');
+
+// Lead Scanner endpoint - Google Maps scraping
+app.post('/api/admin/lead-scanner/google-maps', async (req, res) => {
+  const { google_maps_url } = req.body;
+  
+  if (!google_maps_url || !google_maps_url.includes('google.com/maps/search')) {
+    return res.json({ success: false, error: 'Invalid Google Maps URL' });
+  }
+  
+  try {
+    console.log('🔍 Starting Google Maps scraping...');
+    
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--disable-gpu',
+        '--window-size=1920x1080'
+      ]
+    });
+    
+    const page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+    
+    console.log('📍 Loading Google Maps URL...');
+    await page.goto(google_maps_url, { 
+      waitUntil: 'networkidle2',
+      timeout: 30000 
+    });
+    
+    // Wait for results to load
+    await page.waitForTimeout(5000);
+    
+    // Scroll to load more results
+    console.log('📜 Scrolling to load results...');
+    for (let i = 0; i < 3; i++) {
+      await page.evaluate(() => {
+        const scrollableDiv = document.querySelector('[role="feed"]');
+        if (scrollableDiv) {
+          scrollableDiv.scrollTop = scrollableDiv.scrollHeight;
+        }
+      });
+      await page.waitForTimeout(2000);
+    }
+    
+    // Extract leads
+    console.log('📊 Extracting leads...');
+    const leads = await page.evaluate(() => {
+      const results = [];
+      const items = document.querySelectorAll('[role="article"]');
+      
+      items.forEach(item => {
+        try {
+          // Get company name
+          const nameEl = item.querySelector('[class*="fontHeadlineSmall"]');
+          const name = nameEl ? nameEl.textContent.trim() : null;
+          
+          // Get website
+          const linkEl = item.querySelector('a[data-value="Website"]');
+          const website = linkEl ? linkEl.href : null;
+          
+          // Get address
+          const addressEl = item.querySelector('[class*="fontBodyMedium"]:not([class*="fontHeadlineSmall"])');
+          const address = addressEl ? addressEl.textContent.trim() : null;
+          
+          // Get rating
+          const ratingEl = item.querySelector('[role="img"][aria-label*="stars"]');
+          const rating = ratingEl ? ratingEl.getAttribute('aria-label') : null;
+          
+          // Get phone
+          const phoneEl = item.querySelector('[data-tooltip*="Copy phone number"]');
+          const phone = phoneEl ? phoneEl.getAttribute('data-tooltip').replace('Copy phone number: ', '') : null;
+          
+          if (name && website) {
+            results.push({
+              name,
+              website,
+              address,
+              rating,
+              phone,
+              source: 'Google Maps',
+              scraped_at: new Date().toISOString()
+            });
+          }
+        } catch (err) {
+          console.error('Error extracting item:', err);
+        }
+      });
+      
+      return results;
+    });
+    
+    await browser.close();
+    
+    console.log(`✅ Found ${leads.length} leads`);
+    
+    // Save to database (optional)
+    // You can save to a 'leads' table if needed
+    
+    return res.json({
+      success: true,
+      leads: leads,
+      total: leads.length,
+      message: `Successfully scraped ${leads.length} leads from Google Maps`
+    });
+    
+  } catch (error) {
+    console.error('❌ Google Maps scraping error:', error);
+    return res.json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Bulk scan leads
+app.post('/api/admin/lead-scanner/bulk-scan', async (req, res) => {
+  const { leads } = req.body; // Array of { name, website }
+  
+  if (!leads || !Array.isArray(leads)) {
+    return res.json({ success: false, error: 'Invalid leads array' });
+  }
+  
+  const results = [];
+  
+  for (const lead of leads) {
+    try {
+      // Scan each website
+      const scanResponse = await fetch('http://localhost:3000/api/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: lead.website })
+      });
+      
+      const scanData = await scanResponse.json();
+      
+      results.push({
+        name: lead.name,
+        website: lead.website,
+        score: scanData.score || 0,
+        scanned: scanData.success || false
+      });
+      
+      // Small delay between scans
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+    } catch (err) {
+      results.push({
+        name: lead.name,
+        website: lead.website,
+        score: 0,
+        scanned: false,
+        error: err.message
+      });
+    }
+  }
+  
+  return res.json({
+    success: true,
+    results: results,
+    total: results.length,
+    successful: results.filter(r => r.scanned).length
+  });
+});
         <div id="scan-progress-container" class="hidden bg-gray-800 rounded-lg p-6">
           <h3 class="text-xl font-bold mb-4">Scan Progress</h3>
           <div class="mb-4">
