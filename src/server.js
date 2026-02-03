@@ -107,18 +107,45 @@ async function fetchWithPuppeteer(url) {
       timeout: 25000
     });
     
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // CLOSE COOKIE CONSENT if exists
+    try {
+      await page.evaluate(() => {
+        const buttons = Array.from(document.querySelectorAll('button, a'));
+        const acceptBtn = buttons.find(b => 
+          /accept|akkoord|toestemming|allow|agree/i.test(b.textContent)
+        );
+        if (acceptBtn) acceptBtn.click();
+      });
+      await new Promise(resolve => setTimeout(resolve, 500));
+    } catch (e) {
+      // No cookie consent or failed to close - continue
+    }
     
-    // ============================================
-    // GET RAW HTML FIRST (for technical checks)
-    // ============================================
+    // SCROLL to trigger lazy content
+    await page.evaluate(async () => {
+      await new Promise((resolve) => {
+        let totalHeight = 0;
+        const distance = 300;
+        const timer = setInterval(() => {
+          window.scrollBy(0, distance);
+          totalHeight += distance;
+          if (totalHeight >= document.body.scrollHeight) {
+            clearInterval(timer);
+            resolve();
+          }
+        }, 100);
+      });
+    });
+    
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // GET RAW HTML
     const rawHtml = await page.content();
     
-    // ============================================
-    // THEN EXTRACT CONTENT (for AI scoring)
-    // ============================================
+    // EXTRACT CONTENT - IMPROVED VERSION
     const extracted = await page.evaluate(() => {
       function isVisible(el) {
+        if (!el) return false;
         const style = window.getComputedStyle(el);
         return style.display !== 'none' && 
                style.visibility !== 'hidden' && 
@@ -128,50 +155,60 @@ async function fetchWithPuppeteer(url) {
       }
       
       function extractText(element, result = { text: '', headings: [] }) {
+        if (!element) return result;
+        
         for (let node of element.childNodes) {
           if (node.nodeType === Node.TEXT_NODE) {
             const text = node.textContent.trim();
-            if (text) result.text += text + ' ';
+            if (text && text.length > 2) result.text += text + ' ';
           } else if (node.nodeType === Node.ELEMENT_NODE) {
             const tag = node.tagName.toLowerCase();
             
             if (!isVisible(node)) continue;
             
-            if (['script', 'style', 'nav', 'header', 'footer', 'noscript'].includes(tag)) {
+            // Skip noise elements
+            if (['script', 'style', 'noscript', 'iframe', 'svg'].includes(tag)) {
               continue;
             }
             
+            // Skip navigation/footer/header if not main content
+            if (['nav', 'header', 'footer'].includes(tag) && !element.matches('.entry-content, .post-content, main, article')) {
+              continue;
+            }
+            
+            // Extract headings WITH text
             if (tag === 'h1') {
               const text = node.textContent.trim();
-              if (text) {
+              if (text && text.length > 3) {
                 result.text += `\n[H1]: ${text}\n`;
                 result.headings.push({ level: 1, text });
               }
             } else if (tag === 'h2') {
               const text = node.textContent.trim();
-              if (text) {
+              if (text && text.length > 3) {
                 result.text += `\n[H2]: ${text}\n`;
                 result.headings.push({ level: 2, text });
               }
             } else if (tag === 'h3') {
               const text = node.textContent.trim();
-              if (text) {
+              if (text && text.length > 3) {
                 result.text += `\n[H3]: ${text}\n`;
                 result.headings.push({ level: 3, text });
               }
             } else if (tag === 'h4') {
               const text = node.textContent.trim();
-              if (text) {
+              if (text && text.length > 3) {
                 result.text += `\n[H4]: ${text}\n`;
                 result.headings.push({ level: 4, text });
               }
             } else if (tag === 'p') {
               const text = node.textContent.trim();
-              if (text) result.text += `\n${text}\n`;
+              if (text && text.length > 10) result.text += `\n${text}\n`;
             } else if (tag === 'li') {
               const text = node.textContent.trim();
-              if (text) result.text += `\n• ${text}\n`;
+              if (text && text.length > 3) result.text += `\n• ${text}\n`;
             } else {
+              // Recurse into other elements
               extractText(node, result);
             }
           }
@@ -179,31 +216,41 @@ async function fetchWithPuppeteer(url) {
         return result;
       }
       
-      let mainElement = document.querySelector('main') || 
-                       document.querySelector('article') ||
-                       document.querySelector('[role="main"]') ||
-                       document.querySelector('.content') ||
-                       document.querySelector('#content') ||
-                       document.body;
+      // TRY WORDPRESS-SPECIFIC SELECTORS FIRST
+      let mainElement = 
+        document.querySelector('.entry-content') ||      // WordPress default
+        document.querySelector('.post-content') ||       // Some themes
+        document.querySelector('.content-area') ||       // Genesis/StudioPress
+        document.querySelector('.elementor-widget-wrap') || // Elementor
+        document.querySelector('[data-elementor-type="wp-page"]') || // Elementor
+        document.querySelector('.wpb_wrapper') ||        // WPBakery
+        document.querySelector('main') ||                // HTML5 semantic
+        document.querySelector('article') ||             // HTML5 semantic
+        document.querySelector('[role="main"]') ||       // ARIA
+        document.querySelector('.content') ||            // Generic
+        document.querySelector('#content') ||            // Generic ID
+        document.body;                                   // Fallback
       
       const extracted = extractText(mainElement);
       
       return {
         content: extracted.text,
         title: document.title || '',
-        headingCount: extracted.headings.length
+        headingCount: extracted.headings.length,
+        selector: mainElement.className || mainElement.tagName
       };
     });
     
     await page.close();
-    console.log(`✅ Puppeteer: ${rawHtml.length} bytes HTML, ${extracted.content.length} chars extracted, ${extracted.headingCount} headings`);
+    console.log(`✅ Puppeteer: ${rawHtml.length} bytes HTML, ${extracted.content.length} chars extracted, ${extracted.headingCount} headings from ${extracted.selector}`);
     
     return {
       success: true,
-      rawHtml: rawHtml,                      // ← FOR TECHNICAL CHECKS
-      extractedContent: extracted.content,   // ← FOR AI SCORING
+      rawHtml: rawHtml,
+      extractedContent: extracted.content,
       title: extracted.title,
-      method: 'puppeteer'
+      method: 'puppeteer',
+      selector: extracted.selector
     };
     
   } catch (error) {
