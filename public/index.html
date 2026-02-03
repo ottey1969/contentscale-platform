@@ -406,7 +406,7 @@
       font-style: italic;
     }
 
-    /* ✅ PULSING BORDER ANIMATION */
+    /* ✅ ADDED: PULSING BORDER ANIMATION */
     @keyframes pulse-border {
       0%, 100% { 
         border-color: #8b5cf6;
@@ -477,7 +477,7 @@
 
     <div id="scanner" class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-8 mb-8 border-2 border-purple-600">
       <div class="text-center mb-6">
-        <h2 class="text-3xl font-bold mb-2">🚀 Free SEO Scanner</h2>
+        <h2 class="text-3xl font-bold mb-2">🚀 UNDER CONSTRUCTION</h2>
         <p class="text-gray-300">Get your AI-Era SEO score instantly!</p>
       </div>
       
@@ -486,7 +486,7 @@
           <input type="text" id="scanInput" placeholder="https://yourwebsite.com" 
             class="flex-1 bg-gray-700 text-white px-6 py-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg">
           <button onclick="performScan()" id="scanButton" class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-8 py-4 rounded-lg font-bold text-lg transition-all whitespace-nowrap">
-            🔍 Scan Now
+           UNDER CONSTRUCTION
           </button>
         </div>
       </div>
@@ -529,9 +529,9 @@
       
       <div class="stat-card-yellow stat-card rounded-xl p-5 text-gray-900 relative">
         <div class="relative z-10">
-          <div class="text-4xl mb-2">💼</div>
-          <div class="text-3xl font-bold" id="activeHelpers">0</div>
-          <div class="text-sm opacity-90">Active Freelancers</div>
+          <div class="text-4xl mb-2">⭐</div>
+          <div class="text-3xl font-bold" id="enhancedProfiles">0</div>
+          <div class="text-sm opacity-90">Verified Agencies</div>
         </div>
       </div>
     </div>
@@ -656,7 +656,7 @@
   </div>
 </div>
 
-<!-- ✅ FIX 6: FREELANCER SIGNUP MODAL -->
+<!-- FREELANCER SIGNUP MODAL -->
 <div id="freelancerModal" class="modal-overlay hidden">
   <div class="modal-content max-w-2xl">
     <div class="p-8">
@@ -711,6 +711,8 @@
             2. You receive payment details (€29/month or €290/year)<br>
             3. After payment, you get a writing test<br>
             4. We score your writing (0-100) and publish your profile<br>
+            5. (Hint: https://contentscale.site/graaf-framework/)<br>
+            6. (Hint: https://contentscale.site/craft-framework/)<br>
             5. Clients can contact you directly!
           </p>
         </div>
@@ -954,10 +956,8 @@
 
   </div>
 
-  <!-- ✅ FIX 5: SCAN MODAL (MUST EXIST IN DOM) -->
   <div id="scanModal" class="modal-overlay hidden">
     <div class="modal-content">
-      <!-- Content dynamically inserted by showScanResults() -->
     </div>
   </div>
 
@@ -967,7 +967,6 @@
     let currentFilter = 'all';
     let displayedCount = 10;
     let lastScanData = null;
-    let allFreelancers = []; // ✅ FIX 3: Store freelancers globally
 
     let allRankings = [];
     let displayedRankings = [];
@@ -980,28 +979,20 @@
       loadFreelancers();
     });
 
-    // ✅ FIX 5: FIXED SCAN FUNCTION
     async function performScan() {
       lastScanData = null;
       
-      const urlInput = document.getElementById('scanInput');
+      const urlInput = document.getElementById('scanInput').value.trim();
       const scanButton = document.getElementById('scanButton');
       
-      if (!urlInput || !scanButton) {
-        console.error('Scan elements not found');
-        return;
-      }
-      
-      const url = urlInput.value.trim();
-      
-      if (!url) {
+      if (!urlInput) {
         alert('Please enter a valid URL');
         return;
       }
       
-      let fullUrl = url;
-      if (!url.startsWith('http')) {
-        fullUrl = `https://${url}`;
+      let fullUrl = urlInput;
+      if (!urlInput.startsWith('http')) {
+        fullUrl = `https://${urlInput}`;
       }
       
       try {
@@ -1039,19 +1030,9 @@
       }
     }
 
-    // ✅ FIX 5: FIXED SHOW SCAN RESULTS
     function showScanResults(data) {
       const modal = document.getElementById('scanModal');
-      if (!modal) {
-        console.error('Scan modal not found');
-        return;
-      }
-      
       const modalContent = modal.querySelector('.modal-content');
-      if (!modalContent) {
-        console.error('Modal content not found');
-        return;
-      }
       
       let qualityClass = 'bg-red-600';
       let qualityText = data.quality || 'Poor';
@@ -1173,6 +1154,7 @@
           
           ${recommendationsHtml}
           
+          <!-- ✅ LEADERBOARD SUBMISSION FORM (MOVED HERE - AFTER SCAN) -->
           <div class="mt-8 pt-6 border-t border-gray-700">
             <h3 class="text-xl font-bold mb-3">📊 Add to Leaderboard?</h3>
             <p class="text-sm text-gray-400 mb-4">Share your score publicly! We'll review and approve if it meets our criteria.</p>
@@ -1237,6 +1219,7 @@
       const statusDiv = document.getElementById('modalLeaderboardStatus');
       const btn = document.getElementById('modalLeaderboardBtn');
       
+      // Validate
       if (!companyName) {
         statusDiv.className = 'text-sm p-3 rounded-lg bg-red-900 text-red-300';
         statusDiv.textContent = '❌ Please enter your company/website name';
@@ -1251,6 +1234,7 @@
         return;
       }
       
+      // Disable button
       btn.disabled = true;
       btn.textContent = '⏳ Submitting...';
       
@@ -1273,6 +1257,7 @@
           statusDiv.textContent = '✅ Submitted! Your entry will appear on the leaderboard once Ot reviews and approves it.';
           statusDiv.classList.remove('hidden');
           
+          // Hide button after successful submit
           btn.style.display = 'none';
           document.getElementById('modalCompanyName').disabled = true;
           document.getElementById('modalCountrySelect').disabled = true;
@@ -1289,10 +1274,7 @@
     }
 
     function closeModal() {
-      const modal = document.getElementById('scanModal');
-      if (modal) {
-        modal.classList.add('hidden');
-      }
+      document.getElementById('scanModal').classList.add('hidden');
     }
 
     function downloadScanReport() {
@@ -1407,7 +1389,6 @@
       renderLeaderboard();
     }
 
-    // ✅ FIX 3: COUNT FREELANCERS FOR "ACTIVE HELPERS"
     function updateStats() {
       document.getElementById('totalAgencies').textContent = allAgencies.length;
       
@@ -1419,8 +1400,8 @@
       const countries = new Set(allAgencies.map(a => a.country)).size;
       document.getElementById('countriesCount').textContent = countries;
       
-      // ✅ FIX 3: Count freelancers for "Active Helpers"
-      document.getElementById('activeHelpers').textContent = allFreelancers.length;
+      const enhanced = allAgencies.filter(a => a.isEnhanced).length;
+      document.getElementById('enhancedProfiles').textContent = enhanced;
     }
 
     function toggleFilters() {
@@ -1437,7 +1418,6 @@
         icon.classList.add('fa-chevron-down');
       }
     }
-    
     function toggleRankings() {
       const container = document.getElementById('rankings-container');
       const button = document.getElementById('rankings-toggle');
@@ -1636,54 +1616,47 @@
     // FREELANCER DIRECTORY
     // ============================================
     
-    // ✅ FIX 3: STORE FREELANCERS GLOBALLY & UPDATE STATS
     async function loadFreelancers() {
       try {
         const response = await fetch('/api/freelancers');
         const data = await response.json();
         
         if (data.success && data.freelancers.length > 0) {
-          allFreelancers = data.freelancers; // ✅ Store globally
           renderFreelancers(data.freelancers);
-          updateStats(); // ✅ Update Active Helpers count
         } else {
-          allFreelancers = []; // ✅ Empty array
           document.getElementById('freelancers-grid').innerHTML = `
             <div class="col-span-full text-center text-gray-500 py-8">
               No freelancers listed yet. Be the first!
             </div>
           `;
-          updateStats(); // ✅ Update to show 0
         }
       } catch (error) {
         console.error('Load freelancers error:', error);
-        allFreelancers = []; // ✅ Empty on error
         document.getElementById('freelancers-grid').innerHTML = `
           <div class="col-span-full text-center text-red-500 py-8">
             Failed to load freelancers
           </div>
         `;
-        updateStats(); // ✅ Update to show 0
       }
     }
 
-    function renderFreelancers(freelancers) {
-      const grid = document.getElementById('freelancers-grid');
+   function renderFreelancers(freelancers) {
+  const grid = document.getElementById('freelancers-grid');
+  
+  grid.innerHTML = freelancers.map((f, index) => `
+    <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border-2 pulse-border hover:border-purple-400 transition-all">
+      ${f.is_featured ? '<div class="text-xs px-2 py-1 bg-yellow-500 text-gray-900 rounded-full font-bold inline-block mb-3">⭐ FEATURED</div>' : ''}
       
-      grid.innerHTML = freelancers.map((f, index) => `
-        <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border-2 pulse-border hover:border-purple-400 transition-all">
-          ${f.is_featured ? '<div class="text-xs px-2 py-1 bg-yellow-500 text-gray-900 rounded-full font-bold inline-block mb-3">⭐ FEATURED</div>' : ''}
-          
-          <div class="flex items-start gap-4 mb-4">
-            ${f.profile_photo_url 
-              ? `<img src="${f.profile_photo_url}" class="w-16 h-16 rounded-full object-cover" alt="${f.name}">`
-              : `<div class="w-16 h-16 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-2xl font-bold">${f.name.charAt(0)}</div>`
-            }
-            <div class="flex-1">
-              <h3 class="text-xl font-bold mb-1">${f.name}</h3>
-              <p class="text-sm text-purple-400 mb-2">${f.title}</p>
-            </div>
-          </div>
+      <div class="flex items-start gap-4 mb-4">
+        ${f.profile_photo_url 
+          ? `<img src="${f.profile_photo_url}" class="w-16 h-16 rounded-full object-cover" alt="${f.name}">`
+          : `<div class="w-16 h-16 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-2xl font-bold">${f.name.charAt(0)}</div>`
+        }
+        <div class="flex-1">
+          <h3 class="text-xl font-bold mb-1">${f.name}</h3>
+          <p class="text-sm text-purple-400 mb-2">${f.title}</p>
+        </div>
+      </div>
           
           ${f.has_score ? `
             <div class="inline-block px-3 py-1 rounded-full text-sm font-bold mb-3 ${
@@ -1703,42 +1676,19 @@
             ${f.portfolio_url ? `<a href="${f.portfolio_url}" target="_blank" class="text-blue-400 hover:underline">💼 Portfolio</a>` : ''}
           </div>
           
-          <button onclick="handleContactClick(${index})" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 py-3 rounded-lg font-bold transition-all transform hover:scale-105">
+          <button onclick="contactFreelancer('${f.email}', '${f.name}')" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 py-3 rounded-lg font-bold transition-all transform hover:scale-105">
             💬 Contact ${f.name.split(' ')[0]}
           </button>
         </div>
       `).join('');
-      
-      // ✅ Store freelancers for contact button
-      window.freelancersData = freelancers;
     }
 
-    // ✅ FIX 1 & 2: SAFE CONTACT HANDLER
-    function handleContactClick(index) {
-      const freelancer = window.freelancersData[index];
-      if (!freelancer) {
-        alert('❌ Freelancer data not found');
-        return;
-      }
-      
-      contactFreelancer(freelancer.email, freelancer.name);
-    }
-
-    // ✅ FIX 6: MODAL OPENING
     function openFreelancerSignup() {
-      const modal = document.getElementById('freelancerModal');
-      if (modal) {
-        modal.classList.remove('hidden');
-      } else {
-        console.error('Freelancer modal not found');
-      }
+      document.getElementById('freelancerModal').classList.remove('hidden');
     }
 
     function closeFreelancerModal() {
-      const modal = document.getElementById('freelancerModal');
-      if (modal) {
-        modal.classList.add('hidden');
-      }
+      document.getElementById('freelancerModal').classList.add('hidden');
     }
 
     async function submitFreelancerApplication(e) {
@@ -1755,6 +1705,7 @@
         bio: formData.get('bio'),
         linkedin_url: formData.get('linkedin_url'),
         portfolio_url: formData.get('portfolio_url'),
+        website_url: formData.get('website_url'),
         location: formData.get('location'),
         country: formData.get('country')
       };
@@ -1787,59 +1738,62 @@
       }
     }
 
-    // ✅ FIX 1 & 2: CONTACT MODAL WITH OT'S WHATSAPP & DIRECT EMAIL
-    function contactFreelancer(email, name) {
-      const modal = document.createElement('div');
-      modal.className = 'modal-overlay';
-      modal.innerHTML = `
-        <div class="modal-content max-w-md">
-          <div class="p-8">
-            <div class="flex justify-between items-start mb-6">
-              <div>
-                <h2 class="text-2xl font-bold mb-2">Contact ${name}</h2>
-                <p class="text-sm text-gray-400">Choose your preferred method</p>
-              </div>
-              <button onclick="this.closest('.modal-overlay').remove()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
-            </div>
-            
-            <div class="space-y-3">
-              <button onclick="contactViaEmail('${email.replace(/'/g, "\\'")}', '${name.replace(/'/g, "\\'")}'); this.closest('.modal-overlay').remove();" class="w-full bg-blue-600 hover:bg-blue-700 py-4 rounded-lg font-bold text-lg transition-all flex items-center justify-center gap-2">
-                📧 Email ${name.split(' ')[0]} Directly
-              </button>
-              
-              <button onclick="contactViaWhatsAppOt('${name.replace(/'/g, "\\'")}'); this.closest('.modal-overlay').remove();" class="w-full bg-green-600 hover:bg-green-700 py-4 rounded-lg font-bold text-lg transition-all flex items-center justify-center gap-2">
-                💬 WhatsApp Ot (Quick Connect)
-              </button>
-              
-              <button onclick="this.closest('.modal-overlay').remove()" class="w-full bg-gray-600 hover:bg-gray-700 py-3 rounded-lg font-semibold transition-all">
-                Cancel
-              </button>
-            </div>
-            
-            <p class="text-xs text-gray-500 text-center mt-4">
-              Email goes directly to freelancer • WhatsApp connects via Ot
-            </p>
+    // ✅ UPDATED: WORKING CONTACT FREELANCER FUNCTION
+   // ✅ UPDATED: EMAIL-ONLY CONTACT (NO WHATSAPP)
+function contactFreelancer(email, name) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-content max-w-md">
+      <div class="p-8">
+        <div class="flex justify-between items-start mb-6">
+          <div>
+            <h2 class="text-2xl font-bold mb-2">Contact ${name}</h2>
+            <p class="text-sm text-gray-400">Send an email to get in touch</p>
           </div>
+          <button onclick="this.closest('.modal-overlay').remove()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
         </div>
-      `;
-      
-      document.body.appendChild(modal);
-    }
+        
+        <div class="space-y-3">
+          <button onclick="contactViaEmail('${email}', '${name}')" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 py-4 rounded-lg font-bold text-lg transition-all flex items-center justify-center gap-2">
+            📧 Send Email to ${name.split(' ')[0]}
+          </button>
+          
+          <button onclick="this.closest('.modal-overlay').remove()" class="w-full bg-gray-600 hover:bg-gray-700 py-3 rounded-lg font-semibold transition-all">
+            Cancel
+          </button>
+        </div>
+        
+        <p class="text-xs text-gray-500 text-center mt-4">
+          Your email client will open with a pre-filled message
+        </p>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+}
 
-    // ✅ FIX 2: EMAIL DIRECTLY TO FREELANCER
+// Remove this function - we don't need it anymore
+// function contactViaWhatsApp(freelancerName) { ... }
+
     function contactViaEmail(email, name) {
       const subject = encodeURIComponent(`Project Inquiry from ContentScale`);
       const body = encodeURIComponent(`Hi ${name},\n\nI found your profile on ContentScale's Freelancer Directory and I'm interested in discussing a potential SEO project.\n\nCan we schedule a brief call to discuss?\n\nBest regards`);
       window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+      
+      // Close modal
+      document.querySelector('.modal-overlay')?.remove();
     }
 
-    // ✅ FIX 1: WHATSAPP TO OT WITH FREELANCER NAME
-    function contactViaWhatsAppOt(freelancerName) {
+    function contactViaWhatsApp(freelancerName) {
       const message = encodeURIComponent(`Hi Ot! I'd like to get in touch with ${freelancerName} from your Freelancer Directory. Can you help connect us?`);
       window.open(`https://wa.me/31628073996?text=${message}`, '_blank');
+      
+      // Close modal
+      document.querySelector('.modal-overlay')?.remove();
     }
   </script>
-  
   <!-- Footer -->
    <CENTER><footer>
         <div class="container">
