@@ -1778,6 +1778,257 @@ app.delete('/api/admin/leaderboard/:id', async (req, res) => {
 });
 
 // ============================================
+// ADMIN: DIRECT ADD TO LEADERBOARD
+// ============================================
+app.post('/api/admin/leaderboard/add-direct', async (req, res) => {
+  const adminKey = req.headers['x-admin-key'];
+  
+  if (!adminKey) {
+    return res.status(401).json({ success: false, error: 'Admin key required' });
+  }
+  
+  try {
+    const admin = await pool.query('SELECT * FROM super_admins WHERE id = $1 AND is_active = TRUE', [adminKey]);
+    if (!admin.rows || admin.rows.length === 0) {
+      return res.status(401).json({ success: false, error: 'Invalid admin key' });
+    }
+    
+    const { url, company_name, country, score, type, is_approved, added_by_admin } = req.body;
+    
+    if (!url || !company_name || !country || score === undefined) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Missing required fields: url, company_name, country, score' 
+      });
+    }
+    
+    if (score < 0 || score > 100) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Score must be between 0 and 100' 
+      });
+    }
+    
+    // Check if URL already exists
+    const existing = await pool.query('SELECT id FROM leaderboard WHERE url = $1', [url]);
+    
+    if (existing.rows.length > 0) {
+      return res.json({ 
+        success: false, 
+        error: 'This URL already exists in the leaderboard' 
+      });
+    }
+    
+    // Insert into leaderboard
+    const result = await pool.query(`
+      INSERT INTO leaderboard (
+        url, 
+        company_name, 
+        country, 
+        score, 
+        business_type,
+        admin_verified,
+        created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
+      RETURNING id, url, company_name, country, score
+    `, [
+      url,
+      company_name,
+      country,
+      score,
+      type || 'agency',
+      true  // Admin adds are auto-approved
+    ]);
+    
+    console.log(`✅ Admin added to leaderboard: ${company_name} (${country}) - ${score}/100`);
+    
+    return res.json({ 
+      success: true, 
+      message: 'Successfully added to leaderboard',
+      entry: result.rows[0]
+    });
+    
+  } catch (error) {
+    console.error('Add to leaderboard error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      error: 'Failed to add to leaderboard: ' + error.message 
+    });
+  }
+});
+
+// ============================================
+// ADMIN: GET RECENT LEADERBOARD ADDITIONS
+// ============================================
+app.get('/api/admin/leaderboard/recent', async (req, res) => {
+  const adminKey = req.headers['x-admin-key'];
+  const limit = parseInt(req.query.limit) || 10;
+  
+  if (!adminKey) {
+    return res.status(401).json({ success: false, error: 'Admin key required' });
+  }
+  
+  try {
+    const admin = await pool.query('SELECT * FROM super_admins WHERE id = $1 AND is_active = TRUE', [adminKey]);
+    if (!admin.rows || admin.rows.length === 0) {
+      return res.status(401).json({ success: false, error: 'Invalid admin key' });
+    }
+    
+    const entries = await pool.query(`
+      SELECT 
+        id,
+        url,
+        company_name,
+        country,
+        score,
+        business_type as type,
+        admin_verified as is_approved,
+        created_at
+      FROM leaderboard
+      WHERE admin_verified = TRUE
+      ORDER BY created_at DESC
+      LIMIT $1
+    `, [limit]);
+    
+    return res.json({ 
+      success: true, 
+      entries: entries.rows || []
+    });
+    
+  } catch (error) {
+    console.error('Get recent error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch recent entries' 
+    });
+  }
+});
+
+// ============================================
+// ADMIN: GOOGLE MAPS LEAD SCRAPING
+// ============================================
+app.post('/api/admin/lead-scanner/google-maps', async (req, res) => {
+  const adminKey = req.headers['x-admin-key'];
+  
+  if (!adminKey) {
+    return res.status(401).json({ success: false, error: 'Admin key required' });
+  }
+  
+  try {
+    const admin = await pool.query('SELECT * FROM super_admins WHERE id = $1 AND is_active = TRUE', [adminKey]);
+    if (!admin.rows || admin.rows.length === 0) {
+      return res.status(401).json({ success: false, error: 'Invalid admin key' });
+    }
+    
+    const { google_maps_url } = req.body;
+    
+    if (!google_maps_url || !google_maps_url.includes('google.com/maps/search')) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Valid Google Maps search URL required' 
+      });
+    }
+    
+    console.log('🗺️ Starting Google Maps scrape...');
+    
+    const browser = await getBrowser();
+    const page = await browser.newPage();
+    
+    await page.setViewport({ width: 1920, height: 1080 });
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+    
+    console.log('📍 Navigating to:', google_maps_url);
+    await page.goto(google_maps_url, { waitUntil: 'networkidle2', timeout: 30000 });
+    
+    // Wait for results to load
+    await page.waitForSelector('[role="feed"]', { timeout: 10000 });
+    
+    // Scroll to load more results (3 times)
+    for (let i = 0; i < 3; i++) {
+      await page.evaluate(() => {
+        const feed = document.querySelector('[role="feed"]');
+        if (feed) feed.scrollTop = feed.scrollHeight;
+      });
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    
+    console.log('🔍 Extracting business data...');
+    
+    // Extract business data
+    const leads = await page.evaluate(() => {
+      const results = [];
+      const items = document.querySelectorAll('[role="feed"] > div > div > a');
+      
+      items.forEach(item => {
+        try {
+          // Business name
+          const nameEl = item.querySelector('.fontHeadlineSmall');
+          const name = nameEl ? nameEl.textContent.trim() : null;
+          
+          // Website
+          const websiteEl = item.querySelector('a[href*="http"]');
+          let website = null;
+          if (websiteEl) {
+            const href = websiteEl.getAttribute('href');
+            if (href && !href.includes('google.com')) {
+              website = href;
+            }
+          }
+          
+          // Address
+          const addressEl = item.querySelector('.fontBodyMedium');
+          const address = addressEl ? addressEl.textContent.trim() : null;
+          
+          // Rating
+          const ratingEl = item.querySelector('[aria-label*="stars"]');
+          const rating = ratingEl ? ratingEl.getAttribute('aria-label') : null;
+          
+          if (name) {
+            results.push({
+              name,
+              website: website || 'Geen website',
+              address: address || 'Geen adres',
+              rating: rating || 'Geen rating'
+            });
+          }
+        } catch (err) {
+          console.error('Error extracting item:', err);
+        }
+      });
+      
+      return results;
+    });
+    
+    await page.close();
+    
+    console.log(`✅ Found ${leads.length} businesses`);
+    
+    res.json({
+      success: true,
+      leads: leads,
+      count: leads.length,
+      message: `Scraped ${leads.length} businesses from Google Maps`
+    });
+    
+  } catch (error) {
+    console.error('Google Maps scrape error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Scraping failed: ' + error.message 
+    });
+  }
+});
+
+// In server.js, voeg toe (3 endpoints):
+
+// A) Direct leaderboard add
+app.post('/api/admin/leaderboard/add-direct', ...);
+app.get('/api/admin/leaderboard/recent', ...);
+
+// B) Google Maps scraping
+app.post('/api/admin/lead-scanner/google-maps', ...);
+
+// ============================================
 // BULK DELETE LEADERBOARD ENTRIES
 // ============================================
 app.post('/api/admin/leaderboard/bulk-delete', async (req, res) => {
