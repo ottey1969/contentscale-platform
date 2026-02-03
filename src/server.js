@@ -336,8 +336,6 @@ function extractContentForAI(fetchResult) {
   
   return { title, content: processed };
 }
-
-// AI Scoring prompt and function
 const AI_SCORING_PROMPT = `You are an SEO content quality scorer. Analyze the content using GRAAF and CRAFT frameworks. Be fair but honest.
 
 CONTENT FORMAT: You'll see markers like [H1], [H2], [H3], and • for lists. These ARE structure - count them.
@@ -424,7 +422,7 @@ Return ONLY this JSON structure, no other text:
 
 async function scoreWithAI(contentForAI) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s for Railway network
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -436,7 +434,7 @@ async function scoreWithAI(contentForAI) {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-haiku-20241022', // Faster than 4.5, better for Railway network
+        model: 'claude-3-5-haiku-20241022',
         max_tokens: 2000,
         temperature: 0,
         messages: [{
@@ -456,10 +454,8 @@ async function scoreWithAI(contentForAI) {
     const data = await response.json();
     const text = data.content[0].text;
 
-    // Strip markdown fences aggressively
     let cleanText = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
     
-    // Extract JSON object (first { to last })
     const firstBrace = cleanText.indexOf('{');
     const lastBrace = cleanText.lastIndexOf('}');
     
@@ -469,16 +465,11 @@ async function scoreWithAI(contentForAI) {
     
     cleanText = cleanText.substring(firstBrace, lastBrace + 1);
     
-    // Try parsing - if it fails, attempt to fix common issues
     try {
       return JSON.parse(cleanText);
     } catch (parseError) {
       console.log('⚠️ JSON parse failed, attempting cleanup:', parseError.message);
-      
-      // Remove trailing commas before } or ]
       cleanText = cleanText.replace(/,(\s*[}\]])/g, '$1');
-      
-      // Try again
       try {
         return JSON.parse(cleanText);
       } catch (secondError) {
@@ -514,7 +505,6 @@ function validateAIScores(ai) {
 
   return true;
 }
-
 // Test database connection
 pool.connect((err, client, release) => {
   if (err) {
@@ -548,7 +538,6 @@ async function createAllTables() {
       )
     `);
     
-    // Create default super admin if not exists - NO BCRYPT
     const adminCheck = await client.query('SELECT COUNT(*) FROM super_admins WHERE username = $1', ['ot']);
     if (parseInt(adminCheck.rows[0].count) === 0) {
       await client.query(
@@ -616,7 +605,6 @@ async function createAllTables() {
       )
     `);
 
-    // FIX: Remove the problematic CHECK constraint
     await client.query(`
       ALTER TABLE scans DROP CONSTRAINT IF EXISTS scans_scan_type_check
     `).catch(e => console.log('Constraint already removed or does not exist'));
@@ -882,11 +870,9 @@ async function createAllTables() {
     await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS verified BOOLEAN DEFAULT FALSE`);
     await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS auto_detected_country VARCHAR(100)`);
     
-    // SHARE_LINKS TABLE MIGRATIONS - migrate old schema (token) to new schema (share_code)
     await client.query(`
       DO $$ 
       BEGIN
-        -- Rename token column to share_code if it exists
         IF EXISTS (
           SELECT 1 FROM information_schema.columns 
           WHERE table_name = 'share_links' AND column_name = 'token'
@@ -902,7 +888,6 @@ async function createAllTables() {
     await client.query(`ALTER TABLE share_links ADD COLUMN IF NOT EXISTS agency_id INTEGER REFERENCES agencies(id) ON DELETE CASCADE`).catch(e => {});
     await client.query(`ALTER TABLE share_links ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active'`).catch(e => {});
     
-    // LEADERBOARD APPROVAL MIGRATION - auto-approve all existing entries
     await client.query(`
       UPDATE leaderboard 
       SET admin_verified = TRUE 
@@ -927,102 +912,6 @@ async function createAllTables() {
         ON CONFLICT (key) DO NOTHING
       `, [key, value]);
     }
-
-    // INSERT DEFAULT EMAIL TEMPLATES
-    await client.query(`
-      INSERT INTO email_templates (name, subject, body, variables) VALUES
-      (
-        'leaderboard_addition',
-        'You''re on the ContentScale SEO Agency Leaderboard! 🏆',
-        '<html>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-  <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-    <h2 style="color: #2563eb;">Congratulations {agency_name}! 🎉</h2>
-    
-    <p>Your agency has been added to the <strong>ContentScale SEO Agency Leaderboard</strong>.</p>
-    
-    <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-      <h3 style="margin-top: 0;">Your Current Ranking:</h3>
-      <ul style="list-style: none; padding: 0;">
-        <li>📊 <strong>Score:</strong> {score}/100</li>
-        <li>🏅 <strong>Position:</strong> #{position} in {country}</li>
-        <li>🌐 <strong>URL Scanned:</strong> <a href="{url}">{url}</a></li>
-      </ul>
-    </div>
-    
-    <h3>Want to claim your profile?</h3>
-    <p>Add your logo, description, and specializations to stand out:</p>
-    <p style="text-align: center;">
-      <a href="{claim_url}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-        Claim Your Profile
-      </a>
-    </p>
-    
-    <h3>Want to improve your ranking?</h3>
-    <p>Optimize your content using our GRAAF Framework:</p>
-    <ul>
-      <li><strong>G</strong>enuinely Credible</li>
-      <li><strong>R</strong>elevance</li>
-      <li><strong>A</strong>ctionability</li>
-      <li><strong>A</strong>ccuracy</li>
-      <li><strong>F</strong>reshness</li>
-    </ul>
-    
-    <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #666;">
-      Don''t want to be listed? <a href="{optout_url}">Click here to opt-out</a>
-    </p>
-    
-    <p style="font-size: 14px; color: #666;">
-      Best regards,<br>
-      <strong>Ottmar Francisca</strong><br>
-      ContentScale - GRAAF Framework Creator<br>
-      <a href="https://contentscale.site">contentscale.site</a>
-    </p>
-  </div>
-</body>
-</html>',
-        '{"agency_name": "text", "score": "number", "position": "number", "country": "text", "url": "text", "claim_url": "text", "optout_url": "text"}'::jsonb
-      ),
-      (
-        'claim_approved',
-        'Your ContentScale Profile Has Been Approved! ✅',
-        '<html>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-  <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-    <h2 style="color: #10b981;">Profile Approved! ✅</h2>
-    
-    <p>Hi {agency_name},</p>
-    
-    <p>Great news! Your profile claim has been approved and is now live on the leaderboard.</p>
-    
-    <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-      <h3 style="margin-top: 0;">Your Profile:</h3>
-      <ul style="list-style: none; padding: 0;">
-        <li>✅ <strong>Status:</strong> Verified</li>
-        <li>🏢 <strong>Name:</strong> {agency_name}</li>
-        <li>🌐 <strong>URL:</strong> <a href="{url}">{url}</a></li>
-        <li>🎯 <strong>Specializations:</strong> {specializations}</li>
-      </ul>
-    </div>
-    
-    <p style="text-align: center;">
-      <a href="{leaderboard_url}" style="display: inline-block; background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-        View Your Profile
-      </a>
-    </p>
-    
-    <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #666;">
-      Best regards,<br>
-      <strong>Ottmar Francisca</strong><br>
-      ContentScale
-    </p>
-  </div>
-</body>
-</html>',
-        '{"agency_name": "text", "url": "text", "specializations": "text", "leaderboard_url": "text"}'::jsonb
-      )
-      ON CONFLICT (name) DO NOTHING
-    `);
     
     // CREATE INDEXES
     await client.query('CREATE INDEX IF NOT EXISTS idx_scans_created ON scans(created_at DESC)');
@@ -1050,9 +939,6 @@ async function createAllTables() {
   }
 }
 
-// ============================================
-// AUTO-POPULATE LEADERBOARD
-// ============================================
 async function autoPopulateLeaderboard() {
   try {
     const check = await pool.query('SELECT COUNT(*) FROM leaderboard');
@@ -1081,7 +967,6 @@ async function autoPopulateLeaderboard() {
     console.error('Leaderboard error:', error.message);
   }
 }
-
 // ============================================
 // MIDDLEWARE
 // ============================================
@@ -1098,8 +983,12 @@ app.use((req, res, next) => {
 });
 
 // ============================================
-// PUBLIC SCANNER API — AI-POWERED SCORING (FIXED)
-// Uses rawHtml for technical checks, extractedContent for AI
+// STATIC FILES
+// ============================================
+app.use(express.static('public'));
+
+// ============================================
+// PUBLIC SCANNER API — AI-POWERED SCORING (COMPLETE)
 // ============================================
 app.post('/api/scan', async (req, res) => {
   const { url, shareKey } = req.body;
@@ -1113,9 +1002,7 @@ app.post('/api/scan', async (req, res) => {
     scanUrl = 'https://' + scanUrl;
   }
 
-  // ============================================
   // SHARELINK ENFORCEMENT
-  // ============================================
   if (shareKey) {
     try {
       const shareLinkResult = await pool.query(
@@ -1176,7 +1063,6 @@ app.post('/api/scan', async (req, res) => {
   try {
     console.log(`🔍 Scanning: ${scanUrl}`);
 
-    // === FETCH WITH PUPPETEER (returns rawHtml + extractedContent) ===
     const fetchResult = await fetchWithPuppeteer(scanUrl);
     
     if (!fetchResult.success) {
@@ -1186,13 +1072,10 @@ app.post('/api/scan', async (req, res) => {
       });
     }
 
-    // ============================================
-    // USE RAW HTML FOR TECHNICAL CHECKS
-    // ============================================
     const rawHtml = fetchResult.rawHtml;
     console.log(`✅ Fetched ${rawHtml.length} bytes from ${scanUrl} (${fetchResult.method})`);
 
-    // === TECHNICAL SCORE (regex on RAW HTML) ===
+    // TECHNICAL SCORE
     let technicalScore = 0;
 
     const metaDescMatch = rawHtml.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
@@ -1216,7 +1099,6 @@ app.post('/api/scan', async (req, res) => {
     technicalScore += hasSchema ? 3 : 0;
     technicalScore = Math.min(20, technicalScore);
 
-    // === HTML DETAILS (for response metadata - from RAW HTML) ===
     const textContent = rawHtml.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(w => w.length > 0);
     const wordCount = textContent.length;
     const h1s = (rawHtml.match(/<h1[^>]*>/gi) || []).length;
@@ -1228,9 +1110,7 @@ app.post('/api/scan', async (req, res) => {
     const hasFreshDates = /202[4-6]|january|february|march|april|may|june|july|august|september|october|november|december/gi.test(rawHtml);
     const hasAuthor = /author|by |written by|published by|contributor/gi.test(rawHtml);
 
-    // ============================================
-    // USE EXTRACTED CONTENT FOR AI SCORING
-    // ============================================
+    // AI SCORING
     const contentHash = hashContent(rawHtml);
     let graafScore, craftScore, graafItems, craftItems, aiRecommendations, scoringMethod;
 
@@ -1320,7 +1200,7 @@ app.post('/api/scan', async (req, res) => {
     console.log(`   └─ CRAFT: ${craftScore}/30`);
     console.log(`   └─ Technical: ${technicalScore}/20\n`);
 
-    // === TECHNICAL RECOMMENDATIONS ===
+    // TECHNICAL RECOMMENDATIONS
     const techRecommendations = [];
 
     if (!metaDesc) {
@@ -1456,12 +1336,6 @@ app.post('/api/scan', async (req, res) => {
     }
   }
 });
-
-// ============================================
-// STATIC FILES
-// ============================================
-app.use(express.static('public'));
-
 // ============================================
 // HTML ROUTES
 // ============================================
@@ -1611,7 +1485,6 @@ app.delete('/api/agencies/:id', async (req, res) => {
     res.status(500).json({ success: false, error: 'Database error' });
   }
 });
-
 // FREELANCERS
 app.get('/api/freelancers', async (req, res) => {
   try {
@@ -1794,7 +1667,6 @@ app.patch('/api/scans/:id/company', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
-
 app.get('/api/admin/share-links', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM share_links ORDER BY created_at DESC');
@@ -2062,10 +1934,6 @@ app.post('/api/admin/leaderboard/:id/reject', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
-// ============================================
-// DEZE CODE KOMT UIT PART3-SCAN-ALL-AGENCIES.js
-// ============================================
 app.post('/api/admin/scan-all-agencies', async (req, res) => {
   try {
     const result = await pool.query(`SELECT id, url, company_name FROM leaderboard WHERE is_opted_out = FALSE ORDER BY id`);
@@ -2324,7 +2192,6 @@ app.post('/api/leaderboard/submit', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
 // ============================================
 // EXPORT SCAN RESULTS
 // ============================================
@@ -2388,7 +2255,7 @@ app.get('/api/export/scan/:format', async (req, res) => {
   }
 });
 
-// NOTIFICATIONS (compact)
+// NOTIFICATIONS
 app.get('/api/admin/notifications', async (req, res) => {
   try {
     const filter = req.query.filter || 'all';
