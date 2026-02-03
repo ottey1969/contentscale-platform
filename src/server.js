@@ -145,78 +145,90 @@ async function fetchWithPuppeteer(url) {
     const rawHtml = await page.content();
     
     // EXTRACT CONTENT - IMPROVED VERSION
+  // EXTRACT CONTENT - SIMPLE & BRUTAL (NO FANCY SELECTORS)
     const extracted = await page.evaluate(() => {
-      function isVisible(el) {
-        if (!el) return false;
-        const style = window.getComputedStyle(el);
-        return style.display !== 'none' && 
-               style.visibility !== 'hidden' && 
-               style.opacity !== '0' &&
-               el.offsetWidth > 0 && 
-               el.offsetHeight > 0;
-      }
+      // Remove noise elements from DOM
+      const removeElements = document.querySelectorAll('script, style, noscript, iframe, svg, nav, header, footer');
+      removeElements.forEach(el => el.remove());
       
-      function extractText(element, result = { text: '', headings: [] }) {
-        if (!element) return result;
-        
-        for (let node of element.childNodes) {
-          if (node.nodeType === Node.TEXT_NODE) {
-            const text = node.textContent.trim();
-            if (text && text.length > 2) result.text += text + ' ';
-          } else if (node.nodeType === Node.ELEMENT_NODE) {
-            const tag = node.tagName.toLowerCase();
-            
-            if (!isVisible(node)) continue;
-            
-            // Skip noise elements
-            if (['script', 'style', 'noscript', 'iframe', 'svg'].includes(tag)) {
-              continue;
-            }
-            
-            // Skip navigation/footer/header if not main content
-            if (['nav', 'header', 'footer'].includes(tag) && !element.matches('.entry-content, .post-content, main, article')) {
-              continue;
-            }
-            
-            // Extract headings WITH text
-            if (tag === 'h1') {
-              const text = node.textContent.trim();
-              if (text && text.length > 3) {
-                result.text += `\n[H1]: ${text}\n`;
-                result.headings.push({ level: 1, text });
-              }
-            } else if (tag === 'h2') {
-              const text = node.textContent.trim();
-              if (text && text.length > 3) {
-                result.text += `\n[H2]: ${text}\n`;
-                result.headings.push({ level: 2, text });
-              }
-            } else if (tag === 'h3') {
-              const text = node.textContent.trim();
-              if (text && text.length > 3) {
-                result.text += `\n[H3]: ${text}\n`;
-                result.headings.push({ level: 3, text });
-              }
-            } else if (tag === 'h4') {
-              const text = node.textContent.trim();
-              if (text && text.length > 3) {
-                result.text += `\n[H4]: ${text}\n`;
-                result.headings.push({ level: 4, text });
-              }
-            } else if (tag === 'p') {
-              const text = node.textContent.trim();
-              if (text && text.length > 10) result.text += `\n${text}\n`;
-            } else if (tag === 'li') {
-              const text = node.textContent.trim();
-              if (text && text.length > 3) result.text += `\n• ${text}\n`;
-            } else {
-              // Recurse into other elements
-              extractText(node, result);
-            }
-          }
+      // Get ALL text from body
+      let allText = document.body.innerText || document.body.textContent || '';
+      
+      // Get ALL headings
+      const headings = [];
+      
+      document.querySelectorAll('h1').forEach(h => {
+        const text = h.textContent.trim();
+        if (text.length > 3) {
+          allText = allText.replace(text, `\n[H1]: ${text}\n`);
+          headings.push({ level: 1, text });
         }
-        return result;
-      }
+      });
+      
+      document.querySelectorAll('h2').forEach(h => {
+        const text = h.textContent.trim();
+        if (text.length > 3) {
+          allText = allText.replace(text, `\n[H2]: ${text}\n`);
+          headings.push({ level: 2, text });
+        }
+      });
+      
+      document.querySelectorAll('h3').forEach(h => {
+        const text = h.textContent.trim();
+        if (text.length > 3) {
+          allText = allText.replace(text, `\n[H3]: ${text}\n`);
+          headings.push({ level: 3, text });
+        }
+      });
+      
+      document.querySelectorAll('h4').forEach(h => {
+        const text = h.textContent.trim();
+        if (text.length > 3) {
+          allText = allText.replace(text, `\n[H4]: ${text}\n`);
+          headings.push({ level: 4, text });
+        }
+      });
+      
+      // Mark lists
+      document.querySelectorAll('li').forEach(li => {
+        const text = li.textContent.trim();
+        if (text.length > 3 && !text.includes('\n')) {
+          allText = allText.replace(text, `\n• ${text}\n`);
+        }
+      });
+      
+      // Clean whitespace
+      allText = allText
+        .replace(/\t+/g, ' ')
+        .replace(/[ ]{2,}/g, ' ')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+      
+      return {
+        content: allText,
+        title: document.title || '',
+        headingCount: headings.length,
+        selector: 'BODY-SIMPLE'
+      };
+    });
+```
+
+---
+
+## ✅ **WAAROM DIT WERKT:**
+
+1. ✅ **No fancy selectors** - gewoon hele body
+2. ✅ **innerText** - browser doet het werk
+3. ✅ **querySelectorAll** - vindt ALLE headings
+4. ✅ **Simpel** - geen complexe recursie
+
+---
+
+## 📊 **VERWACHT IN LOGS:**
+
+Na deploy zou je moeten zien:
+```
+✅ Puppeteer: 181701 bytes HTML, 15000+ chars extracted, 13+ headings from BODY-SIMPLE
       
       // TRY WORDPRESS-SPECIFIC SELECTORS FIRST
       let mainElement = 
