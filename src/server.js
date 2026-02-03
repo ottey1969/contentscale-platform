@@ -76,6 +76,11 @@ if (process.env.DATABASE_URL) {
 
 const pool = new Pool(dbConfig);
 
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+
+// CLEAR CACHE ON STARTUP
+scanCache.clear();
+console.log('🧹 Cache cleared on startup');
 
 // ============================================
 // AI SCORING — CACHE + HELPERS
