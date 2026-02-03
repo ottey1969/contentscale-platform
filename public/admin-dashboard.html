@@ -44,7 +44,6 @@
     .category-tips { background: #f59e0b; }
     .category-news { background: #ef4444; }
     
-    /* Lead Scanner Styles */
     .lead-card {
       background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
       border: 1px solid #334155;
@@ -171,6 +170,9 @@
           <button onclick="switchTab('leaderboard')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
             🏆 Leaderboard
           </button>
+          <button onclick="switchTab('freelancers')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
+            💼 Freelancers
+          </button>
           <button onclick="switchTab('blog')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
             📝 Blog
           </button>
@@ -247,10 +249,10 @@
           <div class="stat-card p-6 rounded-lg shadow-lg text-white">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-sm opacity-90">Active Helpers</p>
+                <p class="text-sm opacity-90">Active Freelancers</p>
                 <p class="text-3xl font-bold mt-2" id="stat-active-helpers">-</p>
               </div>
-              <span class="text-5xl opacity-50">🤝</span>
+              <span class="text-5xl opacity-50">💼</span>
             </div>
           </div>
         </div>
@@ -268,8 +270,8 @@
             <button onclick="switchTab('share-links')" class="p-4 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all">
               🔗 Create Share Link
             </button>
-            <button onclick="switchTab('lead-scanner')" class="p-4 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold transition-all">
-              🎯 Scan Leads
+            <button onclick="switchTab('freelancers')" class="p-4 bg-pink-600 hover:bg-pink-700 rounded-lg font-semibold transition-all">
+              💼 Manage Freelancers
             </button>
           </div>
         </div>
@@ -509,7 +511,7 @@
           </button>
         </div>
 
-        <!-- ✅ NEW: PENDING SUBMISSIONS SECTION -->
+        <!-- ✅ PENDING SUBMISSIONS SECTION -->
         <div class="mb-8 bg-gradient-to-r from-yellow-900 to-orange-900 rounded-lg p-6 border-2 border-yellow-600">
           <div class="flex justify-between items-center mb-4">
             <h3 class="text-xl font-bold">⏳ Pending Leaderboard Submissions</h3>
@@ -558,6 +560,52 @@
           <button onclick="deleteSelectedLeaderboard()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
           <button onclick="exportLeaderboardToCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">📊 Export CSV</button>
           <button onclick="exportLeaderboardToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
+        </div>
+      </div>
+
+      <!-- ✅ NEW: FREELANCERS TAB -->
+      <div id="tab-freelancers" class="tab-content hidden">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold">💼 Freelancer Management</h2>
+          <button onclick="loadFreelancers()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all">
+            🔄 Refresh
+          </button>
+        </div>
+
+        <!-- Pending Freelancer Applications -->
+        <div class="mb-8 bg-gradient-to-r from-purple-900 to-pink-900 rounded-lg p-6 border-2 border-purple-600">
+          <h3 class="text-xl font-bold mb-4">⏳ Pending Applications</h3>
+          <div id="pending-freelancers-container" class="space-y-4">
+            <div class="text-center py-8 text-gray-400">
+              <div class="inline-block animate-spin text-4xl mb-4">⏳</div>
+              <p>Loading pending applications...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Freelancers -->
+        <h3 class="text-xl font-bold mb-4">✅ Active Freelancers</h3>
+        <div class="bg-gray-800 rounded-lg overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-700">
+                <tr>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Name</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Email</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Title</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Score</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Featured</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="freelancers-tbody" class="divide-y divide-gray-700">
+                <tr>
+                  <td colspan="7" class="px-4 py-8 text-center text-gray-400">Loading...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -644,7 +692,8 @@
       <!-- Opt-Out Tab -->
       <div id="tab-opt-out" class="tab-content hidden">
         <h2 class="text-2xl font-bold mb-6">🚫 Opt-Out Management</h2>
-        <div class="bg-gray-800 rounded-lg p-6">
+        
+        <div class="bg-gray-800 rounded-lg p-6 mb-6">
           <h3 class="text-xl font-bold mb-4">Manual Opt-Out</h3>
           <div class="flex gap-4">
             <input type="text" id="manual-optout-url" placeholder="Agency website URL" 
@@ -652,6 +701,27 @@
             <button onclick="manualOptOut()" class="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">
               Remove from Leaderboard
             </button>
+          </div>
+        </div>
+
+        <div class="bg-gray-800 rounded-lg p-6">
+          <h3 class="text-xl font-bold mb-4">Opt-Out Requests</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-700">
+                <tr>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Website</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Reason</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Date</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="optout-tbody" class="divide-y divide-gray-700">
+                <tr>
+                  <td colspan="4" class="px-4 py-8 text-center text-gray-400">No opt-out requests</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -753,17 +823,16 @@
   </div>
 
   <script>
-    // ✅ GLOBAL DATA STORES FOR EXPORT
     let allAgencies = [];
     let allClients = [];
     let allScans = [];
     let allLeaderboard = [];
+    let allFreelancers = [];
     let leadQueue = [];
     let allBlogPosts = [];
     let currentBlogView = 'grid';
     let editingBlogPostId = null;
     
-    // Lead Scanner State
     let leadScannerActive = false;
     let leadScannerPaused = false;
     let leadScannerInterval = null;
@@ -805,7 +874,6 @@
       location.reload();
     }
 
-    // Check login
     if (sessionStorage.getItem('admin_logged_in') === 'true') {
       document.getElementById('login-screen').classList.add('hidden');
       document.getElementById('main-dashboard').classList.remove('hidden');
@@ -830,6 +898,7 @@
         loadLeaderboard();
         loadPendingLeaderboard();
       }
+      if (tabName === 'freelancers') loadFreelancers();
       if (tabName === 'claims') loadClaims();
       if (tabName === 'blog') loadBlogPosts();
       if (tabName === 'lead-scanner') updateLeadScannerUI();
@@ -847,6 +916,7 @@
       loadShareLinks();
       loadLeaderboard();
       loadPendingLeaderboard();
+      loadFreelancers();
       loadClaims();
       loadBlogPosts();
       loadLeadQueueFromStorage();
@@ -862,7 +932,7 @@
           document.getElementById('stat-total-agencies').textContent = data.stats.total_agencies;
           document.getElementById('stat-total-clients').textContent = data.stats.total_clients;
           document.getElementById('stat-total-scans').textContent = data.stats.total_scans;
-          document.getElementById('stat-active-helpers').textContent = data.stats.active_helpers;
+          document.getElementById('stat-active-helpers').textContent = data.stats.active_helpers || allFreelancers.filter(f => f.is_approved).length;
         }
       } catch (error) {
         console.error('Stats error:', error);
@@ -1018,31 +1088,39 @@
         tbody.innerHTML = '';
         
         if (data.success && data.share_links) {
-         data.share_links.forEach(link => {
-  tbody.innerHTML += `
-    <tr>
-      <td class="px-4 py-3"><input type="checkbox" class="sharelink-checkbox" value="${link.token}"></td>
-      <td class="px-4 py-3">${link.client_name || '-'}</td>
-      <td class="px-4 py-3">${link.client_email}</td>
-      <td class="px-4 py-3">${link.scans_used || 0}/${link.scans_limit || 5}</td>
-      <td class="px-4 py-3 text-sm">${link.expires_at ? new Date(link.expires_at).toLocaleDateString() : '-'}</td>
-      <td class="px-4 py-3">
-        <span class="px-2 py-1 ${link.is_active ? 'bg-green-900' : 'bg-red-900'} rounded text-xs">
-          ${link.is_active ? 'active' : 'inactive'}
-        </span>
-      </td>
-      <td class="px-4 py-3">
-        <button onclick="toggleShareLinkStatus('${link.token}')" 
-          class="px-3 py-1 ${link.is_active ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} rounded text-sm">
-          ${link.is_active ? 'Deactivate' : 'Activate'}
-        </button>
-        <button onclick="deleteShareLink('${link.token}')" class="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-sm ml-2">
-          🗑️
-        </button>
-      </td>
-    </tr>
-  `;
-});
+          data.share_links.forEach(link => {
+            tbody.innerHTML += `
+              <tr>
+                <td class="px-4 py-3"><input type="checkbox" class="sharelink-checkbox" value="${link.token}"></td>
+                <td class="px-4 py-3">${link.client_name || '-'}</td>
+                <td class="px-4 py-3">${link.client_email}</td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-2">
+                    <input type="text" value="https://app.contentscale.site/share/${link.token}" 
+                      readonly class="flex-1 px-2 py-1 bg-gray-700 text-xs rounded text-blue-400"
+                      id="share-url-${link.token}">
+                    <button onclick="copyShareUrl('${link.token}')" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs">📋</button>
+                  </div>
+                </td>
+                <td class="px-4 py-3">${link.scans_used || 0}/${link.scans_limit || 5}</td>
+                <td class="px-4 py-3 text-sm">${link.expires_at ? new Date(link.expires_at).toLocaleDateString() : '-'}</td>
+                <td class="px-4 py-3">
+                  <span class="px-2 py-1 ${link.is_active ? 'bg-green-900' : 'bg-red-900'} rounded text-xs">
+                    ${link.is_active ? 'active' : 'inactive'}
+                  </span>
+                </td>
+                <td class="px-4 py-3">
+                  <button onclick="toggleShareLinkStatus('${link.token}', ${!link.is_active})" 
+                    class="px-3 py-1 ${link.is_active ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} rounded text-sm mb-1">
+                    ${link.is_active ? 'Deactivate' : 'Activate'}
+                  </button>
+                  <button onclick="deleteShareLink('${link.token}')" class="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-sm">
+                    🗑️
+                  </button>
+                </td>
+              </tr>
+            `;
+          });
           document.getElementById('share-links-loading').classList.add('hidden');
           document.getElementById('share-links-list').classList.remove('hidden');
         }
@@ -1051,8 +1129,13 @@
       }
     }
 
-    async function toggleShareLinkStatus(shareCode) {
-      if (!confirm('Are you sure you want to toggle the status of this share link?')) return;
+    async function toggleShareLinkStatus(shareCode, activate) {
+      if (!shareCode || shareCode === 'undefined') {
+        alert('❌ Invalid share link code');
+        return;
+      }
+      
+      if (!confirm(`${activate ? 'Activate' : 'Deactivate'} this share link?`)) return;
       
       try {
         const response = await fetch(`/api/admin/share-links/${shareCode}/toggle-status`, {
@@ -1060,19 +1143,20 @@
           headers: {
             'Content-Type': 'application/json',
             'x-admin-key': localStorage.getItem('admin_id')
-          }
+          },
+          body: JSON.stringify({ is_active: activate })
         });
         
         const data = await response.json();
         if (data.success) {
-          alert(`✅ Share link ${data.is_active ? 'activated' : 'deactivated'}!`);
+          alert(`✅ Share link ${activate ? 'activated' : 'deactivated'}!`);
           loadShareLinks();
         } else {
           alert('❌ Error: ' + (data.error || 'Failed to update status'));
         }
       } catch (error) {
         console.error('Toggle error:', error);
-        alert('Error updating status: ' + error.message);
+        alert('❌ Error updating status: ' + error.message);
       }
     }
 
@@ -1122,27 +1206,6 @@
       }
     }
 
-    async function loadClaims() {
-      try {
-        const response = await fetch('/api/admin/claims/pending', {
-          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-        });
-        const data = await response.json();
-        
-        if (data.success) {
-          document.getElementById('pending-claims-count').textContent = data.claims?.length || 0;
-          document.getElementById('approved-claims-count').textContent = 0;
-          document.getElementById('total-claimed-count').textContent = 0;
-          document.getElementById('unclaimed-profiles-count').textContent = 0;
-        }
-      } catch (error) {
-        console.error('Claims error:', error);
-      }
-    }
-
-    // ==========================================
-    // ✅ NEW: PENDING LEADERBOARD APPROVAL
-    // ==========================================
     async function loadPendingLeaderboard() {
       try {
         const response = await fetch('/api/admin/leaderboard/pending', {
@@ -1333,9 +1396,180 @@
       }
     }
 
-    // ==========================================
-    // ✅ COPY URL FUNCTIONS
-    // ==========================================
+    // ✅ FREELANCERS FUNCTIONS
+    async function loadFreelancers() {
+      try {
+        const response = await fetch('/api/admin/freelancers', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          allFreelancers = data.freelancers || [];
+          renderPendingFreelancers(allFreelancers.filter(f => !f.is_approved));
+          renderActiveFreelancers(allFreelancers.filter(f => f.is_approved));
+          loadStats();
+        }
+      } catch (error) {
+        console.error('Load freelancers error:', error);
+      }
+    }
+
+    function renderPendingFreelancers(freelancers) {
+      const container = document.getElementById('pending-freelancers-container');
+      
+      if (freelancers.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-8 text-gray-400">
+            <div class="text-6xl mb-4">✅</div>
+            <p class="text-lg">No pending applications</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = freelancers.map(f => `
+        <div class="bg-gray-800 p-6 rounded-lg border-2 border-purple-600">
+          <div class="grid md:grid-cols-2 gap-6">
+            <div>
+              <h4 class="text-xl font-bold mb-2">${f.name}</h4>
+              <p class="text-purple-400 mb-2">${f.title}</p>
+              <p class="text-sm text-gray-400 mb-2">📧 ${f.email}</p>
+              <p class="text-sm text-gray-400 mb-2">📍 ${f.location || 'Unknown'}</p>
+              <p class="text-sm text-gray-400">🌍 ${f.country || 'Unknown'}</p>
+              ${f.linkedin_url ? `<p class="text-sm mt-2"><a href="${f.linkedin_url}" target="_blank" class="text-blue-400 hover:underline">🔗 LinkedIn</a></p>` : ''}
+            </div>
+            <div>
+              <p class="text-sm mb-4">${f.bio}</p>
+              <button onclick="approveFreelancer(${f.id})" class="w-full bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold mb-2">✅ Approve (Payment Received)</button>
+              <button onclick="rejectFreelancer(${f.id})" class="w-full bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">❌ Reject Application</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderActiveFreelancers(freelancers) {
+      const tbody = document.getElementById('freelancers-tbody');
+      
+      if (freelancers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">No active freelancers</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = freelancers.map(f => `
+        <tr>
+          <td class="px-4 py-3">${f.name}</td>
+          <td class="px-4 py-3">${f.email}</td>
+          <td class="px-4 py-3">${f.title}</td>
+          <td class="px-4 py-3">${f.has_score ? `<span class="px-3 py-1 rounded-full ${f.score >= 80 ? 'bg-green-600' : 'bg-yellow-600'}">${f.score}/100</span>` : 'No score'}</td>
+          <td class="px-4 py-3"><span class="px-3 py-1 rounded-full ${f.is_approved ? 'bg-green-600' : 'bg-yellow-600'}">${f.is_approved ? 'Active' : 'Pending'}</span></td>
+          <td class="px-4 py-3"><span class="px-3 py-1 rounded-full ${f.is_featured ? 'bg-yellow-600' : 'bg-gray-600'}">${f.is_featured ? '⭐ Yes' : 'No'}</span></td>
+          <td class="px-4 py-3">
+            <button onclick="toggleFreelancerFeatured(${f.id}, ${!f.is_featured})" class="px-3 py-1 bg-purple-600 hover:bg-purple-700 rounded text-sm mb-1">⭐ ${f.is_featured ? 'Unfeature' : 'Feature'}</button>
+            <button onclick="deactivateFreelancer(${f.id})" class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm">🚫 Deactivate</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function approveFreelancer(id) {
+      try {
+        const response = await fetch(`/api/admin/freelancers/${id}/approve`, {
+          method: 'POST',
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        if (response.ok) {
+          alert('✅ Freelancer approved! They are now live on the site.');
+          loadFreelancers();
+        } else {
+          alert('❌ Approval failed');
+        }
+      } catch (error) {
+        console.error('Approve error:', error);
+        alert('❌ Approval failed');
+      }
+    }
+
+    async function rejectFreelancer(id) {
+      if (!confirm('Reject this freelancer application?')) return;
+      
+      try {
+        const response = await fetch(`/api/admin/freelancers/${id}`, {
+          method: 'DELETE',
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        if (response.ok) {
+          alert('✅ Application rejected');
+          loadFreelancers();
+        } else {
+          alert('❌ Rejection failed');
+        }
+      } catch (error) {
+        console.error('Reject error:', error);
+        alert('❌ Rejection failed');
+      }
+    }
+
+    async function toggleFreelancerFeatured(id, featured) {
+      try {
+        const response = await fetch(`/api/admin/freelancers/${id}/feature`, {
+          method: 'POST',
+          headers: {
+            'x-admin-key': localStorage.getItem('admin_id'),
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ is_featured: featured })
+        });
+        
+        if (response.ok) {
+          alert(featured ? '⭐ Freelancer featured!' : 'Freelancer unfeatured');
+          loadFreelancers();
+        }
+      } catch (error) {
+        console.error('Feature toggle error:', error);
+      }
+    }
+
+    async function deactivateFreelancer(id) {
+      if (!confirm('Deactivate this freelancer? They will be hidden from the public site.')) return;
+      
+      try {
+        const response = await fetch(`/api/admin/freelancers/${id}/deactivate`, {
+          method: 'POST',
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        
+        if (response.ok) {
+          alert('✅ Freelancer deactivated');
+          loadFreelancers();
+        }
+      } catch (error) {
+        console.error('Deactivate error:', error);
+      }
+    }
+
+    async function loadClaims() {
+      try {
+        const response = await fetch('/api/admin/claims/pending', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          document.getElementById('pending-claims-count').textContent = data.claims?.length || 0;
+          document.getElementById('approved-claims-count').textContent = 0;
+          document.getElementById('total-claimed-count').textContent = 0;
+          document.getElementById('unclaimed-profiles-count').textContent = 0;
+        }
+      } catch (error) {
+        console.error('Claims error:', error);
+      }
+    }
+
     function copyShareUrl(token) {
       const input = document.getElementById(`share-url-${token}`);
       input.select();
@@ -1350,9 +1584,6 @@
       alert('✅ Agency Admin URL copied to clipboard!');
     }
 
-    // ==========================================
-    // CRUD OPERATIONS
-    // ==========================================
     async function submitAddAgency() {
       const formData = {
         name: document.getElementById('agency-name').value,
@@ -1534,10 +1765,6 @@
       }
     }
 
-    // ==========================================
-    // BULK SELECT & DELETE FUNCTIONS
-    // ==========================================
-    
     function toggleSelectAllAgencies() {
       const isChecked = document.getElementById('agency-select-all').checked;
       document.querySelectorAll('.agency-checkbox').forEach(cb => cb.checked = isChecked);
@@ -1657,9 +1884,6 @@
       }, 1000);
     }
 
-    // ==========================================
-    // EXPORT FUNCTIONS
-    // ==========================================
     function exportToCSV(filename, data) {
       if (!data || data.length === 0) {
         alert('No data to export');
@@ -1723,17 +1947,6 @@
       exportToJSON(`leaderboard-${Date.now()}.json`, allLeaderboard);
     }
 
-    function exportLeadQueueToCSV() {
-      exportToCSV(`lead-queue-${Date.now()}.csv`, leadQueue);
-    }
-
-    function exportLeadQueueToJSON() {
-      exportToJSON(`lead-queue-${Date.now()}.json`, leadQueue);
-    }
-
-    // ==========================================
-    // HELPERS
-    // ==========================================
     function showAddAgencyModal() {
       document.getElementById('modal-add-agency').classList.remove('hidden');
     }
@@ -1776,7 +1989,38 @@
       alert('Scan started!');
     }
 
-    // Placeholder functions for features not yet implemented
+    async function manualOptOut() {
+      const url = document.getElementById('manual-optout-url').value.trim();
+      if (!url) {
+        alert('Please enter a URL');
+        return;
+      }
+      
+      if (!confirm(`Remove ${url} from leaderboard?`)) return;
+      
+      try {
+        const response = await fetch('/api/admin/opt-out', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          },
+          body: JSON.stringify({ url, reason: 'Manual admin opt-out' })
+        });
+        
+        if (response.ok) {
+          alert('✅ Removed from leaderboard');
+          document.getElementById('manual-optout-url').value = '';
+          loadLeaderboard();
+        } else {
+          alert('❌ Failed to opt-out');
+        }
+      } catch (error) {
+        console.error('Opt-out error:', error);
+        alert('❌ Error');
+      }
+    }
+
     function loadBlogPosts() {}
     function loadLeadQueueFromStorage() {}
     function updateLeadScannerUI() {}
