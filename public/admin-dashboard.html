@@ -521,9 +521,9 @@
         </div>
 
         <div class="mt-4 flex gap-2">
-  <button onclick="deleteSelectedShareLinks()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
-  <button onclick="deleteInvalidShareLinks()" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold">🧹 Clean Invalid Links</button>
-</div>
+          <button onclick="deleteSelectedShareLinks()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
+        </div>
+      </div>
 
       <!-- Leaderboard Tab -->
       <div id="tab-leaderboard" class="tab-content hidden">
@@ -1224,107 +1224,86 @@
     }
 
     async function loadShareLinks() {
-  try {
-    const response = await fetch('/api/admin/share-links', {
-      headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-    });
-    const data = await response.json();
-    const tbody = document.getElementById('share-links-tbody');
-    tbody.innerHTML = '';
-    
-    if (data.success && data.share_links) {
-      data.share_links.forEach((link, index) => {
-        // Generate a unique identifier for this row
-        const rowId = link.token || `temp-${index}-${Date.now()}`;
+      try {
+        const response = await fetch('/api/admin/share-links', {
+          headers: { 'x-admin-key': localStorage.getItem('admin_id') }
+        });
+        const data = await response.json();
+        const tbody = document.getElementById('share-links-tbody');
+        tbody.innerHTML = '';
         
-        tbody.innerHTML += `
-  <tr data-row-id="${rowId}" data-id="${link.id || ''}">
-            <td class="px-4 py-3"><input type="checkbox" class="sharelink-checkbox" value="${rowId}"></td>
-            <td class="px-4 py-3">${link.client_name || '-'}</td>
-            <td class="px-4 py-3">${link.client_email || '-'}</td>
-            <td class="px-4 py-3">
-              <div class="flex items-center gap-2">
-                <input type="text" value="https://app.contentscale.site/share/${link.token || ''}" 
-                  readonly class="flex-1 px-2 py-1 bg-gray-700 text-xs rounded text-blue-400"
-                  id="share-url-${rowId}">
-                <button onclick="copyShareUrl('${rowId}')" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs">📋</button>
-              </div>
-            </td>
-            <td class="px-4 py-3">${link.scans_used || 0}/${link.scans_limit || 5}</td>
-            <td class="px-4 py-3 text-sm">${link.expires_at ? new Date(link.expires_at).toLocaleDateString() : '-'}</td>
-            <td class="px-4 py-3">
-              <span class="px-2 py-1 ${link.is_active ? 'bg-green-900' : 'bg-red-900'} rounded text-xs">
-                ${link.is_active ? 'active' : 'inactive'}
-              </span>
-            </td>
-            <td class="px-4 py-3">
-              ${link.token ? `
-                <button onclick="toggleShareLinkStatus('${link.token}', ${!link.is_active})" 
-                  class="px-3 py-1 ${link.is_active ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} rounded text-sm mb-1">
-                  ${link.is_active ? 'Deactivate' : 'Activate'}
-                </button>
-                <button onclick="deleteShareLink('${link.token}')" class="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-sm">
-                  🗑️
-                </button>
-              ` : `
-                <span class="text-red-400 text-sm">No token available</span>
-              `}
-            </td>
-          </tr>
-        `;
-      });
-      document.getElementById('share-links-loading').classList.add('hidden');
-      document.getElementById('share-links-list').classList.remove('hidden');
+        if (data.success && data.share_links) {
+          data.share_links.forEach(link => {
+            tbody.innerHTML += `
+              <tr>
+                <td class="px-4 py-3"><input type="checkbox" class="sharelink-checkbox" value="${link.token}"></td>
+                <td class="px-4 py-3">${link.client_name || '-'}</td>
+                <td class="px-4 py-3">${link.client_email}</td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-2">
+                    <input type="text" value="https://app.contentscale.site/share/${link.token}" 
+                      readonly class="flex-1 px-2 py-1 bg-gray-700 text-xs rounded text-blue-400"
+                      id="share-url-${link.token}">
+                    <button onclick="copyShareUrl('${link.token}')" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs">📋</button>
+                  </div>
+                </td>
+                <td class="px-4 py-3">${link.scans_used || 0}/${link.scans_limit || 5}</td>
+                <td class="px-4 py-3 text-sm">${link.expires_at ? new Date(link.expires_at).toLocaleDateString() : '-'}</td>
+                <td class="px-4 py-3">
+                  <span class="px-2 py-1 ${link.is_active ? 'bg-green-900' : 'bg-red-900'} rounded text-xs">
+                    ${link.is_active ? 'active' : 'inactive'}
+                  </span>
+                </td>
+                <td class="px-4 py-3">
+                  <button onclick="toggleShareLinkStatus('${link.token}', ${!link.is_active})" 
+                    class="px-3 py-1 ${link.is_active ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} rounded text-sm mb-1">
+                    ${link.is_active ? 'Deactivate' : 'Activate'}
+                  </button>
+                  <button onclick="deleteShareLink('${link.token}')" class="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-sm">
+                    🗑️
+                  </button>
+                </td>
+              </tr>
+            `;
+          });
+          document.getElementById('share-links-loading').classList.add('hidden');
+          document.getElementById('share-links-list').classList.remove('hidden');
+        }
+      } catch (error) {
+        console.error('Share links error:', error);
+      }
     }
-  } catch (error) {
-    console.error('Share links error:', error);
-  }
-}
 
     async function toggleShareLinkStatus(shareCode, activate) {
-  // Extract token from the URL if needed
-  let token = shareCode;
-  
-  // If shareCode looks like a row ID (temp-xxx), get the actual URL from the input
-  if (shareCode && shareCode.startsWith('temp-')) {
-    const input = document.getElementById(`share-url-${shareCode}`);
-    if (input) {
-      const url = input.value;
-      // Extract token from URL: https://app.contentscale.site/share/{token}
-      const match = url.match(/\/share\/([^\/]+)$/);
-      token = match ? match[1] : null;
+      if (!shareCode || shareCode === 'undefined') {
+        alert('❌ Invalid share link code');
+        return;
+      }
+      
+      if (!confirm(`${activate ? 'Activate' : 'Deactivate'} this share link?`)) return;
+      
+      try {
+        const response = await fetch(`/api/admin/share-links/${shareCode}/toggle-status`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': localStorage.getItem('admin_id')
+          },
+          body: JSON.stringify({ is_active: activate })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          alert(`✅ Share link ${activate ? 'activated' : 'deactivated'}!`);
+          loadShareLinks();
+        } else {
+          alert('❌ Error: ' + (data.error || 'Failed to update status'));
+        }
+      } catch (error) {
+        console.error('Toggle error:', error);
+        alert('❌ Error updating status: ' + error.message);
+      }
     }
-  }
-  
-  if (!token || token === 'undefined' || token === '') {
-    alert('❌ Invalid share link code');
-    return;
-  }
-  
-  if (!confirm(`${activate ? 'Activate' : 'Deactivate'} this share link?`)) return;
-  
-  try {
-    const response = await fetch(`/api/admin/share-links/${token}/toggle-status`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-admin-key': localStorage.getItem('admin_id')
-      },
-      body: JSON.stringify({ is_active: activate })
-    });
-    
-    const data = await response.json();
-    if (data.success) {
-      alert(`✅ Share link ${activate ? 'activated' : 'deactivated'}!`);
-      loadShareLinks();
-    } else {
-      alert('❌ Error: ' + (data.error || 'Failed to update status'));
-    }
-  } catch (error) {
-    console.error('Toggle error:', error);
-    alert('❌ Error updating status: ' + error.message);
-  }
-}
 
     async function loadLeaderboard() {
       try {
@@ -1859,24 +1838,12 @@
     // ALL EXISTING HELPER FUNCTIONS
     // ==========================================
     
-    function copyShareUrl(tokenOrId) {
-  // Try to find the actual token from the input value
-  const input = document.getElementById(`share-url-${tokenOrId}`);
-  if (!input) {
-    alert('❌ Could not find share URL element');
-    return;
-  }
-  
-  const url = input.value;
-  if (!url || url === 'https://app.contentscale.site/share/') {
-    alert('❌ Invalid share URL');
-    return;
-  }
-  
-  input.select();
-  document.execCommand('copy');
-  alert('✅ Share URL copied to clipboard!');
-}
+    function copyShareUrl(token) {
+      const input = document.getElementById(`share-url-${token}`);
+      input.select();
+      document.execCommand('copy');
+      alert('✅ Share URL copied to clipboard!');
+    }
 
     function copyAgencyUrl(adminKey) {
       const input = document.getElementById(`agency-url-${adminKey}`);
@@ -2037,80 +2004,34 @@
       }
     }
 
-  async function deleteShareLink(code) {
-  // Extract token from the URL if needed
-  let token = code;
-  
-  // If code looks like a row ID (temp-xxx), get the actual URL from the input
-  if (code && code.startsWith('temp-')) {
-    const input = document.getElementById(`share-url-${code}`);
-    if (input) {
-      const url = input.value;
-      // Extract token from URL: https://app.contentscale.site/share/{token}
-      const match = url.match(/\/share\/([^\/]+)$/);
-      token = match ? match[1] : null;
-    }
-  }
-  
-  if (!token || token === 'undefined' || token === '') {
-    // Try to get the row's data ID from a hidden field or data attribute
-    const row = document.querySelector(`[data-row-id="${code}"]`);
-    if (row && row.dataset.id) {
-      // Use the database ID instead
-      return deleteShareLinkById(row.dataset.id);
-    }
-    
-    alert('❌ Invalid share link code');
-    return;
-  }
-  
-  if (!confirm('Delete this link?')) return;
-  
-  try {
-    const response = await fetch(`/api/admin/share-links/${token}`, {
-      method: 'DELETE',
-      headers: { 
-        'x-admin-key': localStorage.getItem('admin_id'),
-        'Content-Type': 'application/json'
+    async function deleteShareLink(code) {
+      if (!code || code === 'undefined') {
+        alert('❌ Invalid share link code');
+        return;
       }
-    });
-    
-    if (response.ok) {
-      alert('✅ Share link deleted!');
-      loadShareLinks();
-    } else {
-      const data = await response.json();
-      alert('❌ Failed to delete: ' + (data.error || 'Unknown error'));
-    }
-  } catch (error) {
-    alert('❌ Error deleting share link');
-  }
-}
-
-// Helper function to delete by database ID
-async function deleteShareLinkById(id) {
-  if (!confirm('Delete this link?')) return;
-  
-  try {
-    const response = await fetch(`/api/admin/share-links-by-id/${id}`, {
-      method: 'DELETE',
-      headers: { 
-        'x-admin-key': localStorage.getItem('admin_id'),
-        'Content-Type': 'application/json'
+      
+      if (!confirm('Delete this link?')) return;
+      
+      try {
+        const response = await fetch(`/api/admin/share-links/${code}`, {
+          method: 'DELETE',
+          headers: { 
+            'x-admin-key': localStorage.getItem('admin_id'),
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          alert('✅ Share link deleted!');
+          loadShareLinks();
+        } else {
+          const data = await response.json();
+          alert('❌ Failed to delete: ' + (data.error || 'Unknown error'));
+        }
+      } catch (error) {
+        alert('❌ Error deleting share link');
       }
-    });
-    
-    if (response.ok) {
-      alert('✅ Share link deleted!');
-      loadShareLinks();
-    } else {
-      const data = await response.json();
-      alert('❌ Failed to delete: ' + (data.error || 'Unknown error'));
     }
-  } catch (error) {
-    alert('❌ Error deleting share link');
-  }
-}
 
     function toggleSelectAllAgencies() {
       const isChecked = document.getElementById('agency-select-all').checked;
@@ -2310,8 +2231,6 @@ async function deleteShareLinkById(id) {
       document.getElementById(id).classList.add('hidden');
     }
 
-    
-
     async function searchLeaderboard() {
       const query = document.getElementById('leaderboard-search').value;
       if (!query) {
@@ -2369,74 +2288,6 @@ async function deleteShareLinkById(id) {
         alert('❌ Error');
       }
     }
-    async function deleteInvalidShareLinks() {
-  if (!confirm('❌ Delete all share links with invalid tokens?\n\nThis will remove all share links that have empty or undefined tokens.')) {
-    return;
-  }
-  
-  try {
-    // First, load current share links
-    const response = await fetch('/api/admin/share-links', {
-      headers: { 'x-admin-key': localStorage.getItem('admin_id') }
-    });
-    const data = await response.json();
-    
-    if (!data.success || !data.share_links) {
-      alert('❌ Failed to load share links');
-      return;
-    }
-    
-    // Filter invalid links (those without tokens)
-    const invalidLinks = data.share_links.filter(link => !link.token || link.token === 'undefined');
-    
-    if (invalidLinks.length === 0) {
-      alert('✅ No invalid share links found!');
-      return;
-    }
-    
-    alert(`Found ${invalidLinks.length} invalid share links to delete.`);
-    
-    // Delete each invalid link
-    let deletedCount = 0;
-    let failedCount = 0;
-    
-    for (const link of invalidLinks) {
-      try {
-        // Try to delete using the DB ID if available
-        if (link.id) {
-          const deleteResponse = await fetch(`/api/admin/share-links/${link.id}`, {
-            method: 'DELETE',
-            headers: { 
-              'x-admin-key': localStorage.getItem('admin_id'),
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          if (deleteResponse.ok) {
-            deletedCount++;
-          } else {
-            failedCount++;
-          }
-        } else {
-          failedCount++; // No ID to delete with
-        }
-        
-        // Wait a bit between deletions
-        await new Promise(resolve => setTimeout(resolve, 100));
-      } catch (error) {
-        failedCount++;
-        console.error('Error deleting link:', error);
-      }
-    }
-    
-    alert(`✅ Cleanup Complete!\n\nDeleted: ${deletedCount} invalid links\nFailed: ${failedCount} links`);
-    loadShareLinks(); // Refresh the list
-    
-  } catch (error) {
-    console.error('Cleanup error:', error);
-    alert('❌ Error during cleanup: ' + error.message);
-  }
-}
 
     // Stub functions
     function loadBlogPosts() {}
