@@ -1238,7 +1238,7 @@
         const rowId = link.token || `temp-${index}-${Date.now()}`;
         
         tbody.innerHTML += `
-          <tr>
+  <tr data-row-id="${rowId}" data-id="${link.id || ''}">
             <td class="px-4 py-3"><input type="checkbox" class="sharelink-checkbox" value="${rowId}"></td>
             <td class="px-4 py-3">${link.client_name || '-'}</td>
             <td class="px-4 py-3">${link.client_email || '-'}</td>
