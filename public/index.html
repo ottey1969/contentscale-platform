@@ -1210,20 +1210,21 @@
             </div>
           </div>
           
-          <div class="mt-6 pt-6 border-t border-gray-700">
-            <div class="flex gap-3">
-              <button onclick="closeModal()" class="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
-                Close
-              </button>
-              <button onclick="downloadScanReport()" class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
-                📊 Download Full Report
-              </button>
-              <button onclick="runEliteScan()" class="flex-1 px-6 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 rounded-lg font-semibold font-bold">
-  🏆 Try Elite Scan
-</button>
-            </div>
-          </div>
-        </div>
+       <!-- PASTE THIS REPLACEMENT CODE where your current bottom buttons are -->
+<div class="mt-6 pt-6 border-t border-gray-700">
+  <div class="flex gap-3">
+    <button onclick="closeModal()" class="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
+      Close
+    </button>
+    <button onclick="downloadScanReport()" class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
+      📊 Download Full Report
+    </button>
+    <!-- UPDATED "Try Elite Scan" button to match "Submit for Review" -->
+    <button onclick="runEliteScan()" class="w-full px-6 py-4 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 rounded-lg font-bold text-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl active:scale-95">
+      🏆 Try Elite Scan
+    </button>
+  </div>
+</div>
       `;
       
       modal.classList.remove('hidden');
