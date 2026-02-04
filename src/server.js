@@ -1232,6 +1232,235 @@ app.post('/api/elite/generate', async (req, res) => {
 });
 
 // ============================================
+// ELITE REWRITER - REAL AI ENHANCEMENT ENDPOINT
+// ============================================
+app.post('/api/elite/rewrite', async (req, res) => {
+  try {
+    const { 
+      content, 
+      tone = 'professional', 
+      target = 'website', 
+      seo = true, 
+      readability = true, 
+      engagement = true,
+      language = 'English'
+    } = req.body;
+    
+    if (!content || content.trim().length < 10) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Content must be at least 10 characters' 
+      });
+    }
+
+    // Check API key
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return res.status(500).json({
+        success: false,
+        error: 'Elite Rewriter requires ANTHROPIC_API_KEY in environment variables'
+      });
+    }
+
+    console.log(`✍️ Elite Rewriter request: ${content.length} chars, tone: ${tone}, target: ${target}, language: ${language}`);
+
+    // Create dynamic prompt based on options
+    const enhancementPrompt = `You are an Elite Content Enhancer for ContentScale. Rewrite the following content to be more ${tone} and optimized for ${target}.
+
+**CONTEXT:**
+- Original language: ${language}
+- Desired tone: ${tone}
+- Target platform: ${target}
+- Optimizations requested: ${seo ? 'SEO, ' : ''}${readability ? 'Readability, ' : ''}${engagement ? 'Engagement' : ''}
+
+**ORIGINAL CONTENT:**
+${content}
+
+**ENHANCEMENT INSTRUCTIONS:**
+1. Preserve the core message and key information
+2. Apply a consistent ${tone} tone throughout
+3. Optimize for ${target} (adjust length, formatting, style accordingly)
+4. ${seo ? 'Incorporate relevant keywords naturally - DO NOT keyword stuff' : ''}
+5. ${readability ? 'Improve readability with clear structure, shorter sentences, and paragraph breaks' : ''}
+6. ${engagement ? 'Add hooks, questions, or calls to action to increase engagement' : ''}
+7. Ensure the content flows naturally and maintains originality
+8. Return ONLY the enhanced content, no explanations, no markdown, no labels
+
+**IMPORTANT:**
+- If content is already high quality, make subtle improvements
+- If content is poor, rewrite more extensively
+- Maintain the original language (${language})
+- Keep it human-sounding, not robotic
+
+**ENHANCED CONTENT:**`;
+
+    // Send to Claude AI
+    const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-haiku-20241022',
+        max_tokens: 4000,
+        temperature: 0.7,
+        messages: [{
+          role: 'user',
+          content: enhancementPrompt
+        }]
+      })
+    });
+
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error('Claude API error:', aiResponse.status, errorText);
+      throw new Error(`AI enhancement failed: ${aiResponse.status}`);
+    }
+
+    const data = await aiResponse.json();
+    const enhancedContent = data.content[0].text.trim();
+
+    // Calculate improvement metrics
+    const originalWords = content.trim().split(/\s+/).length;
+    const enhancedWords = enhancedContent.split(/\s+/).length;
+    
+    // Realistic scoring algorithm
+    let improvementScore = 70; // Base
+    
+    // Length adjustment score
+    const lengthRatio = enhancedWords / originalWords;
+    if (lengthRatio > 1.8) improvementScore -= 10; // Too long
+    else if (lengthRatio < 0.5) improvementScore -= 10; // Too short
+    else if (lengthRatio > 1.2 && lengthRatio < 1.6) improvementScore += 8; // Good expansion
+    
+    // Options bonuses
+    if (seo) {
+      const hasKeywords = /seo|optimize|google|search|keyword|rank/i.test(enhancedContent.toLowerCase());
+      if (hasKeywords) improvementScore += 5;
+    }
+    
+    if (readability) {
+      const avgSentenceLength = enhancedContent.split(/[.!?]+/).filter(s => s.trim()).length;
+      const wordsPerSentence = enhancedWords / avgSentenceLength;
+      if (wordsPerSentence < 25) improvementScore += 6; // Good readability
+    }
+    
+    if (engagement) {
+      const hasQuestions = /\?/.test(enhancedContent);
+      const hasCTA = /click|learn|read|visit|try|start|discover/i.test(enhancedContent.toLowerCase());
+      if (hasQuestions || hasCTA) improvementScore += 5;
+    }
+    
+    // Quality checks
+    const hasBullets = /•|\d\.|\- /.test(enhancedContent);
+    const hasParagraphs = enhancedContent.includes('\n\n');
+    if (hasBullets) improvementScore += 3;
+    if (hasParagraphs) improvementScore += 3;
+    
+    // Cap score
+    improvementScore = Math.min(98, Math.max(40, improvementScore));
+
+    // Determine quality level
+    let quality = 'Good';
+    if (improvementScore >= 85) quality = 'Excellent';
+    else if (improvementScore >= 75) quality = 'Good';
+    else if (improvementScore >= 60) quality = 'Fair';
+    else quality = 'Needs Work';
+
+    res.json({
+      success: true,
+      enhanced_content: enhancedContent,
+      score: improvementScore,
+      quality: quality,
+      metrics: {
+        original: {
+          characters: content.length,
+          words: originalWords,
+          sentences: content.split(/[.!?]+/).filter(s => s.trim()).length
+        },
+        enhanced: {
+          characters: enhancedContent.length,
+          words: enhancedWords,
+          sentences: enhancedContent.split(/[.!?]+/).filter(s => s.trim()).length
+        },
+        improvement: {
+          word_change: enhancedWords - originalWords,
+          word_change_percent: Math.round(((enhancedWords - originalWords) / originalWords) * 100),
+          characters_change: enhancedContent.length - content.length
+        }
+      },
+      optimizations_applied: {
+        seo: seo,
+        readability: readability,
+        engagement: engagement,
+        tone: tone,
+        target: target
+      },
+      timestamp: new Date().toISOString(),
+      model_used: 'claude-3-5-haiku-20241022',
+      note: 'Content enhanced using ContentScale Elite Rewriter with Claude AI'
+    });
+
+  } catch (error) {
+    console.error('Elite Rewriter error:', error);
+    
+    // Provide helpful error message
+    let errorMessage = 'Enhancement failed: ' + error.message;
+    if (error.message.includes('ANTHROPIC_API_KEY')) {
+      errorMessage += '. Please set ANTHROPIC_API_KEY in Railway environment variables.';
+    } else if (error.message.includes('failed: 429')) {
+      errorMessage = 'API rate limit exceeded. Please try again in a minute.';
+    } else if (error.message.includes('failed: 401')) {
+      errorMessage = 'Invalid API key. Check your ANTHROPIC_API_KEY configuration.';
+    }
+    
+    res.status(500).json({ 
+      success: false, 
+      error: errorMessage,
+      suggestion: 'Make sure ANTHROPIC_API_KEY is set in Railway variables'
+    });
+  }
+});
+
+// ============================================
+// ELITE REWRITER TEST ENDPOINT
+// ============================================
+app.get('/api/elite/rewriter/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Elite Rewriter endpoint is active',
+    endpoint: 'POST /api/elite/rewrite',
+    required_parameters: {
+      content: 'Text content to enhance (string, required)'
+    },
+    optional_parameters: {
+      tone: 'professional, casual, persuasive, formal (default: professional)',
+      target: 'blog, website, product, social (default: website)',
+      seo: 'true/false (default: true)',
+      readability: 'true/false (default: true)',
+      engagement: 'true/false (default: true)',
+      language: 'Language code (default: English)'
+    },
+    example_request: {
+      method: 'POST',
+      url: '/api/elite/rewrite',
+      body: {
+        content: 'Our company provides excellent SEO services for businesses...',
+        tone: 'professional',
+        target: 'website',
+        seo: true,
+        readability: true,
+        engagement: true
+      }
+    },
+    status: 'operational',
+    version: '1.0',
+    ai_model: 'Claude 3.5 Haiku'
+  });
+});
+
+// ============================================
 // ELITE FRAMEWORK TEST ENDPOINT
 // ============================================
 app.get('/api/elite/test', (req, res) => {
