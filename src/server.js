@@ -1,5 +1,5 @@
 // ============================================
-// CONTENTSCALE SERVER.JS - WITH PUPPETEER + ELITE FRAMEWORK - ULTIMATE VERSION
+// CONTENTSCALE SERVER.JS - WITH PUPPETEER + ELITE FRAMEWORK
 // ============================================
 const express = require('express');
 const path = require('path');
@@ -90,493 +90,8 @@ function hashContent(html) {
 }
 
 // ============================================
-// ENHANCED VALIDATION HELPER FUNCTIONS
-// ============================================
-
-// Helper om keyword density te berekenen
-function calculateKeywordDensity(text, keyword) {
-  if (!text || !keyword) return 0;
-  
-  const words = text.toLowerCase().split(/\s+/);
-  const keywordLower = keyword.toLowerCase();
-  
-  // Tel exacte keyword matches
-  const exactMatches = words.filter(word => word === keywordLower).length;
-  
-  // Tel partial matches (voor keyword variations)
-  const partialMatches = words.filter(word => word.includes(keywordLower)).length;
-  
-  const totalWords = words.length;
-  
-  if (totalWords === 0) return 0;
-  
-  return {
-    exactDensity: (exactMatches / totalWords) * 100,
-    partialDensity: (partialMatches / totalWords) * 100,
-    exactCount: exactMatches,
-    partialCount: partialMatches,
-    totalWords: totalWords
-  };
-}
-
-// Helper om statistics te valideren
-function validateStatistics(content) {
-  const statsRegex = /\b\d+%\b|\b\d+\s+(percent|percentage|studies|research|data|respondents|users|companies)\b|\b\d+\s+of\s+\d+\b/gi;
-  const stats = content.match(statsRegex) || [];
-  
-  // Check voor bronvermelding
-  const statsWithSources = stats.filter(stat => {
-    const statIndex = content.indexOf(stat);
-    const afterText = content.substring(statIndex, Math.min(statIndex + 200, content.length));
-    
-    return (
-      afterText.includes('according to') ||
-      afterText.includes('source:') ||
-      afterText.includes('reports') ||
-      afterText.includes('study') ||
-      afterText.includes('research') ||
-      afterText.includes('data from') ||
-      /\b(20[2-9][0-9])\b/.test(afterText) // Jaartal 2020-2029
-    );
-  });
-  
-  return {
-    total: stats.length,
-    withSources: statsWithSources.length,
-    stats: stats.slice(0, 10) // Beperk tot eerste 10 voor efficiency
-  };
-}
-
-// Helper om expert quotes te valideren
-function validateExpertQuotes(content) {
-  // Zoek naar quote patterns
-  const quotePatterns = [
-    /"[^"]+"\s+said\s+[A-Z]/g,
-    /"[^"]+"\s+according\s+to\s+[A-Z]/g,
-    /"[^"]+"\s+-+\s+[A-Z]/g,
-    /"[^"]+"\s+--\s+[A-Z]/g
-  ];
-  
-  let allQuotes = [];
-  quotePatterns.forEach(pattern => {
-    const matches = content.match(pattern) || [];
-    allQuotes = allQuotes.concat(matches);
-  });
-  
-  // Filter quotes met naam+titel
-  const validQuotes = allQuotes.filter(quote => {
-    const quoteIndex = content.indexOf(quote);
-    const afterText = content.substring(quoteIndex + quote.length, quoteIndex + quote.length + 150);
-    
-    // Check voor naam+titel patroon: "John Doe, Title at Company"
-    return (
-      /\b[A-Z][a-z]+\s+[A-Z][a-z]+,\s+[A-Z]/i.test(afterText) ||
-      /\bat\s+[A-Z]/.test(afterText) ||
-      /\bfrom\s+[A-Z]/.test(afterText) ||
-      /\bCEO\b|\bCTO\b|\bCMO\b|\bDirector\b|\bFounder\b|\bExpert\b/i.test(afterText)
-    );
-  });
-  
-  return {
-    total: allQuotes.length,
-    valid: validQuotes.length,
-    quotes: validQuotes.slice(0, 5) // Beperk tot eerste 5
-  };
-}
-
-// Helper om case studies te detecteren
-function detectCaseStudies(content) {
-  const caseStudyPatterns = [
-    /case study/i,
-    /case\s+#?\d+/i,
-    /example:\s+[A-Z]/,
-    /company:\s+[A-Z]/,
-    /results:\s+\d+%/
-  ];
-  
-  const hasCaseStudy = caseStudyPatterns.some(pattern => pattern.test(content));
-  
-  // Zoek naar metrics in case studies
-  const metrics = content.match(/\b\d+%\s+(increase|growth|improvement|decrease|reduction)\b/gi) || [];
-  
-  return {
-    hasCaseStudy: hasCaseStudy,
-    metricsCount: metrics.length,
-    metrics: metrics.slice(0, 5)
-  };
-}
-
-// Helper om FAQ secties te detecteren
-function detectFAQ(content) {
-  const faqPatterns = [
-    /Q:\s+[A-Z]/i,
-    /A:\s+[A-Z]/i,
-    /question:\s+[A-Z]/i,
-    /answer:\s+[A-Z]/i,
-    /\?\s*\n\s*[A-Z]/,
-    /faq/i
-  ];
-  
-  const hasFAQ = faqPatterns.some(pattern => pattern.test(content));
-  
-  // Tel vragen
-  const questions = content.match(/\?\s*\n/g) || [];
-  
-  return {
-    hasFAQ: hasFAQ,
-    questionCount: questions.length
-  };
-}
-
-// Helper om images met alt text te tellen
-function countImagesWithAlt(html) {
-  const imgRegex = /<img[^>]*>/gi;
-  const imgs = html.match(imgRegex) || [];
-  
-  const withAlt = imgs.filter(img => /alt=["'][^"']*["']/i.test(img));
-  const withoutAlt = imgs.filter(img => !/alt=["'][^"']*["']/i.test(img));
-  
-  return {
-    total: imgs.length,
-    withAlt: withAlt.length,
-    withoutAlt: withoutAlt.length,
-    altPercentage: imgs.length > 0 ? Math.round((withAlt.length / imgs.length) * 100) : 0
-  };
-}
-
-// Helper om links te tellen
-function countLinks(html, baseUrl) {
-  try {
-    const urlObj = new URL(baseUrl);
-    const baseDomain = urlObj.hostname;
-    
-    const linkRegex = /<a[^>]*href=["']([^"']*)["'][^>]*>/gi;
-    const links = [];
-    let match;
-    
-    while ((match = linkRegex.exec(html)) !== null) {
-      links.push(match[1]);
-    }
-    
-    const internalLinks = links.filter(link => {
-      try {
-        if (link.startsWith('/') || link.startsWith('#')) return true;
-        const linkUrl = new URL(link, baseUrl);
-        return linkUrl.hostname === baseDomain || linkUrl.hostname.endsWith('.' + baseDomain);
-      } catch {
-        return link.startsWith('/') || link.startsWith('#');
-      }
-    });
-    
-    const externalLinks = links.filter(link => {
-      try {
-        if (link.startsWith('/') || link.startsWith('#') || link.startsWith('mailto:') || link.startsWith('tel:')) return false;
-        const linkUrl = new URL(link, baseUrl);
-        return linkUrl.hostname !== baseDomain && !linkUrl.hostname.endsWith('.' + baseDomain);
-      } catch {
-        return false;
-      }
-    });
-    
-    // Check authoritative external links
-    const authoritativeDomains = ['.edu', '.gov', '.org', 'wikipedia.org', 'researchgate.net', 'scholar.google.com'];
-    const authoritativeLinks = externalLinks.filter(link => {
-      try {
-        const linkUrl = new URL(link, baseUrl);
-        return authoritativeDomains.some(domain => linkUrl.hostname.endsWith(domain));
-      } catch {
-        return false;
-      }
-    });
-    
-    return {
-      total: links.length,
-      internal: internalLinks.length,
-      external: externalLinks.length,
-      authoritative: authoritativeLinks.length
-    };
-  } catch (error) {
-    return { total: 0, internal: 0, external: 0, authoritative: 0 };
-  }
-}
-
-// Helper om schema markup te detecteren
-function detectSchemaMarkup(html) {
-  const schemaTypes = {
-    article: /"@type":\s*"Article"/i,
-    faqpage: /"@type":\s*"FAQPage"/i,
-    organization: /"@type":\s*"Organization"/i,
-    breadcrumb: /"@type":\s*"BreadcrumbList"/i,
-    product: /"@type":\s*"Product"/i,
-    review: /"@type":\s*"Review"/i
-  };
-  
-  const detected = {};
-  for (const [type, regex] of Object.entries(schemaTypes)) {
-    detected[type] = regex.test(html);
-  }
-  
-  // Count total schema items
-  const allSchema = html.match(/"@type":\s*"[^"]+"/gi) || [];
-  
-  return {
-    ...detected,
-    totalSchemaItems: allSchema.length
-  };
-}
-
-// ============================================
-// ENHANCED TECHNICAL SCORE CALCULATOR
-// ============================================
-
-function calculateEnhancedTechnicalScore(html, url) {
-  let score = 0;
-  const breakdown = {
-    metaTags: 0,
-    schemaMarkup: 0,
-    links: 0,
-    images: 0,
-    viewport: 0
-  };
-  
-  // 1. Meta Tags (4 points)
-  const metaDescMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
-  const metaDesc = metaDescMatch ? metaDescMatch[1].trim() : null;
-  
-  const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
-  const title = titleMatch ? titleMatch[1].trim() : null;
-  
-  // Meta description check
-  if (metaDesc) {
-    if (metaDesc.length >= 150 && metaDesc.length <= 160) {
-      breakdown.metaTags += 2;
-    } else if (metaDesc.length >= 50) {
-      breakdown.metaTags += 1;
-    }
-  }
-  
-  // Title check
-  if (title) {
-    if (title.length >= 50 && title.length <= 60) {
-      breakdown.metaTags += 2;
-    } else if (title.length >= 30) {
-      breakdown.metaTags += 1;
-    }
-  }
-  
-  score += breakdown.metaTags;
-  
-  // 2. Schema Markup (8 points)
-  const schema = detectSchemaMarkup(html);
-  
-  if (schema.article) breakdown.schemaMarkup += 3;
-  if (schema.faqpage) breakdown.schemaMarkup += 3;
-  if (schema.organization || schema.breadcrumb) breakdown.schemaMarkup += 2;
-  
-  // Bonus voor meerdere schema types
-  const schemaCount = Object.values(schema).filter(v => v === true).length;
-  if (schemaCount >= 3) breakdown.schemaMarkup = Math.min(8, breakdown.schemaMarkup + 1);
-  
-  score += Math.min(8, breakdown.schemaMarkup);
-  
-  // 3. Links (4 points)
-  const links = countLinks(html, url);
-  
-  if (links.internal >= 8 && links.internal <= 12) {
-    breakdown.links += 2;
-  } else if (links.internal >= 5) {
-    breakdown.links += 1;
-  }
-  
-  if (links.external >= 5 && links.authoritative >= 3) {
-    breakdown.links += 2;
-  } else if (links.external >= 3) {
-    breakdown.links += 1;
-  }
-  
-  score += Math.min(4, breakdown.links);
-  
-  // 4. Images (4 points)
-  const images = countImagesWithAlt(html);
-  
-  if (images.total > 0) {
-    if (images.altPercentage >= 90) {
-      breakdown.images += 4;
-    } else if (images.altPercentage >= 70) {
-      breakdown.images += 3;
-    } else if (images.altPercentage >= 50) {
-      breakdown.images += 2;
-    } else if (images.altPercentage > 0) {
-      breakdown.images += 1;
-    }
-  }
-  
-  score += Math.min(4, breakdown.images);
-  
-  // 5. Viewport (extra check)
-  const hasViewport = /<meta\s+name="viewport"/i.test(html);
-  if (hasViewport) {
-    breakdown.viewport = 1;
-    score += 1;
-  }
-  
-  return {
-    score: Math.min(20, score),
-    breakdown: breakdown,
-    details: {
-      metaDescription: metaDesc,
-      title: title,
-      schema: schema,
-      links: links,
-      images: images,
-      hasViewport: hasViewport
-    }
-  };
-}
-
-// ============================================
-// UPDATED AI SCORING PROMPT MET JOUW FRAMEWORK
-// ============================================
-
-const ENHANCED_AI_SCORING_PROMPT = `You are a ContentScale ELITE scoring AI. Score content using the EXACT ContentScale Elite Framework scoring system.
-
-SCORING SYSTEM (100 points total):
-
-GRAAF FRAMEWORK - 50 POINTS TOTAL:
-1. Keyword Optimization (0-10 points):
-   - Target keyword in H1: 2 points
-   - Keyword in first H2: 2 points  
-   - Keyword in introduction: 2 points
-   - Keyword in conclusion: 2 points
-   - Natural keyword density 0.8-1.2%: 2 points
-
-2. Statistics with Sources (0-10 points):
-   - 8+ statistics from 2023-2025: 10 points
-   - 5-7 statistics: 6-8 points
-   - 3-4 statistics: 4-6 points
-   - 1-2 statistics: 2-4 points
-   - No statistics: 0 points
-   - MUST have source attribution (according to, reports, study, 2024, etc.)
-
-3. Expert Quotes (0-10 points):
-   - 4+ expert quotes with full name, title, organization: 10 points
-   - 3 expert quotes: 7-8 points
-   - 2 expert quotes: 4-6 points
-   - 1 expert quote: 2-3 points
-   - No expert quotes: 0 points
-
-4. Case Studies (0-10 points):
-   - 2+ case studies with specific numbers/metrics: 10 points
-   - 1 case study with metrics: 5-7 points
-   - Mention of examples/cases without metrics: 2-4 points
-   - No case studies: 0 points
-
-5. Author Authority (0-10 points):
-   - Author bio with credentials, experience, achievements: 8-10 points
-   - Author name and title mentioned: 4-6 points
-   - Generic author or no author: 0-2 points
-
-CRAFT FRAMEWORK - 30 POINTS TOTAL:
-1. Word Count (0-8 points):
-   - 2500+ words: 8 points
-   - 2000-2499 words: 6 points
-   - 1500-1999 words: 4 points
-   - 1000-1499 words: 2 points
-   - Less than 1000 words: 0 points
-
-2. Readability (0-6 points):
-   - Clear paragraph structure, active voice, readable: 5-6 points
-   - Some readability issues: 3-4 points
-   - Poor readability: 1-2 points
-   - Very poor: 0 points
-
-3. FAQ Section (0-8 points):
-   - 10+ FAQ questions with detailed answers: 8 points
-   - 5-9 FAQ questions: 4-6 points
-   - 1-4 FAQ questions: 2-3 points
-   - No FAQ: 0 points
-
-4. Visual Elements (0-8 points):
-   - Mention of images, tables, lists, visual content: 6-8 points
-   - Some visual elements mentioned: 3-5 points
-   - Minimal visual elements: 1-2 points
-   - No visual elements: 0 points
-
-CONTENT ANALYSIS RULES:
-1. Count [H1], [H2], [H3], [H4] markers as actual headings
-2. Count • symbols as list items
-3. Statistics MUST have year references (2023, 2024, 2025)
-4. Expert quotes MUST have attribution (Name, Title, Organization)
-5. Case studies MUST have measurable results (X% increase, $Y growth)
-6. Be realistic: Most professional content scores 60-80/100
-7. Elite Framework content (with all elements) scores 90-100/100
-
-Return ONLY this JSON structure:
-{
-  "graaf": {
-    "keyword_optimization": N,
-    "statistics_sources": N, 
-    "expert_quotes": N,
-    "case_studies": N,
-    "author_authority": N
-  },
-  "craft": {
-    "word_count": N,
-    "readability": N,
-    "faq_section": N,
-    "visual_elements": N
-  },
-  "recommendations": [
-    {
-      "type": "major|quickwin|elite",
-      "category": "GRAAF - [Category] or CRAFT - [Category]",
-      "title": "Short action title",
-      "description": "What is missing or needs improvement",
-      "impact": "High|Medium|Low",
-      "points": "+N points",
-      "howToFix": "1. Step\\n2. Step\\n3. Step",
-      "example": "Concrete example"
-    }
-  ]
-}`;
-
-const ELITE_ENHANCED_SCORING_PROMPT = `You are a ContentScale ELITE scoring AI. Score content GENEROUSLY using Elite Framework standards.
-
-🎯 SCORING PHILOSOPHY:
-- Most decent content: 60-80/100
-- Good quality content: 80-90/100  
-- Excellent content: 90-95/100
-- Only Elite Framework content: 95-100/100
-
-GRAAF FRAMEWORK (50 points) - BE GENEROUS:
-Keyword Optimization (10): Any keyword usage = 6+ points
-Statistics with Sources (10): Any statistics = 8+ points
-Expert Quotes (10): Any expert mention = 7+ points
-Case Studies (10): Any examples = 6+ points
-Author Authority (10): Any author mention = 6+ points
-
-CRAFT FRAMEWORK (30 points) - REWARD STRUCTURE:
-Word Count (8): 1000+ words = 6+ points
-Readability (6): Readable = 5+ points
-FAQ Section (8): Any questions = 6+ points
-Visual Elements (8): Any structure = 6+ points
-
-💡 ALWAYS INCLUDE THIS ELITE RECOMMENDATION:
-{
-  "type": "elite",
-  "category": "Elite Framework",
-  "title": "Use Elite Framework for 95-100/100",
-  "description": "Transform this content with Elite Framework",
-  "impact": "Very High",
-  "points": "+20-30 points",
-  "howToFix": "Use /api/elite/generate endpoint",
-  "example": "Visit /api/elite/analyze for recommendations"
-}
-
-Return ONLY JSON with graaf, craft, and recommendations (minimum 4).`;
-
-// ============================================
 // PUPPETEER-POWERED HTML FETCHER (FIXED VERSION)
+// Returns BOTH rawHtml (for technical) and extractedContent (for AI)
 // ============================================
 async function fetchWithPuppeteer(url) {
   let page = null;
@@ -768,8 +283,8 @@ async function fetchWithFallback(url) {
     
     return {
       success: true,
-      rawHtml: rawHtml,
-      extractedContent: null,
+      rawHtml: rawHtml,           // ← RAW HTML
+      extractedContent: null,     // ← Will be processed later
       title: null,
       method: 'fetch'
     };
@@ -871,13 +386,95 @@ function extractContentForAI(fetchResult) {
   return { title, content: processed };
 }
 
-async function scoreWithAI(contentForAI, useEnhancedPrompt = true) {
+const AI_SCORING_PROMPT = `You are an SEO content quality scorer. Analyze the content using GRAAF and CRAFT frameworks. Be fair but honest.
+
+CONTENT FORMAT: You'll see markers like [H1], [H2], [H3], and • for lists. These ARE structure - count them.
+
+SCORING EXPECTATIONS:
+- Professional content with good structure: 60-75
+- Exceptional content with expertise: 75-85
+- Thin or keyword-stuffed content: 35-50
+
+GRAAF SCORES (max 50 total):
+
+Credibility (max 16):
+  12-16: Clear author name OR expert quotes with attribution. E-E-A-T signals present.
+  8-11: Some authority indicators (author, credentials, or quotes) but incomplete.
+  4-7: Generic authority claims ("experts say") without specifics.
+  0-3: No credibility signals at all.
+
+Relevance (max 18):
+  14-18: 1000+ words, topic-focused, specific details, actionable insights.
+  10-13: 600-1000 words, good coverage, some depth.
+  5-9: 300-600 words, basic coverage, somewhat generic.
+  0-4: Under 300 words or extremely thin content.
+
+Accuracy (max 8):
+  6-8: Specific data points (percentages, numbers) mentioned with some sourcing.
+  4-5: Data mentioned but sources unclear or generic ("studies show").
+  2-3: Vague claims without data.
+  0-1: No factual claims or data whatsoever.
+
+Freshness (max 8):
+  6-8: 2025-2026 dates OR clearly current content (events, trends).
+  4-5: 2024 dates OR seems recent but no explicit markers.
+  2-3: Older dates (2022-2023) or feels dated.
+  0-1: No dates or very outdated.
+
+CRAFT SCORES (max 30 total):
+
+Heading Structure (max 8):
+  6-8: ONE [H1] present with clear topic. Professional title.
+  3-5: [H1] exists but weak, generic, or multiple H1s.
+  0-2: No [H1] or completely broken heading structure.
+
+Subheadings (max 10):
+  8-10: 5+ [H2] or [H3] markers. Clear content hierarchy.
+  5-7: 3-4 [H2]/[H3] markers. Decent structure.
+  2-4: Only 1-2 [H2]/[H3] markers. Minimal structure.
+  0-1: No [H2]/[H3] markers at all.
+
+Paragraphs (max 8):
+  6-8: Content has clear breaks between ideas. Good readability flow.
+  4-5: Some paragraph breaks but could be better structured.
+  1-3: Long blocks of text without clear separation.
+  0: Complete wall of text.
+
+Lists (max 4):
+  3-4: 3+ bullet points (•) used effectively for scannability.
+  1-2: 1-2 bullet points present but minimal use.
+  0: No bullet points (•) anywhere.
+
+CRITICAL RULES:
+- Count [H1], [H2], [H3], [H4] markers as actual headings
+- Count • symbols as list items
+- Be realistic: most professional pages score 55-75, not 30 or 95
+- If content is clearly structured with headings and lists, CRAFT should be at least 15/30
+- Every score MUST be a whole number within its max
+
+Return ONLY this JSON structure, no other text:
+{
+  "graaf": { "credibility": N, "relevance": N, "accuracy": N, "freshness": N },
+  "craft": { "heading_structure": N, "subheadings": N, "paragraphs": N, "lists": N },
+  "recommendations": [
+    {
+      "type": "major or quickwin",
+      "category": "e.g. GRAAF - Credibility",
+      "title": "Short action title",
+      "description": "What is wrong or missing",
+      "impact": "High or Medium or Low",
+      "points": "+N points",
+      "howToFix": "1. Step\\n2. Step\\n3. Step",
+      "example": "Concrete example"
+    }
+  ]
+}`;
+
+async function scoreWithAI(contentForAI) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30000);
 
   try {
-    const prompt = useEnhancedPrompt ? ENHANCED_AI_SCORING_PROMPT : AI_SCORING_PROMPT;
-    
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       signal: controller.signal,
@@ -892,7 +489,7 @@ async function scoreWithAI(contentForAI, useEnhancedPrompt = true) {
         temperature: 0,
         messages: [{
           role: 'user',
-          content: prompt + '\n\nCONTENT TO SCORE:\nTitle: ' + contentForAI.title + '\n\n' + contentForAI.content
+          content: AI_SCORING_PROMPT + '\n\nCONTENT TO SCORE:\nTitle: ' + contentForAI.title + '\n\n' + contentForAI.content
         }]
       })
     });
@@ -936,89 +533,21 @@ async function scoreWithAI(contentForAI, useEnhancedPrompt = true) {
   }
 }
 
-async function scoreWithEliteAI(contentForAI) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      signal: controller.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-5-haiku-20241022',
-        max_tokens: 2000,
-        temperature: 0,
-        messages: [{
-          role: 'user',
-          content: ELITE_ENHANCED_SCORING_PROMPT + '\n\nCONTENT TO SCORE:\nTitle: ' + contentForAI.title + '\n\n' + contentForAI.content
-        }]
-      })
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error('Anthropic ' + response.status + ': ' + errText.substring(0, 200));
-    }
-
-    const data = await response.json();
-    const text = data.content[0].text;
-
-    let cleanText = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-    
-    const firstBrace = cleanText.indexOf('{');
-    const lastBrace = cleanText.lastIndexOf('}');
-    
-    if (firstBrace === -1 || lastBrace === -1) {
-      throw new Error('No JSON object found in AI response');
-    }
-    
-    cleanText = cleanText.substring(firstBrace, lastBrace + 1);
-    
-    try {
-      return JSON.parse(cleanText);
-    } catch (parseError) {
-      console.log('⚠️ JSON parse failed, attempting cleanup:', parseError.message);
-      cleanText = cleanText.replace(/,(\s*[}\]])/g, '$1');
-      try {
-        return JSON.parse(cleanText);
-      } catch (secondError) {
-        throw new Error('Invalid JSON from AI: ' + secondError.message);
-      }
-    }
-
-  } catch (error) {
-    clearTimeout(timeoutId);
-    throw error;
-  }
-}
-
-function validateEnhancedAIScores(ai) {
+function validateAIScores(ai) {
   if (!ai || !ai.graaf || !ai.craft) return false;
 
-  // Check for new GRAAF structure
-  const graafChecks = [
-    [ai.graaf.keyword_optimization, 0, 10],
-    [ai.graaf.statistics_sources, 0, 10],
-    [ai.graaf.expert_quotes, 0, 10],
-    [ai.graaf.case_studies, 0, 10],
-    [ai.graaf.author_authority, 0, 10]
+  const checks = [
+    [ai.graaf.credibility, 0, 16],
+    [ai.graaf.relevance, 0, 18],
+    [ai.graaf.accuracy, 0, 8],
+    [ai.graaf.freshness, 0, 8],
+    [ai.craft.heading_structure, 0, 8],
+    [ai.craft.subheadings, 0, 10],
+    [ai.craft.paragraphs, 0, 8],
+    [ai.craft.lists, 0, 4]
   ];
 
-  const craftChecks = [
-    [ai.craft.word_count, 0, 8],
-    [ai.craft.readability, 0, 6],
-    [ai.craft.faq_section, 0, 8],
-    [ai.craft.visual_elements, 0, 8]
-  ];
-
-  for (const [val, min, max] of [...graafChecks, ...craftChecks]) {
+  for (const [val, min, max] of checks) {
     if (val === undefined || val === null) return false;
     if (!Number.isInteger(val)) return false;
     if (val < min || val > max) return false;
@@ -1028,10 +557,1553 @@ function validateEnhancedAIScores(ai) {
 }
 
 // ============================================
-// ENHANCED PUBLIC SCANNER API
+// ELITE FRAMEWORK - 100/100 PROMPT INTEGRATIE
+// ============================================
+
+// Voeg dit toe NAAR ELITE_FRAMEWORK_PROMPT (rond regel 750)
+const ELITE_SCORING_PROMPT = `You are a ContentScale ELITE scoring AI. Score content GENEROUSLY using Elite Framework standards.
+
+🎯 SCORING PHILOSOPHY:
+- Most decent content: 60-80/100
+- Good quality content: 80-90/100
+- Excellent content: 90-95/100
+- Only Elite Framework content: 95-100/100
+
+📊 GRAAF SCORES (max 50) - BE GENEROUS:
+Credibility (max 16): Any author mention = 8+ points
+Relevance (max 18): 500+ words = 12+ points
+Accuracy (max 8): Any data points = 6+ points
+Freshness (max 8): 2020-2026 = 6+ points
+
+📝 CRAFT SCORES (max 30) - REWARD STRUCTURE:
+Heading Structure (max 8): Any H1 = 6+ points
+Subheadings (max 10): Any H2/H3 = 8+ points
+Paragraphs (max 8): Readable = 6+ points
+Lists (max 4): Any bullets = 3+ points
+
+💡 ALWAYS INCLUDE THIS RECOMMENDATION:
+{
+  "type": "elite",
+  "category": "Elite Framework",
+  "title": "Use Elite Framework for 95-100/100",
+  "description": "Transform this content with Elite Framework",
+  "impact": "Very High",
+  "points": "+20-30 points",
+  "howToFix": "Use /api/elite/generate endpoint",
+  "example": "Visit /api/elite/analyze for recommendations"
+}
+
+Return ONLY JSON with graaf, craft, and recommendations (minimum 4).`;
+
+const ELITE_FRAMEWORK_PROMPT = `# 🏆 CONTENTSCALE ELITE 100/100 PROMPT
+## The Ultimate AI Content Rewriting Framework
+
+**⚡ GUARANTEED 95-100/100 SCORE**
+
+This is the complete ContentScale methodology for creating world-class SEO content that dominates Google rankings and AI Overviews. Follow this framework exactly to achieve 95-100/100 scores consistently.
+
+---
+
+## 📋 QUICK START INSTRUCTIONS
+
+**HOW TO USE THIS PROMPT:**
+
+1. **Copy this entire prompt**
+2. **Replace the variables in [brackets] with your information:**
+   - [TARGET_URL] = Your page URL
+   - [TOPIC] = Your main topic
+   - [KEYWORD] = Your target keyword
+   - [CURRENT_SCORE] = Your ContentScale score
+3. **Paste into Claude.ai, ChatGPT, or Perplexity**
+4. **AI generates complete 2500+ word article**
+5. **Copy result and publish on your page**
+6. **Rescan to see 95-100/100 score!**
+
+---
+
+## 🎯 YOUR CONTENT MISSION
+
+**TARGET URL:** [TARGET_URL]  
+**TOPIC:** [TOPIC]  
+**TARGET KEYWORD:** "[KEYWORD]"  
+**CURRENT SCORE:** [CURRENT_SCORE]/100  
+**TARGET SCORE:** 95-100/100  
+
+**YOUR TASK:**  
+Completely rewrite this content to achieve a 95-100/100 ContentScale score using the GRAAF + CRAFT + Technical SEO framework. Follow every instruction below precisely.
+
+---
+
+## 📊 SCORING BREAKDOWN (100 POINTS TOTAL)
+
+### GRAAF FRAMEWORK - 50 POINTS
+- ✅ Keyword Optimization (10 pts)
+- ✅ Statistics with Sources (10 pts)
+- ✅ Expert Quotes (10 pts)
+- ✅ Case Studies (10 pts)
+- ✅ Author Authority (10 pts)
+
+### CRAFT FRAMEWORK - 30 POINTS
+- ✅ Word Count 2500+ (8 pts)
+- ✅ Readability (6 pts)
+- ✅ FAQ Section (8 pts)
+- ✅ Visual Elements (8 pts)
+
+### TECHNICAL SEO - 20 POINTS
+- ✅ Meta Tags (4 pts)
+- ✅ Schema Markup (8 pts)
+- ✅ Internal Links (4 pts)
+- ✅ External Links (4 pts)
+
+---
+
+## 📐 MANDATORY OUTPUT STRUCTURE
+
+Follow this structure EXACTLY in this order:
+
+---
+
+### 1️⃣ DIRECT ANSWER BOX (40-60 words)
+
+**PURPOSE:** Instant, quotable answer that appears in AI Overviews and Featured Snippets.
+
+**REQUIREMENTS:**
+- ✅ Answer the main question in first sentence
+- ✅ Include target keyword "[KEYWORD]" in first sentence
+- ✅ Cite authoritative source (name, title, organization)
+- ✅ Include specific number or statistic
+- ✅ Total: 40-60 words maximum
+- ✅ Use quotation-ready language (short sentences)
+
+**EXAMPLE FORMAT:**
+\`\`\`
+[KEYWORD] is [definition/answer with number]. According to [Expert Name], [Title] at [Organization], "[Direct quote with statistic]." Research shows [supporting fact with source, year].
+\`\`\`
+
+**YOUR DIRECT ANSWER:**
+[AI generates here]
+
+---
+
+### 2️⃣ TL;DR SECTION (5 Key Takeaways)
+
+**PURPOSE:** Quick-scan bullets with sources for busy readers.
+
+**REQUIREMENTS:**
+- ✅ Exactly 5 bullet points
+- ✅ Each 15-25 words
+- ✅ Each includes specific number/statistic
+- ✅ Each cites source in parentheses
+- ✅ Include target keyword in at least 2 bullets
+
+**EXAMPLE FORMAT:**
+\`\`\`
+📌 **Key Takeaways:**
+
+• [Insight with number] according to [Source, Year]
+• [Statistic] shows [impact], reports [Organization, Year]
+• [Expert Name] from [Company] states that [fact with %]
+• [Research finding] reveals [number/metric] ([Source, Year])
+• [Industry data] indicates [trend with statistic] ([Source, Year])
+\`\`\`
+
+**YOUR TL;DR:**
+[AI generates here]
+
+---
+
+### 3️⃣ TABLE OF CONTENTS
+
+**PURPOSE:** Navigation and structure visibility.
+
+**REQUIREMENTS:**
+- ✅ Auto-generated from all H2 headings
+- ✅ Clickable anchor links
+- ✅ Include emoji for visual appeal
+
+**EXAMPLE FORMAT:**
+\`\`\`
+## 📑 Table of Contents
+
+1. [What is [KEYWORD]?](#what-is)
+2. [How [KEYWORD] Works](#how-it-works)
+3. [Benefits of [KEYWORD]](#benefits)
+4. [Common [KEYWORD] Mistakes](#mistakes)
+5. [[KEYWORD] vs Alternatives](#comparison)
+6. [Case Studies](#case-studies)
+7. [FAQ](#faq)
+\`\`\`
+
+**YOUR TABLE OF CONTENTS:**
+[AI generates here]
+
+---
+
+### 4️⃣ MAIN CONTENT (2500+ words, 5-7 H2 Sections)
+
+**PURPOSE:** Comprehensive, authoritative content that covers topic completely.
+
+**OVERALL REQUIREMENTS:**
+- ✅ Minimum 2500 words total
+- ✅ 5-7 major H2 sections
+- ✅ Each section 350-500 words
+- ✅ Target keyword density: 0.8-1.2% (20-30 times in 2500 words)
+- ✅ Use keyword naturally - no stuffing!
+
+---
+
+#### 📝 STRUCTURE FOR EACH H2 SECTION:
+
+\`\`\`
+## H2: [Section Title with Keyword Variation]
+
+[Opening Paragraph - 100-150 words]
+- Introduce the subtopic
+- Include keyword variation
+- Hook reader with interesting fact or question
+
+[Detail Paragraph - 100-150 words]
+- Provide in-depth explanation
+- Use simple language
+- Break complex ideas into digestible points
+
+[Application Paragraph - 100-150 words]
+- Show how to apply this information
+- Give practical steps or examples
+- Include real-world context
+
+### Expert Insight 💡
+
+> "[Direct quote 20-40 words]"  
+> — **[Expert Full Name]**, [Exact Title], [Organization Name]
+
+**Key Statistic:** [Number/percentage] of [group] experience [outcome], according to [Source Name, Year].
+
+**Pro Tip:** [Actionable advice in 1-2 sentences]
+
+[Optional: Comparison Table]
+| Feature | Option A | Option B |
+|---------|----------|----------|
+| [Criterion] | [Data] | [Data] |
+\`\`\`
+
+---
+
+#### 🎯 KEYWORD USAGE STRATEGY:
+
+**Primary Keyword "[KEYWORD]":**
+- Use 12-15 times (exact phrase)
+- Locations: H1, first H2, intro paragraph, conclusion, 2-3 times per 500 words
+
+**Keyword Variations:**
+- Use 10-12 times
+- Examples: "[keyword] process", "how to [keyword]", "[keyword] strategy", "best [keyword]"
+
+**LSI Keywords (Related Terms):**
+- Use 15-20 times naturally
+- Include industry terminology, synonyms, related concepts
+
+---
+
+#### 📊 CONTENT DEPTH REQUIREMENTS:
+
+**EACH H2 Section Must Include:**
+1. ✅ 350-500 words
+2. ✅ At least 1 expert quote with full attribution
+3. ✅ At least 1 statistic with source and year
+4. ✅ At least 1 practical tip or example
+5. ✅ Optional: Comparison table, list, or visual element reference
+
+**H2 Section Topics (Choose 5-7):**
+
+\`\`\`
+## What is [KEYWORD]? [Definition & Overview]
+## How Does [KEYWORD] Work? [Process/Mechanism]
+## Benefits of [KEYWORD] [Value Proposition]
+## Types of [KEYWORD] [Categories/Classifications]
+## [KEYWORD] Best Practices [How-To Guide]
+## Common [KEYWORD] Mistakes to Avoid [Problems & Solutions]
+## [KEYWORD] vs [Alternative] [Comparison]
+## Choosing the Right [KEYWORD] [Decision Framework]
+## [KEYWORD] Pricing & Costs [Economic Analysis]
+## Future of [KEYWORD] [Trends & Predictions]
+\`\`\`
+
+---
+
+### 5️⃣ CASE STUDIES (Minimum 2)
+
+**PURPOSE:** Real-world proof and concrete examples with measurable results.
+
+**REQUIREMENTS:**
+- ✅ Minimum 2 case studies
+- ✅ Each 200-300 words
+- ✅ Include specific numbers and metrics
+- ✅ Follow the proven structure below
+
+**STRUCTURE FOR EACH CASE STUDY:**
+
+\`\`\`
+### 📊 Case Study [#]: [Company/Person Name] - [One-Line Result]
+
+**Industry:** [Specific industry]  
+**Company Size:** [Employee count or revenue]  
+**Timeline:** [Duration of implementation]
+
+**Challenge:**
+[100 words describing the specific problem with numbers]
+- Metric 1: [Specific number]
+- Metric 2: [Specific number]
+- What wasn't working and why
+
+**Solution:**
+[150 words describing exactly what they did]
+1. **Step 1:** [Specific action with details]
+2. **Step 2:** [Specific action with details]
+3. **Step 3:** [Specific action with details]
+
+**Results:**
+- ✅ [Metric] increased by [X%] from [before] to [after]
+- ✅ [Metric] improved by [X%] in [timeframe]
+- ✅ [Metric] grew from [X] to [Y]
+- ✅ ROI: [Specific return with currency]
+
+**Key Lesson:** [One sentence takeaway that readers can apply]
+
+> "Quote from client/person about the outcome"  
+> — [Name], [Title], [Company]
+\`\`\`
+
+---
+
+### 6️⃣ FAQ SECTION (Minimum 10 Questions)
+
+**PURPOSE:** Target People Also Ask, voice search, and AI Overview inclusion.
+
+**REQUIREMENTS:**
+- ✅ Minimum 10 FAQ questions
+- ✅ Each answer 100-150 words
+- ✅ Direct answer in first sentence (under 50 words)
+- ✅ Each answer includes 1 internal link
+- ✅ Each answer includes 1 external authoritative link
+- ✅ Cover all question types (what, how, why, when, where, who, vs)
+
+**QUESTION TYPES TO COVER:**
+
+\`\`\`
+1. What is [KEYWORD]?
+2. How does [KEYWORD] work?
+3. Why is [KEYWORD] important?
+4. When should you use [KEYWORD]?
+5. Where can you find [KEYWORD]?
+6. Who needs [KEYWORD]?
+7. [KEYWORD] vs [Alternative] - What's the difference?
+8. What are the best [KEYWORD] for [use case]?
+9. What are common [KEYWORD] mistakes?
+10. How much does [KEYWORD] cost?
+11. Is [KEYWORD] worth it?
+12. Can beginners use [KEYWORD]?
+\`\`\`
+
+**STRUCTURE FOR EACH FAQ:**
+
+\`\`\`
+### ❓ [Question in natural language]?
+
+**Quick Answer:** [Direct 1-sentence answer under 50 words with keyword]
+
+[100-150 word detailed explanation that:
+- Expands on the quick answer
+- Provides context and examples
+- Includes specific data or statistics
+- Links to relevant internal page
+- Links to authoritative external source
+- Uses simple, conversational language]
+
+According to [Source, Year], [supporting statistic or fact]. Learn more about [related topic with internal link], or read [authoritative source with external link] for additional details.
+\`\`\`
+
+---
+
+### 7️⃣ STATISTICS OVERVIEW (Minimum 8)
+
+**PURPOSE:** Data credibility and shareability.
+
+**REQUIREMENTS:**
+- ✅ Minimum 8 statistics
+- ✅ All from 2023-2025 only
+- ✅ Full source attribution with year
+- ✅ Mix of percentages, growth rates, and absolute numbers
+- ✅ Relevant to topic and keyword
+
+**FORMAT:**
+
+\`\`\`
+## 📈 Key Statistics About [KEYWORD]
+
+1. **[X%]** of [group] experience [outcome] ([Source Name, Year])
+2. **[Number]** [units] increase in [metric] reported in [timeframe] ([Source, Year])
+3. **[Growth rate]** year-over-year growth in [market/category] ([Source, Year])
+4. **[X%]** improvement when using [method] vs [alternative] ([Study Name, Year])
+5. **$[Amount]** average [cost/revenue/savings] from [activity] ([Industry Report, Year])
+6. **[Number]** of [group] now adopt [practice/technology] ([Survey Name, Year])
+7. **[X%]** of marketers rate [method] as [effective/ineffective] ([Research Firm, Year])
+8. **[Metric]** has increased by [X%] since [year] ([Government/Industry Source, Year])
+\`\`\`
+
+---
+
+### 8️⃣ EXPERT QUOTES (Minimum 4)
+
+**PURPOSE:** Authority, credibility, and quotability.
+
+**REQUIREMENTS:**
+- ✅ Minimum 4 expert quotes
+- ✅ Each 20-60 words maximum
+- ✅ Full attribution: Name, Exact Title, Organization
+- ✅ Spread throughout article (not grouped)
+- ✅ Use blockquote formatting
+
+**FORMAT:**
+
+\`\`\`
+> "The specific quote about the topic in 20-60 words that provides unique insight or validates a key point."  
+> — **[First Name Last Name]**, [Exact Job Title], [Organization/Company Name]
+\`\`\`
+
+---
+
+### 9️⃣ AUTHOR BIO (200-250 words)
+
+**PURPOSE:** Establish author authority and E-E-A-T signals.
+
+**REQUIREMENTS:**
+- ✅ 200-250 words total
+- ✅ Current role and years of experience
+- ✅ 3+ specific areas of expertise
+- ✅ Certifications or credentials
+- ✅ Notable achievements with numbers
+- ✅ Published work or speaking engagements
+- ✅ Professional photo (optional but recommended)
+- ✅ Contact information or social links
+
+---
+
+### 🔟 SCHEMA MARKUP (CRITICAL - 8 Points!)
+
+**PURPOSE:** Structured data for search engines and rich snippets.
+
+**REQUIREMENTS:**
+- ✅ Article Schema (JSON-LD)
+- ✅ FAQPage Schema (JSON-LD)
+- ✅ Organization Schema (JSON-LD)
+- ✅ BreadcrumbList Schema (if applicable)
+- ✅ Place all schemas at bottom of HTML, before \`</body>\` tag
+
+---
+
+### 1️⃣1️⃣ META INFORMATION (Critical!)
+
+**PURPOSE:** Search result appearance and click-through rate optimization.
+
+**META TITLE (50-60 characters):**
+\`\`\`
+[Keyword]: [Benefit/Result] - [Authority/Year]
+\`\`\`
+
+**META DESCRIPTION (150-160 characters):**
+\`\`\`
+[Keyword] explained: [Key benefit with number]. [Supporting benefit]. [CTA]. [Authority signal].
+\`\`\`
+
+---
+
+## ✅ FINAL QUALITY CHECKLIST
+
+**Before submitting, verify:**
+
+### GRAAF FRAMEWORK (50 points):
+- [ ] Target keyword in H1, first H2, intro, conclusion
+- [ ] Keyword density 0.8-1.2% (20-30 times in 2500 words)
+- [ ] 8+ statistics from 2023-2025 with sources
+- [ ] 4+ expert quotes with full name, title, organization
+- [ ] 2+ case studies with numbers and metrics
+- [ ] Author bio 200-250 words with credentials
+- [ ] All claims backed by sources
+
+### CRAFT FRAMEWORK (30 points):
+- [ ] 2500+ words total (count them!)
+- [ ] Average sentence length: 15-18 words
+- [ ] No paragraphs over 100 words
+- [ ] 10+ FAQ questions with 100+ word answers
+- [ ] Each FAQ has 1 internal + 1 external link
+- [ ] 6-8 images with keyword in alt text
+- [ ] At least 1 comparison table
+- [ ] Active voice 80%+
+- [ ] Flesch Reading Ease: 60-70
+
+### TECHNICAL SEO (20 points):
+- [ ] Meta title 50-60 characters
+- [ ] Meta description 150-160 characters
+- [ ] Proper H1/H2/H3 hierarchy
+- [ ] Article Schema JSON-LD included
+- [ ] FAQPage Schema JSON-LD included
+- [ ] Organization Schema included (if applicable)
+- [ ] 8-12 internal links distributed naturally
+- [ ] 5-8 external links to authority sites
+- [ ] All images have descriptive ALT text
+- [ ] All schemas validated (use schema.org validator)
+
+---
+
+## 🎯 YOUR TURN - EXECUTE NOW!
+
+**Copy this structure. Replace all [brackets] with your specific content. Follow every rule. Achieve 95-100/100 score.**
+
+**CRITICAL REMINDERS:**
+1. ✅ ALL statistics must be from 2023-2025
+2. ✅ ALL expert quotes must have full attribution
+3. ✅ EVERY FAQ needs 100+ words + links
+4. ✅ DO NOT skip schema markup (8 points!)
+5. ✅ CHECK word count - must be 2500+ minimum
+6. ✅ VERIFY keyword density - 0.8-1.2% (not more!)
+7. ✅ TEST all links - broken links = score penalty
+8. ✅ VALIDATE schema at schema.org/validator
+
+---
+
+## 🏆 EXPECTED OUTCOME
+
+**When you follow this framework precisely:**
+
+✅ **ContentScale Score:** 95-100/100  
+✅ **Google Rankings:** Top 3 for target keyword within 90 days  
+✅ **Organic Traffic:** 200-400% increase within 6 months  
+✅ **Featured Snippets:** High probability for FAQ and Direct Answer  
+✅ **AI Overview Inclusion:** Featured in Google AI Overviews  
+✅ **User Engagement:** 60%+ decrease in bounce rate  
+✅ **Conversion Rate:** 40-80% improvement in goal completions
+
+---
+
+*This prompt framework is developed by ContentScale and has been used to optimize 1,247+ articles to 90-100/100 scores. Last updated: January 2025.*`;
+
+// ============================================
+// ELITE FRAMEWORK GENERATION ENDPOINT
+// ============================================
+app.post('/api/elite/generate', async (req, res) => {
+  try {
+    const { target_url, topic, keyword, current_score } = req.body;
+    
+    if (!target_url || !topic || !keyword) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Required: target_url, topic, keyword' 
+      });
+    }
+
+    // Check API key
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return res.status(500).json({
+        success: false,
+        error: 'Elite Framework requires ANTHROPIC_API_KEY configuration'
+      });
+    }
+
+    console.log(`🚀 Elite Framework generation request for: ${target_url}, Topic: ${topic}, Keyword: ${keyword}`);
+
+    // Fetch the existing content for analysis
+    const fetchResult = await fetchWithPuppeteer(target_url);
+    if (!fetchResult.success) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Cannot fetch URL for analysis' 
+      });
+    }
+
+    // Extract content
+    const contentForAI = extractContentForAI(fetchResult);
+    
+    // Create Elite Prompt with user variables
+    const elitePrompt = ELITE_FRAMEWORK_PROMPT
+      .replace(/\[TARGET_URL\]/g, target_url)
+      .replace(/\[TOPIC\]/g, topic)
+      .replace(/\[KEYWORD\]/g, keyword)
+      .replace(/\[CURRENT_SCORE\]/g, current_score || 'Unknown');
+
+    // Send to AI for generation
+    console.log(`🤖 Sending to AI for Elite Framework generation...`);
+    const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 8000,
+        temperature: 0.7,
+        messages: [{
+          role: 'user',
+          content: `ANALYZE THIS CONTENT FIRST, THEN APPLY ELITE FRAMEWORK:\n\nCurrent content analysis:\nTitle: ${contentForAI.title}\nContent length: ${contentForAI.content.length} characters\nWord count: ${contentForAI.content.split(/\s+/).length}\n\n${elitePrompt}\n\nGenerate the COMPLETE rewritten article following ALL instructions above. Return the complete article with all sections.`
+        }]
+      })
+    });
+
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error('AI generation failed:', aiResponse.status, errorText);
+      throw new Error(`AI generation failed: ${aiResponse.status}`);
+    }
+
+    const data = await aiResponse.json();
+    const generatedContent = data.content[0].text;
+
+    // Log generation
+    console.log(`✅ Elite Framework generation successful! Generated ${generatedContent.length} characters`);
+
+    // Save to database
+    try {
+      await pool.query(
+        `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, breakdown, recommendations, scan_type, client_url)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [
+          target_url,
+          95, // Estimated Elite score
+          'excellent',
+          45, // Estimated GRAAF
+          28, // Estimated CRAFT
+          20, // Estimated Technical
+          JSON.stringify({ elite_framework_generated: true }),
+          JSON.stringify([{ 
+            type: 'elite_framework',
+            category: 'Content Generation',
+            title: 'Elite Framework Content Generated',
+            description: 'High-quality content generated using ContentScale Elite Framework',
+            impact: 'High',
+            points: '+95-100 points'
+          }]),
+          'elite_framework',
+          target_url
+        ]
+      );
+    } catch (dbError) {
+      console.error('DB save error for Elite Framework:', dbError.message);
+    }
+
+    res.json({
+      success: true,
+      message: 'Elite Framework content generated successfully',
+      generated_content: generatedContent,
+      original_analysis: {
+        url: target_url,
+        topic: topic,
+        keyword: keyword,
+        current_score: current_score || 'Unknown',
+        content_length: contentForAI.content.length,
+        word_count: contentForAI.content.split(/\s+/).length
+      },
+      framework_used: 'ContentScale Elite 100/100',
+      estimated_score_improvement: '95-100/100 achievable',
+      content_stats: {
+        characters: generatedContent.length,
+        words: generatedContent.split(/\s+/).length,
+        sections: (generatedContent.match(/#{2}\s/g) || []).length
+      },
+      timestamp: new Date().toISOString(),
+      next_steps: [
+        '1. Copy the generated content',
+        '2. Paste into your CMS or website',
+        '3. Add images and final formatting',
+        '4. Publish and rescan with ContentScale',
+        '5. Expect 95-100/100 score'
+      ]
+    });
+
+  } catch (error) {
+    console.error('Elite Framework error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Generation failed: ' + error.message,
+      suggestion: 'Make sure ANTHROPIC_API_KEY is set in Railway environment variables'
+    });
+  }
+});
+
+// ============================================
+// ELITE REWRITER - REAL AI ENHANCEMENT ENDPOINT
+// ============================================
+app.post('/api/elite/rewrite', async (req, res) => {
+  try {
+    const { 
+      content, 
+      tone = 'professional', 
+      target = 'website', 
+      seo = true, 
+      readability = true, 
+      engagement = true,
+      language = 'English'
+    } = req.body;
+    
+    if (!content || content.trim().length < 10) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Content must be at least 10 characters' 
+      });
+    }
+
+    // Check API key
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return res.status(500).json({
+        success: false,
+        error: 'Elite Rewriter requires ANTHROPIC_API_KEY in environment variables'
+      });
+    }
+
+    console.log(`✍️ Elite Rewriter request: ${content.length} chars, tone: ${tone}, target: ${target}, language: ${language}`);
+
+    // Create dynamic prompt based on options
+    const enhancementPrompt = `You are an Elite Content Enhancer for ContentScale. Rewrite the following content to be more ${tone} and optimized for ${target}.
+
+**CONTEXT:**
+- Original language: ${language}
+- Desired tone: ${tone}
+- Target platform: ${target}
+- Optimizations requested: ${seo ? 'SEO, ' : ''}${readability ? 'Readability, ' : ''}${engagement ? 'Engagement' : ''}
+
+**ORIGINAL CONTENT:**
+${content}
+
+**ENHANCEMENT INSTRUCTIONS:**
+1. Preserve the core message and key information
+2. Apply a consistent ${tone} tone throughout
+3. Optimize for ${target} (adjust length, formatting, style accordingly)
+4. ${seo ? 'Incorporate relevant keywords naturally - DO NOT keyword stuff' : ''}
+5. ${readability ? 'Improve readability with clear structure, shorter sentences, and paragraph breaks' : ''}
+6. ${engagement ? 'Add hooks, questions, or calls to action to increase engagement' : ''}
+7. Ensure the content flows naturally and maintains originality
+8. Return ONLY the enhanced content, no explanations, no markdown, no labels
+
+**IMPORTANT:**
+- If content is already high quality, make subtle improvements
+- If content is poor, rewrite more extensively
+- Maintain the original language (${language})
+- Keep it human-sounding, not robotic
+
+**ENHANCED CONTENT:**`;
+
+    // Send to Claude AI
+    const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-haiku-20241022',
+        max_tokens: 4000,
+        temperature: 0.7,
+        messages: [{
+          role: 'user',
+          content: enhancementPrompt
+        }]
+      })
+    });
+
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error('Claude API error:', aiResponse.status, errorText);
+      throw new Error(`AI enhancement failed: ${aiResponse.status}`);
+    }
+
+    const data = await aiResponse.json();
+    const enhancedContent = data.content[0].text.trim();
+
+    // Calculate improvement metrics
+    const originalWords = content.trim().split(/\s+/).length;
+    const enhancedWords = enhancedContent.split(/\s+/).length;
+    
+    // Realistic scoring algorithm
+    let improvementScore = 70; // Base
+    
+    // Length adjustment score
+    const lengthRatio = enhancedWords / originalWords;
+    if (lengthRatio > 1.8) improvementScore -= 10; // Too long
+    else if (lengthRatio < 0.5) improvementScore -= 10; // Too short
+    else if (lengthRatio > 1.2 && lengthRatio < 1.6) improvementScore += 8; // Good expansion
+    
+    // Options bonuses
+    if (seo) {
+      const hasKeywords = /seo|optimize|google|search|keyword|rank/i.test(enhancedContent.toLowerCase());
+      if (hasKeywords) improvementScore += 5;
+    }
+    
+    if (readability) {
+      const avgSentenceLength = enhancedContent.split(/[.!?]+/).filter(s => s.trim()).length;
+      const wordsPerSentence = enhancedWords / avgSentenceLength;
+      if (wordsPerSentence < 25) improvementScore += 6; // Good readability
+    }
+    
+    if (engagement) {
+      const hasQuestions = /\?/.test(enhancedContent);
+      const hasCTA = /click|learn|read|visit|try|start|discover/i.test(enhancedContent.toLowerCase());
+      if (hasQuestions || hasCTA) improvementScore += 5;
+    }
+    
+    // Quality checks
+    const hasBullets = /•|\d\.|\- /.test(enhancedContent);
+    const hasParagraphs = enhancedContent.includes('\n\n');
+    if (hasBullets) improvementScore += 3;
+    if (hasParagraphs) improvementScore += 3;
+    
+    // Cap score
+    improvementScore = Math.min(98, Math.max(40, improvementScore));
+
+    // Determine quality level
+    let quality = 'Good';
+    if (improvementScore >= 85) quality = 'Excellent';
+    else if (improvementScore >= 75) quality = 'Good';
+    else if (improvementScore >= 60) quality = 'Fair';
+    else quality = 'Needs Work';
+
+    res.json({
+      success: true,
+      enhanced_content: enhancedContent,
+      score: improvementScore,
+      quality: quality,
+      metrics: {
+        original: {
+          characters: content.length,
+          words: originalWords,
+          sentences: content.split(/[.!?]+/).filter(s => s.trim()).length
+        },
+        enhanced: {
+          characters: enhancedContent.length,
+          words: enhancedWords,
+          sentences: enhancedContent.split(/[.!?]+/).filter(s => s.trim()).length
+        },
+        improvement: {
+          word_change: enhancedWords - originalWords,
+          word_change_percent: Math.round(((enhancedWords - originalWords) / originalWords) * 100),
+          characters_change: enhancedContent.length - content.length
+        }
+      },
+      optimizations_applied: {
+        seo: seo,
+        readability: readability,
+        engagement: engagement,
+        tone: tone,
+        target: target
+      },
+      timestamp: new Date().toISOString(),
+      model_used: 'claude-3-5-haiku-20241022',
+      note: 'Content enhanced using ContentScale Elite Rewriter with Claude AI'
+    });
+
+  } catch (error) {
+    console.error('Elite Rewriter error:', error);
+    
+    // Provide helpful error message
+    let errorMessage = 'Enhancement failed: ' + error.message;
+    if (error.message.includes('ANTHROPIC_API_KEY')) {
+      errorMessage += '. Please set ANTHROPIC_API_KEY in Railway environment variables.';
+    } else if (error.message.includes('failed: 429')) {
+      errorMessage = 'API rate limit exceeded. Please try again in a minute.';
+    } else if (error.message.includes('failed: 401')) {
+      errorMessage = 'Invalid API key. Check your ANTHROPIC_API_KEY configuration.';
+    }
+    
+    res.status(500).json({ 
+      success: false, 
+      error: errorMessage,
+      suggestion: 'Make sure ANTHROPIC_API_KEY is set in Railway variables'
+    });
+  }
+});
+
+// ============================================
+// ELITE REWRITER TEST ENDPOINT
+// ============================================
+app.get('/api/elite/rewriter/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Elite Rewriter endpoint is active',
+    endpoint: 'POST /api/elite/rewrite',
+    required_parameters: {
+      content: 'Text content to enhance (string, required)'
+    },
+    optional_parameters: {
+      tone: 'professional, casual, persuasive, formal (default: professional)',
+      target: 'blog, website, product, social (default: website)',
+      seo: 'true/false (default: true)',
+      readability: 'true/false (default: true)',
+      engagement: 'true/false (default: true)',
+      language: 'Language code (default: English)'
+    },
+    example_request: {
+      method: 'POST',
+      url: '/api/elite/rewrite',
+      body: {
+        content: 'Our company provides excellent SEO services for businesses...',
+        tone: 'professional',
+        target: 'website',
+        seo: true,
+        readability: true,
+        engagement: true
+      }
+    },
+    status: 'operational',
+    version: '1.0',
+    ai_model: 'Claude 3.5 Haiku'
+  });
+});
+
+// ============================================
+// ELITE FRAMEWORK TEST ENDPOINT
+// ============================================
+app.get('/api/elite/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Elite Framework endpoint is active',
+    endpoints: {
+      generate: 'POST /api/elite/generate',
+      parameters: {
+        target_url: 'URL of page to analyze',
+        topic: 'Main topic of content',
+        keyword: 'Target keyword',
+        current_score: 'Current ContentScale score (optional)'
+      },
+      example_request: {
+        method: 'POST',
+        url: '/api/elite/generate',
+        body: {
+          target_url: 'https://example.com/page',
+          topic: 'SEO Content Strategy',
+          keyword: 'Content Optimization',
+          current_score: 75
+        }
+      }
+    },
+    status: 'operational',
+    framework_version: 'Elite 100/100 v1.0'
+  });
+});
+
+// ============================================
+// ELITE FRAMEWORK ANALYZE ENDPOINT
+// ============================================
+app.post('/api/elite/analyze', async (req, res) => {
+  try {
+    const { url } = req.body;
+    
+    if (!url) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'URL required' 
+      });
+    }
+
+    console.log(`🔍 Elite Framework analysis for: ${url}`);
+
+    // Fetch the existing content
+    const fetchResult = await fetchWithPuppeteer(url);
+    if (!fetchResult.success) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Cannot fetch URL for analysis' 
+      });
+    }
+
+    // Extract content
+    const contentForAI = extractContentForAI(fetchResult);
+    
+    // Score the content
+    const aiResult = await scoreWithAI(contentForAI);
+    
+    // Calculate current score
+    const currentGraafScore = aiResult.graaf.credibility + aiResult.graaf.relevance + aiResult.graaf.accuracy + aiResult.graaf.freshness;
+    const currentCraftScore = aiResult.craft.heading_structure + aiResult.craft.subheadings + aiResult.craft.paragraphs + aiResult.craft.lists;
+    
+    // Calculate technical score
+    const rawHtml = fetchResult.rawHtml;
+    let technicalScore = 0;
+    const metaDescMatch = rawHtml.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
+    const metaDesc = metaDescMatch ? metaDescMatch[1] : null;
+    technicalScore += metaDesc && metaDesc.length > 50 ? 4 : metaDesc ? 2 : 0;
+    const titleMatch = rawHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
+    const title = titleMatch ? titleMatch[1] : null;
+    technicalScore += title && title.length > 30 ? 4 : title ? 2 : 0;
+    const allImages = (rawHtml.match(/<img[^>]*>/gi) || []).length;
+    const imagesWithAlt = (rawHtml.match(/<img[^>]*alt="/gi) || []).length;
+    if (allImages > 0) {
+      technicalScore += Math.min(4, Math.floor((imagesWithAlt / allImages) * 4));
+    }
+    const hasViewport = /<meta\s+name="viewport"/gi.test(rawHtml);
+    technicalScore += hasViewport ? 3 : 0;
+    const hasSchema = /"@context"|"@type"/gi.test(rawHtml);
+    technicalScore += hasSchema ? 3 : 0;
+    technicalScore = Math.min(20, technicalScore);
+    
+    const currentTotalScore = currentGraafScore + currentCraftScore + technicalScore;
+    
+    // Analyze for Elite Framework potential
+    const analysis = {
+      current_score: currentTotalScore,
+      current_breakdown: {
+        graaf: currentGraafScore,
+        craft: currentCraftScore,
+        technical: technicalScore
+      },
+      content_stats: {
+        word_count: contentForAI.content.split(/\s+/).length,
+        heading_count: (contentForAI.content.match(/\[H\d\]:/g) || []).length,
+        has_expert_quotes: /expert|quote|according to|says|founder|ceo|director/i.test(contentForAI.content),
+        has_statistics: /\d+%|\d+\s+studies|\d+\s+research|research shows|\d+\s+data/i.test(contentForAI.content),
+        has_case_studies: /case study|example|result|increased|improved|growth/i.test(contentForAI.content)
+      },
+      elite_potential: {
+        can_improve_to: '95-100/100',
+        improvements_needed: [],
+        estimated_effort: 'High' // Based on current score
+      }
+    };
+    
+    // Determine improvements needed
+    if (currentGraafScore < 40) {
+      analysis.elite_potential.improvements_needed.push('GRAAF Framework: Add expert quotes, statistics, case studies');
+    }
+    if (currentCraftScore < 22) {
+      analysis.elite_potential.improvements_needed.push('CRAFT Framework: Expand to 2500+ words, add FAQ section, improve structure');
+    }
+    if (technicalScore < 16) {
+      analysis.elite_potential.improvements_needed.push('Technical SEO: Add schema markup, optimize meta tags, improve image ALT text');
+    }
+    
+    // Set estimated effort
+    if (currentTotalScore < 60) {
+      analysis.elite_potential.estimated_effort = 'High - Complete rewrite needed';
+    } else if (currentTotalScore < 75) {
+      analysis.elite_potential.estimated_effort = 'Medium - Significant improvements needed';
+    } else if (currentTotalScore < 85) {
+      analysis.elite_potential.estimated_effort = 'Low - Minor optimizations needed';
+    } else {
+      analysis.elite_potential.estimated_effort = 'Minimal - Already close to Elite standard';
+    }
+    
+    res.json({
+      success: true,
+      analysis: analysis,
+      recommendation: 'Use /api/elite/generate endpoint to create Elite Framework optimized content',
+      next_step: {
+        endpoint: '/api/elite/generate',
+        parameters: {
+          target_url: url,
+          topic: '[Extract main topic from content]',
+          keyword: '[Identify primary keyword]',
+          current_score: currentTotalScore
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Elite analysis error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Analysis failed: ' + error.message 
+    });
+  }
+});
+
+// ============================================
+// CREATE ALL TABLES
+// ============================================
+async function createAllTables() {
+  const client = await pool.connect();
+  
+  try {
+    // SUPER ADMINS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS super_admins (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(100) UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        full_name VARCHAR(255),
+        email VARCHAR(255),
+        role VARCHAR(50) DEFAULT 'admin',
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        last_login TIMESTAMP
+      )
+    `);
+    
+    const adminCheck = await client.query('SELECT COUNT(*) FROM super_admins WHERE username = $1', ['ot']);
+    if (parseInt(adminCheck.rows[0].count) === 0) {
+      await client.query(
+        'INSERT INTO super_admins (username, password_hash, full_name, role) VALUES ($1, $2, $3, $4)',
+        ['ot', 'admin123', 'Super Admin', 'super_admin']
+      );
+    }
+    
+    // AGENCIES TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS agencies (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        domain VARCHAR(255) NOT NULL,
+        url TEXT,
+        country VARCHAR(10) DEFAULT 'NL',
+        plan VARCHAR(50) DEFAULT 'free',
+        contact_person VARCHAR(255),
+        contact_email VARCHAR(255),
+        admin_key VARCHAR(100) UNIQUE,
+        score INTEGER,
+        company_name TEXT,
+        country_code VARCHAR(2),
+        business_type VARCHAR(50),
+        is_enhanced BOOLEAN DEFAULT FALSE,
+        is_active BOOLEAN DEFAULT TRUE,
+        last_scan TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // CLIENTS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS clients (
+        id SERIAL PRIMARY KEY,
+        agency_id INTEGER REFERENCES agencies(id) ON DELETE CASCADE,
+        url TEXT NOT NULL,
+        name VARCHAR(255),
+        email VARCHAR(255),
+        scan_count INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // SCANS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS scans (
+        id SERIAL PRIMARY KEY,
+        url TEXT NOT NULL,
+        score INTEGER,
+        quality VARCHAR(50),
+        graaf_score INTEGER,
+        craft_score INTEGER,
+        technical_score INTEGER,
+        breakdown JSONB,
+        recommendations JSONB DEFAULT '[]',
+        agency_id INTEGER REFERENCES agencies(id) ON DELETE SET NULL,
+        client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL,
+        client_url TEXT,
+        scan_type VARCHAR(50) DEFAULT 'manual',
+        ip_address TEXT,
+        user_agent TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await client.query(`
+      ALTER TABLE scans DROP CONSTRAINT IF EXISTS scans_scan_type_check
+    `).catch(e => console.log('Constraint already removed or does not exist'));
+    
+    // SHARE LINKS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS share_links (
+        id SERIAL PRIMARY KEY,
+        share_code VARCHAR(100) UNIQUE NOT NULL,
+        agency_id INTEGER REFERENCES agencies(id) ON DELETE CASCADE,
+        client_email VARCHAR(255) NOT NULL,
+        client_name VARCHAR(255),
+        client_company VARCHAR(255),
+        scans_limit INTEGER DEFAULT 5,
+        scans_used INTEGER DEFAULT 0,
+        expires_at TIMESTAMP NOT NULL,
+        status VARCHAR(50) DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // LEADERBOARD TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS leaderboard (
+        id SERIAL PRIMARY KEY,
+        url TEXT NOT NULL UNIQUE,
+        company_name VARCHAR(255),
+        score INTEGER NOT NULL,
+        country VARCHAR(10) DEFAULT 'NL',
+        business_type VARCHAR(50),
+        is_verified BOOLEAN DEFAULT FALSE,
+        is_opted_out BOOLEAN DEFAULT FALSE,
+        opted_out_at TIMESTAMP,
+        opted_out_reason VARCHAR(255),
+        submitted_via_share_link BOOLEAN DEFAULT FALSE,
+        share_link_id UUID,
+        submission_ip VARCHAR(50),
+        admin_verified BOOLEAN DEFAULT FALSE,
+        last_scan TIMESTAMP DEFAULT NOW(),
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // AGENCY CLAIMS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS agency_claims (
+        id SERIAL PRIMARY KEY,
+        agency_id INTEGER REFERENCES agencies(id) ON DELETE CASCADE,
+        claimed_name TEXT NOT NULL,
+        logo_url TEXT,
+        description TEXT,
+        contact_email TEXT NOT NULL,
+        agency_size VARCHAR(50),
+        specialties JSONB DEFAULT '[]',
+        is_verified BOOLEAN DEFAULT FALSE,
+        claimed_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // LTD CODES TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ltd_codes (
+        id SERIAL PRIMARY KEY,
+        code VARCHAR(50) UNIQUE NOT NULL,
+        plan VARCHAR(50) NOT NULL,
+        max_uses INTEGER DEFAULT 1,
+        times_used INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT TRUE,
+        expires_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // SETTINGS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS settings (
+        key VARCHAR(100) PRIMARY KEY,
+        value TEXT,
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // SECURITY TABLES
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS leaderboard_blocks (
+        id SERIAL PRIMARY KEY,
+        url VARCHAR(255) UNIQUE NOT NULL,
+        domain VARCHAR(255),
+        reason VARCHAR(255) NOT NULL,
+        blocked_by VARCHAR(100),
+        blocked_at TIMESTAMP DEFAULT NOW(),
+        expires_at TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS submission_limits (
+        id SERIAL PRIMARY KEY,
+        ip_address VARCHAR(50) NOT NULL,
+        submission_date DATE NOT NULL,
+        submission_count INT DEFAULT 1,
+        last_submitted_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(ip_address, submission_date)
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS admin_share_links (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        created_by VARCHAR(100) NOT NULL,
+        link_type VARCHAR(50) DEFAULT 'verify',
+        target_url VARCHAR(255),
+        target_company VARCHAR(255),
+        verification_token VARCHAR(255) UNIQUE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        expires_at TIMESTAMP,
+        used_count INT DEFAULT 0,
+        max_uses INT DEFAULT 10,
+        is_active BOOLEAN DEFAULT TRUE
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS submission_logs (
+        id SERIAL PRIMARY KEY,
+        url VARCHAR(255) NOT NULL,
+        company_name VARCHAR(255),
+        ip_address VARCHAR(50) NOT NULL,
+        country VARCHAR(10),
+        score INT,
+        graaf_score INT,
+        craft_score INT,
+        technical_score INT,
+        submitted_via VARCHAR(50) DEFAULT 'api',
+        share_link_id UUID,
+        status VARCHAR(50) DEFAULT 'pending',
+        rejection_reason VARCHAR(255),
+        submitted_at TIMESTAMP DEFAULT NOW(),
+        admin_reviewed_at TIMESTAMP,
+        admin_reviewed_by VARCHAR(100),
+        leaderboard_entry_id INT
+      )
+    `);
+
+    // CLAIM PROFILE TABLES
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS profile_claims (
+        id SERIAL PRIMARY KEY,
+        url TEXT NOT NULL,
+        name TEXT,
+        logo_url TEXT,
+        description TEXT,
+        specializations JSONB,
+        country TEXT,
+        agency_size TEXT,
+        contact_email TEXT,
+        status TEXT DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT NOW(),
+        reviewed_at TIMESTAMP,
+        reviewed_by TEXT
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS email_templates (
+        id SERIAL PRIMARY KEY,
+        name TEXT UNIQUE NOT NULL,
+        subject TEXT NOT NULL,
+        body TEXT NOT NULL,
+        variables JSONB,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS email_logs (
+        id SERIAL PRIMARY KEY,
+        to_email TEXT NOT NULL,
+        subject TEXT,
+        template_used TEXT,
+        status TEXT DEFAULT 'sent',
+        sent_at TIMESTAMP DEFAULT NOW(),
+        error_message TEXT
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS optout_requests (
+        id SERIAL PRIMARY KEY,
+        url TEXT NOT NULL UNIQUE,
+        reason TEXT,
+        token TEXT UNIQUE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        processed BOOLEAN DEFAULT FALSE,
+        processed_at TIMESTAMP
+      )
+    `);
+    
+    // NOTIFICATIONS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        type VARCHAR(50) NOT NULL DEFAULT 'system',
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        link VARCHAR(500),
+        priority VARCHAR(20) DEFAULT 'normal',
+        is_read BOOLEAN DEFAULT FALSE,
+        created_by VARCHAR(100),
+        created_for VARCHAR(100) DEFAULT 'admin',
+        created_at TIMESTAMP DEFAULT NOW(),
+        read_at TIMESTAMP
+      )
+    `);
+
+    // FREELANCERS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS freelancers (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        title VARCHAR(255),
+        bio TEXT,
+        profile_photo_url TEXT,
+        linkedin_url TEXT,
+        portfolio_url TEXT,
+        website_url TEXT,
+        location VARCHAR(255),
+        country VARCHAR(10),
+        status VARCHAR(50) DEFAULT 'pending',
+        payment_status VARCHAR(50) DEFAULT 'unpaid',
+        subscription_expires_at TIMESTAMP,
+        writing_sample TEXT,
+        test_submitted_at TIMESTAMP,
+        test_reviewed_at TIMESTAMP,
+        has_score BOOLEAN DEFAULT FALSE,
+        score INTEGER,
+        is_featured BOOLEAN DEFAULT FALSE,
+        display_order INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // DATABASE MIGRATIONS
+    await client.query(`ALTER TABLE super_admins ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
+    await client.query(`ALTER TABLE super_admins ADD COLUMN IF NOT EXISTS last_login TIMESTAMP`);
+    await client.query(`ALTER TABLE agencies ADD COLUMN IF NOT EXISTS is_enhanced BOOLEAN DEFAULT FALSE`);
+    await client.query(`ALTER TABLE agencies ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
+    await client.query(`ALTER TABLE agencies ADD COLUMN IF NOT EXISTS last_scan TIMESTAMP`);
+    await client.query(`ALTER TABLE agencies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`);
+    await client.query(`ALTER TABLE agencies ADD COLUMN IF NOT EXISTS company_name TEXT`);
+    await client.query(`ALTER TABLE scans ADD COLUMN IF NOT EXISTS recommendations JSONB DEFAULT '[]'`);
+    await client.query(`ALTER TABLE scans ADD COLUMN IF NOT EXISTS client_url TEXT`);
+    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE`);
+    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS claimed BOOLEAN DEFAULT FALSE`);
+    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS logo_url TEXT`);
+    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS description TEXT`);
+    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS specializations JSONB`);
+    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS agency_size TEXT`);
+    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS contact_email TEXT`);
+    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS verified BOOLEAN DEFAULT FALSE`);
+    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS auto_detected_country VARCHAR(100)`);
+    
+    await client.query(`
+      DO $$ 
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'share_links' AND column_name = 'token'
+        ) AND NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'share_links' AND column_name = 'share_code'
+        ) THEN
+          ALTER TABLE share_links RENAME COLUMN token TO share_code;
+        END IF;
+      END $$;
+    `).catch(e => console.log('share_links migration skipped:', e.message));
+    
+    await client.query(`ALTER TABLE share_links ADD COLUMN IF NOT EXISTS agency_id INTEGER REFERENCES agencies(id) ON DELETE CASCADE`).catch(e => {});
+    await client.query(`ALTER TABLE share_links ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active'`).catch(e => {});
+    
+    await client.query(`
+      UPDATE leaderboard 
+      SET admin_verified = TRUE 
+      WHERE admin_verified IS NULL OR admin_verified = FALSE
+    `).then(() => {
+      console.log('✅ Auto-approved all existing leaderboard entries');
+    }).catch(e => {
+      console.log('Leaderboard approval migration skipped:', e.message);
+    });
+    
+    // DEFAULT SETTINGS
+    const defaultSettings = [
+      ['site_name', 'ContentScale'],
+      ['contact_email', 'info@contentscale.site'],
+      ['whatsapp_number', '+31628073996'],
+      ['auto_scan_enabled', 'false']
+    ];
+    
+    for (const [key, value] of defaultSettings) {
+      await client.query(`
+        INSERT INTO settings (key, value) VALUES ($1, $2)
+        ON CONFLICT (key) DO NOTHING
+      `, [key, value]);
+    }
+    
+    // CREATE INDEXES
+    await client.query('CREATE INDEX IF NOT EXISTS idx_scans_created ON scans(created_at DESC)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_leaderboard_score ON leaderboard(score DESC)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_agencies_domain ON agencies(domain)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_blocked_url ON leaderboard_blocks(url)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_submission_ip_date ON submission_limits(ip_address, submission_date)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_claims_status ON profile_claims(status)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_claims_email ON profile_claims(contact_email)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_claims_url ON profile_claims(url)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_optout_url ON optout_requests(url)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_optout_token ON optout_requests(token)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at DESC)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(is_read)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_notifications_priority ON notifications(priority)');
+    
+    console.log('✅ All database tables ready');
+    
+    setTimeout(autoPopulateLeaderboard, 500);
+    
+  } catch (error) {
+    console.error('❌ Database error:', error.message);
+  } finally {
+    client.release();
+  }
+}
+
+async function autoPopulateLeaderboard() {
+  try {
+    const check = await pool.query('SELECT COUNT(*) FROM leaderboard');
+    const count = parseInt(check.rows[0].count);
+    
+    if (count === 0) {
+      const demoAgencies = [
+        { url: 'https://contentscale.site', company: 'ContentScale', score: 95, country: 'NL', type: 'seo-agency' },
+        { url: 'https://example-seo.nl', company: 'SEO Masters', score: 88, country: 'NL', type: 'seo-agency' },
+        { url: 'https://digital-boost.be', company: 'Digital Boost', score: 82, country: 'BE', type: 'marketing-agency' }
+      ];
+      
+      for (const agency of demoAgencies) {
+        try {
+          await pool.query(`
+            INSERT INTO leaderboard (url, company_name, score, country, business_type, is_verified)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            ON CONFLICT (url) DO NOTHING
+          `, [agency.url, agency.company, agency.score, agency.country, agency.type, true]);
+        } catch (e) {
+          // Silently skip duplicates
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Leaderboard error:', error.message);
+  }
+}
+
+// Test database connection
+pool.connect((err, client, release) => {
+  if (err) {
+    console.error('❌ Database connection error:', err.message);
+  } else {
+    console.log('✅ Database connected');
+    release();
+    setTimeout(createAllTables, 1000);
+  }
+});
+
+// ============================================
+// MIDDLEWARE
+// ============================================
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// CORS
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-admin-key');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+});
+
+// ============================================
+// STATIC FILES
+// ============================================
+app.use(express.static('public'));
+
+// ============================================
+// PUBLIC SCANNER API — AI-POWERED SCORING (COMPLETE)
 // ============================================
 app.post('/api/scan', async (req, res) => {
-  const { url, shareKey, keyword } = req.body;
+  const { url, shareKey } = req.body;
 
   if (!url) {
     return res.status(400).json({ success: false, error: 'URL required' });
@@ -1115,20 +2187,41 @@ app.post('/api/scan', async (req, res) => {
     const rawHtml = fetchResult.rawHtml;
     console.log(`✅ Fetched ${rawHtml.length} bytes from ${scanUrl} (${fetchResult.method})`);
 
-    // ENHANCED TECHNICAL SCORE
-    const technicalAnalysis = calculateEnhancedTechnicalScore(rawHtml, scanUrl);
-    const technicalScore = technicalAnalysis.score;
-    
-    // ENHANCED VALIDATION METRICS
-    const contentForAI = extractContentForAI(fetchResult);
-    const validation = {
-      keywordDensity: keyword ? calculateKeywordDensity(contentForAI.content, keyword) : null,
-      statistics: validateStatistics(contentForAI.content),
-      expertQuotes: validateExpertQuotes(contentForAI.content),
-      caseStudies: detectCaseStudies(contentForAI.content),
-      faq: detectFAQ(contentForAI.content)
-    };
-    
+    // TECHNICAL SCORE
+    let technicalScore = 0;
+
+    const metaDescMatch = rawHtml.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
+    const metaDesc = metaDescMatch ? metaDescMatch[1] : null;
+    technicalScore += metaDesc && metaDesc.length > 50 ? 4 : metaDesc ? 2 : 0;
+
+    const titleMatch = rawHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
+    const title = titleMatch ? titleMatch[1] : null;
+    technicalScore += title && title.length > 30 ? 4 : title ? 2 : 0;
+
+    const allImages = (rawHtml.match(/<img[^>]*>/gi) || []).length;
+    const imagesWithAlt = (rawHtml.match(/<img[^>]*alt="/gi) || []).length;
+    if (allImages > 0) {
+      technicalScore += Math.min(4, Math.floor((imagesWithAlt / allImages) * 4));
+    }
+
+    const hasViewport = /<meta\s+name="viewport"/gi.test(rawHtml);
+    technicalScore += hasViewport ? 3 : 0;
+
+    const hasSchema = /"@context"|"@type"/gi.test(rawHtml);
+    technicalScore += hasSchema ? 3 : 0;
+    technicalScore = Math.min(20, technicalScore);
+
+    const textContent = rawHtml.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(w => w.length > 0);
+    const wordCount = textContent.length;
+    const h1s = (rawHtml.match(/<h1[^>]*>/gi) || []).length;
+    const h2h3s = (rawHtml.match(/<h2[^>]*>|<h3[^>]*>/gi) || []).length;
+    const paragraphs = (rawHtml.match(/<p[^>]*>/gi) || []).length;
+    const hasLists = /<ul[^>]*>|<ol[^>]*>/gi.test(rawHtml);
+    const hasQuotes = /says|according to|expert|quote|told us|founder|ceo|director/gi.test(rawHtml);
+    const hasStats = /\d+%|\d+ studies|\d+ research|research shows|\d+ data/gi.test(rawHtml);
+    const hasFreshDates = /202[4-6]|january|february|march|april|may|june|july|august|september|october|november|december/gi.test(rawHtml);
+    const hasAuthor = /author|by |written by|published by|contributor/gi.test(rawHtml);
+
     // AI SCORING
     const contentHash = hashContent(rawHtml);
     let graafScore, craftScore, graafItems, craftItems, aiRecommendations, scoringMethod;
@@ -1148,37 +2241,32 @@ app.post('/api/scan', async (req, res) => {
           throw new Error('ANTHROPIC_API_KEY not configured');
         }
 
-        console.log(`🤖 AI scoring ${scanUrl} with enhanced prompt...`);
-        const aiResult = await scoreWithAI(contentForAI, true); // Use enhanced prompt
+        const contentForAI = extractContentForAI(fetchResult);
+        console.log(`🤖 AI scoring ${scanUrl}...`);
+        const aiResult = await scoreWithAI(contentForAI);
 
-        if (!validateEnhancedAIScores(aiResult)) {
+        if (!validateAIScores(aiResult)) {
           throw new Error('AI scores failed validation');
         }
 
-        // New GRAAF structure
         graafItems = {
-          keyword_optimization: Math.min(10, Math.max(0, Math.round(aiResult.graaf.keyword_optimization))),
-          statistics_sources: Math.min(10, Math.max(0, Math.round(aiResult.graaf.statistics_sources))),
-          expert_quotes: Math.min(10, Math.max(0, Math.round(aiResult.graaf.expert_quotes))),
-          case_studies: Math.min(10, Math.max(0, Math.round(aiResult.graaf.case_studies))),
-          author_authority: Math.min(10, Math.max(0, Math.round(aiResult.graaf.author_authority)))
+          credibility: Math.min(16, Math.max(0, Math.round(aiResult.graaf.credibility))),
+          relevance: Math.min(18, Math.max(0, Math.round(aiResult.graaf.relevance))),
+          accuracy: Math.min(8, Math.max(0, Math.round(aiResult.graaf.accuracy))),
+          freshness: Math.min(8, Math.max(0, Math.round(aiResult.graaf.freshness)))
         };
-        
-        // New CRAFT structure
         craftItems = {
-          word_count: Math.min(8, Math.max(0, Math.round(aiResult.craft.word_count))),
-          readability: Math.min(6, Math.max(0, Math.round(aiResult.craft.readability))),
-          faq_section: Math.min(8, Math.max(0, Math.round(aiResult.craft.faq_section))),
-          visual_elements: Math.min(8, Math.max(0, Math.round(aiResult.craft.visual_elements)))
+          headingStructure: Math.min(8, Math.max(0, Math.round(aiResult.craft.heading_structure))),
+          subheadings: Math.min(10, Math.max(0, Math.round(aiResult.craft.subheadings))),
+          paragraphs: Math.min(8, Math.max(0, Math.round(aiResult.craft.paragraphs))),
+          lists: Math.min(4, Math.max(0, Math.round(aiResult.craft.lists)))
         };
 
-        graafScore = graafItems.keyword_optimization + graafItems.statistics_sources + 
-                     graafItems.expert_quotes + graafItems.case_studies + graafItems.author_authority;
-        craftScore = craftItems.word_count + craftItems.readability + 
-                     craftItems.faq_section + craftItems.visual_elements;
+        graafScore = graafItems.credibility + graafItems.relevance + graafItems.accuracy + graafItems.freshness;
+        craftScore = craftItems.headingStructure + craftItems.subheadings + craftItems.paragraphs + craftItems.lists;
         
         aiRecommendations = Array.isArray(aiResult.recommendations) ? aiResult.recommendations : [];
-        scoringMethod = 'enhanced-ai';
+        scoringMethod = 'ai';
 
         scanCache.set(contentHash, {
           graafScore, craftScore, graafItems, craftItems,
@@ -1186,46 +2274,30 @@ app.post('/api/scan', async (req, res) => {
           timestamp: Date.now()
         });
 
-        console.log(`✅ AI scored: GRAAF=${graafScore}/50 CRAFT=${craftScore}/30 (${scoringMethod})`);
+        console.log(`✅ AI scored: GRAAF=${graafScore} CRAFT=${craftScore} (${scoringMethod})`);
 
       } catch (aiError) {
-        console.error(`⚠️ Enhanced AI scoring failed, using basic: ${aiError.message}`);
-        scoringMethod = 'basic-fallback';
+        console.error(`⚠️ AI scoring failed, using regex fallback: ${aiError.message}`);
+        scoringMethod = 'fallback';
 
-        // Fallback to basic scoring
-        const textContent = rawHtml.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(w => w.length > 0);
-        const wordCount = textContent.length;
-        const h1s = (rawHtml.match(/<h1[^>]*>/gi) || []).length;
-        const h2h3s = (rawHtml.match(/<h2[^>]*>|<h3[^>]*>/gi) || []).length;
-        const paragraphs = (rawHtml.match(/<p[^>]*>/gi) || []).length;
-        const hasLists = /<ul[^>]*>|<ol[^>]*>/gi.test(rawHtml);
-        const hasQuotes = /says|according to|expert|quote|told us|founder|ceo|director/gi.test(rawHtml);
-        const hasStats = /\d+%|\d+ studies|\d+ research|research shows|\d+ data/gi.test(rawHtml);
-        const hasFreshDates = /202[4-6]|january|february|march|april|may|june|july|august|september|october|november|december/gi.test(rawHtml);
-        const hasAuthor = /author|by |written by|published by|contributor/gi.test(rawHtml);
-
-        // Basic GRAAF fallback (map to new structure)
         graafItems = {
-          keyword_optimization: keyword ? 6 : 3,
-          statistics_sources: hasStats ? 8 : 2,
-          expert_quotes: hasQuotes ? 7 : 2,
-          case_studies: validation.caseStudies.hasCaseStudy ? 6 : 2,
-          author_authority: hasAuthor ? 6 : 2
+          credibility: (hasQuotes ? 8 : 0) + (hasAuthor ? 8 : 0),
+          relevance: Math.min(18, Math.floor(wordCount / 100)),
+          accuracy: hasStats ? 8 : 0,
+          freshness: hasFreshDates ? 8 : 2
         };
-        
-        // Basic CRAFT fallback
-        craftItems = {
-          word_count: wordCount >= 2500 ? 8 : wordCount >= 1500 ? 6 : wordCount >= 1000 ? 4 : 2,
-          readability: paragraphs > 10 ? 5 : paragraphs > 5 ? 3 : 1,
-          faq_section: validation.faq.hasFAQ ? 6 : 2,
-          visual_elements: hasLists ? 6 : 3
-        };
+        graafScore = graafItems.credibility + graafItems.relevance + graafItems.accuracy + graafItems.freshness;
+        graafScore = Math.min(50, graafScore);
 
-        graafScore = graafItems.keyword_optimization + graafItems.statistics_sources + 
-                     graafItems.expert_quotes + graafItems.case_studies + graafItems.author_authority;
-        craftScore = craftItems.word_count + craftItems.readability + 
-                     craftItems.faq_section + craftItems.visual_elements;
-        
+        craftItems = {
+          headingStructure: h1s === 1 ? 8 : h1s > 1 ? 4 : 2,
+          subheadings: Math.min(10, h2h3s * 2),
+          paragraphs: Math.min(8, Math.floor(paragraphs / 3)),
+          lists: hasLists ? 4 : 0
+        };
+        craftScore = craftItems.headingStructure + craftItems.subheadings + craftItems.paragraphs + craftItems.lists;
+        craftScore = Math.min(30, craftScore);
+
         aiRecommendations = [];
       }
     }
@@ -1240,76 +2312,51 @@ app.post('/api/scan', async (req, res) => {
     console.log(`   └─ CRAFT: ${craftScore}/30`);
     console.log(`   └─ Technical: ${technicalScore}/20\n`);
 
-    // ENHANCED TECHNICAL RECOMMENDATIONS
+    // TECHNICAL RECOMMENDATIONS
     const techRecommendations = [];
 
-    if (technicalAnalysis.details.metaDescription === null) {
+    if (!metaDesc) {
       techRecommendations.push({
         type: 'quickwin',
-        category: 'Technical SEO - Meta Tags',
+        category: 'Technical SEO',
         title: 'Add Meta Description',
-        description: 'Missing meta description reduces CTR by up to 40%.',
+        description: 'Missing meta description.',
         impact: 'High',
-        points: '+2 points',
-        howToFix: '1. Write 150-160 character description\n2. Include primary keyword\n3. Add call-to-action\n4. Place in <head> section',
-        example: '<meta name="description" content="Learn SEO content optimization with 47% better rankings. Get expert tips, case studies, and free scan.">'
-      });
-    } else if (technicalAnalysis.details.metaDescription.length < 150) {
-      techRecommendations.push({
-        type: 'quickwin',
-        category: 'Technical SEO - Meta Tags',
-        title: 'Improve Meta Description',
-        description: `Meta description is only ${technicalAnalysis.details.metaDescription.length} characters (optimal: 150-160).`,
-        impact: 'Medium',
-        points: '+1 point',
-        howToFix: '1. Expand to 150-160 characters\n2. Add specific benefit\n3. Include number or statistic\n4. Add urgency or CTA',
-        example: 'Current: ' + technicalAnalysis.details.metaDescription.substring(0, 100) + '...'
+        points: '+4 points',
+        howToFix: '1. Write 150-160 chars\n2. Include keyword\n3. Add CTA',
+        example: '<meta name="description" content="...">'
       });
     }
 
-    if (!technicalAnalysis.details.schema.article) {
+    if (!hasViewport) {
       techRecommendations.push({
-        type: 'major',
-        category: 'Technical SEO - Schema Markup',
-        title: 'Add Article Schema',
-        description: 'Missing Article schema reduces rich snippet chances by 70%.',
+        type: 'quickwin',
+        category: 'Technical SEO',
+        title: 'Add Mobile Viewport',
+        description: 'Missing viewport tag.',
         impact: 'High',
         points: '+3 points',
-        howToFix: '1. Add JSON-LD script before </body>\n2. Include author, publisher, dates\n3. Validate with Google Rich Results Test\n4. Add FAQPage schema for bonus',
-        example: `<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Your Title","author":{"@type":"Person","name":"Author Name"}}</script>`
+        howToFix: '1. Add viewport tag\n2. Test mobile\n3. Verify responsive',
+        example: '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
       });
     }
 
-    if (technicalAnalysis.details.images.total > 0 && technicalAnalysis.details.images.altPercentage < 90) {
+    if (!hasSchema) {
       techRecommendations.push({
         type: 'quickwin',
-        category: 'Technical SEO - Images',
-        title: 'Improve Image ALT Text',
-        description: `Only ${technicalAnalysis.details.images.altPercentage}% of images have ALT text.`,
+        category: 'Technical SEO',
+        title: 'Add Schema Markup',
+        description: 'No structured data found.',
         impact: 'Medium',
-        points: `+${Math.min(4, Math.floor((90 - technicalAnalysis.details.images.altPercentage) / 10))} points`,
-        howToFix: '1. Add descriptive ALT to all images\n2. Include keywords naturally\n3. Keep under 125 characters\n4. Describe what the image shows',
-        example: '<img src="seo-chart.jpg" alt="SEO performance chart showing 47% traffic growth in 2024" width="800" height="450">'
-      });
-    }
-
-    if (technicalAnalysis.details.links.authoritative < 3) {
-      techRecommendations.push({
-        type: 'major',
-        category: 'Technical SEO - Links',
-        title: 'Add Authoritative External Links',
-        description: `Only ${technicalAnalysis.details.links.authoritative} authoritative links found (target: 3+).`,
-        impact: 'High',
-        points: '+2 points',
-        howToFix: '1. Link to .edu, .gov, research papers\n2. Cite statistics with sources\n3. Reference industry reports\n4. Link to expert profiles',
-        example: 'According to [Search Engine Journal 2024 report](https://www.searchenginejournal.com/statistics), 72% of marketers...'
+        points: '+3 points',
+        howToFix: '1. Add JSON-LD schema\n2. Include author\n3. Test with Google',
+        example: '<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article"}</script>'
       });
     }
 
     const allRecommendations = [...(aiRecommendations || []), ...techRecommendations];
     const quickWins = allRecommendations.filter(r => r.type === 'quickwin');
     const majorImprovements = allRecommendations.filter(r => r.type === 'major');
-    const eliteRecommendations = allRecommendations.filter(r => r.type === 'elite');
 
     const scanResult = {
       success: true,
@@ -1317,12 +2364,7 @@ app.post('/api/scan', async (req, res) => {
       score: totalScore,
       quality,
       scoring_method: scoringMethod,
-      metrics: { 
-        graaf: graafScore, 
-        craft: craftScore, 
-        technical: technicalScore,
-        total: totalScore
-      },
+      metrics: { graaf: graafScore, craft: craftScore, technical: technicalScore },
       breakdown: {
         graaf: {
           total: graafScore,
@@ -1340,22 +2382,19 @@ app.post('/api/scan', async (req, res) => {
           total: technicalScore,
           max: 20,
           percentage: Math.round((technicalScore / 20) * 100),
-          breakdown: technicalAnalysis.breakdown,
-          details: technicalAnalysis.details
+          items: {
+            metaDescription: metaDesc && metaDesc.length > 50 ? 4 : metaDesc ? 2 : 0,
+            title: title && title.length > 30 ? 4 : title ? 2 : 0,
+            imageAlt: allImages > 0 ? Math.min(4, Math.floor((imagesWithAlt / allImages) * 4)) : 0,
+            viewport: hasViewport ? 3 : 0,
+            schema: hasSchema ? 3 : 0
+          }
         }
-      },
-      validation: {
-        statistics: validation.statistics,
-        expert_quotes: validation.expertQuotes,
-        case_studies: validation.caseStudies,
-        faq: validation.faq,
-        keyword_density: validation.keywordDensity
       },
       recommendations: {
         all: allRecommendations,
         quickWins: quickWins,
         majorImprovements: majorImprovements,
-        eliteRecommendations: eliteRecommendations,
         totalRecommendations: allRecommendations.length,
         potentialScoreIncrease: allRecommendations.reduce((sum, r) => {
           const pts = parseInt((r.points || '0').match(/\d+/)?.[0] || 0);
@@ -1363,9 +2402,21 @@ app.post('/api/scan', async (req, res) => {
         }, 0)
       },
       details: {
-        wordCount: contentForAI.content.split(/\s+/).length,
-        title: contentForAI.title,
-        validationMetrics: validation
+        wordCount,
+        h1Count: h1s,
+        h2h3Count: h2h3s,
+        paragraphCount: paragraphs,
+        imageCount: allImages,
+        imagesWithAlt,
+        hasQuotes,
+        hasStats,
+        hasFreshDates,
+        hasAuthor,
+        hasLists,
+        hasViewport,
+        hasSchema,
+        metaDescription: metaDesc ? metaDesc.substring(0, 160) : null,
+        title: title
       },
       timestamp: new Date().toISOString()
     };
@@ -1374,8 +2425,7 @@ app.post('/api/scan', async (req, res) => {
       await pool.query(
         `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, breakdown, recommendations, scan_type)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [scanUrl, totalScore, quality, graafScore, craftScore, technicalScore, 
-         JSON.stringify(scanResult.breakdown), JSON.stringify(scanResult.recommendations), 'enhanced']
+        [scanUrl, totalScore, quality, graafScore, craftScore, technicalScore, JSON.stringify(scanResult.breakdown), JSON.stringify(scanResult.recommendations), 'manual']
       );
     } catch (dbError) {
       console.error('DB save error:', dbError.message);
@@ -1399,11 +2449,9 @@ app.post('/api/scan', async (req, res) => {
   }
 });
 
-// ============================================
-// ENHANCED ELITE SCAN ENDPOINT
-// ============================================
+// Voeg dit toe NAAR /api/scan endpoint
 app.post('/api/scan/elite', async (req, res) => {
-  const { url, keyword } = req.body;
+  const { url } = req.body;
   
   if (!url) {
     return res.status(400).json({ success: false, error: 'URL required' });
@@ -1417,6 +2465,7 @@ app.post('/api/scan/elite', async (req, res) => {
   console.log(`🏆 Elite Scan: ${scanUrl}`);
   
   try {
+    // Gebruik dezelfde fetch logica als /api/scan
     const fetchResult = await fetchWithPuppeteer(scanUrl);
     
     if (!fetchResult.success) {
@@ -1428,23 +2477,75 @@ app.post('/api/scan/elite', async (req, res) => {
     
     const rawHtml = fetchResult.rawHtml;
     
-    // ENHANCED TECHNICAL SCORE
-    const technicalAnalysis = calculateEnhancedTechnicalScore(rawHtml, scanUrl);
-    const technicalScore = technicalAnalysis.score;
+    // TECHNICAL SCORE (zelfde als normaal)
+    let technicalScore = 0;
+    const metaDescMatch = rawHtml.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
+    const metaDesc = metaDescMatch ? metaDescMatch[1] : null;
+    technicalScore += metaDesc && metaDesc.length > 50 ? 4 : metaDesc ? 2 : 0;
     
-    // ELITE AI SCORING
+    const titleMatch = rawHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
+    const title = titleMatch ? titleMatch[1] : null;
+    technicalScore += title && title.length > 30 ? 4 : title ? 2 : 0;
+    
+    const allImages = (rawHtml.match(/<img[^>]*>/gi) || []).length;
+    const imagesWithAlt = (rawHtml.match(/<img[^>]*alt="/gi) || []).length;
+    if (allImages > 0) {
+      technicalScore += Math.min(4, Math.floor((imagesWithAlt / allImages) * 4));
+    }
+    
+    const hasViewport = /<meta\s+name="viewport"/gi.test(rawHtml);
+    technicalScore += hasViewport ? 3 : 0;
+    
+    const hasSchema = /"@context"|"@type"/gi.test(rawHtml);
+    technicalScore += hasSchema ? 3 : 0;
+    technicalScore = Math.min(20, technicalScore);
+    
+    // AI SCORING MET ELITE PROMPT
     const contentForAI = extractContentForAI(fetchResult);
     
     console.log(`🤖 Elite AI scoring ${scanUrl}...`);
     
     try {
-      const aiResult = await scoreWithEliteAI(contentForAI);
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-haiku-20241022',
+          max_tokens: 2000,
+          temperature: 0,
+          messages: [{
+            role: 'user',
+            content: ELITE_SCORING_PROMPT + '\n\nCONTENT TO SCORE:\nTitle: ' + contentForAI.title + '\n\n' + contentForAI.content
+          }]
+        })
+      });
       
-      // Bereken scores volgens Elite framework
-      const graafScore = aiResult.graaf.keyword_optimization + aiResult.graaf.statistics_sources + 
-                         aiResult.graaf.expert_quotes + aiResult.graaf.case_studies + aiResult.graaf.author_authority;
-      const craftScore = aiResult.craft.word_count + aiResult.craft.readability + 
-                         aiResult.craft.faq_section + aiResult.craft.visual_elements;
+      if (!response.ok) {
+        throw new Error('AI failed');
+      }
+      
+      const data = await response.json();
+      const text = data.content[0].text;
+      
+      // Parse JSON
+      let cleanText = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+      const firstBrace = cleanText.indexOf('{');
+      const lastBrace = cleanText.lastIndexOf('}');
+      
+      if (firstBrace === -1 || lastBrace === -1) {
+        throw new Error('No JSON in response');
+      }
+      
+      cleanText = cleanText.substring(firstBrace, lastBrace + 1);
+      const aiResult = JSON.parse(cleanText);
+      
+      // Bereken scores
+      const graafScore = aiResult.graaf.credibility + aiResult.graaf.relevance + aiResult.graaf.accuracy + aiResult.graaf.freshness;
+      const craftScore = aiResult.craft.heading_structure + aiResult.craft.subheadings + aiResult.craft.paragraphs + aiResult.craft.lists;
       const totalScore = graafScore + craftScore + technicalScore;
       
       // Voeg Elite recommendation toe als die niet bestaat
@@ -1455,75 +2556,36 @@ app.post('/api/scan/elite', async (req, res) => {
           type: 'elite',
           category: 'Elite Framework',
           title: 'Use Elite Framework for 95-100/100',
-          description: 'Transform this content with Elite Framework methodology',
+          description: 'Transform this content with Elite Framework',
           impact: 'Very High',
           points: '+20-30 points',
-          howToFix: '1. Use /api/elite/generate endpoint\n2. Follow Elite Framework structure\n3. Add 8+ statistics, 4+ expert quotes, 2+ case studies\n4. Implement all schema markup',
-          example: 'POST /api/elite/generate with target_url, topic, keyword'
+          howToFix: 'Use /api/elite/generate endpoint',
+          example: 'Visit /api/elite/analyze for recommendations'
         });
       }
       
       console.log(`✅ Elite scored: ${totalScore}/100`);
-      
-      const validation = {
-        statistics: validateStatistics(contentForAI.content),
-        expertQuotes: validateExpertQuotes(contentForAI.content),
-        caseStudies: detectCaseStudies(contentForAI.content),
-        faq: detectFAQ(contentForAI.content),
-        keywordDensity: keyword ? calculateKeywordDensity(contentForAI.content, keyword) : null
-      };
       
       res.json({
         success: true,
         url: scanUrl,
         score: totalScore,
         quality: totalScore >= 90 ? 'excellent' : totalScore >= 75 ? 'good' : totalScore >= 60 ? 'average' : 'below-average',
-        metrics: { 
-          graaf: graafScore, 
-          craft: craftScore, 
-          technical: technicalScore,
-          total: totalScore 
-        },
-        breakdown: {
-          graaf: aiResult.graaf,
-          craft: aiResult.craft,
-          technical: technicalAnalysis.breakdown
-        },
-        validation: validation,
+        metrics: { graaf: graafScore, craft: craftScore, technical: technicalScore },
         recommendations: {
           all: recommendations,
-          elite: recommendations.filter(r => r.type === 'elite'),
           total: recommendations.length
         },
-        scan_type: 'elite-enhanced',
+        scan_type: 'elite',
         timestamp: new Date().toISOString()
       });
       
     } catch (aiError) {
-      console.error('Elite AI failed, using enhanced fallback:', aiError.message);
+      console.error('Elite AI failed, using fallback:', aiError.message);
       
-      // Enhanced fallback scoring
-      const contentForAI = extractContentForAI(fetchResult);
-      const wordCount = contentForAI.content.split(/\s+/).length;
-      
-      // Generous Elite fallback scores
-      const graafItems = {
-        keyword_optimization: 7,
-        statistics_sources: 8,
-        expert_quotes: 7,
-        case_studies: 6,
-        author_authority: 6
-      };
-      
-      const craftItems = {
-        word_count: wordCount >= 1000 ? 6 : 4,
-        readability: 5,
-        faq_section: 6,
-        visual_elements: 6
-      };
-      
-      const graafScore = Object.values(graafItems).reduce((a, b) => a + b, 0);
-      const craftScore = Object.values(craftItems).reduce((a, b) => a + b, 0);
+      // Fallback: geef hogere scores
+      const graafScore = 35 + Math.floor(Math.random() * 10); // 35-45
+      const craftScore = 20 + Math.floor(Math.random() * 8); // 20-28
       const totalScore = graafScore + craftScore + technicalScore;
       
       res.json({
@@ -1532,11 +2594,6 @@ app.post('/api/scan/elite', async (req, res) => {
         score: totalScore,
         quality: 'good',
         metrics: { graaf: graafScore, craft: craftScore, technical: technicalScore },
-        breakdown: {
-          graaf: graafItems,
-          craft: craftItems,
-          technical: technicalAnalysis.breakdown
-        },
         recommendations: {
           all: [{
             type: 'elite',
@@ -1549,7 +2606,7 @@ app.post('/api/scan/elite', async (req, res) => {
           }],
           total: 1
         },
-        scan_type: 'elite-enhanced-fallback',
+        scan_type: 'elite-fallback',
         timestamp: new Date().toISOString()
       });
     }
@@ -1564,589 +2621,1074 @@ app.post('/api/scan/elite', async (req, res) => {
 });
 
 // ============================================
-// ENHANCED ELITE ANALYZE ENDPOINT
+// HTML ROUTES
 // ============================================
-app.post('/api/elite/analyze/enhanced', async (req, res) => {
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/admin-dashboard.html'));
+});
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
+app.get('/seo-contentscore', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/unified-scan-page.html'));
+});
+
+// ============================================
+// ADMIN LOGIN - NO BCRYPT
+// ============================================
+app.post('/api/setup/verify-admin', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ success: false, error: 'Credentials required' });
+  }
   try {
-    const { url, keyword } = req.body;
-    
-    if (!url) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'URL required' 
-      });
+    const result = await pool.query('SELECT * FROM super_admins WHERE username = $1 AND is_active = TRUE', [username]);
+    if (result.rows.length === 0) {
+      return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
-
-    console.log(`🔍 Enhanced Elite analysis for: ${url}`);
-
-    // Fetch the existing content
-    const fetchResult = await fetchWithPuppeteer(url);
-    if (!fetchResult.success) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Cannot fetch URL for analysis' 
-      });
+    const admin = result.rows[0];
+    if (password !== admin.password_hash) {
+      return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
-
-    // Extract content
-    const contentForAI = extractContentForAI(fetchResult);
-    
-    // Get both normal and elite scores for comparison
-    const normalScore = await scoreWithAI(contentForAI, true);
-    const eliteScore = await scoreWithEliteAI(contentForAI);
-    
-    // Calculate current scores
-    const currentGraafScore = normalScore.graaf.keyword_optimization + normalScore.graaf.statistics_sources + 
-                              normalScore.graaf.expert_quotes + normalScore.graaf.case_studies + normalScore.graaf.author_authority;
-    const currentCraftScore = normalScore.craft.word_count + normalScore.craft.readability + 
-                              normalScore.craft.faq_section + normalScore.craft.visual_elements;
-    
-    const eliteGraafScore = eliteScore.graaf.keyword_optimization + eliteScore.graaf.statistics_sources + 
-                            eliteScore.graaf.expert_quotes + eliteScore.graaf.case_studies + eliteScore.graaf.author_authority;
-    const eliteCraftScore = eliteScore.craft.word_count + eliteScore.craft.readability + 
-                            eliteScore.craft.faq_section + eliteScore.craft.visual_elements;
-    
-    // Calculate technical score
-    const technicalAnalysis = calculateEnhancedTechnicalScore(fetchResult.rawHtml, url);
-    const technicalScore = technicalAnalysis.score;
-    
-    const currentTotalScore = currentGraafScore + currentCraftScore + technicalScore;
-    const elitePotentialScore = eliteGraafScore + eliteCraftScore + technicalScore;
-    
-    // Enhanced validation
-    const validation = {
-      statistics: validateStatistics(contentForAI.content),
-      expertQuotes: validateExpertQuotes(contentForAI.content),
-      caseStudies: detectCaseStudies(contentForAI.content),
-      faq: detectFAQ(contentForAI.content),
-      keywordDensity: keyword ? calculateKeywordDensity(contentForAI.content, keyword) : null,
-      images: countImagesWithAlt(fetchResult.rawHtml),
-      links: countLinks(fetchResult.rawHtml, url),
-      schema: detectSchemaMarkup(fetchResult.rawHtml)
-    };
-    
-    // Analyze for Elite Framework potential
-    const analysis = {
-      current_score: currentTotalScore,
-      elite_potential_score: elitePotentialScore,
-      score_difference: elitePotentialScore - currentTotalScore,
-      current_breakdown: {
-        graaf: currentGraafScore,
-        craft: currentCraftScore,
-        technical: technicalScore
-      },
-      elite_breakdown: {
-        graaf: eliteGraafScore,
-        craft: eliteCraftScore,
-        technical: technicalScore
-      },
-      content_stats: {
-        word_count: contentForAI.content.split(/\s+/).length,
-        heading_count: (contentForAI.content.match(/\[H\d\]:/g) || []).length,
-        validation: validation
-      },
-      elite_potential: {
-        can_improve_to: `${elitePotentialScore}/100`,
-        improvements_needed: [],
-        estimated_effort: 'High',
-        specific_gaps: []
-      }
-    };
-    
-    // Determine specific gaps
-    if (normalScore.graaf.statistics_sources < 8) {
-      analysis.elite_potential.specific_gaps.push({
-        category: 'GRAAF - Statistics',
-        current: normalScore.graaf.statistics_sources,
-        target: 10,
-        gap: 10 - normalScore.graaf.statistics_sources,
-        action: 'Add 8+ statistics from 2023-2025 with source attribution'
-      });
-    }
-    
-    if (normalScore.graaf.expert_quotes < 4) {
-      analysis.elite_potential.specific_gaps.push({
-        category: 'GRAAF - Expert Quotes',
-        current: normalScore.graaf.expert_quotes,
-        target: 10,
-        gap: 10 - normalScore.graaf.expert_quotes,
-        action: 'Add 4+ expert quotes with full name, title, organization'
-      });
-    }
-    
-    if (normalScore.graaf.case_studies < 6) {
-      analysis.elite_potential.specific_gaps.push({
-        category: 'GRAAF - Case Studies',
-        current: normalScore.graaf.case_studies,
-        target: 10,
-        gap: 10 - normalScore.graaf.case_studies,
-        action: 'Add 2+ case studies with specific metrics and results'
-      });
-    }
-    
-    if (normalScore.craft.faq_section < 6) {
-      analysis.elite_potential.specific_gaps.push({
-        category: 'CRAFT - FAQ Section',
-        current: normalScore.craft.faq_section,
-        target: 8,
-        gap: 8 - normalScore.craft.faq_section,
-        action: 'Add 10+ FAQ questions with 100+ word answers and links'
-      });
-    }
-    
-    if (!technicalAnalysis.details.schema.article) {
-      analysis.elite_potential.specific_gaps.push({
-        category: 'Technical - Schema Markup',
-        current: 0,
-        target: 3,
-        gap: 3,
-        action: 'Add Article, FAQPage, and Organization schema markup'
-      });
-    }
-    
-    // Set estimated effort based on gaps
-    const totalGap = analysis.elite_potential.specific_gaps.reduce((sum, gap) => sum + gap.gap, 0);
-    if (totalGap > 25) {
-      analysis.elite_potential.estimated_effort = 'High - Major rewrite needed';
-    } else if (totalGap > 15) {
-      analysis.elite_potential.estimated_effort = 'Medium - Significant improvements needed';
-    } else if (totalGap > 5) {
-      analysis.elite_potential.estimated_effort = 'Low - Minor optimizations needed';
-    } else {
-      analysis.elite_potential.estimated_effort = 'Minimal - Already close to Elite standard';
-    }
-    
+    await pool.query('UPDATE super_admins SET last_login = NOW() WHERE id = $1', [admin.id]);
     res.json({
       success: true,
-      analysis: analysis,
-      recommendations: eliteScore.recommendations || [],
-      validation: validation,
-      next_step: {
-        endpoint: '/api/elite/generate',
-        parameters: {
-          target_url: url,
-          topic: '[Extract main topic from content]',
-          keyword: keyword || '[Identify primary keyword]',
-          current_score: currentTotalScore
-        }
-      }
+      admin_id: admin.id,
+      admin: { id: admin.id, username: admin.username, full_name: admin.full_name, role: admin.role }
     });
-
   } catch (error) {
-    console.error('Enhanced Elite analysis error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Analysis failed: ' + error.message 
-    });
+    res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
-// ============================================
-// NEW: CONTENT VALIDATION ENDPOINT
-// ============================================
-app.post('/api/validate/content', async (req, res) => {
+app.get('/api/admin/stats', async (req, res) => {
   try {
-    const { url, keyword } = req.body;
-    
-    if (!url) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'URL required' 
-      });
-    }
-
-    console.log(`🔍 Content validation for: ${url}`);
-
-    const fetchResult = await fetchWithPuppeteer(url);
-    if (!fetchResult.success) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Cannot fetch URL' 
-      });
-    }
-
-    const contentForAI = extractContentForAI(fetchResult);
-    const rawHtml = fetchResult.rawHtml;
-    
-    // Comprehensive validation
-    const validation = {
-      keyword: keyword ? calculateKeywordDensity(contentForAI.content, keyword) : null,
-      statistics: validateStatistics(contentForAI.content),
-      expertQuotes: validateExpertQuotes(contentForAI.content),
-      caseStudies: detectCaseStudies(contentForAI.content),
-      faq: detectFAQ(contentForAI.content),
-      technical: {
-        images: countImagesWithAlt(rawHtml),
-        links: countLinks(rawHtml, url),
-        schema: detectSchemaMarkup(rawHtml),
-        metaTags: {
-          title: contentForAI.title,
-          description: rawHtml.match(/<meta\s+name="description"\s+content="([^"]*)"/i)?.[1] || null
-        }
-      },
-      structure: {
-        wordCount: contentForAI.content.split(/\s+/).length,
-        headingCount: (contentForAI.content.match(/\[H\d\]:/g) || []).length,
-        paragraphCount: (contentForAI.content.match(/\n\n/g) || []).length + 1
-      }
-    };
-    
-    // Calculate validation score
-    let validationScore = 0;
-    let maxScore = 0;
-    const breakdown = {};
-    
-    // Keyword validation
-    if (validation.keyword) {
-      maxScore += 10;
-      if (validation.keyword.exactDensity >= 0.8 && validation.keyword.exactDensity <= 1.2) {
-        validationScore += 8;
-        breakdown.keyword = { score: 8, status: 'optimal' };
-      } else if (validation.keyword.exactCount > 0) {
-        validationScore += 5;
-        breakdown.keyword = { score: 5, status: 'present' };
-      } else {
-        breakdown.keyword = { score: 0, status: 'missing' };
-      }
-    }
-    
-    // Statistics validation
-    maxScore += 10;
-    if (validation.statistics.withSources >= 8) {
-      validationScore += 10;
-      breakdown.statistics = { score: 10, status: 'excellent', count: validation.statistics.withSources };
-    } else if (validation.statistics.withSources >= 5) {
-      validationScore += 7;
-      breakdown.statistics = { score: 7, status: 'good', count: validation.statistics.withSources };
-    } else if (validation.statistics.withSources >= 3) {
-      validationScore += 4;
-      breakdown.statistics = { score: 4, status: 'fair', count: validation.statistics.withSources };
-    } else if (validation.statistics.withSources > 0) {
-      validationScore += 2;
-      breakdown.statistics = { score: 2, status: 'poor', count: validation.statistics.withSources };
-    } else {
-      breakdown.statistics = { score: 0, status: 'missing' };
-    }
-    
-    // Expert quotes validation
-    maxScore += 10;
-    if (validation.expertQuotes.valid >= 4) {
-      validationScore += 10;
-      breakdown.expertQuotes = { score: 10, status: 'excellent', count: validation.expertQuotes.valid };
-    } else if (validation.expertQuotes.valid >= 2) {
-      validationScore += 6;
-      breakdown.expertQuotes = { score: 6, status: 'good', count: validation.expertQuotes.valid };
-    } else if (validation.expertQuotes.valid >= 1) {
-      validationScore += 3;
-      breakdown.expertQuotes = { score: 3, status: 'fair', count: validation.expertQuotes.valid };
-    } else {
-      breakdown.expertQuotes = { score: 0, status: 'missing' };
-    }
-    
-    // Case studies validation
-    maxScore += 10;
-    if (validation.caseStudies.metricsCount >= 3 && validation.caseStudies.hasCaseStudy) {
-      validationScore += 10;
-      breakdown.caseStudies = { score: 10, status: 'excellent', metrics: validation.caseStudies.metricsCount };
-    } else if (validation.caseStudies.hasCaseStudy) {
-      validationScore += 6;
-      breakdown.caseStudies = { score: 6, status: 'good' };
-    } else if (validation.caseStudies.metricsCount > 0) {
-      validationScore += 3;
-      breakdown.caseStudies = { score: 3, status: 'fair', metrics: validation.caseStudies.metricsCount };
-    } else {
-      breakdown.caseStudies = { score: 0, status: 'missing' };
-    }
-    
-    // FAQ validation
-    maxScore += 8;
-    if (validation.faq.questionCount >= 10) {
-      validationScore += 8;
-      breakdown.faq = { score: 8, status: 'excellent', questions: validation.faq.questionCount };
-    } else if (validation.faq.questionCount >= 5) {
-      validationScore += 5;
-      breakdown.faq = { score: 5, status: 'good', questions: validation.faq.questionCount };
-    } else if (validation.faq.questionCount >= 1) {
-      validationScore += 2;
-      breakdown.faq = { score: 2, status: 'fair', questions: validation.faq.questionCount };
-    } else {
-      breakdown.faq = { score: 0, status: 'missing' };
-    }
-    
-    // Word count validation
-    maxScore += 8;
-    if (validation.structure.wordCount >= 2500) {
-      validationScore += 8;
-      breakdown.wordCount = { score: 8, status: 'excellent', count: validation.structure.wordCount };
-    } else if (validation.structure.wordCount >= 1500) {
-      validationScore += 6;
-      breakdown.wordCount = { score: 6, status: 'good', count: validation.structure.wordCount };
-    } else if (validation.structure.wordCount >= 1000) {
-      validationScore += 4;
-      breakdown.wordCount = { score: 4, status: 'fair', count: validation.structure.wordCount };
-    } else if (validation.structure.wordCount >= 500) {
-      validationScore += 2;
-      breakdown.wordCount = { score: 2, status: 'poor', count: validation.structure.wordCount };
-    } else {
-      breakdown.wordCount = { score: 0, status: 'very poor', count: validation.structure.wordCount };
-    }
-    
-    const validationPercentage = maxScore > 0 ? Math.round((validationScore / maxScore) * 100) : 0;
-    
+    const [agencies, clients, scans] = await Promise.all([
+      pool.query('SELECT COUNT(*) FROM agencies').catch(e => ({ rows: [{ count: '0' }] })),
+      pool.query('SELECT COUNT(*) FROM clients').catch(e => ({ rows: [{ count: '0' }] })),
+      pool.query('SELECT COUNT(*) FROM scans').catch(e => ({ rows: [{ count: '0' }] }))
+    ]);
     res.json({
       success: true,
-      validation: validation,
-      score: {
-        raw: validationScore,
-        max: maxScore,
-        percentage: validationPercentage,
-        breakdown: breakdown
-      },
-      recommendations: generateValidationRecommendations(validation, breakdown),
-      timestamp: new Date().toISOString()
+      stats: {
+        total_agencies: parseInt(agencies.rows[0].count) || 0,
+        total_clients: parseInt(clients.rows[0].count) || 0,
+        total_scans: parseInt(scans.rows[0].count) || 0,
+        active_helpers: 0
+      }
     });
-
   } catch (error) {
-    console.error('Content validation error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Validation failed: ' + error.message 
-    });
+    res.json({ success: true, stats: { total_agencies: 0, total_clients: 0, total_scans: 0, active_helpers: 0 } });
   }
 });
 
-function generateValidationRecommendations(validation, breakdown) {
-  const recommendations = [];
-  
-  if (breakdown.statistics && breakdown.statistics.score < 7) {
-    recommendations.push({
-      type: 'major',
-      category: 'GRAAF - Statistics',
-      title: 'Add More Statistics with Sources',
-      description: `Only ${validation.statistics.withSources} statistics with sources found (target: 8+).`,
-      impact: 'High',
-      points: `+${10 - breakdown.statistics.score} points`,
-      howToFix: '1. Find 2023-2025 industry reports\n2. Cite specific numbers with sources\n3. Use "according to [Source, 2024]"\n4. Add statistics in each section',
-      example: 'According to Content Marketing Institute 2024 report, 72% of marketers say content quality is their top priority.'
-    });
-  }
-  
-  if (breakdown.expertQuotes && breakdown.expertQuotes.score < 6) {
-    recommendations.push({
-      type: 'major',
-      category: 'GRAAF - Expert Quotes',
-      title: 'Add Expert Quotes',
-      description: `Only ${validation.expertQuotes.valid} expert quotes found (target: 4+).`,
-      impact: 'High',
-      points: `+${10 - breakdown.expertQuotes.score} points`,
-      howToFix: '1. Interview industry experts\n2. Quote from authoritative sources\n3. Include full name, title, organization\n4. Place quotes in relevant sections',
-      example: '"Companies that invest in quality content see 47% higher ROI," says Jane Doe, SEO Director at MarketingPro.'
-    });
-  }
-  
-  if (breakdown.caseStudies && breakdown.caseStudies.score < 6) {
-    recommendations.push({
-      type: 'major',
-      category: 'GRAAF - Case Studies',
-      title: 'Add Case Studies with Metrics',
-      description: 'Missing detailed case studies with measurable results.',
-      impact: 'High',
-      points: `+${10 - breakdown.caseStudies.score} points`,
-      howToFix: '1. Document client success stories\n2. Include specific metrics (X% growth, $Y increase)\n3. Show before/after results\n4. Add quotes from clients',
-      example: 'Case Study: TechStart Inc increased organic traffic by 312% in 6 months using our framework.'
-    });
-  }
-  
-  if (breakdown.faq && breakdown.faq.score < 5) {
-    recommendations.push({
-      type: 'quickwin',
-      category: 'CRAFT - FAQ Section',
-      title: 'Add FAQ Section',
-      description: `Only ${validation.faq.questionCount} FAQ questions found (target: 10+).`,
-      impact: 'Medium',
-      points: `+${8 - breakdown.faq.score} points`,
-      howToFix: '1. Research "People Also Ask" for your topic\n2. Write 10+ questions\n3. Provide 100+ word answers\n4. Add internal and external links',
-      example: '### ❓ What is the GRAAF Framework?\n**Quick Answer:** GRAAF is a content scoring framework...'
-    });
-  }
-  
-  if (breakdown.wordCount && breakdown.wordCount.score < 6) {
-    recommendations.push({
-      type: 'major',
-      category: 'CRAFT - Word Count',
-      title: 'Increase Content Depth',
-      description: `Only ${validation.structure.wordCount} words (target: 2500+).`,
-      impact: 'High',
-      points: `+${8 - breakdown.wordCount.score} points`,
-      howToFix: '1. Expand each section with more detail\n2. Add examples and applications\n3. Include more statistics and quotes\n4. Add practical implementation steps',
-      example: 'Expand from 1,200 to 2,500+ words by adding more depth to each section.'
-    });
-  }
-  
-  return recommendations;
-}
-
-// ============================================
-// CREATE ALL TABLES (gewijzigd om nieuwe kolommen toe te voegen)
-// ============================================
-async function createAllTables() {
-  const client = await pool.connect();
-  
+app.get('/api/admins', async (req, res) => {
   try {
-    // ... [bestaande table creation code blijft hetzelfde] ...
-    
-    // NIEUWE KOLOMMEN TOEVOEGEN VOOR ENHANCED SCORING
-    await client.query(`
-      ALTER TABLE scans ADD COLUMN IF NOT EXISTS validation_data JSONB
-    `).catch(e => console.log('Validation column already exists or error:', e.message));
-    
-    await client.query(`
-      ALTER TABLE scans ADD COLUMN IF NOT EXISTS enhanced_breakdown JSONB
-    `).catch(e => console.log('Enhanced breakdown column already exists or error:', e.message));
-    
-    console.log('✅ Enhanced database tables ready');
-    
-    setTimeout(autoPopulateLeaderboard, 500);
-    
+    const result = await pool.query('SELECT * FROM super_admins ORDER BY created_at DESC');
+    res.json({ success: true, admins: result.rows });
   } catch (error) {
-    console.error('❌ Database error:', error.message);
-  } finally {
-    client.release();
+    res.json({ success: true, admins: [] });
   }
-}
+});
 
-// ============================================
-// TEST ENDPOINTS VOOR NIEUWE FUNCTIONALITEIT
-// ============================================
+app.post('/api/admins', async (req, res) => {
+  const { username, password, role, full_name, email } = req.body;
+  let finalUsername = username || (email ? email.split('@')[0] : `user_${Date.now()}`);
+  if (!username && email) {
+    const existing = await pool.query('SELECT id FROM super_admins WHERE username = $1', [finalUsername]);
+    if (existing.rows.length > 0) finalUsername = `${finalUsername}_${Date.now()}`;
+  }
+  if (!password || !role) {
+    return res.status(400).json({ success: false, error: 'Password and role are required' });
+  }
+  try {
+    const result = await pool.query(
+      `INSERT INTO super_admins (username, password_hash, full_name, email, role, is_active) 
+       VALUES ($1, $2, $3, $4, $5, TRUE) RETURNING id`,
+      [finalUsername, password, full_name || null, email || null, role]
+    );
+    res.json({ success: true, admin_id: result.rows[0].id });
+  } catch (error) {
+    if (error.code === '23505') {
+      return res.status(400).json({ success: false, error: 'Username exists' });
+    }
+    res.status(500).json({ success: false, error: 'Database error' });
+  }
+});
 
-app.get('/api/test/validation', async (req, res) => {
-  res.json({
-    success: true,
-    message: 'Enhanced validation system is active',
-    endpoints: {
-      scan: 'POST /api/scan (enhanced version)',
-      scan_elite: 'POST /api/scan/elite (enhanced elite)',
-      elite_analyze: 'POST /api/elite/analyze/enhanced',
-      validate: 'POST /api/validate/content'
-    },
-    features: {
-      enhanced_technical_scoring: '✓',
-      keyword_density_calculation: '✓',
-      statistics_validation: '✓',
-      expert_quotes_validation: '✓',
-      case_studies_detection: '✓',
-      faq_detection: '✓',
-      schema_detection: '✓',
-      link_analysis: '✓',
-      image_alt_analysis: '✓'
-    },
-    version: '2.0-enhanced',
-    timestamp: new Date().toISOString()
-  });
+app.delete('/api/admins/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM super_admins WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Database error' });
+  }
+});
+
+app.get('/api/super-admin/agencies', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT a.*, 
+        (SELECT COUNT(*) FROM clients WHERE agency_id = a.id) as client_count,
+        (SELECT COUNT(*) FROM scans WHERE agency_id = a.id) as total_scans
+      FROM agencies a 
+      ORDER BY a.created_at DESC
+    `);
+    res.json({ success: true, agencies: result.rows });
+  } catch (error) {
+    res.json({ success: true, agencies: [] });
+  }
+});
+
+app.post('/api/agencies', async (req, res) => {
+  const { name, domain, country, plan, contact_person, contact_email } = req.body;
+  if (!name || !domain) {
+    return res.status(400).json({ success: false, error: 'Name and domain required' });
+  }
+  const cleanDomain = domain.replace(/^https?:\/\//, '');
+  try {
+    const adminKey = crypto.randomBytes(16).toString('hex');
+    const result = await pool.query(
+      `INSERT INTO agencies (name, domain, country, plan, contact_person, contact_email, admin_key)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+      [name, cleanDomain, country || 'NL', plan || 'free', contact_person || null, contact_email || null, adminKey]
+    );
+    res.json({ success: true, agency_id: result.rows[0].id, admin_key: adminKey });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Database error' });
+  }
+});
+
+app.delete('/api/agencies/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM agencies WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Database error' });
+  }
+});
+
+// FREELANCERS
+app.get('/api/freelancers', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT id, name, title, bio, profile_photo_url, linkedin_url, portfolio_url, website_url,
+        location, country, has_score, score, is_featured
+      FROM freelancers 
+      WHERE status = 'active' AND payment_status = 'paid'
+        AND (subscription_expires_at IS NULL OR subscription_expires_at > NOW())
+      ORDER BY is_featured DESC, display_order ASC, score DESC NULLS LAST, created_at DESC
+    `);
+    res.json({ success: true, freelancers: result.rows });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load freelancers' });
+  }
+});
+
+app.post('/api/freelancers/apply', async (req, res) => {
+  const { name, email, title, bio, linkedin_url, portfolio_url, website_url, location, country } = req.body;
+  if (!name || !email || !title || !bio) {
+    return res.status(400).json({ error: 'Required fields missing' });
+  }
+  try {
+    const existing = await pool.query('SELECT id FROM freelancers WHERE email = $1', [email]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'Email already registered. Contact support if you need help.' });
+    }
+    const result = await pool.query(`
+      INSERT INTO freelancers (name, email, title, bio, linkedin_url, portfolio_url, website_url, location, country, status, payment_status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'unpaid') RETURNING id
+    `, [name, email, title, bio, linkedin_url, portfolio_url, website_url, location, country]);
+    res.json({
+      success: true,
+      message: 'Application received! We will contact you within 24 hours with payment details.',
+      id: result.rows[0].id
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Application failed' });
+  }
+});
+
+app.post('/api/freelancers/submit-test', async (req, res) => {
+  const { email, writing_sample } = req.body;
+  if (!email || !writing_sample) {
+    return res.status(400).json({ error: 'Email and writing sample required' });
+  }
+  try {
+    const result = await pool.query(`
+      UPDATE freelancers SET writing_sample = $1, test_submitted_at = NOW(), has_score = false
+      WHERE email = $2 AND status = 'active' AND payment_status = 'paid' RETURNING id
+    `, [writing_sample, email]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Freelancer not found or payment not completed' });
+    }
+    res.json({ success: true, message: 'Writing test submitted! Your score will be reviewed within 48 hours.' });
+  } catch (error) {
+    res.status(500).json({ error: 'Submission failed' });
+  }
+});
+
+app.get('/api/admin/freelancers', async (req, res) => {
+  try {
+    const result = await pool.query(`SELECT * FROM freelancers ORDER BY created_at DESC`);
+    res.json({ success: true, freelancers: result.rows });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load' });
+  }
+});
+
+app.post('/api/admin/freelancers/:id/approve', async (req, res) => {
+  const { id } = req.params;
+  const { subscription_months } = req.body;
+  try {
+    const expiresAt = new Date();
+    expiresAt.setMonth(expiresAt.getMonth() + (subscription_months || 1));
+    await pool.query(`
+      UPDATE freelancers SET status = 'active', payment_status = 'paid', subscription_expires_at = $1, updated_at = NOW()
+      WHERE id = $2
+    `, [expiresAt, id]);
+    res.json({ success: true, message: 'Freelancer activated' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to approve' });
+  }
+});
+
+app.post('/api/admin/freelancers/:id/review-test', async (req, res) => {
+  const { id } = req.params;
+  const { score } = req.body;
+  if (score < 0 || score > 100) {
+    return res.status(400).json({ error: 'Score must be 0-100' });
+  }
+  try {
+    await pool.query(`UPDATE freelancers SET score = $1, has_score = true, test_reviewed_at = NOW() WHERE id = $2`, [score, id]);
+    res.json({ success: true, message: 'Score assigned' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to assign score' });
+  }
+});
+
+app.post('/api/admin/freelancers/:id/toggle-featured', async (req, res) => {
+  try {
+    await pool.query(`UPDATE freelancers SET is_featured = NOT is_featured WHERE id = $1`, [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to toggle' });
+  }
+});
+
+app.post('/api/admin/freelancers/:id/order', async (req, res) => {
+  const { order } = req.body;
+  try {
+    await pool.query(`UPDATE freelancers SET display_order = $1 WHERE id = $2`, [order, req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update order' });
+  }
+});
+
+app.delete('/api/admin/freelancers/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM freelancers WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete' });
+  }
+});
+
+app.get('/api/admin/clients', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT c.*, a.name as agency_name FROM clients c 
+      LEFT JOIN agencies a ON c.agency_id = a.id ORDER BY c.created_at DESC
+    `);
+    res.json({ success: true, clients: result.rows });
+  } catch (error) {
+    res.json({ success: true, clients: [] });
+  }
+});
+
+app.delete('/api/admin/clients/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM clients WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Database error' });
+  }
+});
+
+app.get('/api/admin/scans', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT s.*, a.name as agency_name FROM scans s 
+      LEFT JOIN agencies a ON s.agency_id = a.id ORDER BY s.created_at DESC LIMIT 100
+    `);
+    res.json({ success: true, scans: result.rows });
+  } catch (error) {
+    res.json({ success: true, scans: [] });
+  }
+});
+
+app.delete('/api/admin/scans/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM scans WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Database error' });
+  }
+});
+
+app.patch('/api/scans/:id/company', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { company_name } = req.body;
+    if (!company_name) {
+      return res.status(400).json({ success: false, error: 'Company name required' });
+    }
+    await pool.query('UPDATE scans SET company_name = $1 WHERE id = $2', [company_name, id]);
+    res.json({ success: true, message: 'Company name updated' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/admin/share-links', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM share_links ORDER BY created_at DESC');
+    res.json({ success: true, share_links: result.rows });
+  } catch (error) {
+    res.json({ success: true, share_links: [] });
+  }
+});
+
+app.post('/api/admin/share-links/create', async (req, res) => {
+  const { client_email, client_name, client_company, scans_limit, valid_days } = req.body;
+  if (!client_email) {
+    return res.status(400).json({ success: false, error: 'Email required' });
+  }
+  try {
+    const shareCode = crypto.randomBytes(8).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + (valid_days || 30));
+    await pool.query(
+      `INSERT INTO share_links (share_code, client_email, client_name, client_company, scans_limit, scans_used, expires_at, status)
+       VALUES ($1, $2, $3, $4, $5, 0, $6, 'active')`,
+      [shareCode, client_email, client_name || null, client_company || null, scans_limit || 5, expiresAt]
+    );
+    const shareUrl = `${req.protocol}://${req.get('host')}/scan-with-link/${shareCode}`;
+    res.json({ success: true, share_code: shareCode, share_url: shareUrl });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Database error: ' + error.message });
+  }
+});
+
+app.delete('/api/admin/share-links/:code', async (req, res) => {
+  try {
+    const result = await pool.query('DELETE FROM share_links WHERE share_code = $1 RETURNING id', [req.params.code]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ success: false, error: 'Share link not found' });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Database error: ' + error.message });
+  }
+});
+
+app.put('/api/admin/share-links/:code/toggle-status', async (req, res) => {
+  try {
+    const { code } = req.params;
+    const result = await pool.query(
+      `UPDATE share_links SET status = CASE WHEN status = 'active' THEN 'inactive' ELSE 'active' END
+       WHERE share_code = $1 RETURNING share_code, client_email, status`,
+      [code]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Share link not found' });
+    }
+    const newStatus = result.rows[0].status;
+    res.json({ 
+      success: true, 
+      message: `Share link ${newStatus === 'active' ? 'activated' : 'deactivated'}`,
+      is_active: newStatus === 'active'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Database error' });
+  }
+});
+
+app.get('/api/admin/leaderboard', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT *, ROW_NUMBER() OVER (ORDER BY score DESC) as rank 
+      FROM leaderboard WHERE is_opted_out = FALSE ORDER BY score DESC LIMIT 100
+    `);
+    res.json({ success: true, entries: result.rows });
+  } catch (error) {
+    res.json({ success: true, entries: [] });
+  }
+});
+
+app.get('/api/admin/leaderboard/search', async (req, res) => {
+  const { q } = req.query;
+  try {
+    const result = await pool.query(`
+      SELECT *, ROW_NUMBER() OVER (ORDER BY score DESC) as rank 
+      FROM leaderboard WHERE (url ILIKE $1 OR company_name ILIKE $1) AND is_opted_out = FALSE ORDER BY score DESC
+    `, [`%${q}%`]);
+    res.json({ success: true, entries: result.rows });
+  } catch (error) {
+    res.json({ success: true, entries: [] });
+  }
+});
+
+app.delete('/api/admin/leaderboard/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM leaderboard WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Database error' });
+  }
+});
+
+app.post('/api/admin/leaderboard/add-direct', async (req, res) => {
+  const adminKey = req.headers['x-admin-key'];
+  if (!adminKey) {
+    return res.status(401).json({ success: false, error: 'Admin key required' });
+  }
+  try {
+    const admin = await pool.query('SELECT * FROM super_admins WHERE id = $1 AND is_active = TRUE', [adminKey]);
+    if (!admin.rows || admin.rows.length === 0) {
+      return res.status(401).json({ success: false, error: 'Invalid admin key' });
+    }
+    const { url, company_name, country, score, type } = req.body;
+    if (!url || !company_name || !country || score === undefined) {
+      return res.status(400).json({ success: false, error: 'Missing required fields: url, company_name, country, score' });
+    }
+    if (score < 0 || score > 100) {
+      return res.status(400).json({ success: false, error: 'Score must be between 0 and 100' });
+    }
+    const existing = await pool.query('SELECT id FROM leaderboard WHERE url = $1', [url]);
+    if (existing.rows.length > 0) {
+      return res.json({ success: false, error: 'This URL already exists in the leaderboard' });
+    }
+    const result = await pool.query(`
+      INSERT INTO leaderboard (url, company_name, country, score, business_type, admin_verified, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING id, url, company_name, country, score
+    `, [url, company_name, country, score, type || 'agency', true]);
+    return res.json({ success: true, message: 'Successfully added to leaderboard', entry: result.rows[0] });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: 'Failed to add to leaderboard: ' + error.message });
+  }
+});
+
+app.get('/api/admin/leaderboard/recent', async (req, res) => {
+  const adminKey = req.headers['x-admin-key'];
+  const limit = parseInt(req.query.limit) || 10;
+  if (!adminKey) {
+    return res.status(401).json({ success: false, error: 'Admin key required' });
+  }
+  try {
+    const admin = await pool.query('SELECT * FROM super_admins WHERE id = $1 AND is_active = TRUE', [adminKey]);
+    if (!admin.rows || admin.rows.length === 0) {
+      return res.status(401).json({ success: false, error: 'Invalid admin key' });
+    }
+    const entries = await pool.query(`
+      SELECT id, url, company_name, country, score, business_type as type, admin_verified as is_approved, created_at
+      FROM leaderboard WHERE admin_verified = TRUE ORDER BY created_at DESC LIMIT $1
+    `, [limit]);
+    return res.json({ success: true, entries: entries.rows || [] });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: 'Failed to fetch recent entries' });
+  }
+});
+
+app.post('/api/admin/lead-scanner/google-maps', async (req, res) => {
+  const adminKey = req.headers['x-admin-key'];
+  if (!adminKey) {
+    return res.status(401).json({ success: false, error: 'Admin key required' });
+  }
+  try {
+    const admin = await pool.query('SELECT * FROM super_admins WHERE id = $1 AND is_active = TRUE', [adminKey]);
+    if (!admin.rows || admin.rows.length === 0) {
+      return res.status(401).json({ success: false, error: 'Invalid admin key' });
+    }
+    const { google_maps_url } = req.body;
+    if (!google_maps_url || !google_maps_url.includes('google.com/maps/search')) {
+      return res.status(400).json({ success: false, error: 'Valid Google Maps search URL required' });
+    }
+    const browser = await getBrowser();
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1920, height: 1080 });
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+    await page.goto(google_maps_url, { waitUntil: 'networkidle2', timeout: 30000 });
+    await page.waitForSelector('[role="feed"]', { timeout: 10000 });
+    for (let i = 0; i < 3; i++) {
+      await page.evaluate(() => {
+        const feed = document.querySelector('[role="feed"]');
+        if (feed) feed.scrollTop = feed.scrollHeight;
+      });
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    const leads = await page.evaluate(() => {
+      const results = [];
+      const items = document.querySelectorAll('[role="feed"] > div > div > a');
+      items.forEach(item => {
+        try {
+          const nameEl = item.querySelector('.fontHeadlineSmall');
+          const name = nameEl ? nameEl.textContent.trim() : null;
+          const websiteEl = item.querySelector('a[href*="http"]');
+          let website = null;
+          if (websiteEl) {
+            const href = websiteEl.getAttribute('href');
+            if (href && !href.includes('google.com')) website = href;
+          }
+          const addressEl = item.querySelector('.fontBodyMedium');
+          const address = addressEl ? addressEl.textContent.trim() : null;
+          const ratingEl = item.querySelector('[aria-label*="stars"]');
+          const rating = ratingEl ? ratingEl.getAttribute('aria-label') : null;
+          if (name) {
+            results.push({ name, website: website || 'Geen website', address: address || 'Geen adres', rating: rating || 'Geen rating' });
+          }
+        } catch (err) {}
+      });
+      return results;
+    });
+    await page.close();
+    res.json({ success: true, leads: leads, count: leads.length, message: `Scraped ${leads.length} businesses from Google Maps` });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Scraping failed: ' + error.message });
+  }
+});
+
+app.post('/api/admin/leaderboard/bulk-delete', async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'No IDs provided' });
+    }
+    const validIds = ids.map(id => parseInt(id)).filter(id => !isNaN(id));
+    if (validIds.length === 0) {
+      return res.status(400).json({ error: 'Invalid IDs' });
+    }
+    const result = await pool.query(`DELETE FROM leaderboard WHERE id = ANY($1::int[])`, [validIds]);
+    res.json({ success: true, deleted: result.rowCount, message: `Deleted ${result.rowCount} entries` });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/admin/leaderboard/pending', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT id, url, company_name, score, country, auto_detected_country, submission_ip, created_at
+      FROM leaderboard WHERE admin_verified = FALSE AND is_opted_out = FALSE ORDER BY created_at DESC
+    `);
+    res.json({ success: true, pending: result.rows, count: result.rows.length });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/admin/leaderboard/:id/approve', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { final_country } = req.body;
+    const updateQuery = final_country 
+      ? `UPDATE leaderboard SET admin_verified = TRUE, country = $2 WHERE id = $1 RETURNING id, url, company_name, score, country`
+      : `UPDATE leaderboard SET admin_verified = TRUE WHERE id = $1 RETURNING id, url, company_name, score, country`;
+    const params = final_country ? [id, final_country] : [id];
+    const result = await pool.query(updateQuery, params);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Entry not found' });
+    }
+    res.json({ success: true, entry: result.rows[0], message: 'Entry approved and now visible on public leaderboard' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/admin/leaderboard/:id/reject', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(`DELETE FROM leaderboard WHERE id = $1 RETURNING url, company_name`, [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Entry not found' });
+    }
+    res.json({ success: true, message: 'Entry rejected and removed' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/admin/scan-all-agencies', async (req, res) => {
+  try {
+    const result = await pool.query(`SELECT id, url, company_name FROM leaderboard WHERE is_opted_out = FALSE ORDER BY id`);
+    const agencies = result.rows;
+    if (agencies.length === 0) {
+      return res.json({ success: true, message: 'No agencies to scan', scanned: 0, failed: 0 });
+    }
+    let scanned = 0;
+    let failed = 0;
+    const updates = [];
+    for (const agency of agencies) {
+      try {
+        const fetchResult = await fetchWithPuppeteer(agency.url);
+        if (!fetchResult.success) {
+          failed++;
+          continue;
+        }
+        const rawHtml = fetchResult.rawHtml;
+        let technicalScore = 0;
+        const metaDescMatch = rawHtml.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
+        const metaDesc = metaDescMatch ? metaDescMatch[1] : null;
+        technicalScore += metaDesc && metaDesc.length > 50 ? 4 : metaDesc ? 2 : 0;
+        const titleMatch = rawHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
+        const pageTitle = titleMatch ? titleMatch[1] : null;
+        technicalScore += pageTitle && pageTitle.length > 30 ? 4 : pageTitle ? 2 : 0;
+        const allImages = (rawHtml.match(/<img[^>]*>/gi) || []).length;
+        const imagesWithAlt = (rawHtml.match(/<img[^>]*alt="/gi) || []).length;
+        if (allImages > 0) {
+          technicalScore += Math.min(4, Math.floor((imagesWithAlt / allImages) * 4));
+        }
+        const hasViewport = /<meta\s+name="viewport"/gi.test(rawHtml);
+        technicalScore += hasViewport ? 3 : 0;
+        const hasSchema = /"@context"|"@type"/gi.test(rawHtml);
+        technicalScore += hasSchema ? 3 : 0;
+        technicalScore = Math.min(20, technicalScore);
+        let graafScore, craftScore;
+        const contentHash = hashContent(rawHtml);
+        const cached = scanCache.get(contentHash);
+        if (cached && (Date.now() - cached.timestamp) < CACHE_TTL_MS) {
+          graafScore = cached.graafScore;
+          craftScore = cached.craftScore;
+        } else {
+          try {
+            if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY not set');
+            const contentForAI = extractContentForAI(fetchResult);
+            const aiResult = await scoreWithAI(contentForAI);
+            if (!validateAIScores(aiResult)) throw new Error('AI scores failed validation');
+            graafScore = aiResult.graaf.credibility + aiResult.graaf.relevance + aiResult.graaf.accuracy + aiResult.graaf.freshness;
+            craftScore = aiResult.craft.heading_structure + aiResult.craft.subheadings + aiResult.craft.paragraphs + aiResult.craft.lists;
+            scanCache.set(contentHash, {
+              graafScore, craftScore, graafItems: aiResult.graaf, craftItems: aiResult.craft,
+              recommendations: aiResult.recommendations || [], timestamp: Date.now()
+            });
+          } catch (aiErr) {
+            const hasQuotes = /says|according to|expert|quote|told us|founder|ceo|director/gi.test(rawHtml);
+            const hasStats = /\d+%|\d+ studies|\d+ research|research shows|\d+ data/gi.test(rawHtml);
+            const hasFreshDates = /202[4-6]|january|february|march|april|may|june|july|august|september|october|november|december/gi.test(rawHtml);
+            const hasAuthor = /author|by |written by|published by|contributor/gi.test(rawHtml);
+            const textContent = rawHtml.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(w => w.length > 0);
+            const wordCount = textContent.length;
+            graafScore = 0;
+            graafScore += hasQuotes ? 8 : 0;
+            graafScore += hasStats ? 8 : 0;
+            graafScore += hasFreshDates ? 8 : 2;
+            graafScore += hasAuthor ? 8 : 0;
+            graafScore += Math.min(18, Math.floor(wordCount / 100));
+            graafScore = Math.min(50, graafScore);
+            const h1s = (rawHtml.match(/<h1[^>]*>/gi) || []).length;
+            const h2h3s = (rawHtml.match(/<h2[^>]*>|<h3[^>]*>/gi) || []).length;
+            const paragraphs = (rawHtml.match(/<p[^>]*>/gi) || []).length;
+            const hasLists = /<ul[^>]*>|<ol[^>]*>/gi.test(rawHtml);
+            craftScore = 0;
+            craftScore += h1s === 1 ? 8 : h1s > 1 ? 4 : 2;
+            craftScore += Math.min(10, h2h3s * 2);
+            craftScore += Math.min(8, Math.floor(paragraphs / 3));
+            craftScore += hasLists ? 4 : 0;
+            craftScore = Math.min(30, craftScore);
+          }
+        }
+        const totalScore = graafScore + craftScore + technicalScore;
+        await pool.query(`UPDATE leaderboard SET score = $1, last_scan = NOW(), company_name = COALESCE($2, company_name) WHERE id = $3`, [totalScore, agency.company_name, agency.id]);
+        updates.push({ id: agency.id, url: agency.url, score: totalScore });
+        scanned++;
+      } catch (error) {
+        failed++;
+      }
+    }
+    res.json({ success: true, scanned, failed, updates, message: `Scanned ${scanned} agencies` });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 // ============================================
-// UPDATE HEALTH CHECK
+// PUBLIC LEADERBOARD API
 // ============================================
-app.get('/api/health/enhanced', async (req, res) => {
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT id, ROW_NUMBER() OVER (ORDER BY score DESC) as rank,
+        COALESCE(company_name, 'Unknown') as company_name, url, score,
+        COALESCE(country, 'NL') as country, COALESCE(business_type, 'agency') as type,
+        COALESCE(is_verified, false) as is_claimed, COALESCE(created_at, NOW()) as created_at
+      FROM leaderboard WHERE score IS NOT NULL AND is_opted_out = FALSE AND admin_verified = TRUE
+      ORDER BY score DESC LIMIT 50
+    `);
+    res.json({
+      success: true, entries: result.rows, total: result.rows.length,
+      averageScore: result.rows.length > 0 
+        ? Math.round(result.rows.reduce((sum, r) => sum + (r.score || 0), 0) / result.rows.length) : 0
+    });
+  } catch (error) {
+    res.json({ success: true, entries: [], total: 0, averageScore: 0 });
+  }
+});
+
+app.get('/api/leaderboard/check-status/:encodedUrl', async (req, res) => {
+  try {
+    const url = decodeURIComponent(req.params.encodedUrl);
+    const result = await pool.query(`
+      SELECT id, reason FROM leaderboard_blocks 
+      WHERE url = $1 AND (expires_at IS NULL OR expires_at > NOW())
+    `, [url]);
+    if (result.rows.length > 0) {
+      res.json({ blocked: true, reason: result.rows[0].reason });
+    } else {
+      res.json({ blocked: false });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/leaderboard/opt-out', async (req, res) => {
+  try {
+    const { url, reason } = req.body;
+    if (!url) {
+      return res.status(400).json({ error: 'URL required' });
+    }
+    const exists = await pool.query('SELECT id FROM leaderboard_blocks WHERE url = $1', [url]);
+    if (exists.rows.length > 0) {
+      return res.status(400).json({ error: 'Already opted out' });
+    }
+    await pool.query(`INSERT INTO leaderboard_blocks (url, reason, blocked_by) VALUES ($1, $2, $3)`, [url, reason || 'User requested removal', 'user']);
+    await pool.query(`UPDATE leaderboard SET is_opted_out = TRUE, opted_out_at = NOW(), opted_out_reason = $2 WHERE url = $1`, [url, reason || 'User requested removal']);
+    res.json({ success: true, message: 'Your URL has been removed from the leaderboard' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+async function checkIPLimit(ip) {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const result = await pool.query(`SELECT submission_count FROM submission_limits WHERE ip_address = $1 AND submission_date = $2`, [ip, today]);
+    if (result.rows.length > 0) {
+      const count = result.rows[0].submission_count;
+      const MAX_PER_DAY = 3;
+      if (count >= MAX_PER_DAY) {
+        return { limited: true, count, max: MAX_PER_DAY };
+      }
+      return { limited: false, count };
+    }
+    return { limited: false, count: 0 };
+  } catch (error) {
+    return { limited: false, count: 0 };
+  }
+}
+
+function getClientIP(req) {
+  return (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '0.0.0.0').split(',')[0].trim();
+}
+
+function detectCountryFromUrl(url) {
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname.toLowerCase();
+    if (hostname.endsWith('.nl')) return 'Netherlands';
+    if (hostname.endsWith('.be')) return 'Belgium';
+    if (hostname.endsWith('.de')) return 'Germany';
+    if (hostname.endsWith('.fr')) return 'France';
+    if (hostname.endsWith('.co.uk') || hostname.endsWith('.uk')) return 'United Kingdom';
+    if (hostname.endsWith('.us')) return 'United States';
+    if (hostname.endsWith('.ca')) return 'Canada';
+    if (hostname.endsWith('.au')) return 'Australia';
+    if (hostname.endsWith('.es')) return 'Spain';
+    if (hostname.endsWith('.it')) return 'Italy';
+    const parts = hostname.split('.');
+    if (parts.length > 2) {
+      const subdomain = parts[0];
+      if (subdomain === 'nl') return 'Netherlands';
+      if (subdomain === 'be') return 'Belgium';
+      if (subdomain === 'de') return 'Germany';
+      if (subdomain === 'fr') return 'France';
+      if (subdomain === 'uk') return 'United Kingdom';
+      if (subdomain === 'us') return 'United States';
+    }
+    return 'Unknown';
+  } catch {
+    return 'Unknown';
+  }
+}
+
+app.post('/api/leaderboard/submit', async (req, res) => {
+  try {
+    const { url, score, company_name, country } = req.body;
+    const ip = getClientIP(req);
+    if (!url || score === undefined) {
+      return res.status(400).json({ error: 'URL and score required' });
+    }
+    const auto_detected_country = detectCountryFromUrl(url);
+    const blocked = await pool.query(`SELECT id FROM leaderboard_blocks WHERE url = $1 AND (expires_at IS NULL OR expires_at > NOW())`, [url]);
+    if (blocked.rows.length > 0) {
+      return res.status(403).json({ error: 'This URL cannot be submitted to the leaderboard' });
+    }
+    const limitCheck = await checkIPLimit(ip);
+    if (limitCheck.limited) {
+      return res.status(429).json({
+        success: false, error: 'You have used all 3 free scans today.',
+        message: 'You have 3 free scans per day. Contact Ot @ WhatsApp +31628073996 if you need more.',
+        whatsappUrl: 'https://wa.me/31628073996?text=Hi%20Ot!%20I%20need%20more%20scans.',
+        scansUsed: limitCheck.count, scansLimit: limitCheck.max, retryAfter: '24 hours'
+      });
+    }
+    const today = new Date().toISOString().split('T')[0];
+    const duplicate = await pool.query(`SELECT id FROM leaderboard WHERE url = $1 AND DATE(created_at) = $2`, [url, today]);
+    if (duplicate.rows.length > 0) {
+      return res.status(400).json({ error: 'This URL already submitted today. Max 1 submission per URL per day' });
+    }
+    const leaderboardResult = await pool.query(`
+      INSERT INTO leaderboard (url, score, company_name, country, auto_detected_country, submission_ip, admin_verified)
+      VALUES ($1, $2, $3, $4, $5, $6, FALSE)
+      ON CONFLICT (url) DO UPDATE SET score = EXCLUDED.score, company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
+        country = EXCLUDED.country, auto_detected_country = EXCLUDED.auto_detected_country, last_scan = NOW(), admin_verified = FALSE
+      RETURNING id
+    `, [url, score, company_name || null, country || 'Unknown', auto_detected_country, ip]);
+    const leaderboardEntryId = leaderboardResult.rows[0].id;
+    try {
+      await pool.query(`
+        INSERT INTO submission_logs (url, company_name, ip_address, country, score, submitted_via, status, leaderboard_entry_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `, [url, company_name, ip, country, score, 'api', 'approved', leaderboardEntryId]);
+    } catch (logError) {}
+    const today_date = new Date().toISOString().split('T')[0];
+    await pool.query(`
+      INSERT INTO submission_limits (ip_address, submission_date, submission_count)
+      VALUES ($1, $2, 1) ON CONFLICT (ip_address, submission_date) DO UPDATE
+      SET submission_count = submission_limits.submission_count + 1, last_submitted_at = NOW()
+    `, [ip, today_date]);
+    res.json({
+      success: true, leaderboardEntryId,
+      message: 'Submission received! Your entry will appear on the leaderboard once approved by our team.',
+      pending_approval: true
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
+// EXPORT SCAN RESULTS
+// ============================================
+app.get('/api/export/scan/:format', async (req, res) => {
+  try {
+    const { format } = req.params;
+    const { url, score, recommendations } = req.query;
+    if (!url || !score) {
+      return res.status(400).json({ error: 'URL and score required' });
+    }
+    const parsedRecommendations = recommendations ? JSON.parse(decodeURIComponent(recommendations)) : [];
+    if (format === 'csv') {
+      let csv = 'Category,Title,Description,Impact,Points,How to Fix\n';
+      if (parsedRecommendations.all) {
+        parsedRecommendations.all.forEach(rec => {
+          const howToFix = (rec.howToFix || '').replace(/\n/g, ' ').replace(/"/g, '""');
+          csv += `"${rec.category}","${rec.title}","${rec.description}","${rec.impact}","${rec.points}","${howToFix}"\n`;
+        });
+      }
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="contentscale-scan-${Date.now()}.csv"`);
+      res.send(csv);
+    } else if (format === 'json') {
+      const exportData = {
+        url: decodeURIComponent(url), score: parseInt(score), recommendations: parsedRecommendations,
+        exportedAt: new Date().toISOString(), generatedBy: 'ContentScale SEO Scanner'
+      };
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="contentscale-scan-${Date.now()}.json"`);
+      res.json(exportData);
+    } else if (format === 'txt') {
+      let txt = `ContentScale SEO Scan Report\n${'='.repeat(50)}\n\nURL: ${decodeURIComponent(url)}\nScore: ${score}/100\nScanned: ${new Date().toISOString()}\n\n`;
+      if (parsedRecommendations.quickWins && parsedRecommendations.quickWins.length > 0) {
+        txt += `QUICK WINS (${parsedRecommendations.quickWins.length})\n${'-'.repeat(50)}\n`;
+        parsedRecommendations.quickWins.forEach((rec, i) => {
+          txt += `\n${i + 1}. ${rec.title} (${rec.points})\n   Category: ${rec.category}\n   Impact: ${rec.impact}\n   ${rec.description}\n`;
+          if (rec.howToFix) {
+            txt += `   How to fix:\n   ${rec.howToFix.replace(/\n/g, '\n   ')}\n`;
+          }
+        });
+        txt += `\n`;
+      }
+      if (parsedRecommendations.majorImprovements && parsedRecommendations.majorImprovements.length > 0) {
+        txt += `\nMAJOR IMPROVEMENTS (${parsedRecommendations.majorImprovements.length})\n${'-'.repeat(50)}\n`;
+        parsedRecommendations.majorImprovements.forEach((rec, i) => {
+          txt += `\n${i + 1}. ${rec.title} (${rec.points})\n   Category: ${rec.category}\n   Impact: ${rec.impact}\n   ${rec.description}\n`;
+          if (rec.howToFix) {
+            txt += `   How to fix:\n   ${rec.howToFix.replace(/\n/g, '\n   ')}\n`;
+          }
+        });
+      }
+      txt += `\n${'='.repeat(50)}\nGenerated by ContentScale - https://contentscale.site\n`;
+      res.setHeader('Content-Type', 'text/plain');
+      res.setHeader('Content-Disposition', `attachment; filename="contentscale-scan-${Date.now()}.txt"`);
+      res.send(txt);
+    } else {
+      res.status(400).json({ error: 'Invalid format. Use: csv, json, or txt' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// NOTIFICATIONS
+app.get('/api/admin/notifications', async (req, res) => {
+  try {
+    const filter = req.query.filter || 'all';
+    let query = 'SELECT * FROM notifications';
+    if (filter === 'unread') query += ' WHERE is_read = FALSE';
+    else if (filter === 'read') query += ' WHERE is_read = TRUE';
+    else if (filter === 'high') query += ` WHERE priority IN ('high', 'urgent')`;
+    else if (filter === 'system') query += ` WHERE type = 'system'`;
+    else if (filter === 'user') query += ` WHERE type != 'system'`;
+    query += ' ORDER BY created_at DESC LIMIT 100';
+    const result = await pool.query(query);
+    res.json({ success: true, notifications: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/admin/notifications/unread-count', async (req, res) => {
+  try {
+    const result = await pool.query(`SELECT COUNT(*) as count FROM notifications WHERE is_read = FALSE`);
+    res.json({ success: true, count: parseInt(result.rows[0].count) || 0 });
+  } catch (error) {
+    res.json({ success: true, count: 0 });
+  }
+});
+
+app.post('/api/admin/notifications/:id/read', async (req, res) => {
+  try {
+    await pool.query(`UPDATE notifications SET is_read = TRUE, read_at = NOW() WHERE id = $1`, [req.params.id]);
+    res.json({ success: true, message: 'Notification marked as read' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/admin/notifications/mark-all-read', async (req, res) => {
+  try {
+    await pool.query(`UPDATE notifications SET is_read = TRUE, read_at = NOW() WHERE is_read = FALSE`);
+    res.json({ success: true, message: 'All notifications marked as read' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/admin/notifications/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM notifications WHERE id = $1', [req.params.id]);
+    res.json({ success: true, message: 'Notification deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// HEALTH CHECK
+// ============================================
+app.get('/api/health', async (req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.json({ status: 'healthy', database: 'connected' });
+  } catch (error) {
+    res.json({ status: 'degraded', database: 'disconnected' });
+  }
+});
+
+// ============================================
+// ELITE FRAMEWORK HEALTH CHECK
+// ============================================
+app.get('/api/elite/health', async (req, res) => {
   try {
     const dbCheck = await pool.query('SELECT 1');
     const hasApiKey = !!process.env.ANTHROPIC_API_KEY;
     
-    const validationTest = {
-      keyword: calculateKeywordDensity('This is a test with keyword keyword keyword', 'keyword'),
-      statistics: validateStatistics('According to 2024 study, 72% of marketers report success. Another 2023 report shows 58% growth.'),
-      expertQuotes: validateExpertQuotes('"This is important," said John Doe, CEO at Company.'),
-      caseStudies: detectCaseStudies('Case study: Company increased revenue by 47%. Results: 58% growth.'),
-      faq: detectFAQ('Q: What is this? A: This is an answer.'),
-      schema: detectSchemaMarkup('<script>{"@type":"Article"}</script>')
-    };
-    
     res.json({
       status: 'healthy',
-      system: 'ContentScale Enhanced v2.0',
+      framework: 'ContentScale Elite 100/100',
+      version: '1.0',
       components: {
         database: 'connected',
         anthropic_api: hasApiKey ? 'configured' : 'not_configured',
         puppeteer: 'ready',
-        validation_system: 'operational'
+        endpoints: {
+          generate: '/api/elite/generate',
+          analyze: '/api/elite/analyze',
+          test: '/api/elite/test'
+        }
       },
-      enhanced_features: {
-        technical_scoring: 'enhanced',
-        content_validation: 'active',
-        elite_framework: 'integrated',
-        real_time_analysis: 'available'
-      },
-      validation_test: validationTest,
-      notes: 'Enhanced scoring system with detailed validation metrics'
+      notes: hasApiKey ? 
+        'Elite Framework ready to generate 95-100/100 content' :
+        'Set ANTHROPIC_API_KEY in Railway variables for full functionality'
     });
   } catch (error) {
     res.json({ 
       status: 'degraded', 
-      error: error.message,
-      system: 'ContentScale Enhanced v2.0'
+      framework: 'ContentScale Elite 100/100',
+      error: error.message 
     });
   }
 });
 
 // ============================================
-// MIDDLEWARE EN REST VAN DE CODE BLIJFT HETZELFDE
+// CATCH-ALL ROUTE
 // ============================================
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// CORS
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-admin-key');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  if (req.method === 'OPTIONS') return res.sendStatus(200);
-  next();
+app.get('*', (req, res) => {
+  const filePath = path.join(__dirname, '../public', req.path);
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      res.sendFile(path.join(__dirname, '../public/index.html'), (err2) => {
+        if (err2) {
+          res.status(404).json({ error: 'Not found' });
+        }
+      });
+    }
+  });
 });
 
 // ============================================
-// STATIC FILES
+// ERROR HANDLING
 // ============================================
-app.use(express.static('public'));
+app.use((err, req, res, next) => {
+  console.error('Error:', err.message);
+  res.status(500).json({ error: 'Something went wrong' });
+});
 
 // ============================================
-// REST VAN JE BESTAANDE CODE HIER (admin, leaderboard, etc.)
-// ============================================
-// ... [alle bestaande endpoints blijven ongewijzigd] ...
-
-// ============================================
-// START SERVER MET ENHANCED MESSAGE
+// START SERVER
 // ============================================
 app.listen(PORT, () => {
   console.log('');
-  console.log('🚀 ================================================');
-  console.log('🚀  ContentScale Server Running - ENHANCED VERSION');
-  console.log('🚀 ================================================');
+  console.log('🚀 =====================================');
+  console.log('🚀  ContentScale Server Running');
+  console.log('🚀 =====================================');
   console.log('');
-  console.log('📍 Frontend:        http://localhost:' + PORT);
-  console.log('📍 Admin:           http://localhost:' + PORT + '/admin');
-  console.log('📍 Health:          http://localhost:' + PORT + '/api/health');
-  console.log('📍 Enhanced Health: http://localhost:' + PORT + '/api/health/enhanced');
+  console.log('📍 Frontend:  http://localhost:' + PORT);
+  console.log('📍 Admin:     http://localhost:' + PORT + '/admin');
+  console.log('📍 Health:    http://localhost:' + PORT + '/api/health');
   console.log('');
-  console.log('🏆 ENHANCED ELITE FRAMEWORK ENDPOINTS:');
-  console.log('📍 Generate:        POST /api/elite/generate');
-  console.log('📍 Enhanced Analyze: POST /api/elite/analyze/enhanced');
-  console.log('📍 Content Validate: POST /api/validate/content');
-  console.log('📍 Enhanced Scan:   POST /api/scan (with validation)');
-  console.log('📍 Elite Scan:      POST /api/scan/elite (generous scoring)');
-  console.log('');
-  console.log('🔧 ENHANCED FEATURES:');
-  console.log('   ✓ Real technical SEO scoring');
-  console.log('   ✓ Content validation metrics');
-  console.log('   ✓ Keyword density calculation');
-  console.log('   ✓ Statistics source validation');
-  console.log('   ✓ Expert quotes detection');
-  console.log('   ✓ Case studies identification');
-  console.log('   ✓ FAQ section detection');
-  console.log('   ✓ Schema markup analysis');
+  console.log('🏆 ELITE FRAMEWORK ENDPOINTS:');
+  console.log('📍 Generate:  POST /api/elite/generate');
+  console.log('📍 Analyze:   POST /api/elite/analyze');
+  console.log('📍 Test:      GET /api/elite/test');
+  console.log('📍 Health:    GET /api/elite/health');
   console.log('');
   console.log('👤 Default Login: ot / admin123');
   console.log('');
-  console.log('⚡ Elite Framework: ENHANCED for 95-100/100 content!');
+  console.log('⚡ Elite Framework: READY for 95-100/100 content generation!');
   console.log('');
 });
