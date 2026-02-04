@@ -898,6 +898,40 @@ async function createAllTables() {
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
+
+    // AI PROMPTS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ai_prompts (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) UNIQUE NOT NULL,
+        category VARCHAR(100) DEFAULT 'general',
+        prompt_text TEXT NOT NULL,
+        description TEXT,
+        is_active BOOLEAN DEFAULT TRUE,
+        variables JSONB DEFAULT '[]',
+        example TEXT,
+        created_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // REWRITER JOBS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS rewriter_jobs (
+        id SERIAL PRIMARY KEY,
+        original_content TEXT NOT NULL,
+        rewritten_content TEXT,
+        prompt_used TEXT,
+        ai_model VARCHAR(100) DEFAULT 'claude-3-5-haiku',
+        status VARCHAR(50) DEFAULT 'pending',
+        word_count INTEGER,
+        quality_score INTEGER,
+        requested_by VARCHAR(100),
+        completed_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
     
     // DATABASE MIGRATIONS
     await client.query(`ALTER TABLE super_admins ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
@@ -952,7 +986,10 @@ async function createAllTables() {
       ['site_name', 'ContentScale'],
       ['contact_email', 'info@contentscale.site'],
       ['whatsapp_number', '+31628073996'],
-      ['auto_scan_enabled', 'false']
+      ['auto_scan_enabled', 'false'],
+      ['privacy_policy', 'Default privacy policy text...'],
+      ['terms_of_service', 'Default terms of service text...'],
+      ['explanation_text', 'ContentScale helps you analyze and improve your website content for better SEO results.']
     ];
     
     for (const [key, value] of defaultSettings) {
@@ -960,6 +997,23 @@ async function createAllTables() {
         INSERT INTO settings (key, value) VALUES ($1, $2)
         ON CONFLICT (key) DO NOTHING
       `, [key, value]);
+    }
+
+    // DEFAULT AI PROMPTS
+    const defaultPrompts = [
+      ['seo_optimization', 'SEO Optimization', 'Rewrite this content for better SEO. Include target keywords naturally, optimize headings, and improve readability for both users and search engines.', 'general'],
+      ['content_rewrite', 'Content Rewriter', 'Rewrite this content to make it more engaging and professional while keeping the original meaning. Improve flow, remove fluff, and enhance readability.', 'general'],
+      ['blog_post', 'Blog Post Creator', 'Create a compelling blog post from this content. Add an engaging introduction, proper structure with headings, and a strong conclusion.', 'content-creation'],
+      ['meta_description', 'Meta Description Generator', 'Generate 3 compelling meta descriptions (150-160 characters each) for this content. Include primary keywords and a call-to-action.', 'seo'],
+      ['social_media', 'Social Media Post', 'Convert this content into 3 social media posts for LinkedIn, Twitter, and Facebook. Make them engaging with appropriate hashtags.', 'social-media']
+    ];
+
+    for (const [name, displayName, prompt, category] of defaultPrompts) {
+      await client.query(`
+        INSERT INTO ai_prompts (name, prompt_text, description, category, is_active)
+        VALUES ($1, $2, $3, $4, TRUE)
+        ON CONFLICT (name) DO NOTHING
+      `, [name, prompt, displayName, category]);
     }
     
     // CREATE INDEXES
@@ -976,6 +1030,8 @@ async function createAllTables() {
     await client.query('CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at DESC)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(is_read)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_notifications_priority ON notifications(priority)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_prompts_category ON ai_prompts(category)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_prompts_active ON ai_prompts(is_active)');
     
     console.log('✅ All database tables ready');
     
@@ -1428,27 +1484,295 @@ app.post('/api/setup/verify-admin', async (req, res) => {
   }
 });
 
+// ============================================
+// ADMIN SETTINGS API
+// ============================================
+app.get('/api/admin/settings', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM settings ORDER BY key');
+    res.json({ success: true, settings: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/admin/settings', async (req, res) => {
+  try {
+    const { settings } = req.body;
+    if (!settings || typeof settings !== 'object') {
+      return res.status(400).json({ success: false, error: 'Invalid settings data' });
+    }
+
+    for (const [key, value] of Object.entries(settings)) {
+      await pool.query(
+        'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()',
+        [key, value]
+      );
+    }
+
+    res.json({ success: true, message: 'Settings updated' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// AI PROMPTS MANAGEMENT
+// ============================================
+app.get('/api/admin/ai-prompts', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM ai_prompts ORDER BY category, name');
+    res.json({ success: true, prompts: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/admin/ai-prompts', async (req, res) => {
+  try {
+    const { name, prompt_text, description, category, variables, example } = req.body;
+    
+    if (!name || !prompt_text) {
+      return res.status(400).json({ success: false, error: 'Name and prompt text are required' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO ai_prompts (name, prompt_text, description, category, variables, example, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, TRUE)
+       ON CONFLICT (name) DO UPDATE SET
+         prompt_text = $2,
+         description = $3,
+         category = $4,
+         variables = $5,
+         example = $6,
+         updated_at = NOW()
+       RETURNING id`,
+      [name, prompt_text, description || name, category || 'general', variables || [], example || null]
+    );
+
+    res.json({ success: true, id: result.rows[0].id });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/admin/ai-prompts/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM ai_prompts WHERE id = $1', [req.params.id]);
+    res.json({ success: true, message: 'Prompt deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/admin/ai-prompts/:id/toggle', async (req, res) => {
+  try {
+    await pool.query('UPDATE ai_prompts SET is_active = NOT is_active WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// ELITE REWRITER API
+// ============================================
+app.post('/api/rewrite', async (req, res) => {
+  try {
+    const { content, prompt_id, custom_prompt } = req.body;
+    
+    if (!content) {
+      return res.status(400).json({ success: false, error: 'Content is required' });
+    }
+
+    let promptText = custom_prompt;
+    if (!custom_prompt && prompt_id) {
+      const promptResult = await pool.query('SELECT prompt_text FROM ai_prompts WHERE id = $1 AND is_active = TRUE', [prompt_id]);
+      if (promptResult.rows.length > 0) {
+        promptText = promptResult.rows[0].prompt_text;
+      }
+    }
+
+    if (!promptText) {
+      promptText = "Rewrite this content to make it more engaging, SEO-friendly, and professional while keeping the original meaning and key information.";
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 4000,
+          temperature: 0.7,
+          messages: [{
+            role: 'user',
+            content: `${promptText}\n\nORIGINAL CONTENT:\n${content}\n\nREWRITTEN CONTENT:`
+          }]
+        })
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error('AI rewrite failed');
+      }
+
+      const data = await response.json();
+      const rewrittenContent = data.content[0].text;
+
+      // Save to database
+      const result = await pool.query(
+        `INSERT INTO rewriter_jobs (original_content, rewritten_content, prompt_used, status, word_count, requested_by, completed_at)
+         VALUES ($1, $2, $3, 'completed', $4, 'api', NOW()) RETURNING id`,
+        [content.substring(0, 10000), rewrittenContent.substring(0, 15000), promptText || 'Custom prompt', content.split(/\s+/).length]
+      );
+
+      res.json({
+        success: true,
+        rewritten_content: rewrittenContent,
+        original_length: content.length,
+        rewritten_length: rewrittenContent.length,
+        job_id: result.rows[0].id
+      });
+
+    } catch (aiError) {
+      clearTimeout(timeoutId);
+      throw aiError;
+    }
+
+  } catch (error) {
+    console.error('Rewrite error:', error);
+    res.status(500).json({ success: false, error: 'Failed to rewrite content' });
+  }
+});
+
+app.get('/api/admin/rewriter-jobs', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM rewriter_jobs ORDER BY created_at DESC LIMIT 50'
+    );
+    res.json({ success: true, jobs: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// PRIVACY POLICY & TERMS
+// ============================================
+app.get('/api/privacy-policy', async (req, res) => {
+  try {
+    const result = await pool.query("SELECT value FROM settings WHERE key = 'privacy_policy'");
+    const privacyPolicy = result.rows[0]?.value || 'Privacy policy coming soon...';
+    res.json({ success: true, content: privacyPolicy });
+  } catch (error) {
+    res.json({ success: true, content: 'Privacy policy coming soon...' });
+  }
+});
+
+app.get('/api/terms-of-service', async (req, res) => {
+  try {
+    const result = await pool.query("SELECT value FROM settings WHERE key = 'terms_of_service'");
+    const terms = result.rows[0]?.value || 'Terms of service coming soon...';
+    res.json({ success: true, content: terms });
+  } catch (error) {
+    res.json({ success: true, content: 'Terms of service coming soon...' });
+  }
+});
+
+app.get('/api/explanation', async (req, res) => {
+  try {
+    const result = await pool.query("SELECT value FROM settings WHERE key = 'explanation_text'");
+    const explanation = result.rows[0]?.value || 'ContentScale helps you analyze and improve your website content for better SEO results.';
+    res.json({ success: true, content: explanation });
+  } catch (error) {
+    res.json({ success: true, content: 'ContentScale helps you analyze and improve your website content for better SEO results.' });
+  }
+});
+
+// ============================================
+// ADMIN STATS AND DASHBOARD
+// ============================================
 app.get('/api/admin/stats', async (req, res) => {
   try {
-    const [agencies, clients, scans] = await Promise.all([
+    const [
+      agencies, clients, scans, leaderboard,
+      freelancers, prompts, rewriterJobs, todayScans
+    ] = await Promise.all([
       pool.query('SELECT COUNT(*) FROM agencies').catch(e => ({ rows: [{ count: '0' }] })),
       pool.query('SELECT COUNT(*) FROM clients').catch(e => ({ rows: [{ count: '0' }] })),
-      pool.query('SELECT COUNT(*) FROM scans').catch(e => ({ rows: [{ count: '0' }] }))
+      pool.query('SELECT COUNT(*) FROM scans').catch(e => ({ rows: [{ count: '0' }] })),
+      pool.query('SELECT COUNT(*) FROM leaderboard WHERE is_opted_out = FALSE').catch(e => ({ rows: [{ count: '0' }] })),
+      pool.query('SELECT COUNT(*) FROM freelancers WHERE status = "active"').catch(e => ({ rows: [{ count: '0' }] })),
+      pool.query('SELECT COUNT(*) FROM ai_prompts WHERE is_active = TRUE').catch(e => ({ rows: [{ count: '0' }] })),
+      pool.query('SELECT COUNT(*) FROM rewriter_jobs').catch(e => ({ rows: [{ count: '0' }] })),
+      pool.query("SELECT COUNT(*) FROM scans WHERE DATE(created_at) = CURRENT_DATE").catch(e => ({ rows: [{ count: '0' }] }))
     ]);
+    
     res.json({
       success: true,
       stats: {
         total_agencies: parseInt(agencies.rows[0].count) || 0,
         total_clients: parseInt(clients.rows[0].count) || 0,
         total_scans: parseInt(scans.rows[0].count) || 0,
+        leaderboard_entries: parseInt(leaderboard.rows[0].count) || 0,
+        active_freelancers: parseInt(freelancers.rows[0].count) || 0,
+        ai_prompts: parseInt(prompts.rows[0].count) || 0,
+        rewriter_jobs: parseInt(rewriterJobs.rows[0].count) || 0,
+        today_scans: parseInt(todayScans.rows[0].count) || 0,
         active_helpers: 0
       }
     });
   } catch (error) {
-    res.json({ success: true, stats: { total_agencies: 0, total_clients: 0, total_scans: 0, active_helpers: 0 } });
+    res.json({ success: true, stats: { 
+      total_agencies: 0, total_clients: 0, total_scans: 0, leaderboard_entries: 0,
+      active_freelancers: 0, ai_prompts: 0, rewriter_jobs: 0, today_scans: 0, active_helpers: 0 
+    } });
   }
 });
 
+app.get('/api/admin/dashboard-stats', async (req, res) => {
+  try {
+    const today = new Date();
+    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    const [scans7days, leaderboardStats, avgScore] = await Promise.all([
+      pool.query("SELECT DATE(created_at) as date, COUNT(*) as count FROM scans WHERE created_at >= $1 GROUP BY DATE(created_at) ORDER BY date", [weekAgo]),
+      pool.query("SELECT COUNT(*) as total, AVG(score) as avg_score FROM leaderboard WHERE is_opted_out = FALSE AND score IS NOT NULL"),
+      pool.query("SELECT AVG(score) as avg FROM scans WHERE score IS NOT NULL")
+    ]);
+
+    const scanData = scans7days.rows.map(row => ({
+      date: row.date,
+      count: parseInt(row.count)
+    }));
+
+    res.json({
+      success: true,
+      stats: {
+        scans_last_7_days: scanData,
+        total_leaderboard_entries: parseInt(leaderboardStats.rows[0]?.total || 0),
+        avg_leaderboard_score: Math.round(parseFloat(leaderboardStats.rows[0]?.avg_score || 0)),
+        avg_scan_score: Math.round(parseFloat(avgScore.rows[0]?.avg || 0))
+      }
+    });
+  } catch (error) {
+    res.json({ success: true, stats: {} });
+  }
+});
+
+// ============================================
+// ADMIN MANAGEMENT ROUTES
+// ============================================
 app.get('/api/admins', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM super_admins ORDER BY created_at DESC');
@@ -1534,7 +1858,10 @@ app.delete('/api/agencies/:id', async (req, res) => {
     res.status(500).json({ success: false, error: 'Database error' });
   }
 });
-// FREELANCERS
+
+// ============================================
+// FREELANCERS MANAGEMENT
+// ============================================
 app.get('/api/freelancers', async (req, res) => {
   try {
     const result = await pool.query(`
@@ -1661,6 +1988,9 @@ app.delete('/api/admin/freelancers/:id', async (req, res) => {
   }
 });
 
+// ============================================
+// CLIENTS MANAGEMENT
+// ============================================
 app.get('/api/admin/clients', async (req, res) => {
   try {
     const result = await pool.query(`
@@ -1682,6 +2012,9 @@ app.delete('/api/admin/clients/:id', async (req, res) => {
   }
 });
 
+// ============================================
+// SCANS MANAGEMENT
+// ============================================
 app.get('/api/admin/scans', async (req, res) => {
   try {
     const result = await pool.query(`
@@ -1716,6 +2049,10 @@ app.patch('/api/scans/:id/company', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+
+// ============================================
+// SHARE LINKS MANAGEMENT
+// ============================================
 app.get('/api/admin/share-links', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM share_links ORDER BY created_at DESC');
@@ -1780,6 +2117,9 @@ app.put('/api/admin/share-links/:code/toggle-status', async (req, res) => {
   }
 });
 
+// ============================================
+// LEADERBOARD MANAGEMENT
+// ============================================
 app.get('/api/admin/leaderboard', async (req, res) => {
   try {
     const result = await pool.query(`
@@ -1983,6 +2323,7 @@ app.post('/api/admin/leaderboard/:id/reject', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
 app.post('/api/admin/scan-all-agencies', async (req, res) => {
   try {
     const result = await pool.query(`SELECT id, url, company_name FROM leaderboard WHERE is_opted_out = FALSE ORDER BY id`);
@@ -2241,6 +2582,7 @@ app.post('/api/leaderboard/submit', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
 // ============================================
 // EXPORT SCAN RESULTS
 // ============================================
@@ -2304,7 +2646,9 @@ app.get('/api/export/scan/:format', async (req, res) => {
   }
 });
 
-// NOTIFICATIONS
+// ============================================
+// NOTIFICATIONS MANAGEMENT
+// ============================================
 app.get('/api/admin/notifications', async (req, res) => {
   try {
     const filter = req.query.filter || 'all';
@@ -2353,6 +2697,18 @@ app.delete('/api/admin/notifications/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM notifications WHERE id = $1', [req.params.id]);
     res.json({ success: true, message: 'Notification deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// PUBLIC AI PROMPTS API
+// ============================================
+app.get('/api/ai-prompts', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, name, description, category FROM ai_prompts WHERE is_active = TRUE ORDER BY category, name');
+    res.json({ success: true, prompts: result.rows });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -2408,5 +2764,12 @@ app.listen(PORT, () => {
   console.log('📍 Health:    http://localhost:' + PORT + '/api/health');
   console.log('');
   console.log('👤 Default Login: ot / admin123');
+  console.log('');
+  console.log('✅ All admin tabs should now work properly');
+  console.log('   - Settings Management');
+  console.log('   - AI Prompts');
+  console.log('   - Elite Rewriter');
+  console.log('   - Privacy Policy & Terms');
+  console.log('   - All existing functionality');
   console.log('');
 });
