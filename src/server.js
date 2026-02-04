@@ -2369,6 +2369,7 @@ app.post('/api/admin/freelancers/:id/order', async (req, res) => {
   }
 });
 
+// In the freelancer deletion endpoint, change this:
 app.delete('/api/admin/freelancers/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM freelancers WHERE id = $1', [req.params.id]);
