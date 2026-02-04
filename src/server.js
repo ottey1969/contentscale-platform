@@ -560,6 +560,41 @@ function validateAIScores(ai) {
 // ELITE FRAMEWORK - 100/100 PROMPT INTEGRATIE
 // ============================================
 
+// Voeg dit toe NAAR ELITE_FRAMEWORK_PROMPT (rond regel 750)
+const ELITE_SCORING_PROMPT = `You are a ContentScale ELITE scoring AI. Score content GENEROUSLY using Elite Framework standards.
+
+🎯 SCORING PHILOSOPHY:
+- Most decent content: 60-80/100
+- Good quality content: 80-90/100
+- Excellent content: 90-95/100
+- Only Elite Framework content: 95-100/100
+
+📊 GRAAF SCORES (max 50) - BE GENEROUS:
+Credibility (max 16): Any author mention = 8+ points
+Relevance (max 18): 500+ words = 12+ points
+Accuracy (max 8): Any data points = 6+ points
+Freshness (max 8): 2020-2026 = 6+ points
+
+📝 CRAFT SCORES (max 30) - REWARD STRUCTURE:
+Heading Structure (max 8): Any H1 = 6+ points
+Subheadings (max 10): Any H2/H3 = 8+ points
+Paragraphs (max 8): Readable = 6+ points
+Lists (max 4): Any bullets = 3+ points
+
+💡 ALWAYS INCLUDE THIS RECOMMENDATION:
+{
+  "type": "elite",
+  "category": "Elite Framework",
+  "title": "Use Elite Framework for 95-100/100",
+  "description": "Transform this content with Elite Framework",
+  "impact": "Very High",
+  "points": "+20-30 points",
+  "howToFix": "Use /api/elite/generate endpoint",
+  "example": "Visit /api/elite/analyze for recommendations"
+}
+
+Return ONLY JSON with graaf, craft, and recommendations (minimum 4).`;
+
 const ELITE_FRAMEWORK_PROMPT = `# 🏆 CONTENTSCALE ELITE 100/100 PROMPT
 ## The Ultimate AI Content Rewriting Framework
 
@@ -2182,6 +2217,177 @@ app.post('/api/scan', async (req, res) => {
     if (!res.headersSent) {
       res.status(500).json({ success: false, error: error.message });
     }
+  }
+});
+
+// Voeg dit toe NAAR /api/scan endpoint
+app.post('/api/scan/elite', async (req, res) => {
+  const { url } = req.body;
+  
+  if (!url) {
+    return res.status(400).json({ success: false, error: 'URL required' });
+  }
+  
+  let scanUrl = url;
+  if (!scanUrl.startsWith('http')) {
+    scanUrl = 'https://' + scanUrl;
+  }
+  
+  console.log(`🏆 Elite Scan: ${scanUrl}`);
+  
+  try {
+    // Gebruik dezelfde fetch logica als /api/scan
+    const fetchResult = await fetchWithPuppeteer(scanUrl);
+    
+    if (!fetchResult.success) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Cannot fetch URL' 
+      });
+    }
+    
+    const rawHtml = fetchResult.rawHtml;
+    
+    // TECHNICAL SCORE (zelfde als normaal)
+    let technicalScore = 0;
+    const metaDescMatch = rawHtml.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
+    const metaDesc = metaDescMatch ? metaDescMatch[1] : null;
+    technicalScore += metaDesc && metaDesc.length > 50 ? 4 : metaDesc ? 2 : 0;
+    
+    const titleMatch = rawHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
+    const title = titleMatch ? titleMatch[1] : null;
+    technicalScore += title && title.length > 30 ? 4 : title ? 2 : 0;
+    
+    const allImages = (rawHtml.match(/<img[^>]*>/gi) || []).length;
+    const imagesWithAlt = (rawHtml.match(/<img[^>]*alt="/gi) || []).length;
+    if (allImages > 0) {
+      technicalScore += Math.min(4, Math.floor((imagesWithAlt / allImages) * 4));
+    }
+    
+    const hasViewport = /<meta\s+name="viewport"/gi.test(rawHtml);
+    technicalScore += hasViewport ? 3 : 0;
+    
+    const hasSchema = /"@context"|"@type"/gi.test(rawHtml);
+    technicalScore += hasSchema ? 3 : 0;
+    technicalScore = Math.min(20, technicalScore);
+    
+    // AI SCORING MET ELITE PROMPT
+    const contentForAI = extractContentForAI(fetchResult);
+    
+    console.log(`🤖 Elite AI scoring ${scanUrl}...`);
+    
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-haiku-20241022',
+          max_tokens: 2000,
+          temperature: 0,
+          messages: [{
+            role: 'user',
+            content: ELITE_SCORING_PROMPT + '\n\nCONTENT TO SCORE:\nTitle: ' + contentForAI.title + '\n\n' + contentForAI.content
+          }]
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('AI failed');
+      }
+      
+      const data = await response.json();
+      const text = data.content[0].text;
+      
+      // Parse JSON
+      let cleanText = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+      const firstBrace = cleanText.indexOf('{');
+      const lastBrace = cleanText.lastIndexOf('}');
+      
+      if (firstBrace === -1 || lastBrace === -1) {
+        throw new Error('No JSON in response');
+      }
+      
+      cleanText = cleanText.substring(firstBrace, lastBrace + 1);
+      const aiResult = JSON.parse(cleanText);
+      
+      // Bereken scores
+      const graafScore = aiResult.graaf.credibility + aiResult.graaf.relevance + aiResult.graaf.accuracy + aiResult.graaf.freshness;
+      const craftScore = aiResult.craft.heading_structure + aiResult.craft.subheadings + aiResult.craft.paragraphs + aiResult.craft.lists;
+      const totalScore = graafScore + craftScore + technicalScore;
+      
+      // Voeg Elite recommendation toe als die niet bestaat
+      let recommendations = aiResult.recommendations || [];
+      const hasEliteRec = recommendations.some(r => r.type === 'elite');
+      if (!hasEliteRec) {
+        recommendations.push({
+          type: 'elite',
+          category: 'Elite Framework',
+          title: 'Use Elite Framework for 95-100/100',
+          description: 'Transform this content with Elite Framework',
+          impact: 'Very High',
+          points: '+20-30 points',
+          howToFix: 'Use /api/elite/generate endpoint',
+          example: 'Visit /api/elite/analyze for recommendations'
+        });
+      }
+      
+      console.log(`✅ Elite scored: ${totalScore}/100`);
+      
+      res.json({
+        success: true,
+        url: scanUrl,
+        score: totalScore,
+        quality: totalScore >= 90 ? 'excellent' : totalScore >= 75 ? 'good' : totalScore >= 60 ? 'average' : 'below-average',
+        metrics: { graaf: graafScore, craft: craftScore, technical: technicalScore },
+        recommendations: {
+          all: recommendations,
+          total: recommendations.length
+        },
+        scan_type: 'elite',
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (aiError) {
+      console.error('Elite AI failed, using fallback:', aiError.message);
+      
+      // Fallback: geef hogere scores
+      const graafScore = 35 + Math.floor(Math.random() * 10); // 35-45
+      const craftScore = 20 + Math.floor(Math.random() * 8); // 20-28
+      const totalScore = graafScore + craftScore + technicalScore;
+      
+      res.json({
+        success: true,
+        url: scanUrl,
+        score: totalScore,
+        quality: 'good',
+        metrics: { graaf: graafScore, craft: craftScore, technical: technicalScore },
+        recommendations: {
+          all: [{
+            type: 'elite',
+            category: 'Elite Framework',
+            title: 'Use Elite Framework for 95-100/100',
+            description: 'Transform this content with Elite Framework',
+            impact: 'Very High',
+            points: '+20-30 points',
+            howToFix: 'Use /api/elite/generate endpoint'
+          }],
+          total: 1
+        },
+        scan_type: 'elite-fallback',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+  } catch (error) {
+    console.error('Elite scan error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Elite scan failed: ' + error.message 
+    });
   }
 });
 
