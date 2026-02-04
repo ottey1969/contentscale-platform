@@ -1218,6 +1218,9 @@
               <button onclick="downloadScanReport()" class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
                 📊 Download Full Report
               </button>
+              <button onclick="runEliteScan()" class="flex-1 px-6 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 rounded-lg font-semibold font-bold">
+  🏆 Try Elite Scan
+</button>
             </div>
           </div>
         </div>
@@ -1838,6 +1841,124 @@
       const message = encodeURIComponent(`Hi Ot! I'd like to get in touch with ${freelancerName} from your Freelancer Directory. Can you help connect us?`);
       window.open(`https://wa.me/31628073996?text=${message}`, '_blank');
     }
+
+    // ELITE SCAN FUNCTIES
+async function runEliteScan() {
+  if (!lastScanData || !lastScanData.url) {
+    alert('No scan data available');
+    return;
+  }
+  
+  const modal = document.getElementById('scanModal');
+  if (!modal) {
+    alert('Modal not found');
+    return;
+  }
+  
+  const modalContent = modal.querySelector('.modal-content');
+  if (!modalContent) return;
+  
+  // Loading state
+  modalContent.innerHTML = `
+    <div class="p-8 text-center">
+      <div class="text-6xl mb-4">⚡</div>
+      <h2 class="text-2xl font-bold mb-2">Running Elite Scan...</h2>
+      <p class="text-gray-400 mb-6">Analyzing with Elite Framework criteria</p>
+      <div class="inline-block scan-spinner" style="width: 40px; height: 40px; margin: 0 auto;"></div>
+    </div>
+  `;
+  
+  try {
+    const response = await fetch('/api/scan/elite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: lastScanData.url })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      window.eliteScanData = data;
+      showEliteScanResults(data);
+    } else {
+      throw new Error(data.error || 'Elite scan failed');
+    }
+  } catch (error) {
+    modalContent.innerHTML = `
+      <div class="p-8 text-center">
+        <div class="text-5xl mb-4 text-red-500">❌</div>
+        <h2 class="text-xl font-bold mb-2">Elite Scan Unavailable</h2>
+        <p class="text-gray-400 mb-4">Using normal scan results</p>
+        <button onclick="showScanResults(lastScanData)" class="px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg">
+          ← Back to Results
+        </button>
+      </div>
+    `;
+  }
+}
+
+function showEliteScanResults(data) {
+  const modal = document.getElementById('scanModal');
+  const modalContent = modal.querySelector('.modal-content');
+  if (!modalContent) return;
+  
+  const normalScore = lastScanData?.score || 0;
+  const eliteScore = data.score || 0;
+  const scoreDiff = eliteScore - normalScore;
+  
+  modalContent.innerHTML = `
+    <div class="p-8">
+      <div class="flex justify-between items-start mb-6">
+        <div>
+          <span class="inline-block px-3 py-1 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-full text-xs font-bold mb-2">
+            🏆 ELITE SCAN
+          </span>
+          <h2 class="text-3xl font-bold mb-2">Elite Scan Results</h2>
+          <p class="text-sm text-gray-400">${data.url || 'Unknown URL'}</p>
+        </div>
+        <button onclick="closeModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+      </div>
+      
+      <!-- Score Comparison -->
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        <div class="bg-gray-800 p-6 rounded-lg text-center">
+          <div class="text-sm text-gray-400 mb-2">Normal Score</div>
+          <div class="text-4xl font-bold text-gray-300">${normalScore}/100</div>
+        </div>
+        <div class="bg-gradient-to-r from-yellow-900 to-orange-900 p-6 rounded-lg text-center border-2 border-yellow-600">
+          <div class="text-sm text-gray-300 mb-2">Elite Score</div>
+          <div class="text-4xl font-bold text-yellow-400">${eliteScore}/100</div>
+          ${scoreDiff > 0 ? `<div class="text-green-400 text-sm mt-2">↑ +${scoreDiff} points</div>` : ''}
+        </div>
+      </div>
+      
+      <!-- Elite Upgrade CTA -->
+      <div class="bg-gradient-to-r from-purple-900 to-pink-900 rounded-xl p-6 border-2 border-purple-600 mb-6">
+        <div class="text-center">
+          <h3 class="text-xl font-bold mb-3">🚀 Want 95-100/100?</h3>
+          <p class="text-gray-300 mb-4">Use our Elite Framework Generator</p>
+          <button onclick="goToEliteGenerate()" class="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 py-4 rounded-lg font-bold text-lg">
+            Generate Elite Content
+          </button>
+        </div>
+      </div>
+      
+      <button onclick="showScanResults(lastScanData)" class="w-full px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg">
+        ← Back to Normal Results
+      </button>
+    </div>
+  `;
+}
+
+function goToEliteGenerate() {
+  if (!lastScanData || !lastScanData.url) {
+    alert('No scan data available');
+    return;
+  }
+  const url = encodeURIComponent(lastScanData.url);
+  window.open(`/elite-generate.html?url=${url}`, '_blank');
+}
+    
   </script>
   
   <!-- Footer -->
