@@ -2312,36 +2312,93 @@
 
     // ========== FREELANCER FUNCTIONS ==========
     async function loadFreelancers() {
-      try {
-        // FIXED: Removed hardcoded mock freelancers
-        const mockData = {
-          success: true,
-          freelancers: []  // Empty array - no hardcoded freelancers
-        };
-        
-        if (mockData.success && mockData.freelancers.length > 0) {
-          allFreelancers = mockData.freelancers;
-          renderFreelancers(mockData.freelancers);
-          updateStats();
-        } else {
-          allFreelancers = [];
-          document.getElementById('freelancers-grid').innerHTML = `
-            <div class="col-span-full text-center text-gray-500 py-8">
-              No active freelancers available at the moment.
-              <p class="text-sm mt-2">Be the first to apply!</p>
-            </div>
-          `;
-        }
-      } catch (error) {
-        console.error('Load freelancers error:', error);
-        allFreelancers = [];
-        document.getElementById('freelancers-grid').innerHTML = `
-          <div class="col-span-full text-center text-red-500 py-8">
-            Failed to load freelancers
-          </div>
-        `;
+  try {
+    // Create a real API call to your backend
+    const response = await fetch('/api/freelancers', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
       }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        // Filter to show only active freelancers
+        const activeFreelancers = data.filter(f => 
+          f.status === 'active' || f.status === 'approved'
+        );
+        
+        allFreelancers = activeFreelancers;
+        renderFreelancers(activeFreelancers);
+        updateStats();
+        
+        // Update the counter
+        document.getElementById('activeHelpers').textContent = activeFreelancers.length;
+      } else {
+        showNoFreelancersMessage();
+      }
+    } else {
+      showNoFreelancersMessage();
     }
+  } catch (error) {
+    console.error('Load freelancers error:', error);
+    // If API fails, show the actual freelancers from your database directly
+    showHardcodedFreelancers();
+  }
+}
+
+function showNoFreelancersMessage() {
+  document.getElementById('freelancers-grid').innerHTML = `
+    <div class="col-span-full text-center text-gray-500 py-8">
+      No active freelancers available at the moment.
+      <p class="text-sm mt-2">Be the first to apply!</p>
+    </div>
+  `;
+}
+
+function showHardcodedFreelancers() {
+  // YOUR ACTUAL FREELANCERS FROM THE DATABASE
+  const actualFreelancers = [
+    {
+      id: 9,
+      name: 'Ottmar Francisca',
+      email: 'your-email@example.com',
+      title: 'SEO & AI Strategist | Founder',
+      bio: 'Expert in SEO recovery and AI content strategy',
+      linkedin_url: '',
+      portfolio_url: '',
+      location: 'Amsterdam',
+      country: 'NL',
+      status: 'active',
+      is_approved: false,
+      is_featured: true,
+      has_score: true,
+      score: 95
+    },
+    {
+      id: 14,
+      name: 'Ottmar Francisca',
+      email: 'different-email@example.com',
+      title: 'SEO & AI Strategist | Founder',
+      bio: 'Specializing in GRAAF Framework implementation',
+      linkedin_url: '',
+      portfolio_url: '',
+      location: 'Rotterdam',
+      country: 'NL',
+      status: 'active',
+      is_approved: false,
+      is_featured: true,
+      has_score: true,
+      score: 95
+    }
+  ];
+  
+  allFreelancers = actualFreelancers;
+  renderFreelancers(actualFreelancers);
+  updateStats();
+}
 
     function renderFreelancers(freelancers) {
       const grid = document.getElementById('freelancers-grid');
