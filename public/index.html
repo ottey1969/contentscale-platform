@@ -2339,44 +2339,48 @@
       }
     }
 
-    function showHardcodedFreelancers() {
-      // Your ACTUAL freelancers from the database
-      const hardcodedFreelancers = [
+       function showHardcodedFreelancers() {
+      // First, check if there are ANY freelancers in the database
+      // If the API returns empty, don't show hardcoded ones
+      if (allFreelancers.length === 0) {
+        const grid = document.getElementById('freelancers-grid');
+        if (grid) {
+          grid.innerHTML = `
+            <div class="col-span-full text-center text-gray-500 py-8">
+              No active freelancers available at the moment.
+              <p class="text-sm mt-2">Be the first to apply!</p>
+            </div>
+          `;
+        }
+        return; // Don't show hardcoded data
+      }
+      
+      // Only show hardcoded as LAST RESORT if the API fails completely
+      // and we have no data at all
+      const emergencyFreelancers = [
         {
-          id: 9,
-          name: 'Ottmar Francisca',
-          title: 'SEO & AI Strategist | Founder',
-          bio: 'Expert in SEO recovery and AI content strategy. Helping businesses recover from Google updates.',
+          id: 999,
+          name: 'Sample Freelancer',
+          title: 'SEO Expert',
+          bio: 'Apply to become a featured freelancer on ContentScale.',
           linkedin_url: '',
           portfolio_url: '',
-          location: 'Amsterdam',
+          location: 'Your City',
           country: 'NL',
           status: 'active',
-          is_featured: true,
+          is_featured: false,
           has_score: true,
-          score: 95
-        },
-        {
-          id: 14,
-          name: 'Ottmar Francisca',
-          title: 'SEO & AI Strategist | Founder',
-          bio: 'Specializing in GRAAF Framework implementation and international SEO expansion.',
-          linkedin_url: '',
-          portfolio_url: '',
-          location: 'Rotterdam',
-          country: 'NL',
-          status: 'active',
-          is_featured: true,
-          has_score: true,
-          score: 95
+          score: 0
         }
       ];
       
-      allFreelancers = hardcodedFreelancers;
-      renderFreelancers(hardcodedFreelancers);
-      updateStats();
+      // Only use emergency data if we have NO freelancers at all
+      if (allFreelancers.length === 0) {
+        allFreelancers = emergencyFreelancers;
+        renderFreelancers(emergencyFreelancers);
+        updateStats();
+      }
     }
-
     function renderFreelancers(freelancers) {
       const grid = document.getElementById('freelancers-grid');
       
