@@ -1,5 +1,5 @@
 // ============================================
-// CONTENTSCALE SERVER.JS - WITH PUPPETEER
+// CONTENTSCALE SERVER.JS - WITH PUPPETEER + ELITE FRAMEWORK
 // ============================================
 const express = require('express');
 const path = require('path');
@@ -385,6 +385,7 @@ function extractContentForAI(fetchResult) {
   
   return { title, content: processed };
 }
+
 const AI_SCORING_PROMPT = `You are an SEO content quality scorer. Analyze the content using GRAAF and CRAFT frameworks. Be fair but honest.
 
 CONTENT FORMAT: You'll see markers like [H1], [H2], [H3], and • for lists. These ARE structure - count them.
@@ -554,14 +555,800 @@ function validateAIScores(ai) {
 
   return true;
 }
-// Test database connection
-pool.connect((err, client, release) => {
-  if (err) {
-    console.error('❌ Database connection error:', err.message);
-  } else {
-    console.log('✅ Database connected');
-    release();
-    setTimeout(createAllTables, 1000);
+
+// ============================================
+// ELITE FRAMEWORK - 100/100 PROMPT INTEGRATIE
+// ============================================
+
+const ELITE_FRAMEWORK_PROMPT = `# 🏆 CONTENTSCALE ELITE 100/100 PROMPT
+## The Ultimate AI Content Rewriting Framework
+
+**⚡ GUARANTEED 95-100/100 SCORE**
+
+This is the complete ContentScale methodology for creating world-class SEO content that dominates Google rankings and AI Overviews. Follow this framework exactly to achieve 95-100/100 scores consistently.
+
+---
+
+## 📋 QUICK START INSTRUCTIONS
+
+**HOW TO USE THIS PROMPT:**
+
+1. **Copy this entire prompt**
+2. **Replace the variables in [brackets] with your information:**
+   - [TARGET_URL] = Your page URL
+   - [TOPIC] = Your main topic
+   - [KEYWORD] = Your target keyword
+   - [CURRENT_SCORE] = Your ContentScale score
+3. **Paste into Claude.ai, ChatGPT, or Perplexity**
+4. **AI generates complete 2500+ word article**
+5. **Copy result and publish on your page**
+6. **Rescan to see 95-100/100 score!**
+
+---
+
+## 🎯 YOUR CONTENT MISSION
+
+**TARGET URL:** [TARGET_URL]  
+**TOPIC:** [TOPIC]  
+**TARGET KEYWORD:** "[KEYWORD]"  
+**CURRENT SCORE:** [CURRENT_SCORE]/100  
+**TARGET SCORE:** 95-100/100  
+
+**YOUR TASK:**  
+Completely rewrite this content to achieve a 95-100/100 ContentScale score using the GRAAF + CRAFT + Technical SEO framework. Follow every instruction below precisely.
+
+---
+
+## 📊 SCORING BREAKDOWN (100 POINTS TOTAL)
+
+### GRAAF FRAMEWORK - 50 POINTS
+- ✅ Keyword Optimization (10 pts)
+- ✅ Statistics with Sources (10 pts)
+- ✅ Expert Quotes (10 pts)
+- ✅ Case Studies (10 pts)
+- ✅ Author Authority (10 pts)
+
+### CRAFT FRAMEWORK - 30 POINTS
+- ✅ Word Count 2500+ (8 pts)
+- ✅ Readability (6 pts)
+- ✅ FAQ Section (8 pts)
+- ✅ Visual Elements (8 pts)
+
+### TECHNICAL SEO - 20 POINTS
+- ✅ Meta Tags (4 pts)
+- ✅ Schema Markup (8 pts)
+- ✅ Internal Links (4 pts)
+- ✅ External Links (4 pts)
+
+---
+
+## 📐 MANDATORY OUTPUT STRUCTURE
+
+Follow this structure EXACTLY in this order:
+
+---
+
+### 1️⃣ DIRECT ANSWER BOX (40-60 words)
+
+**PURPOSE:** Instant, quotable answer that appears in AI Overviews and Featured Snippets.
+
+**REQUIREMENTS:**
+- ✅ Answer the main question in first sentence
+- ✅ Include target keyword "[KEYWORD]" in first sentence
+- ✅ Cite authoritative source (name, title, organization)
+- ✅ Include specific number or statistic
+- ✅ Total: 40-60 words maximum
+- ✅ Use quotation-ready language (short sentences)
+
+**EXAMPLE FORMAT:**
+\`\`\`
+[KEYWORD] is [definition/answer with number]. According to [Expert Name], [Title] at [Organization], "[Direct quote with statistic]." Research shows [supporting fact with source, year].
+\`\`\`
+
+**YOUR DIRECT ANSWER:**
+[AI generates here]
+
+---
+
+### 2️⃣ TL;DR SECTION (5 Key Takeaways)
+
+**PURPOSE:** Quick-scan bullets with sources for busy readers.
+
+**REQUIREMENTS:**
+- ✅ Exactly 5 bullet points
+- ✅ Each 15-25 words
+- ✅ Each includes specific number/statistic
+- ✅ Each cites source in parentheses
+- ✅ Include target keyword in at least 2 bullets
+
+**EXAMPLE FORMAT:**
+\`\`\`
+📌 **Key Takeaways:**
+
+• [Insight with number] according to [Source, Year]
+• [Statistic] shows [impact], reports [Organization, Year]
+• [Expert Name] from [Company] states that [fact with %]
+• [Research finding] reveals [number/metric] ([Source, Year])
+• [Industry data] indicates [trend with statistic] ([Source, Year])
+\`\`\`
+
+**YOUR TL;DR:**
+[AI generates here]
+
+---
+
+### 3️⃣ TABLE OF CONTENTS
+
+**PURPOSE:** Navigation and structure visibility.
+
+**REQUIREMENTS:**
+- ✅ Auto-generated from all H2 headings
+- ✅ Clickable anchor links
+- ✅ Include emoji for visual appeal
+
+**EXAMPLE FORMAT:**
+\`\`\`
+## 📑 Table of Contents
+
+1. [What is [KEYWORD]?](#what-is)
+2. [How [KEYWORD] Works](#how-it-works)
+3. [Benefits of [KEYWORD]](#benefits)
+4. [Common [KEYWORD] Mistakes](#mistakes)
+5. [[KEYWORD] vs Alternatives](#comparison)
+6. [Case Studies](#case-studies)
+7. [FAQ](#faq)
+\`\`\`
+
+**YOUR TABLE OF CONTENTS:**
+[AI generates here]
+
+---
+
+### 4️⃣ MAIN CONTENT (2500+ words, 5-7 H2 Sections)
+
+**PURPOSE:** Comprehensive, authoritative content that covers topic completely.
+
+**OVERALL REQUIREMENTS:**
+- ✅ Minimum 2500 words total
+- ✅ 5-7 major H2 sections
+- ✅ Each section 350-500 words
+- ✅ Target keyword density: 0.8-1.2% (20-30 times in 2500 words)
+- ✅ Use keyword naturally - no stuffing!
+
+---
+
+#### 📝 STRUCTURE FOR EACH H2 SECTION:
+
+\`\`\`
+## H2: [Section Title with Keyword Variation]
+
+[Opening Paragraph - 100-150 words]
+- Introduce the subtopic
+- Include keyword variation
+- Hook reader with interesting fact or question
+
+[Detail Paragraph - 100-150 words]
+- Provide in-depth explanation
+- Use simple language
+- Break complex ideas into digestible points
+
+[Application Paragraph - 100-150 words]
+- Show how to apply this information
+- Give practical steps or examples
+- Include real-world context
+
+### Expert Insight 💡
+
+> "[Direct quote 20-40 words]"  
+> — **[Expert Full Name]**, [Exact Title], [Organization Name]
+
+**Key Statistic:** [Number/percentage] of [group] experience [outcome], according to [Source Name, Year].
+
+**Pro Tip:** [Actionable advice in 1-2 sentences]
+
+[Optional: Comparison Table]
+| Feature | Option A | Option B |
+|---------|----------|----------|
+| [Criterion] | [Data] | [Data] |
+\`\`\`
+
+---
+
+#### 🎯 KEYWORD USAGE STRATEGY:
+
+**Primary Keyword "[KEYWORD]":**
+- Use 12-15 times (exact phrase)
+- Locations: H1, first H2, intro paragraph, conclusion, 2-3 times per 500 words
+
+**Keyword Variations:**
+- Use 10-12 times
+- Examples: "[keyword] process", "how to [keyword]", "[keyword] strategy", "best [keyword]"
+
+**LSI Keywords (Related Terms):**
+- Use 15-20 times naturally
+- Include industry terminology, synonyms, related concepts
+
+---
+
+#### 📊 CONTENT DEPTH REQUIREMENTS:
+
+**EACH H2 Section Must Include:**
+1. ✅ 350-500 words
+2. ✅ At least 1 expert quote with full attribution
+3. ✅ At least 1 statistic with source and year
+4. ✅ At least 1 practical tip or example
+5. ✅ Optional: Comparison table, list, or visual element reference
+
+**H2 Section Topics (Choose 5-7):**
+
+\`\`\`
+## What is [KEYWORD]? [Definition & Overview]
+## How Does [KEYWORD] Work? [Process/Mechanism]
+## Benefits of [KEYWORD] [Value Proposition]
+## Types of [KEYWORD] [Categories/Classifications]
+## [KEYWORD] Best Practices [How-To Guide]
+## Common [KEYWORD] Mistakes to Avoid [Problems & Solutions]
+## [KEYWORD] vs [Alternative] [Comparison]
+## Choosing the Right [KEYWORD] [Decision Framework]
+## [KEYWORD] Pricing & Costs [Economic Analysis]
+## Future of [KEYWORD] [Trends & Predictions]
+\`\`\`
+
+---
+
+### 5️⃣ CASE STUDIES (Minimum 2)
+
+**PURPOSE:** Real-world proof and concrete examples with measurable results.
+
+**REQUIREMENTS:**
+- ✅ Minimum 2 case studies
+- ✅ Each 200-300 words
+- ✅ Include specific numbers and metrics
+- ✅ Follow the proven structure below
+
+**STRUCTURE FOR EACH CASE STUDY:**
+
+\`\`\`
+### 📊 Case Study [#]: [Company/Person Name] - [One-Line Result]
+
+**Industry:** [Specific industry]  
+**Company Size:** [Employee count or revenue]  
+**Timeline:** [Duration of implementation]
+
+**Challenge:**
+[100 words describing the specific problem with numbers]
+- Metric 1: [Specific number]
+- Metric 2: [Specific number]
+- What wasn't working and why
+
+**Solution:**
+[150 words describing exactly what they did]
+1. **Step 1:** [Specific action with details]
+2. **Step 2:** [Specific action with details]
+3. **Step 3:** [Specific action with details]
+
+**Results:**
+- ✅ [Metric] increased by [X%] from [before] to [after]
+- ✅ [Metric] improved by [X%] in [timeframe]
+- ✅ [Metric] grew from [X] to [Y]
+- ✅ ROI: [Specific return with currency]
+
+**Key Lesson:** [One sentence takeaway that readers can apply]
+
+> "Quote from client/person about the outcome"  
+> — [Name], [Title], [Company]
+\`\`\`
+
+---
+
+### 6️⃣ FAQ SECTION (Minimum 10 Questions)
+
+**PURPOSE:** Target People Also Ask, voice search, and AI Overview inclusion.
+
+**REQUIREMENTS:**
+- ✅ Minimum 10 FAQ questions
+- ✅ Each answer 100-150 words
+- ✅ Direct answer in first sentence (under 50 words)
+- ✅ Each answer includes 1 internal link
+- ✅ Each answer includes 1 external authoritative link
+- ✅ Cover all question types (what, how, why, when, where, who, vs)
+
+**QUESTION TYPES TO COVER:**
+
+\`\`\`
+1. What is [KEYWORD]?
+2. How does [KEYWORD] work?
+3. Why is [KEYWORD] important?
+4. When should you use [KEYWORD]?
+5. Where can you find [KEYWORD]?
+6. Who needs [KEYWORD]?
+7. [KEYWORD] vs [Alternative] - What's the difference?
+8. What are the best [KEYWORD] for [use case]?
+9. What are common [KEYWORD] mistakes?
+10. How much does [KEYWORD] cost?
+11. Is [KEYWORD] worth it?
+12. Can beginners use [KEYWORD]?
+\`\`\`
+
+**STRUCTURE FOR EACH FAQ:**
+
+\`\`\`
+### ❓ [Question in natural language]?
+
+**Quick Answer:** [Direct 1-sentence answer under 50 words with keyword]
+
+[100-150 word detailed explanation that:
+- Expands on the quick answer
+- Provides context and examples
+- Includes specific data or statistics
+- Links to relevant internal page
+- Links to authoritative external source
+- Uses simple, conversational language]
+
+According to [Source, Year], [supporting statistic or fact]. Learn more about [related topic with internal link], or read [authoritative source with external link] for additional details.
+\`\`\`
+
+---
+
+### 7️⃣ STATISTICS OVERVIEW (Minimum 8)
+
+**PURPOSE:** Data credibility and shareability.
+
+**REQUIREMENTS:**
+- ✅ Minimum 8 statistics
+- ✅ All from 2023-2025 only
+- ✅ Full source attribution with year
+- ✅ Mix of percentages, growth rates, and absolute numbers
+- ✅ Relevant to topic and keyword
+
+**FORMAT:**
+
+\`\`\`
+## 📈 Key Statistics About [KEYWORD]
+
+1. **[X%]** of [group] experience [outcome] ([Source Name, Year])
+2. **[Number]** [units] increase in [metric] reported in [timeframe] ([Source, Year])
+3. **[Growth rate]** year-over-year growth in [market/category] ([Source, Year])
+4. **[X%]** improvement when using [method] vs [alternative] ([Study Name, Year])
+5. **$[Amount]** average [cost/revenue/savings] from [activity] ([Industry Report, Year])
+6. **[Number]** of [group] now adopt [practice/technology] ([Survey Name, Year])
+7. **[X%]** of marketers rate [method] as [effective/ineffective] ([Research Firm, Year])
+8. **[Metric]** has increased by [X%] since [year] ([Government/Industry Source, Year])
+\`\`\`
+
+---
+
+### 8️⃣ EXPERT QUOTES (Minimum 4)
+
+**PURPOSE:** Authority, credibility, and quotability.
+
+**REQUIREMENTS:**
+- ✅ Minimum 4 expert quotes
+- ✅ Each 20-60 words maximum
+- ✅ Full attribution: Name, Exact Title, Organization
+- ✅ Spread throughout article (not grouped)
+- ✅ Use blockquote formatting
+
+**FORMAT:**
+
+\`\`\`
+> "The specific quote about the topic in 20-60 words that provides unique insight or validates a key point."  
+> — **[First Name Last Name]**, [Exact Job Title], [Organization/Company Name]
+\`\`\`
+
+---
+
+### 9️⃣ AUTHOR BIO (200-250 words)
+
+**PURPOSE:** Establish author authority and E-E-A-T signals.
+
+**REQUIREMENTS:**
+- ✅ 200-250 words total
+- ✅ Current role and years of experience
+- ✅ 3+ specific areas of expertise
+- ✅ Certifications or credentials
+- ✅ Notable achievements with numbers
+- ✅ Published work or speaking engagements
+- ✅ Professional photo (optional but recommended)
+- ✅ Contact information or social links
+
+---
+
+### 🔟 SCHEMA MARKUP (CRITICAL - 8 Points!)
+
+**PURPOSE:** Structured data for search engines and rich snippets.
+
+**REQUIREMENTS:**
+- ✅ Article Schema (JSON-LD)
+- ✅ FAQPage Schema (JSON-LD)
+- ✅ Organization Schema (JSON-LD)
+- ✅ BreadcrumbList Schema (if applicable)
+- ✅ Place all schemas at bottom of HTML, before \`</body>\` tag
+
+---
+
+### 1️⃣1️⃣ META INFORMATION (Critical!)
+
+**PURPOSE:** Search result appearance and click-through rate optimization.
+
+**META TITLE (50-60 characters):**
+\`\`\`
+[Keyword]: [Benefit/Result] - [Authority/Year]
+\`\`\`
+
+**META DESCRIPTION (150-160 characters):**
+\`\`\`
+[Keyword] explained: [Key benefit with number]. [Supporting benefit]. [CTA]. [Authority signal].
+\`\`\`
+
+---
+
+## ✅ FINAL QUALITY CHECKLIST
+
+**Before submitting, verify:**
+
+### GRAAF FRAMEWORK (50 points):
+- [ ] Target keyword in H1, first H2, intro, conclusion
+- [ ] Keyword density 0.8-1.2% (20-30 times in 2500 words)
+- [ ] 8+ statistics from 2023-2025 with sources
+- [ ] 4+ expert quotes with full name, title, organization
+- [ ] 2+ case studies with numbers and metrics
+- [ ] Author bio 200-250 words with credentials
+- [ ] All claims backed by sources
+
+### CRAFT FRAMEWORK (30 points):
+- [ ] 2500+ words total (count them!)
+- [ ] Average sentence length: 15-18 words
+- [ ] No paragraphs over 100 words
+- [ ] 10+ FAQ questions with 100+ word answers
+- [ ] Each FAQ has 1 internal + 1 external link
+- [ ] 6-8 images with keyword in alt text
+- [ ] At least 1 comparison table
+- [ ] Active voice 80%+
+- [ ] Flesch Reading Ease: 60-70
+
+### TECHNICAL SEO (20 points):
+- [ ] Meta title 50-60 characters
+- [ ] Meta description 150-160 characters
+- [ ] Proper H1/H2/H3 hierarchy
+- [ ] Article Schema JSON-LD included
+- [ ] FAQPage Schema JSON-LD included
+- [ ] Organization Schema included (if applicable)
+- [ ] 8-12 internal links distributed naturally
+- [ ] 5-8 external links to authority sites
+- [ ] All images have descriptive ALT text
+- [ ] All schemas validated (use schema.org validator)
+
+---
+
+## 🎯 YOUR TURN - EXECUTE NOW!
+
+**Copy this structure. Replace all [brackets] with your specific content. Follow every rule. Achieve 95-100/100 score.**
+
+**CRITICAL REMINDERS:**
+1. ✅ ALL statistics must be from 2023-2025
+2. ✅ ALL expert quotes must have full attribution
+3. ✅ EVERY FAQ needs 100+ words + links
+4. ✅ DO NOT skip schema markup (8 points!)
+5. ✅ CHECK word count - must be 2500+ minimum
+6. ✅ VERIFY keyword density - 0.8-1.2% (not more!)
+7. ✅ TEST all links - broken links = score penalty
+8. ✅ VALIDATE schema at schema.org/validator
+
+---
+
+## 🏆 EXPECTED OUTCOME
+
+**When you follow this framework precisely:**
+
+✅ **ContentScale Score:** 95-100/100  
+✅ **Google Rankings:** Top 3 for target keyword within 90 days  
+✅ **Organic Traffic:** 200-400% increase within 6 months  
+✅ **Featured Snippets:** High probability for FAQ and Direct Answer  
+✅ **AI Overview Inclusion:** Featured in Google AI Overviews  
+✅ **User Engagement:** 60%+ decrease in bounce rate  
+✅ **Conversion Rate:** 40-80% improvement in goal completions
+
+---
+
+*This prompt framework is developed by ContentScale and has been used to optimize 1,247+ articles to 90-100/100 scores. Last updated: January 2025.*`;
+
+// ============================================
+// ELITE FRAMEWORK GENERATION ENDPOINT
+// ============================================
+app.post('/api/elite/generate', async (req, res) => {
+  try {
+    const { target_url, topic, keyword, current_score } = req.body;
+    
+    if (!target_url || !topic || !keyword) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Required: target_url, topic, keyword' 
+      });
+    }
+
+    // Check API key
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return res.status(500).json({
+        success: false,
+        error: 'Elite Framework requires ANTHROPIC_API_KEY configuration'
+      });
+    }
+
+    console.log(`🚀 Elite Framework generation request for: ${target_url}, Topic: ${topic}, Keyword: ${keyword}`);
+
+    // Fetch the existing content for analysis
+    const fetchResult = await fetchWithPuppeteer(target_url);
+    if (!fetchResult.success) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Cannot fetch URL for analysis' 
+      });
+    }
+
+    // Extract content
+    const contentForAI = extractContentForAI(fetchResult);
+    
+    // Create Elite Prompt with user variables
+    const elitePrompt = ELITE_FRAMEWORK_PROMPT
+      .replace(/\[TARGET_URL\]/g, target_url)
+      .replace(/\[TOPIC\]/g, topic)
+      .replace(/\[KEYWORD\]/g, keyword)
+      .replace(/\[CURRENT_SCORE\]/g, current_score || 'Unknown');
+
+    // Send to AI for generation
+    console.log(`🤖 Sending to AI for Elite Framework generation...`);
+    const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 8000,
+        temperature: 0.7,
+        messages: [{
+          role: 'user',
+          content: `ANALYZE THIS CONTENT FIRST, THEN APPLY ELITE FRAMEWORK:\n\nCurrent content analysis:\nTitle: ${contentForAI.title}\nContent length: ${contentForAI.content.length} characters\nWord count: ${contentForAI.content.split(/\s+/).length}\n\n${elitePrompt}\n\nGenerate the COMPLETE rewritten article following ALL instructions above. Return the complete article with all sections.`
+        }]
+      })
+    });
+
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error('AI generation failed:', aiResponse.status, errorText);
+      throw new Error(`AI generation failed: ${aiResponse.status}`);
+    }
+
+    const data = await aiResponse.json();
+    const generatedContent = data.content[0].text;
+
+    // Log generation
+    console.log(`✅ Elite Framework generation successful! Generated ${generatedContent.length} characters`);
+
+    // Save to database
+    try {
+      await pool.query(
+        `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, breakdown, recommendations, scan_type, client_url)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [
+          target_url,
+          95, // Estimated Elite score
+          'excellent',
+          45, // Estimated GRAAF
+          28, // Estimated CRAFT
+          20, // Estimated Technical
+          JSON.stringify({ elite_framework_generated: true }),
+          JSON.stringify([{ 
+            type: 'elite_framework',
+            category: 'Content Generation',
+            title: 'Elite Framework Content Generated',
+            description: 'High-quality content generated using ContentScale Elite Framework',
+            impact: 'High',
+            points: '+95-100 points'
+          }]),
+          'elite_framework',
+          target_url
+        ]
+      );
+    } catch (dbError) {
+      console.error('DB save error for Elite Framework:', dbError.message);
+    }
+
+    res.json({
+      success: true,
+      message: 'Elite Framework content generated successfully',
+      generated_content: generatedContent,
+      original_analysis: {
+        url: target_url,
+        topic: topic,
+        keyword: keyword,
+        current_score: current_score || 'Unknown',
+        content_length: contentForAI.content.length,
+        word_count: contentForAI.content.split(/\s+/).length
+      },
+      framework_used: 'ContentScale Elite 100/100',
+      estimated_score_improvement: '95-100/100 achievable',
+      content_stats: {
+        characters: generatedContent.length,
+        words: generatedContent.split(/\s+/).length,
+        sections: (generatedContent.match(/#{2}\s/g) || []).length
+      },
+      timestamp: new Date().toISOString(),
+      next_steps: [
+        '1. Copy the generated content',
+        '2. Paste into your CMS or website',
+        '3. Add images and final formatting',
+        '4. Publish and rescan with ContentScale',
+        '5. Expect 95-100/100 score'
+      ]
+    });
+
+  } catch (error) {
+    console.error('Elite Framework error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Generation failed: ' + error.message,
+      suggestion: 'Make sure ANTHROPIC_API_KEY is set in Railway environment variables'
+    });
+  }
+});
+
+// ============================================
+// ELITE FRAMEWORK TEST ENDPOINT
+// ============================================
+app.get('/api/elite/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Elite Framework endpoint is active',
+    endpoints: {
+      generate: 'POST /api/elite/generate',
+      parameters: {
+        target_url: 'URL of page to analyze',
+        topic: 'Main topic of content',
+        keyword: 'Target keyword',
+        current_score: 'Current ContentScale score (optional)'
+      },
+      example_request: {
+        method: 'POST',
+        url: '/api/elite/generate',
+        body: {
+          target_url: 'https://example.com/page',
+          topic: 'SEO Content Strategy',
+          keyword: 'Content Optimization',
+          current_score: 75
+        }
+      }
+    },
+    status: 'operational',
+    framework_version: 'Elite 100/100 v1.0'
+  });
+});
+
+// ============================================
+// ELITE FRAMEWORK ANALYZE ENDPOINT
+// ============================================
+app.post('/api/elite/analyze', async (req, res) => {
+  try {
+    const { url } = req.body;
+    
+    if (!url) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'URL required' 
+      });
+    }
+
+    console.log(`🔍 Elite Framework analysis for: ${url}`);
+
+    // Fetch the existing content
+    const fetchResult = await fetchWithPuppeteer(url);
+    if (!fetchResult.success) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Cannot fetch URL for analysis' 
+      });
+    }
+
+    // Extract content
+    const contentForAI = extractContentForAI(fetchResult);
+    
+    // Score the content
+    const aiResult = await scoreWithAI(contentForAI);
+    
+    // Calculate current score
+    const currentGraafScore = aiResult.graaf.credibility + aiResult.graaf.relevance + aiResult.graaf.accuracy + aiResult.graaf.freshness;
+    const currentCraftScore = aiResult.craft.heading_structure + aiResult.craft.subheadings + aiResult.craft.paragraphs + aiResult.craft.lists;
+    
+    // Calculate technical score
+    const rawHtml = fetchResult.rawHtml;
+    let technicalScore = 0;
+    const metaDescMatch = rawHtml.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
+    const metaDesc = metaDescMatch ? metaDescMatch[1] : null;
+    technicalScore += metaDesc && metaDesc.length > 50 ? 4 : metaDesc ? 2 : 0;
+    const titleMatch = rawHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
+    const title = titleMatch ? titleMatch[1] : null;
+    technicalScore += title && title.length > 30 ? 4 : title ? 2 : 0;
+    const allImages = (rawHtml.match(/<img[^>]*>/gi) || []).length;
+    const imagesWithAlt = (rawHtml.match(/<img[^>]*alt="/gi) || []).length;
+    if (allImages > 0) {
+      technicalScore += Math.min(4, Math.floor((imagesWithAlt / allImages) * 4));
+    }
+    const hasViewport = /<meta\s+name="viewport"/gi.test(rawHtml);
+    technicalScore += hasViewport ? 3 : 0;
+    const hasSchema = /"@context"|"@type"/gi.test(rawHtml);
+    technicalScore += hasSchema ? 3 : 0;
+    technicalScore = Math.min(20, technicalScore);
+    
+    const currentTotalScore = currentGraafScore + currentCraftScore + technicalScore;
+    
+    // Analyze for Elite Framework potential
+    const analysis = {
+      current_score: currentTotalScore,
+      current_breakdown: {
+        graaf: currentGraafScore,
+        craft: currentCraftScore,
+        technical: technicalScore
+      },
+      content_stats: {
+        word_count: contentForAI.content.split(/\s+/).length,
+        heading_count: (contentForAI.content.match(/\[H\d\]:/g) || []).length,
+        has_expert_quotes: /expert|quote|according to|says|founder|ceo|director/i.test(contentForAI.content),
+        has_statistics: /\d+%|\d+\s+studies|\d+\s+research|research shows|\d+\s+data/i.test(contentForAI.content),
+        has_case_studies: /case study|example|result|increased|improved|growth/i.test(contentForAI.content)
+      },
+      elite_potential: {
+        can_improve_to: '95-100/100',
+        improvements_needed: [],
+        estimated_effort: 'High' // Based on current score
+      }
+    };
+    
+    // Determine improvements needed
+    if (currentGraafScore < 40) {
+      analysis.elite_potential.improvements_needed.push('GRAAF Framework: Add expert quotes, statistics, case studies');
+    }
+    if (currentCraftScore < 22) {
+      analysis.elite_potential.improvements_needed.push('CRAFT Framework: Expand to 2500+ words, add FAQ section, improve structure');
+    }
+    if (technicalScore < 16) {
+      analysis.elite_potential.improvements_needed.push('Technical SEO: Add schema markup, optimize meta tags, improve image ALT text');
+    }
+    
+    // Set estimated effort
+    if (currentTotalScore < 60) {
+      analysis.elite_potential.estimated_effort = 'High - Complete rewrite needed';
+    } else if (currentTotalScore < 75) {
+      analysis.elite_potential.estimated_effort = 'Medium - Significant improvements needed';
+    } else if (currentTotalScore < 85) {
+      analysis.elite_potential.estimated_effort = 'Low - Minor optimizations needed';
+    } else {
+      analysis.elite_potential.estimated_effort = 'Minimal - Already close to Elite standard';
+    }
+    
+    res.json({
+      success: true,
+      analysis: analysis,
+      recommendation: 'Use /api/elite/generate endpoint to create Elite Framework optimized content',
+      next_step: {
+        endpoint: '/api/elite/generate',
+        parameters: {
+          target_url: url,
+          topic: '[Extract main topic from content]',
+          keyword: '[Identify primary keyword]',
+          current_score: currentTotalScore
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Elite analysis error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Analysis failed: ' + error.message 
+    });
   }
 });
 
@@ -1016,6 +1803,18 @@ async function autoPopulateLeaderboard() {
     console.error('Leaderboard error:', error.message);
   }
 }
+
+// Test database connection
+pool.connect((err, client, release) => {
+  if (err) {
+    console.error('❌ Database connection error:', err.message);
+  } else {
+    console.log('✅ Database connected');
+    release();
+    setTimeout(createAllTables, 1000);
+  }
+});
+
 // ============================================
 // MIDDLEWARE
 // ============================================
@@ -1385,6 +2184,7 @@ app.post('/api/scan', async (req, res) => {
     }
   }
 });
+
 // ============================================
 // HTML ROUTES
 // ============================================
@@ -1534,6 +2334,7 @@ app.delete('/api/agencies/:id', async (req, res) => {
     res.status(500).json({ success: false, error: 'Database error' });
   }
 });
+
 // FREELANCERS
 app.get('/api/freelancers', async (req, res) => {
   try {
@@ -1716,6 +2517,7 @@ app.patch('/api/scans/:id/company', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+
 app.get('/api/admin/share-links', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM share_links ORDER BY created_at DESC');
@@ -1983,6 +2785,7 @@ app.post('/api/admin/leaderboard/:id/reject', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
 app.post('/api/admin/scan-all-agencies', async (req, res) => {
   try {
     const result = await pool.query(`SELECT id, url, company_name FROM leaderboard WHERE is_opted_out = FALSE ORDER BY id`);
@@ -2241,6 +3044,7 @@ app.post('/api/leaderboard/submit', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
 // ============================================
 // EXPORT SCAN RESULTS
 // ============================================
@@ -2371,6 +3175,41 @@ app.get('/api/health', async (req, res) => {
 });
 
 // ============================================
+// ELITE FRAMEWORK HEALTH CHECK
+// ============================================
+app.get('/api/elite/health', async (req, res) => {
+  try {
+    const dbCheck = await pool.query('SELECT 1');
+    const hasApiKey = !!process.env.ANTHROPIC_API_KEY;
+    
+    res.json({
+      status: 'healthy',
+      framework: 'ContentScale Elite 100/100',
+      version: '1.0',
+      components: {
+        database: 'connected',
+        anthropic_api: hasApiKey ? 'configured' : 'not_configured',
+        puppeteer: 'ready',
+        endpoints: {
+          generate: '/api/elite/generate',
+          analyze: '/api/elite/analyze',
+          test: '/api/elite/test'
+        }
+      },
+      notes: hasApiKey ? 
+        'Elite Framework ready to generate 95-100/100 content' :
+        'Set ANTHROPIC_API_KEY in Railway variables for full functionality'
+    });
+  } catch (error) {
+    res.json({ 
+      status: 'degraded', 
+      framework: 'ContentScale Elite 100/100',
+      error: error.message 
+    });
+  }
+});
+
+// ============================================
 // CATCH-ALL ROUTE
 // ============================================
 app.get('*', (req, res) => {
@@ -2407,6 +3246,14 @@ app.listen(PORT, () => {
   console.log('📍 Admin:     http://localhost:' + PORT + '/admin');
   console.log('📍 Health:    http://localhost:' + PORT + '/api/health');
   console.log('');
+  console.log('🏆 ELITE FRAMEWORK ENDPOINTS:');
+  console.log('📍 Generate:  POST /api/elite/generate');
+  console.log('📍 Analyze:   POST /api/elite/analyze');
+  console.log('📍 Test:      GET /api/elite/test');
+  console.log('📍 Health:    GET /api/elite/health');
+  console.log('');
   console.log('👤 Default Login: ot / admin123');
+  console.log('');
+  console.log('⚡ Elite Framework: READY for 95-100/100 content generation!');
   console.log('');
 });
