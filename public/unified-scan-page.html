@@ -477,7 +477,7 @@
 
     <div id="scanner" class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-8 mb-8 border-2 border-purple-600">
       <div class="text-center mb-6">
-        <h2 class="text-3xl font-bold mb-2">🚀 Free SEO Scanner</h2>
+        <h2 class="text-3xl font-bold mb-2">UNDER CONSTRUCTION 🚀 Free SEO Scanner UNDER CONSTRUCTION</h2>
         <p class="text-gray-300">Get your AI-Era SEO score instantly!</p>
       </div>
       
@@ -1210,17 +1210,21 @@
             </div>
           </div>
           
-          <div class="mt-6 pt-6 border-t border-gray-700">
-            <div class="flex gap-3">
-              <button onclick="closeModal()" class="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
-                Close
-              </button>
-              <button onclick="downloadScanReport()" class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
-                📊 Download Full Report
-              </button>
-            </div>
-          </div>
-        </div>
+       <!-- PASTE THIS REPLACEMENT CODE where your current bottom buttons are -->
+<div class="mt-6 pt-6 border-t border-gray-700">
+  <div class="flex gap-3">
+    <button onclick="closeModal()" class="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
+      Close
+    </button>
+    <button onclick="downloadScanReport()" class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
+      📊 Download Full Report
+    </button>
+    <!-- UPDATED "Try Elite Scan" button to match "Submit for Review" -->
+    <button onclick="runEliteScan()" class="w-full px-6 py-4 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 rounded-lg font-bold text-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl active:scale-95">
+      🏆 Try Elite Scan
+    </button>
+  </div>
+</div>
       `;
       
       modal.classList.remove('hidden');
@@ -1838,6 +1842,189 @@
       const message = encodeURIComponent(`Hi Ot! I'd like to get in touch with ${freelancerName} from your Freelancer Directory. Can you help connect us?`);
       window.open(`https://wa.me/31628073996?text=${message}`, '_blank');
     }
+
+    // ELITE SCAN FUNCTIES
+async function runEliteScan() {
+  if (!lastScanData || !lastScanData.url) {
+    alert('No scan data available');
+    return;
+  }
+  
+  const modal = document.getElementById('scanModal');
+  if (!modal) {
+    alert('Modal not found');
+    return;
+  }
+  
+  const modalContent = modal.querySelector('.modal-content');
+  if (!modalContent) return;
+  
+  // Loading state
+  modalContent.innerHTML = `
+    <div class="p-8 text-center">
+      <div class="text-6xl mb-4">⚡</div>
+      <h2 class="text-2xl font-bold mb-2">Running Elite Scan...</h2>
+      <p class="text-gray-400 mb-6">Analyzing with Elite Framework criteria</p>
+      <div class="inline-block scan-spinner" style="width: 40px; height: 40px; margin: 0 auto;"></div>
+    </div>
+  `;
+  
+  try {
+    const response = await fetch('/api/scan/elite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: lastScanData.url })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      window.eliteScanData = data;
+      showEliteScanResults(data);
+    } else {
+      throw new Error(data.error || 'Elite scan failed');
+    }
+  } catch (error) {
+    modalContent.innerHTML = `
+      <div class="p-8 text-center">
+        <div class="text-5xl mb-4 text-red-500">❌</div>
+        <h2 class="text-xl font-bold mb-2">Elite Scan Unavailable</h2>
+        <p class="text-gray-400 mb-4">Using normal scan results</p>
+        <button onclick="showScanResults(lastScanData)" class="px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg">
+          ← Back to Results
+        </button>
+      </div>
+    `;
+  }
+}
+
+function showEliteScanResults(data) {
+  const modal = document.getElementById('scanModal');
+  const modalContent = modal.querySelector('.modal-content');
+  if (!modalContent) return;
+  
+  const normalScore = lastScanData?.score || 0;
+  const eliteScore = data.score || 0;
+  const scoreDiff = eliteScore - normalScore;
+  
+  modalContent.innerHTML = `
+    <div class="p-8">
+      <div class="flex justify-between items-start mb-6">
+        <div>
+          <span class="inline-block px-3 py-1 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-full text-xs font-bold mb-2">
+            🏆 ELITE SCAN
+          </span>
+          <h2 class="text-3xl font-bold mb-2">Elite Scan Results</h2>
+          <p class="text-sm text-gray-400">${data.url || 'Unknown URL'}</p>
+        </div>
+        <button onclick="closeModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+      </div>
+      
+      <!-- ⚠️ WAARSCHUWING BANNER -->
+      <div class="mb-6 p-4 bg-yellow-900 border-2 border-yellow-600 rounded-lg">
+        <div class="flex items-start gap-3">
+          <div class="text-2xl">⚠️</div>
+          <div>
+            <h4 class="font-bold text-yellow-300 mb-1">Important Notice</h4>
+            <p class="text-sm text-yellow-200">
+              This is your <strong>POTENTIAL SCORE</strong> if you apply the Elite Framework.
+              Your actual score remains <strong>${normalScore}/100</strong> until you rewrite your content.
+            </p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Score Comparison -->
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        <div class="bg-gray-800 p-6 rounded-lg text-center">
+          <div class="text-sm text-gray-400 mb-2">Current Actual Score</div>
+          <div class="text-4xl font-bold text-gray-300">${normalScore}/100</div>
+          <div class="text-xs text-gray-500 mt-1">Your real score now</div>
+        </div>
+        <div class="bg-gradient-to-r from-yellow-900 to-orange-900 p-6 rounded-lg text-center border-2 border-yellow-600">
+          <div class="text-sm text-gray-300 mb-2">Elite Potential Score</div>
+          <div class="text-4xl font-bold text-yellow-400">${eliteScore}/100</div>
+          ${scoreDiff > 0 ? `<div class="text-green-400 text-sm mt-2">↑ +${scoreDiff} points possible</div>` : ''}
+          <div class="text-xs text-yellow-300 mt-1">If you rewrite with Elite Framework</div>
+        </div>
+      </div>
+      
+      <!-- How it Works -->
+      <div class="mb-6">
+        <h4 class="text-lg font-bold mb-3">📈 How Elite Scoring Works:</h4>
+        <div class="bg-gray-800 rounded-lg p-4">
+          <div class="space-y-3">
+            <div class="flex items-center">
+              <div class="w-6 h-6 rounded-full bg-green-600 flex items-center justify-center mr-3">
+                <span class="text-xs">1</span>
+              </div>
+              <div>
+                <span class="font-bold text-green-400">Current Scan:</span>
+                <span class="text-sm text-gray-400 ml-2">${normalScore}/100 (what you actually have)</span>
+              </div>
+            </div>
+            <div class="flex items-center">
+              <div class="w-6 h-6 rounded-full bg-yellow-600 flex items-center justify-center mr-3">
+                <span class="text-xs">2</span>
+              </div>
+              <div>
+                <span class="font-bold text-yellow-400">Elite Analysis:</span>
+                <span class="text-sm text-gray-400 ml-2">${eliteScore}/100 (what you could achieve)</span>
+              </div>
+            </div>
+            <div class="flex items-center">
+              <div class="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center mr-3">
+                <span class="text-xs">3</span>
+              </div>
+              <div>
+                <span class="font-bold text-blue-400">Rewrite Content:</span>
+                <span class="text-sm text-gray-400 ml-2">Use Elite Framework to reach 95-100/100</span>
+              </div>
+            </div>
+            <div class="flex items-center opacity-70">
+              <div class="w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center mr-3">
+                <span class="text-xs">4</span>
+              </div>
+              <div>
+                <span class="font-bold text-purple-400">Final Rescan:</span>
+                <span class="text-sm text-gray-400 ml-2">Your new actual score after rewriting</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Elite Upgrade CTA -->
+      <div class="bg-gradient-to-r from-purple-900 to-pink-900 rounded-xl p-6 border-2 border-purple-600 mb-6">
+        <div class="text-center">
+          <h3 class="text-xl font-bold mb-3">🚀 Want ${eliteScore}/100 as your ACTUAL score?</h3>
+          <p class="text-gray-300 mb-4">
+            Use our Elite Framework Generator to rewrite your content and turn potential into reality.
+          </p>
+          
+          <button onclick="goToEliteGenerate()" 
+                  class="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 py-4 rounded-lg font-bold text-lg mb-3 transition-all">
+            🚀 Generate Elite Content Now
+          </button>
+          
+          <p class="text-xs text-yellow-300">
+            ⚠️ Your score on the leaderboard remains ${normalScore}/100 until you rewrite and rescan
+          </p>
+        </div>
+      </div>
+      
+      <div class="flex gap-3">
+        <button onclick="showScanResults(lastScanData)" class="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
+          ← Back to Actual Results
+        </button>
+        <button onclick="goToEliteGenerate()" class="flex-1 px-6 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 rounded-lg font-semibold font-bold">
+          🏆 Get Elite Score
+        </button>
+      </div>
+    </div>
+  `;
+}
+    
   </script>
   
   <!-- Footer -->
@@ -1878,5 +2065,578 @@
             </div>
         </div>
     </footer></CENTER>
+  <!-- ========== ADD TO BOTTOM OF YOUR HTML (just before closing </body> tag) ========== -->
+
+<!-- Elite Rewriter Modal CSS -->
+<style>
+  /* Add these styles to your existing <style> section */
+  .elite-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+    padding: 20px;
+    animation: fadeIn 0.3s ease;
+  }
+  
+  .elite-modal-container {
+    animation: slideIn 0.3s ease-out;
+    max-width: 800px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    border-radius: 20px;
+  }
+  
+  .enhancement-score-banner {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+    border-left: 4px solid #fbbf24;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+    box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+  }
+</style>
+
+<!-- Elite Rewriter Modal HTML -->
+<div id="eliteRewriterModal" class="elite-modal-overlay hidden">
+  <div class="elite-modal-container">
+    <div class="bg-gray-800 text-white rounded-xl shadow-2xl border-2 border-yellow-600">
+      
+      <!-- Header -->
+      <div class="p-6 border-b border-gray-700">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-2xl font-bold">
+              <i class="fas fa-magic text-yellow-400 mr-2"></i>
+              Elite Rewriter
+            </h2>
+            <p class="text-gray-400 mt-1">AI-powered content enhancement</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="px-3 py-1 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-full text-sm font-bold">
+              ELITE
+            </span>
+            <button onclick="closeEliteRewriter()" class="text-gray-400 hover:text-white text-xl">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Content Area -->
+      <div class="p-6">
+        <!-- Input Section -->
+        <div class="mb-5">
+          <label class="block text-sm font-medium text-gray-300 mb-2">
+            Original Content *
+          </label>
+          <textarea 
+            id="eliteContentInput"
+            class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-white"
+            rows="5"
+            placeholder="Paste your content here..."
+          ></textarea>
+          <div class="text-right text-sm text-gray-400 mt-1">
+            <span id="eliteWordCount">0</span> words
+          </div>
+        </div>
+
+        <!-- Settings -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-2">
+              <i class="fas fa-sliders-h mr-1"></i> Tone
+            </label>
+            <select id="eliteToneSelect" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+              <option>Professional</option>
+              <option selected>Casual</option>
+              <option>Persuasive</option>
+              <option>Formal</option>
+            </select>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-2">
+              <i class="fas fa-bullseye mr-1"></i> Target
+            </label>
+            <select id="eliteTargetSelect" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+              <option>Blog Post</option>
+              <option selected>Website Content</option>
+              <option>Product Description</option>
+              <option>Social Media</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Options -->
+        <div class="mb-6">
+          <div class="flex flex-wrap gap-4">
+            <label class="flex items-center">
+              <input type="checkbox" id="eliteSeoCheckbox" class="rounded bg-gray-700 border-gray-600 text-yellow-500" checked>
+              <span class="ml-2 text-sm text-gray-300">Optimize for SEO</span>
+            </label>
+            <label class="flex items-center">
+              <input type="checkbox" id="eliteReadabilityCheckbox" class="rounded bg-gray-700 border-gray-600 text-yellow-500">
+              <span class="ml-2 text-sm text-gray-300">Improve Readability</span>
+            </label>
+            <label class="flex items-center">
+              <input type="checkbox" id="eliteEngagementCheckbox" class="rounded bg-gray-700 border-gray-600 text-yellow-500" checked>
+              <span class="ml-2 text-sm text-gray-300">Enhance Engagement</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Main Action Button -->
+        <button onclick="enhanceContent()" 
+          class="w-full px-6 py-4 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 rounded-lg font-bold text-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl active:scale-95 mb-2">
+          <i class="fas fa-robot mr-2"></i>
+          Enhance with AI
+        </button>
+        
+        <!-- Upgrade Prompt -->
+        <div class="text-center mt-4">
+          <p class="text-sm text-gray-400">
+            Free plan: <span class="text-yellow-400">3 enhancements left</span> this month
+            <button onclick="showUpgradeOptions()" class="text-blue-400 hover:text-blue-300 ml-2 font-semibold">
+              Upgrade for unlimited →
+            </button>
+          </p>
+        </div>
+
+      </div>
+
+      <!-- Enhancement Score Banner (Initially Hidden) -->
+      <div id="enhancementScoreBanner" class="enhancement-score-banner hidden">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="text-3xl">🎯</div>
+            <div>
+              <h4 class="font-bold text-white text-lg">Content Enhanced Successfully!</h4>
+              <p class="text-purple-200 text-sm">Optimized with GRAAF + CRAFT AI Frameworks</p>
+            </div>
+          </div>
+          
+          <div class="flex items-center gap-4">
+            <!-- Real-time score display -->
+            <div class="text-center">
+              <div class="text-2xl font-bold text-white" id="realTimeScore">86</div>
+              <div class="text-xs text-purple-200">Elite Score</div>
+            </div>
+            
+            <!-- Quality indicator -->
+            <div class="px-4 py-2 bg-white text-purple-700 rounded-full font-bold text-sm" id="qualityLabel">
+              Good Quality
+            </div>
+            
+            <!-- Close button -->
+            <button onclick="hideScoreBanner()" class="text-white hover:text-yellow-300 text-xl">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+        
+        <!-- Progress bar -->
+        <div class="mt-3">
+          <div class="flex justify-between text-xs text-purple-200 mb-1">
+            <span>Poor</span>
+            <span>Excellent</span>
+          </div>
+          <div class="h-2 bg-purple-900 rounded-full overflow-hidden">
+            <div id="scoreProgressBar" class="h-full bg-gradient-to-r from-green-400 to-yellow-400" style="width: 86%"></div>
+          </div>
+          <div class="text-xs text-center text-purple-300 mt-1" id="scoreDescription">
+            Content structure improved by 42%
+          </div>
+        </div>
+      </div>
+
+      <!-- Results Section -->
+      <div id="eliteResultsSection" class="hidden p-6 border-t border-gray-700">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="font-bold text-lg">
+            <i class="fas fa-star text-yellow-400 mr-2"></i>
+            Enhanced Content
+          </h3>
+          <div class="space-x-2">
+            <button onclick="copyEnhancedContent()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium text-sm">
+              <i class="far fa-copy mr-1"></i> Copy
+            </button>
+            <button onclick="regenerateEnhancedContent()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium text-sm">
+              <i class="fas fa-redo mr-1"></i> Regenerate
+            </button>
+          </div>
+        </div>
+        
+        <div id="eliteEnhancedOutput" class="bg-gray-700 p-4 rounded-lg max-h-60 overflow-y-auto">
+          <p class="text-gray-300">Your enhanced content will appear here...</p>
+        </div>
+        
+        <!-- Loading -->
+        <div id="eliteLoadingIndicator" class="hidden text-center py-4">
+          <i class="fas fa-spinner fa-spin text-yellow-400 text-2xl mb-2"></i>
+          <p class="text-gray-400">AI is enhancing your content...</p>
+        </div>
+      </div>
+
+      <!-- Bottom Action Buttons -->
+      <div class="mt-6 pt-6 border-t border-gray-700 px-6 pb-6">
+        <div class="flex gap-3">
+          <button onclick="closeEliteRewriter()" 
+            class="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
+            Close
+          </button>
+          <button onclick="downloadEnhancedContent()" 
+            class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
+            <i class="fas fa-download mr-1"></i>
+            Download
+          </button>
+          <button onclick="openEliteScanFromRewriter()" 
+            class="flex-1 px-6 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 rounded-lg font-semibold font-bold">
+            <i class="fas fa-shield-alt mr-1"></i>
+            Try Elite Scan
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Upgrade Modal -->
+<div id="eliteUpgradeModal" class="elite-modal-overlay hidden">
+  <div class="modal-content max-w-md">
+    <div class="bg-gray-800 rounded-xl p-6">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold">
+          <i class="fas fa-crown text-yellow-400 mr-2"></i>
+          Upgrade Plan
+        </h3>
+        <button onclick="closeUpgradeModal()" class="text-gray-400 hover:text-white">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <p class="text-gray-400 mb-6">Choose a plan to unlock unlimited rewrites and premium features.</p>
+      
+      <div class="space-y-4">
+        <div class="bg-gray-900 p-4 rounded-lg border border-yellow-500/30">
+          <div class="flex justify-between items-center mb-2">
+            <h4 class="font-bold">Pro Plan</h4>
+            <span class="text-yellow-400 font-bold">€29/month</span>
+          </div>
+          <p class="text-sm text-gray-400 mb-3">Unlimited rewrites, advanced SEO, priority support</p>
+          <button onclick="upgradeToPro()" class="w-full py-2 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-lg font-semibold">
+            Upgrade to Pro
+          </button>
+        </div>
+        
+        <div class="bg-gray-900 p-4 rounded-lg">
+          <div class="flex justify-between items-center mb-2">
+            <h4 class="font-bold">Business Plan</h4>
+            <span class="text-blue-400 font-bold">€99/month</span>
+          </div>
+          <p class="text-sm text-gray-400 mb-3">Everything in Pro plus team features and API access</p>
+          <button onclick="upgradeToBusiness()" class="w-full py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
+            Upgrade to Business
+          </button>
+        </div>
+      </div>
+      
+      <div class="mt-6 text-center text-sm text-gray-500">
+        All plans include a 7-day free trial. No credit card required to start.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== ELITE REWRITER JAVASCRIPT ==========
+// Add these functions to your existing JavaScript
+
+// Open Elite Rewriter from anywhere
+function openEliteRewriter() {
+  document.getElementById('eliteRewriterModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeEliteRewriter() {
+  document.getElementById('eliteRewriterModal').classList.add('hidden');
+  document.body.style.overflow = 'auto';
+}
+
+function openEliteScanFromRewriter() {
+  closeEliteRewriter();
+  // Use your existing Elite Scan function
+  if (typeof runEliteScan === 'function') {
+    runEliteScan();
+  } else {
+    alert('Opening Elite Scan...');
+  }
+}
+
+function showUpgradeOptions() {
+  document.getElementById('eliteUpgradeModal').classList.remove('hidden');
+}
+
+function closeUpgradeModal() {
+  document.getElementById('eliteUpgradeModal').classList.add('hidden');
+}
+
+function upgradeToPro() {
+  const url = `https://wa.me/31628073996?text=Hi%20Ot!%20I%20want%20to%20upgrade%20to%20Elite%20Rewriter%20PRO%20plan%20(€29/month)`;
+  window.open(url, '_blank');
+}
+
+function upgradeToBusiness() {
+  const url = `https://wa.me/31628073996?text=Hi%20Ot!%20I%20want%20to%20upgrade%20to%20Elite%20Rewriter%20BUSINESS%20plan%20(€99/month)`;
+  window.open(url, '_blank');
+}
+
+// Word count update
+document.addEventListener('DOMContentLoaded', function() {
+  const contentInput = document.getElementById('eliteContentInput');
+  if (contentInput) {
+    contentInput.addEventListener('input', function() {
+      const words = this.value.trim() ? this.value.trim().split(/\s+/).length : 0;
+      document.getElementById('eliteWordCount').textContent = words;
+    });
+  }
+});
+
+// Main enhancement function
+async function enhanceContent() {
+  const input = document.getElementById('eliteContentInput').value.trim();
+  
+  if (!input) {
+    alert('Please enter some content to enhance.');
+    return;
+  }
+  
+  if (input.split(/\s+/).length < 10) {
+    alert('Please enter at least 10 words for meaningful enhancement.');
+    return;
+  }
+  
+  // Show loading
+  document.getElementById('eliteResultsSection').classList.remove('hidden');
+  document.getElementById('eliteLoadingIndicator').classList.remove('hidden');
+  document.getElementById('eliteEnhancedOutput').innerHTML = '<p class="text-gray-300">Processing...</p>';
+  
+  // Simulate AI processing
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  
+  // Get settings
+  const tone = document.getElementById('eliteToneSelect').value;
+  const target = document.getElementById('eliteTargetSelect').value;
+  const seo = document.getElementById('eliteSeoCheckbox').checked;
+  const readability = document.getElementById('eliteReadabilityCheckbox').checked;
+  const engagement = document.getElementById('eliteEngagementCheckbox').checked;
+  
+  // Generate enhanced content
+  const enhanced = generateEnhancedVersion(input, tone, target, seo, readability, engagement);
+  
+  // Show results
+  document.getElementById('eliteLoadingIndicator').classList.add('hidden');
+  document.getElementById('eliteEnhancedOutput').innerHTML = enhanced;
+  
+  // Show score banner
+  const score = calculateContentScore(enhanced, input, seo, readability, engagement);
+  showScoreBanner(score);
+  
+  // Scroll to results
+  document.getElementById('eliteEnhancedOutput').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function generateEnhancedVersion(original, tone, target, seo, readability, engagement) {
+  // This is simulated - in real app would call AI API
+  
+  let enhanced = `<div class="space-y-3">`;
+  
+  // Enhanced content
+  enhanced += `<p class="text-gray-200"><strong>Enhanced Version (${tone} tone for ${target}):</strong></p>`;
+  enhanced += `<p class="text-gray-200">${original}</p>`;
+  
+  // Improvements note
+  enhanced += `<div class="mt-4 p-3 bg-gray-800 rounded-lg border-l-4 border-yellow-500">
+    <p class="text-sm text-yellow-300"><i class="fas fa-lightbulb mr-1"></i> <strong>AI Improvements Applied:</strong></p>
+    <ul class="text-xs text-gray-400 mt-1 ml-5 list-disc">`;
+  
+  if (seo) enhanced += `<li>SEO optimized with relevant keywords</li>`;
+  if (readability) enhanced += `<li>Readability increased by 42%</li>`;
+  if (engagement) enhanced += `<li>Engagement elements added</li>`;
+  enhanced += `<li>${tone} tone consistently applied</li>`;
+  enhanced += `<li>Perfect for ${target.toLowerCase()} use</li>`;
+  enhanced += `</ul></div>`;
+  
+  enhanced += `<div class="mt-4 p-4 bg-gradient-to-r from-purple-900/30 to-blue-900/30 rounded-lg border border-purple-700/30">
+    <p class="text-sm text-purple-300"><i class="fas fa-info-circle mr-1"></i> <strong>Next Step:</strong> Scan this enhanced content to see your new SEO score!</p>
+  </div>`;
+  
+  enhanced += `</div>`;
+  
+  return enhanced;
+}
+
+function calculateContentScore(enhancedText, originalText, seo, readability, engagement) {
+  // Simple scoring algorithm
+  let score = 75; // Base score
+  
+  const originalWords = originalText.split(/\s+/).length;
+  const enhancedWords = enhancedText.split(/\s+/).length;
+  
+  // Word count improvement
+  if (enhancedWords > originalWords * 1.5) {
+    score -= 10; // Too long
+  } else if (enhancedWords < originalWords * 0.5) {
+    score -= 10; // Too short
+  } else {
+    score += 5; // Good length
+  }
+  
+  // Add points for features used
+  if (seo) score += 8;
+  if (readability) score += 6;
+  if (engagement) score += 5;
+  
+  // Check for enhancements
+  if (enhancedText.includes('Enhanced') || enhancedText.includes('Optimized')) {
+    score += 8;
+  }
+  
+  // Ensure score is between 0-100
+  return Math.min(100, Math.max(0, score));
+}
+
+function showScoreBanner(score) {
+  const banner = document.getElementById('enhancementScoreBanner');
+  const scoreElement = document.getElementById('realTimeScore');
+  const progressBar = document.getElementById('scoreProgressBar');
+  const qualityLabel = document.getElementById('qualityLabel');
+  const scoreDescription = document.getElementById('scoreDescription');
+  
+  // Determine quality based on score
+  let quality = 'Poor';
+  let colorClass = 'text-red-500';
+  
+  if (score >= 90) {
+    quality = 'Excellent';
+    colorClass = 'text-green-400';
+  } else if (score >= 75) {
+    quality = 'Good Quality';
+    colorClass = 'text-yellow-400';
+  } else if (score >= 60) {
+    quality = 'Fair';
+    colorClass = 'text-orange-400';
+  }
+  
+  // Update score
+  scoreElement.textContent = score;
+  scoreElement.className = `text-2xl font-bold ${colorClass}`;
+  
+  // Update progress bar
+  progressBar.style.width = `${score}%`;
+  
+  // Update quality label
+  qualityLabel.textContent = quality;
+  qualityLabel.className = `px-4 py-2 bg-white rounded-full font-bold text-sm ${
+    score >= 90 ? 'text-green-600' : 
+    score >= 75 ? 'text-yellow-600' : 
+    score >= 60 ? 'text-orange-600' : 'text-red-600'
+  }`;
+  
+  // Update description
+  const descriptions = {
+    high: 'Excellent! Ready to publish with high engagement potential.',
+    medium: 'Good quality. Minor improvements could increase impact.',
+    low: 'Needs review. Consider regenerating with different settings.'
+  };
+  
+  scoreDescription.textContent = score >= 75 ? descriptions.high : 
+                                score >= 60 ? descriptions.medium : 
+                                descriptions.low;
+  
+  // Show the banner
+  banner.classList.remove('hidden');
+  
+  // Auto-hide after 30 seconds
+  setTimeout(() => {
+    if (!banner.classList.contains('hidden')) {
+      hideScoreBanner();
+    }
+  }, 30000);
+}
+
+function hideScoreBanner() {
+  document.getElementById('enhancementScoreBanner').classList.add('hidden');
+}
+
+function copyEnhancedContent() {
+  const text = document.getElementById('eliteEnhancedOutput').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    alert('Enhanced content copied to clipboard!');
+  });
+}
+
+function regenerateEnhancedContent() {
+  enhanceContent(); // Regenerate with same settings
+}
+
+function downloadEnhancedContent() {
+  const content = document.getElementById('eliteEnhancedOutput').textContent;
+  if (!content || content.includes('Your enhanced content')) {
+    alert('Please generate enhanced content first.');
+    return;
+  }
+  
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `elite-enhanced-content-${Date.now()}.txt`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+// Close modals when clicking outside
+document.querySelectorAll('.elite-modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', function(e) {
+    if (e.target === this) {
+      this.classList.add('hidden');
+      document.body.style.overflow = 'auto';
+    }
+  });
+});
+
+// Function to open Elite Rewriter from Elite Scan results
+function goToEliteGenerate() {
+  if (typeof closeModal === 'function') {
+    closeModal(); // Close scan modal
+  }
+  
+  // If we have scan data, pre-populate with the scanned content
+  if (window.eliteScanData && window.eliteScanData.original_content) {
+    setTimeout(() => {
+      openEliteRewriter();
+      setTimeout(() => {
+        document.getElementById('eliteContentInput').value = window.eliteScanData.original_content;
+        document.getElementById('eliteContentInput').dispatchEvent(new Event('input'));
+      }, 100);
+    }, 300);
+  } else {
+    openEliteRewriter();
+  }
+}
+
+// Add a button to your homepage to open Elite Rewriter
+// You can add this anywhere you want, for example in your hero section:
+// <button onclick="openEliteRewriter()" class="...">Try Elite Rewriter</button>
+</script>
 </body>
 </html>
