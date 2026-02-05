@@ -99,136 +99,9 @@ setInterval(() => {
   }
 }, 60000);
 
-
-
-
-
 // ============================================
 // STABLE SCORING ALGORITHM
 // ============================================
-
-// ============================================
-// TRANSPARENT SCORING SYSTEM
-// ============================================
-
-/**
- * NEW: Calculate honest, transparent scores
- * Returns: { overall, breakdown, calculation_steps }
- */
-function calculateTransparentScore(graafScore, craftScore, technicalScore, stats, url) {
-  // 1. CALCULATE CONTENT SCORE (from GRAAF + CRAFT)
-  const contentScore = Math.round(
-    (graafScore / 50 * 100 * 0.6) +  // GRAAF contributes 60% to content
-    (craftScore / 30 * 100 * 0.4)    // CRAFT contributes 40% to content
-  );
-  
-  // 2. CALCULATE OVERALL SCORE (weighted average)
-  const overall = Math.round(
-    (technicalScore / 20 * 100 * 0.4) +  // Technical: 40% weight
-    (contentScore * 0.4) +               // Content: 40% weight
-    (getUXScore(stats) * 0.2)            // UX: 20% weight (from readability stats)
-  );
-  
-  // 3. Get UX Score based on readability
-  function getUXScore(stats) {
-    let ux = 70; // Base UX score
-    
-    // Headings improve UX
-    if (stats.h1Count === 1) ux += 10;
-    if (stats.h2Count >= 2) ux += 10;
-    if (stats.h3Count >= 3) ux += 5;
-    
-    // Lists improve scannability
-    if (stats.listCount >= 3) ux += 5;
-    
-    // Word count affects engagement
-    if (stats.wordCount > 800) ux += 10;
-    else if (stats.wordCount < 300) ux -= 20;
-    
-    return Math.min(100, Math.max(0, ux));
-  }
-  
-  // 4. Quality rating
-  const getQuality = (score) => {
-    if (score >= 90) return 'excellent';
-    if (score >= 75) return 'good';
-    if (score >= 60) return 'average';
-    if (score >= 45) return 'below-average';
-    return 'poor';
-  };
-  
-  return {
-    overall: Math.min(100, Math.max(0, overall)),
-    content_score: Math.min(100, Math.max(0, contentScore)),
-    technical_score: Math.min(100, Math.max(0, technicalScore)),
-    ux_score: getUXScore(stats),
-    quality: getQuality(overall),
-    calculation_steps: {
-      weights: {
-        technical: '40%',
-        content: '40%',
-        ux: '20%'
-      },
-      content_breakdown: {
-        graaf_contribution: `${Math.round((graafScore / 50 * 100 * 0.6))} points (60% of content)`,
-        craft_contribution: `${Math.round((craftScore / 30 * 100 * 0.4))} points (40% of content)`,
-        total_content: `${contentScore}/100`
-      },
-      formula: 'overall = (technical × 0.4) + (content × 0.4) + (ux × 0.2)'
-    }
-  };
-}
-
-/**
- * NEW: Compare with previous scan to explain changes
- */
-async function getScanComparison(url, newScores) {
-  try {
-    const client = await pool.connect();
-    const previous = await client.query(
-      'SELECT score, graaf_score, craft_score, technical_score, breakdown FROM scans WHERE url = $1 ORDER BY created_at DESC LIMIT 1 OFFSET 1',
-      [url]
-    );
-    client.release();
-    
-    if (previous.rows.length === 0) {
-      return {
-        is_first_scan: true,
-        changes: null
-      };
-    }
-    
-    const prev = previous.rows[0];
-    const changes = {
-      overall_change: newScores.overall - (prev.score || 0),
-      graaf_change: newScores.graafScore - (prev.graaf_score || 0),
-      craft_change: newScores.craftScore - (prev.craft_score || 0),
-      technical_change: newScores.technicalScore - (prev.technical_score || 0)
-    };
-    
-    // Explain changes
-    const explanations = [];
-    if (Math.abs(changes.overall_change) > 5) {
-      if (changes.technical_change > 0) explanations.push('Technical improvements detected');
-      if (changes.graaf_change > 0) explanations.push('Content credibility improved');
-      if (changes.craft_change > 0) explanations.push('Content structure enhanced');
-      if (changes.technical_change < 0) explanations.push('Technical metrics declined');
-    }
-    
-    return {
-      is_first_scan: false,
-      previous_score: prev.score,
-      changes,
-      explanations,
-      previous_scan_date: prev.created_at
-    };
-  } catch (error) {
-    console.error('Comparison error:', error);
-    return { is_first_scan: true, changes: null };
-  }
-}
-
-
 
 function calculateStableScores(content, stats, rawHtml) {
   const { wordCount = 0, h1Count = 0, h2Count = 0, h3Count = 0, listCount = 0 } = stats;
@@ -334,6 +207,128 @@ function calculateStableScores(content, stats, rawHtml) {
 }
 
 // ============================================
+// TRANSPARENT SCORING SYSTEM
+// ============================================
+
+/**
+ * Calculate honest, transparent scores
+ */
+function calculateTransparentScore(graafScore, craftScore, technicalScore, stats) {
+  // 1. CALCULATE CONTENT SCORE (from GRAAF + CRAFT)
+  const contentScore = Math.round(
+    (graafScore / 50 * 100 * 0.6) +  // GRAAF contributes 60% to content
+    (craftScore / 30 * 100 * 0.4)    // CRAFT contributes 40% to content
+  );
+  
+  // 2. Get UX Score based on readability
+  function getUXScore(stats) {
+    let ux = 70; // Base UX score
+    
+    // Headings improve UX
+    if (stats.h1Count === 1) ux += 10;
+    if (stats.h2Count >= 2) ux += 10;
+    if (stats.h3Count >= 3) ux += 5;
+    
+    // Lists improve scannability
+    if (stats.listCount >= 3) ux += 5;
+    
+    // Word count affects engagement
+    if (stats.wordCount > 800) ux += 10;
+    else if (stats.wordCount < 300) ux -= 20;
+    
+    return Math.min(100, Math.max(0, ux));
+  }
+  
+  const uxScore = getUXScore(stats);
+  
+  // 3. CALCULATE OVERALL SCORE (weighted average)
+  const overall = Math.round(
+    (technicalScore / 20 * 100 * 0.4) +  // Technical: 40% weight
+    (contentScore * 0.4) +               // Content: 40% weight
+    (uxScore * 0.2)                      // UX: 20% weight
+  );
+  
+  // 4. Quality rating
+  const getQuality = (score) => {
+    if (score >= 90) return 'excellent';
+    if (score >= 75) return 'good';
+    if (score >= 60) return 'average';
+    if (score >= 45) return 'below-average';
+    return 'poor';
+  };
+  
+  return {
+    overall: Math.min(100, Math.max(0, overall)),
+    content_score: Math.min(100, Math.max(0, contentScore)),
+    technical_score: Math.min(100, Math.max(0, technicalScore)),
+    ux_score: uxScore,
+    quality: getQuality(overall),
+    calculation_steps: {
+      weights: {
+        technical: '40%',
+        content: '40%',
+        ux: '20%'
+      },
+      content_breakdown: {
+        graaf_contribution: `${Math.round((graafScore / 50 * 100 * 0.6))} points (60% of content)`,
+        craft_contribution: `${Math.round((craftScore / 30 * 100 * 0.4))} points (40% of content)`,
+        total_content: `${contentScore}/100`
+      },
+      formula: 'overall = (technical × 0.4) + (content × 0.4) + (ux × 0.2)'
+    }
+  };
+}
+
+/**
+ * Compare with previous scan to explain changes
+ */
+async function getScanComparison(url, newScores) {
+  try {
+    const client = await pool.connect();
+    const previous = await client.query(
+      'SELECT score, graaf_score, craft_score, technical_score, breakdown, created_at FROM scans WHERE url = $1 ORDER BY created_at DESC LIMIT 1 OFFSET 1',
+      [url]
+    );
+    client.release();
+    
+    if (previous.rows.length === 0) {
+      return {
+        is_first_scan: true,
+        changes: null
+      };
+    }
+    
+    const prev = previous.rows[0];
+    const changes = {
+      overall_change: newScores.overall - (prev.score || 0),
+      graaf_change: newScores.graafScore - (prev.graaf_score || 0),
+      craft_change: newScores.craftScore - (prev.craft_score || 0),
+      technical_change: newScores.technicalScore - (prev.technical_score || 0)
+    };
+    
+    // Explain changes
+    const explanations = [];
+    if (Math.abs(changes.overall_change) > 5) {
+      if (changes.technical_change > 0) explanations.push('Technical improvements detected');
+      if (changes.graaf_change > 0) explanations.push('Content credibility improved');
+      if (changes.craft_change > 0) explanations.push('Content structure enhanced');
+      if (changes.technical_change < 0) explanations.push('Technical metrics declined');
+    }
+    
+    return {
+      is_first_scan: false,
+      previous_score: prev.score,
+      changes,
+      explanations,
+      previous_scan_date: prev.created_at
+    };
+  } catch (error) {
+    console.error('Comparison error:', error);
+    return { is_first_scan: true, changes: null };
+  }
+}
+
+// ============================================
 // DATABASE INITIALIZATION
 // ============================================
 async function createAllTables() {
@@ -391,7 +386,7 @@ async function createAllTables() {
       )
     `);
     
-    // SCANS TABLE
+    // SCANS TABLE - UPDATED WITH TRANSPARENT SCORING FIELDS
     await client.query(`
       CREATE TABLE IF NOT EXISTS scans (
         id SERIAL PRIMARY KEY,
@@ -401,7 +396,10 @@ async function createAllTables() {
         graaf_score INTEGER,
         craft_score INTEGER,
         technical_score INTEGER,
+        content_score INTEGER,        -- NEW: transparent content score
+        ux_score INTEGER,            -- NEW: UX score
         breakdown JSONB,
+        comparison_data JSONB,       -- NEW: scan comparison data
         recommendations JSONB DEFAULT '[]',
         agency_id INTEGER REFERENCES agencies(id) ON DELETE SET NULL,
         client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL,
@@ -855,7 +853,6 @@ app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
 // 8. CLAIMS MANAGEMENT
 app.get('/api/admin/claims/pending', verifyAdmin, async (req, res) => {
   try {
-    // Using leaderboard as claims for now
     const result = await pool.query(`
       SELECT COUNT(*) as count FROM leaderboard WHERE admin_verified = FALSE
     `);
@@ -1085,7 +1082,7 @@ app.get('/api/leaderboard', async (req, res) => {
 });
 
 // ============================================
-// SCAN ENDPOINT (STABLE VERSION)
+// SCAN ENDPOINT (UPDATED WITH TRANSPARENT SCORING)
 // ============================================
 app.post('/api/scan', async (req, res) => {
   const { url, shareKey } = req.body;
@@ -1140,29 +1137,28 @@ app.post('/api/scan', async (req, res) => {
     
     const stats = { wordCount, h1Count, h2Count, h3Count, listCount };
     
-   // Calculate STABLE scores (original algorithm)
-const scores = calculateStableScores(textContent, stats, rawHtml);
-
-// NEW: Calculate TRANSPARENT scores
-const transparentScores = calculateTransparentScore(
-  scores.graafScore, 
-  scores.craftScore, 
-  scores.technicalScore,
-  stats,
-  scanUrl
-);
-
-// NEW: Get comparison with previous scan
-const comparison = await getScanComparison(scanUrl, {
-  graafScore: scores.graafScore,
-  craftScore: scores.craftScore,
-  technicalScore: scores.technicalScore,
-  overall: transparentScores.overall
-});
-
-// Determine quality from transparent system
-const totalScore = transparentScores.overall;
-const quality = transparentScores.quality;
+    // Calculate STABLE scores
+    const scores = calculateStableScores(textContent, stats, rawHtml);
+    
+    // NEW: Calculate TRANSPARENT scores
+    const transparentScores = calculateTransparentScore(
+      scores.graafScore, 
+      scores.craftScore, 
+      scores.technicalScore,
+      stats
+    );
+    
+    // NEW: Get comparison with previous scan
+    const comparison = await getScanComparison(scanUrl, {
+      graafScore: scores.graafScore,
+      craftScore: scores.craftScore,
+      technicalScore: scores.technicalScore,
+      overall: transparentScores.overall
+    });
+    
+    // Determine quality from transparent system
+    const totalScore = transparentScores.overall;
+    const quality = transparentScores.quality;
     
     // Create recommendations
     const recommendations = [];
@@ -1209,61 +1205,90 @@ const quality = transparentScores.quality;
     const quickWins = recommendations.filter(r => r.type === 'quickwin');
     const majorImprovements = recommendations.filter(r => r.type === 'major');
     
-// Build result
-const result = {
-  success: true,
-  url: scanUrl,
-  score: totalScore,
-  quality,
-  scoring_method: 'transparent',
-  metrics: { 
-    graaf: scores.graafScore, 
-    craft: scores.craftScore, 
-    technical: scores.technicalScore,
-    content: transparentScores.content_score,
-    ux: transparentScores.ux_score
-  },
-  breakdown: {
-    transparent: transparentScores.calculation_steps,
-    category_scores: {
-      technical: {
-        raw: scores.technicalScore,
-        max: 20,
-        weighted: Math.round(scores.technicalScore / 20 * 100 * 0.4),
-        contribution: '40% of overall'
+    // Build result with transparent scoring
+    const result = {
+      success: true,
+      url: scanUrl,
+      score: totalScore,
+      quality,
+      scoring_method: 'transparent',
+      metrics: { 
+        graaf: scores.graafScore, 
+        craft: scores.craftScore, 
+        technical: scores.technicalScore,
+        content: transparentScores.content_score,
+        ux: transparentScores.ux_score
       },
-      content: {
-        raw_graaf: scores.graafScore,
-        raw_craft: scores.craftScore,
-        calculated: transparentScores.content_score,
-        weighted: Math.round(transparentScores.content_score * 0.4),
-        contribution: '40% of overall'
+      breakdown: {
+        transparent: transparentScores.calculation_steps,
+        category_scores: {
+          technical: {
+            raw: scores.technicalScore,
+            max: 20,
+            weighted: Math.round(scores.technicalScore / 20 * 100 * 0.4),
+            contribution: '40% of overall'
+          },
+          content: {
+            raw_graaf: scores.graafScore,
+            raw_craft: scores.craftScore,
+            calculated: transparentScores.content_score,
+            weighted: Math.round(transparentScores.content_score * 0.4),
+            contribution: '40% of overall'
+          },
+          ux: {
+            score: transparentScores.ux_score,
+            weighted: Math.round(transparentScores.ux_score * 0.2),
+            contribution: '20% of overall'
+          }
+        },
+        total_calculation: `${Math.round(scores.technicalScore / 20 * 100 * 0.4)} + ${Math.round(transparentScores.content_score * 0.4)} + ${Math.round(transparentScores.ux_score * 0.2)} = ${totalScore}`
       },
-      ux: {
-        score: transparentScores.ux_score,
-        weighted: Math.round(transparentScores.ux_score * 0.2),
-        contribution: '20% of overall'
-      }
-    },
-    total_calculation: `${Math.round(scores.technicalScore / 20 * 100 * 0.4)} + ${Math.round(transparentScores.content_score * 0.4)} + ${Math.round(transparentScores.ux_score * 0.2)} = ${totalScore}`
-  },
-  comparison: comparison,
-  recommendations: {
-    all: recommendations,
-    quickWins: quickWins,
-    majorImprovements: majorImprovements,
-    totalRecommendations: recommendations.length
-  },
-  content_stats: stats,
-  details: {
-    wordCount,
-    h1Count,
-    h2Count,
-    h3Count,
-    listCount
-  },
-  timestamp: new Date().toISOString()
-};
+      comparison: comparison,
+      recommendations: {
+        all: recommendations,
+        quickWins: quickWins,
+        majorImprovements: majorImprovements,
+        totalRecommendations: recommendations.length
+      },
+      content_stats: stats,
+      details: {
+        wordCount,
+        h1Count,
+        h2Count,
+        h3Count,
+        listCount
+      },
+      timestamp: new Date().toISOString()
+    };
+    
+    // Cache the result
+    scanCache.set(cacheKey, {
+      timestamp: Date.now(),
+      result: result
+    });
+    
+    // Save to database with transparent scores
+    try {
+      await pool.query(
+        `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, content_score, ux_score, breakdown, comparison_data, recommendations, scan_type)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'manual')`,
+        [scanUrl, totalScore, quality, scores.graafScore, scores.craftScore, scores.technicalScore,
+         transparentScores.content_score, transparentScores.ux_score,
+         JSON.stringify(result.breakdown), JSON.stringify(comparison), 
+         JSON.stringify(result.recommendations)]
+      );
+    } catch (dbError) {
+      console.error('DB save error:', dbError.message);
+    }
+    
+    console.log(`✅ Scan complete: ${scanUrl} - ${totalScore}/100 (${quality})`);
+    res.json(result);
+    
+  } catch (error) {
+    console.error('Scan error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 // ============================================
 // HTML ROUTES
@@ -1354,130 +1379,8 @@ app.listen(PORT, () => {
   console.log('   • /api/admin/leaderboard');
   console.log('   • /api/admin/analytics');
   console.log('   • /api/admin/stats');
-  console.log('   • /api/scan (STABLE SCORING)');
+  console.log('   • /api/scan (TRANSPARENT SCORING)');
   console.log('');
   console.log('👤 Default Admin: ot / admin123');
   console.log('');
 });
-
-  // ============================================
-// TRANSPARENT SCORING SYSTEM - ADD THESE FUNCTIONS
-// ============================================
-
-/**
- * Calculate honest, transparent scores
- */
-function calculateTransparentScore(graafScore, craftScore, technicalScore, stats, url) {
-  // 1. CALCULATE CONTENT SCORE (from GRAAF + CRAFT)
-  const contentScore = Math.round(
-    (graafScore / 50 * 100 * 0.6) +  // GRAAF contributes 60% to content
-    (craftScore / 30 * 100 * 0.4)    // CRAFT contributes 40% to content
-  );
-  
-  // 2. Get UX Score based on readability
-  function getUXScore(stats) {
-    let ux = 70; // Base UX score
-    
-    // Headings improve UX
-    if (stats.h1Count === 1) ux += 10;
-    if (stats.h2Count >= 2) ux += 10;
-    if (stats.h3Count >= 3) ux += 5;
-    
-    // Lists improve scannability
-    if (stats.listCount >= 3) ux += 5;
-    
-    // Word count affects engagement
-    if (stats.wordCount > 800) ux += 10;
-    else if (stats.wordCount < 300) ux -= 20;
-    
-    return Math.min(100, Math.max(0, ux));
-  }
-  
-  const uxScore = getUXScore(stats);
-  
-  // 3. CALCULATE OVERALL SCORE (weighted average)
-  const overall = Math.round(
-    (technicalScore / 20 * 100 * 0.4) +  // Technical: 40% weight
-    (contentScore * 0.4) +               // Content: 40% weight
-    (uxScore * 0.2)                      // UX: 20% weight
-  );
-  
-  // 4. Quality rating
-  const getQuality = (score) => {
-    if (score >= 90) return 'excellent';
-    if (score >= 75) return 'good';
-    if (score >= 60) return 'average';
-    if (score >= 45) return 'below-average';
-    return 'poor';
-  };
-  
-  return {
-    overall: Math.min(100, Math.max(0, overall)),
-    content_score: Math.min(100, Math.max(0, contentScore)),
-    technical_score: Math.min(100, Math.max(0, technicalScore)),
-    ux_score: uxScore,
-    quality: getQuality(overall),
-    calculation_steps: {
-      weights: {
-        technical: '40%',
-        content: '40%',
-        ux: '20%'
-      },
-      content_breakdown: {
-        graaf_contribution: `${Math.round((graafScore / 50 * 100 * 0.6))} points (60% of content)`,
-        craft_contribution: `${Math.round((craftScore / 30 * 100 * 0.4))} points (40% of content)`,
-        total_content: `${contentScore}/100`
-      },
-      formula: 'overall = (technical × 0.4) + (content × 0.4) + (ux × 0.2)'
-    }
-  };
-}
-
-/**
- * Compare with previous scan to explain changes
- */
-async function getScanComparison(url, newScores) {
-  try {
-    const client = await pool.connect();
-    const previous = await client.query(
-      'SELECT score, graaf_score, craft_score, technical_score, breakdown, created_at FROM scans WHERE url = $1 ORDER BY created_at DESC LIMIT 1 OFFSET 1',
-      [url]
-    );
-    client.release();
-    
-    if (previous.rows.length === 0) {
-      return {
-        is_first_scan: true,
-        changes: null
-      };
-    }
-    
-    const prev = previous.rows[0];
-    const changes = {
-      overall_change: newScores.overall - (prev.score || 0),
-      graaf_change: newScores.graafScore - (prev.graaf_score || 0),
-      craft_change: newScores.craftScore - (prev.craft_score || 0),
-      technical_change: newScores.technicalScore - (prev.technical_score || 0)
-    };
-    
-    // Explain changes
-    const explanations = [];
-    if (Math.abs(changes.overall_change) > 5) {
-      if (changes.technical_change > 0) explanations.push('Technical improvements detected');
-      if (changes.graaf_change > 0) explanations.push('Content credibility improved');
-      if (changes.craft_change > 0) explanations.push('Content structure enhanced');
-      if (changes.technical_change < 0) explanations.push('Technical metrics declined');
-    }
-    
-    return {
-      is_first_scan: false,
-      previous_score: prev.score,
-      changes,
-      explanations,
-      previous_scan_date: prev.created_at
-    };
-  } catch (error) {
-    console.error('Comparison error:', error);
-    return { is_first_scan: true, changes: null };
-  }
-}
