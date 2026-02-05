@@ -1,5 +1,5 @@
 // ============================================
-// CONTENTSCALE SERVER.JS - ULTIMATE VERSION WITH ELITE ENHANCEMENTS
+// CONTENTSCALE SERVER.JS - FIXED VERSION WITH ELITE ANALYSIS
 // ============================================
 const express = require('express');
 const path = require('path');
@@ -100,9 +100,83 @@ function hashContent(html) {
 }
 
 // ============================================
-// ELITE FRAMEWORK PROMPTS
+// ENHANCED PROMPTS
 // ============================================
 
+// ENHANCED NORMAL SCANNER PROMPT
+const AI_SCORING_PROMPT = `You are an SEO content quality scorer. Analyze the content using GRAAF and CRAFT frameworks. Be fair but strict and provide SPECIFIC, CONTEXTUAL recommendations.
+
+GRAAF SCORES (max 50 total):
+- Credibility (0-16): Author names, expert quotes, credentials, bylines, testimonials
+- Relevance (0-18): Topic focus, keyword usage, user intent matching, depth
+- Accuracy (0-8): Data points, sources, facts, statistics, research citations
+- Freshness (0-8): Dates, current information, recent updates, timeliness
+
+CRAFT SCORES (max 30 total):
+- Heading Structure (0-8): ONE H1, proper hierarchy, semantic structure
+- Subheadings (0-10): H2/H3 count and quality, topic segmentation
+- Paragraphs (0-8): Readability, breaks, flow, sentence variety
+- Lists (0-4): Bullet points, numbered lists, scannability
+
+REALISTIC SCORING GUIDE:
+- Thin content (<300 words): 20-35 total
+- Basic content (300-800 words): 35-55 total
+- Good content (800-1500 words): 55-75 total
+- Excellent content (1500-2500 words): 75-85 total
+- Exceptional content (2500+ words): 85-95 total
+
+CRITICAL: Provide UNIQUE, CONTENT-SPECIFIC recommendations based on actual analysis:
+
+RECOMMENDATION RULES:
+1. NEVER give generic "Improve heading structure" unless NO H1 or MULTIPLE H1s
+2. NEVER give generic "Add internal links" for content under 500 words
+3. ALWAYS base recommendations on what's ACTUALLY missing or weak in THIS content
+4. Give DIFFERENT types of recommendations for each scan
+5. Focus on QUICK WINS that add most points
+
+RECOMMENDATION TYPES TO CHOOSE FROM:
+• If no statistics: "Add Relevant Statistics"
+• If no quotes: "Include Expert Quotes"
+• If no author info: "Add Author Credentials"
+• If poor readability: "Improve Readability"
+• If short content: "Expand Content Depth"
+• If no meta description: "Add Meta Description"
+• If no images: "Add Visual Elements"
+• If long paragraphs: "Break Up Paragraphs"
+• If no lists: "Add Scannable Lists"
+• If no external sources: "Cite Authority Sources"
+• If no dates: "Add Freshness Signals"
+• If keyword missing: "Improve Keyword Usage"
+
+FOR EACH RECOMMENDATION, provide:
+1. type: "quickwin" (easy, <15 min) or "major" (needs more work)
+2. category: Specific area like "GRAAF - Credibility" or "CRAFT - Readability"
+3. title: Specific action like "Add Expert Quote About [Topic]"
+4. description: What's missing and why it matters for THIS content
+5. impact: High/Medium/Low based on SEO importance
+6. points: "+N points" realistic estimate
+7. howToFix: 2-3 SPECIFIC steps for THIS content
+8. example: Concrete example relevant to content topic
+
+Return ONLY this JSON structure:
+{
+  "graaf": { "credibility": N, "relevance": N, "accuracy": N, "freshness": N },
+  "craft": { "heading_structure": N, "subheadings": N, "paragraphs": N, "lists": N },
+  "recommendations": [
+    {
+      "type": "quickwin|major",
+      "category": "GRAAF - Credibility|CRAFT - Headings|TECHNICAL",
+      "title": "Specific action title related to content",
+      "description": "What is actually missing or wrong in THIS content",
+      "impact": "High|Medium|Low",
+      "points": "+N points",
+      "howToFix": "1. Specific step 1\\n2. Specific step 2\\n3. Specific step 3",
+      "example": "Concrete example relevant to content topic"
+    }
+  ]
+}`;
+
+// ELITE SCANNER PROMPT
 const ELITE_SCANNER_PROMPT = `You are the ContentScale Elite Scanner AI. Analyze this content with ULTRA-STRICT standards for elite-level content that scores 95-100/100.
 
 ELITE SCORING FRAMEWORK (100 points total):
@@ -131,24 +205,6 @@ ANALYSIS INSTRUCTIONS:
 2. Check for ALL required elements from Elite framework
 3. Score lower for missing ANY required element
 4. Give SPECIFIC recommendations on how to reach 95+ score
-
-CONTENT STRUCTURE REQUIREMENTS (Must have all):
-1. Direct Answer Box (40-60 words with keyword)
-2. TL;DR with 5 key takeaways
-3. Table of Contents
-4. 5-7 H2 sections (350-500 words each)
-5. 2+ Case Studies with metrics
-6. 10+ FAQ questions
-7. 8+ Statistics (2023-2025)
-8. 4+ Expert Quotes
-9. Author Bio (200+ words)
-10. All Schema Markup
-
-RECOMMENDATIONS:
-- Focus on WHAT'S MISSING from elite requirements
-- Give exact point values for improvements
-- Provide step-by-step fixes
-- Include specific examples
 
 Return ONLY this JSON structure:
 {
@@ -189,51 +245,7 @@ Return ONLY this JSON structure:
   "potential_score": N
 }`;
 
-const AI_SCORING_PROMPT = `You are an SEO content quality scorer. Analyze the content using GRAAF and CRAFT frameworks. Be fair but strict.
-
-GRAAF SCORES (max 50 total):
-- Credibility (0-16): Author names, expert quotes, credentials
-- Relevance (0-18): Topic focus, word count, depth
-- Accuracy (0-8): Data points, sources, facts
-- Freshness (0-8): Dates, current information
-
-CRAFT SCORES (max 30 total):
-- Heading Structure (0-8): ONE H1, proper hierarchy
-- Subheadings (0-10): H2/H3 count and quality
-- Paragraphs (0-8): Readability, breaks, flow
-- Lists (0-4): Bullet points, scannability
-
-REALISTIC SCORING GUIDE:
-- Thin content (<300 words): 20-35 total
-- Basic content (300-800 words): 35-55 total
-- Good content (800-1500 words): 55-75 total
-- Excellent content (1500-2500 words): 75-85 total
-- Exceptional content (2500+ words): 85-95 total
-
-SPECIFIC RECOMMENDATIONS RULES:
-1. Only recommend "Improve Heading Structure" if: No H1 OR multiple H1s OR no H2/H3
-2. Only recommend "Add More Internal Links" if: Content >500 words AND no internal links
-3. Give DIFFERENT recommendations based on actual content issues
-4. Focus on QUICK WINS that add most points
-
-Return ONLY this JSON structure:
-{
-  "graaf": { "credibility": N, "relevance": N, "accuracy": N, "freshness": N },
-  "craft": { "heading_structure": N, "subheadings": N, "paragraphs": N, "lists": N },
-  "recommendations": [
-    {
-      "type": "quickwin|major",
-      "category": "GRAAF - Credibility|CRAFT - Headings|TECHNICAL",
-      "title": "Specific action title",
-      "description": "What is actually missing or wrong",
-      "impact": "High|Medium|Low",
-      "points": "+N points",
-      "howToFix": "1. Step\\n2. Step\\n3. Step",
-      "example": "Concrete example"
-    }
-  ]
-}`;
-
+// ELITE REWRITER PROMPT
 const ELITE_REWRITER_PROMPT = `🏆 CONTENTSCALE ELITE 100/100 REWRITER
 Transform content into ELITE 95-100/100 scoring articles.
 
@@ -261,7 +273,6 @@ TECHNICAL REQUIREMENTS:
 OUTPUT FORMAT:
 Return COMPLETE rewritten article ready for publication. Include ALL sections above.
 Structure exactly as outlined.
-Add HTML comments for sections: <!-- SECTION: Direct Answer --> etc.
 
 CRITICAL: Ensure content scores 95-100/100 on ContentScale Elite Scanner.`;
 
@@ -693,97 +704,6 @@ function validateAIScores(ai, type = 'standard') {
   return true;
 }
 
-function validateAndFilterRecommendations(recommendations, contentStats, scanType = 'standard') {
-  const filtered = [];
-  const { h1Count = 0, h2Count = 0, h3Count = 0, listCount = 0, wordCount = 0 } = contentStats || {};
-  
-  for (const rec of recommendations) {
-    // Skip generic heading recommendation if structure is good
-    if (rec.title.includes('Heading Structure') || rec.title.includes('heading hierarchy')) {
-      if (h1Count === 1 && h2Count >= 2 && h3Count >= 1) {
-        console.log('✅ Skipping heading recommendation - structure is good');
-        continue;
-      }
-    }
-    
-    // Skip internal links for short content
-    if (rec.title.includes('Internal Links') || rec.title.includes('internal linking')) {
-      if (wordCount < 500) {
-        console.log('✅ Skipping internal links - content too short');
-        continue;
-      }
-    }
-    
-    // Skip lists recommendation if we have enough lists
-    if (rec.title.includes('Lists') || rec.title.includes('bullet points')) {
-      if (listCount >= 3) {
-        console.log('✅ Skipping lists recommendation - enough lists present');
-        continue;
-      }
-    }
-    
-    filtered.push(rec);
-  }
-  
-  // Add specific recommendations based on actual issues
-  if (scanType === 'standard') {
-    if (h1Count === 0 && !filtered.some(r => r.title.includes('H1'))) {
-      filtered.push({
-        type: 'major',
-        category: 'CRAFT - Headings',
-        title: 'Add H1 Heading',
-        description: 'No H1 heading found. Critical for SEO and user experience.',
-        impact: 'High',
-        points: '+8 points',
-        howToFix: '1. Add ONE main H1 heading\n2. Make it descriptive and include primary keyword\n3. Place at top of content',
-        example: '<h1>Complete Guide to SEO Content Optimization</h1>'
-      });
-    }
-    
-    if (h2Count < 2 && h1Count > 0 && !filtered.some(r => r.title.includes('H2'))) {
-      filtered.push({
-        type: 'medium',
-        category: 'CRAFT - Structure',
-        title: 'Add More Subheadings',
-        description: `Only ${h2Count} H2 headings found. Need 2+ for proper content structure.`,
-        impact: 'Medium',
-        points: '+5 points',
-        howToFix: '1. Break content into logical sections\n2. Add descriptive H2 headings\n3. Use keyword variations naturally',
-        example: '<h2>Key Benefits of Proper Structure</h2>'
-      });
-    }
-    
-    if (listCount < 2 && wordCount > 300 && !filtered.some(r => r.title.includes('Lists'))) {
-      filtered.push({
-        type: 'quickwin',
-        category: 'CRAFT - Readability',
-        title: 'Add Bullet Points or Lists',
-        description: 'Content lacks lists for better scannability.',
-        impact: 'Medium',
-        points: '+3 points',
-        howToFix: '1. Convert long paragraphs into bullet points\n2. Use numbered lists for steps\n3. Highlight key points',
-        example: '<ul><li>Improved readability</li><li>Better user engagement</li><li>Higher retention</li></ul>'
-      });
-    }
-  } else if (scanType === 'elite') {
-    // Elite-specific recommendations
-    if (wordCount < 2500 && !filtered.some(r => r.title.includes('2500'))) {
-      filtered.push({
-        type: 'elite_major',
-        category: 'CRAFT - Word Count',
-        title: 'Increase Content Length',
-        description: `Elite content requires 2500+ words. Current: ${wordCount} words.`,
-        impact: 'High',
-        points: '+8 points',
-        howToFix: '1. Add more depth to each section\n2. Include case studies\n3. Add statistics and expert quotes\n4. Expand FAQ section',
-        example: 'Elite articles are comprehensive guides covering all aspects of a topic.'
-      });
-    }
-  }
-  
-  return filtered;
-}
-
 // ============================================
 // TECHNICAL SCORE CALCULATION
 // ============================================
@@ -988,30 +908,7 @@ async function createAllTables() {
       )
     `);
     
-    // LTD CODES TABLE
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS ltd_codes (
-        id SERIAL PRIMARY KEY,
-        code VARCHAR(50) UNIQUE NOT NULL,
-        plan VARCHAR(50) NOT NULL,
-        max_uses INTEGER DEFAULT 1,
-        times_used INTEGER DEFAULT 0,
-        is_active BOOLEAN DEFAULT TRUE,
-        expires_at TIMESTAMP,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-    
-    // SETTINGS TABLE
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS settings (
-        key VARCHAR(100) PRIMARY KEY,
-        value TEXT,
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-    
-    // ELITE REWRITER JOBS TABLE
+    // ELITE REWRITER JOBS TABLE (NEW)
     await client.query(`
       CREATE TABLE IF NOT EXISTS elite_rewriter_jobs (
         id SERIAL PRIMARY KEY,
@@ -1029,6 +926,26 @@ async function createAllTables() {
         missing_elements JSONB DEFAULT '[]',
         requested_by VARCHAR(100),
         completed_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // ELITE SCANS TABLE (NEW)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS elite_scans (
+        id SERIAL PRIMARY KEY,
+        url TEXT NOT NULL,
+        score INTEGER,
+        elite_rating VARCHAR(50),
+        graaf_score INTEGER,
+        craft_score INTEGER,
+        technical_score INTEGER,
+        breakdown JSONB,
+        recommendations JSONB DEFAULT '[]',
+        missing_elements JSONB DEFAULT '[]',
+        potential_score INTEGER,
+        normal_score INTEGER,
+        score_difference INTEGER,
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
@@ -1082,8 +999,8 @@ async function createAllTables() {
       'CREATE INDEX IF NOT EXISTS idx_scans_created ON scans(created_at DESC)',
       'CREATE INDEX IF NOT EXISTS idx_leaderboard_score ON leaderboard(score DESC)',
       'CREATE INDEX IF NOT EXISTS idx_agencies_domain ON agencies(domain)',
-      'CREATE INDEX IF NOT EXISTS idx_elite_jobs_status ON elite_rewriter_jobs(status)',
-      'CREATE INDEX IF NOT EXISTS idx_elite_jobs_created ON elite_rewriter_jobs(created_at DESC)'
+      'CREATE INDEX IF NOT EXISTS idx_elite_scans_created ON elite_scans(created_at DESC)',
+      'CREATE INDEX IF NOT EXISTS idx_elite_rewriter_status ON elite_rewriter_jobs(status)'
     ];
     
     for (const query of indexQueries) {
@@ -1118,361 +1035,155 @@ app.use((req, res, next) => {
 app.use(express.static('public'));
 
 // ============================================
-// ELITE SCAN ENDPOINT (IMPROVED)
+// ENHANCED RECOMMENDATION FUNCTIONS
 // ============================================
-app.post('/api/scan/elite', async (req, res) => {
-  const { url } = req.body;
 
-  if (!url) {
-    return res.status(400).json({ success: false, error: 'URL required' });
-  }
-
-  let scanUrl = url;
-  if (!scanUrl.startsWith('http://') && !scanUrl.startsWith('https://')) {
-    scanUrl = 'https://' + scanUrl;
-  }
-
-  try {
-    console.log(`🏆 ELITE SCAN initiated: ${scanUrl}`);
-
-    const fetchResult = await fetchWithPuppeteer(scanUrl);
+function validateAndFilterRecommendations(recommendations, contentStats, scanType = 'standard') {
+  const filtered = [];
+  const { h1Count = 0, h2Count = 0, h3Count = 0, listCount = 0, wordCount = 0 } = contentStats || {};
+  
+  // Track which recommendation types we've already included
+  const includedTypes = new Set();
+  
+  for (const rec of recommendations) {
+    const recKey = rec.title.toLowerCase().replace(/\s+/g, '_');
     
-    if (!fetchResult.success) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Failed to fetch URL' 
-      });
+    // Skip if we already have this type of recommendation
+    if (includedTypes.has(recKey)) {
+      console.log(`↪️ Skipping duplicate recommendation: ${rec.title}`);
+      continue;
     }
-
-    const rawHtml = fetchResult.rawHtml;
-    const contentForAI = extractContentForAI(fetchResult);
-    const stats = contentForAI.stats || {};
     
-    let eliteResult, eliteRecommendations = [];
-    let graafScore = 0, craftScore = 0, technicalScore = 0;
+    // Skip generic heading recommendation if structure is good
+    if (rec.title.includes('Heading Structure') || rec.title.includes('heading hierarchy')) {
+      if (h1Count === 1 && h2Count >= 2 && h3Count >= 1) {
+        console.log('✅ Skipping heading recommendation - structure is good');
+        continue;
+      }
+    }
     
-    // Try Elite AI scoring first
-    try {
-      if (!process.env.ANTHROPIC_API_KEY) {
-        throw new Error('ANTHROPIC_API_KEY not configured');
+    // Skip internal links for short content
+    if (rec.title.includes('Internal Links') || rec.title.includes('internal linking')) {
+      if (wordCount < 500) {
+        console.log('✅ Skipping internal links - content too short');
+        continue;
       }
-
-      eliteResult = await scoreWithAI(contentForAI, 'elite');
-      
-      if (validateAIScores(eliteResult, 'elite')) {
-        // Calculate scores from elite framework
-        graafScore = eliteResult.graaf.keyword_optimization + 
-                    eliteResult.graaf.statistics_sources + 
-                    eliteResult.graaf.expert_quotes + 
-                    eliteResult.graaf.case_studies + 
-                    eliteResult.graaf.author_authority;
-        
-        craftScore = eliteResult.craft.word_count + 
-                    eliteResult.craft.readability + 
-                    eliteResult.craft.faq_section + 
-                    eliteResult.craft.visual_elements;
-        
-        technicalScore = eliteResult.technical.meta_tags + 
-                        eliteResult.technical.schema_markup + 
-                        eliteResult.technical.internal_links + 
-                        eliteResult.technical.external_links;
-        
-        eliteRecommendations = eliteResult.recommendations || [];
-        
-        console.log(`✅ Elite AI scored: GRAAF=${graafScore}/50, CRAFT=${craftScore}/30, TECHNICAL=${technicalScore}/20`);
-      } else {
-        throw new Error('Elite AI scores validation failed');
+    }
+    
+    // Skip lists recommendation if we have enough lists
+    if (rec.title.includes('Lists') || rec.title.includes('bullet points')) {
+      if (listCount >= 3) {
+        console.log('✅ Skipping lists recommendation - enough lists present');
+        continue;
       }
-      
-    } catch (aiError) {
-      console.error('Elite AI failed, using enhanced fallback:', aiError.message);
-      
-      // Enhanced fallback scoring for elite
-      const wordCount = stats.wordCount || 0;
-      
-      // GRAAF scoring (elite expectations)
-      graafScore += wordCount > 2000 ? 10 : wordCount > 1000 ? 7 : 4; // Keyword optimization
-      graafScore += 6; // Statistics (assume some)
-      graafScore += 5; // Expert quotes (assume some)
-      graafScore += 4; // Case studies
-      graafScore += 6; // Author authority
-      graafScore = Math.min(50, graafScore);
-      
-      // CRAFT scoring (elite expectations)
-      craftScore += wordCount >= 2500 ? 8 : wordCount >= 2000 ? 6 : wordCount >= 1500 ? 4 : 2;
-      craftScore += 5; // Readability
-      craftScore += 6; // FAQ section
-      craftScore += 5; // Visual elements
-      craftScore = Math.min(30, craftScore);
-      
-      // Technical scoring (elite)
-      technicalScore = calculateTechnicalScore(rawHtml, true);
-      
-      eliteRecommendations = [{
-        type: 'elite_major',
-        category: 'ELITE FRAMEWORK',
-        title: 'Upgrade to Elite Content',
-        description: 'This content needs significant improvement to reach elite 95+ scores',
+    }
+    
+    // Ensure recommendation is specific enough (not too generic)
+    if (rec.title.length < 15 || rec.description.length < 30) {
+      console.log(`⚠️ Skipping too generic recommendation: ${rec.title}`);
+      continue;
+    }
+    
+    includedTypes.add(recKey);
+    filtered.push(rec);
+  }
+  
+  // Add contextual recommendations based on actual content issues
+  if (scanType === 'standard') {
+    // Ensure we have a good mix of recommendation types
+    const recommendationTypes = filtered.map(r => r.category.split(' - ')[0]);
+    
+    // Add missing H1 if needed
+    if (h1Count === 0 && !filtered.some(r => r.title.includes('H1') || r.title.includes('heading'))) {
+      filtered.push({
+        type: 'major',
+        category: 'CRAFT - Structure',
+        title: 'Add Primary H1 Heading',
+        description: 'No main heading found. Critical for SEO and user experience.',
         impact: 'High',
-        points: '+25 points',
-        howToFix: '1. Add expert quotes with full attribution\n2. Include 8+ statistics from 2023-2025\n3. Add 2+ detailed case studies\n4. Expand to 2500+ words\n5. Add comprehensive FAQ section\n6. Implement all schema markup',
-        example: 'Elite content includes direct answer boxes, TL;DR sections, case studies, and complete technical implementation.'
-      }];
-    }
-    
-    // Filter recommendations
-    eliteRecommendations = validateAndFilterRecommendations(eliteRecommendations, stats, 'elite');
-    
-    // Calculate total score (adjusted for elite)
-    const totalScore = graafScore + craftScore + technicalScore;
-    const eliteRating = totalScore >= 90 ? 'elite' : 
-                       totalScore >= 80 ? 'excellent' : 
-                       totalScore >= 70 ? 'good' : 
-                       totalScore >= 60 ? 'average' : 'poor';
-    
-    console.log(`🏆 ELITE SCAN COMPLETE: ${scanUrl}`);
-    console.log(`   Total Score: ${totalScore}/100 (${eliteRating})`);
-    console.log(`   Breakdown: GRAAF=${graafScore}/50, CRAFT=${craftScore}/30, TECH=${technicalScore}/20`);
-    
-    const result = {
-      success: true,
-      url: scanUrl,
-      score: totalScore,
-      quality: eliteRating,
-      elite_rating: eliteRating,
-      scoring_method: 'elite',
-      metrics: {
-        graaf: graafScore,
-        craft: craftScore,
-        technical: technicalScore
-      },
-      breakdown: {
-        graaf: {
-          total: graafScore,
-          max: 50,
-          percentage: Math.round((graafScore / 50) * 100),
-          items: eliteResult?.graaf || { keyword_optimization: 0, statistics_sources: 0, expert_quotes: 0, case_studies: 0, author_authority: 0 }
-        },
-        craft: {
-          total: craftScore,
-          max: 30,
-          percentage: Math.round((craftScore / 30) * 100),
-          items: eliteResult?.craft || { word_count: 0, readability: 0, faq_section: 0, visual_elements: 0 }
-        },
-        technical: {
-          total: technicalScore,
-          max: 20,
-          percentage: Math.round((technicalScore / 20) * 100),
-          items: eliteResult?.technical || { meta_tags: 0, schema_markup: 0, internal_links: 0, external_links: 0 }
-        }
-      },
-      recommendations: eliteRecommendations,
-      content_stats: stats,
-      details: {
-        is_elite: eliteRating === 'elite',
-        potential_score: Math.min(100, totalScore + 20),
-        missing_elements: eliteResult?.missing_elements || [],
-        framework: 'ContentScale Elite Framework'
-      },
-      timestamp: new Date().toISOString()
-    };
-    
-    // Save to database
-    try {
-      await pool.query(
-        `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, 
-                          breakdown, recommendations, scan_type)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [scanUrl, totalScore, eliteRating, graafScore, craftScore, technicalScore,
-         JSON.stringify(result.breakdown), JSON.stringify(eliteRecommendations), 'elite']
-      );
-    } catch (dbError) {
-      console.error('Elite scan DB save error:', dbError.message);
-    }
-    
-    res.json(result);
-    
-  } catch (error) {
-    console.error('Elite scan error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// ============================================
-// ELITE REWRITER ENDPOINT (GUARANTEED 95+ SCORES)
-// ============================================
-app.post('/api/rewrite/elite', async (req, res) => {
-  try {
-    const { url, target_score = 95, keyword, topic } = req.body;
-    
-    if (!url) {
-      return res.status(400).json({ success: false, error: 'URL required' });
-    }
-    
-    let scanUrl = url;
-    if (!scanUrl.startsWith('http://') && !scanUrl.startsWith('https://')) {
-      scanUrl = 'https://' + scanUrl;
-    }
-    
-    console.log(`🎯 ELITE REWRITER initiated for: ${scanUrl}`);
-    
-    // First, analyze the current content with elite scanner
-    const fetchResult = await fetchWithPuppeteer(scanUrl);
-    
-    if (!fetchResult.success) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Failed to fetch URL for analysis' 
+        points: '+8 points',
+        howToFix: '1. Create ONE descriptive H1 heading\n2. Include primary keyword naturally\n3. Place at beginning of content\n4. Make it engaging and clear',
+        example: '<h1>Complete Guide to SEO Content Optimization in 2024</h1>'
       });
     }
     
-    const contentForAI = extractContentForAI(fetchResult);
-    const stats = contentForAI.stats || {};
-    
-    // Create rewriter job
-    const jobResult = await pool.query(
-      `INSERT INTO elite_rewriter_jobs (original_url, original_content, original_score, target_score, status, requested_by)
-       VALUES ($1, $2, $3, $4, 'processing', 'api') RETURNING id`,
-      [scanUrl, contentForAI.content.substring(0, 5000), stats.wordCount || 0, target_score]
-    );
-    
-    const jobId = jobResult.rows[0].id;
-    
-    // Build elite rewriter prompt with context
-    const eliteRewriterContext = `${ELITE_REWRITER_PROMPT}
-
-ORIGINAL CONTENT ANALYSIS:
-- Current word count: ${stats.wordCount || 0}
-- H1 headings: ${stats.h1Count || 0}
-- H2 headings: ${stats.h2Count || 0}
-- H3 headings: ${stats.h3Count || 0}
-- Target keyword: ${keyword || 'main topic'}
-- Target topic: ${topic || 'comprehensive guide'}
-
-MISSION:
-Transform this content into ELITE 95-100/100 scoring article following ALL framework requirements.
-
-ORIGINAL CONTENT:
-${contentForAI.content.substring(0, 4000)}
-
-YOUR TASK:
-Rewrite this entire content to achieve ${target_score}/100 score. Include ALL required sections.
-Structure exactly as specified in the framework.`;
-
-    // Call AI for rewriting
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 120000);
-
-    try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01'
-        },
-        body: JSON.stringify({
-          model: 'claude-3-5-sonnet-20241022',
-          max_tokens: 8000,
-          temperature: 0.7,
-          messages: [{
-            role: 'user',
-            content: eliteRewriterContext
-          }]
-        })
+    // Add subheadings if needed
+    if (h2Count < 2 && wordCount > 500 && !filtered.some(r => r.title.includes('H2') || r.title.includes('subheading'))) {
+      filtered.push({
+        type: 'medium',
+        category: 'CRAFT - Structure',
+        title: 'Add More Section Subheadings',
+        description: `Only ${h2Count} H2 subheadings found. Need at least 2-3 for better content organization.`,
+        impact: 'Medium',
+        points: '+5 points',
+        howToFix: '1. Identify main topics within content\n2. Add descriptive H2 headings for each section\n3. Use keyword variations naturally\n4. Break content into logical sections',
+        example: '<h2>Key Benefits of Content Optimization</h2>'
       });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`AI rewrite failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const rewrittenContent = data.content[0].text;
-      
-      // Analyze the rewritten content
-      const rewrittenWordCount = rewrittenContent.split(/\s+/).length;
-      const hasDirectAnswer = rewrittenContent.includes('DIRECT ANSWER') || 
-                             rewrittenContent.includes('Quick Answer') || 
-                             (rewrittenContent.match(/\[H1\]:/g) || []).length > 0;
-      const hasFAQ = (rewrittenContent.match(/\?\s*$/gm) || []).length >= 5;
-      const hasCaseStudies = rewrittenContent.includes('Case Study') || 
-                            rewrittenContent.includes('case study');
-      
-      // Update job with results
-      await pool.query(
-        `UPDATE elite_rewriter_jobs 
-         SET rewritten_content = $1, 
-             status = 'completed', 
-             word_count = $2, 
-             completed_at = NOW(),
-             missing_elements = $3
-         WHERE id = $4`,
-        [rewrittenContent.substring(0, 15000), rewrittenWordCount, 
-         JSON.stringify({
-           has_direct_answer: hasDirectAnswer,
-           has_faq: hasFAQ,
-           has_case_studies: hasCaseStudies,
-           word_count_achieved: rewrittenWordCount >= 2500
-         }), jobId]
-      );
-      
-      res.json({
-        success: true,
-        job_id: jobId,
-        rewritten_content: rewrittenContent,
-        metrics: {
-          original_word_count: stats.wordCount || 0,
-          rewritten_word_count: rewrittenWordCount,
-          improvement: `${Math.round((rewrittenWordCount / Math.max(1, stats.wordCount || 1)) * 100)}%`,
-          has_direct_answer: hasDirectAnswer,
-          has_faq: hasFAQ,
-          has_case_studies: hasCaseStudies,
-          elite_ready: rewrittenWordCount >= 2500 && hasDirectAnswer && hasFAQ
-        },
-        next_steps: [
-          '1. Copy the rewritten content',
-          '2. Publish on your website',
-          '3. Run Elite Scan to verify 95+ score',
-          '4. Monitor rankings for improvement'
-        ],
-        guarantee: 'Content follows Elite Framework for guaranteed 95+ scores when properly implemented'
-      });
-
-    } catch (aiError) {
-      clearTimeout(timeoutId);
-      await pool.query(
-        `UPDATE elite_rewriter_jobs SET status = 'failed' WHERE id = $1`,
-        [jobId]
-      );
-      throw aiError;
     }
-
-  } catch (error) {
-    console.error('Elite rewriter error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Elite rewrite failed',
-      details: error.message
-    });
+    
+    // Add readability improvement for long paragraphs
+    if (wordCount > 800 && !recommendationTypes.includes('CRAFT')) {
+      filtered.push({
+        type: 'quickwin',
+        category: 'CRAFT - Readability',
+        title: 'Improve Content Scannability',
+        description: 'Content could be more scannable for better user engagement.',
+        impact: 'Medium',
+        points: '+4 points',
+        howToFix: '1. Break long paragraphs into shorter ones (3-4 sentences)\n2. Use more bullet points for lists\n3. Add bold text for key points\n4. Use subheadings to guide readers',
+        example: 'Instead of one 10-sentence paragraph, create three 3-4 sentence paragraphs with clear focus.'
+      });
+    }
+    
+    // Add credibility improvement if no author info or quotes
+    if (!recommendationTypes.includes('GRAAF') && wordCount > 300) {
+      filtered.push({
+        type: 'major',
+        category: 'GRAAF - Credibility',
+        title: 'Add Authority Signals',
+        description: 'Content lacks expert credibility signals that build trust with readers.',
+        impact: 'High',
+        points: '+12 points',
+        howToFix: '1. Add author bio with credentials\n2. Include 1-2 expert quotes with attribution\n3. Cite authoritative sources\n4. Add "last updated" date',
+        example: 'Add: "According to [Expert Name], [Title] at [Company], \'[Quote]\'" with link to their profile.'
+      });
+    }
+    
+    // Limit to 6-8 recommendations max
+    if (filtered.length > 8) {
+      filtered.length = 8;
+    }
+  } else if (scanType === 'elite') {
+    // Elite-specific recommendations remain the same
+    if (wordCount < 2500 && !filtered.some(r => r.title.includes('2500'))) {
+      filtered.push({
+        type: 'elite_major',
+        category: 'CRAFT - Word Count',
+        title: 'Increase to Elite Content Length',
+        description: `Elite content requires 2500+ words. Current: ${wordCount} words.`,
+        impact: 'High',
+        points: '+8 points',
+        howToFix: '1. Add more depth to each section\n2. Include case studies with metrics\n3. Add statistics and expert quotes\n4. Expand FAQ section\n5. Add practical examples',
+        example: 'Elite articles are comprehensive guides covering all aspects with data and examples.'
+      });
+    }
   }
-});
-
-// ============================================
-// GET ELITE REWRITER JOBS
-// ============================================
-app.get('/api/rewriter/jobs', async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT * FROM elite_rewriter_jobs ORDER BY created_at DESC LIMIT 50`
-    );
-    res.json({ success: true, jobs: result.rows });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+  
+  // Ensure recommendations are unique and varied
+  const uniqueFiltered = [];
+  const seenTitles = new Set();
+  
+  for (const rec of filtered) {
+    const simpleTitle = rec.title.toLowerCase().replace(/[^a-z]/g, '');
+    if (!seenTitles.has(simpleTitle)) {
+      seenTitles.add(simpleTitle);
+      uniqueFiltered.push(rec);
+    }
   }
-});
+  
+  console.log(`📊 Filtered recommendations: ${uniqueFiltered.length} unique suggestions`);
+  return uniqueFiltered;
+}
 
 // ============================================
 // STANDARD SCAN ENDPOINT (IMPROVED)
@@ -1800,7 +1511,549 @@ app.post('/api/scan', async (req, res) => {
 });
 
 // ============================================
-// QUICK SCAN ENDPOINT (SIMPLE VERSION)
+// ELITE SCAN ENDPOINT
+// ============================================
+app.post('/api/scan/elite', async (req, res) => {
+  const { url, normal_score } = req.body;
+
+  if (!url) {
+    return res.status(400).json({ success: false, error: 'URL required' });
+  }
+
+  let scanUrl = url;
+  if (!scanUrl.startsWith('http://') && !scanUrl.startsWith('https://')) {
+    scanUrl = 'https://' + scanUrl;
+  }
+
+  try {
+    console.log(`🏆 ELITE SCAN initiated: ${scanUrl}`);
+
+    const fetchResult = await fetchWithPuppeteer(scanUrl);
+    
+    if (!fetchResult.success) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Failed to fetch URL' 
+      });
+    }
+
+    const rawHtml = fetchResult.rawHtml;
+    const contentForAI = extractContentForAI(fetchResult);
+    const stats = contentForAI.stats || {};
+    
+    let eliteResult, eliteRecommendations = [];
+    let graafScore = 0, craftScore = 0, technicalScore = 0;
+    
+    // Try Elite AI scoring first
+    try {
+      if (!process.env.ANTHROPIC_API_KEY) {
+        throw new Error('ANTHROPIC_API_KEY not configured');
+      }
+
+      eliteResult = await scoreWithAI(contentForAI, 'elite');
+      
+      if (validateAIScores(eliteResult, 'elite')) {
+        // Calculate scores from elite framework
+        graafScore = eliteResult.graaf.keyword_optimization + 
+                    eliteResult.graaf.statistics_sources + 
+                    eliteResult.graaf.expert_quotes + 
+                    eliteResult.graaf.case_studies + 
+                    eliteResult.graaf.author_authority;
+        
+        craftScore = eliteResult.craft.word_count + 
+                    eliteResult.craft.readability + 
+                    eliteResult.craft.faq_section + 
+                    eliteResult.craft.visual_elements;
+        
+        technicalScore = eliteResult.technical.meta_tags + 
+                        eliteResult.technical.schema_markup + 
+                        eliteResult.technical.internal_links + 
+                        eliteResult.technical.external_links;
+        
+        eliteRecommendations = eliteResult.recommendations || [];
+        
+        console.log(`✅ Elite AI scored: GRAAF=${graafScore}/50, CRAFT=${craftScore}/30, TECHNICAL=${technicalScore}/20`);
+      } else {
+        throw new Error('Elite AI scores validation failed');
+      }
+      
+    } catch (aiError) {
+      console.error('Elite AI failed, using enhanced fallback:', aiError.message);
+      
+      // Enhanced fallback scoring for elite
+      const wordCount = stats.wordCount || 0;
+      
+      // GRAAF scoring (elite expectations)
+      graafScore += wordCount > 2000 ? 10 : wordCount > 1000 ? 7 : 4; // Keyword optimization
+      graafScore += 6; // Statistics (assume some)
+      graafScore += 5; // Expert quotes (assume some)
+      graafScore += 4; // Case studies
+      graafScore += 6; // Author authority
+      graafScore = Math.min(50, graafScore);
+      
+      // CRAFT scoring (elite expectations)
+      craftScore += wordCount >= 2500 ? 8 : wordCount >= 2000 ? 6 : wordCount >= 1500 ? 4 : 2;
+      craftScore += 5; // Readability
+      craftScore += 6; // FAQ section
+      craftScore += 5; // Visual elements
+      craftScore = Math.min(30, craftScore);
+      
+      // Technical scoring (elite)
+      technicalScore = calculateTechnicalScore(rawHtml, true);
+      
+      eliteRecommendations = [{
+        type: 'elite_major',
+        category: 'ELITE FRAMEWORK',
+        title: 'Upgrade to Elite Content',
+        description: 'This content needs significant improvement to reach elite 95+ scores',
+        impact: 'High',
+        points: '+25 points',
+        howToFix: '1. Add expert quotes with full attribution\n2. Include 8+ statistics from 2023-2025\n3. Add 2+ detailed case studies\n4. Expand to 2500+ words\n5. Add comprehensive FAQ section\n6. Implement all schema markup',
+        example: 'Elite content includes direct answer boxes, TL;DR sections, case studies, and complete technical implementation.'
+      }];
+    }
+    
+    // Filter recommendations
+    eliteRecommendations = validateAndFilterRecommendations(eliteRecommendations, stats, 'elite');
+    
+    // Calculate total score (adjusted for elite)
+    const totalScore = graafScore + craftScore + technicalScore;
+    const eliteRating = totalScore >= 90 ? 'elite' : 
+                       totalScore >= 80 ? 'excellent' : 
+                       totalScore >= 70 ? 'good' : 
+                       totalScore >= 60 ? 'average' : 'poor';
+    
+    // Calculate score difference
+    const scoreDifference = normal_score ? (totalScore - normal_score) : 0;
+    const potentialScore = Math.min(100, totalScore + 20);
+    
+    console.log(`🏆 ELITE SCAN COMPLETE: ${scanUrl}`);
+    console.log(`   Total Score: ${totalScore}/100 (${eliteRating})`);
+    console.log(`   Breakdown: GRAAF=${graafScore}/50, CRAFT=${craftScore}/30, TECH=${technicalScore}/20`);
+    console.log(`   Score Difference: +${scoreDifference} points`);
+    
+    const result = {
+      success: true,
+      url: scanUrl,
+      score: totalScore,
+      quality: eliteRating,
+      elite_rating: eliteRating,
+      scoring_method: 'elite',
+      metrics: {
+        graaf: graafScore,
+        craft: craftScore,
+        technical: technicalScore
+      },
+      breakdown: {
+        graaf: {
+          total: graafScore,
+          max: 50,
+          percentage: Math.round((graafScore / 50) * 100),
+          items: eliteResult?.graaf || { keyword_optimization: 0, statistics_sources: 0, expert_quotes: 0, case_studies: 0, author_authority: 0 }
+        },
+        craft: {
+          total: craftScore,
+          max: 30,
+          percentage: Math.round((craftScore / 30) * 100),
+          items: eliteResult?.craft || { word_count: 0, readability: 0, faq_section: 0, visual_elements: 0 }
+        },
+        technical: {
+          total: technicalScore,
+          max: 20,
+          percentage: Math.round((technicalScore / 20) * 100),
+          items: eliteResult?.technical || { meta_tags: 0, schema_markup: 0, internal_links: 0, external_links: 0 }
+        }
+      },
+      recommendations: eliteRecommendations,
+      content_stats: stats,
+      comparison: {
+        normal_score: normal_score || null,
+        elite_score: totalScore,
+        score_difference: scoreDifference,
+        improvement_percentage: normal_score ? Math.round((scoreDifference / normal_score) * 100) : 0
+      },
+      details: {
+        is_elite: eliteRating === 'elite',
+        potential_score: potentialScore,
+        missing_elements: eliteResult?.missing_elements || [],
+        framework: 'ContentScale Elite Framework'
+      },
+      timestamp: new Date().toISOString()
+    };
+    
+    // Save to elite_scans table
+    try {
+      await pool.query(
+        `INSERT INTO elite_scans (url, score, elite_rating, graaf_score, craft_score, technical_score, 
+                                 breakdown, recommendations, missing_elements, potential_score, 
+                                 normal_score, score_difference)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        [scanUrl, totalScore, eliteRating, graafScore, craftScore, technicalScore,
+         JSON.stringify(result.breakdown), JSON.stringify(eliteRecommendations),
+         JSON.stringify(eliteResult?.missing_elements || []), potentialScore,
+         normal_score || null, scoreDifference]
+      );
+    } catch (dbError) {
+      console.error('Elite scan DB save error:', dbError.message);
+    }
+    
+    res.json(result);
+    
+  } catch (error) {
+    console.error('Elite scan error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// ELITE REWRITER ENDPOINT
+// ============================================
+app.post('/api/rewrite/elite', async (req, res) => {
+  try {
+    const { url, target_score = 95, keyword, topic } = req.body;
+    
+    if (!url) {
+      return res.status(400).json({ success: false, error: 'URL required' });
+    }
+    
+    let scanUrl = url;
+    if (!scanUrl.startsWith('http://') && !scanUrl.startsWith('https://')) {
+      scanUrl = 'https://' + scanUrl;
+    }
+    
+    console.log(`🎯 ELITE REWRITER initiated for: ${scanUrl}`);
+    
+    // First, analyze the current content with elite scanner
+    const fetchResult = await fetchWithPuppeteer(scanUrl);
+    
+    if (!fetchResult.success) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Failed to fetch URL for analysis' 
+      });
+    }
+    
+    const contentForAI = extractContentForAI(fetchResult);
+    const stats = contentForAI.stats || {};
+    
+    // Create rewriter job
+    const jobResult = await pool.query(
+      `INSERT INTO elite_rewriter_jobs (original_url, original_content, original_score, target_score, status, requested_by)
+       VALUES ($1, $2, $3, $4, 'processing', 'api') RETURNING id`,
+      [scanUrl, contentForAI.content.substring(0, 5000), stats.wordCount || 0, target_score]
+    );
+    
+    const jobId = jobResult.rows[0].id;
+    
+    // Build elite rewriter prompt with context
+    const eliteRewriterContext = `${ELITE_REWRITER_PROMPT}
+
+ORIGINAL CONTENT ANALYSIS:
+- Current word count: ${stats.wordCount || 0}
+- H1 headings: ${stats.h1Count || 0}
+- H2 headings: ${stats.h2Count || 0}
+- H3 headings: ${stats.h3Count || 0}
+- Target keyword: ${keyword || 'main topic'}
+- Target topic: ${topic || 'comprehensive guide'}
+
+MISSION:
+Transform this content into ELITE 95-100/100 scoring article following ALL framework requirements.
+
+ORIGINAL CONTENT:
+${contentForAI.content.substring(0, 4000)}
+
+YOUR TASK:
+Rewrite this entire content to achieve ${target_score}/100 score. Include ALL required sections.
+Structure exactly as specified in the framework.`;
+
+    // Call AI for rewriting
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
+
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 8000,
+          temperature: 0.7,
+          messages: [{
+            role: 'user',
+            content: eliteRewriterContext
+          }]
+        })
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`AI rewrite failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const rewrittenContent = data.content[0].text;
+      
+      // Analyze the rewritten content
+      const rewrittenWordCount = rewrittenContent.split(/\s+/).length;
+      const hasDirectAnswer = rewrittenContent.includes('DIRECT ANSWER') || 
+                             rewrittenContent.includes('Quick Answer') || 
+                             (rewrittenContent.match(/\[H1\]:/g) || []).length > 0;
+      const hasFAQ = (rewrittenContent.match(/\?\s*$/gm) || []).length >= 5;
+      const hasCaseStudies = rewrittenContent.includes('Case Study') || 
+                            rewrittenContent.includes('case study');
+      
+      // Update job with results
+      await pool.query(
+        `UPDATE elite_rewriter_jobs 
+         SET rewritten_content = $1, 
+             status = 'completed', 
+             word_count = $2, 
+             completed_at = NOW(),
+             missing_elements = $3
+         WHERE id = $4`,
+        [rewrittenContent.substring(0, 15000), rewrittenWordCount, 
+         JSON.stringify({
+           has_direct_answer: hasDirectAnswer,
+           has_faq: hasFAQ,
+           has_case_studies: hasCaseStudies,
+           word_count_achieved: rewrittenWordCount >= 2500
+         }), jobId]
+      );
+      
+      res.json({
+        success: true,
+        job_id: jobId,
+        rewritten_content: rewrittenContent,
+        metrics: {
+          original_word_count: stats.wordCount || 0,
+          rewritten_word_count: rewrittenWordCount,
+          improvement: `${Math.round((rewrittenWordCount / Math.max(1, stats.wordCount || 1)) * 100)}%`,
+          has_direct_answer: hasDirectAnswer,
+          has_faq: hasFAQ,
+          has_case_studies: hasCaseStudies,
+          elite_ready: rewrittenWordCount >= 2500 && hasDirectAnswer && hasFAQ
+        },
+        next_steps: [
+          '1. Copy the rewritten content',
+          '2. Publish on your website',
+          '3. Run Elite Scan to verify 95+ score',
+          '4. Monitor rankings for improvement'
+        ],
+        guarantee: 'Content follows Elite Framework for guaranteed 95+ scores when properly implemented'
+      });
+
+    } catch (aiError) {
+      clearTimeout(timeoutId);
+      await pool.query(
+        `UPDATE elite_rewriter_jobs SET status = 'failed' WHERE id = $1`,
+        [jobId]
+      );
+      throw aiError;
+    }
+
+  } catch (error) {
+    console.error('Elite rewriter error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Elite rewrite failed',
+      details: error.message
+    });
+  }
+});
+
+// ============================================
+// GET ELITE REWRITER JOBS
+// ============================================
+app.get('/api/rewriter/jobs', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM elite_rewriter_jobs ORDER BY created_at DESC LIMIT 50`
+    );
+    res.json({ success: true, jobs: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// GET ELITE SCANS FOR ADMIN
+// ============================================
+app.get('/api/admin/elite-scans', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM elite_scans ORDER BY created_at DESC LIMIT 100
+    `);
+    res.json({ success: true, scans: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// GET ELITE ANALYSIS STATS
+// ============================================
+app.get('/api/admin/elite-analytics', async (req, res) => {
+  try {
+    const [jobStats, scanStats, recentEliteScans] = await Promise.all([
+      pool.query(`
+        SELECT 
+          COUNT(*) as total_jobs,
+          COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed,
+          COUNT(CASE WHEN status = 'processing' THEN 1 END) as processing,
+          COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed,
+          AVG(word_count) as avg_word_count,
+          AVG(target_score) as avg_target_score
+        FROM elite_rewriter_jobs
+      `),
+      pool.query(`
+        SELECT 
+          COUNT(*) as total_elite_scans,
+          AVG(score) as avg_elite_score,
+          AVG(score_difference) as avg_improvement,
+          COUNT(CASE WHEN elite_rating = 'elite' THEN 1 END) as elite_count,
+          COUNT(CASE WHEN elite_rating = 'excellent' THEN 1 END) as excellent_count,
+          COUNT(CASE WHEN elite_rating = 'good' THEN 1 END) as good_count
+        FROM elite_scans
+      `),
+      pool.query(`
+        SELECT es.*, s.score as normal_score, s.quality as normal_quality
+        FROM elite_scans es
+        LEFT JOIN scans s ON es.url = s.url AND s.scan_type = 'manual'
+        ORDER BY es.created_at DESC LIMIT 10
+      `)
+    ]);
+    
+    res.json({
+      success: true,
+      analytics: {
+        rewriter_jobs: jobStats.rows[0] || {},
+        elite_scans: scanStats.rows[0] || {},
+        recent_comparisons: recentEliteScans.rows || []
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// ADMIN SETTINGS ENDPOINTS (RESTORED)
+// ============================================
+
+app.get('/api/admin/settings', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM settings ORDER BY key');
+    res.json({ success: true, settings: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/admin/settings', async (req, res) => {
+  try {
+    const { settings } = req.body;
+    if (!settings || typeof settings !== 'object') {
+      return res.status(400).json({ success: false, error: 'Invalid settings data' });
+    }
+
+    for (const [key, value] of Object.entries(settings)) {
+      await pool.query(
+        'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()',
+        [key, value]
+      );
+    }
+
+    res.json({ success: true, message: 'Settings updated' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// ADMIN STATS (RESTORED)
+// ============================================
+
+app.get('/api/admin/stats', async (req, res) => {
+  try {
+    const [
+      agencies, clients, scans, leaderboard,
+      todayScans, eliteJobs, eliteScans
+    ] = await Promise.all([
+      pool.query('SELECT COUNT(*) FROM agencies').catch(e => ({ rows: [{ count: '0' }] })),
+      pool.query('SELECT COUNT(*) FROM clients').catch(e => ({ rows: [{ count: '0' }] })),
+      pool.query('SELECT COUNT(*) FROM scans').catch(e => ({ rows: [{ count: '0' }] })),
+      pool.query('SELECT COUNT(*) FROM leaderboard WHERE is_opted_out = FALSE').catch(e => ({ rows: [{ count: '0' }] })),
+      pool.query("SELECT COUNT(*) FROM scans WHERE DATE(created_at) = CURRENT_DATE").catch(e => ({ rows: [{ count: '0' }] })),
+      pool.query("SELECT COUNT(*) FROM elite_rewriter_jobs WHERE status = 'completed'").catch(e => ({ rows: [{ count: '0' }] })),
+      pool.query("SELECT COUNT(*) FROM elite_scans").catch(e => ({ rows: [{ count: '0' }] }))
+    ]);
+    
+    res.json({
+      success: true,
+      stats: {
+        total_agencies: parseInt(agencies.rows[0].count) || 0,
+        total_clients: parseInt(clients.rows[0].count) || 0,
+        total_scans: parseInt(scans.rows[0].count) || 0,
+        leaderboard_entries: parseInt(leaderboard.rows[0].count) || 0,
+        today_scans: parseInt(todayScans.rows[0].count) || 0,
+        elite_rewrites: parseInt(eliteJobs.rows[0].count) || 0,
+        elite_scans: parseInt(eliteScans.rows[0].count) || 0,
+        active_scanners: 1
+      }
+    });
+  } catch (error) {
+    res.json({ success: true, stats: { 
+      total_agencies: 0, total_clients: 0, total_scans: 0, leaderboard_entries: 0,
+      today_scans: 0, elite_rewrites: 0, elite_scans: 0, active_scanners: 1
+    } });
+  }
+});
+
+// ============================================
+// OTHER ADMIN ENDPOINTS (RESTORED)
+// ============================================
+
+app.get('/api/admin/scans', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT s.*, a.name as agency_name FROM scans s 
+      LEFT JOIN agencies a ON s.agency_id = a.id ORDER BY s.created_at DESC LIMIT 100
+    `);
+    res.json({ success: true, scans: result.rows });
+  } catch (error) {
+    res.json({ success: true, scans: [] });
+  }
+});
+
+app.get('/api/admin/share-links', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM share_links ORDER BY created_at DESC');
+    res.json({ success: true, share_links: result.rows });
+  } catch (error) {
+    res.json({ success: true, share_links: [] });
+  }
+});
+
+app.get('/api/admin/leaderboard', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT *, ROW_NUMBER() OVER (ORDER BY score DESC) as rank 
+      FROM leaderboard WHERE is_opted_out = FALSE ORDER BY score DESC LIMIT 100
+    `);
+    res.json({ success: true, entries: result.rows });
+  } catch (error) {
+    res.json({ success: true, entries: [] });
+  }
+});
+
+// ============================================
+// QUICK SCAN ENDPOINT
 // ============================================
 app.post('/api/scan/quick', async (req, res) => {
   const { url } = req.body;
@@ -1879,203 +2132,6 @@ app.post('/api/scan/quick', async (req, res) => {
 });
 
 // ============================================
-// EXISTING ENDPOINTS (PRESERVED)
-// ============================================
-
-// HTML routes
-app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/admin-dashboard.html'));
-});
-
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
-});
-
-app.get('/seo-contentscore', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/unified-scan-page.html'));
-});
-
-app.get('/ultimate', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/ultimate-scanner.html'));
-});
-
-// Admin login
-app.post('/api/setup/verify-admin', async (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) {
-    return res.status(400).json({ success: false, error: 'Credentials required' });
-  }
-  try {
-    const result = await pool.query('SELECT * FROM super_admins WHERE username = $1 AND is_active = TRUE', [username]);
-    if (result.rows.length === 0) {
-      return res.status(401).json({ success: false, error: 'Invalid credentials' });
-    }
-    const admin = result.rows[0];
-    if (password !== admin.password_hash) {
-      return res.status(401).json({ success: false, error: 'Invalid credentials' });
-    }
-    await pool.query('UPDATE super_admins SET last_login = NOW() WHERE id = $1', [admin.id]);
-    res.json({
-      success: true,
-      admin_id: admin.id,
-      admin: { id: admin.id, username: admin.username, full_name: admin.full_name, role: admin.role }
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Server error' });
-  }
-});
-
-// Admin settings
-app.get('/api/admin/settings', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM settings ORDER BY key');
-    res.json({ success: true, settings: result.rows });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.post('/api/admin/settings', async (req, res) => {
-  try {
-    const { settings } = req.body;
-    if (!settings || typeof settings !== 'object') {
-      return res.status(400).json({ success: false, error: 'Invalid settings data' });
-    }
-
-    for (const [key, value] of Object.entries(settings)) {
-      await pool.query(
-        'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()',
-        [key, value]
-      );
-    }
-
-    res.json({ success: true, message: 'Settings updated' });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Admin stats
-app.get('/api/admin/stats', async (req, res) => {
-  try {
-    const [
-      agencies, clients, scans, leaderboard,
-      todayScans, eliteJobs
-    ] = await Promise.all([
-      pool.query('SELECT COUNT(*) FROM agencies').catch(e => ({ rows: [{ count: '0' }] })),
-      pool.query('SELECT COUNT(*) FROM clients').catch(e => ({ rows: [{ count: '0' }] })),
-      pool.query('SELECT COUNT(*) FROM scans').catch(e => ({ rows: [{ count: '0' }] })),
-      pool.query('SELECT COUNT(*) FROM leaderboard WHERE is_opted_out = FALSE').catch(e => ({ rows: [{ count: '0' }] })),
-      pool.query("SELECT COUNT(*) FROM scans WHERE DATE(created_at) = CURRENT_DATE").catch(e => ({ rows: [{ count: '0' }] })),
-      pool.query("SELECT COUNT(*) FROM elite_rewriter_jobs WHERE status = 'completed'").catch(e => ({ rows: [{ count: '0' }] }))
-    ]);
-    
-    res.json({
-      success: true,
-      stats: {
-        total_agencies: parseInt(agencies.rows[0].count) || 0,
-        total_clients: parseInt(clients.rows[0].count) || 0,
-        total_scans: parseInt(scans.rows[0].count) || 0,
-        leaderboard_entries: parseInt(leaderboard.rows[0].count) || 0,
-        today_scans: parseInt(todayScans.rows[0].count) || 0,
-        elite_rewrites: parseInt(eliteJobs.rows[0].count) || 0,
-        active_scanners: 1
-      }
-    });
-  } catch (error) {
-    res.json({ success: true, stats: { 
-      total_agencies: 0, total_clients: 0, total_scans: 0, leaderboard_entries: 0,
-      today_scans: 0, elite_rewrites: 0, active_scanners: 1
-    } });
-  }
-});
-
-// Other admin endpoints (preserved from original)
-app.get('/api/admin/scans', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT s.*, a.name as agency_name FROM scans s 
-      LEFT JOIN agencies a ON s.agency_id = a.id ORDER BY s.created_at DESC LIMIT 100
-    `);
-    res.json({ success: true, scans: result.rows });
-  } catch (error) {
-    res.json({ success: true, scans: [] });
-  }
-});
-
-app.get('/api/admin/share-links', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM share_links ORDER BY created_at DESC');
-    res.json({ success: true, share_links: result.rows });
-  } catch (error) {
-    res.json({ success: true, share_links: [] });
-  }
-});
-
-app.get('/api/admin/leaderboard', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT *, ROW_NUMBER() OVER (ORDER BY score DESC) as rank 
-      FROM leaderboard WHERE is_opted_out = FALSE ORDER BY score DESC LIMIT 100
-    `);
-    res.json({ success: true, entries: result.rows });
-  } catch (error) {
-    res.json({ success: true, entries: [] });
-  }
-});
-
-// ============================================
-// NEW ELITE-SPECIFIC ADMIN ENDPOINTS
-// ============================================
-
-// Get elite rewriter analytics
-app.get('/api/admin/elite-analytics', async (req, res) => {
-  try {
-    const [jobStats, scoreDistribution, recentJobs] = await Promise.all([
-      pool.query(`
-        SELECT 
-          COUNT(*) as total_jobs,
-          COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed,
-          COUNT(CASE WHEN status = 'processing' THEN 1 END) as processing,
-          COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed,
-          AVG(word_count) as avg_word_count,
-          AVG(target_score) as avg_target_score
-        FROM elite_rewriter_jobs
-      `),
-      pool.query(`
-        SELECT 
-          CASE 
-            WHEN word_count >= 2500 THEN '2500+ (Elite)'
-            WHEN word_count >= 2000 THEN '2000-2499'
-            WHEN word_count >= 1500 THEN '1500-1999'
-            ELSE '<1500'
-          END as word_range,
-          COUNT(*) as job_count
-        FROM elite_rewriter_jobs 
-        WHERE status = 'completed'
-        GROUP BY 1 ORDER BY job_count DESC
-      `),
-      pool.query(`
-        SELECT id, original_url, word_count, target_score, status, created_at
-        FROM elite_rewriter_jobs 
-        ORDER BY created_at DESC LIMIT 10
-      `)
-    ]);
-    
-    res.json({
-      success: true,
-      analytics: {
-        jobs: jobStats.rows[0] || {},
-        score_distribution: scoreDistribution.rows || [],
-        recent_jobs: recentJobs.rows || []
-      }
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// ============================================
 // PUBLIC LEADERBOARD API
 // ============================================
 app.get('/api/leaderboard', async (req, res) => {
@@ -2122,6 +2178,55 @@ app.get('/api/health', async (req, res) => {
 });
 
 // ============================================
+// HTML ROUTES
+// ============================================
+
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/admin-dashboard.html'));
+});
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
+app.get('/seo-contentscore', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/unified-scan-page.html'));
+});
+
+app.get('/ultimate', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/ultimate-scanner.html'));
+});
+
+// ============================================
+// ADMIN LOGIN
+// ============================================
+
+app.post('/api/setup/verify-admin', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ success: false, error: 'Credentials required' });
+  }
+  try {
+    const result = await pool.query('SELECT * FROM super_admins WHERE username = $1 AND is_active = TRUE', [username]);
+    if (result.rows.length === 0) {
+      return res.status(401).json({ success: false, error: 'Invalid credentials' });
+    }
+    const admin = result.rows[0];
+    if (password !== admin.password_hash) {
+      return res.status(401).json({ success: false, error: 'Invalid credentials' });
+    }
+    await pool.query('UPDATE super_admins SET last_login = NOW() WHERE id = $1', [admin.id]);
+    res.json({
+      success: true,
+      admin_id: admin.id,
+      admin: { id: admin.id, username: admin.username, full_name: admin.full_name, role: admin.role }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// ============================================
 // CATCH-ALL ROUTE
 // ============================================
 app.get('*', (req, res) => {
@@ -2155,27 +2260,27 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log('');
   console.log('🚀 =====================================');
-  console.log('🚀  CONTENTSCALE ELITE SERVER RUNNING');
+  console.log('🚀  CONTENTSCALE SERVER RUNNING');
   console.log('🚀 =====================================');
   console.log('');
   console.log('📍 Frontend:  http://localhost:' + PORT);
   console.log('📍 Admin:     http://localhost:' + PORT + '/admin');
   console.log('📍 Ultimate:  http://localhost:' + PORT + '/ultimate');
   console.log('');
-  console.log('🎯 ELITE FEATURES ENABLED:');
+  console.log('🎯 ENHANCED FEATURES:');
+  console.log('   • Improved Normal Scanner (Better recommendations)');
   console.log('   • Elite Scanner (95-100/100 scoring)');
   console.log('   • Elite Rewriter (Guaranteed 95+ scores)');
-  console.log('   • Improved recommendation filtering');
-  console.log('   • Better content analysis');
-  console.log('   • Cache management');
+  console.log('   • Elite Analysis in Admin Dashboard');
+  console.log('   • No duplicate/generic suggestions');
   console.log('');
   console.log('👤 Default Admin: ot / admin123');
   console.log('');
   console.log('✅ All endpoints ready');
+  console.log('   - /api/scan (IMPROVED Normal scanner)');
   console.log('   - /api/scan/elite (Elite scanner)');
   console.log('   - /api/rewrite/elite (Elite rewriter)');
-  console.log('   - /api/scan (Standard scanner)');
   console.log('   - /api/scan/quick (Quick scanner)');
-  console.log('   - All admin endpoints preserved');
+  console.log('   - All admin endpoints RESTORED');
   console.log('');
 });
