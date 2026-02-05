@@ -507,6 +507,71 @@
       margin-top: auto !important;
       margin-bottom: 0 !important;
     }
+
+    /* FIXED: Email modal styles */
+    .email-modal-content {
+      max-width: 500px;
+      width: 100%;
+    }
+
+    .email-input-container {
+      margin: 20px 0;
+    }
+
+    .email-input {
+      width: 100%;
+      padding: 15px;
+      background: #1f2937;
+      border: 2px solid #374151;
+      border-radius: 10px;
+      color: white;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+
+    .email-input:focus {
+      outline: none;
+      border-color: #8b5cf6;
+    }
+
+    .email-submit-btn {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .email-submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4);
+    }
+
+    /* Agency Profile Modal */
+    .agency-profile-modal {
+      max-width: 800px;
+      width: 100%;
+    }
+
+    .agency-profile-header {
+      background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+      padding: 30px;
+      border-radius: 15px 15px 0 0;
+    }
+
+    .agency-score-badge {
+      display: inline-block;
+      padding: 5px 15px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100">
@@ -585,6 +650,13 @@
             class="flex-1 bg-gray-700 text-white px-6 py-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg">
           <button onclick="performScan()" id="scanButton" class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-8 py-4 rounded-lg font-bold text-lg transition-all whitespace-nowrap">
             🔍 Scan Now
+          </button>
+        </div>
+        <!-- ADDED: Fixed "Try Scanner" button -->
+        <div class="text-center mt-4">
+          <button onclick="scrollToScanner()" class="px-6 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 rounded-lg font-medium transition-all">
+            <i class="fas fa-play mr-2"></i>
+            Try Scanner Free
           </button>
         </div>
       </div>
@@ -688,6 +760,7 @@
               <th>Website</th>
               <th>Score</th>
               <th>Added</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody id="rankings-tbody">
@@ -909,6 +982,8 @@
         <h3 class="text-2xl font-bold mb-2">FREE Starter</h3>
         <div class="price-tag">€0</div>
         <div class="price-period">forever</div>
+        <!-- FIXED: Added clear monthly text -->
+        <div class="text-sm text-gray-400 mt-2">No monthly fees</div>
       </div>
       
       <ul class="feature-list">
@@ -929,7 +1004,9 @@
         <h3 class="text-2xl font-bold mb-2">PRO</h3>
         <div class="price-tag">€27</div>
         <div class="price-period">/month</div>
+        <!-- FIXED: Added yearly pricing clearly -->
         <div class="text-xs text-green-400 mt-2">€259/year (save 20%)</div>
+        <div class="text-sm text-gray-400 mt-1">Billed monthly or yearly</div>
       </div>
       
       <ul class="feature-list">
@@ -950,7 +1027,9 @@
         <h3 class="text-2xl font-bold mb-2">AGENCY</h3>
         <div class="price-tag">€97</div>
         <div class="price-period">/month</div>
+        <!-- FIXED: Added yearly pricing clearly -->
         <div class="text-xs text-green-400 mt-2">€929/year (save 20%)</div>
+        <div class="text-sm text-gray-400 mt-1">Billed monthly or yearly</div>
       </div>
       
       <ul class="feature-list">
@@ -998,9 +1077,11 @@
           <strong>Note:</strong> Lifetime deals offer incredible value but exclude white-label, API access, and enterprise features. Perfect for individuals and small teams!
         </div>
 
-        <button onclick="notifyLTD()" class="inline-block bg-gray-900 text-yellow-400 hover:bg-gray-800 px-8 py-4 rounded-lg font-bold text-lg transition-all">
+        <!-- FIXED: Changed from prompt to modal for email collection -->
+        <button onclick="showEmailModalForLTD()" class="inline-block bg-gray-900 text-yellow-400 hover:bg-gray-800 px-8 py-4 rounded-lg font-bold text-lg transition-all">
           🔔 Notify Me When Available
         </button>
+        <p class="text-xs text-gray-700 mt-2">You'll receive emails at the address you provide</p>
       </div>
     </div>
 
@@ -1306,6 +1387,123 @@
       
       <div class="mt-6 text-center text-sm text-gray-500">
         All plans include a 7-day free trial. No credit card required to start.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FIXED: Email Collection Modal for LTD Notifications -->
+<div id="emailModal" class="modal-overlay">
+  <div class="modal-content email-modal-content">
+    <div class="p-8">
+      <div class="flex justify-between items-start mb-6">
+        <div>
+          <h2 class="text-2xl font-bold mb-2">Get Notified About Lifetime Deals</h2>
+          <p class="text-sm text-gray-400">We'll email you when Lifetime Deals launch</p>
+        </div>
+        <button onclick="closeEmailModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+      </div>
+      
+      <div class="email-input-container">
+        <input type="email" id="ltdEmailInput" placeholder="your.email@example.com" class="email-input" required>
+        <p class="text-xs text-gray-500 mb-4">Where should we send the notification?</p>
+        
+        <div class="flex items-center mb-4">
+          <input type="checkbox" id="emailConsent" class="mr-2" checked>
+          <label for="emailConsent" class="text-sm text-gray-400">
+            Yes, I want to receive email updates about ContentScale Lifetime Deals and special offers
+          </label>
+        </div>
+        
+        <button onclick="submitLTDEmail()" class="email-submit-btn">
+          🔔 Notify Me When Available
+        </button>
+      </div>
+      
+      <p class="text-center text-xs text-gray-500 mt-4">
+        We respect your privacy. Unsubscribe anytime. Emails sent to: hello@contentscale.site
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- FIXED: Agency Profile Modal -->
+<div id="agencyProfileModal" class="modal-overlay">
+  <div class="modal-content agency-profile-modal">
+    <div class="agency-profile-header">
+      <div class="flex justify-between items-start">
+        <div>
+          <div class="agency-score-badge">🏆 #1 Worldwide</div>
+          <h2 id="agencyProfileName" class="text-3xl font-bold mt-2">SEO Masters</h2>
+          <p id="agencyProfileCountry" class="text-gray-300">🇺🇸 United States</p>
+        </div>
+        <button onclick="closeAgencyProfile()" class="text-white hover:text-yellow-300 text-2xl">&times;</button>
+      </div>
+    </div>
+    
+    <div class="p-8">
+      <div class="grid md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-gray-800 p-6 rounded-lg">
+          <h3 class="text-xl font-bold mb-4">📊 Agency Score</h3>
+          <div class="text-center">
+            <div class="text-5xl font-bold text-yellow-400 mb-2" id="agencyProfileScore">95</div>
+            <div class="text-gray-400">/100 GRAAF Score</div>
+          </div>
+        </div>
+        
+        <div class="bg-gray-800 p-6 rounded-lg">
+          <h3 class="text-xl font-bold mb-4">🔗 Quick Actions</h3>
+          <div class="space-y-3">
+            <button onclick="visitAgencyWebsite()" class="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-semibold">
+              🌐 Visit Website
+            </button>
+            <button onclick="scanThisAgency()" class="w-full bg-purple-600 hover:bg-purple-700 py-3 rounded-lg font-semibold">
+              🔍 Scan This Agency
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-gray-800 rounded-lg p-6 mb-6">
+        <h3 class="text-xl font-bold mb-4">📈 Score Breakdown</h3>
+        <div class="space-y-4">
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="text-gray-400">GRAAF Framework</span>
+              <span class="text-green-400 font-bold">48/50</span>
+            </div>
+            <div class="h-2 bg-gray-700 rounded-full">
+              <div class="h-full bg-green-500 rounded-full" style="width: 96%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="text-gray-400">CRAFT Content</span>
+              <span class="text-blue-400 font-bold">28/30</span>
+            </div>
+            <div class="h-2 bg-gray-700 rounded-full">
+              <div class="h-full bg-blue-500 rounded-full" style="width: 93%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="text-gray-400">Technical SEO</span>
+              <span class="text-yellow-400 font-bold">19/20</span>
+            </div>
+            <div class="h-2 bg-gray-700 rounded-full">
+              <div class="h-full bg-yellow-500 rounded-full" style="width: 95%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="flex gap-3">
+        <button onclick="closeAgencyProfile()" class="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
+          Close
+        </button>
+        <button onclick="contactThisAgency()" class="flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 rounded-lg font-semibold">
+          💬 Contact Agency
+        </button>
       </div>
     </div>
   </div>
@@ -2056,7 +2254,8 @@
             <span class="text-sm text-gray-400">/100</span>
           </div>
           <div class="text-sm text-gray-400 mb-4">${getFlagEmoji(agency.country)} ${getCountryName(agency.country)}</div>
-          <button onclick="viewAgencyProfile(${agency.id})" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 py-2 rounded-lg font-semibold transition-all">
+          <!-- FIXED: View Profile button now works -->
+          <button onclick="viewAgencyProfile(${agency.id}, '${agency.company.replace(/'/g, "\\'")}', ${agency.score}, '${agency.country}')" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 py-2 rounded-lg font-semibold transition-all">
             View Profile
           </button>
         </div>
@@ -2218,6 +2417,12 @@
           </td>
           <td class="score-cell ${scoreClass}">${entry.score}/100</td>
           <td class="date-cell">${dateFormatted}</td>
+          <td>
+            <!-- FIXED: Added View Profile button in rankings table -->
+            <button onclick="viewAgencyProfile(${entry.id}, '${entry.company.replace(/'/g, "\\'")}', ${entry.score}, '${entry.country}')" class="px-3 py-1 bg-purple-600 hover:bg-purple-700 rounded text-xs font-semibold">
+              View Profile
+            </button>
+          </td>
         </tr>
       `;
     }
@@ -2280,13 +2485,47 @@
       document.getElementById('scanner').scrollIntoView({ behavior: 'smooth' });
     }
 
-    function notifyLTD() {
-      const email = prompt('Enter your email to get notified when Lifetime Deals launch:');
-      if (email && email.includes('@')) {
-        alert('✅ Thanks! We\'ll notify you at ' + email + ' when LTD launches!');
-      } else if (email) {
-        alert('Please enter a valid email address');
+    // FIXED: Email modal for LTD notifications
+    function showEmailModalForLTD() {
+      showModal('emailModal');
+    }
+
+    function closeEmailModal() {
+      hideModal('emailModal');
+    }
+
+    function submitLTDEmail() {
+      const emailInput = document.getElementById('ltdEmailInput');
+      const consentCheckbox = document.getElementById('emailConsent');
+      const email = emailInput.value.trim();
+      
+      if (!email) {
+        alert('Please enter your email address');
+        return;
       }
+      
+      if (!email.includes('@') || !email.includes('.')) {
+        alert('Please enter a valid email address');
+        return;
+      }
+      
+      if (!consentCheckbox.checked) {
+        alert('Please consent to receive email notifications');
+        return;
+      }
+      
+      // In a real implementation, you would send this to your backend
+      // For now, we'll simulate a successful submission
+      console.log('LTD notification email submitted:', email);
+      
+      // Show success message
+      alert(`✅ Thanks! We'll notify you at ${email} when Lifetime Deals launch!\n\nYou'll receive emails from: hello@contentscale.site`);
+      
+      // Clear the input
+      emailInput.value = '';
+      
+      // Close the modal
+      closeEmailModal();
     }
 
     function getFlagEmoji(countryCode) {
@@ -2308,8 +2547,64 @@
       return names[countryCode] || countryCode;
     }
 
-    function viewAgencyProfile(id) {
-      console.log('View agency profile:', id);
+    // FIXED: Agency Profile View Function
+    function viewAgencyProfile(id, companyName, score, country) {
+      // Set the agency profile data
+      document.getElementById('agencyProfileName').textContent = companyName;
+      document.getElementById('agencyProfileScore').textContent = score;
+      document.getElementById('agencyProfileCountry').textContent = getFlagEmoji(country) + ' ' + getCountryName(country);
+      
+      // Store the current agency data for other functions
+      window.currentAgencyProfile = {
+        id: id,
+        name: companyName,
+        score: score,
+        country: country,
+        url: allAgencies.find(a => a.id === id)?.url || 'https://example.com'
+      };
+      
+      // Show the modal
+      showModal('agencyProfileModal');
+    }
+
+    function closeAgencyProfile() {
+      hideModal('agencyProfileModal');
+    }
+
+    function visitAgencyWebsite() {
+      if (window.currentAgencyProfile && window.currentAgencyProfile.url) {
+        window.open(window.currentAgencyProfile.url, '_blank', 'noopener,noreferrer');
+      } else {
+        alert('Website URL not available');
+      }
+    }
+
+    function scanThisAgency() {
+      if (window.currentAgencyProfile && window.currentAgencyProfile.url) {
+        // Set the scanner input to the agency URL
+        document.getElementById('scanInput').value = window.currentAgencyProfile.url;
+        
+        // Close the profile modal
+        closeAgencyProfile();
+        
+        // Scroll to scanner
+        setTimeout(() => {
+          scrollToScanner();
+          
+          // Auto-trigger scan after a short delay
+          setTimeout(() => {
+            performScan();
+          }, 500);
+        }, 300);
+      }
+    }
+
+    function contactThisAgency() {
+      if (window.currentAgencyProfile) {
+        const message = `Hi Ot! I saw ${window.currentAgencyProfile.name} on your leaderboard with a score of ${window.currentAgencyProfile.score}/100. Can you connect me with them?`;
+        const url = `https://wa.me/31628073996?text=${encodeURIComponent(message)}`;
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
     }
 
     function submitClaim(e) {
