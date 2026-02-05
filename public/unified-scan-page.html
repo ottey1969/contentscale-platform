@@ -676,6 +676,117 @@
       font-size: 14px;
       margin-bottom: 10px;
     }
+
+    /* LIGHT HOLOGRAPHIC BORDERS FOR COMPARISON TABLE */
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+      color: #e0f0ff;
+      font-size: 15px;
+      background: rgba(10, 10, 20, 0.3);
+      backdrop-filter: blur(5px);
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+      border: 1px solid rgba(100, 180, 255, 0.2);
+    }
+    
+    /* Light holographic borders */
+    .comparison-table th, 
+    .comparison-table td {
+      padding: 18px 15px;
+      position: relative;
+      border: 1px solid rgba(100, 180, 255, 0.2);
+      background: rgba(15, 20, 40, 0.6);
+      transition: all 0.3s ease;
+    }
+    
+    /* Header holographic glow */
+    .comparison-table thead th {
+      background: rgba(20, 30, 70, 0.8);
+      font-weight: 600;
+      font-size: 17px;
+      letter-spacing: 0.5px;
+      padding: 22px 15px;
+      border-top: 1px solid rgba(120, 180, 255, 0.3);
+      border-bottom: 2px solid rgba(120, 180, 255, 0.3);
+      text-transform: uppercase;
+      color: #a8d8ff;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    /* Holographic scanline effect on headers */
+    .comparison-table thead th::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, 
+        transparent, 
+        rgba(100, 200, 255, 0.8), 
+        transparent);
+      animation: scanline 4s infinite linear;
+    }
+    
+    /* First column (feature names) */
+    .comparison-table tbody tr td:first-child {
+      text-align: left;
+      font-weight: 500;
+      border-left: 1px solid rgba(120, 180, 255, 0.25);
+      background: rgba(20, 25, 50, 0.7);
+    }
+    
+    /* Hover effects */
+    .comparison-table tbody tr:hover td {
+      background: rgba(30, 40, 80, 0.8);
+      box-shadow: inset 0 0 20px rgba(100, 180, 255, 0.1);
+    }
+    
+    /* Plan columns with subtle glow */
+    .comparison-table th:nth-child(2) { /* FREE */
+      border-top: 1px solid rgba(100, 180, 255, 0.2);
+      box-shadow: inset 0 0 15px rgba(100, 180, 255, 0.05);
+    }
+    
+    .comparison-table th:nth-child(3) { /* PRO */
+      border-top: 1px solid rgba(100, 220, 255, 0.25);
+      box-shadow: inset 0 0 15px rgba(100, 220, 255, 0.07);
+    }
+    
+    .comparison-table th:nth-child(4) { /* AGENCY */
+      border-top: 1px solid rgba(150, 100, 255, 0.3);
+      box-shadow: inset 0 0 15px rgba(150, 100, 255, 0.1);
+    }
+    
+    .comparison-table th:nth-child(5) { /* ELITE */
+      border-top: 1px solid rgba(255, 200, 50, 0.35);
+      box-shadow: inset 0 0 15px rgba(255, 200, 50, 0.12);
+    }
+    
+    /* Checkmarks and X's with glow */
+    .comparison-table .fa-check {
+      color: #4ade80;
+      text-shadow: 0 0 8px rgba(74, 222, 128, 0.5);
+    }
+    
+    .comparison-table .fa-xmark {
+      color: #f87171;
+      text-shadow: 0 0 8px rgba(248, 113, 113, 0.3);
+    }
+    
+    /* Scanline animation */
+    @keyframes scanline {
+      0% {
+        left: -100%;
+      }
+      100% {
+        left: 100%;
+      }
+    }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100">
@@ -1169,14 +1280,14 @@
         </div>
       </div>
 
-      <!-- Comparison Table -->
+      <!-- Comparison Table with Light Holographic Borders -->
       <div class="bg-gray-800 rounded-xl p-8 mb-12 border border-gray-700">
         <h3 class="text-2xl font-bold text-center mb-8">📊 Plan Comparison</h3>
         
         <div class="overflow-x-auto">
-          <table class="w-full text-left">
+          <table class="comparison-table w-full">
             <thead>
-              <tr class="border-b border-gray-700">
+              <tr>
                 <th class="pb-4 font-bold">Feature</th>
                 <th class="pb-4 text-center font-bold">FREE</th>
                 <th class="pb-4 text-center font-bold">PRO</th>
@@ -1185,47 +1296,47 @@
               </tr>
             </thead>
             <tbody>
-              <tr class="border-b border-gray-700">
+              <tr>
                 <td class="py-3">Scans per month</td>
                 <td class="py-3 text-center">90</td>
                 <td class="py-3 text-center">100</td>
                 <td class="py-3 text-center">500</td>
                 <td class="py-3 text-center font-bold text-yellow-400">Unlimited</td>
               </tr>
-              <tr class="border-b border-gray-700">
+              <tr>
                 <td class="py-3">Score type</td>
                 <td class="py-3 text-center">Basic</td>
                 <td class="py-3 text-center">Advanced</td>
                 <td class="py-3 text-center">Advanced</td>
                 <td class="py-3 text-center font-bold text-yellow-400">Elite Framework</td>
               </tr>
-              <tr class="border-b border-gray-700">
+              <tr>
                 <td class="py-3">AI recommendations</td>
-                <td class="py-3 text-center">❌</td>
-                <td class="py-3 text-center">✅ Basic</td>
-                <td class="py-3 text-center">✅ Advanced</td>
-                <td class="py-3 text-center font-bold text-yellow-400">✅ Premium</td>
+                <td class="py-3 text-center"><i class="fas fa-xmark"></i></td>
+                <td class="py-3 text-center"><i class="fas fa-check"></i> Basic</td>
+                <td class="py-3 text-center"><i class="fas fa-check"></i> Advanced</td>
+                <td class="py-3 text-center font-bold text-yellow-400"><i class="fas fa-check"></i> Premium</td>
               </tr>
-              <tr class="border-b border-gray-700">
+              <tr>
                 <td class="py-3">Competitor analysis</td>
-                <td class="py-3 text-center">❌</td>
-                <td class="py-3 text-center">❌</td>
-                <td class="py-3 text-center">✅ Basic</td>
-                <td class="py-3 text-center font-bold text-yellow-400">✅ Advanced</td>
+                <td class="py-3 text-center"><i class="fas fa-xmark"></i></td>
+                <td class="py-3 text-center"><i class="fas fa-check"></i> Basic</td>
+                <td class="py-3 text-center"><i class="fas fa-check"></i> Basic</td>
+                <td class="py-3 text-center font-bold text-yellow-400"><i class="fas fa-check"></i> Advanced</td>
               </tr>
-              <tr class="border-b border-gray-700">
+              <tr>
                 <td class="py-3">White-label</td>
-                <td class="py-3 text-center">❌</td>
-                <td class="py-3 text-center">❌</td>
-                <td class="py-3 text-center">✅</td>
-                <td class="py-3 text-center font-bold text-yellow-400">✅ Premium</td>
+                <td class="py-3 text-center"><i class="fas fa-xmark"></i></td>
+                <td class="py-3 text-center"><i class="fas fa-xmark"></i></td>
+                <td class="py-3 text-center"><i class="fas fa-check"></i></td>
+                <td class="py-3 text-center font-bold text-yellow-400"><i class="fas fa-check"></i> Premium</td>
               </tr>
               <tr>
                 <td class="py-3">API access</td>
-                <td class="py-3 text-center">❌</td>
-                <td class="py-3 text-center">❌</td>
-                <td class="py-3 text-center">✅ Basic</td>
-                <td class="py-3 text-center font-bold text-yellow-400">✅ Full</td>
+                <td class="py-3 text-center"><i class="fas fa-xmark"></i></td>
+                <td class="py-3 text-center"><i class="fas fa-xmark"></i></td>
+                <td class="py-3 text-center"><i class="fas fa-check"></i></td>
+                <td class="py-3 text-center font-bold text-yellow-400"><i class="fas fa-check"></i> Full</td>
               </tr>
             </tbody>
           </table>
