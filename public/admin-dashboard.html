@@ -2407,7 +2407,7 @@
   id="share-url-${link.id || link.token || 'temp'}">
 <input type="text" value="https://app.contentscale.site/share/${link.token || 'invalid'}" 
   readonly class="flex-1 px-2 py-1 bg-gray-700 text-xs rounded text-blue-400"
-  id="share-url-${link.id || link.token || Date.now()}">
+id="share-url-${link.id}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}"
   </div>
                 </td>
                 <td class="px-4 py-3">${link.scans_used || 0}/${link.scans_limit || 5}</td>
