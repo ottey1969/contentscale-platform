@@ -1,5 +1,3 @@
-SERVER.JS file feb 6, 2026 / 11.35
-
 /// ============================================
 // CONTENTSCALE SERVER.JS - COMPLETE WORKING VERSION
 // ============================================
