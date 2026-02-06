@@ -2402,11 +2402,13 @@
                 <td class="px-4 py-3">${link.client_email}</td>
                 <td class="px-4 py-3">
                   <div class="flex items-center gap-2">
-                    <input type="text" value="https://app.contentscale.site/share/${link.token}" 
-                      readonly class="flex-1 px-2 py-1 bg-gray-700 text-xs rounded text-blue-400"
-                      id="share-url-${link.token}">
-                    <button onclick="copyShareUrl('${link.token}')" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs">📋</button>
-                  </div>
+                   <input type="text" value="https://app.contentscale.site/share/${link.token || 'invalid'}" 
+  readonly class="flex-1 px-2 py-1 bg-gray-700 text-xs rounded text-blue-400"
+  id="share-url-${link.id || link.token || 'temp'}">
+<input type="text" value="https://app.contentscale.site/share/${link.token || 'invalid'}" 
+  readonly class="flex-1 px-2 py-1 bg-gray-700 text-xs rounded text-blue-400"
+  id="share-url-${link.id || link.token || Date.now()}">
+  </div>
                 </td>
                 <td class="px-4 py-3">${link.scans_used || 0}/${link.scans_limit || 5}</td>
                 <td class="px-4 py-3 text-sm">${link.expires_at ? new Date(link.expires_at).toLocaleDateString() : '-'}</td>
@@ -2880,12 +2882,19 @@
     // ALL EXISTING HELPER FUNCTIONS
     // ==========================================
     
-    function copyShareUrl(token) {
-      const input = document.getElementById(`share-url-${token}`);
+  function copyShareUrl(token) {
+  // Find the input that contains this token in its value
+  const inputs = document.querySelectorAll('input[type="text"]');
+  for (let input of inputs) {
+    if (input.value.includes(`/share/${token}`)) {
       input.select();
       document.execCommand('copy');
       alert('✅ Share URL copied to clipboard!');
+      return;
     }
+  }
+  alert('❌ Could not find share URL to copy');
+}
 
     function copyAgencyUrl(adminKey) {
       const input = document.getElementById(`agency-url-${adminKey}`);
