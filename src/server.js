@@ -857,12 +857,132 @@ app.post('/api/admin/share-links/create', verifyAdmin, async (req, res) => {
   }
 });
 
+// ============================================
+// MISSING SHARE LINK ENDPOINTS - ADDED FOR FIX
+// ============================================
+
+// 6.1 SHARE LINK TOGGLE STATUS ENDPOINT
+app.put('/api/admin/share-links/:code/toggle-status', verifyAdmin, async (req, res) => {
+  try {
+    const { code } = req.params;
+    const { status } = req.body;
+    
+    console.log(`🔄 Toggling share link status: ${code} to ${status}`);
+    
+    // Validate status
+    if (!status || !['active', 'inactive', 'expired'].includes(status)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Valid status required: active, inactive, or expired' 
+      });
+    }
+    
+    // Update status in database
+    const result = await pool.query(
+      'UPDATE share_links SET status = $1 WHERE share_code = $2 RETURNING share_code, status',
+      [status, code]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Share link not found' 
+      });
+    }
+    
+    console.log(`✅ Share link ${code} status updated to ${status}`);
+    
+    res.json({
+      success: true,
+      share_code: result.rows[0].share_code,
+      new_status: result.rows[0].status,
+      message: `Share link status updated to ${status}`
+    });
+    
+  } catch (error) {
+    console.error('Toggle share link error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// 6.2 SHARE LINK DELETE ENDPOINT
 app.delete('/api/admin/share-links/:code', verifyAdmin, async (req, res) => {
   try {
-    await pool.query('DELETE FROM share_links WHERE share_code = $1', [req.params.code]);
-    res.json({ success: true });
+    const { code } = req.params;
+    
+    console.log(`🗑️ Deleting share link: ${code}`);
+    
+    const result = await pool.query(
+      'DELETE FROM share_links WHERE share_code = $1 RETURNING share_code',
+      [code]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Share link not found' 
+      });
+    }
+    
+    console.log(`✅ Share link ${code} deleted`);
+    
+    res.json({
+      success: true,
+      message: `Share link ${code} deleted successfully`
+    });
+    
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Delete share link error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// 6.3 SHARE LINK EXTEND ENDPOINT
+app.post('/api/admin/share-links/:code/extend', verifyAdmin, async (req, res) => {
+  try {
+    const { code } = req.params;
+    const { days } = req.body;
+    
+    console.log(`📅 Extending share link: ${code} by ${days} days`);
+    
+    const extensionDays = parseInt(days) || 30;
+    
+    const result = await pool.query(
+      `UPDATE share_links 
+       SET expires_at = expires_at + INTERVAL '${extensionDays} days'
+       WHERE share_code = $1 
+       RETURNING share_code, expires_at`,
+      [code]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Share link not found' 
+      });
+    }
+    
+    console.log(`✅ Share link ${code} extended to ${result.rows[0].expires_at}`);
+    
+    res.json({
+      success: true,
+      share_code: result.rows[0].share_code,
+      new_expiry: result.rows[0].expires_at,
+      message: `Share link extended by ${extensionDays} days`
+    });
+    
+  } catch (error) {
+    console.error('Extend share link error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
   }
 });
 
@@ -1972,13 +2092,15 @@ app.listen(PORT, () => {
   console.log('   • /api/admin/clients');
   console.log('   • /api/admin/scans');
   console.log('   • /api/admin/share-links');
+  console.log('   • /api/admin/share-links/:code/toggle-status (NEW)');
+  console.log('   • /api/admin/share-links/:code/extend (NEW)');
   console.log('   • /api/admin/leaderboard');
   console.log('   • /api/admin/analytics');
   console.log('   • /api/admin/stats');
   console.log('   • /api/scan (TRANSPARENT SCORING)');
   console.log('   • /api/marketplace/leads');
   console.log('   • /api/marketplace/creators/register');
-  console.log('   • /api/admin/ltd-codes (NEW)');
+  console.log('   • /api/admin/ltd-codes');
   console.log('');
   console.log('👤 Default Admin: ot / admin123');
   console.log('');
