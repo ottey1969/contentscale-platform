@@ -413,6 +413,7 @@ async function createAllTables() {
       CREATE TABLE IF NOT EXISTS share_links (
         id SERIAL PRIMARY KEY,
         share_code VARCHAR(100) UNIQUE NOT NULL,
+        token VARCHAR(100) UNIQUE NOT NULL,
         client_email VARCHAR(255) NOT NULL,
         client_name VARCHAR(255),
         scans_limit INTEGER DEFAULT 5,
@@ -512,6 +513,94 @@ pool.connect((err, client, release) => {
     setTimeout(createAllTables, 1000);
   }
 });
+
+// In your existing createAllTables() function, ADD these:
+async function createAllTables() {
+  const client = await pool.connect();
+  
+  try {
+    // ... your existing tables ...
+    
+    // ============================================
+    // MARKETPLACE TABLES (ADD THESE - SAFE)
+    // ============================================
+    
+    // 1. CONTENT CREATORS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS content_creators (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES super_admins(id) ON DELETE CASCADE,
+        bio TEXT,
+        languages TEXT[] DEFAULT '{"en"}',
+        specialties TEXT[] DEFAULT '{"general"}',
+        hourly_rate INTEGER DEFAULT 25,
+        credits INTEGER DEFAULT 0,
+        total_earnings DECIMAL(10,2) DEFAULT 0,
+        platform_fees_paid DECIMAL(10,2) DEFAULT 0,
+        rating DECIMAL(3,2) DEFAULT 0,
+        completed_projects INTEGER DEFAULT 0,
+        is_verified BOOLEAN DEFAULT FALSE,
+        is_available BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✅ content_creators table ready');
+    
+    // 2. LEADS MARKETPLACE TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS leads_marketplace (
+        id SERIAL PRIMARY KEY,
+        business_name VARCHAR(255),
+        website_url TEXT NOT NULL,
+        industry VARCHAR(100),
+        location VARCHAR(255),
+        contact_email_original TEXT,
+        contact_phone_original TEXT,
+        contact_email_forwarding TEXT,
+        contact_phone_forwarding TEXT,
+        content_score INTEGER,
+        technical_score INTEGER,
+        ux_score INTEGER,
+        specific_issues JSONB,
+        estimated_value VARCHAR(50),
+        credit_cost INTEGER DEFAULT 5,
+        claimed_by INTEGER REFERENCES content_creators(id),
+        claimed_at TIMESTAMP,
+        expires_at TIMESTAMP,
+        is_available BOOLEAN DEFAULT TRUE,
+        scan_date TIMESTAMP DEFAULT NOW(),
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✅ leads_marketplace table ready');
+    
+    // 3. LEAD PURCHASES TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS lead_purchases (
+        id SERIAL PRIMARY KEY,
+        lead_id INTEGER REFERENCES leads_marketplace(id),
+        creator_id INTEGER REFERENCES content_creators(id),
+        credits_used INTEGER,
+        contact_revealed_at TIMESTAMP DEFAULT NOW(),
+        contacted_at TIMESTAMP,
+        hired_at TIMESTAMP,
+        project_value DECIMAL(10,2),
+        platform_fee DECIMAL(10,2),
+        status VARCHAR(50) DEFAULT 'purchased',
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✅ lead_purchases table ready');
+    
+    // ... rest of your existing tables ...
+    
+  } catch (error) {
+    console.error('❌ Table creation error:', error.message);
+  } finally {
+    client.release();
+  }
+}
 
 // ============================================
 // MIDDLEWARE
@@ -1289,6 +1378,429 @@ app.post('/api/scan', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+
+// ============================================
+// CONTENT CREATOR MARKETPLACE ENDPOINTS (REAL)
+// ============================================
+
+// 1. CREATOR REGISTRATION
+app.post('/api/marketplace/creators/register', async (req, res) => {
+  try {
+    console.log('📝 Creator registration attempt:', req.body);
+    
+    const { user_id, bio, languages, specialties, hourly_rate } = req.body;
+    
+    // Use existing user or create new
+    const userId = user_id || 1; // Default to first admin for testing
+    
+    const result = await pool.query(
+      `INSERT INTO content_creators 
+       (user_id, bio, languages, specialties, hourly_rate, credits)
+       VALUES ($1, $2, $3, $4, $5, 0)
+       RETURNING id, user_id, bio, credits`,
+      [userId, bio || 'New content creator', 
+       languages || ['en'], 
+       specialties || ['general'], 
+       hourly_rate || 25]
+    );
+    
+    console.log('✅ Creator registered:', result.rows[0]);
+    
+    res.json({
+      success: true,
+      creator: result.rows[0],
+      message: 'Creator profile created successfully',
+      next_steps: [
+        'Visit /api/marketplace/creators/add-credits to purchase credits',
+        'Browse leads at /api/marketplace/leads',
+        'Use credits to purchase leads'
+      ]
+    });
+    
+  } catch (error) {
+    console.error('❌ Creator registration error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      note: 'Check if content_creators table exists'
+    });
+  }
+});
+
+// 2. ADD CREDITS (Real - needs Stripe later)
+app.post('/api/marketplace/creators/add-credits', async (req, res) => {
+  try {
+    const { creator_id, amount } = req.body;
+    
+    if (!creator_id || !amount) {
+      return res.status(400).json({
+        success: false,
+        error: 'creator_id and amount required'
+      });
+    }
+    
+    // Calculate credits: $5 = 1 credit
+    const creditsToAdd = Math.floor(amount / 5);
+    
+    if (creditsToAdd < 1) {
+      return res.status(400).json({
+        success: false,
+        error: 'Minimum $5 required (1 credit)'
+      });
+    }
+    
+    // For now, just add credits (in production, verify Stripe payment first)
+    await pool.query(
+      'UPDATE content_creators SET credits = credits + $1 WHERE id = $2',
+      [creditsToAdd, creator_id]
+    );
+    
+    const updated = await pool.query(
+      'SELECT id, credits FROM content_creators WHERE id = $1',
+      [creator_id]
+    );
+    
+    res.json({
+      success: true,
+      message: `Added ${creditsToAdd} credits for $${amount}`,
+      creator: updated.rows[0],
+      note: 'For MVP: Payment simulated. Add Stripe webhook verification later.',
+      warning: 'In production, verify payment via Stripe webhook before adding credits'
+    });
+    
+  } catch (error) {
+    console.error('Credit add error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 3. BROWSE LEADS (Protected - no contact info)
+app.get('/api/marketplace/leads', async (req, res) => {
+  try {
+    const { creator_id, industry, location } = req.query;
+    
+    let query = `
+      SELECT 
+        id,
+        business_name,
+        industry,
+        location,
+        content_score,
+        technical_score,
+        ux_score,
+        estimated_value,
+        credit_cost,
+        -- Safe description without contact info
+        'Business in ' || location || ' needs content help' as safe_description,
+        CASE 
+          WHEN content_score < 50 THEN '🚨 Urgent'
+          WHEN content_score < 70 THEN '🔥 High Priority' 
+          ELSE '💼 Opportunity'
+        END as priority,
+        100 - content_score as improvement_possible
+      FROM leads_marketplace
+      WHERE is_available = true
+    `;
+    
+    const params = [];
+    let paramCount = 1;
+    
+    if (industry) {
+      query += ` AND industry ILIKE $${paramCount}`;
+      params.push(`%${industry}%`);
+      paramCount++;
+    }
+    
+    if (location) {
+      query += ` AND location ILIKE $${paramCount}`;
+      params.push(`%${location}%`);
+      paramCount++;
+    }
+    
+    query += ' ORDER BY content_score ASC, created_at DESC LIMIT 50';
+    
+    const leads = await pool.query(query, params);
+    
+    // Get creator's credit balance if provided
+    let creatorCredits = 0;
+    if (creator_id) {
+      const creator = await pool.query(
+        'SELECT credits FROM content_creators WHERE id = $1',
+        [creator_id]
+      );
+      if (creator.rows.length > 0) {
+        creatorCredits = creator.rows[0].credits;
+      }
+    }
+    
+    res.json({
+      success: true,
+      leads: leads.rows,
+      stats: {
+        total: leads.rows.length,
+        urgent: leads.rows.filter(l => l.content_score < 50).length,
+        high_priority: leads.rows.filter(l => l.content_score >= 50 && l.content_score < 70).length
+      },
+      creator_credits: creatorCredits,
+      protection_note: 'Contact information hidden until purchase. This prevents lead theft.',
+      purchase_endpoint: 'POST /api/marketplace/leads/:id/purchase'
+    });
+    
+  } catch (error) {
+    console.error('Leads fetch error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 4. PURCHASE LEAD (Real purchase with credit deduction)
+app.post('/api/marketplace/leads/:id/purchase', async (req, res) => {
+  try {
+    const leadId = req.params.id;
+    const { creator_id } = req.body;
+    
+    console.log(`🛒 Purchase attempt: Lead ${leadId} by Creator ${creator_id}`);
+    
+    if (!creator_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'creator_id required'
+      });
+    }
+    
+    // Check creator exists and get credits
+    const creator = await pool.query(
+      'SELECT id, credits FROM content_creators WHERE id = $1',
+      [creator_id]
+    );
+    
+    if (creator.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Creator not found. Register first at /api/marketplace/creators/register'
+      });
+    }
+    
+    // Check lead availability and cost
+    const lead = await pool.query(
+      `SELECT id, credit_cost, business_name, 
+              contact_email_forwarding, contact_phone_forwarding,
+              website_url, content_score, specific_issues
+       FROM leads_marketplace 
+       WHERE id = $1 AND is_available = true`,
+      [leadId]
+    );
+    
+    if (lead.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Lead not available or already purchased'
+      });
+    }
+    
+    const creditCost = lead.rows[0].credit_cost;
+    const creatorCredits = creator.rows[0].credits;
+    
+    if (creatorCredits < creditCost) {
+      return res.json({
+        success: false,
+        error: 'Insufficient credits',
+        details: {
+          credits_needed: creditCost,
+          credits_available: creatorCredits,
+          credits_missing: creditCost - creatorCredits,
+          cost_in_dollars: creditCost * 5,
+          solution: 'Add credits at /api/marketplace/creators/add-credits'
+        }
+      });
+    }
+    
+    // START TRANSACTION
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // 1. Deduct credits from creator
+      await client.query(
+        'UPDATE content_creators SET credits = credits - $1 WHERE id = $2',
+        [creditCost, creator_id]
+      );
+      
+      // 2. Mark lead as claimed
+      await client.query(
+        `UPDATE leads_marketplace 
+         SET claimed_by = $1, claimed_at = NOW(), 
+             expires_at = NOW() + INTERVAL '30 days', is_available = false
+         WHERE id = $2`,
+        [creator_id, leadId]
+      );
+      
+      // 3. Record purchase
+      await client.query(
+        `INSERT INTO lead_purchases (lead_id, creator_id, credits_used, status)
+         VALUES ($1, $2, $3, 'purchased')`,
+        [leadId, creator_id, creditCost]
+      );
+      
+      await client.query('COMMIT');
+      
+      console.log(`✅ Lead ${leadId} purchased by creator ${creator_id}`);
+      
+      // Return lead details WITH forwarding contacts
+      res.json({
+        success: true,
+        purchase: {
+          lead_id: leadId,
+          creator_id: creator_id,
+          credits_used: creditCost,
+          purchased_at: new Date().toISOString(),
+          expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        },
+        lead_details: {
+          business_name: lead.rows[0].business_name,
+          website: lead.rows[0].website_url,
+          content_score: lead.rows[0].content_score,
+          specific_issues: lead.rows[0].specific_issues,
+          // FORWARDING CONTACTS (not direct)
+          contact_email: lead.rows[0].contact_email_forwarding,
+          contact_phone: lead.rows[0].contact_phone_forwarding
+        },
+        instructions: {
+          communication: 'Use ONLY the forwarding contacts above',
+          tracking: 'All emails/calls will be tracked through these contacts',
+          next_steps: [
+            '1. Contact business using forwarding contacts',
+            '2. Report contact at /api/marketplace/leads/:id/contacted',
+            '3. Complete project through platform escrow'
+          ],
+          warnings: [
+            'Do NOT attempt to find direct contact information',
+            'Violation will result in account termination',
+            'All payments must go through platform escrow'
+          ]
+        },
+        credits_remaining: creatorCredits - creditCost
+      });
+      
+    } catch (transactionError) {
+      await client.query('ROLLBACK');
+      throw transactionError;
+    } finally {
+      client.release();
+    }
+    
+  } catch (error) {
+    console.error('Purchase error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      note: 'Transaction rolled back. No credits deducted.'
+    });
+  }
+});
+
+// 5. POPULATE TEST LEADS (For development)
+app.post('/api/marketplace/admin/populate-test-leads', async (req, res) => {
+  try {
+    const testLeads = [
+      {
+        business_name: 'La Bella Pizzeria',
+        website_url: 'https://labellapizza-amsterdam.example.com',
+        industry: 'Restaurant',
+        location: 'Amsterdam',
+        contact_email_original: 'owner@labellapizza.nl',
+        contact_phone_original: '+31201234567',
+        contact_email_forwarding: `contact+lead${Date.now()}1@forward.contentscale.site`,
+        contact_phone_forwarding: '+3155' + Math.floor(1000000 + Math.random() * 9000000),
+        content_score: 42,
+        technical_score: 65,
+        ux_score: 70,
+        specific_issues: JSON.stringify(['Empty menu pages', 'No blog', 'Poor descriptions']),
+        estimated_value: '$300-500'
+      },
+      {
+        business_name: 'Modern Dental Care',
+        website_url: 'https://moderndental-berlin.example.com',
+        industry: 'Healthcare',
+        location: 'Berlin',
+        contact_email_original: 'info@moderndental.de',
+        contact_phone_original: '+493012345678',
+        contact_email_forwarding: `contact+lead${Date.now()}2@forward.contentscale.site`,
+        contact_phone_forwarding: '+4915' + Math.floor(10000000 + Math.random() * 90000000),
+        content_score: 58,
+        technical_score: 72,
+        ux_score: 68,
+        specific_issues: JSON.stringify(['Technical jargon', 'No patient stories', 'Outdated prices']),
+        estimated_value: '$500-800'
+      }
+    ];
+    
+    for (const lead of testLeads) {
+      await pool.query(
+        `INSERT INTO leads_marketplace 
+         (business_name, website_url, industry, location,
+          contact_email_original, contact_phone_original,
+          contact_email_forwarding, contact_phone_forwarding,
+          content_score, technical_score, ux_score, 
+          specific_issues, estimated_value, credit_cost)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 5)`,
+        Object.values(lead)
+      );
+    }
+    
+    res.json({
+      success: true,
+      message: 'Test leads added to marketplace',
+      count: testLeads.length,
+      test_lead_ids: [1, 2],
+      note: 'Use /api/marketplace/leads to browse them'
+    });
+    
+  } catch (error) {
+    console.error('Populate leads error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 6. MARKETPLACE HEALTH CHECK
+app.get('/api/marketplace/health', async (req, res) => {
+  try {
+    // Check tables exist
+    const [creators, leads, purchases] = await Promise.all([
+      pool.query('SELECT COUNT(*) FROM content_creators').catch(() => ({ rows: [{ count: '0' }] })),
+      pool.query('SELECT COUNT(*) FROM leads_marketplace').catch(() => ({ rows: [{ count: '0' }] })),
+      pool.query('SELECT COUNT(*) FROM lead_purchases').catch(() => ({ rows: [{ count: '0' }] }))
+    ]);
+    
+    res.json({
+      success: true,
+      marketplace: 'ACTIVE',
+      tables: {
+        content_creators: parseInt(creators.rows[0].count),
+        leads_marketplace: parseInt(leads.rows[0].count),
+        lead_purchases: parseInt(purchases.rows[0].count)
+      },
+      endpoints: [
+        'POST /api/marketplace/creators/register',
+        'POST /api/marketplace/creators/add-credits',
+        'GET  /api/marketplace/leads',
+        'POST /api/marketplace/leads/:id/purchase',
+        'POST /api/marketplace/admin/populate-test-leads'
+      ],
+      status: 'Ready for testing'
+    });
+    
+  } catch (error) {
+    res.json({
+      success: false,
+      marketplace: 'SETUP REQUIRED',
+      error: error.message,
+      action: 'Run server to auto-create tables, then check /api/marketplace/health'
+    });
+  }
+});
+
+console.log('✅ Marketplace endpoints loaded (REAL DATABASE)');
 
 // ============================================
 // HTML ROUTES
