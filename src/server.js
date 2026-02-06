@@ -1803,13 +1803,14 @@ app.get('/api/marketplace/health', async (req, res) => {
 console.log('✅ Marketplace endpoints loaded (REAL DATABASE)');
 
 // ============================================
-// SHARE LINK ENDPOINT
+// SHARE LINK ENDPOINT - FIX FOR JSON ERROR
 // ============================================
 app.get('/share/:code', async (req, res) => {
   try {
     const { code } = req.params;
+    console.log(`📬 Share link requested: ${code}`);
     
-    // Check if share code exists and is valid
+    // Check if share code exists in database
     const result = await pool.query(
       `SELECT * FROM share_links 
        WHERE share_code = $1 
@@ -1819,11 +1820,12 @@ app.get('/share/:code', async (req, res) => {
     );
     
     if (result.rows.length === 0) {
-      // If not found, return an error JSON
+      // Return JSON error (NOT HTML)
       return res.json({ 
         success: false, 
         error: 'Invalid or expired share link',
-        code: code 
+        code: code,
+        message: 'This share link is not valid or has expired.'
       });
     }
     
@@ -1839,16 +1841,19 @@ app.get('/share/:code', async (req, res) => {
       scans_limit: shareLink.scans_limit,
       expires_at: shareLink.expires_at,
       status: shareLink.status,
-      note: 'Use this code with the scan endpoint',
+      message: 'Share link is valid and active',
+      instructions: 'Use this share code with the scan API endpoint',
       scan_endpoint: 'POST /api/scan with body: { "url": "https://example.com", "shareKey": "' + code + '" }'
     });
     
   } catch (error) {
-    console.error('Share link error:', error);
+    console.error('❌ Share link error:', error);
+    // Return JSON error (NOT HTML)
     res.status(500).json({ 
       success: false, 
-      error: 'Server error',
-      code: req.params.code 
+      error: 'Server error processing share link',
+      code: req.params.code,
+      message: 'Please try again later.'
     });
   }
 });
