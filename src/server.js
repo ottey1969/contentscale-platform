@@ -1803,6 +1803,57 @@ app.get('/api/marketplace/health', async (req, res) => {
 console.log('✅ Marketplace endpoints loaded (REAL DATABASE)');
 
 // ============================================
+// SHARE LINK ENDPOINT
+// ============================================
+app.get('/share/:code', async (req, res) => {
+  try {
+    const { code } = req.params;
+    
+    // Check if share code exists and is valid
+    const result = await pool.query(
+      `SELECT * FROM share_links 
+       WHERE share_code = $1 
+       AND status = 'active'
+       AND expires_at > NOW()`,
+      [code]
+    );
+    
+    if (result.rows.length === 0) {
+      // If not found, return an error JSON
+      return res.json({ 
+        success: false, 
+        error: 'Invalid or expired share link',
+        code: code 
+      });
+    }
+    
+    const shareLink = result.rows[0];
+    
+    // Return share link data as JSON
+    res.json({
+      success: true,
+      share_code: shareLink.share_code,
+      client_email: shareLink.client_email,
+      client_name: shareLink.client_name,
+      scans_used: shareLink.scans_used,
+      scans_limit: shareLink.scans_limit,
+      expires_at: shareLink.expires_at,
+      status: shareLink.status,
+      note: 'Use this code with the scan endpoint',
+      scan_endpoint: 'POST /api/scan with body: { "url": "https://example.com", "shareKey": "' + code + '" }'
+    });
+    
+  } catch (error) {
+    console.error('Share link error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Server error',
+      code: req.params.code 
+    });
+  }
+});
+
+// ============================================
 // HTML ROUTES
 // ============================================
 app.get('/admin', (req, res) => {
