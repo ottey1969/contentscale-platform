@@ -2324,47 +2324,127 @@
       scanButton.innerHTML = '<div class="scan-spinner"></div> Scanning...';
       scanButton.disabled = true;
       
-      setTimeout(() => {
-        lastScanData = {
-          success: true,
-          url: fullUrl,
-          score: Math.floor(Math.random() * 30) + 70,
-          quality: 'Good',
-          metrics: {
-            graaf: Math.floor(Math.random() * 30) + 20,
-            craft: Math.floor(Math.random() * 20) + 10,
-            technical: Math.floor(Math.random() * 15) + 5
+      try {
+        // ACTUAL API CALL TO YOUR BACKEND
+        const response = await fetch('/api/scan', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-          breakdown: {
-            graaf: { percentage: Math.floor(Math.random() * 30) + 70 },
-            craft: { percentage: Math.floor(Math.random() * 30) + 70 },
-            technical: { percentage: Math.floor(Math.random() * 30) + 70 }
-          },
-          recommendations: {
-            all: [
-              {
-                title: 'Improve Heading Structure',
-                impact: 'High',
-                points: '+15',
-                category: 'CRAFT Framework',
-                description: 'Add proper H1-H3 heading hierarchy',
-                howToFix: 'Use H1 for main title, H2 for sections, H3 for subsections'
-              },
-              {
-                title: 'Add More Internal Links',
-                impact: 'Medium',
-                points: '+8',
-                category: 'Technical SEO',
-                description: 'Link to related content on your site'
-              }
-            ]
-          }
-        };
+          body: JSON.stringify({ url: fullUrl })
+        });
         
-        showScanResults(lastScanData);
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Scan failed');
+        }
+        
+        // Store the REAL data
+        lastScanData = data;
+        
+        // Show results with transparent scoring
+        showScanResults(data);
+        
+      } catch (error) {
+        console.error('Scan error:', error);
+        alert(`Scan failed: ${error.message}\n\nMake sure your server is running.`);
+        
+        // Fallback to mock data for testing
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Using fallback mock data for testing');
+          lastScanData = {
+            success: true,
+            url: fullUrl,
+            score: 87,
+            quality: 'Good',
+            metrics: {
+              graaf: 33,
+              craft: 26,
+              technical: 19,
+              content: 85,    // NEW: transparent content score
+              ux: 92          // NEW: UX score
+            },
+            breakdown: {
+              transparent: {
+                weights: {
+                  technical: '40%',
+                  content: '40%',
+                  ux: '20%'
+                },
+                content_breakdown: {
+                  graaf_contribution: '66 points (60% of content)',
+                  craft_contribution: '35 points (40% of content)',
+                  total_content: '101/100'
+                },
+                formula: 'overall = (technical × 0.4) + (content × 0.4) + (ux × 0.2)'
+              },
+              category_scores: {
+                technical: {
+                  raw: 19,
+                  max: 20,
+                  weighted: 38,
+                  contribution: '40% of overall'
+                },
+                content: {
+                  raw_graaf: 33,
+                  raw_craft: 26,
+                  calculated: 85,
+                  weighted: 34,
+                  contribution: '40% of overall'
+                },
+                ux: {
+                  score: 92,
+                  weighted: 18.4,
+                  contribution: '20% of overall'
+                }
+              },
+              total_calculation: '38 + 34 + 18.4 = 90.4'
+            },
+            comparison: {
+              is_first_scan: true,
+              changes: null
+            },
+            recommendations: {
+              all: [
+                {
+                  title: 'Improve Heading Structure',
+                  impact: 'High',
+                  points: '+15',
+                  category: 'CRAFT Framework',
+                  description: 'Add proper H1-H3 heading hierarchy',
+                  howToFix: '1. Create ONE descriptive H1 heading\n2. Include primary keyword naturally\n3. Place at beginning of content\n4. Make it engaging and clear',
+                  example: '<h1>Complete Guide to SEO Content Optimization in 2024</h1>'
+                },
+                {
+                  title: 'Add More Internal Links',
+                  impact: 'Medium',
+                  points: '+8',
+                  category: 'Technical SEO',
+                  description: 'Link to related content on your site'
+                }
+              ],
+              quickWins: [],
+              majorImprovements: [
+                {
+                  title: 'Improve Heading Structure',
+                  impact: 'High',
+                  points: '+15',
+                  category: 'CRAFT Framework',
+                  description: 'Add proper H1-H3 heading hierarchy',
+                  howToFix: '1. Create ONE descriptive H1 heading\n2. Include primary keyword naturally\n3. Place at beginning of content\n4. Make it engaging and clear',
+                  example: '<h1>Complete Guide to SEO Content Optimization in 2024</h1>'
+                }
+              ],
+              totalRecommendations: 2
+            }
+          };
+          showScanResults(lastScanData);
+        }
+      } finally {
         scanButton.innerHTML = originalText;
         scanButton.disabled = false;
-      }, 1500);
+      }
     }
 
     function showScanResults(data) {
@@ -2442,6 +2522,57 @@
         `;
       }
       
+      // Build transparent scoring HTML
+      let transparentHtml = '';
+      if (data.breakdown?.transparent) {
+        transparentHtml = `
+          <div class="mt-6 bg-gray-800 border border-purple-600 rounded-xl p-6">
+            <h3 class="text-xl font-bold mb-4 text-purple-400">🔍 Transparent Scoring Breakdown</h3>
+            
+            <div class="mb-4">
+              <div class="text-sm text-gray-400 mb-2">📊 How Your ${data.score}/100 Score Was Calculated:</div>
+              <div class="text-sm text-gray-300 mb-2">Formula: <code class="bg-gray-900 px-2 py-1 rounded">${data.breakdown.transparent.formula || 'overall = (technical × 0.4) + (content × 0.4) + (ux × 0.2)'}</code></div>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-4 mb-4">
+              <div class="bg-gray-900 p-4 rounded-lg text-center">
+                <div class="text-sm text-gray-400 mb-1">Technical SEO</div>
+                <div class="text-lg font-bold text-green-400">${data.breakdown.transparent.weights?.technical || '40%'}</div>
+                <div class="text-xs text-gray-500">Weight</div>
+              </div>
+              <div class="bg-gray-900 p-4 rounded-lg text-center">
+                <div class="text-sm text-gray-400 mb-1">Content Quality</div>
+                <div class="text-lg font-bold text-blue-400">${data.breakdown.transparent.weights?.content || '40%'}</div>
+                <div class="text-xs text-gray-500">Weight</div>
+              </div>
+              <div class="bg-gray-900 p-4 rounded-lg text-center">
+                <div class="text-sm text-gray-400 mb-1">User Experience</div>
+                <div class="text-lg font-bold text-yellow-400">${data.breakdown.transparent.weights?.ux || '20%'}</div>
+                <div class="text-xs text-gray-500">Weight</div>
+              </div>
+            </div>
+            
+            <div class="text-sm text-gray-300">
+              <div class="mb-2">🎯 <strong>Content Score Calculation:</strong></div>
+              <div class="ml-4 text-gray-400">
+                • GRAAF Contribution: ${data.breakdown.transparent.content_breakdown?.graaf_contribution || '60%'}<br>
+                • CRAFT Contribution: ${data.breakdown.transparent.content_breakdown?.craft_contribution || '40%'}<br>
+                • Total Content Score: ${data.breakdown.transparent.content_breakdown?.total_content || 'Calculated'}
+              </div>
+            </div>
+            
+            ${data.breakdown?.total_calculation ? `
+              <div class="mt-4 pt-4 border-t border-gray-700">
+                <div class="text-sm text-gray-300">
+                  <strong>📐 Exact Calculation:</strong>
+                  <div class="text-gray-400 mt-1">${data.breakdown.total_calculation}</div>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }
+      
       modalContent.innerHTML = `
         <div class="p-8">
           <div class="flex justify-between items-start mb-6">
@@ -2464,21 +2595,23 @@
           
           <div class="grid grid-cols-3 gap-4 mb-6">
             <div class="bg-gray-700 p-4 rounded-lg text-center">
-              <div class="text-sm text-gray-400 mb-1">GRAAF Score</div>
-              <div class="text-2xl font-bold text-purple-400">${data.metrics?.graaf || 0}/50</div>
-              <div class="text-xs text-gray-500 mt-1">${data.breakdown?.graaf?.percentage || 0}%</div>
+              <div class="text-sm text-gray-400 mb-1">Content Score</div>
+              <div class="text-2xl font-bold text-blue-400">${data.metrics?.content || data.metrics?.graaf || 0}/100</div>
+              <div class="text-xs text-gray-500 mt-1">${data.breakdown?.content_breakdown?.percentage || 'Calculated'}</div>
             </div>
             <div class="bg-gray-700 p-4 rounded-lg text-center">
-              <div class="text-sm text-gray-400 mb-1">CRAFT Score</div>
-              <div class="text-2xl font-bold text-blue-400">${data.metrics?.craft || 0}/30</div>
-              <div class="text-xs text-gray-500 mt-1">${data.breakdown?.craft?.percentage || 0}%</div>
-            </div>
-            <div class="bg-gray-700 p-4 rounded-lg text-center">
-              <div class="text-sm text-gray-400 mb-1">Technical</div>
+              <div class="text-sm text-gray-400 mb-1">Technical SEO</div>
               <div class="text-2xl font-bold text-green-400">${data.metrics?.technical || 0}/20</div>
-              <div class="text-xs text-gray-500 mt-1">${data.breakdown?.technical?.percentage || 0}%</div>
+              <div class="text-xs text-gray-500 mt-1">${Math.round((data.metrics?.technical || 0) / 20 * 100)}%</div>
+            </div>
+            <div class="bg-gray-700 p-4 rounded-lg text-center">
+              <div class="text-sm text-gray-400 mb-1">User Experience</div>
+              <div class="text-2xl font-bold text-yellow-400">${data.metrics?.ux || 0}/100</div>
+              <div class="text-xs text-gray-500 mt-1">${data.metrics?.ux || 0}%</div>
             </div>
           </div>
+          
+          ${transparentHtml}
           
           ${recommendationsHtml}
           
