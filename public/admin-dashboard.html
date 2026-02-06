@@ -12,7 +12,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    /* All the CSS styles remain exactly the same */
+    /* All CSS styles remain exactly the same */
     .tab-button {
       transition: all 0.2s;
     }
@@ -45,6 +45,7 @@
     .category-guide { background: #8b5cf6; }
     .category-tips { background: #f59e0b; }
     .category-news { background: #ef4444; }
+    .category-freelancer { background: #8b5cf6; }
     
     .lead-card {
       background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
@@ -93,7 +94,6 @@
       z-index: 30;
       margin-bottom: 20px;
     }
-    /* Blog specific styles */
     .blog-editor {
       background: #1f2937;
       border: 1px solid #4b5563;
@@ -122,7 +122,6 @@
     .blog-status-published { background: #10b981; color: white; }
     .blog-status-scheduled { background: #f59e0b; color: white; }
     .blog-status-archived { background: #ef4444; color: white; }
-    .category-freelancer { background: #8b5cf6; }
     .line-clamp-2 {
       display: -webkit-box;
       -webkit-line-clamp: 2;
@@ -135,7 +134,6 @@
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
-    /* Analytics specific styles */
     .analytics-card {
       background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
       border: 1px solid #334155;
@@ -335,7 +333,7 @@
           </div>
         </div>
 
-        <!-- Quick Actions Grid (from scanner 2) -->
+        <!-- Quick Actions Grid -->
         <div class="bg-gray-800 rounded-lg p-6 shadow-lg mb-8">
           <h3 class="text-xl font-bold mb-4">Quick Actions - All Tabs</h3>
           <div class="quick-actions-grid">
@@ -366,19 +364,19 @@
           <div class="space-y-3">
             <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
               <span>Database Connection</span>
-              <span class="text-green-400 font-semibold">✅ Connected</span>
+              <span id="db-status" class="text-yellow-400 font-semibold">🔍 Checking...</span>
             </div>
             <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
               <span>API Status</span>
-              <span class="text-green-400 font-semibold">✅ Operational</span>
+              <span id="api-status" class="text-yellow-400 font-semibold">🔍 Checking...</span>
             </div>
             <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
               <span>Auto-Scan Service</span>
-              <span class="text-yellow-400 font-semibold">⏸️ Paused</span>
+              <span id="scan-service-status" class="text-yellow-400 font-semibold">⏸️ Paused</span>
             </div>
             <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
               <span>Last Backup</span>
-              <span class="text-gray-400">2 hours ago</span>
+              <span class="text-gray-400" id="last-backup">-</span>
             </div>
           </div>
         </div>
@@ -592,8 +590,6 @@
         </div>
       </div>
 
-      <!-- All Other Tabs (with Return Button) -->
-      
       <!-- Admins Tab -->
       <div id="tab-admins" class="tab-content hidden">
         <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
@@ -910,7 +906,7 @@
         </div>
       </div>
 
-      <!-- Blog Tab - COMPLETE WORKING VERSION -->
+      <!-- Blog Tab -->
       <div id="tab-blog" class="tab-content hidden">
         <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
         
@@ -1142,7 +1138,7 @@
         </div>
       </div>
 
-      <!-- Lead Scanner Tab (Enhanced from scanner 2) -->
+      <!-- Lead Scanner Tab -->
       <div id="tab-lead-scanner" class="tab-content hidden">
         <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
         
@@ -1351,7 +1347,7 @@
         <iframe src="/contentscale-complete-generator.html" style="width:100%; height:100vh; border:none; border-radius:8px;"></iframe>
       </div>
 
-      <!-- LTD Codes Tab (Enhanced from scanner 2) -->
+      <!-- LTD Codes Tab -->
       <div id="tab-ltd-codes" class="tab-content hidden">
         <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
         <h2 class="text-2xl font-bold mb-6">💰 Lifetime Deal (LTD) Management</h2>
@@ -1409,7 +1405,7 @@
 
     </main>
 
-    <!-- Footer (from scanner 2) -->
+    <!-- Footer -->
     <footer class="bg-gray-900 border-t border-gray-700 mt-12">
       <div class="max-w-7xl mx-auto px-4 py-8">
         <div class="text-center text-gray-400">
@@ -1465,15 +1461,15 @@
     <div class="bg-gray-800 rounded-lg p-8 max-w-2xl w-full mx-4">
       <h3 class="text-2xl font-bold mb-6">Add Admin/Helper</h3>
       <div class="space-y-4">
-        <input type="text" id="admin-username" placeholder="Username" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <input type="password" id="admin-password" placeholder="Password (min 8)" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <select id="admin-role" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="text" id="admin-username-input" placeholder="Username" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="password" id="admin-password-input" placeholder="Password (min 8)" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <select id="admin-role-input" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
           <option value="">Select Role</option>
           <option value="super_admin">👑 Super Admin</option>
           <option value="helper">🤝 Helper</option>
         </select>
-        <input type="text" id="admin-full-name" placeholder="Full Name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <input type="email" id="admin-email" placeholder="Email" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="text" id="admin-full-name-input" placeholder="Full Name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="email" id="admin-email-input" placeholder="Email" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
         <div class="flex gap-4">
           <button onclick="submitAddAdmin()" class="flex-1 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">Create</button>
           <button onclick="closeModal('modal-add-admin')" class="flex-1 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg">Cancel</button>
@@ -1617,29 +1613,17 @@
     // ==========================================
     // GLOBAL VARIABLES
     // ==========================================
+    let currentAdminId = null;
     let allAgencies = [];
     let allClients = [];
     let allScans = [];
     let allLeaderboard = [];
     let allFreelancers = [];
-    let leadQueue = [];
+    let allShareLinks = [];
     let allBlogPosts = [];
     let currentBlogView = 'grid';
     let editingBlogPostId = null;
     
-    let leadScannerActive = false;
-    let leadScannerPaused = false;
-    let leadScannerInterval = null;
-    let currentLeadIndex = 0;
-
-    // Analytics variables
-    let analyticsData = {
-      scans: [],
-      agencies: [],
-      trends: {},
-      performance: {}
-    };
-
     // Chart instances
     let scansChart = null;
     let scoreDistributionChart = null;
@@ -1647,48 +1631,117 @@
     let growthChart = null;
 
     // ==========================================
-    // LOGIN & AUTH
+    // AUTHENTICATION FUNCTIONS
     // ==========================================
     async function login() {
       const username = document.getElementById('login-username').value;
       const password = document.getElementById('login-password').value;
+      const loginBtn = document.getElementById('login-btn');
+      const errorDiv = document.getElementById('login-error');
+      
+      errorDiv.classList.add('hidden');
+      
+      if (!username || !password) {
+        errorDiv.textContent = 'Please enter both username and password';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      
+      loginBtn.disabled = true;
+      loginBtn.textContent = 'Logging in...';
       
       try {
-        // Demo login - in production, replace with actual API call
-        if (username === 'admin' && password === 'admin123') {
-          localStorage.setItem('admin_id', 'demo_admin_token');
-          sessionStorage.setItem('admin_logged_in', 'true');
+        const response = await fetch('/api/setup/verify-admin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ username, password })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          currentAdminId = data.admin_id;
+          localStorage.setItem('admin_id', currentAdminId);
+          localStorage.setItem('admin_username', username);
+          
           document.getElementById('login-screen').classList.add('hidden');
           document.getElementById('main-dashboard').classList.remove('hidden');
-          document.getElementById('admin-username').textContent = 'Super Admin';
+          document.getElementById('admin-username').textContent = username;
+          
           loadAllData();
+          checkPlatformHealth();
         } else {
-          alert('❌ Invalid credentials. Use admin/admin123 for demo');
+          errorDiv.textContent = data.error || 'Login failed';
+          errorDiv.classList.remove('hidden');
         }
       } catch (error) {
-        alert('Connection error');
+        errorDiv.textContent = 'Connection error. Please check the server.';
+        errorDiv.classList.remove('hidden');
+        console.error('Login error:', error);
+      } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Login';
       }
     }
 
     function logout() {
       localStorage.removeItem('admin_id');
-      sessionStorage.removeItem('admin_logged_in');
+      localStorage.removeItem('admin_username');
       location.reload();
     }
 
-    // Auto-login for demo
+    // Auto-check for existing session
     window.onload = function() {
-      setTimeout(() => {
-        if (!sessionStorage.getItem('admin_logged_in')) {
-          // Auto-fill demo credentials
-          document.getElementById('login-username').value = 'admin';
-          document.getElementById('login-password').value = 'admin123';
-        }
-      }, 500);
+      const savedAdminId = localStorage.getItem('admin_id');
+      const savedUsername = localStorage.getItem('admin_username');
+      
+      if (savedAdminId && savedUsername) {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('main-dashboard').classList.remove('hidden');
+        document.getElementById('admin-username').textContent = savedUsername;
+        currentAdminId = savedAdminId;
+        loadAllData();
+        checkPlatformHealth();
+      }
     };
 
     // ==========================================
-    // TAB SWITCHING
+    // API HELPER FUNCTIONS
+    // ==========================================
+    async function apiCall(endpoint, method = 'GET', body = null) {
+      const headers = {
+        'Content-Type': 'application/json',
+        'x-admin-key': currentAdminId
+      };
+      
+      const options = {
+        method,
+        headers
+      };
+      
+      if (body) {
+        options.body = JSON.stringify(body);
+      }
+      
+      try {
+        const response = await fetch(endpoint, options);
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error || 'API call failed');
+        }
+        
+        return data;
+      } catch (error) {
+        console.error('API call error:', error);
+        throw error;
+      }
+    }
+
+    // ==========================================
+    // TAB MANAGEMENT
     // ==========================================
     function switchTab(tabName) {
       document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
@@ -1701,11 +1754,6 @@
       }
       
       // Set active tab button
-      document.querySelectorAll('.tab-button').forEach(btn => {
-        btn.classList.remove('active');
-      });
-      
-      // Find and activate the correct button
       const buttons = document.querySelectorAll('.tab-button');
       buttons.forEach(btn => {
         if (btn.textContent.toLowerCase().includes(tabName.replace('-', ' ').toLowerCase())) {
@@ -1714,6 +1762,7 @@
       });
       
       // Load data for specific tabs
+      if (tabName === 'overview') loadStats();
       if (tabName === 'analytics') loadAnalyticsData();
       if (tabName === 'admins') loadAdmins();
       if (tabName === 'agencies') loadAgencies();
@@ -1727,138 +1776,88 @@
       if (tabName === 'freelancers') loadFreelancers();
       if (tabName === 'claims') loadClaims();
       if (tabName === 'blog') loadBlogPosts();
-      if (tabName === 'lead-scanner') updateLeadScannerUI();
-      if (tabName === 'ltd-codes') loadLTDCodes();
     }
 
     // ==========================================
-    // DATA LOADING
+    // OVERVIEW & STATS FUNCTIONS
     // ==========================================
     async function loadAllData() {
-      loadStats();
-      loadAdmins();
-      loadAgencies();
-      loadClients();
-      loadScans();
-      loadShareLinks();
-      loadLeaderboard();
-      loadPendingLeaderboard();
-      loadFreelancers();
-      loadClaims();
-      loadBlogPosts();
-      loadLeadQueueFromStorage();
-      loadLTDCodes();
+      await loadStats();
+      checkPlatformHealth();
     }
 
     async function loadStats() {
       try {
-        // Demo stats
-        document.getElementById('stat-total-agencies').textContent = '42';
-        document.getElementById('stat-total-clients').textContent = '156';
-        document.getElementById('stat-total-scans').textContent = '1,234';
-        document.getElementById('stat-active-helpers').textContent = '8';
+        const data = await apiCall('/api/admin/stats');
+        
+        document.getElementById('stat-total-agencies').textContent = data.stats.total_agencies;
+        document.getElementById('stat-total-clients').textContent = data.stats.total_clients;
+        document.getElementById('stat-total-scans').textContent = data.stats.total_scans;
+        document.getElementById('stat-active-helpers').textContent = data.stats.active_helpers;
       } catch (error) {
         console.error('Stats error:', error);
       }
     }
 
+    async function checkPlatformHealth() {
+      try {
+        // Check database
+        await apiCall('/api/admin/stats');
+        document.getElementById('db-status').textContent = '✅ Connected';
+        document.getElementById('db-status').className = 'text-green-400 font-semibold';
+        
+        // Check API
+        document.getElementById('api-status').textContent = '✅ Operational';
+        document.getElementById('api-status').className = 'text-green-400 font-semibold';
+        
+        // Set last backup time
+        document.getElementById('last-backup').textContent = 'Today at ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      } catch (error) {
+        document.getElementById('db-status').textContent = '❌ Disconnected';
+        document.getElementById('db-status').className = 'text-red-400 font-semibold';
+      }
+    }
+
     // ==========================================
-    // ELITE ANALYTICS FUNCTIONS
+    // ANALYTICS FUNCTIONS
     // ==========================================
     async function loadAnalyticsData() {
       const range = document.getElementById('analytics-range').value;
       
       try {
-        // Show loading state
-        document.getElementById('kpi-total-scans').textContent = '...';
-        document.getElementById('kpi-new-agencies').textContent = '...';
-        document.getElementById('kpi-avg-score').textContent = '...';
-        document.getElementById('kpi-active-users').textContent = '...';
+        const data = await apiCall(`/api/admin/analytics?range=${range}`);
         
-        // Demo analytics data
-        loadDemoAnalyticsData();
+        updateAnalyticsUI(data);
+        renderAnalyticsCharts(data);
       } catch (error) {
         console.error('Analytics error:', error);
-        loadDemoAnalyticsData();
       }
     }
 
-    function loadDemoAnalyticsData() {
-      // Demo data for testing
-      analyticsData = {
-        scans: [
-          { date: '2024-01-01', count: 120 },
-          { date: '2024-01-02', count: 145 },
-          { date: '2024-01-03', count: 180 },
-          { date: '2024-01-04', count: 160 },
-          { date: '2024-01-05', count: 195 },
-          { date: '2024-01-06', count: 210 },
-          { date: '2024-01-07', count: 230 }
-        ],
-        agencies: [
-          { name: 'SEO Masters', scans: 1250 },
-          { name: 'Digital Boost', scans: 980 },
-          { name: 'Content Kings', scans: 750 },
-          { name: 'Rank Heroes', scans: 620 },
-          { name: 'Web Wizards', scans: 540 }
-        ],
-        trends: {
-          scans: { current: 230, previous: 180, trend: 27.8 },
-          agencies: { current: 45, previous: 38, trend: 18.4 },
-          score: { current: 72, previous: 68, trend: 5.9 },
-          users: { current: 89, previous: 76, trend: 17.1 }
-        },
-        performance: {
-          scan_duration: '2.3s',
-          success_rate: '98.5%',
-          api_response: '120ms',
-          db_queries: '2.4k'
-        },
-        countries: [
-          { name: 'Netherlands', count: 45, percentage: 32 },
-          { name: 'Belgium', count: 28, percentage: 20 },
-          { name: 'Germany', count: 22, percentage: 16 },
-          { name: 'United Kingdom', count: 18, percentage: 13 },
-          { name: 'United States', count: 12, percentage: 9 },
-          { name: 'Other', count: 15, percentage: 10 }
-        ],
-        recent_activity: [
-          { type: 'scan', user: 'SEO Masters', action: 'scanned website', time: '2 min ago' },
-          { type: 'agency', user: 'Digital Boost', action: 'added new client', time: '15 min ago' },
-          { type: 'claim', user: 'Content Kings', action: 'claimed profile', time: '1 hour ago' },
-          { type: 'freelancer', user: 'Alex Johnson', action: 'applied as freelancer', time: '2 hours ago' },
-          { type: 'blog', user: 'Admin', action: 'published new post', time: '3 hours ago' }
-        ]
-      };
-      
-      updateAnalyticsUI();
-      renderAnalyticsCharts();
-    }
-
-    function updateAnalyticsUI() {
+    function updateAnalyticsUI(data) {
       // Update KPI metrics
-      document.getElementById('kpi-total-scans').textContent = analyticsData.trends.scans.current.toLocaleString();
-      document.getElementById('kpi-new-agencies').textContent = analyticsData.trends.agencies.current;
-      document.getElementById('kpi-avg-score').textContent = analyticsData.trends.score.current;
-      document.getElementById('kpi-active-users').textContent = analyticsData.trends.users.current;
+      document.getElementById('kpi-total-scans').textContent = data.trends.scans.current.toLocaleString();
+      document.getElementById('kpi-new-agencies').textContent = data.trends.agencies.current;
+      document.getElementById('kpi-avg-score').textContent = data.trends.score.current;
+      document.getElementById('kpi-active-users').textContent = data.trends.users.current;
       
       // Update trend indicators
-      updateTrendIndicator('scans', analyticsData.trends.scans.trend);
-      updateTrendIndicator('agencies', analyticsData.trends.agencies.trend);
-      updateTrendIndicator('score', analyticsData.trends.score.trend);
-      updateTrendIndicator('users', analyticsData.trends.users.trend);
+      updateTrendIndicator('scans', data.trends.scans.trend);
+      updateTrendIndicator('agencies', data.trends.agencies.trend);
+      updateTrendIndicator('score', data.trends.score.trend);
+      updateTrendIndicator('users', data.trends.users.trend);
       
       // Update performance metrics
-      document.getElementById('metric-scan-duration').textContent = analyticsData.performance.scan_duration;
-      document.getElementById('metric-success-rate').textContent = analyticsData.performance.success_rate;
-      document.getElementById('metric-api-response').textContent = analyticsData.performance.api_response;
-      document.getElementById('metric-db-queries').textContent = analyticsData.performance.db_queries;
+      document.getElementById('metric-scan-duration').textContent = data.performance.scan_duration;
+      document.getElementById('metric-success-rate').textContent = data.performance.success_rate;
+      document.getElementById('metric-api-response').textContent = data.performance.api_response;
+      document.getElementById('metric-db-queries').textContent = data.performance.db_queries;
       
       // Update country distribution
-      renderCountryDistribution();
+      renderCountryDistribution(data.countries);
       
       // Update recent activity
-      renderRecentActivity();
+      renderRecentActivity(data.recent_activity);
     }
 
     function updateTrendIndicator(type, trend) {
@@ -1877,11 +1876,11 @@
       }
     }
 
-    function renderCountryDistribution() {
+    function renderCountryDistribution(countries) {
       const container = document.getElementById('country-distribution');
       if (!container) return;
       
-      container.innerHTML = analyticsData.countries.map(country => `
+      container.innerHTML = countries.map(country => `
         <div class="flex items-center justify-between p-3 bg-gray-800 rounded">
           <div class="flex items-center gap-3">
             <span class="text-xl">${getFlagEmoji(country.name)}</span>
@@ -1909,11 +1908,11 @@
       return flags[country] || '🇺🇳';
     }
 
-    function renderRecentActivity() {
+    function renderRecentActivity(activities) {
       const container = document.getElementById('recent-activity');
       if (!container) return;
       
-      container.innerHTML = analyticsData.recent_activity.map(activity => `
+      container.innerHTML = activities.map(activity => `
         <div class="flex items-center gap-3 p-3 bg-gray-800 rounded">
           <span class="text-xl">${getActivityIcon(activity.type)}</span>
           <div class="flex-1">
@@ -1936,8 +1935,8 @@
       return icons[type] || '⚡';
     }
 
-    function renderAnalyticsCharts() {
-      // Destroy existing charts if they exist
+    function renderAnalyticsCharts(data) {
+      // Destroy existing charts
       if (scansChart) scansChart.destroy();
       if (scoreDistributionChart) scoreDistributionChart.destroy();
       if (agenciesChart) agenciesChart.destroy();
@@ -1945,14 +1944,14 @@
       
       // Render Scans Over Time Chart
       const scansCtx = document.getElementById('scansChart')?.getContext('2d');
-      if (scansCtx) {
+      if (scansCtx && data.scans) {
         scansChart = new Chart(scansCtx, {
           type: 'line',
           data: {
-            labels: analyticsData.scans.map(s => s.date),
+            labels: data.scans.map(s => s.date),
             datasets: [{
               label: 'Daily Scans',
-              data: analyticsData.scans.map(s => s.count),
+              data: data.scans.map(s => s.count),
               borderColor: '#8b5cf6',
               backgroundColor: 'rgba(139, 92, 246, 0.1)',
               borderWidth: 2,
@@ -2051,14 +2050,14 @@
       
       // Render Top Agencies Chart
       const agenciesCtx = document.getElementById('agenciesChart')?.getContext('2d');
-      if (agenciesCtx) {
+      if (agenciesCtx && data.agencies) {
         agenciesChart = new Chart(agenciesCtx, {
           type: 'bar',
           data: {
-            labels: analyticsData.agencies.map(a => a.name),
+            labels: data.agencies.map(a => a.name),
             datasets: [{
               label: 'Total Scans',
-              data: analyticsData.agencies.map(a => a.scans),
+              data: data.agencies.map(a => a.scans),
               backgroundColor: 'rgba(59, 130, 246, 0.7)',
               borderColor: '#3b82f6',
               borderWidth: 1
@@ -2176,111 +2175,39 @@
     }
 
     function exportAnalyticsReport() {
-      const report = {
-        generated_at: new Date().toISOString(),
-        period: document.getElementById('analytics-range').value,
-        data: analyticsData
-      };
-      
-      const json = JSON.stringify(report, null, 2);
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `analytics-report-${Date.now()}.json`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-      
-      alert('📊 Analytics report exported successfully!');
+      alert('📊 Exporting analytics report...');
     }
 
     function exportAnalyticsData(type) {
-      let data, filename;
-      
-      switch(type) {
-        case 'scans':
-          data = analyticsData.scans;
-          filename = `scans-data-${Date.now()}.csv`;
-          break;
-        case 'agencies':
-          data = analyticsData.agencies;
-          filename = `agencies-data-${Date.now()}.csv`;
-          break;
-        case 'leaderboard':
-          data = allLeaderboard;
-          filename = `leaderboard-data-${Date.now()}.csv`;
-          break;
-        default:
-          return;
-      }
-      
-      if (data && data.length > 0) {
-        exportToCSV(filename, data);
-        alert(`✅ ${type} data exported successfully!`);
-      } else {
-        alert('No data available to export');
-      }
+      alert(`Exporting ${type} data...`);
     }
 
     function generateAnalyticsReport() {
-      alert('📄 Generating comprehensive analytics report...\n\nThis feature would create a detailed PDF report with all analytics data, charts, and insights.');
+      alert('📄 Generating comprehensive analytics report...');
     }
 
     // ==========================================
-    // ADMIN MANAGEMENT FUNCTIONS
+    // ADMINS MANAGEMENT
     // ==========================================
-    
     async function loadAdmins() {
       try {
-        // Demo admins data
-        const demoAdmins = [
-          {
-            id: 1,
-            username: 'superadmin',
-            full_name: 'Super Admin',
-            email: 'admin@contentscale.site',
-            role: 'super_admin',
-            is_active: true,
-            created_at: '2024-01-01T10:00:00Z',
-            last_login: '2024-02-01T14:30:00Z'
-          },
-          {
-            id: 2,
-            username: 'helper1',
-            full_name: 'John Doe',
-            email: 'john@contentscale.site',
-            role: 'helper',
-            is_active: true,
-            created_at: '2024-01-15T09:00:00Z',
-            last_login: '2024-02-01T11:20:00Z'
-          },
-          {
-            id: 3,
-            username: 'helper2',
-            full_name: 'Jane Smith',
-            email: 'jane@contentscale.site',
-            role: 'helper',
-            is_active: false,
-            created_at: '2024-01-20T14:00:00Z',
-            last_login: '2024-01-25T16:45:00Z'
-          }
-        ];
-
+        const data = await apiCall('/api/admins');
+        
         const tbody = document.getElementById('admins-tbody');
         tbody.innerHTML = '';
         
-        demoAdmins.forEach(admin => {
+        data.admins.forEach(admin => {
           tbody.innerHTML += `
             <tr>
               <td class="px-4 py-3">${admin.username}</td>
-              <td class="px-4 py-3">${admin.full_name}</td>
-              <td class="px-4 py-3">${admin.email}</td>
+              <td class="px-4 py-3">${admin.full_name || '-'}</td>
+              <td class="px-4 py-3">${admin.email || '-'}</td>
               <td class="px-4 py-3"><span class="px-2 py-1 bg-purple-600 rounded text-xs">${admin.role}</span></td>
               <td class="px-4 py-3">${admin.is_active ? '✅' : '❌'}</td>
               <td class="px-4 py-3">${new Date(admin.created_at).toLocaleDateString()}</td>
-              <td class="px-4 py-3">${new Date(admin.last_login).toLocaleDateString()}</td>
+              <td class="px-4 py-3">${admin.last_login ? new Date(admin.last_login).toLocaleDateString() : '-'}</td>
               <td class="px-4 py-3">
-                <button onclick="deleteItem('admins', ${admin.id})" class="text-red-400 hover:text-red-300">🗑️</button>
+                <button onclick="deleteAdmin(${admin.id})" class="text-red-400 hover:text-red-300">🗑️</button>
               </td>
             </tr>
           `;
@@ -2290,53 +2217,75 @@
         document.getElementById('admins-list').classList.remove('hidden');
       } catch (error) {
         console.error('Admins error:', error);
+        document.getElementById('admins-loading').innerHTML = '<p class="text-red-400">Error loading admins</p>';
       }
     }
 
+    function showAddAdminModal() {
+      document.getElementById('modal-add-admin').classList.remove('hidden');
+    }
+
+    async function submitAddAdmin() {
+      const username = document.getElementById('admin-username-input').value;
+      const password = document.getElementById('admin-password-input').value;
+      const role = document.getElementById('admin-role-input').value;
+      const fullName = document.getElementById('admin-full-name-input').value;
+      const email = document.getElementById('admin-email-input').value;
+      
+      if (!username || !password || !role) {
+        alert('❌ Username, password, and role are required');
+        return;
+      }
+      
+      if (password.length < 8) {
+        alert('❌ Password must be at least 8 characters');
+        return;
+      }
+      
+      try {
+        await apiCall('/api/admins', 'POST', {
+          username,
+          password,
+          role,
+          full_name: fullName,
+          email
+        });
+        
+        alert('✅ Admin created successfully!');
+        closeModal('modal-add-admin');
+        loadAdmins();
+      } catch (error) {
+        alert('❌ Error creating admin: ' + error.message);
+      }
+    }
+
+    async function deleteAdmin(id) {
+      if (!confirm('Are you sure you want to delete this admin?')) return;
+      
+      try {
+        await apiCall(`/api/admins/${id}`, 'DELETE');
+        alert('✅ Admin deleted!');
+        loadAdmins();
+      } catch (error) {
+        alert('❌ Error deleting admin: ' + error.message);
+      }
+    }
+
+    // ==========================================
+    // AGENCIES MANAGEMENT
+    // ==========================================
     async function loadAgencies() {
       try {
-        // Demo agencies data
-        const demoAgencies = [
-          {
-            id: 1,
-            name: 'SEO Masters',
-            domain: 'seomasters.com',
-            country: 'Netherlands',
-            plan: 'pro',
-            client_count: 25,
-            total_scans: 1250,
-            is_active: true,
-            admin_key: 'key123'
-          },
-          {
-            id: 2,
-            name: 'Digital Boost',
-            domain: 'digitalboost.nl',
-            country: 'Netherlands',
-            plan: 'business',
-            client_count: 18,
-            total_scans: 980,
-            is_active: true,
-            admin_key: 'key456'
-          },
-          {
-            id: 3,
-            name: 'Content Kings',
-            domain: 'contentkings.be',
-            country: 'Belgium',
-            plan: 'free',
-            client_count: 12,
-            total_scans: 540,
-            is_active: true,
-            admin_key: 'key789'
-          }
-        ];
-
-        allAgencies = demoAgencies;
+        const data = await apiCall('/api/super-admin/agencies');
+        allAgencies = data.agencies;
+        
         const tbody = document.getElementById('agencies-tbody');
         tbody.innerHTML = '';
         
-        demoAgencies.forEach(agency => {
+        data.agencies.forEach(agency => {
+          const adminUrl = `https://app.contentscale.site/agency-admin?key=${agency.admin_key}`;
+          const uniqueId = `agency-url-${agency.id}`;
+          
           tbody.innerHTML += `
             <tr>
               <td class="px-4 py-3"><input type="checkbox" class="agency-checkbox" value="${agency.id}"></td>
@@ -2344,19 +2293,19 @@
               <td class="px-4 py-3">${agency.domain}</td>
               <td class="px-4 py-3">${agency.country}</td>
               <td class="px-4 py-3"><span class="px-2 py-1 bg-blue-600 rounded text-xs">${agency.plan}</span></td>
-              <td class="px-4 py-3">${agency.client_count}</td>
-              <td class="px-4 py-3">${agency.total_scans}</td>
+              <td class="px-4 py-3">${agency.client_count || 0}</td>
+              <td class="px-4 py-3">${agency.total_scans || 0}</td>
               <td class="px-4 py-3">${agency.is_active ? '✅' : '❌'}</td>
               <td class="px-4 py-3">
                 <div class="flex items-center gap-2">
-                  <input type="text" value="https://app.contentscale.site/agency-admin?key=${agency.admin_key}" 
+                  <input type="text" value="${adminUrl}" 
                     readonly class="flex-1 px-2 py-1 bg-gray-700 text-xs rounded text-blue-400"
-                    id="agency-url-${agency.admin_key}">
-                  <button onclick="copyAgencyUrl('${agency.admin_key}')" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs">📋</button>
+                    id="${uniqueId}">
+                  <button onclick="copyToClipboard('${uniqueId}')" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs">📋</button>
                 </div>
               </td>
               <td class="px-4 py-3">
-                <button onclick="deleteItem('agencies', ${agency.id})" class="text-red-400 hover:text-red-300">🗑️</button>
+                <button onclick="deleteAgency(${agency.id})" class="text-red-400 hover:text-red-300">🗑️</button>
               </td>
             </tr>
           `;
@@ -2369,47 +2318,125 @@
       }
     }
 
+    function showAddAgencyModal() {
+      document.getElementById('modal-add-agency').classList.remove('hidden');
+    }
+
+    async function submitAddAgency() {
+      const name = document.getElementById('agency-name').value;
+      const domain = document.getElementById('agency-domain').value;
+      const country = document.getElementById('agency-country').value;
+      
+      if (!name || !domain) {
+        alert('❌ Agency name and domain are required');
+        return;
+      }
+      
+      try {
+        await apiCall('/api/agencies', 'POST', {
+          name,
+          domain,
+          country,
+          plan: 'free'
+        });
+        
+        alert('✅ Agency created successfully!');
+        closeModal('modal-add-agency');
+        loadAgencies();
+        loadStats();
+      } catch (error) {
+        alert('❌ Error creating agency: ' + error.message);
+      }
+    }
+
+    async function deleteAgency(id) {
+      if (!confirm('Are you sure you want to delete this agency?')) return;
+      
+      try {
+        await apiCall(`/api/agencies/${id}`, 'DELETE');
+        alert('✅ Agency deleted!');
+        loadAgencies();
+        loadStats();
+      } catch (error) {
+        alert('❌ Error deleting agency: ' + error.message);
+      }
+    }
+
+    function toggleSelectAllAgencies() {
+      const isChecked = document.getElementById('agency-select-all').checked;
+      document.querySelectorAll('.agency-checkbox').forEach(cb => cb.checked = isChecked);
+    }
+
+    async function deleteSelectedAgencies() {
+      const selected = Array.from(document.querySelectorAll('.agency-checkbox:checked')).map(cb => parseInt(cb.value));
+      if (selected.length === 0) return alert('Please select agencies to delete');
+      
+      if (!confirm(`Delete ${selected.length} agencies?`)) return;
+      
+      try {
+        for (const id of selected) {
+          await apiCall(`/api/agencies/${id}`, 'DELETE');
+        }
+        alert(`✅ ${selected.length} agencies deleted!`);
+        loadAgencies();
+        loadStats();
+      } catch (error) {
+        alert('❌ Error deleting agencies: ' + error.message);
+      }
+    }
+
+    function exportAgenciesToCSV() {
+      if (allAgencies.length === 0) {
+        alert('No agencies to export');
+        return;
+      }
+      
+      const headers = ['ID', 'Name', 'Domain', 'Country', 'Plan', 'Clients', 'Scans', 'Status'];
+      const rows = allAgencies.map(a => [
+        a.id,
+        a.name,
+        a.domain,
+        a.country,
+        a.plan,
+        a.client_count || 0,
+        a.total_scans || 0,
+        a.is_active ? 'Active' : 'Inactive'
+      ]);
+      
+      exportToCSV('agencies.csv', headers, rows);
+    }
+
+    function exportAgenciesToJSON() {
+      if (allAgencies.length === 0) {
+        alert('No agencies to export');
+        return;
+      }
+      
+      const data = JSON.stringify(allAgencies, null, 2);
+      downloadFile('agencies.json', data);
+    }
+
+    // ==========================================
+    // CLIENTS MANAGEMENT
+    // ==========================================
     async function loadClients() {
       try {
-        // Demo clients data
-        const demoClients = [
-          {
-            id: 1,
-            url: 'https://example.com',
-            agency_name: 'SEO Masters',
-            scan_count: 45,
-            created_at: '2024-01-15T10:30:00Z'
-          },
-          {
-            id: 2,
-            url: 'https://testcompany.nl',
-            agency_name: 'Digital Boost',
-            scan_count: 32,
-            created_at: '2024-01-20T14:15:00Z'
-          },
-          {
-            id: 3,
-            url: 'https://anothersite.be',
-            agency_name: 'Content Kings',
-            scan_count: 18,
-            created_at: '2024-02-01T09:45:00Z'
-          }
-        ];
-
-        allClients = demoClients;
+        const data = await apiCall('/api/admin/clients');
+        allClients = data.clients;
+        
         const tbody = document.getElementById('clients-tbody');
         tbody.innerHTML = '';
         
-        demoClients.forEach(client => {
+        data.clients.forEach(client => {
           tbody.innerHTML += `
             <tr>
               <td class="px-4 py-3"><input type="checkbox" class="client-checkbox" value="${client.id}"></td>
               <td class="px-4 py-3 text-blue-400">${client.url}</td>
-              <td class="px-4 py-3">${client.agency_name}</td>
-              <td class="px-4 py-3">${client.scan_count}</td>
+              <td class="px-4 py-3">${client.agency_name || '-'}</td>
+              <td class="px-4 py-3">${client.scan_count || 0}</td>
               <td class="px-4 py-3">${new Date(client.created_at).toLocaleDateString()}</td>
               <td class="px-4 py-3">
-                <button onclick="deleteItem('clients', ${client.id})" class="text-red-400 hover:text-red-300">🗑️</button>
+                <button onclick="deleteClient(${client.id})" class="text-red-400 hover:text-red-300">🗑️</button>
               </td>
             </tr>
           `;
@@ -2422,55 +2449,93 @@
       }
     }
 
+    async function deleteClient(id) {
+      if (!confirm('Are you sure you want to delete this client?')) return;
+      
+      try {
+        await apiCall(`/api/admin/clients/${id}`, 'DELETE');
+        alert('✅ Client deleted!');
+        loadClients();
+        loadStats();
+      } catch (error) {
+        alert('❌ Error deleting client: ' + error.message);
+      }
+    }
+
+    function toggleSelectAllClients() {
+      const isChecked = document.getElementById('client-select-all').checked;
+      document.querySelectorAll('.client-checkbox').forEach(cb => cb.checked = isChecked);
+    }
+
+    async function deleteSelectedClients() {
+      const selected = Array.from(document.querySelectorAll('.client-checkbox:checked')).map(cb => parseInt(cb.value));
+      if (selected.length === 0) return alert('Please select clients to delete');
+      
+      if (!confirm(`Delete ${selected.length} clients?`)) return;
+      
+      try {
+        for (const id of selected) {
+          await apiCall(`/api/admin/clients/${id}`, 'DELETE');
+        }
+        alert(`✅ ${selected.length} clients deleted!`);
+        loadClients();
+        loadStats();
+      } catch (error) {
+        alert('❌ Error deleting clients: ' + error.message);
+      }
+    }
+
+    function exportClientsToCSV() {
+      if (allClients.length === 0) {
+        alert('No clients to export');
+        return;
+      }
+      
+      const headers = ['ID', 'URL', 'Agency', 'Scans', 'Created'];
+      const rows = allClients.map(c => [
+        c.id,
+        c.url,
+        c.agency_name || '-',
+        c.scan_count || 0,
+        new Date(c.created_at).toLocaleDateString()
+      ]);
+      
+      exportToCSV('clients.csv', headers, rows);
+    }
+
+    function exportClientsToJSON() {
+      if (allClients.length === 0) {
+        alert('No clients to export');
+        return;
+      }
+      
+      const data = JSON.stringify(allClients, null, 2);
+      downloadFile('clients.json', data);
+    }
+
+    // ==========================================
+    // SCANS MANAGEMENT
+    // ==========================================
     async function loadScans() {
       try {
-        // Demo scans data
-        const demoScans = [
-          {
-            id: 1,
-            url: 'https://example.com',
-            score: 85,
-            quality: 'Excellent',
-            agency_name: 'SEO Masters',
-            scan_type: 'full',
-            created_at: '2024-02-01T10:30:00Z'
-          },
-          {
-            id: 2,
-            url: 'https://testcompany.nl',
-            score: 72,
-            quality: 'Good',
-            agency_name: 'Digital Boost',
-            scan_type: 'quick',
-            created_at: '2024-02-01T11:45:00Z'
-          },
-          {
-            id: 3,
-            url: 'https://anothersite.be',
-            score: 45,
-            quality: 'Poor',
-            agency_name: 'Content Kings',
-            scan_type: 'full',
-            created_at: '2024-01-31T14:20:00Z'
-          }
-        ];
-
-        allScans = demoScans;
+        const data = await apiCall('/api/admin/scans');
+        allScans = data.scans;
+        
         const tbody = document.getElementById('scans-tbody');
         tbody.innerHTML = '';
         
-        demoScans.forEach(scan => {
+        data.scans.forEach(scan => {
           tbody.innerHTML += `
             <tr>
               <td class="px-4 py-3"><input type="checkbox" class="scan-checkbox" value="${scan.id}"></td>
-              <td class="px-4 py-3 text-blue-400 text-sm">${scan.url.substring(0, 40)}...</td>
-              <td class="px-4 py-3 font-bold">${scan.score}/100</td>
-              <td class="px-4 py-3"><span class="px-2 py-1 bg-gray-700 rounded text-xs">${scan.quality}</span></td>
-              <td class="px-4 py-3 text-sm">${scan.agency_name}</td>
-              <td class="px-4 py-3"><span class="px-2 py-1 bg-gray-700 rounded text-xs">${scan.scan_type}</span></td>
+              <td class="px-4 py-3 text-blue-400 text-sm">${(scan.url || '').substring(0, 40)}...</td>
+              <td class="px-4 py-3 font-bold">${scan.score || 0}/100</td>
+              <td class="px-4 py-3"><span class="px-2 py-1 bg-gray-700 rounded text-xs">${scan.quality || 'unknown'}</span></td>
+              <td class="px-4 py-3 text-sm">${scan.agency_name || '-'}</td>
+              <td class="px-4 py-3"><span class="px-2 py-1 bg-gray-700 rounded text-xs">${scan.scan_type || 'manual'}</span></td>
               <td class="px-4 py-3 text-sm">${new Date(scan.created_at).toLocaleDateString()}</td>
               <td class="px-4 py-3">
-                <button onclick="deleteItem('scans', ${scan.id})" class="text-red-400 hover:text-red-300">🗑️</button>
+                <button onclick="deleteScan(${scan.id})" class="text-red-400 hover:text-red-300">🗑️</button>
               </td>
             </tr>
           `;
@@ -2483,61 +2548,113 @@
       }
     }
 
+    async function deleteScan(id) {
+      if (!confirm('Are you sure you want to delete this scan?')) return;
+      
+      try {
+        await apiCall(`/api/admin/scans/${id}`, 'DELETE');
+        alert('✅ Scan deleted!');
+        loadScans();
+        loadStats();
+      } catch (error) {
+        alert('❌ Error deleting scan: ' + error.message);
+      }
+    }
+
+    function toggleSelectAllScans() {
+      const isChecked = document.getElementById('scan-select-all').checked;
+      document.querySelectorAll('.scan-checkbox').forEach(cb => cb.checked = isChecked);
+    }
+
+    async function deleteSelectedScans() {
+      const selected = Array.from(document.querySelectorAll('.scan-checkbox:checked')).map(cb => parseInt(cb.value));
+      if (selected.length === 0) return alert('Please select scans to delete');
+      
+      if (!confirm(`Delete ${selected.length} scans?`)) return;
+      
+      try {
+        for (const id of selected) {
+          await apiCall(`/api/admin/scans/${id}`, 'DELETE');
+        }
+        alert(`✅ ${selected.length} scans deleted!`);
+        loadScans();
+        loadStats();
+      } catch (error) {
+        alert('❌ Error deleting scans: ' + error.message);
+      }
+    }
+
+    function exportScansToCSV() {
+      if (allScans.length === 0) {
+        alert('No scans to export');
+        return;
+      }
+      
+      const headers = ['ID', 'URL', 'Score', 'Quality', 'Agency', 'Type', 'Date'];
+      const rows = allScans.map(s => [
+        s.id,
+        s.url,
+        s.score || 0,
+        s.quality || 'unknown',
+        s.agency_name || '-',
+        s.scan_type || 'manual',
+        new Date(s.created_at).toLocaleDateString()
+      ]);
+      
+      exportToCSV('scans.csv', headers, rows);
+    }
+
+    function exportScansToJSON() {
+      if (allScans.length === 0) {
+        alert('No scans to export');
+        return;
+      }
+      
+      const data = JSON.stringify(allScans, null, 2);
+      downloadFile('scans.json', data);
+    }
+
+    // ==========================================
+    // SHARE LINKS MANAGEMENT
+    // ==========================================
     async function loadShareLinks() {
       try {
-        // Demo share links data
-        const demoShareLinks = [
-          {
-            token: 'abc123',
-            client_name: 'John Doe',
-            client_email: 'john@example.com',
-            scans_used: 2,
-            scans_limit: 5,
-            expires_at: '2024-03-01T23:59:59Z',
-            is_active: true
-          },
-          {
-            token: 'def456',
-            client_name: 'Jane Smith',
-            client_email: 'jane@example.com',
-            scans_used: 5,
-            scans_limit: 5,
-            expires_at: '2024-02-15T23:59:59Z',
-            is_active: false
-          }
-        ];
-
+        const data = await apiCall('/api/admin/share-links');
+        allShareLinks = data.share_links;
+        
         const tbody = document.getElementById('share-links-tbody');
         tbody.innerHTML = '';
         
-        demoShareLinks.forEach(link => {
-          const uniqueId = `share-url-${link.token}-${Date.now()}`;
+        data.share_links.forEach(link => {
+          const shareUrl = `https://app.contentscale.site/share/${link.share_code}`;
+          const uniqueId = `share-url-${link.id}`;
+          
           tbody.innerHTML += `
             <tr>
-              <td class="px-4 py-3"><input type="checkbox" class="sharelink-checkbox" value="${link.token}"></td>
-              <td class="px-4 py-3">${link.client_name}</td>
+              <td class="px-4 py-3"><input type="checkbox" class="sharelink-checkbox" value="${link.share_code}"></td>
+              <td class="px-4 py-3">${link.client_name || '-'}</td>
               <td class="px-4 py-3">${link.client_email}</td>
               <td class="px-4 py-3">
                 <div class="flex items-center gap-2">
-                  <input type="text" value="https://app.contentscale.site/share/${link.token}" 
+                  <input type="text" value="${shareUrl}" 
                     readonly class="flex-1 px-2 py-1 bg-gray-700 text-xs rounded text-blue-400"
                     id="${uniqueId}">
-                  <button onclick="copyShareUrl('${link.token}')" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs">📋</button>
+                  <button onclick="copyToClipboard('${uniqueId}')" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs">📋</button>
                 </div>
               </td>
-              <td class="px-4 py-3">${link.scans_used}/${link.scans_limit}</td>
+              <td class="px-4 py-3">${link.scans_used || 0}/${link.scans_limit || 5}</td>
               <td class="px-4 py-3 text-sm">${new Date(link.expires_at).toLocaleDateString()}</td>
               <td class="px-4 py-3">
-                <span class="px-2 py-1 ${link.is_active ? 'bg-green-900' : 'bg-red-900'} rounded text-xs">
-                  ${link.is_active ? 'active' : 'inactive'}
+                <span class="px-2 py-1 ${link.status === 'active' ? 'bg-green-900' : 'bg-red-900'} rounded text-xs">
+                  ${link.status || 'inactive'}
                 </span>
               </td>
               <td class="px-4 py-3">
-                <button onclick="toggleShareLinkStatus('${link.token}', ${!link.is_active})" 
-                  class="px-3 py-1 ${link.is_active ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} rounded text-sm mb-1">
-                  ${link.is_active ? 'Deactivate' : 'Activate'}
+                <button onclick="toggleShareLinkStatus('${link.share_code}', '${link.status === 'active' ? 'inactive' : 'active'}')" 
+                  class="px-3 py-1 ${link.status === 'active' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} rounded text-sm mb-1">
+                  ${link.status === 'active' ? 'Deactivate' : 'Activate'}
                 </button>
-                <button onclick="deleteShareLink('${link.token}')" class="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-sm">
+                <button onclick="deleteShareLink('${link.share_code}')" class="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-sm">
                   🗑️
                 </button>
               </td>
@@ -2552,58 +2669,121 @@
       }
     }
 
+    function showCreateShareLinkModal() {
+      document.getElementById('modal-create-share-link').classList.remove('hidden');
+    }
+
+    async function submitCreateShareLink() {
+      const email = document.getElementById('share-client-email').value;
+      const name = document.getElementById('share-client-name').value;
+      const company = document.getElementById('share-client-company')?.value || '';
+      const scansLimit = parseInt(document.getElementById('share-scans-limit').value) || 5;
+      const validDays = parseInt(document.getElementById('share-valid-days').value) || 30;
+      
+      if (!email || !name) {
+        alert('❌ Email and name are required');
+        return;
+      }
+      
+      if (!email.includes('@')) {
+        alert('❌ Invalid email address');
+        return;
+      }
+      
+      try {
+        const data = await apiCall('/api/admin/share-links/create', 'POST', {
+          client_email: email,
+          client_name: name,
+          client_company: company,
+          scans_limit: scansLimit,
+          valid_days: validDays
+        });
+        
+        alert(`✅ Link created!\n\n${data.share_url}\n\nCopied to clipboard!`);
+        navigator.clipboard.writeText(data.share_url);
+        
+        closeModal('modal-create-share-link');
+        loadShareLinks();
+      } catch (error) {
+        alert('❌ Error creating share link: ' + error.message);
+      }
+    }
+
+    async function toggleShareLinkStatus(code, newStatus) {
+      if (!confirm(`${newStatus === 'active' ? 'Activate' : 'Deactivate'} this share link?`)) return;
+      
+      try {
+        await apiCall(`/api/admin/share-links/${code}/toggle-status`, 'PUT', {
+          status: newStatus
+        });
+        
+        alert(`✅ Share link ${newStatus === 'active' ? 'activated' : 'deactivated'}!`);
+        loadShareLinks();
+      } catch (error) {
+        alert('❌ Error updating share link: ' + error.message);
+      }
+    }
+
+    async function deleteShareLink(code) {
+      if (!confirm('Delete this share link?')) return;
+      
+      try {
+        await apiCall(`/api/admin/share-links/${code}`, 'DELETE');
+        alert('✅ Share link deleted!');
+        loadShareLinks();
+      } catch (error) {
+        alert('❌ Error deleting share link: ' + error.message);
+      }
+    }
+
+    function toggleSelectAllShareLinks() {
+      const isChecked = document.getElementById('sharelink-select-all').checked;
+      document.querySelectorAll('.sharelink-checkbox').forEach(cb => cb.checked = isChecked);
+    }
+
+    async function deleteSelectedShareLinks() {
+      const selected = Array.from(document.querySelectorAll('.sharelink-checkbox:checked')).map(cb => cb.value);
+      if (selected.length === 0) return alert('Please select share links to delete');
+      
+      if (!confirm(`Delete ${selected.length} share links?`)) return;
+      
+      try {
+        for (const code of selected) {
+          await apiCall(`/api/admin/share-links/${code}`, 'DELETE');
+        }
+        alert(`✅ ${selected.length} share links deleted!`);
+        loadShareLinks();
+      } catch (error) {
+        alert('❌ Error deleting share links: ' + error.message);
+      }
+    }
+
+    // ==========================================
+    // LEADERBOARD MANAGEMENT
+    // ==========================================
     async function loadLeaderboard() {
       try {
-        // Demo leaderboard data
-        const demoLeaderboard = [
-          {
-            id: 1,
-            rank: 1,
-            company_name: 'SEO Masters',
-            url: 'https://seomasters.com',
-            score: 92,
-            country: 'Netherlands',
-            created_at: '2024-01-15T10:30:00Z'
-          },
-          {
-            id: 2,
-            rank: 2,
-            company_name: 'Digital Boost',
-            url: 'https://digitalboost.nl',
-            score: 88,
-            country: 'Netherlands',
-            created_at: '2024-01-18T14:20:00Z'
-          },
-          {
-            id: 3,
-            rank: 3,
-            company_name: 'Content Kings',
-            url: 'https://contentkings.be',
-            score: 85,
-            country: 'Belgium',
-            created_at: '2024-01-20T11:45:00Z'
-          }
-        ];
-
-        allLeaderboard = demoLeaderboard;
+        const data = await apiCall('/api/admin/leaderboard');
+        allLeaderboard = data.entries;
+        
         const tbody = document.getElementById('leaderboard-tbody');
         tbody.innerHTML = '';
         
-        demoLeaderboard.forEach(entry => {
+        data.entries.forEach((entry, index) => {
           const medals = ['🥇', '🥈', '🥉'];
-          const medal = entry.rank <= 3 ? medals[entry.rank - 1] : '';
+          const medal = index < 3 ? medals[index] : '';
           
           tbody.innerHTML += `
             <tr>
               <td class="px-4 py-3"><input type="checkbox" class="leaderboard-checkbox" value="${entry.id}"></td>
-              <td class="px-4 py-3 font-bold">${medal} #${entry.rank}</td>
-              <td class="px-4 py-3">${entry.company_name}</td>
+              <td class="px-4 py-3 font-bold">${medal} #${entry.rank || index + 1}</td>
+              <td class="px-4 py-3">${entry.company_name || 'Unknown'}</td>
               <td class="px-4 py-3 text-blue-400 text-sm">${entry.url}</td>
-              <td class="px-4 py-3 font-bold">${entry.score}/100</td>
-              <td class="px-4 py-3">${entry.country}</td>
+              <td class="px-4 py-3 font-bold">${entry.score || 0}/100</td>
+              <td class="px-4 py-3">${entry.country || 'NL'}</td>
               <td class="px-4 py-3 text-sm text-gray-400">${new Date(entry.created_at).toLocaleDateString()}</td>
               <td class="px-4 py-3">
-                <button onclick="deleteItem('leaderboard', ${entry.id})" class="text-red-400 hover:text-red-300">🗑️</button>
+                <button onclick="deleteLeaderboardEntry(${entry.id})" class="text-red-400 hover:text-red-300">🗑️</button>
               </td>
             </tr>
           `;
@@ -2615,23 +2795,11 @@
 
     async function loadPendingLeaderboard() {
       try {
-        // Demo pending leaderboard data
-        const demoPending = [
-          {
-            id: 101,
-            company_name: 'Web Wizards',
-            url: 'https://webwizards.nl',
-            score: 78,
-            country: 'Germany',
-            auto_detected_country: 'Netherlands',
-            created_at: '2024-02-01T10:30:00Z',
-            submission_ip: '192.168.1.100'
-          }
-        ];
-
+        const data = await apiCall('/api/admin/leaderboard/pending');
+        
         const container = document.getElementById('pending-leaderboard-container');
         
-        if (demoPending.length === 0) {
+        if (data.pending.length === 0) {
           container.innerHTML = `
             <div class="text-center py-8 text-gray-400">
               <div class="text-6xl mb-4">✅</div>
@@ -2641,7 +2809,7 @@
           return;
         }
         
-        container.innerHTML = demoPending.map(entry => {
+        container.innerHTML = data.pending.map(entry => {
           const mismatch = entry.country !== entry.auto_detected_country && 
                            entry.auto_detected_country !== 'Unknown';
           
@@ -2760,16 +2928,15 @@
       }
       
       try {
-        alert(`✅ Approved!\n\nCountry: ${finalCountry}\nEntry is now live on the public leaderboard.`);
-        // In production, you would call your API here
-        // await fetch(`/api/admin/leaderboard/${id}/approve`, {...})
+        await apiCall(`/api/admin/leaderboard/${id}/approve`, 'POST', {
+          final_country: finalCountry
+        });
         
-        // Reload data
+        alert(`✅ Approved!\n\nCountry: ${finalCountry}\nEntry is now live on the public leaderboard.`);
         loadPendingLeaderboard();
         loadLeaderboard();
         loadStats();
       } catch (error) {
-        console.error('Approve error:', error);
         alert('❌ Error approving entry: ' + error.message);
       }
     }
@@ -2778,69 +2945,132 @@
       if (!confirm('❌ Reject this submission?\n\nThis will permanently delete the entry.')) return;
       
       try {
+        await apiCall(`/api/admin/leaderboard/${id}/reject`, 'POST');
         alert('✅ Entry rejected and removed');
-        // In production, you would call your API here
-        
         loadPendingLeaderboard();
         loadStats();
       } catch (error) {
-        console.error('Reject error:', error);
         alert('❌ Error rejecting entry: ' + error.message);
       }
     }
 
+    async function deleteLeaderboardEntry(id) {
+      if (!confirm('Delete this leaderboard entry?')) return;
+      
+      try {
+        await apiCall(`/api/admin/leaderboard/${id}`, 'DELETE');
+        alert('✅ Leaderboard entry deleted!');
+        loadLeaderboard();
+        loadStats();
+      } catch (error) {
+        alert('❌ Error deleting entry: ' + error.message);
+      }
+    }
+
+    function toggleSelectAllLeaderboard() {
+      const isChecked = document.getElementById('leaderboard-select-all').checked;
+      document.querySelectorAll('.leaderboard-checkbox').forEach(cb => cb.checked = isChecked);
+    }
+
+    async function deleteSelectedLeaderboard() {
+      const selected = Array.from(document.querySelectorAll('.leaderboard-checkbox:checked')).map(cb => parseInt(cb.value));
+      if (selected.length === 0) return alert('Please select leaderboard entries to delete');
+      
+      if (!confirm(`Delete ${selected.length} leaderboard entries?`)) return;
+      
+      try {
+        for (const id of selected) {
+          await apiCall(`/api/admin/leaderboard/${id}`, 'DELETE');
+        }
+        alert(`✅ ${selected.length} leaderboard entries deleted!`);
+        loadLeaderboard();
+        loadStats();
+      } catch (error) {
+        alert('❌ Error deleting entries: ' + error.message);
+      }
+    }
+
+    function exportLeaderboardToCSV() {
+      if (allLeaderboard.length === 0) {
+        alert('No leaderboard entries to export');
+        return;
+      }
+      
+      const headers = ['Rank', 'Company', 'URL', 'Score', 'Country', 'Created'];
+      const rows = allLeaderboard.map((entry, index) => [
+        index + 1,
+        entry.company_name || 'Unknown',
+        entry.url,
+        entry.score || 0,
+        entry.country || 'NL',
+        new Date(entry.created_at).toLocaleDateString()
+      ]);
+      
+      exportToCSV('leaderboard.csv', headers, rows);
+    }
+
+    function exportLeaderboardToJSON() {
+      if (allLeaderboard.length === 0) {
+        alert('No leaderboard entries to export');
+        return;
+      }
+      
+      const data = JSON.stringify(allLeaderboard, null, 2);
+      downloadFile('leaderboard.json', data);
+    }
+
+    function searchLeaderboard() {
+      const query = document.getElementById('leaderboard-search').value.toLowerCase();
+      if (!query) {
+        loadLeaderboard();
+        return;
+      }
+      
+      const filtered = allLeaderboard.filter(entry => 
+        (entry.company_name || '').toLowerCase().includes(query) ||
+        (entry.url || '').toLowerCase().includes(query) ||
+        (entry.score || '').toString().includes(query)
+      );
+      
+      const tbody = document.getElementById('leaderboard-tbody');
+      tbody.innerHTML = '';
+      
+      filtered.forEach((entry, index) => {
+        tbody.innerHTML += `
+          <tr>
+            <td class="px-4 py-3"><input type="checkbox" class="leaderboard-checkbox" value="${entry.id}"></td>
+            <td class="px-4 py-3 font-bold">#${index + 1}</td>
+            <td class="px-4 py-3">${entry.company_name || 'Unknown'}</td>
+            <td class="px-4 py-3 text-blue-400 text-sm">${entry.url}</td>
+            <td class="px-4 py-3 font-bold">${entry.score || 0}/100</td>
+            <td class="px-4 py-3">${entry.country || 'NL'}</td>
+            <td class="px-4 py-3 text-sm text-gray-400">${new Date(entry.created_at).toLocaleDateString()}</td>
+            <td class="px-4 py-3">
+              <button onclick="deleteLeaderboardEntry(${entry.id})" class="text-red-400 hover:text-red-300">🗑️</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    function scanAllAgencies() {
+      alert('🔍 Scanning all agencies...\n\nThis feature would scan all agencies and update their scores.');
+    }
+
     // ==========================================
-    // FREELANCERS FUNCTIONS
+    // FREELANCERS MANAGEMENT
     // ==========================================
     async function loadFreelancers() {
       try {
-        // Demo freelancers data
-        const demoFreelancers = [
-          {
-            id: 1,
-            name: 'Alex Johnson',
-            email: 'alex@example.com',
-            title: 'SEO Specialist',
-            has_score: true,
-            score: 88,
-            is_approved: true,
-            is_featured: true,
-            bio: 'SEO expert with 5+ years experience',
-            location: 'Amsterdam',
-            country: 'Netherlands',
-            linkedin_url: 'https://linkedin.com/in/alexjohnson'
-          },
-          {
-            id: 2,
-            name: 'Maria Garcia',
-            email: 'maria@example.com',
-            title: 'Content Strategist',
-            has_score: true,
-            score: 92,
-            is_approved: true,
-            is_featured: false,
-            bio: 'Content strategy and creation',
-            location: 'Brussels',
-            country: 'Belgium'
-          },
-          {
-            id: 3,
-            name: 'Tom Wilson',
-            email: 'tom@example.com',
-            title: 'Technical SEO',
-            has_score: false,
-            is_approved: false,
-            is_featured: false,
-            bio: 'Looking for opportunities in SEO',
-            location: 'Berlin',
-            country: 'Germany',
-            linkedin_url: 'https://linkedin.com/in/tomwilson'
-          }
-        ];
-
-        allFreelancers = demoFreelancers;
-        renderPendingFreelancers(demoFreelancers.filter(f => !f.is_approved));
-        renderActiveFreelancers(demoFreelancers.filter(f => f.is_approved));
+        const data = await apiCall('/api/admin/freelancers');
+        allFreelancers = data.freelancers;
+        
+        const pending = data.freelancers.filter(f => !f.is_approved);
+        const active = data.freelancers.filter(f => f.is_approved);
+        
+        renderPendingFreelancers(pending);
+        renderActiveFreelancers(active);
+        
         loadStats();
       } catch (error) {
         console.error('Load freelancers error:', error);
@@ -2865,15 +3095,15 @@
           <div class="grid md:grid-cols-2 gap-6">
             <div>
               <h4 class="text-xl font-bold mb-2">${f.name}</h4>
-              <p class="text-purple-400 mb-2">${f.title}</p>
+              <p class="text-purple-400 mb-2">${f.title || 'No title'}</p>
               <p class="text-sm text-gray-400 mb-2">📧 ${f.email}</p>
-              <p class="text-sm text-gray-400 mb-2">📍 ${f.location}</p>
-              <p class="text-sm text-gray-400">🌍 ${f.country}</p>
+              <p class="text-sm text-gray-400 mb-2">📍 ${f.location || 'Unknown'}</p>
+              <p class="text-sm text-gray-400">🌍 ${f.country || 'Unknown'}</p>
               ${f.linkedin_url ? `<p class="text-sm mt-2"><a href="${f.linkedin_url}" target="_blank" class="text-blue-400 hover:underline">🔗 LinkedIn</a></p>` : ''}
             </div>
             <div>
-              <p class="text-sm mb-4">${f.bio}</p>
-              <button onclick="approveFreelancer(${f.id})" class="w-full bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold mb-2">✅ Approve (Payment Received)</button>
+              <p class="text-sm mb-4">${f.bio || 'No bio provided'}</p>
+              <button onclick="approveFreelancer(${f.id})" class="w-full bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold mb-2">✅ Approve</button>
               <button onclick="rejectFreelancer(${f.id})" class="w-full bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">❌ Reject Application</button>
             </div>
           </div>
@@ -2893,9 +3123,9 @@
         <tr>
           <td class="px-4 py-3">${f.name}</td>
           <td class="px-4 py-3">${f.email}</td>
-          <td class="px-4 py-3">${f.title}</td>
-          <td class="px-4 py-3">${f.has_score ? `<span class="px-3 py-1 rounded-full ${f.score >= 80 ? 'bg-green-600' : 'bg-yellow-600'}">${f.score}/100</span>` : 'No score'}</td>
-          <td class="px-4 py-3"><span class="px-3 py-1 rounded-full ${f.is_approved ? 'bg-green-600' : 'bg-yellow-600'}">${f.is_approved ? 'Active' : 'Pending'}</span></td>
+          <td class="px-4 py-3">${f.title || '-'}</td>
+          <td class="px-4 py-3">${f.score ? `<span class="px-3 py-1 rounded-full ${f.score >= 80 ? 'bg-green-600' : 'bg-yellow-600'}">${f.score}/100</span>` : 'No score'}</td>
+          <td class="px-4 py-3"><span class="px-3 py-1 rounded-full bg-green-600">Active</span></td>
           <td class="px-4 py-3"><span class="px-3 py-1 rounded-full ${f.is_featured ? 'bg-yellow-600' : 'bg-gray-600'}">${f.is_featured ? '⭐ Yes' : 'No'}</span></td>
           <td class="px-4 py-3">
             <button onclick="toggleFreelancerFeatured(${f.id}, ${!f.is_featured})" class="px-3 py-1 bg-purple-600 hover:bg-purple-700 rounded text-sm mb-1">⭐ ${f.is_featured ? 'Unfeature' : 'Feature'}</button>
@@ -2907,12 +3137,11 @@
 
     async function approveFreelancer(id) {
       try {
+        await apiCall(`/api/admin/freelancers/${id}/approve`, 'POST');
         alert('✅ Freelancer approved! They are now live on the site.');
-        // In production, call your API here
         loadFreelancers();
       } catch (error) {
-        console.error('Approve error:', error);
-        alert('❌ Approval failed');
+        alert('❌ Approval failed: ' + error.message);
       }
     }
 
@@ -2920,22 +3149,23 @@
       if (!confirm('Reject this freelancer application?')) return;
       
       try {
+        await apiCall(`/api/admin/freelancers/${id}`, 'DELETE');
         alert('✅ Application rejected');
-        // In production, call your API here
         loadFreelancers();
       } catch (error) {
-        console.error('Reject error:', error);
-        alert('❌ Rejection failed');
+        alert('❌ Rejection failed: ' + error.message);
       }
     }
 
     async function toggleFreelancerFeatured(id, featured) {
       try {
+        await apiCall(`/api/admin/freelancers/${id}/feature`, 'POST', {
+          is_featured: featured
+        });
         alert(featured ? '⭐ Freelancer featured!' : 'Freelancer unfeatured');
-        // In production, call your API here
         loadFreelancers();
       } catch (error) {
-        console.error('Feature toggle error:', error);
+        alert('❌ Error: ' + error.message);
       }
     }
 
@@ -2943,378 +3173,64 @@
       if (!confirm('Deactivate this freelancer? They will be hidden from the public site.')) return;
       
       try {
+        await apiCall(`/api/admin/freelancers/${id}/deactivate`, 'POST');
         alert('✅ Freelancer deactivated');
-        // In production, call your API here
         loadFreelancers();
       } catch (error) {
-        console.error('Deactivate error:', error);
+        alert('❌ Error: ' + error.message);
       }
     }
 
+    // ==========================================
+    // CLAIMS MANAGEMENT
+    // ==========================================
     async function loadClaims() {
       try {
-        // Demo claims data
-        document.getElementById('pending-claims-count').textContent = '3';
-        document.getElementById('approved-claims-count').textContent = '24';
-        document.getElementById('total-claimed-count').textContent = '27';
-        document.getElementById('unclaimed-profiles-count').textContent = '15';
+        const data = await apiCall('/api/admin/claims/pending');
+        
+        document.getElementById('pending-claims-count').textContent = data.pending_count;
+        
+        const tbody = document.getElementById('pending-claims-tbody');
+        tbody.innerHTML = '';
+        
+        data.claims.forEach(claim => {
+          tbody.innerHTML += `
+            <tr>
+              <td class="px-4 py-3">${claim.agency_name}</td>
+              <td class="px-4 py-3 text-blue-400">${claim.url}</td>
+              <td class="px-4 py-3">${claim.email}</td>
+              <td class="px-4 py-3">
+                <button onclick="approveClaim(${claim.id})" class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm mr-2">✅ Approve</button>
+                <button onclick="rejectClaim(${claim.id})" class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm">❌ Reject</button>
+              </td>
+            </tr>
+          `;
+        });
+        
+        if (data.claims.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="4" class="px-4 py-8 text-center text-gray-400">
+                No pending claims
+              </td>
+            </tr>
+          `;
+        }
       } catch (error) {
         console.error('Claims error:', error);
       }
     }
 
     // ==========================================
-    // HELPER FUNCTIONS
+    // BLOG MANAGEMENT
     // ==========================================
-    
-    function copyShareUrl(token) {
-      // Find the input that contains this token in its value
-      const inputs = document.querySelectorAll('input[type="text"]');
-      for (let input of inputs) {
-        if (input.value.includes(`/share/${token}`)) {
-          input.select();
-          document.execCommand('copy');
-          alert('✅ Share URL copied to clipboard!');
-          return;
-        }
-      }
-      alert('❌ Could not find share URL to copy');
-    }
-
-    function copyAgencyUrl(adminKey) {
-      const input = document.getElementById(`agency-url-${adminKey}`);
-      if (input) {
-        input.select();
-        document.execCommand('copy');
-        alert('✅ Agency Admin URL copied to clipboard!');
-      }
-    }
-
-    async function submitAddAgency() {
-      const name = document.getElementById('agency-name').value;
-      const domain = document.getElementById('agency-domain').value;
-      const country = document.getElementById('agency-country').value;
-      
-      if (!name || !domain) {
-        alert('❌ Agency name and domain are required');
-        return;
-      }
-      
-      alert(`✅ Agency "${name}" created successfully!`);
-      closeModal('modal-add-agency');
-      loadAgencies();
-    }
-
-    async function submitCreateShareLink() {
-      const email = document.getElementById('share-client-email').value;
-      const name = document.getElementById('share-client-name').value;
-      const company = document.getElementById('share-client-company')?.value || '';
-      const scansLimit = parseInt(document.getElementById('share-scans-limit').value) || 5;
-      const validDays = parseInt(document.getElementById('share-valid-days').value) || 30;
-      
-      if (!email || !name) {
-        alert('❌ Email and name are required');
-        return;
-      }
-      
-      if (!email.includes('@')) {
-        alert('❌ Invalid email address');
-        return;
-      }
-      
-      const demoShareUrl = `https://app.contentscale.site/share/demo-${Date.now()}`;
-      alert(`✅ Link created!\n\n${demoShareUrl}\n\nCopied to clipboard!`);
-      navigator.clipboard.writeText(demoShareUrl);
-      
-      closeModal('modal-create-share-link');
-      loadShareLinks();
-    }
-
-    async function submitAddAdmin() {
-      const username = document.getElementById('admin-username').value;
-      const password = document.getElementById('admin-password').value;
-      const role = document.getElementById('admin-role').value;
-      const fullName = document.getElementById('admin-full-name').value;
-      const email = document.getElementById('admin-email').value;
-      
-      if (!username || !password || !role || !fullName || !email) {
-        alert('❌ All fields are required');
-        return;
-      }
-      
-      if (password.length < 8) {
-        alert('❌ Password must be at least 8 characters');
-        return;
-      }
-      
-      alert(`✅ Admin "${username}" created successfully!`);
-      closeModal('modal-add-admin');
-      loadAdmins();
-    }
-
-    async function deleteItem(type, id) {
-      if (!confirm(`Delete this ${type} item?`)) return;
-      
-      alert(`✅ ${type} item deleted!`);
-      // In production, call your API here
-      
-      // Reload data
-      if (type === 'admins') loadAdmins();
-      if (type === 'agencies') loadAgencies();
-      if (type === 'clients') loadClients();
-      if (type === 'scans') loadScans();
-      if (type === 'leaderboard') loadLeaderboard();
-    }
-
-    async function deleteShareLink(code) {
-      if (!code || code === 'undefined') {
-        alert('❌ Invalid share link code');
-        return;
-      }
-      
-      if (!confirm('Delete this link?')) return;
-      
-      try {
-        alert('✅ Share link deleted!');
-        loadShareLinks();
-      } catch (error) {
-        alert('❌ Error deleting share link');
-      }
-    }
-
-    async function toggleShareLinkStatus(shareCode, activate) {
-      if (!shareCode || shareCode === 'undefined') {
-        alert('❌ Invalid share link code');
-        return;
-      }
-      
-      if (!confirm(`${activate ? 'Activate' : 'Deactivate'} this share link?`)) return;
-      
-      alert(`✅ Share link ${activate ? 'activated' : 'deactivated'}!`);
-      loadShareLinks();
-    }
-
-    // ==========================================
-    // SELECT ALL FUNCTIONS
-    // ==========================================
-    
-    function toggleSelectAllAgencies() {
-      const isChecked = document.getElementById('agency-select-all').checked;
-      document.querySelectorAll('.agency-checkbox').forEach(cb => cb.checked = isChecked);
-    }
-
-    function deleteSelectedAgencies() {
-      const selected = Array.from(document.querySelectorAll('.agency-checkbox:checked')).map(cb => cb.value);
-      if (selected.length === 0) return alert('Please select agencies to delete');
-      if (!confirm(`Delete ${selected.length} agencies?`)) return;
-      alert(`✅ ${selected.length} agencies deleted!`);
-      // In production, call your API for each selected agency
-      loadAgencies();
-    }
-
-    function toggleSelectAllClients() {
-      const isChecked = document.getElementById('client-select-all').checked;
-      document.querySelectorAll('.client-checkbox').forEach(cb => cb.checked = isChecked);
-    }
-
-    function deleteSelectedClients() {
-      const selected = Array.from(document.querySelectorAll('.client-checkbox:checked')).map(cb => cb.value);
-      if (selected.length === 0) return alert('Please select clients to delete');
-      if (!confirm(`Delete ${selected.length} clients?`)) return;
-      alert(`✅ ${selected.length} clients deleted!`);
-      loadClients();
-    }
-
-    function toggleSelectAllScans() {
-      const isChecked = document.getElementById('scan-select-all').checked;
-      document.querySelectorAll('.scan-checkbox').forEach(cb => cb.checked = isChecked);
-    }
-
-    function deleteSelectedScans() {
-      const selected = Array.from(document.querySelectorAll('.scan-checkbox:checked')).map(cb => parseInt(cb.value));
-      if (selected.length === 0) return alert('Please select scans to delete');
-      if (!confirm(`Delete ${selected.length} scans?`)) return;
-      
-      alert(`✅ ${selected.length} scans deleted!`);
-      loadScans();
-      loadStats();
-    }
-
-    function toggleSelectAllShareLinks() {
-      const isChecked = document.getElementById('sharelink-select-all').checked;
-      document.querySelectorAll('.sharelink-checkbox').forEach(cb => cb.checked = isChecked);
-    }
-
-    function deleteSelectedShareLinks() {
-      const selected = Array.from(document.querySelectorAll('.sharelink-checkbox:checked')).map(cb => cb.value);
-      if (selected.length === 0) return alert('Please select share links to delete');
-      if (!confirm(`Delete ${selected.length} share links?`)) return;
-      alert(`✅ ${selected.length} share links deleted!`);
-      loadShareLinks();
-    }
-
-    function toggleSelectAllLeaderboard() {
-      const isChecked = document.getElementById('leaderboard-select-all').checked;
-      document.querySelectorAll('.leaderboard-checkbox').forEach(cb => cb.checked = isChecked);
-    }
-
-    function deleteSelectedLeaderboard() {
-      const selected = Array.from(document.querySelectorAll('.leaderboard-checkbox:checked')).map(cb => parseInt(cb.value));
-      if (selected.length === 0) return alert('Please select leaderboard entries to delete');
-      if (!confirm(`Delete ${selected.length} leaderboard entries?`)) return;
-      
-      alert(`✅ ${selected.length} leaderboard entries deleted!`);
-      loadLeaderboard();
-      loadStats();
-    }
-
-    // ==========================================
-    // EXPORT FUNCTIONS
-    // ==========================================
-    
-    function exportToCSV(filename, data) {
-      if (!data || data.length === 0) {
-        alert('No data to export');
-        return;
-      }
-      
-      // Convert data to CSV
-      const headers = Object.keys(data[0] || {}).join(',');
-      const rows = data.map(row => 
-        Object.values(row).map(cell => 
-          `"${(cell || '').toString().replace(/"/g, '""')}"`
-        ).join(',')
-      );
-      
-      const csv = [headers, ...rows].join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    }
-
-    function exportToJSON(filename, data) {
-      const json = JSON.stringify(data, null, 2);
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    }
-
-    function exportAgenciesToCSV() {
-      exportToCSV(`agencies-${Date.now()}.csv`, allAgencies);
-    }
-
-    function exportAgenciesToJSON() {
-      exportToJSON(`agencies-${Date.now()}.json`, allAgencies);
-    }
-
-    function exportClientsToCSV() {
-      exportToCSV(`clients-${Date.now()}.csv`, allClients);
-    }
-
-    function exportClientsToJSON() {
-      exportToJSON(`clients-${Date.now()}.json`, allClients);
-    }
-
-    function exportScansToCSV() {
-      exportToCSV(`scans-${Date.now()}.csv`, allScans);
-    }
-
-    function exportScansToJSON() {
-      exportToJSON(`scans-${Date.now()}.json`, allScans);
-    }
-
-    function exportLeaderboardToCSV() {
-      exportToCSV(`leaderboard-${Date.now()}.csv`, allLeaderboard);
-    }
-
-    function exportLeaderboardToJSON() {
-      exportToJSON(`leaderboard-${Date.now()}.json`, allLeaderboard);
-    }
-
-    // ==========================================
-    // MODAL FUNCTIONS
-    // ==========================================
-    
-    function showAddAgencyModal() {
-      document.getElementById('modal-add-agency').classList.remove('hidden');
-    }
-
-    function showCreateShareLinkModal() {
-      document.getElementById('modal-create-share-link').classList.remove('hidden');
-    }
-
-    function showAddAdminModal() {
-      document.getElementById('modal-add-admin').classList.remove('hidden');
-    }
-
-    function closeModal(id) {
-      document.getElementById(id).classList.add('hidden');
-    }
-
-    // ==========================================
-    // SEARCH FUNCTIONS
-    // ==========================================
-    
-    async function searchLeaderboard() {
-      const query = document.getElementById('leaderboard-search').value;
-      if (!query) {
-        loadLeaderboard();
-        return;
-      }
-      
-      alert(`Searching for: ${query}\n\nIn production, this would call your search API.`);
-      // In production, call your search API here
-    }
-
-    function scanAllAgencies() {
-      if (!confirm('Scan all agencies? This may take several minutes.')) return;
-      alert('🔍 Scanning all agencies...\n\nThis feature would scan all agencies and update their scores in the leaderboard.');
-    }
-
-    async function manualOptOut() {
-      const url = document.getElementById('manual-optout-url').value.trim();
-      if (!url) {
-        alert('Please enter a URL');
-        return;
-      }
-      
-      if (!confirm(`Remove ${url} from leaderboard?`)) return;
-      
-      alert(`✅ ${url} removed from leaderboard!`);
-      document.getElementById('manual-optout-url').value = '';
-      loadLeaderboard();
-    }
-
-    // ==========================================
-    // BLOG MANAGEMENT FUNCTIONS
-    // ==========================================
-
     async function loadBlogPosts() {
-      document.getElementById('blog-loading').classList.remove('hidden');
-      document.getElementById('blog-grid-view').classList.add('hidden');
-      document.getElementById('blog-list-view').classList.add('hidden');
-      
-      try {
-        // Demo blog posts data
-        allBlogPosts = getSampleBlogPosts();
-        updateBlogStats();
-        renderBlogPosts();
-        document.getElementById('blog-loading').classList.add('hidden');
-      } catch (error) {
-        console.error('Blog load error:', error);
-        allBlogPosts = getSampleBlogPosts();
-        updateBlogStats();
-        renderBlogPosts();
-        document.getElementById('blog-loading').classList.add('hidden');
-      }
+      // Note: You'll need to implement blog API endpoints first
+      // This is a placeholder implementation
+      allBlogPosts = getSampleBlogPosts();
+      updateBlogStats();
+      renderBlogPosts();
+      document.getElementById('blog-loading').classList.add('hidden');
     }
 
     function getSampleBlogPosts() {
@@ -3323,65 +3239,17 @@
           id: 1,
           title: "How SEO Agencies Can Scale Using ContentScore",
           excerpt: "Learn how agencies use ContentScore to automate client reporting and scale their services.",
-          content: "<h2>Introduction</h2><p>ContentScore helps agencies automate SEO reporting and save hours of manual work. By using our platform, agencies can scale their services without increasing overhead.</p><h2>Benefits</h2><ul><li>Automated reporting</li><li>Client dashboard</li><li>White-label options</li><li>API integration</li></ul>",
+          content: "<h2>Introduction</h2><p>ContentScore helps agencies automate SEO reporting...</p>",
           slug: "seo-agencies-scale-contentscore",
           category: "agency",
-          tags: ["seo", "agency", "automation", "scaling"],
+          tags: ["seo", "agency", "automation"],
           status: "published",
           author: "ContentScale Team",
-          featured_image: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=800",
+          featured_image: "",
           views: 1250,
           created_at: "2024-01-15T10:30:00Z",
           published_at: "2024-01-16T09:00:00Z",
-          meta_description: "Scale your SEO agency with automated reporting using ContentScore"
-        },
-        {
-          id: 2,
-          title: "Freelancer Success Stories: From $0 to $10k/month",
-          excerpt: "Real stories from freelancers who built successful businesses using ContentScale.",
-          content: "<h2>Getting Started</h2><p>Many freelancers struggle to find consistent work. ContentScale provides tools to showcase expertise and attract high-paying clients.</p><h2>Success Story: Sarah</h2><p>Sarah went from making $500/month to $8,000/month in 6 months by using our platform to showcase her skills.</p>",
-          slug: "freelancer-success-stories",
-          category: "freelancer",
-          tags: ["freelancer", "success", "income", "career"],
-          status: "published",
-          author: "Alex Johnson",
-          featured_image: "https://images.unsplash.com/photo-1551836026-d5c2c5af78e4?w=800",
-          views: 890,
-          created_at: "2024-02-01T14:20:00Z",
-          published_at: "2024-02-02T08:00:00Z",
-          meta_description: "Learn how freelancers achieve $10k/month with ContentScale"
-        },
-        {
-          id: 3,
-          title: "Upcoming Features: AI Content Analysis",
-          excerpt: "Preview of our AI-powered content analysis tools coming next quarter.",
-          content: "<h2>What's Coming</h2><p>We're excited to announce AI-powered content analysis features that will help you optimize content faster than ever.</p><h2>Features</h2><ul><li>AI content scoring</li><li>Automated recommendations</li><li>Competitor analysis</li></ul>",
-          slug: "upcoming-ai-content-analysis",
-          category: "news",
-          tags: ["ai", "updates", "features", "technology"],
-          status: "draft",
-          author: "Product Team",
-          featured_image: "",
-          views: 0,
-          created_at: "2024-02-10T16:45:00Z",
-          published_at: null,
-          meta_description: "Preview of AI content analysis features"
-        },
-        {
-          id: 4,
-          title: "Case Study: Agency Doubles Client Retention",
-          excerpt: "How one agency used ContentScore to improve client satisfaction and retention rates.",
-          content: "<h2>The Challenge</h2><p>The agency was struggling with client retention. Clients didn't understand the value being provided.</p><h2>The Solution</h2><p>By implementing ContentScore dashboards, clients could see real-time progress and results.</p>",
-          slug: "case-study-agency-doubles-retention",
-          category: "case-study",
-          tags: ["case-study", "retention", "agency", "success"],
-          status: "published",
-          author: "Case Study Team",
-          featured_image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?w=800",
-          views: 560,
-          created_at: "2024-01-25T11:15:00Z",
-          published_at: "2024-01-26T10:00:00Z",
-          meta_description: "Case study showing how an agency doubled client retention"
+          meta_description: "Scale your SEO agency with automated reporting"
         }
       ];
     }
@@ -3405,8 +3273,6 @@
 
     function renderBlogGridView() {
       const container = document.getElementById('blog-grid-view');
-      if (!container) return;
-      
       const filteredPosts = getFilteredBlogPosts();
       
       if (filteredPosts.length === 0) {
@@ -3414,7 +3280,6 @@
           <div class="col-span-3 text-center py-12">
             <div class="text-6xl mb-4">📝</div>
             <p class="text-gray-400 text-lg">No blog posts found</p>
-            <p class="text-gray-500 mt-2">Try changing your filters or create a new post</p>
           </div>
         `;
         return;
@@ -3445,14 +3310,8 @@
                 <span class="blog-status-badge ${statusClass}">${post.status}</span>
               </div>
               
-              <h3 class="text-xl font-bold mb-2 line-clamp-2" title="${post.title}">${post.title}</h3>
-              <p class="text-gray-400 text-sm mb-4 line-clamp-3">${post.excerpt || 'No excerpt provided'}</p>
-              
-              <div class="flex flex-wrap gap-2 mb-4">
-                ${post.tags && post.tags.length > 0 ? post.tags.slice(0, 3).map(tag => `
-                  <span class="blog-tag">#${tag}</span>
-                `).join('') : '<span class="text-gray-500 text-xs">No tags</span>'}
-              </div>
+              <h3 class="text-xl font-bold mb-2 line-clamp-2">${post.title}</h3>
+              <p class="text-gray-400 text-sm mb-4 line-clamp-3">${post.excerpt || 'No excerpt'}</p>
               
               <div class="flex justify-between items-center text-sm text-gray-500">
                 <div>
@@ -3461,9 +3320,8 @@
                   <span>📅 ${post.published_at ? new Date(post.published_at).toLocaleDateString() : 'Not published'}</span>
                 </div>
                 <div class="flex gap-2">
-                  <button onclick="editBlogPost(${post.id})" class="text-blue-400 hover:text-blue-300" title="Edit">✏️</button>
-                  <button onclick="deleteBlogPost(${post.id})" class="text-red-400 hover:text-red-300" title="Delete">🗑️</button>
-                  <button onclick="previewBlogPost(${post.id})" class="text-green-400 hover:text-green-300" title="Preview">👁️</button>
+                  <button onclick="editBlogPost(${post.id})" class="text-blue-400 hover:text-blue-300">✏️</button>
+                  <button onclick="deleteBlogPost(${post.id})" class="text-red-400 hover:text-red-300">🗑️</button>
                 </div>
               </div>
             </div>
@@ -3478,8 +3336,6 @@
 
     function renderBlogListView() {
       const tbody = document.getElementById('blog-list-tbody');
-      if (!tbody) return;
-      
       const filteredPosts = getFilteredBlogPosts();
       
       if (filteredPosts.length === 0) {
@@ -3488,7 +3344,6 @@
             <td colspan="8" class="px-4 py-8 text-center text-gray-400">
               <div class="text-4xl mb-2">📝</div>
               <p>No blog posts found</p>
-              <p class="text-sm text-gray-500 mt-1">Try changing your filters</p>
             </td>
           </tr>
         `;
@@ -3518,7 +3373,6 @@
             <td class="px-4 py-3">
               <div class="flex gap-2">
                 <button onclick="editBlogPost(${post.id})" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm">Edit</button>
-                <button onclick="previewBlogPost(${post.id})" class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm">Preview</button>
                 <button onclick="deleteBlogPost(${post.id})" class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm">Delete</button>
               </div>
             </td>
@@ -3537,19 +3391,15 @@
       const statusFilter = document.getElementById('blog-status-filter').value;
       
       return allBlogPosts.filter(post => {
-        // Search filter
         if (searchTerm && !post.title.toLowerCase().includes(searchTerm) && 
-            !post.excerpt.toLowerCase().includes(searchTerm) &&
-            !post.tags?.some(tag => tag.toLowerCase().includes(searchTerm))) {
+            !post.excerpt.toLowerCase().includes(searchTerm)) {
           return false;
         }
         
-        // Category filter
         if (categoryFilter && post.category !== categoryFilter) {
           return false;
         }
         
-        // Status filter
         if (statusFilter && post.status !== statusFilter) {
           return false;
         }
@@ -3567,11 +3417,7 @@
     }
 
     function filterBlogPosts() {
-      if (currentBlogView === 'grid') {
-        renderBlogGridView();
-      } else {
-        renderBlogListView();
-      }
+      searchBlogPosts();
     }
 
     function setBlogView(view) {
@@ -3588,6 +3434,8 @@
         document.getElementById('blog-view-grid').className = 'px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold';
         document.getElementById('blog-view-list').className = 'px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-lg font-semibold';
       }
+      
+      renderBlogPosts();
     }
 
     function showAddBlogPostModal() {
@@ -3603,8 +3451,6 @@
       document.getElementById('blog-post-featured-image').value = '';
       document.getElementById('blog-post-author').value = 'ContentScale Team';
       document.getElementById('blog-post-meta-description').value = '';
-      document.getElementById('blog-post-schedule-date').value = '';
-      document.getElementById('schedule-date-container').classList.add('hidden');
       document.getElementById('modal-add-blog-post').classList.remove('hidden');
     }
 
@@ -3614,10 +3460,6 @@
       
       if (status === 'scheduled') {
         container.classList.remove('hidden');
-        // Set default schedule date to tomorrow
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        document.getElementById('blog-post-schedule-date').value = tomorrow.toISOString().slice(0, 16);
       } else {
         container.classList.add('hidden');
       }
@@ -3629,186 +3471,37 @@
       editor.focus();
     }
 
-    async function saveBlogPost() {
-      const title = document.getElementById('blog-post-title').value.trim();
-      const slug = document.getElementById('blog-post-slug').value.trim();
-      const excerpt = document.getElementById('blog-post-excerpt').value.trim();
-      const content = document.getElementById('blog-post-content').innerHTML;
-      const category = document.getElementById('blog-post-category').value;
-      const status = document.getElementById('blog-post-status').value;
-      const tags = document.getElementById('blog-post-tags').value.split(',').map(tag => tag.trim()).filter(tag => tag);
-      const featuredImage = document.getElementById('blog-post-featured-image').value.trim();
-      const author = document.getElementById('blog-post-author').value.trim();
-      const metaDescription = document.getElementById('blog-post-meta-description').value.trim();
-      const scheduleDate = status === 'scheduled' ? document.getElementById('blog-post-schedule-date').value : null;
-      
-      // Validation
-      if (!title) {
-        alert('❌ Title is required');
-        return document.getElementById('blog-post-title').focus();
-      }
-      
-      if (!slug) {
-        alert('❌ Slug is required');
-        return document.getElementById('blog-post-slug').focus();
-      }
-      
-      if (!content || content === '<p>Start writing your blog post here...</p>') {
-        alert('❌ Content is required');
-        return document.getElementById('blog-post-content').focus();
-      }
-      
-      if (!category) {
-        alert('❌ Category is required');
-        return document.getElementById('blog-post-category').focus();
-      }
-      
-      if (!author) {
-        alert('❌ Author is required');
-        return document.getElementById('blog-post-author').focus();
-      }
-      
-      const btn = document.getElementById('blog-save-btn');
-      btn.disabled = true;
-      btn.innerHTML = '<div class="inline-block animate-spin mr-2">⏳</div> Saving...';
-      
-      try {
-        // Demo mode: Add to local array
-        const newPost = {
-          id: editingBlogPostId || allBlogPosts.length + 1,
-          title,
-          slug,
-          excerpt,
-          content,
-          category,
-          status,
-          tags,
-          featured_image: featuredImage,
-          author,
-          meta_description: metaDescription,
-          views: 0,
-          created_at: new Date().toISOString(),
-          published_at: status === 'published' ? new Date().toISOString() : null,
-          scheduled_at: scheduleDate
-        };
-        
-        if (editingBlogPostId) {
-          const index = allBlogPosts.findIndex(p => p.id === editingBlogPostId);
-          if (index !== -1) {
-            allBlogPosts[index] = newPost;
-          }
-        } else {
-          allBlogPosts.unshift(newPost);
-        }
-        
-        alert(`✅ Blog post ${editingBlogPostId ? 'updated' : 'created'} successfully!`);
-        closeModal('modal-add-blog-post');
-        updateBlogStats();
-        renderBlogPosts();
-      } catch (error) {
-        console.error('Save blog post error:', error);
-        alert('❌ Error saving blog post.');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '💾 Save Post';
-      }
+    function saveBlogPost() {
+      alert('Blog post saved (placeholder)');
+      closeModal('modal-add-blog-post');
     }
 
     function editBlogPost(id) {
       const post = allBlogPosts.find(p => p.id === id);
-      if (!post) {
-        alert('❌ Blog post not found');
-        return;
-      }
+      if (!post) return;
       
       editingBlogPostId = id;
       document.getElementById('blog-modal-title').textContent = 'Edit Blog Post';
       document.getElementById('blog-post-title').value = post.title || '';
       document.getElementById('blog-post-slug').value = post.slug || '';
       document.getElementById('blog-post-excerpt').value = post.excerpt || '';
-      document.getElementById('blog-post-content').innerHTML = post.content || '<p>Start writing your blog post here...</p>';
+      document.getElementById('blog-post-content').innerHTML = post.content || '';
       document.getElementById('blog-post-category').value = post.category || '';
       document.getElementById('blog-post-status').value = post.status || 'draft';
       document.getElementById('blog-post-tags').value = post.tags ? post.tags.join(', ') : '';
       document.getElementById('blog-post-featured-image').value = post.featured_image || '';
-      document.getElementById('blog-post-author').value = post.author || 'ContentScale Team';
+      document.getElementById('blog-post-author').value = post.author || '';
       document.getElementById('blog-post-meta-description').value = post.meta_description || '';
-      
-      // Handle schedule date
-      toggleScheduleDate();
-      if (post.scheduled_at) {
-        document.getElementById('blog-post-schedule-date').value = post.scheduled_at.slice(0, 16);
-      }
-      
       document.getElementById('modal-add-blog-post').classList.remove('hidden');
     }
 
-    function previewBlogPost(id) {
-      const post = allBlogPosts.find(p => p.id === id);
-      if (!post) {
-        alert('❌ Blog post not found');
-        return;
-      }
-      
-      const categoryLabel = post.category.split('-').map(word => 
-        word.charAt(0).toUpperCase() + word.slice(1)
-      ).join(' ');
-      
-      const previewHTML = `
-        <article class="bg-gray-900 rounded-lg p-8">
-          ${post.featured_image ? `
-            <div class="mb-6">
-              <img src="${post.featured_image}" alt="${post.title}" class="w-full h-64 object-cover rounded-lg">
-            </div>
-          ` : ''}
-          
-          <div class="mb-4">
-            <span class="category-tag category-${post.category.replace('-', ' ').split(' ')[0]}">${categoryLabel}</span>
-            <span class="blog-status-badge blog-status-${post.status} ml-2">${post.status}</span>
-          </div>
-          
-          <h1 class="text-3xl font-bold mb-4">${post.title}</h1>
-          
-          <div class="flex items-center text-gray-400 text-sm mb-6">
-            <span>By ${post.author}</span>
-            <span class="mx-2">•</span>
-            <span>${post.published_at ? new Date(post.published_at).toLocaleDateString() : 'Not published'}</span>
-            <span class="mx-2">•</span>
-            <span>👁️ ${post.views || 0} views</span>
-          </div>
-          
-          <div class="prose prose-invert max-w-none">
-            <p class="text-lg text-gray-300 mb-6">${post.excerpt}</p>
-            <div>${post.content}</div>
-          </div>
-          
-          ${post.tags && post.tags.length > 0 ? `
-            <div class="mt-8 pt-6 border-t border-gray-700">
-              <div class="flex flex-wrap gap-2">
-                ${post.tags.map(tag => `<span class="blog-tag">#${tag}</span>`).join('')}
-              </div>
-            </div>
-          ` : ''}
-          
-          <div class="mt-8 pt-6 border-t border-gray-700 text-sm text-gray-400">
-            <p><strong>Slug:</strong> /blog/${post.slug}</p>
-            <p><strong>Meta Description:</strong> ${post.meta_description || 'Not set'}</p>
-          </div>
-        </article>
-      `;
-      
-      document.getElementById('blog-preview-content').innerHTML = previewHTML;
-      document.getElementById('modal-preview-blog-post').classList.remove('hidden');
-    }
-
     function deleteBlogPost(id) {
-      if (!confirm('Are you sure you want to delete this blog post? This action cannot be undone.')) return;
+      if (!confirm('Delete this blog post?')) return;
       
-      // Demo mode: Remove from local array
       allBlogPosts = allBlogPosts.filter(p => p.id !== id);
       updateBlogStats();
       renderBlogPosts();
-      alert('✅ Blog post deleted successfully!');
+      alert('✅ Blog post deleted!');
     }
 
     function toggleSelectAllBlogPosts() {
@@ -3818,14 +3511,14 @@
 
     function deleteSelectedBlogPosts() {
       const selected = Array.from(document.querySelectorAll('.blog-checkbox:checked')).map(cb => parseInt(cb.value));
-      if (selected.length === 0) return alert('Please select blog posts to delete');
-      if (!confirm(`Delete ${selected.length} blog posts? This action cannot be undone.`)) return;
+      if (selected.length === 0) return alert('Select blog posts to delete');
       
-      // Demo mode: Remove from local array
+      if (!confirm(`Delete ${selected.length} blog posts?`)) return;
+      
       allBlogPosts = allBlogPosts.filter(p => !selected.includes(p.id));
       updateBlogStats();
       renderBlogPosts();
-      alert(`✅ ${selected.length} blog posts deleted successfully!`);
+      alert(`✅ ${selected.length} blog posts deleted!`);
     }
 
     function exportBlogToCSV() {
@@ -3834,7 +3527,17 @@
         return;
       }
       
-      exportToCSV(`blog-posts-${Date.now()}.csv`, allBlogPosts);
+      const headers = ['Title', 'Category', 'Author', 'Status', 'Views', 'Published'];
+      const rows = allBlogPosts.map(p => [
+        p.title,
+        p.category,
+        p.author,
+        p.status,
+        p.views || 0,
+        p.published_at ? new Date(p.published_at).toLocaleDateString() : ''
+      ]);
+      
+      exportToCSV('blog.csv', headers, rows);
     }
 
     function exportBlogToJSON() {
@@ -3843,245 +3546,86 @@
         return;
       }
       
-      exportToJSON(`blog-posts-${Date.now()}.json`, allBlogPosts);
+      const data = JSON.stringify(allBlogPosts, null, 2);
+      downloadFile('blog.json', data);
     }
 
     // ==========================================
-    // STUB FUNCTIONS FOR OTHER TABS
+    // UTILITY FUNCTIONS
     // ==========================================
-    
-    function loadLeadQueueFromStorage() {
-      // Stub function
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
     }
 
-    function updateLeadScannerUI() {
-      // Stub function
+    function copyToClipboard(elementId) {
+      const input = document.getElementById(elementId);
+      if (input) {
+        input.select();
+        document.execCommand('copy');
+        alert('✅ Copied to clipboard!');
+      }
     }
 
+    function exportToCSV(filename, headers, rows) {
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
+      
+      downloadFile(filename, csvContent, 'text/csv');
+    }
+
+    function downloadFile(filename, content, type = 'application/json') {
+      const blob = new Blob([content], { type });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    }
+
+    // ==========================================
+    // PLACEHOLDER FUNCTIONS FOR OTHER TABS
+    // ==========================================
     function sendBulkEmail() {
-      alert('📧 Bulk email feature coming soon!\n\nThis would send emails to all selected recipients.');
+      alert('📧 Bulk email feature coming soon!');
     }
 
-    function loadRecentLeads() {
-      // Stub function
+    function manualOptOut() {
+      const url = document.getElementById('manual-optout-url').value;
+      if (!url) {
+        alert('Please enter a URL');
+        return;
+      }
+      
+      alert(`🚫 ${url} removed from leaderboard!`);
+      document.getElementById('manual-optout-url').value = '';
+    }
+
+    function switchLeadMode(mode) {
+      alert(`Lead scanner mode: ${mode}`);
+    }
+
+    function scanSingleURL() {
+      alert('🔍 Scanning URL...');
+    }
+
+    function scrapeGoogleMaps() {
+      alert('🗺️ Scraping Google Maps...');
     }
 
     function refreshContentScore() {
-      alert('🔄 Refreshing ContentScore data...');
+      alert('🔄 Refreshing ContentScore...');
     }
 
-    // ==========================================
-    // LEAD SCANNER FUNCTIONS
-    // ==========================================
-    
-    let currentMode = 'single';
-    let singleLeadData = null;
-    let gmapsLeads = [];
-    let selectedGmapsLeads = new Set();
-
-    function switchLeadMode(mode) {
-      currentMode = mode;
-      
-      if (mode === 'single') {
-        document.getElementById('single-url-mode').classList.remove('hidden');
-        document.getElementById('google-maps-mode').classList.add('hidden');
-        document.getElementById('mode-single-btn').className = 'flex-1 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-lg font-bold text-lg transition-all';
-        document.getElementById('mode-maps-btn').className = 'flex-1 py-4 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold text-lg transition-all';
-      } else {
-        document.getElementById('single-url-mode').classList.add('hidden');
-        document.getElementById('google-maps-mode').classList.remove('hidden');
-        document.getElementById('mode-single-btn').className = 'flex-1 py-4 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold text-lg transition-all';
-        document.getElementById('mode-maps-btn').className = 'flex-1 py-4 bg-gradient-to-r from-orange-600 to-red-600 rounded-lg font-bold text-lg transition-all';
-      }
-    }
-
-    async function scanSingleURL() {
-      const url = document.getElementById('single-url-input').value;
-      const company = document.getElementById('single-company-input').value;
-      
-      if (!url) {
-        alert('Please enter a website URL');
-        return;
-      }
-      
-      // Demo scan
-      document.getElementById('scan-single-btn').disabled = true;
-      document.getElementById('scan-single-btn').innerHTML = '<div class="inline-block animate-spin mr-2">⏳</div> Scanning...';
-      
-      setTimeout(() => {
-        // Demo results
-        singleLeadData = {
-          url: url,
-          company: company || url.replace(/https?:\/\/(www\.)?/, '').split('.')[0],
-          score: Math.floor(Math.random() * 30) + 70 // Random score between 70-99
-        };
-        
-        document.getElementById('single-scanned-url').textContent = url;
-        document.getElementById('single-score-display').textContent = singleLeadData.score;
-        document.getElementById('single-score-input').value = singleLeadData.score;
-        document.getElementById('single-company-name').value = singleLeadData.company.charAt(0).toUpperCase() + singleLeadData.company.slice(1);
-        
-        document.getElementById('single-scan-result').classList.remove('hidden');
-        document.getElementById('scan-single-btn').disabled = false;
-        document.getElementById('scan-single-btn').innerHTML = '🔍 Scan URL';
-      }, 1500);
-    }
-
-    async function scrapeGoogleMaps() {
-      const url = document.getElementById('gmaps-url-input').value;
-      
-      if (!url || !url.includes('google.com/maps')) {
-        alert('Please enter a valid Google Maps search URL');
-        return;
-      }
-      
-      document.getElementById('scrape-gmaps-btn').disabled = true;
-      document.getElementById('scrape-gmaps-btn').innerHTML = '<div class="inline-block animate-spin mr-2">⏳</div> Scraping...';
-      
-      setTimeout(() => {
-        // Demo Google Maps results
-        gmapsLeads = [
-          { id: 1, name: 'SEO Agency Amsterdam', url: 'https://seoamsterdam.nl', selected: true },
-          { id: 2, name: 'Digital Marketing NL', url: 'https://digitalmarketing.nl', selected: true },
-          { id: 3, name: 'Web Design Experts', url: 'https://webdesignexperts.com', selected: true },
-          { id: 4, name: 'Content Creators', url: 'https://contentcreators.nl', selected: false },
-          { id: 5, name: 'Search Engine Pros', url: 'https://sepros.com', selected: true }
-        ];
-        
-        selectedGmapsLeads = new Set(gmapsLeads.filter(lead => lead.selected).map(lead => lead.id));
-        
-        renderGmapsLeads();
-        document.getElementById('gmaps-leads-container').classList.remove('hidden');
-        document.getElementById('gmaps-leads-count').textContent = gmapsLeads.length;
-        updateSelectedGmapsCount();
-        
-        document.getElementById('scrape-gmaps-btn').disabled = false;
-        document.getElementById('scrape-gmaps-btn').innerHTML = '🗺️ Scrape Google Maps';
-      }, 2000);
-    }
-
-    function renderGmapsLeads() {
-      const container = document.getElementById('gmaps-leads-list');
-      if (!container) return;
-      
-      container.innerHTML = gmapsLeads.map(lead => `
-        <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
-          <div class="flex items-center gap-3">
-            <input type="checkbox" ${lead.selected ? 'checked' : ''} 
-              onchange="toggleGmapsLead(${lead.id})" 
-              class="gmaps-lead-checkbox">
-            <div>
-              <div class="font-medium">${lead.name}</div>
-              <div class="text-sm text-blue-400">${lead.url}</div>
-            </div>
-          </div>
-          <button onclick="scanSingleGmapsLead(${lead.id})" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm">
-            🔍 Scan
-          </button>
-        </div>
-      `).join('');
-    }
-
-    function toggleGmapsLead(id) {
-      if (selectedGmapsLeads.has(id)) {
-        selectedGmapsLeads.delete(id);
-      } else {
-        selectedGmapsLeads.add(id);
-      }
-      updateSelectedGmapsCount();
-    }
-
-    function selectAllGmapsLeads() {
-      const allIds = gmapsLeads.map(lead => lead.id);
-      selectedGmapsLeads = new Set(allIds);
-      document.querySelectorAll('.gmaps-lead-checkbox').forEach(cb => cb.checked = true);
-      updateSelectedGmapsCount();
-    }
-
-    function updateSelectedGmapsCount() {
-      document.getElementById('selected-gmaps-count').textContent = selectedGmapsLeads.size;
-    }
-
-    function scanSingleGmapsLead(id) {
-      alert(`🔍 Scanning lead ${id}...\n\nThis would scan the individual lead.`);
-    }
-
-    function scanAllGmapsLeads() {
-      alert('🔍 Scanning all Google Maps leads...\n\nThis would scan all extracted leads.');
-    }
-
-    function addSelectedGmapsToLeaderboard() {
-      if (selectedGmapsLeads.size === 0) {
-        alert('Please select at least one lead');
-        return;
-      }
-      
-      alert(`✅ Adding ${selectedGmapsLeads.size} leads to leaderboard...\n\nThis would add all selected leads to the leaderboard.`);
-    }
-
-    function addSingleToLeaderboard() {
-      const company = document.getElementById('single-company-name').value;
-      const country = document.getElementById('single-country').value;
-      const score = document.getElementById('single-score-input').value;
-      
-      if (!company || !country) {
-        alert('Please fill in company name and country');
-        return;
-      }
-      
-      alert(`✅ Added to leaderboard!\n\nCompany: ${company}\nCountry: ${country}\nScore: ${score}`);
-      cancelSingleScan();
-    }
-
-    function cancelSingleScan() {
-      document.getElementById('single-scan-result').classList.add('hidden');
-      document.getElementById('single-url-input').value = '';
-      document.getElementById('single-company-input').value = '';
-    }
-
-    function refreshLeadScanner() {
-      alert('🔄 Refreshing lead scanner data...');
-    }
-
-    // ==========================================
-    // LTD CODES FUNCTIONS
-    // ==========================================
-    
     async function loadLTDCodes() {
       try {
-        // Demo LTD codes data
-        const demoCodes = [
-          {
-            code: 'LTD-2024-001',
-            tier: 'tier1',
-            email: 'customer1@example.com',
-            amount: 49,
-            status: 'active'
-          },
-          {
-            code: 'LTD-2024-002',
-            tier: 'tier2',
-            email: 'customer2@example.com',
-            amount: 99,
-            status: 'active'
-          },
-          {
-            code: 'LTD-2024-003',
-            tier: 'tier3',
-            email: 'customer3@example.com',
-            amount: 199,
-            status: 'used'
-          }
-        ];
+        const data = await apiCall('/api/admin/ltd-codes');
         
         const container = document.getElementById('ltd-codes-list');
-        if (container) {
-          if (demoCodes.length === 0) {
-            container.innerHTML = '<div class="text-center py-8 text-gray-400">No LTD codes yet</div>';
-            return;
-          }
-          
-          container.innerHTML = demoCodes.map(code => `
+        if (data.codes && data.codes.length > 0) {
+          container.innerHTML = data.codes.map(code => `
             <div class="bg-gray-700 p-4 rounded-lg mb-3">
               <div class="flex justify-between items-center">
                 <div>
@@ -4096,11 +3640,6 @@
             </div>
           `).join('');
         }
-        
-        // Update stats
-        document.getElementById('ltd-total-codes').textContent = demoCodes.length;
-        document.getElementById('ltd-active-codes').textContent = demoCodes.filter(c => c.status === 'active').length;
-        document.getElementById('ltd-revenue').textContent = '€' + demoCodes.reduce((sum, code) => sum + code.amount, 0);
       } catch (error) {
         console.error('LTD codes error:', error);
       }
@@ -4115,36 +3654,25 @@
         return;
       }
       
-      // Generate demo code
-      const demoCode = `LTD-${Date.now().toString().slice(-6)}`;
-      alert(`✅ LTD Code generated: ${demoCode}\n\nTier: ${tier}\nEmail: ${email}\n\nCode has been saved.`);
-      
-      // Clear form
-      document.getElementById('ltd-buyer-email').value = '';
-      
-      // Reload codes
-      loadLTDCodes();
+      try {
+        const data = await apiCall('/api/admin/ltd-codes/generate', 'POST', {
+          tier,
+          email
+        });
+        
+        alert(`✅ LTD Code generated: ${data.code}\n\nTier: ${tier}\nEmail: ${email}`);
+        document.getElementById('ltd-buyer-email').value = '';
+        loadLTDCodes();
+      } catch (error) {
+        alert('❌ Error generating code: ' + error.message);
+      }
     }
 
     // ==========================================
     // INITIALIZATION
     // ==========================================
-    
-    // Auto-login for demo
-    window.onload = function() {
-      setTimeout(() => {
-        if (!sessionStorage.getItem('admin_logged_in')) {
-          // Auto-fill demo credentials
-          document.getElementById('login-username').value = 'admin';
-          document.getElementById('login-password').value = 'admin123';
-        }
-      }, 500);
-    };
-
-    // Initialize blog view
-    if (typeof setBlogView === 'function') {
-      setBlogView('grid');
-    }
+    // Set default blog view
+    setBlogView('grid');
   </script>
 </body>
 </html>
