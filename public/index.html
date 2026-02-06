@@ -677,106 +677,106 @@
       margin-bottom: 10px;
     }
 
-    /* LIGHT HOLOGRAPHIC BORDERS FOR COMPARISON TABLE */
-    .comparison-table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: center;
-      color: #e0f0ff;
-      font-size: 15px;
-      background: rgba(10, 10, 20, 0.3);
-      backdrop-filter: blur(5px);
-      border-radius: 12px;
-      overflow: hidden;
-      position: relative;
-      border: 1px solid rgba(100, 180, 255, 0.2);
-    }
-    
-    /* Light holographic borders */
-    .comparison-table th, 
-    .comparison-table td {
-      padding: 18px 15px;
-      position: relative;
-      border: 1px solid rgba(100, 180, 255, 0.2);
-      background: rgba(15, 20, 40, 0.6);
-      transition: all 0.3s ease;
-    }
-    
-    /* Header holographic glow */
-    .comparison-table thead th {
-      background: rgba(20, 30, 70, 0.8);
-      font-weight: 600;
-      font-size: 17px;
-      letter-spacing: 0.5px;
-      padding: 22px 15px;
-      border-top: 1px solid rgba(120, 180, 255, 0.3);
-      border-bottom: 2px solid rgba(120, 180, 255, 0.3);
-      text-transform: uppercase;
-      color: #a8d8ff;
-      position: relative;
-      overflow: hidden;
-    }
-    
-    /* Holographic scanline effect on headers */
-    .comparison-table thead th::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 1px;
-      background: linear-gradient(90deg, 
-        transparent, 
-        rgba(100, 200, 255, 0.8), 
-        transparent);
-      animation: scanline 4s infinite linear;
-    }
-    
-    /* First column (feature names) */
-    .comparison-table tbody tr td:first-child {
-      text-align: left;
-      font-weight: 500;
-      border-left: 1px solid rgba(120, 180, 255, 0.25);
-      background: rgba(20, 25, 50, 0.7);
-    }
-    
-    /* Hover effects */
-    .comparison-table tbody tr:hover td {
-      background: rgba(30, 40, 80, 0.8);
-      box-shadow: inset 0 0 20px rgba(100, 180, 255, 0.1);
-    }
-    
-    /* Plan columns with subtle glow */
-    .comparison-table th:nth-child(2) { /* FREE */
-      border-top: 1px solid rgba(100, 180, 255, 0.2);
-      box-shadow: inset 0 0 15px rgba(100, 180, 255, 0.05);
-    }
-    
-    .comparison-table th:nth-child(3) { /* PRO */
-      border-top: 1px solid rgba(100, 220, 255, 0.25);
-      box-shadow: inset 0 0 15px rgba(100, 220, 255, 0.07);
-    }
-    
-    .comparison-table th:nth-child(4) { /* AGENCY */
-      border-top: 1px solid rgba(150, 100, 255, 0.3);
-      box-shadow: inset 0 0 15px rgba(150, 100, 255, 0.1);
-    }
-    
-    .comparison-table th:nth-child(5) { /* ELITE */
-      border-top: 1px solid rgba(255, 200, 50, 0.35);
-      box-shadow: inset 0 0 15px rgba(255, 200, 50, 0.12);
-    }
-    
-    /* Checkmarks and X's with glow */
-    .comparison-table .fa-check {
-      color: #4ade80;
-      text-shadow: 0 0 8px rgba(74, 222, 128, 0.5);
-    }
-    
-    .comparison-table .fa-xmark {
-      color: #f87171;
-      text-shadow: 0 0 8px rgba(248, 113, 113, 0.3);
-    }
+  /* LIGHT HOLOGRAPHIC BORDERS FOR COMPARISON TABLE */
+.comparison-feature-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: center;
+  color: #e0f0ff;
+  font-size: 15px;
+  background: rgba(10, 10, 20, 0.3);
+  backdrop-filter: blur(5px);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(100, 180, 255, 0.2);
+}
+
+/* Light holographic borders */
+.comparison-feature-table th, 
+.comparison-feature-table td {
+  padding: 18px 15px;
+  position: relative;
+  border: 1px solid rgba(100, 180, 255, 0.2);
+  background: rgba(15, 20, 40, 0.6);
+  transition: all 0.3s ease;
+}
+
+/* Header holographic glow */
+.comparison-feature-table thead th {
+  background: rgba(20, 30, 70, 0.8);
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: 0.5px;
+  padding: 22px 15px;
+  border-top: 1px solid rgba(120, 180, 255, 0.3);
+  border-bottom: 2px solid rgba(120, 180, 255, 0.3);
+  text-transform: uppercase;
+  color: #a8d8ff;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Holographic scanline effect on headers */
+.comparison-feature-table thead th::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(100, 200, 255, 0.8), 
+    transparent);
+  animation: scanline 4s infinite linear;
+}
+
+/* First column (feature names) */
+.comparison-feature-table tbody tr td:first-child {
+  text-align: left;
+  font-weight: 500;
+  border-left: 1px solid rgba(120, 180, 255, 0.25);
+  background: rgba(20, 25, 50, 0.7);
+}
+
+/* Hover effects */
+.comparison-feature-table tbody tr:hover td {
+  background: rgba(30, 40, 80, 0.8);
+  box-shadow: inset 0 0 20px rgba(100, 180, 255, 0.1);
+}
+
+/* Plan columns with subtle glow */
+.comparison-feature-table th:nth-child(2) { /* FREE */
+  border-top: 1px solid rgba(100, 180, 255, 0.2);
+  box-shadow: inset 0 0 15px rgba(100, 180, 255, 0.05);
+}
+
+.comparison-feature-table th:nth-child(3) { /* PRO */
+  border-top: 1px solid rgba(100, 220, 255, 0.25);
+  box-shadow: inset 0 0 15px rgba(100, 220, 255, 0.07);
+}
+
+.comparison-feature-table th:nth-child(4) { /* AGENCY */
+  border-top: 1px solid rgba(150, 100, 255, 0.3);
+  box-shadow: inset 0 0 15px rgba(150, 100, 255, 0.1);
+}
+
+.comparison-feature-table th:nth-child(5) { /* ELITE */
+  border-top: 1px solid rgba(255, 200, 50, 0.35);
+  box-shadow: inset 0 0 15px rgba(255, 200, 50, 0.12);
+}
+
+/* Checkmarks and X's with glow */
+.comparison-feature-table .fa-check {
+  color: #4ade80;
+  text-shadow: 0 0 8px rgba(74, 222, 128, 0.5);
+}
+
+.comparison-feature-table .fa-xmark {
+  color: #f87171;
+  text-shadow: 0 0 8px rgba(248, 113, 113, 0.3);
+}
     
     /* Scanline animation */
     @keyframes scanline {
@@ -1285,7 +1285,7 @@
         <h3 class="text-2xl font-bold text-center mb-8">📊 Plan Comparison</h3>
         
         <div class="overflow-x-auto">
-          <table class="comparison-table w-full">
+              <table class="comparison-feature-table w-full">
             <thead>
               <tr>
                 <th class="pb-4 font-bold">Feature</th>
@@ -1502,13 +1502,6 @@
       <p class="text-xs text-gray-400 mt-3">Usually responds within 1 hour 🚀</p>
     </div>
 
-  </div>
-
-  <!-- SCAN MODAL -->
-  <div id="scanModal" class="modal-overlay">
-    <div class="modal-content">
-      <!-- Content dynamically inserted by showScanResults() -->
-    </div>
   </div>
 
   <!-- ELITE REWRITER MODAL -->
