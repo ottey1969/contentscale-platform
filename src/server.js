@@ -768,7 +768,7 @@ app.get('/api/admin/share-links', verifyAdmin, async (req, res) => {
 app.post('/api/admin/share-links/create', verifyAdmin, async (req, res) => {
   try {
     const { client_email, client_name, client_company, scans_limit, valid_days } = req.body;
-    const shareCode = crypto.randomBytes(8).toString('hex');
+    const shareCode = crypto.randomBytes(8).toString('hex'); // Generate unique code
     const expiresAt = new Date(Date.now() + (valid_days || 30) * 24 * 60 * 60 * 1000);
     
     const result = await pool.query(
