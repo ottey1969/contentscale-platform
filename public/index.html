@@ -1,193 +1,120 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>GRAAF Framework SEO Scanner 2026</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ContentScale – Global SEO Leaderboard</title>
 
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
 
-  <style>
-    body { background:#0f172a; color:#e5e7eb; }
-
-    .stat-card {
-      background: linear-gradient(135deg,#667eea,#764ba2);
-      border-radius:16px;
-      padding:20px;
-      position:relative;
-      overflow:hidden;
-    }
-
-    .scan-spinner {
-      width:18px;height:18px;
-      border:3px solid rgba(255,255,255,.3);
-      border-top-color:#fff;
-      border-radius:50%;
-      animation:spin .8s linear infinite;
-      display:inline-block;
-      margin-right:8px;
-    }
-
-    @keyframes spin { to { transform:rotate(360deg); } }
-
-    .pricing-card {
-      background:linear-gradient(135deg,#1e293b,#020617);
-      border:2px solid #334155;
-      border-radius:16px;
-      padding:32px;
-      display:flex;
-      flex-direction:column;
-    }
-
-    .pricing-card.popular {
-      border-color:#fbbf24;
-    }
-
-    .price-tag {
-      font-size:46px;
-      font-weight:800;
-      background:linear-gradient(135deg,#a78bfa,#8b5cf6);
-      -webkit-background-clip:text;
-      -webkit-text-fill-color:transparent;
-    }
-
-    .feature-list li {
-      padding:10px 0;
-      border-bottom:1px solid #334155;
-      display:flex;
-      gap:10px;
-    }
-
-    .pricing-button {
-      margin-top:auto;
-      padding:14px;
-      border-radius:10px;
-      font-weight:700;
-    }
-
-    .sticky-nav {
-      position:sticky;
-      top:0;
-      z-index:1000;
-      background:#020617;
-      border-bottom:2px solid #1e293b;
-    }
-  </style>
+<style>
+body { background:#0b1220; color:#e5e7eb; }
+.card { border-radius:18px; padding:28px; background:linear-gradient(135deg,#1e293b,#020617); }
+.stat { background:linear-gradient(135deg,#7c6cff,#9f7aea); }
+.btn { background:linear-gradient(90deg,#7c3aed,#2563eb); }
+</style>
 </head>
 
 <body>
 
-<!-- NAV -->
-<nav class="sticky-nav">
-  <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-    <div class="text-2xl font-bold text-purple-400">ContentScale</div>
-    <div class="flex gap-4 items-center">
-      <a href="#scanner" class="hover:text-white">Scanner</a>
-      <a href="#leaderboard" class="hover:text-white">Leaderboard</a>
-      <a href="#pricing" class="hover:text-white">Pricing</a>
-      <a href="/blog/index.html" class="hover:text-white">Blog</a>
-    </div>
+<!-- TOP CLAIM BAR -->
+<div class="max-w-7xl mx-auto mt-6 px-6">
+  <div class="flex justify-between items-center bg-gradient-to-r from-purple-800 to-indigo-800 rounded-xl px-6 py-4">
+    <span class="font-semibold">🏢 Agency owner? Claim your free verified listing</span>
+    <button class="px-6 py-2 rounded-lg btn font-bold">Claim Profile</button>
   </div>
-</nav>
+</div>
 
-<!-- HERO -->
-<section class="text-center py-16 px-6">
-  <h1 class="text-5xl font-extrabold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
-    GRAAF SEO Quality Scanner 2026
-  </h1>
-  <p class="text-xl text-gray-400 mt-4">
-    Real AI-era content scoring. No caps. No fake ceilings.
-  </p>
+<!-- STATS -->
+<section class="max-w-7xl mx-auto grid md:grid-cols-4 gap-6 mt-10 px-6">
+  <div class="card stat"><h2 class="text-4xl font-bold">5</h2><p>Agencies Listed</p></div>
+  <div class="card bg-gradient-to-r from-pink-500 to-rose-500"><h2 class="text-4xl font-bold">90</h2><p>Avg. Score</p></div>
+  <div class="card bg-gradient-to-r from-cyan-400 to-blue-500"><h2 class="text-4xl font-bold">5</h2><p>Countries</p></div>
+  <div class="card bg-gradient-to-r from-orange-300 to-amber-400"><h2 class="text-4xl font-bold">3</h2><p>Active Freelancers</p></div>
 </section>
 
-<!-- SCANNER -->
-<section id="scanner" class="max-w-4xl mx-auto bg-gray-900 border-2 border-purple-600 rounded-xl p-8">
-  <h2 class="text-3xl font-bold text-center mb-4">Free SEO Scanner</h2>
-
-  <div class="flex gap-3">
-    <input id="scanInput" placeholder="https://example.com"
-      class="flex-1 px-5 py-4 bg-gray-800 rounded-lg"/>
-    <button id="scanButton"
-      onclick="performScan()"
-      class="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg font-bold">
-      Scan
-    </button>
+<!-- LEADERBOARD -->
+<section class="max-w-7xl mx-auto mt-16 px-6">
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-3xl font-bold">🏆 Top 3 Agencies</h2>
+    <span class="text-sm text-gray-400">Based on GRAAF + CRAFT + Technical SEO</span>
   </div>
 
-  <div id="scanResult" class="mt-6 hidden"></div>
-</section>
-
-<!-- PRICING -->
-<section id="pricing" class="py-20">
-  <h2 class="text-center text-4xl font-bold mb-12">Scanner Pricing</h2>
-
-  <div class="grid md:grid-cols-4 gap-6 max-w-7xl mx-auto px-6">
-
-    <div class="pricing-card">
-      <h3 class="text-xl font-bold">FREE</h3>
-      <div class="price-tag">€0</div>
-      <ul class="feature-list">
-        <li>✅ GRAAF</li>
-        <li>✅ CRAFT</li>
-        <li>✅ Technical SEO</li>
-      </ul>
-      <button class="pricing-button bg-gray-700">Use Free</button>
+  <div class="grid md:grid-cols-3 gap-6">
+    <div class="card border-2 border-yellow-400">
+      <div class="text-center">
+        <div class="text-5xl">🥇</div>
+        <h3 class="text-2xl font-bold mt-3">SEO Masters</h3>
+        <p class="text-yellow-400 text-3xl font-bold mt-2">95<span class="text-sm">/100</span></p>
+        <p class="text-sm text-gray-400 mt-2">🇺🇸 United States</p>
+        <button class="w-full mt-4 py-3 rounded-lg btn font-bold">View Profile</button>
+      </div>
     </div>
 
-    <div class="pricing-card">
-      <h3 class="text-xl font-bold">PRO</h3>
-      <div class="price-tag">€27</div>
-      <ul class="feature-list">
-        <li>✅ 100 scans</li>
-        <li>✅ Priority support</li>
-      </ul>
-      <button class="pricing-button bg-blue-600">Choose</button>
+    <div class="card border-2 border-gray-400">
+      <div class="text-center">
+        <div class="text-5xl">🥈</div>
+        <h3 class="text-2xl font-bold mt-3">Digital Growth</h3>
+        <p class="text-gray-300 text-3xl font-bold mt-2">92<span class="text-sm">/100</span></p>
+        <p class="text-sm text-gray-400 mt-2">🇬🇧 United Kingdom</p>
+        <button class="w-full mt-4 py-3 rounded-lg btn font-bold">View Profile</button>
+      </div>
     </div>
 
-    <div class="pricing-card popular">
-      <h3 class="text-xl font-bold">AGENCY</h3>
-      <div class="price-tag">€97</div>
-      <ul class="feature-list">
-        <li>✅ 500 scans</li>
-        <li>✅ White-label</li>
-        <li>✅ API</li>
-      </ul>
-      <button class="pricing-button bg-yellow-600">Most Popular</button>
+    <div class="card border-2 border-orange-400">
+      <div class="text-center">
+        <div class="text-5xl">🥉</div>
+        <h3 class="text-2xl font-bold mt-3">Content Kings</h3>
+        <p class="text-orange-400 text-3xl font-bold mt-2">89<span class="text-sm">/100</span></p>
+        <p class="text-sm text-gray-400 mt-2">🇳🇱 Netherlands</p>
+        <button class="w-full mt-4 py-3 rounded-lg btn font-bold">View Profile</button>
+      </div>
     </div>
-
-    <div class="pricing-card">
-      <h3 class="text-xl font-bold text-yellow-400">ELITE SCANNER</h3>
-      <div class="price-tag">€197</div>
-      <ul class="feature-list">
-        <li>✅ GRAAF</li>
-        <li>✅ CRAFT</li>
-        <li>✅ Technical SEO</li>
-        <li>✅ EEAT</li>
-        <li>✅ Readability</li>
-        <li>✅ People-First</li>
-      </ul>
-      <button class="pricing-button bg-purple-600">Go Elite</button>
-    </div>
-
   </div>
 </section>
 
-<script>
-function performScan() {
-  const btn = document.getElementById('scanButton');
-  btn.innerHTML = '<span class="scan-spinner"></span>Scanning...';
-  btn.disabled = true;
+<!-- FREELANCERS -->
+<section class="max-w-7xl mx-auto mt-20 px-6">
+  <h2 class="text-3xl font-bold mb-4">Top Freelancers</h2>
+  <p class="text-gray-400 mb-6">Independent experts ranked with the same scanner logic.</p>
+  <button class="px-8 py-3 rounded-lg btn font-bold">Browse Freelancers</button>
+</section>
 
-  setTimeout(() => {
-    btn.innerHTML = 'Scan';
-    btn.disabled = false;
-    document.getElementById('scanResult').classList.remove('hidden');
-    document.getElementById('scanResult').innerHTML =
-      '<div class="text-center text-green-400 font-bold">Scan completed. Score generated.</div>';
-  }, 1800);
-}
-</script>
+<!-- FOOTER -->
+<footer class="mt-24 border-t border-gray-700">
+  <div class="max-w-7xl mx-auto px-6 py-12 grid md:grid-cols-4 gap-6 text-sm">
+    <div>
+      <h4 class="font-bold mb-3">ContentScale</h4>
+      <p class="text-gray-400">AI-era SEO quality verification platform.</p>
+    </div>
+    <div>
+      <h4 class="font-bold mb-3">Platform</h4>
+      <ul class="space-y-2 text-gray-400">
+        <li>Scanner</li>
+        <li>Leaderboard</li>
+        <li>Freelancers</li>
+        <li>Blog</li>
+      </ul>
+    </div>
+    <div>
+      <h4 class="font-bold mb-3">For Agencies</h4>
+      <ul class="space-y-2 text-gray-400">
+        <li>Claim Profile</li>
+        <li>Verification</li>
+        <li>Rankings</li>
+      </ul>
+    </div>
+    <div>
+      <h4 class="font-bold mb-3">Legal</h4>
+      <ul class="space-y-2 text-gray-400">
+        <li>Privacy Policy</li>
+        <li>Terms</li>
+      </ul>
+    </div>
+  </div>
+  <div class="text-center text-gray-500 pb-6">© 2026 ContentScale</div>
+</footer>
 
 </body>
 </html>
