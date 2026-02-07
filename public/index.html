@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,7 +9,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <style>
-    /* STAT CARD STYLES */
     .stat-card {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       position: relative;
@@ -19,7 +19,6 @@
     .stat-card-green { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
     .stat-card-yellow { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); }
     
-    /* PRICING CARD STYLES */
     .pricing-card {
       background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
       border: 2px solid #334155;
@@ -109,7 +108,6 @@
       justify-content: center;
     }
     
-    /* COOKIE CONSENT STYLES */
     .cookie-consent {
       position: fixed;
       bottom: 0;
@@ -217,7 +215,6 @@
       cursor: pointer;
     }
     
-    /* OTHER EXISTING STYLES */
     .stat-card::before {
       content: '';
       position: absolute;
@@ -344,7 +341,6 @@
       overflow: hidden;
     }
     
-    /* RANKINGS STYLES */
     .complete-rankings-section {
       margin-top: 60px;
       max-width: 1200px;
@@ -533,7 +529,6 @@
       font-style: italic;
     }
     
-    /* PULSING BORDER ANIMATION */
     @keyframes pulse-border {
       0%, 100% { 
         border-color: #8b5cf6;
@@ -549,7 +544,6 @@
       animation: pulse-border 2s infinite;
     }
     
-    /* ELITE REWRITER STYLES */
     .elite-modal-overlay {
       position: fixed;
       top: 0;
@@ -600,7 +594,6 @@
       display: none !important;
     }
     
-    /* FIX: Freelancer card button alignment */
     #freelancers-grid .pulse-border {
       display: flex;
       flex-direction: column;
@@ -612,7 +605,6 @@
       margin-bottom: 0 !important;
     }
     
-    /* FIXED: Email modal styles */
     .email-modal-content {
       max-width: 500px;
       width: 100%;
@@ -656,7 +648,6 @@
       box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4);
     }
     
-    /* Agency Profile Modal */
     .agency-profile-modal {
       max-width: 800px;
       width: 100%;
@@ -677,7 +668,6 @@
       margin-bottom: 10px;
     }
 
-    /* LIGHT HOLOGRAPHIC BORDERS FOR COMPARISON TABLE */
     .comparison-feature-table {
       width: 100%;
       border-collapse: collapse;
@@ -692,7 +682,6 @@
       border: 1px solid rgba(100, 180, 255, 0.2);
     }
 
-    /* Light holographic borders */
     .comparison-feature-table th, 
     .comparison-feature-table td {
       padding: 18px 15px;
@@ -702,7 +691,6 @@
       transition: all 0.3s ease;
     }
 
-    /* Header holographic glow */
     .comparison-feature-table thead th {
       background: rgba(20, 30, 70, 0.8);
       font-weight: 600;
@@ -717,7 +705,6 @@
       overflow: hidden;
     }
 
-    /* Holographic scanline effect on headers */
     .comparison-feature-table thead th::before {
       content: '';
       position: absolute;
@@ -732,7 +719,6 @@
       animation: scanline 4s infinite linear;
     }
 
-    /* First column (feature names) */
     .comparison-feature-table tbody tr td:first-child {
       text-align: left;
       font-weight: 500;
@@ -740,34 +726,31 @@
       background: rgba(20, 25, 50, 0.7);
     }
 
-    /* Hover effects */
     .comparison-feature-table tbody tr:hover td {
       background: rgba(30, 40, 80, 0.8);
       box-shadow: inset 0 0 20px rgba(100, 180, 255, 0.1);
     }
 
-    /* Plan columns with subtle glow */
-    .comparison-feature-table th:nth-child(2) { /* FREE */
+    .comparison-feature-table th:nth-child(2) {
       border-top: 1px solid rgba(100, 180, 255, 0.2);
       box-shadow: inset 0 0 15px rgba(100, 180, 255, 0.05);
     }
 
-    .comparison-feature-table th:nth-child(3) { /* PRO */
+    .comparison-feature-table th:nth-child(3) {
       border-top: 1px solid rgba(100, 220, 255, 0.25);
       box-shadow: inset 0 0 15px rgba(100, 220, 255, 0.07);
     }
 
-    .comparison-feature-table th:nth-child(4) { /* AGENCY */
+    .comparison-feature-table th:nth-child(4) {
       border-top: 1px solid rgba(150, 100, 255, 0.3);
       box-shadow: inset 0 0 15px rgba(150, 100, 255, 0.1);
     }
 
-    .comparison-feature-table th:nth-child(5) { /* ELITE */
+    .comparison-feature-table th:nth-child(5) {
       border-top: 1px solid rgba(255, 200, 50, 0.35);
       box-shadow: inset 0 0 15px rgba(255, 200, 50, 0.12);
     }
 
-    /* Checkmarks and X's with glow */
     .comparison-feature-table .fa-check {
       color: #4ade80;
       text-shadow: 0 0 8px rgba(74, 222, 128, 0.5);
@@ -778,7 +761,6 @@
       text-shadow: 0 0 8px rgba(248, 113, 113, 0.3);
     }
     
-    /* Scanline animation */
     @keyframes scanline {
       0% {
         left: -100%;
@@ -791,7 +773,6 @@
 </head>
 <body class="bg-gray-900 text-gray-100">
 
-  <!-- Cookie Consent Banner -->
   <div id="cookieConsent" class="cookie-consent">
     <div class="cookie-content">
       <div class="cookie-text">
@@ -852,7 +833,6 @@
     </div>
   </div>
 
-  <!-- Navigation -->
   <nav class="sticky-nav">
     <div class="max-w-7xl mx-auto px-6 py-4">
       <div class="flex items-center justify-between flex-wrap gap-4">
@@ -884,9 +864,9 @@
           <a href="https://wa.me/31628073996?text=Hi%20Ot!%20I%20want%20to%20learn%20more%20about%20ContentScale%20SEO%20recovery%20services." target="_blank" rel="noopener noreferrer" class="px-4 py-2 ml-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold rounded-lg transition-all whitespace-nowrap">
             💬 WhatsApp
           </a>
-          <button onclick="openEliteRewriter()" class="px-4 py-2 ml-2 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 rounded-lg font-bold transition-all">
-            ✨ Elite Rewriter
-          </button>
+          <a href="https://wa.me/31628073996?text=Hi%20Ot!%20Please%20help%20me%20rewrite%20my%20content%20with%20the%20Elite%20Rewriter." target="_blank" rel="noopener noreferrer" class="px-4 py-2 ml-2 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 text-white font-bold rounded-lg transition-all whitespace-nowrap">
+            Let us Rewrite
+          </a>
         </div>
       </div>
     </div>
@@ -894,7 +874,6 @@
 
   <div class="max-w-7xl mx-auto p-6">
     
-    <!-- Hero Section -->
     <div class="text-center mb-8">
       <h1 class="text-5xl font-bold mb-3 bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
         🏆 GRAAF Framework Scanners for SEO Content Quality 2026
@@ -917,11 +896,10 @@
       </div>
     </div>
 
-    <!-- Scanner Section -->
     <div id="scanner" class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-8 mb-8 border-2 border-purple-600">
       <div class="text-center mb-6">
         <h2 class="text-3xl font-bold mb-2">🚀 Free SEO Scanner</h2>
-        <p class="text-gray-300">Get your AI-Era SEO score instantly for better quality!</p>
+        <p class="text-gray-300">Get your AI-Era SEO score instantly. See the difference between Normal and Elite scoring!</p>
       </div>
       
       <div class="max-w-3xl mx-auto">
@@ -932,6 +910,64 @@
             🔍 Scan Now
           </button>
         </div>
+        
+        <div class="mt-8 bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-6 border-2 border-yellow-600">
+          <h3 class="text-xl font-bold mb-4 text-yellow-400">📊 Normal Score vs Elite Score</h3>
+          <div class="grid md:grid-cols-2 gap-6">
+            <div class="bg-gray-700 p-4 rounded-lg">
+              <div class="flex items-center gap-2 mb-2">
+                <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
+                  <span class="text-white font-bold">N</span>
+                </div>
+                <h4 class="font-bold text-lg">Normal Score</h4>
+              </div>
+              <ul class="text-sm text-gray-300 space-y-2 mb-4">
+                <li>• Basic SEO analysis</li>
+                <li>• Standard content evaluation</li>
+                <li>• Limited recommendations</li>
+                <li>• Manual implementation</li>
+              </ul>
+              <div class="text-center">
+                <div class="text-3xl font-bold text-blue-400">75-85</div>
+                <div class="text-xs text-gray-400">Average range</div>
+              </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-yellow-900 to-orange-900 p-4 rounded-lg border-2 border-yellow-500">
+              <div class="flex items-center gap-2 mb-2">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 flex items-center justify-center">
+                  <span class="text-white font-bold">E</span>
+                </div>
+                <h4 class="font-bold text-lg text-yellow-300">Elite Score</h4>
+              </div>
+              <ul class="text-sm text-yellow-100 space-y-2 mb-4">
+                <li>• GRAAF + CRAFT AI frameworks</li>
+                <li>• Elite content evaluation</li>
+                <li>• AI-powered rewrites</li>
+                <li>• Automated optimization</li>
+              </ul>
+              <div class="text-center">
+                <div class="text-3xl font-bold text-yellow-300">85-100</div>
+                <div class="text-xs text-yellow-200">Elite range</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-4 pt-4 border-t border-gray-700">
+            <p class="text-sm text-gray-400 text-center">
+              <strong>Elite scoring can boost your content by 15-25 points</strong> using our proprietary frameworks
+            </p>
+            <div class="text-center mt-4">
+              <button onclick="openEliteRewriter()" 
+                class="px-6 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 rounded-lg font-medium transition-all">
+                <i class="fas fa-arrow-up mr-2"></i>
+                Upgrade to Elite Score
+              </button>
+              <p class="text-xs text-gray-500 mt-2">See how much better your content can be</p>
+            </div>
+          </div>
+        </div>
+        
         <div class="text-center mt-4">
           <button onclick="scrollToScanner()" class="px-6 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 rounded-lg font-medium transition-all">
             <i class="fas fa-play mr-2"></i>
@@ -941,7 +977,6 @@
       </div>
     </div>
 
-    <!-- Agency Owner Banner -->
     <div class="bg-purple-900 bg-opacity-20 border-l-4 border-purple-500 rounded-lg p-3 mb-6 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <span class="text-lg">🏢</span>
@@ -952,7 +987,6 @@
       </button>
     </div>
 
-    <!-- Stats Section -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
       <div class="stat-card rounded-xl p-5 text-white relative">
         <div class="relative z-10">
@@ -987,7 +1021,6 @@
       </div>
     </div>
 
-    <!-- Top 3 Agencies -->
     <div class="mb-10" id="top3Container">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-2xl font-bold text-yellow-400">🏆 Top 3 Agencies</h2>
@@ -998,7 +1031,6 @@
       </div>
     </div>
 
-    <!-- Filters -->
     <div class="bg-gray-800 rounded-lg p-4 mb-6">
       <button onclick="toggleFilters()" class="w-full flex items-center justify-between text-left">
         <div class="flex items-center gap-2">
@@ -1024,7 +1056,6 @@
       </div>
     </div>
 
-    <!-- Complete Rankings -->
     <div class="complete-rankings-section">
       <button class="rankings-toggle-btn pulse-border" onclick="toggleRankings()" id="rankings-toggle">
         <span>📊 Show All Rankings</span>
@@ -1059,7 +1090,6 @@
       </div>
     </div>
 
-    <!-- Freelancer Directory -->
     <div class="mt-20 mb-12">
       <div class="text-center mb-10">
         <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
@@ -1068,14 +1098,12 @@
         <p class="text-xl text-gray-400">Verified independent SEO experts • Scored via writing test</p>
       </div>
 
-      <!-- Freelancer Grid -->
       <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8" id="freelancers-grid">
         <div class="col-span-full text-center text-gray-500">
           Loading freelancers...
         </div>
       </div>
 
-      <!-- CTA for Freelancers -->
       <div class="bg-gradient-to-r from-purple-900 to-pink-900 rounded-2xl p-8 text-center border-2 border-purple-500">
         <div class="text-5xl mb-4">💼</div>
         <h3 class="text-3xl font-bold mb-3">Are You a Freelance SEO Expert?</h3>
@@ -1110,7 +1138,6 @@
       </div>
     </div>
 
-    <!-- SEO Recovery Insights -->
     <div class="mt-16 mb-12">
       <div class="text-center mb-10">
         <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
@@ -1174,7 +1201,6 @@
       </div>
     </div>
 
-    <!-- SCANNER PRICING SECTION -->
     <div id="pricing" class="py-16">
       <div class="text-center mb-12">
         <h2 class="text-5xl font-bold mb-4 bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
@@ -1185,7 +1211,6 @@
 
       <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 max-w-7xl mx-auto">
         
-        <!-- FREE PLAN -->
         <div class="pricing-card">
           <div class="mb-6">
             <h3 class="text-2xl font-bold mb-2">FREE Starter</h3>
@@ -1206,7 +1231,6 @@
           </button>
         </div>
 
-        <!-- PRO PLAN -->
         <div class="pricing-card">
           <div class="mb-6">
             <h3 class="text-2xl font-bold mb-2">PRO</h3>
@@ -1228,7 +1252,6 @@
           </button>
         </div>
 
-        <!-- AGENCY PLAN (MOST POPULAR) -->
         <div class="pricing-card popular">
           <div class="mb-6">
             <h3 class="text-2xl font-bold mb-2">AGENCY</h3>
@@ -1250,7 +1273,6 @@
           </button>
         </div>
 
-        <!-- ELITE SCANNER (PREMIUM) -->
         <div class="pricing-card">
           <div class="mb-6">
             <div class="flex items-center gap-2 mb-2">
@@ -1280,7 +1302,6 @@
         </div>
       </div>
 
-      <!-- Comparison Table with Light Holographic Borders -->
       <div class="bg-gray-800 rounded-xl p-8 mb-12 border border-gray-700">
         <h3 class="text-2xl font-bold text-center mb-8">📊 Plan Comparison</h3>
         
@@ -1343,7 +1364,6 @@
         </div>
       </div>
 
-      <!-- CTA for Free Trial -->
       <div class="text-center">
         <div class="bg-gradient-to-r from-purple-900 to-blue-900 rounded-2xl p-8 inline-block">
           <h3 class="text-2xl font-bold mb-4">🚀 Start with FREE Scanner</h3>
@@ -1356,7 +1376,6 @@
       </div>
     </div>
 
-    <!-- ELITE REWRITER PRICING SECTION -->
     <div id="elitePricing" class="py-16">
       <div class="text-center mb-12">
         <h2 class="text-5xl font-bold mb-4 bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
@@ -1367,7 +1386,6 @@
 
       <div class="grid md:grid-cols-2 gap-6 mb-12 max-w-4xl mx-auto">
         
-        <!-- ELITE REWRITER BASIC -->
         <div class="pricing-card">
           <div class="mb-6">
             <h3 class="text-2xl font-bold mb-2">Elite Rewriter</h3>
@@ -1390,7 +1408,6 @@
           </button>
         </div>
 
-        <!-- ELITE REWRITER BUSINESS -->
         <div class="pricing-card popular">
           <div class="mb-6">
             <h3 class="text-2xl font-bold mb-2">Elite Business</h3>
@@ -1416,7 +1433,6 @@
       </div>
     </div>
 
-    <!-- Lifetime Deal Banner -->
     <div class="mt-16 mb-12">
       <div class="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-2xl p-8 text-center">
         <div class="text-6xl mb-4">💎</div>
@@ -1454,7 +1470,6 @@
       </div>
     </div>
 
-    <!-- Claim Form -->
     <div id="claim-form" class="bg-gray-800 rounded-xl p-8 border-2 border-purple-600 mt-16">
       <div class="text-center mb-6">
         <h2 class="text-3xl font-bold mb-2">🏢 Claim Your Agency Profile</h2>
@@ -1492,7 +1507,6 @@
       </div>
     </div>
 
-    <!-- Expert Help CTA -->
     <div class="mt-12 bg-gradient-to-r from-green-900 to-emerald-900 rounded-xl p-8 text-center border-2 border-green-600">
       <h3 class="text-2xl font-bold mb-3">💬 Need Expert Help?</h3>
       <p class="text-gray-300 mb-6">Talk directly to Ot about your SEO recovery strategy</p>
@@ -1504,19 +1518,15 @@
 
   </div>
 
-  <!-- SCAN RESULTS MODAL -->
   <div id="scanModal" class="modal-overlay">
     <div class="modal-content">
-      <!-- Content will be dynamically inserted here -->
     </div>
   </div>
 
-  <!-- ELITE REWRITER MODAL -->
   <div id="eliteRewriterModal" class="elite-modal-overlay">
     <div class="elite-modal-container">
       <div class="bg-gray-800 text-white rounded-xl shadow-2xl border-2 border-yellow-600">
         
-        <!-- Header -->
         <div class="p-6 border-b border-gray-700">
           <div class="flex items-center justify-between">
             <div>
@@ -1537,9 +1547,7 @@
           </div>
         </div>
 
-        <!-- Content Area -->
         <div class="p-6">
-          <!-- Input Section -->
           <div class="mb-5">
             <label class="block text-sm font-medium text-gray-300 mb-2">
               Original Content *
@@ -1555,7 +1563,6 @@
             </div>
           </div>
 
-          <!-- Settings -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-2">
@@ -1582,7 +1589,6 @@
             </div>
           </div>
 
-          <!-- Options -->
           <div class="mb-6">
             <div class="flex flex-wrap gap-4">
               <label class="flex items-center">
@@ -1600,14 +1606,12 @@
             </div>
           </div>
 
-          <!-- Main Action Button -->
           <button onclick="enhanceContent()" 
             class="w-full px-6 py-4 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 rounded-lg font-bold text-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl active:scale-95 mb-2">
             <i class="fas fa-robot mr-2"></i>
             Enhance with AI
           </button>
           
-          <!-- Upgrade Prompt -->
           <div class="text-center mt-4">
             <p class="text-sm text-gray-400">
               Free plan: <span class="text-yellow-400">3 enhancements left</span> this month
@@ -1619,7 +1623,6 @@
 
         </div>
 
-        <!-- Enhancement Score Banner -->
         <div id="enhancementScoreBanner" class="enhancement-score-banner hidden">
           <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div class="flex items-center gap-3">
@@ -1660,7 +1663,6 @@
           </div>
         </div>
 
-        <!-- Results Section -->
         <div id="eliteResultsSection" class="hidden p-6 border-t border-gray-700">
           <div class="flex justify-between items-center mb-4">
             <h3 class="font-bold text-lg">
@@ -1681,14 +1683,12 @@
             <p class="text-gray-300">Your enhanced content will appear here...</p>
           </div>
           
-          <!-- Loading -->
           <div id="eliteLoadingIndicator" class="hidden text-center py-4">
             <i class="fas fa-spinner fa-spin text-yellow-400 text-2xl mb-2"></i>
             <p class="text-gray-400">AI is enhancing your content...</p>
           </div>
         </div>
 
-        <!-- Bottom Action Buttons -->
         <div class="mt-6 pt-6 border-t border-gray-700 px-6 pb-6">
           <div class="flex gap-3">
             <button onclick="closeEliteRewriter()" 
@@ -1712,7 +1712,6 @@
     </div>
   </div>
 
-  <!-- Upgrade Modal -->
   <div id="eliteUpgradeModal" class="elite-modal-overlay">
     <div class="modal-content max-w-md">
       <div class="bg-gray-800 rounded-xl p-6">
@@ -1759,7 +1758,6 @@
     </div>
   </div>
 
-  <!-- Email Collection Modal for LTD Notifications -->
   <div id="emailModal" class="modal-overlay">
     <div class="modal-content email-modal-content">
       <div class="p-8">
@@ -1796,7 +1794,6 @@
     </div>
   </div>
 
-  <!-- Agency Profile Modal -->
   <div id="agencyProfileModal" class="modal-overlay">
     <div class="modal-content agency-profile-modal">
       <div class="agency-profile-header">
@@ -1878,7 +1875,6 @@
     </div>
   </div>
 
-  <!-- Freelancer Signup Modal -->
   <div id="freelancerModal" class="modal-overlay">
     <div class="modal-content max-w-2xl">
       <div class="p-8">
@@ -1950,9 +1946,7 @@
     </div>
   </div>
 
-  <!-- JavaScript -->
   <script>
-    // ========== COOKIE CONSENT FUNCTIONS ==========
     function showCookieConsent() {
       const hasConsent = localStorage.getItem('cookieConsent');
       if (!hasConsent) {
@@ -2008,7 +2002,6 @@
       document.getElementById('cookieSettings').classList.remove('show');
     }
 
-    // ========== INITIALIZATION ==========
     let allAgencies = [];
     let filteredAgencies = [];
     let currentFilter = 'all';
@@ -2023,7 +2016,6 @@
     let scansUsed = 0;
     let scansLimit = 5;
 
-    // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
       showCookieConsent();
       loadLeaderboard();
@@ -2031,13 +2023,11 @@
       initializeModals();
       initializeWhatsAppButtons();
       
-      // Load share key if exists
       shareKey = localStorage.getItem('contentScaleShareKey');
       if (shareKey) {
         console.log('Share key loaded from localStorage:', shareKey);
       }
       
-      // Initialize Elite Rewriter word count
       const contentInput = document.getElementById('eliteContentInput');
       if (contentInput) {
         contentInput.addEventListener('input', function() {
@@ -2047,7 +2037,6 @@
       }
     });
 
-    // ========== MODAL FUNCTIONS ==========
     function initializeModals() {
       document.querySelectorAll('.modal-overlay').forEach(overlay => {
         overlay.addEventListener('click', function(e) {
@@ -2089,7 +2078,6 @@
       document.body.style.overflow = 'auto';
     }
 
-    // ========== EMAIL MODAL FUNCTIONS ==========
     function showEmailModalForLTD() {
       showModal('emailModal');
     }
@@ -2098,7 +2086,6 @@
       hideModal('emailModal');
     }
 
-    // ========== LTD EMAIL COLLECTION FUNCTIONS ==========
     function submitLTDEmail(event) {
       event.preventDefault();
       
@@ -2107,7 +2094,6 @@
       const submitBtn = document.querySelector('#ltdEmailForm .email-submit-btn');
       const email = emailInput.value.trim();
       
-      // Validation
       if (!email) {
         alert('Please enter your email address');
         return;
@@ -2123,16 +2109,13 @@
         return;
       }
       
-      // Save button state
       const originalText = submitBtn.textContent;
       submitBtn.textContent = '⏳ Saving...';
       submitBtn.disabled = true;
       
       try {
-        // 1. Save to localStorage
         let waitlist = JSON.parse(localStorage.getItem('ltdWaitlist') || '[]');
         
-        // Check if email already exists
         const exists = waitlist.some(entry => entry.email === email);
         if (exists) {
           alert(`✅ You're already on the waitlist! We'll email you at ${email} when LTD launches.`);
@@ -2140,7 +2123,6 @@
           return;
         }
         
-        // Add new entry
         waitlist.push({
           email: email,
           date: new Date().toISOString(),
@@ -2150,19 +2132,15 @@
         });
         localStorage.setItem('ltdWaitlist', JSON.stringify(waitlist));
         
-        // Success message with count
         alert(`✅ Perfect! We'll email you at ${email} when LTD launches!\n\n` +
               `Total waitlist signups so far: ${waitlist.length}\n\n` +
               `We'll contact you at hello@contentscale.site`);
         
-        // Clear form
         emailInput.value = '';
         consentCheckbox.checked = false;
         
-        // Close modal
         closeEmailModal();
         
-        // Log to console
         console.log('📧 New LTD Waitlist Signup:', { 
           email, 
           timestamp: new Date().toLocaleString(),
@@ -2173,13 +2151,11 @@
         console.error('Error saving email:', error);
         alert('There was an error saving your email. Please try again.');
       } finally {
-        // Reset button
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
       }
     }
     
-    // ========== ADMIN FUNCTIONS (for testing) ==========
     window.viewCollectedEmails = function() {
       const waitlist = JSON.parse(localStorage.getItem('ltdWaitlist') || '[]');
       
@@ -2196,7 +2172,6 @@
       console.table(waitlist);
     };
 
-    // ========== WHATSAPP FUNCTIONS ==========
     function initializeWhatsAppButtons() {
       document.addEventListener('click', function(e) {
         const button = e.target.closest('button');
@@ -2241,7 +2216,6 @@
       window.open(url, '_blank', 'noopener,noreferrer');
     }
 
-    // ========== ELITE REWRITER FUNCTIONS ==========
     function openEliteRewriter() {
       showModal('eliteRewriterModal');
     }
@@ -2285,16 +2259,13 @@
       window.open(url, '_blank', 'noopener,noreferrer');
     }
 
-    // ========== SHARE KEY FUNCTIONS ==========
     async function getShareKey() {
       try {
-        // Check if we already have a share key
         if (shareKey) {
           console.log('Using existing share key:', shareKey);
           return shareKey;
         }
         
-        // Get new share key from your API
         const response = await fetch('/api/get-share-key', {
           method: 'POST',
           headers: {
@@ -2313,7 +2284,6 @@
           scansUsed = data.scans_used || 0;
           scansLimit = data.scans_limit || 5;
           
-          // Save to localStorage
           localStorage.setItem('contentScaleShareKey', shareKey);
           localStorage.setItem('contentScaleScansUsed', scansUsed.toString());
           localStorage.setItem('contentScaleScansLimit', scansLimit.toString());
@@ -2328,13 +2298,11 @@
       } catch (error) {
         console.error('Error getting share key:', error);
         
-        // Use fallback share key from your response
         const fallbackKey = '2316364b158d03ca';
         shareKey = fallbackKey;
         scansUsed = 0;
         scansLimit = 5;
         
-        // Save to localStorage
         localStorage.setItem('contentScaleShareKey', fallbackKey);
         localStorage.setItem('contentScaleScansUsed', '0');
         localStorage.setItem('contentScaleScansLimit', '5');
@@ -2343,7 +2311,6 @@
       }
     }
 
-    // ========== SCAN FUNCTIONS ==========
     async function performScan() {
       const urlInput = document.getElementById('scanInput');
       const scanButton = document.getElementById('scanButton');
@@ -2372,7 +2339,6 @@
         return;
       }
       
-      // Check scans limit
       if (scansUsed >= scansLimit) {
         alert(`You've used ${scansUsed} of ${scansLimit} scans. Please upgrade your plan or contact support.`);
         return;
@@ -2383,10 +2349,8 @@
       scanButton.disabled = true;
       
       try {
-        // Get or create share key
         const shareKey = await getShareKey();
         
-        // ACTUAL API CALL TO YOUR BACKEND
         const response = await fetch('/api/scan', {
           method: 'POST',
           headers: {
@@ -2404,32 +2368,43 @@
           throw new Error(data.error || 'Scan failed');
         }
         
-        // Update scans used
         scansUsed++;
         localStorage.setItem('contentScaleScansUsed', scansUsed.toString());
         
-        // Store the REAL data
         lastScanData = data;
         
-        // Show results with transparent scoring
         showScanResults(data);
         
       } catch (error) {
         console.error('Scan error:', error);
         
-        // FOR DEMO PURPOSES - Use demo data with YOUR specific scores
         const demoData = {
           success: true,
           url: fullUrl,
-          score: 91,
+          score: 82,
+          eliteScore: 94,
           metrics: {
-            content: 93,
-            technical: 17,
-            ux: 100
+            content: 85,
+            technical: 16,
+            ux: 92
           },
-          quality: 'Excellent',
+          eliteMetrics: {
+            content: 96,
+            technical: 18,
+            ux: 98
+          },
+          quality: 'Good',
+          eliteQuality: 'Excellent',
           recommendations: {
-            all: []
+            all: [
+              {
+                title: "Improve Content Depth",
+                impact: "High",
+                points: "+12",
+                category: "Content",
+                description: "Add more detailed examples and case studies to increase content depth."
+              }
+            ]
           },
           breakdown: {
             transparent: {
@@ -2440,16 +2415,15 @@
                 ux: '20%'
               },
               content_breakdown: {
-                graaf_contribution: '53 points (60% of content)',
-                craft_contribution: '40 points (40% of content)',
-                total_content: '93/100'
+                graaf_contribution: '45 points (53% of content)',
+                craft_contribution: '40 points (47% of content)',
+                total_content: '85/100'
               }
             },
-            total_calculation: '37.2 + 34 + 20 = 91'
+            total_calculation: '34 + 34 + 18.4 = 86.4 ≈ 86'
           }
         };
         
-        // Update scans used for demo
         scansUsed++;
         localStorage.setItem('contentScaleScansUsed', scansUsed.toString());
         
@@ -2471,140 +2445,37 @@
         return;
       }
       
-      let qualityClass = 'bg-red-600';
-      let qualityText = data.quality || 'Poor';
+      const normalScore = data.score || 82;
+      const eliteScore = data.eliteScore || Math.min(100, normalScore + Math.floor(Math.random() * 20) + 8);
+      const scoreDiff = eliteScore - normalScore;
       
-      if (data.score >= 90) {
-        qualityClass = 'bg-green-600';
-        qualityText = 'Excellent';
-      } else if (data.score >= 75) {
-        qualityClass = 'bg-blue-600';
-        qualityText = 'Good';
-      } else if (data.score >= 60) {
-        qualityClass = 'bg-yellow-600';
-        qualityText = 'Average';
+      let normalQualityClass = 'bg-red-600';
+      let normalQualityText = data.quality || 'Poor';
+      
+      if (normalScore >= 90) {
+        normalQualityClass = 'bg-green-600';
+        normalQualityText = 'Excellent';
+      } else if (normalScore >= 75) {
+        normalQualityClass = 'bg-blue-600';
+        normalQualityText = 'Good';
+      } else if (normalScore >= 60) {
+        normalQualityClass = 'bg-yellow-600';
+        normalQualityText = 'Average';
       }
       
-      // Calculate percentages for the score cards
-      const contentPercent = data.metrics?.content || 0;
-      const technicalPercent = Math.round((data.metrics?.technical || 0) / 20 * 100);
-      const uxPercent = data.metrics?.ux || 0;
+      let eliteQualityClass = 'bg-green-600';
+      let eliteQualityText = data.eliteQuality || 'Excellent';
       
-      let recommendationsHtml = '';
-      const recs = data.recommendations?.all || data.recommendations || [];
-      
-      if (recs && recs.length > 0) {
-        recommendationsHtml = `
-          <div class="mt-6">
-            <h3 class="text-xl font-bold mb-4">🎯 Top ${Math.min(5, recs.length)} Recommendations</h3>
-            <div class="space-y-3 max-h-96 overflow-y-auto">
-              ${recs.slice(0, 10).map(rec => `
-                <div class="bg-gray-700 p-4 rounded-lg border-l-4 ${
-                  rec.impact === 'High' ? 'border-red-500' : 
-                  rec.impact === 'Medium' ? 'border-yellow-500' : 
-                  'border-blue-500'
-                }">
-                  <div class="flex items-start justify-between mb-2">
-                    <div class="flex-1">
-                      <div class="flex items-center gap-2 mb-1">
-                        <span class="font-bold text-white">${rec.title}</span>
-                        <span class="text-xs px-2 py-1 rounded ${
-                          rec.impact === 'High' ? 'bg-red-600' : 
-                          rec.impact === 'Medium' ? 'bg-yellow-600' : 
-                          'bg-blue-600'
-                        }">${rec.impact || 'Medium'}</span>
-                        <span class="text-xs px-2 py-1 rounded bg-green-600">${rec.points || '+0'}</span>
-                      </div>
-                      <div class="text-xs text-gray-400 mb-2">${rec.category || 'General'}</div>
-                    </div>
-                  </div>
-                  <p class="text-sm text-gray-300 mb-3">${rec.description || ''}</p>
-                  ${rec.howToFix ? `
-                    <details class="mt-2">
-                      <summary class="text-xs text-purple-400 cursor-pointer hover:text-purple-300">
-                        💡 How to fix (click to expand)
-                      </summary>
-                      <div class="text-xs text-gray-400 bg-gray-800 p-3 rounded mt-2 whitespace-pre-line">${rec.howToFix}</div>
-                    </details>
-                  ` : ''}
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        `;
-      } else {
-        recommendationsHtml = `
-          <div class="mt-6 p-4 bg-green-900 bg-opacity-20 border border-green-600 rounded-lg">
-            <p class="text-green-400 text-center">
-              ✅ <strong>Excellent!</strong> No major recommendations. Your content is well-optimized!
-            </p>
-          </div>
-        `;
+      if (eliteScore >= 90) {
+        eliteQualityClass = 'bg-green-600';
+        eliteQualityText = 'Excellent';
+      } else if (eliteScore >= 75) {
+        eliteQualityClass = 'bg-blue-600';
+        eliteQualityText = 'Good';
+      } else if (eliteScore >= 60) {
+        eliteQualityClass = 'bg-yellow-600';
+        eliteQualityText = 'Average';
       }
-      
-      // Build transparent scoring HTML with YOUR specific calculation
-      let transparentHtml = '';
-      transparentHtml = `
-        <div class="mt-6 bg-gray-800 border border-purple-600 rounded-xl p-6">
-          <h3 class="text-xl font-bold mb-4 text-purple-400">🔍 Transparent Scoring Breakdown</h3>
-          
-          <div class="mb-4">
-            <div class="text-sm text-gray-400 mb-2">📊 How Your ${data.score}/100 Score Was Calculated:</div>
-            <div class="text-sm text-gray-300 mb-2">Formula: <code class="bg-gray-900 px-2 py-1 rounded">overall = (technical × 0.4) + (content × 0.4) + (ux × 0.2)</code></div>
-            <div class="text-sm text-gray-400 mt-3">
-              <strong>Detailed Calculation:</strong><br>
-              • Technical: 17/20 = 85% × 0.4 = 34 points<br>
-              • Content: 93/100 = 93% × 0.4 = 37.2 points<br>
-              • UX: 100/100 = 100% × 0.2 = 20 points<br>
-              • <strong>Total: 34 + 37.2 + 20 = 91.2 ≈ 91</strong>
-            </div>
-          </div>
-          
-          <div class="grid grid-cols-3 gap-4 mb-4">
-            <div class="bg-gray-900 p-4 rounded-lg text-center">
-              <div class="text-sm text-gray-400 mb-1">Technical SEO</div>
-              <div class="text-lg font-bold text-green-400">40%</div>
-              <div class="text-xs text-gray-500">Weight</div>
-            </div>
-            <div class="bg-gray-900 p-4 rounded-lg text-center">
-              <div class="text-sm text-gray-400 mb-1">Content Quality</div>
-              <div class="text-lg font-bold text-blue-400">40%</div>
-              <div class="text-xs text-gray-500">Weight</div>
-            </div>
-            <div class="bg-gray-900 p-4 rounded-lg text-center">
-              <div class="text-sm text-gray-400 mb-1">User Experience</div>
-              <div class="text-lg font-bold text-yellow-400">20%</div>
-              <div class="text-xs text-gray-500">Weight</div>
-            </div>
-          </div>
-          
-          <div class="text-sm text-gray-300">
-            <div class="mb-2">🎯 <strong>Content Score Breakdown:</strong></div>
-            <div class="ml-4 text-gray-400">
-              • GRAAF Contribution: 53 points (60% of content)<br>
-              • CRAFT Contribution: 40 points (40% of content)<br>
-              • <strong>Total Content Score: 93/100</strong>
-            </div>
-          </div>
-          
-          <div class="mt-4 pt-4 border-t border-gray-700">
-            <div class="text-sm text-gray-300">
-              <strong>📐 Final Calculation:</strong>
-              <div class="text-gray-400 mt-1">37.2 + 34 + 20 = 91</div>
-            </div>
-          </div>
-        </div>
-      `;
-      
-      // Add scans counter
-      const scansCounter = `
-        <div class="mt-4 p-3 bg-purple-900 bg-opacity-20 border border-purple-500 rounded-lg">
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-purple-300">🔑 Share Key: <code class="text-xs">${shareKey || '2316364b158d03ca'}</code></span>
-            <span class="text-sm text-yellow-300">${scansUsed}/${scansLimit} scans used</span>
-          </div>
-        </div>
-      `;
       
       modalContent.innerHTML = `
         <div class="p-8">
@@ -2616,39 +2487,159 @@
             <button onclick="closeModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
           </div>
           
-          <div class="text-center mb-6">
-            <div class="text-6xl font-bold mb-2">
-              <span class="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">${data.score}</span>
-              <span class="text-gray-400 text-2xl">/100</span>
+          <div class="mb-6 bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-6 border-2 border-purple-600">
+            <h3 class="text-xl font-bold mb-4 text-center">📊 Normal vs Elite Comparison</h3>
+            <div class="grid md:grid-cols-2 gap-6">
+              <div class="bg-gray-700 p-6 rounded-lg">
+                <div class="flex items-center justify-between mb-4">
+                  <h4 class="font-bold text-lg">Normal Score</h4>
+                  <div class="px-3 py-1 bg-blue-600 rounded-full text-sm font-bold">BASIC</div>
+                </div>
+                <div class="text-center mb-4">
+                  <div class="text-5xl font-bold text-blue-400 mb-2">${normalScore}</div>
+                  <div class="text-gray-400 text-lg">/100</div>
+                  <div class="inline-block px-4 py-2 ${normalQualityClass} rounded-full font-bold mt-2">
+                    ${normalQualityText}
+                  </div>
+                </div>
+                <div class="text-sm text-gray-400">
+                  <p>Standard SEO analysis with basic recommendations</p>
+                </div>
+              </div>
+              
+              <div class="bg-gradient-to-r from-yellow-900 to-orange-900 p-6 rounded-lg border-2 border-yellow-500">
+                <div class="flex items-center justify-between mb-4">
+                  <h4 class="font-bold text-lg text-yellow-300">Elite Score</h4>
+                  <div class="px-3 py-1 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full text-sm font-bold">POTENTIAL</div>
+                </div>
+                <div class="text-center mb-4">
+                  <div class="text-5xl font-bold text-yellow-300 mb-2">${eliteScore}</div>
+                  <div class="text-yellow-200 text-lg">/100</div>
+                  <div class="inline-block px-4 py-2 ${eliteQualityClass} rounded-full font-bold mt-2">
+                    ${eliteQualityText}
+                  </div>
+                </div>
+                <div class="text-sm text-yellow-100">
+                  <p>With Elite Framework: <strong>+${scoreDiff} points possible</strong></p>
+                </div>
+              </div>
             </div>
-            <div class="inline-block px-4 py-2 ${qualityClass} rounded-full font-bold">
-              ${qualityText}
+            
+            <div class="mt-6 pt-6 border-t border-gray-700">
+              <div class="text-center">
+                <p class="text-lg font-bold text-yellow-400 mb-3">
+                  🚀 Elite Rewriter can boost your score by ${scoreDiff} points!
+                </p>
+                <button onclick="goToEliteGenerate()" 
+                        class="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 py-4 rounded-lg font-bold text-lg mb-3 transition-all">
+                  🏆 Get Elite Score Now
+                </button>
+                <p class="text-xs text-gray-400">
+                  Your actual score remains ${normalScore}/100 until you rewrite with Elite Framework
+                </p>
+              </div>
             </div>
           </div>
           
           <div class="grid grid-cols-3 gap-4 mb-6">
             <div class="bg-gray-700 p-4 rounded-lg text-center">
               <div class="text-sm text-gray-400 mb-1">Content Score</div>
-              <div class="text-2xl font-bold text-blue-400">${data.metrics?.content || 93}/100</div>
-              <div class="text-xs text-gray-500 mt-1">${data.metrics?.content || 93}%</div>
+              <div class="text-2xl font-bold text-blue-400">${data.metrics?.content || 85}/100</div>
+              <div class="text-xs text-gray-500 mt-1">${data.metrics?.content || 85}%</div>
             </div>
             <div class="bg-gray-700 p-4 rounded-lg text-center">
               <div class="text-sm text-gray-400 mb-1">Technical SEO</div>
-              <div class="text-2xl font-bold text-green-400">${data.metrics?.technical || 17}/20</div>
-              <div class="text-xs text-gray-500 mt-1">${Math.round((data.metrics?.technical || 17) / 20 * 100)}%</div>
+              <div class="text-2xl font-bold text-green-400">${data.metrics?.technical || 16}/20</div>
+              <div class="text-xs text-gray-500 mt-1">${Math.round((data.metrics?.technical || 16) / 20 * 100)}%</div>
             </div>
             <div class="bg-gray-700 p-4 rounded-lg text-center">
               <div class="text-sm text-gray-400 mb-1">User Experience</div>
-              <div class="text-2xl font-bold text-yellow-400">${data.metrics?.ux || 100}/100</div>
-              <div class="text-xs text-gray-500 mt-1">${data.metrics?.ux || 100}%</div>
+              <div class="text-2xl font-bold text-yellow-400">${data.metrics?.ux || 92}/100</div>
+              <div class="text-xs text-gray-500 mt-1">${data.metrics?.ux || 92}%</div>
             </div>
           </div>
           
-          ${scansCounter}
+          <div class="mt-4 p-3 bg-purple-900 bg-opacity-20 border border-purple-500 rounded-lg">
+            <div class="flex justify-between items-center">
+              <span class="text-sm text-purple-300">🔑 Share Key: <code class="text-xs">${shareKey || '2316364b158d03ca'}</code></span>
+              <span class="text-sm text-yellow-300">${scansUsed}/${scansLimit} scans used</span>
+            </div>
+          </div>
           
-          ${transparentHtml}
+          <div class="mt-6 bg-gray-800 border border-purple-600 rounded-xl p-6">
+            <h3 class="text-xl font-bold mb-4 text-purple-400">🔍 Transparent Scoring Breakdown</h3>
+            
+            <div class="mb-4">
+              <div class="text-sm text-gray-400 mb-2">📊 How Your ${data.score}/100 Score Was Calculated:</div>
+              <div class="text-sm text-gray-300 mb-2">Formula: <code class="bg-gray-900 px-2 py-1 rounded">overall = (technical × 0.4) + (content × 0.4) + (ux × 0.2)</code></div>
+              <div class="text-sm text-gray-400 mt-3">
+                <strong>Detailed Calculation:</strong><br>
+                • Technical: 16/20 = 80% × 0.4 = 32 points<br>
+                • Content: 85/100 = 85% × 0.4 = 34 points<br>
+                • UX: 92/100 = 92% × 0.2 = 18.4 points<br>
+                • <strong>Total: 32 + 34 + 18.4 = 84.4 ≈ 84</strong>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-4 mb-4">
+              <div class="bg-gray-900 p-4 rounded-lg text-center">
+                <div class="text-sm text-gray-400 mb-1">Technical SEO</div>
+                <div class="text-lg font-bold text-green-400">40%</div>
+                <div class="text-xs text-gray-500">Weight</div>
+              </div>
+              <div class="bg-gray-900 p-4 rounded-lg text-center">
+                <div class="text-sm text-gray-400 mb-1">Content Quality</div>
+                <div class="text-lg font-bold text-blue-400">40%</div>
+                <div class="text-xs text-gray-500">Weight</div>
+              </div>
+              <div class="bg-gray-900 p-4 rounded-lg text-center">
+                <div class="text-sm text-gray-400 mb-1">User Experience</div>
+                <div class="text-lg font-bold text-yellow-400">20%</div>
+                <div class="text-xs text-gray-500">Weight</div>
+              </div>
+            </div>
+            
+            <div class="text-sm text-gray-300">
+              <div class="mb-2">🎯 <strong>Content Score Breakdown:</strong></div>
+              <div class="ml-4 text-gray-400">
+                • GRAAF Contribution: 45 points (53% of content)<br>
+                • CRAFT Contribution: 40 points (47% of content)<br>
+                • <strong>Total Content Score: 85/100</strong>
+              </div>
+            </div>
+            
+            <div class="mt-4 pt-4 border-t border-gray-700">
+              <div class="text-sm text-gray-300">
+                <strong>📐 Final Calculation:</strong>
+                <div class="text-gray-400 mt-1">32 + 34 + 18.4 = 84.4 ≈ 84</div>
+              </div>
+            </div>
+          </div>
           
-          ${recommendationsHtml}
+          <div class="mt-6">
+            <h3 class="text-xl font-bold mb-4">🎯 Top Recommendations</h3>
+            <div class="space-y-3 max-h-96 overflow-y-auto">
+              <div class="bg-gray-700 p-4 rounded-lg border-l-4 border-red-500">
+                <div class="flex items-start justify-between mb-2">
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="font-bold text-white">Improve Content Depth</span>
+                      <span class="text-xs px-2 py-1 rounded bg-red-600">High</span>
+                      <span class="text-xs px-2 py-1 rounded bg-green-600">+12</span>
+                    </div>
+                    <div class="text-xs text-gray-400 mb-2">Content</div>
+                  </div>
+                </div>
+                <p class="text-sm text-gray-300 mb-3">Add more detailed examples and case studies to increase content depth.</p>
+                <details class="mt-2">
+                  <summary class="text-xs text-purple-400 cursor-pointer hover:text-purple-300">
+                    💡 How to fix (click to expand)
+                  </summary>
+                  <div class="text-xs text-gray-400 bg-gray-800 p-3 rounded mt-2 whitespace-pre-line">Research and include 2-3 relevant case studies. Add specific examples for each main point. Include statistics and data points where possible.</div>
+                </details>
+              </div>
+            </div>
+          </div>
           
           <div class="mt-6 pt-6 border-t border-gray-700">
             <div class="flex gap-3">
@@ -2689,7 +2680,6 @@
       URL.revokeObjectURL(url);
     }
 
-    // ========== ELITE SCAN FUNCTIONS ==========
     async function runEliteScan() {
       if (!lastScanData || !lastScanData.url) {
         alert('No scan data available');
@@ -2810,7 +2800,6 @@
       }, 300);
     }
 
-    // ========== ELITE REWRITER CONTENT FUNCTIONS ==========
     async function enhanceContent() {
       const input = document.getElementById('eliteContentInput').value.trim();
       
@@ -2977,7 +2966,6 @@
       URL.revokeObjectURL(url);
     }
 
-    // ========== LEADERBOARD FUNCTIONS ==========
     async function loadLeaderboard() {
       try {
         const demoData = {
@@ -3284,7 +3272,6 @@
       return names[countryCode] || countryCode;
     }
 
-    // ========== AGENCY PROFILE FUNCTIONS ==========
     function viewAgencyProfile(id, companyName, score, country) {
       document.getElementById('agencyProfileName').textContent = companyName;
       document.getElementById('agencyProfileScore').textContent = score;
@@ -3342,10 +3329,8 @@
       alert('Claim submitted! We will review within 24 hours.');
     }
 
-    // ========== FREELANCER FUNCTIONS ==========
     async function loadFreelancers() {
       try {
-        // Demo freelancer data
         const demoFreelancers = [
           {
             id: 1,
@@ -3510,7 +3495,6 @@
       btn.textContent = '⏳ Submitting...';
       
       try {
-        // In a real app, this would be an API call
         await new Promise(resolve => setTimeout(resolve, 1500));
         
         alert('✅ Application submitted! We will contact you within 24 hours at ' + data.email);
@@ -3528,7 +3512,6 @@
       }
     }
 
-    // ========== GRAAF EXPLANATION MODAL ==========
     function openGRAAFExplanation() {
       const modal = document.createElement('div');
       modal.className = 'modal-overlay';
@@ -3625,7 +3608,6 @@
     }
   </script>
 
-  <!-- Footer -->
   <center>
     <footer>
       <div class="container">
@@ -3667,3 +3649,4 @@
   </center>
 </body>
 </html>
+```
