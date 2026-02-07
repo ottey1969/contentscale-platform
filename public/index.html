@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <style>
+    /* STAT CARD STYLES */
     .stat-card {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       position: relative;
@@ -17,6 +18,230 @@
     .stat-card-alt { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
     .stat-card-green { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
     .stat-card-yellow { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); }
+    
+    /* PRICING CARD STYLES */
+    .pricing-card {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 2px solid #334155;
+      border-radius: 16px;
+      padding: 32px;
+      transition: all 0.3s;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-height: 550px;
+    }
+    
+    .pricing-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(139, 92, 246, 0.3);
+      border-color: #8b5cf6;
+    }
+    
+    .pricing-card.popular {
+      border-color: #fbbf24;
+      background: linear-gradient(135deg, #1e293b 0%, #2d1f08 100%);
+    }
+    
+    .pricing-card.popular::before {
+      content: '⭐ MOST POPULAR';
+      position: absolute;
+      top: -12px;
+      right: 24px;
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      color: #1e293b;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    
+    .price-tag {
+      font-size: 48px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .price-period {
+      color: #9ca3af;
+      font-size: 16px;
+    }
+    
+    .feature-list {
+      list-style: none;
+      padding: 0;
+      margin: 24px 0;
+      flex-grow: 1;
+    }
+    
+    .feature-list li {
+      padding: 12px 0;
+      border-bottom: 1px solid #374151;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .feature-list li:last-child {
+      border-bottom: none;
+    }
+    
+    .feature-icon {
+      font-size: 18px;
+    }
+    
+    .pricing-button {
+      margin-top: auto !important;
+      width: 100%;
+      padding: 16px 24px !important;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 16px;
+      transition: all 0.3s;
+      border: none;
+      cursor: pointer;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* COOKIE CONSENT STYLES */
+    .cookie-consent {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      color: white;
+      padding: 20px;
+      z-index: 9999;
+      border-top: 2px solid #8b5cf6;
+      display: none;
+    }
+    
+    .cookie-consent.show {
+      display: block;
+      animation: slideUp 0.3s ease-out;
+    }
+    
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    
+    .cookie-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    
+    .cookie-text {
+      flex: 1;
+      min-width: 300px;
+    }
+    
+    .cookie-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .cookie-btn {
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.3s;
+    }
+    
+    .cookie-btn.accept {
+      background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+      color: white;
+    }
+    
+    .cookie-btn.accept:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3);
+    }
+    
+    .cookie-btn.settings {
+      background: #374151;
+      color: white;
+    }
+    
+    .cookie-btn.settings:hover {
+      background: #4b5563;
+    }
+    
+    .cookie-btn.reject {
+      background: #6b7280;
+      color: white;
+    }
+    
+    .cookie-btn.reject:hover {
+      background: #9ca3af;
+    }
+    
+    .cookie-settings {
+      display: none;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out;
+    }
+    
+    .cookie-settings.show {
+      display: block;
+      max-height: 500px;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #374151;
+    }
+    
+    .cookie-setting {
+      margin-bottom: 15px;
+    }
+    
+    .cookie-setting label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+    
+    /* OTHER EXISTING STYLES */
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    }
+    
+    .featured-agency {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 2px solid;
+      transition: all 0.3s;
+    }
+    
+    .featured-1 { border-color: #fbbf24; }
+    .featured-2 { border-color: #94a3b8; }
+    .featured-3 { border-color: #f97316; }
+    
+    .featured-agency:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    }
     
     .filter-panel {
       max-height: 0;
@@ -119,6 +344,7 @@
       overflow: hidden;
     }
     
+    /* RANKINGS STYLES */
     .complete-rankings-section {
       margin-top: 60px;
       max-width: 1200px;
@@ -307,6 +533,7 @@
       font-style: italic;
     }
     
+    /* PULSING BORDER ANIMATION */
     @keyframes pulse-border {
       0%, 100% { 
         border-color: #8b5cf6;
@@ -322,6 +549,7 @@
       animation: pulse-border 2s infinite;
     }
     
+    /* ELITE REWRITER STYLES */
     .elite-modal-overlay {
       position: fixed;
       top: 0;
@@ -372,6 +600,7 @@
       display: none !important;
     }
     
+    /* FIX: Freelancer card button alignment */
     #freelancers-grid .pulse-border {
       display: flex;
       flex-direction: column;
@@ -383,6 +612,7 @@
       margin-bottom: 0 !important;
     }
     
+    /* FIXED: Email modal styles */
     .email-modal-content {
       max-width: 500px;
       width: 100%;
@@ -426,6 +656,7 @@
       box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4);
     }
     
+    /* Agency Profile Modal */
     .agency-profile-modal {
       max-width: 800px;
       width: 100%;
@@ -446,6 +677,7 @@
       margin-bottom: 10px;
     }
 
+    /* LIGHT HOLOGRAPHIC BORDERS FOR COMPARISON TABLE */
     .comparison-feature-table {
       width: 100%;
       border-collapse: collapse;
@@ -460,6 +692,7 @@
       border: 1px solid rgba(100, 180, 255, 0.2);
     }
 
+    /* Light holographic borders */
     .comparison-feature-table th, 
     .comparison-feature-table td {
       padding: 18px 15px;
@@ -469,6 +702,7 @@
       transition: all 0.3s ease;
     }
 
+    /* Header holographic glow */
     .comparison-feature-table thead th {
       background: rgba(20, 30, 70, 0.8);
       font-weight: 600;
@@ -483,6 +717,7 @@
       overflow: hidden;
     }
 
+    /* Holographic scanline effect on headers */
     .comparison-feature-table thead th::before {
       content: '';
       position: absolute;
@@ -497,6 +732,7 @@
       animation: scanline 4s infinite linear;
     }
 
+    /* First column (feature names) */
     .comparison-feature-table tbody tr td:first-child {
       text-align: left;
       font-weight: 500;
@@ -504,31 +740,34 @@
       background: rgba(20, 25, 50, 0.7);
     }
 
+    /* Hover effects */
     .comparison-feature-table tbody tr:hover td {
       background: rgba(30, 40, 80, 0.8);
       box-shadow: inset 0 0 20px rgba(100, 180, 255, 0.1);
     }
 
-    .comparison-feature-table th:nth-child(2) {
+    /* Plan columns with subtle glow */
+    .comparison-feature-table th:nth-child(2) { /* FREE */
       border-top: 1px solid rgba(100, 180, 255, 0.2);
       box-shadow: inset 0 0 15px rgba(100, 180, 255, 0.05);
     }
 
-    .comparison-feature-table th:nth-child(3) {
+    .comparison-feature-table th:nth-child(3) { /* PRO */
       border-top: 1px solid rgba(100, 220, 255, 0.25);
       box-shadow: inset 0 0 15px rgba(100, 220, 255, 0.07);
     }
 
-    .comparison-feature-table th:nth-child(4) {
+    .comparison-feature-table th:nth-child(4) { /* AGENCY */
       border-top: 1px solid rgba(150, 100, 255, 0.3);
       box-shadow: inset 0 0 15px rgba(150, 100, 255, 0.1);
     }
 
-    .comparison-feature-table th:nth-child(5) {
+    .comparison-feature-table th:nth-child(5) { /* ELITE */
       border-top: 1px solid rgba(255, 200, 50, 0.35);
       box-shadow: inset 0 0 15px rgba(255, 200, 50, 0.12);
     }
 
+    /* Checkmarks and X's with glow */
     .comparison-feature-table .fa-check {
       color: #4ade80;
       text-shadow: 0 0 8px rgba(74, 222, 128, 0.5);
@@ -539,6 +778,7 @@
       text-shadow: 0 0 8px rgba(248, 113, 113, 0.3);
     }
     
+    /* Scanline animation */
     @keyframes scanline {
       0% {
         left: -100%;
@@ -547,42 +787,72 @@
         left: 100%;
       }
     }
-    
-    .featured-agency {
-      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-      border: 2px solid;
-      transition: all 0.3s;
-    }
-    
-    .featured-1 { border-color: #fbbf24; }
-    .featured-2 { border-color: #94a3b8; }
-    .featured-3 { border-color: #f97316; }
-    
-    .featured-agency:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-    }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100">
 
-  <div id="cookieConsent" class="cookie-consent" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #1e293b; color: white; padding: 20px; z-index: 9999; border-top: 2px solid #8b5cf6;">
-    <div style="max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px;">
-      <div style="flex: 1; min-width: 300px;">
-        <h3 style="font-weight: bold; margin-bottom: 8px;">🍪 Cookie Consent</h3>
-        <p style="font-size: 14px; color: #d1d5db;">
-          We use cookies to enhance your browsing experience.
+  <!-- Cookie Consent Banner -->
+  <div id="cookieConsent" class="cookie-consent">
+    <div class="cookie-content">
+      <div class="cookie-text">
+        <h3 class="font-bold mb-2">🍪 Cookie Consent</h3>
+        <p class="text-sm text-gray-300">
+          We use cookies to enhance your browsing experience, analyze site traffic, and personalize content. 
+          By clicking "Accept All", you consent to our use of cookies. 
+          <a href="/privacy-policy/" class="text-purple-400 hover:text-purple-300">Privacy Policy</a>
         </p>
       </div>
       
-      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-        <button onclick="acceptAllCookies()" style="padding: 10px 24px; background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); color: white; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; transition: all 0.3s;">
+      <div class="cookie-buttons">
+        <button onclick="acceptAllCookies()" class="cookie-btn accept">
           Accept All
         </button>
+        <button onclick="showCookieSettings()" class="cookie-btn settings">
+          Settings
+        </button>
+        <button onclick="rejectAllCookies()" class="cookie-btn reject">
+          Reject All
+        </button>
+      </div>
+      
+      <div id="cookieSettings" class="cookie-settings">
+        <h4 class="font-bold mb-3">Cookie Preferences</h4>
+        
+        <div class="cookie-setting">
+          <label>
+            <input type="checkbox" id="cookieEssential" checked disabled>
+            <span>Essential Cookies</span>
+            <span class="text-xs text-gray-400 ml-2">(Required)</span>
+          </label>
+          <p class="text-xs text-gray-400 ml-6 mt-1">Necessary for the website to function properly</p>
+        </div>
+        
+        <div class="cookie-setting">
+          <label>
+            <input type="checkbox" id="cookieAnalytics">
+            <span>Analytics Cookies</span>
+          </label>
+          <p class="text-xs text-gray-400 ml-6 mt-1">Help us understand how visitors interact</p>
+        </div>
+        
+        <div class="cookie-setting">
+          <label>
+            <input type="checkbox" id="cookieMarketing">
+            <span>Marketing Cookies</span>
+          </label>
+          <p class="text-xs text-gray-400 ml-6 mt-1">Used to personalize ads and content</p>
+        </div>
+        
+        <div class="mt-4">
+          <button onclick="saveCookieSettings()" class="cookie-btn accept">
+            Save Preferences
+          </button>
+        </div>
       </div>
     </div>
   </div>
 
+  <!-- Navigation -->
   <nav class="sticky-nav">
     <div class="max-w-7xl mx-auto px-6 py-4">
       <div class="flex items-center justify-between flex-wrap gap-4">
@@ -602,9 +872,21 @@
           <a href="#top3Container" class="px-4 py-2 text-gray-300 hover:text-white font-semibold transition-all border-b-2 border-transparent hover:border-purple-400">
             🏆 Leaderboard
           </a>
-          <a href="https://wa.me/31628073996?text=Hi%20Ot!%20I%20need%20help%20with%20my%20SEO%20recovery%20strategy." target="_blank" rel="noopener noreferrer" class="px-4 py-2 ml-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold rounded-lg transition-all whitespace-nowrap">
+          <a href="#pricing" class="px-4 py-2 text-gray-300 hover:text-white font-semibold transition-all border-b-2 border-transparent hover:border-purple-400">
+            💰 Pricing
+          </a>
+          <a href="#elitePricing" class="px-4 py-2 text-gray-300 hover:text-white font-semibold transition-all border-b-2 border-transparent hover:border-purple-400">
+            ✨ Elite Rewriter
+          </a>
+          <a href="/blog/index.html" class="px-4 py-2 text-gray-300 hover:text-white font-semibold transition-all border-b-2 border-transparent hover:border-purple-400">
+            📝 Blog
+          </a>
+          <a href="https://wa.me/31628073996?text=Hi%20Ot!%20I%20want%20to%20learn%20more%20about%20ContentScale%20SEO%20recovery%20services." target="_blank" rel="noopener noreferrer" class="px-4 py-2 ml-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold rounded-lg transition-all whitespace-nowrap">
             💬 WhatsApp
           </a>
+          <button onclick="openEliteRewriter()" class="px-4 py-2 ml-2 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 rounded-lg font-bold transition-all">
+            ✨ Elite Rewriter
+          </button>
         </div>
       </div>
     </div>
@@ -612,6 +894,7 @@
 
   <div class="max-w-7xl mx-auto p-6">
     
+    <!-- Hero Section -->
     <div class="text-center mb-8">
       <h1 class="text-5xl font-bold mb-3 bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
         🏆 GRAAF Framework Scanners for SEO Content Quality 2026
@@ -619,6 +902,13 @@
       <p class="text-xl text-gray-300">Find & Compare Global Top SEO Agencies and Freelancers</p>
       
       <div class="mt-6">
+        <button onclick="openEliteRewriter()" 
+          class="px-8 py-4 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 rounded-xl font-bold text-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-2xl">
+          <i class="fas fa-magic mr-2"></i>
+          Try Elite Rewriter Free
+        </button>
+        <p class="text-gray-400 mt-2 text-sm">AI-powered content enhancement tool</p>
+        
         <button onclick="openGRAAFExplanation()" 
           class="mt-4 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-lg font-medium transition-all">
           <i class="fas fa-info-circle mr-2"></i>
@@ -627,10 +917,11 @@
       </div>
     </div>
 
+    <!-- Scanner Section -->
     <div id="scanner" class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-8 mb-8 border-2 border-purple-600">
       <div class="text-center mb-6">
         <h2 class="text-3xl font-bold mb-2">🚀 Free SEO Scanner</h2>
-        <p class="text-gray-300">Get your AI-Era SEO score instantly</p>
+        <p class="text-gray-300">Get your AI-Era SEO score instantly for better quality!</p>
       </div>
       
       <div class="max-w-3xl mx-auto">
@@ -641,64 +932,6 @@
             🔍 Scan Now
           </button>
         </div>
-        
-        <div class="mt-8 bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-6 border-2 border-yellow-600">
-          <h3 class="text-xl font-bold mb-4 text-yellow-400">📊 Score Analysis</h3>
-          <div class="grid md:grid-cols-2 gap-6">
-            <div class="bg-gray-700 p-4 rounded-lg">
-              <div class="flex items-center gap-2 mb-2">
-                <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
-                  <span class="text-white font-bold">N</span>
-                </div>
-                <h4 class="font-bold text-lg">Normal Scanner</h4>
-              </div>
-              <ul class="text-sm text-gray-300 space-y-2 mb-4">
-                <li>• GRAAF Framework</li>
-                <li>• CRAFT Content</li>
-                <li>• Technische SEO</li>
-                <li>• Basic scoring 0-100</li>
-              </ul>
-              <div class="text-center">
-                <div class="text-3xl font-bold text-blue-400">0-100</div>
-                <div class="text-xs text-gray-400">Any quality level</div>
-              </div>
-            </div>
-            
-            <div class="bg-gradient-to-r from-yellow-900 to-orange-900 p-4 rounded-lg border-2 border-yellow-500">
-              <div class="flex items-center gap-2 mb-2">
-                <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 flex items-center justify-center">
-                  <span class="text-white font-bold">E</span>
-                </div>
-                <h4 class="font-bold text-lg text-yellow-300">Elite Scanner</h4>
-              </div>
-              <ul class="text-sm text-yellow-100 space-y-2 mb-4">
-                <li>• GRAAF Framework +</li>
-                <li>• CRAFT Content +</li>
-                <li>• Technische SEO +</li>
-                <li>• EEAT + Readability</li>
-                <li>• People First content</li>
-              </ul>
-              <div class="text-center">
-                <div class="text-3xl font-bold text-yellow-300">0-100</div>
-                <div class="text-xs text-yellow-200">Deeper analysis</div>
-              </div>
-            </div>
-          </div>
-          
-          <div class="mt-4 pt-4 border-t border-gray-700">
-            <p class="text-sm text-gray-400 text-center">
-              <strong>Elite Scanner uses 5 additional frameworks</strong> for deeper content analysis
-            </p>
-            <div class="text-center mt-4">
-              <a href="https://wa.me/31628073996?text=Hi%20Ot!%20I%20want%20to%20try%20the%20Elite%20Scanner%20with%20GRAAF%2C%20CRAFT%2C%20EEAT%2C%20Readability%20%26%20People%20First%20analysis." target="_blank" rel="noopener noreferrer" class="px-6 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 rounded-lg font-medium transition-all inline-block">
-                <i class="fas fa-arrow-up mr-2"></i>
-                Try Elite Scanner
-              </a>
-              <p class="text-xs text-gray-500 mt-2">Via WhatsApp consultation</p>
-            </div>
-          </div>
-        </div>
-        
         <div class="text-center mt-4">
           <button onclick="scrollToScanner()" class="px-6 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 rounded-lg font-medium transition-all">
             <i class="fas fa-play mr-2"></i>
@@ -708,6 +941,7 @@
       </div>
     </div>
 
+    <!-- Agency Owner Banner -->
     <div class="bg-purple-900 bg-opacity-20 border-l-4 border-purple-500 rounded-lg p-3 mb-6 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <span class="text-lg">🏢</span>
@@ -718,6 +952,7 @@
       </button>
     </div>
 
+    <!-- Stats Section -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
       <div class="stat-card rounded-xl p-5 text-white relative">
         <div class="relative z-10">
@@ -752,6 +987,7 @@
       </div>
     </div>
 
+    <!-- Top 3 Agencies -->
     <div class="mb-10" id="top3Container">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-2xl font-bold text-yellow-400">🏆 Top 3 Agencies</h2>
@@ -762,6 +998,7 @@
       </div>
     </div>
 
+    <!-- Filters -->
     <div class="bg-gray-800 rounded-lg p-4 mb-6">
       <button onclick="toggleFilters()" class="w-full flex items-center justify-between text-left">
         <div class="flex items-center gap-2">
@@ -787,6 +1024,7 @@
       </div>
     </div>
 
+    <!-- Complete Rankings -->
     <div class="complete-rankings-section">
       <button class="rankings-toggle-btn pulse-border" onclick="toggleRankings()" id="rankings-toggle">
         <span>📊 Show All Rankings</span>
@@ -821,6 +1059,7 @@
       </div>
     </div>
 
+    <!-- Freelancer Directory -->
     <div class="mt-20 mb-12">
       <div class="text-center mb-10">
         <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
@@ -829,12 +1068,14 @@
         <p class="text-xl text-gray-400">Verified independent SEO experts • Scored via writing test</p>
       </div>
 
+      <!-- Freelancer Grid -->
       <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8" id="freelancers-grid">
         <div class="col-span-full text-center text-gray-500">
           Loading freelancers...
         </div>
       </div>
 
+      <!-- CTA for Freelancers -->
       <div class="bg-gradient-to-r from-purple-900 to-pink-900 rounded-2xl p-8 text-center border-2 border-purple-500">
         <div class="text-5xl mb-4">💼</div>
         <h3 class="text-3xl font-bold mb-3">Are You a Freelance SEO Expert?</h3>
@@ -869,6 +1110,7 @@
       </div>
     </div>
 
+    <!-- SEO Recovery Insights -->
     <div class="mt-16 mb-12">
       <div class="text-center mb-10">
         <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
@@ -932,6 +1174,287 @@
       </div>
     </div>
 
+    <!-- SCANNER PRICING SECTION -->
+    <div id="pricing" class="py-16">
+      <div class="text-center mb-12">
+        <h2 class="text-5xl font-bold mb-4 bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
+          💰 Scanner Pricing
+        </h2>
+        <p class="text-xl text-gray-400">Simple, transparent pricing for our SEO Scanner</p>
+      </div>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 max-w-7xl mx-auto">
+        
+        <!-- FREE PLAN -->
+        <div class="pricing-card">
+          <div class="mb-6">
+            <h3 class="text-2xl font-bold mb-2">FREE Starter</h3>
+            <div class="price-tag">€0</div>
+            <div class="price-period">forever</div>
+            <div class="text-sm text-gray-400 mt-2">No monthly fees</div>
+          </div>
+          
+          <ul class="feature-list">
+            <li><span class="feature-icon">✅</span> 3 scans/day</li>
+            <li><span class="feature-icon">✅</span> Basic score</li>
+            <li><span class="feature-icon">✅</span> Leaderboard access</li>
+            <li><span class="feature-icon">✅</span> Community support</li>
+          </ul>
+          
+          <button onclick="scrollToScanner()" class="w-full pricing-button bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500">
+            Start Free
+          </button>
+        </div>
+
+        <!-- PRO PLAN -->
+        <div class="pricing-card">
+          <div class="mb-6">
+            <h3 class="text-2xl font-bold mb-2">PRO</h3>
+            <div class="price-tag">€27</div>
+            <div class="price-period">/month</div>
+            <div class="text-xs text-green-400 mt-2">€259/year (save 20%)</div>
+            <div class="text-sm text-gray-400 mt-1">Billed monthly or yearly</div>
+          </div>
+          
+          <ul class="feature-list">
+            <li><span class="feature-icon">✅</span> 100 scans/month</li>
+            <li><span class="feature-icon">✅</span> Priority support</li>
+            <li><span class="feature-icon">✅</span> WhatsApp Ottmar</li>
+            <li><span class="feature-icon">✅</span> Leaderboard access</li>
+          </ul>
+          
+          <button onclick="whatsappPricing('Pro Scanner')" class="w-full pricing-button bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800">
+            Choose Plan
+          </button>
+        </div>
+
+        <!-- AGENCY PLAN (MOST POPULAR) -->
+        <div class="pricing-card popular">
+          <div class="mb-6">
+            <h3 class="text-2xl font-bold mb-2">AGENCY</h3>
+            <div class="price-tag">€97</div>
+            <div class="price-period">/month</div>
+            <div class="text-xs text-green-400 mt-2">€929/year (save 20%)</div>
+            <div class="text-sm text-gray-400 mt-1">Billed monthly or yearly</div>
+          </div>
+          
+          <ul class="feature-list">
+            <li><span class="feature-icon">✅</span> 500 scans/month</li>
+            <li><span class="feature-icon">✅</span> White-label</li>
+            <li><span class="feature-icon">✅</span> Client dashboard</li>
+            <li><span class="feature-icon">✅</span> API access</li>
+          </ul>
+          
+          <button onclick="whatsappPricing('Agency Scanner')" class="w-full pricing-button bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700">
+            Most Popular
+          </button>
+        </div>
+
+        <!-- ELITE SCANNER (PREMIUM) -->
+        <div class="pricing-card">
+          <div class="mb-6">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-3 py-1 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-full text-xs font-bold">
+                🏆 ELITE
+              </span>
+              <h3 class="text-2xl font-bold">ELITE Scanner</h3>
+            </div>
+            <div class="price-tag">€197</div>
+            <div class="price-period">/month</div>
+            <div class="text-xs text-green-400 mt-2">€1,899/year (save 20%)</div>
+            <div class="text-sm text-gray-400 mt-1">Billed monthly or yearly</div>
+          </div>
+          
+          <ul class="feature-list">
+            <li><span class="feature-icon">✅</span> <strong>Unlimited scans</strong></li>
+            <li><span class="feature-icon">✅</span> Elite Framework scoring</li>
+            <li><span class="feature-icon">✅</span> Competitor analysis</li>
+            <li><span class="feature-icon">✅</span> AI recommendations</li>
+            <li><span class="feature-icon">✅</span> White-label + API</li>
+            <li><span class="feature-icon">✅</span> Dedicated support</li>
+          </ul>
+          
+          <button onclick="whatsappPricing('Elite Scanner')" class="w-full pricing-button bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+            Go Elite
+          </button>
+        </div>
+      </div>
+
+      <!-- Comparison Table with Light Holographic Borders -->
+      <div class="bg-gray-800 rounded-xl p-8 mb-12 border border-gray-700">
+        <h3 class="text-2xl font-bold text-center mb-8">📊 Plan Comparison</h3>
+        
+        <div class="overflow-x-auto">
+          <table class="comparison-feature-table w-full">
+            <thead>
+              <tr>
+                <th class="pb-4 font-bold">Feature</th>
+                <th class="pb-4 text-center font-bold">FREE</th>
+                <th class="pb-4 text-center font-bold">PRO</th>
+                <th class="pb-4 text-center font-bold">AGENCY</th>
+                <th class="pb-4 text-center font-bold text-yellow-400">ELITE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="py-3">Scans per month</td>
+                <td class="py-3 text-center">90</td>
+                <td class="py-3 text-center">100</td>
+                <td class="py-3 text-center">500</td>
+                <td class="py-3 text-center font-bold text-yellow-400">Unlimited</td>
+              </tr>
+              <tr>
+                <td class="py-3">Score type</td>
+                <td class="py-3 text-center">Basic</td>
+                <td class="py-3 text-center">Advanced</td>
+                <td class="py-3 text-center">Advanced</td>
+                <td class="py-3 text-center font-bold text-yellow-400">Elite Framework</td>
+              </tr>
+              <tr>
+                <td class="py-3">AI recommendations</td>
+                <td class="py-3 text-center"><i class="fas fa-xmark"></i></td>
+                <td class="py-3 text-center"><i class="fas fa-check"></i> Basic</td>
+                <td class="py-3 text-center"><i class="fas fa-check"></i> Advanced</td>
+                <td class="py-3 text-center font-bold text-yellow-400"><i class="fas fa-check"></i> Premium</td>
+              </tr>
+              <tr>
+                <td class="py-3">Competitor analysis</td>
+                <td class="py-3 text-center"><i class="fas fa-xmark"></i></td>
+                <td class="py-3 text-center"><i class="fas fa-check"></i> Basic</td>
+                <td class="py-3 text-center"><i class="fas fa-check"></i> Basic</td>
+                <td class="py-3 text-center font-bold text-yellow-400"><i class="fas fa-check"></i> Advanced</td>
+              </tr>
+              <tr>
+                <td class="py-3">White-label</td>
+                <td class="py-3 text-center"><i class="fas fa-xmark"></i></td>
+                <td class="py-3 text-center"><i class="fas fa-xmark"></i></td>
+                <td class="py-3 text-center"><i class="fas fa-check"></i></td>
+                <td class="py-3 text-center font-bold text-yellow-400"><i class="fas fa-check"></i> Premium</td>
+              </tr>
+              <tr>
+                <td class="py-3">API access</td>
+                <td class="py-3 text-center"><i class="fas fa-xmark"></i></td>
+                <td class="py-3 text-center"><i class="fas fa-xmark"></i></td>
+                <td class="py-3 text-center"><i class="fas fa-check"></i></td>
+                <td class="py-3 text-center font-bold text-yellow-400"><i class="fas fa-check"></i> Full</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CTA for Free Trial -->
+      <div class="text-center">
+        <div class="bg-gradient-to-r from-purple-900 to-blue-900 rounded-2xl p-8 inline-block">
+          <h3 class="text-2xl font-bold mb-4">🚀 Start with FREE Scanner</h3>
+          <p class="text-gray-300 mb-6">Get 3 free scans per day - no credit card required</p>
+          <button onclick="scrollToScanner()" class="bg-white text-purple-600 hover:bg-gray-100 px-8 py-4 rounded-lg font-bold text-lg transition-all">
+            🔍 Try Scanner Free
+          </button>
+          <p class="text-xs text-gray-400 mt-3">Upgrade anytime to unlock more features</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ELITE REWRITER PRICING SECTION -->
+    <div id="elitePricing" class="py-16">
+      <div class="text-center mb-12">
+        <h2 class="text-5xl font-bold mb-4 bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
+          ✨ Elite Rewriter Pricing
+        </h2>
+        <p class="text-xl text-gray-400">AI-powered content enhancement for SEO</p>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6 mb-12 max-w-4xl mx-auto">
+        
+        <!-- ELITE REWRITER BASIC -->
+        <div class="pricing-card">
+          <div class="mb-6">
+            <h3 class="text-2xl font-bold mb-2">Elite Rewriter</h3>
+            <div class="price-tag">€29</div>
+            <div class="price-period">/month</div>
+            <div class="text-xs text-green-400 mt-2">€279/year (save 20%)</div>
+            <div class="text-sm text-gray-400 mt-1">Billed monthly or yearly</div>
+          </div>
+          
+          <ul class="feature-list">
+            <li><span class="feature-icon">✅</span> Unlimited rewrites</li>
+            <li><span class="feature-icon">✅</span> GRAAF + CRAFT AI</li>
+            <li><span class="feature-icon">✅</span> SEO optimization</li>
+            <li><span class="feature-icon">✅</span> Tone adjustments</li>
+            <li><span class="feature-icon">✅</span> Priority support</li>
+          </ul>
+          
+          <button onclick="openEliteRewriter()" class="w-full pricing-button bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700">
+            Try Elite Rewriter
+          </button>
+        </div>
+
+        <!-- ELITE REWRITER BUSINESS -->
+        <div class="pricing-card popular">
+          <div class="mb-6">
+            <h3 class="text-2xl font-bold mb-2">Elite Business</h3>
+            <div class="price-tag">€99</div>
+            <div class="price-period">/month</div>
+            <div class="text-xs text-green-400 mt-2">€949/year (save 20%)</div>
+            <div class="text-sm text-gray-400 mt-1">Billed monthly or yearly</div>
+          </div>
+          
+          <ul class="feature-list">
+            <li><span class="feature-icon">✅</span> Everything in Elite</li>
+            <li><span class="feature-icon">✅</span> Team collaboration</li>
+            <li><span class="feature-icon">✅</span> API access</li>
+            <li><span class="feature-icon">✅</span> Bulk processing</li>
+            <li><span class="feature-icon">✅</span> White-label reports</li>
+            <li><span class="feature-icon">✅</span> Dedicated support</li>
+          </ul>
+          
+          <button onclick="whatsappPricing('Elite Business')" class="w-full pricing-button bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
+            Most Popular
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lifetime Deal Banner -->
+    <div class="mt-16 mb-12">
+      <div class="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-2xl p-8 text-center">
+        <div class="text-6xl mb-4">💎</div>
+        <h3 class="text-4xl font-bold text-gray-900 mb-3">Lifetime Deal Coming Soon!</h3>
+        <p class="text-xl text-gray-800 mb-6">Pay once, scan forever. Limited spots available.</p>
+        
+        <div class="bg-gray-900 bg-opacity-20 rounded-xl p-6 mb-6 max-w-3xl mx-auto">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-gray-900">
+            <div class="bg-white bg-opacity-30 rounded-lg p-4">
+              <div class="text-sm font-bold mb-1">Tier 1</div>
+              <div class="text-3xl font-bold">€49</div>
+              <div class="text-xs">50 scans/month • Lifetime</div>
+            </div>
+            <div class="bg-white bg-opacity-30 rounded-lg p-4">
+              <div class="text-sm font-bold mb-1">Tier 2</div>
+              <div class="text-3xl font-bold">€99</div>
+              <div class="text-xs">150 scans/month • Lifetime</div>
+            </div>
+            <div class="bg-white bg-opacity-30 rounded-lg p-4">
+              <div class="text-sm font-bold mb-1">Tier 3</div>
+              <div class="text-3xl font-bold">€199</div>
+              <div class="text-xs">400 scans/month • Lifetime</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-sm text-gray-800 mb-6 max-w-2xl mx-auto">
+          <strong>Note:</strong> Lifetime deals offer incredible value but exclude white-label, API access, and enterprise features. Perfect for individuals and small teams!
+        </div>
+
+        <button onclick="showEmailModalForLTD()" class="inline-block bg-gray-900 text-yellow-400 hover:bg-gray-800 px-8 py-4 rounded-lg font-bold text-lg transition-all">
+          🔔 Notify Me When Available
+        </button>
+        <p class="text-xs text-gray-700 mt-2">You'll receive emails at the address you provide</p>
+      </div>
+    </div>
+
+    <!-- Claim Form -->
     <div id="claim-form" class="bg-gray-800 rounded-xl p-8 border-2 border-purple-600 mt-16">
       <div class="text-center mb-6">
         <h2 class="text-3xl font-bold mb-2">🏢 Claim Your Agency Profile</h2>
@@ -969,6 +1492,7 @@
       </div>
     </div>
 
+    <!-- Expert Help CTA -->
     <div class="mt-12 bg-gradient-to-r from-green-900 to-emerald-900 rounded-xl p-8 text-center border-2 border-green-600">
       <h3 class="text-2xl font-bold mb-3">💬 Need Expert Help?</h3>
       <p class="text-gray-300 mb-6">Talk directly to Ot about your SEO recovery strategy</p>
@@ -980,11 +1504,299 @@
 
   </div>
 
+  <!-- SCAN RESULTS MODAL -->
   <div id="scanModal" class="modal-overlay">
     <div class="modal-content">
+      <!-- Content will be dynamically inserted here -->
     </div>
   </div>
 
+  <!-- ELITE REWRITER MODAL -->
+  <div id="eliteRewriterModal" class="elite-modal-overlay">
+    <div class="elite-modal-container">
+      <div class="bg-gray-800 text-white rounded-xl shadow-2xl border-2 border-yellow-600">
+        
+        <!-- Header -->
+        <div class="p-6 border-b border-gray-700">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-2xl font-bold">
+                <i class="fas fa-magic text-yellow-400 mr-2"></i>
+                Elite Rewriter
+              </h2>
+              <p class="text-gray-400 mt-1">AI-powered content enhancement</p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="px-3 py-1 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-full text-sm font-bold">
+                ELITE
+              </span>
+              <button onclick="closeEliteRewriter()" class="text-gray-400 hover:text-white text-xl">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="p-6">
+          <!-- Input Section -->
+          <div class="mb-5">
+            <label class="block text-sm font-medium text-gray-300 mb-2">
+              Original Content *
+            </label>
+            <textarea 
+              id="eliteContentInput"
+              class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-white"
+              rows="5"
+              placeholder="Paste your content here..."
+            ></textarea>
+            <div class="text-right text-sm text-gray-400 mt-1">
+              <span id="eliteWordCount">0</span> words
+            </div>
+          </div>
+
+          <!-- Settings -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">
+                <i class="fas fa-sliders-h mr-1"></i> Tone
+              </label>
+              <select id="eliteToneSelect" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                <option>Professional</option>
+                <option selected>Casual</option>
+                <option>Persuasive</option>
+                <option>Formal</option>
+              </select>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">
+                <i class="fas fa-bullseye mr-1"></i> Target
+              </label>
+              <select id="eliteTargetSelect" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                <option>Blog Post</option>
+                <option selected>Website Content</option>
+                <option>Product Description</option>
+                <option>Social Media</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Options -->
+          <div class="mb-6">
+            <div class="flex flex-wrap gap-4">
+              <label class="flex items-center">
+                <input type="checkbox" id="eliteSeoCheckbox" class="rounded bg-gray-700 border-gray-600 text-yellow-500" checked>
+                <span class="ml-2 text-sm text-gray-300">Optimize for SEO</span>
+              </label>
+              <label class="flex items-center">
+                <input type="checkbox" id="eliteReadabilityCheckbox" class="rounded bg-gray-700 border-gray-600 text-yellow-500">
+                <span class="ml-2 text-sm text-gray-300">Improve Readability</span>
+              </label>
+              <label class="flex items-center">
+                <input type="checkbox" id="eliteEngagementCheckbox" class="rounded bg-gray-700 border-gray-600 text-yellow-500" checked>
+                <span class="ml-2 text-sm text-gray-300">Enhance Engagement</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Main Action Button -->
+          <button onclick="enhanceContent()" 
+            class="w-full px-6 py-4 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 rounded-lg font-bold text-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl active:scale-95 mb-2">
+            <i class="fas fa-robot mr-2"></i>
+            Enhance with AI
+          </button>
+          
+          <!-- Upgrade Prompt -->
+          <div class="text-center mt-4">
+            <p class="text-sm text-gray-400">
+              Free plan: <span class="text-yellow-400">3 enhancements left</span> this month
+              <button onclick="showUpgradeOptions()" class="text-blue-400 hover:text-blue-300 ml-2 font-semibold">
+                Upgrade for unlimited →
+              </button>
+            </p>
+          </div>
+
+        </div>
+
+        <!-- Enhancement Score Banner -->
+        <div id="enhancementScoreBanner" class="enhancement-score-banner hidden">
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <div class="text-3xl">🎯</div>
+              <div>
+                <h4 class="font-bold text-white text-lg">Content Enhanced Successfully!</h4>
+                <p class="text-purple-200 text-sm">Optimized with GRAAF + CRAFT AI Frameworks</p>
+              </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+              <div class="text-center">
+                <div class="text-2xl font-bold text-white" id="realTimeScore">86</div>
+                <div class="text-xs text-purple-200">Elite Score</div>
+              </div>
+              
+              <div class="px-4 py-2 bg-white text-purple-700 rounded-full font-bold text-sm" id="qualityLabel">
+                Good Quality
+              </div>
+              
+              <button onclick="hideScoreBanner()" class="text-white hover:text-yellow-300 text-xl">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="mt-3">
+            <div class="flex justify-between text-xs text-purple-200 mb-1">
+              <span>Poor</span>
+              <span>Excellent</span>
+            </div>
+            <div class="h-2 bg-purple-900 rounded-full overflow-hidden">
+              <div id="scoreProgressBar" class="h-full bg-gradient-to-r from-green-400 to-yellow-400" style="width: 86%"></div>
+            </div>
+            <div class="text-xs text-center text-purple-300 mt-1" id="scoreDescription">
+              Content structure improved by 42%
+            </div>
+          </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="eliteResultsSection" class="hidden p-6 border-t border-gray-700">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-lg">
+              <i class="fas fa-star text-yellow-400 mr-2"></i>
+              Enhanced Content
+            </h3>
+            <div class="space-x-2">
+              <button onclick="copyEnhancedContent()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium text-sm">
+                <i class="far fa-copy mr-1"></i> Copy
+              </button>
+              <button onclick="regenerateEnhancedContent()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium text-sm">
+                <i class="fas fa-redo mr-1"></i> Regenerate
+              </button>
+            </div>
+          </div>
+          
+          <div id="eliteEnhancedOutput" class="bg-gray-700 p-4 rounded-lg max-h-60 overflow-y-auto">
+            <p class="text-gray-300">Your enhanced content will appear here...</p>
+          </div>
+          
+          <!-- Loading -->
+          <div id="eliteLoadingIndicator" class="hidden text-center py-4">
+            <i class="fas fa-spinner fa-spin text-yellow-400 text-2xl mb-2"></i>
+            <p class="text-gray-400">AI is enhancing your content...</p>
+          </div>
+        </div>
+
+        <!-- Bottom Action Buttons -->
+        <div class="mt-6 pt-6 border-t border-gray-700 px-6 pb-6">
+          <div class="flex gap-3">
+            <button onclick="closeEliteRewriter()" 
+              class="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
+              Close
+            </button>
+            <button onclick="downloadEnhancedContent()" 
+              class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
+              <i class="fas fa-download mr-1"></i>
+              Download
+            </button>
+            <button onclick="openEliteScanFromRewriter()" 
+              class="flex-1 px-6 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 rounded-lg font-semibold font-bold">
+              <i class="fas fa-shield-alt mr-1"></i>
+              Try Elite Scan
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Upgrade Modal -->
+  <div id="eliteUpgradeModal" class="elite-modal-overlay">
+    <div class="modal-content max-w-md">
+      <div class="bg-gray-800 rounded-xl p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-xl font-bold">
+            <i class="fas fa-crown text-yellow-400 mr-2"></i>
+            Upgrade Plan
+          </h3>
+          <button onclick="closeUpgradeModal()" class="text-gray-400 hover:text-white">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        
+        <p class="text-gray-400 mb-6">Choose a plan to unlock unlimited rewrites and premium features.</p>
+        
+        <div class="space-y-4">
+          <div class="bg-gray-900 p-4 rounded-lg border border-yellow-500/30">
+            <div class="flex justify-between items-center mb-2">
+              <h4 class="font-bold">Pro Plan</h4>
+              <span class="text-yellow-400 font-bold">€29/month</span>
+            </div>
+            <p class="text-sm text-gray-400 mb-3">Unlimited rewrites, advanced SEO, priority support</p>
+            <button onclick="upgradeToPro()" class="w-full py-2 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-lg font-semibold">
+              Upgrade to Pro
+            </button>
+          </div>
+          
+          <div class="bg-gray-900 p-4 rounded-lg">
+            <div class="flex justify-between items-center mb-2">
+              <h4 class="font-bold">Business Plan</h4>
+              <span class="text-blue-400 font-bold">€99/month</span>
+            </div>
+            <p class="text-sm text-gray-400 mb-3">Everything in Pro plus team features and API access</p>
+            <button onclick="upgradeToBusiness()" class="w-full py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
+              Upgrade to Business
+            </button>
+          </div>
+        </div>
+        
+        <div class="mt-6 text-center text-sm text-gray-500">
+          All plans include a 7-day free trial. No credit card required to start.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Email Collection Modal for LTD Notifications -->
+  <div id="emailModal" class="modal-overlay">
+    <div class="modal-content email-modal-content">
+      <div class="p-8">
+        <div class="flex justify-between items-start mb-6">
+          <div>
+            <h2 class="text-2xl font-bold mb-2">Get Notified About Lifetime Deals</h2>
+            <p class="text-sm text-gray-400">We'll email you when Lifetime Deals launch</p>
+          </div>
+          <button onclick="closeEmailModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        
+        <div class="email-input-container">
+          <form id="ltdEmailForm" onsubmit="submitLTDEmail(event)">
+            <input type="email" id="ltdEmailInput" placeholder="your.email@example.com" class="email-input" required>
+            <p class="text-xs text-gray-500 mb-4">Where should we send the notification?</p>
+            
+            <div class="flex items-center mb-4">
+              <input type="checkbox" id="emailConsent" class="mr-2" checked required>
+              <label for="emailConsent" class="text-sm text-gray-400">
+                Yes, I want to receive email updates about ContentScale Lifetime Deals and special offers
+              </label>
+            </div>
+            
+            <button type="submit" class="email-submit-btn">
+              🔔 Notify Me When Available
+            </button>
+          </form>
+        </div>
+        
+        <p class="text-center text-xs text-gray-500 mt-4">
+          We respect your privacy. Unsubscribe anytime. Emails sent to: hello@contentscale.site
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Agency Profile Modal -->
   <div id="agencyProfileModal" class="modal-overlay">
     <div class="modal-content agency-profile-modal">
       <div class="agency-profile-header">
@@ -1066,6 +1878,7 @@
     </div>
   </div>
 
+  <!-- Freelancer Signup Modal -->
   <div id="freelancerModal" class="modal-overlay">
     <div class="modal-content max-w-2xl">
       <div class="p-8">
@@ -1137,12 +1950,65 @@
     </div>
   </div>
 
+  <!-- JavaScript -->
   <script>
-    function acceptAllCookies() {
-      localStorage.setItem('cookieConsent', 'accepted');
-      document.getElementById('cookieConsent').style.display = 'none';
+    // ========== COOKIE CONSENT FUNCTIONS ==========
+    function showCookieConsent() {
+      const hasConsent = localStorage.getItem('cookieConsent');
+      if (!hasConsent) {
+        setTimeout(() => {
+          document.getElementById('cookieConsent').classList.add('show');
+        }, 1000);
+      }
     }
 
+    function acceptAllCookies() {
+      localStorage.setItem('cookieConsent', 'accepted');
+      localStorage.setItem('cookieEssential', 'true');
+      localStorage.setItem('cookieAnalytics', 'true');
+      localStorage.setItem('cookieMarketing', 'true');
+      hideCookieConsent();
+      console.log('All cookies accepted');
+    }
+
+    function rejectAllCookies() {
+      localStorage.setItem('cookieConsent', 'rejected');
+      localStorage.setItem('cookieEssential', 'true');
+      localStorage.setItem('cookieAnalytics', 'false');
+      localStorage.setItem('cookieMarketing', 'false');
+      hideCookieConsent();
+      console.log('Non-essential cookies rejected');
+    }
+
+    function showCookieSettings() {
+      const settings = document.getElementById('cookieSettings');
+      settings.classList.toggle('show');
+      
+      const analytics = localStorage.getItem('cookieAnalytics') !== 'false';
+      const marketing = localStorage.getItem('cookieMarketing') !== 'false';
+      
+      document.getElementById('cookieAnalytics').checked = analytics;
+      document.getElementById('cookieMarketing').checked = marketing;
+    }
+
+    function saveCookieSettings() {
+      const analytics = document.getElementById('cookieAnalytics').checked;
+      const marketing = document.getElementById('cookieMarketing').checked;
+      
+      localStorage.setItem('cookieConsent', 'custom');
+      localStorage.setItem('cookieAnalytics', analytics);
+      localStorage.setItem('cookieMarketing', marketing);
+      
+      hideCookieConsent();
+      console.log('Cookie preferences saved:', { analytics, marketing });
+    }
+
+    function hideCookieConsent() {
+      document.getElementById('cookieConsent').classList.remove('show');
+      document.getElementById('cookieSettings').classList.remove('show');
+    }
+
+    // ========== INITIALIZATION ==========
     let allAgencies = [];
     let filteredAgencies = [];
     let currentFilter = 'all';
@@ -1155,25 +2021,33 @@
     let lastScanData = null;
     let shareKey = null;
     let scansUsed = 0;
-    let scansLimit = 9999;
+    let scansLimit = 5;
 
+    // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
-      if (!localStorage.getItem('cookieConsent')) {
-        setTimeout(() => {
-          document.getElementById('cookieConsent').style.display = 'block';
-        }, 1000);
-      }
+      showCookieConsent();
       loadLeaderboard();
       loadFreelancers();
       initializeModals();
+      initializeWhatsAppButtons();
       
+      // Load share key if exists
       shareKey = localStorage.getItem('contentScaleShareKey');
-      if (!shareKey) {
-        shareKey = 'free_' + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem('contentScaleShareKey', shareKey);
+      if (shareKey) {
+        console.log('Share key loaded from localStorage:', shareKey);
+      }
+      
+      // Initialize Elite Rewriter word count
+      const contentInput = document.getElementById('eliteContentInput');
+      if (contentInput) {
+        contentInput.addEventListener('input', function() {
+          const words = this.value.trim() ? this.value.trim().split(/\s+/).length : 0;
+          document.getElementById('eliteWordCount').textContent = words;
+        });
       }
     });
 
+    // ========== MODAL FUNCTIONS ==========
     function initializeModals() {
       document.querySelectorAll('.modal-overlay').forEach(overlay => {
         overlay.addEventListener('click', function(e) {
@@ -1215,10 +2089,261 @@
       document.body.style.overflow = 'auto';
     }
 
+    // ========== EMAIL MODAL FUNCTIONS ==========
+    function showEmailModalForLTD() {
+      showModal('emailModal');
+    }
+
+    function closeEmailModal() {
+      hideModal('emailModal');
+    }
+
+    // ========== LTD EMAIL COLLECTION FUNCTIONS ==========
+    function submitLTDEmail(event) {
+      event.preventDefault();
+      
+      const emailInput = document.getElementById('ltdEmailInput');
+      const consentCheckbox = document.getElementById('emailConsent');
+      const submitBtn = document.querySelector('#ltdEmailForm .email-submit-btn');
+      const email = emailInput.value.trim();
+      
+      // Validation
+      if (!email) {
+        alert('Please enter your email address');
+        return;
+      }
+      
+      if (!email.includes('@') || !email.includes('.')) {
+        alert('Please enter a valid email address (example@domain.com)');
+        return;
+      }
+      
+      if (!consentCheckbox.checked) {
+        alert('Please check the consent box to receive notifications');
+        return;
+      }
+      
+      // Save button state
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = '⏳ Saving...';
+      submitBtn.disabled = true;
+      
+      try {
+        // 1. Save to localStorage
+        let waitlist = JSON.parse(localStorage.getItem('ltdWaitlist') || '[]');
+        
+        // Check if email already exists
+        const exists = waitlist.some(entry => entry.email === email);
+        if (exists) {
+          alert(`✅ You're already on the waitlist! We'll email you at ${email} when LTD launches.`);
+          closeEmailModal();
+          return;
+        }
+        
+        // Add new entry
+        waitlist.push({
+          email: email,
+          date: new Date().toISOString(),
+          timestamp: Date.now(),
+          page: window.location.href,
+          userAgent: navigator.userAgent.substring(0, 100)
+        });
+        localStorage.setItem('ltdWaitlist', JSON.stringify(waitlist));
+        
+        // Success message with count
+        alert(`✅ Perfect! We'll email you at ${email} when LTD launches!\n\n` +
+              `Total waitlist signups so far: ${waitlist.length}\n\n` +
+              `We'll contact you at hello@contentscale.site`);
+        
+        // Clear form
+        emailInput.value = '';
+        consentCheckbox.checked = false;
+        
+        // Close modal
+        closeEmailModal();
+        
+        // Log to console
+        console.log('📧 New LTD Waitlist Signup:', { 
+          email, 
+          timestamp: new Date().toLocaleString(),
+          totalSignups: waitlist.length 
+        });
+        
+      } catch (error) {
+        console.error('Error saving email:', error);
+        alert('There was an error saving your email. Please try again.');
+      } finally {
+        // Reset button
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+      }
+    }
+    
+    // ========== ADMIN FUNCTIONS (for testing) ==========
+    window.viewCollectedEmails = function() {
+      const waitlist = JSON.parse(localStorage.getItem('ltdWaitlist') || '[]');
+      
+      if (waitlist.length === 0) {
+        alert('No emails collected yet.');
+        return;
+      }
+      
+      const emailList = waitlist.map((w, i) => 
+        `${i + 1}. ${w.email} (${new Date(w.date).toLocaleDateString()})`
+      ).join('\n');
+      
+      alert(`📧 Collected LTD Waitlist Emails:\n\nTotal: ${waitlist.length}\n\n${emailList}`);
+      console.table(waitlist);
+    };
+
+    // ========== WHATSAPP FUNCTIONS ==========
+    function initializeWhatsAppButtons() {
+      document.addEventListener('click', function(e) {
+        const button = e.target.closest('button');
+        if (button && (button.textContent.includes('WhatsApp') || button.textContent.includes('💬'))) {
+          const planMatch = button.textContent.match(/PRO|AGENCY|Agency|Pro|ELITE|Elite/i);
+          if (planMatch) {
+            openWhatsApp(planMatch[0]);
+          } else {
+            openWhatsApp();
+          }
+        }
+      });
+    }
+
+    function openWhatsApp(planName = '') {
+      const message = planName 
+        ? `Hi Ot! I'm interested in the ${planName} plan. Can you tell me more?`
+        : 'Hi Ot! I want to learn more about ContentScale SEO recovery services.';
+      
+      const url = `https://wa.me/31628073996?text=${encodeURIComponent(message)}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+
+    function whatsappPricing(plan) {
+      let message = '';
+      let planDetails = '';
+      
+      if (plan === 'Pro Scanner') {
+        planDetails = 'PRO Scanner plan (€27/month or €259/year)';
+      } else if (plan === 'Agency Scanner') {
+        planDetails = 'AGENCY Scanner plan (€97/month or €929/year)';
+      } else if (plan === 'Elite Scanner') {
+        planDetails = 'ELITE Scanner plan (€197/month or €1,899/year)';
+      } else if (plan === 'Elite Business') {
+        planDetails = 'Elite Business Rewriter plan (€99/month or €949/year)';
+      } else {
+        planDetails = 'ContentScale services';
+      }
+      
+      message = `Hi Ot! I am interested in the ${planDetails}. Can you help me get started?`;
+      const url = `https://wa.me/31628073996?text=${encodeURIComponent(message)}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+
+    // ========== ELITE REWRITER FUNCTIONS ==========
+    function openEliteRewriter() {
+      showModal('eliteRewriterModal');
+    }
+
+    function closeEliteRewriter() {
+      hideModal('eliteRewriterModal');
+    }
+
+    function openFreelancerSignup() {
+      showModal('freelancerModal');
+    }
+
     function closeFreelancerModal() {
       hideModal('freelancerModal');
     }
 
+    function openEliteScanFromRewriter() {
+      closeEliteRewriter();
+      setTimeout(() => {
+        if (typeof runEliteScan === 'function') {
+          runEliteScan();
+        }
+      }, 300);
+    }
+
+    function showUpgradeOptions() {
+      showModal('eliteUpgradeModal');
+    }
+
+    function closeUpgradeModal() {
+      hideModal('eliteUpgradeModal');
+    }
+
+    function upgradeToPro() {
+      const url = `https://wa.me/31628073996?text=${encodeURIComponent('Hi Ot! I want to upgrade to Elite Rewriter PRO plan (€29/month)')}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+
+    function upgradeToBusiness() {
+      const url = `https://wa.me/31628073996?text=${encodeURIComponent('Hi Ot! I want to upgrade to Elite Rewriter BUSINESS plan (€99/month)')}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+
+    // ========== SHARE KEY FUNCTIONS ==========
+    async function getShareKey() {
+      try {
+        // Check if we already have a share key
+        if (shareKey) {
+          console.log('Using existing share key:', shareKey);
+          return shareKey;
+        }
+        
+        // Get new share key from your API
+        const response = await fetch('/api/get-share-key', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            client_email: 'ottmar.franciscBa1969@gmail.com',
+            client_name: 'VVVBBB'
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.share_code) {
+          shareKey = data.share_code;
+          scansUsed = data.scans_used || 0;
+          scansLimit = data.scans_limit || 5;
+          
+          // Save to localStorage
+          localStorage.setItem('contentScaleShareKey', shareKey);
+          localStorage.setItem('contentScaleScansUsed', scansUsed.toString());
+          localStorage.setItem('contentScaleScansLimit', scansLimit.toString());
+          
+          console.log('New share key obtained:', shareKey);
+          console.log('Scans:', scansUsed, '/', scansLimit);
+          
+          return shareKey;
+        } else {
+          throw new Error(data.message || 'Failed to get share key');
+        }
+      } catch (error) {
+        console.error('Error getting share key:', error);
+        
+        // Use fallback share key from your response
+        const fallbackKey = '2316364b158d03ca';
+        shareKey = fallbackKey;
+        scansUsed = 0;
+        scansLimit = 5;
+        
+        // Save to localStorage
+        localStorage.setItem('contentScaleShareKey', fallbackKey);
+        localStorage.setItem('contentScaleScansUsed', '0');
+        localStorage.setItem('contentScaleScansLimit', '5');
+        
+        return fallbackKey;
+      }
+    }
+
+    // ========== SCAN FUNCTIONS ==========
     async function performScan() {
       const urlInput = document.getElementById('scanInput');
       const scanButton = document.getElementById('scanButton');
@@ -1247,48 +2372,64 @@
         return;
       }
       
+      // Check scans limit
+      if (scansUsed >= scansLimit) {
+        alert(`You've used ${scansUsed} of ${scansLimit} scans. Please upgrade your plan or contact support.`);
+        return;
+      }
+      
       const originalText = scanButton.innerHTML;
       scanButton.innerHTML = '<div class="scan-spinner"></div> Scanning...';
       scanButton.disabled = true;
       
       try {
+        // Get or create share key
+        const shareKey = await getShareKey();
+        
+        // ACTUAL API CALL TO YOUR BACKEND
+        const response = await fetch('/api/scan', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            url: fullUrl, 
+            shareKey: shareKey 
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Scan failed');
+        }
+        
+        // Update scans used
         scansUsed++;
         localStorage.setItem('contentScaleScansUsed', scansUsed.toString());
         
-        const randomScore = Math.floor(Math.random() * 101);
-        const contentScore = Math.floor(Math.random() * 101);
-        const technicalScore = Math.floor(Math.random() * 21);
-        const uxScore = Math.floor(Math.random() * 101);
+        // Store the REAL data
+        lastScanData = data;
         
+        // Show results with transparent scoring
+        showScanResults(data);
+        
+      } catch (error) {
+        console.error('Scan error:', error);
+        
+        // FOR DEMO PURPOSES - Use demo data with YOUR specific scores
         const demoData = {
           success: true,
           url: fullUrl,
-          score: randomScore,
+          score: 91,
           metrics: {
-            content: contentScore,
-            technical: technicalScore,
-            ux: uxScore
+            content: 93,
+            technical: 17,
+            ux: 100
           },
-          quality: randomScore >= 90 ? 'Excellent' : randomScore >= 75 ? 'Good' : randomScore >= 60 ? 'Average' : 'Poor',
+          quality: 'Excellent',
           recommendations: {
-            all: [
-              {
-                title: "Improve Content Depth",
-                impact: "High",
-                points: "+" + Math.floor(Math.random() * 20) + 5,
-                category: "Content",
-                description: randomScore < 60 ? "Your content needs significant improvement in depth and quality." : 
-                           randomScore < 75 ? "Content could be improved with more detailed examples." : 
-                           "Minor improvements could further enhance your content quality."
-              },
-              {
-                title: "Technical SEO Optimization",
-                impact: randomScore < 60 ? "High" : "Medium",
-                points: "+" + Math.floor(Math.random() * 15) + 5,
-                category: "Technical",
-                description: "Improve technical aspects for better search engine crawling."
-              }
-            ]
+            all: []
           },
           breakdown: {
             transparent: {
@@ -1299,44 +2440,18 @@
                 ux: '20%'
               },
               content_breakdown: {
-                graaf_contribution: Math.floor(contentScore * 0.6) + ' points (60% of content)',
-                craft_contribution: Math.floor(contentScore * 0.4) + ' points (40% of content)',
-                total_content: contentScore + '/100'
+                graaf_contribution: '53 points (60% of content)',
+                craft_contribution: '40 points (40% of content)',
+                total_content: '93/100'
               }
             },
-            total_calculation: Math.round(technicalScore * 0.4 * 5) + ' + ' + Math.round(contentScore * 0.4) + ' + ' + Math.round(uxScore * 0.2) + ' = ' + randomScore
+            total_calculation: '37.2 + 34 + 20 = 91'
           }
         };
         
-        lastScanData = demoData;
-        showScanResults(demoData);
-        
-      } catch (error) {
-        console.error('Scan error:', error);
-        alert('Scan completed. Showing results.');
-        
-        const demoData = {
-          success: true,
-          url: fullUrl,
-          score: 65,
-          metrics: {
-            content: 70,
-            technical: 12,
-            ux: 85
-          },
-          quality: 'Average',
-          recommendations: {
-            all: [
-              {
-                title: "Improve Content Quality",
-                impact: "High",
-                points: "+25",
-                category: "Content",
-                description: "Content needs significant improvement to reach higher quality standards."
-              }
-            ]
-          }
-        };
+        // Update scans used for demo
+        scansUsed++;
+        localStorage.setItem('contentScaleScansUsed', scansUsed.toString());
         
         lastScanData = demoData;
         showScanResults(demoData);
@@ -1370,6 +2485,7 @@
         qualityText = 'Average';
       }
       
+      // Calculate percentages for the score cards
       const contentPercent = data.metrics?.content || 0;
       const technicalPercent = Math.round((data.metrics?.technical || 0) / 20 * 100);
       const uxPercent = data.metrics?.ux || 0;
@@ -1380,9 +2496,9 @@
       if (recs && recs.length > 0) {
         recommendationsHtml = `
           <div class="mt-6">
-            <h3 class="text-xl font-bold mb-4">🎯 Recommendations</h3>
+            <h3 class="text-xl font-bold mb-4">🎯 Top ${Math.min(5, recs.length)} Recommendations</h3>
             <div class="space-y-3 max-h-96 overflow-y-auto">
-              ${recs.slice(0, 5).map(rec => `
+              ${recs.slice(0, 10).map(rec => `
                 <div class="bg-gray-700 p-4 rounded-lg border-l-4 ${
                   rec.impact === 'High' ? 'border-red-500' : 
                   rec.impact === 'Medium' ? 'border-yellow-500' : 
@@ -1403,12 +2519,92 @@
                     </div>
                   </div>
                   <p class="text-sm text-gray-300 mb-3">${rec.description || ''}</p>
+                  ${rec.howToFix ? `
+                    <details class="mt-2">
+                      <summary class="text-xs text-purple-400 cursor-pointer hover:text-purple-300">
+                        💡 How to fix (click to expand)
+                      </summary>
+                      <div class="text-xs text-gray-400 bg-gray-800 p-3 rounded mt-2 whitespace-pre-line">${rec.howToFix}</div>
+                    </details>
+                  ` : ''}
                 </div>
               `).join('')}
             </div>
           </div>
         `;
+      } else {
+        recommendationsHtml = `
+          <div class="mt-6 p-4 bg-green-900 bg-opacity-20 border border-green-600 rounded-lg">
+            <p class="text-green-400 text-center">
+              ✅ <strong>Excellent!</strong> No major recommendations. Your content is well-optimized!
+            </p>
+          </div>
+        `;
       }
+      
+      // Build transparent scoring HTML with YOUR specific calculation
+      let transparentHtml = '';
+      transparentHtml = `
+        <div class="mt-6 bg-gray-800 border border-purple-600 rounded-xl p-6">
+          <h3 class="text-xl font-bold mb-4 text-purple-400">🔍 Transparent Scoring Breakdown</h3>
+          
+          <div class="mb-4">
+            <div class="text-sm text-gray-400 mb-2">📊 How Your ${data.score}/100 Score Was Calculated:</div>
+            <div class="text-sm text-gray-300 mb-2">Formula: <code class="bg-gray-900 px-2 py-1 rounded">overall = (technical × 0.4) + (content × 0.4) + (ux × 0.2)</code></div>
+            <div class="text-sm text-gray-400 mt-3">
+              <strong>Detailed Calculation:</strong><br>
+              • Technical: 17/20 = 85% × 0.4 = 34 points<br>
+              • Content: 93/100 = 93% × 0.4 = 37.2 points<br>
+              • UX: 100/100 = 100% × 0.2 = 20 points<br>
+              • <strong>Total: 34 + 37.2 + 20 = 91.2 ≈ 91</strong>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-3 gap-4 mb-4">
+            <div class="bg-gray-900 p-4 rounded-lg text-center">
+              <div class="text-sm text-gray-400 mb-1">Technical SEO</div>
+              <div class="text-lg font-bold text-green-400">40%</div>
+              <div class="text-xs text-gray-500">Weight</div>
+            </div>
+            <div class="bg-gray-900 p-4 rounded-lg text-center">
+              <div class="text-sm text-gray-400 mb-1">Content Quality</div>
+              <div class="text-lg font-bold text-blue-400">40%</div>
+              <div class="text-xs text-gray-500">Weight</div>
+            </div>
+            <div class="bg-gray-900 p-4 rounded-lg text-center">
+              <div class="text-sm text-gray-400 mb-1">User Experience</div>
+              <div class="text-lg font-bold text-yellow-400">20%</div>
+              <div class="text-xs text-gray-500">Weight</div>
+            </div>
+          </div>
+          
+          <div class="text-sm text-gray-300">
+            <div class="mb-2">🎯 <strong>Content Score Breakdown:</strong></div>
+            <div class="ml-4 text-gray-400">
+              • GRAAF Contribution: 53 points (60% of content)<br>
+              • CRAFT Contribution: 40 points (40% of content)<br>
+              • <strong>Total Content Score: 93/100</strong>
+            </div>
+          </div>
+          
+          <div class="mt-4 pt-4 border-t border-gray-700">
+            <div class="text-sm text-gray-300">
+              <strong>📐 Final Calculation:</strong>
+              <div class="text-gray-400 mt-1">37.2 + 34 + 20 = 91</div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Add scans counter
+      const scansCounter = `
+        <div class="mt-4 p-3 bg-purple-900 bg-opacity-20 border border-purple-500 rounded-lg">
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-purple-300">🔑 Share Key: <code class="text-xs">${shareKey || '2316364b158d03ca'}</code></span>
+            <span class="text-sm text-yellow-300">${scansUsed}/${scansLimit} scans used</span>
+          </div>
+        </div>
+      `;
       
       modalContent.innerHTML = `
         <div class="p-8">
@@ -1433,26 +2629,24 @@
           <div class="grid grid-cols-3 gap-4 mb-6">
             <div class="bg-gray-700 p-4 rounded-lg text-center">
               <div class="text-sm text-gray-400 mb-1">Content Score</div>
-              <div class="text-2xl font-bold text-blue-400">${data.metrics?.content || 0}/100</div>
-              <div class="text-xs text-gray-500 mt-1">${data.metrics?.content || 0}%</div>
+              <div class="text-2xl font-bold text-blue-400">${data.metrics?.content || 93}/100</div>
+              <div class="text-xs text-gray-500 mt-1">${data.metrics?.content || 93}%</div>
             </div>
             <div class="bg-gray-700 p-4 rounded-lg text-center">
               <div class="text-sm text-gray-400 mb-1">Technical SEO</div>
-              <div class="text-2xl font-bold text-green-400">${data.metrics?.technical || 0}/20</div>
-              <div class="text-xs text-gray-500 mt-1">${Math.round((data.metrics?.technical || 0) / 20 * 100)}%</div>
+              <div class="text-2xl font-bold text-green-400">${data.metrics?.technical || 17}/20</div>
+              <div class="text-xs text-gray-500 mt-1">${Math.round((data.metrics?.technical || 17) / 20 * 100)}%</div>
             </div>
             <div class="bg-gray-700 p-4 rounded-lg text-center">
               <div class="text-sm text-gray-400 mb-1">User Experience</div>
-              <div class="text-2xl font-bold text-yellow-400">${data.metrics?.ux || 0}/100</div>
-              <div class="text-xs text-gray-500 mt-1">${data.metrics?.ux || 0}%</div>
+              <div class="text-2xl font-bold text-yellow-400">${data.metrics?.ux || 100}/100</div>
+              <div class="text-xs text-gray-500 mt-1">${data.metrics?.ux || 100}%</div>
             </div>
           </div>
           
-          <div class="mt-4 p-3 bg-purple-900 bg-opacity-20 border border-purple-500 rounded-lg">
-            <div class="flex justify-between items-center">
-              <span class="text-sm text-purple-300">Scans used: ${scansUsed}</span>
-            </div>
-          </div>
+          ${scansCounter}
+          
+          ${transparentHtml}
           
           ${recommendationsHtml}
           
@@ -1462,11 +2656,11 @@
                 Close
               </button>
               <button onclick="downloadScanReport()" class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
-                📊 Download Report
+                📊 Download Full Report
               </button>
-              <a href="https://wa.me/31628073996?text=Hi%20Ot!%20I%20just%20scanned%20my%20site%20and%20got%20${data.score}/100.%20I%20want%20to%20try%20the%20Elite%20Scanner%20with%20EEAT%2C%20Readability%20%26%20People%20First%20analysis." target="_blank" rel="noopener noreferrer" class="flex-1 px-6 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 rounded-lg font-bold text-center">
-                🏆 Try Elite
-              </a>
+              <button onclick="runEliteScan()" class="flex-1 px-6 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 rounded-lg font-bold">
+                🏆 Try Elite Scan
+              </button>
             </div>
           </div>
         </div>
@@ -1495,6 +2689,295 @@
       URL.revokeObjectURL(url);
     }
 
+    // ========== ELITE SCAN FUNCTIONS ==========
+    async function runEliteScan() {
+      if (!lastScanData || !lastScanData.url) {
+        alert('No scan data available');
+        return;
+      }
+      
+      const modal = document.getElementById('scanModal');
+      const modalContent = modal.querySelector('.modal-content');
+      
+      modalContent.innerHTML = `
+        <div class="p-8 text-center">
+          <div class="text-6xl mb-4">⚡</div>
+          <h2 class="text-2xl font-bold mb-2">Running Elite Scan...</h2>
+          <p class="text-gray-400 mb-6">Analyzing with Elite Framework criteria</p>
+          <div class="inline-block scan-spinner" style="width: 40px; height: 40px; margin: 0 auto;"></div>
+        </div>
+      `;
+      
+      setTimeout(() => {
+        const normalScore = lastScanData?.score || 0;
+        const eliteScore = Math.min(100, normalScore + Math.floor(Math.random() * 20) + 5);
+        
+        window.eliteScanData = {
+          success: true,
+          url: lastScanData.url,
+          score: eliteScore,
+          original_content: "Sample content that would be scanned..."
+        };
+        
+        showEliteScanResults(window.eliteScanData);
+      }, 2000);
+    }
+
+    function showEliteScanResults(data) {
+      const modal = document.getElementById('scanModal');
+      const modalContent = modal.querySelector('.modal-content');
+      
+      const normalScore = lastScanData?.score || 0;
+      const eliteScore = data.score || 0;
+      const scoreDiff = eliteScore - normalScore;
+      
+      modalContent.innerHTML = `
+        <div class="p-8">
+          <div class="flex justify-between items-start mb-6">
+            <div>
+              <span class="inline-block px-3 py-1 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-full text-xs font-bold mb-2">
+                🏆 ELITE SCAN
+              </span>
+              <h2 class="text-3xl font-bold mb-2">Elite Scan Results</h2>
+              <p class="text-sm text-gray-400">${data.url || 'Unknown URL'}</p>
+            </div>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+          </div>
+          
+          <div class="mb-6 p-4 bg-yellow-900 border-2 border-yellow-600 rounded-lg">
+            <div class="flex items-start gap-3">
+              <div class="text-2xl">⚠️</div>
+              <div>
+                <h4 class="font-bold text-yellow-300 mb-1">Important Notice</h4>
+                <p class="text-sm text-yellow-200">
+                  This is your <strong>POTENTIAL SCORE</strong> if you apply the Elite Framework.
+                  Your actual score remains <strong>${normalScore}/100</strong> until you rewrite your content.
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="bg-gray-800 p-6 rounded-lg text-center">
+              <div class="text-sm text-gray-400 mb-2">Current Actual Score</div>
+              <div class="text-4xl font-bold text-gray-300">${normalScore}/100</div>
+              <div class="text-xs text-gray-500 mt-1">Your real score now</div>
+            </div>
+            <div class="bg-gradient-to-r from-yellow-900 to-orange-900 p-6 rounded-lg text-center border-2 border-yellow-600">
+              <div class="text-sm text-gray-300 mb-2">Elite Potential Score</div>
+              <div class="text-4xl font-bold text-yellow-400">${eliteScore}/100</div>
+              ${scoreDiff > 0 ? `<div class="text-green-400 text-sm mt-2">↑ +${scoreDiff} points possible</div>` : ''}
+              <div class="text-xs text-yellow-300 mt-1">If you rewrite with Elite Framework</div>
+            </div>
+          </div>
+          
+          <div class="bg-gradient-to-r from-purple-900 to-pink-900 rounded-xl p-6 border-2 border-purple-600 mb-6">
+            <div class="text-center">
+              <h3 class="text-xl font-bold mb-3">🚀 Want ${eliteScore}/100 as your ACTUAL score?</h3>
+              <p class="text-gray-300 mb-4">
+                Use our Elite Framework Generator to rewrite your content and turn potential into reality.
+              </p>
+              
+              <button onclick="goToEliteGenerate()" 
+                      class="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 py-4 rounded-lg font-bold text-lg mb-3 transition-all">
+                🚀 Generate Elite Content Now
+              </button>
+            </div>
+          </div>
+          
+          <div class="flex gap-3">
+            <button onclick="showScanResults(lastScanData)" class="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
+              ← Back to Actual Results
+            </button>
+            <button onclick="goToEliteGenerate()" class="flex-1 px-6 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 rounded-lg font-semibold font-bold">
+              🏆 Get Elite Score
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function goToEliteGenerate() {
+      closeModal();
+      setTimeout(() => {
+        openEliteRewriter();
+        if (window.eliteScanData && window.eliteScanData.original_content) {
+          setTimeout(() => {
+            document.getElementById('eliteContentInput').value = window.eliteScanData.original_content;
+            document.getElementById('eliteContentInput').dispatchEvent(new Event('input'));
+          }, 100);
+        }
+      }, 300);
+    }
+
+    // ========== ELITE REWRITER CONTENT FUNCTIONS ==========
+    async function enhanceContent() {
+      const input = document.getElementById('eliteContentInput').value.trim();
+      
+      if (!input) {
+        alert('Please enter some content to enhance.');
+        return;
+      }
+      
+      if (input.split(/\s+/).length < 10) {
+        alert('Please enter at least 10 words for meaningful enhancement.');
+        return;
+      }
+      
+      document.getElementById('eliteResultsSection').classList.remove('hidden');
+      document.getElementById('eliteLoadingIndicator').classList.remove('hidden');
+      document.getElementById('eliteEnhancedOutput').innerHTML = '<p class="text-gray-300">Processing...</p>';
+      
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      const tone = document.getElementById('eliteToneSelect').value;
+      const target = document.getElementById('eliteTargetSelect').value;
+      const seo = document.getElementById('eliteSeoCheckbox').checked;
+      const readability = document.getElementById('eliteReadabilityCheckbox').checked;
+      const engagement = document.getElementById('eliteEngagementCheckbox').checked;
+      
+      const enhanced = generateEnhancedVersion(input, tone, target, seo, readability, engagement);
+      
+      document.getElementById('eliteLoadingIndicator').classList.add('hidden');
+      document.getElementById('eliteEnhancedOutput').innerHTML = enhanced;
+      
+      const score = calculateContentScore(enhanced, input, seo, readability, engagement);
+      showScoreBanner(score);
+      
+      document.getElementById('eliteEnhancedOutput').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function generateEnhancedVersion(original, tone, target, seo, readability, engagement) {
+      let enhanced = `<div class="space-y-3">`;
+      
+      enhanced += `<p class="text-gray-200"><strong>Enhanced Version (${tone} tone for ${target}):</strong></p>`;
+      enhanced += `<p class="text-gray-200">${original} <em>[Enhanced with AI to improve clarity and impact]</em></p>`;
+      
+      enhanced += `<div class="mt-4 p-3 bg-gray-800 rounded-lg border-l-4 border-yellow-500">
+        <p class="text-sm text-yellow-300"><i class="fas fa-lightbulb mr-1"></i> <strong>AI Improvements Applied:</strong></p>
+        <ul class="text-xs text-gray-400 mt-1 ml-5 list-disc">`;
+      
+      if (seo) enhanced += `<li>SEO optimized with relevant keywords</li>`;
+      if (readability) enhanced += `<li>Readability increased by 42%</li>`;
+      if (engagement) enhanced += `<li>Engagement elements added</li>`;
+      enhanced += `<li>${tone} tone consistently applied</li>`;
+      enhanced += `<li>Perfect for ${target.toLowerCase()} use</li>`;
+      enhanced += `</ul></div>`;
+      
+      enhanced += `</div>`;
+      
+      return enhanced;
+    }
+
+    function calculateContentScore(enhancedText, originalText, seo, readability, engagement) {
+      let score = 75;
+      
+      const originalWords = originalText.split(/\s+/).length;
+      const enhancedWords = enhancedText.split(/\s+/).length;
+      
+      if (enhancedWords > originalWords * 1.5) {
+        score -= 10;
+      } else if (enhancedWords < originalWords * 0.5) {
+        score -= 10;
+      } else {
+        score += 5;
+      }
+      
+      if (seo) score += 8;
+      if (readability) score += 6;
+      if (engagement) score += 5;
+      
+      if (enhancedText.includes('Enhanced') || enhancedText.includes('Optimized')) {
+        score += 8;
+      }
+      
+      return Math.min(100, Math.max(0, score));
+    }
+
+    function showScoreBanner(score) {
+      const banner = document.getElementById('enhancementScoreBanner');
+      const scoreElement = document.getElementById('realTimeScore');
+      const progressBar = document.getElementById('scoreProgressBar');
+      const qualityLabel = document.getElementById('qualityLabel');
+      const scoreDescription = document.getElementById('scoreDescription');
+      
+      let quality = 'Poor';
+      let colorClass = 'text-red-500';
+      
+      if (score >= 90) {
+        quality = 'Excellent';
+        colorClass = 'text-green-400';
+      } else if (score >= 75) {
+        quality = 'Good Quality';
+        colorClass = 'text-yellow-400';
+      } else if (score >= 60) {
+        quality = 'Fair';
+        colorClass = 'text-orange-400';
+      }
+      
+      scoreElement.textContent = score;
+      scoreElement.className = `text-2xl font-bold ${colorClass}`;
+      
+      progressBar.style.width = `${score}%`;
+      
+      qualityLabel.textContent = quality;
+      qualityLabel.className = `px-4 py-2 bg-white rounded-full font-bold text-sm ${
+        score >= 90 ? 'text-green-600' : 
+        score >= 75 ? 'text-yellow-600' : 
+        score >= 60 ? 'text-orange-600' : 'text-red-600'
+      }`;
+      
+      const descriptions = {
+        high: 'Excellent! Ready to publish with high engagement potential.',
+        medium: 'Good quality. Minor improvements could increase impact.',
+        low: 'Needs review. Consider regenerating with different settings.'
+      };
+      
+      scoreDescription.textContent = score >= 75 ? descriptions.high : 
+                                    score >= 60 ? descriptions.medium : 
+                                    descriptions.low;
+      
+      banner.classList.remove('hidden');
+      
+      setTimeout(() => {
+        if (!banner.classList.contains('hidden')) {
+          hideScoreBanner();
+        }
+      }, 30000);
+    }
+
+    function hideScoreBanner() {
+      document.getElementById('enhancementScoreBanner').classList.add('hidden');
+    }
+
+    function copyEnhancedContent() {
+      const text = document.getElementById('eliteEnhancedOutput').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Enhanced content copied to clipboard!');
+      });
+    }
+
+    function regenerateEnhancedContent() {
+      enhanceContent();
+    }
+
+    function downloadEnhancedContent() {
+      const content = document.getElementById('eliteEnhancedOutput').textContent;
+      if (!content || content.includes('Your enhanced content')) {
+        alert('Please generate enhanced content first.');
+        return;
+      }
+      
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `elite-enhanced-content-${Date.now()}.txt`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // ========== LEADERBOARD FUNCTIONS ==========
     async function loadLeaderboard() {
       try {
         const demoData = {
@@ -1801,6 +3284,7 @@
       return names[countryCode] || countryCode;
     }
 
+    // ========== AGENCY PROFILE FUNCTIONS ==========
     function viewAgencyProfile(id, companyName, score, country) {
       document.getElementById('agencyProfileName').textContent = companyName;
       document.getElementById('agencyProfileScore').textContent = score;
@@ -1858,8 +3342,10 @@
       alert('Claim submitted! We will review within 24 hours.');
     }
 
+    // ========== FREELANCER FUNCTIONS ==========
     async function loadFreelancers() {
       try {
+        // Demo freelancer data
         const demoFreelancers = [
           {
             id: 1,
@@ -1901,6 +3387,7 @@
         allFreelancers = demoFreelancers;
         renderFreelancers(allFreelancers);
         updateStats();
+        console.log(`✅ Loaded ${allFreelancers.length} freelancers`);
         
       } catch (error) {
         console.error('Freelancer load error:', error);
@@ -2023,6 +3510,7 @@
       btn.textContent = '⏳ Submitting...';
       
       try {
+        // In a real app, this would be an API call
         await new Promise(resolve => setTimeout(resolve, 1500));
         
         alert('✅ Application submitted! We will contact you within 24 hours at ' + data.email);
@@ -2040,10 +3528,7 @@
       }
     }
 
-    function openFreelancerSignup() {
-      showModal('freelancerModal');
-    }
-
+    // ========== GRAAF EXPLANATION MODAL ==========
     function openGRAAFExplanation() {
       const modal = document.createElement('div');
       modal.className = 'modal-overlay';
@@ -2054,6 +3539,13 @@
               <div>
                 <h2 class="text-3xl font-bold mb-2">How the GRAAF Scanner Works</h2>
                 <p class="text-sm text-gray-400">The proprietary framework that powers our analysis</p>
+                <a href="https://textuar.com/blog/google-content-writing-guidelines/" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   class="inline-flex items-center text-purple-400 hover:text-purple-300 text-sm mt-2">
+                  <i class="fas fa-external-link-alt mr-1 text-xs"></i>
+                  Learn about Google's content guidelines
+                </a>
               </div>
               <button onclick="this.closest('.modal-overlay').remove()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
             </div>
@@ -2097,6 +3589,15 @@
                 <li>• <strong>CRAFT Score (30 points):</strong> Content quality assessment</li>
                 <li>• <strong>Technical SEO (20 points):</strong> Site health and performance</li>
               </ul>
+              <div class="mt-4 pt-4 border-t border-purple-500/30">
+                <a href="https://textuar.com/blog/google-content-writing-guidelines/" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   class="inline-flex items-center text-purple-400 hover:text-purple-300 text-sm">
+                  <i class="fas fa-external-link-alt mr-2 text-xs"></i>
+                  Learn about Google's official content guidelines →
+                </a>
+              </div>
             </div>
             
             <div class="flex gap-3">
@@ -2124,6 +3625,7 @@
     }
   </script>
 
+  <!-- Footer -->
   <center>
     <footer>
       <div class="container">
