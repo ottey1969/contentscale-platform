@@ -124,6 +124,53 @@
       max-height: 90vh;
       overflow-y: auto;
     }
+
+    /* Lead Scanner Styles */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .scan-result-card {
+      animation: fadeInUp 0.5s ease-out;
+    }
+
+    .lead-card {
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .lead-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 25px rgba(139, 92, 246, 0.3);
+    }
+
+    .lead-card input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: #8b5cf6;
+    }
+
+    .progress-bar {
+      transition: width 0.3s ease;
+    }
+
+    .mode-toggle {
+      transition: all 0.3s ease;
+    }
+
+    .mode-toggle.active {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      color: white;
+      transform: scale(1.05);
+    }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100">
@@ -137,6 +184,7 @@
         </div>
         <div class="flex gap-4 items-center">
           <a href="#scanner" class="text-gray-300 hover:text-white">Scanner</a>
+          <a href="#lead-scanner" class="text-gray-300 hover:text-white">Lead Scanner</a>
           <a href="#freelancers" class="text-gray-300 hover:text-white">Freelancers</a>
           <a href="#leaderboard" class="text-gray-300 hover:text-white">Leaderboard</a>
           <a href="#blog" class="text-gray-300 hover:text-white">Blog</a>
@@ -204,6 +252,167 @@
         </p>
       </div>
     </div>
+
+    <!-- ============================================ -->
+    <!-- LEAD SCANNER SECTION - NEW -->
+    <!-- ============================================ -->
+    <div id="lead-scanner" class="mb-16">
+      <div class="bg-gradient-to-br from-purple-900 to-indigo-900 rounded-2xl p-8 border-2 border-purple-500">
+        
+        <!-- Header -->
+        <div class="text-center mb-8">
+          <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text text-transparent">
+            🎯 Lead Scanner voor Specialisten
+          </h2>
+          <p class="text-xl text-gray-300 mb-2">
+            Vind bedrijven die content hulp nodig hebben
+          </p>
+          <p class="text-sm text-purple-300">
+            ✨ Gratis voor freelancers • 🔍 Scan individueel of bulk • 📊 Export naar CSV
+          </p>
+        </div>
+
+        <!-- Mode Selector -->
+        <div class="flex justify-center gap-4 mb-8">
+          <button id="modeSingleBtn" onclick="switchScanMode('single')" 
+                  class="mode-toggle active px-6 py-3 bg-gray-700 rounded-lg font-semibold">
+            🔍 Single URL Scanner
+          </button>
+          <button id="modeBulkBtn" onclick="switchScanMode('bulk')" 
+                  class="mode-toggle px-6 py-3 bg-gray-700 rounded-lg font-semibold">
+            🗺️ Google Maps Bulk
+          </button>
+        </div>
+
+        <!-- Single URL Scanner -->
+        <div id="singleScanMode" class="max-w-3xl mx-auto">
+          <div class="bg-gray-800 rounded-xl p-6 mb-4">
+            <div class="flex flex-col sm:flex-row gap-3 mb-4">
+              <input type="text" 
+                     id="singleUrlInput" 
+                     placeholder="https://bedrijf-website.nl" 
+                     class="flex-1 bg-gray-700 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+              <button onclick="scanSingleURLPublic()" 
+                      id="singleScanBtn"
+                      class="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 px-6 py-3 rounded-lg font-bold transition-all whitespace-nowrap">
+                🚀 Start Scan
+              </button>
+            </div>
+            
+            <!-- Progress Indicator -->
+            <div id="singleScanProgress" class="hidden">
+              <div class="bg-gray-700 rounded-full h-3 overflow-hidden mb-2">
+                <div id="singleProgressBar" class="progress-bar bg-gradient-to-r from-purple-500 to-pink-500 h-full transition-all" style="width: 0%"></div>
+              </div>
+              <p id="singleProgressText" class="text-sm text-center text-gray-400"></p>
+            </div>
+          </div>
+
+          <!-- Single Scan Result -->
+          <div id="singleScanResult" class="hidden"></div>
+
+          <!-- Tip Box -->
+          <div class="bg-blue-900 bg-opacity-30 border border-blue-500 rounded-lg p-4 mt-4">
+            <p class="text-sm text-blue-300">
+              💡 <strong>Tip:</strong> Gebruik scan resultaten om je pitch te versterken met concrete data
+            </p>
+          </div>
+        </div>
+
+        <!-- Google Maps Bulk Scanner -->
+        <div id="bulkScanMode" class="hidden max-w-5xl mx-auto">
+          <div class="bg-gray-800 rounded-xl p-6 mb-4">
+            <div class="flex flex-col sm:flex-row gap-3 mb-4">
+              <input type="text" 
+                     id="googleMapsInput" 
+                     placeholder="https://www.google.com/maps/search/restaurants+amsterdam" 
+                     class="flex-1 bg-gray-700 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+              <button onclick="scrapeGoogleMapsPublic()" 
+                      id="gmapsScrapeBtn"
+                      class="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 px-6 py-3 rounded-lg font-bold transition-all whitespace-nowrap">
+                🗺️ Scrape Google Maps
+              </button>
+            </div>
+            
+            <!-- Instructie -->
+            <div class="bg-gray-700 rounded-lg p-3">
+              <p class="text-xs text-gray-300">
+                <strong class="text-purple-300">🔍 Hoe te gebruiken:</strong> 
+                Zoek bedrijven op Google Maps → Kopieer de URL → Plak hier → Scrapet automatisch bedrijfsnamen en websites
+              </p>
+            </div>
+          </div>
+
+          <!-- Scraped Leads Container -->
+          <div id="scrapedLeadsContainer" class="hidden">
+            <div class="bg-gray-800 rounded-xl p-6">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold">
+                  📋 Gevonden Leads (<span id="leadCount">0</span>)
+                </h3>
+                <div class="flex gap-2">
+                  <button onclick="scanAllGoogleMapsLeads()" 
+                          id="scanAllBtn"
+                          class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-semibold">
+                    ⚡ Scan Alle Websites
+                  </button>
+                  <button onclick="selectAllLeads()" 
+                          class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg font-semibold">
+                    ☑️ Selecteer Alles
+                  </button>
+                </div>
+              </div>
+
+              <!-- Bulk Scan Progress -->
+              <div id="bulkScanProgress" class="hidden mb-4">
+                <div class="bg-gray-700 rounded-full h-3 overflow-hidden mb-2">
+                  <div id="bulkProgressBar" class="progress-bar bg-gradient-to-r from-purple-500 to-pink-500 h-full" style="width: 0%"></div>
+                </div>
+                <p id="bulkProgressText" class="text-sm text-center text-gray-400"></p>
+              </div>
+
+              <!-- Leads Grid -->
+              <div id="leadsGrid" class="grid md:grid-cols-2 gap-4 mb-4">
+                <!-- Leads will be inserted here -->
+              </div>
+
+              <!-- Export Buttons -->
+              <div class="flex gap-3 justify-end">
+                <button onclick="exportLeadsToCSV()" 
+                        class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-semibold">
+                  📊 Export CSV
+                </button>
+                <button onclick="exportLeadsToJSON()" 
+                        class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-semibold">
+                  📄 Export JSON
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Freelancer CTA -->
+        <div class="mt-8 bg-gradient-to-r from-purple-800 to-pink-800 rounded-xl p-6 text-center border-2 border-purple-400">
+          <h3 class="text-2xl font-bold mb-2">💼 Ben je Content Specialist?</h3>
+          <p class="text-gray-200 mb-4">
+            Gebruik deze scanner om potentiële klanten te vinden met concrete data
+          </p>
+          <div class="flex gap-3 justify-center flex-wrap">
+            <button onclick="document.getElementById('freelancers')?.scrollIntoView({behavior:'smooth'})" 
+                    class="bg-white text-purple-900 hover:bg-gray-100 px-6 py-3 rounded-lg font-bold transition-all">
+              📝 Registreer als Freelancer
+            </button>
+            <a href="https://wa.me/31628073996?text=Hi!%20Ik%20wil%20graag%20de%20Lead%20Scanner%20gebruiken" 
+               target="_blank"
+               class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold transition-all">
+              💬 WhatsApp Contact
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <!-- END LEAD SCANNER SECTION -->
 
     <!-- Freelancers Section -->
     <div id="freelancers" class="mb-12">
@@ -325,12 +534,277 @@
     </div>
   </div>
 
-  <!-- JavaScript -->
+  <!-- Lead Scanner Module -->
+  <script src="/lead-scanner-module.js"></script>
+
+  <!-- Main JavaScript -->
   <script>
     let scanData = null;
+    let publicScanner = null;
+    let scrapedLeads = [];
+
+    // Initialize lead scanner when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initialize scanner module
+      publicScanner = new window.LeadScanner({
+        apiEndpoint: '/api/scan',
+        onScanComplete: (result) => {
+          console.log('Scan complete:', result);
+        },
+        onError: (error) => {
+          console.error('Scan error:', error);
+        }
+      });
+
+      // Load other data
+      loadFreelancers();
+      loadLeaderboard();
+      loadBlog();
+    });
 
     // ============================================
-    // SCANNER FUNCTIONS
+    // LEAD SCANNER FUNCTIONS
+    // ============================================
+
+    function switchScanMode(mode) {
+      const singleMode = document.getElementById('singleScanMode');
+      const bulkMode = document.getElementById('bulkScanMode');
+      const singleBtn = document.getElementById('modeSingleBtn');
+      const bulkBtn = document.getElementById('modeBulkBtn');
+
+      if (mode === 'single') {
+        singleMode.classList.remove('hidden');
+        bulkMode.classList.add('hidden');
+        singleBtn.classList.add('active');
+        bulkBtn.classList.remove('active');
+      } else {
+        singleMode.classList.add('hidden');
+        bulkMode.classList.remove('hidden');
+        singleBtn.classList.remove('active');
+        bulkBtn.classList.add('active');
+      }
+    }
+
+    async function scanSingleURLPublic() {
+      const input = document.getElementById('singleUrlInput');
+      const button = document.getElementById('singleScanBtn');
+      const progressDiv = document.getElementById('singleScanProgress');
+      const progressBar = document.getElementById('singleProgressBar');
+      const progressText = document.getElementById('singleProgressText');
+      const resultDiv = document.getElementById('singleScanResult');
+
+      const url = input.value.trim();
+      if (!url) {
+        alert('Voer een URL in');
+        return;
+      }
+
+      // Show progress
+      progressDiv.classList.remove('hidden');
+      resultDiv.classList.add('hidden');
+      button.disabled = true;
+      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
+
+      // Animate progress
+      let progress = 0;
+      const progressInterval = setInterval(() => {
+        if (progress < 90) {
+          progress += Math.random() * 15;
+          progressBar.style.width = Math.min(90, progress) + '%';
+          progressText.textContent = `Analyzing ${url}...`;
+        }
+      }, 300);
+
+      try {
+        const result = await publicScanner.scanSingleURL(url);
+        
+        clearInterval(progressInterval);
+        progressBar.style.width = '100%';
+        progressText.textContent = 'Scan complete!';
+
+        setTimeout(() => {
+          progressDiv.classList.add('hidden');
+          displaySingleScanResult(result);
+        }, 500);
+
+      } catch (error) {
+        clearInterval(progressInterval);
+        progressDiv.classList.add('hidden');
+        alert('Scan mislukt: ' + error.message);
+      } finally {
+        button.disabled = false;
+        button.innerHTML = '🚀 Start Scan';
+      }
+    }
+
+    function displaySingleScanResult(result) {
+      const resultDiv = document.getElementById('singleScanResult');
+      const ui = new window.LeadScannerUI();
+      
+      resultDiv.innerHTML = ui.renderScanResult(result);
+      resultDiv.classList.remove('hidden');
+    }
+
+    async function scrapeGoogleMapsPublic() {
+      const input = document.getElementById('googleMapsInput');
+      const button = document.getElementById('gmapsScrapeBtn');
+      const container = document.getElementById('scrapedLeadsContainer');
+
+      const mapsUrl = input.value.trim();
+      if (!mapsUrl) {
+        alert('Voer een Google Maps URL in');
+        return;
+      }
+
+      if (!mapsUrl.includes('google.com/maps')) {
+        alert('Voer een geldige Google Maps URL in');
+        return;
+      }
+
+      button.disabled = true;
+      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scraping...';
+
+      try {
+        const leads = await publicScanner.scrapeGoogleMaps(mapsUrl);
+        scrapedLeads = leads;
+
+        displayScrapedLeads(leads);
+        container.classList.remove('hidden');
+
+      } catch (error) {
+        alert('Scraping mislukt: ' + error.message);
+      } finally {
+        button.disabled = false;
+        button.innerHTML = '🗺️ Scrape Google Maps';
+      }
+    }
+
+    function displayScrapedLeads(leads) {
+      const grid = document.getElementById('leadsGrid');
+      const countSpan = document.getElementById('leadCount');
+      const ui = new window.LeadScannerUI();
+
+      countSpan.textContent = leads.length;
+
+      grid.innerHTML = leads.map((lead, index) => 
+        ui.renderGoogleMapsLead(lead, index)
+      ).join('');
+    }
+
+    async function scanAllGoogleMapsLeads() {
+      const selectedIndices = getSelectedLeads();
+      
+      if (selectedIndices.length === 0) {
+        alert('Selecteer eerst enkele leads');
+        return;
+      }
+
+      const button = document.getElementById('scanAllBtn');
+      const progressDiv = document.getElementById('bulkScanProgress');
+      const progressBar = document.getElementById('bulkProgressBar');
+      const progressText = document.getElementById('bulkProgressText');
+      const ui = new window.LeadScannerUI();
+
+      button.disabled = true;
+      progressDiv.classList.remove('hidden');
+
+      const selectedLeads = selectedIndices.map(i => scrapedLeads[i]).filter(l => l.website);
+      const urls = selectedLeads.map(l => l.website);
+
+      try {
+        await publicScanner.scanMultipleURLs(urls, (current, total, status) => {
+          const percent = Math.round((current / total) * 100);
+          progressBar.style.width = percent + '%';
+          progressText.textContent = `${current}/${total} - ${status}`;
+
+          // Update lead card with score
+          if (current > 0) {
+            const leadIndex = selectedIndices[current - 1];
+            const result = publicScanner.lastResults[current - 1];
+            if (result && result.score !== undefined) {
+              scrapedLeads[leadIndex].score = result.score;
+              const leadCard = document.querySelector(`[data-lead-index="${leadIndex}"] .lead-score`);
+              if (leadCard) {
+                leadCard.innerHTML = `
+                  <div class="text-2xl font-bold ${result.score >= 75 ? 'text-green-400' : result.score >= 60 ? 'text-yellow-400' : 'text-red-400'}">
+                    ${result.score}
+                  </div>
+                  <div class="text-xs text-gray-400">Score</div>
+                `;
+              }
+            }
+          }
+        });
+
+        setTimeout(() => {
+          progressDiv.classList.add('hidden');
+          alert(`✅ Scan voltooid! ${selectedLeads.length} websites gescand`);
+        }, 500);
+
+      } catch (error) {
+        alert('Bulk scan mislukt: ' + error.message);
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    function getSelectedLeads() {
+      const checkboxes = document.querySelectorAll('.lead-checkbox:checked');
+      return Array.from(checkboxes).map(cb => parseInt(cb.dataset.index));
+    }
+
+    function selectAllLeads() {
+      const checkboxes = document.querySelectorAll('.lead-checkbox');
+      const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+      checkboxes.forEach(cb => cb.checked = !allChecked);
+    }
+
+    function exportLeadsToCSV() {
+      const headers = ['Business Name', 'Website', 'Location', 'Rating', 'Reviews', 'Phone', 'Score'];
+      const rows = scrapedLeads.map(lead => [
+        lead.name || '',
+        lead.website || '',
+        lead.location || '',
+        lead.rating || '',
+        lead.reviews || '',
+        lead.phone || '',
+        lead.score || ''
+      ]);
+
+      const csv = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ].join('\n');
+
+      downloadFile('leads.csv', csv, 'text/csv');
+    }
+
+    function exportLeadsToJSON() {
+      const json = JSON.stringify(scrapedLeads, null, 2);
+      downloadFile('leads.json', json, 'application/json');
+    }
+
+    function downloadFile(filename, content, mimeType) {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Enter key support
+    document.getElementById('singleUrlInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') scanSingleURLPublic();
+    });
+
+    document.getElementById('googleMapsInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') scrapeGoogleMapsPublic();
+    });
+
+    // ============================================
+    // SCANNER FUNCTIONS (Original)
     // ============================================
 
     async function performScan() {
@@ -578,17 +1052,17 @@
                   </div>
                   <div>
                     <h3 class="font-bold text-lg">${f.name}</h3>
-                    <p class="text-sm text-gray-400">${f.specialty}</p>
+                    <p class="text-sm text-gray-400">${f.specialty || f.title || 'SEO Specialist'}</p>
                   </div>
                 </div>
-                ${f.verified ? '<span class="px-2 py-1 bg-green-600 rounded text-xs">✓ Verified</span>' : ''}
+                ${f.verified || f.is_featured ? '<span class="px-2 py-1 bg-green-600 rounded text-xs">✓ Verified</span>' : ''}
               </div>
               
-              <p class="text-sm text-gray-300 mb-3">${f.bio}</p>
+              <p class="text-sm text-gray-300 mb-3">${f.bio || 'Professional SEO specialist'}</p>
               
               <div class="flex items-center justify-between text-sm">
-                <span class="text-gray-400">${f.experience} years exp</span>
-                ${f.portfolio ? `<a href="${f.portfolio}" target="_blank" class="text-blue-400 hover:underline">Portfolio →</a>` : ''}
+                <span class="text-gray-400">${f.experience || 5} years exp</span>
+                ${f.portfolio || f.linkedin_url ? `<a href="${f.portfolio || f.linkedin_url}" target="_blank" class="text-blue-400 hover:underline">Portfolio →</a>` : ''}
               </div>
               
               <button onclick="contactFreelancer('${f.email}', '${f.name}')" 
@@ -641,7 +1115,7 @@
         if (result.success) {
           alert('Application submitted successfully! We\'ll review and contact you soon.');
           closeFreelancerModal();
-          loadFreelancers(); // Reload list
+          loadFreelancers();
         } else {
           throw new Error(result.error || 'Registration failed');
         }
@@ -664,9 +1138,9 @@
         const response = await fetch('/api/leaderboard');
         const data = await response.json();
         
-        if (data.success && data.agencies && data.agencies.length > 0) {
+        if (data.success && data.entries && data.entries.length > 0) {
           const list = document.getElementById('leaderboard-list');
-          list.innerHTML = data.agencies.map((agency, index) => {
+          list.innerHTML = data.entries.slice(0, 10).map((entry, index) => {
             const rank = index + 1;
             const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
             
@@ -678,30 +1152,22 @@
                       ${rank <= 3 ? (rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉') : rank}
                     </div>
                     <div class="flex-1">
-                      <h3 class="font-bold text-xl">${agency.name}</h3>
-                      <p class="text-sm text-gray-400">${agency.location || 'Global'}</p>
+                      <h3 class="font-bold text-xl">${entry.company_name}</h3>
+                      <p class="text-sm text-gray-400">${entry.country || 'Global'}</p>
                     </div>
                   </div>
                   
                   <div class="text-right">
-                    <div class="text-3xl font-bold text-yellow-400">${agency.score || 95}</div>
+                    <div class="text-3xl font-bold text-yellow-400">${entry.score}</div>
                     <div class="text-xs text-gray-400">Quality Score</div>
                   </div>
                 </div>
                 
-                ${agency.description ? `<p class="text-sm text-gray-300 mt-3">${agency.description}</p>` : ''}
-                
                 <div class="flex gap-2 mt-3">
-                  ${agency.website ? `
-                    <a href="${agency.website}" target="_blank" 
+                  ${entry.url ? `
+                    <a href="${entry.url}" target="_blank" 
                        class="flex-1 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-center font-semibold transition-all">
                       Visit Website
-                    </a>
-                  ` : ''}
-                  ${agency.contact ? `
-                    <a href="mailto:${agency.contact}" 
-                       class="flex-1 bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-center font-semibold transition-all">
-                      Contact
                     </a>
                   ` : ''}
                 </div>
@@ -731,18 +1197,18 @@
 
     async function loadBlog() {
       try {
-        const response = await fetch('/api/blog');
+        const response = await fetch('/api/blog?limit=3');
         const data = await response.json();
         
         if (data.success && data.posts && data.posts.length > 0) {
           const grid = document.getElementById('blog-grid');
           grid.innerHTML = data.posts.map(post => `
             <div class="blog-card">
-              ${post.image ? `<img src="${post.image}" alt="${post.title}" class="w-full h-48 object-cover">` : ''}
+              ${post.featured_image ? `<img src="${post.featured_image}" alt="${post.title}" class="w-full h-48 object-cover">` : ''}
               <div class="p-6">
                 <div class="flex gap-2 mb-3">
-                  ${post.tags ? post.tags.split(',').map(tag => `
-                    <span class="px-2 py-1 bg-purple-600 rounded text-xs">${tag.trim()}</span>
+                  ${post.tags && post.tags.length > 0 ? post.tags.slice(0, 2).map(tag => `
+                    <span class="px-2 py-1 bg-purple-600 rounded text-xs">${tag}</span>
                   `).join('') : ''}
                 </div>
                 
@@ -751,7 +1217,7 @@
                 
                 <div class="flex items-center justify-between text-sm">
                   <span class="text-gray-400">${new Date(post.published_at || Date.now()).toLocaleDateString()}</span>
-                  <a href="/blog/${post.slug || post.id}" class="text-blue-400 hover:underline">
+                  <a href="/blog/${post.slug}" class="text-blue-400 hover:underline">
                     Read More →
                   </a>
                 </div>
@@ -774,17 +1240,6 @@
         `;
       }
     }
-
-    // ============================================
-    // INIT
-    // ============================================
-
-    // Load everything on page load
-    document.addEventListener('DOMContentLoaded', () => {
-      loadFreelancers();
-      loadLeaderboard();
-      loadBlog();
-    });
   </script>
 
 </body>
