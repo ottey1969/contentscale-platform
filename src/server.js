@@ -1556,6 +1556,160 @@ app.delete('/api/admin/blog/:id', verifyAdmin, async (req, res) => {
 });
 
 // ============================================
+// FREELANCERS API
+// ============================================
+
+// Get all freelancers
+app.get('/api/freelancers', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT id, name, email, specialty, experience, portfolio, bio, verified, created_at
+      FROM freelancers
+      WHERE approved = true
+      ORDER BY created_at DESC
+      LIMIT 50
+    `);
+    
+    res.json({
+      success: true,
+      freelancers: result.rows
+    });
+  } catch (error) {
+    console.error('Get freelancers error:', error);
+    res.json({
+      success: false,
+      error: 'Failed to load freelancers'
+    });
+  }
+});
+
+// Register new freelancer
+app.post('/api/freelancers/register', async (req, res) => {
+  try {
+    const { name, email, specialty, experience, portfolio, bio } = req.body;
+    
+    // Validation
+    if (!name || !email || !specialty || !bio) {
+      return res.json({
+        success: false,
+        error: 'Missing required fields'
+      });
+    }
+    
+    if (bio.length > 200) {
+      return res.json({
+        success: false,
+        error: 'Bio too long (max 200 characters)'
+      });
+    }
+    
+    // Check if email already exists
+    const existing = await pool.query(
+      'SELECT id FROM freelancers WHERE email = $1',
+      [email]
+    );
+    
+    if (existing.rows.length > 0) {
+      return res.json({
+        success: false,
+        error: 'Email already registered'
+      });
+    }
+    
+    // Insert new freelancer
+    const result = await pool.query(`
+      INSERT INTO freelancers (name, email, specialty, experience, portfolio, bio, verified, approved)
+      VALUES ($1, $2, $3, $4, $5, $6, false, false)
+      RETURNING id
+    `,
+      [name, email, specialty, parseInt(experience) || 0, portfolio || null, bio]
+    );
+    
+    res.json({
+      success: true,
+      id: result.rows[0].id,
+      message: 'Application submitted successfully'
+    });
+  } catch (error) {
+    console.error('Register freelancer error:', error);
+    res.json({
+      success: false,
+      error: 'Registration failed'
+    });
+  }
+});
+
+// ============================================
+// LEADERBOARD API
+// ============================================
+
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT id, name, location, score, description, website, contact
+      FROM agencies
+      WHERE active = true
+      ORDER BY score DESC
+      LIMIT 50
+    `);
+    
+    res.json({
+      success: true,
+      agencies: result.rows
+    });
+  } catch (error) {
+    console.error('Get leaderboard error:', error);
+    res.json({
+      success: false,
+      error: 'Failed to load leaderboard'
+    });
+  }
+});
+
+// Add/Update agency on leaderboard
+app.post('/api/leaderboard/add', async (req, res) => {
+  try {
+    const { name, location, score, description, website, contact } = req.body;
+    
+    if (!name || !score) {
+      return res.json({
+        success: false,
+        error: 'Missing required fields'
+      });
+    }
+    
+    const result = await pool.query(`
+      INSERT INTO agencies (name, location, score, description, website, contact, active)
+      VALUES ($1, $2, $3, $4, $5, $6, true)
+      ON CONFLICT (name) 
+      DO UPDATE SET 
+        score = EXCLUDED.score,
+        location = EXCLUDED.location,
+        description = EXCLUDED.description,
+        website = EXCLUDED.website,
+        contact = EXCLUDED.contact,
+        updated_at = NOW()
+      RETURNING id
+    `,
+      [name, location || null, score, description || null, website || null, contact || null]
+    );
+    
+    res.json({
+      success: true,
+      id: result.rows[0].id
+    });
+  } catch (error) {
+    console.error('Add leaderboard error:', error);
+    res.json({
+      success: false,
+      error: 'Failed to add to leaderboard'
+    });
+  }
+});
+
+
+
+// ============================================
 // OPT-OUT MANAGEMENT ENDPOINTS
 // ============================================
 app.post('/api/admin/opt-out', verifyAdmin, async (req, res) => {
@@ -1608,6 +1762,66 @@ app.get('/api/admin/opt-out-requests', verifyAdmin, async (req, res) => {
   } catch (error) {
     console.error('Opt-out requests error:', error);
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// BLOG API
+// ============================================
+
+app.get('/api/blog', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT id, title, slug, excerpt, image, tags, published_at
+      FROM blog_posts
+      WHERE published = true
+      ORDER BY published_at DESC
+      LIMIT 50
+    `);
+    
+    res.json({
+      success: true,
+      posts: result.rows
+    });
+  } catch (error) {
+    console.error('Get blog error:', error);
+    res.json({
+      success: false,
+      error: 'Failed to load blog posts'
+    });
+  }
+});
+
+// Get single blog post
+app.get('/api/blog/:slug', async (req, res) => {
+  try {
+    const { slug } = req.params;
+    
+    const result = await pool.query(`
+      SELECT id, title, slug, content, excerpt, image, tags, published_at, author
+      FROM blog_posts
+      WHERE slug = $1 AND published = true
+    `,
+      [slug]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.json({
+        success: false,
+        error: 'Post not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      post: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Get blog post error:', error);
+    res.json({
+      success: false,
+      error: 'Failed to load blog post'
+    });
   }
 });
 
@@ -2494,6 +2708,12 @@ app.get('/api/health', async (req, res) => {
 // ============================================
 // CATCH-ALL ROUTE
 // ============================================
+app.get('/api/freelancers', async (req, res) => { ... });
+app.post('/api/freelancers/register', async (req, res) => { ... });
+app.get('/api/leaderboard', async (req, res) => { ... });
+app.post('/api/leaderboard/add', async (req, res) => { ... });
+app.get('/api/blog', async (req, res) => { ... });
+app.get('/api/blog/:slug', async (req, res) => { ... });
 app.get('*', (req, res) => {
   const filePath = path.join(__dirname, '../public', req.path);
   res.sendFile(filePath, (err) => {
