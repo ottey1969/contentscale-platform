@@ -2706,14 +2706,218 @@ app.get('/api/health', async (req, res) => {
 });
 
 // ============================================
-// CATCH-ALL ROUTE
+// PUBLIC API ENDPOINTS - VOLLEDIG INGEVULD
 // ============================================
-app.get('/api/freelancers', async (req, res) => { ... });
-app.post('/api/freelancers/register', async (req, res) => { ... });
-app.get('/api/leaderboard', async (req, res) => { ... });
-app.post('/api/leaderboard/add', async (req, res) => { ... });
-app.get('/api/blog', async (req, res) => { ... });
-app.get('/api/blog/:slug', async (req, res) => { ... });
+
+// 1. GET Freelancers (publiek)
+app.get('/api/freelancers', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM freelancers WHERE is_approved = TRUE ORDER BY is_featured DESC, created_at DESC
+    `);
+    res.json({ success: true, freelancers: result.rows });
+  } catch (error) {
+    res.json({ success: true, freelancers: [] });
+  }
+});
+
+// 2. POST Freelancer Registration
+app.post('/api/freelancers/register', async (req, res) => {
+  try {
+    const { name, email, title, location, country, bio, linkedin_url } = req.body;
+    
+    if (!name || !email) {
+      return res.status(400).json({ success: false, error: 'Name and email required' });
+    }
+    
+    const result = await pool.query(
+      `INSERT INTO freelancers (name, email, title, location, country, bio, linkedin_url, is_approved) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, false) RETURNING id`,
+      [name, email, title || null, location || null, country || null, bio || null, linkedin_url || null]
+    );
+    
+    res.json({ 
+      success: true, 
+      message: 'Application submitted! We will review and approve soon.',
+      id: result.rows[0].id 
+    });
+  } catch (error) {
+    console.error('Freelancer registration error:', error);
+    res.status(500).json({ success: false, error: 'Registration failed' });
+  }
+});
+
+// 3. GET Leaderboard (publiek)
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT id, ROW_NUMBER() OVER (ORDER BY score DESC) as rank,
+        COALESCE(company_name, 'Unknown') as company_name, url, score,
+        COALESCE(country, 'NL') as country, 
+        COALESCE(is_verified, false) as is_claimed, created_at
+      FROM leaderboard 
+      WHERE score IS NOT NULL AND is_opted_out = FALSE AND admin_verified = TRUE
+      ORDER BY score DESC LIMIT 50
+    `);
+    
+    res.json({
+      success: true, 
+      entries: result.rows, 
+      total: result.rows.length,
+      averageScore: result.rows.length > 0 
+        ? Math.round(result.rows.reduce((sum, r) => sum + (r.score || 0), 0) / result.rows.length) 
+        : 0
+    });
+  } catch (error) {
+    console.error('Leaderboard error:', error);
+    res.json({ success: true, entries: [], total: 0, averageScore: 0 });
+  }
+});
+
+// 4. POST Leaderboard Add (publiek - voor submissions)
+app.post('/api/leaderboard/add', async (req, res) => {
+  try {
+    const { url, company_name, score, country } = req.body;
+    
+    if (!url || !score) {
+      return res.status(400).json({ success: false, error: 'URL and score required' });
+    }
+    
+    // Get submission IP
+    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown';
+    
+    // Auto-detect country from domain (basic)
+    let autoDetectedCountry = 'Unknown';
+    try {
+      const domain = new URL(url).hostname;
+      if (domain.endsWith('.nl')) autoDetectedCountry = 'Netherlands';
+      else if (domain.endsWith('.be')) autoDetectedCountry = 'Belgium';
+      else if (domain.endsWith('.de')) autoDetectedCountry = 'Germany';
+      else if (domain.endsWith('.fr')) autoDetectedCountry = 'France';
+      else if (domain.endsWith('.uk') || domain.endsWith('.co.uk')) autoDetectedCountry = 'United Kingdom';
+    } catch (e) {
+      console.error('Domain parse error:', e);
+    }
+    
+    const result = await pool.query(
+      `INSERT INTO leaderboard 
+       (url, company_name, score, country, auto_detected_country, submission_ip, admin_verified) 
+       VALUES ($1, $2, $3, $4, $5, $6, false) 
+       ON CONFLICT (url) DO UPDATE SET 
+         score = EXCLUDED.score,
+         company_name = EXCLUDED.company_name,
+         country = EXCLUDED.country,
+         auto_detected_country = EXCLUDED.auto_detected_country
+       RETURNING id`,
+      [url, company_name || 'Unknown', score, country || autoDetectedCountry, autoDetectedCountry, ip]
+    );
+    
+    res.json({ 
+      success: true, 
+      message: 'Submitted for review! Will appear on leaderboard after admin approval.',
+      id: result.rows[0].id 
+    });
+  } catch (error) {
+    console.error('Leaderboard add error:', error);
+    res.status(500).json({ success: false, error: 'Submission failed' });
+  }
+});
+
+// 5. GET Blog Posts (publiek)
+app.get('/api/blog', async (req, res) => {
+  try {
+    const { category, limit = 10, page = 1 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    
+    let query = `
+      SELECT id, title, slug, excerpt, category, featured_image, author, 
+             published_at, views, tags
+      FROM blog_posts 
+      WHERE status = 'published' AND published_at <= NOW()
+    `;
+    
+    const params = [];
+    let paramCount = 1;
+    
+    if (category) {
+      query += ` AND category = $${paramCount}`;
+      params.push(category);
+      paramCount++;
+    }
+    
+    query += ` ORDER BY published_at DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+    params.push(parseInt(limit), offset);
+    
+    const result = await pool.query(query, params);
+    
+    // Get total count
+    const countQuery = category ? 
+      'SELECT COUNT(*) FROM blog_posts WHERE status = \'published\' AND published_at <= NOW() AND category = $1' :
+      'SELECT COUNT(*) FROM blog_posts WHERE status = \'published\' AND published_at <= NOW()';
+    
+    const countParams = category ? [category] : [];
+    const countResult = await pool.query(countQuery, countParams);
+    const total = parseInt(countResult.rows[0].count);
+    
+    res.json({
+      success: true,
+      posts: result.rows,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Public blog error:', error);
+    res.json({ success: true, posts: [], pagination: { page: 1, limit: 10, total: 0, pages: 0 } });
+  }
+});
+
+// 6. GET Single Blog Post (publiek)
+app.get('/api/blog/:slug', async (req, res) => {
+  try {
+    // Get the post
+    const result = await pool.query(
+      `SELECT * FROM blog_posts 
+       WHERE slug = $1 AND status = 'published' AND published_at <= NOW()`,
+      [req.params.slug]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Blog post not found' });
+    }
+    
+    // Increment views
+    await pool.query(
+      'UPDATE blog_posts SET views = views + 1 WHERE id = $1',
+      [result.rows[0].id]
+    );
+    
+    // Get related posts (same category)
+    const related = await pool.query(
+      `SELECT id, title, slug, excerpt, featured_image, published_at
+       FROM blog_posts 
+       WHERE category = $1 AND id != $2 AND status = 'published' AND published_at <= NOW()
+       ORDER BY published_at DESC LIMIT 3`,
+      [result.rows[0].category, result.rows[0].id]
+    );
+    
+    res.json({
+      success: true,
+      post: result.rows[0],
+      related: related.rows
+    });
+  } catch (error) {
+    console.error('Blog post error:', error);
+    res.status(500).json({ success: false, error: 'Failed to load blog post' });
+  }
+});
+
+// ============================================
+// CATCH-ALL ROUTE (blijft hetzelfde)
+// ============================================
 app.get('*', (req, res) => {
   const filePath = path.join(__dirname, '../public', req.path);
   res.sendFile(filePath, (err) => {
