@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ContentScale - Professional SEO Content Quality Platform 2025</title>
+  <title>ContentScale - Elite SEO Content Optimization | Recover Lost Traffic</title>
+  <meta name="description" content="Stop losing traffic to AI. Professional SEO content optimization based on Google's E-E-A-T guidelines. Get your 90+ quality score roadmap today.">
+  <meta name="keywords" content="SEO content optimization, Google E-E-A-T, content quality score, AI-proof SEO, GRAAF framework, traffic recovery">
+  
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
@@ -23,6 +26,7 @@
       color: white;
       font-size: 13px;
       font-weight: 600;
+      box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
     }
     
     .score-card {
@@ -32,6 +36,44 @@
     .score-card:hover {
       transform: translateY(-4px);
       box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    
+    /* Language Toggle */
+    .lang-toggle {
+      display: flex;
+      background: #374151;
+      border-radius: 20px;
+      padding: 4px;
+      gap: 4px;
+    }
+    
+    .lang-btn {
+      padding: 6px 16px;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    
+    .lang-btn.active {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      color: white;
+      box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+    }
+    
+    .lang-btn:not(.active) {
+      color: #9ca3af;
+    }
+    
+    .lang-btn:not(.active):hover {
+      color: #fff;
+      background: #4b5563;
+    }
+    
+    /* Hide inactive language content */
+    [data-lang]:not(.active-lang) {
+      display: none !important;
     }
     
     /* Leaderboard Styles */
@@ -94,6 +136,31 @@
       border-color: #3b82f6;
       transform: translateY(-4px);
       box-shadow: 0 15px 30px rgba(59, 130, 246, 0.3);
+    }
+    
+    /* Pricing Cards */
+    .pricing-card {
+      background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+      border: 2px solid #374151;
+      border-radius: 16px;
+      padding: 32px;
+      transition: all 0.3s;
+      position: relative;
+    }
+    
+    .pricing-card.featured {
+      border-color: #8b5cf6;
+      transform: scale(1.05);
+      box-shadow: 0 20px 40px rgba(139, 92, 246, 0.4);
+    }
+    
+    .pricing-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(139, 92, 246, 0.3);
+    }
+    
+    .pricing-card.featured:hover {
+      transform: scale(1.05) translateY(-8px);
     }
     
     /* Modal */
@@ -171,26 +238,59 @@
       color: white;
       transform: scale(1.05);
     }
+
+    /* Stats Counter Animation */
+    @keyframes countUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .stat-card {
+      animation: countUp 0.6s ease-out;
+    }
+
+    /* Pulse animation for important CTAs */
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7); }
+      50% { box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); }
+    }
+
+    .cta-pulse {
+      animation: pulse 2s infinite;
+    }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100">
 
   <!-- Navigation -->
-  <nav class="sticky top-0 z-50 bg-gradient-to-r from-gray-800 to-gray-900 border-b-2 border-purple-600">
+  <nav class="sticky top-0 z-50 bg-gradient-to-r from-gray-800 to-gray-900 border-b-2 border-purple-600 backdrop-blur-sm bg-opacity-95">
     <div class="max-w-7xl mx-auto px-6 py-4">
       <div class="flex items-center justify-between">
-        <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-          ContentScale
+        <div class="flex items-center gap-3">
+          <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+            ContentScale
+          </div>
+          <span class="hidden sm:inline-block text-xs px-2 py-1 bg-purple-600 rounded text-white font-semibold">Pro</span>
         </div>
+        
+        <div class="hidden md:flex gap-6 items-center">
+          <a href="#scanner" class="text-gray-300 hover:text-white transition-colors">Scanner</a>
+          <a href="#lead-scanner" class="text-gray-300 hover:text-white transition-colors">Lead Scanner</a>
+          <a href="#freelancers" class="text-gray-300 hover:text-white transition-colors" data-lang="nl">Specialisten</a>
+          <a href="#freelancers" class="text-gray-300 hover:text-white transition-colors" data-lang="en">Experts</a>
+          <a href="#pricing" class="text-gray-300 hover:text-white transition-colors">Pricing</a>
+        </div>
+
         <div class="flex gap-4 items-center">
-          <a href="#scanner" class="text-gray-300 hover:text-white">Scanner</a>
-          <a href="#lead-scanner" class="text-gray-300 hover:text-white">Lead Scanner</a>
-          <a href="#freelancers" class="text-gray-300 hover:text-white">Freelancers</a>
-          <a href="#leaderboard" class="text-gray-300 hover:text-white">Leaderboard</a>
-          <a href="#blog" class="text-gray-300 hover:text-white">Blog</a>
+          <!-- Language Toggle -->
+          <div class="lang-toggle">
+            <button class="lang-btn" onclick="switchLanguage('nl')" id="langBtnNL">NL</button>
+            <button class="lang-btn" onclick="switchLanguage('en')" id="langBtnEN">EN</button>
+          </div>
+          
           <a href="https://wa.me/31628073996" target="_blank" 
-             class="px-6 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all">
-            💬 WhatsApp Expert
+             class="px-6 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl">
+            💬 Chat
           </a>
         </div>
       </div>
@@ -200,39 +300,44 @@
   <div class="max-w-7xl mx-auto p-6">
     
     <!-- Hero Section -->
-    <div class="text-center mb-12" id="scanner">
-      <div class="inline-block mb-4">
+    <div class="text-center mb-16 pt-8" id="scanner">
+      <div class="inline-block mb-6 animate-pulse">
         <span class="google-badge">
           <i class="fab fa-google"></i>
-          Google-Aligned Quality Assessment
+          Google E-E-A-T Aligned
         </span>
       </div>
       
-      <h1 class="text-5xl font-bold mb-4 bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
-        Professional SEO Content Quality Scanner
-      </h1>
+      <!-- Dutch Hero -->
+      <div data-lang="nl">
+        <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 bg-clip-text text-transparent leading-tight">
+          Stop Traffic Verlies aan AI
+        </h1>
+        <p class="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
+          Krijg je persoonlijke <span class="text-purple-400 font-semibold">roadmap naar 90+ scores</span> • Herstel traffic in 90 dagen • Gebaseerd op Google's E-E-A-T
+        </p>
+      </div>
       
-      <p class="text-xl text-gray-300 mb-6">
-        Get your content score + improvement roadmap to 90+ instantly
-      </p>
-      
-      <div class="max-w-2xl mx-auto text-sm text-gray-400">
-        <p class="mb-2">
-          <strong class="text-purple-400">Based on Google's E-E-A-T Guidelines:</strong> 
-          <a href="https://developers.google.com/search/docs/fundamentals/creating-helpful-content" 
-             target="_blank" 
-             class="text-blue-400 hover:underline">
-            Creating Helpful Content
-          </a>
+      <!-- English Hero -->
+      <div data-lang="en">
+        <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 bg-clip-text text-transparent leading-tight">
+          Stop Losing Traffic to AI
+        </h1>
+        <p class="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
+          Get your personalized <span class="text-purple-400 font-semibold">roadmap to 90+ scores</span> • Recover traffic in 90 days • Based on Google's E-E-A-T
         </p>
       </div>
     </div>
 
-    <!-- Scanner Input Section -->
-    <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-8 mb-12 border-2 border-purple-600">
-      <div class="text-center mb-6">
+    <!-- Quick Scanner Section -->
+    <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 mb-16 border-2 border-purple-600 shadow-2xl">
+      <div class="text-center mb-6" data-lang="nl">
+        <h2 class="text-3xl font-bold mb-2">🔍 Scan je Content Kwaliteit</h2>
+        <p class="text-gray-300">Krijg direct professionele beoordeling • Volledig gratis</p>
+      </div>
+      <div class="text-center mb-6" data-lang="en">
         <h2 class="text-3xl font-bold mb-2">🔍 Scan Your Content Quality</h2>
-        <p class="text-gray-300">Get instant professional assessment</p>
+        <p class="text-gray-300">Get instant professional assessment • Completely free</p>
       </div>
       
       <div class="max-w-3xl mx-auto">
@@ -240,29 +345,59 @@
           <input type="text" 
                  id="scanInput" 
                  placeholder="https://yourwebsite.com/page" 
-                 class="flex-1 bg-gray-700 text-white px-6 py-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg">
+                 class="flex-1 bg-gray-700 text-white px-6 py-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg shadow-inner">
           <button onclick="performScan()" 
                   id="scanButton" 
-                  class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-8 py-4 rounded-lg font-bold text-lg transition-all whitespace-nowrap">
-            🔍 Analyze Content
+                  class="cta-pulse bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-8 py-4 rounded-lg font-bold text-lg transition-all whitespace-nowrap shadow-lg hover:shadow-xl">
+            <span data-lang="nl">🚀 Analyseer Nu</span>
+            <span data-lang="en">🚀 Analyze Now</span>
           </button>
         </div>
-        <p class="text-center text-xs text-gray-500 mt-3">
-          Free • No signup required • Instant results
+        <p class="text-center text-xs text-gray-500 mt-3" data-lang="nl">
+          ✨ Gratis • Geen registratie • Direct resultaat
+        </p>
+        <p class="text-center text-xs text-gray-500 mt-3" data-lang="en">
+          ✨ Free • No signup • Instant results
         </p>
       </div>
     </div>
 
-    <!-- ============================================ -->
-    <!-- LEAD SCANNER SECTION - NEW -->
-    <!-- ============================================ -->
-    <div id="lead-scanner" class="mb-16">
-      <div class="bg-gradient-to-br from-purple-900 to-indigo-900 rounded-2xl p-8 border-2 border-purple-500">
+    <!-- Trust Signals / Stats -->
+    <div class="mb-16">
+      <div class="grid md:grid-cols-4 gap-6">
+        <div class="stat-card bg-gradient-to-br from-purple-900 to-purple-800 rounded-xl p-6 text-center border-2 border-purple-600 shadow-lg">
+          <div class="text-4xl font-bold mb-2">200+</div>
+          <div class="text-sm text-gray-300" data-lang="nl">Bedrijven Geholpen</div>
+          <div class="text-sm text-gray-300" data-lang="en">Businesses Helped</div>
+        </div>
         
-        <!-- Header -->
-        <div class="text-center mb-8">
-          <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text text-transparent">
-            🎯 Lead Scanner voor SEO Specialisten
+        <div class="stat-card bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl p-6 text-center border-2 border-blue-600 shadow-lg">
+          <div class="text-4xl font-bold mb-2">78%</div>
+          <div class="text-sm text-gray-300">Recovery Rate</div>
+        </div>
+        
+        <div class="stat-card bg-gradient-to-br from-green-900 to-green-800 rounded-xl p-6 text-center border-2 border-green-600 shadow-lg">
+          <div class="text-4xl font-bold mb-2">47+</div>
+          <div class="text-sm text-gray-300" data-lang="nl">Landen</div>
+          <div class="text-sm text-gray-300" data-lang="en">Countries</div>
+        </div>
+        
+        <div class="stat-card bg-gradient-to-br from-orange-900 to-orange-800 rounded-xl p-6 text-center border-2 border-orange-600 shadow-lg">
+          <div class="text-4xl font-bold mb-2">90d</div>
+          <div class="text-sm text-gray-300" data-lang="nl">Gem. Herstel</div>
+          <div class="text-sm text-gray-300" data-lang="en">Avg. Recovery</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lead Scanner Section -->
+    <div id="lead-scanner" class="mb-16">
+      <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500 shadow-2xl">
+        
+        <!-- Header NL -->
+        <div class="text-center mb-8" data-lang="nl">
+          <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-300 via-pink-300 to-purple-300 bg-clip-text text-transparent">
+            🎯 Lead Scanner voor Specialisten
           </h2>
           <p class="text-xl text-gray-300 mb-2">
             Vind bedrijven die content hulp nodig hebben
@@ -272,30 +407,46 @@
           </p>
         </div>
 
+        <!-- Header EN -->
+        <div class="text-center mb-8" data-lang="en">
+          <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-300 via-pink-300 to-purple-300 bg-clip-text text-transparent">
+            🎯 Lead Scanner for Content Specialists
+          </h2>
+          <p class="text-xl text-gray-300 mb-2">
+            Find businesses that need content help
+          </p>
+          <p class="text-sm text-purple-300">
+            ✨ Free for freelancers • 🔍 Single or bulk scanning • 📊 Export to CSV
+          </p>
+        </div>
+
         <!-- Mode Selector -->
         <div class="flex justify-center gap-4 mb-8">
           <button id="modeSingleBtn" onclick="switchScanMode('single')" 
-                  class="mode-toggle active px-6 py-3 bg-gray-700 rounded-lg font-semibold">
-            🔍 Single URL Scanner
+                  class="mode-toggle active px-6 py-3 bg-gray-700 rounded-lg font-semibold shadow-lg">
+            <span data-lang="nl">🔍 Enkele URL</span>
+            <span data-lang="en">🔍 Single URL</span>
           </button>
           <button id="modeBulkBtn" onclick="switchScanMode('bulk')" 
-                  class="mode-toggle px-6 py-3 bg-gray-700 rounded-lg font-semibold">
-            🗺️ Google Maps Bulk
+                  class="mode-toggle px-6 py-3 bg-gray-700 rounded-lg font-semibold shadow-lg">
+            <span data-lang="nl">🗺️ Google Maps Bulk</span>
+            <span data-lang="en">🗺️ Google Maps Bulk</span>
           </button>
         </div>
 
         <!-- Single URL Scanner -->
         <div id="singleScanMode" class="max-w-3xl mx-auto">
-          <div class="bg-gray-800 rounded-xl p-6 mb-4">
+          <div class="bg-gray-800 rounded-xl p-6 mb-4 shadow-lg">
             <div class="flex flex-col sm:flex-row gap-3 mb-4">
               <input type="text" 
                      id="singleUrlInput" 
-                     placeholder="https://bedrijf-website.nl" 
-                     class="flex-1 bg-gray-700 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                     placeholder="https://business-website.com" 
+                     class="flex-1 bg-gray-700 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-inner">
               <button onclick="scanSingleURLPublic()" 
                       id="singleScanBtn"
-                      class="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 px-6 py-3 rounded-lg font-bold transition-all whitespace-nowrap">
-                🚀 Start Scan
+                      class="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 px-6 py-3 rounded-lg font-bold transition-all whitespace-nowrap shadow-lg hover:shadow-xl">
+                <span data-lang="nl">🚀 Start Scan</span>
+                <span data-lang="en">🚀 Start Scan</span>
               </button>
             </div>
             
@@ -313,52 +464,63 @@
 
           <!-- Tip Box -->
           <div class="bg-blue-900 bg-opacity-30 border border-blue-500 rounded-lg p-4 mt-4">
-            <p class="text-sm text-blue-300">
-              💡 <strong>Tip:</strong> Gebruik scan resultaten om je pitch te versterken met concrete data
+            <p class="text-sm text-blue-300" data-lang="nl">
+              💡 <strong>Pro Tip:</strong> Gebruik scan resultaten om je pitch te versterken met concrete data
+            </p>
+            <p class="text-sm text-blue-300" data-lang="en">
+              💡 <strong>Pro Tip:</strong> Use scan results to strengthen your pitch with concrete data
             </p>
           </div>
         </div>
 
         <!-- Google Maps Bulk Scanner -->
         <div id="bulkScanMode" class="hidden max-w-5xl mx-auto">
-          <div class="bg-gray-800 rounded-xl p-6 mb-4">
+          <div class="bg-gray-800 rounded-xl p-6 mb-4 shadow-lg">
             <div class="flex flex-col sm:flex-row gap-3 mb-4">
               <input type="text" 
                      id="googleMapsInput" 
                      placeholder="https://www.google.com/maps/search/restaurants+amsterdam" 
-                     class="flex-1 bg-gray-700 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                     class="flex-1 bg-gray-700 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-inner">
               <button onclick="scrapeGoogleMapsPublic()" 
                       id="gmapsScrapeBtn"
-                      class="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 px-6 py-3 rounded-lg font-bold transition-all whitespace-nowrap">
-                🗺️ Scrape Google Maps
+                      class="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 px-6 py-3 rounded-lg font-bold transition-all whitespace-nowrap shadow-lg hover:shadow-xl">
+                <span data-lang="nl">🗺️ Scrape Maps</span>
+                <span data-lang="en">🗺️ Scrape Maps</span>
               </button>
             </div>
             
             <!-- Instructie -->
             <div class="bg-gray-700 rounded-lg p-3">
-              <p class="text-xs text-gray-300">
-                <strong class="text-purple-300">🔍 Hoe te gebruiken:</strong> 
-                Zoek bedrijven op Google Maps → Kopieer de URL → Plak hier → Scrapet automatisch bedrijfsnamen en websites
+              <p class="text-xs text-gray-300" data-lang="nl">
+                <strong class="text-purple-300">💡 Hoe te gebruiken:</strong> 
+                Zoek bedrijven op Google Maps → Kopieer de URL → Plak hier
+              </p>
+              <p class="text-xs text-gray-300" data-lang="en">
+                <strong class="text-purple-300">💡 How to use:</strong> 
+                Search businesses on Google Maps → Copy the URL → Paste here
               </p>
             </div>
           </div>
 
           <!-- Scraped Leads Container -->
           <div id="scrapedLeadsContainer" class="hidden">
-            <div class="bg-gray-800 rounded-xl p-6">
+            <div class="bg-gray-800 rounded-xl p-6 shadow-lg">
               <div class="flex items-center justify-between mb-4">
                 <h3 class="text-xl font-bold">
-                  📋 Gevonden Leads (<span id="leadCount">0</span>)
+                  <span data-lang="nl">📋 Gevonden Leads (<span id="leadCount">0</span>)</span>
+                  <span data-lang="en">📋 Found Leads (<span id="leadCountEN">0</span>)</span>
                 </h3>
                 <div class="flex gap-2">
                   <button onclick="scanAllGoogleMapsLeads()" 
                           id="scanAllBtn"
-                          class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-semibold">
-                    ⚡ Scan Alle Websites
+                          class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all">
+                    <span data-lang="nl">⚡ Scan Alles</span>
+                    <span data-lang="en">⚡ Scan All</span>
                   </button>
                   <button onclick="selectAllLeads()" 
-                          class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg font-semibold">
-                    ☑️ Selecteer Alles
+                          class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all">
+                    <span data-lang="nl">☑️ Selecteer Alles</span>
+                    <span data-lang="en">☑️ Select All</span>
                   </button>
                 </div>
               </div>
@@ -372,18 +534,16 @@
               </div>
 
               <!-- Leads Grid -->
-              <div id="leadsGrid" class="grid md:grid-cols-2 gap-4 mb-4">
-                <!-- Leads will be inserted here -->
-              </div>
+              <div id="leadsGrid" class="grid md:grid-cols-2 gap-4 mb-4"></div>
 
               <!-- Export Buttons -->
               <div class="flex gap-3 justify-end">
                 <button onclick="exportLeadsToCSV()" 
-                        class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-semibold">
+                        class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all">
                   📊 Export CSV
                 </button>
                 <button onclick="exportLeadsToJSON()" 
-                        class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-semibold">
+                        class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all">
                   📄 Export JSON
                 </button>
               </div>
@@ -392,98 +552,450 @@
         </div>
 
         <!-- Freelancer CTA -->
-        <div class="mt-8 bg-gradient-to-r from-purple-800 to-pink-800 rounded-xl p-6 text-center border-2 border-purple-400">
-          <h3 class="text-2xl font-bold mb-2">💼 Ben je Content Specialist?</h3>
-          <p class="text-gray-200 mb-4">
-            Gebruik deze scanner om potentiële klanten te vinden met concrete data
-          </p>
-          <div class="flex gap-3 justify-center flex-wrap">
-            <button onclick="document.getElementById('freelancers')?.scrollIntoView({behavior:'smooth'})" 
-                    class="bg-white text-purple-900 hover:bg-gray-100 px-6 py-3 rounded-lg font-bold transition-all">
-              📝 Registreer als Freelancer
-            </button>
-            <a href="https://wa.me/31628073996?text=Hi!%20Ik%20wil%20graag%20de%20Lead%20Scanner%20gebruiken" 
-               target="_blank"
-               class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold transition-all">
-              💬 WhatsApp Contact
-            </a>
+        <div class="mt-8 bg-gradient-to-r from-purple-800 via-pink-800 to-purple-800 rounded-xl p-6 text-center border-2 border-purple-400 shadow-lg">
+          <div data-lang="nl">
+            <h3 class="text-2xl font-bold mb-2">💼 Ben je Content Specialist?</h3>
+            <p class="text-gray-200 mb-4">
+              Gebruik deze scanner gratis om potentiële klanten te vinden
+            </p>
+            <div class="flex gap-3 justify-center flex-wrap">
+              <button onclick="document.getElementById('freelancers')?.scrollIntoView({behavior:'smooth'})" 
+                      class="bg-white text-purple-900 hover:bg-gray-100 px-6 py-3 rounded-lg font-bold transition-all shadow-lg hover:shadow-xl">
+                📝 Registreer als Specialist
+              </button>
+              <a href="https://wa.me/31628073996?text=Hi!%20Ik%20wil%20de%20Lead%20Scanner%20gebruiken" 
+                 target="_blank"
+                 class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold transition-all shadow-lg hover:shadow-xl">
+                💬 WhatsApp Contact
+              </a>
+            </div>
+          </div>
+          <div data-lang="en">
+            <h3 class="text-2xl font-bold mb-2">💼 Are You a Content Specialist?</h3>
+            <p class="text-gray-200 mb-4">
+              Use this scanner for free to find potential clients
+            </p>
+            <div class="flex gap-3 justify-center flex-wrap">
+              <button onclick="document.getElementById('freelancers')?.scrollIntoView({behavior:'smooth'})" 
+                      class="bg-white text-purple-900 hover:bg-gray-100 px-6 py-3 rounded-lg font-bold transition-all shadow-lg hover:shadow-xl">
+                📝 Register as Specialist
+              </button>
+              <a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20use%20the%20Lead%20Scanner" 
+                 target="_blank"
+                 class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold transition-all shadow-lg hover:shadow-xl">
+                💬 WhatsApp Contact
+              </a>
+            </div>
           </div>
         </div>
 
       </div>
     </div>
-    <!-- END LEAD SCANNER SECTION -->
 
     <!-- Freelancers Section -->
-    <div id="freelancers" class="mb-12">
+    <div id="freelancers" class="mb-16">
       <div class="text-center mb-8">
-        <h2 class="text-4xl font-bold mb-3">🎯 Verified SEO Freelancers</h2>
-        <p class="text-xl text-gray-300 mb-4">Expert content optimizers ready to help</p>
+        <h2 class="text-4xl font-bold mb-3" data-lang="nl">🎯 Geverifieerde SEO Specialisten</h2>
+        <h2 class="text-4xl font-bold mb-3" data-lang="en">🎯 Verified SEO Specialists</h2>
+        
+        <p class="text-xl text-gray-300 mb-4" data-lang="nl">Expert content optimizers klaar om te helpen</p>
+        <p class="text-xl text-gray-300 mb-4" data-lang="en">Expert content optimizers ready to elevate your rankings</p>
+        
         <button onclick="openFreelancerModal()" 
-                class="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all">
-          📝 Register as Freelancer
+                class="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl">
+          <span data-lang="nl">📝 Registreer als Specialist</span>
+          <span data-lang="en">📝 Join Our Network</span>
         </button>
       </div>
       
       <div id="freelancers-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Freelancers will be loaded here -->
-        <div class="text-center col-span-full text-gray-400">
-          Loading freelancers...
+        <div class="text-center col-span-full text-gray-400" data-lang="nl">
+          Laden...
+        </div>
+        <div class="text-center col-span-full text-gray-400" data-lang="en">
+          Loading specialists...
         </div>
       </div>
     </div>
 
     <!-- Leaderboard Section -->
-    <div id="leaderboard" class="mb-12">
+    <div id="leaderboard" class="mb-16">
       <div class="text-center mb-8">
-        <h2 class="text-4xl font-bold mb-3">🏆 Agency Leaderboard</h2>
-        <p class="text-xl text-gray-300">Top SEO agencies ranked by performance</p>
+        <h2 class="text-4xl font-bold mb-3">🏆 Top SEO Content Scores</h2>
+        
+        <p class="text-xl text-gray-300" data-lang="nl">De beste content scores wereldwijd</p>
+        <p class="text-xl text-gray-300" data-lang="en">The world's highest content quality scores</p>
       </div>
       
       <div id="leaderboard-list" class="max-w-4xl mx-auto">
-        <!-- Leaderboard will be loaded here -->
-        <div class="text-center text-gray-400">
+        <div class="text-center text-gray-400" data-lang="nl">
+          Laden...
+        </div>
+        <div class="text-center text-gray-400" data-lang="en">
           Loading leaderboard...
         </div>
       </div>
     </div>
 
+    <!-- Pricing Section -->
+    <div id="pricing" class="mb-16">
+      <div class="text-center mb-12">
+        <h2 class="text-4xl font-bold mb-3" data-lang="nl">💎 Simpele, Transparante Prijzen</h2>
+        <h2 class="text-4xl font-bold mb-3" data-lang="en">💎 Simple, Transparent Pricing</h2>
+        
+        <p class="text-xl text-gray-300" data-lang="nl">Kies het plan dat bij je past</p>
+        <p class="text-xl text-gray-300" data-lang="en">Choose the plan that fits your needs</p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        
+        <!-- Free Tier -->
+        <div class="pricing-card">
+          <div class="text-center mb-6">
+            <div class="text-sm font-semibold text-gray-400 mb-2" data-lang="nl">GRATIS</div>
+            <div class="text-sm font-semibold text-gray-400 mb-2" data-lang="en">FREE</div>
+            <div class="text-5xl font-bold mb-2">€0</div>
+            <div class="text-gray-400" data-lang="nl">Perfect om te starten</div>
+            <div class="text-gray-400" data-lang="en">Perfect to get started</div>
+          </div>
+          
+          <ul class="space-y-3 mb-8" data-lang="nl">
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>5 scans per maand</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Basis kwaliteitsscore</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>GRAAF Framework analyse</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Email support</span>
+            </li>
+          </ul>
+          
+          <ul class="space-y-3 mb-8" data-lang="en">
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>5 scans per month</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Basic quality score</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>GRAAF Framework analysis</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Email support</span>
+            </li>
+          </ul>
+          
+          <button onclick="document.getElementById('scanInput').scrollIntoView({behavior:'smooth'}); document.getElementById('scanInput').focus()" 
+                  class="w-full bg-gray-600 hover:bg-gray-700 px-6 py-3 rounded-lg font-bold transition-all shadow-lg hover:shadow-xl">
+            <span data-lang="nl">Start Gratis</span>
+            <span data-lang="en">Start Free</span>
+          </button>
+        </div>
+
+        <!-- Pro Tier - Featured -->
+        <div class="pricing-card featured">
+          <div class="absolute top-4 right-4 bg-gradient-to-r from-purple-600 to-pink-600 px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+            <span data-lang="nl">POPULAIR</span>
+            <span data-lang="en">POPULAR</span>
+          </div>
+          
+          <div class="text-center mb-6">
+            <div class="text-sm font-semibold text-purple-400 mb-2">PRO</div>
+            <div class="text-5xl font-bold mb-2">€49</div>
+            <div class="text-gray-400" data-lang="nl">per maand</div>
+            <div class="text-gray-400" data-lang="en">per month</div>
+          </div>
+          
+          <ul class="space-y-3 mb-8" data-lang="nl">
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span><strong>Onbeperkte scans</strong></span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Volledige GRAAF + CRAFT analyse</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Competitor analyse</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Priority support</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>API toegang</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Lead Scanner onbeperkt</span>
+            </li>
+          </ul>
+          
+          <ul class="space-y-3 mb-8" data-lang="en">
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span><strong>Unlimited scans</strong></span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Full GRAAF + CRAFT analysis</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Competitor analysis</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Priority support</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>API access</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Unlimited Lead Scanner</span>
+            </li>
+          </ul>
+          
+          <button onclick="window.location.href='https://wa.me/31628073996?text=' + (currentLang === 'nl' ? 'Hi!%20Ik%20wil%20het%20Pro%20plan' : 'Hi!%20I%20want%20the%20Pro%20plan')" 
+                  class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 px-6 py-3 rounded-lg font-bold transition-all shadow-lg hover:shadow-xl">
+            <span data-lang="nl">Start Pro</span>
+            <span data-lang="en">Get Started</span>
+          </button>
+        </div>
+
+        <!-- Enterprise Tier -->
+        <div class="pricing-card">
+          <div class="text-center mb-6">
+            <div class="text-sm font-semibold text-gray-400 mb-2">ENTERPRISE</div>
+            <div class="text-5xl font-bold mb-2" data-lang="nl">Op Maat</div>
+            <div class="text-5xl font-bold mb-2" data-lang="en">Custom</div>
+            <div class="text-gray-400" data-lang="nl">Voor grote teams</div>
+            <div class="text-gray-400" data-lang="en">For large teams</div>
+          </div>
+          
+          <ul class="space-y-3 mb-8" data-lang="nl">
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Alles van Pro</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Dedicated account manager</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Custom integraties</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>SLA garanties</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Training & onboarding</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>White-label optie</span>
+            </li>
+          </ul>
+          
+          <ul class="space-y-3 mb-8" data-lang="en">
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Everything in Pro</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Dedicated account manager</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Custom integrations</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>SLA guarantees</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Training & onboarding</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>White-label option</span>
+            </li>
+          </ul>
+          
+          <button onclick="window.location.href='https://wa.me/31628073996?text=' + (currentLang === 'nl' ? 'Hi!%20Ik%20wil%20meer%20weten%20over%20Enterprise' : 'Hi!%20I%20want%20to%20learn%20more%20about%20Enterprise')" 
+                  class="w-full bg-gray-600 hover:bg-gray-700 px-6 py-3 rounded-lg font-bold transition-all shadow-lg hover:shadow-xl">
+            <span data-lang="nl">Contact Sales</span>
+            <span data-lang="en">Contact Sales</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
     <!-- Blog Section -->
-    <div id="blog" class="mb-12">
+    <div id="blog" class="mb-16">
       <div class="text-center mb-8">
-        <h2 class="text-4xl font-bold mb-3">📚 SEO Insights & Guides</h2>
-        <p class="text-xl text-gray-300">Latest tips for content optimization</p>
+        <h2 class="text-4xl font-bold mb-3" data-lang="nl">📚 SEO Insights & Guides</h2>
+        <h2 class="text-4xl font-bold mb-3" data-lang="en">📚 SEO Insights & Guides</h2>
+        
+        <p class="text-xl text-gray-300" data-lang="nl">Laatste tips voor content optimalisatie</p>
+        <p class="text-xl text-gray-300" data-lang="en">Latest strategies for content optimization</p>
       </div>
       
       <div id="blog-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Blog posts will be loaded here -->
-        <div class="text-center col-span-full text-gray-400">
-          Loading blog posts...
+        <div class="text-center col-span-full text-gray-400" data-lang="nl">
+          Laden...
+        </div>
+        <div class="text-center col-span-full text-gray-400" data-lang="en">
+          Loading insights...
+        </div>
+      </div>
+    </div>
+
+    <!-- Final CTA -->
+    <div class="mb-16">
+      <div class="bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-900 rounded-2xl p-12 text-center border-2 border-purple-500 shadow-2xl">
+        <div class="text-5xl mb-4">🚀</div>
+        
+        <div data-lang="nl">
+          <h2 class="text-4xl font-bold mb-4">Klaar om je Traffic te Herstellen?</h2>
+          <p class="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
+            Stop met traffic verliezen aan AI Overviews. Krijg vandaag nog je persoonlijke roadmap naar 90+ content scores.
+          </p>
+        </div>
+        
+        <div data-lang="en">
+          <h2 class="text-4xl font-bold mb-4">Ready to Recover Your Traffic?</h2>
+          <p class="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
+            Stop losing traffic to AI Overviews. Get your personalized roadmap to 90+ content scores today.
+          </p>
+        </div>
+        
+        <div class="flex gap-4 justify-center flex-wrap">
+          <button onclick="document.getElementById('scanInput').scrollIntoView({behavior:'smooth'}); document.getElementById('scanInput').focus()" 
+                  class="cta-pulse bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 px-8 py-4 rounded-lg font-bold text-lg transition-all shadow-lg hover:shadow-xl">
+            <span data-lang="nl">🔍 Scan Gratis</span>
+            <span data-lang="en">🔍 Scan Free</span>
+          </button>
+          
+          <a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20discuss%20SEO%20optimization" 
+             target="_blank"
+             class="bg-green-600 hover:bg-green-700 px-8 py-4 rounded-lg font-bold text-lg transition-all shadow-lg hover:shadow-xl">
+            <span data-lang="nl">💬 Gratis Consultatie</span>
+            <span data-lang="en">💬 Free Consultation</span>
+          </a>
         </div>
       </div>
     </div>
 
   </div>
 
+  <!-- Footer -->
+  <footer class="bg-gray-800 border-t-2 border-gray-700 mt-16">
+    <div class="max-w-7xl mx-auto px-6 py-12">
+      <div class="grid md:grid-cols-4 gap-8 mb-8">
+        
+        <div>
+          <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-4">
+            ContentScale
+          </div>
+          <p class="text-gray-400 text-sm" data-lang="nl">
+            Professional SEO content optimalisatie gebaseerd op Google's E-E-A-T richtlijnen.
+          </p>
+          <p class="text-gray-400 text-sm" data-lang="en">
+            Professional SEO content optimization based on Google's E-E-A-T guidelines.
+          </p>
+        </div>
+        
+        <div>
+          <h3 class="font-bold mb-4" data-lang="nl">Product</h3>
+          <h3 class="font-bold mb-4" data-lang="en">Product</h3>
+          <ul class="space-y-2 text-sm">
+            <li><a href="#scanner" class="text-gray-400 hover:text-white transition-colors">Scanner</a></li>
+            <li><a href="#lead-scanner" class="text-gray-400 hover:text-white transition-colors">Lead Scanner</a></li>
+            <li><a href="#pricing" class="text-gray-400 hover:text-white transition-colors">Pricing</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h3 class="font-bold mb-4" data-lang="nl">Bedrijf</h3>
+          <h3 class="font-bold mb-4" data-lang="en">Company</h3>
+          <ul class="space-y-2 text-sm">
+            <li><a href="#blog" class="text-gray-400 hover:text-white transition-colors">Blog</a></li>
+            <li><a href="#leaderboard" class="text-gray-400 hover:text-white transition-colors">Leaderboard</a></li>
+            <li><a href="#freelancers" class="text-gray-400 hover:text-white transition-colors" data-lang="nl">Specialisten</a></li>
+            <li><a href="#freelancers" class="text-gray-400 hover:text-white transition-colors" data-lang="en">Specialists</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h3 class="font-bold mb-4">Contact</h3>
+          <ul class="space-y-2 text-sm">
+            <li class="text-gray-400">
+              <i class="fas fa-envelope mr-2"></i>
+              info@contentscale.site
+            </li>
+            <li>
+              <a href="https://wa.me/31628073996" target="_blank" class="text-gray-400 hover:text-white transition-colors">
+                <i class="fab fa-whatsapp mr-2"></i>
+                +31 6 2807 3996
+              </a>
+            </li>
+            <li class="text-gray-400">
+              <i class="fas fa-map-marker-alt mr-2"></i>
+              Amsterdam, NL
+            </li>
+          </ul>
+        </div>
+        
+      </div>
+      
+      <div class="border-t border-gray-700 pt-8 text-center text-sm text-gray-400">
+        <p>&copy; 2025 ContentScale. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
   <!-- Scan Results Modal -->
   <div id="scanModal" class="modal">
-    <div class="modal-content">
-      <!-- Results will be inserted here -->
-    </div>
+    <div class="modal-content"></div>
   </div>
 
   <!-- Freelancer Registration Modal -->
   <div id="freelancerModal" class="modal">
     <div class="modal-content p-8">
       <div class="flex justify-between items-start mb-6">
-        <h2 class="text-3xl font-bold">📝 Register as SEO Freelancer</h2>
+        <h2 class="text-3xl font-bold" data-lang="nl">📝 Registreer als SEO Specialist</h2>
+        <h2 class="text-3xl font-bold" data-lang="en">📝 Join Our Network</h2>
         <button onclick="closeFreelancerModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
       </div>
       
       <form id="freelancerForm" class="space-y-4">
         <div class="grid md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-semibold mb-2">Full Name *</label>
+            <label class="block text-sm font-semibold mb-2" data-lang="nl">Volledige Naam *</label>
+            <label class="block text-sm font-semibold mb-2" data-lang="en">Full Name *</label>
             <input type="text" name="name" required 
                    class="w-full bg-gray-700 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
           </div>
@@ -495,10 +1007,12 @@
         </div>
         
         <div>
-          <label class="block text-sm font-semibold mb-2">Specialty *</label>
+          <label class="block text-sm font-semibold mb-2" data-lang="nl">Specialiteit *</label>
+          <label class="block text-sm font-semibold mb-2" data-lang="en">Specialty *</label>
           <select name="specialty" required 
                   class="w-full bg-gray-700 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-            <option value="">Select specialty...</option>
+            <option value="" data-lang="nl">Selecteer specialiteit...</option>
+            <option value="" data-lang="en">Select specialty...</option>
             <option value="SEO Content Writing">SEO Content Writing</option>
             <option value="Technical SEO">Technical SEO</option>
             <option value="Content Strategy">Content Strategy</option>
@@ -509,7 +1023,8 @@
         
         <div class="grid md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-semibold mb-2">Years Experience *</label>
+            <label class="block text-sm font-semibold mb-2" data-lang="nl">Jaren Ervaring *</label>
+            <label class="block text-sm font-semibold mb-2" data-lang="en">Years Experience *</label>
             <input type="number" name="experience" min="0" max="50" required 
                    class="w-full bg-gray-700 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
           </div>
@@ -521,14 +1036,16 @@
         </div>
         
         <div>
-          <label class="block text-sm font-semibold mb-2">Bio (max 200 chars) *</label>
+          <label class="block text-sm font-semibold mb-2" data-lang="nl">Bio (max 200 tekens) *</label>
+          <label class="block text-sm font-semibold mb-2" data-lang="en">Bio (max 200 chars) *</label>
           <textarea name="bio" maxlength="200" required rows="3"
                     class="w-full bg-gray-700 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
         </div>
         
         <button type="submit" 
-                class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-8 py-4 rounded-lg font-bold text-lg transition-all">
-          Submit Application
+                class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-8 py-4 rounded-lg font-bold text-lg transition-all shadow-lg hover:shadow-xl">
+          <span data-lang="nl">Verstuur Aanmelding</span>
+          <span data-lang="en">Submit Application</span>
         </button>
       </form>
     </div>
@@ -542,9 +1059,33 @@
     let scanData = null;
     let publicScanner = null;
     let scrapedLeads = [];
+    let currentLang = localStorage.getItem('contentscale_lang') || 'en';
 
-    // Initialize lead scanner when page loads
+    // ============================================
+    // LANGUAGE SYSTEM
+    // ============================================
+
+    function switchLanguage(lang) {
+      currentLang = lang;
+      localStorage.setItem('contentscale_lang', lang);
+      
+      // Update button states
+      document.getElementById('langBtnNL').classList.toggle('active', lang === 'nl');
+      document.getElementById('langBtnEN').classList.toggle('active', lang === 'en');
+      
+      // Show/hide content
+      document.querySelectorAll('[data-lang]').forEach(el => {
+        el.classList.toggle('active-lang', el.getAttribute('data-lang') === lang);
+      });
+      
+      // Update HTML lang attribute
+      document.documentElement.lang = lang;
+    }
+
+    // Initialize language on page load
     document.addEventListener('DOMContentLoaded', () => {
+      switchLanguage(currentLang);
+      
       // Initialize scanner module
       publicScanner = new window.LeadScanner({
         apiEndpoint: '/api/scan',
@@ -595,23 +1136,21 @@
 
       const url = input.value.trim();
       if (!url) {
-        alert('Voer een URL in');
+        alert(currentLang === 'nl' ? 'Voer een URL in' : 'Enter a URL');
         return;
       }
 
-      // Show progress
       progressDiv.classList.remove('hidden');
       resultDiv.classList.add('hidden');
       button.disabled = true;
-      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
+      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + (currentLang === 'nl' ? 'Scannen...' : 'Scanning...');
 
-      // Animate progress
       let progress = 0;
       const progressInterval = setInterval(() => {
         if (progress < 90) {
           progress += Math.random() * 15;
           progressBar.style.width = Math.min(90, progress) + '%';
-          progressText.textContent = `Analyzing ${url}...`;
+          progressText.textContent = (currentLang === 'nl' ? 'Analyseren ' : 'Analyzing ') + url + '...';
         }
       }, 300);
 
@@ -620,7 +1159,7 @@
         
         clearInterval(progressInterval);
         progressBar.style.width = '100%';
-        progressText.textContent = 'Scan complete!';
+        progressText.textContent = currentLang === 'nl' ? 'Scan voltooid!' : 'Scan complete!';
 
         setTimeout(() => {
           progressDiv.classList.add('hidden');
@@ -630,10 +1169,10 @@
       } catch (error) {
         clearInterval(progressInterval);
         progressDiv.classList.add('hidden');
-        alert('Scan mislukt: ' + error.message);
+        alert((currentLang === 'nl' ? 'Scan mislukt: ' : 'Scan failed: ') + error.message);
       } finally {
         button.disabled = false;
-        button.innerHTML = '🚀 Start Scan';
+        button.innerHTML = (currentLang === 'nl' ? '🚀 Start Scan' : '🚀 Start Scan');
       }
     }
 
@@ -652,17 +1191,17 @@
 
       const mapsUrl = input.value.trim();
       if (!mapsUrl) {
-        alert('Voer een Google Maps URL in');
+        alert(currentLang === 'nl' ? 'Voer een Google Maps URL in' : 'Enter a Google Maps URL');
         return;
       }
 
       if (!mapsUrl.includes('google.com/maps')) {
-        alert('Voer een geldige Google Maps URL in');
+        alert(currentLang === 'nl' ? 'Voer een geldige Google Maps URL in' : 'Enter a valid Google Maps URL');
         return;
       }
 
       button.disabled = true;
-      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scraping...';
+      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + (currentLang === 'nl' ? 'Scraping...' : 'Scraping...');
 
       try {
         const leads = await publicScanner.scrapeGoogleMaps(mapsUrl);
@@ -672,19 +1211,21 @@
         container.classList.remove('hidden');
 
       } catch (error) {
-        alert('Scraping mislukt: ' + error.message);
+        alert((currentLang === 'nl' ? 'Scraping mislukt: ' : 'Scraping failed: ') + error.message);
       } finally {
         button.disabled = false;
-        button.innerHTML = '🗺️ Scrape Google Maps';
+        button.innerHTML = currentLang === 'nl' ? '🗺️ Scrape Maps' : '🗺️ Scrape Maps';
       }
     }
 
     function displayScrapedLeads(leads) {
       const grid = document.getElementById('leadsGrid');
       const countSpan = document.getElementById('leadCount');
+      const countSpanEN = document.getElementById('leadCountEN');
       const ui = new window.LeadScannerUI();
 
       countSpan.textContent = leads.length;
+      countSpanEN.textContent = leads.length;
 
       grid.innerHTML = leads.map((lead, index) => 
         ui.renderGoogleMapsLead(lead, index)
@@ -695,7 +1236,7 @@
       const selectedIndices = getSelectedLeads();
       
       if (selectedIndices.length === 0) {
-        alert('Selecteer eerst enkele leads');
+        alert(currentLang === 'nl' ? 'Selecteer eerst enkele leads' : 'Select some leads first');
         return;
       }
 
@@ -717,7 +1258,6 @@
           progressBar.style.width = percent + '%';
           progressText.textContent = `${current}/${total} - ${status}`;
 
-          // Update lead card with score
           if (current > 0) {
             const leadIndex = selectedIndices[current - 1];
             const result = publicScanner.lastResults[current - 1];
@@ -738,11 +1278,11 @@
 
         setTimeout(() => {
           progressDiv.classList.add('hidden');
-          alert(`✅ Scan voltooid! ${selectedLeads.length} websites gescand`);
+          alert((currentLang === 'nl' ? '✅ Scan voltooid! ' : '✅ Scan complete! ') + selectedLeads.length + (currentLang === 'nl' ? ' websites gescand' : ' websites scanned'));
         }, 500);
 
       } catch (error) {
-        alert('Bulk scan mislukt: ' + error.message);
+        alert((currentLang === 'nl' ? 'Bulk scan mislukt: ' : 'Bulk scan failed: ') + error.message);
       } finally {
         button.disabled = false;
       }
@@ -794,7 +1334,6 @@
       URL.revokeObjectURL(url);
     }
 
-    // Enter key support
     document.getElementById('singleUrlInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') scanSingleURLPublic();
     });
@@ -804,7 +1343,7 @@
     });
 
     // ============================================
-    // SCANNER FUNCTIONS (Original)
+    // MAIN SCANNER FUNCTIONS
     // ============================================
 
     async function performScan() {
@@ -813,7 +1352,7 @@
       const url = input.value.trim();
       
       if (!url) {
-        alert('Please enter a URL to scan');
+        alert(currentLang === 'nl' ? 'Voer een URL in' : 'Please enter a URL to scan');
         return;
       }
       
@@ -825,12 +1364,12 @@
       try {
         new URL(fullUrl);
       } catch {
-        alert('Please enter a valid URL');
+        alert(currentLang === 'nl' ? 'Voer een geldige URL in' : 'Please enter a valid URL');
         return;
       }
       
       button.disabled = true;
-      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyzing...';
+      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + (currentLang === 'nl' ? 'Analyseren...' : 'Analyzing...');
       
       try {
         const response = await fetch('/api/scan', {
@@ -850,10 +1389,10 @@
         
       } catch (error) {
         console.error('Scan error:', error);
-        alert('Scan failed: ' + error.message);
+        alert((currentLang === 'nl' ? 'Scan mislukt: ' : 'Scan failed: ') + error.message);
       } finally {
         button.disabled = false;
-        button.innerHTML = '🔍 Analyze Content';
+        button.innerHTML = currentLang === 'nl' ? '🚀 Analyseer Nu' : '🚀 Analyze Now';
       }
     }
 
@@ -868,17 +1407,17 @@
       const uxScore = data.metrics?.ux || 100;
       
       let qualityClass = 'bg-red-600';
-      let qualityText = 'Poor';
+      let qualityText = currentLang === 'nl' ? 'Slecht' : 'Poor';
       
       if (score >= 90) {
         qualityClass = 'bg-green-600';
-        qualityText = 'Excellent';
+        qualityText = currentLang === 'nl' ? 'Uitstekend' : 'Excellent';
       } else if (score >= 75) {
         qualityClass = 'bg-blue-600';
-        qualityText = 'Good';
+        qualityText = currentLang === 'nl' ? 'Goed' : 'Good';
       } else if (score >= 60) {
         qualityClass = 'bg-yellow-600';
-        qualityText = 'Average';
+        qualityText = currentLang === 'nl' ? 'Gemiddeld' : 'Average';
       }
       
       const potentialScore = Math.min(96, score + 12 + Math.floor(Math.random() * 6));
@@ -904,7 +1443,7 @@
             ${rec.howToFix ? `
               <details>
                 <summary class="text-sm text-purple-400 cursor-pointer hover:text-purple-300 font-semibold">
-                  <i class="fas fa-wrench mr-1"></i> How to Fix
+                  <i class="fas fa-wrench mr-1"></i> ${currentLang === 'nl' ? 'Oplossing' : 'How to Fix'}
                 </summary>
                 <div class="text-sm text-gray-300 bg-gray-800 p-4 rounded mt-2 whitespace-pre-line">${rec.howToFix}</div>
               </details>
@@ -915,8 +1454,8 @@
         recsHtml = `
           <div class="text-center p-8 bg-green-900 bg-opacity-20 rounded-lg border-2 border-green-600">
             <div class="text-5xl mb-3">🎉</div>
-            <h3 class="text-xl font-bold mb-2 text-green-400">Excellent Content Quality!</h3>
-            <p class="text-gray-300">Your content already meets high-quality standards.</p>
+            <h3 class="text-xl font-bold mb-2 text-green-400">${currentLang === 'nl' ? 'Uitstekende Content!' : 'Excellent Content Quality!'}</h3>
+            <p class="text-gray-300">${currentLang === 'nl' ? 'Je content voldoet al aan de hoogste standaarden.' : 'Your content already meets the highest standards.'}</p>
           </div>
         `;
       }
@@ -925,7 +1464,7 @@
         <div class="p-8">
           <div class="flex justify-between items-start mb-6">
             <div>
-              <h2 class="text-3xl font-bold mb-2">Content Quality Analysis</h2>
+              <h2 class="text-3xl font-bold mb-2">${currentLang === 'nl' ? 'Content Kwaliteit Analyse' : 'Content Quality Analysis'}</h2>
               <p class="text-sm text-gray-400">${data.url}</p>
             </div>
             <button onclick="closeScanModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
@@ -933,7 +1472,7 @@
           
           <div class="grid md:grid-cols-2 gap-4 mb-6">
             <div class="bg-gray-800 rounded-xl p-6 border-2 ${score < 75 ? 'border-red-500' : 'border-gray-600'}">
-              <div class="text-sm text-gray-400 mb-2">Current Quality Score</div>
+              <div class="text-sm text-gray-400 mb-2">${currentLang === 'nl' ? 'Huidige Score' : 'Current Score'}</div>
               <div class="text-5xl font-bold mb-2">${score}<span class="text-2xl text-gray-400">/100</span></div>
               <div class="inline-block px-4 py-2 ${qualityClass} rounded-full font-bold text-sm">${qualityText}</div>
               
@@ -951,7 +1490,7 @@
                 <div>
                   <div class="flex justify-between text-xs mb-1">
                     <span>Technical</span>
-                    <span class="font-bold">${technicalRaw}/20 (${technicalPercent}%)</span>
+                    <span class="font-bold">${technicalRaw}/20</span>
                   </div>
                   <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
                     <div class="h-full bg-green-500" style="width: ${technicalPercent}%"></div>
@@ -971,15 +1510,15 @@
             </div>
             
             <div class="bg-gradient-to-br from-green-900 to-emerald-900 rounded-xl p-6 border-2 border-green-500">
-              <div class="text-sm text-gray-300 mb-2">Potential with Our Help</div>
+              <div class="text-sm text-gray-300 mb-2">${currentLang === 'nl' ? 'Potentieel met Onze Hulp' : 'Potential with Our Help'}</div>
               <div class="text-5xl font-bold text-green-400 mb-2">${potentialScore}<span class="text-2xl text-gray-300">/100</span></div>
-              <div class="inline-block px-4 py-2 bg-green-600 rounded-full font-bold text-sm">🏆 Professional</div>
+              <div class="inline-block px-4 py-2 bg-green-600 rounded-full font-bold text-sm">🏆 ${currentLang === 'nl' ? 'Elite' : 'Elite'}</div>
               
               <div class="mt-4 pt-4 border-t border-green-700">
-                <h4 class="text-sm font-bold mb-2 text-green-400">How We'll Help:</h4>
+                <h4 class="text-sm font-bold mb-2 text-green-400">${currentLang === 'nl' ? 'Onze Aanpak:' : "Our Approach:"}</h4>
                 <ul class="text-xs text-gray-300 space-y-1">
                   <li>✅ Google E-E-A-T optimization</li>
-                  <li>✅ GRAAF Framework implementation</li>
+                  <li>✅ GRAAF Framework ${currentLang === 'nl' ? 'implementatie' : 'implementation'}</li>
                   <li>✅ CRAFT enhancement</li>
                   <li>✅ Technical SEO fixes</li>
                 </ul>
@@ -988,32 +1527,32 @@
           </div>
           
           <div class="mb-6">
-            <h3 class="text-xl font-bold mb-4"><i class="fas fa-route text-purple-400 mr-2"></i>Improvement Roadmap</h3>
+            <h3 class="text-xl font-bold mb-4"><i class="fas fa-route text-purple-400 mr-2"></i>${currentLang === 'nl' ? 'Verbeterplan' : 'Improvement Roadmap'}</h3>
             ${recsHtml}
           </div>
           
           ${score < 90 ? `
             <div class="bg-gradient-to-r from-green-900 to-emerald-900 rounded-xl p-6 text-center border-2 border-green-600">
               <div class="text-4xl mb-3">🚀</div>
-              <h3 class="text-2xl font-bold mb-2">Ready to Reach ${potentialScore}+?</h3>
-              <p class="text-gray-300 mb-4">Our experts implement all recommendations</p>
+              <h3 class="text-2xl font-bold mb-2">${currentLang === 'nl' ? `Klaar voor ${potentialScore}+?` : `Ready to Reach ${potentialScore}+?`}</h3>
+              <p class="text-gray-300 mb-4">${currentLang === 'nl' ? 'Onze experts implementeren alle verbeteringen' : 'Our experts implement all improvements'}</p>
               <div class="flex gap-3 justify-center flex-wrap">
-                <a href="https://wa.me/31628073996?text=Hi!%20I%20scanned%20${encodeURIComponent(data.url)}%20and%20got%20${score}/100" 
+                <a href="https://wa.me/31628073996?text=${currentLang === 'nl' ? 'Hi!%20Ik%20heb%20' : 'Hi!%20I%20scanned%20'}${encodeURIComponent(data.url)}%20${currentLang === 'nl' ? 'gescand%20-%20score:%20' : 'and%20got%20'}${score}/100" 
                    target="_blank"
-                   class="inline-block bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold">
-                  💬 Free Consultation
+                   class="inline-block bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold shadow-lg hover:shadow-xl">
+                  💬 ${currentLang === 'nl' ? 'Gratis Consultatie' : 'Free Consultation'}
                 </a>
-                <button onclick="closeScanModal(); setTimeout(() => document.getElementById('freelancers-grid')?.scrollIntoView({behavior:'smooth'}), 300)" 
-                        class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-bold">
-                  📝 Hire Expert
+                <button onclick="closeScanModal(); setTimeout(() => document.getElementById('freelancers')?.scrollIntoView({behavior:'smooth'}), 300)" 
+                        class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-bold shadow-lg hover:shadow-xl">
+                  📝 ${currentLang === 'nl' ? 'Huur Expert' : 'Hire Expert'}
                 </button>
               </div>
             </div>
           ` : ''}
           
-          <div class="mt-4 flex gap-3">
-            <button onclick="closeScanModal()" class="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
-              Close
+          <div class="mt-4">
+            <button onclick="closeScanModal()" class="w-full px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
+              ${currentLang === 'nl' ? 'Sluiten' : 'Close'}
             </button>
           </div>
         </div>
@@ -1060,21 +1599,21 @@
               
               <p class="text-sm text-gray-300 mb-3">${f.bio || 'Professional SEO specialist'}</p>
               
-              <div class="flex items-center justify-between text-sm">
-                <span class="text-gray-400">${f.experience || 5} years exp</span>
+              <div class="flex items-center justify-between text-sm mb-3">
+                <span class="text-gray-400">${f.experience || 5}+ ${currentLang === 'nl' ? 'jaar' : 'years'}</span>
                 ${f.portfolio || f.linkedin_url ? `<a href="${f.portfolio || f.linkedin_url}" target="_blank" class="text-blue-400 hover:underline">Portfolio →</a>` : ''}
               </div>
               
               <button onclick="contactFreelancer('${f.email}', '${f.name}')" 
-                      class="mt-3 w-full bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-semibold transition-all">
-                Contact ${f.name}
+                      class="w-full bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl">
+                ${currentLang === 'nl' ? 'Contact' : 'Contact'} ${f.name}
               </button>
             </div>
           `).join('');
         } else {
           document.getElementById('freelancers-grid').innerHTML = `
             <div class="col-span-full text-center p-8 bg-gray-800 rounded-lg">
-              <p class="text-gray-400">No freelancers yet. Be the first to register!</p>
+              <p class="text-gray-400">${currentLang === 'nl' ? 'Nog geen specialisten. Wees de eerste!' : 'No specialists yet. Be the first to join!'}</p>
             </div>
           `;
         }
@@ -1082,7 +1621,7 @@
         console.error('Load freelancers error:', error);
         document.getElementById('freelancers-grid').innerHTML = `
           <div class="col-span-full text-center p-8 bg-red-900 bg-opacity-20 rounded-lg border border-red-600">
-            <p class="text-red-400">Failed to load freelancers</p>
+            <p class="text-red-400">${currentLang === 'nl' ? 'Kon specialisten niet laden' : 'Failed to load specialists'}</p>
           </div>
         `;
       }
@@ -1113,7 +1652,9 @@
         const result = await response.json();
         
         if (result.success) {
-          alert('Application submitted successfully! We\'ll review and contact you soon.');
+          alert(currentLang === 'nl' ? 
+            'Aanmelding succesvol! We nemen binnenkort contact op.' : 
+            'Application submitted! We\'ll review and contact you soon.');
           closeFreelancerModal();
           loadFreelancers();
         } else {
@@ -1121,12 +1662,12 @@
         }
       } catch (error) {
         console.error('Registration error:', error);
-        alert('Registration failed: ' + error.message);
+        alert((currentLang === 'nl' ? 'Registratie mislukt: ' : 'Registration failed: ') + error.message);
       }
     });
 
     function contactFreelancer(email, name) {
-      window.location.href = `mailto:${email}?subject=SEO Project Inquiry&body=Hi ${name}, I found your profile on ContentScale and would like to discuss a project...`;
+      window.location.href = `mailto:${email}?subject=${currentLang === 'nl' ? 'SEO Project via ContentScale' : 'SEO Project Inquiry via ContentScale'}&body=${currentLang === 'nl' ? 'Hoi' : 'Hi'} ${name},%0A%0A${currentLang === 'nl' ? 'Ik vond je via ContentScale en wil graag een project bespreken.' : 'I found you via ContentScale and would like to discuss a project.'}`;
     }
 
     // ============================================
@@ -1159,25 +1700,25 @@
                   
                   <div class="text-right">
                     <div class="text-3xl font-bold text-yellow-400">${entry.score}</div>
-                    <div class="text-xs text-gray-400">Quality Score</div>
+                    <div class="text-xs text-gray-400">${currentLang === 'nl' ? 'Score' : 'Score'}</div>
                   </div>
                 </div>
                 
-                <div class="flex gap-2 mt-3">
-                  ${entry.url ? `
+                ${entry.url ? `
+                  <div class="mt-3">
                     <a href="${entry.url}" target="_blank" 
-                       class="flex-1 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-center font-semibold transition-all">
-                      Visit Website
+                       class="block text-center bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl">
+                      ${currentLang === 'nl' ? 'Bezoek Website' : 'Visit Website'}
                     </a>
-                  ` : ''}
-                </div>
+                  </div>
+                ` : ''}
               </div>
             `;
           }).join('');
         } else {
           document.getElementById('leaderboard-list').innerHTML = `
             <div class="text-center p-8 bg-gray-800 rounded-lg">
-              <p class="text-gray-400">Leaderboard coming soon!</p>
+              <p class="text-gray-400">${currentLang === 'nl' ? 'Leaderboard komt binnenkort!' : 'Leaderboard coming soon!'}</p>
             </div>
           `;
         }
@@ -1185,7 +1726,7 @@
         console.error('Load leaderboard error:', error);
         document.getElementById('leaderboard-list').innerHTML = `
           <div class="text-center p-8 bg-red-900 bg-opacity-20 rounded-lg border border-red-600">
-            <p class="text-red-400">Failed to load leaderboard</p>
+            <p class="text-red-400">${currentLang === 'nl' ? 'Kon leaderboard niet laden' : 'Failed to load leaderboard'}</p>
           </div>
         `;
       }
@@ -1218,7 +1759,7 @@
                 <div class="flex items-center justify-between text-sm">
                   <span class="text-gray-400">${new Date(post.published_at || Date.now()).toLocaleDateString()}</span>
                   <a href="/blog/${post.slug}" class="text-blue-400 hover:underline">
-                    Read More →
+                    ${currentLang === 'nl' ? 'Lees Meer' : 'Read More'} →
                   </a>
                 </div>
               </div>
@@ -1227,7 +1768,7 @@
         } else {
           document.getElementById('blog-grid').innerHTML = `
             <div class="col-span-full text-center p-8 bg-gray-800 rounded-lg">
-              <p class="text-gray-400">Blog posts coming soon!</p>
+              <p class="text-gray-400">${currentLang === 'nl' ? 'Blog posts komen binnenkort!' : 'Blog posts coming soon!'}</p>
             </div>
           `;
         }
@@ -1235,7 +1776,7 @@
         console.error('Load blog error:', error);
         document.getElementById('blog-grid').innerHTML = `
           <div class="col-span-full text-center p-8 bg-red-900 bg-opacity-20 rounded-lg border border-red-600">
-            <p class="text-red-400">Failed to load blog posts</p>
+            <p class="text-red-400">${currentLang === 'nl' ? 'Kon blog posts niet laden' : 'Failed to load blog posts'}</p>
           </div>
         `;
       }
