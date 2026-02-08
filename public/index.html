@@ -977,6 +977,18 @@
     </div>
   </footer>
 
+  <!-- Email Config Modal -->
+<div id="emailConfigModal" class="modal">
+  <div class="modal-content"></div>
+</div>
+
+<!-- Email Review Modal (blijft hetzelfde) -->
+<div id="emailReviewModal" class="modal">
+  <div class="modal-content"></div>
+</div>
+
+</body>
+
   <!-- Scan Results Modal -->
   <div id="scanModal" class="modal">
     <div class="modal-content"></div>
@@ -1863,6 +1875,562 @@ console.log('  - Share functions (WhatsApp, Email, LinkedIn, Copy)');
 console.log('  - Freelancer directory');
 console.log('  - Leaderboard');
 console.log('  - Blog');
+
+    // ============================================
+// HYBRID EMAIL CONFIG UI
+// FREE TIER: User adds own SendGrid API key
+// PRO TIER: Upgrade option (€10/mnd)
+// ============================================
+
+// ============================================
+// SHOW EMAIL CONFIG MODAL
+// ============================================
+
+function showEmailConfigModal() {
+  const modal = document.getElementById('emailConfigModal');
+  if (!modal) {
+    console.error('Email config modal not found');
+    return;
+  }
+  
+  loadEmailConfig();
+  modal.classList.add('active');
+}
+
+// ============================================
+// LOAD USER'S CONFIG
+// ============================================
+
+async function loadEmailConfig() {
+  try {
+    const response = await fetch('/api/user/email-config');
+    const data = await response.json();
+    
+    if (data.hasConfig) {
+      renderConfigActive(data.config);
+    } else {
+      renderConfigSetup();
+    }
+  } catch (error) {
+    console.error('Error loading config:', error);
+    renderConfigSetup();
+  }
+}
+
+// ============================================
+// RENDER SETUP FORM (NEW USER)
+// ============================================
+
+function renderConfigSetup() {
+  const modalContent = document.querySelector('#emailConfigModal .modal-content');
+  
+  const html = `
+    <div class="p-8">
+      
+      <!-- Header -->
+      <div class="flex justify-between items-start mb-6">
+        <div>
+          <h2 class="text-3xl font-bold mb-2">
+            ${currentLang === 'nl' ? '🚀 Email Setup - GRATIS' : '🚀 Email Setup - FREE'}
+          </h2>
+          <p class="text-gray-400">
+            ${currentLang === 'nl' ? 'Start gratis, upgrade later' : 'Start free, upgrade later'}
+          </p>
+        </div>
+        <button onclick="closeEmailConfigModal()" class="text-gray-400 hover:text-white text-2xl">
+          &times;
+        </button>
+      </div>
+      
+      <!-- Tier Comparison -->
+      <div class="grid md:grid-cols-2 gap-4 mb-6">
+        
+        <!-- FREE TIER -->
+        <div class="bg-gray-800 border-2 border-green-500 rounded-lg p-6">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-2xl">✅</span>
+            <h3 class="text-xl font-bold text-green-400">Free Tier</h3>
+          </div>
+          <div class="text-3xl font-bold mb-4">€0/mnd</div>
+          <ul class="space-y-2 text-sm mb-4">
+            <li class="flex items-start gap-2">
+              <span class="text-green-400">✓</span>
+              <span>FROM: jouw email</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-green-400">✓</span>
+              <span>ContentScale template</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-green-400">✓</span>
+              <span>"Powered by" branding</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-green-400">✓</span>
+              <span>100 emails/dag gratis</span>
+            </li>
+          </ul>
+          <div class="bg-green-900 bg-opacity-30 border border-green-600 rounded px-3 py-2 text-xs text-green-300">
+            👈 START HIER!
+          </div>
+        </div>
+        
+        <!-- PRO TIER -->
+        <div class="bg-gray-800 border border-purple-600 rounded-lg p-6 opacity-60">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-2xl">⭐</span>
+            <h3 class="text-xl font-bold text-purple-400">Pro Tier</h3>
+          </div>
+          <div class="text-3xl font-bold mb-4">€10/mnd</div>
+          <ul class="space-y-2 text-sm mb-4">
+            <li class="flex items-start gap-2">
+              <span class="text-purple-400">✓</span>
+              <span>FROM: info@contentscale.site</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-purple-400">✓</span>
+              <span>100% white-label</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-purple-400">✓</span>
+              <span>Reply forwarding</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-purple-400">✓</span>
+              <span>Priority support</span>
+            </li>
+          </ul>
+          <div class="bg-gray-700 rounded px-3 py-2 text-xs text-gray-400">
+            Upgrade later
+          </div>
+        </div>
+        
+      </div>
+      
+      <!-- How Free Tier Works -->
+      <div class="bg-blue-900 bg-opacity-20 border border-blue-600 rounded-lg p-6 mb-6">
+        <h3 class="text-lg font-bold mb-3">
+          ${currentLang === 'nl' ? '🔄 Hoe Free Tier Werkt' : '🔄 How Free Tier Works'}
+        </h3>
+        <ol class="space-y-2 text-sm text-gray-300">
+          <li class="flex gap-2">
+            <span class="font-bold text-blue-400">1.</span>
+            <span>${currentLang === 'nl' ? 'Maak gratis SendGrid account' : 'Create free SendGrid account'} (100 emails/dag)</span>
+          </li>
+          <li class="flex gap-2">
+            <span class="font-bold text-blue-400">2.</span>
+            <span>${currentLang === 'nl' ? 'Kopieer je API key' : 'Copy your API key'}</span>
+          </li>
+          <li class="flex gap-2">
+            <span class="font-bold text-blue-400">3.</span>
+            <span>${currentLang === 'nl' ? 'Plak hier + verifieer' : 'Paste here + verify'}</span>
+          </li>
+          <li class="flex gap-2">
+            <span class="font-bold text-blue-400">4.</span>
+            <span>${currentLang === 'nl' ? 'Verstuur emails met ContentScale template!' : 'Send emails with ContentScale template!'}</span>
+          </li>
+        </ol>
+      </div>
+      
+      <!-- Setup Instructions -->
+      <div class="bg-gray-800 rounded-lg p-6 mb-6">
+        <h3 class="text-lg font-bold mb-3">
+          ${currentLang === 'nl' ? '📋 SendGrid Setup (5 min)' : '📋 SendGrid Setup (5 min)'}
+        </h3>
+        <ol class="space-y-3 text-sm">
+          <li class="flex gap-2">
+            <span class="font-bold text-purple-400">1.</span>
+            <span>
+              <a href="https://sendgrid.com/free" target="_blank" class="text-blue-400 underline">
+                Maak SendGrid account
+              </a> (gratis, 100 emails/dag)
+            </span>
+          </li>
+          <li class="flex gap-2">
+            <span class="font-bold text-purple-400">2.</span>
+            <span>Verify sender met JOUW email</span>
+          </li>
+          <li class="flex gap-2">
+            <span class="font-bold text-purple-400">3.</span>
+            <span>Settings → API Keys → Create API Key (Full Access)</span>
+          </li>
+          <li class="flex gap-2">
+            <span class="font-bold text-purple-400">4.</span>
+            <span>Kopieer de key (SG.xxxxxx) en plak hieronder</span>
+          </li>
+        </ol>
+      </div>
+      
+      <!-- Form -->
+      <div class="space-y-4 mb-6">
+        
+        <div>
+          <label class="block text-sm font-semibold mb-2">
+            ${currentLang === 'nl' ? 'SendGrid API Key:' : 'SendGrid API Key:'}
+          </label>
+          <input 
+            type="password" 
+            id="sendgridApiKey" 
+            placeholder="SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+            class="w-full bg-gray-700 px-4 py-3 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none mb-2" />
+          <p class="text-xs text-gray-400">
+            ${currentLang === 'nl' ? 'Je API key blijft privé' : 'Your API key stays private'}
+          </p>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold mb-2">
+            ${currentLang === 'nl' ? 'Jouw Email (FROM):' : 'Your Email (FROM):'}
+          </label>
+          <input 
+            type="email" 
+            id="userEmail" 
+            placeholder="${currentLang === 'nl' ? 'jouw@email.nl' : 'your@email.com'}"
+            class="w-full bg-gray-700 px-4 py-3 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none mb-2" />
+          <p class="text-xs text-gray-400">
+            ${currentLang === 'nl' 
+              ? 'Email die je in SendGrid verified hebt' 
+              : 'Email you verified in SendGrid'}
+          </p>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold mb-2">
+            ${currentLang === 'nl' ? 'Jouw Naam (optioneel):' : 'Your Name (optional):'}
+          </label>
+          <input 
+            type="text" 
+            id="userName" 
+            placeholder="${currentLang === 'nl' ? 'Jouw Naam' : 'Your Name'}"
+            class="w-full bg-gray-700 px-4 py-3 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none" />
+        </div>
+        
+      </div>
+      
+      <!-- Actions -->
+      <div class="flex gap-3 justify-end border-t border-gray-700 pt-6">
+        <button 
+          onclick="saveAndVerifyConfig()" 
+          class="px-8 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-bold transition-all shadow-lg hover:shadow-xl">
+          ${currentLang === 'nl' ? '✅ Opslaan & Verifiëren' : '✅ Save & Verify'}
+        </button>
+        
+        <button 
+          onclick="closeEmailConfigModal()" 
+          class="px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition-all">
+          ${currentLang === 'nl' ? 'Annuleer' : 'Cancel'}
+        </button>
+      </div>
+      
+    </div>
+  `;
+  
+  modalContent.innerHTML = html;
+}
+
+// ============================================
+// RENDER ACTIVE CONFIG
+// ============================================
+
+function renderConfigActive(config) {
+  const modalContent = document.querySelector('#emailConfigModal .modal-content');
+  
+  const isFree = config.tier === 'free';
+  const isPro = config.tier === 'pro';
+  
+  const html = `
+    <div class="p-8">
+      
+      <!-- Header -->
+      <div class="flex justify-between items-start mb-6">
+        <div>
+          <h2 class="text-3xl font-bold mb-2">
+            ${currentLang === 'nl' ? '📧 Email Configuratie' : '📧 Email Configuration'}
+          </h2>
+          <p class="text-gray-400">
+            ${isFree ? 'Free Tier' : 'Pro Tier'}
+          </p>
+        </div>
+        <button onclick="closeEmailConfigModal()" class="text-gray-400 hover:text-white text-2xl">
+          &times;
+        </button>
+      </div>
+      
+      <!-- Status -->
+      <div class="bg-${isFree ? 'green' : 'purple'}-900 bg-opacity-30 border border-${isFree ? 'green' : 'purple'}-600 rounded-lg p-6 mb-6">
+        <div class="flex items-center gap-3">
+          <div class="text-4xl">${isFree ? '✅' : '⭐'}</div>
+          <div>
+            <h3 class="text-xl font-bold">${isFree ? 'Free Tier Actief' : 'Pro Tier Actief'}</h3>
+            <p class="text-sm text-gray-300">${config.user_email}</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Current Setup -->
+      <div class="bg-gray-800 rounded-lg p-6 mb-6">
+        <h3 class="text-lg font-bold mb-4">${currentLang === 'nl' ? '⚙️ Huidige Setup' : '⚙️ Current Setup'}</h3>
+        
+        <div class="space-y-3">
+          <div class="flex justify-between pb-3 border-b border-gray-700">
+            <span class="text-gray-400">Tier:</span>
+            <span class="font-bold ${isFree ? 'text-green-400' : 'text-purple-400'}">${isFree ? 'FREE' : 'PRO'}</span>
+          </div>
+          
+          <div class="flex justify-between pb-3 border-b border-gray-700">
+            <span class="text-gray-400">FROM:</span>
+            <span class="text-sm">${isFree ? config.user_email : 'info@contentscale.site'}</span>
+          </div>
+          
+          <div class="flex justify-between pb-3 border-b border-gray-700">
+            <span class="text-gray-400">Template:</span>
+            <span class="text-sm">${isFree ? 'ContentScale (with branding)' : 'White-label'}</span>
+          </div>
+          
+          <div class="flex justify-between">
+            <span class="text-gray-400">Status:</span>
+            <span class="px-3 py-1 bg-green-900 text-green-300 rounded-full text-xs font-bold">
+              ${config.is_verified ? 'VERIFIED' : 'PENDING'}
+            </span>
+          </div>
+        </div>
+      </div>
+      
+      ${isFree ? `
+        <!-- Upgrade to Pro -->
+        <div class="bg-gradient-to-r from-purple-900 to-blue-900 bg-opacity-30 border border-purple-600 rounded-lg p-6 mb-6">
+          <h3 class="text-xl font-bold mb-3 flex items-center gap-2">
+            <span>⭐</span>
+            ${currentLang === 'nl' ? 'Upgrade naar Pro' : 'Upgrade to Pro'}
+          </h3>
+          <p class="text-sm text-gray-300 mb-4">
+            ${currentLang === 'nl' 
+              ? 'Verstuur FROM info@contentscale.site met 100% white-label template'
+              : 'Send FROM info@contentscale.site with 100% white-label template'}
+          </p>
+          
+          <div class="grid md:grid-cols-2 gap-4 mb-4 text-sm">
+            <div class="flex items-start gap-2">
+              <span class="text-purple-400">✓</span>
+              <span>FROM: info@contentscale.site</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <span class="text-purple-400">✓</span>
+              <span>100% white-label</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <span class="text-purple-400">✓</span>
+              <span>Reply forwarding</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <span class="text-purple-400">✓</span>
+              <span>Priority support</span>
+            </div>
+          </div>
+          
+          <div class="flex items-center justify-between">
+            <div class="text-3xl font-bold">€10/mnd</div>
+            <button 
+              onclick="alert('Pro tier binnenkort beschikbaar! Contact: info@contentscale.site')"
+              class="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-bold transition-all">
+              ${currentLang === 'nl' ? '🚀 Upgrade' : '🚀 Upgrade'}
+            </button>
+          </div>
+        </div>
+      ` : ''}
+      
+      <!-- Actions -->
+      <div class="flex justify-end gap-3 pt-6 border-t border-gray-700">
+        <button 
+          onclick="closeEmailConfigModal()" 
+          class="px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition-all">
+          ${currentLang === 'nl' ? 'Sluiten' : 'Close'}
+        </button>
+      </div>
+      
+    </div>
+  `;
+  
+  modalContent.innerHTML = html;
+}
+
+// ============================================
+// SAVE & VERIFY CONFIG
+// ============================================
+
+async function saveAndVerifyConfig() {
+  const apiKey = document.getElementById('sendgridApiKey').value.trim();
+  const userEmail = document.getElementById('userEmail').value.trim();
+  const userName = document.getElementById('userName').value.trim();
+  
+  // Validation
+  if (!apiKey || !apiKey.startsWith('SG.')) {
+    alert(currentLang === 'nl' 
+      ? 'Voer een geldige SendGrid API key in (begint met SG.)'
+      : 'Enter a valid SendGrid API key (starts with SG.)');
+    return;
+  }
+  
+  if (!userEmail || !userEmail.includes('@')) {
+    alert(currentLang === 'nl' 
+      ? 'Voer een geldig email adres in'
+      : 'Enter a valid email address');
+    return;
+  }
+  
+  // Show loading
+  const modalContent = document.querySelector('#emailConfigModal .modal-content');
+  modalContent.innerHTML = `
+    <div class="p-8 text-center">
+      <div class="text-6xl mb-4 animate-pulse">⏳</div>
+      <h3 class="text-2xl font-bold mb-4">
+        ${currentLang === 'nl' ? 'Verifiëren...' : 'Verifying...'}
+      </h3>
+      <p class="text-gray-400">
+        ${currentLang === 'nl' ? 'We sturen een test email...' : 'Sending test email...'}
+      </p>
+    </div>
+  `;
+  
+  try {
+    // Save config
+    const saveResponse = await fetch('/api/user/email-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tier: 'free',
+        sendgridApiKey: apiKey,
+        userEmail: userEmail,
+        userName: userName || null
+      })
+    });
+    
+    const saveResult = await saveResponse.json();
+    
+    if (!saveResult.success) {
+      throw new Error(saveResult.error);
+    }
+    
+    // Verify
+    const verifyResponse = await fetch('/api/user/verify-email-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apiKey: apiKey,
+        testEmail: userEmail
+      })
+    });
+    
+    const verifyResult = await verifyResponse.json();
+    
+    if (verifyResult.success) {
+      // Success!
+      modalContent.innerHTML = `
+        <div class="p-8 text-center">
+          <div class="text-6xl mb-4">✅</div>
+          <h3 class="text-2xl font-bold mb-4 text-green-400">
+            ${currentLang === 'nl' ? 'Geverifieerd!' : 'Verified!'}
+          </h3>
+          <p class="text-gray-400 mb-2">
+            ${currentLang === 'nl' ? 'Check je inbox:' : 'Check your inbox:'}
+          </p>
+          <p class="text-xl font-bold mb-6">${userEmail}</p>
+          <p class="text-sm text-gray-400 mb-6">
+            ${currentLang === 'nl' 
+              ? 'Je kunt nu leaderboard emails versturen!'
+              : 'You can now send leaderboard emails!'}
+          </p>
+          <button 
+            onclick="closeEmailConfigModal(); location.reload();" 
+            class="px-8 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-bold transition-all">
+            ${currentLang === 'nl' ? 'Start Versturen!' : 'Start Sending!'}
+          </button>
+        </div>
+      `;
+    } else {
+      throw new Error(verifyResult.error);
+    }
+    
+  } catch (error) {
+    modalContent.innerHTML = `
+      <div class="p-8 text-center">
+        <div class="text-6xl mb-4">❌</div>
+        <h3 class="text-2xl font-bold mb-4 text-red-400">
+          ${currentLang === 'nl' ? 'Verificatie Mislukt' : 'Verification Failed'}
+        </h3>
+        <p class="text-gray-400 mb-6">
+          ${error.message}
+        </p>
+        <button 
+          onclick="loadEmailConfig();" 
+          class="px-8 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-bold transition-all">
+          ${currentLang === 'nl' ? 'Probeer Opnieuw' : 'Try Again'}
+        </button>
+      </div>
+    `;
+  }
+}
+
+// ============================================
+// CLOSE MODAL
+// ============================================
+
+function closeEmailConfigModal() {
+  const modal = document.getElementById('emailConfigModal');
+  if (modal) {
+    modal.classList.remove('active');
+  }
+}
+
+// ============================================
+// CHECK IF CONFIG NEEDED BEFORE SENDING
+// ============================================
+
+async function checkEmailConfigured() {
+  try {
+    const response = await fetch('/api/user/email-config');
+    const data = await response.json();
+    
+    if (!data.hasConfig) {
+      alert(currentLang === 'nl' 
+        ? 'Voeg eerst je SendGrid setup toe in Settings!'
+        : 'Please add your SendGrid setup in Settings first!');
+      showEmailConfigModal();
+      return false;
+    }
+    
+    if (!data.config.is_verified) {
+      alert(currentLang === 'nl' 
+        ? 'Verifieer eerst je email! Check je inbox.'
+        : 'Please verify your email first! Check your inbox.');
+      return false;
+    }
+    
+    return true;
+    
+  } catch (error) {
+    console.error('Check config error:', error);
+    return false;
+  }
+}
+
+// ============================================
+// ADD TO INDEX.HTML
+// ============================================
+
+/*
+<!-- Email Config Modal -->
+<div id="emailConfigModal" class="modal">
+  <div class="modal-content"></div>
+</div>
+
+<!-- Settings Button -->
+<button onclick="showEmailConfigModal()" class="btn-settings">
+  ⚙️ Email Settings
+</button>
+*/
+
+    
     
   </script>
 
