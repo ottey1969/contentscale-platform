@@ -6,7 +6,20 @@ const path = require('path');
 const crypto = require('crypto');
 const { Pool } = require('pg');
 const puppeteer = require('puppeteer');
+const express = require('express');
+const path = require('path');
+const crypto = require('crypto');
+const { Pool } = require('pg');
+const puppeteer = require('puppeteer');
 
+// ============================================
+// EMAIL SERVICES
+// ============================================
+const HybridEmailService = require('./services/hybrid-email-service');
+const EmailDetectionService = require('./services/email-detection-service');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -69,6 +82,12 @@ if (process.env.DATABASE_URL) {
 }
 
 const pool = new Pool(dbConfig);
+
+// ============================================
+// EMAIL SERVICE INITIALIZATION
+// ============================================
+const emailService = new HybridEmailService(pool);
+const emailDetectionService = new EmailDetectionService();
 
 // ============================================
 // STABLE CACHE SYSTEM
