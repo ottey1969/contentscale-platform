@@ -1056,12 +1056,19 @@
 
   <!-- Main JavaScript -->
   <script>
- // PLAK DIT IN JE <script> TAG - VANAF REGEL ~800
+ // ============================================
+// DEEL 1: LANGUAGE SYSTEM + LEAD SCANNER
+// Plak dit EERST in je <script> tag
+// ============================================
 
 let scanData = null;
 let publicScanner = null;
 let scrapedLeads = [];
 let currentLang = localStorage.getItem('contentscale_lang') || 'en';
+
+// ============================================
+// LANGUAGE SYSTEM
+// ============================================
 
 function switchLanguage(lang) {
   currentLang = lang;
@@ -1088,6 +1095,10 @@ document.addEventListener('DOMContentLoaded', () => {
   loadBlog();
 });
 
+// ============================================
+// LEAD SCANNER MODE SWITCHER
+// ============================================
+
 function switchScanMode(mode) {
   const singleMode = document.getElementById('singleScanMode');
   const bulkMode = document.getElementById('bulkScanMode');
@@ -1105,6 +1116,10 @@ function switchScanMode(mode) {
     bulkBtn.classList.add('active');
   }
 }
+
+// ============================================
+// SINGLE URL SCANNER
+// ============================================
 
 async function scanSingleURLPublic() {
   const input = document.getElementById('singleUrlInput');
@@ -1163,10 +1178,17 @@ async function scanSingleURLPublic() {
   }
 }
 
+// ============================================
+// DISPLAY SCAN RESULT - ✅ FIXED VERSION
+// ============================================
+
 function displaySingleScanResult(result) {
   const resultDiv = document.getElementById('singleScanResult');
-const wordCount = result.wordCount || result.content_stats?.wordCount || result.details?.wordCount || 0;
   
+  // ✅ FIX: Check multiple locations for wordCount
+  const wordCount = result.wordCount || result.content_stats?.wordCount || result.details?.wordCount || 0;
+  
+  // NOT QUALIFIED (< 1100 words)
   if (wordCount < 1100) {
     const titleText = currentLang === 'nl' ? 'Niet Gekwalificeerd als Lead' : 'Not Qualified as Lead';
     const wordText = currentLang === 'nl' ? 'woorden' : 'words';
@@ -1184,6 +1206,7 @@ const wordCount = result.wordCount || result.content_stats?.wordCount || result.
     return;
   }
   
+  // QUALIFIED LEAD - Show full report
   const score = result.score || 0;
   const potentialScore = Math.min(95, score + Math.floor((100 - score) * 0.7));
   const improvement = potentialScore - score;
@@ -1257,8 +1280,13 @@ const wordCount = result.wordCount || result.content_stats?.wordCount || result.
   resultDiv.classList.remove('hidden');
 }
 
+// ============================================
+// RECOMMENDATIONS GENERATOR
+// ============================================
+
 function generateDetailedRecommendations(score, metrics, wordCount) {
   const recs = [];
+  
   if (metrics.content < 40) {
     recs.push({
       priority: 'HIGH',
@@ -1269,6 +1297,7 @@ function generateDetailedRecommendations(score, metrics, wordCount) {
       description: currentLang === 'nl' ? 'Voeg een auteur bio met credentials toe om E-A-T signalen te versterken' : 'Add an author bio with credentials to build E-A-T signals'
     });
   }
+  
   if (wordCount < 1500) {
     recs.push({
       priority: 'MEDIUM',
@@ -1279,6 +1308,7 @@ function generateDetailedRecommendations(score, metrics, wordCount) {
       description: currentLang === 'nl' ? 'Verhoog van ' + wordCount + ' naar 1500+ woorden met uitgebreide coverage' : 'Increase from ' + wordCount + ' to 1500+ words with comprehensive coverage'
     });
   }
+  
   if (metrics.technical < 15) {
     recs.push({
       priority: 'HIGH',
@@ -1289,6 +1319,7 @@ function generateDetailedRecommendations(score, metrics, wordCount) {
       description: currentLang === 'nl' ? 'Voeg Article/Product schema toe voor betere SERP weergave' : 'Add Article/Product schema for better SERP appearance'
     });
   }
+  
   if (score < 75) {
     recs.push({
       priority: 'HIGH',
@@ -1299,6 +1330,7 @@ function generateDetailedRecommendations(score, metrics, wordCount) {
       description: currentLang === 'nl' ? 'Reduceer laadtijd naar <3s via image optimalisatie en caching' : 'Reduce load time to <3s through image optimization and caching'
     });
   }
+  
   recs.push({
     priority: 'MEDIUM',
     title: currentLang === 'nl' ? 'Voeg FAQ Sectie Toe' : 'Add FAQ Section',
@@ -1307,8 +1339,13 @@ function generateDetailedRecommendations(score, metrics, wordCount) {
     cost: '€75-100',
     description: currentLang === 'nl' ? 'Beantwoord veelgestelde vragen om AI Overview kansen te pakken' : 'Answer common questions to capture AI Overview opportunities'
   });
+  
   return recs.slice(0, 5);
 }
+
+// ============================================
+// SHARE FUNCTIONS
+// ============================================
 
 function shareLeadViaWhatsApp(url, currentScore, potentialScore) {
   const decodedUrl = decodeURIComponent(url);
@@ -1348,8 +1385,485 @@ function copyLeadReport(url, currentScore, potentialScore) {
   });
 }
 
-// ADD THE REST OF YOUR FUNCTIONS HERE (performScan, loadFreelancers, etc.)
-// I only fixed the displaySingleScanResult function - rest stays the same!
+// ============================================
+// EINDE DEEL 1
+// Ga nu naar DEEL 2!
+// ============================================
+
+    // ============================================
+// DEEL 2: MAIN SCANNER + MODAL FUNCTIONS
+// Plak dit NA DEEL 1
+// ============================================
+
+// ============================================
+// MAIN SCANNER (Header)
+// ============================================
+
+async function performScan() {
+  const input = document.getElementById('scanInput');
+  const button = document.getElementById('scanButton');
+  const url = input.value.trim();
+  
+  if (!url) {
+    alert(currentLang === 'nl' ? 'Voer een URL in' : 'Please enter a URL to scan');
+    return;
+  }
+  
+  let fullUrl = url;
+  if (!url.startsWith('http')) {
+    fullUrl = 'https://' + url;
+  }
+  
+  try {
+    new URL(fullUrl);
+  } catch {
+    alert(currentLang === 'nl' ? 'Voer een geldige URL in' : 'Please enter a valid URL');
+    return;
+  }
+  
+  button.disabled = true;
+  button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + (currentLang === 'nl' ? 'Analyseren...' : 'Analyzing...');
+  
+  try {
+    const response = await fetch('/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: fullUrl })
+    });
+      
+    const data = await response.json();
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Scan failed');
+    }
+    
+    scanData = data;
+    displayScanResults(data);
+    
+  } catch (error) {
+    console.error('Scan error:', error);
+    alert((currentLang === 'nl' ? 'Scan mislukt: ' : 'Scan failed: ') + error.message);
+  } finally {
+    button.disabled = false;
+    button.innerHTML = currentLang === 'nl' ? '🚀 Analyseer Nu' : '🚀 Analyze Now';
+  }
+}
+
+// Enter key handler for main scanner
+document.getElementById('scanInput')?.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    performScan();
+  }
+});
+
+// ============================================
+// DISPLAY SCAN RESULTS (Main Scanner Modal)
+// ============================================
+
+function displayScanResults(data) {
+  const modal = document.getElementById('scanModal');
+  const modalContent = modal.querySelector('.modal-content');
+  
+  const score = data.score || 0;
+  const contentScore = data.metrics?.content || 0;
+  const technicalRaw = data.metrics?.technical || 0;
+  const technicalPercent = Math.round((technicalRaw / 20) * 100);
+  const uxScore = data.metrics?.ux || 100;
+  
+  let qualityClass = 'bg-red-600';
+  let qualityText = currentLang === 'nl' ? 'Slecht' : 'Poor';
+  
+  if (score >= 90) {
+    qualityClass = 'bg-green-600';
+    qualityText = currentLang === 'nl' ? 'Uitstekend' : 'Excellent';
+  } else if (score >= 75) {
+    qualityClass = 'bg-blue-600';
+    qualityText = currentLang === 'nl' ? 'Goed' : 'Good';
+  } else if (score >= 60) {
+    qualityClass = 'bg-yellow-600';
+    qualityText = currentLang === 'nl' ? 'Gemiddeld' : 'Average';
+  }
+  
+  const potentialScore = Math.min(96, score + 12 + Math.floor(Math.random() * 6));
+  
+  const recs = data.recommendations?.all || [];
+  let recsHtml = '';
+  
+  if (recs.length > 0) {
+    recsHtml = recs.map((rec, i) => 
+      '<div class="bg-gray-700 p-4 rounded-lg border-l-4 ' + (rec.impact === 'High' ? 'border-red-500' : rec.impact === 'Medium' ? 'border-yellow-500' : 'border-blue-500') + ' mb-3">' +
+      '<div class="flex items-start justify-between mb-2">' +
+      '<div class="flex-1">' +
+      '<div class="flex items-center gap-2 mb-1">' +
+      '<span class="text-2xl font-bold text-gray-400">' + (i + 1) + '</span>' +
+      '<span class="font-bold text-white">' + rec.title + '</span>' +
+      '<span class="text-xs px-2 py-1 rounded ' + (rec.impact === 'High' ? 'bg-red-600' : rec.impact === 'Medium' ? 'bg-yellow-600' : 'bg-blue-600') + '">' + rec.impact + '</span>' +
+      (rec.points ? '<span class="text-xs px-2 py-1 rounded bg-green-600">' + rec.points + '</span>' : '') +
+      '</div>' +
+      '<div class="text-xs text-gray-400">' + (rec.category || '') + '</div>' +
+      '</div>' +
+      '</div>' +
+      '<p class="text-sm text-gray-300 mb-2">' + (rec.description || '') + '</p>' +
+      (rec.howToFix ? '<details>' +
+      '<summary class="text-sm text-purple-400 cursor-pointer hover:text-purple-300 font-semibold">' +
+      '<i class="fas fa-wrench mr-1"></i> ' + (currentLang === 'nl' ? 'Oplossing' : 'How to Fix') +
+      '</summary>' +
+      '<div class="text-sm text-gray-300 bg-gray-800 p-4 rounded mt-2 whitespace-pre-line">' + rec.howToFix + '</div>' +
+      '</details>' : '') +
+      '</div>'
+    ).join('');
+  } else {
+    recsHtml = '<div class="text-center p-8 bg-green-900 bg-opacity-20 rounded-lg border-2 border-green-600">' +
+      '<div class="text-5xl mb-3">🎉</div>' +
+      '<h3 class="text-xl font-bold mb-2 text-green-400">' + (currentLang === 'nl' ? 'Uitstekende Content!' : 'Excellent Content Quality!') + '</h3>' +
+      '<p class="text-gray-300">' + (currentLang === 'nl' ? 'Je content voldoet al aan de hoogste standaarden.' : 'Your content already meets the highest standards.') + '</p>' +
+      '</div>';
+  }
+  
+  modalContent.innerHTML = '<div class="p-8">' +
+    '<div class="flex justify-between items-start mb-6">' +
+    '<div>' +
+    '<h2 class="text-3xl font-bold mb-2">' + (currentLang === 'nl' ? 'Content Kwaliteit Analyse' : 'Content Quality Analysis') + '</h2>' +
+    '<p class="text-sm text-gray-400">' + data.url + '</p>' +
+    '</div>' +
+    '<button onclick="closeScanModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>' +
+    '</div>' +
+    '<div class="grid md:grid-cols-2 gap-4 mb-6">' +
+    '<div class="bg-gray-800 rounded-xl p-6 border-2 ' + (score < 75 ? 'border-red-500' : 'border-gray-600') + '">' +
+    '<div class="text-sm text-gray-400 mb-2">' + (currentLang === 'nl' ? 'Huidige Score' : 'Current Score') + '</div>' +
+    '<div class="text-5xl font-bold mb-2">' + score + '<span class="text-2xl text-gray-400">/100</span></div>' +
+    '<div class="inline-block px-4 py-2 ' + qualityClass + ' rounded-full font-bold text-sm">' + qualityText + '</div>' +
+    '<div class="mt-4 space-y-2">' +
+    '<div>' +
+    '<div class="flex justify-between text-xs mb-1">' +
+    '<span>Content</span>' +
+    '<span class="font-bold">' + contentScore + '/100</span>' +
+    '</div>' +
+    '<div class="h-2 bg-gray-700 rounded-full overflow-hidden">' +
+    '<div class="h-full bg-blue-500" style="width: ' + contentScore + '%"></div>' +
+    '</div>' +
+    '</div>' +
+    '<div>' +
+    '<div class="flex justify-between text-xs mb-1">' +
+    '<span>Technical</span>' +
+    '<span class="font-bold">' + technicalRaw + '/20</span>' +
+    '</div>' +
+    '<div class="h-2 bg-gray-700 rounded-full overflow-hidden">' +
+    '<div class="h-full bg-green-500" style="width: ' + technicalPercent + '%"></div>' +
+    '</div>' +
+    '</div>' +
+    '<div>' +
+    '<div class="flex justify-between text-xs mb-1">' +
+    '<span>UX</span>' +
+    '<span class="font-bold">' + uxScore + '/100</span>' +
+    '</div>' +
+    '<div class="h-2 bg-gray-700 rounded-full overflow-hidden">' +
+    '<div class="h-full bg-yellow-500" style="width: ' + uxScore + '%"></div>' +
+    '</div>' +
+    '</div>' +
+    '</div>' +
+    '</div>' +
+    '<div class="bg-gradient-to-br from-green-900 to-emerald-900 rounded-xl p-6 border-2 border-green-500">' +
+    '<div class="text-sm text-gray-300 mb-2">' + (currentLang === 'nl' ? 'Potentieel met Onze Hulp' : 'Potential with Our Help') + '</div>' +
+    '<div class="text-5xl font-bold text-green-400 mb-2">' + potentialScore + '<span class="text-2xl text-gray-300">/100</span></div>' +
+    '<div class="inline-block px-4 py-2 bg-green-600 rounded-full font-bold text-sm">🏆 ' + (currentLang === 'nl' ? 'Elite' : 'Elite') + '</div>' +
+    '<div class="mt-4 pt-4 border-t border-green-700">' +
+    '<h4 class="text-sm font-bold mb-2 text-green-400">' + (currentLang === 'nl' ? 'Onze Aanpak:' : 'Our Approach:') + '</h4>' +
+    '<ul class="text-xs text-gray-300 space-y-1">' +
+    '<li>✅ Google E-E-A-T optimization</li>' +
+    '<li>✅ GRAAF Framework ' + (currentLang === 'nl' ? 'implementatie' : 'implementation') + '</li>' +
+    '<li>✅ CRAFT enhancement</li>' +
+    '<li>✅ Technical SEO fixes</li>' +
+    '</ul>' +
+    '</div>' +
+    '</div>' +
+    '</div>' +
+    '<div class="mb-6">' +
+    '<h3 class="text-xl font-bold mb-4"><i class="fas fa-route text-purple-400 mr-2"></i>' + (currentLang === 'nl' ? 'Verbeterplan' : 'Improvement Roadmap') + '</h3>' +
+    recsHtml +
+    '</div>' +
+    (score < 90 ? '<div class="bg-gradient-to-r from-green-900 to-emerald-900 rounded-xl p-6 text-center border-2 border-green-600">' +
+    '<div class="text-4xl mb-3">🚀</div>' +
+    '<h3 class="text-2xl font-bold mb-2">' + (currentLang === 'nl' ? 'Klaar voor ' + potentialScore + '+?' : 'Ready to Reach ' + potentialScore + '+?') + '</h3>' +
+    '<p class="text-gray-300 mb-4">' + (currentLang === 'nl' ? 'Onze experts implementeren alle verbeteringen' : 'Our experts implement all improvements') + '</p>' +
+    '<div class="flex gap-3 justify-center flex-wrap">' +
+    '<a href="https://wa.me/31628073996?text=' + (currentLang === 'nl' ? 'Hi!%20Ik%20heb%20' : 'Hi!%20I%20scanned%20') + encodeURIComponent(data.url) + '%20' + (currentLang === 'nl' ? 'gescand%20-%20score:%20' : 'and%20got%20') + score + '/100" ' +
+    'target="_blank" ' +
+    'class="inline-block bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold shadow-lg hover:shadow-xl">' +
+    '💬 ' + (currentLang === 'nl' ? 'Gratis Consultatie' : 'Free Consultation') +
+    '</a>' +
+    '<button onclick="closeScanModal(); setTimeout(() => document.getElementById(\'freelancers\')?.scrollIntoView({behavior:\'smooth\'}), 300)" ' +
+    'class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-bold shadow-lg hover:shadow-xl">' +
+    '📝 ' + (currentLang === 'nl' ? 'Huur Expert' : 'Hire Expert') +
+    '</button>' +
+    '</div>' +
+    '</div>' : '') +
+    '<div class="mt-4">' +
+    '<button onclick="closeScanModal()" class="w-full px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">' +
+    (currentLang === 'nl' ? 'Sluiten' : 'Close') +
+    '</button>' +
+    '</div>' +
+    '</div>';
+  
+  modal.classList.add('active');
+}
+
+function closeScanModal() {
+  document.getElementById('scanModal').classList.remove('active');
+}
+
+// ============================================
+// FREELANCER MODAL FUNCTIONS
+// ============================================
+
+function openFreelancerModal() {
+  document.getElementById('freelancerModal').classList.add('active');
+}
+
+function closeFreelancerModal() {
+  document.getElementById('freelancerModal').classList.remove('active');
+  document.getElementById('freelancerForm').reset();
+}
+
+function contactFreelancer(email, name) {
+  window.location.href = 'mailto:' + email + '?subject=' + (currentLang === 'nl' ? 'SEO Project via ContentScale' : 'SEO Project Inquiry via ContentScale') + '&body=' + (currentLang === 'nl' ? 'Hoi' : 'Hi') + ' ' + name + ',%0A%0A' + (currentLang === 'nl' ? 'Ik vond je via ContentScale en wil graag een project bespreken.' : 'I found you via ContentScale and would like to discuss a project.');
+}
+
+// Freelancer registration form handler
+document.getElementById('freelancerForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const formData = new FormData(e.target);
+  const data = Object.fromEntries(formData);
+  
+  try {
+    const response = await fetch('/api/freelancers/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      alert(currentLang === 'nl' ? 
+        'Aanmelding succesvol! We nemen binnenkort contact op.' : 
+        'Application submitted! We\'ll review and contact you soon.');
+      closeFreelancerModal();
+      loadFreelancers();
+    } else {
+      throw new Error(result.error || 'Registration failed');
+    }
+  } catch (error) {
+    console.error('Registration error:', error);
+    alert((currentLang === 'nl' ? 'Registratie mislukt: ' : 'Registration failed: ') + error.message);
+  }
+});
+
+// ============================================
+// EINDE DEEL 2
+// Ga nu naar DEEL 3!
+// ============================================
+
+    // ============================================
+// DEEL 3: FREELANCER, LEADERBOARD, BLOG
+// Plak dit NA DEEL 2 - DIT IS HET LAATSTE DEEL!
+// ============================================
+
+// ============================================
+// FREELANCER FUNCTIONS
+// ============================================
+
+async function loadFreelancers() {
+  try {
+    const response = await fetch('/api/freelancers');
+    const data = await response.json();
+    
+    if (data.success && data.freelancers && data.freelancers.length > 0) {
+      const grid = document.getElementById('freelancers-grid');
+      grid.innerHTML = data.freelancers.map(f => 
+        '<div class="freelancer-card">' +
+        '<div class="flex items-start justify-between mb-3">' +
+        '<div class="flex items-center gap-3">' +
+        '<div class="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-xl font-bold">' +
+        f.name.charAt(0) +
+        '</div>' +
+        '<div>' +
+        '<h3 class="font-bold text-lg">' + f.name + '</h3>' +
+        '<p class="text-sm text-gray-400">' + (f.specialty || f.title || 'SEO Specialist') + '</p>' +
+        '</div>' +
+        '</div>' +
+        (f.verified || f.is_featured ? '<span class="px-2 py-1 bg-green-600 rounded text-xs">✓ Verified</span>' : '') +
+        '</div>' +
+        '<p class="text-sm text-gray-300 mb-3">' + (f.bio || 'Professional SEO specialist') + '</p>' +
+        '<div class="flex items-center justify-between text-sm mb-3">' +
+        '<span class="text-gray-400">' + (f.experience || 5) + '+ ' + (currentLang === 'nl' ? 'jaar' : 'years') + '</span>' +
+        (f.portfolio || f.linkedin_url ? '<a href="' + (f.portfolio || f.linkedin_url) + '" target="_blank" class="text-blue-400 hover:underline">Portfolio →</a>' : '') +
+        '</div>' +
+        '<button onclick="contactFreelancer(\'' + f.email + '\', \'' + f.name + '\')" ' +
+        'class="w-full bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl">' +
+        (currentLang === 'nl' ? 'Contact' : 'Contact') + ' ' + f.name +
+        '</button>' +
+        '</div>'
+      ).join('');
+    } else {
+      document.getElementById('freelancers-grid').innerHTML = '<div class="col-span-full text-center p-8 bg-gray-800 rounded-lg">' +
+        '<p class="text-gray-400">' + (currentLang === 'nl' ? 'Nog geen specialisten. Wees de eerste!' : 'No specialists yet. Be the first to join!') + '</p>' +
+        '</div>';
+    }
+  } catch (error) {
+    console.error('Load freelancers error:', error);
+    document.getElementById('freelancers-grid').innerHTML = '<div class="col-span-full text-center p-8 bg-red-900 bg-opacity-20 rounded-lg border border-red-600">' +
+      '<p class="text-red-400">' + (currentLang === 'nl' ? 'Kon specialisten niet laden' : 'Failed to load specialists') + '</p>' +
+      '</div>';
+  }
+}
+
+// ============================================
+// LEADERBOARD FUNCTIONS
+// ============================================
+
+async function loadLeaderboard() {
+  try {
+    const response = await fetch('/api/leaderboard');
+    const data = await response.json();
+    
+    if (data.success && data.entries && data.entries.length > 0) {
+      const list = document.getElementById('leaderboard-list');
+      list.innerHTML = data.entries.slice(0, 10).map((entry, index) => {
+        const rank = index + 1;
+        const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
+        
+        return '<div class="leaderboard-card">' +
+          '<div class="flex items-center justify-between">' +
+          '<div class="flex items-center gap-4 flex-1">' +
+          '<div class="rank-badge ' + rankClass + '">' +
+          (rank <= 3 ? (rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉') : rank) +
+          '</div>' +
+          '<div class="flex-1">' +
+          '<h3 class="font-bold text-xl">' + entry.company_name + '</h3>' +
+          '<p class="text-sm text-gray-400">' + (entry.country || 'Global') + '</p>' +
+          '</div>' +
+          '</div>' +
+          '<div class="text-right">' +
+          '<div class="text-3xl font-bold text-yellow-400">' + entry.score + '</div>' +
+          '<div class="text-xs text-gray-400">' + (currentLang === 'nl' ? 'Score' : 'Score') + '</div>' +
+          '</div>' +
+          '</div>' +
+          (entry.url ? '<div class="mt-3">' +
+          '<a href="' + entry.url + '" target="_blank" ' +
+          'class="block text-center bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl">' +
+          (currentLang === 'nl' ? 'Bezoek Website' : 'Visit Website') +
+          '</a>' +
+          '</div>' : '') +
+          '</div>';
+      }).join('');
+    } else {
+      document.getElementById('leaderboard-list').innerHTML = '<div class="text-center p-8 bg-gray-800 rounded-lg">' +
+        '<p class="text-gray-400">' + (currentLang === 'nl' ? 'Leaderboard komt binnenkort!' : 'Leaderboard coming soon!') + '</p>' +
+        '</div>';
+    }
+  } catch (error) {
+    console.error('Load leaderboard error:', error);
+    document.getElementById('leaderboard-list').innerHTML = '<div class="text-center p-8 bg-red-900 bg-opacity-20 rounded-lg border border-red-600">' +
+      '<p class="text-red-400">' + (currentLang === 'nl' ? 'Kon leaderboard niet laden' : 'Failed to load leaderboard') + '</p>' +
+      '</div>';
+  }
+}
+
+// ============================================
+// BLOG FUNCTIONS
+// ============================================
+
+async function loadBlog() {
+  try {
+    const response = await fetch('/api/blog?limit=3');
+    const data = await response.json();
+    
+    if (data.success && data.posts && data.posts.length > 0) {
+      const grid = document.getElementById('blog-grid');
+      grid.innerHTML = data.posts.map(post => 
+        '<div class="blog-card">' +
+        (post.featured_image ? '<img src="' + post.featured_image + '" alt="' + post.title + '" class="w-full h-48 object-cover">' : '') +
+        '<div class="p-6">' +
+        '<div class="flex gap-2 mb-3">' +
+        (post.tags && post.tags.length > 0 ? post.tags.slice(0, 2).map(tag => 
+          '<span class="px-2 py-1 bg-purple-600 rounded text-xs">' + tag + '</span>'
+        ).join('') : '') +
+        '</div>' +
+        '<h3 class="font-bold text-xl mb-2 line-clamp-2">' + post.title + '</h3>' +
+        '<p class="text-sm text-gray-400 mb-4 line-clamp-3">' + (post.excerpt || '') + '</p>' +
+        '<div class="flex items-center justify-between text-sm">' +
+        '<span class="text-gray-400">' + new Date(post.published_at || Date.now()).toLocaleDateString() + '</span>' +
+        '<a href="/blog/' + post.slug + '" class="text-blue-400 hover:underline">' +
+        (currentLang === 'nl' ? 'Lees Meer' : 'Read More') + ' →' +
+        '</a>' +
+        '</div>' +
+        '</div>' +
+        '</div>'
+      ).join('');
+    } else {
+      document.getElementById('blog-grid').innerHTML = '<div class="col-span-full text-center p-8 bg-gray-800 rounded-lg">' +
+        '<p class="text-gray-400">' + (currentLang === 'nl' ? 'Blog posts komen binnenkort!' : 'Blog posts coming soon!') + '</p>' +
+        '</div>';
+    }
+  } catch (error) {
+    console.error('Load blog error:', error);
+    document.getElementById('blog-grid').innerHTML = '<div class="col-span-full text-center p-8 bg-red-900 bg-opacity-20 rounded-lg border border-red-600">' +
+      '<p class="text-red-400">' + (currentLang === 'nl' ? 'Kon blog posts niet laden' : 'Failed to load blog posts') + '</p>' +
+      '</div>';
+  }
+}
+
+// ============================================
+// GOOGLE MAPS BULK SCANNER (PLACEHOLDER)
+// Deze functies zijn voor toekomstig gebruik
+// ============================================
+
+async function scrapeGoogleMapsPublic() {
+  alert(currentLang === 'nl' ? 
+    'Google Maps Bulk Scanner komt binnenkort!' : 
+    'Google Maps Bulk Scanner coming soon!');
+}
+
+async function scanAllGoogleMapsLeads() {
+  alert(currentLang === 'nl' ? 
+    'Bulk scan functie komt binnenkort!' : 
+    'Bulk scan function coming soon!');
+}
+
+function selectAllLeads() {
+  alert(currentLang === 'nl' ? 
+    'Select all functie komt binnenkort!' : 
+    'Select all function coming soon!');
+}
+
+function exportLeadsToCSV() {
+  alert(currentLang === 'nl' ? 
+    'CSV export komt binnenkort!' : 
+    'CSV export coming soon!');
+}
+
+function exportLeadsToJSON() {
+  alert(currentLang === 'nl' ? 
+    'JSON export komt binnenkort!' : 
+    'JSON export coming soon!');
+}
+
+// ============================================
+// ✅ KLAAR! ALLE FUNCTIES ZIJN NU COMPLEET
+// ============================================
+
+console.log('✅ ContentScale JavaScript fully loaded!');
+console.log('📊 Features enabled:');
+console.log('  - Language switching (NL/EN)');
+console.log('  - Main content scanner');
+console.log('  - Lead scanner with 1100-word filter');
+console.log('  - Share functions (WhatsApp, Email, LinkedIn, Copy)');
+console.log('  - Freelancer directory');
+console.log('  - Leaderboard');
+console.log('  - Blog');
+    
   </script>
 
 </body>
