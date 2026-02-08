@@ -2725,6 +2725,132 @@ app.get('/api/health', async (req, res) => {
 });
 
 // ============================================
+// EMAIL CONFIGURATION & SENDING API
+// ============================================
+
+// Email configuration endpoints
+app.post('/api/user/email-config', async (req, res) => {
+  try {
+    const { tier, sendgridApiKey, userEmail, userName } = req.body;
+    const userId = req.user?.id || 1; // TODO: Real auth
+    
+    await emailService.saveUserEmailConfig(
+      userId, tier, sendgridApiKey, userEmail, userName
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/user/verify-email-config', async (req, res) => {
+  try {
+    const { apiKey, testEmail } = req.body;
+    const userId = req.user?.id || 1;
+    
+    const result = await emailService.verifyApiKey(userId, apiKey, testEmail);
+    
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/user/email-config', async (req, res) => {
+  try {
+    const userId = req.user?.id || 1;
+    const config = await emailService.getUserEmailConfig(userId);
+    
+    res.json({
+      success: true,
+      hasConfig: !!config,
+      config: config
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Email sending endpoints
+app.post('/api/leaderboard/send-emails', async (req, res) => {
+  try {
+    const { entryIds, language, batchId } = req.body;
+    const userId = req.user?.id || 1;
+    
+    const result = await pool.query(
+      'SELECT * FROM leaderboard WHERE id = ANY($1) AND email IS NOT NULL',
+      [entryIds]
+    );
+    
+    const sendResult = await emailService.sendBatchEmails(
+      result.rows,
+      language || 'nl',
+      userId,
+      batchId || `batch-${Date.now()}`
+    );
+    
+    res.json(sendResult);
+    
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/user/email-stats', async (req, res) => {
+  try {
+    const userId = req.user?.id || 1;
+    const stats = await emailService.getUserEmailStats(userId);
+    
+    res.json({ success: true, stats });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Pro tier upgrade (for later)
+app.post('/api/user/upgrade-to-pro', async (req, res) => {
+  try {
+    const userId = req.user?.id || 1;
+    
+    // TODO: Process payment (Stripe/Mollie)
+    // TODO: Check payment success
+    
+    await emailService.upgradeToProTier(userId);
+    
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+console.log('✅ Hybrid email endpoints loaded');
+
+// ============================================
+// PUBLIC API ENDPOINTS - VOLLEDIG INGEVULD
+// ============================================
+```
+
+---
+
+## ✅ **SAMENVATTEND - 3 LOCATIES:**
+```
+LOCATIE 1: Bovenaan (regel ~6)
+├─ NA: const puppeteer = require('puppeteer');
+├─ VOOR: const app = express();
+└─ Voeg toe: Email service requires
+
+LOCATIE 2: Na database (regel ~68)
+├─ NA: const pool = new Pool(dbConfig);
+├─ VOOR: // STABLE CACHE SYSTEM
+└─ Voeg toe: Email service initialization
+
+LOCATIE 3: Voor public API (regel ~2780)
+├─ NA: Marketplace endpoints
+├─ VOOR: // PUBLIC API ENDPOINTS
+└─ Voeg toe: Complete email API routes
+
+// ============================================
 // PUBLIC API ENDPOINTS - VOLLEDIG INGEVULD
 // ============================================
 
