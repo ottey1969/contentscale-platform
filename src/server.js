@@ -6,11 +6,6 @@ const path = require('path');
 const crypto = require('crypto');
 const { Pool } = require('pg');
 const puppeteer = require('puppeteer');
-const express = require('express');
-const path = require('path');
-const crypto = require('crypto');
-const { Pool } = require('pg');
-const puppeteer = require('puppeteer');
 
 // ============================================
 // EMAIL SERVICES
