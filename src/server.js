@@ -2822,30 +2822,6 @@ console.log('✅ Hybrid email endpoints loaded');
 // ============================================
 // PUBLIC API ENDPOINTS - VOLLEDIG INGEVULD
 // ============================================
-```
-
----
-
-## ✅ **SAMENVATTEND - 3 LOCATIES:**
-```
-LOCATIE 1: Bovenaan (regel ~6)
-├─ NA: const puppeteer = require('puppeteer');
-├─ VOOR: const app = express();
-└─ Voeg toe: Email service requires
-
-LOCATIE 2: Na database (regel ~68)
-├─ NA: const pool = new Pool(dbConfig);
-├─ VOOR: // STABLE CACHE SYSTEM
-└─ Voeg toe: Email service initialization
-
-LOCATIE 3: Voor public API (regel ~2780)
-├─ NA: Marketplace endpoints
-├─ VOOR: // PUBLIC API ENDPOINTS
-└─ Voeg toe: Complete email API routes
-
-// ============================================
-// PUBLIC API ENDPOINTS - VOLLEDIG INGEVULD
-// ============================================
 
 // 1. GET Freelancers (publiek)
 app.get('/api/freelancers', async (req, res) => {
