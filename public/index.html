@@ -1165,7 +1165,7 @@ async function scanSingleURLPublic() {
 
 function displaySingleScanResult(result) {
   const resultDiv = document.getElementById('singleScanResult');
-  const wordCount = result.wordCount || 0;
+const wordCount = result.wordCount || result.content_stats?.wordCount || result.details?.wordCount || 0;
   
   if (wordCount < 1100) {
     const titleText = currentLang === 'nl' ? 'Niet Gekwalificeerd als Lead' : 'Not Qualified as Lead';
