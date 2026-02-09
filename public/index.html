@@ -1833,9 +1833,85 @@ async function loadBlog() {
 // ============================================
 
 async function scrapeGoogleMapsPublic() {
-  alert(currentLang === 'nl' ? 
-    'Google Maps Bulk Scanner komt binnenkort!' : 
-    'Google Maps Bulk Scanner coming soon!');
+async function scrapeGoogleMapsPublic() {
+  const input = document.getElementById('googleMapsInput');
+  const button = document.getElementById('gmapsScrapeBtn');
+  const url = input.value.trim();
+  
+  if (!url) {
+    alert(currentLang === 'nl' ? 'Voer een Google Maps URL in' : 'Enter a Google Maps URL');
+    return;
+  }
+  
+  if (!url.includes('google.com/maps')) {
+    alert(currentLang === 'nl' ? 'Dit is geen geldige Google Maps URL' : 'Not a valid Google Maps URL');
+    return;
+  }
+  
+  button.disabled = true;
+  button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + (currentLang === 'nl' ? 'Scrapen...' : 'Scraping...');
+  
+  try {
+    const response = await fetch('/api/google-maps/scrape', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: url })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success && data.leads && data.leads.length > 0) {
+      scrapedLeads = data.leads;
+      displayScrapedLeads(data.leads);
+    } else {
+      alert(currentLang === 'nl' ? 
+        'Geen leads gevonden. Probeer een andere zoekopdracht.' : 
+        'No leads found. Try a different search.');
+    }
+    
+  } catch (error) {
+    console.error('Scrape error:', error);
+    alert((currentLang === 'nl' ? 'Scrape mislukt: ' : 'Scrape failed: ') + error.message);
+  } finally {
+    button.disabled = false;
+    button.innerHTML = currentLang === 'nl' ? '🗺️ Scrape Maps' : '🗺️ Scrape Maps';
+  }
+}
+
+function displayScrapedLeads(leads) {
+  const container = document.getElementById('scrapedLeadsContainer');
+  const grid = document.getElementById('leadsGrid');
+  const countEl = document.getElementById('leadCount');
+  const countElEN = document.getElementById('leadCountEN');
+  
+  if (!container || !grid) return;
+  
+  countEl.textContent = leads.length;
+  countElEN.textContent = leads.length;
+  
+  grid.innerHTML = leads.map((lead, index) => `
+    <div class="lead-card bg-gray-800 rounded-lg p-4 border-2 border-gray-600 hover:border-purple-500">
+      <div class="flex items-start gap-3 mb-3">
+        <input type="checkbox" 
+               id="lead-${index}" 
+               class="mt-1" 
+               onchange="toggleLeadSelection(${index})">
+        <div class="flex-1">
+          <h4 class="font-bold text-white mb-1">${lead.name}</h4>
+          <p class="text-sm text-gray-400 mb-2">${lead.address || 'No address'}</p>
+          ${lead.website ? `<a href="${lead.website}" target="_blank" class="text-xs text-blue-400 hover:underline block mb-2">🌐 ${lead.website}</a>` : ''}
+          ${lead.phone ? `<p class="text-xs text-gray-400">📞 ${lead.phone}</p>` : ''}
+        </div>
+      </div>
+      <button onclick="scanSingleLead(${index})" 
+              class="w-full bg-purple-600 hover:bg-purple-700 px-3 py-2 rounded text-sm font-semibold">
+        ${currentLang === 'nl' ? '🔍 Scan Deze Lead' : '🔍 Scan This Lead'}
+      </button>
+    </div>
+  `).join('');
+  
+  container.classList.remove('hidden');
+} 'Google Maps Bulk Scanner coming soon!');
 }
 
 async function scanAllGoogleMapsLeads() {
