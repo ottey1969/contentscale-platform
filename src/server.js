@@ -432,20 +432,38 @@ function generateDetailedRecommendations(score, metrics, wordCount, scanData) {
     });
   }
   
-  // 4. FAQ Section (VERBETERD)
+  // 4. FAQ Section (SMART DETECTION)
   const hasFAQ = scanData?.hasFAQ || false;
+  const faqScore = scanData?.faqScore || 0;
+  
   if (!hasFAQ) {
-    recs.push({
-      priority: 'HIGH',
-      title: currentLang === 'nl' ? 'Voeg FAQ Sectie Toe' : 'Add FAQ Section',
-      impact: 8,
-      effort: currentLang === 'nl' ? 'Laag (2-3 uur)' : 'Low (2-3 hours)',
-      cost: '€100-175',
-      description: currentLang === 'nl' 
-        ? 'Beantwoord 8-12 veelgestelde vragen met FAQ schema markup voor AI Overview kansen' 
-        : 'Answer 8-12 common questions with FAQ schema markup to capture AI Overview opportunities'
-    });
+    // Als er een FAQ score is maar niet genoeg voor detectie
+    if (faqScore > 0 && faqScore < 2) {
+      recs.push({
+        priority: 'MEDIUM',
+        title: currentLang === 'nl' ? 'Verbeter FAQ Detectie' : 'Improve FAQ Detection',
+        impact: 5,
+        effort: currentLang === 'nl' ? 'Laag (30 min)' : 'Low (30 min)',
+        cost: '€25-50',
+        description: currentLang === 'nl' 
+          ? `FAQ elementen gedetecteerd (score: ${faqScore}), maar niet herkend als complete sectie. Voeg "FAQ" of "veelgestelde vragen" toe aan headers.` 
+          : `FAQ elements detected (score: ${faqScore}), but not recognized as complete section. Add "FAQ" or "frequently asked questions" to headers.`
+      });
+    } else {
+      // Geen FAQ gedetecteerd
+      recs.push({
+        priority: 'HIGH',
+        title: currentLang === 'nl' ? 'Voeg FAQ Sectie Toe' : 'Add FAQ Section',
+        impact: 8,
+        effort: currentLang === 'nl' ? 'Laag (2-3 uur)' : 'Low (2-3 hours)',
+        cost: '€100-175',
+        description: currentLang === 'nl' 
+          ? 'Beantwoord 8-12 veelgestelde vragen met FAQ schema markup voor AI Overview kansen' 
+          : 'Answer 8-12 common questions with FAQ schema markup to capture AI Overview opportunities'
+      });
+    }
   } else {
+    // FAQ bestaat al
     recs.push({
       priority: 'MEDIUM',
       title: currentLang === 'nl' ? 'Optimaliseer Bestaande FAQ' : 'Optimize Existing FAQ',
@@ -453,8 +471,8 @@ function generateDetailedRecommendations(score, metrics, wordCount, scanData) {
       effort: currentLang === 'nl' ? 'Laag (1-2 uur)' : 'Low (1-2 hours)',
       cost: '€75-125',
       description: currentLang === 'nl' 
-        ? 'Voeg FAQ schema markup toe en breid uit naar 12+ vragen' 
-        : 'Add FAQ schema markup and expand to 12+ questions'
+        ? `FAQ sectie gevonden (score: ${faqScore}). Voeg FAQ schema markup toe en breid uit naar 12+ vragen.` 
+        : `FAQ section found (score: ${faqScore}). Add FAQ schema markup and expand to 12+ questions.`
     });
   }
 
