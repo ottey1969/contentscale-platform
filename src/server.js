@@ -2393,31 +2393,7 @@ app.post('/api/scan', async (req, res) => {
     // Calculate STABLE scores
     const scores = calculateStableScores(textContent, stats, rawHtml);
 
-        // ============================================
-    // FAQ DEBUGGING - SEE WHAT'S FOUND
-    // ============================================
-    console.log('🔍 FAQ Detection Debug:');
-    console.log('- hasFAQ:', scores.hasFAQ);
-    console.log('- faqScore:', scores.faqScore);
-    
-    // Check for FAQ schema markup
-    const hasFAQSchema = /"@type"\s*:\s*"FAQPage"/gi.test(rawHtml);
-    console.log('- FAQ Schema markup:', hasFAQSchema ? '✅ Yes' : '❌ No');
-    
-    // Check for common FAQ patterns
-    const hasDetailsTags = /<details>/gi.test(rawHtml);
-    const hasSummaryTags = /<summary>/gi.test(rawHtml);
-    const hasFAQInClass = /class=".*faq.*"/gi.test(rawHtml);
-    
-    console.log('- <details> tags:', hasDetailsTags ? '✅ Yes' : '❌ No');
-    console.log('- <summary> tags:', hasSummaryTags ? '✅ Yes' : '❌ No');
-    console.log('- class contains "faq":', hasFAQInClass ? '✅ Yes' : '❌ No');
-    
-    // Check if "vraag" or "antwoord" in text
-    const hasVraag = /vraag/gi.test(textContent);
-    const hasAntwoord = /antwoord/gi.test(textContent);
-    console.log('- Text contains "vraag":', hasVraag ? '✅ Yes' : '❌ No');
-    console.log('- Text contains "antwoord":', hasAntwoord ? '✅ Yes' : '❌ No');
+     
     
     
     // NEW: Calculate TRANSPARENT scores
