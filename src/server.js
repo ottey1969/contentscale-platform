@@ -181,62 +181,6 @@ function calculateStableScores(content, stats, rawHtml) {
   let graafScore = 0;
   const graafItems = {};
   
-  // ... rest van de bestaande code blijft hetzelfde ...
-  
-  // TECHNICAL SCORES (20 points total) - STABLE
-  let technicalScore = 0;
-  
-  // Meta description
-  const metaDescMatch = rawHtml.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
-  const metaDesc = metaDescMatch ? metaDescMatch[1] : null;
-  technicalScore += metaDesc && metaDesc.length > 50 ? 4 : metaDesc ? 2 : 0;
-  
-  // Title
-  const titleMatch = rawHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
-  const title = titleMatch ? titleMatch[1] : null;
-  technicalScore += title && title.length > 30 ? 4 : title ? 2 : 0;
-  
-  // Images with alt text
-  const allImages = (rawHtml.match(/<img[^>]*>/gi) || []).length;
-  const imagesWithAlt = (rawHtml.match(/<img[^>]*alt="/gi) || []).length;
-  if (allImages > 0) {
-    const imageScore = Math.floor((imagesWithAlt / allImages) * 4);
-    technicalScore += Math.min(4, imageScore);
-  }
-  
-  // Viewport
-  const hasViewport = /<meta\s+name="viewport"/gi.test(rawHtml);
-  technicalScore += hasViewport ? 3 : 0;
-  
-  // Schema markup
-  const hasSchema = /"@context"|"@type"/gi.test(rawHtml);
-  technicalScore += hasSchema ? 3 : 0;
-  
-  // FAQ DETECTION BONUS - Add this part
-  if (faqDetection.hasFAQ) {
-    technicalScore += 2; // Bonus for having FAQ
-    console.log('✅ FAQ detected: +2 technical points');
-  }
-  
-  // Total score
-  const totalScore = graafScore + craftScore + technicalScore;
-  
-  return {
-    graafScore,
-    craftScore,
-    technicalScore,
-    totalScore,
-    graafItems,
-    craftItems,
-    hasFAQ: faqDetection.hasFAQ, // Add this to return object
-    faqScore: faqDetection.faqScore // Add this to return object
-  };
-}
-  
-  // GRAAF SCORES (50 points total) - STABLE
-  let graafScore = 0;
-  const graafItems = {};
-  
   // Credibility (0-16)
   let credibility = 0;
   const hasAuthor = /by\s+\w+|author:|written\s+by|contributor/i.test(content);
@@ -320,6 +264,12 @@ function calculateStableScores(content, stats, rawHtml) {
   const hasSchema = /"@context"|"@type"/gi.test(rawHtml);
   technicalScore += hasSchema ? 3 : 0;
   
+  // FAQ DETECTION BONUS - Add this part
+  if (faqDetection.hasFAQ) {
+    technicalScore += 2; // Bonus for having FAQ
+    console.log('✅ FAQ detected: +2 technical points');
+  }
+  
   // Total score
   const totalScore = graafScore + craftScore + technicalScore;
   
@@ -329,7 +279,9 @@ function calculateStableScores(content, stats, rawHtml) {
     technicalScore,
     totalScore,
     graafItems,
-    craftItems
+    craftItems,
+    hasFAQ: faqDetection.hasFAQ, // Add this to return object
+    faqScore: faqDetection.faqScore // Add this to return object
   };
 }
 
