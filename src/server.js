@@ -77,6 +77,12 @@ if (process.env.DATABASE_URL) {
 const pool = new Pool(dbConfig);
 
 // ============================================
+// GOOGLE MAPS SCRAPER SERVICE
+// ============================================
+const GoogleMapsScraper = require('./services/google-maps-scraper');
+const gmapsScraper = new GoogleMapsScraper(pool);
+
+// ============================================
 // EMAIL SERVICE INITIALIZATION
 // ============================================
 const emailService = new HybridEmailService(pool);
@@ -3028,6 +3034,131 @@ app.get('/api/blog/:slug', async (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to load blog post' });
   }
 });
+
+// ============================================
+// GOOGLE MAPS SCRAPER API
+// ============================================
+
+// Scrape Google Maps
+app.post('/api/google-maps/scrape', async (req, res) => {
+  try {
+    const { url, maxResults = 20 } = req.body;
+    const userId = req.user?.id || null;
+    
+    if (!url || !url.includes('google.com/maps')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid Google Maps URL'
+      });
+    }
+    
+    console.log(`🗺️ Google Maps scrape request: ${url}`);
+    
+    const result = await gmapsScraper.scrapeGoogleMaps(url, maxResults);
+    
+    // Save leads to database
+    const savedLeads = [];
+    for (const lead of result.leads) {
+      const leadId = await gmapsScraper.saveLead(lead, userId);
+      if (leadId) {
+        savedLeads.push({ ...lead, id: leadId });
+      }
+    }
+    
+    res.json({
+      success: true,
+      leads: savedLeads,
+      stats: {
+        total: savedLeads.length,
+        with_website: savedLeads.filter(l => l.website).length,
+        with_phone: savedLeads.filter(l => l.phone).length
+      }
+    });
+    
+  } catch (error) {
+    console.error('Google Maps scrape error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Get my leads
+app.get('/api/google-maps/my-leads', async (req, res) => {
+  try {
+    const userId = req.user?.id || null;
+    const { status, has_website, limit = 50 } = req.query;
+    
+    let query = 'SELECT * FROM google_maps_leads WHERE 1=1';
+    const params = [];
+    let paramCount = 1;
+    
+    if (userId) {
+      query += ` AND user_id = $${paramCount}`;
+      params.push(userId);
+      paramCount++;
+    }
+    
+    if (status) {
+      query += ` AND status = $${paramCount}`;
+      params.push(status);
+      paramCount++;
+    }
+    
+    if (has_website === 'true') {
+      query += ' AND website IS NOT NULL';
+    }
+    
+    query += ` ORDER BY created_at DESC LIMIT $${paramCount}`;
+    params.push(parseInt(limit));
+    
+    const result = await pool.query(query, params);
+    
+    res.json({
+      success: true,
+      leads: result.rows,
+      total: result.rows.length
+    });
+    
+  } catch (error) {
+    console.error('Get leads error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Update lead status
+app.put('/api/google-maps/leads/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, notes } = req.body;
+    
+    await pool.query(
+      `UPDATE google_maps_leads 
+       SET status = $1, notes = $2, 
+           contacted_at = CASE WHEN $1 = 'contacted' THEN NOW() ELSE contacted_at END,
+           converted_at = CASE WHEN $1 = 'converted' THEN NOW() ELSE converted_at END
+       WHERE id = $3`,
+      [status, notes || null, id]
+    );
+    
+    res.json({ success: true });
+    
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+console.log('✅ Google Maps scraper endpoints loaded');
+```
+
+---
+
+## ✅ **STAP 5: TEST!**
+
+### **Test URL (Amsterdam restaurants):**
+```
+https://www.google.com/maps/search/restaurants+amsterdam
 
 // ============================================
 // CATCH-ALL ROUTE (blijft hetzelfde)
