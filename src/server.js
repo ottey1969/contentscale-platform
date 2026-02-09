@@ -3150,9 +3150,7 @@ app.put('/api/google-maps/leads/:id/status', async (req, res) => {
 });
 
 console.log('✅ Google Maps scraper endpoints loaded');
-```
 
----
 
 ## ✅ **STAP 5: TEST!**
 
