@@ -127,52 +127,72 @@ function calculateStableScores(content, stats, rawHtml) {
   // ============================================
   // IMPROVED FAQ DETECTION
   // ============================================
-  function detectFAQ(html, text) {
-    const faqPatterns = [
-      // Headers
-      /<h[1-6][^>]*>.*?(faq|frequently asked|questions|vraag|antwoord|veelgestelde).*?<\/h[1-6]>/gi,
-      
-      // Schema markup
-      /"@type"\s*:\s*"FAQPage"/gi,
-      /<div[^>]*itemtype[^>]*FAQPage/gi,
-      
-      // Accordion structures
-      /<details>/gi,
-      /class="(accordion|collapse|faq|qa-)/gi,
-      
-      // Q&A patterns
-      /\b(vraag|question|q):\s*/gi,
-      /\b(antwoord|answer|a):\s*/gi,
-      
-      // Dutch patterns
-      /veelgestelde vragen/gi,
-      /vaak gestelde vragen/gi
-    ];
+ function detectFAQ(html, text) {
+  const faqPatterns = [
+    // Headers
+    /<h[1-6][^>]*>.*?(faq|frequently asked|questions|vraag|antwoord|veelgestelde).*?<\/h[1-6]>/gi,
     
-    let faqScore = 0;
-    let detectedPatterns = [];
+    // Schema markup
+    /"@type"\s*:\s*"FAQPage"/gi,
+    /<div[^>]*itemtype[^>]*FAQPage/gi,
+    /itemtype="https:\/\/schema\.org\/FAQPage"/gi,
     
-    faqPatterns.forEach((pattern, index) => {
-      const matches = (html + ' ' + text).match(pattern);
-      if (matches) {
-        faqScore += matches.length;
-        detectedPatterns.push(`Pattern ${index + 1}: ${matches.length} matches`);
-      }
-    });
+    // Accordion structures
+    /<details>/gi,
+    /<summary>/gi,
+    /class="(accordion|collapse|faq|qa-|faq-|vraag|antwoord)/gi,
+    /id="(faq|accordion|vragen)"/gi,
+    /data-(faq|accordion|toggle|target)/gi,
     
-    const hasFAQ = faqScore >= 3; // Need at least 3 matches
+    // Q&A patterns
+    /\b(vraag|question|q):\s*/gi,
+    /\b(antwoord|answer|a):\s*/gi,
     
-    console.log(`FAQ Detection: ${hasFAQ ? 'FOUND' : 'NOT FOUND'} (score: ${faqScore})`);
-    if (detectedPatterns.length > 0) {
-      console.log('Detected patterns:', detectedPatterns);
+    // ContentScale specifieke patterns
+    /contentscale.*faq/gi,
+    
+    // Dutch patterns
+    /veelgestelde vragen/gi,
+    /vaak gestelde vragen/gi,
+    /vragen en antwoorden/gi,
+    
+    // Question mark detection
+    /\?.*\?/gi, // Multiple question marks
+    /<p>[^<]*\?[^<]*<\/p>/gi, // Paragraph with question mark
+    
+    // Button/click patterns
+    /onclick=".*(toggle|show|hide).*faq/gi,
+    /data-target=".*faq/gi
+  ];
+  
+  let faqScore = 0;
+  let detectedPatterns = [];
+  
+  // Combineer HTML en tekst voor betere detectie
+  const combined = html + ' ' + text;
+  
+  faqPatterns.forEach((pattern, index) => {
+    const matches = combined.match(pattern);
+    if (matches) {
+      faqScore += matches.length;
+      detectedPatterns.push(`Pattern ${index + 1}: ${matches.length} matches (${pattern.toString().substring(0, 50)}...)`);
     }
-    
-    return {
-      hasFAQ: hasFAQ,
-      faqScore: faqScore,
-      patterns: detectedPatterns
-    };
+  });
+  
+  // Minder strikte detectie: 2 matches is genoeg
+  const hasFAQ = faqScore >= 2; // Changed from 3 to 2
+  
+  console.log(`FAQ Detection: ${hasFAQ ? '✅ FOUND' : '❌ NOT FOUND'} (score: ${faqScore})`);
+  if (detectedPatterns.length > 0) {
+    console.log('Detected patterns:', detectedPatterns);
   }
+  
+  return {
+    hasFAQ: hasFAQ,
+    faqScore: faqScore,
+    patterns: detectedPatterns
+  };
+}
   
   // Detect FAQ
   const faqDetection = detectFAQ(rawHtml, content);
