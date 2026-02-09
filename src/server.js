@@ -418,8 +418,8 @@ function generateDetailedRecommendations(score, metrics, wordCount, scanData) {
     });
   }
   
-  // 3. Technical SEO
-  if (metrics.technical < 16) {
+  // 3. Technical SEO - DIT WAS DE FOUT! scores.technical → metrics.technical
+  if (metrics.technical < 16) {  // ← HIER: FIXED!
     recs.push({
       priority: 'HIGH',
       title: currentLang === 'nl' ? 'Implementeer Schema Markup' : 'Implement Schema Markup',
@@ -475,32 +475,90 @@ function generateDetailedRecommendations(score, metrics, wordCount, scanData) {
         : `FAQ section found (score: ${faqScore}). Add FAQ schema markup and expand to 12+ questions.`
     });
   }
+  
+  // 5. Page Speed
+  if (score < 80) {
+    recs.push({
+      priority: score < 70 ? 'HIGH' : 'MEDIUM',
+      title: currentLang === 'nl' ? 'Optimaliseer Pagina Snelheid' : 'Optimize Page Speed',
+      impact: 9,
+      effort: currentLang === 'nl' ? 'Gemiddeld (3-5 uur)' : 'Medium (3-5 hours)',
+      cost: '€200-400',
+      description: currentLang === 'nl' 
+        ? 'Reduceer laadtijd naar <2s via image compression, lazy loading en CDN' 
+        : 'Reduce load time to <2s through image compression, lazy loading and CDN'
+    });
+  }
+  
+  // 6. Internal Links
+  if (wordCount > 1500) {
+    recs.push({
+      priority: 'MEDIUM',
+      title: currentLang === 'nl' ? 'Voeg Interne Links Toe' : 'Add Internal Links',
+      impact: 6,
+      effort: currentLang === 'nl' ? 'Laag (1 uur)' : 'Low (1 hour)',
+      cost: '€50-100',
+      description: currentLang === 'nl' 
+        ? 'Voeg 5-8 relevante interne links toe naar gerelateerde content' 
+        : 'Add 5-8 relevant internal links to related content'
+    });
+  }
+  
+  // 7. Meta Description
+  recs.push({
+    priority: 'MEDIUM',
+    title: currentLang === 'nl' ? 'Optimaliseer Meta Description' : 'Optimize Meta Description',
+    impact: 4,
+    effort: currentLang === 'nl' ? 'Laag (30 min)' : 'Low (30 min)',
+    cost: '€25-50',
+    description: currentLang === 'nl' 
+      ? 'Schrijf overtuigende meta description van 150-160 karakters' 
+      : 'Write compelling meta description of 150-160 characters'
+  });
+  
+  // 8. Images & Alt Text
+  recs.push({
+    priority: 'MEDIUM',
+    title: currentLang === 'nl' ? 'Optimaliseer Afbeeldingen' : 'Optimize Images',
+    impact: 7,
+    effort: currentLang === 'nl' ? 'Gemiddeld (2-3 uur)' : 'Medium (2-3 hours)',
+    cost: '€100-200',
+    description: currentLang === 'nl' 
+      ? 'Voeg alt-text toe, comprimeer images en gebruik WebP format' 
+      : 'Add alt-text, compress images and use WebP format'
+  });
+  
+  // 9. Mobile Optimization
+  if (score < 85) {
+    recs.push({
+      priority: 'HIGH',
+      title: currentLang === 'nl' ? 'Verbeter Mobile UX' : 'Improve Mobile UX',
+      impact: 8,
+      effort: currentLang === 'nl' ? 'Hoog (6-8 uur)' : 'High (6-8 hours)',
+      cost: '€300-500',
+      description: currentLang === 'nl' 
+        ? 'Optimaliseer voor mobile: touch targets, font sizes, tap-friendly buttons' 
+        : 'Optimize for mobile: touch targets, font sizes, tap-friendly buttons'
+    });
+  }
+  
+  // 10. Content Freshness
+  recs.push({
+    priority: 'LOW',
+    title: currentLang === 'nl' ? 'Update Content Regelmatig' : 'Update Content Regularly',
+    impact: 5,
+    effort: currentLang === 'nl' ? 'Laag (1-2 uur/maand)' : 'Low (1-2 hours/month)',
+    cost: '€75-150/mnd',
+    description: currentLang === 'nl' 
+      ? 'Update content maandelijks met nieuwe data en insights' 
+      : 'Update content monthly with new data and insights'
+  });
+  
+  // Sort by impact (highest first)
+  return recs.sort((a, b) => b.impact - a.impact).slice(0, 8);
+}
 
-      // ============================================
-    // FAQ DEBUGGING - SEE WHAT'S FOUND
-    // ============================================
-    console.log('🔍 FAQ Detection Debug:');
-    console.log('- hasFAQ:', scores.hasFAQ);
-    console.log('- faqScore:', scores.faqScore);
     
-    // Check for FAQ schema markup
-    const hasFAQSchema = /"@type"\s*:\s*"FAQPage"/gi.test(rawHtml);
-    console.log('- FAQ Schema markup:', hasFAQSchema ? '✅ Yes' : '❌ No');
-    
-    // Check for common FAQ patterns
-    const hasDetailsTags = /<details>/gi.test(rawHtml);
-    const hasSummaryTags = /<summary>/gi.test(rawHtml);
-    const hasFAQInClass = /class=".*faq.*"/gi.test(rawHtml);
-    
-    console.log('- <details> tags:', hasDetailsTags ? '✅ Yes' : '❌ No');
-    console.log('- <summary> tags:', hasSummaryTags ? '✅ Yes' : '❌ No');
-    console.log('- class contains "faq":', hasFAQInClass ? '✅ Yes' : '❌ No');
-    
-    // Check if "vraag" or "antwoord" in text
-    const hasVraag = /vraag/gi.test(textContent);
-    const hasAntwoord = /antwoord/gi.test(textContent);
-    console.log('- Text contains "vraag":', hasVraag ? '✅ Yes' : '❌ No');
-    console.log('- Text contains "antwoord":', hasAntwoord ? '✅ Yes' : '❌ No');
   
   // 5. Page Speed
   if (score < 80) {
