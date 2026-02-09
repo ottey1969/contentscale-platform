@@ -299,7 +299,66 @@ function calculateTransparentScore(graafScore, craftScore, technicalScore, stats
     (craftScore / 30 * 100 * 0.4)    // CRAFT contributes 40% to content
   );
 
-  // ============================================
+  // 2. Get UX Score based on readability
+  function getUXScore(stats) {
+    let ux = 70; // Base UX score
+    
+    // Headings improve UX
+    if (stats.h1Count === 1) ux += 10;
+    if (stats.h2Count >= 2) ux += 10;
+    if (stats.h3Count >= 3) ux += 5;
+    
+    // Lists improve scannability
+    if (stats.listCount >= 3) ux += 5;
+    
+    // Word count affects engagement
+    if (stats.wordCount > 800) ux += 10;
+    else if (stats.wordCount < 300) ux -= 20;
+    
+    return Math.min(100, Math.max(0, ux));
+  }
+  
+  const uxScore = getUXScore(stats);
+  
+  // 3. CALCULATE OVERALL SCORE (weighted average)
+  const overall = Math.round(
+    (technicalScore / 20 * 100 * 0.4) +  // Technical: 40% weight
+    (contentScore * 0.4) +               // Content: 40% weight
+    (uxScore * 0.2)                      // UX: 20% weight
+  );
+  
+  // 4. Quality rating
+  const getQuality = (score) => {
+    if (score >= 90) return 'excellent';
+    if (score >= 75) return 'good';
+    if (score >= 60) return 'average';
+    if (score >= 45) return 'below-average';
+    return 'poor';
+  };
+  
+  return {
+    overall: Math.min(100, Math.max(0, overall)),
+    content_score: Math.min(100, Math.max(0, contentScore)),
+    technical_score: Math.min(100, Math.max(0, technicalScore)),
+    ux_score: uxScore,
+    quality: getQuality(overall),
+    calculation_steps: {
+      weights: {
+        technical: '40%',
+        content: '40%',
+        ux: '20%'
+      },
+      content_breakdown: {
+        graaf_contribution: `${Math.round((graafScore / 50 * 100 * 0.6))} points (60% of content)`,
+        craft_contribution: `${Math.round((craftScore / 30 * 100 * 0.4))} points (40% of content)`,
+        total_content: `${contentScore}/100`
+      },
+      formula: 'overall = (technical × 0.4) + (content × 0.4) + (ux × 0.2)'
+    }
+  };
+}
+
+// ============================================
 // DETAILED RECOMMENDATIONS GENERATOR
 // ============================================
 
@@ -459,65 +518,6 @@ function generateDetailedRecommendations(score, metrics, wordCount, scanData) {
   
   // Sort by impact (highest first)
   return recs.sort((a, b) => b.impact - a.impact).slice(0, 8);
-}
-  
-  // 2. Get UX Score based on readability
-  function getUXScore(stats) {
-    let ux = 70; // Base UX score
-    
-    // Headings improve UX
-    if (stats.h1Count === 1) ux += 10;
-    if (stats.h2Count >= 2) ux += 10;
-    if (stats.h3Count >= 3) ux += 5;
-    
-    // Lists improve scannability
-    if (stats.listCount >= 3) ux += 5;
-    
-    // Word count affects engagement
-    if (stats.wordCount > 800) ux += 10;
-    else if (stats.wordCount < 300) ux -= 20;
-    
-    return Math.min(100, Math.max(0, ux));
-  }
-  
-  const uxScore = getUXScore(stats);
-  
-  // 3. CALCULATE OVERALL SCORE (weighted average)
-  const overall = Math.round(
-    (technicalScore / 20 * 100 * 0.4) +  // Technical: 40% weight
-    (contentScore * 0.4) +               // Content: 40% weight
-    (uxScore * 0.2)                      // UX: 20% weight
-  );
-  
-  // 4. Quality rating
-  const getQuality = (score) => {
-    if (score >= 90) return 'excellent';
-    if (score >= 75) return 'good';
-    if (score >= 60) return 'average';
-    if (score >= 45) return 'below-average';
-    return 'poor';
-  };
-  
-  return {
-    overall: Math.min(100, Math.max(0, overall)),
-    content_score: Math.min(100, Math.max(0, contentScore)),
-    technical_score: Math.min(100, Math.max(0, technicalScore)),
-    ux_score: uxScore,
-    quality: getQuality(overall),
-    calculation_steps: {
-      weights: {
-        technical: '40%',
-        content: '40%',
-        ux: '20%'
-      },
-      content_breakdown: {
-        graaf_contribution: `${Math.round((graafScore / 50 * 100 * 0.6))} points (60% of content)`,
-        craft_contribution: `${Math.round((craftScore / 30 * 100 * 0.4))} points (40% of content)`,
-        total_content: `${contentScore}/100`
-      },
-      formula: 'overall = (technical × 0.4) + (content × 0.4) + (ux × 0.2)'
-    }
-  };
 }
 
 /**
@@ -2291,47 +2291,24 @@ app.post('/api/scan', async (req, res) => {
     const totalScore = transparentScores.overall;
     const quality = transparentScores.quality;
     
-    // Create recommendations
-    const recommendations = [];
-    
-    if (h1Count === 0) {
-      recommendations.push({
-        type: 'major',
-        category: 'CRAFT - Structure',
-        title: 'Add Primary H1 Heading',
-        description: 'No main heading found. Critical for SEO and user experience.',
-        impact: 'High',
-        points: '+8 points',
-        howToFix: '1. Create ONE descriptive H1 heading\n2. Include primary keyword naturally\n3. Place at beginning of content\n4. Make it engaging and clear',
-        example: '<h1>Complete Guide to SEO Content Optimization in 2024</h1>'
-      });
-    }
-    
-    if (wordCount < 300) {
-      recommendations.push({
-        type: 'major',
-        category: 'GRAAF - Relevance',
-        title: 'Expand Content Depth',
-        description: `Content is too short (${wordCount} words). Aim for at least 800+ words for better SEO.`,
-        impact: 'High',
-        points: '+15 points',
-        howToFix: '1. Add more detailed explanations\n2. Include examples and case studies\n3. Expand on key points\n4. Add relevant statistics',
-        example: 'Instead of brief descriptions, provide detailed step-by-step guides with practical examples.'
-      });
-    }
-    
-    if (listCount < 2) {
-      recommendations.push({
-        type: 'quickwin',
-        category: 'CRAFT - Readability',
-        title: 'Add Scannable Lists',
-        description: 'Lists improve readability and user engagement.',
-        impact: 'Medium',
-        points: '+4 points',
-        howToFix: '1. Convert long paragraphs into bullet points\n2. Add numbered lists for step-by-step guides\n3. Use lists for features or benefits\n4. Keep list items concise',
-        example: '• Benefit 1: Improved readability\n• Benefit 2: Better SEO\n• Benefit 3: Higher engagement'
-      });
-    }
+       // Create recommendations - USE NEW DETAILED FUNCTION
+    const recommendations = generateDetailedRecommendations(
+      totalScore,
+      {
+        content: transparentScores.content_score,
+        technical: transparentScores.technical_score,
+        ux: transparentScores.ux_score
+      },
+      wordCount,
+      {
+        hasFAQ: scores.hasFAQ || false,
+        faqScore: scores.faqScore || 0
+      }
+    );
+
+    // Also keep some basic recommendations for compatibility
+    const quickWins = recommendations.filter(r => r.priority === 'HIGH').slice(0, 3);
+    const majorImprovements = recommendations.filter(r => r.priority === 'HIGH' && r.impact >= 8);
     
     const quickWins = recommendations.filter(r => r.type === 'quickwin');
     const majorImprovements = recommendations.filter(r => r.type === 'major');
