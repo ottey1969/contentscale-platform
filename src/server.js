@@ -124,6 +124,115 @@ setInterval(() => {
 function calculateStableScores(content, stats, rawHtml) {
   const { wordCount = 0, h1Count = 0, h2Count = 0, h3Count = 0, listCount = 0 } = stats;
   
+  // ============================================
+  // IMPROVED FAQ DETECTION
+  // ============================================
+  function detectFAQ(html, text) {
+    const faqPatterns = [
+      // Headers
+      /<h[1-6][^>]*>.*?(faq|frequently asked|questions|vraag|antwoord|veelgestelde).*?<\/h[1-6]>/gi,
+      
+      // Schema markup
+      /"@type"\s*:\s*"FAQPage"/gi,
+      /<div[^>]*itemtype[^>]*FAQPage/gi,
+      
+      // Accordion structures
+      /<details>/gi,
+      /class="(accordion|collapse|faq|qa-)/gi,
+      
+      // Q&A patterns
+      /\b(vraag|question|q):\s*/gi,
+      /\b(antwoord|answer|a):\s*/gi,
+      
+      // Dutch patterns
+      /veelgestelde vragen/gi,
+      /vaak gestelde vragen/gi
+    ];
+    
+    let faqScore = 0;
+    let detectedPatterns = [];
+    
+    faqPatterns.forEach((pattern, index) => {
+      const matches = (html + ' ' + text).match(pattern);
+      if (matches) {
+        faqScore += matches.length;
+        detectedPatterns.push(`Pattern ${index + 1}: ${matches.length} matches`);
+      }
+    });
+    
+    const hasFAQ = faqScore >= 3; // Need at least 3 matches
+    
+    console.log(`FAQ Detection: ${hasFAQ ? 'FOUND' : 'NOT FOUND'} (score: ${faqScore})`);
+    if (detectedPatterns.length > 0) {
+      console.log('Detected patterns:', detectedPatterns);
+    }
+    
+    return {
+      hasFAQ: hasFAQ,
+      faqScore: faqScore,
+      patterns: detectedPatterns
+    };
+  }
+  
+  // Detect FAQ
+  const faqDetection = detectFAQ(rawHtml, content);
+  
+  // GRAAF SCORES (50 points total) - STABLE
+  let graafScore = 0;
+  const graafItems = {};
+  
+  // ... rest van de bestaande code blijft hetzelfde ...
+  
+  // TECHNICAL SCORES (20 points total) - STABLE
+  let technicalScore = 0;
+  
+  // Meta description
+  const metaDescMatch = rawHtml.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
+  const metaDesc = metaDescMatch ? metaDescMatch[1] : null;
+  technicalScore += metaDesc && metaDesc.length > 50 ? 4 : metaDesc ? 2 : 0;
+  
+  // Title
+  const titleMatch = rawHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
+  const title = titleMatch ? titleMatch[1] : null;
+  technicalScore += title && title.length > 30 ? 4 : title ? 2 : 0;
+  
+  // Images with alt text
+  const allImages = (rawHtml.match(/<img[^>]*>/gi) || []).length;
+  const imagesWithAlt = (rawHtml.match(/<img[^>]*alt="/gi) || []).length;
+  if (allImages > 0) {
+    const imageScore = Math.floor((imagesWithAlt / allImages) * 4);
+    technicalScore += Math.min(4, imageScore);
+  }
+  
+  // Viewport
+  const hasViewport = /<meta\s+name="viewport"/gi.test(rawHtml);
+  technicalScore += hasViewport ? 3 : 0;
+  
+  // Schema markup
+  const hasSchema = /"@context"|"@type"/gi.test(rawHtml);
+  technicalScore += hasSchema ? 3 : 0;
+  
+  // FAQ DETECTION BONUS - Add this part
+  if (faqDetection.hasFAQ) {
+    technicalScore += 2; // Bonus for having FAQ
+    console.log('✅ FAQ detected: +2 technical points');
+  }
+  
+  // Total score
+  const totalScore = graafScore + craftScore + technicalScore;
+  
+  return {
+    graafScore,
+    craftScore,
+    technicalScore,
+    totalScore,
+    graafItems,
+    craftItems,
+    hasFAQ: faqDetection.hasFAQ, // Add this to return object
+    faqScore: faqDetection.faqScore // Add this to return object
+  };
+}
+  
   // GRAAF SCORES (50 points total) - STABLE
   let graafScore = 0;
   const graafItems = {};
@@ -237,6 +346,168 @@ function calculateTransparentScore(graafScore, craftScore, technicalScore, stats
     (graafScore / 50 * 100 * 0.6) +  // GRAAF contributes 60% to content
     (craftScore / 30 * 100 * 0.4)    // CRAFT contributes 40% to content
   );
+
+  // ============================================
+// DETAILED RECOMMENDATIONS GENERATOR
+// ============================================
+
+function generateDetailedRecommendations(score, metrics, wordCount, scanData) {
+  const recs = [];
+  
+  // Default to Dutch for now, you can adjust based on language detection
+  const currentLang = 'nl'; // You can make this dynamic later
+  
+  // ALTIJD CHECKEN:
+  
+  // 1. Content Quality
+  if (metrics.content < 45) {
+    recs.push({
+      priority: 'HIGH',
+      title: currentLang === 'nl' ? 'Voeg Auteur Credentials Toe' : 'Add Author Credentials',
+      impact: 8,
+      effort: currentLang === 'nl' ? 'Laag (1-2 uur)' : 'Low (1-2 hours)',
+      cost: '€75-150',
+      description: currentLang === 'nl' 
+        ? 'Voeg auteur bio met credentials en expertise toe voor E-E-A-T' 
+        : 'Add author bio with credentials and expertise for E-E-A-T'
+    });
+  }
+  
+  // 2. Word Count
+  if (wordCount < 2000) {
+    recs.push({
+      priority: wordCount < 1500 ? 'HIGH' : 'MEDIUM',
+      title: currentLang === 'nl' ? 'Vergroot Content Diepte' : 'Expand Content Depth',
+      impact: wordCount < 1500 ? 10 : 6,
+      effort: currentLang === 'nl' ? 'Gemiddeld (4-6 uur)' : 'Medium (4-6 hours)',
+      cost: '€200-350',
+      description: currentLang === 'nl' 
+        ? `Verhoog van ${wordCount} naar 2000+ woorden met diepgaande coverage` 
+        : `Increase from ${wordCount} to 2000+ words with in-depth coverage`
+    });
+  }
+  
+  // 3. Technical SEO
+  if (metrics.technical < 16) {
+    recs.push({
+      priority: 'HIGH',
+      title: currentLang === 'nl' ? 'Implementeer Schema Markup' : 'Implement Schema Markup',
+      impact: 12,
+      effort: currentLang === 'nl' ? 'Gemiddeld (2-4 uur)' : 'Medium (2-4 hours)',
+      cost: '€150-250',
+      description: currentLang === 'nl' 
+        ? 'Voeg Article/FAQ/Organization schema toe voor betere SERP weergave' 
+        : 'Add Article/FAQ/Organization schema for better SERP visibility'
+    });
+  }
+  
+  // 4. FAQ Section (VERBETERD)
+  const hasFAQ = scanData?.hasFAQ || false;
+  if (!hasFAQ) {
+    recs.push({
+      priority: 'HIGH',
+      title: currentLang === 'nl' ? 'Voeg FAQ Sectie Toe' : 'Add FAQ Section',
+      impact: 8,
+      effort: currentLang === 'nl' ? 'Laag (2-3 uur)' : 'Low (2-3 hours)',
+      cost: '€100-175',
+      description: currentLang === 'nl' 
+        ? 'Beantwoord 8-12 veelgestelde vragen met FAQ schema markup voor AI Overview kansen' 
+        : 'Answer 8-12 common questions with FAQ schema markup to capture AI Overview opportunities'
+    });
+  } else {
+    recs.push({
+      priority: 'MEDIUM',
+      title: currentLang === 'nl' ? 'Optimaliseer Bestaande FAQ' : 'Optimize Existing FAQ',
+      impact: 5,
+      effort: currentLang === 'nl' ? 'Laag (1-2 uur)' : 'Low (1-2 hours)',
+      cost: '€75-125',
+      description: currentLang === 'nl' 
+        ? 'Voeg FAQ schema markup toe en breid uit naar 12+ vragen' 
+        : 'Add FAQ schema markup and expand to 12+ questions'
+    });
+  }
+  
+  // 5. Page Speed
+  if (score < 80) {
+    recs.push({
+      priority: score < 70 ? 'HIGH' : 'MEDIUM',
+      title: currentLang === 'nl' ? 'Optimaliseer Pagina Snelheid' : 'Optimize Page Speed',
+      impact: 9,
+      effort: currentLang === 'nl' ? 'Gemiddeld (3-5 uur)' : 'Medium (3-5 hours)',
+      cost: '€200-400',
+      description: currentLang === 'nl' 
+        ? 'Reduceer laadtijd naar <2s via image compression, lazy loading en CDN' 
+        : 'Reduce load time to <2s through image compression, lazy loading and CDN'
+    });
+  }
+  
+  // 6. Internal Links
+  if (wordCount > 1500) {
+    recs.push({
+      priority: 'MEDIUM',
+      title: currentLang === 'nl' ? 'Voeg Interne Links Toe' : 'Add Internal Links',
+      impact: 6,
+      effort: currentLang === 'nl' ? 'Laag (1 uur)' : 'Low (1 hour)',
+      cost: '€50-100',
+      description: currentLang === 'nl' 
+        ? 'Voeg 5-8 relevante interne links toe naar gerelateerde content' 
+        : 'Add 5-8 relevant internal links to related content'
+    });
+  }
+  
+  // 7. Meta Description
+  recs.push({
+    priority: 'MEDIUM',
+    title: currentLang === 'nl' ? 'Optimaliseer Meta Description' : 'Optimize Meta Description',
+    impact: 4,
+    effort: currentLang === 'nl' ? 'Laag (30 min)' : 'Low (30 min)',
+    cost: '€25-50',
+    description: currentLang === 'nl' 
+      ? 'Schrijf overtuigende meta description van 150-160 karakters' 
+      : 'Write compelling meta description of 150-160 characters'
+  });
+  
+  // 8. Images & Alt Text
+  recs.push({
+    priority: 'MEDIUM',
+    title: currentLang === 'nl' ? 'Optimaliseer Afbeeldingen' : 'Optimize Images',
+    impact: 7,
+    effort: currentLang === 'nl' ? 'Gemiddeld (2-3 uur)' : 'Medium (2-3 hours)',
+    cost: '€100-200',
+    description: currentLang === 'nl' 
+      ? 'Voeg alt-text toe, comprimeer images en gebruik WebP format' 
+      : 'Add alt-text, compress images and use WebP format'
+  });
+  
+  // 9. Mobile Optimization
+  if (score < 85) {
+    recs.push({
+      priority: 'HIGH',
+      title: currentLang === 'nl' ? 'Verbeter Mobile UX' : 'Improve Mobile UX',
+      impact: 8,
+      effort: currentLang === 'nl' ? 'Hoog (6-8 uur)' : 'High (6-8 hours)',
+      cost: '€300-500',
+      description: currentLang === 'nl' 
+        ? 'Optimaliseer voor mobile: touch targets, font sizes, tap-friendly buttons' 
+        : 'Optimize for mobile: touch targets, font sizes, tap-friendly buttons'
+    });
+  }
+  
+  // 10. Content Freshness
+  recs.push({
+    priority: 'LOW',
+    title: currentLang === 'nl' ? 'Update Content Regelmatig' : 'Update Content Regularly',
+    impact: 5,
+    effort: currentLang === 'nl' ? 'Laag (1-2 uur/maand)' : 'Low (1-2 hours/month)',
+    cost: '€75-150/mnd',
+    description: currentLang === 'nl' 
+      ? 'Update content maandelijks met nieuwe data en insights' 
+      : 'Update content monthly with new data and insights'
+  });
+  
+  // Sort by impact (highest first)
+  return recs.sort((a, b) => b.impact - a.impact).slice(0, 8);
+}
   
   // 2. Get UX Score based on readability
   function getUXScore(stats) {
