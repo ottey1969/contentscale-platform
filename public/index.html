@@ -1862,6 +1862,57 @@ function exportLeadsToJSON() {
     'JSON export coming soon!');
 }
 
+    // ============================================
+// OFFER WEBSITE PACKAGE (NO-WEBSITE LEADS)
+// ============================================
+
+function offerWebsitePackage(index) {
+  const lead = scrapedLeads[index];
+  
+  if (!lead) {
+    alert('Lead niet gevonden');
+    return;
+  }
+  
+  // Generate WhatsApp message
+  const message = currentLang === 'nl' ?
+    `Hallo ${lead.name}!\n\n` +
+    `Ik zag jullie op Google Maps${lead.rating ? ` (${lead.rating}⭐ met ${lead.reviews || 0} reviews)` : ''}.\n\n` +
+    `Jullie hebben geen website, wat betekent dat je veel potentiële klanten mist die op Google zoeken!\n\n` +
+    `Ik kan helpen met:\n` +
+    `✅ Professionele website binnen 1 week\n` +
+    `✅ Direct zichtbaar op Google\n` +
+    `✅ Meer klanten online\n\n` +
+    `Interesse in een gratis adviesgesprek?\n\n` +
+    `Groet,\n[Jouw Naam]` :
+    
+    `Hi ${lead.name}!\n\n` +
+    `I saw you on Google Maps${lead.rating ? ` (${lead.rating}⭐ with ${lead.reviews || 0} reviews)` : ''}.\n\n` +
+    `You don't have a website, which means you're missing many potential customers searching on Google!\n\n` +
+    `I can help with:\n` +
+    `✅ Professional website within 1 week\n` +
+    `✅ Visible on Google immediately\n` +
+    `✅ More customers online\n\n` +
+    `Interested in a free consultation?\n\n` +
+    `Best regards,\n[Your Name]`;
+  
+  if (lead.phone) {
+    // Open WhatsApp with pre-filled message
+    const phone = lead.phone.replace(/\s+/g, '').replace(/^0/, '+31');
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+  } else {
+    // Copy message to clipboard
+    navigator.clipboard.writeText(message).then(() => {
+      alert(currentLang === 'nl' ?
+        '✅ Bericht gekopieerd! Zoek het bedrijf op LinkedIn of Google Maps om contact op te nemen.' :
+        '✅ Message copied! Find the business on LinkedIn or Google Maps to reach out.');
+      
+      // Open Google search for the business
+      window.open(`https://www.google.com/search?q=${encodeURIComponent(lead.name + ' ' + (lead.address || ''))}`, '_blank');
+    });
+  }
+}
+
 // ============================================
 // ✅ KLAAR! ALLE FUNCTIES ZIJN NU COMPLEET
 // ============================================
