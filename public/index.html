@@ -1220,7 +1220,7 @@ function displaySingleScanResult(result) {
   
   // QUALIFIED LEAD - Show full report
   const score = result.score || 0;
-  const potentialScore = Math.min(95, score + Math.floor((100 - score) * 0.7));
+const potentialScore = Math.min(98, score + Math.floor((100 - score) * 0.8));
   const improvement = potentialScore - score;
   const metrics = result.metrics || { content: 0, technical: 0, ux: 100 };
   const recommendations = generateDetailedRecommendations(score, metrics, wordCount);
