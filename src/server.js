@@ -2310,9 +2310,7 @@ app.post('/api/scan', async (req, res) => {
     const quickWins = recommendations.filter(r => r.priority === 'HIGH').slice(0, 3);
     const majorImprovements = recommendations.filter(r => r.priority === 'HIGH' && r.impact >= 8);
     
-    const quickWins = recommendations.filter(r => r.type === 'quickwin');
-    const majorImprovements = recommendations.filter(r => r.type === 'major');
-    
+   
     // Build result with transparent scoring
     const result = {
       success: true,
