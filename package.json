@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "node src/server.js",
-    "postinstall": "npx puppeteer browsers install chrome && npx playwright install chromium --with-deps"
+    "postinstall": "npx playwright install chromium --with-deps"
   },
   "dependencies": {
     "@sendgrid/mail": "^7.7.0",
