@@ -258,6 +258,18 @@
     .cta-pulse {
       animation: pulse 2s infinite;
     }
+
+    /* Loading skeleton */
+    .skeleton {
+      background: linear-gradient(90deg, #2d3748 25%, #374151 50%, #2d3748 75%);
+      background-size: 200% 100%;
+      animation: loading 1.5s infinite;
+    }
+
+    @keyframes loading {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100">
@@ -609,12 +621,10 @@
       </div>
       
       <div id="freelancers-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div class="text-center col-span-full text-gray-400" data-lang="nl">
-          Laden...
-        </div>
-        <div class="text-center col-span-full text-gray-400" data-lang="en">
-          Loading specialists...
-        </div>
+        <!-- Skeleton Loading -->
+        <div class="freelancer-card skeleton h-48"></div>
+        <div class="freelancer-card skeleton h-48"></div>
+        <div class="freelancer-card skeleton h-48"></div>
       </div>
     </div>
 
@@ -628,12 +638,10 @@
       </div>
       
       <div id="leaderboard-list" class="max-w-4xl mx-auto">
-        <div class="text-center text-gray-400" data-lang="nl">
-          Laden...
-        </div>
-        <div class="text-center text-gray-400" data-lang="en">
-          Loading leaderboard...
-        </div>
+        <!-- Skeleton Loading -->
+        <div class="leaderboard-card skeleton h-32"></div>
+        <div class="leaderboard-card skeleton h-32"></div>
+        <div class="leaderboard-card skeleton h-32"></div>
       </div>
     </div>
 
@@ -864,12 +872,10 @@
       </div>
       
       <div id="blog-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div class="text-center col-span-full text-gray-400" data-lang="nl">
-          Laden...
-        </div>
-        <div class="text-center col-span-full text-gray-400" data-lang="en">
-          Loading insights...
-        </div>
+        <!-- Skeleton Loading -->
+        <div class="blog-card skeleton h-64"></div>
+        <div class="blog-card skeleton h-64"></div>
+        <div class="blog-card skeleton h-64"></div>
       </div>
     </div>
 
@@ -977,1771 +983,828 @@
     </div>
   </footer>
 
-  <!-- Email Config Modal -->
-<div id="emailConfigModal" class="modal">
-  <div class="modal-content"></div>
-</div>
-
-<!-- Email Review Modal (blijft hetzelfde) -->
-<div id="emailReviewModal" class="modal">
-  <div class="modal-content"></div>
-</div>
-
-</body>
-
-  <!-- Scan Results Modal -->
+  <!-- Modals -->
   <div id="scanModal" class="modal">
     <div class="modal-content"></div>
   </div>
 
-  <!-- Freelancer Registration Modal -->
   <div id="freelancerModal" class="modal">
-    <div class="modal-content p-8">
-      <div class="flex justify-between items-start mb-6">
-        <h2 class="text-3xl font-bold" data-lang="nl">📝 Registreer als SEO Specialist</h2>
-        <h2 class="text-3xl font-bold" data-lang="en">📝 Join Our Network</h2>
-        <button onclick="closeFreelancerModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
-      </div>
-      
-      <form id="freelancerForm" class="space-y-4">
-        <div class="grid md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-semibold mb-2" data-lang="nl">Volledige Naam *</label>
-            <label class="block text-sm font-semibold mb-2" data-lang="en">Full Name *</label>
-            <input type="text" name="name" required 
-                   class="w-full bg-gray-700 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-          </div>
-          <div>
-            <label class="block text-sm font-semibold mb-2">Email *</label>
-            <input type="email" name="email" required 
-                   class="w-full bg-gray-700 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-          </div>
-        </div>
-        
-        <div>
-          <label class="block text-sm font-semibold mb-2" data-lang="nl">Specialiteit *</label>
-          <label class="block text-sm font-semibold mb-2" data-lang="en">Specialty *</label>
-          <select name="specialty" required 
-                  class="w-full bg-gray-700 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-            <option value="" data-lang="nl">Selecteer specialiteit...</option>
-            <option value="" data-lang="en">Select specialty...</option>
-            <option value="SEO Content Writing">SEO Content Writing</option>
-            <option value="Technical SEO">Technical SEO</option>
-            <option value="Content Strategy">Content Strategy</option>
-            <option value="Link Building">Link Building</option>
-            <option value="Local SEO">Local SEO</option>
-          </select>
-        </div>
-        
-        <div class="grid md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-semibold mb-2" data-lang="nl">Jaren Ervaring *</label>
-            <label class="block text-sm font-semibold mb-2" data-lang="en">Years Experience *</label>
-            <input type="number" name="experience" min="0" max="50" required 
-                   class="w-full bg-gray-700 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-          </div>
-          <div>
-            <label class="block text-sm font-semibold mb-2">Portfolio URL</label>
-            <input type="url" name="portfolio" 
-                   class="w-full bg-gray-700 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-          </div>
-        </div>
-        
-        <div>
-          <label class="block text-sm font-semibold mb-2" data-lang="nl">Bio (max 200 tekens) *</label>
-          <label class="block text-sm font-semibold mb-2" data-lang="en">Bio (max 200 chars) *</label>
-          <textarea name="bio" maxlength="200" required rows="3"
-                    class="w-full bg-gray-700 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
-        </div>
-        
-        <button type="submit" 
-                class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-8 py-4 rounded-lg font-bold text-lg transition-all shadow-lg hover:shadow-xl">
-          <span data-lang="nl">Verstuur Aanmelding</span>
-          <span data-lang="en">Submit Application</span>
-        </button>
-      </form>
-    </div>
+    <div class="modal-content"></div>
   </div>
-
-  <!-- Lead Scanner Module -->
-  <script src="/lead-scanner-module.js"></script>
 
   <!-- Main JavaScript -->
   <script>
- // ============================================
-// DEEL 1: LANGUAGE SYSTEM + LEAD SCANNER
-// Plak dit EERST in je <script> tag
-// ============================================
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    let currentLang = localStorage.getItem('contentscale_lang') || 'en';
+    let scrapedLeads = [];
 
-let scanData = null;
-let publicScanner = null;
-let scrapedLeads = [];
-let currentLang = localStorage.getItem('contentscale_lang') || 'en';
-
-// ============================================
-// LANGUAGE SYSTEM
-// ============================================
-
-function switchLanguage(lang) {
-  currentLang = lang;
-  localStorage.setItem('contentscale_lang', lang);
-  document.getElementById('langBtnNL').classList.toggle('active', lang === 'nl');
-  document.getElementById('langBtnEN').classList.toggle('active', lang === 'en');
-  document.querySelectorAll('[data-lang]').forEach(el => {
-    el.classList.toggle('active-lang', el.getAttribute('data-lang') === lang);
-  });
-  document.documentElement.lang = lang;
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  switchLanguage(currentLang);
-  if (window.LeadScanner) {
-    publicScanner = new window.LeadScanner({
-      apiEndpoint: '/api/scan',
-      onScanComplete: (result) => console.log('Scan complete:', result),
-      onError: (error) => console.error('Scan error:', error)
-    });
-  }
-  loadFreelancers();
-  loadLeaderboard();
-  loadBlog();
-});
-
-// ============================================
-// LEAD SCANNER MODE SWITCHER
-// ============================================
-
-function switchScanMode(mode) {
-  const singleMode = document.getElementById('singleScanMode');
-  const bulkMode = document.getElementById('bulkScanMode');
-  const singleBtn = document.getElementById('modeSingleBtn');
-  const bulkBtn = document.getElementById('modeBulkBtn');
-  if (mode === 'single') {
-    singleMode.classList.remove('hidden');
-    bulkMode.classList.add('hidden');
-    singleBtn.classList.add('active');
-    bulkBtn.classList.remove('active');
-  } else {
-    singleMode.classList.add('hidden');
-    bulkMode.classList.remove('hidden');
-    singleBtn.classList.remove('active');
-    bulkBtn.classList.add('active');
-  }
-}
-
-// ============================================
-// SINGLE URL SCANNER
-// ============================================
-
-async function scanSingleURLPublic() {
-  const input = document.getElementById('singleUrlInput');
-  const button = document.getElementById('singleScanBtn');
-  const progressDiv = document.getElementById('singleScanProgress');
-  const progressBar = document.getElementById('singleProgressBar');
-  const progressText = document.getElementById('singleProgressText');
-  const resultDiv = document.getElementById('singleScanResult');
-  const url = input.value.trim();
-  
-  if (!url) {
-    alert(currentLang === 'nl' ? 'Voer een URL in' : 'Enter a URL');
-    return;
-  }
-  
-  progressDiv.classList.remove('hidden');
-  resultDiv.classList.add('hidden');
-  button.disabled = true;
-  button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + (currentLang === 'nl' ? 'Scannen...' : 'Scanning...');
-  
-  let progress = 0;
-  const progressInterval = setInterval(() => {
-    if (progress < 90) {
-      progress += Math.random() * 15;
-      progressBar.style.width = Math.min(90, progress) + '%';
-      progressText.textContent = (currentLang === 'nl' ? 'Analyseren ' : 'Analyzing ') + url + '...';
-    }
-  }, 300);
-  
-  try {
-    let result;
-    if (publicScanner && publicScanner.scanSingleURL) {
-      result = await publicScanner.scanSingleURL(url);
-    } else {
-      const response = await fetch('/api/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url })
+    // Language system
+    function switchLanguage(lang) {
+      currentLang = lang;
+      localStorage.setItem('contentscale_lang', lang);
+      
+      // Update button states
+      document.getElementById('langBtnNL').classList.toggle('active', lang === 'nl');
+      document.getElementById('langBtnEN').classList.toggle('active', lang === 'en');
+      
+      // Show/hide language-specific content
+      document.querySelectorAll('[data-lang]').forEach(el => {
+        el.classList.toggle('active-lang', el.getAttribute('data-lang') === lang);
       });
-      result = await response.json();
-    }
-    clearInterval(progressInterval);
-    progressBar.style.width = '100%';
-    progressText.textContent = currentLang === 'nl' ? 'Scan voltooid!' : 'Scan complete!';
-    setTimeout(() => {
-      progressDiv.classList.add('hidden');
-      displaySingleScanResult(result);
-    }, 500);
-  } catch (error) {
-    clearInterval(progressInterval);
-    progressDiv.classList.add('hidden');
-    alert((currentLang === 'nl' ? 'Scan mislukt: ' : 'Scan failed: ') + error.message);
-  } finally {
-    button.disabled = false;
-    button.innerHTML = (currentLang === 'nl' ? '🚀 Start Scan' : '🚀 Start Scan');
-  }
-}
-
-// ============================================
-// DISPLAY SCAN RESULT - ✅ FIXED VERSION
-// ============================================
-
-function displaySingleScanResult(result) {
-  const resultDiv = document.getElementById('singleScanResult');
-  
-  // ✅ FIX: Check multiple locations for wordCount
-  const wordCount = result.wordCount || result.content_stats?.wordCount || result.details?.wordCount || 0;
-  
-  // NOT QUALIFIED (< 1100 words)
-  if (wordCount < 1100) {
-    const titleText = currentLang === 'nl' ? 'Niet Gekwalificeerd als Lead' : 'Not Qualified as Lead';
-    const wordText = currentLang === 'nl' ? 'woorden' : 'words';
-    const minText = currentLang === 'nl' ? 'Minimum 1100 woorden vereist voor optimalisatie potentieel' : 'Minimum 1100 words required for optimization potential';
-    const tipText = currentLang === 'nl' ? 'Tip: Scan pagina\'s met substantiële content voor betere leads' : 'Tip: Scan pages with substantial content for better leads';
-    
-    resultDiv.innerHTML = '<div class="scan-result-card bg-yellow-900 bg-opacity-30 border-2 border-yellow-500 rounded-xl p-8 text-center">' +
-      '<div class="text-6xl mb-4">⚠️</div>' +
-      '<h3 class="text-3xl font-bold text-yellow-400 mb-3">' + titleText + '</h3>' +
-      '<p class="text-lg text-gray-300 mb-2">Deze pagina heeft slechts <strong class="text-yellow-400">' + wordCount + ' ' + wordText + '</strong></p>' +
-      '<p class="text-gray-400 mb-6">' + minText + '</p>' +
-      '<div class="bg-gray-800 rounded-lg p-4 inline-block"><p class="text-sm text-gray-400">💡 ' + tipText + '</p></div>' +
-      '</div>';
-    resultDiv.classList.remove('hidden');
-    return;
-  }
-  
-  // QUALIFIED LEAD - Show full report
-  const score = result.score || 0;
-const potentialScore = Math.min(98, score + Math.floor((100 - score) * 0.8));
-  const improvement = potentialScore - score;
-  const metrics = result.metrics || { content: 0, technical: 0, ux: 100 };
-  const recommendations = generateDetailedRecommendations(score, metrics, wordCount);
-  
-  let scoreColor = 'text-red-400', scoreLabel = 'Poor', scoreBg = 'bg-red-900';
-  if (score >= 90) { scoreColor = 'text-green-400'; scoreLabel = currentLang === 'nl' ? 'Uitstekend' : 'Excellent'; scoreBg = 'bg-green-900'; }
-  else if (score >= 75) { scoreColor = 'text-blue-400'; scoreLabel = currentLang === 'nl' ? 'Goed' : 'Good'; scoreBg = 'bg-blue-900'; }
-  else if (score >= 60) { scoreColor = 'text-yellow-400'; scoreLabel = currentLang === 'nl' ? 'Gemiddeld' : 'Average'; scoreBg = 'bg-yellow-900'; }
-  
-  const recsHTML = recommendations.map((rec, i) => {
-    const borderColor = rec.priority === 'HIGH' ? 'border-red-500' : rec.priority === 'MEDIUM' ? 'border-yellow-500' : 'border-blue-500';
-    const badgeColor = rec.priority === 'HIGH' ? 'bg-red-600' : rec.priority === 'MEDIUM' ? 'bg-yellow-600' : 'bg-blue-600';
-    return '<div class="bg-gray-700 rounded-lg p-4 border-l-4 ' + borderColor + ' hover:bg-gray-650 transition-all">' +
-      '<div class="flex items-start gap-3">' +
-      '<div class="text-2xl font-bold text-gray-500 mt-1">' + (i+1) + '</div>' +
-      '<div class="flex-1">' +
-      '<div class="flex items-center gap-2 mb-2 flex-wrap">' +
-      '<h5 class="font-bold text-white text-sm md:text-base">' + rec.title + '</h5>' +
-      '<span class="text-xs px-2 py-1 rounded ' + badgeColor + ' text-white">' + rec.priority + '</span>' +
-      '<span class="text-xs px-2 py-1 rounded bg-green-600 text-white font-semibold">+' + rec.impact + ' pts</span>' +
-      '</div>' +
-      '<p class="text-sm text-gray-300 mb-2">' + rec.description + '</p>' +
-      '<div class="flex items-center gap-4 text-xs text-gray-400 flex-wrap">' +
-      '<span>⏱️ ' + rec.effort + '</span><span>💵 ' + rec.cost + '</span>' +
-      '</div></div></div></div>';
-  }).join('');
-  
-  resultDiv.innerHTML = '<div class="scan-result-card bg-gray-800 rounded-2xl p-8 border-2 border-purple-500 shadow-2xl">' +
-    '<div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 pb-6 border-b-2 border-gray-700 gap-4">' +
-    '<div class="flex-1"><h3 class="text-2xl font-bold text-white mb-2">' + (currentLang === 'nl' ? '📊 Lead Analyse Rapport' : '📊 Lead Analysis Report') + '</h3>' +
-    '<p class="text-sm text-gray-400 break-all mb-2">' + (result.url || '') + '</p>' +
-    '<div class="flex items-center gap-3 text-sm flex-wrap">' +
-    '<span class="text-gray-400">📝 ' + wordCount + ' ' + (currentLang === 'nl' ? 'woorden' : 'words') + '</span>' +
-    '<span class="text-gray-400">•</span>' +
-    '<span class="px-3 py-1 bg-green-600 rounded-full text-white font-semibold text-xs">✅ ' + (currentLang === 'nl' ? 'Gekwalificeerde Lead' : 'Qualified Lead') + '</span></div></div>' +
-    '<div class="text-center ' + scoreBg + ' bg-opacity-30 rounded-2xl px-8 py-6 border-2 border-current">' +
-    '<div class="' + scoreColor + ' text-6xl font-black mb-2">' + score + '</div>' +
-    '<div class="text-sm text-gray-300 font-semibold">' + scoreLabel + '</div></div></div>' +
-    '<div class="grid md:grid-cols-2 gap-6 mb-8"><div class="bg-gray-900 rounded-xl p-6 border-2 border-gray-600">' +
-    '<h4 class="text-lg font-bold text-white mb-4 flex items-center gap-2"><span>📊</span><span>' + (currentLang === 'nl' ? 'Huidige Staat' : 'Current State') + '</span></h4>' +
-    '<div class="space-y-3"><div><div class="flex justify-between items-center mb-1">' +
-    '<span class="text-sm text-gray-300">' + (currentLang === 'nl' ? 'Content Kwaliteit' : 'Content Quality') + '</span>' +
-    '<span class="font-bold ' + scoreColor + '">' + metrics.content + '/50</span></div>' +
-    '<div class="h-2 bg-gray-700 rounded-full overflow-hidden"><div class="h-full bg-blue-500 transition-all" style="width: ' + ((metrics.content/50)*100) + '%"></div></div></div>' +
-    '<div><div class="flex justify-between items-center mb-1"><span class="text-sm text-gray-300">' + (currentLang === 'nl' ? 'Technisch SEO' : 'Technical SEO') + '</span>' +
-    '<span class="font-bold text-green-400">' + metrics.technical + '/20</span></div>' +
-    '<div class="h-2 bg-gray-700 rounded-full overflow-hidden"><div class="h-full bg-green-500 transition-all" style="width: ' + ((metrics.technical/20)*100) + '%"></div></div></div>' +
-    '<div><div class="flex justify-between items-center mb-1"><span class="text-sm text-gray-300">' + (currentLang === 'nl' ? 'Gebruikerservaring' : 'User Experience') + '</span>' +
-    '<span class="font-bold text-yellow-400">' + metrics.ux + '/30</span></div>' +
-    '<div class="h-2 bg-gray-700 rounded-full overflow-hidden"><div class="h-full bg-yellow-500 transition-all" style="width: ' + ((metrics.ux/30)*100) + '%"></div></div></div></div></div>' +
-    '<div class="bg-gradient-to-br from-green-900 to-emerald-900 rounded-xl p-6 border-2 border-green-500">' +
-    '<h4 class="text-lg font-bold text-white mb-4 flex items-center gap-2"><span>🚀</span><span>' + (currentLang === 'nl' ? 'Potentieel (Na Optimalisatie)' : 'Potential (After Optimization)') + '</span></h4>' +
-    '<div class="text-center mb-4"><div class="text-6xl md:text-7xl font-black text-green-400 mb-2">' + potentialScore + '</div>' +
-    '<div class="text-green-300 font-semibold text-lg">+' + improvement + ' ' + (currentLang === 'nl' ? 'punten mogelijk!' : 'points possible!') + '</div></div>' +
-    '<div class="bg-green-800 bg-opacity-50 rounded-lg p-4"><div class="text-sm text-green-200 space-y-1">' +
-    '<div class="flex items-center gap-2"><span>⏱️</span><span>' + (currentLang === 'nl' ? 'Timeline: 2-3 weken' : 'Timeline: 2-3 weeks') + '</span></div>' +
-    '<div class="flex items-center gap-2"><span>💰</span><span>' + (currentLang === 'nl' ? 'Investering' : 'Investment') + ': €' + Math.round(improvement * 15) + '-' + Math.round(improvement * 20) + '</span></div>' +
-    '<div class="flex items-center gap-2"><span>📈</span><span>ROI: 300-500%</span></div></div></div></div></div>' +
-    '<div class="mb-6"><h4 class="text-xl font-bold text-white mb-4 flex items-center gap-2"><span>💡</span><span>' + (currentLang === 'nl' ? 'Quick Wins & Aanbevelingen' : 'Quick Wins & Recommendations') + '</span></h4>' +
-    '<div class="space-y-3">' + recsHTML + '</div></div>' +
-    '<div class="border-t-2 border-gray-700 pt-6"><h4 class="text-lg font-bold text-white mb-4">' + (currentLang === 'nl' ? '📤 Deel dit Rapport' : '📤 Share This Report') + '</h4>' +
-    '<div class="grid grid-cols-2 md:grid-cols-4 gap-3">' +
-    '<button onclick="shareLeadViaWhatsApp(\'' + encodeURIComponent(result.url) + '\', ' + score + ', ' + potentialScore + ')" class="bg-green-600 hover:bg-green-700 px-4 py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"><i class="fab fa-whatsapp"></i><span>WhatsApp</span></button>' +
-    '<button onclick="shareLeadViaEmail(\'' + encodeURIComponent(result.url) + '\', ' + score + ', ' + potentialScore + ')" class="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"><i class="fas fa-envelope"></i><span>Email</span></button>' +
-    '<button onclick="shareLeadViaLinkedIn(\'' + encodeURIComponent(result.url) + '\', ' + score + ', ' + potentialScore + ')" class="bg-blue-700 hover:bg-blue-800 px-4 py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"><i class="fab fa-linkedin"></i><span>LinkedIn</span></button>' +
-    '<button onclick="copyLeadReport(\'' + encodeURIComponent(result.url) + '\', ' + score + ', ' + potentialScore + ')" class="bg-gray-600 hover:bg-gray-700 px-4 py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"><i class="fas fa-copy"></i><span>' + (currentLang === 'nl' ? 'Kopieer' : 'Copy') + '</span></button>' +
-    '</div></div></div>';
-  
-  resultDiv.classList.remove('hidden');
-}
-
-// ============================================
-// RECOMMENDATIONS GENERATOR
-// ============================================
-
-function generateDetailedRecommendations(score, metrics, wordCount) {
-  const recs = [];
-  
-  if (metrics.content < 40) {
-    recs.push({
-      priority: 'HIGH',
-      title: currentLang === 'nl' ? 'Voeg Auteur Credentials Toe' : 'Add Author Credentials',
-      impact: 5,
-      effort: currentLang === 'nl' ? 'Laag (1-2 uur)' : 'Low (1-2 hours)',
-      cost: '€75-100',
-      description: currentLang === 'nl' ? 'Voeg een auteur bio met credentials toe om E-A-T signalen te versterken' : 'Add an author bio with credentials to build E-A-T signals'
-    });
-  }
-  
-  if (wordCount < 1500) {
-    recs.push({
-      priority: 'MEDIUM',
-      title: currentLang === 'nl' ? 'Vergroot Content Diepte' : 'Expand Content Depth',
-      impact: 4,
-      effort: currentLang === 'nl' ? 'Gemiddeld (3-4 uur)' : 'Medium (3-4 hours)',
-      cost: '€150-200',
-      description: currentLang === 'nl' ? 'Verhoog van ' + wordCount + ' naar 1500+ woorden met uitgebreide coverage' : 'Increase from ' + wordCount + ' to 1500+ words with comprehensive coverage'
-    });
-  }
-  
-  if (metrics.technical < 15) {
-    recs.push({
-      priority: 'HIGH',
-      title: currentLang === 'nl' ? 'Implementeer Schema Markup' : 'Implement Schema Markup',
-      impact: 8,
-      effort: currentLang === 'nl' ? 'Gemiddeld (2-3 uur)' : 'Medium (2-3 hours)',
-      cost: '€100-150',
-      description: currentLang === 'nl' ? 'Voeg Article/Product schema toe voor betere SERP weergave' : 'Add Article/Product schema for better SERP appearance'
-    });
-  }
-  
-  if (score < 75) {
-    recs.push({
-      priority: 'HIGH',
-      title: currentLang === 'nl' ? 'Optimaliseer Pagina Snelheid' : 'Optimize Page Speed',
-      impact: 6,
-      effort: currentLang === 'nl' ? 'Gemiddeld (4-5 uur)' : 'Medium (4-5 hours)',
-      cost: '€200-300',
-      description: currentLang === 'nl' ? 'Reduceer laadtijd naar <3s via image optimalisatie en caching' : 'Reduce load time to <3s through image optimization and caching'
-    });
-  }
-  
-  recs.push({
-    priority: 'MEDIUM',
-    title: currentLang === 'nl' ? 'Voeg FAQ Sectie Toe' : 'Add FAQ Section',
-    impact: 5,
-    effort: currentLang === 'nl' ? 'Laag (1-2 uur)' : 'Low (1-2 hours)',
-    cost: '€75-100',
-    description: currentLang === 'nl' ? 'Beantwoord veelgestelde vragen om AI Overview kansen te pakken' : 'Answer common questions to capture AI Overview opportunities'
-  });
-  
-  return recs.slice(0, 5);
-}
-
-// ============================================
-// SHARE FUNCTIONS
-// ============================================
-
-function shareLeadViaWhatsApp(url, currentScore, potentialScore) {
-  const decodedUrl = decodeURIComponent(url);
-  const message = currentLang === 'nl' ?
-    '🚨 SEO Kans Gevonden!\n\nIk heb ' + decodedUrl + ' geanalyseerd en ontdekte:\n\nHuidige Score: ' + currentScore + '/100\nPotentiële Score: ' + potentialScore + '/100\nVerbetering: +' + (potentialScore - currentScore) + ' punten mogelijk!\n\nWil je het volledige rapport? Laten we chatten!' :
-    '🚨 SEO Opportunity Alert!\n\nI analyzed ' + decodedUrl + ' and found:\n\nCurrent Score: ' + currentScore + '/100\nPotential Score: ' + potentialScore + '/100\nImprovement: +' + (potentialScore - currentScore) + ' points possible!\n\nWant the full report? Let\'s chat!';
-  window.open('https://wa.me/?text=' + encodeURIComponent(message), '_blank');
-}
-
-function shareLeadViaEmail(url, currentScore, potentialScore) {
-  const decodedUrl = decodeURIComponent(url);
-  const subject = currentLang === 'nl' ? 'SEO Analyse: ' + decodedUrl + ' scoorde ' + currentScore + '/100' : 'SEO Analysis: ' + decodedUrl + ' scored ' + currentScore + '/100';
-  const body = currentLang === 'nl' ?
-    'Hoi,\n\nIk heb een AI-era SEO analyse uitgevoerd op ' + decodedUrl + ' en significante kansen ontdekt:\n\n📊 HUIDIGE SCORE: ' + currentScore + '/100\n🚀 POTENTIËLE SCORE: ' + potentialScore + '/100\n📈 VERBETERING: +' + (potentialScore - currentScore) + ' punten\n\nJe website heeft sterk potentieel! Met enkele strategische optimalisaties kunnen we je zichtbaarheid significant verbeteren.\n\nWil je de volledige analyse en implementatie plan bespreken?\n\nGroeten' :
-    'Hi,\n\nI ran an AI-era SEO analysis on ' + decodedUrl + ' and discovered significant opportunities:\n\n📊 CURRENT SCORE: ' + currentScore + '/100\n🚀 POTENTIAL SCORE: ' + potentialScore + '/100\n📈 IMPROVEMENT: +' + (potentialScore - currentScore) + ' points\n\nYour website has strong potential! With some strategic optimizations, we could boost your visibility significantly.\n\nWant to discuss the full analysis and implementation plan?\n\nBest regards';
-  window.location.href = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
-}
-
-function shareLeadViaLinkedIn(url, currentScore, potentialScore) {
-  const decodedUrl = decodeURIComponent(url);
-  const text = currentLang === 'nl' ?
-    'Zojuist ' + decodedUrl + ' geanalyseerd - ' + (potentialScore - currentScore) + ' punten SEO verbeteringspotentieel gevonden! Huidige: ' + currentScore + '/100, Potentieel: ' + potentialScore + '/100. #SEO #ContentOptimalisatie' :
-    'Just analyzed ' + decodedUrl + ' - found ' + (potentialScore - currentScore) + ' points of SEO improvement potential! Current: ' + currentScore + '/100, Potential: ' + potentialScore + '/100. #SEO #ContentOptimization';
-  window.open('https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(decodedUrl) + '&summary=' + encodeURIComponent(text), '_blank');
-}
-
-function copyLeadReport(url, currentScore, potentialScore) {
-  const decodedUrl = decodeURIComponent(url);
-  const report = currentLang === 'nl' ?
-    'SEO ANALYSE RAPPORT\n\nURL: ' + decodedUrl + '\n\nRESULTATEN:\n✅ Gekwalificeerde lead (1100+ woorden)\n📊 Huidige Score: ' + currentScore + '/100\n🚀 Potentieel: ' + potentialScore + '/100\n📈 Verbetering: +' + (potentialScore - currentScore) + ' punten\n\nINVESTERING:\n⏱️ Timeline: 2-3 weken\n💰 Budget: €' + Math.round((potentialScore - currentScore) * 15) + '-' + Math.round((potentialScore - currentScore) * 20) + '\n📈 ROI: 300-500%\n\nContact: info@contentscale.site\nWhatsApp: +31 6 2807 3996' :
-    'SEO ANALYSIS REPORT\n\nURL: ' + decodedUrl + '\n\nRESULTS:\n✅ Qualified lead (1100+ words)\n📊 Current Score: ' + currentScore + '/100\n🚀 Potential: ' + potentialScore + '/100\n📈 Improvement: +' + (potentialScore - currentScore) + ' points\n\nINVESTMENT:\n⏱️ Timeline: 2-3 weeks\n💰 Budget: €' + Math.round((potentialScore - currentScore) * 15) + '-' + Math.round((potentialScore - currentScore) * 20) + '\n📈 ROI: 300-500%\n\nContact: info@contentscale.site\nWhatsApp: +31 6 2807 3996';
-  navigator.clipboard.writeText(report).then(() => {
-    alert(currentLang === 'nl' ? '✅ Rapport gekopieerd naar clipboard!' : '✅ Report copied to clipboard!');
-  }).catch(err => {
-    console.error('Copy failed:', err);
-    alert(currentLang === 'nl' ? '❌ Kopiëren mislukt. Probeer handmatig te selecteren en kopiëren.' : '❌ Copy failed. Please select and copy manually.');
-  });
-}
-
-// ============================================
-// EINDE DEEL 1
-// Ga nu naar DEEL 2!
-// ============================================
-
-    // ============================================
-// DEEL 2: MAIN SCANNER + MODAL FUNCTIONS
-// Plak dit NA DEEL 1
-// ============================================
-
-// ============================================
-// MAIN SCANNER (Header)
-// ============================================
-
-async function performScan() {
-  const input = document.getElementById('scanInput');
-  const button = document.getElementById('scanButton');
-  const url = input.value.trim();
-  
-  if (!url) {
-    alert(currentLang === 'nl' ? 'Voer een URL in' : 'Please enter a URL to scan');
-    return;
-  }
-  
-  let fullUrl = url;
-  if (!url.startsWith('http')) {
-    fullUrl = 'https://' + url;
-  }
-  
-  try {
-    new URL(fullUrl);
-  } catch {
-    alert(currentLang === 'nl' ? 'Voer een geldige URL in' : 'Please enter a valid URL');
-    return;
-  }
-  
-  button.disabled = true;
-  button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + (currentLang === 'nl' ? 'Analyseren...' : 'Analyzing...');
-  
-  try {
-    const response = await fetch('/api/scan', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: fullUrl })
-    });
       
-    const data = await response.json();
-    
-    if (!data.success) {
-      throw new Error(data.error || 'Scan failed');
+      document.documentElement.lang = lang;
     }
-    
-    scanData = data;
-    displayScanResults(data);
-    
-  } catch (error) {
-    console.error('Scan error:', error);
-    alert((currentLang === 'nl' ? 'Scan mislukt: ' : 'Scan failed: ') + error.message);
-  } finally {
-    button.disabled = false;
-    button.innerHTML = currentLang === 'nl' ? '🚀 Analyseer Nu' : '🚀 Analyze Now';
-  }
-}
 
-// Enter key handler for main scanner
-document.getElementById('scanInput')?.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    performScan();
-  }
-});
-
-// ============================================
-// DISPLAY SCAN RESULTS (Main Scanner Modal)
-// ============================================
-
-function displayScanResults(data) {
-  const modal = document.getElementById('scanModal');
-  const modalContent = modal.querySelector('.modal-content');
-  
-  const score = data.score || 0;
-  const contentScore = data.metrics?.content || 0;
-  const technicalRaw = data.metrics?.technical || 0;
-  const technicalPercent = Math.round((technicalRaw / 20) * 100);
-  const uxScore = data.metrics?.ux || 100;
-  
-  let qualityClass = 'bg-red-600';
-  let qualityText = currentLang === 'nl' ? 'Slecht' : 'Poor';
-  
-  if (score >= 90) {
-    qualityClass = 'bg-green-600';
-    qualityText = currentLang === 'nl' ? 'Uitstekend' : 'Excellent';
-  } else if (score >= 75) {
-    qualityClass = 'bg-blue-600';
-    qualityText = currentLang === 'nl' ? 'Goed' : 'Good';
-  } else if (score >= 60) {
-    qualityClass = 'bg-yellow-600';
-    qualityText = currentLang === 'nl' ? 'Gemiddeld' : 'Average';
-  }
-  
-  const potentialScore = Math.min(96, score + 12 + Math.floor(Math.random() * 6));
-  
-  const recs = data.recommendations?.all || [];
-  let recsHtml = '';
-  
-  if (recs.length > 0) {
-    recsHtml = recs.map((rec, i) => 
-      '<div class="bg-gray-700 p-4 rounded-lg border-l-4 ' + (rec.impact === 'High' ? 'border-red-500' : rec.impact === 'Medium' ? 'border-yellow-500' : 'border-blue-500') + ' mb-3">' +
-      '<div class="flex items-start justify-between mb-2">' +
-      '<div class="flex-1">' +
-      '<div class="flex items-center gap-2 mb-1">' +
-      '<span class="text-2xl font-bold text-gray-400">' + (i + 1) + '</span>' +
-      '<span class="font-bold text-white">' + rec.title + '</span>' +
-      '<span class="text-xs px-2 py-1 rounded ' + (rec.impact === 'High' ? 'bg-red-600' : rec.impact === 'Medium' ? 'bg-yellow-600' : 'bg-blue-600') + '">' + rec.impact + '</span>' +
-      (rec.points ? '<span class="text-xs px-2 py-1 rounded bg-green-600">' + rec.points + '</span>' : '') +
-      '</div>' +
-      '<div class="text-xs text-gray-400">' + (rec.category || '') + '</div>' +
-      '</div>' +
-      '</div>' +
-      '<p class="text-sm text-gray-300 mb-2">' + (rec.description || '') + '</p>' +
-      (rec.howToFix ? '<details>' +
-      '<summary class="text-sm text-purple-400 cursor-pointer hover:text-purple-300 font-semibold">' +
-      '<i class="fas fa-wrench mr-1"></i> ' + (currentLang === 'nl' ? 'Oplossing' : 'How to Fix') +
-      '</summary>' +
-      '<div class="text-sm text-gray-300 bg-gray-800 p-4 rounded mt-2 whitespace-pre-line">' + rec.howToFix + '</div>' +
-      '</details>' : '') +
-      '</div>'
-    ).join('');
-  } else {
-    recsHtml = '<div class="text-center p-8 bg-green-900 bg-opacity-20 rounded-lg border-2 border-green-600">' +
-      '<div class="text-5xl mb-3">🎉</div>' +
-      '<h3 class="text-xl font-bold mb-2 text-green-400">' + (currentLang === 'nl' ? 'Uitstekende Content!' : 'Excellent Content Quality!') + '</h3>' +
-      '<p class="text-gray-300">' + (currentLang === 'nl' ? 'Je content voldoet al aan de hoogste standaarden.' : 'Your content already meets the highest standards.') + '</p>' +
-      '</div>';
-  }
-  
-  modalContent.innerHTML = '<div class="p-8">' +
-    '<div class="flex justify-between items-start mb-6">' +
-    '<div>' +
-    '<h2 class="text-3xl font-bold mb-2">' + (currentLang === 'nl' ? 'Content Kwaliteit Analyse' : 'Content Quality Analysis') + '</h2>' +
-    '<p class="text-sm text-gray-400">' + data.url + '</p>' +
-    '</div>' +
-    '<button onclick="closeScanModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>' +
-    '</div>' +
-    '<div class="grid md:grid-cols-2 gap-4 mb-6">' +
-    '<div class="bg-gray-800 rounded-xl p-6 border-2 ' + (score < 75 ? 'border-red-500' : 'border-gray-600') + '">' +
-    '<div class="text-sm text-gray-400 mb-2">' + (currentLang === 'nl' ? 'Huidige Score' : 'Current Score') + '</div>' +
-    '<div class="text-5xl font-bold mb-2">' + score + '<span class="text-2xl text-gray-400">/100</span></div>' +
-    '<div class="inline-block px-4 py-2 ' + qualityClass + ' rounded-full font-bold text-sm">' + qualityText + '</div>' +
-    '<div class="mt-4 space-y-2">' +
-    '<div>' +
-    '<div class="flex justify-between text-xs mb-1">' +
-    '<span>Content</span>' +
-    '<span class="font-bold">' + contentScore + '/100</span>' +
-    '</div>' +
-    '<div class="h-2 bg-gray-700 rounded-full overflow-hidden">' +
-    '<div class="h-full bg-blue-500" style="width: ' + contentScore + '%"></div>' +
-    '</div>' +
-    '</div>' +
-    '<div>' +
-    '<div class="flex justify-between text-xs mb-1">' +
-    '<span>Technical</span>' +
-    '<span class="font-bold">' + technicalRaw + '/20</span>' +
-    '</div>' +
-    '<div class="h-2 bg-gray-700 rounded-full overflow-hidden">' +
-    '<div class="h-full bg-green-500" style="width: ' + technicalPercent + '%"></div>' +
-    '</div>' +
-    '</div>' +
-    '<div>' +
-    '<div class="flex justify-between text-xs mb-1">' +
-    '<span>UX</span>' +
-    '<span class="font-bold">' + uxScore + '/100</span>' +
-    '</div>' +
-    '<div class="h-2 bg-gray-700 rounded-full overflow-hidden">' +
-    '<div class="h-full bg-yellow-500" style="width: ' + uxScore + '%"></div>' +
-    '</div>' +
-    '</div>' +
-    '</div>' +
-    '</div>' +
-    '<div class="bg-gradient-to-br from-green-900 to-emerald-900 rounded-xl p-6 border-2 border-green-500">' +
-    '<div class="text-sm text-gray-300 mb-2">' + (currentLang === 'nl' ? 'Potentieel met Onze Hulp' : 'Potential with Our Help') + '</div>' +
-    '<div class="text-5xl font-bold text-green-400 mb-2">' + potentialScore + '<span class="text-2xl text-gray-300">/100</span></div>' +
-    '<div class="inline-block px-4 py-2 bg-green-600 rounded-full font-bold text-sm">🏆 ' + (currentLang === 'nl' ? 'Elite' : 'Elite') + '</div>' +
-    '<div class="mt-4 pt-4 border-t border-green-700">' +
-    '<h4 class="text-sm font-bold mb-2 text-green-400">' + (currentLang === 'nl' ? 'Onze Aanpak:' : 'Our Approach:') + '</h4>' +
-    '<ul class="text-xs text-gray-300 space-y-1">' +
-    '<li>✅ Google E-E-A-T optimization</li>' +
-    '<li>✅ GRAAF Framework ' + (currentLang === 'nl' ? 'implementatie' : 'implementation') + '</li>' +
-    '<li>✅ CRAFT enhancement</li>' +
-    '<li>✅ Technical SEO fixes</li>' +
-    '</ul>' +
-    '</div>' +
-    '</div>' +
-    '</div>' +
-    '<div class="mb-6">' +
-    '<h3 class="text-xl font-bold mb-4"><i class="fas fa-route text-purple-400 mr-2"></i>' + (currentLang === 'nl' ? 'Verbeterplan' : 'Improvement Roadmap') + '</h3>' +
-    recsHtml +
-    '</div>' +
-    (score < 90 ? '<div class="bg-gradient-to-r from-green-900 to-emerald-900 rounded-xl p-6 text-center border-2 border-green-600">' +
-    '<div class="text-4xl mb-3">🚀</div>' +
-    '<h3 class="text-2xl font-bold mb-2">' + (currentLang === 'nl' ? 'Klaar voor ' + potentialScore + '+?' : 'Ready to Reach ' + potentialScore + '+?') + '</h3>' +
-    '<p class="text-gray-300 mb-4">' + (currentLang === 'nl' ? 'Onze experts implementeren alle verbeteringen' : 'Our experts implement all improvements') + '</p>' +
-    '<div class="flex gap-3 justify-center flex-wrap">' +
-    '<a href="https://wa.me/31628073996?text=' + (currentLang === 'nl' ? 'Hi!%20Ik%20heb%20' : 'Hi!%20I%20scanned%20') + encodeURIComponent(data.url) + '%20' + (currentLang === 'nl' ? 'gescand%20-%20score:%20' : 'and%20got%20') + score + '/100" ' +
-    'target="_blank" ' +
-    'class="inline-block bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold shadow-lg hover:shadow-xl">' +
-    '💬 ' + (currentLang === 'nl' ? 'Gratis Consultatie' : 'Free Consultation') +
-    '</a>' +
-    '<button onclick="closeScanModal(); setTimeout(() => document.getElementById(\'freelancers\')?.scrollIntoView({behavior:\'smooth\'}), 300)" ' +
-    'class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-bold shadow-lg hover:shadow-xl">' +
-    '📝 ' + (currentLang === 'nl' ? 'Huur Expert' : 'Hire Expert') +
-    '</button>' +
-    '</div>' +
-    '</div>' : '') +
-    '<div class="mt-4">' +
-    '<button onclick="closeScanModal()" class="w-full px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">' +
-    (currentLang === 'nl' ? 'Sluiten' : 'Close') +
-    '</button>' +
-    '</div>' +
-    '</div>';
-  
-  modal.classList.add('active');
-}
-
-function closeScanModal() {
-  document.getElementById('scanModal').classList.remove('active');
-}
-
-// ============================================
-// FREELANCER MODAL FUNCTIONS
-// ============================================
-
-function openFreelancerModal() {
-  document.getElementById('freelancerModal').classList.add('active');
-}
-
-function closeFreelancerModal() {
-  document.getElementById('freelancerModal').classList.remove('active');
-  document.getElementById('freelancerForm').reset();
-}
-
-function contactFreelancer(email, name) {
-  window.location.href = 'mailto:' + email + '?subject=' + (currentLang === 'nl' ? 'SEO Project via ContentScale' : 'SEO Project Inquiry via ContentScale') + '&body=' + (currentLang === 'nl' ? 'Hoi' : 'Hi') + ' ' + name + ',%0A%0A' + (currentLang === 'nl' ? 'Ik vond je via ContentScale en wil graag een project bespreken.' : 'I found you via ContentScale and would like to discuss a project.');
-}
-
-// Freelancer registration form handler
-document.getElementById('freelancerForm')?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  
-  const formData = new FormData(e.target);
-  const data = Object.fromEntries(formData);
-  
-  try {
-    const response = await fetch('/api/freelancers/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    
-    const result = await response.json();
-    
-    if (result.success) {
-      alert(currentLang === 'nl' ? 
-        'Aanmelding succesvol! We nemen binnenkort contact op.' : 
-        'Application submitted! We\'ll review and contact you soon.');
-      closeFreelancerModal();
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', () => {
+      switchLanguage(currentLang);
       loadFreelancers();
-    } else {
-      throw new Error(result.error || 'Registration failed');
-    }
-  } catch (error) {
-    console.error('Registration error:', error);
-    alert((currentLang === 'nl' ? 'Registratie mislukt: ' : 'Registration failed: ') + error.message);
-  }
-});
-
-// ============================================
-// EINDE DEEL 2
-// Ga nu naar DEEL 3!
-// ============================================
+      loadLeaderboard();
+      loadBlog();
+    });
 
     // ============================================
-// DEEL 3: FREELANCER, LEADERBOARD, BLOG
-// Plak dit NA DEEL 2 - DIT IS HET LAATSTE DEEL!
-// ============================================
-
-// ============================================
-// FREELANCER FUNCTIONS
-// ============================================
-
-async function loadFreelancers() {
-  try {
-    const response = await fetch('/api/freelancers');
-    const data = await response.json();
-    
-    if (data.success && data.freelancers && data.freelancers.length > 0) {
-      const grid = document.getElementById('freelancers-grid');
-      grid.innerHTML = data.freelancers.map(f => 
-        '<div class="freelancer-card">' +
-        '<div class="flex items-start justify-between mb-3">' +
-        '<div class="flex items-center gap-3">' +
-        '<div class="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-xl font-bold">' +
-        f.name.charAt(0) +
-        '</div>' +
-        '<div>' +
-        '<h3 class="font-bold text-lg">' + f.name + '</h3>' +
-        '<p class="text-sm text-gray-400">' + (f.specialty || f.title || 'SEO Specialist') + '</p>' +
-        '</div>' +
-        '</div>' +
-        (f.verified || f.is_featured ? '<span class="px-2 py-1 bg-green-600 rounded text-xs">✓ Verified</span>' : '') +
-        '</div>' +
-        '<p class="text-sm text-gray-300 mb-3">' + (f.bio || 'Professional SEO specialist') + '</p>' +
-        '<div class="flex items-center justify-between text-sm mb-3">' +
-        '<span class="text-gray-400">' + (f.experience || 5) + '+ ' + (currentLang === 'nl' ? 'jaar' : 'years') + '</span>' +
-        (f.portfolio || f.linkedin_url ? '<a href="' + (f.portfolio || f.linkedin_url) + '" target="_blank" class="text-blue-400 hover:underline">Portfolio →</a>' : '') +
-        '</div>' +
-        '<button onclick="contactFreelancer(\'' + f.email + '\', \'' + f.name + '\')" ' +
-        'class="w-full bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl">' +
-        (currentLang === 'nl' ? 'Contact' : 'Contact') + ' ' + f.name +
-        '</button>' +
-        '</div>'
-      ).join('');
-    } else {
-      document.getElementById('freelancers-grid').innerHTML = '<div class="col-span-full text-center p-8 bg-gray-800 rounded-lg">' +
-        '<p class="text-gray-400">' + (currentLang === 'nl' ? 'Nog geen specialisten. Wees de eerste!' : 'No specialists yet. Be the first to join!') + '</p>' +
-        '</div>';
-    }
-  } catch (error) {
-    console.error('Load freelancers error:', error);
-    document.getElementById('freelancers-grid').innerHTML = '<div class="col-span-full text-center p-8 bg-red-900 bg-opacity-20 rounded-lg border border-red-600">' +
-      '<p class="text-red-400">' + (currentLang === 'nl' ? 'Kon specialisten niet laden' : 'Failed to load specialists') + '</p>' +
-      '</div>';
-  }
-}
-
-// ============================================
-// LEADERBOARD FUNCTIONS
-// ============================================
-
-async function loadLeaderboard() {
-  try {
-    const response = await fetch('/api/leaderboard');
-    const data = await response.json();
-    
-    if (data.success && data.entries && data.entries.length > 0) {
-      const list = document.getElementById('leaderboard-list');
-      list.innerHTML = data.entries.slice(0, 10).map((entry, index) => {
-        const rank = index + 1;
-        const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
-        
-        return '<div class="leaderboard-card">' +
-          '<div class="flex items-center justify-between">' +
-          '<div class="flex items-center gap-4 flex-1">' +
-          '<div class="rank-badge ' + rankClass + '">' +
-          (rank <= 3 ? (rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉') : rank) +
-          '</div>' +
-          '<div class="flex-1">' +
-          '<h3 class="font-bold text-xl">' + entry.company_name + '</h3>' +
-          '<p class="text-sm text-gray-400">' + (entry.country || 'Global') + '</p>' +
-          '</div>' +
-          '</div>' +
-          '<div class="text-right">' +
-          '<div class="text-3xl font-bold text-yellow-400">' + entry.score + '</div>' +
-          '<div class="text-xs text-gray-400">' + (currentLang === 'nl' ? 'Score' : 'Score') + '</div>' +
-          '</div>' +
-          '</div>' +
-          (entry.url ? '<div class="mt-3">' +
-          '<a href="' + entry.url + '" target="_blank" ' +
-          'class="block text-center bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl">' +
-          (currentLang === 'nl' ? 'Bezoek Website' : 'Visit Website') +
-          '</a>' +
-          '</div>' : '') +
-          '</div>';
-      }).join('');
-    } else {
-      document.getElementById('leaderboard-list').innerHTML = '<div class="text-center p-8 bg-gray-800 rounded-lg">' +
-        '<p class="text-gray-400">' + (currentLang === 'nl' ? 'Leaderboard komt binnenkort!' : 'Leaderboard coming soon!') + '</p>' +
-        '</div>';
-    }
-  } catch (error) {
-    console.error('Load leaderboard error:', error);
-    document.getElementById('leaderboard-list').innerHTML = '<div class="text-center p-8 bg-red-900 bg-opacity-20 rounded-lg border border-red-600">' +
-      '<p class="text-red-400">' + (currentLang === 'nl' ? 'Kon leaderboard niet laden' : 'Failed to load leaderboard') + '</p>' +
-      '</div>';
-  }
-}
-
-// ============================================
-// BLOG FUNCTIONS
-// ============================================
-
-async function loadBlog() {
-  try {
-    const response = await fetch('/api/blog?limit=3');
-    const data = await response.json();
-    
-    if (data.success && data.posts && data.posts.length > 0) {
-      const grid = document.getElementById('blog-grid');
-      grid.innerHTML = data.posts.map(post => 
-        '<div class="blog-card">' +
-        (post.featured_image ? '<img src="' + post.featured_image + '" alt="' + post.title + '" class="w-full h-48 object-cover">' : '') +
-        '<div class="p-6">' +
-        '<div class="flex gap-2 mb-3">' +
-        (post.tags && post.tags.length > 0 ? post.tags.slice(0, 2).map(tag => 
-          '<span class="px-2 py-1 bg-purple-600 rounded text-xs">' + tag + '</span>'
-        ).join('') : '') +
-        '</div>' +
-        '<h3 class="font-bold text-xl mb-2 line-clamp-2">' + post.title + '</h3>' +
-        '<p class="text-sm text-gray-400 mb-4 line-clamp-3">' + (post.excerpt || '') + '</p>' +
-        '<div class="flex items-center justify-between text-sm">' +
-        '<span class="text-gray-400">' + new Date(post.published_at || Date.now()).toLocaleDateString() + '</span>' +
-        '<a href="/blog/' + post.slug + '" class="text-blue-400 hover:underline">' +
-        (currentLang === 'nl' ? 'Lees Meer' : 'Read More') + ' →' +
-        '</a>' +
-        '</div>' +
-        '</div>' +
-        '</div>'
-      ).join('');
-    } else {
-      document.getElementById('blog-grid').innerHTML = '<div class="col-span-full text-center p-8 bg-gray-800 rounded-lg">' +
-        '<p class="text-gray-400">' + (currentLang === 'nl' ? 'Blog posts komen binnenkort!' : 'Blog posts coming soon!') + '</p>' +
-        '</div>';
-    }
-  } catch (error) {
-    console.error('Load blog error:', error);
-    document.getElementById('blog-grid').innerHTML = '<div class="col-span-full text-center p-8 bg-red-900 bg-opacity-20 rounded-lg border border-red-600">' +
-      '<p class="text-red-400">' + (currentLang === 'nl' ? 'Kon blog posts niet laden' : 'Failed to load blog posts') + '</p>' +
-      '</div>';
-  }
-}
-
-// ============================================
-// GOOGLE MAPS BULK SCANNER (PLACEHOLDER)
-// Deze functies zijn voor toekomstig gebruik
-// ============================================
-
-// ============================================
-// GOOGLE MAPS BULK SCANNER - REAL IMPLEMENTATION
-// ============================================
-
-async function scrapeGoogleMapsPublic() {
-  const input = document.getElementById('googleMapsInput');
-  const button = document.getElementById('gmapsScrapeBtn');
-  const url = input.value.trim();
-  
-  if (!url || !url.includes('google.com/maps')) {
-    alert(currentLang === 'nl' ? 
-      'Voer een geldige Google Maps URL in' : 
-      'Enter a valid Google Maps URL');
-    return;
-  }
-  
-  button.disabled = true;
-  button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + 
-    (currentLang === 'nl' ? 'Scrapen...' : 'Scraping...');
-  
-  try {
-    const response = await fetch('/api/google-maps/scrape', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: url, maxResults: 20 })
-    });
-    
-    const data = await response.json();
-    
-    if (!data.success) {
-      throw new Error(data.error || 'Scrape failed');
-    }
-    
-    scrapedLeads = data.leads || [];
-    displayScrapedLeads(scrapedLeads);
-    
-  } catch (error) {
-    console.error('Scrape error:', error);
-    alert((currentLang === 'nl' ? 'Scrape mislukt: ' : 'Scrape failed: ') + error.message);
-  } finally {
-    button.disabled = false;
-    button.innerHTML = currentLang === 'nl' ? '🗺️ Scrape Maps' : '🗺️ Scrape Maps';
-  }
-}
-
-// ============================================
-// DISPLAY SCRAPED LEADS
-// ============================================
-
-function displayScrapedLeads(leads) {
-  const container = document.getElementById('scrapedLeadsContainer');
-  const grid = document.getElementById('leadsGrid');
-  const countSpan = document.getElementById('leadCount');
-  const countSpanEN = document.getElementById('leadCountEN');
-  
-  if (!leads || leads.length === 0) {
-    alert(currentLang === 'nl' ? 
-      'Geen leads gevonden. Probeer een andere zoekopdracht.' : 
-      'No leads found. Try a different search.');
-    return;
-  }
-  
-  // Update count
-  if (countSpan) countSpan.textContent = leads.length;
-  if (countSpanEN) countSpanEN.textContent = leads.length;
-  
-  // Display leads
-  grid.innerHTML = leads.map((lead, index) => {
-    const hasWebsite = lead.website && lead.website.length > 0;
-    const websiteDisplay = hasWebsite ? 
-      `<a href="${lead.website}" target="_blank" class="text-blue-400 hover:underline text-xs truncate block">
-        ${lead.website}
-      </a>` : 
-      `<p class="text-xs text-gray-500 mb-2">❌ No website found</p>
-      <button onclick="offerWebsitePackage(${index})" 
-              class="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 px-3 py-2 rounded-lg text-sm font-bold transition-all mb-2">
-        💰 ${currentLang === 'nl' ? 'Bied Website Aan' : 'Offer Website Package'}
-      </button>`;
-    
-    return `
-      <div class="lead-card bg-gray-800 rounded-lg p-4 border-2 border-gray-600 hover:border-purple-500">
-        <div class="flex items-start gap-3 mb-3">
-          <input type="checkbox" 
-                 class="lead-checkbox mt-1" 
-                 data-index="${index}"
-                 onchange="updateSelectionCount()">
-          <div class="flex-1">
-            <h4 class="font-bold text-white mb-1">${lead.name}</h4>
-            <p class="text-xs text-gray-400 mb-1">${lead.category || 'Business'}</p>
-            ${lead.rating ? 
-              `<div class="flex items-center gap-1 mb-2">
-                <span class="text-yellow-400 text-sm">⭐ ${lead.rating}</span>
-                <span class="text-gray-500 text-xs">(${lead.reviews || 0})</span>
-              </div>` : ''}
-          </div>
-        </div>
-        
-        ${websiteDisplay}
-        
-        ${lead.phone ? 
-          `<a href="tel:${lead.phone}" class="block text-green-400 text-xs mb-2">
-            📞 ${lead.phone}
-          </a>` : ''}
-        
-        ${lead.address ? 
-          `<p class="text-xs text-gray-500 truncate">📍 ${lead.address}</p>` : ''}
-        
-        ${!hasWebsite ? '' : 
-          `<button onclick="scanSingleURLFromLead('${lead.website}', ${index})" 
-                  class="w-full bg-purple-600 hover:bg-purple-700 px-3 py-2 rounded-lg text-sm font-bold transition-all mt-2">
-            🔍 ${currentLang === 'nl' ? 'Scan Website' : 'Scan Website'}
-          </button>`}
-      </div>
-    `;
-  }).join('');
-  
-  container.classList.remove('hidden');
-}
-
-// ============================================
-// SCAN SINGLE URL FROM LEAD
-// ============================================
-
-async function scanSingleURLFromLead(url, index) {
-  try {
-    const response = await fetch('/api/scan', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: url })
-    });
-    
-    const result = await response.json();
-    
-    if (result.success) {
-      // Store scan result in lead
-      scrapedLeads[index].scanResult = result;
+    // SCANNER FUNCTIONS
+    // ============================================
+    async function performScan() {
+      const input = document.getElementById('scanInput');
+      const button = document.getElementById('scanButton');
+      const url = input.value.trim();
       
-      // Show quick summary in alert or modal
-      const score = result.score || 0;
-      const wordCount = result.content_stats?.wordCount || result.details?.wordCount || 0;
+      if (!url) {
+        alert(currentLang === 'nl' ? 'Voer een URL in' : 'Please enter a URL to scan');
+        return;
+      }
       
-      if (wordCount >= 1100) {
-        alert(`✅ Qualified Lead!\n\nScore: ${score}/100\nWords: ${wordCount}\n\n${currentLang === 'nl' ? 'Potentieel voor optimalisatie!' : 'Potential for optimization!'}`);
-      } else {
-        alert(`⚠️ Not Qualified\n\nOnly ${wordCount} words (need 1100+)\n\n${currentLang === 'nl' ? 'Scan een pagina met meer content' : 'Scan a page with more content'}`);
+      // Validate URL
+      let fullUrl = url;
+      if (!url.startsWith('http')) {
+        fullUrl = 'https://' + url;
+      }
+      
+      try {
+        new URL(fullUrl);
+      } catch {
+        alert(currentLang === 'nl' ? 'Voer een geldige URL in' : 'Please enter a valid URL');
+        return;
+      }
+      
+      // Update UI
+      button.disabled = true;
+      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + 
+        (currentLang === 'nl' ? 'Analyseren...' : 'Analyzing...');
+      
+      try {
+        // Simulate API call - replace with real API
+        const mockData = generateMockScanData(fullUrl);
+        
+        // Show results in modal
+        displayScanResults(mockData);
+        
+      } catch (error) {
+        console.error('Scan error:', error);
+        alert((currentLang === 'nl' ? 'Scan mislukt: ' : 'Scan failed: ') + error.message);
+      } finally {
+        button.disabled = false;
+        button.innerHTML = currentLang === 'nl' ? '🚀 Analyseer Nu' : '🚀 Analyze Now';
       }
     }
-  } catch (error) {
-    alert('Scan failed: ' + error.message);
-  }
-}
-
-// ============================================
-// BULK SCAN ALL LEADS
-// ============================================
-
-async function scanAllGoogleMapsLeads() {
-  const checkboxes = document.querySelectorAll('.lead-checkbox:checked');
-  
-  if (checkboxes.length === 0) {
-    alert(currentLang === 'nl' ? 
-      'Selecteer eerst leads om te scannen' : 
-      'Select leads to scan first');
-    return;
-  }
-  
-  const progressDiv = document.getElementById('bulkScanProgress');
-  const progressBar = document.getElementById('bulkProgressBar');
-  const progressText = document.getElementById('bulkProgressText');
-  
-  progressDiv.classList.remove('hidden');
-  
-  let completed = 0;
-  const total = checkboxes.length;
-  
-  for (const checkbox of checkboxes) {
-    const index = parseInt(checkbox.dataset.index);
-    const lead = scrapedLeads[index];
-    
-    if (!lead.website) {
-      completed++;
-      continue;
-    }
-    
-    progressText.textContent = `${currentLang === 'nl' ? 'Scannen' : 'Scanning'} ${completed + 1}/${total}: ${lead.name}`;
-    progressBar.style.width = ((completed / total) * 100) + '%';
-    
-    try {
-      const response = await fetch('/api/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: lead.website })
-      });
-      
-      const result = await response.json();
-      scrapedLeads[index].scanResult = result;
-    } catch (error) {
-      console.error('Scan error:', error);
-    }
-    
-    completed++;
-    progressBar.style.width = ((completed / total) * 100) + '%';
-  }
-  
-  progressText.textContent = currentLang === 'nl' ? 
-    `✅ ${completed} leads gescand!` : 
-    `✅ ${completed} leads scanned!`;
-  
-  setTimeout(() => {
-    progressDiv.classList.add('hidden');
-    progressBar.style.width = '0%';
-  }, 2000);
-}
-
-// ============================================
-// SELECT ALL LEADS
-// ============================================
-
-function selectAllLeads() {
-  const checkboxes = document.querySelectorAll('.lead-checkbox');
-  const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-  
-  checkboxes.forEach(cb => {
-    cb.checked = !allChecked;
-  });
-  
-  updateSelectionCount();
-}
-
-function updateSelectionCount() {
-  const checked = document.querySelectorAll('.lead-checkbox:checked').length;
-  const button = document.getElementById('scanAllBtn');
-  
-  if (button) {
-    button.innerHTML = checked > 0 ? 
-      `⚡ ${currentLang === 'nl' ? 'Scan' : 'Scan'} ${checked}` : 
-      `⚡ ${currentLang === 'nl' ? 'Scan Alles' : 'Scan All'}`;
-  }
-}
-
-// ============================================
-// EXPORT FUNCTIONS
-// ============================================
-
-function exportLeadsToCSV() {
-  if (!scrapedLeads || scrapedLeads.length === 0) {
-    alert('No leads to export');
-    return;
-  }
-  
-  const headers = ['Name', 'Category', 'Rating', 'Reviews', 'Website', 'Phone', 'Address'];
-  const rows = scrapedLeads.map(lead => [
-    lead.name || '',
-    lead.category || '',
-    lead.rating || '',
-    lead.reviews || '',
-    lead.website || '',
-    lead.phone || '',
-    lead.address || ''
-  ]);
-  
-  let csv = headers.join(',') + '\n';
-  csv += rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-  
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `google-maps-leads-${Date.now()}.csv`;
-  a.click();
-}
-
-function exportLeadsToJSON() {
-  if (!scrapedLeads || scrapedLeads.length === 0) {
-    alert('No leads to export');
-    return;
-  }
-  
-  const json = JSON.stringify(scrapedLeads, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `google-maps-leads-${Date.now()}.json`;
-  a.click();
-}
-
-
-// ============================================
-// OFFER WEBSITE PACKAGE (NO-WEBSITE LEADS)
-// ============================================
-
-function offerWebsitePackage(index) {
-  const lead = scrapedLeads[index];
-  
-  if (!lead) {
-    alert('Lead niet gevonden');
-    return;
-  }
-  
-  // Generate WhatsApp message
-  const message = currentLang === 'nl' ?
-    `Hallo ${lead.name}!\n\n` +
-    `Ik zag jullie op Google Maps${lead.rating ? ` (${lead.rating}⭐ met ${lead.reviews || 0} reviews)` : ''}.\n\n` +
-    `Jullie hebben geen website, wat betekent dat je veel potentiële klanten mist die op Google zoeken!\n\n` +
-    `Ik kan helpen met:\n` +
-    `✅ Professionele website binnen 1 week\n` +
-    `✅ Direct zichtbaar op Google\n` +
-    `✅ Meer klanten online\n\n` +
-    `Interesse in een gratis adviesgesprek?\n\n` +
-    `Groet,\n[Jouw Naam]` :
-    
-    `Hi ${lead.name}!\n\n` +
-    `I saw you on Google Maps${lead.rating ? ` (${lead.rating}⭐ with ${lead.reviews || 0} reviews)` : ''}.\n\n` +
-    `You don't have a website, which means you're missing many potential customers searching on Google!\n\n` +
-    `I can help with:\n` +
-    `✅ Professional website within 1 week\n` +
-    `✅ Visible on Google immediately\n` +
-    `✅ More customers online\n\n` +
-    `Interested in a free consultation?\n\n` +
-    `Best regards,\n[Your Name]`;
-  
-  if (lead.phone) {
-    // Open WhatsApp with pre-filled message
-    const phone = lead.phone.replace(/\s+/g, '').replace(/^0/, '+31');
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
-  } else {
-    // Copy message to clipboard
-    navigator.clipboard.writeText(message).then(() => {
-      alert(currentLang === 'nl' ?
-        '✅ Bericht gekopieerd! Zoek het bedrijf op LinkedIn of Google Maps om contact op te nemen.' :
-        '✅ Message copied! Find the business on LinkedIn or Google Maps to reach out.');
-      
-      // Open Google search for the business
-      window.open(`https://www.google.com/search?q=${encodeURIComponent(lead.name + ' ' + (lead.address || ''))}`, '_blank');
-    });
-  }
-}
-
-// ============================================
-// ✅ KLAAR! ALLE FUNCTIES ZIJN NU COMPLEET
-// ============================================
-
-console.log('✅ ContentScale JavaScript fully loaded!');
-console.log('📊 Features enabled:');
-console.log('  - Language switching (NL/EN)');
-console.log('  - Main content scanner');
-console.log('  - Lead scanner with 1100-word filter');
-console.log('  - Share functions (WhatsApp, Email, LinkedIn, Copy)');
-console.log('  - Freelancer directory');
-console.log('  - Leaderboard');
-console.log('  - Blog');
 
     // ============================================
-// HYBRID EMAIL CONFIG UI
-// FREE TIER: User adds own SendGrid API key
-// PRO TIER: Upgrade option (€10/mnd)
-// ============================================
-
-// ============================================
-// SHOW EMAIL CONFIG MODAL
-// ============================================
-
-function showEmailConfigModal() {
-  const modal = document.getElementById('emailConfigModal');
-  if (!modal) {
-    console.error('Email config modal not found');
-    return;
-  }
-  
-  loadEmailConfig();
-  modal.classList.add('active');
-}
-
-// ============================================
-// LOAD USER'S CONFIG
-// ============================================
-
-async function loadEmailConfig() {
-  try {
-    const response = await fetch('/api/user/email-config');
-    const data = await response.json();
-    
-    if (data.hasConfig) {
-      renderConfigActive(data.config);
-    } else {
-      renderConfigSetup();
+    // LEAD SCANNER FUNCTIONS
+    // ============================================
+    function switchScanMode(mode) {
+      const singleMode = document.getElementById('singleScanMode');
+      const bulkMode = document.getElementById('bulkScanMode');
+      const singleBtn = document.getElementById('modeSingleBtn');
+      const bulkBtn = document.getElementById('modeBulkBtn');
+      
+      if (mode === 'single') {
+        singleMode.classList.remove('hidden');
+        bulkMode.classList.add('hidden');
+        singleBtn.classList.add('active');
+        bulkBtn.classList.remove('active');
+      } else {
+        singleMode.classList.add('hidden');
+        bulkMode.classList.remove('hidden');
+        singleBtn.classList.remove('active');
+        bulkBtn.classList.add('active');
+      }
     }
-  } catch (error) {
-    console.error('Error loading config:', error);
-    renderConfigSetup();
-  }
-}
 
-// ============================================
-// RENDER SETUP FORM (NEW USER)
-// ============================================
+    async function scanSingleURLPublic() {
+      const input = document.getElementById('singleUrlInput');
+      const button = document.getElementById('singleScanBtn');
+      const url = input.value.trim();
+      
+      if (!url) {
+        alert(currentLang === 'nl' ? 'Voer een URL in' : 'Enter a URL');
+        return;
+      }
+      
+      // Update UI
+      button.disabled = true;
+      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + 
+        (currentLang === 'nl' ? 'Scannen...' : 'Scanning...');
+      
+      // Show progress
+      const progressDiv = document.getElementById('singleScanProgress');
+      const progressBar = document.getElementById('singleProgressBar');
+      const progressText = document.getElementById('singleProgressText');
+      const resultDiv = document.getElementById('singleScanResult');
+      
+      progressDiv.classList.remove('hidden');
+      resultDiv.classList.add('hidden');
+      
+      // Simulate progress
+      let progress = 0;
+      const progressInterval = setInterval(() => {
+        if (progress < 90) {
+          progress += Math.random() * 15;
+          progressBar.style.width = Math.min(90, progress) + '%';
+          progressText.textContent = (currentLang === 'nl' ? 'Analyseren ' : 'Analyzing ') + url + '...';
+        }
+      }, 300);
+      
+      try {
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        const mockResult = generateMockLeadScanData(url);
+        
+        clearInterval(progressInterval);
+        progressBar.style.width = '100%';
+        progressText.textContent = currentLang === 'nl' ? 'Scan voltooid!' : 'Scan complete!';
+        
+        setTimeout(() => {
+          progressDiv.classList.add('hidden');
+          displaySingleScanResult(mockResult);
+        }, 500);
+        
+      } catch (error) {
+        clearInterval(progressInterval);
+        alert((currentLang === 'nl' ? 'Scan mislukt: ' : 'Scan failed: ') + error.message);
+      } finally {
+        button.disabled = false;
+        button.innerHTML = currentLang === 'nl' ? '🚀 Start Scan' : '🚀 Start Scan';
+      }
+    }
 
-function renderConfigSetup() {
-  const modalContent = document.querySelector('#emailConfigModal .modal-content');
-  
-  const html = `
-    <div class="p-8">
+    function displaySingleScanResult(result) {
+      const resultDiv = document.getElementById('singleScanResult');
+      const wordCount = result.wordCount || 0;
       
-      <!-- Header -->
-      <div class="flex justify-between items-start mb-6">
-        <div>
-          <h2 class="text-3xl font-bold mb-2">
-            ${currentLang === 'nl' ? '🚀 Email Setup - GRATIS' : '🚀 Email Setup - FREE'}
-          </h2>
-          <p class="text-gray-400">
-            ${currentLang === 'nl' ? 'Start gratis, upgrade later' : 'Start free, upgrade later'}
-          </p>
-        </div>
-        <button onclick="closeEmailConfigModal()" class="text-gray-400 hover:text-white text-2xl">
-          &times;
-        </button>
-      </div>
-      
-      <!-- Tier Comparison -->
-      <div class="grid md:grid-cols-2 gap-4 mb-6">
+      // Check if qualified (1100+ words)
+      if (wordCount < 1100) {
+        const titleText = currentLang === 'nl' ? 'Niet Gekwalificeerd als Lead' : 'Not Qualified as Lead';
+        const wordText = currentLang === 'nl' ? 'woorden' : 'words';
+        const minText = currentLang === 'nl' ? 'Minimum 1100 woorden vereist voor optimalisatie potentieel' : 'Minimum 1100 words required for optimization potential';
+        const tipText = currentLang === 'nl' ? 'Tip: Scan pagina\'s met substantiële content voor betere leads' : 'Tip: Scan pages with substantial content for better leads';
         
-        <!-- FREE TIER -->
-        <div class="bg-gray-800 border-2 border-green-500 rounded-lg p-6">
-          <div class="flex items-center gap-2 mb-3">
-            <span class="text-2xl">✅</span>
-            <h3 class="text-xl font-bold text-green-400">Free Tier</h3>
-          </div>
-          <div class="text-3xl font-bold mb-4">€0/mnd</div>
-          <ul class="space-y-2 text-sm mb-4">
-            <li class="flex items-start gap-2">
-              <span class="text-green-400">✓</span>
-              <span>FROM: jouw email</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-green-400">✓</span>
-              <span>ContentScale template</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-green-400">✓</span>
-              <span>"Powered by" branding</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-green-400">✓</span>
-              <span>100 emails/dag gratis</span>
-            </li>
-          </ul>
-          <div class="bg-green-900 bg-opacity-30 border border-green-600 rounded px-3 py-2 text-xs text-green-300">
-            👈 START HIER!
-          </div>
-        </div>
-        
-        <!-- PRO TIER -->
-        <div class="bg-gray-800 border border-purple-600 rounded-lg p-6 opacity-60">
-          <div class="flex items-center gap-2 mb-3">
-            <span class="text-2xl">⭐</span>
-            <h3 class="text-xl font-bold text-purple-400">Pro Tier</h3>
-          </div>
-          <div class="text-3xl font-bold mb-4">€10/mnd</div>
-          <ul class="space-y-2 text-sm mb-4">
-            <li class="flex items-start gap-2">
-              <span class="text-purple-400">✓</span>
-              <span>FROM: info@contentscale.site</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-purple-400">✓</span>
-              <span>100% white-label</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-purple-400">✓</span>
-              <span>Reply forwarding</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-purple-400">✓</span>
-              <span>Priority support</span>
-            </li>
-          </ul>
-          <div class="bg-gray-700 rounded px-3 py-2 text-xs text-gray-400">
-            Upgrade later
-          </div>
-        </div>
-        
-      </div>
-      
-      <!-- How Free Tier Works -->
-      <div class="bg-blue-900 bg-opacity-20 border border-blue-600 rounded-lg p-6 mb-6">
-        <h3 class="text-lg font-bold mb-3">
-          ${currentLang === 'nl' ? '🔄 Hoe Free Tier Werkt' : '🔄 How Free Tier Works'}
-        </h3>
-        <ol class="space-y-2 text-sm text-gray-300">
-          <li class="flex gap-2">
-            <span class="font-bold text-blue-400">1.</span>
-            <span>${currentLang === 'nl' ? 'Maak gratis SendGrid account' : 'Create free SendGrid account'} (100 emails/dag)</span>
-          </li>
-          <li class="flex gap-2">
-            <span class="font-bold text-blue-400">2.</span>
-            <span>${currentLang === 'nl' ? 'Kopieer je API key' : 'Copy your API key'}</span>
-          </li>
-          <li class="flex gap-2">
-            <span class="font-bold text-blue-400">3.</span>
-            <span>${currentLang === 'nl' ? 'Plak hier + verifieer' : 'Paste here + verify'}</span>
-          </li>
-          <li class="flex gap-2">
-            <span class="font-bold text-blue-400">4.</span>
-            <span>${currentLang === 'nl' ? 'Verstuur emails met ContentScale template!' : 'Send emails with ContentScale template!'}</span>
-          </li>
-        </ol>
-      </div>
-      
-      <!-- Setup Instructions -->
-      <div class="bg-gray-800 rounded-lg p-6 mb-6">
-        <h3 class="text-lg font-bold mb-3">
-          ${currentLang === 'nl' ? '📋 SendGrid Setup (5 min)' : '📋 SendGrid Setup (5 min)'}
-        </h3>
-        <ol class="space-y-3 text-sm">
-          <li class="flex gap-2">
-            <span class="font-bold text-purple-400">1.</span>
-            <span>
-              <a href="https://sendgrid.com/free" target="_blank" class="text-blue-400 underline">
-                Maak SendGrid account
-              </a> (gratis, 100 emails/dag)
-            </span>
-          </li>
-          <li class="flex gap-2">
-            <span class="font-bold text-purple-400">2.</span>
-            <span>Verify sender met JOUW email</span>
-          </li>
-          <li class="flex gap-2">
-            <span class="font-bold text-purple-400">3.</span>
-            <span>Settings → API Keys → Create API Key (Full Access)</span>
-          </li>
-          <li class="flex gap-2">
-            <span class="font-bold text-purple-400">4.</span>
-            <span>Kopieer de key (SG.xxxxxx) en plak hieronder</span>
-          </li>
-        </ol>
-      </div>
-      
-      <!-- Form -->
-      <div class="space-y-4 mb-6">
-        
-        <div>
-          <label class="block text-sm font-semibold mb-2">
-            ${currentLang === 'nl' ? 'SendGrid API Key:' : 'SendGrid API Key:'}
-          </label>
-          <input 
-            type="password" 
-            id="sendgridApiKey" 
-            placeholder="SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-            class="w-full bg-gray-700 px-4 py-3 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none mb-2" />
-          <p class="text-xs text-gray-400">
-            ${currentLang === 'nl' ? 'Je API key blijft privé' : 'Your API key stays private'}
-          </p>
-        </div>
-        
-        <div>
-          <label class="block text-sm font-semibold mb-2">
-            ${currentLang === 'nl' ? 'Jouw Email (FROM):' : 'Your Email (FROM):'}
-          </label>
-          <input 
-            type="email" 
-            id="userEmail" 
-            placeholder="${currentLang === 'nl' ? 'jouw@email.nl' : 'your@email.com'}"
-            class="w-full bg-gray-700 px-4 py-3 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none mb-2" />
-          <p class="text-xs text-gray-400">
-            ${currentLang === 'nl' 
-              ? 'Email die je in SendGrid verified hebt' 
-              : 'Email you verified in SendGrid'}
-          </p>
-        </div>
-        
-        <div>
-          <label class="block text-sm font-semibold mb-2">
-            ${currentLang === 'nl' ? 'Jouw Naam (optioneel):' : 'Your Name (optional):'}
-          </label>
-          <input 
-            type="text" 
-            id="userName" 
-            placeholder="${currentLang === 'nl' ? 'Jouw Naam' : 'Your Name'}"
-            class="w-full bg-gray-700 px-4 py-3 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none" />
-        </div>
-        
-      </div>
-      
-      <!-- Actions -->
-      <div class="flex gap-3 justify-end border-t border-gray-700 pt-6">
-        <button 
-          onclick="saveAndVerifyConfig()" 
-          class="px-8 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-bold transition-all shadow-lg hover:shadow-xl">
-          ${currentLang === 'nl' ? '✅ Opslaan & Verifiëren' : '✅ Save & Verify'}
-        </button>
-        
-        <button 
-          onclick="closeEmailConfigModal()" 
-          class="px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition-all">
-          ${currentLang === 'nl' ? 'Annuleer' : 'Cancel'}
-        </button>
-      </div>
-      
-    </div>
-  `;
-  
-  modalContent.innerHTML = html;
-}
-
-// ============================================
-// RENDER ACTIVE CONFIG
-// ============================================
-
-function renderConfigActive(config) {
-  const modalContent = document.querySelector('#emailConfigModal .modal-content');
-  
-  const isFree = config.tier === 'free';
-  const isPro = config.tier === 'pro';
-  
-  const html = `
-    <div class="p-8">
-      
-      <!-- Header -->
-      <div class="flex justify-between items-start mb-6">
-        <div>
-          <h2 class="text-3xl font-bold mb-2">
-            ${currentLang === 'nl' ? '📧 Email Configuratie' : '📧 Email Configuration'}
-          </h2>
-          <p class="text-gray-400">
-            ${isFree ? 'Free Tier' : 'Pro Tier'}
-          </p>
-        </div>
-        <button onclick="closeEmailConfigModal()" class="text-gray-400 hover:text-white text-2xl">
-          &times;
-        </button>
-      </div>
-      
-      <!-- Status -->
-      <div class="bg-${isFree ? 'green' : 'purple'}-900 bg-opacity-30 border border-${isFree ? 'green' : 'purple'}-600 rounded-lg p-6 mb-6">
-        <div class="flex items-center gap-3">
-          <div class="text-4xl">${isFree ? '✅' : '⭐'}</div>
-          <div>
-            <h3 class="text-xl font-bold">${isFree ? 'Free Tier Actief' : 'Pro Tier Actief'}</h3>
-            <p class="text-sm text-gray-300">${config.user_email}</p>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Current Setup -->
-      <div class="bg-gray-800 rounded-lg p-6 mb-6">
-        <h3 class="text-lg font-bold mb-4">${currentLang === 'nl' ? '⚙️ Huidige Setup' : '⚙️ Current Setup'}</h3>
-        
-        <div class="space-y-3">
-          <div class="flex justify-between pb-3 border-b border-gray-700">
-            <span class="text-gray-400">Tier:</span>
-            <span class="font-bold ${isFree ? 'text-green-400' : 'text-purple-400'}">${isFree ? 'FREE' : 'PRO'}</span>
-          </div>
-          
-          <div class="flex justify-between pb-3 border-b border-gray-700">
-            <span class="text-gray-400">FROM:</span>
-            <span class="text-sm">${isFree ? config.user_email : 'info@contentscale.site'}</span>
-          </div>
-          
-          <div class="flex justify-between pb-3 border-b border-gray-700">
-            <span class="text-gray-400">Template:</span>
-            <span class="text-sm">${isFree ? 'ContentScale (with branding)' : 'White-label'}</span>
-          </div>
-          
-          <div class="flex justify-between">
-            <span class="text-gray-400">Status:</span>
-            <span class="px-3 py-1 bg-green-900 text-green-300 rounded-full text-xs font-bold">
-              ${config.is_verified ? 'VERIFIED' : 'PENDING'}
-            </span>
-          </div>
-        </div>
-      </div>
-      
-      ${isFree ? `
-        <!-- Upgrade to Pro -->
-        <div class="bg-gradient-to-r from-purple-900 to-blue-900 bg-opacity-30 border border-purple-600 rounded-lg p-6 mb-6">
-          <h3 class="text-xl font-bold mb-3 flex items-center gap-2">
-            <span>⭐</span>
-            ${currentLang === 'nl' ? 'Upgrade naar Pro' : 'Upgrade to Pro'}
-          </h3>
-          <p class="text-sm text-gray-300 mb-4">
-            ${currentLang === 'nl' 
-              ? 'Verstuur FROM info@contentscale.site met 100% white-label template'
-              : 'Send FROM info@contentscale.site with 100% white-label template'}
-          </p>
-          
-          <div class="grid md:grid-cols-2 gap-4 mb-4 text-sm">
-            <div class="flex items-start gap-2">
-              <span class="text-purple-400">✓</span>
-              <span>FROM: info@contentscale.site</span>
+        resultDiv.innerHTML = `
+          <div class="scan-result-card bg-yellow-900 bg-opacity-30 border-2 border-yellow-500 rounded-xl p-8 text-center">
+            <div class="text-6xl mb-4">⚠️</div>
+            <h3 class="text-3xl font-bold text-yellow-400 mb-3">${titleText}</h3>
+            <p class="text-lg text-gray-300 mb-2">Deze pagina heeft slechts <strong class="text-yellow-400">${wordCount} ${wordText}</strong></p>
+            <p class="text-gray-400 mb-6">${minText}</p>
+            <div class="bg-gray-800 rounded-lg p-4 inline-block">
+              <p class="text-sm text-gray-400">💡 ${tipText}</p>
             </div>
-            <div class="flex items-start gap-2">
-              <span class="text-purple-400">✓</span>
-              <span>100% white-label</span>
+          </div>
+        `;
+        resultDiv.classList.remove('hidden');
+        return;
+      }
+      
+      // Qualified lead - show full report
+      const score = result.score || 0;
+      const potentialScore = Math.min(98, score + Math.floor((100 - score) * 0.8));
+      const improvement = potentialScore - score;
+      
+      resultDiv.innerHTML = `
+        <div class="scan-result-card bg-gray-800 rounded-2xl p-8 border-2 border-purple-500 shadow-2xl">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 pb-6 border-b-2 border-gray-700 gap-4">
+            <div class="flex-1">
+              <h3 class="text-2xl font-bold text-white mb-2">${currentLang === 'nl' ? '📊 Lead Analyse Rapport' : '📊 Lead Analysis Report'}</h3>
+              <p class="text-sm text-gray-400 break-all mb-2">${result.url || ''}</p>
+              <div class="flex items-center gap-3 text-sm flex-wrap">
+                <span class="text-gray-400">📝 ${wordCount} ${currentLang === 'nl' ? 'woorden' : 'words'}</span>
+                <span class="text-gray-400">•</span>
+                <span class="px-3 py-1 bg-green-600 rounded-full text-white font-semibold text-xs">
+                  ✅ ${currentLang === 'nl' ? 'Gekwalificeerde Lead' : 'Qualified Lead'}
+                </span>
+              </div>
             </div>
-            <div class="flex items-start gap-2">
-              <span class="text-purple-400">✓</span>
-              <span>Reply forwarding</span>
-            </div>
-            <div class="flex items-start gap-2">
-              <span class="text-purple-400">✓</span>
-              <span>Priority support</span>
+            <div class="text-center bg-gray-900 bg-opacity-30 rounded-2xl px-8 py-6 border-2 border-purple-600">
+              <div class="text-6xl font-black mb-2 text-purple-400">${score}</div>
+              <div class="text-sm text-gray-300 font-semibold">${score >= 90 ? 'Excellent' : score >= 75 ? 'Good' : score >= 60 ? 'Average' : 'Poor'}</div>
             </div>
           </div>
           
-          <div class="flex items-center justify-between">
-            <div class="text-3xl font-bold">€10/mnd</div>
-            <button 
-              onclick="alert('Pro tier binnenkort beschikbaar! Contact: info@contentscale.site')"
-              class="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-bold transition-all">
-              ${currentLang === 'nl' ? '🚀 Upgrade' : '🚀 Upgrade'}
+          <div class="grid md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-gray-900 rounded-xl p-6 border-2 border-gray-600">
+              <h4 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <span>📊</span><span>${currentLang === 'nl' ? 'Huidige Staat' : 'Current State'}</span>
+              </h4>
+              <div class="space-y-3">
+                <div>
+                  <div class="flex justify-between items-center mb-1">
+                    <span class="text-sm text-gray-300">${currentLang === 'nl' ? 'Content Kwaliteit' : 'Content Quality'}</span>
+                    <span class="font-bold text-blue-400">${Math.round(score * 0.5)}/50</span>
+                  </div>
+                  <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
+                    <div class="h-full bg-blue-500 transition-all" style="width: ${(score * 0.5)}%"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-gradient-to-br from-green-900 to-emerald-900 rounded-xl p-6 border-2 border-green-500">
+              <h4 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <span>🚀</span><span>${currentLang === 'nl' ? 'Potentieel (Na Optimalisatie)' : 'Potential (After Optimization)'}</span>
+              </h4>
+              <div class="text-center mb-4">
+                <div class="text-6xl md:text-7xl font-black text-green-400 mb-2">${potentialScore}</div>
+                <div class="text-green-300 font-semibold text-lg">+${improvement} ${currentLang === 'nl' ? 'punten mogelijk!' : 'points possible!'}</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="border-t-2 border-gray-700 pt-6">
+            <h4 class="text-lg font-bold text-white mb-4">${currentLang === 'nl' ? '📤 Deel dit Rapport' : '📤 Share This Report'}</h4>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <button onclick="shareLeadViaWhatsApp('${encodeURIComponent(result.url)}', ${score}, ${potentialScore})" 
+                      class="bg-green-600 hover:bg-green-700 px-4 py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
+                <i class="fab fa-whatsapp"></i><span>WhatsApp</span>
+              </button>
+              <button onclick="shareLeadViaEmail('${encodeURIComponent(result.url)}', ${score}, ${potentialScore})" 
+                      class="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
+                <i class="fas fa-envelope"></i><span>Email</span>
+              </button>
+              <button onclick="copyLeadReport('${encodeURIComponent(result.url)}', ${score}, ${potentialScore})" 
+                      class="bg-gray-600 hover:bg-gray-700 px-4 py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
+                <i class="fas fa-copy"></i><span>${currentLang === 'nl' ? 'Kopieer' : 'Copy'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      resultDiv.classList.remove('hidden');
+    }
+
+    // ============================================
+    // GOOGLE MAPS SCRAPER (MOCK)
+    // ============================================
+    async function scrapeGoogleMapsPublic() {
+      const input = document.getElementById('googleMapsInput');
+      const button = document.getElementById('gmapsScrapeBtn');
+      const url = input.value.trim();
+      
+      if (!url || !url.includes('google.com/maps')) {
+        alert(currentLang === 'nl' 
+          ? 'Voer een geldige Google Maps URL in' 
+          : 'Enter a valid Google Maps URL');
+        return;
+      }
+      
+      button.disabled = true;
+      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + 
+        (currentLang === 'nl' ? 'Scrapen...' : 'Scraping...');
+      
+      try {
+        // Simulate scraping
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Generate mock leads
+        scrapedLeads = generateMockLeads();
+        displayScrapedLeads(scrapedLeads);
+        
+      } catch (error) {
+        alert((currentLang === 'nl' ? 'Scrape mislukt: ' : 'Scrape failed: ') + error.message);
+      } finally {
+        button.disabled = false;
+        button.innerHTML = currentLang === 'nl' ? '🗺️ Scrape Maps' : '🗺️ Scrape Maps';
+      }
+    }
+
+    function displayScrapedLeads(leads) {
+      const container = document.getElementById('scrapedLeadsContainer');
+      const grid = document.getElementById('leadsGrid');
+      const countSpan = document.getElementById('leadCount');
+      const countSpanEN = document.getElementById('leadCountEN');
+      
+      if (!leads || leads.length === 0) {
+        alert(currentLang === 'nl' 
+          ? 'Geen leads gevonden. Probeer een andere zoekopdracht.' 
+          : 'No leads found. Try a different search.');
+        return;
+      }
+      
+      // Update count
+      if (countSpan) countSpan.textContent = leads.length;
+      if (countSpanEN) countSpanEN.textContent = leads.length;
+      
+      // Display leads
+      grid.innerHTML = leads.map((lead, index) => `
+        <div class="lead-card bg-gray-800 rounded-lg p-4 border-2 border-gray-600 hover:border-purple-500">
+          <div class="flex items-start gap-3 mb-3">
+            <input type="checkbox" 
+                   class="lead-checkbox mt-1" 
+                   data-index="${index}"
+                   onchange="updateSelectionCount()">
+            <div class="flex-1">
+              <h4 class="font-bold text-white mb-1">${lead.name}</h4>
+              <p class="text-xs text-gray-400 mb-1">${lead.category || 'Business'}</p>
+              ${lead.rating ? 
+                `<div class="flex items-center gap-1 mb-2">
+                  <span class="text-yellow-400 text-sm">⭐ ${lead.rating}</span>
+                  <span class="text-gray-500 text-xs">(${lead.reviews || 0})</span>
+                </div>` : ''}
+            </div>
+          </div>
+          
+          ${lead.website ? 
+            `<a href="${lead.website}" target="_blank" class="text-blue-400 hover:underline text-xs truncate block mb-2">
+              ${lead.website}
+            </a>` : 
+            `<p class="text-xs text-gray-500 mb-2">❌ No website found</p>`}
+          
+          ${lead.phone ? 
+            `<a href="tel:${lead.phone}" class="block text-green-400 text-xs mb-2">
+              📞 ${lead.phone}
+            </a>` : ''}
+          
+          ${lead.address ? 
+            `<p class="text-xs text-gray-500 truncate">📍 ${lead.address}</p>` : ''}
+          
+          ${lead.website ? 
+            `<button onclick="scanSingleURLFromLead('${lead.website}', ${index})" 
+                    class="w-full bg-purple-600 hover:bg-purple-700 px-3 py-2 rounded-lg text-sm font-bold transition-all mt-2">
+              🔍 ${currentLang === 'nl' ? 'Scan Website' : 'Scan Website'}
+            </button>` : ''}
+        </div>
+      `).join('');
+      
+      container.classList.remove('hidden');
+    }
+
+    // ============================================
+    // SHARE FUNCTIONS
+    // ============================================
+    function shareLeadViaWhatsApp(url, currentScore, potentialScore) {
+      const decodedUrl = decodeURIComponent(url);
+      const message = currentLang === 'nl' ?
+        `🚨 SEO Kans Gevonden!\n\nIk heb ${decodedUrl} geanalyseerd en ontdekte:\n\nHuidige Score: ${currentScore}/100\nPotentiële Score: ${potentialScore}/100\nVerbetering: +${potentialScore - currentScore} punten mogelijk!\n\nWil je het volledige rapport? Laten we chatten!` :
+        `🚨 SEO Opportunity Alert!\n\nI analyzed ${decodedUrl} and found:\n\nCurrent Score: ${currentScore}/100\nPotential Score: ${potentialScore}/100\nImprovement: +${potentialScore - currentScore} points possible!\n\nWant the full report? Let's chat!`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+    }
+
+    function shareLeadViaEmail(url, currentScore, potentialScore) {
+      const decodedUrl = decodeURIComponent(url);
+      const subject = currentLang === 'nl' ? `SEO Analyse: ${decodedUrl} scoorde ${currentScore}/100` : `SEO Analysis: ${decodedUrl} scored ${currentScore}/100`;
+      const body = currentLang === 'nl' ?
+        `Hoi,\n\nIk heb een AI-era SEO analyse uitgevoerd op ${decodedUrl} en significante kansen ontdekt:\n\n📊 HUIDIGE SCORE: ${currentScore}/100\n🚀 POTENTIËLE SCORE: ${potentialScore}/100\n📈 VERBETERING: +${potentialScore - currentScore} punten\n\nJe website heeft sterk potentieel! Met enkele strategische optimalisaties kunnen we je zichtbaarheid significant verbeteren.\n\nWil je de volledige analyse en implementatie plan bespreken?\n\nGroeten` :
+        `Hi,\n\nI ran an AI-era SEO analysis on ${decodedUrl} and discovered significant opportunities:\n\n📊 CURRENT SCORE: ${currentScore}/100\n🚀 POTENTIAL SCORE: ${potentialScore}/100\n📈 IMPROVEMENT: +${potentialScore - currentScore} points\n\nYour website has strong potential! With some strategic optimizations, we could boost your visibility significantly.\n\nWant to discuss the full analysis and implementation plan?\n\nBest regards`;
+      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    }
+
+    function copyLeadReport(url, currentScore, potentialScore) {
+      const decodedUrl = decodeURIComponent(url);
+      const report = currentLang === 'nl' ?
+        `SEO ANALYSE RAPPORT\n\nURL: ${decodedUrl}\n\nRESULTATEN:\n✅ Gekwalificeerde lead (1100+ woorden)\n📊 Huidige Score: ${currentScore}/100\n🚀 Potentieel: ${potentialScore}/100\n📈 Verbetering: +${potentialScore - currentScore} punten\n\nINVESTERING:\n⏱️ Timeline: 2-3 weken\n💰 Budget: €${Math.round((potentialScore - currentScore) * 15)}-${Math.round((potentialScore - currentScore) * 20)}\n📈 ROI: 300-500%\n\nContact: info@contentscale.site\nWhatsApp: +31 6 2807 3996` :
+        `SEO ANALYSIS REPORT\n\nURL: ${decodedUrl}\n\nRESULTS:\n✅ Qualified lead (1100+ words)\n📊 Current Score: ${currentScore}/100\n🚀 Potential: ${potentialScore}/100\n📈 Improvement: +${potentialScore - currentScore} points\n\nINVESTMENT:\n⏱️ Timeline: 2-3 weeks\n💰 Budget: €${Math.round((potentialScore - currentScore) * 15)}-${Math.round((potentialScore - currentScore) * 20)}\n📈 ROI: 300-500%\n\nContact: info@contentscale.site\nWhatsApp: +31 6 2807 3996`;
+      
+      navigator.clipboard.writeText(report).then(() => {
+        alert(currentLang === 'nl' ? '✅ Rapport gekopieerd naar clipboard!' : '✅ Report copied to clipboard!');
+      }).catch(err => {
+        console.error('Copy failed:', err);
+        alert(currentLang === 'nl' ? '❌ Kopiëren mislukt. Probeer handmatig te selecteren en kopiëren.' : '❌ Copy failed. Please select and copy manually.');
+      });
+    }
+
+    // ============================================
+    // MODAL FUNCTIONS
+    // ============================================
+    function displayScanResults(data) {
+      const modal = document.getElementById('scanModal');
+      const modalContent = modal.querySelector('.modal-content');
+      
+      const score = data.score || 0;
+      const potentialScore = Math.min(96, score + 12 + Math.floor(Math.random() * 6));
+      
+      modalContent.innerHTML = `
+        <div class="p-8">
+          <div class="flex justify-between items-start mb-6">
+            <div>
+              <h2 class="text-3xl font-bold mb-2">${currentLang === 'nl' ? 'Content Kwaliteit Analyse' : 'Content Quality Analysis'}</h2>
+              <p class="text-sm text-gray-400">${data.url}</p>
+            </div>
+            <button onclick="closeModal('scanModal')" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+          </div>
+          
+          <div class="grid md:grid-cols-2 gap-4 mb-6">
+            <div class="bg-gray-800 rounded-xl p-6 border-2 ${score < 75 ? 'border-red-500' : 'border-gray-600'}">
+              <div class="text-sm text-gray-400 mb-2">${currentLang === 'nl' ? 'Huidige Score' : 'Current Score'}</div>
+              <div class="text-5xl font-bold mb-2">${score}<span class="text-2xl text-gray-400">/100</span></div>
+              <div class="inline-block px-4 py-2 ${score >= 90 ? 'bg-green-600' : score >= 75 ? 'bg-blue-600' : score >= 60 ? 'bg-yellow-600' : 'bg-red-600'} rounded-full font-bold text-sm">
+                ${score >= 90 ? 'Excellent' : score >= 75 ? 'Good' : score >= 60 ? 'Average' : 'Poor'}
+              </div>
+            </div>
+            
+            <div class="bg-gradient-to-br from-green-900 to-emerald-900 rounded-xl p-6 border-2 border-green-500">
+              <div class="text-sm text-gray-300 mb-2">${currentLang === 'nl' ? 'Potentieel met Onze Hulp' : 'Potential with Our Help'}</div>
+              <div class="text-5xl font-bold text-green-400 mb-2">${potentialScore}<span class="text-2xl text-gray-300">/100</span></div>
+              <div class="inline-block px-4 py-2 bg-green-600 rounded-full font-bold text-sm">🏆 Elite</div>
+            </div>
+          </div>
+          
+          <div class="text-center">
+            <button onclick="closeModal('scanModal')" class="w-full px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
+              ${currentLang === 'nl' ? 'Sluiten' : 'Close'}
             </button>
           </div>
         </div>
-      ` : ''}
+      `;
       
-      <!-- Actions -->
-      <div class="flex justify-end gap-3 pt-6 border-t border-gray-700">
-        <button 
-          onclick="closeEmailConfigModal()" 
-          class="px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition-all">
-          ${currentLang === 'nl' ? 'Sluiten' : 'Close'}
-        </button>
-      </div>
-      
-    </div>
-  `;
-  
-  modalContent.innerHTML = html;
-}
-
-// ============================================
-// SAVE & VERIFY CONFIG
-// ============================================
-
-async function saveAndVerifyConfig() {
-  const apiKey = document.getElementById('sendgridApiKey').value.trim();
-  const userEmail = document.getElementById('userEmail').value.trim();
-  const userName = document.getElementById('userName').value.trim();
-  
-  // Validation
-  if (!apiKey || !apiKey.startsWith('SG.')) {
-    alert(currentLang === 'nl' 
-      ? 'Voer een geldige SendGrid API key in (begint met SG.)'
-      : 'Enter a valid SendGrid API key (starts with SG.)');
-    return;
-  }
-  
-  if (!userEmail || !userEmail.includes('@')) {
-    alert(currentLang === 'nl' 
-      ? 'Voer een geldig email adres in'
-      : 'Enter a valid email address');
-    return;
-  }
-  
-  // Show loading
-  const modalContent = document.querySelector('#emailConfigModal .modal-content');
-  modalContent.innerHTML = `
-    <div class="p-8 text-center">
-      <div class="text-6xl mb-4 animate-pulse">⏳</div>
-      <h3 class="text-2xl font-bold mb-4">
-        ${currentLang === 'nl' ? 'Verifiëren...' : 'Verifying...'}
-      </h3>
-      <p class="text-gray-400">
-        ${currentLang === 'nl' ? 'We sturen een test email...' : 'Sending test email...'}
-      </p>
-    </div>
-  `;
-  
-  try {
-    // Save config
-    const saveResponse = await fetch('/api/user/email-config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tier: 'free',
-        sendgridApiKey: apiKey,
-        userEmail: userEmail,
-        userName: userName || null
-      })
-    });
-    
-    const saveResult = await saveResponse.json();
-    
-    if (!saveResult.success) {
-      throw new Error(saveResult.error);
+      modal.classList.add('active');
     }
-    
-    // Verify
-    const verifyResponse = await fetch('/api/user/verify-email-config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        apiKey: apiKey,
-        testEmail: userEmail
-      })
-    });
-    
-    const verifyResult = await verifyResponse.json();
-    
-    if (verifyResult.success) {
-      // Success!
+
+    function openFreelancerModal() {
+      const modal = document.getElementById('freelancerModal');
+      const modalContent = modal.querySelector('.modal-content');
+      
       modalContent.innerHTML = `
-        <div class="p-8 text-center">
-          <div class="text-6xl mb-4">✅</div>
-          <h3 class="text-2xl font-bold mb-4 text-green-400">
-            ${currentLang === 'nl' ? 'Geverifieerd!' : 'Verified!'}
-          </h3>
-          <p class="text-gray-400 mb-2">
-            ${currentLang === 'nl' ? 'Check je inbox:' : 'Check your inbox:'}
-          </p>
-          <p class="text-xl font-bold mb-6">${userEmail}</p>
-          <p class="text-sm text-gray-400 mb-6">
-            ${currentLang === 'nl' 
-              ? 'Je kunt nu leaderboard emails versturen!'
-              : 'You can now send leaderboard emails!'}
-          </p>
-          <button 
-            onclick="closeEmailConfigModal(); location.reload();" 
-            class="px-8 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-bold transition-all">
-            ${currentLang === 'nl' ? 'Start Versturen!' : 'Start Sending!'}
-          </button>
+        <div class="p-8">
+          <div class="flex justify-between items-start mb-6">
+            <h2 class="text-3xl font-bold" data-lang="nl">📝 Registreer als SEO Specialist</h2>
+            <h2 class="text-3xl font-bold" data-lang="en">📝 Join Our Network</h2>
+            <button onclick="closeModal('freelancerModal')" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+          </div>
+          
+          <form id="freelancerForm" class="space-y-4">
+            <div class="grid md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-semibold mb-2" data-lang="nl">Volledige Naam *</label>
+                <label class="block text-sm font-semibold mb-2" data-lang="en">Full Name *</label>
+                <input type="text" name="name" required 
+                       class="w-full bg-gray-700 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+              </div>
+              <div>
+                <label class="block text-sm font-semibold mb-2">Email *</label>
+                <input type="email" name="email" required 
+                       class="w-full bg-gray-700 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+              </div>
+            </div>
+            
+            <button type="submit" 
+                    class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-8 py-4 rounded-lg font-bold text-lg transition-all shadow-lg hover:shadow-xl">
+              <span data-lang="nl">Verstuur Aanmelding</span>
+              <span data-lang="en">Submit Application</span>
+            </button>
+          </form>
         </div>
       `;
-    } else {
-      throw new Error(verifyResult.error);
+      
+      // Update language for modal content
+      document.querySelectorAll('[data-lang]').forEach(el => {
+        el.classList.toggle('active-lang', el.getAttribute('data-lang') === currentLang);
+      });
+      
+      modal.classList.add('active');
+      
+      // Add form submission handler
+      document.getElementById('freelancerForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        alert(currentLang === 'nl' ? 'Aanmelding verstuurd! We nemen contact op.' : 'Application submitted! We will contact you.');
+        closeModal('freelancerModal');
+      });
     }
-    
-  } catch (error) {
-    modalContent.innerHTML = `
-      <div class="p-8 text-center">
-        <div class="text-6xl mb-4">❌</div>
-        <h3 class="text-2xl font-bold mb-4 text-red-400">
-          ${currentLang === 'nl' ? 'Verificatie Mislukt' : 'Verification Failed'}
-        </h3>
-        <p class="text-gray-400 mb-6">
-          ${error.message}
-        </p>
-        <button 
-          onclick="loadEmailConfig();" 
-          class="px-8 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-bold transition-all">
-          ${currentLang === 'nl' ? 'Probeer Opnieuw' : 'Try Again'}
-        </button>
-      </div>
-    `;
-  }
-}
 
-// ============================================
-// CLOSE MODAL
-// ============================================
-
-function closeEmailConfigModal() {
-  const modal = document.getElementById('emailConfigModal');
-  if (modal) {
-    modal.classList.remove('active');
-  }
-}
-
-// ============================================
-// CHECK IF CONFIG NEEDED BEFORE SENDING
-// ============================================
-
-async function checkEmailConfigured() {
-  try {
-    const response = await fetch('/api/user/email-config');
-    const data = await response.json();
-    
-    if (!data.hasConfig) {
-      alert(currentLang === 'nl' 
-        ? 'Voeg eerst je SendGrid setup toe in Settings!'
-        : 'Please add your SendGrid setup in Settings first!');
-      showEmailConfigModal();
-      return false;
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.remove('active');
     }
-    
-    if (!data.config.is_verified) {
-      alert(currentLang === 'nl' 
-        ? 'Verifieer eerst je email! Check je inbox.'
-        : 'Please verify your email first! Check your inbox.');
-      return false;
+
+    // ============================================
+    // DATA LOADING FUNCTIONS
+    // ============================================
+    async function loadFreelancers() {
+      try {
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const mockFreelancers = [
+          {
+            name: "Alex Johnson",
+            specialty: "SEO Content Writing",
+            bio: "5+ years experience in technical SEO and content optimization",
+            experience: 5,
+            email: "alex@example.com"
+          },
+          {
+            name: "Maria Schmidt",
+            specialty: "Content Strategy",
+            bio: "Expert in E-E-A-T optimization and AI-proof content",
+            experience: 7,
+            email: "maria@example.com"
+          },
+          {
+            name: "David Chen",
+            specialty: "Technical SEO",
+            bio: "Specialized in site speed optimization and schema markup",
+            experience: 4,
+            email: "david@example.com"
+          }
+        ];
+        
+        const grid = document.getElementById('freelancers-grid');
+        grid.innerHTML = mockFreelancers.map(f => `
+          <div class="freelancer-card">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-xl font-bold">
+                  ${f.name.charAt(0)}
+                </div>
+                <div>
+                  <h3 class="font-bold text-lg">${f.name}</h3>
+                  <p class="text-sm text-gray-400">${f.specialty}</p>
+                </div>
+              </div>
+              <span class="px-2 py-1 bg-green-600 rounded text-xs">✓ Verified</span>
+            </div>
+            <p class="text-sm text-gray-300 mb-3">${f.bio}</p>
+            <div class="flex items-center justify-between text-sm mb-3">
+              <span class="text-gray-400">${f.experience}+ ${currentLang === 'nl' ? 'jaar' : 'years'}</span>
+            </div>
+            <button onclick="contactFreelancer('${f.email}', '${f.name}')" 
+                    class="w-full bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl">
+              ${currentLang === 'nl' ? 'Contact' : 'Contact'} ${f.name}
+            </button>
+          </div>
+        `).join('');
+        
+      } catch (error) {
+        console.error('Load freelancers error:', error);
+      }
     }
-    
-    return true;
-    
-  } catch (error) {
-    console.error('Check config error:', error);
-    return false;
-  }
-}
 
-// ============================================
-// ADD TO INDEX.HTML
-// ============================================
+    async function loadLeaderboard() {
+      try {
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        const mockLeaderboard = [
+          { company_name: "TechCorp Global", score: 96, country: "USA" },
+          { company_name: "DigitalFlow Inc", score: 94, country: "Germany" },
+          { company_name: "ContentMasters", score: 92, country: "Netherlands" },
+          { company_name: "SEO Kings", score: 91, country: "UK" },
+          { company_name: "AI Optimizers", score: 90, country: "Canada" }
+        ];
+        
+        const list = document.getElementById('leaderboard-list');
+        list.innerHTML = mockLeaderboard.map((entry, index) => {
+          const rank = index + 1;
+          const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
+          
+          return `
+            <div class="leaderboard-card">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4 flex-1">
+                  <div class="rank-badge ${rankClass}">
+                    ${rank <= 3 ? (rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉') : rank}
+                  </div>
+                  <div class="flex-1">
+                    <h3 class="font-bold text-xl">${entry.company_name}</h3>
+                    <p class="text-sm text-gray-400">${entry.country}</p>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-3xl font-bold text-yellow-400">${entry.score}</div>
+                  <div class="text-xs text-gray-400">Score</div>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+        
+      } catch (error) {
+        console.error('Load leaderboard error:', error);
+      }
+    }
 
-/*
-<!-- Email Config Modal -->
-<div id="emailConfigModal" class="modal">
-  <div class="modal-content"></div>
-</div>
+    async function loadBlog() {
+      try {
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 600));
+        
+        const mockBlogPosts = [
+          {
+            title: currentLang === 'nl' ? "Hoe je content optimaliseert voor AI Overviews" : "How to Optimize Content for AI Overviews",
+            excerpt: currentLang === 'nl' ? "Strategieën om je content AI-proof te maken en traffic te behouden" : "Strategies to make your content AI-proof and maintain traffic",
+            tags: ["AI", "SEO", "Content"]
+          },
+          {
+            title: currentLang === 'nl' ? "Google's E-E-A-T: De Complete Gids" : "Google's E-E-A-T: The Complete Guide",
+            excerpt: currentLang === 'nl' ? "Leer hoe je Experience, Expertise, Authoritativeness en Trustworthiness implementeert" : "Learn how to implement Experience, Expertise, Authoritativeness and Trustworthiness",
+            tags: ["E-E-A-T", "Google", "Best Practices"]
+          },
+          {
+            title: currentLang === 'nl' ? "Lead Scanner: Vind Nieuwe Klanten" : "Lead Scanner: Find New Clients",
+            excerpt: currentLang === 'nl' ? "Hoe je onze lead scanner gebruikt om potentiële klanten te vinden" : "How to use our lead scanner to find potential clients",
+            tags: ["Leads", "Scanner", "Business"]
+          }
+        ];
+        
+        const grid = document.getElementById('blog-grid');
+        grid.innerHTML = mockBlogPosts.map(post => `
+          <div class="blog-card">
+            <div class="p-6">
+              <div class="flex gap-2 mb-3">
+                ${post.tags.map(tag => 
+                  `<span class="px-2 py-1 bg-purple-600 rounded text-xs">${tag}</span>`
+                ).join('')}
+              </div>
+              <h3 class="font-bold text-xl mb-2">${post.title}</h3>
+              <p class="text-sm text-gray-400 mb-4">${post.excerpt}</p>
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-gray-400">${new Date().toLocaleDateString()}</span>
+                <a href="#" class="text-blue-400 hover:underline">
+                  ${currentLang === 'nl' ? 'Lees Meer' : 'Read More'} →
+                </a>
+              </div>
+            </div>
+          </div>
+        `).join('');
+        
+      } catch (error) {
+        console.error('Load blog error:', error);
+      }
+    }
 
-<!-- Settings Button -->
-<button onclick="showEmailConfigModal()" class="btn-settings">
-  ⚙️ Email Settings
-</button>
-*/
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    function contactFreelancer(email, name) {
+      const subject = currentLang === 'nl' ? 'SEO Project via ContentScale' : 'SEO Project Inquiry via ContentScale';
+      const body = `${currentLang === 'nl' ? 'Hoi' : 'Hi'} ${name},%0A%0A${currentLang === 'nl' ? 'Ik vond je via ContentScale en wil graag een project bespreken.' : 'I found you via ContentScale and would like to discuss a project.'}`;
+      window.location.href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    }
 
-    
-    
+    function generateMockScanData(url) {
+      const score = Math.floor(Math.random() * 30) + 50; // 50-80
+      return {
+        url: url,
+        score: score,
+        metrics: {
+          content: Math.round(score * 0.5),
+          technical: Math.floor(Math.random() * 15) + 5,
+          ux: Math.floor(Math.random() * 20) + 70
+        },
+        content_stats: {
+          wordCount: Math.floor(Math.random() * 2000) + 500
+        }
+      };
+    }
+
+    function generateMockLeadScanData(url) {
+      const wordCount = Math.floor(Math.random() * 3000) + 500;
+      const score = Math.min(95, Math.floor(wordCount / 30) + Math.floor(Math.random() * 20));
+      
+      return {
+        url: url,
+        score: score,
+        wordCount: wordCount,
+        metrics: {
+          content: Math.round(score * 0.5),
+          technical: Math.floor(Math.random() * 15) + 5,
+          ux: Math.floor(Math.random() * 20) + 70
+        }
+      };
+    }
+
+    function generateMockLeads() {
+      const businessTypes = ['Restaurant', 'Hotel', 'Dentist', 'Lawyer', 'Contractor', 'Plumber', 'Electrician', 'Marketing Agency'];
+      const locations = ['Amsterdam', 'Rotterdam', 'Utrecht', 'The Hague', 'Eindhoven', 'Groningen'];
+      
+      return Array.from({ length: 12 }, (_, i) => {
+        const hasWebsite = Math.random() > 0.3;
+        const category = businessTypes[Math.floor(Math.random() * businessTypes.length)];
+        
+        return {
+          name: `${category} ${locations[Math.floor(Math.random() * locations.length)]} ${i + 1}`,
+          category: category,
+          rating: Math.random() > 0.5 ? (Math.random() * 2 + 3).toFixed(1) : null,
+          reviews: Math.random() > 0.5 ? Math.floor(Math.random() * 100) : 0,
+          website: hasWebsite ? `https://${category.toLowerCase()}-example${i}.com` : null,
+          phone: Math.random() > 0.4 ? `+31 6 ${Math.floor(Math.random() * 9000000) + 1000000}` : null,
+          address: `${locations[Math.floor(Math.random() * locations.length)]} Street ${i + 1}`
+        };
+      });
+    }
+
+    function selectAllLeads() {
+      const checkboxes = document.querySelectorAll('.lead-checkbox');
+      const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+      
+      checkboxes.forEach(cb => {
+        cb.checked = !allChecked;
+      });
+      
+      updateSelectionCount();
+    }
+
+    function updateSelectionCount() {
+      const checked = document.querySelectorAll('.lead-checkbox:checked').length;
+      const button = document.getElementById('scanAllBtn');
+      
+      if (button) {
+        button.innerHTML = checked > 0 ? 
+          `⚡ ${currentLang === 'nl' ? 'Scan' : 'Scan'} ${checked}` : 
+          `⚡ ${currentLang === 'nl' ? 'Scan Alles' : 'Scan All'}`;
+      }
+    }
+
+    function exportLeadsToCSV() {
+      if (!scrapedLeads || scrapedLeads.length === 0) {
+        alert('No leads to export');
+        return;
+      }
+      
+      const headers = ['Name', 'Category', 'Rating', 'Reviews', 'Website', 'Phone', 'Address'];
+      const rows = scrapedLeads.map(lead => [
+        lead.name || '',
+        lead.category || '',
+        lead.rating || '',
+        lead.reviews || '',
+        lead.website || '',
+        lead.phone || '',
+        lead.address || ''
+      ]);
+      
+      let csv = headers.join(',') + '\n';
+      csv += rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+      
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `google-maps-leads-${Date.now()}.csv`;
+      a.click();
+    }
+
+    function exportLeadsToJSON() {
+      if (!scrapedLeads || scrapedLeads.length === 0) {
+        alert('No leads to export');
+        return;
+      }
+      
+      const json = JSON.stringify(scrapedLeads, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `google-maps-leads-${Date.now()}.json`;
+      a.click();
+    }
+
+    async function scanSingleURLFromLead(url, index) {
+      try {
+        // Simulate scan
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const wordCount = Math.floor(Math.random() * 3000) + 500;
+        const score = Math.min(95, Math.floor(wordCount / 30) + Math.floor(Math.random() * 20));
+        
+        if (wordCount >= 1100) {
+          alert(`✅ ${currentLang === 'nl' ? 'Gekwalificeerde Lead!' : 'Qualified Lead!'}\n\n${currentLang === 'nl' ? 'Score' : 'Score'}: ${score}/100\n${currentLang === 'nl' ? 'Woorden' : 'Words'}: ${wordCount}\n\n${currentLang === 'nl' ? 'Potentieel voor optimalisatie!' : 'Potential for optimization!'}`);
+        } else {
+          alert(`⚠️ ${currentLang === 'nl' ? 'Niet Gekwalificeerd' : 'Not Qualified'}\n\n${currentLang === 'nl' ? 'Slechts' : 'Only'} ${wordCount} ${currentLang === 'nl' ? 'woorden (nodig 1100+)' : 'words (need 1100+)'}\n\n${currentLang === 'nl' ? 'Scan een pagina met meer content' : 'Scan a page with more content'}`);
+        }
+      } catch (error) {
+        alert('Scan failed: ' + error.message);
+      }
+    }
+
+    // ============================================
+    // ENTER KEY HANDLERS
+    // ============================================
+    document.getElementById('scanInput')?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') performScan();
+    });
+
+    document.getElementById('singleUrlInput')?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') scanSingleURLPublic();
+    });
+
+    document.getElementById('googleMapsInput')?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') scrapeGoogleMapsPublic();
+    });
+
+    // ============================================
+    // INITIALIZATION COMPLETE
+    // ============================================
+    console.log('✅ ContentScale fully loaded!');
   </script>
-
 </body>
 </html>
