@@ -80,7 +80,28 @@ const pool = new Pool(dbConfig);
 // GOOGLE MAPS SCRAPER SERVICE
 // ============================================
 const GoogleMapsScraper = require('./services/google-maps-scraper');
-const gmapsScraper = new GoogleMapsScraper(pool);
+// ✅ NIEUW (deel browser):
+let gmapsScraper;
+
+// Initialiseer na browser launch
+async function initGoogleMapsScraper() {
+  const browser = await getBrowser(); // Reuse Puppeteer browser
+  gmapsScraper = new GoogleMapsScraper(pool, browser);
+}
+
+// Call it after database init
+pool.connect((err, client, release) => {
+  if (err) {
+    console.error('❌ Database connection error:', err.message);
+  } else {
+    console.log('✅ Database connected');
+    release();
+    setTimeout(async () => {
+      await createAllTables();
+      await initGoogleMapsScraper(); // ✅ NIEUW
+    }, 1000);
+  }
+});
 
 // ============================================
 // EMAIL SERVICE INITIALIZATION
