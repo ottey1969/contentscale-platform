@@ -1052,6 +1052,592 @@ const verifyAdmin = async (req, res, next) => {
   } catch (error) {
     res.status(500).json({ success: false, error: 'Authentication error' });
   }
+};function generateDetailedRecommendations(score, metrics, wordCount, scanData) {
+  const recs = [];
+  
+  // Default to Dutch for now, you can adjust based on language detection
+  const currentLang = 'nl'; // You can make this dynamic later
+  
+  // ALTIJD CHECKEN:
+  
+  // 1. Content Quality
+  if (metrics.content < 45) {
+    recs.push({
+      priority: 'HIGH',
+      title: currentLang === 'nl' ? 'Voeg Auteur Credentials Toe' : 'Add Author Credentials',
+      impact: 8,
+      effort: currentLang === 'nl' ? 'Laag (1-2 uur)' : 'Low (1-2 hours)',
+      cost: '€75-150',
+      description: currentLang === 'nl' 
+        ? 'Voeg auteur bio met credentials en expertise toe voor E-E-A-T' 
+        : 'Add author bio with credentials and expertise for E-E-A-T'
+    });
+  }
+  
+  // 2. Word Count
+  if (wordCount < 2000) {
+    recs.push({
+      priority: wordCount < 1500 ? 'HIGH' : 'MEDIUM',
+      title: currentLang === 'nl' ? 'Vergroot Content Diepte' : 'Expand Content Depth',
+      impact: wordCount < 1500 ? 10 : 6,
+      effort: currentLang === 'nl' ? 'Gemiddeld (4-6 uur)' : 'Medium (4-6 hours)',
+      cost: '€200-350',
+      description: currentLang === 'nl' 
+        ? `Verhoog van ${wordCount} naar 2000+ woorden met diepgaande coverage` 
+        : `Increase from ${wordCount} to 2000+ words with in-depth coverage`
+    });
+  }
+  
+  // 3. Technical SEO - FIX: metrics.technical in plaats van scores.technical
+  if (metrics.technical < 16) {
+    recs.push({
+      priority: 'HIGH',
+      title: currentLang === 'nl' ? 'Implementeer Schema Markup' : 'Implement Schema Markup',
+      impact: 12,
+      effort: currentLang === 'nl' ? 'Gemiddeld (2-4 uur)' : 'Medium (2-4 hours)',
+      cost: '€150-250',
+      description: currentLang === 'nl' 
+        ? 'Voeg Article/FAQ/Organization schema toe voor betere SERP weergave' 
+        : 'Add Article/FAQ/Organization schema for better SERP visibility'
+    });
+  }
+  
+  // 4. FAQ Section (SMART DETECTION)
+  const hasFAQ = scanData?.hasFAQ || false;
+  const faqScore = scanData?.faqScore || 0;
+  
+  if (!hasFAQ) {
+    // Als er een FAQ score is maar niet genoeg voor detectie
+    if (faqScore > 0 && faqScore < 2) {
+      recs.push({
+        priority: 'MEDIUM',
+        title: currentLang === 'nl' ? 'Verbeter FAQ Detectie' : 'Improve FAQ Detection',
+        impact: 5,
+        effort: currentLang === 'nl' ? 'Laag (30 min)' : 'Low (30 min)',
+        cost: '€25-50',
+        description: currentLang === 'nl' 
+          ? `FAQ elementen gedetecteerd (score: ${faqScore}), maar niet herkend als complete sectie. Voeg "FAQ" of "veelgestelde vragen" toe aan headers.` 
+          : `FAQ elements detected (score: ${faqScore}), but not recognized as complete section. Add "FAQ" or "frequently asked questions" to headers.`
+      });
+    } else {
+      // Geen FAQ gedetecteerd
+      recs.push({
+        priority: 'HIGH',
+        title: currentLang === 'nl' ? 'Voeg FAQ Sectie Toe' : 'Add FAQ Section',
+        impact: 8,
+        effort: currentLang === 'nl' ? 'Laag (2-3 uur)' : 'Low (2-3 hours)',
+        cost: '€100-175',
+        description: currentLang === 'nl' 
+          ? 'Beantwoord 8-12 veelgestelde vragen met FAQ schema markup voor AI Overview kansen' 
+          : 'Answer 8-12 common questions with FAQ schema markup to capture AI Overview opportunities'
+      });
+    }
+  } else {
+    // FAQ bestaat al
+    recs.push({
+      priority: 'MEDIUM',
+      title: currentLang === 'nl' ? 'Optimaliseer Bestaande FAQ' : 'Optimize Existing FAQ',
+      impact: 5,
+      effort: currentLang === 'nl' ? 'Laag (1-2 uur)' : 'Low (1-2 hours)',
+      cost: '€75-125',
+      description: currentLang === 'nl' 
+        ? `FAQ sectie gevonden (score: ${faqScore}). Voeg FAQ schema markup toe en breid uit naar 12+ vragen.` 
+        : `FAQ section found (score: ${faqScore}). Add FAQ schema markup and expand to 12+ questions.`
+    });
+  }
+  
+  // 5. Page Speed
+  if (score < 80) {
+    recs.push({
+      priority: score < 70 ? 'HIGH' : 'MEDIUM',
+      title: currentLang === 'nl' ? 'Optimaliseer Pagina Snelheid' : 'Optimize Page Speed',
+      impact: 9,
+      effort: currentLang === 'nl' ? 'Gemiddeld (3-5 uur)' : 'Medium (3-5 hours)',
+      cost: '€200-400',
+      description: currentLang === 'nl' 
+        ? 'Reduceer laadtijd naar <2s via image compression, lazy loading en CDN' 
+        : 'Reduce load time to <2s through image compression, lazy loading and CDN'
+    });
+  }
+  
+  // 6. Internal Links
+  if (wordCount > 1500) {
+    recs.push({
+      priority: 'MEDIUM',
+      title: currentLang === 'nl' ? 'Voeg Interne Links Toe' : 'Add Internal Links',
+      impact: 6,
+      effort: currentLang === 'nl' ? 'Laag (1 uur)' : 'Low (1 hour)',
+      cost: '€50-100',
+      description: currentLang === 'nl' 
+        ? 'Voeg 5-8 relevante interne links toe naar gerelateerde content' 
+        : 'Add 5-8 relevant internal links to related content'
+    });
+  }
+  
+  // 7. Meta Description
+  recs.push({
+    priority: 'MEDIUM',
+    title: currentLang === 'nl' ? 'Optimaliseer Meta Description' : 'Optimize Meta Description',
+    impact: 4,
+    effort: currentLang === 'nl' ? 'Laag (30 min)' : 'Low (30 min)',
+    cost: '€25-50',
+    description: currentLang === 'nl' 
+      ? 'Schrijf overtuigende meta description van 150-160 karakters' 
+      : 'Write compelling meta description of 150-160 characters'
+  });
+  
+  // 8. Images & Alt Text
+  recs.push({
+    priority: 'MEDIUM',
+    title: currentLang === 'nl' ? 'Optimaliseer Afbeeldingen' : 'Optimize Images',
+    impact: 7,
+    effort: currentLang === 'nl' ? 'Gemiddeld (2-3 uur)' : 'Medium (2-3 hours)',
+    cost: '€100-200',
+    description: currentLang === 'nl' 
+      ? 'Voeg alt-text toe, comprimeer images en gebruik WebP format' 
+      : 'Add alt-text, compress images and use WebP format'
+  });
+  
+  // 9. Mobile Optimization
+  if (score < 85) {
+    recs.push({
+      priority: 'HIGH',
+      title: currentLang === 'nl' ? 'Verbeter Mobile UX' : 'Improve Mobile UX',
+      impact: 8,
+      effort: currentLang === 'nl' ? 'Hoog (6-8 uur)' : 'High (6-8 hours)',
+      cost: '€300-500',
+      description: currentLang === 'nl' 
+        ? 'Optimaliseer voor mobile: touch targets, font sizes, tap-friendly buttons' 
+        : 'Optimize for mobile: touch targets, font sizes, tap-friendly buttons'
+    });
+  }
+  
+  // 10. Content Freshness
+  recs.push({
+    priority: 'LOW',
+    title: currentLang === 'nl' ? 'Update Content Regelmatig' : 'Update Content Regularly',
+    impact: 5,
+    effort: currentLang === 'nl' ? 'Laag (1-2 uur/maand)' : 'Low (1-2 hours/month)',
+    cost: '€75-150/mnd',
+    description: currentLang === 'nl' 
+      ? 'Update content maandelijks met nieuwe data en insights' 
+      : 'Update content monthly with new data and insights'
+  });
+  
+  // Sort by impact (highest first)
+  return recs.sort((a, b) => b.impact - a.impact).slice(0, 8);
+}
+
+/**
+ * Compare with previous scan to explain changes
+ */
+async function getScanComparison(url, newScores) {
+  try {
+    const client = await pool.connect();
+    const previous = await client.query(
+      'SELECT score, graaf_score, craft_score, technical_score, breakdown, created_at FROM scans WHERE url = $1 ORDER BY created_at DESC LIMIT 1 OFFSET 1',
+      [url]
+    );
+    client.release();
+    
+    if (previous.rows.length === 0) {
+      return {
+        is_first_scan: true,
+        changes: null
+      };
+    }
+    
+    const prev = previous.rows[0];
+    const changes = {
+      overall_change: newScores.overall - (prev.score || 0),
+      graaf_change: newScores.graafScore - (prev.graaf_score || 0),
+      craft_change: newScores.craftScore - (prev.craft_score || 0),
+      technical_change: newScores.technicalScore - (prev.technical_score || 0)
+    };
+    
+    // Explain changes
+    const explanations = [];
+    if (Math.abs(changes.overall_change) > 5) {
+      if (changes.technical_change > 0) explanations.push('Technical improvements detected');
+      if (changes.graaf_change > 0) explanations.push('Content credibility improved');
+      if (changes.craft_change > 0) explanations.push('Content structure enhanced');
+      if (changes.technical_change < 0) explanations.push('Technical metrics declined');
+    }
+    
+    return {
+      is_first_scan: false,
+      previous_score: prev.score,
+      changes,
+      explanations,
+      previous_scan_date: prev.created_at
+    };
+  } catch (error) {
+    console.error('Comparison error:', error);
+    return { is_first_scan: true, changes: null };
+  }
+}
+
+// ============================================
+// DATABASE INITIALIZATION - SINGLE FUNCTION
+// ============================================
+async function createAllTables() {
+  const client = await pool.connect();
+  
+  try {
+    // SUPER ADMINS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS super_admins (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(100) UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        full_name VARCHAR(255),
+        email VARCHAR(255),
+        role VARCHAR(50) DEFAULT 'admin',
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        last_login TIMESTAMP
+      )
+    `);
+    
+    // Add default admin
+    const adminCheck = await client.query('SELECT COUNT(*) FROM super_admins WHERE username = $1', ['ot']);
+    if (parseInt(adminCheck.rows[0].count) === 0) {
+      await client.query(
+        'INSERT INTO super_admins (username, password_hash, full_name, role) VALUES ($1, $2, $3, $4)',
+        ['ot', 'admin123', 'Super Admin', 'super_admin']
+      );
+    }
+    
+    // AGENCIES TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS agencies (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        domain VARCHAR(255) NOT NULL,
+        country VARCHAR(10) DEFAULT 'NL',
+        plan VARCHAR(50) DEFAULT 'free',
+        admin_key VARCHAR(100) UNIQUE,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // CLIENTS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS clients (
+        id SERIAL PRIMARY KEY,
+        agency_id INTEGER REFERENCES agencies(id) ON DELETE CASCADE,
+        url TEXT NOT NULL,
+        name VARCHAR(255),
+        email VARCHAR(255),
+        scan_count INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // SCANS TABLE - UPDATED WITH TRANSPARENT SCORING FIELDS
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS scans (
+        id SERIAL PRIMARY KEY,
+        url TEXT NOT NULL,
+        score INTEGER,
+        quality VARCHAR(50),
+        graaf_score INTEGER,
+        craft_score INTEGER,
+        technical_score INTEGER,
+        content_score INTEGER,        -- NEW: transparent content score
+        ux_score INTEGER,            -- NEW: UX score
+        breakdown JSONB,
+        comparison_data JSONB,       -- NEW: scan comparison data
+        recommendations JSONB DEFAULT '[]',
+        agency_id INTEGER REFERENCES agencies(id) ON DELETE SET NULL,
+        client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL,
+        scan_type VARCHAR(50) DEFAULT 'manual',
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // SHARE LINKS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS share_links (
+        id SERIAL PRIMARY KEY,
+        share_code VARCHAR(100) UNIQUE NOT NULL,
+        token VARCHAR(100) UNIQUE NOT NULL,
+        client_email VARCHAR(255) NOT NULL,
+        client_name VARCHAR(255),
+        scans_limit INTEGER DEFAULT 5,
+        scans_used INTEGER DEFAULT 0,
+        expires_at TIMESTAMP NOT NULL,
+        status VARCHAR(50) DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // LEADERBOARD TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS leaderboard (
+        id SERIAL PRIMARY KEY,
+        url TEXT NOT NULL UNIQUE,
+        company_name VARCHAR(255),
+        score INTEGER NOT NULL,
+        country VARCHAR(10) DEFAULT 'NL',
+        is_verified BOOLEAN DEFAULT FALSE,
+        is_opted_out BOOLEAN DEFAULT FALSE,
+        submission_ip VARCHAR(50),
+        admin_verified BOOLEAN DEFAULT FALSE,
+        auto_detected_country VARCHAR(100),
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // FREELANCERS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS freelancers (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        title VARCHAR(255),
+        location VARCHAR(255),
+        country VARCHAR(100),
+        bio TEXT,
+        linkedin_url TEXT,
+        is_approved BOOLEAN DEFAULT FALSE,
+        is_featured BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // SETTINGS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS settings (
+        key VARCHAR(100) PRIMARY KEY,
+        value TEXT,
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // ELITE SCANS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS elite_scans (
+        id SERIAL PRIMARY KEY,
+        url TEXT NOT NULL,
+        score INTEGER,
+        elite_rating VARCHAR(50),
+        breakdown JSONB,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // ============================================
+    // MARKETPLACE TABLES
+    // ============================================
+    
+    // 1. CONTENT CREATORS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS content_creators (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES super_admins(id) ON DELETE CASCADE,
+        bio TEXT,
+        languages TEXT[] DEFAULT '{"en"}',
+        specialties TEXT[] DEFAULT '{"general"}',
+        hourly_rate INTEGER DEFAULT 25,
+        credits INTEGER DEFAULT 0,
+        total_earnings DECIMAL(10,2) DEFAULT 0,
+        platform_fees_paid DECIMAL(10,2) DEFAULT 0,
+        rating DECIMAL(3,2) DEFAULT 0,
+        completed_projects INTEGER DEFAULT 0,
+        is_verified BOOLEAN DEFAULT FALSE,
+        is_available BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✅ content_creators table ready');
+    
+    // 2. LEADS MARKETPLACE TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS leads_marketplace (
+        id SERIAL PRIMARY KEY,
+        business_name VARCHAR(255),
+        website_url TEXT NOT NULL,
+        industry VARCHAR(100),
+        location VARCHAR(255),
+        contact_email_original TEXT,
+        contact_phone_original TEXT,
+        contact_email_forwarding TEXT,
+        contact_phone_forwarding TEXT,
+        content_score INTEGER,
+        technical_score INTEGER,
+        ux_score INTEGER,
+        specific_issues JSONB,
+        estimated_value VARCHAR(50),
+        credit_cost INTEGER DEFAULT 5,
+        claimed_by INTEGER REFERENCES content_creators(id),
+        claimed_at TIMESTAMP,
+        expires_at TIMESTAMP,
+        is_available BOOLEAN DEFAULT TRUE,
+        scan_date TIMESTAMP DEFAULT NOW(),
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✅ leads_marketplace table ready');
+    
+    // 3. LEAD PURCHASES TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS lead_purchases (
+        id SERIAL PRIMARY KEY,
+        lead_id INTEGER REFERENCES leads_marketplace(id),
+        creator_id INTEGER REFERENCES content_creators(id),
+        credits_used INTEGER,
+        contact_revealed_at TIMESTAMP DEFAULT NOW(),
+        contacted_at TIMESTAMP,
+        hired_at TIMESTAMP,
+        project_value DECIMAL(10,2),
+        platform_fee DECIMAL(10,2),
+        status VARCHAR(50) DEFAULT 'purchased',
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✅ lead_purchases table ready');
+    
+    // ============================================
+    // BLOG POSTS TABLE (NEW)
+    // ============================================
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS blog_posts (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(500) NOT NULL,
+        slug VARCHAR(500) UNIQUE NOT NULL,
+        excerpt TEXT,
+        content TEXT NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        status VARCHAR(50) DEFAULT 'draft',
+        tags TEXT[] DEFAULT '{}',
+        featured_image TEXT,
+        author VARCHAR(255) NOT NULL,
+        meta_description TEXT,
+        views INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
+        published_at TIMESTAMP,
+        scheduled_at TIMESTAMP
+      )
+    `);
+    console.log('✅ blog_posts table ready');
+    
+    // ============================================
+    // LTD CODES TABLE (NEW)
+    // ============================================
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ltd_codes (
+        id SERIAL PRIMARY KEY,
+        code VARCHAR(100) UNIQUE NOT NULL,
+        tier VARCHAR(50) NOT NULL,
+        amount DECIMAL(10,2) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        status VARCHAR(50) DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT NOW(),
+        expires_at TIMESTAMP,
+        used_at TIMESTAMP
+      )
+    `);
+    console.log('✅ ltd_codes table ready');
+    
+    // ============================================
+    // OPT OUT REQUESTS TABLE (NEW)
+    // ============================================
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS opt_out_requests (
+        id SERIAL PRIMARY KEY,
+        website_url TEXT NOT NULL,
+        contact_email VARCHAR(255),
+        contact_name VARCHAR(255),
+        reason TEXT,
+        status VARCHAR(50) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT NOW(),
+        processed_at TIMESTAMP,
+        processed_by INTEGER REFERENCES super_admins(id)
+      )
+    `);
+    console.log('✅ opt_out_requests table ready');
+    
+    // DEFAULT SETTINGS
+    const defaultSettings = [
+      ['site_name', 'ContentScale'],
+      ['contact_email', 'info@contentscale.site'],
+      ['whatsapp_number', '+31628073996'],
+      ['auto_scan_enabled', 'false']
+    ];
+    
+    for (const [key, value] of defaultSettings) {
+      await client.query(`
+        INSERT INTO settings (key, value) VALUES ($1, $2)
+        ON CONFLICT (key) DO NOTHING
+      `, [key, value]);
+    }
+    
+    console.log('✅ All database tables ready');
+    
+  } catch (error) {
+    console.error('❌ Database error:', error.message);
+  } finally {
+    client.release();
+  }
+}
+
+// Initialize database
+pool.connect((err, client, release) => {
+  if (err) {
+    console.error('❌ Database connection error:', err.message);
+  } else {
+    console.log('✅ Database connected');
+    release();
+    setTimeout(createAllTables, 1000);
+  }
+});
+
+// ============================================
+// MIDDLEWARE
+// ============================================
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// CORS
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-admin-key');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+});
+
+// Static files
+app.use(express.static('public'));
+
+// ============================================
+// ADMIN VERIFICATION MIDDLEWARE
+// ============================================
+const verifyAdmin = async (req, res, next) => {
+  const adminKey = req.headers['x-admin-key'];
+  if (!adminKey) {
+    return res.status(401).json({ success: false, error: 'Admin authentication required' });
+  }
+  
+  try {
+    const result = await pool.query(
+      'SELECT * FROM super_admins WHERE id = $1 AND is_active = TRUE',
+      [adminKey]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json({ success: false, error: 'Invalid admin credentials' });
+    }
+    
+    req.admin = result.rows[0];
+    next();
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Authentication error' });
+  }
 };
 
 // ============================================
@@ -2392,9 +2978,6 @@ app.post('/api/scan', async (req, res) => {
     
     // Calculate STABLE scores
     const scores = calculateStableScores(textContent, stats, rawHtml);
-
-     
-    
     
     // NEW: Calculate TRANSPARENT scores
     const transparentScores = calculateTransparentScore(
@@ -2416,7 +2999,7 @@ app.post('/api/scan', async (req, res) => {
     const totalScore = transparentScores.overall;
     const quality = transparentScores.quality;
     
-       // Create recommendations - USE NEW DETAILED FUNCTION
+    // Create recommendations - USE NEW DETAILED FUNCTION
     const recommendations = generateDetailedRecommendations(
       totalScore,
       {
@@ -2435,7 +3018,6 @@ app.post('/api/scan', async (req, res) => {
     const quickWins = recommendations.filter(r => r.priority === 'HIGH').slice(0, 3);
     const majorImprovements = recommendations.filter(r => r.priority === 'HIGH' && r.impact >= 8);
     
-   
     // Build result with transparent scoring
     const result = {
       success: true,
@@ -3473,9 +4055,6 @@ app.put('/api/google-maps/leads/:id/status', async (req, res) => {
 });
 
 console.log('✅ Google Maps scraper endpoints loaded');
-
-
-https://www.google.com/maps/search/restaurants+amsterdam
 
 // ============================================
 // CATCH-ALL ROUTE (blijft hetzelfde)
