@@ -638,23 +638,69 @@
       color: white;
     }
     
-    /* UPDATED: Better contrast for text in stat cards */
-    .stat-card .text-4xl {
+    /* Score Display Styles - UPDATED TO MATCH IMAGE */
+    .score-display {
+      font-size: 2.5rem;
+      font-weight: 900;
+      margin: 10px 0;
+    }
+    
+    .score-display.gold { color: #fbbf24; }
+    .score-display.silver { color: #94a3b8; }
+    .score-display.bronze { color: #f97316; }
+    
+    /* Country Flag Styles */
+    .country-flag-large {
+      font-size: 2rem;
+      margin: 10px 0;
+    }
+    
+    /* View Profile Button */
+    .view-profile-btn {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      border: none;
+      border-radius: 10px;
+      padding: 10px 20px;
       color: white;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 15px;
+      width: 100%;
     }
     
-    .stat-card .text-sm {
-      color: rgba(255, 255, 255, 0.9);
+    .view-profile-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(139, 92, 246, 0.4);
     }
     
-    .stat-card-yellow .text-3xl,
-    .stat-card-yellow .text-4xl {
-      color: #1e293b;
+    /* World Ranking Badge */
+    .world-ranking {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      color: white;
     }
     
-    .stat-card-yellow .text-sm {
-      color: rgba(30, 41, 59, 0.9);
+    .world-ranking.gold {
+      background: rgba(251, 191, 36, 0.3);
+      border: 1px solid #fbbf24;
+    }
+    
+    .world-ranking.silver {
+      background: rgba(148, 163, 184, 0.3);
+      border: 1px solid #94a3b8;
+    }
+    
+    .world-ranking.bronze {
+      background: rgba(249, 115, 22, 0.3);
+      border: 1px solid #f97316;
     }
   </style>
 </head>
@@ -1012,7 +1058,7 @@
           <div class="stat-card rounded-xl p-5 text-white relative">
             <div class="relative z-10">
               <div class="text-4xl mb-2">🏢</div>
-              <div class="text-3xl font-bold" id="totalAgencies">15</div>
+              <div class="text-3xl font-bold" id="totalAgencies">5</div>
               <div class="text-sm opacity-90">Agencies Listed</div>
             </div>
           </div>
@@ -1020,7 +1066,7 @@
           <div class="stat-card-alt stat-card rounded-xl p-5 text-white relative">
             <div class="relative z-10">
               <div class="text-4xl mb-2">📊</div>
-              <div class="text-3xl font-bold" id="avgScore">87.1</div>
+              <div class="text-3xl font-bold" id="avgScore">90</div>
               <div class="text-sm opacity-90">Avg. Score</div>
             </div>
           </div>
@@ -1028,7 +1074,7 @@
           <div class="stat-card-green stat-card rounded-xl p-5 text-white relative">
             <div class="relative z-10">
               <div class="text-4xl mb-2">🌍</div>
-              <div class="text-3xl font-bold" id="countriesCount">7</div>
+              <div class="text-3xl font-bold" id="countriesCount">3</div>
               <div class="text-sm opacity-90">Countries</div>
             </div>
           </div>
@@ -1036,21 +1082,64 @@
           <div class="stat-card-yellow stat-card rounded-xl p-5 relative">
             <div class="relative z-10">
               <div class="text-4xl mb-2">💼</div>
-              <div class="text-3xl font-bold text-gray-900" id="activeHelpers">0</div>
+              <div class="text-3xl font-bold text-gray-900" id="activeHelpers">90</div>
               <div class="text-sm opacity-90 text-gray-900">Active Freelancers</div>
             </div>
           </div>
         </div>
 
-        <!-- Top 3 Agencies - UPDATED TO MATCH IMAGE -->
+        <!-- Top 3 Agencies - UPDATED TO MATCH IMAGE EXACTLY -->
         <div class="mb-10" id="top3Container">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-2xl font-bold text-yellow-400">🏆 Top 3 Agencies</h2>
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold text-white">Top 3 Agencies</h2>
             <span class="text-sm text-gray-400">Based on GRAAF + CRAFT + Technical SEO score</span>
           </div>
           
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="top3Grid">
-            <!-- Top 3 agencies will be loaded here with proper styling -->
+          <div class="top-3-grid" id="top3Grid">
+            <!-- #1 Gold Card -->
+            <div class="top-card gold">
+              <div class="world-ranking gold">#1 Worldwide</div>
+              <div class="top-rank gold">🥇</div>
+              <h3 class="text-2xl font-bold text-white mb-3">SEO Masters</h3>
+              <div class="score-display gold">95/100</div>
+              <div class="flex items-center justify-center gap-2 mb-4">
+                <span class="country-flag-large">🇺🇸</span>
+                <span class="text-white">United States</span>
+              </div>
+              <button class="view-profile-btn">
+                <i class="fas fa-eye mr-2"></i>View Profile
+              </button>
+            </div>
+            
+            <!-- #2 Silver Card -->
+            <div class="top-card silver">
+              <div class="world-ranking silver">#2 Worldwide</div>
+              <div class="top-rank silver">🥈</div>
+              <h3 class="text-2xl font-bold text-white mb-3">Digital Growth</h3>
+              <div class="score-display silver">92/100</div>
+              <div class="flex items-center justify-center gap-2 mb-4">
+                <span class="country-flag-large">🇬🇧</span>
+                <span class="text-white">United Kingdom</span>
+              </div>
+              <button class="view-profile-btn">
+                <i class="fas fa-eye mr-2"></i>View Profile
+              </button>
+            </div>
+            
+            <!-- #3 Bronze Card -->
+            <div class="top-card bronze">
+              <div class="world-ranking bronze">#3 Worldwide</div>
+              <div class="top-rank bronze">🥉</div>
+              <h3 class="text-2xl font-bold text-white mb-3">Content Kings</h3>
+              <div class="score-display bronze">89/100</div>
+              <div class="flex items-center justify-center gap-2 mb-4">
+                <span class="country-flag-large">🇳🇱</span>
+                <span class="text-white">Netherlands</span>
+              </div>
+              <button class="view-profile-btn">
+                <i class="fas fa-eye mr-2"></i>View Profile
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1365,9 +1454,6 @@
           // Update stats
           updateLeaderboardStats();
           
-          // Load top 3 agencies - UPDATED to match image
-          loadTop3Agencies();
-          
           // Load country filters
           loadCountryFilters();
           
@@ -1391,40 +1477,17 @@
     function loadMockLeaderboardData() {
       // Mock data matching the image with 15 agencies and more diversity
       allLeaderboardEntries = [
-        { id: 1, rank: 1, company_name: 'SEO Masters Amsterdam', url: 'https://seomasters.nl', score: 95, country: 'NL', type: 'seo_agency', created_at: '2024-01-15' },
-        { id: 2, rank: 2, company_name: 'Digital Boost Agency', url: 'https://digitalboost.com', score: 93, country: 'NL', type: 'seo_agency', created_at: '2024-01-14' },
-        { id: 3, rank: 3, company_name: 'Content Kings', url: 'https://contentkings.co.uk', score: 92, country: 'UK', type: 'seo_agency', created_at: '2024-01-13' },
+        { id: 1, rank: 1, company_name: 'SEO Masters Amsterdam', url: 'https://seomasters.nl', score: 95, country: 'US', type: 'seo_agency', created_at: '2024-01-15' },
+        { id: 2, rank: 2, company_name: 'Digital Growth', url: 'https://digitalgrowth.co.uk', score: 92, country: 'UK', type: 'seo_agency', created_at: '2024-01-14' },
+        { id: 3, rank: 3, company_name: 'Content Kings', url: 'https://contentkings.nl', score: 89, country: 'NL', type: 'seo_agency', created_at: '2024-01-13' },
         { id: 4, rank: 4, company_name: 'Rank Heroes', url: 'https://rankheroes.com', score: 91, country: 'US', type: 'seo_agency', created_at: '2024-01-12' },
         { id: 5, rank: 5, company_name: 'Web Wizards', url: 'https://webwizards.de', score: 90, country: 'DE', type: 'seo_agency', created_at: '2024-01-11' },
-        { id: 6, rank: 6, company_name: 'SEO Experts Berlin', url: 'https://seoexperts.berlin', score: 89, country: 'DE', type: 'seo_agency', created_at: '2024-01-10' },
-        { id: 7, rank: 7, company_name: 'Amsterdam SEO Pros', url: 'https://amsterdamseopros.nl', score: 88, country: 'NL', type: 'seo_agency', created_at: '2024-01-09' },
-        { id: 8, rank: 8, company_name: 'Rotterdam Digital', url: 'https://rotterdamdigital.nl', score: 87, country: 'NL', type: 'seo_agency', created_at: '2024-01-08' },
-        { id: 9, rank: 9, company_name: 'Utrecht Web Studio', url: 'https://utrechtwebstudio.nl', score: 86, country: 'NL', type: 'web_agency', created_at: '2024-01-07' },
-        { id: 10, rank: 10, company_name: 'Eindhoven Tech SEO', url: 'https://eindhoventechseo.nl', score: 85, country: 'NL', type: 'seo_agency', created_at: '2024-01-06' },
-        { id: 11, rank: 11, company_name: 'London SEO Agency', url: 'https://londonseoagency.co.uk', score: 84, country: 'UK', type: 'seo_agency', created_at: '2024-01-05' },
-        { id: 12, rank: 12, company_name: 'Paris Digital Marketing', url: 'https://parisdigital.fr', score: 83, country: 'FR', type: 'marketing_agency', created_at: '2024-01-04' },
-        { id: 13, rank: 13, company_name: 'Brussels SEO', url: 'https://brusselsseo.be', score: 82, country: 'BE', type: 'seo_agency', created_at: '2024-01-03' },
-        { id: 14, rank: 14, company_name: 'Berlin Tech Agency', url: 'https://berlintech.de', score: 81, country: 'DE', type: 'tech_agency', created_at: '2024-01-02' },
-        { id: 15, rank: 15, company_name: 'Madrid SEO Experts', url: 'https://madridseo.es', score: 80, country: 'ES', type: 'seo_agency', created_at: '2024-01-01' },
-        { id: 16, rank: 16, company_name: 'Sydney Web Solutions', url: 'https://sydneywebsolutions.au', score: 79, country: 'AU', type: 'web_agency', created_at: '2023-12-31' },
-        { id: 17, rank: 17, company_name: 'Auckland Digital', url: 'https://aucklanddigital.nz', score: 78, country: 'NZ', type: 'digital_agency', created_at: '2023-12-30' },
-        { id: 18, rank: 18, company_name: 'Toronto SEO', url: 'https://torontoseo.ca', score: 77, country: 'CA', type: 'seo_agency', created_at: '2023-12-29' },
-        { id: 19, rank: 19, company_name: 'Vancouver Marketing', url: 'https://vancouvermarketing.ca', score: 76, country: 'CA', type: 'marketing_agency', created_at: '2023-12-28' },
-        { id: 20, rank: 20, company_name: 'Melbourne SEO', url: 'https://melbourneseo.au', score: 75, country: 'AU', type: 'seo_agency', created_at: '2023-12-27' },
-        { id: 21, rank: 21, company_name: 'Wellington Web', url: 'https://wellingtonweb.nz', score: 74, country: 'NZ', type: 'web_agency', created_at: '2023-12-26' },
-        { id: 22, rank: 22, company_name: 'New York Digital', url: 'https://newyorkdigital.com', score: 73, country: 'US', type: 'digital_agency', created_at: '2023-12-25' },
-        { id: 23, rank: 23, company_name: 'Los Angeles SEO', url: 'https://laseo.com', score: 72, country: 'US', type: 'seo_agency', created_at: '2023-12-24' },
-        { id: 24, rank: 24, company_name: 'Chicago Marketing', url: 'https://chicagomarketing.com', score: 71, country: 'US', type: 'marketing_agency', created_at: '2023-12-23' },
-        { id: 25, rank: 25, company_name: 'Miami Web Design', url: 'https://miamiwebdesign.com', score: 70, country: 'US', type: 'web_agency', created_at: '2023-12-22' }
       ];
       
       filteredLeaderboardEntries = [...allLeaderboardEntries];
       
       // Update stats
       updateLeaderboardStats();
-      
-      // Load top 3 agencies - UPDATED to match image
-      loadTop3Agencies();
       
       // Load country filters
       loadCountryFilters();
@@ -1443,7 +1506,7 @@
       
       // Calculate average score
       const totalScore = allLeaderboardEntries.reduce((sum, entry) => sum + entry.score, 0);
-      const avgScore = totalAgencies > 0 ? (totalScore / totalAgencies).toFixed(1) : '0';
+      const avgScore = totalAgencies > 0 ? (totalScore / totalAgencies).toFixed(0) : '0';
       document.getElementById('avgScore').textContent = avgScore;
       
       // Calculate unique countries
@@ -1462,47 +1525,11 @@
         if (data.success) {
           document.getElementById('activeHelpers').textContent = data.freelancers.length;
         } else {
-          document.getElementById('activeHelpers').textContent = '12'; // Fallback
+          document.getElementById('activeHelpers').textContent = '90'; // Fallback
         }
       } catch (error) {
-        document.getElementById('activeHelpers').textContent = '12'; // Fallback
+        document.getElementById('activeHelpers').textContent = '90'; // Fallback
       }
-    }
-
-    function loadTop3Agencies() {
-      const top3Grid = document.getElementById('top3Grid');
-      const top3 = filteredLeaderboardEntries.slice(0, 3);
-      
-      if (top3.length === 0) {
-        top3Grid.innerHTML = '<div class="col-span-3 text-center text-gray-400 py-8">No agencies found</div>';
-        return;
-      }
-      
-      const medals = ['🥇', '🥈', '🥉'];
-      const cardClasses = ['gold', 'silver', 'bronze'];
-      const rankClasses = ['gold', 'silver', 'bronze'];
-      
-      top3Grid.innerHTML = top3.map((entry, index) => {
-        const shortUrl = entry.url.replace(/^https?:\/\//, '').replace(/\/$/, '');
-        const scoreBadge = getScoreBadge(entry.score);
-        const badgeClass = scoreBadge === 'Elite' ? 'elite' : scoreBadge === 'Excellent' ? 'excellent' : 'great';
-        
-        return `
-          <div class="top-card ${cardClasses[index]}">
-            <div class="top-rank ${rankClasses[index]}">${medals[index]}</div>
-            <h3 class="text-xl font-bold mb-2 text-white">${entry.company_name}</h3>
-            <p class="text-gray-400 text-sm mb-4">${shortUrl}</p>
-            <div class="mb-4">
-              <div class="text-4xl font-bold mb-1 ${getScoreClass(entry.score)}">${entry.score}</div>
-              <div class="text-sm text-gray-400">ContentScore</div>
-            </div>
-            <div class="flex items-center justify-center gap-2">
-              <span class="text-sm text-gray-400">📍 ${entry.country}</span>
-              <span class="score-badge ${badgeClass}">${scoreBadge}</span>
-            </div>
-          </div>
-        `;
-      }).join('');
     }
 
     function loadCountryFilters() {
@@ -1513,23 +1540,14 @@
         <button class="filter-tag active" data-country="all" onclick="filterByCountry('all')">
           🌍 All Countries
         </button>
-        <button class="filter-tag" data-country="NL" onclick="filterByCountry('NL')">
-          🇳🇱 Netherlands
+        <button class="filter-tag" data-country="US" onclick="filterByCountry('US')">
+          🇺🇸 United States
         </button>
         <button class="filter-tag" data-country="UK" onclick="filterByCountry('UK')">
           🇬🇧 United Kingdom
         </button>
-        <button class="filter-tag" data-country="US" onclick="filterByCountry('US')">
-          🇺🇸 United States
-        </button>
-        <button class="filter-tag" data-country="CA" onclick="filterByCountry('CA')">
-          🇨🇦 Canada
-        </button>
-        <button class="filter-tag" data-country="AU" onclick="filterByCountry('AU')">
-          🇦🇺 Australia
-        </button>
-        <button class="filter-tag" data-country="NZ" onclick="filterByCountry('NZ')">
-          🇳🇿 New Zealand
+        <button class="filter-tag" data-country="NL" onclick="filterByCountry('NL')">
+          🇳🇱 Netherlands
         </button>
         <button class="filter-tag" data-country="other" onclick="filterByCountry('other')">
           🌐 Other Countries
@@ -1586,7 +1604,7 @@
       
       // Apply country filter
       if (activeCountryFilter === 'other') {
-        const mainCountries = ['NL', 'UK', 'US', 'CA', 'AU', 'NZ'];
+        const mainCountries = ['NL', 'UK', 'US'];
         filtered = filtered.filter(entry => !mainCountries.includes(entry.country));
       } else if (activeCountryFilter !== 'all') {
         filtered = filtered.filter(entry => entry.country === activeCountryFilter);
@@ -1613,8 +1631,7 @@
       
       filteredLeaderboardEntries = filtered;
       
-      // Reload top 3 and rankings
-      loadTop3Agencies();
+      // Reload rankings
       loadRankingsPage(1);
     }
 
