@@ -1,14 +1,9 @@
 {
   "name": "contentscale-platform",
   "version": "1.0.0",
-  "description": "ContentScale SEO Platform",
-  "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
-  },
-  "engines": {
-    "node": ">=18.0.0"
+    "postinstall": "npx puppeteer browsers install chrome && npx playwright install chromium --with-deps"
   },
   "dependencies": {
     "@sendgrid/mail": "^7.7.0",
@@ -16,8 +11,5 @@
     "pg": "^8.11.3",
     "playwright": "^1.40.0",
     "puppeteer": "^21.6.0"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.1"
   }
 }
