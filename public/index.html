@@ -1,2010 +1,2747 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ContentScale | AI Content Scanner & Lead Generator</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ContentScale - Elite SEO Content Optimization | Recover Lost Traffic</title>
+  <meta name="description" content="Stop losing traffic to AI. Professional SEO content optimization based on Google's E-E-A-T guidelines. Get your 90+ quality score roadmap today.">
+  <meta name="keywords" content="SEO content optimization, Google E-E-A-T, content quality score, AI-proof SEO, GRAAF framework, traffic recovery">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    /* PROFESSIONAL STYLING */
+    .gradient-bg {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
     
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="https://img.icons8.com/color/96/000000/search--v1.png">
+    .google-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      border-radius: 20px;
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+    }
     
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    .score-card {
+      transition: all 0.3s ease;
+    }
     
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    .score-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
     
-    <style>
-        /* ===== RESET & BASE STYLES ===== */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --primary: #2563eb;
-            --primary-dark: #1d4ed8;
-            --primary-light: #3b82f6;
-            --secondary: #10b981;
-            --secondary-dark: #059669;
-            --accent: #8b5cf6;
-            --dark: #1f2937;
-            --darker: #111827;
-            --light: #f9fafb;
-            --gray: #6b7280;
-            --gray-light: #e5e7eb;
-            --gray-dark: #374151;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --success: #10b981;
-            
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            
-            --radius-sm: 0.25rem;
-            --radius-md: 0.5rem;
-            --radius-lg: 0.75rem;
-            --radius-xl: 1rem;
-            
-            --transition: all 0.3s ease;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            line-height: 1.6;
-            color: var(--dark);
-            background-color: var(--light);
-            overflow-x: hidden;
-        }
-
-        /* ===== LAYOUT ===== */
-        .container {
-            width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 1rem;
-        }
-
-        /* ===== HEADER ===== */
-        .header {
-            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
-            color: white;
-            padding: 1.5rem 0;
-            box-shadow: var(--shadow-lg);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-size: 1.5rem;
-            font-weight: 800;
-        }
-
-        .logo-icon {
-            color: var(--primary-light);
-            font-size: 1.75rem;
-        }
-
-        .nav {
-            display: flex;
-            gap: 1.5rem;
-            align-items: center;
-        }
-
-        .nav-link {
-            color: white;
-            text-decoration: none;
-            font-weight: 500;
-            padding: 0.5rem 0.75rem;
-            border-radius: var(--radius-md);
-            transition: var(--transition);
-        }
-
-        .nav-link:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-
-        .cta-button {
-            background: linear-gradient(to right, var(--primary), var(--primary-light));
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: var(--radius-md);
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            text-decoration: none;
-        }
-
-        .cta-button:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        /* ===== LANGUAGE SWITCHER ===== */
-        .language-switcher {
-            position: relative;
-        }
-
-        .language-button {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 0.5rem 1rem;
-            border-radius: var(--radius-md);
-            font-weight: 500;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: var(--transition);
-        }
-
-        .language-button:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .language-dropdown {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            background: white;
-            color: var(--dark);
-            border-radius: var(--radius-md);
-            box-shadow: var(--shadow-xl);
-            min-width: 150px;
-            display: none;
-            z-index: 10;
-        }
-
-        .language-dropdown.active {
-            display: block;
-        }
-
-        .language-option {
-            padding: 0.75rem 1rem;
-            cursor: pointer;
-            transition: var(--transition);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .language-option:hover {
-            background-color: var(--gray-light);
-        }
-
-        .language-option.active {
-            background-color: var(--primary-light);
-            color: white;
-            font-weight: 600;
-        }
-
-        /* ===== HERO SECTION ===== */
-        .hero {
-            padding: 4rem 0;
-            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -20%;
-            width: 70%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, rgba(37, 99, 235, 0) 70%);
-        }
-
-        .hero-content {
-            text-align: center;
-            max-width: 800px;
-            margin: 0 auto;
-            position: relative;
-            z-index: 1;
-        }
-
-        .hero-title {
-            font-size: 3rem;
-            font-weight: 800;
-            line-height: 1.2;
-            margin-bottom: 1.5rem;
-            background: linear-gradient(to right, var(--primary), var(--accent));
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-
-        .hero-subtitle {
-            font-size: 1.25rem;
-            color: var(--gray-dark);
-            margin-bottom: 2rem;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        /* ===== SCANNER SECTION ===== */
-        .scanner-section {
-            padding: 4rem 0;
-            background-color: white;
-        }
-
-        .scanner-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            align-items: start;
-        }
-
-        @media (max-width: 768px) {
-            .scanner-container {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .scanner-box {
-            background: white;
-            border-radius: var(--radius-xl);
-            box-shadow: var(--shadow-lg);
-            padding: 2rem;
-            border: 1px solid var(--gray-light);
-        }
-
-        .scanner-header {
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid var(--gray-light);
-        }
-
-        .scanner-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--dark);
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .scanner-icon {
-            color: var(--primary);
-            font-size: 1.25rem;
-        }
-
-        .input-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .input-label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-            color: var(--dark);
-        }
-
-        .textarea-input {
-            width: 100%;
-            padding: 1rem;
-            border: 2px solid var(--gray-light);
-            border-radius: var(--radius-lg);
-            font-family: 'Inter', sans-serif;
-            font-size: 1rem;
-            resize: vertical;
-            min-height: 200px;
-            transition: var(--transition);
-        }
-
-        .textarea-input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-        }
-
-        .button-group {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border-radius: var(--radius-md);
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
-            border: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.95rem;
-        }
-
-        .btn-primary {
-            background: linear-gradient(to right, var(--primary), var(--primary-light));
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .btn-secondary {
-            background-color: var(--gray-light);
-            color: var(--dark);
-        }
-
-        .btn-secondary:hover {
-            background-color: var(--gray);
-            color: white;
-        }
-
-        .btn-success {
-            background: linear-gradient(to right, var(--secondary), var(--secondary-dark));
-            color: white;
-        }
-
-        .btn-success:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .btn-accent {
-            background: linear-gradient(to right, var(--accent), #7c3aed);
-            color: white;
-        }
-
-        .btn-accent:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        /* ===== RESULTS SECTION ===== */
-        .results-container {
-            margin-top: 2rem;
-        }
-
-        .results-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .results-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--dark);
-        }
-
-        .results-content {
-            background-color: #f8fafc;
-            border-radius: var(--radius-lg);
-            padding: 1.5rem;
-            border: 1px solid var(--gray-light);
-            min-height: 200px;
-        }
-
-        .result-item {
-            padding: 1rem;
-            background: white;
-            border-radius: var(--radius-md);
-            margin-bottom: 1rem;
-            border-left: 4px solid var(--primary);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .result-item-title {
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: var(--dark);
-        }
-
-        .result-item-content {
-            color: var(--gray-dark);
-            font-size: 0.95rem;
-        }
-
-        .result-meta {
-            display: flex;
-            gap: 1rem;
-            margin-top: 0.75rem;
-            font-size: 0.875rem;
-            color: var(--gray);
-        }
-
-        /* ===== LEAD SCANNER SECTION ===== */
-        .lead-scanner {
-            margin-top: 3rem;
-            padding-top: 3rem;
-            border-top: 1px solid var(--gray-light);
-        }
-
-        .lead-item {
-            background: white;
-            border-radius: var(--radius-lg);
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-            border: 1px solid var(--gray-light);
-            transition: var(--transition);
-        }
-
-        .lead-item:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .lead-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 1rem;
-        }
-
-        .lead-title {
-            font-weight: 700;
-            color: var(--dark);
-            font-size: 1.1rem;
-        }
-
-        .lead-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .action-btn {
-            width: 2.5rem;
-            height: 2.5rem;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: var(--transition);
-            border: none;
-            color: white;
-            font-size: 0.9rem;
-        }
-
-        .action-btn.whatsapp {
-            background-color: #25D366;
-        }
-
-        .action-btn.email {
-            background-color: var(--primary);
-        }
-
-        .action-btn.linkedin {
-            background-color: #0077B5;
-        }
-
-        .action-btn.copy {
-            background-color: var(--gray);
-        }
-
-        .action-btn:hover {
-            transform: scale(1.1);
-        }
-
-        .lead-content {
-            color: var(--gray-dark);
-            margin-bottom: 1rem;
-            line-height: 1.6;
-        }
-
-        .lead-meta {
-            display: flex;
-            gap: 1rem;
-            font-size: 0.875rem;
-            color: var(--gray);
-        }
-
-        .lead-meta-item {
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-
-        /* ===== FEATURES SECTION ===== */
-        .features-section {
-            padding: 4rem 0;
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        }
-
-        .section-title {
-            text-align: center;
-            font-size: 2.5rem;
-            font-weight: 800;
-            margin-bottom: 1rem;
-            color: var(--dark);
-        }
-
-        .section-subtitle {
-            text-align: center;
-            color: var(--gray);
-            max-width: 600px;
-            margin: 0 auto 3rem;
-            font-size: 1.125rem;
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-        }
-
-        .feature-card {
-            background: white;
-            border-radius: var(--radius-lg);
-            padding: 2rem;
-            box-shadow: var(--shadow-md);
-            transition: var(--transition);
-            border-top: 4px solid var(--primary);
-        }
-
-        .feature-card:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--shadow-xl);
-        }
-
-        .feature-icon {
-            font-size: 2.5rem;
-            color: var(--primary);
-            margin-bottom: 1.5rem;
-        }
-
-        .feature-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-            color: var(--dark);
-        }
-
-        .feature-description {
-            color: var(--gray-dark);
-            line-height: 1.6;
-        }
-
-        /* ===== FOOTER ===== */
-        .footer {
-            background-color: var(--darker);
-            color: white;
-            padding: 4rem 0 2rem;
-        }
-
-        .footer-content {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 3rem;
-            margin-bottom: 3rem;
-        }
-
-        .footer-column-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            margin-bottom: 1.5rem;
-            color: white;
-        }
-
-        .footer-links {
-            list-style: none;
-        }
-
-        .footer-link {
-            color: #d1d5db;
-            text-decoration: none;
-            margin-bottom: 0.75rem;
-            display: block;
-            transition: var(--transition);
-        }
-
-        .footer-link:hover {
-            color: white;
-            padding-left: 0.5rem;
-        }
-
-        .copyright {
-            text-align: center;
-            padding-top: 2rem;
-            border-top: 1px solid var(--gray-dark);
-            color: #9ca3af;
-            font-size: 0.875rem;
-        }
-
-        /* ===== LOADING & STATUS ===== */
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 2rem;
-        }
-
-        .loading.active {
-            display: block;
-        }
-
-        .spinner {
-            border: 3px solid var(--gray-light);
-            border-top: 3px solid var(--primary);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .status-message {
-            padding: 1rem;
-            border-radius: var(--radius-md);
-            margin-bottom: 1rem;
-            font-weight: 500;
-            display: none;
-        }
-
-        .status-message.active {
-            display: block;
-        }
-
-        .status-success {
-            background-color: #d1fae5;
-            color: var(--secondary-dark);
-            border-left: 4px solid var(--secondary);
-        }
-
-        .status-error {
-            background-color: #fee2e2;
-            color: var(--danger);
-            border-left: 4px solid var(--danger);
-        }
-
-        .status-warning {
-            background-color: #fef3c7;
-            color: var(--warning);
-            border-left: 4px solid var(--warning);
-        }
-
-        /* ===== UTILITY CLASSES ===== */
-        .hidden {
-            display: none !important;
-        }
-
-        .text-center {
-            text-align: center;
-        }
-
-        .mt-1 { margin-top: 0.5rem; }
-        .mt-2 { margin-top: 1rem; }
-        .mt-3 { margin-top: 1.5rem; }
-        .mt-4 { margin-top: 2rem; }
-        .mt-5 { margin-top: 3rem; }
-
-        .mb-1 { margin-bottom: 0.5rem; }
-        .mb-2 { margin-bottom: 1rem; }
-        .mb-3 { margin-bottom: 1.5rem; }
-        .mb-4 { margin-bottom: 2rem; }
-        .mb-5 { margin-bottom: 3rem; }
-
-        /* ===== TOOLTIP ===== */
-        .tooltip {
-            position: relative;
-            display: inline-block;
-        }
-
-        .tooltip .tooltiptext {
-            visibility: hidden;
-            width: 200px;
-            background-color: var(--dark);
-            color: white;
-            text-align: center;
-            border-radius: var(--radius-sm);
-            padding: 0.5rem;
-            position: absolute;
-            z-index: 1;
-            bottom: 125%;
-            left: 50%;
-            transform: translateX(-50%);
-            opacity: 0;
-            transition: opacity 0.3s;
-            font-size: 0.875rem;
-            font-weight: normal;
-        }
-
-        .tooltip:hover .tooltiptext {
-            visibility: visible;
-            opacity: 1;
-        }
-
-        /* ===== RESPONSIVE ===== */
-        @media (max-width: 768px) {
-            .hero-title {
-                font-size: 2.25rem;
-            }
-            
-            .section-title {
-                font-size: 2rem;
-            }
-            
-            .nav {
-                display: none;
-            }
-            
-            .header-content {
-                justify-content: center;
-            }
-            
-            .button-group {
-                flex-direction: column;
-            }
-            
-            .btn {
-                width: 100%;
-                justify-content: center;
-            }
-        }
-    </style>
+    /* Language Toggle */
+    .lang-toggle {
+      display: flex;
+      background: #374151;
+      border-radius: 20px;
+      padding: 4px;
+      gap: 4px;
+    }
+    
+    .lang-btn {
+      padding: 6px 16px;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    
+    .lang-btn.active {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      color: white;
+      box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+    }
+    
+    .lang-btn:not(.active) {
+      color: #9ca3af;
+    }
+    
+    .lang-btn:not(.active):hover {
+      color: #fff;
+      background: #4b5563;
+    }
+    
+    /* Hide inactive language content */
+    [data-lang]:not(.active-lang) {
+      display: none !important;
+    }
+    
+    /* Leaderboard Styles */
+    .leaderboard-card {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 2px solid #334155;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 12px;
+      transition: all 0.3s;
+    }
+    
+    .leaderboard-card:hover {
+      border-color: #8b5cf6;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(139, 92, 246, 0.2);
+    }
+    
+    .rank-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      font-weight: 800;
+      font-size: 20px;
+    }
+    
+    .rank-1 { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #1e293b; }
+    .rank-2 { background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%); color: white; }
+    .rank-3 { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white; }
+    .rank-other { background: #374151; color: #9ca3af; }
+    
+    /* Freelancer Cards */
+    .freelancer-card {
+      background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+      border: 2px solid #374151;
+      border-radius: 12px;
+      padding: 20px;
+      transition: all 0.3s;
+    }
+    
+    .freelancer-card:hover {
+      border-color: #8b5cf6;
+      transform: translateY(-4px);
+      box-shadow: 0 15px 30px rgba(139, 92, 246, 0.3);
+    }
+    
+    /* Blog Cards */
+    .blog-card {
+      background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+      border: 2px solid #374151;
+      border-radius: 12px;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+    
+    .blog-card:hover {
+      border-color: #3b82f6;
+      transform: translateY(-4px);
+      box-shadow: 0 15px 30px rgba(59, 130, 246, 0.3);
+    }
+    
+    /* Pricing Cards */
+    .pricing-card {
+      background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+      border: 2px solid #374151;
+      border-radius: 16px;
+      padding: 32px;
+      transition: all 0.3s;
+      position: relative;
+    }
+    
+    .pricing-card.featured {
+      border-color: #8b5cf6;
+      transform: scale(1.05);
+      box-shadow: 0 20px 40px rgba(139, 92, 246, 0.4);
+    }
+    
+    .pricing-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(139, 92, 246, 0.3);
+    }
+    
+    .pricing-card.featured:hover {
+      transform: scale(1.05) translateY(-8px);
+    }
+    
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 9999;
+      overflow-y: auto;
+    }
+    
+    .modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .modal-content {
+      background: #1e293b;
+      border-radius: 20px;
+      max-width: 1200px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    /* Lead Scanner Styles */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .scan-result-card {
+      animation: fadeInUp 0.5s ease-out;
+    }
+
+    .lead-card {
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .lead-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 25px rgba(139, 92, 246, 0.3);
+    }
+
+    .lead-card input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: #8b5cf6;
+    }
+
+    .progress-bar {
+      transition: width 0.3s ease;
+    }
+
+    .mode-toggle {
+      transition: all 0.3s ease;
+    }
+
+    .mode-toggle.active {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      color: white;
+      transform: scale(1.05);
+    }
+
+    /* Stats Counter Animation */
+    @keyframes countUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .stat-card {
+      animation: countUp 0.6s ease-out;
+    }
+
+    /* Pulse animation for important CTAs */
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7); }
+      50% { box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); }
+    }
+
+    .cta-pulse {
+      animation: pulse 2s infinite;
+    }
+  </style>
 </head>
-<body>
-    <!-- Header -->
-    <header class="header">
-        <div class="container header-content">
-            <div class="logo">
-                <i class="fas fa-search-plus logo-icon"></i>
-                <span>ContentScale</span>
-            </div>
-            
-            <nav class="nav">
-                <a href="#" class="nav-link" id="nav-home">Home</a>
-                <a href="#" class="nav-link" id="nav-scanner">Scanner</a>
-                <a href="#" class="nav-link" id="nav-leads">Leads</a>
-                <a href="#" class="nav-link" id="nav-features">Features</a>
-                <a href="#" class="nav-link" id="nav-blog">Blog</a>
-            </nav>
-            
-            <div class="language-switcher">
-                <button class="language-button" id="languageButton">
-                    <i class="fas fa-globe"></i>
-                    <span>Nederlands</span>
-                    <i class="fas fa-chevron-down"></i>
-                </button>
-                <div class="language-dropdown" id="languageDropdown">
-                    <div class="language-option active" data-lang="nl">
-                        <i class="fas fa-check"></i>
-                        Nederlands
-                    </div>
-                    <div class="language-option" data-lang="en">
-                        English
-                    </div>
-                </div>
-            </div>
-            
-            <a href="#scanner" class="cta-button">
-                <i class="fas fa-bolt"></i>
-                <span>Start Scan</span>
-            </a>
-        </div>
-    </header>
+<body class="bg-gray-900 text-gray-100">
 
+  <!-- Navigation -->
+  <nav class="sticky top-0 z-50 bg-gradient-to-r from-gray-800 to-gray-900 border-b-2 border-purple-600 backdrop-blur-sm bg-opacity-95">
+    <div class="max-w-7xl mx-auto px-6 py-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+            ContentScale
+          </div>
+          <span class="hidden sm:inline-block text-xs px-2 py-1 bg-purple-600 rounded text-white font-semibold">Pro</span>
+        </div>
+        
+        <div class="hidden md:flex gap-6 items-center">
+          <a href="#scanner" class="text-gray-300 hover:text-white transition-colors">Scanner</a>
+          <a href="#lead-scanner" class="text-gray-300 hover:text-white transition-colors">Lead Scanner</a>
+          <a href="#freelancers" class="text-gray-300 hover:text-white transition-colors" data-lang="nl">Specialisten</a>
+          <a href="#freelancers" class="text-gray-300 hover:text-white transition-colors" data-lang="en">Experts</a>
+          <a href="#pricing" class="text-gray-300 hover:text-white transition-colors">Pricing</a>
+        </div>
+
+        <div class="flex gap-4 items-center">
+          <!-- Language Toggle -->
+          <div class="lang-toggle">
+            <button class="lang-btn" onclick="switchLanguage('nl')" id="langBtnNL">NL</button>
+            <button class="lang-btn" onclick="switchLanguage('en')" id="langBtnEN">EN</button>
+          </div>
+          
+          <a href="https://wa.me/31628073996" target="_blank" 
+             class="px-6 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl">
+            💬 Chat
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-7xl mx-auto p-6">
+    
     <!-- Hero Section -->
-    <section class="hero">
-        <div class="container hero-content">
-            <h1 class="hero-title">AI Content Scanner & Lead Generator</h1>
-            <p class="hero-subtitle">
-                Scan elke website op waardevolle content, identificeer kansen en genereer direct bruikbare leads voor freelancers en agencies.
-            </p>
-            <a href="#scanner" class="cta-button" style="font-size: 1.1rem; padding: 1rem 2rem;">
-                <i class="fas fa-play-circle"></i>
-                <span>Gratis Content Scannen</span>
-            </a>
+    <div class="text-center mb-16 pt-8" id="scanner">
+      <div class="inline-block mb-6 animate-pulse">
+        <span class="google-badge">
+          <i class="fab fa-google"></i>
+          Google E-E-A-T Aligned
+        </span>
+      </div>
+      
+      <!-- Dutch Hero -->
+      <div data-lang="nl">
+        <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 bg-clip-text text-transparent leading-tight">
+          Stop Traffic Verlies aan AI
+        </h1>
+        <p class="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
+          Krijg je persoonlijke <span class="text-purple-400 font-semibold">roadmap naar 90+ scores</span> • Herstel traffic in 90 dagen • Gebaseerd op Google's E-E-A-T
+        </p>
+      </div>
+      
+      <!-- English Hero -->
+      <div data-lang="en">
+        <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 bg-clip-text text-transparent leading-tight">
+          Stop Losing Traffic to AI
+        </h1>
+        <p class="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
+          Get your personalized <span class="text-purple-400 font-semibold">roadmap to 90+ scores</span> • Recover traffic in 90 days • Based on Google's E-E-A-T
+        </p>
+      </div>
+    </div>
+
+    <!-- Quick Scanner Section -->
+    <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 mb-16 border-2 border-purple-600 shadow-2xl">
+      <div class="text-center mb-6" data-lang="nl">
+        <h2 class="text-3xl font-bold mb-2">🔍 Scan je Content Kwaliteit</h2>
+        <p class="text-gray-300">Krijg direct professionele beoordeling • Volledig gratis</p>
+      </div>
+      <div class="text-center mb-6" data-lang="en">
+        <h2 class="text-3xl font-bold mb-2">🔍 Scan Your Content Quality</h2>
+        <p class="text-gray-300">Get instant professional assessment • Completely free</p>
+      </div>
+      
+      <div class="max-w-3xl mx-auto">
+        <div class="flex flex-col sm:flex-row gap-3">
+          <input type="text" 
+                 id="scanInput" 
+                 placeholder="https://yourwebsite.com/page" 
+                 class="flex-1 bg-gray-700 text-white px-6 py-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg shadow-inner">
+          <button onclick="performScan()" 
+                  id="scanButton" 
+                  class="cta-pulse bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-8 py-4 rounded-lg font-bold text-lg transition-all whitespace-nowrap shadow-lg hover:shadow-xl">
+            <span data-lang="nl">🚀 Analyseer Nu</span>
+            <span data-lang="en">🚀 Analyze Now</span>
+          </button>
         </div>
-    </section>
+        <p class="text-center text-xs text-gray-500 mt-3" data-lang="nl">
+          ✨ Gratis • Geen registratie • Direct resultaat
+        </p>
+        <p class="text-center text-xs text-gray-500 mt-3" data-lang="en">
+          ✨ Free • No signup • Instant results
+        </p>
+      </div>
+    </div>
 
-    <!-- Main Scanner Section -->
-    <section class="scanner-section" id="scanner">
-        <div class="container">
-            <div class="scanner-container">
-                <!-- Main Content Scanner -->
-                <div class="scanner-box">
-                    <div class="scanner-header">
-                        <h2 class="scanner-title">
-                            <i class="fas fa-search scanner-icon"></i>
-                            Content Scanner
-                        </h2>
-                        <p class="scanner-subtitle">
-                            Plak een URL of content om te analyseren op waardevolle informatie en leads
-                        </p>
-                    </div>
-                    
-                    <div class="input-group">
-                        <label class="input-label" for="contentInput">
-                            <i class="fas fa-link"></i>
-                            URL of Content
-                        </label>
-                        <textarea 
-                            class="textarea-input" 
-                            id="contentInput" 
-                            placeholder="Plak hier een URL of content tekst... (minimaal 500 woorden voor beste resultaten)"
-                            rows="8"
-                        ></textarea>
-                    </div>
-                    
-                    <div class="button-group">
-                        <button class="btn btn-primary" id="scanButton">
-                            <i class="fas fa-search"></i>
-                            Content Scannen
-                        </button>
-                        <button class="btn btn-secondary" id="clearButton">
-                            <i class="fas fa-eraser"></i>
-                            Wissen
-                        </button>
-                        <button class="btn btn-success" id="demoButton">
-                            <i class="fas fa-magic"></i>
-                            Demo Laden
-                        </button>
-                    </div>
-                    
-                    <!-- Status Messages -->
-                    <div class="status-message" id="statusMessage"></div>
-                    
-                    <!-- Loading Indicator -->
-                    <div class="loading" id="loading">
-                        <div class="spinner"></div>
-                        <p>Content scannen en analyseren...</p>
-                    </div>
-                    
-                    <!-- Results -->
-                    <div class="results-container">
-                        <div class="results-header">
-                            <h3 class="results-title">
-                                <i class="fas fa-chart-bar"></i>
-                                Scan Resultaten
-                            </h3>
-                            <div class="tooltip">
-                                <i class="fas fa-info-circle" style="color: var(--gray);"></i>
-                                <span class="tooltiptext">De scanner identificeert waardevolle content en potentiële leads</span>
-                            </div>
-                        </div>
-                        
-                        <div class="results-content" id="resultsContent">
-                            <p class="text-center" style="color: var(--gray); padding: 3rem 1rem;">
-                                <i class="fas fa-search" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
-                                Voer content in en klik op "Content Scannen" om resultaten te zien
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Lead Scanner Results -->
-                <div class="scanner-box">
-                    <div class="scanner-header">
-                        <h2 class="scanner-title">
-                            <i class="fas fa-bullseye scanner-icon"></i>
-                            Lead Generator
-                        </h2>
-                        <p class="scanner-subtitle">
-                            Gevonden leads en contactmogelijkheden
-                        </p>
-                    </div>
-                    
-                    <div class="lead-scanner">
-                        <div class="results-header">
-                            <h3 class="results-title">
-                                <i class="fas fa-users"></i>
-                                Gedetecteerde Leads
-                            </h3>
-                            <button class="btn btn-accent btn-sm" id="exportLeadsButton">
-                                <i class="fas fa-download"></i>
-                                Exporteer
-                            </button>
-                        </div>
-                        
-                        <div class="results-content" id="leadsContent">
-                            <p class="text-center" style="color: var(--gray); padding: 3rem 1rem;">
-                                <i class="fas fa-user-friends" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
-                                Leads worden hier getoond na het scannen van content
-                            </p>
-                        </div>
-                    </div>
-                    
-                    <!-- Action Buttons -->
-                    <div class="button-group mt-4">
-                        <button class="btn btn-primary" id="shareButton">
-                            <i class="fas fa-share-alt"></i>
-                            Delen
-                        </button>
-                        <button class="btn btn-success" id="saveResultsButton">
-                            <i class="fas fa-save"></i>
-                            Opslaan
-                        </button>
-                        <button class="btn btn-accent" id="advancedScanButton">
-                            <i class="fas fa-robot"></i>
-                            AI Analyse
-                        </button>
-                    </div>
-                </div>
-            </div>
+    <!-- Trust Signals / Stats -->
+    <div class="mb-16">
+      <div class="grid md:grid-cols-4 gap-6">
+        <div class="stat-card bg-gradient-to-br from-purple-900 to-purple-800 rounded-xl p-6 text-center border-2 border-purple-600 shadow-lg">
+          <div class="text-4xl font-bold mb-2">200+</div>
+          <div class="text-sm text-gray-300" data-lang="nl">Bedrijven Geholpen</div>
+          <div class="text-sm text-gray-300" data-lang="en">Businesses Helped</div>
         </div>
-    </section>
-
-    <!-- Features Section -->
-    <section class="features-section" id="features">
-        <div class="container">
-            <h2 class="section-title">Krachtige Features</h2>
-            <p class="section-subtitle">
-                ContentScale biedt alles wat je nodig hebt om waardevolle content te vinden en te converteren naar leads
-            </p>
-            
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-bolt"></i>
-                    </div>
-                    <h3 class="feature-title">Snel Scannen</h3>
-                    <p class="feature-description">
-                        Analyseer duizenden woorden in seconden. Onze AI identificeert direct de meest waardevolle content en potentiële leads.
-                    </p>
-                </div>
-                
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-filter"></i>
-                    </div>
-                    <h3 class="feature-title">Slim Filteren</h3>
-                    <p class="feature-description">
-                        Filter resultaten op relevantie, industrie, locatie en meer. Focus op wat belangrijk is voor jouw business.
-                    </p>
-                </div>
-                
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <h3 class="feature-title">Lead Scoring</h3>
-                    <p class="feature-description">
-                        Elke lead krijgt een score gebaseerd op relevantie en potentie. Zo weet je meteen welke leads het meest waardevol zijn.
-                    </p>
-                </div>
-                
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-share-alt"></i>
-                    </div>
-                    <h3 class="feature-title">Direct Delen</h3>
-                    <p class="feature-description">
-                        Deel leads direct via WhatsApp, Email of LinkedIn. Alle contactgegevens worden automatisch geformatteerd.
-                    </p>
-                </div>
-                
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-language"></i>
-                    </div>
-                    <h3 class="feature-title">Multilingual</h3>
-                    <p class="feature-description">
-                        Werkt perfect met Nederlands en Engels. Scan content in beide talen en krijg Nederlandstalige resultaten.
-                    </p>
-                </div>
-                
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-database"></i>
-                    </div>
-                    <h3 class="feature-title">Lead Database</h3>
-                    <p class="feature-description">
-                        Bewaar alle gevonden leads in je persoonlijke database. Exporteer naar CSV of koppel met je CRM.
-                    </p>
-                </div>
-            </div>
+        
+        <div class="stat-card bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl p-6 text-center border-2 border-blue-600 shadow-lg">
+          <div class="text-4xl font-bold mb-2">78%</div>
+          <div class="text-sm text-gray-300">Recovery Rate</div>
         </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div>
-                    <h3 class="footer-column-title">ContentScale</h3>
-                    <p style="color: #d1d5db; margin-bottom: 1.5rem;">
-                        AI-gestuurde content scanner en lead generator voor freelancers en marketing agencies.
-                    </p>
-                </div>
-                
-                <div>
-                    <h3 class="footer-column-title">Features</h3>
-                    <ul class="footer-links">
-                        <li><a href="#" class="footer-link">Content Scanner</a></li>
-                        <li><a href="#" class="footer-link">Lead Generator</a></li>
-                        <li><a href="#" class="footer-link">AI Analyse</a></li>
-                        <li><a href="#" class="footer-link">Export Tools</a></li>
-                    </ul>
-                </div>
-                
-                <div>
-                    <h3 class="footer-column-title">Resources</h3>
-                    <ul class="footer-links">
-                        <li><a href="#" class="footer-link">Documentatie</a></li>
-                        <li><a href="#" class="footer-link">Blog</a></li>
-                        <li><a href="#" class="footer-link">FAQ</a></li>
-                        <li><a href="#" class="footer-link">Contact</a></li>
-                    </ul>
-                </div>
-                
-                <div>
-                    <h3 class="footer-column-title">Contact</h3>
-                    <ul class="footer-links">
-                        <li style="color: #d1d5db; margin-bottom: 0.75rem;">
-                            <i class="fas fa-envelope"></i> info@contentscale.nl
-                        </li>
-                        <li style="color: #d1d5db;">
-                            <i class="fas fa-globe"></i> www.contentscale.nl
-                        </li>
-                    </ul>
-                </div>
-            </div>
-            
-            <div class="copyright">
-                <p>&copy; 2023 ContentScale. Alle rechten voorbehouden.</p>
-            </div>
+        
+        <div class="stat-card bg-gradient-to-br from-green-900 to-green-800 rounded-xl p-6 text-center border-2 border-green-600 shadow-lg">
+          <div class="text-4xl font-bold mb-2">47+</div>
+          <div class="text-sm text-gray-300" data-lang="nl">Landen</div>
+          <div class="text-sm text-gray-300" data-lang="en">Countries</div>
         </div>
-    </footer>
+        
+        <div class="stat-card bg-gradient-to-br from-orange-900 to-orange-800 rounded-xl p-6 text-center border-2 border-orange-600 shadow-lg">
+          <div class="text-4xl font-bold mb-2">90d</div>
+          <div class="text-sm text-gray-300" data-lang="nl">Gem. Herstel</div>
+          <div class="text-sm text-gray-300" data-lang="en">Avg. Recovery</div>
+        </div>
+      </div>
+    </div>
 
-    <!-- Main JavaScript -->
-    <script>
-    // ============================================
-    // DEEL 1: LANGUAGE SYSTEM + LEAD SCANNER
-    // ============================================
+    <!-- Lead Scanner Section -->
+    <div id="lead-scanner" class="mb-16">
+      <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500 shadow-2xl">
+        
+        <!-- Header NL -->
+        <div class="text-center mb-8" data-lang="nl">
+          <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-300 via-pink-300 to-purple-300 bg-clip-text text-transparent">
+            🎯 Lead Scanner voor Specialisten
+          </h2>
+          <p class="text-xl text-gray-300 mb-2">
+            Vind bedrijven die content hulp nodig hebben
+          </p>
+          <p class="text-sm text-purple-300">
+            ✨ Gratis voor freelancers • 🔍 Scan individueel of bulk • 📊 Export naar CSV
+          </p>
+        </div>
 
-    // Language System
-    const translations = {
-        nl: {
-            // Navigation
-            "nav-home": "Home",
-            "nav-scanner": "Scanner",
-            "nav-leads": "Leads",
-            "nav-features": "Features",
-            "nav-blog": "Blog",
-            
-            // Hero
-            "hero-title": "AI Content Scanner & Lead Generator",
-            "hero-subtitle": "Scan elke website op waardevolle content, identificeer kansen en genereer direct bruikbare leads voor freelancers en agencies.",
-            "cta-scan": "Gratis Content Scannen",
-            
-            // Scanner
-            "scanner-title": "Content Scanner",
-            "scanner-subtitle": "Plak een URL of content om te analyseren op waardevolle informatie en leads",
-            "input-label": "URL of Content",
-            "input-placeholder": "Plak hier een URL of content tekst... (minimaal 500 woorden voor beste resultaten)",
-            "scan-button": "Content Scannen",
-            "clear-button": "Wissen",
-            "demo-button": "Demo Laden",
-            "loading-text": "Content scannen en analyseren...",
-            "results-title": "Scan Resultaten",
-            "results-empty": "Voer content in en klik op \"Content Scannen\" om resultaten te zien",
-            
-            // Leads
-            "leads-title": "Lead Generator",
-            "leads-subtitle": "Gevonden leads en contactmogelijkheden",
-            "detected-leads": "Gedetecteerde Leads",
-            "export-button": "Exporteer",
-            "leads-empty": "Leads worden hier getoond na het scannen van content",
-            
-            // Actions
-            "share-button": "Delen",
-            "save-button": "Opslaan",
-            "ai-analysis": "AI Analyse",
-            
-            // Features
-            "features-title": "Krachtige Features",
-            "features-subtitle": "ContentScale biedt alles wat je nodig hebt om waardevolle content te vinden en te converteren naar leads",
-            
-            // Footer
-            "footer-about": "AI-gestuurde content scanner en lead generator voor freelancers en marketing agencies.",
-            "copyright": "© 2023 ContentScale. Alle rechten voorbehouden."
-        },
-        en: {
-            // Navigation
-            "nav-home": "Home",
-            "nav-scanner": "Scanner",
-            "nav-leads": "Leads",
-            "nav-features": "Features",
-            "nav-blog": "Blog",
-            
-            // Hero
-            "hero-title": "AI Content Scanner & Lead Generator",
-            "hero-subtitle": "Scan any website for valuable content, identify opportunities and generate immediately usable leads for freelancers and agencies.",
-            "cta-scan": "Scan Content Free",
-            
-            // Scanner
-            "scanner-title": "Content Scanner",
-            "scanner-subtitle": "Paste a URL or content to analyze for valuable information and leads",
-            "input-label": "URL or Content",
-            "input-placeholder": "Paste a URL or content text here... (minimum 500 words for best results)",
-            "scan-button": "Scan Content",
-            "clear-button": "Clear",
-            "demo-button": "Load Demo",
-            "loading-text": "Scanning and analyzing content...",
-            "results-title": "Scan Results",
-            "results-empty": "Enter content and click \"Scan Content\" to see results",
-            
-            // Leads
-            "leads-title": "Lead Generator",
-            "leads-subtitle": "Found leads and contact opportunities",
-            "detected-leads": "Detected Leads",
-            "export-button": "Export",
-            "leads-empty": "Leads will be shown here after scanning content",
-            
-            // Actions
-            "share-button": "Share",
-            "save-button": "Save",
-            "ai-analysis": "AI Analysis",
-            
-            // Features
-            "features-title": "Powerful Features",
-            "features-subtitle": "ContentScale provides everything you need to find valuable content and convert it into leads",
-            
-            // Footer
-            "footer-about": "AI-powered content scanner and lead generator for freelancers and marketing agencies.",
-            "copyright": "© 2023 ContentScale. All rights reserved."
-        }
-    };
+        <!-- Header EN -->
+        <div class="text-center mb-8" data-lang="en">
+          <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-300 via-pink-300 to-purple-300 bg-clip-text text-transparent">
+            🎯 Lead Scanner for Content SEO Specialists
+          </h2>
+          <p class="text-xl text-gray-300 mb-2">
+            Find businesses that need content help
+          </p>
+          <p class="text-sm text-purple-300">
+            ✨ Free for freelancers • 🔍 Single or bulk scanning • 📊 Export to CSV
+          </p>
+        </div>
 
-    let currentLanguage = 'nl';
+        <!-- Mode Selector -->
+        <div class="flex justify-center gap-4 mb-8">
+          <button id="modeSingleBtn" onclick="switchScanMode('single')" 
+                  class="mode-toggle active px-6 py-3 bg-gray-700 rounded-lg font-semibold shadow-lg">
+            <span data-lang="nl">🔍 Enkele URL</span>
+            <span data-lang="en">🔍 Single URL</span>
+          </button>
+          <button id="modeBulkBtn" onclick="switchScanMode('bulk')" 
+                  class="mode-toggle px-6 py-3 bg-gray-700 rounded-lg font-semibold shadow-lg">
+            <span data-lang="nl">🗺️ Google Maps Bulk</span>
+            <span data-lang="en">🗺️ Google Maps Bulk</span>
+          </button>
+        </div>
 
-    // Language switching
-    function switchLanguage(lang) {
-        currentLanguage = lang;
-        
-        // Update button text
-        const langButton = document.getElementById('languageButton');
-        const langText = langButton.querySelector('span');
-        langText.textContent = lang === 'nl' ? 'Nederlands' : 'English';
-        
-        // Update dropdown active state
-        document.querySelectorAll('.language-option').forEach(option => {
-            option.classList.remove('active');
-            if (option.dataset.lang === lang) {
-                option.classList.add('active');
-                option.innerHTML = `<i class="fas fa-check"></i> ${lang === 'nl' ? 'Nederlands' : 'English'}`;
-            } else {
-                option.innerHTML = lang === 'nl' ? 'English' : 'Nederlands';
-            }
-        });
-        
-        // Update all translatable elements
-        updateTextContent();
-        
-        // Close dropdown
-        document.getElementById('languageDropdown').classList.remove('active');
-    }
-
-    function updateTextContent() {
-        const langData = translations[currentLanguage];
-        
-        // Update elements with data-i18n attribute
-        document.querySelectorAll('[data-i18n]').forEach(element => {
-            const key = element.getAttribute('data-i18n');
-            if (langData[key]) {
-                element.textContent = langData[key];
-            }
-        });
-        
-        // Update specific elements without data-i18n
-        const elements = {
-            'nav-home': '#nav-home',
-            'nav-scanner': '#nav-scanner',
-            'nav-leads': '#nav-leads',
-            'nav-features': '#nav-features',
-            'nav-blog': '#nav-blog',
-            'hero-title': '.hero-title',
-            'hero-subtitle': '.hero-subtitle',
-            'cta-scan': '.hero .cta-button span',
-            'scanner-title': '.scanner-box:first-child .scanner-title',
-            'scanner-subtitle': '.scanner-box:first-child .scanner-subtitle',
-            'input-label': '.input-label',
-            'input-placeholder': '#contentInput',
-            'scan-button': '#scanButton',
-            'clear-button': '#clearButton',
-            'demo-button': '#demoButton',
-            'loading-text': '#loading p',
-            'results-title': '.scanner-box:first-child .results-title',
-            'results-empty': '.scanner-box:first-child .results-content p',
-            'leads-title': '.scanner-box:last-child .scanner-title',
-            'leads-subtitle': '.scanner-box:last-child .scanner-subtitle',
-            'detected-leads': '.scanner-box:last-child .results-title',
-            'export-button': '#exportLeadsButton',
-            'leads-empty': '.scanner-box:last-child .results-content p',
-            'share-button': '#shareButton',
-            'save-button': '#saveResultsButton',
-            'ai-analysis': '#advancedScanButton',
-            'features-title': '.section-title',
-            'features-subtitle': '.section-subtitle',
-            'footer-about': '.footer p',
-            'copyright': '.copyright p'
-        };
-        
-        for (const [key, selector] of Object.entries(elements)) {
-            const element = document.querySelector(selector);
-            if (element && langData[key]) {
-                if (selector === '#contentInput') {
-                    element.placeholder = langData[key];
-                } else if (selector.includes('Button') || selector.includes('button')) {
-                    const span = element.querySelector('span');
-                    if (span) {
-                        span.textContent = langData[key];
-                    } else if (element.tagName === 'BUTTON') {
-                        const textNodes = Array.from(element.childNodes).filter(node => node.nodeType === Node.TEXT_NODE);
-                        if (textNodes.length > 0) {
-                            textNodes[0].textContent = langData[key];
-                        }
-                    }
-                } else {
-                    element.textContent = langData[key];
-                }
-            }
-        }
-    }
-
-    // ============================================
-    // DEEL 2: CONTENT SCANNER FUNCTIES
-    // ============================================
-
-    // DOM Elements
-    const contentInput = document.getElementById('contentInput');
-    const scanButton = document.getElementById('scanButton');
-    const clearButton = document.getElementById('clearButton');
-    const demoButton = document.getElementById('demoButton');
-    const loading = document.getElementById('loading');
-    const statusMessage = document.getElementById('statusMessage');
-    const resultsContent = document.getElementById('resultsContent');
-    const leadsContent = document.getElementById('leadsContent');
-    const exportLeadsButton = document.getElementById('exportLeadsButton');
-    const shareButton = document.getElementById('shareButton');
-    const saveResultsButton = document.getElementById('saveResultsButton');
-    const advancedScanButton = document.getElementById('advancedScanButton');
-
-    // Demo content
-    const demoContent = `Hoe een Nederlandse Start-up hun Omzet Verdubbelde met Content Marketing
-
-In de afgelopen 2 jaar hebben we bij GrowthBoosters (een Amsterdamse digital marketing agency) gewerkt met TechSolutions, een SaaS-bedrijf uit Utrecht. Ze boden een projectmanagement tool voor remote teams maar hadden moeite met leadgeneratie.
-
-Het Probleem:
-TechSolutions had een klein marketingteam van 3 personen en een beperkt budget. Ze produceerden content maar dit leverde weinig kwalitatieve leads op. Hun blog werd wel gelezen maar conversie bleef uit.
-
-Onze Aanpak:
-We hebben een complete content-strategie ontwikkeld gefocust op lange artikelen (1500+ woorden) die specifieke pijnpunten adresseren van projectmanagers in de IT-sector.
-
-De resultaten waren opmerkelijk:
-- 300% meer organisch verkeer binnen 6 maanden
-- 45 kwalitatieve leads per maand (was eerder 5-10)
-- 12 nieuwe klanten in het eerste kwartaal
-- Omzetgroei van 200% in 8 maanden
-
-Belangrijkste inzichten:
-1. Diepgaande, specialistische content werkt beter dan algemene artikelen
-2. Case studies met concrete cijfers hebben de hoogste conversie
-3. LinkedIn outreach gecombineerd met content geeft 5x beter resultaat
-
-Contactgegevens voor meer info:
-- Naam: Mark Janssen (Marketing Director TechSolutions)
-- Email: m.janssen@techsolutions.nl
-- Telefoon: +31 6 12345678
-- LinkedIn: linkedin.com/in/markjanssennl
-
-Of neem contact op met onze accountmanager:
-- Lisa van der Berg (Senior Account Manager GrowthBoosters)
-- Email: lisa@growthboosters.nl
-- Website: www.growthboosters.nl/cases
-
-Dit geval laat zien hoe de juiste content-strategie enorme impact kan hebben, zelfs met een beperkt budget.`;
-
-    // Lead scanner function
-    function scanForLeads(text) {
-        const leads = [];
-        const words = text.split(/\s+/);
-        
-        // Only process if text is substantial
-        if (words.length < 1100) {
-            return leads;
-        }
-        
-        // Look for email patterns
-        const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-        const emails = text.match(emailRegex) || [];
-        
-        // Look for name patterns (capitalized words that might be names)
-        const nameRegex = /(?:[A-Z][a-z]+ )+[A-Z][a-z]+/g;
-        const potentialNames = text.match(nameRegex) || [];
-        
-        // Look for company mentions
-        const companyRegex = /(?:[A-Z][a-z]+ )*(?:BV|B\.V\.|NV|Ltd|GmbH|Inc|Company|Agency|Startup|Solutions|Tech|Software)/gi;
-        const companies = text.match(companyRegex) || [];
-        
-        // Look for phone numbers (Dutch and international formats)
-        const phoneRegex = /(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,3}\)?[-.\s]?\d{2,4}[-.\s]?\d{2,4}[-.\s]?\d{0,4}/g;
-        const phones = text.match(phoneRegex) || [];
-        
-        // Look for LinkedIn URLs
-        const linkedinRegex = /linkedin\.com\/in\/[a-zA-Z0-9-]+/gi;
-        const linkedins = text.match(linkedinRegex) || [];
-        
-        // Look for website URLs
-        const websiteRegex = /(?:www\.)?[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?/gi;
-        const websites = text.match(websiteRegex) || [];
-        
-        // Extract context around found entities
-        const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-        
-        // Create lead objects from found information
-        if (emails.length > 0) {
-            emails.forEach((email, index) => {
-                // Find context for this email
-                let context = '';
-                for (const sentence of sentences) {
-                    if (sentence.includes(email)) {
-                        context = sentence.trim();
-                        break;
-                    }
-                }
-                
-                // Try to find a name associated with this email
-                let name = '';
-                for (const potentialName of potentialNames) {
-                    if (context.includes(potentialName)) {
-                        name = potentialName;
-                        break;
-                    }
-                }
-                
-                // Try to find a company
-                let company = '';
-                for (const potentialCompany of companies) {
-                    if (context.includes(potentialCompany)) {
-                        company = potentialCompany;
-                        break;
-                    }
-                }
-                
-                // Try to find a phone number
-                let phone = '';
-                for (const potentialPhone of phones) {
-                    if (context.includes(potentialPhone)) {
-                        phone = potentialPhone;
-                        break;
-                    }
-                }
-                
-                leads.push({
-                    id: `lead-${Date.now()}-${index}`,
-                    name: name || `Lead ${index + 1}`,
-                    email: email,
-                    company: company || 'Niet gespecificeerd',
-                    phone: phone || 'Niet gespecificeerd',
-                    context: context || 'Geen aanvullende context gevonden',
-                    type: 'Email Lead',
-                    score: Math.floor(Math.random() * 30) + 70, // Random score 70-100
-                    foundIn: 'Content scan'
-                });
-            });
-        }
-        
-        // If no emails found, create leads from other entities
-        if (leads.length === 0 && (potentialNames.length > 0 || companies.length > 0)) {
-            const maxLeads = Math.min(5, Math.max(potentialNames.length, companies.length));
-            for (let i = 0; i < maxLeads; i++) {
-                const name = potentialNames[i] || `Contactpersoon ${i + 1}`;
-                const company = companies[i] || `Bedrijf ${i + 1}`;
-                const contextIndex = Math.floor(Math.random() * Math.min(5, sentences.length));
-                const context = sentences[contextIndex] || 'Interessante content gevonden met potentiële leadmogelijkheden.';
-                
-                leads.push({
-                    id: `lead-${Date.now()}-${i}`,
-                    name: name,
-                    email: 'info@' + (company.toLowerCase().replace(/[^a-z0-9]/g, '') || 'voorbeeld') + '.nl',
-                    company: company,
-                    phone: '+31 6 ' + Math.floor(1000000 + Math.random() * 9000000),
-                    context: context,
-                    type: 'Content Lead',
-                    score: Math.floor(Math.random() * 40) + 60, // Random score 60-100
-                    foundIn: 'Content analyse'
-                });
-            }
-        }
-        
-        // Ensure we have at least some leads for demo purposes
-        if (leads.length === 0 && words.length >= 1100) {
-            leads.push(
-                {
-                    id: `lead-${Date.now()}-1`,
-                    name: 'Mark Janssen',
-                    email: 'm.janssen@techsolutions.nl',
-                    company: 'TechSolutions BV',
-                    phone: '+31 6 12345678',
-                    context: 'Marketing Director bij TechSolutions met ervaring in SaaS-projectmanagement tools.',
-                    type: 'Executive Lead',
-                    score: 92,
-                    foundIn: 'Case study content'
-                },
-                {
-                    id: `lead-${Date.now()}-2`,
-                    name: 'Lisa van der Berg',
-                    email: 'lisa@growthboosters.nl',
-                    company: 'GrowthBoosters Agency',
-                    phone: '+31 6 87654321',
-                    context: 'Senior Account Manager gespecialiseerd in content marketing voor tech-bedrijven.',
-                    type: 'Agency Contact',
-                    score: 88,
-                    foundIn: 'Agency vermelding'
-                },
-                {
-                    id: `lead-${Date.now()}-3`,
-                    name: 'Alex de Vries',
-                    email: 'alex@digitalboost.nl',
-                    company: 'DigitalBoost',
-                    phone: '+31 6 11223344',
-                    context: 'Vermeld als expert in content-strategie voor B2B software bedrijven.',
-                    type: 'Expert Lead',
-                    score: 85,
-                    foundIn: 'Expert referentie'
-                }
-            );
-        }
-        
-        return leads;
-    }
-
-    // Content analysis function
-    function analyzeContent(text) {
-        const words = text.split(/\s+/);
-        const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-        const paragraphs = text.split(/\n+/).filter(p => p.trim().length > 0);
-        
-        // Calculate basic metrics
-        const wordCount = words.length;
-        const sentenceCount = sentences.length;
-        const paragraphCount = paragraphs.length;
-        
-        // Look for key elements
-        const hasEmail = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(text);
-        const hasPhone = /(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,3}\)?[-.\s]?\d{2,4}[-.\s]?\d{2,4}[-.\s]?\d{0,4}/.test(text);
-        const hasName = /(?:[A-Z][a-z]+ )+[A-Z][a-z]+/.test(text);
-        const hasCompany = /(?:[A-Z][a-z]+ )*(?:BV|B\.V\.|NV|Ltd|GmbH|Inc|Company|Agency)/i.test(text);
-        const hasNumbers = /\d+%|\d+\s*(?:euro|EUR|dollar|USD|procent|percentage|maanden|jaren|klanten|leads)/i.test(text);
-        const hasCaseStudy = /case|casestudy|resultaat|succes|verdubbeld|groei|toename|verbeterd/i.test(text);
-        
-        // Determine content type
-        let contentType = 'Informatief artikel';
-        if (hasCaseStudy && hasNumbers) {
-            contentType = 'Case study';
-        } else if (hasEmail && hasPhone && hasName) {
-            contentType = 'Contactpagina / Leadgeneratie';
-        } else if (text.length > 2000) {
-            contentType = 'Diepgaand artikel';
-        } else if (text.length < 800) {
-            contentType = 'Kort artikel / Blogpost';
-        }
-        
-        // Extract key sentences (most informative)
-        const keySentences = sentences
-            .filter(s => s.length > 50 && s.length < 200)
-            .filter(s => /\b(?:succes|resultaat|strategie|tip|advies|conclusie|belangrijk|effectief|beter|verbeterd|groei|toename)\b/i.test(s))
-            .slice(0, 5);
-        
-        // Calculate quality score
-        let qualityScore = 50;
-        if (wordCount > 1000) qualityScore += 20;
-        if (hasEmail || hasPhone) qualityScore += 10;
-        if (hasCaseStudy) qualityScore += 15;
-        if (hasNumbers) qualityScore += 10;
-        if (keySentences.length >= 3) qualityScore += 15;
-        
-        return {
-            wordCount,
-            sentenceCount,
-            paragraphCount,
-            contentType,
-            hasContactInfo: hasEmail || hasPhone || hasName || hasCompany,
-            hasQuantifiableData: hasNumbers,
-            isCaseStudy: hasCaseStudy,
-            keySentences,
-            qualityScore: Math.min(100, qualityScore),
-            leadPotential: hasEmail || hasPhone ? 'Hoog' : hasName || hasCompany ? 'Medium' : 'Laag'
-        };
-    }
-
-    // Display results
-    function displayResults(analysis, leads) {
-        // Clear previous results
-        resultsContent.innerHTML = '';
-        leadsContent.innerHTML = '';
-        
-        // Display analysis results
-        const analysisHTML = `
-            <div class="result-item">
-                <h4 class="result-item-title">📊 Content Analyse</h4>
-                <div class="result-item-content">
-                    <p><strong>Type:</strong> ${analysis.contentType}</p>
-                    <p><strong>Woorden:</strong> ${analysis.wordCount} | <strong>Zinnen:</strong> ${analysis.sentenceCount} | <strong>Paragrafen:</strong> ${analysis.paragraphCount}</p>
-                    <p><strong>Kwaliteitsscore:</strong> ${analysis.qualityScore}/100</p>
-                    <p><strong>Lead potentieel:</strong> ${analysis.leadPotential}</p>
-                    <p><strong>Contactgegevens:</strong> ${analysis.hasContactInfo ? '✅ Gedetecteerd' : '❌ Niet gevonden'}</p>
-                    <p><strong>Kwantificeerbare data:</strong> ${analysis.hasQuantifiableData ? '✅ Aanwezig' : '❌ Niet aanwezig'}</p>
-                    ${analysis.isCaseStudy ? '<p><strong>🎯 Case study gedetecteerd - Hoge conversie waarde!</strong></p>' : ''}
-                </div>
+        <!-- Single URL Scanner -->
+        <div id="singleScanMode" class="max-w-3xl mx-auto">
+          <div class="bg-gray-800 rounded-xl p-6 mb-4 shadow-lg">
+            <div class="flex flex-col sm:flex-row gap-3 mb-4">
+              <input type="text" 
+                     id="singleUrlInput" 
+                     placeholder="https://business-website.com" 
+                     class="flex-1 bg-gray-700 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-inner">
+              <button onclick="scanSingleURLPublic()" 
+                      id="singleScanBtn"
+                      class="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 px-6 py-3 rounded-lg font-bold transition-all whitespace-nowrap shadow-lg hover:shadow-xl">
+                <span data-lang="nl">🚀 Start Scan</span>
+                <span data-lang="en">🚀 Start Scan</span>
+              </button>
             </div>
             
-            ${analysis.keySentences.length > 0 ? `
-            <div class="result-item">
-                <h4 class="result-item-title">💡 Belangrijkste Inzichten</h4>
-                <div class="result-item-content">
-                    <ul>
-                        ${analysis.keySentences.map(sentence => `<li>${sentence.trim()}</li>`).join('')}
-                    </ul>
-                </div>
+            <!-- Progress Indicator -->
+            <div id="singleScanProgress" class="hidden">
+              <div class="bg-gray-700 rounded-full h-3 overflow-hidden mb-2">
+                <div id="singleProgressBar" class="progress-bar bg-gradient-to-r from-purple-500 to-pink-500 h-full transition-all" style="width: 0%"></div>
+              </div>
+              <p id="singleProgressText" class="text-sm text-center text-gray-400"></p>
             </div>
-            ` : ''}
-            
-            <div class="result-item">
-                <h4 class="result-item-title">✅ Actiepunten</h4>
-                <div class="result-item-content">
-                    <ul>
-                        ${analysis.hasContactInfo ? '<li>📞 Contactgegevens gevonden - Mogelijkheid voor directe outreach</li>' : ''}
-                        ${analysis.isCaseStudy ? '<li>📈 Case study gedetecteerd - Perfect voor sociale media sharing</li>' : ''}
-                        ${analysis.hasQuantifiableData ? '<li>📊 Kwantificeerbare resultaten - Sterk bewijs voor conversie</li>' : ''}
-                        ${analysis.wordCount > 1000 ? '<li>📝 Uitgebreide content - Goed voor SEO en autoriteit</li>' : ''}
-                        <li>🔍 ${leads.length} potentiële leads gedetecteerd</li>
-                    </ul>
-                </div>
-            </div>
-        `;
-        
-        resultsContent.innerHTML = analysisHTML;
-        
-        // Display leads if found
-        if (leads.length > 0) {
-            leads.forEach(lead => {
-                const leadHTML = `
-                    <div class="lead-item">
-                        <div class="lead-header">
-                            <h4 class="lead-title">${lead.name} • ${lead.company}</h4>
-                            <div class="lead-actions">
-                                <button class="action-btn whatsapp" onclick="shareViaWhatsApp('${lead.name}', '${lead.company}', '${lead.context.substring(0, 100)}...')" title="Delen via WhatsApp">
-                                    <i class="fab fa-whatsapp"></i>
-                                </button>
-                                <button class="action-btn email" onclick="shareViaEmail('${lead.name}', '${lead.email}', '${lead.context.substring(0, 100)}...')" title="E-mail lead">
-                                    <i class="fas fa-envelope"></i>
-                                </button>
-                                <button class="action-btn linkedin" onclick="shareViaLinkedIn('${lead.name}', '${lead.company}', '${lead.context.substring(0, 100)}...')" title="LinkedIn">
-                                    <i class="fab fa-linkedin"></i>
-                                </button>
-                                <button class="action-btn copy" onclick="copyLeadInfo('${lead.name}', '${lead.email}', '${lead.company}', '${lead.phone}')" title="Kopiëren">
-                                    <i class="fas fa-copy"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="lead-content">
-                            <p>${lead.context}</p>
-                        </div>
-                        <div class="lead-meta">
-                            <span class="lead-meta-item">
-                                <i class="fas fa-envelope"></i> ${lead.email}
-                            </span>
-                            <span class="lead-meta-item">
-                                <i class="fas fa-phone"></i> ${lead.phone}
-                            </span>
-                            <span class="lead-meta-item">
-                                <i class="fas fa-star"></i> Score: ${lead.score}/100
-                            </span>
-                            <span class="lead-meta-item">
-                                <i class="fas fa-tag"></i> ${lead.type}
-                            </span>
-                        </div>
-                    </div>
-                `;
-                leadsContent.insertAdjacentHTML('beforeend', leadHTML);
-            });
-        } else {
-            leadsContent.innerHTML = `
-                <div class="result-item">
-                    <h4 class="result-item-title">Geen leads gedetecteerd</h4>
-                    <div class="result-item-content">
-                        <p>Er zijn geen duidelijke leads gevonden in deze content. Probeer:</p>
-                        <ul>
-                            <li>Langere content (minimaal 1100 woorden)</li>
-                            <li>Content met contactgegevens (email, telefoon)</li>
-                            <li>Case studies of getuigenissen</li>
-                            <li>Content met namen van personen of bedrijven</li>
-                        </ul>
-                    </div>
-                </div>
-            `;
-        }
-    }
+          </div>
 
-    // ============================================
-    // DEEL 3: UI FUNCTIES & EVENT HANDLERS
-    // ============================================
+          <!-- Single Scan Result -->
+          <div id="singleScanResult" class="hidden"></div>
 
-    // Perform scan
-    function performScan() {
-        const text = contentInput.value.trim();
-        
-        if (!text) {
-            showStatus('Voer eerst content in om te scannen', 'error');
-            return;
-        }
-        
-        // Show loading
-        loading.classList.add('active');
-        showStatus('Content scannen...', 'warning');
-        
-        // Simulate processing time
-        setTimeout(() => {
-            const analysis = analyzeContent(text);
-            const leads = scanForLeads(text);
-            
-            displayResults(analysis, leads);
-            
-            loading.classList.remove('active');
-            showStatus(`Scan voltooid! ${leads.length} leads gevonden in ${analysis.wordCount} woorden`, 'success');
-            
-            // Scroll to results
-            document.querySelector('#scanner').scrollIntoView({ behavior: 'smooth' });
-        }, 1500);
-    }
-
-    // Clear input and results
-    function clearAll() {
-        contentInput.value = '';
-        resultsContent.innerHTML = `
-            <p class="text-center" style="color: var(--gray); padding: 3rem 1rem;">
-                <i class="fas fa-search" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
-                Voer content in en klik op "Content Scannen" om resultaten te zien
+          <!-- Tip Box -->
+          <div class="bg-blue-900 bg-opacity-30 border border-blue-500 rounded-lg p-4 mt-4">
+            <p class="text-sm text-blue-300" data-lang="nl">
+              💡 <strong>Pro Tip:</strong> Gebruik scan resultaten om je pitch te versterken met concrete data
             </p>
-        `;
-        leadsContent.innerHTML = `
-            <p class="text-center" style="color: var(--gray); padding: 3rem 1rem;">
-                <i class="fas fa-user-friends" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
-                Leads worden hier getoond na het scannen van content
+            <p class="text-sm text-blue-300" data-lang="en">
+              💡 <strong>Pro Tip:</strong> Use scan results to strengthen your pitch with concrete data
             </p>
-        `;
-        showStatus('Alles gewist', 'success');
-    }
+          </div>
+        </div>
 
-    // Load demo content
-    function loadDemo() {
-        contentInput.value = demoContent;
-        showStatus('Demo content geladen. Klik op "Content Scannen" om te analyseren.', 'success');
-    }
-
-    // Show status message
-    function showStatus(message, type = 'info') {
-        statusMessage.textContent = message;
-        statusMessage.className = 'status-message active';
-        
-        switch(type) {
-            case 'success':
-                statusMessage.classList.add('status-success');
-                break;
-            case 'error':
-                statusMessage.classList.add('status-error');
-                break;
-            case 'warning':
-                statusMessage.classList.add('status-warning');
-                break;
-        }
-        
-        // Auto-hide after 5 seconds
-        setTimeout(() => {
-            statusMessage.classList.remove('active');
-        }, 5000);
-    }
-
-    // Share functions
-    function shareViaWhatsApp(name, company, context) {
-        const text = `Lead gevonden via ContentScale:\n\nNaam: ${name}\nBedrijf: ${company}\nContext: ${context}\n\nBekijk meer leads op ContentScale`;
-        const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-        window.open(url, '_blank');
-    }
-
-    function shareViaEmail(name, email, context) {
-        const subject = `Lead: ${name} van ${company}`;
-        const body = `Beste collega,\n\nIk heb een interessante lead gevonden via ContentScale:\n\nNaam: ${name}\nEmail: ${email}\nContext: ${context}\n\nGroeten,`;
-        const url = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        window.open(url, '_blank');
-    }
-
-    function shareViaLinkedIn(name, company, context) {
-        const text = `Interessante lead gevonden via ContentScale: ${name} van ${company}. ${context}`;
-        const url = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(window.location.href)}&title=${encodeURIComponent('ContentScale Lead')}&summary=${encodeURIComponent(text)}`;
-        window.open(url, '_blank');
-    }
-
-    function copyLeadInfo(name, email, company, phone) {
-        const text = `Naam: ${name}\nEmail: ${email}\nBedrijf: ${company}\nTelefoon: ${phone}\n\nGevonden via ContentScale`;
-        navigator.clipboard.writeText(text).then(() => {
-            showStatus('Lead informatie gekopieerd naar klembord!', 'success');
-        });
-    }
-
-    // Export leads function
-    function exportLeads() {
-        const leadItems = document.querySelectorAll('.lead-item');
-        if (leadItems.length === 0) {
-            showStatus('Geen leads om te exporteren', 'warning');
-            return;
-        }
-        
-        let csvContent = "Naam,Email,Bedrijf,Telefoon,Type,Score\n";
-        
-        leadItems.forEach(item => {
-            const name = item.querySelector('.lead-title').textContent.split('•')[0].trim();
-            const email = item.querySelector('.lead-meta-item:nth-child(1)').textContent.replace('📧 ', '').trim();
-            const company = item.querySelector('.lead-title').textContent.split('•')[1].trim();
-            const phone = item.querySelector('.lead-meta-item:nth-child(2)').textContent.replace('📞 ', '').trim();
-            const type = item.querySelector('.lead-meta-item:nth-child(4)').textContent.replace('🏷️ ', '').trim();
-            const score = item.querySelector('.lead-meta-item:nth-child(3)').textContent.replace('⭐ ', '').trim();
+        <!-- Google Maps Bulk Scanner -->
+        <div id="bulkScanMode" class="hidden max-w-5xl mx-auto">
+          <div class="bg-gray-800 rounded-xl p-6 mb-4 shadow-lg">
+            <div class="flex flex-col sm:flex-row gap-3 mb-4">
+              <input type="text" 
+                     id="googleMapsInput" 
+                     placeholder="https://www.google.com/maps/search/restaurants+amsterdam" 
+                     class="flex-1 bg-gray-700 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-inner">
+              <button onclick="scrapeGoogleMapsPublic()" 
+                      id="gmapsScrapeBtn"
+                      class="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 px-6 py-3 rounded-lg font-bold transition-all whitespace-nowrap shadow-lg hover:shadow-xl">
+                <span data-lang="nl">🗺️ Scrape Maps</span>
+                <span data-lang="en">🗺️ Scrape Maps</span>
+              </button>
+            </div>
             
-            csvContent += `"${name}","${email}","${company}","${phone}","${type}","${score}"\n`;
-        });
-        
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.setAttribute('href', url);
-        link.setAttribute('download', `contentscale_leads_${new Date().toISOString().slice(0,10)}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        showStatus(`${leadItems.length} leads geëxporteerd als CSV`, 'success');
-    }
+            <!-- Instructie -->
+            <div class="bg-gray-700 rounded-lg p-3">
+              <p class="text-xs text-gray-300" data-lang="nl">
+                <strong class="text-purple-300">💡 Hoe te gebruiken:</strong> 
+                Zoek bedrijven op Google Maps → Kopieer de URL → Plak hier
+              </p>
+              <p class="text-xs text-gray-300" data-lang="en">
+                <strong class="text-purple-300">💡 How to use:</strong> 
+                Search businesses on Google Maps → Copy the URL → Paste here
+              </p>
+            </div>
+          </div>
 
-    // Save results function
-    function saveResults() {
-        const analysisElement = resultsContent.querySelector('.result-item');
-        const leadCount = document.querySelectorAll('.lead-item').length;
-        
-        if (!analysisElement && leadCount === 0) {
-            showStatus('Geen resultaten om op te slaan', 'warning');
-            return;
-        }
-        
-        const resultsData = {
-            timestamp: new Date().toISOString(),
-            contentLength: contentInput.value.length,
-            leadCount: leadCount,
-            analysis: analysisElement ? analysisElement.textContent : 'Geen analyse beschikbaar'
-        };
-        
-        localStorage.setItem('contentscale_last_scan', JSON.stringify(resultsData));
-        showStatus('Resultaten opgeslagen in browser', 'success');
-    }
-
-    // Advanced AI analysis function
-    function performAdvancedAnalysis() {
-        if (!contentInput.value.trim()) {
-            showStatus('Voer eerst content in om te analyseren', 'error');
-            return;
-        }
-        
-        showStatus('AI analyse gestart... Dit kan even duren.', 'warning');
-        
-        // Simulate AI processing
-        setTimeout(() => {
-            const insights = [
-                "De content bevat sterke case study elementen die goed converteren",
-                "Er zijn meerdere actionable insights voor leadgeneratie",
-                "De tone-of-voice is professioneel maar toegankelijk",
-                "Er is ruimte voor meer specifieke call-to-actions",
-                "De content scoort hoog op autoriteit en expertise"
-            ];
-            
-            const analysisHTML = `
-                <div class="result-item">
-                    <h4 class="result-item-title">🤖 AI Diepte Analyse</h4>
-                    <div class="result-item-content">
-                        <p><strong>Geavanceerde inzichten:</strong></p>
-                        <ul>
-                            ${insights.map(insight => `<li>${insight}</li>`).join('')}
-                        </ul>
-                        <p class="mt-3"><strong>Aanbevelingen:</strong></p>
-                        <ol>
-                            <li>Voeg een duidelijke call-to-action toe aan het einde</li>
-                            <li>Gebruik deze content voor LinkedIn outreach</li>
-                            <li>Creëer een samenvatting voor sociale media</li>
-                            <li>Overweeg een follow-up artikel met meer data</li>
-                        </ol>
-                    </div>
+          <!-- Scraped Leads Container -->
+          <div id="scrapedLeadsContainer" class="hidden">
+            <div class="bg-gray-800 rounded-xl p-6 shadow-lg">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold">
+                  <span data-lang="nl">📋 Gevonden Leads (<span id="leadCount">0</span>)</span>
+                  <span data-lang="en">📋 Found Leads (<span id="leadCountEN">0</span>)</span>
+                </h3>
+                <div class="flex gap-2">
+                  <button onclick="scanAllGoogleMapsLeads()" 
+                          id="scanAllBtn"
+                          class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all">
+                    <span data-lang="nl">⚡ Scan Alles</span>
+                    <span data-lang="en">⚡ Scan All</span>
+                  </button>
+                  <button onclick="selectAllLeads()" 
+                          class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all">
+                    <span data-lang="nl">☑️ Selecteer Alles</span>
+                    <span data-lang="en">☑️ Select All</span>
+                  </button>
                 </div>
-            `;
-            
-            resultsContent.insertAdjacentHTML('afterbegin', analysisHTML);
-            showStatus('AI analyse voltooid! Bekijk de extra inzichten.', 'success');
-        }, 2500);
-    }
+              </div>
 
-    // ============================================
-    // EVENT LISTENERS & INITIALIZATION
-    // ============================================
+              <!-- Bulk Scan Progress -->
+              <div id="bulkScanProgress" class="hidden mb-4">
+                <div class="bg-gray-700 rounded-full h-3 overflow-hidden mb-2">
+                  <div id="bulkProgressBar" class="progress-bar bg-gradient-to-r from-purple-500 to-pink-500 h-full" style="width: 0%"></div>
+                </div>
+                <p id="bulkProgressText" class="text-sm text-center text-gray-400"></p>
+              </div>
 
-    // Initialize event listeners
-    function initEventListeners() {
-        // Language dropdown
-        document.getElementById('languageButton').addEventListener('click', function() {
-            document.getElementById('languageDropdown').classList.toggle('active');
-        });
-        
-        // Language selection
-        document.querySelectorAll('.language-option').forEach(option => {
-            option.addEventListener('click', function() {
-                const lang = this.dataset.lang;
-                switchLanguage(lang);
-            });
-        });
-        
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function(event) {
-            const dropdown = document.getElementById('languageDropdown');
-            const button = document.getElementById('languageButton');
-            
-            if (!button.contains(event.target) && !dropdown.contains(event.target)) {
-                dropdown.classList.remove('active');
-            }
-        });
-        
-        // Scanner buttons
-        scanButton.addEventListener('click', performScan);
-        clearButton.addEventListener('click', clearAll);
-        demoButton.addEventListener('click', loadDemo);
-        exportLeadsButton.addEventListener('click', exportLeads);
-        shareButton.addEventListener('click', () => {
-            const leadCount = document.querySelectorAll('.lead-item').length;
-            if (leadCount > 0) {
-                const text = `Ik heb ${leadCount} interessante leads gevonden met ContentScale! Bekijk het hier: ${window.location.href}`;
-                if (navigator.share) {
-                    navigator.share({
-                        title: 'ContentScale Leads',
-                        text: text,
-                        url: window.location.href
-                    });
-                } else {
-                    navigator.clipboard.writeText(text).then(() => {
-                        showStatus('Deeltekst gekopieerd naar klembord!', 'success');
-                    });
-                }
-            } else {
-                showStatus('Geen leads om te delen', 'warning');
-            }
-        });
-        
-        saveResultsButton.addEventListener('click', saveResults);
-        advancedScanButton.addEventListener('click', performAdvancedAnalysis);
-        
-        // Navigation links
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                const targetId = this.id.replace('nav-', '');
-                const targetElement = document.getElementById(targetId);
-                
-                if (targetElement) {
-                    targetElement.scrollIntoView({ behavior: 'smooth' });
-                } else if (targetId === 'home') {
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-            });
-        });
-        
-        // CTA buttons
-        document.querySelectorAll('.cta-button').forEach(button => {
-            button.addEventListener('click', function(e) {
-                if (this.getAttribute('href') === '#scanner') {
-                    e.preventDefault();
-                    document.getElementById('scanner').scrollIntoView({ behavior: 'smooth' });
-                }
-            });
-        });
-        
-        // Keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-            // Ctrl/Cmd + Enter to scan
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                if (document.activeElement === contentInput) {
-                    performScan();
-                }
-            }
-            
-            // Escape to clear
-            if (e.key === 'Escape') {
-                if (document.activeElement === contentInput) {
-                    clearAll();
-                }
-            }
-        });
-        
-        // Auto-save content on input (with debounce)
-        let saveTimeout;
-        contentInput.addEventListener('input', function() {
-            clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(() => {
-                if (this.value.trim().length > 100) {
-                    localStorage.setItem('contentscale_draft', this.value);
-                }
-            }, 2000);
-        });
-        
-        // Load draft on page load
-        window.addEventListener('load', function() {
-            const draft = localStorage.getItem('contentscale_draft');
-            if (draft) {
-                contentInput.value = draft;
-                showStatus('Vorige content hersteld', 'success');
-            }
-            
-            // Initialize with Dutch language
-            switchLanguage('nl');
-        });
-    }
+              <!-- Leads Grid -->
+              <div id="leadsGrid" class="grid md:grid-cols-2 gap-4 mb-4"></div>
 
-    // ============================================
-    // INITIALIZE EVERYTHING
-    // ============================================
+              <!-- Export Buttons -->
+              <div class="flex gap-3 justify-end">
+                <button onclick="exportLeadsToCSV()" 
+                        class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all">
+                  📊 Export CSV
+                </button>
+                <button onclick="exportLeadsToJSON()" 
+                        class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all">
+                  📄 Export JSON
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
-    // Start the application
-    document.addEventListener('DOMContentLoaded', function() {
-        initEventListeners();
+        <!-- Freelancer CTA -->
+        <div class="mt-8 bg-gradient-to-r from-purple-800 via-pink-800 to-purple-800 rounded-xl p-6 text-center border-2 border-purple-400 shadow-lg">
+          <div data-lang="nl">
+            <h3 class="text-2xl font-bold mb-2">💼 Ben je Content Specialist?</h3>
+            <p class="text-gray-200 mb-4">
+              Gebruik deze scanner gratis om potentiële klanten te vinden
+            </p>
+            <div class="flex gap-3 justify-center flex-wrap">
+              <button onclick="document.getElementById('freelancers')?.scrollIntoView({behavior:'smooth'})" 
+                      class="bg-white text-purple-900 hover:bg-gray-100 px-6 py-3 rounded-lg font-bold transition-all shadow-lg hover:shadow-xl">
+                📝 Registreer als Specialist
+              </button>
+              <a href="https://wa.me/31628073996?text=Hi!%20Ik%20wil%20de%20Lead%20Scanner%20gebruiken" 
+                 target="_blank"
+                 class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold transition-all shadow-lg hover:shadow-xl">
+                💬 WhatsApp Contact
+              </a>
+            </div>
+          </div>
+          <div data-lang="en">
+            <h3 class="text-2xl font-bold mb-2">💼 Are You a Content Specialist?</h3>
+            <p class="text-gray-200 mb-4">
+              Use this scanner for free to find potential clients
+            </p>
+            <div class="flex gap-3 justify-center flex-wrap">
+              <button onclick="document.getElementById('freelancers')?.scrollIntoView({behavior:'smooth'})" 
+                      class="bg-white text-purple-900 hover:bg-gray-100 px-6 py-3 rounded-lg font-bold transition-all shadow-lg hover:shadow-xl">
+                📝 Register as Specialist
+              </button>
+              <a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20use%20the%20Lead%20Scanner" 
+                 target="_blank"
+                 class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold transition-all shadow-lg hover:shadow-xl">
+                💬 WhatsApp Contact
+              </a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Freelancers Section -->
+    <div id="freelancers" class="mb-16">
+      <div class="text-center mb-8">
+        <h2 class="text-4xl font-bold mb-3" data-lang="nl">🎯 Geverifieerde SEO Specialisten</h2>
+        <h2 class="text-4xl font-bold mb-3" data-lang="en">🎯 Verified SEO Specialists</h2>
         
-        // Add some initial instructions
-        console.log('🚀 ContentScale AI Scanner loaded successfully!');
-        console.log('📝 Features available:');
-        console.log('  • Content scanning and analysis');
-        console.log('  • Lead detection and extraction');
-        console.log('  • Multi-language support (NL/EN)');
-        console.log('  • Export to CSV functionality');
-        console.log('  • Share via WhatsApp, Email, LinkedIn');
-        console.log('  • Advanced AI analysis');
+        <p class="text-xl text-gray-300 mb-4" data-lang="nl">Expert content optimizers klaar om te helpen</p>
+        <p class="text-xl text-gray-300 mb-4" data-lang="en">Expert content optimizers ready to elevate your rankings</p>
         
-        // Show welcome message
-        setTimeout(() => {
-            showStatus('Welkom bij ContentScale! Plak content of gebruik de demo knop om te beginnen.', 'success');
-        }, 1000);
+        <button onclick="openFreelancerModal()" 
+                class="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl">
+          <span data-lang="nl">📝 Registreer als Specialist</span>
+          <span data-lang="en">📝 Join Our Network</span>
+        </button>
+      </div>
+      
+      <div id="freelancers-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="text-center col-span-full text-gray-400" data-lang="nl">
+          Laden...
+        </div>
+        <div class="text-center col-span-full text-gray-400" data-lang="en">
+          Loading specialists...
+        </div>
+      </div>
+    </div>
+
+    <!-- Leaderboard Section -->
+    <div id="leaderboard" class="mb-16">
+      <div class="text-center mb-8">
+        <h2 class="text-4xl font-bold mb-3">🏆 Top SEO Content Scores</h2>
+        
+        <p class="text-xl text-gray-300" data-lang="nl">De beste content scores wereldwijd</p>
+        <p class="text-xl text-gray-300" data-lang="en">The world's highest content quality scores</p>
+      </div>
+      
+      <div id="leaderboard-list" class="max-w-4xl mx-auto">
+        <div class="text-center text-gray-400" data-lang="nl">
+          Laden...
+        </div>
+        <div class="text-center text-gray-400" data-lang="en">
+          Loading leaderboard...
+        </div>
+      </div>
+    </div>
+
+    <!-- Pricing Section -->
+    <div id="pricing" class="mb-16">
+      <div class="text-center mb-12">
+        <h2 class="text-4xl font-bold mb-3" data-lang="nl">💎 Simpele, Transparante Prijzen</h2>
+        <h2 class="text-4xl font-bold mb-3" data-lang="en">💎 Simple, Transparent Pricing</h2>
+        
+        <p class="text-xl text-gray-300" data-lang="nl">Kies het plan dat bij je past</p>
+        <p class="text-xl text-gray-300" data-lang="en">Choose the plan that fits your needs</p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        
+        <!-- Free Tier -->
+        <div class="pricing-card">
+          <div class="text-center mb-6">
+            <div class="text-sm font-semibold text-gray-400 mb-2" data-lang="nl">GRATIS</div>
+            <div class="text-sm font-semibold text-gray-400 mb-2" data-lang="en">FREE</div>
+            <div class="text-5xl font-bold mb-2">€0</div>
+            <div class="text-gray-400" data-lang="nl">Perfect om te starten</div>
+            <div class="text-gray-400" data-lang="en">Perfect to get started</div>
+          </div>
+          
+          <ul class="space-y-3 mb-8" data-lang="nl">
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>5 scans per maand</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Basis kwaliteitsscore</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>GRAAF Framework analyse</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Email support</span>
+            </li>
+          </ul>
+          
+          <ul class="space-y-3 mb-8" data-lang="en">
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>5 scans per month</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Basic quality score</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>GRAAF Framework analysis</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Email support</span>
+            </li>
+          </ul>
+          
+          <button onclick="document.getElementById('scanInput').scrollIntoView({behavior:'smooth'}); document.getElementById('scanInput').focus()" 
+                  class="w-full bg-gray-600 hover:bg-gray-700 px-6 py-3 rounded-lg font-bold transition-all shadow-lg hover:shadow-xl">
+            <span data-lang="nl">Start Gratis</span>
+            <span data-lang="en">Start Free</span>
+          </button>
+        </div>
+
+        <!-- Pro Tier - Featured -->
+        <div class="pricing-card featured">
+          <div class="absolute top-4 right-4 bg-gradient-to-r from-purple-600 to-pink-600 px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+            <span data-lang="nl">POPULAIR</span>
+            <span data-lang="en">POPULAR</span>
+          </div>
+          
+          <div class="text-center mb-6">
+            <div class="text-sm font-semibold text-purple-400 mb-2">PRO</div>
+            <div class="text-5xl font-bold mb-2">€49</div>
+            <div class="text-gray-400" data-lang="nl">per maand</div>
+            <div class="text-gray-400" data-lang="en">per month</div>
+          </div>
+          
+          <ul class="space-y-3 mb-8" data-lang="nl">
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span><strong>Onbeperkte scans</strong></span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Volledige GRAAF + CRAFT analyse</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Competitor analyse</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Priority support</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>API toegang</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Lead Scanner onbeperkt</span>
+            </li>
+          </ul>
+          
+          <ul class="space-y-3 mb-8" data-lang="en">
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span><strong>Unlimited scans</strong></span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Full GRAAF + CRAFT analysis</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Competitor analysis</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Priority support</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>API access</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Unlimited Lead Scanner</span>
+            </li>
+          </ul>
+          
+          <button onclick="window.location.href='https://wa.me/31628073996?text=' + (currentLang === 'nl' ? 'Hi!%20Ik%20wil%20het%20Pro%20plan' : 'Hi!%20I%20want%20the%20Pro%20plan')" 
+                  class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 px-6 py-3 rounded-lg font-bold transition-all shadow-lg hover:shadow-xl">
+            <span data-lang="nl">Start Pro</span>
+            <span data-lang="en">Get Started</span>
+          </button>
+        </div>
+
+        <!-- Enterprise Tier -->
+        <div class="pricing-card">
+          <div class="text-center mb-6">
+            <div class="text-sm font-semibold text-gray-400 mb-2">ENTERPRISE</div>
+            <div class="text-5xl font-bold mb-2" data-lang="nl">Op Maat</div>
+            <div class="text-5xl font-bold mb-2" data-lang="en">Custom</div>
+            <div class="text-gray-400" data-lang="nl">Voor grote teams</div>
+            <div class="text-gray-400" data-lang="en">For large teams</div>
+          </div>
+          
+          <ul class="space-y-3 mb-8" data-lang="nl">
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Alles van Pro</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Dedicated account manager</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Custom integraties</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>SLA garanties</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Training & onboarding</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>White-label optie</span>
+            </li>
+          </ul>
+          
+          <ul class="space-y-3 mb-8" data-lang="en">
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Everything in Pro</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Dedicated account manager</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Custom integrations</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>SLA guarantees</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>Training & onboarding</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fas fa-check text-green-400"></i>
+              <span>White-label option</span>
+            </li>
+          </ul>
+          
+          <button onclick="window.location.href='https://wa.me/31628073996?text=' + (currentLang === 'nl' ? 'Hi!%20Ik%20wil%20meer%20weten%20over%20Enterprise' : 'Hi!%20I%20want%20to%20learn%20more%20about%20Enterprise')" 
+                  class="w-full bg-gray-600 hover:bg-gray-700 px-6 py-3 rounded-lg font-bold transition-all shadow-lg hover:shadow-xl">
+            <span data-lang="nl">Contact Sales</span>
+            <span data-lang="en">Contact Sales</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Blog Section -->
+    <div id="blog" class="mb-16">
+      <div class="text-center mb-8">
+        <h2 class="text-4xl font-bold mb-3" data-lang="nl">📚 SEO Insights & Guides</h2>
+        <h2 class="text-4xl font-bold mb-3" data-lang="en">📚 SEO Insights & Guides</h2>
+        
+        <p class="text-xl text-gray-300" data-lang="nl">Laatste tips voor content optimalisatie</p>
+        <p class="text-xl text-gray-300" data-lang="en">Latest strategies for content optimization</p>
+      </div>
+      
+      <div id="blog-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="text-center col-span-full text-gray-400" data-lang="nl">
+          Laden...
+        </div>
+        <div class="text-center col-span-full text-gray-400" data-lang="en">
+          Loading insights...
+        </div>
+      </div>
+    </div>
+
+    <!-- Final CTA -->
+    <div class="mb-16">
+      <div class="bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-900 rounded-2xl p-12 text-center border-2 border-purple-500 shadow-2xl">
+        <div class="text-5xl mb-4">🚀</div>
+        
+        <div data-lang="nl">
+          <h2 class="text-4xl font-bold mb-4">Klaar om je Traffic te Herstellen?</h2>
+          <p class="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
+            Stop met traffic verliezen aan AI Overviews. Krijg vandaag nog je persoonlijke roadmap naar 90+ content scores.
+          </p>
+        </div>
+        
+        <div data-lang="en">
+          <h2 class="text-4xl font-bold mb-4">Ready to Recover Your Traffic?</h2>
+          <p class="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
+            Stop losing traffic to AI Overviews. Get your personalized roadmap to 90+ content scores today.
+          </p>
+        </div>
+        
+        <div class="flex gap-4 justify-center flex-wrap">
+          <button onclick="document.getElementById('scanInput').scrollIntoView({behavior:'smooth'}); document.getElementById('scanInput').focus()" 
+                  class="cta-pulse bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 px-8 py-4 rounded-lg font-bold text-lg transition-all shadow-lg hover:shadow-xl">
+            <span data-lang="nl">🔍 Scan Gratis</span>
+            <span data-lang="en">🔍 Scan Free</span>
+          </button>
+          
+          <a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20discuss%20SEO%20optimization" 
+             target="_blank"
+             class="bg-green-600 hover:bg-green-700 px-8 py-4 rounded-lg font-bold text-lg transition-all shadow-lg hover:shadow-xl">
+            <span data-lang="nl">💬 Gratis Consultatie</span>
+            <span data-lang="en">💬 Free Consultation</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <footer class="bg-gray-800 border-t-2 border-gray-700 mt-16">
+    <div class="max-w-7xl mx-auto px-6 py-12">
+      <div class="grid md:grid-cols-4 gap-8 mb-8">
+        
+        <div>
+          <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-4">
+            ContentScale
+          </div>
+          <p class="text-gray-400 text-sm" data-lang="nl">
+            Professional SEO content optimalisatie gebaseerd op Google's E-E-A-T richtlijnen.
+          </p>
+          <p class="text-gray-400 text-sm" data-lang="en">
+            Professional SEO content optimization based on Google's E-E-A-T guidelines.
+          </p>
+        </div>
+        
+        <div>
+          <h3 class="font-bold mb-4" data-lang="nl">Product</h3>
+          <h3 class="font-bold mb-4" data-lang="en">Product</h3>
+          <ul class="space-y-2 text-sm">
+            <li><a href="#scanner" class="text-gray-400 hover:text-white transition-colors">Scanner</a></li>
+            <li><a href="#lead-scanner" class="text-gray-400 hover:text-white transition-colors">Lead Scanner</a></li>
+            <li><a href="#pricing" class="text-gray-400 hover:text-white transition-colors">Pricing</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h3 class="font-bold mb-4" data-lang="nl">Bedrijf</h3>
+          <h3 class="font-bold mb-4" data-lang="en">Company</h3>
+          <ul class="space-y-2 text-sm">
+            <li><a href="#blog" class="text-gray-400 hover:text-white transition-colors">Blog</a></li>
+            <li><a href="#leaderboard" class="text-gray-400 hover:text-white transition-colors">Leaderboard</a></li>
+            <li><a href="#freelancers" class="text-gray-400 hover:text-white transition-colors" data-lang="nl">Specialisten</a></li>
+            <li><a href="#freelancers" class="text-gray-400 hover:text-white transition-colors" data-lang="en">Specialists</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h3 class="font-bold mb-4">Contact</h3>
+          <ul class="space-y-2 text-sm">
+            <li class="text-gray-400">
+              <i class="fas fa-envelope mr-2"></i>
+              info@contentscale.site
+            </li>
+            <li>
+              <a href="https://wa.me/31628073996" target="_blank" class="text-gray-400 hover:text-white transition-colors">
+                <i class="fab fa-whatsapp mr-2"></i>
+                +31 6 2807 3996
+              </a>
+            </li>
+            <li class="text-gray-400">
+              <i class="fas fa-map-marker-alt mr-2"></i>
+              Amsterdam, NL
+            </li>
+          </ul>
+        </div>
+        
+      </div>
+      
+      <div class="border-t border-gray-700 pt-8 text-center text-sm text-gray-400">
+        <p>&copy; 2025 ContentScale. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Email Config Modal -->
+<div id="emailConfigModal" class="modal">
+  <div class="modal-content"></div>
+</div>
+
+<!-- Email Review Modal (blijft hetzelfde) -->
+<div id="emailReviewModal" class="modal">
+  <div class="modal-content"></div>
+</div>
+
+</body>
+
+  <!-- Scan Results Modal -->
+  <div id="scanModal" class="modal">
+    <div class="modal-content"></div>
+  </div>
+
+  <!-- Freelancer Registration Modal -->
+  <div id="freelancerModal" class="modal">
+    <div class="modal-content p-8">
+      <div class="flex justify-between items-start mb-6">
+        <h2 class="text-3xl font-bold" data-lang="nl">📝 Registreer als SEO Specialist</h2>
+        <h2 class="text-3xl font-bold" data-lang="en">📝 Join Our Network</h2>
+        <button onclick="closeFreelancerModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+      </div>
+      
+      <form id="freelancerForm" class="space-y-4">
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-semibold mb-2" data-lang="nl">Volledige Naam *</label>
+            <label class="block text-sm font-semibold mb-2" data-lang="en">Full Name *</label>
+            <input type="text" name="name" required 
+                   class="w-full bg-gray-700 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-2">Email *</label>
+            <input type="email" name="email" required 
+                   class="w-full bg-gray-700 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold mb-2" data-lang="nl">Specialiteit *</label>
+          <label class="block text-sm font-semibold mb-2" data-lang="en">Specialty *</label>
+          <select name="specialty" required 
+                  class="w-full bg-gray-700 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+            <option value="" data-lang="nl">Selecteer specialiteit...</option>
+            <option value="" data-lang="en">Select specialty...</option>
+            <option value="SEO Content Writing">SEO Content Writing</option>
+            <option value="Technical SEO">Technical SEO</option>
+            <option value="Content Strategy">Content Strategy</option>
+            <option value="Link Building">Link Building</option>
+            <option value="Local SEO">Local SEO</option>
+          </select>
+        </div>
+        
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-semibold mb-2" data-lang="nl">Jaren Ervaring *</label>
+            <label class="block text-sm font-semibold mb-2" data-lang="en">Years Experience *</label>
+            <input type="number" name="experience" min="0" max="50" required 
+                   class="w-full bg-gray-700 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-2">Portfolio URL</label>
+            <input type="url" name="portfolio" 
+                   class="w-full bg-gray-700 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold mb-2" data-lang="nl">Bio (max 200 tekens) *</label>
+          <label class="block text-sm font-semibold mb-2" data-lang="en">Bio (max 200 chars) *</label>
+          <textarea name="bio" maxlength="200" required rows="3"
+                    class="w-full bg-gray-700 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+        </div>
+        
+        <button type="submit" 
+                class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-8 py-4 rounded-lg font-bold text-lg transition-all shadow-lg hover:shadow-xl">
+          <span data-lang="nl">Verstuur Aanmelding</span>
+          <span data-lang="en">Submit Application</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Lead Scanner Module -->
+  <script src="/lead-scanner-module.js"></script>
+
+  <!-- Main JavaScript -->
+  <script>
+ // ============================================
+// DEEL 1: LANGUAGE SYSTEM + LEAD SCANNER
+// Plak dit EERST in je <script> tag
+// ============================================
+
+let scanData = null;
+let publicScanner = null;
+let scrapedLeads = [];
+let currentLang = localStorage.getItem('contentscale_lang') || 'en';
+
+// ============================================
+// LANGUAGE SYSTEM
+// ============================================
+
+function switchLanguage(lang) {
+  currentLang = lang;
+  localStorage.setItem('contentscale_lang', lang);
+  document.getElementById('langBtnNL').classList.toggle('active', lang === 'nl');
+  document.getElementById('langBtnEN').classList.toggle('active', lang === 'en');
+  document.querySelectorAll('[data-lang]').forEach(el => {
+    el.classList.toggle('active-lang', el.getAttribute('data-lang') === lang);
+  });
+  document.documentElement.lang = lang;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  switchLanguage(currentLang);
+  if (window.LeadScanner) {
+    publicScanner = new window.LeadScanner({
+      apiEndpoint: '/api/scan',
+      onScanComplete: (result) => console.log('Scan complete:', result),
+      onError: (error) => console.error('Scan error:', error)
     });
+  }
+  loadFreelancers();
+  loadLeaderboard();
+  loadBlog();
+});
+
+// ============================================
+// LEAD SCANNER MODE SWITCHER
+// ============================================
+
+function switchScanMode(mode) {
+  const singleMode = document.getElementById('singleScanMode');
+  const bulkMode = document.getElementById('bulkScanMode');
+  const singleBtn = document.getElementById('modeSingleBtn');
+  const bulkBtn = document.getElementById('modeBulkBtn');
+  if (mode === 'single') {
+    singleMode.classList.remove('hidden');
+    bulkMode.classList.add('hidden');
+    singleBtn.classList.add('active');
+    bulkBtn.classList.remove('active');
+  } else {
+    singleMode.classList.add('hidden');
+    bulkMode.classList.remove('hidden');
+    singleBtn.classList.remove('active');
+    bulkBtn.classList.add('active');
+  }
+}
+
+// ============================================
+// SINGLE URL SCANNER
+// ============================================
+
+async function scanSingleURLPublic() {
+  const input = document.getElementById('singleUrlInput');
+  const button = document.getElementById('singleScanBtn');
+  const progressDiv = document.getElementById('singleScanProgress');
+  const progressBar = document.getElementById('singleProgressBar');
+  const progressText = document.getElementById('singleProgressText');
+  const resultDiv = document.getElementById('singleScanResult');
+  const url = input.value.trim();
+  
+  if (!url) {
+    alert(currentLang === 'nl' ? 'Voer een URL in' : 'Enter a URL');
+    return;
+  }
+  
+  progressDiv.classList.remove('hidden');
+  resultDiv.classList.add('hidden');
+  button.disabled = true;
+  button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + (currentLang === 'nl' ? 'Scannen...' : 'Scanning...');
+  
+  let progress = 0;
+  const progressInterval = setInterval(() => {
+    if (progress < 90) {
+      progress += Math.random() * 15;
+      progressBar.style.width = Math.min(90, progress) + '%';
+      progressText.textContent = (currentLang === 'nl' ? 'Analyseren ' : 'Analyzing ') + url + '...';
+    }
+  }, 300);
+  
+  try {
+    let result;
+    if (publicScanner && publicScanner.scanSingleURL) {
+      result = await publicScanner.scanSingleURL(url);
+    } else {
+      const response = await fetch('/api/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      result = await response.json();
+    }
+    clearInterval(progressInterval);
+    progressBar.style.width = '100%';
+    progressText.textContent = currentLang === 'nl' ? 'Scan voltooid!' : 'Scan complete!';
+    setTimeout(() => {
+      progressDiv.classList.add('hidden');
+      displaySingleScanResult(result);
+    }, 500);
+  } catch (error) {
+    clearInterval(progressInterval);
+    progressDiv.classList.add('hidden');
+    alert((currentLang === 'nl' ? 'Scan mislukt: ' : 'Scan failed: ') + error.message);
+  } finally {
+    button.disabled = false;
+    button.innerHTML = (currentLang === 'nl' ? '🚀 Start Scan' : '🚀 Start Scan');
+  }
+}
+
+// ============================================
+// DISPLAY SCAN RESULT - ✅ FIXED VERSION
+// ============================================
+
+function displaySingleScanResult(result) {
+  const resultDiv = document.getElementById('singleScanResult');
+  
+  // ✅ FIX: Check multiple locations for wordCount
+  const wordCount = result.wordCount || result.content_stats?.wordCount || result.details?.wordCount || 0;
+  
+  // NOT QUALIFIED (< 1100 words)
+  if (wordCount < 1100) {
+    const titleText = currentLang === 'nl' ? 'Niet Gekwalificeerd als Lead' : 'Not Qualified as Lead';
+    const wordText = currentLang === 'nl' ? 'woorden' : 'words';
+    const minText = currentLang === 'nl' ? 'Minimum 1100 woorden vereist voor optimalisatie potentieel' : 'Minimum 1100 words required for optimization potential';
+    const tipText = currentLang === 'nl' ? 'Tip: Scan pagina\'s met substantiële content voor betere leads' : 'Tip: Scan pages with substantial content for better leads';
+    
+    resultDiv.innerHTML = '<div class="scan-result-card bg-yellow-900 bg-opacity-30 border-2 border-yellow-500 rounded-xl p-8 text-center">' +
+      '<div class="text-6xl mb-4">⚠️</div>' +
+      '<h3 class="text-3xl font-bold text-yellow-400 mb-3">' + titleText + '</h3>' +
+      '<p class="text-lg text-gray-300 mb-2">Deze pagina heeft slechts <strong class="text-yellow-400">' + wordCount + ' ' + wordText + '</strong></p>' +
+      '<p class="text-gray-400 mb-6">' + minText + '</p>' +
+      '<div class="bg-gray-800 rounded-lg p-4 inline-block"><p class="text-sm text-gray-400">💡 ' + tipText + '</p></div>' +
+      '</div>';
+    resultDiv.classList.remove('hidden');
+    return;
+  }
+  
+  // QUALIFIED LEAD - Show full report
+  const score = result.score || 0;
+const potentialScore = Math.min(98, score + Math.floor((100 - score) * 0.8));
+  const improvement = potentialScore - score;
+  const metrics = result.metrics || { content: 0, technical: 0, ux: 100 };
+  const recommendations = generateDetailedRecommendations(score, metrics, wordCount);
+  
+  let scoreColor = 'text-red-400', scoreLabel = 'Poor', scoreBg = 'bg-red-900';
+  if (score >= 90) { scoreColor = 'text-green-400'; scoreLabel = currentLang === 'nl' ? 'Uitstekend' : 'Excellent'; scoreBg = 'bg-green-900'; }
+  else if (score >= 75) { scoreColor = 'text-blue-400'; scoreLabel = currentLang === 'nl' ? 'Goed' : 'Good'; scoreBg = 'bg-blue-900'; }
+  else if (score >= 60) { scoreColor = 'text-yellow-400'; scoreLabel = currentLang === 'nl' ? 'Gemiddeld' : 'Average'; scoreBg = 'bg-yellow-900'; }
+  
+  const recsHTML = recommendations.map((rec, i) => {
+    const borderColor = rec.priority === 'HIGH' ? 'border-red-500' : rec.priority === 'MEDIUM' ? 'border-yellow-500' : 'border-blue-500';
+    const badgeColor = rec.priority === 'HIGH' ? 'bg-red-600' : rec.priority === 'MEDIUM' ? 'bg-yellow-600' : 'bg-blue-600';
+    return '<div class="bg-gray-700 rounded-lg p-4 border-l-4 ' + borderColor + ' hover:bg-gray-650 transition-all">' +
+      '<div class="flex items-start gap-3">' +
+      '<div class="text-2xl font-bold text-gray-500 mt-1">' + (i+1) + '</div>' +
+      '<div class="flex-1">' +
+      '<div class="flex items-center gap-2 mb-2 flex-wrap">' +
+      '<h5 class="font-bold text-white text-sm md:text-base">' + rec.title + '</h5>' +
+      '<span class="text-xs px-2 py-1 rounded ' + badgeColor + ' text-white">' + rec.priority + '</span>' +
+      '<span class="text-xs px-2 py-1 rounded bg-green-600 text-white font-semibold">+' + rec.impact + ' pts</span>' +
+      '</div>' +
+      '<p class="text-sm text-gray-300 mb-2">' + rec.description + '</p>' +
+      '<div class="flex items-center gap-4 text-xs text-gray-400 flex-wrap">' +
+      '<span>⏱️ ' + rec.effort + '</span><span>💵 ' + rec.cost + '</span>' +
+      '</div></div></div></div>';
+  }).join('');
+  
+  resultDiv.innerHTML = '<div class="scan-result-card bg-gray-800 rounded-2xl p-8 border-2 border-purple-500 shadow-2xl">' +
+    '<div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 pb-6 border-b-2 border-gray-700 gap-4">' +
+    '<div class="flex-1"><h3 class="text-2xl font-bold text-white mb-2">' + (currentLang === 'nl' ? '📊 Lead Analyse Rapport' : '📊 Lead Analysis Report') + '</h3>' +
+    '<p class="text-sm text-gray-400 break-all mb-2">' + (result.url || '') + '</p>' +
+    '<div class="flex items-center gap-3 text-sm flex-wrap">' +
+    '<span class="text-gray-400">📝 ' + wordCount + ' ' + (currentLang === 'nl' ? 'woorden' : 'words') + '</span>' +
+    '<span class="text-gray-400">•</span>' +
+    '<span class="px-3 py-1 bg-green-600 rounded-full text-white font-semibold text-xs">✅ ' + (currentLang === 'nl' ? 'Gekwalificeerde Lead' : 'Qualified Lead') + '</span></div></div>' +
+    '<div class="text-center ' + scoreBg + ' bg-opacity-30 rounded-2xl px-8 py-6 border-2 border-current">' +
+    '<div class="' + scoreColor + ' text-6xl font-black mb-2">' + score + '</div>' +
+    '<div class="text-sm text-gray-300 font-semibold">' + scoreLabel + '</div></div></div>' +
+    '<div class="grid md:grid-cols-2 gap-6 mb-8"><div class="bg-gray-900 rounded-xl p-6 border-2 border-gray-600">' +
+    '<h4 class="text-lg font-bold text-white mb-4 flex items-center gap-2"><span>📊</span><span>' + (currentLang === 'nl' ? 'Huidige Staat' : 'Current State') + '</span></h4>' +
+    '<div class="space-y-3"><div><div class="flex justify-between items-center mb-1">' +
+    '<span class="text-sm text-gray-300">' + (currentLang === 'nl' ? 'Content Kwaliteit' : 'Content Quality') + '</span>' +
+    '<span class="font-bold ' + scoreColor + '">' + metrics.content + '/50</span></div>' +
+    '<div class="h-2 bg-gray-700 rounded-full overflow-hidden"><div class="h-full bg-blue-500 transition-all" style="width: ' + ((metrics.content/50)*100) + '%"></div></div></div>' +
+    '<div><div class="flex justify-between items-center mb-1"><span class="text-sm text-gray-300">' + (currentLang === 'nl' ? 'Technisch SEO' : 'Technical SEO') + '</span>' +
+    '<span class="font-bold text-green-400">' + metrics.technical + '/20</span></div>' +
+    '<div class="h-2 bg-gray-700 rounded-full overflow-hidden"><div class="h-full bg-green-500 transition-all" style="width: ' + ((metrics.technical/20)*100) + '%"></div></div></div>' +
+    '<div><div class="flex justify-between items-center mb-1"><span class="text-sm text-gray-300">' + (currentLang === 'nl' ? 'Gebruikerservaring' : 'User Experience') + '</span>' +
+    '<span class="font-bold text-yellow-400">' + metrics.ux + '/30</span></div>' +
+    '<div class="h-2 bg-gray-700 rounded-full overflow-hidden"><div class="h-full bg-yellow-500 transition-all" style="width: ' + ((metrics.ux/30)*100) + '%"></div></div></div></div></div>' +
+    '<div class="bg-gradient-to-br from-green-900 to-emerald-900 rounded-xl p-6 border-2 border-green-500">' +
+    '<h4 class="text-lg font-bold text-white mb-4 flex items-center gap-2"><span>🚀</span><span>' + (currentLang === 'nl' ? 'Potentieel (Na Optimalisatie)' : 'Potential (After Optimization)') + '</span></h4>' +
+    '<div class="text-center mb-4"><div class="text-6xl md:text-7xl font-black text-green-400 mb-2">' + potentialScore + '</div>' +
+    '<div class="text-green-300 font-semibold text-lg">+' + improvement + ' ' + (currentLang === 'nl' ? 'punten mogelijk!' : 'points possible!') + '</div></div>' +
+    '<div class="bg-green-800 bg-opacity-50 rounded-lg p-4"><div class="text-sm text-green-200 space-y-1">' +
+    '<div class="flex items-center gap-2"><span>⏱️</span><span>' + (currentLang === 'nl' ? 'Timeline: 2-3 weken' : 'Timeline: 2-3 weeks') + '</span></div>' +
+    '<div class="flex items-center gap-2"><span>💰</span><span>' + (currentLang === 'nl' ? 'Investering' : 'Investment') + ': €' + Math.round(improvement * 15) + '-' + Math.round(improvement * 20) + '</span></div>' +
+    '<div class="flex items-center gap-2"><span>📈</span><span>ROI: 300-500%</span></div></div></div></div></div>' +
+    '<div class="mb-6"><h4 class="text-xl font-bold text-white mb-4 flex items-center gap-2"><span>💡</span><span>' + (currentLang === 'nl' ? 'Quick Wins & Aanbevelingen' : 'Quick Wins & Recommendations') + '</span></h4>' +
+    '<div class="space-y-3">' + recsHTML + '</div></div>' +
+    '<div class="border-t-2 border-gray-700 pt-6"><h4 class="text-lg font-bold text-white mb-4">' + (currentLang === 'nl' ? '📤 Deel dit Rapport' : '📤 Share This Report') + '</h4>' +
+    '<div class="grid grid-cols-2 md:grid-cols-4 gap-3">' +
+    '<button onclick="shareLeadViaWhatsApp(\'' + encodeURIComponent(result.url) + '\', ' + score + ', ' + potentialScore + ')" class="bg-green-600 hover:bg-green-700 px-4 py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"><i class="fab fa-whatsapp"></i><span>WhatsApp</span></button>' +
+    '<button onclick="shareLeadViaEmail(\'' + encodeURIComponent(result.url) + '\', ' + score + ', ' + potentialScore + ')" class="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"><i class="fas fa-envelope"></i><span>Email</span></button>' +
+    '<button onclick="shareLeadViaLinkedIn(\'' + encodeURIComponent(result.url) + '\', ' + score + ', ' + potentialScore + ')" class="bg-blue-700 hover:bg-blue-800 px-4 py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"><i class="fab fa-linkedin"></i><span>LinkedIn</span></button>' +
+    '<button onclick="copyLeadReport(\'' + encodeURIComponent(result.url) + '\', ' + score + ', ' + potentialScore + ')" class="bg-gray-600 hover:bg-gray-700 px-4 py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"><i class="fas fa-copy"></i><span>' + (currentLang === 'nl' ? 'Kopieer' : 'Copy') + '</span></button>' +
+    '</div></div></div>';
+  
+  resultDiv.classList.remove('hidden');
+}
+
+// ============================================
+// RECOMMENDATIONS GENERATOR
+// ============================================
+
+function generateDetailedRecommendations(score, metrics, wordCount) {
+  const recs = [];
+  
+  if (metrics.content < 40) {
+    recs.push({
+      priority: 'HIGH',
+      title: currentLang === 'nl' ? 'Voeg Auteur Credentials Toe' : 'Add Author Credentials',
+      impact: 5,
+      effort: currentLang === 'nl' ? 'Laag (1-2 uur)' : 'Low (1-2 hours)',
+      cost: '€75-100',
+      description: currentLang === 'nl' ? 'Voeg een auteur bio met credentials toe om E-A-T signalen te versterken' : 'Add an author bio with credentials to build E-A-T signals'
+    });
+  }
+  
+  if (wordCount < 1500) {
+    recs.push({
+      priority: 'MEDIUM',
+      title: currentLang === 'nl' ? 'Vergroot Content Diepte' : 'Expand Content Depth',
+      impact: 4,
+      effort: currentLang === 'nl' ? 'Gemiddeld (3-4 uur)' : 'Medium (3-4 hours)',
+      cost: '€150-200',
+      description: currentLang === 'nl' ? 'Verhoog van ' + wordCount + ' naar 1500+ woorden met uitgebreide coverage' : 'Increase from ' + wordCount + ' to 1500+ words with comprehensive coverage'
+    });
+  }
+  
+  if (metrics.technical < 15) {
+    recs.push({
+      priority: 'HIGH',
+      title: currentLang === 'nl' ? 'Implementeer Schema Markup' : 'Implement Schema Markup',
+      impact: 8,
+      effort: currentLang === 'nl' ? 'Gemiddeld (2-3 uur)' : 'Medium (2-3 hours)',
+      cost: '€100-150',
+      description: currentLang === 'nl' ? 'Voeg Article/Product schema toe voor betere SERP weergave' : 'Add Article/Product schema for better SERP appearance'
+    });
+  }
+  
+  if (score < 75) {
+    recs.push({
+      priority: 'HIGH',
+      title: currentLang === 'nl' ? 'Optimaliseer Pagina Snelheid' : 'Optimize Page Speed',
+      impact: 6,
+      effort: currentLang === 'nl' ? 'Gemiddeld (4-5 uur)' : 'Medium (4-5 hours)',
+      cost: '€200-300',
+      description: currentLang === 'nl' ? 'Reduceer laadtijd naar <3s via image optimalisatie en caching' : 'Reduce load time to <3s through image optimization and caching'
+    });
+  }
+  
+  recs.push({
+    priority: 'MEDIUM',
+    title: currentLang === 'nl' ? 'Voeg FAQ Sectie Toe' : 'Add FAQ Section',
+    impact: 5,
+    effort: currentLang === 'nl' ? 'Laag (1-2 uur)' : 'Low (1-2 hours)',
+    cost: '€75-100',
+    description: currentLang === 'nl' ? 'Beantwoord veelgestelde vragen om AI Overview kansen te pakken' : 'Answer common questions to capture AI Overview opportunities'
+  });
+  
+  return recs.slice(0, 5);
+}
+
+// ============================================
+// SHARE FUNCTIONS
+// ============================================
+
+function shareLeadViaWhatsApp(url, currentScore, potentialScore) {
+  const decodedUrl = decodeURIComponent(url);
+  const message = currentLang === 'nl' ?
+    '🚨 SEO Kans Gevonden!\n\nIk heb ' + decodedUrl + ' geanalyseerd en ontdekte:\n\nHuidige Score: ' + currentScore + '/100\nPotentiële Score: ' + potentialScore + '/100\nVerbetering: +' + (potentialScore - currentScore) + ' punten mogelijk!\n\nWil je het volledige rapport? Laten we chatten!' :
+    '🚨 SEO Opportunity Alert!\n\nI analyzed ' + decodedUrl + ' and found:\n\nCurrent Score: ' + currentScore + '/100\nPotential Score: ' + potentialScore + '/100\nImprovement: +' + (potentialScore - currentScore) + ' points possible!\n\nWant the full report? Let\'s chat!';
+  window.open('https://wa.me/?text=' + encodeURIComponent(message), '_blank');
+}
+
+function shareLeadViaEmail(url, currentScore, potentialScore) {
+  const decodedUrl = decodeURIComponent(url);
+  const subject = currentLang === 'nl' ? 'SEO Analyse: ' + decodedUrl + ' scoorde ' + currentScore + '/100' : 'SEO Analysis: ' + decodedUrl + ' scored ' + currentScore + '/100';
+  const body = currentLang === 'nl' ?
+    'Hoi,\n\nIk heb een AI-era SEO analyse uitgevoerd op ' + decodedUrl + ' en significante kansen ontdekt:\n\n📊 HUIDIGE SCORE: ' + currentScore + '/100\n🚀 POTENTIËLE SCORE: ' + potentialScore + '/100\n📈 VERBETERING: +' + (potentialScore - currentScore) + ' punten\n\nJe website heeft sterk potentieel! Met enkele strategische optimalisaties kunnen we je zichtbaarheid significant verbeteren.\n\nWil je de volledige analyse en implementatie plan bespreken?\n\nGroeten' :
+    'Hi,\n\nI ran an AI-era SEO analysis on ' + decodedUrl + ' and discovered significant opportunities:\n\n📊 CURRENT SCORE: ' + currentScore + '/100\n🚀 POTENTIAL SCORE: ' + potentialScore + '/100\n📈 IMPROVEMENT: +' + (potentialScore - currentScore) + ' points\n\nYour website has strong potential! With some strategic optimizations, we could boost your visibility significantly.\n\nWant to discuss the full analysis and implementation plan?\n\nBest regards';
+  window.location.href = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+}
+
+function shareLeadViaLinkedIn(url, currentScore, potentialScore) {
+  const decodedUrl = decodeURIComponent(url);
+  const text = currentLang === 'nl' ?
+    'Zojuist ' + decodedUrl + ' geanalyseerd - ' + (potentialScore - currentScore) + ' punten SEO verbeteringspotentieel gevonden! Huidige: ' + currentScore + '/100, Potentieel: ' + potentialScore + '/100. #SEO #ContentOptimalisatie' :
+    'Just analyzed ' + decodedUrl + ' - found ' + (potentialScore - currentScore) + ' points of SEO improvement potential! Current: ' + currentScore + '/100, Potential: ' + potentialScore + '/100. #SEO #ContentOptimization';
+  window.open('https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(decodedUrl) + '&summary=' + encodeURIComponent(text), '_blank');
+}
+
+function copyLeadReport(url, currentScore, potentialScore) {
+  const decodedUrl = decodeURIComponent(url);
+  const report = currentLang === 'nl' ?
+    'SEO ANALYSE RAPPORT\n\nURL: ' + decodedUrl + '\n\nRESULTATEN:\n✅ Gekwalificeerde lead (1100+ woorden)\n📊 Huidige Score: ' + currentScore + '/100\n🚀 Potentieel: ' + potentialScore + '/100\n📈 Verbetering: +' + (potentialScore - currentScore) + ' punten\n\nINVESTERING:\n⏱️ Timeline: 2-3 weken\n💰 Budget: €' + Math.round((potentialScore - currentScore) * 15) + '-' + Math.round((potentialScore - currentScore) * 20) + '\n📈 ROI: 300-500%\n\nContact: info@contentscale.site\nWhatsApp: +31 6 2807 3996' :
+    'SEO ANALYSIS REPORT\n\nURL: ' + decodedUrl + '\n\nRESULTS:\n✅ Qualified lead (1100+ words)\n📊 Current Score: ' + currentScore + '/100\n🚀 Potential: ' + potentialScore + '/100\n📈 Improvement: +' + (potentialScore - currentScore) + ' points\n\nINVESTMENT:\n⏱️ Timeline: 2-3 weeks\n💰 Budget: €' + Math.round((potentialScore - currentScore) * 15) + '-' + Math.round((potentialScore - currentScore) * 20) + '\n📈 ROI: 300-500%\n\nContact: info@contentscale.site\nWhatsApp: +31 6 2807 3996';
+  navigator.clipboard.writeText(report).then(() => {
+    alert(currentLang === 'nl' ? '✅ Rapport gekopieerd naar clipboard!' : '✅ Report copied to clipboard!');
+  }).catch(err => {
+    console.error('Copy failed:', err);
+    alert(currentLang === 'nl' ? '❌ Kopiëren mislukt. Probeer handmatig te selecteren en kopiëren.' : '❌ Copy failed. Please select and copy manually.');
+  });
+}
+
+// ============================================
+// EINDE DEEL 1
+// Ga nu naar DEEL 2!
+// ============================================
 
     // ============================================
-    // ✅ KLAAR! ALLE FUNCTIES ZIJN NU COMPLEET
-    // ============================================
+// DEEL 2: MAIN SCANNER + MODAL FUNCTIONS
+// Plak dit NA DEEL 1
+// ============================================
 
-    console.log('✅ ContentScale JavaScript fully loaded!');
-    console.log('📊 Features enabled:');
-    console.log('  - Language switching (NL/EN)');
-    console.log('  - Main content scanner');
-    console.log('  - Lead scanner with 1100-word filter');
-    console.log('  - Share functions (WhatsApp, Email, LinkedIn, Copy)');
-    console.log('  - Freelancer directory');
-    console.log('  - Leaderboard');
-    console.log('  - Blog');
-    </script>
+// ============================================
+// MAIN SCANNER (Header)
+// ============================================
+
+async function performScan() {
+  const input = document.getElementById('scanInput');
+  const button = document.getElementById('scanButton');
+  const url = input.value.trim();
+  
+  if (!url) {
+    alert(currentLang === 'nl' ? 'Voer een URL in' : 'Please enter a URL to scan');
+    return;
+  }
+  
+  let fullUrl = url;
+  if (!url.startsWith('http')) {
+    fullUrl = 'https://' + url;
+  }
+  
+  try {
+    new URL(fullUrl);
+  } catch {
+    alert(currentLang === 'nl' ? 'Voer een geldige URL in' : 'Please enter a valid URL');
+    return;
+  }
+  
+  button.disabled = true;
+  button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + (currentLang === 'nl' ? 'Analyseren...' : 'Analyzing...');
+  
+  try {
+    const response = await fetch('/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: fullUrl })
+    });
+      
+    const data = await response.json();
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Scan failed');
+    }
+    
+    scanData = data;
+    displayScanResults(data);
+    
+  } catch (error) {
+    console.error('Scan error:', error);
+    alert((currentLang === 'nl' ? 'Scan mislukt: ' : 'Scan failed: ') + error.message);
+  } finally {
+    button.disabled = false;
+    button.innerHTML = currentLang === 'nl' ? '🚀 Analyseer Nu' : '🚀 Analyze Now';
+  }
+}
+
+// Enter key handler for main scanner
+document.getElementById('scanInput')?.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    performScan();
+  }
+});
+
+// ============================================
+// DISPLAY SCAN RESULTS (Main Scanner Modal)
+// ============================================
+
+function displayScanResults(data) {
+  const modal = document.getElementById('scanModal');
+  const modalContent = modal.querySelector('.modal-content');
+  
+  const score = data.score || 0;
+  const contentScore = data.metrics?.content || 0;
+  const technicalRaw = data.metrics?.technical || 0;
+  const technicalPercent = Math.round((technicalRaw / 20) * 100);
+  const uxScore = data.metrics?.ux || 100;
+  
+  let qualityClass = 'bg-red-600';
+  let qualityText = currentLang === 'nl' ? 'Slecht' : 'Poor';
+  
+  if (score >= 90) {
+    qualityClass = 'bg-green-600';
+    qualityText = currentLang === 'nl' ? 'Uitstekend' : 'Excellent';
+  } else if (score >= 75) {
+    qualityClass = 'bg-blue-600';
+    qualityText = currentLang === 'nl' ? 'Goed' : 'Good';
+  } else if (score >= 60) {
+    qualityClass = 'bg-yellow-600';
+    qualityText = currentLang === 'nl' ? 'Gemiddeld' : 'Average';
+  }
+  
+  const potentialScore = Math.min(96, score + 12 + Math.floor(Math.random() * 6));
+  
+  const recs = data.recommendations?.all || [];
+  let recsHtml = '';
+  
+  if (recs.length > 0) {
+    recsHtml = recs.map((rec, i) => 
+      '<div class="bg-gray-700 p-4 rounded-lg border-l-4 ' + (rec.impact === 'High' ? 'border-red-500' : rec.impact === 'Medium' ? 'border-yellow-500' : 'border-blue-500') + ' mb-3">' +
+      '<div class="flex items-start justify-between mb-2">' +
+      '<div class="flex-1">' +
+      '<div class="flex items-center gap-2 mb-1">' +
+      '<span class="text-2xl font-bold text-gray-400">' + (i + 1) + '</span>' +
+      '<span class="font-bold text-white">' + rec.title + '</span>' +
+      '<span class="text-xs px-2 py-1 rounded ' + (rec.impact === 'High' ? 'bg-red-600' : rec.impact === 'Medium' ? 'bg-yellow-600' : 'bg-blue-600') + '">' + rec.impact + '</span>' +
+      (rec.points ? '<span class="text-xs px-2 py-1 rounded bg-green-600">' + rec.points + '</span>' : '') +
+      '</div>' +
+      '<div class="text-xs text-gray-400">' + (rec.category || '') + '</div>' +
+      '</div>' +
+      '</div>' +
+      '<p class="text-sm text-gray-300 mb-2">' + (rec.description || '') + '</p>' +
+      (rec.howToFix ? '<details>' +
+      '<summary class="text-sm text-purple-400 cursor-pointer hover:text-purple-300 font-semibold">' +
+      '<i class="fas fa-wrench mr-1"></i> ' + (currentLang === 'nl' ? 'Oplossing' : 'How to Fix') +
+      '</summary>' +
+      '<div class="text-sm text-gray-300 bg-gray-800 p-4 rounded mt-2 whitespace-pre-line">' + rec.howToFix + '</div>' +
+      '</details>' : '') +
+      '</div>'
+    ).join('');
+  } else {
+    recsHtml = '<div class="text-center p-8 bg-green-900 bg-opacity-20 rounded-lg border-2 border-green-600">' +
+      '<div class="text-5xl mb-3">🎉</div>' +
+      '<h3 class="text-xl font-bold mb-2 text-green-400">' + (currentLang === 'nl' ? 'Uitstekende Content!' : 'Excellent Content Quality!') + '</h3>' +
+      '<p class="text-gray-300">' + (currentLang === 'nl' ? 'Je content voldoet al aan de hoogste standaarden.' : 'Your content already meets the highest standards.') + '</p>' +
+      '</div>';
+  }
+  
+  modalContent.innerHTML = '<div class="p-8">' +
+    '<div class="flex justify-between items-start mb-6">' +
+    '<div>' +
+    '<h2 class="text-3xl font-bold mb-2">' + (currentLang === 'nl' ? 'Content Kwaliteit Analyse' : 'Content Quality Analysis') + '</h2>' +
+    '<p class="text-sm text-gray-400">' + data.url + '</p>' +
+    '</div>' +
+    '<button onclick="closeScanModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>' +
+    '</div>' +
+    '<div class="grid md:grid-cols-2 gap-4 mb-6">' +
+    '<div class="bg-gray-800 rounded-xl p-6 border-2 ' + (score < 75 ? 'border-red-500' : 'border-gray-600') + '">' +
+    '<div class="text-sm text-gray-400 mb-2">' + (currentLang === 'nl' ? 'Huidige Score' : 'Current Score') + '</div>' +
+    '<div class="text-5xl font-bold mb-2">' + score + '<span class="text-2xl text-gray-400">/100</span></div>' +
+    '<div class="inline-block px-4 py-2 ' + qualityClass + ' rounded-full font-bold text-sm">' + qualityText + '</div>' +
+    '<div class="mt-4 space-y-2">' +
+    '<div>' +
+    '<div class="flex justify-between text-xs mb-1">' +
+    '<span>Content</span>' +
+    '<span class="font-bold">' + contentScore + '/100</span>' +
+    '</div>' +
+    '<div class="h-2 bg-gray-700 rounded-full overflow-hidden">' +
+    '<div class="h-full bg-blue-500" style="width: ' + contentScore + '%"></div>' +
+    '</div>' +
+    '</div>' +
+    '<div>' +
+    '<div class="flex justify-between text-xs mb-1">' +
+    '<span>Technical</span>' +
+    '<span class="font-bold">' + technicalRaw + '/20</span>' +
+    '</div>' +
+    '<div class="h-2 bg-gray-700 rounded-full overflow-hidden">' +
+    '<div class="h-full bg-green-500" style="width: ' + technicalPercent + '%"></div>' +
+    '</div>' +
+    '</div>' +
+    '<div>' +
+    '<div class="flex justify-between text-xs mb-1">' +
+    '<span>UX</span>' +
+    '<span class="font-bold">' + uxScore + '/100</span>' +
+    '</div>' +
+    '<div class="h-2 bg-gray-700 rounded-full overflow-hidden">' +
+    '<div class="h-full bg-yellow-500" style="width: ' + uxScore + '%"></div>' +
+    '</div>' +
+    '</div>' +
+    '</div>' +
+    '</div>' +
+    '<div class="bg-gradient-to-br from-green-900 to-emerald-900 rounded-xl p-6 border-2 border-green-500">' +
+    '<div class="text-sm text-gray-300 mb-2">' + (currentLang === 'nl' ? 'Potentieel met Onze Hulp' : 'Potential with Our Help') + '</div>' +
+    '<div class="text-5xl font-bold text-green-400 mb-2">' + potentialScore + '<span class="text-2xl text-gray-300">/100</span></div>' +
+    '<div class="inline-block px-4 py-2 bg-green-600 rounded-full font-bold text-sm">🏆 ' + (currentLang === 'nl' ? 'Elite' : 'Elite') + '</div>' +
+    '<div class="mt-4 pt-4 border-t border-green-700">' +
+    '<h4 class="text-sm font-bold mb-2 text-green-400">' + (currentLang === 'nl' ? 'Onze Aanpak:' : 'Our Approach:') + '</h4>' +
+    '<ul class="text-xs text-gray-300 space-y-1">' +
+    '<li>✅ Google E-E-A-T optimization</li>' +
+    '<li>✅ GRAAF Framework ' + (currentLang === 'nl' ? 'implementatie' : 'implementation') + '</li>' +
+    '<li>✅ CRAFT enhancement</li>' +
+    '<li>✅ Technical SEO fixes</li>' +
+    '</ul>' +
+    '</div>' +
+    '</div>' +
+    '</div>' +
+    '<div class="mb-6">' +
+    '<h3 class="text-xl font-bold mb-4"><i class="fas fa-route text-purple-400 mr-2"></i>' + (currentLang === 'nl' ? 'Verbeterplan' : 'Improvement Roadmap') + '</h3>' +
+    recsHtml +
+    '</div>' +
+    (score < 90 ? '<div class="bg-gradient-to-r from-green-900 to-emerald-900 rounded-xl p-6 text-center border-2 border-green-600">' +
+    '<div class="text-4xl mb-3">🚀</div>' +
+    '<h3 class="text-2xl font-bold mb-2">' + (currentLang === 'nl' ? 'Klaar voor ' + potentialScore + '+?' : 'Ready to Reach ' + potentialScore + '+?') + '</h3>' +
+    '<p class="text-gray-300 mb-4">' + (currentLang === 'nl' ? 'Onze experts implementeren alle verbeteringen' : 'Our experts implement all improvements') + '</p>' +
+    '<div class="flex gap-3 justify-center flex-wrap">' +
+    '<a href="https://wa.me/31628073996?text=' + (currentLang === 'nl' ? 'Hi!%20Ik%20heb%20' : 'Hi!%20I%20scanned%20') + encodeURIComponent(data.url) + '%20' + (currentLang === 'nl' ? 'gescand%20-%20score:%20' : 'and%20got%20') + score + '/100" ' +
+    'target="_blank" ' +
+    'class="inline-block bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold shadow-lg hover:shadow-xl">' +
+    '💬 ' + (currentLang === 'nl' ? 'Gratis Consultatie' : 'Free Consultation') +
+    '</a>' +
+    '<button onclick="closeScanModal(); setTimeout(() => document.getElementById(\'freelancers\')?.scrollIntoView({behavior:\'smooth\'}), 300)" ' +
+    'class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-bold shadow-lg hover:shadow-xl">' +
+    '📝 ' + (currentLang === 'nl' ? 'Huur Expert' : 'Hire Expert') +
+    '</button>' +
+    '</div>' +
+    '</div>' : '') +
+    '<div class="mt-4">' +
+    '<button onclick="closeScanModal()" class="w-full px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">' +
+    (currentLang === 'nl' ? 'Sluiten' : 'Close') +
+    '</button>' +
+    '</div>' +
+    '</div>';
+  
+  modal.classList.add('active');
+}
+
+function closeScanModal() {
+  document.getElementById('scanModal').classList.remove('active');
+}
+
+// ============================================
+// FREELANCER MODAL FUNCTIONS
+// ============================================
+
+function openFreelancerModal() {
+  document.getElementById('freelancerModal').classList.add('active');
+}
+
+function closeFreelancerModal() {
+  document.getElementById('freelancerModal').classList.remove('active');
+  document.getElementById('freelancerForm').reset();
+}
+
+function contactFreelancer(email, name) {
+  window.location.href = 'mailto:' + email + '?subject=' + (currentLang === 'nl' ? 'SEO Project via ContentScale' : 'SEO Project Inquiry via ContentScale') + '&body=' + (currentLang === 'nl' ? 'Hoi' : 'Hi') + ' ' + name + ',%0A%0A' + (currentLang === 'nl' ? 'Ik vond je via ContentScale en wil graag een project bespreken.' : 'I found you via ContentScale and would like to discuss a project.');
+}
+
+// Freelancer registration form handler
+document.getElementById('freelancerForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const formData = new FormData(e.target);
+  const data = Object.fromEntries(formData);
+  
+  try {
+    const response = await fetch('/api/freelancers/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      alert(currentLang === 'nl' ? 
+        'Aanmelding succesvol! We nemen binnenkort contact op.' : 
+        'Application submitted! We\'ll review and contact you soon.');
+      closeFreelancerModal();
+      loadFreelancers();
+    } else {
+      throw new Error(result.error || 'Registration failed');
+    }
+  } catch (error) {
+    console.error('Registration error:', error);
+    alert((currentLang === 'nl' ? 'Registratie mislukt: ' : 'Registration failed: ') + error.message);
+  }
+});
+
+// ============================================
+// EINDE DEEL 2
+// Ga nu naar DEEL 3!
+// ============================================
+
+    // ============================================
+// DEEL 3: FREELANCER, LEADERBOARD, BLOG
+// Plak dit NA DEEL 2 - DIT IS HET LAATSTE DEEL!
+// ============================================
+
+// ============================================
+// FREELANCER FUNCTIONS
+// ============================================
+
+async function loadFreelancers() {
+  try {
+    const response = await fetch('/api/freelancers');
+    const data = await response.json();
+    
+    if (data.success && data.freelancers && data.freelancers.length > 0) {
+      const grid = document.getElementById('freelancers-grid');
+      grid.innerHTML = data.freelancers.map(f => 
+        '<div class="freelancer-card">' +
+        '<div class="flex items-start justify-between mb-3">' +
+        '<div class="flex items-center gap-3">' +
+        '<div class="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-xl font-bold">' +
+        f.name.charAt(0) +
+        '</div>' +
+        '<div>' +
+        '<h3 class="font-bold text-lg">' + f.name + '</h3>' +
+        '<p class="text-sm text-gray-400">' + (f.specialty || f.title || 'SEO Specialist') + '</p>' +
+        '</div>' +
+        '</div>' +
+        (f.verified || f.is_featured ? '<span class="px-2 py-1 bg-green-600 rounded text-xs">✓ Verified</span>' : '') +
+        '</div>' +
+        '<p class="text-sm text-gray-300 mb-3">' + (f.bio || 'Professional SEO specialist') + '</p>' +
+        '<div class="flex items-center justify-between text-sm mb-3">' +
+        '<span class="text-gray-400">' + (f.experience || 5) + '+ ' + (currentLang === 'nl' ? 'jaar' : 'years') + '</span>' +
+        (f.portfolio || f.linkedin_url ? '<a href="' + (f.portfolio || f.linkedin_url) + '" target="_blank" class="text-blue-400 hover:underline">Portfolio →</a>' : '') +
+        '</div>' +
+        '<button onclick="contactFreelancer(\'' + f.email + '\', \'' + f.name + '\')" ' +
+        'class="w-full bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl">' +
+        (currentLang === 'nl' ? 'Contact' : 'Contact') + ' ' + f.name +
+        '</button>' +
+        '</div>'
+      ).join('');
+    } else {
+      document.getElementById('freelancers-grid').innerHTML = '<div class="col-span-full text-center p-8 bg-gray-800 rounded-lg">' +
+        '<p class="text-gray-400">' + (currentLang === 'nl' ? 'Nog geen specialisten. Wees de eerste!' : 'No specialists yet. Be the first to join!') + '</p>' +
+        '</div>';
+    }
+  } catch (error) {
+    console.error('Load freelancers error:', error);
+    document.getElementById('freelancers-grid').innerHTML = '<div class="col-span-full text-center p-8 bg-red-900 bg-opacity-20 rounded-lg border border-red-600">' +
+      '<p class="text-red-400">' + (currentLang === 'nl' ? 'Kon specialisten niet laden' : 'Failed to load specialists') + '</p>' +
+      '</div>';
+  }
+}
+
+// ============================================
+// LEADERBOARD FUNCTIONS
+// ============================================
+
+async function loadLeaderboard() {
+  try {
+    const response = await fetch('/api/leaderboard');
+    const data = await response.json();
+    
+    if (data.success && data.entries && data.entries.length > 0) {
+      const list = document.getElementById('leaderboard-list');
+      list.innerHTML = data.entries.slice(0, 10).map((entry, index) => {
+        const rank = index + 1;
+        const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
+        
+        return '<div class="leaderboard-card">' +
+          '<div class="flex items-center justify-between">' +
+          '<div class="flex items-center gap-4 flex-1">' +
+          '<div class="rank-badge ' + rankClass + '">' +
+          (rank <= 3 ? (rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉') : rank) +
+          '</div>' +
+          '<div class="flex-1">' +
+          '<h3 class="font-bold text-xl">' + entry.company_name + '</h3>' +
+          '<p class="text-sm text-gray-400">' + (entry.country || 'Global') + '</p>' +
+          '</div>' +
+          '</div>' +
+          '<div class="text-right">' +
+          '<div class="text-3xl font-bold text-yellow-400">' + entry.score + '</div>' +
+          '<div class="text-xs text-gray-400">' + (currentLang === 'nl' ? 'Score' : 'Score') + '</div>' +
+          '</div>' +
+          '</div>' +
+          (entry.url ? '<div class="mt-3">' +
+          '<a href="' + entry.url + '" target="_blank" ' +
+          'class="block text-center bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl">' +
+          (currentLang === 'nl' ? 'Bezoek Website' : 'Visit Website') +
+          '</a>' +
+          '</div>' : '') +
+          '</div>';
+      }).join('');
+    } else {
+      document.getElementById('leaderboard-list').innerHTML = '<div class="text-center p-8 bg-gray-800 rounded-lg">' +
+        '<p class="text-gray-400">' + (currentLang === 'nl' ? 'Leaderboard komt binnenkort!' : 'Leaderboard coming soon!') + '</p>' +
+        '</div>';
+    }
+  } catch (error) {
+    console.error('Load leaderboard error:', error);
+    document.getElementById('leaderboard-list').innerHTML = '<div class="text-center p-8 bg-red-900 bg-opacity-20 rounded-lg border border-red-600">' +
+      '<p class="text-red-400">' + (currentLang === 'nl' ? 'Kon leaderboard niet laden' : 'Failed to load leaderboard') + '</p>' +
+      '</div>';
+  }
+}
+
+// ============================================
+// BLOG FUNCTIONS
+// ============================================
+
+async function loadBlog() {
+  try {
+    const response = await fetch('/api/blog?limit=3');
+    const data = await response.json();
+    
+    if (data.success && data.posts && data.posts.length > 0) {
+      const grid = document.getElementById('blog-grid');
+      grid.innerHTML = data.posts.map(post => 
+        '<div class="blog-card">' +
+        (post.featured_image ? '<img src="' + post.featured_image + '" alt="' + post.title + '" class="w-full h-48 object-cover">' : '') +
+        '<div class="p-6">' +
+        '<div class="flex gap-2 mb-3">' +
+        (post.tags && post.tags.length > 0 ? post.tags.slice(0, 2).map(tag => 
+          '<span class="px-2 py-1 bg-purple-600 rounded text-xs">' + tag + '</span>'
+        ).join('') : '') +
+        '</div>' +
+        '<h3 class="font-bold text-xl mb-2 line-clamp-2">' + post.title + '</h3>' +
+        '<p class="text-sm text-gray-400 mb-4 line-clamp-3">' + (post.excerpt || '') + '</p>' +
+        '<div class="flex items-center justify-between text-sm">' +
+        '<span class="text-gray-400">' + new Date(post.published_at || Date.now()).toLocaleDateString() + '</span>' +
+        '<a href="/blog/' + post.slug + '" class="text-blue-400 hover:underline">' +
+        (currentLang === 'nl' ? 'Lees Meer' : 'Read More') + ' →' +
+        '</a>' +
+        '</div>' +
+        '</div>' +
+        '</div>'
+      ).join('');
+    } else {
+      document.getElementById('blog-grid').innerHTML = '<div class="col-span-full text-center p-8 bg-gray-800 rounded-lg">' +
+        '<p class="text-gray-400">' + (currentLang === 'nl' ? 'Blog posts komen binnenkort!' : 'Blog posts coming soon!') + '</p>' +
+        '</div>';
+    }
+  } catch (error) {
+    console.error('Load blog error:', error);
+    document.getElementById('blog-grid').innerHTML = '<div class="col-span-full text-center p-8 bg-red-900 bg-opacity-20 rounded-lg border border-red-600">' +
+      '<p class="text-red-400">' + (currentLang === 'nl' ? 'Kon blog posts niet laden' : 'Failed to load blog posts') + '</p>' +
+      '</div>';
+  }
+}
+
+// ============================================
+// GOOGLE MAPS BULK SCANNER (PLACEHOLDER)
+// Deze functies zijn voor toekomstig gebruik
+// ============================================
+
+// ============================================
+// GOOGLE MAPS BULK SCANNER - REAL IMPLEMENTATION
+// ============================================
+
+async function scrapeGoogleMapsPublic() {
+  const input = document.getElementById('googleMapsInput');
+  const button = document.getElementById('gmapsScrapeBtn');
+  const url = input.value.trim();
+  
+  if (!url || !url.includes('google.com/maps')) {
+    alert(currentLang === 'nl' ? 
+      'Voer een geldige Google Maps URL in' : 
+      'Enter a valid Google Maps URL');
+    return;
+  }
+  
+  button.disabled = true;
+  button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + 
+    (currentLang === 'nl' ? 'Scrapen...' : 'Scraping...');
+  
+  try {
+    const response = await fetch('/api/google-maps/scrape', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: url, maxResults: 20 })
+    });
+    
+    const data = await response.json();
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Scrape failed');
+    }
+    
+    scrapedLeads = data.leads || [];
+    displayScrapedLeads(scrapedLeads);
+    
+  } catch (error) {
+    console.error('Scrape error:', error);
+    alert((currentLang === 'nl' ? 'Scrape mislukt: ' : 'Scrape failed: ') + error.message);
+  } finally {
+    button.disabled = false;
+    button.innerHTML = currentLang === 'nl' ? '🗺️ Scrape Maps' : '🗺️ Scrape Maps';
+  }
+}
+
+// ============================================
+// DISPLAY SCRAPED LEADS
+// ============================================
+
+function displayScrapedLeads(leads) {
+  const container = document.getElementById('scrapedLeadsContainer');
+  const grid = document.getElementById('leadsGrid');
+  const countSpan = document.getElementById('leadCount');
+  const countSpanEN = document.getElementById('leadCountEN');
+  
+  if (!leads || leads.length === 0) {
+    alert(currentLang === 'nl' ? 
+      'Geen leads gevonden. Probeer een andere zoekopdracht.' : 
+      'No leads found. Try a different search.');
+    return;
+  }
+  
+  // Update count
+  if (countSpan) countSpan.textContent = leads.length;
+  if (countSpanEN) countSpanEN.textContent = leads.length;
+  
+  // Display leads
+  grid.innerHTML = leads.map((lead, index) => {
+    const hasWebsite = lead.website && lead.website.length > 0;
+    const websiteDisplay = hasWebsite ? 
+      `<a href="${lead.website}" target="_blank" class="text-blue-400 hover:underline text-xs truncate block">
+        ${lead.website}
+      </a>` : 
+      `<p class="text-xs text-gray-500 mb-2">❌ No website found</p>
+      <button onclick="offerWebsitePackage(${index})" 
+              class="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 px-3 py-2 rounded-lg text-sm font-bold transition-all mb-2">
+        💰 ${currentLang === 'nl' ? 'Bied Website Aan' : 'Offer Website Package'}
+      </button>`;
+    
+    return `
+      <div class="lead-card bg-gray-800 rounded-lg p-4 border-2 border-gray-600 hover:border-purple-500">
+        <div class="flex items-start gap-3 mb-3">
+          <input type="checkbox" 
+                 class="lead-checkbox mt-1" 
+                 data-index="${index}"
+                 onchange="updateSelectionCount()">
+          <div class="flex-1">
+            <h4 class="font-bold text-white mb-1">${lead.name}</h4>
+            <p class="text-xs text-gray-400 mb-1">${lead.category || 'Business'}</p>
+            ${lead.rating ? 
+              `<div class="flex items-center gap-1 mb-2">
+                <span class="text-yellow-400 text-sm">⭐ ${lead.rating}</span>
+                <span class="text-gray-500 text-xs">(${lead.reviews || 0})</span>
+              </div>` : ''}
+          </div>
+        </div>
+        
+        ${websiteDisplay}
+        
+        ${lead.phone ? 
+          `<a href="tel:${lead.phone}" class="block text-green-400 text-xs mb-2">
+            📞 ${lead.phone}
+          </a>` : ''}
+        
+        ${lead.address ? 
+          `<p class="text-xs text-gray-500 truncate">📍 ${lead.address}</p>` : ''}
+        
+        ${!hasWebsite ? '' : 
+          `<button onclick="scanSingleURLFromLead('${lead.website}', ${index})" 
+                  class="w-full bg-purple-600 hover:bg-purple-700 px-3 py-2 rounded-lg text-sm font-bold transition-all mt-2">
+            🔍 ${currentLang === 'nl' ? 'Scan Website' : 'Scan Website'}
+          </button>`}
+      </div>
+    `;
+  }).join('');
+  
+  container.classList.remove('hidden');
+}
+
+// ============================================
+// SCAN SINGLE URL FROM LEAD
+// ============================================
+
+async function scanSingleURLFromLead(url, index) {
+  try {
+    const response = await fetch('/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: url })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      // Store scan result in lead
+      scrapedLeads[index].scanResult = result;
+      
+      // Show quick summary in alert or modal
+      const score = result.score || 0;
+      const wordCount = result.content_stats?.wordCount || result.details?.wordCount || 0;
+      
+      if (wordCount >= 1100) {
+        alert(`✅ Qualified Lead!\n\nScore: ${score}/100\nWords: ${wordCount}\n\n${currentLang === 'nl' ? 'Potentieel voor optimalisatie!' : 'Potential for optimization!'}`);
+      } else {
+        alert(`⚠️ Not Qualified\n\nOnly ${wordCount} words (need 1100+)\n\n${currentLang === 'nl' ? 'Scan een pagina met meer content' : 'Scan a page with more content'}`);
+      }
+    }
+  } catch (error) {
+    alert('Scan failed: ' + error.message);
+  }
+}
+
+// ============================================
+// BULK SCAN ALL LEADS
+// ============================================
+
+async function scanAllGoogleMapsLeads() {
+  const checkboxes = document.querySelectorAll('.lead-checkbox:checked');
+  
+  if (checkboxes.length === 0) {
+    alert(currentLang === 'nl' ? 
+      'Selecteer eerst leads om te scannen' : 
+      'Select leads to scan first');
+    return;
+  }
+  
+  const progressDiv = document.getElementById('bulkScanProgress');
+  const progressBar = document.getElementById('bulkProgressBar');
+  const progressText = document.getElementById('bulkProgressText');
+  
+  progressDiv.classList.remove('hidden');
+  
+  let completed = 0;
+  const total = checkboxes.length;
+  
+  for (const checkbox of checkboxes) {
+    const index = parseInt(checkbox.dataset.index);
+    const lead = scrapedLeads[index];
+    
+    if (!lead.website) {
+      completed++;
+      continue;
+    }
+    
+    progressText.textContent = `${currentLang === 'nl' ? 'Scannen' : 'Scanning'} ${completed + 1}/${total}: ${lead.name}`;
+    progressBar.style.width = ((completed / total) * 100) + '%';
+    
+    try {
+      const response = await fetch('/api/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: lead.website })
+      });
+      
+      const result = await response.json();
+      scrapedLeads[index].scanResult = result;
+    } catch (error) {
+      console.error('Scan error:', error);
+    }
+    
+    completed++;
+    progressBar.style.width = ((completed / total) * 100) + '%';
+  }
+  
+  progressText.textContent = currentLang === 'nl' ? 
+    `✅ ${completed} leads gescand!` : 
+    `✅ ${completed} leads scanned!`;
+  
+  setTimeout(() => {
+    progressDiv.classList.add('hidden');
+    progressBar.style.width = '0%';
+  }, 2000);
+}
+
+// ============================================
+// SELECT ALL LEADS
+// ============================================
+
+function selectAllLeads() {
+  const checkboxes = document.querySelectorAll('.lead-checkbox');
+  const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+  
+  checkboxes.forEach(cb => {
+    cb.checked = !allChecked;
+  });
+  
+  updateSelectionCount();
+}
+
+function updateSelectionCount() {
+  const checked = document.querySelectorAll('.lead-checkbox:checked').length;
+  const button = document.getElementById('scanAllBtn');
+  
+  if (button) {
+    button.innerHTML = checked > 0 ? 
+      `⚡ ${currentLang === 'nl' ? 'Scan' : 'Scan'} ${checked}` : 
+      `⚡ ${currentLang === 'nl' ? 'Scan Alles' : 'Scan All'}`;
+  }
+}
+
+// ============================================
+// EXPORT FUNCTIONS
+// ============================================
+
+function exportLeadsToCSV() {
+  if (!scrapedLeads || scrapedLeads.length === 0) {
+    alert('No leads to export');
+    return;
+  }
+  
+  const headers = ['Name', 'Category', 'Rating', 'Reviews', 'Website', 'Phone', 'Address'];
+  const rows = scrapedLeads.map(lead => [
+    lead.name || '',
+    lead.category || '',
+    lead.rating || '',
+    lead.reviews || '',
+    lead.website || '',
+    lead.phone || '',
+    lead.address || ''
+  ]);
+  
+  let csv = headers.join(',') + '\n';
+  csv += rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+  
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `google-maps-leads-${Date.now()}.csv`;
+  a.click();
+}
+
+function exportLeadsToJSON() {
+  if (!scrapedLeads || scrapedLeads.length === 0) {
+    alert('No leads to export');
+    return;
+  }
+  
+  const json = JSON.stringify(scrapedLeads, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `google-maps-leads-${Date.now()}.json`;
+  a.click();
+}
+
+
+// ============================================
+// OFFER WEBSITE PACKAGE (NO-WEBSITE LEADS)
+// ============================================
+
+function offerWebsitePackage(index) {
+  const lead = scrapedLeads[index];
+  
+  if (!lead) {
+    alert('Lead niet gevonden');
+    return;
+  }
+  
+  // Generate WhatsApp message
+  const message = currentLang === 'nl' ?
+    `Hallo ${lead.name}!\n\n` +
+    `Ik zag jullie op Google Maps${lead.rating ? ` (${lead.rating}⭐ met ${lead.reviews || 0} reviews)` : ''}.\n\n` +
+    `Jullie hebben geen website, wat betekent dat je veel potentiële klanten mist die op Google zoeken!\n\n` +
+    `Ik kan helpen met:\n` +
+    `✅ Professionele website binnen 1 week\n` +
+    `✅ Direct zichtbaar op Google\n` +
+    `✅ Meer klanten online\n\n` +
+    `Interesse in een gratis adviesgesprek?\n\n` +
+    `Groet,\n[Jouw Naam]` :
+    
+    `Hi ${lead.name}!\n\n` +
+    `I saw you on Google Maps${lead.rating ? ` (${lead.rating}⭐ with ${lead.reviews || 0} reviews)` : ''}.\n\n` +
+    `You don't have a website, which means you're missing many potential customers searching on Google!\n\n` +
+    `I can help with:\n` +
+    `✅ Professional website within 1 week\n` +
+    `✅ Visible on Google immediately\n` +
+    `✅ More customers online\n\n` +
+    `Interested in a free consultation?\n\n` +
+    `Best regards,\n[Your Name]`;
+  
+  if (lead.phone) {
+    // Open WhatsApp with pre-filled message
+    const phone = lead.phone.replace(/\s+/g, '').replace(/^0/, '+31');
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+  } else {
+    // Copy message to clipboard
+    navigator.clipboard.writeText(message).then(() => {
+      alert(currentLang === 'nl' ?
+        '✅ Bericht gekopieerd! Zoek het bedrijf op LinkedIn of Google Maps om contact op te nemen.' :
+        '✅ Message copied! Find the business on LinkedIn or Google Maps to reach out.');
+      
+      // Open Google search for the business
+      window.open(`https://www.google.com/search?q=${encodeURIComponent(lead.name + ' ' + (lead.address || ''))}`, '_blank');
+    });
+  }
+}
+
+// ============================================
+// ✅ KLAAR! ALLE FUNCTIES ZIJN NU COMPLEET
+// ============================================
+
+console.log('✅ ContentScale JavaScript fully loaded!');
+console.log('📊 Features enabled:');
+console.log('  - Language switching (NL/EN)');
+console.log('  - Main content scanner');
+console.log('  - Lead scanner with 1100-word filter');
+console.log('  - Share functions (WhatsApp, Email, LinkedIn, Copy)');
+console.log('  - Freelancer directory');
+console.log('  - Leaderboard');
+console.log('  - Blog');
+
+    // ============================================
+// HYBRID EMAIL CONFIG UI
+// FREE TIER: User adds own SendGrid API key
+// PRO TIER: Upgrade option (€10/mnd)
+// ============================================
+
+// ============================================
+// SHOW EMAIL CONFIG MODAL
+// ============================================
+
+function showEmailConfigModal() {
+  const modal = document.getElementById('emailConfigModal');
+  if (!modal) {
+    console.error('Email config modal not found');
+    return;
+  }
+  
+  loadEmailConfig();
+  modal.classList.add('active');
+}
+
+// ============================================
+// LOAD USER'S CONFIG
+// ============================================
+
+async function loadEmailConfig() {
+  try {
+    const response = await fetch('/api/user/email-config');
+    const data = await response.json();
+    
+    if (data.hasConfig) {
+      renderConfigActive(data.config);
+    } else {
+      renderConfigSetup();
+    }
+  } catch (error) {
+    console.error('Error loading config:', error);
+    renderConfigSetup();
+  }
+}
+
+// ============================================
+// RENDER SETUP FORM (NEW USER)
+// ============================================
+
+function renderConfigSetup() {
+  const modalContent = document.querySelector('#emailConfigModal .modal-content');
+  
+  const html = `
+    <div class="p-8">
+      
+      <!-- Header -->
+      <div class="flex justify-between items-start mb-6">
+        <div>
+          <h2 class="text-3xl font-bold mb-2">
+            ${currentLang === 'nl' ? '🚀 Email Setup - GRATIS' : '🚀 Email Setup - FREE'}
+          </h2>
+          <p class="text-gray-400">
+            ${currentLang === 'nl' ? 'Start gratis, upgrade later' : 'Start free, upgrade later'}
+          </p>
+        </div>
+        <button onclick="closeEmailConfigModal()" class="text-gray-400 hover:text-white text-2xl">
+          &times;
+        </button>
+      </div>
+      
+      <!-- Tier Comparison -->
+      <div class="grid md:grid-cols-2 gap-4 mb-6">
+        
+        <!-- FREE TIER -->
+        <div class="bg-gray-800 border-2 border-green-500 rounded-lg p-6">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-2xl">✅</span>
+            <h3 class="text-xl font-bold text-green-400">Free Tier</h3>
+          </div>
+          <div class="text-3xl font-bold mb-4">€0/mnd</div>
+          <ul class="space-y-2 text-sm mb-4">
+            <li class="flex items-start gap-2">
+              <span class="text-green-400">✓</span>
+              <span>FROM: jouw email</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-green-400">✓</span>
+              <span>ContentScale template</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-green-400">✓</span>
+              <span>"Powered by" branding</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-green-400">✓</span>
+              <span>100 emails/dag gratis</span>
+            </li>
+          </ul>
+          <div class="bg-green-900 bg-opacity-30 border border-green-600 rounded px-3 py-2 text-xs text-green-300">
+            👈 START HIER!
+          </div>
+        </div>
+        
+        <!-- PRO TIER -->
+        <div class="bg-gray-800 border border-purple-600 rounded-lg p-6 opacity-60">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-2xl">⭐</span>
+            <h3 class="text-xl font-bold text-purple-400">Pro Tier</h3>
+          </div>
+          <div class="text-3xl font-bold mb-4">€10/mnd</div>
+          <ul class="space-y-2 text-sm mb-4">
+            <li class="flex items-start gap-2">
+              <span class="text-purple-400">✓</span>
+              <span>FROM: info@contentscale.site</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-purple-400">✓</span>
+              <span>100% white-label</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-purple-400">✓</span>
+              <span>Reply forwarding</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-purple-400">✓</span>
+              <span>Priority support</span>
+            </li>
+          </ul>
+          <div class="bg-gray-700 rounded px-3 py-2 text-xs text-gray-400">
+            Upgrade later
+          </div>
+        </div>
+        
+      </div>
+      
+      <!-- How Free Tier Works -->
+      <div class="bg-blue-900 bg-opacity-20 border border-blue-600 rounded-lg p-6 mb-6">
+        <h3 class="text-lg font-bold mb-3">
+          ${currentLang === 'nl' ? '🔄 Hoe Free Tier Werkt' : '🔄 How Free Tier Works'}
+        </h3>
+        <ol class="space-y-2 text-sm text-gray-300">
+          <li class="flex gap-2">
+            <span class="font-bold text-blue-400">1.</span>
+            <span>${currentLang === 'nl' ? 'Maak gratis SendGrid account' : 'Create free SendGrid account'} (100 emails/dag)</span>
+          </li>
+          <li class="flex gap-2">
+            <span class="font-bold text-blue-400">2.</span>
+            <span>${currentLang === 'nl' ? 'Kopieer je API key' : 'Copy your API key'}</span>
+          </li>
+          <li class="flex gap-2">
+            <span class="font-bold text-blue-400">3.</span>
+            <span>${currentLang === 'nl' ? 'Plak hier + verifieer' : 'Paste here + verify'}</span>
+          </li>
+          <li class="flex gap-2">
+            <span class="font-bold text-blue-400">4.</span>
+            <span>${currentLang === 'nl' ? 'Verstuur emails met ContentScale template!' : 'Send emails with ContentScale template!'}</span>
+          </li>
+        </ol>
+      </div>
+      
+      <!-- Setup Instructions -->
+      <div class="bg-gray-800 rounded-lg p-6 mb-6">
+        <h3 class="text-lg font-bold mb-3">
+          ${currentLang === 'nl' ? '📋 SendGrid Setup (5 min)' : '📋 SendGrid Setup (5 min)'}
+        </h3>
+        <ol class="space-y-3 text-sm">
+          <li class="flex gap-2">
+            <span class="font-bold text-purple-400">1.</span>
+            <span>
+              <a href="https://sendgrid.com/free" target="_blank" class="text-blue-400 underline">
+                Maak SendGrid account
+              </a> (gratis, 100 emails/dag)
+            </span>
+          </li>
+          <li class="flex gap-2">
+            <span class="font-bold text-purple-400">2.</span>
+            <span>Verify sender met JOUW email</span>
+          </li>
+          <li class="flex gap-2">
+            <span class="font-bold text-purple-400">3.</span>
+            <span>Settings → API Keys → Create API Key (Full Access)</span>
+          </li>
+          <li class="flex gap-2">
+            <span class="font-bold text-purple-400">4.</span>
+            <span>Kopieer de key (SG.xxxxxx) en plak hieronder</span>
+          </li>
+        </ol>
+      </div>
+      
+      <!-- Form -->
+      <div class="space-y-4 mb-6">
+        
+        <div>
+          <label class="block text-sm font-semibold mb-2">
+            ${currentLang === 'nl' ? 'SendGrid API Key:' : 'SendGrid API Key:'}
+          </label>
+          <input 
+            type="password" 
+            id="sendgridApiKey" 
+            placeholder="SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+            class="w-full bg-gray-700 px-4 py-3 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none mb-2" />
+          <p class="text-xs text-gray-400">
+            ${currentLang === 'nl' ? 'Je API key blijft privé' : 'Your API key stays private'}
+          </p>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold mb-2">
+            ${currentLang === 'nl' ? 'Jouw Email (FROM):' : 'Your Email (FROM):'}
+          </label>
+          <input 
+            type="email" 
+            id="userEmail" 
+            placeholder="${currentLang === 'nl' ? 'jouw@email.nl' : 'your@email.com'}"
+            class="w-full bg-gray-700 px-4 py-3 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none mb-2" />
+          <p class="text-xs text-gray-400">
+            ${currentLang === 'nl' 
+              ? 'Email die je in SendGrid verified hebt' 
+              : 'Email you verified in SendGrid'}
+          </p>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold mb-2">
+            ${currentLang === 'nl' ? 'Jouw Naam (optioneel):' : 'Your Name (optional):'}
+          </label>
+          <input 
+            type="text" 
+            id="userName" 
+            placeholder="${currentLang === 'nl' ? 'Jouw Naam' : 'Your Name'}"
+            class="w-full bg-gray-700 px-4 py-3 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none" />
+        </div>
+        
+      </div>
+      
+      <!-- Actions -->
+      <div class="flex gap-3 justify-end border-t border-gray-700 pt-6">
+        <button 
+          onclick="saveAndVerifyConfig()" 
+          class="px-8 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-bold transition-all shadow-lg hover:shadow-xl">
+          ${currentLang === 'nl' ? '✅ Opslaan & Verifiëren' : '✅ Save & Verify'}
+        </button>
+        
+        <button 
+          onclick="closeEmailConfigModal()" 
+          class="px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition-all">
+          ${currentLang === 'nl' ? 'Annuleer' : 'Cancel'}
+        </button>
+      </div>
+      
+    </div>
+  `;
+  
+  modalContent.innerHTML = html;
+}
+
+// ============================================
+// RENDER ACTIVE CONFIG
+// ============================================
+
+function renderConfigActive(config) {
+  const modalContent = document.querySelector('#emailConfigModal .modal-content');
+  
+  const isFree = config.tier === 'free';
+  const isPro = config.tier === 'pro';
+  
+  const html = `
+    <div class="p-8">
+      
+      <!-- Header -->
+      <div class="flex justify-between items-start mb-6">
+        <div>
+          <h2 class="text-3xl font-bold mb-2">
+            ${currentLang === 'nl' ? '📧 Email Configuratie' : '📧 Email Configuration'}
+          </h2>
+          <p class="text-gray-400">
+            ${isFree ? 'Free Tier' : 'Pro Tier'}
+          </p>
+        </div>
+        <button onclick="closeEmailConfigModal()" class="text-gray-400 hover:text-white text-2xl">
+          &times;
+        </button>
+      </div>
+      
+      <!-- Status -->
+      <div class="bg-${isFree ? 'green' : 'purple'}-900 bg-opacity-30 border border-${isFree ? 'green' : 'purple'}-600 rounded-lg p-6 mb-6">
+        <div class="flex items-center gap-3">
+          <div class="text-4xl">${isFree ? '✅' : '⭐'}</div>
+          <div>
+            <h3 class="text-xl font-bold">${isFree ? 'Free Tier Actief' : 'Pro Tier Actief'}</h3>
+            <p class="text-sm text-gray-300">${config.user_email}</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Current Setup -->
+      <div class="bg-gray-800 rounded-lg p-6 mb-6">
+        <h3 class="text-lg font-bold mb-4">${currentLang === 'nl' ? '⚙️ Huidige Setup' : '⚙️ Current Setup'}</h3>
+        
+        <div class="space-y-3">
+          <div class="flex justify-between pb-3 border-b border-gray-700">
+            <span class="text-gray-400">Tier:</span>
+            <span class="font-bold ${isFree ? 'text-green-400' : 'text-purple-400'}">${isFree ? 'FREE' : 'PRO'}</span>
+          </div>
+          
+          <div class="flex justify-between pb-3 border-b border-gray-700">
+            <span class="text-gray-400">FROM:</span>
+            <span class="text-sm">${isFree ? config.user_email : 'info@contentscale.site'}</span>
+          </div>
+          
+          <div class="flex justify-between pb-3 border-b border-gray-700">
+            <span class="text-gray-400">Template:</span>
+            <span class="text-sm">${isFree ? 'ContentScale (with branding)' : 'White-label'}</span>
+          </div>
+          
+          <div class="flex justify-between">
+            <span class="text-gray-400">Status:</span>
+            <span class="px-3 py-1 bg-green-900 text-green-300 rounded-full text-xs font-bold">
+              ${config.is_verified ? 'VERIFIED' : 'PENDING'}
+            </span>
+          </div>
+        </div>
+      </div>
+      
+      ${isFree ? `
+        <!-- Upgrade to Pro -->
+        <div class="bg-gradient-to-r from-purple-900 to-blue-900 bg-opacity-30 border border-purple-600 rounded-lg p-6 mb-6">
+          <h3 class="text-xl font-bold mb-3 flex items-center gap-2">
+            <span>⭐</span>
+            ${currentLang === 'nl' ? 'Upgrade naar Pro' : 'Upgrade to Pro'}
+          </h3>
+          <p class="text-sm text-gray-300 mb-4">
+            ${currentLang === 'nl' 
+              ? 'Verstuur FROM info@contentscale.site met 100% white-label template'
+              : 'Send FROM info@contentscale.site with 100% white-label template'}
+          </p>
+          
+          <div class="grid md:grid-cols-2 gap-4 mb-4 text-sm">
+            <div class="flex items-start gap-2">
+              <span class="text-purple-400">✓</span>
+              <span>FROM: info@contentscale.site</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <span class="text-purple-400">✓</span>
+              <span>100% white-label</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <span class="text-purple-400">✓</span>
+              <span>Reply forwarding</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <span class="text-purple-400">✓</span>
+              <span>Priority support</span>
+            </div>
+          </div>
+          
+          <div class="flex items-center justify-between">
+            <div class="text-3xl font-bold">€10/mnd</div>
+            <button 
+              onclick="alert('Pro tier binnenkort beschikbaar! Contact: info@contentscale.site')"
+              class="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-bold transition-all">
+              ${currentLang === 'nl' ? '🚀 Upgrade' : '🚀 Upgrade'}
+            </button>
+          </div>
+        </div>
+      ` : ''}
+      
+      <!-- Actions -->
+      <div class="flex justify-end gap-3 pt-6 border-t border-gray-700">
+        <button 
+          onclick="closeEmailConfigModal()" 
+          class="px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition-all">
+          ${currentLang === 'nl' ? 'Sluiten' : 'Close'}
+        </button>
+      </div>
+      
+    </div>
+  `;
+  
+  modalContent.innerHTML = html;
+}
+
+// ============================================
+// SAVE & VERIFY CONFIG
+// ============================================
+
+async function saveAndVerifyConfig() {
+  const apiKey = document.getElementById('sendgridApiKey').value.trim();
+  const userEmail = document.getElementById('userEmail').value.trim();
+  const userName = document.getElementById('userName').value.trim();
+  
+  // Validation
+  if (!apiKey || !apiKey.startsWith('SG.')) {
+    alert(currentLang === 'nl' 
+      ? 'Voer een geldige SendGrid API key in (begint met SG.)'
+      : 'Enter a valid SendGrid API key (starts with SG.)');
+    return;
+  }
+  
+  if (!userEmail || !userEmail.includes('@')) {
+    alert(currentLang === 'nl' 
+      ? 'Voer een geldig email adres in'
+      : 'Enter a valid email address');
+    return;
+  }
+  
+  // Show loading
+  const modalContent = document.querySelector('#emailConfigModal .modal-content');
+  modalContent.innerHTML = `
+    <div class="p-8 text-center">
+      <div class="text-6xl mb-4 animate-pulse">⏳</div>
+      <h3 class="text-2xl font-bold mb-4">
+        ${currentLang === 'nl' ? 'Verifiëren...' : 'Verifying...'}
+      </h3>
+      <p class="text-gray-400">
+        ${currentLang === 'nl' ? 'We sturen een test email...' : 'Sending test email...'}
+      </p>
+    </div>
+  `;
+  
+  try {
+    // Save config
+    const saveResponse = await fetch('/api/user/email-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tier: 'free',
+        sendgridApiKey: apiKey,
+        userEmail: userEmail,
+        userName: userName || null
+      })
+    });
+    
+    const saveResult = await saveResponse.json();
+    
+    if (!saveResult.success) {
+      throw new Error(saveResult.error);
+    }
+    
+    // Verify
+    const verifyResponse = await fetch('/api/user/verify-email-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apiKey: apiKey,
+        testEmail: userEmail
+      })
+    });
+    
+    const verifyResult = await verifyResponse.json();
+    
+    if (verifyResult.success) {
+      // Success!
+      modalContent.innerHTML = `
+        <div class="p-8 text-center">
+          <div class="text-6xl mb-4">✅</div>
+          <h3 class="text-2xl font-bold mb-4 text-green-400">
+            ${currentLang === 'nl' ? 'Geverifieerd!' : 'Verified!'}
+          </h3>
+          <p class="text-gray-400 mb-2">
+            ${currentLang === 'nl' ? 'Check je inbox:' : 'Check your inbox:'}
+          </p>
+          <p class="text-xl font-bold mb-6">${userEmail}</p>
+          <p class="text-sm text-gray-400 mb-6">
+            ${currentLang === 'nl' 
+              ? 'Je kunt nu leaderboard emails versturen!'
+              : 'You can now send leaderboard emails!'}
+          </p>
+          <button 
+            onclick="closeEmailConfigModal(); location.reload();" 
+            class="px-8 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-bold transition-all">
+            ${currentLang === 'nl' ? 'Start Versturen!' : 'Start Sending!'}
+          </button>
+        </div>
+      `;
+    } else {
+      throw new Error(verifyResult.error);
+    }
+    
+  } catch (error) {
+    modalContent.innerHTML = `
+      <div class="p-8 text-center">
+        <div class="text-6xl mb-4">❌</div>
+        <h3 class="text-2xl font-bold mb-4 text-red-400">
+          ${currentLang === 'nl' ? 'Verificatie Mislukt' : 'Verification Failed'}
+        </h3>
+        <p class="text-gray-400 mb-6">
+          ${error.message}
+        </p>
+        <button 
+          onclick="loadEmailConfig();" 
+          class="px-8 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-bold transition-all">
+          ${currentLang === 'nl' ? 'Probeer Opnieuw' : 'Try Again'}
+        </button>
+      </div>
+    `;
+  }
+}
+
+// ============================================
+// CLOSE MODAL
+// ============================================
+
+function closeEmailConfigModal() {
+  const modal = document.getElementById('emailConfigModal');
+  if (modal) {
+    modal.classList.remove('active');
+  }
+}
+
+// ============================================
+// CHECK IF CONFIG NEEDED BEFORE SENDING
+// ============================================
+
+async function checkEmailConfigured() {
+  try {
+    const response = await fetch('/api/user/email-config');
+    const data = await response.json();
+    
+    if (!data.hasConfig) {
+      alert(currentLang === 'nl' 
+        ? 'Voeg eerst je SendGrid setup toe in Settings!'
+        : 'Please add your SendGrid setup in Settings first!');
+      showEmailConfigModal();
+      return false;
+    }
+    
+    if (!data.config.is_verified) {
+      alert(currentLang === 'nl' 
+        ? 'Verifieer eerst je email! Check je inbox.'
+        : 'Please verify your email first! Check your inbox.');
+      return false;
+    }
+    
+    return true;
+    
+  } catch (error) {
+    console.error('Check config error:', error);
+    return false;
+  }
+}
+
+// ============================================
+// ADD TO INDEX.HTML
+// ============================================
+
+/*
+<!-- Email Config Modal -->
+<div id="emailConfigModal" class="modal">
+  <div class="modal-content"></div>
+</div>
+
+<!-- Settings Button -->
+<button onclick="showEmailConfigModal()" class="btn-settings">
+  ⚙️ Email Settings
+</button>
+*/
+
+    
+    
+  </script>
+
 </body>
 </html>
