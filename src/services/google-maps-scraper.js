@@ -264,4 +264,30 @@ class GoogleMapsScraper {
       const result = await this.pool.query(
         `INSERT INTO google_maps_leads 
          (name, category, rating, reviews, address, phone, website, place_url, user_id, status)
-         V
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'new')
+         ON CONFLICT (place_url) DO UPDATE SET
+           rating = EXCLUDED.rating,
+           reviews = EXCLUDED.reviews
+         RETURNING id`,
+        [
+          lead.name,
+          lead.category || null,
+          lead.rating || null,
+          lead.reviews || 0,
+          lead.address || null,
+          lead.phone || null,
+          lead.website || null,
+          lead.place_url || null,
+          userId
+        ]
+      );
+      
+      return result.rows[0]?.id;
+    } catch (error) {
+      console.error('Save lead error:', error);
+      return null;
+    }
+  }
+}
+
+module.exports = GoogleMapsScraper;
