@@ -376,7 +376,7 @@
       vertical-align: middle;
     }
     
-    /* Leaderboard Stats Cards */
+    /* Leaderboard Stats Cards - UPDATED TO MATCH IMAGE */
     .stat-card {
       background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%);
       border: 2px solid #334155;
@@ -417,7 +417,6 @@
     .stat-card-yellow {
       background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%);
       border: 2px solid #f59e0b;
-      color: #1e293b;
     }
     
     .stat-card-yellow::before {
@@ -434,7 +433,7 @@
     
     .rankings-table-container.show {
       max-height: 1000px;
-      overflow-y: auto; /* FIX: Add scrolling for the container */
+      overflow-y: auto;
     }
     
     .rankings-toggle-btn {
@@ -558,7 +557,7 @@
       border-color: #8b5cf6;
     }
     
-    /* Top 3 Grid */
+    /* Top 3 Grid - UPDATED TO MATCH IMAGE */
     .top-3-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -579,12 +578,15 @@
       padding: 24px;
       text-align: center;
       transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
     }
     
     .top-card:hover {
       transform: translateY(-5px);
     }
     
+    /* Gold/Silver/Bronze borders from image */
     .top-card.gold {
       border-color: #fbbf24;
       box-shadow: 0 10px 30px rgba(251, 191, 36, 0.3);
@@ -609,6 +611,51 @@
     .top-rank.gold { color: #fbbf24; }
     .top-rank.silver { color: #94a3b8; }
     .top-rank.bronze { color: #f97316; }
+    
+    /* Score badges for top 3 cards - UPDATED TO MATCH IMAGE */
+    .score-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .score-badge.elite {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      color: #1e293b;
+    }
+    
+    .score-badge.excellent {
+      background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+      color: white;
+    }
+    
+    .score-badge.great {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      color: white;
+    }
+    
+    /* UPDATED: Better contrast for text in stat cards */
+    .stat-card .text-4xl {
+      color: white;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    
+    .stat-card .text-sm {
+      color: rgba(255, 255, 255, 0.9);
+    }
+    
+    .stat-card-yellow .text-3xl,
+    .stat-card-yellow .text-4xl {
+      color: #1e293b;
+    }
+    
+    .stat-card-yellow .text-sm {
+      color: rgba(30, 41, 59, 0.9);
+    }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100">
@@ -960,12 +1007,12 @@
           </p>
         </div>
 
-        <!-- Stats Section -->
+        <!-- Stats Section - UPDATED TO MATCH IMAGE -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div class="stat-card rounded-xl p-5 text-white relative">
             <div class="relative z-10">
               <div class="text-4xl mb-2">🏢</div>
-              <div class="text-3xl font-bold" id="totalAgencies">0</div>
+              <div class="text-3xl font-bold" id="totalAgencies">15</div>
               <div class="text-sm opacity-90">Agencies Listed</div>
             </div>
           </div>
@@ -973,7 +1020,7 @@
           <div class="stat-card-alt stat-card rounded-xl p-5 text-white relative">
             <div class="relative z-10">
               <div class="text-4xl mb-2">📊</div>
-              <div class="text-3xl font-bold" id="avgScore">0</div>
+              <div class="text-3xl font-bold" id="avgScore">87.1</div>
               <div class="text-sm opacity-90">Avg. Score</div>
             </div>
           </div>
@@ -981,21 +1028,21 @@
           <div class="stat-card-green stat-card rounded-xl p-5 text-white relative">
             <div class="relative z-10">
               <div class="text-4xl mb-2">🌍</div>
-              <div class="text-3xl font-bold" id="countriesCount">0</div>
+              <div class="text-3xl font-bold" id="countriesCount">7</div>
               <div class="text-sm opacity-90">Countries</div>
             </div>
           </div>
           
-          <div class="stat-card-yellow stat-card rounded-xl p-5 text-gray-900 relative">
+          <div class="stat-card-yellow stat-card rounded-xl p-5 relative">
             <div class="relative z-10">
               <div class="text-4xl mb-2">💼</div>
-              <div class="text-3xl font-bold" id="activeHelpers">0</div>
-              <div class="text-sm opacity-90">Active Freelancers</div>
+              <div class="text-3xl font-bold text-gray-900" id="activeHelpers">0</div>
+              <div class="text-sm opacity-90 text-gray-900">Active Freelancers</div>
             </div>
           </div>
         </div>
 
-        <!-- Top 3 Agencies -->
+        <!-- Top 3 Agencies - UPDATED TO MATCH IMAGE -->
         <div class="mb-10" id="top3Container">
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-2xl font-bold text-yellow-400">🏆 Top 3 Agencies</h2>
@@ -1003,7 +1050,7 @@
           </div>
           
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="top3Grid">
-            <!-- Top 3 agencies will be loaded here -->
+            <!-- Top 3 agencies will be loaded here with proper styling -->
           </div>
         </div>
 
@@ -1310,7 +1357,7 @@
           // Update stats
           updateLeaderboardStats();
           
-          // Load top 3 agencies
+          // Load top 3 agencies - UPDATED to match image
           loadTop3Agencies();
           
           // Load country filters
@@ -1331,7 +1378,7 @@
     }
 
     function loadMockLeaderboardData() {
-      // Mock data for testing
+      // Mock data matching the image
       allLeaderboardEntries = [
         { id: 1, rank: 1, company_name: 'SEO Masters Amsterdam', url: 'https://seomasters.nl', score: 95, country: 'NL', created_at: '2024-01-15' },
         { id: 2, rank: 2, company_name: 'Digital Boost Agency', url: 'https://digitalboost.com', score: 93, country: 'NL', created_at: '2024-01-14' },
@@ -1355,7 +1402,7 @@
       // Update stats
       updateLeaderboardStats();
       
-      // Load top 3 agencies
+      // Load top 3 agencies - UPDATED to match image
       loadTop3Agencies();
       
       // Load country filters
@@ -1413,11 +1460,13 @@
       
       top3Grid.innerHTML = top3.map((entry, index) => {
         const shortUrl = entry.url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+        const scoreBadge = getScoreBadge(entry.score);
+        const badgeClass = scoreBadge === 'Elite' ? 'elite' : scoreBadge === 'Excellent' ? 'excellent' : 'great';
         
         return `
           <div class="top-card ${cardClasses[index]}">
             <div class="top-rank ${rankClasses[index]}">${medals[index]}</div>
-            <h3 class="text-xl font-bold mb-2">${entry.company_name}</h3>
+            <h3 class="text-xl font-bold mb-2 text-white">${entry.company_name}</h3>
             <p class="text-gray-400 text-sm mb-4">${shortUrl}</p>
             <div class="mb-4">
               <div class="text-4xl font-bold mb-1 ${getScoreClass(entry.score)}">${entry.score}</div>
@@ -1425,7 +1474,7 @@
             </div>
             <div class="flex items-center justify-center gap-2">
               <span class="text-sm text-gray-400">📍 ${entry.country}</span>
-              <span class="text-xs px-2 py-1 bg-purple-600 rounded">${getScoreBadge(entry.score)}</span>
+              <span class="score-badge ${badgeClass}">${scoreBadge}</span>
             </div>
           </div>
         `;
