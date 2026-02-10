@@ -1073,6 +1073,13 @@
               </div>
             </div>
             
+            <div class="mb-4">
+              <div class="text-xs text-gray-400 mb-2">Agency Type:</div>
+              <div class="flex flex-wrap gap-2" id="typeFilters">
+                <!-- Type filters will be loaded here -->
+              </div>
+            </div>
+            
             <div>
               <input type="text" id="searchInput" placeholder="Search agencies..." 
                 oninput="filterAgencies()"
@@ -1100,6 +1107,7 @@
                   <th>Company</th>
                   <th>Website</th>
                   <th>Score</th>
+                  <th>Country</th>
                   <th>Added</th>
                   <th>Action</th>
                 </tr>
@@ -1302,6 +1310,12 @@
     let currentLang = localStorage.getItem('contentscale_lang') || 'en';
     let scrapedLeads = [];
     const API_BASE_URL = window.location.hostname.includes('localhost') ? 'http://localhost:3000' : '';
+    let allLeaderboardEntries = [];
+    let filteredLeaderboardEntries = [];
+    let currentPage = 1;
+    const entriesPerPage = 20;
+    let activeCountryFilter = 'all';
+    let activeTypeFilter = 'all';
 
     // Language system
     function switchLanguage(lang) {
@@ -1330,12 +1344,6 @@
     // ============================================
     // LEADERBOARD FUNCTIONS
     // ============================================
-    let allLeaderboardEntries = [];
-    let filteredLeaderboardEntries = [];
-    let currentPage = 1;
-    const entriesPerPage = 20;
-    let activeCountryFilter = 'all';
-
     async function loadLeaderboardData() {
       try {
         console.log('Loading leaderboard data...');
@@ -1363,6 +1371,9 @@
           // Load country filters
           loadCountryFilters();
           
+          // Load type filters
+          loadTypeFilters();
+          
           // Load first page of rankings
           loadRankingsPage(1);
         } else {
@@ -1378,23 +1389,33 @@
     }
 
     function loadMockLeaderboardData() {
-      // Mock data matching the image
+      // Mock data matching the image with 15 agencies and more diversity
       allLeaderboardEntries = [
-        { id: 1, rank: 1, company_name: 'SEO Masters Amsterdam', url: 'https://seomasters.nl', score: 95, country: 'NL', created_at: '2024-01-15' },
-        { id: 2, rank: 2, company_name: 'Digital Boost Agency', url: 'https://digitalboost.com', score: 93, country: 'NL', created_at: '2024-01-14' },
-        { id: 3, rank: 3, company_name: 'Content Kings', url: 'https://contentkings.co.uk', score: 92, country: 'UK', created_at: '2024-01-13' },
-        { id: 4, rank: 4, company_name: 'Rank Heroes', url: 'https://rankheroes.com', score: 91, country: 'US', created_at: '2024-01-12' },
-        { id: 5, rank: 5, company_name: 'Web Wizards', url: 'https://webwizards.de', score: 90, country: 'DE', created_at: '2024-01-11' },
-        { id: 6, rank: 6, company_name: 'SEO Experts Berlin', url: 'https://seoexperts.berlin', score: 89, country: 'DE', created_at: '2024-01-10' },
-        { id: 7, rank: 7, company_name: 'Amsterdam SEO Pros', url: 'https://amsterdamseopros.nl', score: 88, country: 'NL', created_at: '2024-01-09' },
-        { id: 8, rank: 8, company_name: 'Rotterdam Digital', url: 'https://rotterdamdigital.nl', score: 87, country: 'NL', created_at: '2024-01-08' },
-        { id: 9, rank: 9, company_name: 'Utrecht Web Studio', url: 'https://utrechtwebstudio.nl', score: 86, country: 'NL', created_at: '2024-01-07' },
-        { id: 10, rank: 10, company_name: 'Eindhoven Tech SEO', url: 'https://eindhoventechseo.nl', score: 85, country: 'NL', created_at: '2024-01-06' },
-        { id: 11, rank: 11, company_name: 'London SEO Agency', url: 'https://londonseoagency.co.uk', score: 84, country: 'UK', created_at: '2024-01-05' },
-        { id: 12, rank: 12, company_name: 'Paris Digital Marketing', url: 'https://parisdigital.fr', score: 83, country: 'FR', created_at: '2024-01-04' },
-        { id: 13, rank: 13, company_name: 'Brussels SEO', url: 'https://brusselsseo.be', score: 82, country: 'BE', created_at: '2024-01-03' },
-        { id: 14, rank: 14, company_name: 'Berlin Tech Agency', url: 'https://berlintech.de', score: 81, country: 'DE', created_at: '2024-01-02' },
-        { id: 15, rank: 15, company_name: 'Madrid SEO Experts', url: 'https://madridseo.es', score: 80, country: 'ES', created_at: '2024-01-01' }
+        { id: 1, rank: 1, company_name: 'SEO Masters Amsterdam', url: 'https://seomasters.nl', score: 95, country: 'NL', type: 'seo_agency', created_at: '2024-01-15' },
+        { id: 2, rank: 2, company_name: 'Digital Boost Agency', url: 'https://digitalboost.com', score: 93, country: 'NL', type: 'seo_agency', created_at: '2024-01-14' },
+        { id: 3, rank: 3, company_name: 'Content Kings', url: 'https://contentkings.co.uk', score: 92, country: 'UK', type: 'seo_agency', created_at: '2024-01-13' },
+        { id: 4, rank: 4, company_name: 'Rank Heroes', url: 'https://rankheroes.com', score: 91, country: 'US', type: 'seo_agency', created_at: '2024-01-12' },
+        { id: 5, rank: 5, company_name: 'Web Wizards', url: 'https://webwizards.de', score: 90, country: 'DE', type: 'seo_agency', created_at: '2024-01-11' },
+        { id: 6, rank: 6, company_name: 'SEO Experts Berlin', url: 'https://seoexperts.berlin', score: 89, country: 'DE', type: 'seo_agency', created_at: '2024-01-10' },
+        { id: 7, rank: 7, company_name: 'Amsterdam SEO Pros', url: 'https://amsterdamseopros.nl', score: 88, country: 'NL', type: 'seo_agency', created_at: '2024-01-09' },
+        { id: 8, rank: 8, company_name: 'Rotterdam Digital', url: 'https://rotterdamdigital.nl', score: 87, country: 'NL', type: 'seo_agency', created_at: '2024-01-08' },
+        { id: 9, rank: 9, company_name: 'Utrecht Web Studio', url: 'https://utrechtwebstudio.nl', score: 86, country: 'NL', type: 'web_agency', created_at: '2024-01-07' },
+        { id: 10, rank: 10, company_name: 'Eindhoven Tech SEO', url: 'https://eindhoventechseo.nl', score: 85, country: 'NL', type: 'seo_agency', created_at: '2024-01-06' },
+        { id: 11, rank: 11, company_name: 'London SEO Agency', url: 'https://londonseoagency.co.uk', score: 84, country: 'UK', type: 'seo_agency', created_at: '2024-01-05' },
+        { id: 12, rank: 12, company_name: 'Paris Digital Marketing', url: 'https://parisdigital.fr', score: 83, country: 'FR', type: 'marketing_agency', created_at: '2024-01-04' },
+        { id: 13, rank: 13, company_name: 'Brussels SEO', url: 'https://brusselsseo.be', score: 82, country: 'BE', type: 'seo_agency', created_at: '2024-01-03' },
+        { id: 14, rank: 14, company_name: 'Berlin Tech Agency', url: 'https://berlintech.de', score: 81, country: 'DE', type: 'tech_agency', created_at: '2024-01-02' },
+        { id: 15, rank: 15, company_name: 'Madrid SEO Experts', url: 'https://madridseo.es', score: 80, country: 'ES', type: 'seo_agency', created_at: '2024-01-01' },
+        { id: 16, rank: 16, company_name: 'Sydney Web Solutions', url: 'https://sydneywebsolutions.au', score: 79, country: 'AU', type: 'web_agency', created_at: '2023-12-31' },
+        { id: 17, rank: 17, company_name: 'Auckland Digital', url: 'https://aucklanddigital.nz', score: 78, country: 'NZ', type: 'digital_agency', created_at: '2023-12-30' },
+        { id: 18, rank: 18, company_name: 'Toronto SEO', url: 'https://torontoseo.ca', score: 77, country: 'CA', type: 'seo_agency', created_at: '2023-12-29' },
+        { id: 19, rank: 19, company_name: 'Vancouver Marketing', url: 'https://vancouvermarketing.ca', score: 76, country: 'CA', type: 'marketing_agency', created_at: '2023-12-28' },
+        { id: 20, rank: 20, company_name: 'Melbourne SEO', url: 'https://melbourneseo.au', score: 75, country: 'AU', type: 'seo_agency', created_at: '2023-12-27' },
+        { id: 21, rank: 21, company_name: 'Wellington Web', url: 'https://wellingtonweb.nz', score: 74, country: 'NZ', type: 'web_agency', created_at: '2023-12-26' },
+        { id: 22, rank: 22, company_name: 'New York Digital', url: 'https://newyorkdigital.com', score: 73, country: 'US', type: 'digital_agency', created_at: '2023-12-25' },
+        { id: 23, rank: 23, company_name: 'Los Angeles SEO', url: 'https://laseo.com', score: 72, country: 'US', type: 'seo_agency', created_at: '2023-12-24' },
+        { id: 24, rank: 24, company_name: 'Chicago Marketing', url: 'https://chicagomarketing.com', score: 71, country: 'US', type: 'marketing_agency', created_at: '2023-12-23' },
+        { id: 25, rank: 25, company_name: 'Miami Web Design', url: 'https://miamiwebdesign.com', score: 70, country: 'US', type: 'web_agency', created_at: '2023-12-22' }
       ];
       
       filteredLeaderboardEntries = [...allLeaderboardEntries];
@@ -1407,6 +1428,9 @@
       
       // Load country filters
       loadCountryFilters();
+      
+      // Load type filters
+      loadTypeFilters();
       
       // Load first page of rankings
       loadRankingsPage(1);
@@ -1489,91 +1513,135 @@
         <button class="filter-tag active" data-country="all" onclick="filterByCountry('all')">
           🌍 All Countries
         </button>
+        <button class="filter-tag" data-country="NL" onclick="filterByCountry('NL')">
+          🇳🇱 Netherlands
+        </button>
+        <button class="filter-tag" data-country="UK" onclick="filterByCountry('UK')">
+          🇬🇧 United Kingdom
+        </button>
+        <button class="filter-tag" data-country="US" onclick="filterByCountry('US')">
+          🇺🇸 United States
+        </button>
+        <button class="filter-tag" data-country="CA" onclick="filterByCountry('CA')">
+          🇨🇦 Canada
+        </button>
+        <button class="filter-tag" data-country="AU" onclick="filterByCountry('AU')">
+          🇦🇺 Australia
+        </button>
+        <button class="filter-tag" data-country="NZ" onclick="filterByCountry('NZ')">
+          🇳🇿 New Zealand
+        </button>
+        <button class="filter-tag" data-country="other" onclick="filterByCountry('other')">
+          🌐 Other Countries
+        </button>
       `;
+    }
+
+    function loadTypeFilters() {
+      const typeFiltersDiv = document.getElementById('typeFilters');
       
-      countries.forEach(country => {
-        const count = allLeaderboardEntries.filter(entry => entry.country === country).length;
-        countryFiltersDiv.innerHTML += `
-          <button class="filter-tag" data-country="${country}" onclick="filterByCountry('${country}')">
-            ${getCountryFlag(country)} ${country} (${count})
-          </button>
-        `;
-      });
+      typeFiltersDiv.innerHTML = `
+        <button class="filter-tag active" data-type="all" onclick="filterByType('all')">
+          All Types
+        </button>
+        <button class="filter-tag" data-type="seo_agency" onclick="filterByType('seo_agency')">
+          🏢 SEO Agency
+        </button>
+        <button class="filter-tag" data-type="others" onclick="filterByType('others')">
+          🏢 Others
+        </button>
+      `;
     }
 
     function filterByCountry(country) {
       activeCountryFilter = country;
       
       // Update active filter button
-      document.querySelectorAll('.filter-tag').forEach(btn => {
+      document.querySelectorAll('.filter-tag[data-country]').forEach(btn => {
         btn.classList.remove('active');
         if (btn.dataset.country === country) {
           btn.classList.add('active');
         }
       });
       
-      // Filter entries
-      if (country === 'all') {
-        filteredLeaderboardEntries = [...allLeaderboardEntries];
-      } else {
-        filteredLeaderboardEntries = allLeaderboardEntries.filter(entry => entry.country === country);
+      applyFilters();
+    }
+
+    function filterByType(type) {
+      activeTypeFilter = type;
+      
+      // Update active filter button
+      document.querySelectorAll('.filter-tag[data-type]').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.type === type) {
+          btn.classList.add('active');
+        }
+      });
+      
+      applyFilters();
+    }
+
+    function applyFilters() {
+      let filtered = [...allLeaderboardEntries];
+      
+      // Apply country filter
+      if (activeCountryFilter === 'other') {
+        const mainCountries = ['NL', 'UK', 'US', 'CA', 'AU', 'NZ'];
+        filtered = filtered.filter(entry => !mainCountries.includes(entry.country));
+      } else if (activeCountryFilter !== 'all') {
+        filtered = filtered.filter(entry => entry.country === activeCountryFilter);
+      }
+      
+      // Apply type filter
+      if (activeTypeFilter === 'seo_agency') {
+        filtered = filtered.filter(entry => entry.type === 'seo_agency');
+      } else if (activeTypeFilter === 'others') {
+        filtered = filtered.filter(entry => entry.type !== 'seo_agency');
       }
       
       // Apply search filter if any
       const searchInput = document.getElementById('searchInput');
-      if (searchInput.value.trim()) {
-        filterAgencies();
-      } else {
-        // Reload top 3 and rankings
-        loadTop3Agencies();
-        loadRankingsPage(1);
-      }
-    }
-
-    function filterAgencies() {
-      const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+      const searchTerm = searchInput.value.toLowerCase().trim();
       
-      if (!searchTerm) {
-        // If no search term, just use country filter
-        if (activeCountryFilter === 'all') {
-          filteredLeaderboardEntries = [...allLeaderboardEntries];
-        } else {
-          filteredLeaderboardEntries = allLeaderboardEntries.filter(entry => entry.country === activeCountryFilter);
-        }
-      } else {
-        // Apply both country and search filters
-        let filtered = allLeaderboardEntries;
-        
-        if (activeCountryFilter !== 'all') {
-          filtered = filtered.filter(entry => entry.country === activeCountryFilter);
-        }
-        
-        filteredLeaderboardEntries = filtered.filter(entry => 
+      if (searchTerm) {
+        filtered = filtered.filter(entry => 
           entry.company_name.toLowerCase().includes(searchTerm) ||
           entry.url.toLowerCase().includes(searchTerm) ||
           entry.country.toLowerCase().includes(searchTerm)
         );
       }
       
+      filteredLeaderboardEntries = filtered;
+      
       // Reload top 3 and rankings
       loadTop3Agencies();
       loadRankingsPage(1);
     }
 
+    function filterAgencies() {
+      applyFilters();
+    }
+
     function loadRankingsPage(page) {
       currentPage = page;
       const startIndex = (page - 1) * entriesPerPage;
-      const endIndex = startIndex + entriesPerPage;
+      const endIndex = Math.min(startIndex + entriesPerPage, filteredLeaderboardEntries.length);
       const pageEntries = filteredLeaderboardEntries.slice(startIndex, endIndex);
       
       const tbody = document.getElementById('rankings-tbody');
       const totalCount = document.getElementById('total-count');
       const rankingsCountText = document.getElementById('rankings-count-text');
       const loadMoreContainer = document.getElementById('load-more-container');
+      const loadMoreBtn = document.getElementById('load-more-btn');
+      
+      if (!tbody || !totalCount || !rankingsCountText || !loadMoreContainer || !loadMoreBtn) {
+        console.error('One or more leaderboard elements not found');
+        return;
+      }
       
       // Update total count
       totalCount.textContent = filteredLeaderboardEntries.length;
-      rankingsCountText.textContent = `Showing ${startIndex + 1}-${Math.min(endIndex, filteredLeaderboardEntries.length)} of ${filteredLeaderboardEntries.length} agencies`;
+      rankingsCountText.textContent = `Showing ${startIndex + 1}-${endIndex} of ${filteredLeaderboardEntries.length} agencies`;
       
       // Generate table rows
       tbody.innerHTML = pageEntries.map((entry, index) => {
@@ -1585,18 +1653,31 @@
           day: 'numeric'
         });
         
+        // Determine rank styling
+        let rankClass = 'rank-other';
+        let rankDisplay = actualRank;
+        
+        if (actualRank === 1) {
+          rankClass = 'rank-1';
+          rankDisplay = '🥇';
+        } else if (actualRank === 2) {
+          rankClass = 'rank-2';
+          rankDisplay = '🥈';
+        } else if (actualRank === 3) {
+          rankClass = 'rank-3';
+          rankDisplay = '🥉';
+        }
+        
         return `
           <tr>
             <td class="rank-cell">
-              <div class="rank-badge rank-${actualRank <= 3 ? actualRank : 'other'}">
-                ${actualRank}
+              <div class="rank-badge ${rankClass}">
+                ${rankDisplay}
               </div>
             </td>
             <td>
               <div class="font-semibold">${entry.company_name}</div>
-              <div class="text-xs text-gray-400 flex items-center mt-1">
-                ${getCountryFlag(entry.country)} ${entry.country}
-              </div>
+              <div class="text-xs text-gray-400">${getTypeName(entry.type)}</div>
             </td>
             <td>
               <a href="${entry.url}" target="_blank" class="text-blue-400 hover:underline text-sm">
@@ -1605,6 +1686,11 @@
             </td>
             <td class="score-cell">
               <div class="text-lg font-bold ${getScoreClass(entry.score)}">${entry.score}</div>
+            </td>
+            <td>
+              <div class="text-sm text-gray-400 flex items-center">
+                ${getCountryFlag(entry.country)} ${entry.country}
+              </div>
             </td>
             <td>
               <div class="text-sm text-gray-400">${date}</div>
@@ -1620,20 +1706,34 @@
       }).join('');
       
       // Show/hide load more button
-      if (endIndex < filteredLeaderboardEntries.length) {
+      if (endIndex < filteredLeaderboardEntries.length && filteredLeaderboardEntries.length <= 100) {
         loadMoreContainer.style.display = 'block';
+        loadMoreBtn.disabled = false;
+        loadMoreBtn.textContent = '⬇️ Load Next 20';
+      } else if (endIndex < filteredLeaderboardEntries.length && filteredLeaderboardEntries.length > 100) {
+        loadMoreContainer.style.display = 'block';
+        loadMoreBtn.disabled = true;
+        loadMoreBtn.textContent = '⛔ Max 100 results';
       } else {
         loadMoreContainer.style.display = 'none';
       }
     }
 
     function loadMoreRankings() {
-      loadRankingsPage(currentPage + 1);
+      const nextPage = currentPage + 1;
+      const totalToLoad = Math.min(filteredLeaderboardEntries.length, 100);
+      const maxPage = Math.ceil(totalToLoad / entriesPerPage);
+      
+      if (nextPage <= maxPage) {
+        loadRankingsPage(nextPage);
+      }
     }
 
     function toggleRankings() {
       const container = document.getElementById('rankings-container');
       const toggleBtn = document.getElementById('rankings-toggle');
+      
+      if (!container || !toggleBtn) return;
       
       container.classList.toggle('show');
       toggleBtn.classList.toggle('active');
@@ -1648,6 +1748,8 @@
     function toggleFilters() {
       const panel = document.getElementById('filter-panel');
       const icon = document.getElementById('filter-icon');
+      
+      if (!panel || !icon) return;
       
       panel.classList.toggle('show');
       icon.classList.toggle('fa-chevron-down');
@@ -1677,13 +1779,29 @@
         'DE': '🇩🇪',
         'FR': '🇫🇷',
         'BE': '🇧🇪',
-        'ES': '🇪🇸'
+        'ES': '🇪🇸',
+        'AU': '🇦🇺',
+        'NZ': '🇳🇿',
+        'CA': '🇨🇦'
       };
       return flagEmojis[country] || '🌐';
     }
 
+    function getTypeName(type) {
+      const typeNames = {
+        'seo_agency': 'SEO Agency',
+        'web_agency': 'Web Agency',
+        'marketing_agency': 'Marketing Agency',
+        'digital_agency': 'Digital Agency',
+        'tech_agency': 'Tech Agency'
+      };
+      return typeNames[type] || 'Other';
+    }
+
     function scanSingleURLFromLeaderboard(url) {
       const input = document.getElementById('singleUrlInput');
+      if (!input) return;
+      
       input.value = url;
       
       // Switch to single scan mode
@@ -1727,6 +1845,9 @@
           if (url.includes('.fr')) country = 'FR';
           if (url.includes('.be')) country = 'BE';
           if (url.includes('.es')) country = 'ES';
+          if (url.includes('.au')) country = 'AU';
+          if (url.includes('.nz')) country = 'NZ';
+          if (url.includes('.ca')) country = 'CA';
           
           // Submit to leaderboard API
           const response = await fetch(`${API_BASE_URL}/api/leaderboard/add`, {
@@ -1738,7 +1859,8 @@
               url: url,
               company_name: companyName,
               score: score,
-              country: country
+              country: country,
+              type: 'seo_agency' // Default type
             })
           });
           
@@ -2236,7 +2358,7 @@
                 (currentLang === 'nl' ? 'Hoog (85+)' : 'High (85+)') :
                 score >= 70 ? 
                 (currentLang === 'nl' ? 'Medium (70-84)' : 'Medium (70-84)') :
-                (currentLang === 'nl' ? 'Laag (<70)' : 'Low (<70)');
+                (currentLang === 'nl' ? 'Laog (<70)' : 'Low (<70)');
               statusCell.innerHTML = `<span class="status-badge status-${score >= 85 ? 'high' : score >= 70 ? 'medium' : 'low'}">${statusText}</span>`;
             }
           }
@@ -2576,6 +2698,74 @@
     });
 
     // ============================================
+    // MODAL FUNCTIONS
+    // ============================================
+    function openFreelancerModal() {
+      const modal = document.getElementById('freelancerModal');
+      if (!modal) return;
+      
+      modal.classList.add('active');
+      modal.querySelector('.modal-content').innerHTML = `
+        <div class="p-8">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold">${currentLang === 'nl' ? 'Registreer als Specialist' : 'Register as Specialist'}</h2>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-white">
+              <i class="fas fa-times text-2xl"></i>
+            </button>
+          </div>
+          
+          <form id="freelancerForm" class="space-y-4">
+            <div>
+              <label class="block text-sm mb-2">${currentLang === 'nl' ? 'Naam' : 'Name'}</label>
+              <input type="text" required class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white">
+            </div>
+            
+            <div>
+              <label class="block text-sm mb-2">Email</label>
+              <input type="email" required class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white">
+            </div>
+            
+            <div>
+              <label class="block text-sm mb-2">${currentLang === 'nl' ? 'Telefoon' : 'Phone'}</label>
+              <input type="tel" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white">
+            </div>
+            
+            <div>
+              <label class="block text-sm mb-2">${currentLang === 'nl' ? 'Specialisatie' : 'Specialization'}</label>
+              <select class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white">
+                <option value="seo">SEO</option>
+                <option value="content">Content Marketing</option>
+                <option value="technical">Technical SEO</option>
+                <option value="ecommerce">E-commerce SEO</option>
+              </select>
+            </div>
+            
+            <div>
+              <label class="block text-sm mb-2">${currentLang === 'nl' ? 'Ervaring (jaren)' : 'Experience (years)'}</label>
+              <input type="number" min="1" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white">
+            </div>
+            
+            <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 px-4 py-3 rounded-lg font-bold">
+              ${currentLang === 'nl' ? 'Verstuur Aanmelding' : 'Submit Application'}
+            </button>
+          </form>
+        </div>
+      `;
+      
+      document.getElementById('freelancerForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        alert(currentLang === 'nl' ? 'Bedankt voor je aanmelding! We nemen binnen 24 uur contact met je op.' : 'Thank you for your application! We will contact you within 24 hours.');
+        closeModal();
+      });
+    }
+
+    function closeModal() {
+      document.querySelectorAll('.modal').forEach(modal => {
+        modal.classList.remove('active');
+      });
+    }
+
+    // ============================================
     // INITIALIZATION COMPLETE
     // ============================================
     console.log('✅ ContentScale Website fully loaded!');
@@ -2587,6 +2777,9 @@
     console.log('- Country detection and flags');
     console.log('- Backend integration for all data');
     console.log('- Automated actions triggered based on scores');
+    console.log('- Load More functionality (max 100 results)');
+    console.log('- Gold/Silver/Bronze styling for top 3');
+    console.log('- Country and type filters');
   </script>
 </body>
 </html>
