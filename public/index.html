@@ -1832,37 +1832,295 @@ async function loadBlog() {
 // Deze functies zijn voor toekomstig gebruik
 // ============================================
 
+// ============================================
+// GOOGLE MAPS BULK SCANNER - REAL IMPLEMENTATION
+// ============================================
+
 async function scrapeGoogleMapsPublic() {
-  alert(currentLang === 'nl' ? 
-    'Google Maps Bulk Scanner komt binnenkort!' : 
-    'Google Maps Bulk Scanner coming soon!');
+  const input = document.getElementById('googleMapsInput');
+  const button = document.getElementById('gmapsScrapeBtn');
+  const url = input.value.trim();
+  
+  if (!url || !url.includes('google.com/maps')) {
+    alert(currentLang === 'nl' ? 
+      'Voer een geldige Google Maps URL in' : 
+      'Enter a valid Google Maps URL');
+    return;
+  }
+  
+  button.disabled = true;
+  button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + 
+    (currentLang === 'nl' ? 'Scrapen...' : 'Scraping...');
+  
+  try {
+    const response = await fetch('/api/google-maps/scrape', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: url, maxResults: 20 })
+    });
+    
+    const data = await response.json();
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Scrape failed');
+    }
+    
+    scrapedLeads = data.leads || [];
+    displayScrapedLeads(scrapedLeads);
+    
+  } catch (error) {
+    console.error('Scrape error:', error);
+    alert((currentLang === 'nl' ? 'Scrape mislukt: ' : 'Scrape failed: ') + error.message);
+  } finally {
+    button.disabled = false;
+    button.innerHTML = currentLang === 'nl' ? '🗺️ Scrape Maps' : '🗺️ Scrape Maps';
+  }
 }
+
+// ============================================
+// DISPLAY SCRAPED LEADS
+// ============================================
+
+function displayScrapedLeads(leads) {
+  const container = document.getElementById('scrapedLeadsContainer');
+  const grid = document.getElementById('leadsGrid');
+  const countSpan = document.getElementById('leadCount');
+  const countSpanEN = document.getElementById('leadCountEN');
+  
+  if (!leads || leads.length === 0) {
+    alert(currentLang === 'nl' ? 
+      'Geen leads gevonden. Probeer een andere zoekopdracht.' : 
+      'No leads found. Try a different search.');
+    return;
+  }
+  
+  // Update count
+  if (countSpan) countSpan.textContent = leads.length;
+  if (countSpanEN) countSpanEN.textContent = leads.length;
+  
+  // Display leads
+  grid.innerHTML = leads.map((lead, index) => {
+    const hasWebsite = lead.website && lead.website.length > 0;
+    const websiteDisplay = hasWebsite ? 
+      `<a href="${lead.website}" target="_blank" class="text-blue-400 hover:underline text-xs truncate block">
+        ${lead.website}
+      </a>` : 
+      `<p class="text-xs text-gray-500 mb-2">❌ No website found</p>
+      <button onclick="offerWebsitePackage(${index})" 
+              class="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 px-3 py-2 rounded-lg text-sm font-bold transition-all mb-2">
+        💰 ${currentLang === 'nl' ? 'Bied Website Aan' : 'Offer Website Package'}
+      </button>`;
+    
+    return `
+      <div class="lead-card bg-gray-800 rounded-lg p-4 border-2 border-gray-600 hover:border-purple-500">
+        <div class="flex items-start gap-3 mb-3">
+          <input type="checkbox" 
+                 class="lead-checkbox mt-1" 
+                 data-index="${index}"
+                 onchange="updateSelectionCount()">
+          <div class="flex-1">
+            <h4 class="font-bold text-white mb-1">${lead.name}</h4>
+            <p class="text-xs text-gray-400 mb-1">${lead.category || 'Business'}</p>
+            ${lead.rating ? 
+              `<div class="flex items-center gap-1 mb-2">
+                <span class="text-yellow-400 text-sm">⭐ ${lead.rating}</span>
+                <span class="text-gray-500 text-xs">(${lead.reviews || 0})</span>
+              </div>` : ''}
+          </div>
+        </div>
+        
+        ${websiteDisplay}
+        
+        ${lead.phone ? 
+          `<a href="tel:${lead.phone}" class="block text-green-400 text-xs mb-2">
+            📞 ${lead.phone}
+          </a>` : ''}
+        
+        ${lead.address ? 
+          `<p class="text-xs text-gray-500 truncate">📍 ${lead.address}</p>` : ''}
+        
+        ${!hasWebsite ? '' : 
+          `<button onclick="scanSingleURLFromLead('${lead.website}', ${index})" 
+                  class="w-full bg-purple-600 hover:bg-purple-700 px-3 py-2 rounded-lg text-sm font-bold transition-all mt-2">
+            🔍 ${currentLang === 'nl' ? 'Scan Website' : 'Scan Website'}
+          </button>`}
+      </div>
+    `;
+  }).join('');
+  
+  container.classList.remove('hidden');
+}
+
+// ============================================
+// SCAN SINGLE URL FROM LEAD
+// ============================================
+
+async function scanSingleURLFromLead(url, index) {
+  try {
+    const response = await fetch('/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: url })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      // Store scan result in lead
+      scrapedLeads[index].scanResult = result;
+      
+      // Show quick summary in alert or modal
+      const score = result.score || 0;
+      const wordCount = result.content_stats?.wordCount || result.details?.wordCount || 0;
+      
+      if (wordCount >= 1100) {
+        alert(`✅ Qualified Lead!\n\nScore: ${score}/100\nWords: ${wordCount}\n\n${currentLang === 'nl' ? 'Potentieel voor optimalisatie!' : 'Potential for optimization!'}`);
+      } else {
+        alert(`⚠️ Not Qualified\n\nOnly ${wordCount} words (need 1100+)\n\n${currentLang === 'nl' ? 'Scan een pagina met meer content' : 'Scan a page with more content'}`);
+      }
+    }
+  } catch (error) {
+    alert('Scan failed: ' + error.message);
+  }
+}
+
+// ============================================
+// BULK SCAN ALL LEADS
+// ============================================
 
 async function scanAllGoogleMapsLeads() {
-  alert(currentLang === 'nl' ? 
-    'Bulk scan functie komt binnenkort!' : 
-    'Bulk scan function coming soon!');
+  const checkboxes = document.querySelectorAll('.lead-checkbox:checked');
+  
+  if (checkboxes.length === 0) {
+    alert(currentLang === 'nl' ? 
+      'Selecteer eerst leads om te scannen' : 
+      'Select leads to scan first');
+    return;
+  }
+  
+  const progressDiv = document.getElementById('bulkScanProgress');
+  const progressBar = document.getElementById('bulkProgressBar');
+  const progressText = document.getElementById('bulkProgressText');
+  
+  progressDiv.classList.remove('hidden');
+  
+  let completed = 0;
+  const total = checkboxes.length;
+  
+  for (const checkbox of checkboxes) {
+    const index = parseInt(checkbox.dataset.index);
+    const lead = scrapedLeads[index];
+    
+    if (!lead.website) {
+      completed++;
+      continue;
+    }
+    
+    progressText.textContent = `${currentLang === 'nl' ? 'Scannen' : 'Scanning'} ${completed + 1}/${total}: ${lead.name}`;
+    progressBar.style.width = ((completed / total) * 100) + '%';
+    
+    try {
+      const response = await fetch('/api/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: lead.website })
+      });
+      
+      const result = await response.json();
+      scrapedLeads[index].scanResult = result;
+    } catch (error) {
+      console.error('Scan error:', error);
+    }
+    
+    completed++;
+    progressBar.style.width = ((completed / total) * 100) + '%';
+  }
+  
+  progressText.textContent = currentLang === 'nl' ? 
+    `✅ ${completed} leads gescand!` : 
+    `✅ ${completed} leads scanned!`;
+  
+  setTimeout(() => {
+    progressDiv.classList.add('hidden');
+    progressBar.style.width = '0%';
+  }, 2000);
 }
+
+// ============================================
+// SELECT ALL LEADS
+// ============================================
 
 function selectAllLeads() {
-  alert(currentLang === 'nl' ? 
-    'Select all functie komt binnenkort!' : 
-    'Select all function coming soon!');
+  const checkboxes = document.querySelectorAll('.lead-checkbox');
+  const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+  
+  checkboxes.forEach(cb => {
+    cb.checked = !allChecked;
+  });
+  
+  updateSelectionCount();
 }
 
+function updateSelectionCount() {
+  const checked = document.querySelectorAll('.lead-checkbox:checked').length;
+  const button = document.getElementById('scanAllBtn');
+  
+  if (button) {
+    button.innerHTML = checked > 0 ? 
+      `⚡ ${currentLang === 'nl' ? 'Scan' : 'Scan'} ${checked}` : 
+      `⚡ ${currentLang === 'nl' ? 'Scan Alles' : 'Scan All'}`;
+  }
+}
+
+// ============================================
+// EXPORT FUNCTIONS
+// ============================================
+
 function exportLeadsToCSV() {
-  alert(currentLang === 'nl' ? 
-    'CSV export komt binnenkort!' : 
-    'CSV export coming soon!');
+  if (!scrapedLeads || scrapedLeads.length === 0) {
+    alert('No leads to export');
+    return;
+  }
+  
+  const headers = ['Name', 'Category', 'Rating', 'Reviews', 'Website', 'Phone', 'Address'];
+  const rows = scrapedLeads.map(lead => [
+    lead.name || '',
+    lead.category || '',
+    lead.rating || '',
+    lead.reviews || '',
+    lead.website || '',
+    lead.phone || '',
+    lead.address || ''
+  ]);
+  
+  let csv = headers.join(',') + '\n';
+  csv += rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+  
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `google-maps-leads-${Date.now()}.csv`;
+  a.click();
 }
 
 function exportLeadsToJSON() {
-  alert(currentLang === 'nl' ? 
-    'JSON export komt binnenkort!' : 
-    'JSON export coming soon!');
+  if (!scrapedLeads || scrapedLeads.length === 0) {
+    alert('No leads to export');
+    return;
+  }
+  
+  const json = JSON.stringify(scrapedLeads, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `google-maps-leads-${Date.now()}.json`;
+  a.click();
 }
 
-    // ============================================
+
+// ============================================
 // OFFER WEBSITE PACKAGE (NO-WEBSITE LEADS)
 // ============================================
 
