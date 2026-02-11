@@ -170,6 +170,19 @@ async function createAllTables() {
       )
     `);
     
+    // MIGRATE: Add missing columns to scans if they don't exist
+    try {
+      await client.query(`
+        ALTER TABLE scans 
+        ADD COLUMN IF NOT EXISTS content_score INTEGER,
+        ADD COLUMN IF NOT EXISTS ux_score INTEGER,
+        ADD COLUMN IF NOT EXISTS comparison_data JSONB
+      `);
+      console.log('✅ Scans table migrated');
+    } catch (migrationError) {
+      console.log('ℹ️ Scans migration skipped (columns may already exist)');
+    }
+    
     // LEADERBOARD TABLE
     await client.query(`
       CREATE TABLE IF NOT EXISTS leaderboard (
@@ -193,6 +206,22 @@ async function createAllTables() {
       )
     `);
     
+    // MIGRATE: Add missing columns to leaderboard if they don't exist
+    try {
+      await client.query(`
+        ALTER TABLE leaderboard 
+        ADD COLUMN IF NOT EXISTS city VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS type VARCHAR(100) DEFAULT 'seo_agency',
+        ADD COLUMN IF NOT EXISTS location VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS graaf_score INTEGER,
+        ADD COLUMN IF NOT EXISTS craft_score INTEGER,
+        ADD COLUMN IF NOT EXISTS technical_score INTEGER
+      `);
+      console.log('✅ Leaderboard table migrated');
+    } catch (migrationError) {
+      console.log('ℹ️ Leaderboard migration skipped (columns may already exist)');
+    }
+    
     // FREELANCERS TABLE
     await client.query(`
       CREATE TABLE IF NOT EXISTS freelancers (
@@ -212,6 +241,18 @@ async function createAllTables() {
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
+    
+    // MIGRATE: Add missing columns to freelancers if they don't exist
+    try {
+      await client.query(`
+        ALTER TABLE freelancers 
+        ADD COLUMN IF NOT EXISTS hourly_rate VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS availability VARCHAR(100)
+      `);
+      console.log('✅ Freelancers table migrated');
+    } catch (migrationError) {
+      console.log('ℹ️ Freelancers migration skipped (columns may already exist)');
+    }
     
     // GOOGLE MAPS LEADS TABLE
     await client.query(`
