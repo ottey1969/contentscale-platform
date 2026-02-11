@@ -7,7 +7,7 @@
   <meta name="description" content="Stop losing traffic to AI. Professional SEO content optimization based on Google's E-E-A-T guidelines. Get your 90+ quality score roadmap today.">
   <meta name="keywords" content="SEO content optimization, Google E-E-A-T, content quality score, AI-proof SEO, GRAAF framework, traffic recovery">
   
-  <!-- Use proper Tailwind CSS installation -->
+  <!-- Tailwind CSS from CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -1416,11 +1416,139 @@
   </div>
 
   <script>
+    // ============================================
+    // MOCK DATA - NO API REQUIRED
+    // ============================================
+    
+    // Mock freelancers data
+    const MOCK_FREELANCERS = [
+      { 
+        id: 1, 
+        name: "Mark van Dijk", 
+        title: "Senior SEO Specialist", 
+        email: "mark@seoexpert.nl", 
+        location: "Amsterdam", 
+        bio: "10+ years experience in E-E-A-T optimization and traffic recovery. Specialized in GRAAF framework implementation.", 
+        is_verified: true,
+        hourly_rate: "€85-€120",
+        availability: "Full-time"
+      },
+      { 
+        id: 2, 
+        name: "Sarah Johnson", 
+        title: "Content Strategist", 
+        email: "sarah@contentstrategy.com", 
+        location: "London", 
+        bio: "Expert in content scaling and AI-proof SEO strategies. Helped 50+ businesses recover traffic.", 
+        is_verified: true,
+        hourly_rate: "€75-€110",
+        availability: "Part-time"
+      },
+      { 
+        id: 3, 
+        name: "Thomas Schmidt", 
+        title: "Technical SEO Expert", 
+        email: "thomas@techseo.de", 
+        location: "Berlin", 
+        bio: "Specialized in technical SEO audits, site structure optimization, and Core Web Vitals improvement.", 
+        is_verified: true,
+        hourly_rate: "€90-€130",
+        availability: "Full-time"
+      },
+      { 
+        id: 4, 
+        name: "Lisa Chen", 
+        title: "E-commerce SEO Consultant", 
+        email: "lisa@ecomseo.nl", 
+        location: "Rotterdam", 
+        bio: "Helping e-commerce businesses recover lost traffic from AI Overviews. Focus on conversion optimization.", 
+        is_verified: true,
+        hourly_rate: "€80-€115",
+        availability: "Full-time"
+      },
+      { 
+        id: 5, 
+        name: "David Miller", 
+        title: "Local SEO Specialist", 
+        email: "david@localseo.com", 
+        location: "Utrecht", 
+        bio: "Expert in local SEO and Google Business Profile optimization. Specialized in service-based businesses.", 
+        is_verified: true,
+        hourly_rate: "€70-€100",
+        availability: "Full-time"
+      },
+      { 
+        id: 6, 
+        name: "Emma Wilson", 
+        title: "Content Quality Analyst", 
+        email: "emma@contentquality.com", 
+        location: "Remote", 
+        bio: "Focus on E-E-A-T alignment, content quality scoring, and editorial guideline development.", 
+        is_verified: true,
+        hourly_rate: "€65-€95",
+        availability: "Part-time"
+      }
+    ];
+
+    // Mock leaderboard data
+    const MOCK_LEADERBOARD = [
+      { id: 1, company_name: "SEO Masters International", url: "https://seomasters.com", score: 97, country: "US", type: "seo_agency", location: "New York, NY", created_at: "2024-01-15", rank: 1 },
+      { id: 2, company_name: "Digital Growth Experts", url: "https://digitalgrowthexperts.nl", score: 95, country: "NL", type: "seo_agency", location: "Amsterdam", created_at: "2024-02-20", rank: 2 },
+      { id: 3, company_name: "Content Kings", url: "https://contentkings.co.uk", score: 94, country: "UK", type: "content_agency", location: "London", created_at: "2024-03-10", rank: 3 },
+      { id: 4, company_name: "Ranking Revolution", url: "https://rankingrevolution.de", score: 93, country: "DE", type: "seo_agency", location: "Berlin", created_at: "2024-01-28", rank: 4 },
+      { id: 5, company_name: "Traffic Titans", url: "https://traffictitans.com", score: 92, country: "US", type: "marketing_agency", location: "Los Angeles, CA", created_at: "2024-02-15", rank: 5 },
+      { id: 6, company_name: "Dutch SEO Professionals", url: "https://dutchseo.nl", score: 91, country: "NL", type: "seo_agency", location: "Rotterdam", created_at: "2024-03-05", rank: 6 },
+      { id: 7, company_name: "Paris SEO Solutions", url: "https://parisseo.fr", score: 90, country: "FR", type: "seo_agency", location: "Paris", created_at: "2024-02-10", rank: 7 },
+      { id: 8, company_name: "Australian Web Wizards", url: "https://webwizards.au", score: 89, country: "AU", type: "web_agency", location: "Sydney", created_at: "2024-03-01", rank: 8 },
+      { id: 9, company_name: "Canadian Content Creators", url: "https://canadiancontent.ca", score: 88, country: "CA", type: "content_agency", location: "Toronto", created_at: "2024-02-25", rank: 9 },
+      { id: 10, company_name: "Barcelona Digital", url: "https://barcelonadigital.es", score: 87, country: "ES", type: "digital_agency", location: "Barcelona", created_at: "2024-03-15", rank: 10 },
+      { id: 11, company_name: "Brussels Marketing Hub", url: "https://brusselsmarketing.be", score: 86, country: "BE", type: "marketing_agency", location: "Brussels", created_at: "2024-03-12", rank: 11 },
+      { id: 12, company_name: "Swiss Precision SEO", url: "https://swissseo.ch", score: 85, country: "CH", type: "seo_agency", location: "Zurich", created_at: "2024-02-28", rank: 12 },
+      { id: 13, company_name: "Italian Internet Experts", url: "https://italianinternet.it", score: 84, country: "IT", type: "web_agency", location: "Milan", created_at: "2024-03-08", rank: 13 },
+      { id: 14, company_name: "Auckland Digital Agency", url: "https://aucklanddigital.nz", score: 83, country: "NZ", type: "digital_agency", location: "Auckland", created_at: "2024-03-18", rank: 14 },
+      { id: 15, company_name: "Manchester SEO Group", url: "https://manchesterseo.co.uk", score: 82, country: "UK", type: "seo_agency", location: "Manchester", created_at: "2024-02-05", rank: 15 }
+    ];
+
+    // Add more entries to reach 35+
+    for (let i = 16; i <= 35; i++) {
+      const countries = ['NL', 'US', 'UK', 'DE', 'FR', 'ES', 'AU', 'CA', 'IT', 'BE', 'CH'];
+      const types = ['seo_agency', 'digital_agency', 'web_agency', 'marketing_agency', 'content_agency'];
+      const cities = {
+        'NL': ['Amsterdam', 'Rotterdam', 'Utrecht', 'The Hague'],
+        'US': ['New York', 'Los Angeles', 'Chicago', 'Miami'],
+        'UK': ['London', 'Manchester', 'Birmingham', 'Edinburgh'],
+        'DE': ['Berlin', 'Munich', 'Hamburg', 'Frankfurt'],
+        'FR': ['Paris', 'Lyon', 'Marseille', 'Toulouse'],
+        'ES': ['Madrid', 'Barcelona', 'Valencia', 'Seville'],
+        'AU': ['Sydney', 'Melbourne', 'Brisbane', 'Perth'],
+        'CA': ['Toronto', 'Vancouver', 'Montreal', 'Calgary'],
+        'IT': ['Rome', 'Milan', 'Naples', 'Turin'],
+        'BE': ['Brussels', 'Antwerp', 'Ghent', 'Bruges'],
+        'CH': ['Zurich', 'Geneva', 'Basel', 'Bern']
+      };
+      
+      const country = countries[Math.floor(Math.random() * countries.length)];
+      const type = types[Math.floor(Math.random() * types.length)];
+      const city = cities[country] ? cities[country][Math.floor(Math.random() * cities[country].length)] : 'Capital City';
+      
+      MOCK_LEADERBOARD.push({
+        id: i,
+        company_name: `Agency ${i} Solutions`,
+        url: `https://agency${i}solutions.${country === 'UK' ? 'co.uk' : country === 'US' ? 'com' : country.toLowerCase()}`,
+        score: 100 - i,
+        country: country,
+        type: type,
+        location: `${city}, ${getCountryName(country)}`,
+        created_at: `2024-0${Math.floor(Math.random() * 2) + 1}-${Math.floor(Math.random() * 28) + 1}`,
+        rank: i
+      });
+    }
+
+    // ============================================
+    // GLOBAL VARIABLES
+    // ============================================
     let currentLang = localStorage.getItem('contentscale_lang') || 'en';
     let scrapedLeads = [];
-    // Use mock data since API endpoints are not resolving
-    const USE_MOCK_DATA = true;
-    const MOCK_API_BASE_URL = 'https://mock-api.contentscale.site';
     
     let allLeaderboardEntries = [];
     let filteredLeaderboardEntries = [];
@@ -1430,17 +1558,18 @@
     let activeTypeFilter = 'all';
     let currentAgencyModalData = null;
 
-    // Initialize on page load
+    // ============================================
+    // INITIALIZATION
+    // ============================================
     document.addEventListener('DOMContentLoaded', () => {
       switchLanguage(currentLang);
       loadFreelancers();
       loadLeaderboardData();
       setupEventListeners();
       
-      console.log('✅ ContentScale Website fully loaded with enhanced functionality!');
+      console.log('✅ ContentScale Website fully loaded with MOCK DATA - No API required!');
     });
 
-    // Setup all event listeners
     function setupEventListeners() {
       // Enter key for inputs
       document.getElementById('singleUrlInput')?.addEventListener('keypress', (e) => {
@@ -1457,7 +1586,7 @@
 
       // Close modals when clicking outside
       document.addEventListener('click', (e) => {
-        if (e.target.classList.contains('modal')) {
+        if (e.target.classList.contains('modal') || e.target.classList.contains('agency-modal')) {
           e.target.classList.remove('active');
           document.body.style.overflow = 'auto';
         }
@@ -1478,6 +1607,9 @@
       document.body.style.overflow = 'auto';
     }
 
+    // ============================================
+    // LANGUAGE SWITCHING
+    // ============================================
     function switchLanguage(lang) {
       currentLang = lang;
       localStorage.setItem('contentscale_lang', lang);
@@ -1492,6 +1624,9 @@
       document.documentElement.lang = lang;
     }
 
+    // ============================================
+    // SCANNER FUNCTIONS
+    // ============================================
     function testMyWebsite() {
       let currentUrl = window.location.hostname;
       currentUrl = currentUrl.replace(/^www\./, '');
@@ -1553,7 +1688,720 @@
       }
     }
 
-    async function loadLeaderboardData() {
+    async function scanSingleURLPublic() {
+      const input = document.getElementById('singleUrlInput');
+      const button = document.getElementById('singleScanBtn');
+      const url = input.value.trim();
+      
+      if (!url) {
+        alert(currentLang === 'nl' ? 'Voer een URL in' : 'Enter a URL');
+        return;
+      }
+      
+      let fullUrl = url;
+      if (!url.startsWith('http')) {
+        fullUrl = 'https://' + url;
+      }
+      
+      try {
+        new URL(fullUrl);
+      } catch {
+        alert(currentLang === 'nl' ? 'Voer een geldige URL in' : 'Please enter a valid URL');
+        return;
+      }
+      
+      button.disabled = true;
+      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + 
+        (currentLang === 'nl' ? 'Scannen...' : 'Scanning...');
+      
+      const progressDiv = document.getElementById('singleScanProgress');
+      const progressBar = document.getElementById('singleProgressBar');
+      const progressText = document.getElementById('singleProgressText');
+      const resultDiv = document.getElementById('singleScanResult');
+      
+      progressDiv.classList.remove('hidden');
+      resultDiv.classList.add('hidden');
+      progressBar.style.width = '10%';
+      progressText.textContent = currentLang === 'nl' ? 'URL valideren...' : 'Validating URL...';
+      
+      try {
+        // Simulate progress
+        await simulateProgress(progressBar, progressText, [
+          {percent: 30, text: currentLang === 'nl' ? 'Content ophalen...' : 'Fetching content...'},
+          {percent: 60, text: currentLang === 'nl' ? 'Analyse uitvoeren...' : 'Performing analysis...'},
+          {percent: 90, text: currentLang === 'nl' ? 'Resultaten genereren...' : 'Generating results...'},
+          {percent: 100, text: currentLang === 'nl' ? 'Scan voltooid!' : 'Scan complete!'}
+        ]);
+        
+        // Generate mock scan result
+        const mockScanResult = generateMockScanResult(fullUrl);
+        
+        // Display result
+        setTimeout(() => {
+          progressDiv.classList.add('hidden');
+          displayRealSingleScanResult(mockScanResult);
+          
+          // Trigger automated actions
+          triggerAutomatedActions(mockScanResult);
+          
+          // Submit to leaderboard if score is high enough
+          submitToLeaderboardAutomatically(mockScanResult);
+          
+        }, 500);
+        
+      } catch (error) {
+        console.error('Scan error:', error);
+        progressBar.style.width = '100%';
+        progressText.textContent = currentLang === 'nl' ? 'Fout opgetreden!' : 'Error occurred!';
+        
+        setTimeout(() => {
+          progressDiv.classList.add('hidden');
+          alert(currentLang === 'nl' ? `Scan mislukt: ${error.message}` : `Scan failed: ${error.message}`);
+        }, 500);
+      } finally {
+        button.disabled = false;
+        button.innerHTML = currentLang === 'nl' ? '🚀 Start Scan' : '🚀 Start Scan';
+      }
+    }
+
+    async function simulateProgress(progressBar, progressText, steps) {
+      for (const step of steps) {
+        progressBar.style.width = `${step.percent}%`;
+        progressText.textContent = step.text;
+        await new Promise(resolve => setTimeout(resolve, 400));
+      }
+    }
+
+    function generateMockScanResult(url) {
+      const domain = new URL(url).hostname;
+      const randomScore = Math.floor(Math.random() * 40) + 60; // 60-100
+      const wordCount = Math.floor(Math.random() * 2000) + 500; // 500-2500
+      
+      return {
+        success: true,
+        url: url,
+        score: randomScore,
+        wordCount: wordCount,
+        quality: randomScore >= 85 ? 'Excellent' : randomScore >= 70 ? 'Good' : randomScore >= 60 ? 'Average' : 'Poor',
+        content_stats: { wordCount: wordCount },
+        metrics: {
+          content: randomScore - 10,
+          technical: randomScore - 15,
+          ux: randomScore - 20
+        },
+        recommendations: {
+          all: [
+            {
+              title: 'Improve Content Depth',
+              description: 'Add more detailed information and examples to increase content value.',
+              priority: 'HIGH',
+              effort: 'Medium',
+              impact: 'High'
+            },
+            {
+              title: 'Optimize Page Speed',
+              description: 'Compress images and minimize JavaScript to improve loading time.',
+              priority: 'MEDIUM',
+              effort: 'Low',
+              impact: 'Medium'
+            },
+            {
+              title: 'Add Author Bio',
+              description: 'Include author credentials to establish E-E-A-T.',
+              priority: 'HIGH',
+              effort: 'Low',
+              impact: 'High'
+            },
+            {
+              title: 'Improve Internal Linking',
+              description: 'Add more relevant internal links to improve site structure.',
+              priority: 'MEDIUM',
+              effort: 'Medium',
+              impact: 'Medium'
+            },
+            {
+              title: 'Update Old Content',
+              description: 'Refresh outdated articles with current information.',
+              priority: 'MEDIUM',
+              effort: 'High',
+              impact: 'Medium'
+            }
+          ]
+        }
+      };
+    }
+
+    function displayRealSingleScanResult(result) {
+      const resultDiv = document.getElementById('singleScanResult');
+      const wordCount = result.content_stats?.wordCount || result.wordCount || 0;
+      const score = result.score || 0;
+      
+      const potentialScore = Math.min(98, score + Math.floor((100 - score) * 0.8));
+      const improvement = potentialScore - score;
+      
+      const recommendations = result.recommendations?.all || result.recommendations || [];
+      
+      resultDiv.innerHTML = `
+        <div class="scan-result-card bg-gray-800 rounded-2xl p-8 border-2 border-purple-500 shadow-2xl">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 pb-6 border-b-2 border-gray-700 gap-4">
+            <div class="flex-1">
+              <h3 class="text-2xl font-bold text-white mb-2">${currentLang === 'nl' ? '📊 Lead Analyse Rapport' : '📊 Lead Analysis Report'}</h3>
+              <p class="text-sm text-gray-400 break-all mb-2">${result.url || ''}</p>
+              <div class="flex items-center gap-3 text-sm flex-wrap">
+                <span class="text-gray-400">📝 ${wordCount} ${currentLang === 'nl' ? 'woorden' : 'words'}</span>
+                <span class="text-gray-400">•</span>
+                <span class="px-3 py-1 ${score >= 85 ? 'bg-green-600' : score >= 70 ? 'bg-yellow-600' : 'bg-red-600'} rounded-full text-white font-semibold text-xs">
+                  ${score >= 85 ? '✅ ' : score >= 70 ? '⚠️ ' : '❌ '}${currentLang === 'nl' ? 'Lead' : 'Lead'} (${score}/100)
+                </span>
+                <span class="text-gray-400">•</span>
+                <span class="text-sm text-gray-400">${currentLang === 'nl' ? 'Kwaliteit:' : 'Quality:'} ${result.quality || 'Unknown'}</span>
+              </div>
+            </div>
+            <div class="text-center bg-gray-900 bg-opacity-30 rounded-2xl px-8 py-6 border-2 border-purple-600">
+              <div class="text-6xl font-black mb-2 text-purple-400">${score}</div>
+              <div class="text-sm text-gray-300 font-semibold">${score >= 90 ? 'Excellent' : score >= 75 ? 'Good' : score >= 60 ? 'Average' : 'Poor'}</div>
+            </div>
+          </div>
+          
+          <div class="grid md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-gray-900 rounded-xl p-6 border-2 border-gray-600">
+              <h4 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <span>📊</span><span>${currentLang === 'nl' ? 'Huidige Staat' : 'Current State'}</span>
+              </h4>
+              <div class="space-y-3">
+                <div>
+                  <div class="flex justify-between items-center mb-1">
+                    <span class="text-sm text-gray-300">${currentLang === 'nl' ? 'Content Kwaliteit' : 'Content Quality'}</span>
+                    <span class="font-bold text-blue-400">${result.metrics?.content || Math.floor(score * 0.7)}/100</span>
+                  </div>
+                  <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
+                    <div class="h-full bg-blue-500 transition-all" style="width: ${result.metrics?.content || Math.floor(score * 0.7)}%"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center mb-1">
+                    <span class="text-sm text-gray-300">${currentLang === 'nl' ? 'Technische SEO' : 'Technical SEO'}</span>
+                    <span class="font-bold text-green-400">${result.metrics?.technical || Math.floor(score * 0.6)}/100</span>
+                  </div>
+                  <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
+                    <div class="h-full bg-green-500 transition-all" style="width: ${result.metrics?.technical || Math.floor(score * 0.6)}%"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center mb-1">
+                    <span class="text-sm text-gray-300">UX Score</span>
+                    <span class="font-bold text-purple-400">${result.metrics?.ux || Math.floor(score * 0.5)}/100</span>
+                  </div>
+                  <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
+                    <div class="h-full bg-purple-500 transition-all" style="width: ${result.metrics?.ux || Math.floor(score * 0.5)}%"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-gradient-to-br from-green-900 to-emerald-900 rounded-xl p-6 border-2 border-green-500">
+              <h4 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <span>🚀</span><span>${currentLang === 'nl' ? 'Potentieel (Na Optimalisatie)' : 'Potential (After Optimization)'}</span>
+              </h4>
+              <div class="text-center mb-4">
+                <div class="text-6xl md:text-7xl font-black text-green-400 mb-2">${potentialScore}</div>
+                <div class="text-green-300 font-semibold text-lg">+${improvement} ${currentLang === 'nl' ? 'punten mogelijk!' : 'points possible!'}</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-8">
+            <h4 class="text-lg font-bold text-white mb-4">${currentLang === 'nl' ? '🎯 Aanbevelingen voor Verbetering' : '🎯 Improvement Recommendations'}</h4>
+            <div class="space-y-4">
+              ${recommendations.length > 0 ? recommendations.slice(0, 5).map(rec => `
+                <div class="bg-gray-900 rounded-lg p-4 border-l-4 ${rec.priority === 'HIGH' ? 'border-red-500' : rec.priority === 'MEDIUM' ? 'border-yellow-500' : 'border-blue-500'}">
+                  <div class="flex justify-between items-start mb-2">
+                    <span class="font-semibold text-white">${rec.title}</span>
+                    <span class="px-2 py-1 text-xs rounded ${rec.priority === 'HIGH' ? 'bg-red-600' : rec.priority === 'MEDIUM' ? 'bg-yellow-600' : 'bg-blue-600'}">
+                      ${rec.priority === 'HIGH' ? 'Hoge prioriteit' : rec.priority === 'MEDIUM' ? 'Medium prioriteit' : 'Lage prioriteit'}
+                    </span>
+                  </div>
+                  <p class="text-sm text-gray-400 mb-2">${rec.description}</p>
+                  <div class="flex justify-between text-xs text-gray-500">
+                    <span>${currentLang === 'nl' ? 'Inspanning:' : 'Effort:'} ${rec.effort}</span>
+                    <span>${currentLang === 'nl' ? 'Impact:' : 'Impact:'} ${rec.impact}</span>
+                  </div>
+                </div>
+              `).join('') : '<p class="text-gray-400">Geen specifieke aanbevelingen beschikbaar</p>'}
+            </div>
+          </div>
+          
+          <div class="border-t-2 border-gray-700 pt-6">
+            <h4 class="text-lg font-bold text-white mb-4">${currentLang === 'nl' ? '📤 Deel dit Rapport' : '📤 Share This Report'}</h4>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <button onclick="shareLeadViaWhatsApp('${encodeURIComponent(result.url)}', ${score}, ${potentialScore})" 
+                      class="bg-green-600 hover:bg-green-700 px-4 py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
+                <i class="fab fa-whatsapp"></i><span>WhatsApp</span>
+              </button>
+              <button onclick="shareLeadViaEmail('${encodeURIComponent(result.url)}', ${score}, ${potentialScore})" 
+                      class="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
+                <i class="fas fa-envelope"></i><span>Email</span>
+              </button>
+              <button onclick="copyLeadReport('${encodeURIComponent(result.url)}', ${score}, ${potentialScore}, ${wordCount})" 
+                      class="bg-gray-600 hover:bg-gray-700 px-4 py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
+                <i class="fas fa-copy"></i><span>${currentLang === 'nl' ? 'Kopieer' : 'Copy'}</span>
+              </button>
+              <button onclick="saveLeadToWorkspace('${encodeURIComponent(result.url)}', ${score}, ${wordCount})" 
+                      class="bg-purple-600 hover:bg-purple-700 px-4 py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
+                <i class="fas fa-save"></i><span>${currentLang === 'nl' ? 'Opslaan' : 'Save'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      resultDiv.classList.remove('hidden');
+    }
+
+    function triggerAutomatedActions(scanResult) {
+      const score = scanResult.score;
+      const url = scanResult.url;
+      
+      if (score >= 85) {
+        console.log(`🎉 Triggering congratulatory email for ${url} with score ${score}`);
+      } else if (score > 0) {
+        console.log(`📧 Triggering optimization outreach for ${url} with score ${score}`);
+      } else {
+        console.log(`📞 Triggering website building outreach for ${url}`);
+      }
+    }
+
+    function submitToLeaderboardAutomatically(scanResult) {
+      const score = scanResult.score;
+      const url = scanResult.url;
+      
+      if (score >= 85) {
+        console.log(`🚀 Auto-submitting to leaderboard: ${url} (score: ${score})`);
+        
+        // In a real app, this would make an API call
+        setTimeout(() => {
+          alert(currentLang === 'nl' 
+            ? `🎉 Gefeliciteerd! Je website is automatisch toegevoegd aan de leaderboard met score ${score}/100.`
+            : `🎉 Congratulations! Your website has been automatically added to the leaderboard with score ${score}/100.`);
+          
+          // Refresh leaderboard data
+          setTimeout(() => {
+            loadLeaderboardData();
+          }, 2000);
+        }, 1000);
+      }
+    }
+
+    // ============================================
+    // GOOGLE MAPS SCRAPER
+    // ============================================
+    async function scrapeGoogleMapsPublic() {
+      const input = document.getElementById('googleMapsInput');
+      const button = document.getElementById('gmapsScrapeBtn');
+      const url = input.value.trim();
+      
+      if (!url || !url.includes('google.com/maps')) {
+        alert(currentLang === 'nl' 
+          ? 'Voer een geldige Google Maps URL in' 
+          : 'Enter a valid Google Maps URL');
+        return;
+      }
+      
+      button.disabled = true;
+      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + 
+        (currentLang === 'nl' ? 'Scrapen...' : 'Scraping...');
+      
+      try {
+        // Simulate scraping delay
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        const mockLeads = generateMockGoogleMapsLeads();
+        scrapedLeads = mockLeads;
+        displayScrapedLeadsTable(scrapedLeads);
+        
+        console.log('✅ Mock Google Maps leads generated');
+        
+      } catch (error) {
+        console.error('Google Maps scrape error:', error);
+        alert(currentLang === 'nl' 
+          ? 'Scrape mislukt. Probeer het later opnieuw.' 
+          : 'Scrape failed. Please try again later.');
+      } finally {
+        button.disabled = false;
+        button.innerHTML = currentLang === 'nl' ? '🗺️ Scrape Maps' : '🗺️ Scrape Maps';
+      }
+    }
+
+    function generateMockGoogleMapsLeads() {
+      const businessNames = [
+        'Amsterdam Digital Agency', 'Rotterdam SEO Experts', 'Utrecht Web Solutions',
+        'The Hague Marketing Pros', 'Eindhoven Tech Partners', 'Groningen Digital Studio',
+        'Maastricht Web Design', 'Leiden Online Marketing', 'Delft SEO Masters',
+        'Haarlem Digital Creators', 'Breda SEO Solutions', 'Tilburg Marketing Agency',
+        'Enschede Web Experts', 'Nijmegen Digital Partners', 'Almere Online Solutions'
+      ];
+      
+      const categories = [
+        'SEO Agency', 'Digital Marketing', 'Web Design', 'Content Marketing',
+        'Social Media Agency', 'PPC Advertising', 'E-commerce SEO', 'Local SEO'
+      ];
+      
+      const domains = ['nl', 'com', 'org', 'net'];
+      
+      return businessNames.map((name, index) => {
+        const hasWebsite = Math.random() > 0.2; // 80% have websites
+        const domain = domains[Math.floor(Math.random() * domains.length)];
+        const website = hasWebsite ? `https://${name.toLowerCase().replace(/\s+/g, '')}.${domain}` : 'N/A';
+        const score = hasWebsite ? Math.floor(Math.random() * 40) + 60 : 0; // 60-100 or 0
+        
+        return {
+          name: name,
+          category: categories[Math.floor(Math.random() * categories.length)],
+          website: website,
+          phone: `+31 6 ${Math.floor(Math.random() * 9000000) + 1000000}`,
+          address: `${name.split(' ')[0]}straat ${Math.floor(Math.random() * 100) + 1}, ${name.split(' ')[0]}`,
+          rating: (Math.random() * 2 + 3).toFixed(1), // 3.0-5.0
+          reviews: Math.floor(Math.random() * 100),
+          score: score
+        };
+      });
+    }
+
+    function displayScrapedLeadsTable(leads) {
+      const container = document.getElementById('scrapedLeadsContainer');
+      const tableBody = document.getElementById('leadsTableBody');
+      const countSpan = document.getElementById('leadCount');
+      const countSpanEN = document.getElementById('leadCountEN');
+      
+      if (!leads || leads.length === 0) {
+        alert(currentLang === 'nl' 
+          ? 'Geen leads gevonden. Probeer een andere zoekopdracht.' 
+          : 'No leads found. Try a different search.');
+        return;
+      }
+      
+      if (countSpan) countSpan.textContent = leads.length;
+      if (countSpanEN) countSpanEN.textContent = leads.length;
+      
+      tableBody.innerHTML = leads.map((lead, index) => {
+        const hasWebsite = lead.website && lead.website !== 'N/A';
+        const score = lead.score || 0;
+        let status = 'none';
+        let statusText = currentLang === 'nl' ? 'Niet gescand' : 'Not scanned';
+        
+        if (hasWebsite) {
+          if (score >= 85) {
+            status = 'high';
+            statusText = currentLang === 'nl' ? 'Hoog (85+)' : 'High (85+)';
+          } else if (score >= 70) {
+            status = 'medium';
+            statusText = currentLang === 'nl' ? 'Medium (70-84)' : 'Medium (70-84)';
+          } else {
+            status = 'low';
+            statusText = currentLang === 'nl' ? 'Laag (<70)' : 'Low (<70)';
+          }
+        }
+        
+        return `
+          <tr>
+            <td>
+              <input type="checkbox" class="lead-checkbox" data-index="${index}" onchange="updateSelectionCount()">
+            </td>
+            <td>
+              <div class="font-semibold">${lead.name}</div>
+              ${lead.rating ? `<div class="text-xs text-yellow-400">⭐ ${lead.rating} (${lead.reviews || 0})</div>` : ''}
+            </td>
+            <td>${lead.category}</td>
+            <td class="website-cell">
+              ${hasWebsite ? 
+                `<a href="${lead.website}" target="_blank" class="text-blue-400 hover:underline text-sm">${lead.website.replace('https://', '')}</a>` : 
+                `<span class="text-red-400 text-sm">${currentLang === 'nl' ? 'Geen website' : 'No website'}</span>`
+              }
+            </td>
+            <td>${lead.phone || '-'}</td>
+            <td>
+              ${hasWebsite ? 
+                `<div class="text-lg font-bold ${score >= 85 ? 'text-green-400' : score >= 70 ? 'text-yellow-400' : 'text-red-400'}">${score}</div>` : 
+                '-'
+              }
+            </td>
+            <td>
+              <span class="status-badge status-${status}">${statusText}</span>
+            </td>
+            <td>
+              <div class="action-buttons">
+                ${hasWebsite ? 
+                  `<button onclick="scanSingleURLFromLead('${lead.website}', ${index})" 
+                          class="bg-purple-600 hover:bg-purple-700 px-3 py-1 rounded text-sm font-bold transition-all">
+                    🔍
+                  </button>` : ''
+                }
+                <button onclick="showLeadDetails(${index})" 
+                        class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm font-bold transition-all">
+                  👁️
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      
+      container.classList.remove('hidden');
+    }
+
+    async function scanAllGoogleMapsLeads() {
+      const selectedLeads = scrapedLeads.filter((lead, index) => {
+        const checkbox = document.querySelector(`.lead-checkbox[data-index="${index}"]`);
+        return checkbox && checkbox.checked && lead.website && lead.website !== 'N/A';
+      });
+      
+      if (selectedLeads.length === 0) {
+        alert(currentLang === 'nl' ? 'Selecteer eerst enkele leads om te scannen.' : 'Select some leads to scan first.');
+        return;
+      }
+      
+      const progressDiv = document.getElementById('bulkScanProgress');
+      const progressBar = document.getElementById('bulkProgressBar');
+      const progressText = document.getElementById('bulkProgressText');
+      
+      progressDiv.classList.remove('hidden');
+      progressBar.style.width = '0%';
+      progressText.textContent = currentLang === 'nl' 
+        ? `Scannen ${selectedLeads.length} leads...` 
+        : `Scanning ${selectedLeads.length} leads...`;
+      
+      const results = [];
+      
+      for (let i = 0; i < selectedLeads.length; i++) {
+        const lead = selectedLeads[i];
+        
+        const progressPercent = Math.round((i / selectedLeads.length) * 100);
+        progressBar.style.width = `${progressPercent}%`;
+        progressText.textContent = currentLang === 'nl'
+          ? `Scannen ${i + 1}/${selectedLeads.length}: ${lead.name}`
+          : `Scanning ${i + 1}/${selectedLeads.length}: ${lead.name}`;
+        
+        // Simulate scanning delay
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        const score = Math.floor(Math.random() * 40) + 60; // 60-100
+        results.push({
+          lead: lead,
+          score: score,
+          status: score >= 85 ? 'high' : score >= 70 ? 'medium' : 'low'
+        });
+        
+        // Update UI
+        const rowIndex = scrapedLeads.findIndex(l => l.name === lead.name);
+        if (rowIndex !== -1) {
+          scrapedLeads[rowIndex].score = score;
+          
+          const scoreCell = document.querySelector(`tr:nth-child(${rowIndex + 1}) td:nth-child(6)`);
+          const statusCell = document.querySelector(`tr:nth-child(${rowIndex + 1}) td:nth-child(7)`);
+          
+          if (scoreCell) {
+            scoreCell.innerHTML = `<div class="text-lg font-bold ${score >= 85 ? 'text-green-400' : score >= 70 ? 'text-yellow-400' : 'text-red-400'}">${score}</div>`;
+          }
+          
+          if (statusCell) {
+            const statusText = score >= 85 ? 
+              (currentLang === 'nl' ? 'Hoog (85+)' : 'High (85+)') :
+              score >= 70 ? 
+              (currentLang === 'nl' ? 'Medium (70-84)' : 'Medium (70-84)') :
+              (currentLang === 'nl' ? 'Laag (<70)' : 'Low (<70)');
+            statusCell.innerHTML = `<span class="status-badge status-${score >= 85 ? 'high' : score >= 70 ? 'medium' : 'low'}">${statusText}</span>`;
+          }
+        }
+      }
+      
+      progressBar.style.width = '100%';
+      progressText.textContent = currentLang === 'nl' 
+        ? 'Scan voltooid!' 
+        : 'Scan complete!';
+      
+      setTimeout(() => {
+        progressDiv.classList.add('hidden');
+        
+        results.forEach(result => {
+          if (result.score >= 85) {
+            console.log(`🎉 Sending congratulations to ${result.lead.name} (score: ${result.score})`);
+            submitToLeaderboardAutomatically({
+              url: result.lead.website,
+              score: result.score
+            });
+          } else if (result.score > 0) {
+            console.log(`📧 Contacting ${result.lead.name} for optimization (score: ${result.score})`);
+          }
+        });
+        
+        alert(currentLang === 'nl' 
+          ? `✅ ${results.length} leads gescand. Automatische acties worden uitgevoerd.` 
+          : `✅ ${results.length} leads scanned. Automated actions are being triggered.`);
+      }, 1000);
+    }
+
+    function selectAllLeads() {
+      const checkboxes = document.querySelectorAll('.lead-checkbox');
+      const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+      const allChecked = selectAllCheckbox?.checked || false;
+      
+      checkboxes.forEach(cb => {
+        cb.checked = allChecked;
+      });
+      
+      updateSelectionCount();
+    }
+
+    function updateSelectionCount() {
+      const checked = document.querySelectorAll('.lead-checkbox:checked').length;
+      const button = document.getElementById('scanAllBtn');
+      
+      if (button) {
+        button.innerHTML = checked > 0 ? 
+          `⚡ ${currentLang === 'nl' ? 'Scan' : 'Scan'} ${checked}` : 
+          `⚡ ${currentLang === 'nl' ? 'Scan Alles' : 'Scan All'}`;
+      }
+      
+      const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+      if (selectAllCheckbox) {
+        const totalCheckboxes = document.querySelectorAll('.lead-checkbox').length;
+        selectAllCheckbox.checked = checked > 0 && checked === totalCheckboxes;
+        selectAllCheckbox.indeterminate = checked > 0 && checked < totalCheckboxes;
+      }
+    }
+
+    function showLeadDetails(index) {
+      const lead = scrapedLeads[index];
+      if (!lead) return;
+      
+      alert(currentLang === 'nl' ?
+        `📋 Lead Details:\n\nBedrijf: ${lead.name}\nCategorie: ${lead.category}\nWebsite: ${lead.website || 'Geen'}\nTelefoon: ${lead.phone || 'Niet bekend'}\nAdres: ${lead.address || 'Niet bekend'}\nRating: ${lead.rating || 'Geen'} ${lead.reviews ? `(${lead.reviews} reviews)` : ''}` :
+        `📋 Lead Details:\n\nBusiness: ${lead.name}\nCategory: ${lead.category}\nWebsite: ${lead.website || 'None'}\nPhone: ${lead.phone || 'Unknown'}\nAddress: ${lead.address || 'Unknown'}\nRating: ${lead.rating || 'None'} ${lead.reviews ? `(${lead.reviews} reviews)` : ''}`
+      );
+    }
+
+    async function scanSingleURLFromLead(url, index) {
+      try {
+        const input = document.getElementById('singleUrlInput');
+        input.value = url;
+        
+        switchScanMode('single');
+        
+        await scanSingleURLPublic();
+      } catch (error) {
+        alert('Scan failed: ' + error.message);
+      }
+    }
+
+    function shareLeadViaWhatsApp(url, currentScore, potentialScore) {
+      const decodedUrl = decodeURIComponent(url);
+      const message = currentLang === 'nl' ?
+        `🚨 SEO Kans Gevonden!\n\nIk heb ${decodedUrl} geanalyseerd en ontdekte:\n\nHuidige Score: ${currentScore}/100\nPotentiële Score: ${potentialScore}/100\nVerbetering: +${potentialScore - currentScore} punten mogelijk!\n\nWil je het volledige rapport? Laten we chatten!` :
+        `🚨 SEO Opportunity Alert!\n\nI analyzed ${decodedUrl} and found:\n\nCurrent Score: ${currentScore}/100\nPotential Score: ${potentialScore}/100\nImprovement: +${potentialScore - currentScore} points possible!\n\nWant the full report? Let's chat!`;
+      window.open(`https://wa.me/31628073996?text=${encodeURIComponent(message)}`, '_blank');
+    }
+
+    function shareLeadViaEmail(url, currentScore, potentialScore) {
+      const decodedUrl = decodeURIComponent(url);
+      const subject = currentLang === 'nl' ? `SEO Analyse: ${decodedUrl} scoorde ${currentScore}/100` : `SEO Analysis: ${decodedUrl} scored ${currentScore}/100`;
+      const body = currentLang === 'nl' ?
+        `Hoi,\n\nIk heb een AI-era SEO analyse uitgevoerd op ${decodedUrl} en significante kansen ontdekt:\n\n📊 HUIDIGE SCORE: ${currentScore}/100\n🚀 POTENTIËLE SCORE: ${potentialScore}/100\n📈 VERBETERING: +${potentialScore - currentScore} punten\n\nJe website heeft sterk potentieel! Met enkele strategische optimalisaties kunnen we je zichtbaarheid significant verbeteren.\n\nWil je de volledige analyse en implementatie plan bespreken?\n\nGroeten` :
+        `Hi,\n\nI ran an AI-era SEO analysis on ${decodedUrl} and discovered significant opportunities:\n\n📊 CURRENT SCORE: ${currentScore}/100\n🚀 POTENTIAL SCORE: ${potentialScore}/100\n📈 IMPROVEMENT: +${potentialScore - currentScore} points\n\nYour website has strong potential! With some strategic optimizations, we could boost your visibility significantly.\n\nWant to discuss the full analysis and implementation plan?\n\nBest regards`;
+      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    }
+
+    function copyLeadReport(url, currentScore, potentialScore, wordCount) {
+      const decodedUrl = decodeURIComponent(url);
+      const report = currentLang === 'nl' ?
+        `SEO ANALYSE RAPPORT\n\nURL: ${decodedUrl}\n\nRESULTATEN:\n✅ Gekwalificeerde lead (${wordCount} woorden)\n📊 Huidige Score: ${currentScore}/100\n🚀 Potentieel: ${potentialScore}/100\n📈 Verbetering: +${potentialScore - currentScore} punten\n\nINVESTERING:\n⏱️ Timeline: 2-3 weken\n💰 Budget: €${Math.round((potentialScore - currentScore) * 15)}-${Math.round((potentialScore - currentScore) * 20)}\n📈 ROI: 300-500%\n\nContact: info@contentscale.site\nWhatsApp: +31 6 2807 3996` :
+        `SEO ANALYSIS REPORT\n\nURL: ${decodedUrl}\n\nRESULTS:\n✅ Qualified lead (${wordCount} words)\n📊 Current Score: ${currentScore}/100\n🚀 Potential: ${potentialScore}/100\n📈 Improvement: +${potentialScore - currentScore} points\n\nINVESTMENT:\n⏱️ Timeline: 2-3 weeks\n💰 Budget: €${Math.round((potentialScore - currentScore) * 15)}-${Math.round((potentialScore - currentScore) * 20)}\n📈 ROI: 300-500%\n\nContact: info@contentscale.site\nWhatsApp: +31 6 2807 3996`;
+      
+      navigator.clipboard.writeText(report).then(() => {
+        alert(currentLang === 'nl' ? '✅ Rapport gekopieerd naar clipboard!' : '✅ Report copied to clipboard!');
+      }).catch(err => {
+        console.error('Copy failed:', err);
+        alert(currentLang === 'nl' ? '❌ Kopiëren mislukt. Probeer handmatig te selecteren en kopiëren.' : '❌ Copy failed. Please select and copy manually.');
+      });
+    }
+
+    function saveLeadToWorkspace(url, score, wordCount) {
+      const decodedUrl = decodeURIComponent(url);
+      
+      let workspace = JSON.parse(localStorage.getItem('contentscale_workspace') || '[]');
+      
+      const existing = workspace.find(item => item.url === decodedUrl);
+      if (existing) {
+        alert(currentLang === 'nl' ? '✅ Lead staat al in je workspace!' : '✅ Lead already in your workspace!');
+        return;
+      }
+      
+      workspace.push({
+        url: decodedUrl,
+        score: score,
+        wordCount: wordCount,
+        date: new Date().toISOString(),
+        status: 'new'
+      });
+      
+      localStorage.setItem('contentscale_workspace', JSON.stringify(workspace));
+      
+      alert(currentLang === 'nl' 
+        ? `✅ Lead toegevoegd aan workspace! Je hebt nu ${workspace.length} leads.` 
+        : `✅ Lead added to workspace! You now have ${workspace.length} leads.`);
+    }
+
+    function exportLeadsToCSV() {
+      let leadsToExport = scrapedLeads;
+      
+      if (!leadsToExport || leadsToExport.length === 0) {
+        alert('No leads to export');
+        return;
+      }
+      
+      const headers = ['Name', 'Category', 'Website', 'Phone', 'Address', 'Rating', 'Reviews', 'Score'];
+      const rows = leadsToExport.map(lead => [
+        lead.name || '',
+        lead.category || '',
+        lead.website || '',
+        lead.phone || '',
+        lead.address || '',
+        lead.rating || '',
+        lead.reviews || '',
+        lead.score || ''
+      ]);
+      
+      let csv = headers.join(',') + '\n';
+      csv += rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+      
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `contentscale-leads-${Date.now()}.csv`;
+      a.click();
+    }
+
+    function exportLeadsToJSON() {
+      let leadsToExport = scrapedLeads;
+      
+      if (!leadsToExport || leadsToExport.length === 0) {
+        alert('No leads to export');
+        return;
+      }
+      
+      const json = JSON.stringify(leadsToExport, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `contentscale-leads-${Date.now()}.json`;
+      a.click();
+    }
+
+    // ============================================
+    // LEADERBOARD FUNCTIONS
+    // ============================================
+    function loadLeaderboardData() {
       try {
         // Show loading states
         document.getElementById('totalAgencies').textContent = '...';
@@ -1561,48 +2409,8 @@
         document.getElementById('countriesCount').textContent = '...';
         document.getElementById('activeHelpers').textContent = '...';
         
-        // Use mock data if API is not available
-        if (USE_MOCK_DATA) {
-          // Simulate API delay
-          await new Promise(resolve => setTimeout(resolve, 800));
-          
-          allLeaderboardEntries = generateMockLeaderboardData();
-          filteredLeaderboardEntries = [...allLeaderboardEntries];
-          
-          updateLeaderboardStats();
-          loadTop3Agencies();
-          loadCountryFilters();
-          loadTypeFilters();
-          loadRankingsPage(1);
-          
-          console.log('✅ Loaded mock leaderboard data');
-          return;
-        }
-        
-        // Original API call (commented out since domain doesn't resolve)
-        /*
-        const response = await fetch(`${API_BASE_URL}/api/leaderboard`);
-        const data = await response.json();
-        
-        if (data.success) {
-          allLeaderboardEntries = data.entries;
-          filteredLeaderboardEntries = [...allLeaderboardEntries];
-          
-          updateLeaderboardStats();
-          loadTop3Agencies();
-          loadCountryFilters();
-          loadTypeFilters();
-          loadRankingsPage(1);
-        } else {
-          console.error('Failed to load leaderboard:', data.error);
-          showError('Failed to load leaderboard data. Please try again later.');
-        }
-        */
-      } catch (error) {
-        console.error('Error loading leaderboard:', error);
-        
-        // Fallback to mock data
-        allLeaderboardEntries = generateMockLeaderboardData();
+        // Use mock data
+        allLeaderboardEntries = MOCK_LEADERBOARD;
         filteredLeaderboardEntries = [...allLeaderboardEntries];
         
         updateLeaderboardStats();
@@ -1611,70 +2419,12 @@
         loadTypeFilters();
         loadRankingsPage(1);
         
-        console.log('✅ Loaded fallback mock leaderboard data');
-      }
-    }
-
-    function generateMockLeaderboardData() {
-      const agencies = [
-        { id: 1, company_name: "SEO Masters International", url: "https://seomasters.com", score: 97, country: "US", type: "seo_agency", location: "New York, NY", created_at: "2024-01-15", rank: 1 },
-        { id: 2, company_name: "Digital Growth Experts", url: "https://digitalgrowthexperts.nl", score: 95, country: "NL", type: "seo_agency", location: "Amsterdam", created_at: "2024-02-20", rank: 2 },
-        { id: 3, company_name: "Content Kings", url: "https://contentkings.co.uk", score: 94, country: "UK", type: "content_agency", location: "London", created_at: "2024-03-10", rank: 3 },
-        { id: 4, company_name: "Ranking Revolution", url: "https://rankingrevolution.de", score: 93, country: "DE", type: "seo_agency", location: "Berlin", created_at: "2024-01-28", rank: 4 },
-        { id: 5, company_name: "Traffic Titans", url: "https://traffictitans.com", score: 92, country: "US", type: "marketing_agency", location: "Los Angeles, CA", created_at: "2024-02-15", rank: 5 },
-        { id: 6, company_name: "Dutch SEO Professionals", url: "https://dutchseo.nl", score: 91, country: "NL", type: "seo_agency", location: "Rotterdam", created_at: "2024-03-05", rank: 6 },
-        { id: 7, company_name: "Paris SEO Solutions", url: "https://parisseo.fr", score: 90, country: "FR", type: "seo_agency", location: "Paris", created_at: "2024-02-10", rank: 7 },
-        { id: 8, company_name: "Australian Web Wizards", url: "https://webwizards.au", score: 89, country: "AU", type: "web_agency", location: "Sydney", created_at: "2024-03-01", rank: 8 },
-        { id: 9, company_name: "Canadian Content Creators", url: "https://canadiancontent.ca", score: 88, country: "CA", type: "content_agency", location: "Toronto", created_at: "2024-02-25", rank: 9 },
-        { id: 10, company_name: "Barcelona Digital", url: "https://barcelonadigital.es", score: 87, country: "ES", type: "digital_agency", location: "Barcelona", created_at: "2024-03-15", rank: 10 },
-        { id: 11, company_name: "Brussels Marketing Hub", url: "https://brusselsmarketing.be", score: 86, country: "BE", type: "marketing_agency", location: "Brussels", created_at: "2024-03-12", rank: 11 },
-        { id: 12, company_name: "Swiss Precision SEO", url: "https://swissseo.ch", score: 85, country: "CH", type: "seo_agency", location: "Zurich", created_at: "2024-02-28", rank: 12 },
-        { id: 13, company_name: "Italian Internet Experts", url: "https://italianinternet.it", score: 84, country: "IT", type: "web_agency", location: "Milan", created_at: "2024-03-08", rank: 13 },
-        { id: 14, company_name: "Auckland Digital Agency", url: "https://aucklanddigital.nz", score: 83, country: "NZ", type: "digital_agency", location: "Auckland", created_at: "2024-03-18", rank: 14 },
-        { id: 15, company_name: "Manchester SEO Group", url: "https://manchesterseo.co.uk", score: 82, country: "UK", type: "seo_agency", location: "Manchester", created_at: "2024-02-05", rank: 15 },
-        { id: 16, company_name: "Hamburg Web Solutions", url: "https://hamburgweb.de", score: 81, country: "DE", type: "web_agency", location: "Hamburg", created_at: "2024-03-20", rank: 16 },
-        { id: 17, company_name: "Lyon Marketing Masters", url: "https://lyonmarketing.fr", score: 80, country: "FR", type: "marketing_agency", location: "Lyon", created_at: "2024-02-18", rank: 17 },
-        { id: 18, company_name: "Madrid SEO Specialists", url: "https://madridseo.es", score: 79, country: "ES", type: "seo_agency", location: "Madrid", created_at: "2024-03-22", rank: 18 },
-        { id: 19, company_name: "Melbourne Content Studio", url: "https://melbournecontent.au", score: 78, country: "AU", type: "content_agency", location: "Melbourne", created_at: "2024-01-30", rank: 19 },
-        { id: 20, company_name: "Vancouver Web Design", url: "https://vancouverweb.ca", score: 77, country: "CA", type: "web_agency", location: "Vancouver", created_at: "2024-03-25", rank: 20 }
-      ];
-      
-      // Add more entries to reach 35+
-      for (let i = 21; i <= 35; i++) {
-        const countries = ['NL', 'US', 'UK', 'DE', 'FR', 'ES', 'AU', 'CA', 'IT', 'BE', 'CH'];
-        const types = ['seo_agency', 'digital_agency', 'web_agency', 'marketing_agency', 'content_agency'];
-        const cities = {
-          'NL': ['Amsterdam', 'Rotterdam', 'Utrecht', 'The Hague'],
-          'US': ['New York', 'Los Angeles', 'Chicago', 'Miami'],
-          'UK': ['London', 'Manchester', 'Birmingham', 'Edinburgh'],
-          'DE': ['Berlin', 'Munich', 'Hamburg', 'Frankfurt'],
-          'FR': ['Paris', 'Lyon', 'Marseille', 'Toulouse'],
-          'ES': ['Madrid', 'Barcelona', 'Valencia', 'Seville'],
-          'AU': ['Sydney', 'Melbourne', 'Brisbane', 'Perth'],
-          'CA': ['Toronto', 'Vancouver', 'Montreal', 'Calgary'],
-          'IT': ['Rome', 'Milan', 'Naples', 'Turin'],
-          'BE': ['Brussels', 'Antwerp', 'Ghent', 'Bruges'],
-          'CH': ['Zurich', 'Geneva', 'Basel', 'Bern']
-        };
+        console.log('✅ Loaded mock leaderboard data');
         
-        const country = countries[Math.floor(Math.random() * countries.length)];
-        const type = types[Math.floor(Math.random() * types.length)];
-        const city = cities[country] ? cities[country][Math.floor(Math.random() * cities[country].length)] : 'Capital City';
-        
-        agencies.push({
-          id: i,
-          company_name: `Agency ${i} Solutions`,
-          url: `https://agency${i}solutions.${country === 'UK' ? 'co.uk' : country === 'US' ? 'com' : country.toLowerCase()}`,
-          score: 100 - i,
-          country: country,
-          type: type,
-          location: `${city}, ${getCountryName(country)}`,
-          created_at: `2024-0${Math.floor(Math.random() * 2) + 1}-${Math.floor(Math.random() * 28) + 1}`,
-          rank: i
-        });
+      } catch (error) {
+        console.error('Error loading leaderboard:', error);
+        showError('Failed to load leaderboard data.');
       }
-      
-      return agencies;
     }
 
     function updateLeaderboardStats() {
@@ -1689,7 +2439,7 @@
       document.getElementById('countriesCount').textContent = uniqueCountries.length;
       
       // Mock freelancers count
-      document.getElementById('activeHelpers').textContent = '47';
+      document.getElementById('activeHelpers').textContent = MOCK_FREELANCERS.length;
     }
 
     function loadTop3Agencies() {
@@ -2116,708 +2866,16 @@
         : 'How does automatic submission work?\n\n1. Scan a website with our scanner\n2. If the score is 85+, it\'s automatically added to the leaderboard\n3. We automatically detect country and city\n4. Data is updated daily\n\nWebsites can also submit manually via the scan form.');
     }
 
-    async function scanSingleURLPublic() {
-      const input = document.getElementById('singleUrlInput');
-      const button = document.getElementById('singleScanBtn');
-      const url = input.value.trim();
-      
-      if (!url) {
-        alert(currentLang === 'nl' ? 'Voer een URL in' : 'Enter a URL');
-        return;
-      }
-      
-      let fullUrl = url;
-      if (!url.startsWith('http')) {
-        fullUrl = 'https://' + url;
-      }
-      
-      try {
-        new URL(fullUrl);
-      } catch {
-        alert(currentLang === 'nl' ? 'Voer een geldige URL in' : 'Please enter a valid URL');
-        return;
-      }
-      
-      button.disabled = true;
-      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + 
-        (currentLang === 'nl' ? 'Scannen...' : 'Scanning...');
-      
-      const progressDiv = document.getElementById('singleScanProgress');
-      const progressBar = document.getElementById('singleProgressBar');
-      const progressText = document.getElementById('singleProgressText');
-      const resultDiv = document.getElementById('singleScanResult');
-      
-      progressDiv.classList.remove('hidden');
-      resultDiv.classList.add('hidden');
-      progressBar.style.width = '10%';
-      progressText.textContent = currentLang === 'nl' ? 'URL valideren...' : 'Validating URL...';
-      
-      try {
-        progressBar.style.width = '30%';
-        progressText.textContent = currentLang === 'nl' ? 'Content ophalen...' : 'Fetching content...';
-        
-        // Simulate API call with mock data
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        const mockScanResult = generateMockScanResult(fullUrl);
-        
-        progressBar.style.width = '70%';
-        progressText.textContent = currentLang === 'nl' ? 'Analyse voltooien...' : 'Completing analysis...';
-        
-        progressBar.style.width = '100%';
-        progressText.textContent = currentLang === 'nl' ? 'Scan voltooid!' : 'Scan complete!';
-        
-        setTimeout(() => {
-          progressDiv.classList.add('hidden');
-          displayRealSingleScanResult(mockScanResult);
-          
-          triggerAutomatedActions(mockScanResult);
-          
-          submitToLeaderboardAutomatically(mockScanResult);
-          
-        }, 500);
-        
-      } catch (error) {
-        console.error('Scan error:', error);
-        progressBar.style.width = '100%';
-        progressText.textContent = currentLang === 'nl' ? 'Fout opgetreden!' : 'Error occurred!';
-        
-        setTimeout(() => {
-          progressDiv.classList.add('hidden');
-          alert(currentLang === 'nl' ? `Scan mislukt: ${error.message}` : `Scan failed: ${error.message}`);
-        }, 500);
-      } finally {
-        button.disabled = false;
-        button.innerHTML = currentLang === 'nl' ? '🚀 Start Scan' : '🚀 Start Scan';
-      }
-    }
-
-    function generateMockScanResult(url) {
-      const domain = new URL(url).hostname;
-      const randomScore = Math.floor(Math.random() * 40) + 60; // 60-100
-      const wordCount = Math.floor(Math.random() * 2000) + 500; // 500-2500
-      
-      return {
-        success: true,
-        url: url,
-        score: randomScore,
-        wordCount: wordCount,
-        quality: randomScore >= 85 ? 'Excellent' : randomScore >= 70 ? 'Good' : randomScore >= 60 ? 'Average' : 'Poor',
-        content_stats: { wordCount: wordCount },
-        metrics: {
-          content: randomScore - 10,
-          technical: randomScore - 15,
-          ux: randomScore - 20
-        },
-        recommendations: {
-          all: [
-            {
-              title: 'Improve Content Depth',
-              description: 'Add more detailed information and examples to increase content value.',
-              priority: 'HIGH',
-              effort: 'Medium',
-              impact: 'High'
-            },
-            {
-              title: 'Optimize Page Speed',
-              description: 'Compress images and minimize JavaScript to improve loading time.',
-              priority: 'MEDIUM',
-              effort: 'Low',
-              impact: 'Medium'
-            },
-            {
-              title: 'Add Author Bio',
-              description: 'Include author credentials to establish E-E-A-T.',
-              priority: 'HIGH',
-              effort: 'Low',
-              impact: 'High'
-            }
-          ]
-        }
-      };
-    }
-
-    function displayRealSingleScanResult(result) {
-      const resultDiv = document.getElementById('singleScanResult');
-      const wordCount = result.content_stats?.wordCount || result.wordCount || 0;
-      const score = result.score || 0;
-      
-      const potentialScore = Math.min(98, score + Math.floor((100 - score) * 0.8));
-      const improvement = potentialScore - score;
-      
-      const recommendations = result.recommendations?.all || result.recommendations || [];
-      
-      resultDiv.innerHTML = `
-        <div class="scan-result-card bg-gray-800 rounded-2xl p-8 border-2 border-purple-500 shadow-2xl">
-          <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 pb-6 border-b-2 border-gray-700 gap-4">
-            <div class="flex-1">
-              <h3 class="text-2xl font-bold text-white mb-2">${currentLang === 'nl' ? '📊 Lead Analyse Rapport' : '📊 Lead Analysis Report'}</h3>
-              <p class="text-sm text-gray-400 break-all mb-2">${result.url || ''}</p>
-              <div class="flex items-center gap-3 text-sm flex-wrap">
-                <span class="text-gray-400">📝 ${wordCount} ${currentLang === 'nl' ? 'woorden' : 'words'}</span>
-                <span class="text-gray-400">•</span>
-                <span class="px-3 py-1 ${score >= 85 ? 'bg-green-600' : score >= 70 ? 'bg-yellow-600' : 'bg-red-600'} rounded-full text-white font-semibold text-xs">
-                  ${score >= 85 ? '✅ ' : score >= 70 ? '⚠️ ' : '❌ '}${currentLang === 'nl' ? 'Lead' : 'Lead'} (${score}/100)
-                </span>
-                <span class="text-gray-400">•</span>
-                <span class="text-sm text-gray-400">${currentLang === 'nl' ? 'Kwaliteit:' : 'Quality:'} ${result.quality || 'Unknown'}</span>
-              </div>
-            </div>
-            <div class="text-center bg-gray-900 bg-opacity-30 rounded-2xl px-8 py-6 border-2 border-purple-600">
-              <div class="text-6xl font-black mb-2 text-purple-400">${score}</div>
-              <div class="text-sm text-gray-300 font-semibold">${score >= 90 ? 'Excellent' : score >= 75 ? 'Good' : score >= 60 ? 'Average' : 'Poor'}</div>
-            </div>
-          </div>
-          
-          <div class="grid md:grid-cols-2 gap-6 mb-8">
-            <div class="bg-gray-900 rounded-xl p-6 border-2 border-gray-600">
-              <h4 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <span>📊</span><span>${currentLang === 'nl' ? 'Huidige Staat' : 'Current State'}</span>
-              </h4>
-              <div class="space-y-3">
-                <div>
-                  <div class="flex justify-between items-center mb-1">
-                    <span class="text-sm text-gray-300">${currentLang === 'nl' ? 'Content Kwaliteit' : 'Content Quality'}</span>
-                    <span class="font-bold text-blue-400">${result.metrics?.content || Math.floor(score * 0.7)}/100</span>
-                  </div>
-                  <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
-                    <div class="h-full bg-blue-500 transition-all" style="width: ${result.metrics?.content || Math.floor(score * 0.7)}%"></div>
-                  </div>
-                </div>
-                <div>
-                  <div class="flex justify-between items-center mb-1">
-                    <span class="text-sm text-gray-300">${currentLang === 'nl' ? 'Technische SEO' : 'Technical SEO'}</span>
-                    <span class="font-bold text-green-400">${result.metrics?.technical || Math.floor(score * 0.6)}/100</span>
-                  </div>
-                  <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
-                    <div class="h-full bg-green-500 transition-all" style="width: ${result.metrics?.technical || Math.floor(score * 0.6)}%"></div>
-                  </div>
-                </div>
-                <div>
-                  <div class="flex justify-between items-center mb-1">
-                    <span class="text-sm text-gray-300">UX Score</span>
-                    <span class="font-bold text-purple-400">${result.metrics?.ux || Math.floor(score * 0.5)}/100</span>
-                  </div>
-                  <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
-                    <div class="h-full bg-purple-500 transition-all" style="width: ${result.metrics?.ux || Math.floor(score * 0.5)}%"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div class="bg-gradient-to-br from-green-900 to-emerald-900 rounded-xl p-6 border-2 border-green-500">
-              <h4 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <span>🚀</span><span>${currentLang === 'nl' ? 'Potentieel (Na Optimalisatie)' : 'Potential (After Optimization)'}</span>
-              </h4>
-              <div class="text-center mb-4">
-                <div class="text-6xl md:text-7xl font-black text-green-400 mb-2">${potentialScore}</div>
-                <div class="text-green-300 font-semibold text-lg">+${improvement} ${currentLang === 'nl' ? 'punten mogelijk!' : 'points possible!'}</div>
-              </div>
-            </div>
-          </div>
-          
-          <div class="mb-8">
-            <h4 class="text-lg font-bold text-white mb-4">${currentLang === 'nl' ? '🎯 Aanbevelingen voor Verbetering' : '🎯 Improvement Recommendations'}</h4>
-            <div class="space-y-4">
-              ${recommendations.length > 0 ? recommendations.slice(0, 5).map(rec => `
-                <div class="bg-gray-900 rounded-lg p-4 border-l-4 ${rec.priority === 'HIGH' ? 'border-red-500' : rec.priority === 'MEDIUM' ? 'border-yellow-500' : 'border-blue-500'}">
-                  <div class="flex justify-between items-start mb-2">
-                    <span class="font-semibold text-white">${rec.title}</span>
-                    <span class="px-2 py-1 text-xs rounded ${rec.priority === 'HIGH' ? 'bg-red-600' : rec.priority === 'MEDIUM' ? 'bg-yellow-600' : 'bg-blue-600'}">
-                      ${rec.priority === 'HIGH' ? 'Hoge prioriteit' : rec.priority === 'MEDIUM' ? 'Medium prioriteit' : 'Lage prioriteit'}
-                    </span>
-                  </div>
-                  <p class="text-sm text-gray-400 mb-2">${rec.description}</p>
-                  <div class="flex justify-between text-xs text-gray-500">
-                    <span>${currentLang === 'nl' ? 'Inspanning:' : 'Effort:'} ${rec.effort}</span>
-                    <span>${currentLang === 'nl' ? 'Impact:' : 'Impact:'} ${rec.impact}</span>
-                  </div>
-                </div>
-              `).join('') : '<p class="text-gray-400">Geen specifieke aanbevelingen beschikbaar</p>'}
-            </div>
-          </div>
-          
-          <div class="border-t-2 border-gray-700 pt-6">
-            <h4 class="text-lg font-bold text-white mb-4">${currentLang === 'nl' ? '📤 Deel dit Rapport' : '📤 Share This Report'}</h4>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <button onclick="shareLeadViaWhatsApp('${encodeURIComponent(result.url)}', ${score}, ${potentialScore})" 
-                      class="bg-green-600 hover:bg-green-700 px-4 py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
-                <i class="fab fa-whatsapp"></i><span>WhatsApp</span>
-              </button>
-              <button onclick="shareLeadViaEmail('${encodeURIComponent(result.url)}', ${score}, ${potentialScore})" 
-                      class="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
-                <i class="fas fa-envelope"></i><span>Email</span>
-              </button>
-              <button onclick="copyLeadReport('${encodeURIComponent(result.url)}', ${score}, ${potentialScore}, ${wordCount})" 
-                      class="bg-gray-600 hover:bg-gray-700 px-4 py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
-                <i class="fas fa-copy"></i><span>${currentLang === 'nl' ? 'Kopieer' : 'Copy'}</span>
-              </button>
-              <button onclick="saveLeadToWorkspace('${encodeURIComponent(result.url)}', ${score}, ${wordCount})" 
-                      class="bg-purple-600 hover:bg-purple-700 px-4 py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
-                <i class="fas fa-save"></i><span>${currentLang === 'nl' ? 'Opslaan' : 'Save'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      `;
-      
-      resultDiv.classList.remove('hidden');
-    }
-
-    function triggerAutomatedActions(scanResult) {
-      const score = scanResult.score;
-      const url = scanResult.url;
-      
-      if (score >= 85) {
-        console.log(`🎉 Triggering congratulatory email for ${url} with score ${score}`);
-        // In a real app, this would trigger an API call
-      } else if (score > 0) {
-        console.log(`📧 Triggering optimization outreach for ${url} with score ${score}`);
-      } else {
-        console.log(`📞 Triggering website building outreach for ${url}`);
-      }
-    }
-
-    async function submitToLeaderboardAutomatically(scanResult) {
-      const score = scanResult.score;
-      const url = scanResult.url;
-      
-      if (score >= 85) {
-        console.log(`🚀 Auto-submitting to leaderboard: ${url} (score: ${score})`);
-        
-        // In a real app, this would make an API call
-        setTimeout(() => {
-          alert(currentLang === 'nl' 
-            ? `🎉 Gefeliciteerd! Je website is automatisch toegevoegd aan de leaderboard met score ${score}/100.`
-            : `🎉 Congratulations! Your website has been automatically added to the leaderboard with score ${score}/100.`);
-          
-          // Refresh leaderboard data
-          setTimeout(() => {
-            loadLeaderboardData();
-          }, 2000);
-        }, 1000);
-      }
-    }
-
-    async function scrapeGoogleMapsPublic() {
-      const input = document.getElementById('googleMapsInput');
-      const button = document.getElementById('gmapsScrapeBtn');
-      const url = input.value.trim();
-      
-      if (!url || !url.includes('google.com/maps')) {
-        alert(currentLang === 'nl' 
-          ? 'Voer een geldige Google Maps URL in' 
-          : 'Enter a valid Google Maps URL');
-        return;
-      }
-      
-      button.disabled = true;
-      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + 
-        (currentLang === 'nl' ? 'Scrapen...' : 'Scraping...');
-      
-      try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        const mockLeads = generateMockGoogleMapsLeads();
-        scrapedLeads = mockLeads;
-        displayScrapedLeadsTable(scrapedLeads);
-        
-        console.log('✅ Mock Google Maps leads generated');
-        
-      } catch (error) {
-        console.error('Google Maps scrape error:', error);
-        alert(currentLang === 'nl' 
-          ? 'Scrape mislukt. Probeer het later opnieuw.' 
-          : 'Scrape failed. Please try again later.');
-      } finally {
-        button.disabled = false;
-        button.innerHTML = currentLang === 'nl' ? '🗺️ Scrape Maps' : '🗺️ Scrape Maps';
-      }
-    }
-
-    function generateMockGoogleMapsLeads() {
-      const businessNames = [
-        'Amsterdam Digital Agency', 'Rotterdam SEO Experts', 'Utrecht Web Solutions',
-        'The Hague Marketing Pros', 'Eindhoven Tech Partners', 'Groningen Digital Studio',
-        'Maastricht Web Design', 'Leiden Online Marketing', 'Delft SEO Masters',
-        'Haarlem Digital Creators'
-      ];
-      
-      const categories = [
-        'SEO Agency', 'Digital Marketing', 'Web Design', 'Content Marketing',
-        'Social Media Agency', 'PPC Advertising', 'E-commerce SEO', 'Local SEO'
-      ];
-      
-      const domains = ['nl', 'com', 'org', 'net'];
-      
-      return businessNames.map((name, index) => {
-        const hasWebsite = Math.random() > 0.2; // 80% have websites
-        const domain = domains[Math.floor(Math.random() * domains.length)];
-        const website = hasWebsite ? `https://${name.toLowerCase().replace(/\s+/g, '')}.${domain}` : 'N/A';
-        const score = hasWebsite ? Math.floor(Math.random() * 40) + 60 : 0; // 60-100 or 0
-        
-        return {
-          name: name,
-          category: categories[Math.floor(Math.random() * categories.length)],
-          website: website,
-          phone: `+31 6 ${Math.floor(Math.random() * 9000000) + 1000000}`,
-          address: `${name.split(' ')[0]}straat ${Math.floor(Math.random() * 100) + 1}, ${name.split(' ')[0]}`,
-          rating: (Math.random() * 2 + 3).toFixed(1), // 3.0-5.0
-          reviews: Math.floor(Math.random() * 100),
-          score: score
-        };
-      });
-    }
-
-    function displayScrapedLeadsTable(leads) {
-      const container = document.getElementById('scrapedLeadsContainer');
-      const tableBody = document.getElementById('leadsTableBody');
-      const countSpan = document.getElementById('leadCount');
-      const countSpanEN = document.getElementById('leadCountEN');
-      
-      if (!leads || leads.length === 0) {
-        alert(currentLang === 'nl' 
-          ? 'Geen leads gevonden. Probeer een andere zoekopdracht.' 
-          : 'No leads found. Try a different search.');
-        return;
-      }
-      
-      if (countSpan) countSpan.textContent = leads.length;
-      if (countSpanEN) countSpanEN.textContent = leads.length;
-      
-      tableBody.innerHTML = leads.map((lead, index) => {
-        const hasWebsite = lead.website && lead.website !== 'N/A';
-        const score = lead.score || 0;
-        let status = 'none';
-        let statusText = currentLang === 'nl' ? 'Niet gescand' : 'Not scanned';
-        
-        if (hasWebsite) {
-          if (score >= 85) {
-            status = 'high';
-            statusText = currentLang === 'nl' ? 'Hoog (85+)' : 'High (85+)';
-          } else if (score >= 70) {
-            status = 'medium';
-            statusText = currentLang === 'nl' ? 'Medium (70-84)' : 'Medium (70-84)';
-          } else {
-            status = 'low';
-            statusText = currentLang === 'nl' ? 'Laag (<70)' : 'Low (<70)';
-          }
-        }
-        
-        return `
-          <tr>
-            <td>
-              <input type="checkbox" class="lead-checkbox" data-index="${index}" onchange="updateSelectionCount()">
-            </td>
-            <td>
-              <div class="font-semibold">${lead.name}</div>
-              ${lead.rating ? `<div class="text-xs text-yellow-400">⭐ ${lead.rating} (${lead.reviews || 0})</div>` : ''}
-            </td>
-            <td>${lead.category}</td>
-            <td class="website-cell">
-              ${hasWebsite ? 
-                `<a href="${lead.website}" target="_blank" class="text-blue-400 hover:underline text-sm">${lead.website.replace('https://', '')}</a>` : 
-                `<span class="text-red-400 text-sm">${currentLang === 'nl' ? 'Geen website' : 'No website'}</span>`
-              }
-            </td>
-            <td>${lead.phone || '-'}</td>
-            <td>
-              ${hasWebsite ? 
-                `<div class="text-lg font-bold ${score >= 85 ? 'text-green-400' : score >= 70 ? 'text-yellow-400' : 'text-red-400'}">${score}</div>` : 
-                '-'
-              }
-            </td>
-            <td>
-              <span class="status-badge status-${status}">${statusText}</span>
-            </td>
-            <td>
-              <div class="action-buttons">
-                ${hasWebsite ? 
-                  `<button onclick="scanSingleURLFromLead('${lead.website}', ${index})" 
-                          class="bg-purple-600 hover:bg-purple-700 px-3 py-1 rounded text-sm font-bold transition-all">
-                    🔍
-                  </button>` : ''
-                }
-                <button onclick="showLeadDetails(${index})" 
-                        class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm font-bold transition-all">
-                  👁️
-                </button>
-              </div>
-            </td>
-          </tr>
-        `;
-      }).join('');
-      
-      container.classList.remove('hidden');
-    }
-
-    async function scanAllGoogleMapsLeads() {
-      const selectedLeads = scrapedLeads.filter((lead, index) => {
-        const checkbox = document.querySelector(`.lead-checkbox[data-index="${index}"]`);
-        return checkbox && checkbox.checked && lead.website && lead.website !== 'N/A';
-      });
-      
-      if (selectedLeads.length === 0) {
-        alert(currentLang === 'nl' ? 'Selecteer eerst enkele leads om te scannen.' : 'Select some leads to scan first.');
-        return;
-      }
-      
-      const progressDiv = document.getElementById('bulkScanProgress');
-      const progressBar = document.getElementById('bulkProgressBar');
-      const progressText = document.getElementById('bulkProgressText');
-      
-      progressDiv.classList.remove('hidden');
-      progressBar.style.width = '0%';
-      progressText.textContent = currentLang === 'nl' 
-        ? `Scannen ${selectedLeads.length} leads...` 
-        : `Scanning ${selectedLeads.length} leads...`;
-      
-      const results = [];
-      
-      for (let i = 0; i < selectedLeads.length; i++) {
-        const lead = selectedLeads[i];
-        
-        const progressPercent = Math.round((i / selectedLeads.length) * 100);
-        progressBar.style.width = `${progressPercent}%`;
-        progressText.textContent = currentLang === 'nl'
-          ? `Scannen ${i + 1}/${selectedLeads.length}: ${lead.name}`
-          : `Scanning ${i + 1}/${selectedLeads.length}: ${lead.name}`;
-        
-        // Simulate scanning delay
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        const score = Math.floor(Math.random() * 40) + 60; // 60-100
-        results.push({
-          lead: lead,
-          score: score,
-          status: score >= 85 ? 'high' : score >= 70 ? 'medium' : 'low'
-        });
-        
-        // Update UI
-        const rowIndex = scrapedLeads.findIndex(l => l.name === lead.name);
-        if (rowIndex !== -1) {
-          scrapedLeads[rowIndex].score = score;
-          
-          const scoreCell = document.querySelector(`tr:nth-child(${rowIndex + 1}) td:nth-child(6)`);
-          const statusCell = document.querySelector(`tr:nth-child(${rowIndex + 1}) td:nth-child(7)`);
-          
-          if (scoreCell) {
-            scoreCell.innerHTML = `<div class="text-lg font-bold ${score >= 85 ? 'text-green-400' : score >= 70 ? 'text-yellow-400' : 'text-red-400'}">${score}</div>`;
-          }
-          
-          if (statusCell) {
-            const statusText = score >= 85 ? 
-              (currentLang === 'nl' ? 'Hoog (85+)' : 'High (85+)') :
-              score >= 70 ? 
-              (currentLang === 'nl' ? 'Medium (70-84)' : 'Medium (70-84)') :
-              (currentLang === 'nl' ? 'Laag (<70)' : 'Low (<70)');
-            statusCell.innerHTML = `<span class="status-badge status-${score >= 85 ? 'high' : score >= 70 ? 'medium' : 'low'}">${statusText}</span>`;
-          }
-        }
-      }
-      
-      progressBar.style.width = '100%';
-      progressText.textContent = currentLang === 'nl' 
-        ? 'Scan voltooid!' 
-        : 'Scan complete!';
-      
-      setTimeout(() => {
-        progressDiv.classList.add('hidden');
-        
-        results.forEach(result => {
-          if (result.score >= 85) {
-            console.log(`🎉 Sending congratulations to ${result.lead.name} (score: ${result.score})`);
-            submitToLeaderboardAutomatically({
-              url: result.lead.website,
-              score: result.score
-            });
-          } else if (result.score > 0) {
-            console.log(`📧 Contacting ${result.lead.name} for optimization (score: ${result.score})`);
-          }
-        });
-        
-        alert(currentLang === 'nl' 
-          ? `✅ ${results.length} leads gescand. Automatische acties worden uitgevoerd.` 
-          : `✅ ${results.length} leads scanned. Automated actions are being triggered.`);
-      }, 1000);
-    }
-
-    function selectAllLeads() {
-      const checkboxes = document.querySelectorAll('.lead-checkbox');
-      const selectAllCheckbox = document.getElementById('selectAllCheckbox');
-      const allChecked = selectAllCheckbox?.checked || false;
-      
-      checkboxes.forEach(cb => {
-        cb.checked = allChecked;
-      });
-      
-      updateSelectionCount();
-    }
-
-    function updateSelectionCount() {
-      const checked = document.querySelectorAll('.lead-checkbox:checked').length;
-      const button = document.getElementById('scanAllBtn');
-      
-      if (button) {
-        button.innerHTML = checked > 0 ? 
-          `⚡ ${currentLang === 'nl' ? 'Scan' : 'Scan'} ${checked}` : 
-          `⚡ ${currentLang === 'nl' ? 'Scan Alles' : 'Scan All'}`;
-      }
-      
-      const selectAllCheckbox = document.getElementById('selectAllCheckbox');
-      if (selectAllCheckbox) {
-        const totalCheckboxes = document.querySelectorAll('.lead-checkbox').length;
-        selectAllCheckbox.checked = checked > 0 && checked === totalCheckboxes;
-        selectAllCheckbox.indeterminate = checked > 0 && checked < totalCheckboxes;
-      }
-    }
-
-    function showLeadDetails(index) {
-      const lead = scrapedLeads[index];
-      if (!lead) return;
-      
-      alert(currentLang === 'nl' ?
-        `📋 Lead Details:\n\nBedrijf: ${lead.name}\nCategorie: ${lead.category}\nWebsite: ${lead.website || 'Geen'}\nTelefoon: ${lead.phone || 'Niet bekend'}\nAdres: ${lead.address || 'Niet bekend'}\nRating: ${lead.rating || 'Geen'} ${lead.reviews ? `(${lead.reviews} reviews)` : ''}` :
-        `📋 Lead Details:\n\nBusiness: ${lead.name}\nCategory: ${lead.category}\nWebsite: ${lead.website || 'None'}\nPhone: ${lead.phone || 'Unknown'}\nAddress: ${lead.address || 'Unknown'}\nRating: ${lead.rating || 'None'} ${lead.reviews ? `(${lead.reviews} reviews)` : ''}`
-      );
-    }
-
-    async function scanSingleURLFromLead(url, index) {
-      try {
-        const input = document.getElementById('singleUrlInput');
-        input.value = url;
-        
-        switchScanMode('single');
-        
-        await scanSingleURLPublic();
-      } catch (error) {
-        alert('Scan failed: ' + error.message);
-      }
-    }
-
-    function shareLeadViaWhatsApp(url, currentScore, potentialScore) {
-      const decodedUrl = decodeURIComponent(url);
-      const message = currentLang === 'nl' ?
-        `🚨 SEO Kans Gevonden!\n\nIk heb ${decodedUrl} geanalyseerd en ontdekte:\n\nHuidige Score: ${currentScore}/100\nPotentiële Score: ${potentialScore}/100\nVerbetering: +${potentialScore - currentScore} punten mogelijk!\n\nWil je het volledige rapport? Laten we chatten!` :
-        `🚨 SEO Opportunity Alert!\n\nI analyzed ${decodedUrl} and found:\n\nCurrent Score: ${currentScore}/100\nPotential Score: ${potentialScore}/100\nImprovement: +${potentialScore - currentScore} points possible!\n\nWant the full report? Let's chat!`;
-      window.open(`https://wa.me/31628073996?text=${encodeURIComponent(message)}`, '_blank');
-    }
-
-    function shareLeadViaEmail(url, currentScore, potentialScore) {
-      const decodedUrl = decodeURIComponent(url);
-      const subject = currentLang === 'nl' ? `SEO Analyse: ${decodedUrl} scoorde ${currentScore}/100` : `SEO Analysis: ${decodedUrl} scored ${currentScore}/100`;
-      const body = currentLang === 'nl' ?
-        `Hoi,\n\nIk heb een AI-era SEO analyse uitgevoerd op ${decodedUrl} en significante kansen ontdekt:\n\n📊 HUIDIGE SCORE: ${currentScore}/100\n🚀 POTENTIËLE SCORE: ${potentialScore}/100\n📈 VERBETERING: +${potentialScore - currentScore} punten\n\nJe website heeft sterk potentieel! Met enkele strategische optimalisaties kunnen we je zichtbaarheid significant verbeteren.\n\nWil je de volledige analyse en implementatie plan bespreken?\n\nGroeten` :
-        `Hi,\n\nI ran an AI-era SEO analysis on ${decodedUrl} and discovered significant opportunities:\n\n📊 CURRENT SCORE: ${currentScore}/100\n🚀 POTENTIAL SCORE: ${potentialScore}/100\n📈 IMPROVEMENT: +${potentialScore - currentScore} points\n\nYour website has strong potential! With some strategic optimizations, we could boost your visibility significantly.\n\nWant to discuss the full analysis and implementation plan?\n\nBest regards`;
-      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    }
-
-    function copyLeadReport(url, currentScore, potentialScore, wordCount) {
-      const decodedUrl = decodeURIComponent(url);
-      const report = currentLang === 'nl' ?
-        `SEO ANALYSE RAPPORT\n\nURL: ${decodedUrl}\n\nRESULTATEN:\n✅ Gekwalificeerde lead (${wordCount} woorden)\n📊 Huidige Score: ${currentScore}/100\n🚀 Potentieel: ${potentialScore}/100\n📈 Verbetering: +${potentialScore - currentScore} punten\n\nINVESTERING:\n⏱️ Timeline: 2-3 weken\n💰 Budget: €${Math.round((potentialScore - currentScore) * 15)}-${Math.round((potentialScore - currentScore) * 20)}\n📈 ROI: 300-500%\n\nContact: info@contentscale.site\nWhatsApp: +31 6 2807 3996` :
-        `SEO ANALYSIS REPORT\n\nURL: ${decodedUrl}\n\nRESULTS:\n✅ Qualified lead (${wordCount} words)\n📊 Current Score: ${currentScore}/100\n🚀 Potential: ${potentialScore}/100\n📈 Improvement: +${potentialScore - currentScore} points\n\nINVESTMENT:\n⏱️ Timeline: 2-3 weeks\n💰 Budget: €${Math.round((potentialScore - currentScore) * 15)}-${Math.round((potentialScore - currentScore) * 20)}\n📈 ROI: 300-500%\n\nContact: info@contentscale.site\nWhatsApp: +31 6 2807 3996`;
-      
-      navigator.clipboard.writeText(report).then(() => {
-        alert(currentLang === 'nl' ? '✅ Rapport gekopieerd naar clipboard!' : '✅ Report copied to clipboard!');
-      }).catch(err => {
-        console.error('Copy failed:', err);
-        alert(currentLang === 'nl' ? '❌ Kopiëren mislukt. Probeer handmatig te selecteren en kopiëren.' : '❌ Copy failed. Please select and copy manually.');
-      });
-    }
-
-    function saveLeadToWorkspace(url, score, wordCount) {
-      const decodedUrl = decodeURIComponent(url);
-      
-      let workspace = JSON.parse(localStorage.getItem('contentscale_workspace') || '[]');
-      
-      const existing = workspace.find(item => item.url === decodedUrl);
-      if (existing) {
-        alert(currentLang === 'nl' ? '✅ Lead staat al in je workspace!' : '✅ Lead already in your workspace!');
-        return;
-      }
-      
-      workspace.push({
-        url: decodedUrl,
-        score: score,
-        wordCount: wordCount,
-        date: new Date().toISOString(),
-        status: 'new'
-      });
-      
-      localStorage.setItem('contentscale_workspace', JSON.stringify(workspace));
-      
-      alert(currentLang === 'nl' 
-        ? `✅ Lead toegevoegd aan workspace! Je hebt nu ${workspace.length} leads.` 
-        : `✅ Lead added to workspace! You now have ${workspace.length} leads.`);
-    }
-
-    function exportLeadsToCSV() {
-      let leadsToExport = scrapedLeads;
-      
-      if (!leadsToExport || leadsToExport.length === 0) {
-        alert('No leads to export');
-        return;
-      }
-      
-      const headers = ['Name', 'Category', 'Website', 'Phone', 'Address', 'Rating', 'Reviews', 'Score'];
-      const rows = leadsToExport.map(lead => [
-        lead.name || '',
-        lead.category || '',
-        lead.website || '',
-        lead.phone || '',
-        lead.address || '',
-        lead.rating || '',
-        lead.reviews || '',
-        lead.score || ''
-      ]);
-      
-      let csv = headers.join(',') + '\n';
-      csv += rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-      
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `contentscale-leads-${Date.now()}.csv`;
-      a.click();
-    }
-
-    function exportLeadsToJSON() {
-      let leadsToExport = scrapedLeads;
-      
-      if (!leadsToExport || leadsToExport.length === 0) {
-        alert('No leads to export');
-        return;
-      }
-      
-      const json = JSON.stringify(leadsToExport, null, 2);
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `contentscale-leads-${Date.now()}.json`;
-      a.click();
-    }
-
-    async function loadFreelancers() {
+    // ============================================
+    // FREELANCERS FUNCTIONS
+    // ============================================
+    function loadFreelancers() {
       try {
         // Use mock data
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        const mockFreelancers = [
-          { name: "Mark van Dijk", title: "Senior SEO Specialist", email: "mark@example.com", location: "Amsterdam", bio: "10+ years experience in E-E-A-T optimization and traffic recovery.", is_verified: true },
-          { name: "Sarah Johnson", title: "Content Strategist", email: "sarah@example.com", location: "London", bio: "Expert in GRAAF framework implementation and content scaling.", is_verified: true },
-          { name: "Thomas Schmidt", title: "Technical SEO Expert", email: "thomas@example.com", location: "Berlin", bio: "Specialized in technical SEO audits and site structure optimization.", is_verified: true },
-          { name: "Lisa Chen", title: "E-commerce SEO Consultant", email: "lisa@example.com", location: "Rotterdam", bio: "Helping e-commerce businesses recover lost traffic from AI Overviews.", is_verified: true },
-          { name: "David Miller", title: "Local SEO Specialist", email: "david@example.com", location: "Utrecht", bio: "Expert in local SEO and Google Business Profile optimization.", is_verified: true },
-          { name: "Emma Wilson", title: "Content Quality Analyst", email: "emma@example.com", location: "Remote", bio: "Focus on E-E-A-T alignment and content quality scoring.", is_verified: true }
-        ];
-        
+        const freelancers = MOCK_FREELANCERS;
         const grid = document.getElementById('freelancers-grid');
         
-        grid.innerHTML = mockFreelancers.map(f => `
+        grid.innerHTML = freelancers.map(f => `
           <div class="freelancer-card">
             <div class="flex items-start justify-between mb-3">
               <div class="flex items-center gap-3">
@@ -2848,7 +2906,7 @@
         
       } catch (error) {
         console.error('Load freelancers error:', error);
-        showError('Network error loading freelancers. Please check your connection.');
+        showError('Failed to load freelancers.');
       }
     }
 
@@ -2874,7 +2932,7 @@
             </button>
           </div>
           
-          <form id="freelancerForm" class="space-y-4">
+          <div class="space-y-4">
             <div>
               <label class="block text-sm mb-2">${currentLang === 'nl' ? 'Naam' : 'Name'}</label>
               <input type="text" id="freelancerName" required class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white">
@@ -2916,11 +2974,11 @@
               <textarea id="freelancerMotivation" rows="3" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"></textarea>
             </div>
             
-            <button type="button" onclick="submitFreelancerRegistration()" 
+            <button onclick="submitFreelancerRegistration()" 
                     class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 px-4 py-3 rounded-lg font-bold transition-all">
               ${currentLang === 'nl' ? 'Verstuur Aanmelding' : 'Submit Application'}
             </button>
-          </form>
+          </div>
           
           <p class="text-xs text-gray-400 mt-4 text-center">
             ${currentLang === 'nl' ? 'We nemen binnen 24-48 uur contact met je op.' : 'We will contact you within 24-48 hours.'}
@@ -2945,10 +3003,9 @@
         return;
       }
       
-      // In a real app, this would be an API call
+      // Simulate submission
       console.log('Submitting freelancer registration:', { name, email, specialization });
       
-      // Simulate submission
       setTimeout(() => {
         alert(currentLang === 'nl' 
           ? `✅ Bedankt voor je aanmelding, ${name}! We nemen binnen 24 uur contact met je op.` 
@@ -2956,17 +3013,20 @@
         
         closeFreelancerModal();
         
-        // Optionally refresh freelancers list
-        setTimeout(() => {
-          loadFreelancers();
-        }, 1000);
+        // In a real app, you would add the freelancer to the list
+        console.log('Freelancer registration submitted successfully');
       }, 1000);
     }
 
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
     function showError(message) {
       console.error('Error:', message);
       // Could implement a toast notification here
     }
+
+    console.log('✅ ContentScale Website JavaScript loaded successfully!');
   </script>
 </body>
 </html>
