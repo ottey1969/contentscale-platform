@@ -247,7 +247,9 @@ async function createAllTables() {
       await client.query(`
         ALTER TABLE freelancers 
         ADD COLUMN IF NOT EXISTS hourly_rate VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS availability VARCHAR(100)
+        ADD COLUMN IF NOT EXISTS availability VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS is_featured BOOLEAN DEFAULT FALSE
       `);
       console.log('✅ Freelancers table migrated');
     } catch (migrationError) {
