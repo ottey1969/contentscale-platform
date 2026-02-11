@@ -19,6 +19,11 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ============================================
+// TRUST PROXY - FIX VOOR RATE LIMITING ACHTER PROXY
+// ============================================
+app.set('trust proxy', 1); // ✅ Vertrouw de eerste proxy (Railway/Heroku)
+
+// ============================================
 // COMPRESSIE - ALLE RESPONSES IN GZIP
 // ============================================
 app.use(compression({ 
@@ -28,18 +33,28 @@ app.use(compression({
 console.log('✅ GZIP compressie actief - 56 KiB besparing');
 
 // ============================================
-// RATE LIMITING
+// RATE LIMITING - MET PROXY SUPPORT
 // ============================================
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
-  message: { success: false, error: 'Too many requests, please try again later.' }
+  message: { success: false, error: 'Too many requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    return req.ip || req.connection.remoteAddress;
+  }
 });
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
-  message: { success: false, error: 'Too many login attempts, please try again later.' }
+  message: { success: false, error: 'Too many login attempts, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    return req.ip || req.connection.remoteAddress;
+  }
 });
 
 app.use('/api/', limiter);
@@ -1747,7 +1762,7 @@ app.listen(PORT, async () => {
   console.log('');
   console.log('🔒 SECURITY ENHANCED:');
   console.log('   • ✅ bcrypt password hashing');
-  console.log('   • ✅ Rate limiting (100/15min)');
+  console.log('   • ✅ Rate limiting (100/15min) - PROXY FIXED');
   console.log('   • ✅ URL validation');
   console.log('   • ✅ Production CORS');
   console.log('   • ✅ Admin authentication');
@@ -1761,5 +1776,3 @@ app.listen(PORT, async () => {
   console.log('📦 Cache: Active (24h TTL)');
   console.log('');
 });
-
-
