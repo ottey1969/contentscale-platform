@@ -11,7 +11,16 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <style>
-    /* All your existing CSS styles remain exactly the same */
+    /* ========== BASE STYLES ========== */
+    * {
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      overflow-x: hidden;
+    }
+    
     .gradient-bg {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     }
@@ -29,8 +38,597 @@
       box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
     }
     
-    /* ... all other CSS styles remain exactly as you have them ... */
+    /* ========== LANGUAGE TOGGLE ========== */
+    .lang-toggle {
+      display: flex;
+      gap: 4px;
+      background: #374151;
+      padding: 4px;
+      border-radius: 8px;
+    }
     
+    .lang-btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 14px;
+      background: transparent;
+      color: #9ca3af;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .lang-btn.active {
+      background: #4f46e5;
+      color: white;
+    }
+    
+    [data-lang] {
+      display: none;
+    }
+    
+    [data-lang].active-lang {
+      display: block;
+    }
+    
+    /* ========== LEADERBOARD STYLES ========== */
+    .top-3-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+    
+    @media (max-width: 768px) {
+      .top-3-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+    }
+    
+    .top-card {
+      position: relative;
+      border-radius: 16px;
+      padding: 24px;
+      text-align: center;
+      overflow: hidden;
+      transition: transform 0.3s ease;
+    }
+    
+    .top-card:hover {
+      transform: translateY(-4px);
+    }
+    
+    .top-card.gold {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      border: 3px solid #fbbf24;
+    }
+    
+    .top-card.silver {
+      background: linear-gradient(135deg, #e5e7eb 0%, #9ca3af 100%);
+      border: 3px solid #e5e7eb;
+    }
+    
+    .top-card.bronze {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      border: 3px solid #f97316;
+    }
+    
+    .world-ranking {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      display: inline-block;
+    }
+    
+    .world-ranking.gold {
+      background: rgba(0, 0, 0, 0.2);
+      color: white;
+    }
+    
+    .world-ranking.silver {
+      background: rgba(0, 0, 0, 0.2);
+      color: white;
+    }
+    
+    .world-ranking.bronze {
+      background: rgba(0, 0, 0, 0.2);
+      color: white;
+    }
+    
+    .top-rank {
+      font-size: 48px;
+      margin: 12px 0;
+    }
+    
+    .score-display {
+      font-size: 48px;
+      font-weight: 900;
+      margin: 16px 0;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    
+    .score-display.gold { color: #ffd700; }
+    .score-display.silver { color: #c0c0c0; }
+    .score-display.bronze { color: #cd7f32; }
+    
+    .view-profile-btn {
+      background: rgba(0, 0, 0, 0.3);
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      padding: 10px 24px;
+      border-radius: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      width: 100%;
+      margin-top: 16px;
+    }
+    
+    .view-profile-btn:hover {
+      background: rgba(0, 0, 0, 0.5);
+      border-color: rgba(255, 255, 255, 0.6);
+    }
+    
+    /* ========== STAT CARDS ========== */
+    .stat-card {
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);
+      border-radius: 12px;
+    }
+    
+    .stat-card-alt::before {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%);
+    }
+    
+    .stat-card-green::before {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(21, 128, 61, 0.1) 100%);
+    }
+    
+    .stat-card-yellow::before {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%);
+    }
+    
+    /* ========== FILTERS ========== */
+    .filter-tag {
+      background: #374151;
+      color: #d1d5db;
+      border: 1px solid #4b5563;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .filter-tag:hover {
+      background: #4b5563;
+      color: white;
+    }
+    
+    .filter-tag.active {
+      background: #4f46e5;
+      color: white;
+      border-color: #4f46e5;
+    }
+    
+    .filter-panel {
+      display: none;
+    }
+    
+    .filter-panel.show {
+      display: block;
+    }
+    
+    /* ========== RANKINGS TABLE ========== */
+    .complete-rankings-section {
+      margin-top: 32px;
+    }
+    
+    .rankings-toggle-btn {
+      width: 100%;
+      background: #374151;
+      border: 2px solid #4f46e5;
+      color: white;
+      padding: 16px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      transition: all 0.3s ease;
+    }
+    
+    .rankings-toggle-btn:hover {
+      background: #4b5563;
+    }
+    
+    .rankings-toggle-btn.active .arrow {
+      transform: rotate(180deg);
+    }
+    
+    .rankings-table-container {
+      display: none;
+    }
+    
+    .rankings-table-container.show {
+      display: block;
+    }
+    
+    .rankings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding: 0 8px;
+    }
+    
+    .rankings-table {
+      width: 100%;
+      background: #1f2937;
+      border-radius: 12px;
+      overflow: hidden;
+      border-collapse: collapse;
+    }
+    
+    .rankings-table thead {
+      background: #111827;
+    }
+    
+    .rankings-table th {
+      padding: 16px;
+      text-align: left;
+      font-weight: 600;
+      color: #d1d5db;
+      border-bottom: 2px solid #374151;
+    }
+    
+    .rankings-table td {
+      padding: 16px;
+      border-bottom: 1px solid #374151;
+    }
+    
+    .rankings-table tbody tr:hover {
+      background: #374151;
+    }
+    
+    .rank-cell {
+      width: 80px;
+    }
+    
+    .rank-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    
+    .rank-badge.rank-other {
+      background: #374151;
+      color: #9ca3af;
+    }
+    
+    .score-cell {
+      width: 100px;
+    }
+    
+    .score-95 { color: #10b981; }
+    .score-90 { color: #84cc16; }
+    .score-85 { color: #f59e0b; }
+    
+    .load-more-container {
+      padding: 24px;
+      text-align: center;
+    }
+    
+    .load-more-btn {
+      background: #4f46e5;
+      color: white;
+      border: none;
+      padding: 12px 32px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .load-more-btn:hover:not(:disabled) {
+      background: #4338ca;
+    }
+    
+    .load-more-btn:disabled {
+      background: #6b7280;
+      cursor: not-allowed;
+    }
+    
+    /* ========== MODAL STYLES ========== */
+    .agency-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 1000;
+      overflow-y: auto;
+      backdrop-filter: blur(4px);
+    }
+    
+    .agency-modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .agency-modal-content {
+      background: #1f2937;
+      border-radius: 16px;
+      max-width: 800px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      border: 2px solid #4f46e5;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+    
+    .score-breakdown {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+    
+    @media (max-width: 640px) {
+      .score-breakdown {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .breakdown-item {
+      background: #111827;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      border: 2px solid transparent;
+    }
+    
+    .breakdown-graaf { border-color: #8b5cf6; }
+    .breakdown-craft { border-color: #10b981; }
+    .breakdown-technical { border-color: #3b82f6; }
+    
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    
+    @media (max-width: 640px) {
+      .quick-actions {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .quick-action-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: none;
+      color: white;
+    }
+    
+    .quick-action-btn.visit {
+      background: #3b82f6;
+    }
+    
+    .quick-action-btn.visit:hover {
+      background: #2563eb;
+    }
+    
+    .quick-action-btn.scan {
+      background: #8b5cf6;
+    }
+    
+    .quick-action-btn.scan:hover {
+      background: #7c3aed;
+    }
+    
+    .quick-action-btn.contact {
+      background: #10b981;
+    }
+    
+    .quick-action-btn.contact:hover {
+      background: #059669;
+    }
+    
+    /* ========== LEAD TABLE STYLES ========== */
+    .lead-list-table {
+      width: 100%;
+      background: #1f2937;
+      border-radius: 12px;
+      overflow: hidden;
+      border-collapse: collapse;
+    }
+    
+    .lead-list-table thead {
+      background: #111827;
+    }
+    
+    .lead-list-table th {
+      padding: 16px;
+      text-align: left;
+      font-weight: 600;
+      color: #d1d5db;
+      border-bottom: 2px solid #374151;
+    }
+    
+    .lead-list-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid #374151;
+    }
+    
+    .website-cell {
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    .status-high { background: #10b981; color: white; }
+    .status-medium { background: #f59e0b; color: white; }
+    .status-low { background: #ef4444; color: white; }
+    .status-none { background: #6b7280; color: white; }
+    
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+    }
+    
+    /* ========== FREELANCER CARDS ========== */
+    .freelancer-card {
+      background: #1f2937;
+      border: 2px solid #374151;
+      border-radius: 16px;
+      padding: 20px;
+      transition: all 0.3s ease;
+    }
+    
+    .freelancer-card:hover {
+      border-color: #4f46e5;
+      transform: translateY(-4px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* ========== SCAN RESULT STYLES ========== */
+    .scan-result-card {
+      animation: fadeIn 0.5s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .progress-bar {
+      transition: width 0.3s ease;
+    }
+    
+    /* ========== SKELETON LOADERS ========== */
+    .skeleton {
+      background: linear-gradient(90deg, #2d3748 25%, #4a5568 50%, #2d3748 75%);
+      background-size: 200% 100%;
+      animation: loading 1.5s infinite;
+      border-radius: 12px;
+    }
+    
+    @keyframes loading {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    
+    /* ========== ANIMATIONS ========== */
+    .cta-pulse {
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+    }
+    
+    .pulse-border {
+      animation: pulse-border 2s infinite;
+    }
+    
+    @keyframes pulse-border {
+      0% { border-color: #4f46e5; }
+      50% { border-color: #8b5cf6; }
+      100% { border-color: #4f46e5; }
+    }
+    
+    /* ========== UTILITY CLASSES ========== */
+    .country-flag-large {
+      font-size: 32px;
+    }
+    
+    /* ========== RESPONSIVE ADJUSTMENTS ========== */
+    @media (max-width: 768px) {
+      .lead-list-table {
+        font-size: 14px;
+      }
+      
+      .lead-list-table th,
+      .lead-list-table td {
+        padding: 8px;
+      }
+      
+      .action-buttons {
+        flex-direction: column;
+      }
+      
+      .action-buttons button {
+        width: 100%;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .google-badge {
+        font-size: 11px;
+        padding: 6px 12px;
+      }
+      
+      h1 {
+        font-size: 2.5rem !important;
+      }
+      
+      .stat-card {
+        padding: 16px !important;
+      }
+      
+      .stat-card .text-4xl {
+        font-size: 2rem;
+      }
+    }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100">
@@ -56,7 +654,7 @@
         <div class="flex gap-4 items-center">
           <div class="lang-toggle">
             <button class="lang-btn" onclick="switchLanguage('nl')" id="langBtnNL">NL</button>
-            <button class="lang-btn" onclick="switchLanguage('en')" id="langBtnEN">EN</button>
+            <button class="lang-btn active" onclick="switchLanguage('en')" id="langBtnEN">EN</button>
           </div>
           
           <a href="https://wa.me/31628073996" target="_blank" 
@@ -78,7 +676,7 @@
         </span>
       </div>
       
-      <div data-lang="nl">
+      <div data-lang="nl" class="active-lang">
         <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 bg-clip-text text-transparent leading-tight">
           Stop Traffic Verlies aan AI
         </h1>
@@ -127,7 +725,7 @@
     <div id="lead-scanner" class="mb-16">
       <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500 shadow-2xl">
         
-        <div class="text-center mb-8" data-lang="nl">
+        <div class="text-center mb-8" data-lang="nl" class="active-lang">
           <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-300 via-pink-300 to-purple-300 bg-clip-text text-transparent">
             🎯 Lead Scanner voor Specialisten
           </h2>
@@ -154,12 +752,12 @@
         <div class="flex justify-center gap-4 mb-8">
           <button id="modeSingleBtn" onclick="switchScanMode('single')" 
                   class="mode-toggle active px-6 py-3 bg-gray-700 rounded-lg font-semibold shadow-lg">
-            <span data-lang="nl">🔍 Enkele URL</span>
+            <span data-lang="nl" class="active-lang">🔍 Enkele URL</span>
             <span data-lang="en">🔍 Single URL</span>
           </button>
           <button id="modeBulkBtn" onclick="switchScanMode('bulk')" 
                   class="mode-toggle px-6 py-3 bg-gray-700 rounded-lg font-semibold shadow-lg">
-            <span data-lang="nl">🗺️ Google Maps Bulk</span>
+            <span data-lang="nl" class="active-lang">🗺️ Google Maps Bulk</span>
             <span data-lang="en">🗺️ Google Maps Bulk</span>
           </button>
         </div>
@@ -174,7 +772,7 @@
               <button onclick="scanSingleURLPublic()" 
                       id="singleScanBtn"
                       class="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 px-6 py-3 rounded-lg font-bold transition-all whitespace-nowrap shadow-lg hover:shadow-xl">
-                <span data-lang="nl">🚀 Start Scan</span>
+                <span data-lang="nl" class="active-lang">🚀 Start Scan</span>
                 <span data-lang="en">🚀 Start Scan</span>
               </button>
             </div>
@@ -190,7 +788,7 @@
           <div id="singleScanResult" class="hidden"></div>
 
           <div class="bg-blue-900 bg-opacity-30 border border-blue-500 rounded-lg p-4 mt-4">
-            <p class="text-sm text-blue-300" data-lang="nl">
+            <p class="text-sm text-blue-300" data-lang="nl" class="active-lang">
               💡 <strong>Pro Tip:</strong> Gebruik scan resultaten om je pitch te versterken met concrete data
             </p>
             <p class="text-sm text-blue-300" data-lang="en">
@@ -209,13 +807,13 @@
               <button onclick="scrapeGoogleMapsPublic()" 
                       id="gmapsScrapeBtn"
                       class="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 px-6 py-3 rounded-lg font-bold transition-all whitespace-nowrap shadow-lg hover:shadow-xl">
-                <span data-lang="nl">🗺️ Scrape Maps</span>
+                <span data-lang="nl" class="active-lang">🗺️ Scrape Maps</span>
                 <span data-lang="en">🗺️ Scrape Maps</span>
               </button>
             </div>
             
             <div class="bg-gray-700 rounded-lg p-3">
-              <p class="text-xs text-gray-300" data-lang="nl">
+              <p class="text-xs text-gray-300" data-lang="nl" class="active-lang">
                 <strong class="text-purple-300">💡 Hoe te gebruiken:</strong> 
                 Zoek bedrijven op Google Maps → Kopieer de URL → Plak hier
               </p>
@@ -230,19 +828,19 @@
             <div class="bg-gray-800 rounded-xl p-6 shadow-lg">
               <div class="flex items-center justify-between mb-4">
                 <h3 class="text-xl font-bold">
-                  <span data-lang="nl">📋 Gevonden Leads (<span id="leadCount">0</span>)</span>
+                  <span data-lang="nl" class="active-lang">📋 Gevonden Leads (<span id="leadCount">0</span>)</span>
                   <span data-lang="en">📋 Found Leads (<span id="leadCountEN">0</span>)</span>
                 </h3>
                 <div class="flex gap-2">
                   <button onclick="scanAllGoogleMapsLeads()" 
                           id="scanAllBtn"
                           class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all">
-                    <span data-lang="nl">⚡ Scan Alles</span>
+                    <span data-lang="nl" class="active-lang">⚡ Scan Alles</span>
                     <span data-lang="en">⚡ Scan All</span>
                   </button>
                   <button onclick="selectAllLeads()" 
                           class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all">
-                    <span data-lang="nl">☑️ Selecteer Alles</span>
+                    <span data-lang="nl" class="active-lang">☑️ Selecteer Alles</span>
                     <span data-lang="en">☑️ Select All</span>
                   </button>
                 </div>
@@ -291,7 +889,7 @@
         </div>
 
         <div class="mt-8 bg-gradient-to-r from-purple-800 via-pink-800 to-purple-800 rounded-xl p-6 text-center border-2 border-purple-400 shadow-lg">
-          <div data-lang="nl">
+          <div data-lang="nl" class="active-lang">
             <h3 class="text-2xl font-bold mb-2">💼 Ben je Content Specialist?</h3>
             <p class="text-gray-200 mb-4">
               Gebruik deze scanner gratis om potentiële klanten te vinden
@@ -334,7 +932,7 @@
     <div id="leaderboard" class="mb-16">
       <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500 shadow-2xl">
         
-        <div class="text-center mb-8" data-lang="nl">
+        <div class="text-center mb-8" data-lang="nl" class="active-lang">
           <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-300 via-pink-300 to-purple-300 bg-clip-text text-transparent">
             🏆 Elite Leaderboard (85+ Scores)
           </h2>
@@ -481,7 +1079,7 @@
         </div>
 
         <div class="mt-8 bg-gradient-to-r from-green-900 via-emerald-900 to-green-800 rounded-xl p-6 text-center border-2 border-green-500 shadow-lg">
-          <div data-lang="nl">
+          <div data-lang="nl" class="active-lang">
             <h3 class="text-2xl font-bold mb-2">⚡ Automatische Toevoeging</h3>
             <p class="text-gray-200 mb-4">
               Websites met scores van 85+ worden <strong>automatisch</strong> toegevoegd aan de leaderboard via onze scanner.
@@ -519,15 +1117,15 @@
 
     <div id="freelancers" class="mb-16">
       <div class="text-center mb-8">
-        <h2 class="text-4xl font-bold mb-3" data-lang="nl">🎯 Geverifieerde SEO Specialisten</h2>
+        <h2 class="text-4xl font-bold mb-3" data-lang="nl" class="active-lang">🎯 Geverifieerde SEO Specialisten</h2>
         <h2 class="text-4xl font-bold mb-3" data-lang="en">🎯 Verified SEO Specialists</h2>
         
-        <p class="text-xl text-gray-300 mb-4" data-lang="nl">Expert content optimizers klaar om te helpen</p>
+        <p class="text-xl text-gray-300 mb-4" data-lang="nl" class="active-lang">Expert content optimizers klaar om te helpen</p>
         <p class="text-xl text-gray-300 mb-4" data-lang="en">Expert content optimizers ready to elevate your rankings</p>
         
         <button onclick="openFreelancerModal()" 
                 class="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl">
-          <span data-lang="nl">📝 Registreer als Specialist</span>
+          <span data-lang="nl" class="active-lang">📝 Registreer als Specialist</span>
           <span data-lang="en">📝 Join Our Network</span>
         </button>
       </div>
@@ -543,7 +1141,7 @@
       <div class="bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-900 rounded-2xl p-12 text-center border-2 border-purple-500 shadow-2xl">
         <div class="text-5xl mb-4">🚀</div>
         
-        <div data-lang="nl">
+        <div data-lang="nl" class="active-lang">
           <h2 class="text-4xl font-bold mb-4">Klaar om je Traffic te Herstellen?</h2>
           <p class="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
             Stop met traffic verliezen aan AI Overviews. Krijg vandaag nog je persoonlijke roadmap naar 90+ content scores.
@@ -560,14 +1158,14 @@
         <div class="flex gap-4 justify-center flex-wrap">
           <button onclick="document.getElementById('singleUrlInput').scrollIntoView({behavior:'smooth'}); document.getElementById('singleUrlInput').focus()" 
                   class="cta-pulse bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 px-8 py-4 rounded-lg font-bold text-lg transition-all shadow-lg hover:shadow-xl">
-            <span data-lang="nl">🔍 Scan Gratis</span>
+            <span data-lang="nl" class="active-lang">🔍 Scan Gratis</span>
             <span data-lang="en">🔍 Scan Free</span>
           </button>
           
           <a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20discuss%20SEO%20optimization" 
              target="_blank"
              class="bg-green-600 hover:bg-green-700 px-8 py-4 rounded-lg font-bold text-lg transition-all shadow-lg hover:shadow-xl">
-            <span data-lang="nl">💬 Gratis Consultatie</span>
+            <span data-lang="nl" class="active-lang">💬 Gratis Consultatie</span>
             <span data-lang="en">💬 Free Consultation</span>
           </a>
         </div>
@@ -584,7 +1182,7 @@
           <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-4">
             ContentScale
           </div>
-          <p class="text-gray-400 text-sm" data-lang="nl">
+          <p class="text-gray-400 text-sm" data-lang="nl" class="active-lang">
             Professional SEO content optimalisatie gebaseerd op Google's E-E-A-T richtlijnen.
           </p>
           <p class="text-gray-400 text-sm" data-lang="en">
@@ -593,7 +1191,7 @@
         </div>
         
         <div>
-          <h3 class="font-bold mb-4" data-lang="nl">Product</h3>
+          <h3 class="font-bold mb-4" data-lang="nl" class="active-lang">Product</h3>
           <h3 class="font-bold mb-4" data-lang="en">Product</h3>
           <ul class="space-y-2 text-sm">
             <li><a href="#scanner" class="text-gray-400 hover:text-white transition-colors">Scanner</a></li>
@@ -603,12 +1201,12 @@
         </div>
         
         <div>
-          <h3 class="font-bold mb-4" data-lang="nl">Bedrijf</h3>
+          <h3 class="font-bold mb-4" data-lang="nl" class="active-lang">Bedrijf</h3>
           <h3 class="font-bold mb-4" data-lang="en">Company</h3>
           <ul class="space-y-2 text-sm">
             <li><a href="#blog" class="text-gray-400 hover:text-white transition-colors">Blog</a></li>
             <li><a href="#leaderboard" class="text-gray-400 hover:text-white transition-colors">Leaderboard</a></li>
-            <li><a href="#freelancers" class="text-gray-400 hover:text-white transition-colors" data-lang="nl">Specialisten</a></li>
+            <li><a href="#freelancers" class="text-gray-400 hover:text-white transition-colors" data-lang="nl" class="active-lang">Specialisten</a></li>
             <li><a href="#freelancers" class="text-gray-400 hover:text-white transition-colors" data-lang="en">Specialists</a></li>
           </ul>
         </div>
@@ -1775,7 +2373,7 @@
                     (currentLang === 'nl' ? 'Hoog (85+)' : 'High (85+)') :
                     score >= 70 ? 
                     (currentLang === 'nl' ? 'Medium (70-84)' : 'Medium (70-84)') :
-                    (currentLang === 'nl' ? 'Laog (<70)' : 'Low (<70)');
+                    (currentLang === 'nl' ? 'Laag (<70)' : 'Low (<70)');
                   statusCell.innerHTML = `<span class="status-badge status-${score >= 85 ? 'high' : score >= 70 ? 'medium' : 'low'}">${statusText}</span>`;
                 }
               }
