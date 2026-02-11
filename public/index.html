@@ -1136,13 +1136,13 @@
     }
 
     function updateLeaderboardStats() {
-      document.getElementById('totalAgencies').textContent = allLeaderboardEntries.length;
+      document.getElementById('totalAgencies').textContent = allLeaderboardEntries.length || '...';
       const avgScore = allLeaderboardEntries.length > 0 ? 
-        Math.round(allLeaderboardEntries.reduce((sum, e) => sum + e.score, 0) / allLeaderboardEntries.length) : 0;
+        Math.round(allLeaderboardEntries.reduce((sum, e) => sum + e.score, 0) / allLeaderboardEntries.length) : '...';
       document.getElementById('avgScore').textContent = avgScore;
       const uniqueCountries = [...new Set(allLeaderboardEntries.map(e => e.country))];
-      document.getElementById('countriesCount').textContent = uniqueCountries.length;
-      document.getElementById('activeHelpers').textContent = 0;
+      document.getElementById('countriesCount').textContent = uniqueCountries.length || '...';
+      document.getElementById('activeHelpers').textContent = '...';
     }
 
     function loadTop3Agencies() {
@@ -1195,7 +1195,7 @@
       const rankings = allLeaderboardEntries.slice(15);
       const tbody = document.getElementById('rankings-tbody');
       const totalCount = document.getElementById('total-count');
-      totalCount.textContent = allLeaderboardEntries.length;
+      totalCount.textContent = allLeaderboardEntries.length || 0;
       tbody.innerHTML = rankings.slice(0, 20).map((entry, index) => {
         const actualRank = index + 16;
         return `
