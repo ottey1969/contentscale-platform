@@ -11,7 +11,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <style>
-    /* PROFESSIONAL STYLING */
     .gradient-bg {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     }
@@ -38,7 +37,6 @@
       box-shadow: 0 10px 30px rgba(0,0,0,0.2);
     }
     
-    /* Language Toggle */
     .lang-toggle {
       display: flex;
       background: #374151;
@@ -71,12 +69,10 @@
       background: #4b5563;
     }
     
-    /* Hide inactive language content */
     [data-lang]:not(.active-lang) {
       display: none !important;
     }
     
-    /* Leaderboard Styles */
     .leaderboard-card {
       background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
       border: 2px solid #334155;
@@ -108,7 +104,6 @@
     .rank-3 { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white; }
     .rank-other { background: #374151; color: #9ca3af; }
     
-    /* Freelancer Cards */
     .freelancer-card {
       background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
       border: 2px solid #374151;
@@ -123,7 +118,6 @@
       box-shadow: 0 15px 30px rgba(139, 92, 246, 0.3);
     }
     
-    /* Blog Cards */
     .blog-card {
       background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
       border: 2px solid #374151;
@@ -138,7 +132,6 @@
       box-shadow: 0 15px 30px rgba(59, 130, 246, 0.3);
     }
     
-    /* Pricing Cards */
     .pricing-card {
       background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
       border: 2px solid #374151;
@@ -163,7 +156,6 @@
       transform: scale(1.05) translateY(-8px);
     }
     
-    /* Modal */
     .modal {
       display: none;
       position: fixed;
@@ -192,7 +184,6 @@
       overflow-y: auto;
     }
 
-    /* Lead Scanner Styles */
     @keyframes fadeInUp {
       from {
         opacity: 0;
@@ -222,7 +213,6 @@
       transform: scale(1.05);
     }
 
-    /* Stats Counter Animation */
     @keyframes countUp {
       from { opacity: 0; transform: translateY(20px); }
       to { opacity: 1; transform: translateY(0); }
@@ -232,7 +222,6 @@
       animation: countUp 0.6s ease-out;
     }
 
-    /* Pulse animation for important CTAs */
     @keyframes pulse {
       0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7); }
       50% { box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); }
@@ -242,7 +231,6 @@
       animation: pulse 2s infinite;
     }
 
-    /* Loading skeleton */
     .skeleton {
       background: linear-gradient(90deg, #2d3748 25%, #374151 50%, #2d3748 75%);
       background-size: 200% 100%;
@@ -254,7 +242,6 @@
       100% { background-position: -200% 0; }
     }
 
-    /* Lead List Table Styles */
     .lead-list-table {
       width: 100%;
       border-collapse: separate;
@@ -324,7 +311,6 @@
       color: white;
     }
 
-    /* Leaderboard Table Styles */
     .leaderboard-table {
       width: 100%;
       border-collapse: collapse;
@@ -376,7 +362,6 @@
       vertical-align: middle;
     }
     
-    /* Leaderboard Stats Cards - UPDATED TO MATCH IMAGE */
     .stat-card {
       background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%);
       border: 2px solid #334155;
@@ -423,7 +408,6 @@
       background: linear-gradient(90deg, #f59e0b, #fbbf24, #fcd34d);
     }
     
-    /* Rankings Table Styles */
     .rankings-table-container {
       max-height: 0;
       overflow: hidden;
@@ -527,7 +511,6 @@
       cursor: not-allowed;
     }
     
-    /* Filter Panel */
     .filter-panel {
       overflow: hidden;
       max-height: 0;
@@ -557,7 +540,6 @@
       border-color: #8b5cf6;
     }
     
-    /* Top 3 Grid - UPDATED TO MATCH IMAGE */
     .top-3-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -586,7 +568,6 @@
       transform: translateY(-5px);
     }
     
-    /* Gold/Silver/Bronze borders from image */
     .top-card.gold {
       border-color: #fbbf24;
       box-shadow: 0 10px 30px rgba(251, 191, 36, 0.3);
@@ -612,7 +593,6 @@
     .top-rank.silver { color: #94a3b8; }
     .top-rank.bronze { color: #f97316; }
     
-    /* Score badges for top 3 cards - UPDATED TO MATCH IMAGE */
     .score-badge {
       display: inline-block;
       padding: 4px 12px;
@@ -638,7 +618,6 @@
       color: white;
     }
     
-    /* Score Display Styles - UPDATED TO MATCH IMAGE */
     .score-display {
       font-size: 2.5rem;
       font-weight: 900;
@@ -649,13 +628,11 @@
     .score-display.silver { color: #94a3b8; }
     .score-display.bronze { color: #f97316; }
     
-    /* Country Flag Styles */
     .country-flag-large {
       font-size: 2rem;
       margin: 10px 0;
     }
     
-    /* View Profile Button */
     .view-profile-btn {
       background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
       border: none;
@@ -675,7 +652,6 @@
       box-shadow: 0 5px 15px rgba(139, 92, 246, 0.4);
     }
     
-    /* World Ranking Badge */
     .world-ranking {
       position: absolute;
       top: 15px;
@@ -706,7 +682,6 @@
 </head>
 <body class="bg-gray-900 text-gray-100">
 
-  <!-- Navigation -->
   <nav class="sticky top-0 z-50 bg-gradient-to-r from-gray-800 to-gray-900 border-b-2 border-purple-600 backdrop-blur-sm bg-opacity-95">
     <div class="max-w-7xl mx-auto px-6 py-4">
       <div class="flex items-center justify-between">
@@ -726,7 +701,6 @@
         </div>
 
         <div class="flex gap-4 items-center">
-          <!-- Language Toggle -->
           <div class="lang-toggle">
             <button class="lang-btn" onclick="switchLanguage('nl')" id="langBtnNL">NL</button>
             <button class="lang-btn" onclick="switchLanguage('en')" id="langBtnEN">EN</button>
@@ -743,7 +717,6 @@
 
   <div class="max-w-7xl mx-auto p-6">
     
-    <!-- Hero Section -->
     <div class="text-center mb-16 pt-8" id="scanner">
       <div class="inline-block mb-6 animate-pulse">
         <span class="google-badge">
@@ -752,7 +725,6 @@
         </span>
       </div>
       
-      <!-- Dutch Hero -->
       <div data-lang="nl">
         <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 bg-clip-text text-transparent leading-tight">
           Stop Traffic Verlies aan AI
@@ -762,7 +734,6 @@
         </p>
       </div>
       
-      <!-- English Hero -->
       <div data-lang="en">
         <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 bg-clip-text text-transparent leading-tight">
           Stop Losing Traffic to AI
@@ -773,7 +744,6 @@
       </div>
     </div>
 
-    <!-- Trust Signals / Stats -->
     <div class="mb-16">
       <div class="grid md:grid-cols-4 gap-6">
         <div class="stat-card bg-gradient-to-br from-purple-900 to-purple-800 rounded-xl p-6 text-center border-2 border-purple-600 shadow-lg">
@@ -801,11 +771,9 @@
       </div>
     </div>
 
-    <!-- Lead Scanner Section -->
     <div id="lead-scanner" class="mb-16">
       <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500 shadow-2xl">
         
-        <!-- Header NL -->
         <div class="text-center mb-8" data-lang="nl">
           <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-300 via-pink-300 to-purple-300 bg-clip-text text-transparent">
             🎯 Lead Scanner voor Specialisten
@@ -818,7 +786,6 @@
           </p>
         </div>
 
-        <!-- Header EN -->
         <div class="text-center mb-8" data-lang="en">
           <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-300 via-pink-300 to-purple-300 bg-clip-text text-transparent">
             🎯 Lead Scanner for Content SEO Specialists
@@ -831,7 +798,6 @@
           </p>
         </div>
 
-        <!-- Mode Selector -->
         <div class="flex justify-center gap-4 mb-8">
           <button id="modeSingleBtn" onclick="switchScanMode('single')" 
                   class="mode-toggle active px-6 py-3 bg-gray-700 rounded-lg font-semibold shadow-lg">
@@ -845,7 +811,6 @@
           </button>
         </div>
 
-        <!-- Single URL Scanner -->
         <div id="singleScanMode" class="max-w-3xl mx-auto">
           <div class="bg-gray-800 rounded-xl p-6 mb-4 shadow-lg">
             <div class="flex flex-col sm:flex-row gap-3 mb-4">
@@ -861,7 +826,6 @@
               </button>
             </div>
             
-            <!-- Progress Indicator -->
             <div id="singleScanProgress" class="hidden">
               <div class="bg-gray-700 rounded-full h-3 overflow-hidden mb-2">
                 <div id="singleProgressBar" class="progress-bar bg-gradient-to-r from-purple-500 to-pink-500 h-full transition-all" style="width: 0%"></div>
@@ -870,10 +834,8 @@
             </div>
           </div>
 
-          <!-- Single Scan Result -->
           <div id="singleScanResult" class="hidden"></div>
 
-          <!-- Tip Box -->
           <div class="bg-blue-900 bg-opacity-30 border border-blue-500 rounded-lg p-4 mt-4">
             <p class="text-sm text-blue-300" data-lang="nl">
               💡 <strong>Pro Tip:</strong> Gebruik scan resultaten om je pitch te versterken met concrete data
@@ -884,7 +846,6 @@
           </div>
         </div>
 
-        <!-- Google Maps Bulk Scanner -->
         <div id="bulkScanMode" class="hidden max-w-6xl mx-auto">
           <div class="bg-gray-800 rounded-xl p-6 mb-4 shadow-lg">
             <div class="flex flex-col sm:flex-row gap-3 mb-4">
@@ -900,7 +861,6 @@
               </button>
             </div>
             
-            <!-- Instructie -->
             <div class="bg-gray-700 rounded-lg p-3">
               <p class="text-xs text-gray-300" data-lang="nl">
                 <strong class="text-purple-300">💡 Hoe te gebruiken:</strong> 
@@ -913,7 +873,6 @@
             </div>
           </div>
 
-          <!-- Scraped Leads Container -->
           <div id="scrapedLeadsContainer" class="hidden">
             <div class="bg-gray-800 rounded-xl p-6 shadow-lg">
               <div class="flex items-center justify-between mb-4">
@@ -936,7 +895,6 @@
                 </div>
               </div>
 
-              <!-- Bulk Scan Progress -->
               <div id="bulkScanProgress" class="hidden mb-4">
                 <div class="bg-gray-700 rounded-full h-3 overflow-hidden mb-2">
                   <div id="bulkProgressBar" class="progress-bar bg-gradient-to-r from-purple-500 to-pink-500 h-full" style="width: 0%"></div>
@@ -944,7 +902,6 @@
                 <p id="bulkProgressText" class="text-sm text-center text-gray-400"></p>
               </div>
 
-              <!-- Leads Table (List View) -->
               <div class="overflow-x-auto">
                 <table class="lead-list-table">
                   <thead>
@@ -962,12 +919,10 @@
                     </tr>
                   </thead>
                   <tbody id="leadsTableBody">
-                    <!-- Leads will be inserted here -->
                   </tbody>
                 </table>
               </div>
 
-              <!-- Export Buttons -->
               <div class="flex gap-3 justify-end mt-4">
                 <button onclick="exportLeadsToCSV()" 
                         class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all">
@@ -982,7 +937,6 @@
           </div>
         </div>
 
-        <!-- Freelancer CTA -->
         <div class="mt-8 bg-gradient-to-r from-purple-800 via-pink-800 to-purple-800 rounded-xl p-6 text-center border-2 border-purple-400 shadow-lg">
           <div data-lang="nl">
             <h3 class="text-2xl font-bold mb-2">💼 Ben je Content Specialist?</h3>
@@ -1023,11 +977,9 @@
       </div>
     </div>
 
-    <!-- Leaderboard Section -->
     <div id="leaderboard" class="mb-16">
       <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500 shadow-2xl">
         
-        <!-- Header NL -->
         <div class="text-center mb-8" data-lang="nl">
           <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-300 via-pink-300 to-purple-300 bg-clip-text text-transparent">
             🏆 Elite Leaderboard (85+ Scores)
@@ -1040,7 +992,6 @@
           </p>
         </div>
 
-        <!-- Header EN -->
         <div class="text-center mb-8" data-lang="en">
           <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-300 via-pink-300 to-purple-300 bg-clip-text text-transparent">
             🏆 Elite Leaderboard (85+ Scores)
@@ -1053,7 +1004,6 @@
           </p>
         </div>
 
-        <!-- Stats Section - UPDATED TO MATCH IMAGE -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div class="stat-card rounded-xl p-5 text-white relative">
             <div class="relative z-10">
@@ -1088,7 +1038,6 @@
           </div>
         </div>
 
-        <!-- Top 3 Agencies - UPDATED TO MATCH IMAGE EXACTLY -->
         <div class="mb-10" id="top3Container">
           <div class="flex items-center justify-between mb-6">
             <h2 class="text-2xl font-bold text-white">Top 3 Agencies</h2>
@@ -1096,7 +1045,6 @@
           </div>
           
           <div class="top-3-grid" id="top3Grid">
-            <!-- #1 Gold Card -->
             <div class="top-card gold">
               <div class="world-ranking gold">#1 Worldwide</div>
               <div class="top-rank gold">🥇</div>
@@ -1111,7 +1059,6 @@
               </button>
             </div>
             
-            <!-- #2 Silver Card -->
             <div class="top-card silver">
               <div class="world-ranking silver">#2 Worldwide</div>
               <div class="top-rank silver">🥈</div>
@@ -1126,7 +1073,6 @@
               </button>
             </div>
             
-            <!-- #3 Bronze Card -->
             <div class="top-card bronze">
               <div class="world-ranking bronze">#3 Worldwide</div>
               <div class="top-rank bronze">🥉</div>
@@ -1143,7 +1089,6 @@
           </div>
         </div>
 
-        <!-- Filters -->
         <div class="bg-gray-800 rounded-lg p-4 mb-6">
           <button onclick="toggleFilters()" class="w-full flex items-center justify-between text-left">
             <div class="flex items-center gap-2">
@@ -1158,14 +1103,12 @@
             <div class="mb-4">
               <div class="text-xs text-gray-400 mb-2">Country:</div>
               <div class="flex flex-wrap gap-2" id="countryFilters">
-                <!-- Country filters will be loaded here -->
               </div>
             </div>
             
             <div class="mb-4">
               <div class="text-xs text-gray-400 mb-2">Agency Type:</div>
               <div class="flex flex-wrap gap-2" id="typeFilters">
-                <!-- Type filters will be loaded here -->
               </div>
             </div>
             
@@ -1177,7 +1120,6 @@
           </div>
         </div>
 
-        <!-- Complete Rankings -->
         <div class="complete-rankings-section">
           <button class="rankings-toggle-btn pulse-border" onclick="toggleRankings()" id="rankings-toggle">
             <span>📊 Show All Rankings</span>
@@ -1202,7 +1144,6 @@
                 </tr>
               </thead>
               <tbody id="rankings-tbody">
-                <!-- Rankings will be loaded here -->
               </tbody>
             </table>
             
@@ -1214,7 +1155,6 @@
           </div>
         </div>
 
-        <!-- Auto Submission Note -->
         <div class="mt-8 bg-gradient-to-r from-green-900 via-emerald-900 to-green-800 rounded-xl p-6 text-center border-2 border-green-500 shadow-lg">
           <div data-lang="nl">
             <h3 class="text-2xl font-bold mb-2">⚡ Automatische Toevoeging</h3>
@@ -1253,7 +1193,6 @@
       </div>
     </div>
 
-    <!-- Freelancers Section -->
     <div id="freelancers" class="mb-16">
       <div class="text-center mb-8">
         <h2 class="text-4xl font-bold mb-3" data-lang="nl">🎯 Geverifieerde SEO Specialisten</h2>
@@ -1270,14 +1209,12 @@
       </div>
       
       <div id="freelancers-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Skeleton Loading -->
         <div class="freelancer-card skeleton h-48"></div>
         <div class="freelancer-card skeleton h-48"></div>
         <div class="freelancer-card skeleton h-48"></div>
       </div>
     </div>
 
-    <!-- Final CTA - FIXED TO POINT TO CORRECT INPUT -->
     <div class="mb-16">
       <div class="bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-900 rounded-2xl p-12 text-center border-2 border-purple-500 shadow-2xl">
         <div class="text-5xl mb-4">🚀</div>
@@ -1297,7 +1234,6 @@
         </div>
         
         <div class="flex gap-4 justify-center flex-wrap">
-          <!-- FIXED: Now points to singleUrlInput instead of scanInput -->
           <button onclick="document.getElementById('singleUrlInput').scrollIntoView({behavior:'smooth'}); document.getElementById('singleUrlInput').focus()" 
                   class="cta-pulse bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 px-8 py-4 rounded-lg font-bold text-lg transition-all shadow-lg hover:shadow-xl">
             <span data-lang="nl">🔍 Scan Gratis</span>
@@ -1316,7 +1252,6 @@
 
   </div>
 
-  <!-- Footer -->
   <footer class="bg-gray-800 border-t-2 border-gray-700 mt-16">
     <div class="max-w-7xl mx-auto px-6 py-12">
       <div class="grid md:grid-cols-4 gap-8 mb-8">
@@ -1382,7 +1317,6 @@
     </div>
   </footer>
 
-  <!-- Modals -->
   <div id="scanModal" class="modal">
     <div class="modal-content"></div>
   </div>
@@ -1391,11 +1325,7 @@
     <div class="modal-content"></div>
   </div>
 
-  <!-- Main JavaScript -->
   <script>
-    // ============================================
-    // INITIALIZATION
-    // ============================================
     let currentLang = localStorage.getItem('contentscale_lang') || 'en';
     let scrapedLeads = [];
     const API_BASE_URL = window.location.hostname.includes('localhost') ? 'http://localhost:3000' : '';
@@ -1406,16 +1336,13 @@
     let activeCountryFilter = 'all';
     let activeTypeFilter = 'all';
 
-    // Language system
     function switchLanguage(lang) {
       currentLang = lang;
       localStorage.setItem('contentscale_lang', lang);
       
-      // Update button states
       document.getElementById('langBtnNL').classList.toggle('active', lang === 'nl');
       document.getElementById('langBtnEN').classList.toggle('active', lang === 'en');
       
-      // Show/hide language-specific content
       document.querySelectorAll('[data-lang]').forEach(el => {
         el.classList.toggle('active-lang', el.getAttribute('data-lang') === lang);
       });
@@ -1423,27 +1350,19 @@
       document.documentElement.lang = lang;
     }
 
-    // Initialize on load
     document.addEventListener('DOMContentLoaded', () => {
       switchLanguage(currentLang);
       loadFreelancers();
-      loadLeaderboardData(); // Load leaderboard data on page load
+      loadLeaderboardData();
     });
 
-    // ============================================
-    // LEADERBOARD FUNCTIONS
-    // ============================================
     async function loadLeaderboardData() {
       try {
-        console.log('Loading leaderboard data...');
-        
-        // Show loading state
         document.getElementById('totalAgencies').textContent = '...';
         document.getElementById('avgScore').textContent = '...';
         document.getElementById('countriesCount').textContent = '...';
         document.getElementById('activeHelpers').textContent = '...';
         
-        // Load leaderboard entries from API
         const response = await fetch(`${API_BASE_URL}/api/leaderboard`);
         const data = await response.json();
         
@@ -1451,31 +1370,19 @@
           allLeaderboardEntries = data.entries;
           filteredLeaderboardEntries = [...allLeaderboardEntries];
           
-          // Update stats
           updateLeaderboardStats();
-          
-          // Load country filters
           loadCountryFilters();
-          
-          // Load type filters
           loadTypeFilters();
-          
-          // Load first page of rankings
           loadRankingsPage(1);
         } else {
-          // Fallback to mock data if API fails
-          console.log('Using mock leaderboard data');
           loadMockLeaderboardData();
         }
       } catch (error) {
-        console.error('Error loading leaderboard:', error);
-        // Fallback to mock data
         loadMockLeaderboardData();
       }
     }
 
     function loadMockLeaderboardData() {
-      // Mock data matching the image with 15 agencies and more diversity
       allLeaderboardEntries = [
         { id: 1, rank: 1, company_name: 'SEO Masters Amsterdam', url: 'https://seomasters.nl', score: 95, country: 'US', type: 'seo_agency', created_at: '2024-01-15' },
         { id: 2, rank: 2, company_name: 'Digital Growth', url: 'https://digitalgrowth.co.uk', score: 92, country: 'UK', type: 'seo_agency', created_at: '2024-01-14' },
@@ -1486,34 +1393,23 @@
       
       filteredLeaderboardEntries = [...allLeaderboardEntries];
       
-      // Update stats
       updateLeaderboardStats();
-      
-      // Load country filters
       loadCountryFilters();
-      
-      // Load type filters
       loadTypeFilters();
-      
-      // Load first page of rankings
       loadRankingsPage(1);
     }
 
     function updateLeaderboardStats() {
-      // Calculate total agencies
       const totalAgencies = allLeaderboardEntries.length;
       document.getElementById('totalAgencies').textContent = totalAgencies;
       
-      // Calculate average score
       const totalScore = allLeaderboardEntries.reduce((sum, entry) => sum + entry.score, 0);
       const avgScore = totalAgencies > 0 ? (totalScore / totalAgencies).toFixed(0) : '0';
       document.getElementById('avgScore').textContent = avgScore;
       
-      // Calculate unique countries
       const uniqueCountries = [...new Set(allLeaderboardEntries.map(entry => entry.country))];
       document.getElementById('countriesCount').textContent = uniqueCountries.length;
       
-      // Load freelancers count from API
       loadFreelancersCount();
     }
 
@@ -1525,10 +1421,10 @@
         if (data.success) {
           document.getElementById('activeHelpers').textContent = data.freelancers.length;
         } else {
-          document.getElementById('activeHelpers').textContent = '90'; // Fallback
+          document.getElementById('activeHelpers').textContent = '90';
         }
       } catch (error) {
-        document.getElementById('activeHelpers').textContent = '90'; // Fallback
+        document.getElementById('activeHelpers').textContent = '90';
       }
     }
 
@@ -1574,7 +1470,6 @@
     function filterByCountry(country) {
       activeCountryFilter = country;
       
-      // Update active filter button
       document.querySelectorAll('.filter-tag[data-country]').forEach(btn => {
         btn.classList.remove('active');
         if (btn.dataset.country === country) {
@@ -1588,7 +1483,6 @@
     function filterByType(type) {
       activeTypeFilter = type;
       
-      // Update active filter button
       document.querySelectorAll('.filter-tag[data-type]').forEach(btn => {
         btn.classList.remove('active');
         if (btn.dataset.type === type) {
@@ -1602,7 +1496,6 @@
     function applyFilters() {
       let filtered = [...allLeaderboardEntries];
       
-      // Apply country filter
       if (activeCountryFilter === 'other') {
         const mainCountries = ['NL', 'UK', 'US'];
         filtered = filtered.filter(entry => !mainCountries.includes(entry.country));
@@ -1610,14 +1503,12 @@
         filtered = filtered.filter(entry => entry.country === activeCountryFilter);
       }
       
-      // Apply type filter
       if (activeTypeFilter === 'seo_agency') {
         filtered = filtered.filter(entry => entry.type === 'seo_agency');
       } else if (activeTypeFilter === 'others') {
         filtered = filtered.filter(entry => entry.type !== 'seo_agency');
       }
       
-      // Apply search filter if any
       const searchInput = document.getElementById('searchInput');
       const searchTerm = searchInput.value.toLowerCase().trim();
       
@@ -1631,7 +1522,6 @@
       
       filteredLeaderboardEntries = filtered;
       
-      // Reload rankings
       loadRankingsPage(1);
     }
 
@@ -1652,15 +1542,12 @@
       const loadMoreBtn = document.getElementById('load-more-btn');
       
       if (!tbody || !totalCount || !rankingsCountText || !loadMoreContainer || !loadMoreBtn) {
-        console.error('One or more leaderboard elements not found');
         return;
       }
       
-      // Update total count
       totalCount.textContent = filteredLeaderboardEntries.length;
       rankingsCountText.textContent = `Showing ${startIndex + 1}-${endIndex} of ${filteredLeaderboardEntries.length} agencies`;
       
-      // Generate table rows
       tbody.innerHTML = pageEntries.map((entry, index) => {
         const actualRank = startIndex + index + 1;
         const shortUrl = entry.url.replace(/^https?:\/\//, '').replace(/\/$/, '');
@@ -1670,7 +1557,6 @@
           day: 'numeric'
         });
         
-        // Determine rank styling
         let rankClass = 'rank-other';
         let rankDisplay = actualRank;
         
@@ -1722,7 +1608,6 @@
         `;
       }).join('');
       
-      // Show/hide load more button
       if (endIndex < filteredLeaderboardEntries.length && filteredLeaderboardEntries.length <= 100) {
         loadMoreContainer.style.display = 'block';
         loadMoreBtn.disabled = false;
@@ -1773,19 +1658,11 @@
       icon.classList.toggle('fa-chevron-up');
     }
 
-    // Helper functions
     function getScoreClass(score) {
       if (score >= 95) return 'score-95';
       if (score >= 90) return 'score-90';
       if (score >= 85) return 'score-85';
       return '';
-    }
-
-    function getScoreBadge(score) {
-      if (score >= 95) return 'Elite';
-      if (score >= 90) return 'Excellent';
-      if (score >= 85) return 'Great';
-      return 'Good';
     }
 
     function getCountryFlag(country) {
@@ -1821,13 +1698,10 @@
       
       input.value = url;
       
-      // Switch to single scan mode
       switchScanMode('single');
       
-      // Scroll to scanner
       document.getElementById('scanner').scrollIntoView({ behavior: 'smooth' });
       
-      // Trigger scan after a short delay
       setTimeout(() => {
         scanSingleURLPublic();
       }, 500);
@@ -1839,9 +1713,6 @@
         : 'How does automatic submission work?\n\n1. Scan a website with our scanner\n2. If the score is 85+, it\'s automatically added to the leaderboard\n3. We automatically detect country and city\n4. Data is updated daily\n\nWebsites can also submit manually via the scan form.');
     }
 
-    // ============================================
-    // AUTOMATED LEADERBOARD SUBMISSION
-    // ============================================
     async function submitToLeaderboardAutomatically(scanResult) {
       const score = scanResult.score;
       const url = scanResult.url;
@@ -1850,12 +1721,10 @@
         console.log(`🚀 Auto-submitting to leaderboard: ${url} (score: ${score})`);
         
         try {
-          // Try to extract company name from URL
           const domain = new URL(url).hostname.replace(/^www\./, '');
           const companyName = domain.split('.')[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
           
-          // Try to detect country from domain
-          let country = 'NL'; // Default to Netherlands
+          let country = 'NL';
           if (url.includes('.com')) country = 'US';
           if (url.includes('.co.uk') || url.includes('.uk')) country = 'UK';
           if (url.includes('.de')) country = 'DE';
@@ -1866,7 +1735,6 @@
           if (url.includes('.nz')) country = 'NZ';
           if (url.includes('.ca')) country = 'CA';
           
-          // Submit to leaderboard API
           const response = await fetch(`${API_BASE_URL}/api/leaderboard/add`, {
             method: 'POST',
             headers: {
@@ -1877,7 +1745,7 @@
               company_name: companyName,
               score: score,
               country: country,
-              type: 'seo_agency' // Default type
+              type: 'seo_agency'
             })
           });
           
@@ -1886,14 +1754,12 @@
           if (result.success) {
             console.log(`✅ Successfully submitted to leaderboard: ${url}`);
             
-            // Show success message
             setTimeout(() => {
               alert(currentLang === 'nl' 
                 ? `🎉 Gefeliciteerd! Je website is automatisch toegevoegd aan de leaderboard met score ${score}/100.`
                 : `🎉 Congratulations! Your website has been automatically added to the leaderboard with score ${score}/100.`);
             }, 1000);
             
-            // Reload leaderboard data
             setTimeout(() => {
               loadLeaderboardData();
             }, 2000);
@@ -1904,9 +1770,6 @@
       }
     }
 
-    // ============================================
-    // LEAD SCANNER FUNCTIONS - REAL IMPLEMENTATION
-    // ============================================
     function switchScanMode(mode) {
       const singleMode = document.getElementById('singleScanMode');
       const bulkMode = document.getElementById('bulkScanMode');
@@ -1936,7 +1799,6 @@
         return;
       }
       
-      // Validate URL
       let fullUrl = url;
       if (!url.startsWith('http')) {
         fullUrl = 'https://' + url;
@@ -1949,12 +1811,10 @@
         return;
       }
       
-      // Update UI
       button.disabled = true;
       button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + 
         (currentLang === 'nl' ? 'Scannen...' : 'Scanning...');
       
-      // Show progress
       const progressDiv = document.getElementById('singleScanProgress');
       const progressBar = document.getElementById('singleProgressBar');
       const progressText = document.getElementById('singleProgressText');
@@ -1966,11 +1826,9 @@
       progressText.textContent = currentLang === 'nl' ? 'URL valideren...' : 'Validating URL...';
       
       try {
-        // REAL API call
         progressBar.style.width = '30%';
         progressText.textContent = currentLang === 'nl' ? 'Content ophalen...' : 'Fetching content...';
         
-        // Call the backend API
         const response = await fetch(`${API_BASE_URL}/api/scan`, {
           method: 'POST',
           headers: {
@@ -1999,10 +1857,8 @@
           progressDiv.classList.add('hidden');
           displayRealSingleScanResult(scanResult);
           
-          // Trigger automated actions based on score
           triggerAutomatedActions(scanResult);
           
-          // AUTO-SUBMIT TO LEADERBOARD IF SCORE >= 85
           submitToLeaderboardAutomatically(scanResult);
           
         }, 500);
@@ -2027,11 +1883,9 @@
       const wordCount = result.content_stats?.wordCount || result.wordCount || 0;
       const score = result.score || 0;
       
-      // Calculate potential score
       const potentialScore = Math.min(98, score + Math.floor((100 - score) * 0.8));
       const improvement = potentialScore - score;
       
-      // Prepare recommendations
       const recommendations = result.recommendations?.all || result.recommendations || [];
       
       resultDiv.innerHTML = `
@@ -2103,7 +1957,6 @@
             </div>
           </div>
           
-          <!-- RECOMMENDATIONS SECTION -->
           <div class="mb-8">
             <h4 class="text-lg font-bold text-white mb-4">${currentLang === 'nl' ? '🎯 Aanbevelingen voor Verbetering' : '🎯 Improvement Recommendations'}</h4>
             <div class="space-y-4">
@@ -2157,23 +2010,14 @@
       const url = scanResult.url;
       
       if (score >= 85) {
-        // High score - send congratulations
         console.log(`Triggering congratulatory email for ${url} with score ${score}`);
-        // In production: fetch('/api/send-congratulations', { method: 'POST', body: JSON.stringify({ url, score }) });
       } else if (score > 0) {
-        // Low score - contact for optimization
         console.log(`Triggering optimization outreach for ${url} with score ${score}`);
-        // In production: fetch('/api/contact-for-optimization', { method: 'POST', body: JSON.stringify({ url, score }) });
       } else {
-        // No website or invalid
         console.log(`Triggering website building outreach for ${url}`);
-        // In production: fetch('/api/contact-for-website', { method: 'POST', body: JSON.stringify({ url }) });
       }
     }
 
-    // ============================================
-    // GOOGLE MAPS SCRAPER (REAL)
-    // ============================================
     async function scrapeGoogleMapsPublic() {
       const input = document.getElementById('googleMapsInput');
       const button = document.getElementById('gmapsScrapeBtn');
@@ -2191,7 +2035,6 @@
         (currentLang === 'nl' ? 'Scrapen...' : 'Scraping...');
       
       try {
-        // Call Google Maps scraper API
         const response = await fetch(`${API_BASE_URL}/api/google-maps/scrape`, {
           method: 'POST',
           headers: {
@@ -2216,12 +2059,10 @@
       } catch (error) {
         console.error('Google Maps scrape error:', error);
         
-        // Fallback to mock data
         alert(currentLang === 'nl' 
           ? 'Scrape mislukt. Gebruik mock data voor demo.' 
           : 'Scrape failed. Using mock data for demo.');
         
-        // Generate mock leads as fallback
         scrapedLeads = generateMockLeads();
         displayScrapedLeadsTable(scrapedLeads);
       } finally {
@@ -2243,14 +2084,12 @@
         return;
       }
       
-      // Update count
       if (countSpan) countSpan.textContent = leads.length;
       if (countSpanEN) countSpanEN.textContent = leads.length;
       
-      // Display leads in table
       tableBody.innerHTML = leads.map((lead, index) => {
         const hasWebsite = lead.website && lead.website !== 'N/A';
-        const score = lead.score || Math.floor(Math.random() * 40) + 50; // Random 50-90
+        const score = lead.score || Math.floor(Math.random() * 40) + 50;
         let status = 'none';
         let statusText = currentLang === 'nl' ? 'Niet gescand' : 'Not scanned';
         
@@ -2325,7 +2164,6 @@
         return;
       }
       
-      // Show progress
       const progressDiv = document.getElementById('bulkScanProgress');
       const progressBar = document.getElementById('bulkProgressBar');
       const progressText = document.getElementById('bulkProgressText');
@@ -2341,7 +2179,6 @@
       for (let i = 0; i < selectedLeads.length; i++) {
         const lead = selectedLeads[i];
         
-        // Update progress
         const progressPercent = Math.round((i / selectedLeads.length) * 100);
         progressBar.style.width = `${progressPercent}%`;
         progressText.textContent = currentLang === 'nl'
@@ -2349,10 +2186,8 @@
           : `Scanning ${i + 1}/${selectedLeads.length}: ${lead.name}`;
         
         try {
-          // Simulate scan
           await new Promise(resolve => setTimeout(resolve, 500));
           
-          // Generate mock scan result
           const score = Math.floor(Math.random() * 40) + 50;
           results.push({
             lead: lead,
@@ -2360,7 +2195,6 @@
             status: score >= 85 ? 'high' : score >= 70 ? 'medium' : 'low'
           });
           
-          // Update table row
           const rowIndex = scrapedLeads.findIndex(l => l.name === lead.name);
           if (rowIndex !== -1) {
             const scoreCell = document.querySelector(`tr:nth-child(${rowIndex + 1}) td:nth-child(6)`);
@@ -2385,7 +2219,6 @@
         }
       }
       
-      // Complete progress
       progressBar.style.width = '100%';
       progressText.textContent = currentLang === 'nl' 
         ? 'Scan voltooid!' 
@@ -2394,11 +2227,9 @@
       setTimeout(() => {
         progressDiv.classList.add('hidden');
         
-        // Trigger automated actions for scanned leads
         results.forEach(result => {
           if (result.score >= 85) {
             console.log(`Sending congratulations to ${result.lead.name} (score: ${result.score})`);
-            // Auto-submit to leaderboard
             submitToLeaderboardAutomatically({
               url: result.lead.website,
               score: result.score
@@ -2414,9 +2245,6 @@
       }, 1000);
     }
 
-    // ============================================
-    // HELPER FUNCTIONS
-    // ============================================
     function selectAllLeads() {
       const checkboxes = document.querySelectorAll('.lead-checkbox');
       const selectAllCheckbox = document.getElementById('selectAllCheckbox');
@@ -2439,7 +2267,6 @@
           `⚡ ${currentLang === 'nl' ? 'Scan Alles' : 'Scan All'}`;
       }
       
-      // Update select all checkbox
       const selectAllCheckbox = document.getElementById('selectAllCheckbox');
       if (selectAllCheckbox) {
         const totalCheckboxes = document.querySelectorAll('.lead-checkbox').length;
@@ -2463,10 +2290,8 @@
         const input = document.getElementById('singleUrlInput');
         input.value = url;
         
-        // Switch to single scan mode
         switchScanMode('single');
         
-        // Trigger scan
         await scanSingleURLPublic();
       } catch (error) {
         alert('Scan failed: ' + error.message);
@@ -2479,7 +2304,7 @@
       const domains = ['example.com', 'agency.nl', 'seo.com', 'marketing.nl', 'digital.eu'];
       
       return Array.from({ length: 10 }, (_, i) => {
-        const hasWebsite = Math.random() > 0.2; // 80% have websites
+        const hasWebsite = Math.random() > 0.2;
         const category = businessTypes[Math.floor(Math.random() * businessTypes.length)];
         const location = locations[Math.floor(Math.random() * locations.length)];
         const domain = domains[Math.floor(Math.random() * domains.length)];
@@ -2492,14 +2317,11 @@
           website: hasWebsite ? `https://${category.toLowerCase().replace(/ /g, '')}-${location.toLowerCase()}.${domain}` : 'N/A',
           phone: Math.random() > 0.3 ? `+31 6 ${Math.floor(Math.random() * 9000000) + 1000000}` : null,
           address: `${location} Street ${i + 1}, ${location}`,
-          score: hasWebsite ? Math.floor(Math.random() * 40) + 50 : null // 50-90 if has website
+          score: hasWebsite ? Math.floor(Math.random() * 40) + 50 : null
         };
       });
     }
 
-    // ============================================
-    // SHARE FUNCTIONS
-    // ============================================
     function shareLeadViaWhatsApp(url, currentScore, potentialScore) {
       const decodedUrl = decodeURIComponent(url);
       const message = currentLang === 'nl' ?
@@ -2557,9 +2379,6 @@
         : `✅ Lead added to workspace! You now have ${workspace.length} leads.`);
     }
 
-    // ============================================
-    // EXPORT FUNCTIONS
-    // ============================================
     function exportLeadsToCSV() {
       let leadsToExport = scrapedLeads;
       
@@ -2608,9 +2427,6 @@
       a.click();
     }
 
-    // ============================================
-    // DATA LOADING FUNCTIONS
-    // ============================================
     async function loadFreelancers() {
       try {
         const response = await fetch(`${API_BASE_URL}/api/freelancers`);
@@ -2647,12 +2463,10 @@
             </div>
           `).join('');
         } else {
-          // Fallback to mock freelancers
           loadMockFreelancers();
         }
       } catch (error) {
         console.error('Load freelancers error:', error);
-        // Fallback to mock freelancers
         loadMockFreelancers();
       }
     }
@@ -2699,9 +2513,6 @@
       window.location.href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     }
 
-    // ============================================
-    // ENTER KEY HANDLERS
-    // ============================================
     document.getElementById('singleUrlInput')?.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') scanSingleURLPublic();
     });
@@ -2714,9 +2525,6 @@
       if (e.key === 'Enter') filterAgencies();
     });
 
-    // ============================================
-    // MODAL FUNCTIONS
-    // ============================================
     function openFreelancerModal() {
       const modal = document.getElementById('freelancerModal');
       if (!modal) return;
@@ -2782,21 +2590,7 @@
       });
     }
 
-    // ============================================
-    // INITIALIZATION COMPLETE
-    // ============================================
     console.log('✅ ContentScale Website fully loaded!');
-    console.log('Features:');
-    console.log('- Single URL scanning with detailed reports');
-    console.log('- Google Maps lead scraping with list view');
-    console.log('- Elite Leaderboard with automatic 85+ submissions');
-    console.log('- Real-time stats and filtering');
-    console.log('- Country detection and flags');
-    console.log('- Backend integration for all data');
-    console.log('- Automated actions triggered based on scores');
-    console.log('- Load More functionality (max 100 results)');
-    console.log('- Gold/Silver/Bronze styling for top 3');
-    console.log('- Country and type filters');
   </script>
 </body>
 </html>
