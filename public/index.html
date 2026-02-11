@@ -11,7 +11,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <style>
-    /* ========== BASE STYLES ========== */
     * {
       box-sizing: border-box;
     }
@@ -38,7 +37,6 @@
       box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
     }
     
-    /* ========== LANGUAGE TOGGLE ========== */
     .lang-toggle {
       display: flex;
       gap: 4px;
@@ -72,7 +70,6 @@
       display: block;
     }
     
-    /* ========== LEADERBOARD STYLES ========== */
     .top-3-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -175,7 +172,6 @@
       border-color: rgba(255, 255, 255, 0.6);
     }
     
-    /* ========== STAT CARDS ========== */
     .stat-card {
       position: relative;
       overflow: hidden;
@@ -204,7 +200,6 @@
       background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%);
     }
     
-    /* ========== FILTERS ========== */
     .filter-tag {
       background: #374151;
       color: #d1d5db;
@@ -236,7 +231,6 @@
       display: block;
     }
     
-    /* ========== RANKINGS TABLE ========== */
     .complete-rankings-section {
       margin-top: 32px;
     }
@@ -364,7 +358,6 @@
       cursor: not-allowed;
     }
     
-    /* ========== MODAL STYLES ========== */
     .agency-modal {
       display: none;
       position: fixed;
@@ -472,7 +465,6 @@
       background: #059669;
     }
     
-    /* ========== LEAD TABLE STYLES ========== */
     .lead-list-table {
       width: 100%;
       background: #1f2937;
@@ -523,7 +515,6 @@
       gap: 8px;
     }
     
-    /* ========== FREELANCER CARDS ========== */
     .freelancer-card {
       background: #1f2937;
       border: 2px solid #374151;
@@ -538,7 +529,6 @@
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     }
     
-    /* ========== SCAN RESULT STYLES ========== */
     .scan-result-card {
       animation: fadeIn 0.5s ease;
     }
@@ -552,7 +542,6 @@
       transition: width 0.3s ease;
     }
     
-    /* ========== SKELETON LOADERS ========== */
     .skeleton {
       background: linear-gradient(90deg, #2d3748 25%, #4a5568 50%, #2d3748 75%);
       background-size: 200% 100%;
@@ -565,7 +554,6 @@
       100% { background-position: -200% 0; }
     }
     
-    /* ========== ANIMATIONS ========== */
     .cta-pulse {
       animation: pulse 2s infinite;
     }
@@ -586,12 +574,34 @@
       100% { border-color: #4f46e5; }
     }
     
-    /* ========== UTILITY CLASSES ========== */
     .country-flag-large {
       font-size: 32px;
     }
     
-    /* ========== RESPONSIVE ADJUSTMENTS ========== */
+    .mode-toggle.active {
+      position: relative;
+      border: 2px solid rgba(255, 255, 255, 0.3) !important;
+      box-shadow: 0 0 15px rgba(139, 92, 246, 0.5) !important;
+    }
+    
+    .mode-toggle.active::after {
+      content: '✓';
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: #10b981;
+      color: white;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+      z-index: 10;
+    }
+    
     @media (max-width: 768px) {
       .lead-list-table {
         font-size: 14px;
@@ -693,6 +703,18 @@
           Get your personalized <span class="text-purple-400 font-semibold">roadmap to 90+ scores</span> • Recover traffic in 90 days • Based on Google's E-E-A-T
         </p>
       </div>
+      
+      <div class="text-center mt-8">
+        <button onclick="testMyWebsite()" 
+                class="bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 px-8 py-4 rounded-lg font-bold text-lg transition-all shadow-lg hover:shadow-xl">
+          <span data-lang="nl" class="active-lang">🚀 Test Mijn Website</span>
+          <span data-lang="en">🚀 Test My Website</span>
+        </button>
+        <p class="text-sm text-gray-400 mt-2">
+          <span data-lang="nl" class="active-lang">Krijg direct je GRAAF score</span>
+          <span data-lang="en">Get your GRAAF score instantly</span>
+        </p>
+      </div>
     </div>
 
     <div class="mb-16">
@@ -725,38 +747,40 @@
     <div id="lead-scanner" class="mb-16">
       <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500 shadow-2xl">
         
-        <div class="text-center mb-8" data-lang="nl" class="active-lang">
-          <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-300 via-pink-300 to-purple-300 bg-clip-text text-transparent">
-            🎯 Lead Scanner voor Specialisten
-          </h2>
-          <p class="text-xl text-gray-300 mb-2">
-            Vind bedrijven die content hulp nodig hebben
-          </p>
-          <p class="text-sm text-purple-300">
-            ✨ Gratis voor freelancers • 🔍 Scan individueel of bulk • 📊 Export naar CSV
-          </p>
-        </div>
+        <div class="text-center mb-8">
+          <div data-lang="nl" class="active-lang">
+            <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-300 via-pink-300 to-purple-300 bg-clip-text text-transparent">
+              🎯 Lead Scanner voor SEO Specialisten
+            </h2>
+            <p class="text-xl text-gray-300 mb-2">
+              Vind bedrijven die content hulp nodig hebben
+            </p>
+            <p class="text-sm text-purple-300">
+              ✨ Gratis voor freelancers • 🔍 Scan individueel of bulk • 📊 Export naar CSV
+            </p>
+          </div>
 
-        <div class="text-center mb-8" data-lang="en">
-          <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-300 via-pink-300 to-purple-300 bg-clip-text text-transparent">
-            🎯 Lead Scanner for Content SEO Specialists
-          </h2>
-          <p class="text-xl text-gray-300 mb-2">
-            Find businesses that need content help
-          </p>
-          <p class="text-sm text-purple-300">
-            ✨ Free for freelancers • 🔍 Single or bulk scanning • 📊 Export to CSV
-          </p>
+          <div data-lang="en">
+            <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-300 via-pink-300 to-purple-300 bg-clip-text text-transparent">
+              🎯 Lead Scanner for SEO Specialists
+            </h2>
+            <p class="text-xl text-gray-300 mb-2">
+              Find businesses that need content help
+            </p>
+            <p class="text-sm text-purple-300">
+              ✨ Free for freelancers • 🔍 Single or bulk scanning • 📊 Export to CSV
+            </p>
+          </div>
         </div>
 
         <div class="flex justify-center gap-4 mb-8">
           <button id="modeSingleBtn" onclick="switchScanMode('single')" 
-                  class="mode-toggle active px-6 py-3 bg-gray-700 rounded-lg font-semibold shadow-lg">
+                  class="mode-toggle active px-6 py-3 bg-gradient-to-r from-purple-700 to-pink-700 rounded-lg font-semibold shadow-lg hover:from-purple-800 hover:to-pink-800">
             <span data-lang="nl" class="active-lang">🔍 Enkele URL</span>
             <span data-lang="en">🔍 Single URL</span>
           </button>
           <button id="modeBulkBtn" onclick="switchScanMode('bulk')" 
-                  class="mode-toggle px-6 py-3 bg-gray-700 rounded-lg font-semibold shadow-lg">
+                  class="mode-toggle px-6 py-3 bg-gradient-to-r from-blue-700 to-cyan-700 rounded-lg font-semibold shadow-lg hover:from-blue-800 hover:to-cyan-800">
             <span data-lang="nl" class="active-lang">🗺️ Google Maps Bulk</span>
             <span data-lang="en">🗺️ Google Maps Bulk</span>
           </button>
@@ -1085,7 +1109,7 @@
               Websites met scores van 85+ worden <strong>automatisch</strong> toegevoegd aan de leaderboard via onze scanner.
             </p>
             <div class="flex gap-3 justify-center flex-wrap">
-              <button onclick="document.getElementById('singleUrlInput').scrollIntoView({behavior:'smooth'}); document.getElementById('singleUrlInput').focus()" 
+              <button onclick="testMyWebsite()" 
                       class="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 px-6 py-3 rounded-lg font-bold transition-all shadow-lg hover:shadow-xl">
                 🔍 Test je Website
               </button>
@@ -1101,7 +1125,7 @@
               Websites with scores of 85+ are <strong>automatically</strong> added to the leaderboard via our scanner.
             </p>
             <div class="flex gap-3 justify-center flex-wrap">
-              <button onclick="document.getElementById('singleUrlInput').scrollIntoView({behavior:'smooth'}); document.getElementById('singleUrlInput').focus()" 
+              <button onclick="testMyWebsite()" 
                       class="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 px-6 py-3 rounded-lg font-bold transition-all shadow-lg hover:shadow-xl">
                 🔍 Test Your Website
               </button>
@@ -1156,7 +1180,7 @@
         </div>
         
         <div class="flex gap-4 justify-center flex-wrap">
-          <button onclick="document.getElementById('singleUrlInput').scrollIntoView({behavior:'smooth'}); document.getElementById('singleUrlInput').focus()" 
+          <button onclick="document.getElementById('singleUrlInput').scrollIntoView({behavior:'smooth'}); document.getElementById('singleUrlInput').focus(); switchScanMode('single');" 
                   class="cta-pulse bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 px-8 py-4 rounded-lg font-bold text-lg transition-all shadow-lg hover:shadow-xl">
             <span data-lang="nl" class="active-lang">🔍 Scan Gratis</span>
             <span data-lang="en">🔍 Scan Free</span>
@@ -1345,7 +1369,6 @@
     let scrapedLeads = [];
     const API_BASE_URL = window.location.hostname.includes('localhost') ? 'http://localhost:3000' : 'https://api.contentscale.site';
     
-    // Leaderboard variables
     let allLeaderboardEntries = [];
     let filteredLeaderboardEntries = [];
     let currentPage = 1;
@@ -1374,7 +1397,67 @@
       loadLeaderboardData();
     });
 
-    // LEADERBOARD FUNCTIONS
+    function testMyWebsite() {
+      let currentUrl = window.location.hostname;
+      currentUrl = currentUrl.replace(/^www\./, '');
+      
+      if (currentUrl.includes('contentscale.site') || currentUrl === 'localhost') {
+        const userUrl = prompt(
+          currentLang === 'nl' 
+            ? 'Voer je website URL in (bijv. example.com):'
+            : 'Enter your website URL (e.g., example.com):',
+          'https://'
+        );
+        
+        if (userUrl && userUrl.trim() !== 'https://') {
+          const input = document.getElementById('singleUrlInput');
+          input.value = userUrl.trim();
+          
+          switchScanMode('single');
+          
+          document.getElementById('scanner')?.scrollIntoView({ behavior: 'smooth' });
+          
+          setTimeout(() => {
+            input.focus();
+          }, 500);
+        }
+      } else {
+        const input = document.getElementById('singleUrlInput');
+        input.value = `https://${currentUrl}`;
+        
+        switchScanMode('single');
+        
+        document.getElementById('scanner')?.scrollIntoView({ behavior: 'smooth' });
+        
+        setTimeout(() => {
+          input.focus();
+        }, 500);
+        
+        setTimeout(() => {
+          scanSingleURLPublic();
+        }, 1000);
+      }
+    }
+
+    function switchScanMode(mode) {
+      const singleMode = document.getElementById('singleScanMode');
+      const bulkMode = document.getElementById('bulkScanMode');
+      const singleBtn = document.getElementById('modeSingleBtn');
+      const bulkBtn = document.getElementById('modeBulkBtn');
+      
+      if (mode === 'single') {
+        singleMode.classList.remove('hidden');
+        bulkMode.classList.add('hidden');
+        singleBtn.classList.add('active');
+        bulkBtn.classList.remove('active');
+      } else {
+        singleMode.classList.add('hidden');
+        bulkMode.classList.remove('hidden');
+        singleBtn.classList.remove('active');
+        bulkBtn.classList.add('active');
+      }
+    }
+
     async function loadLeaderboardData() {
       try {
         document.getElementById('totalAgencies').textContent = '...';
@@ -1856,39 +1939,17 @@
         : 'How does automatic submission work?\n\n1. Scan a website with our scanner\n2. If the score is 85+, it\'s automatically added to the leaderboard\n3. We automatically detect country and city\n4. Data is updated daily\n\nWebsites can also submit manually via the scan form.');
     }
 
-    // Close modal when clicking outside
     document.getElementById('agencyModal')?.addEventListener('click', function(e) {
       if (e.target === this) {
         closeAgencyModal();
       }
     });
 
-    // Close modal with Escape key
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') {
         closeAgencyModal();
       }
     });
-
-    // EXISTING FUNCTIONS (keep all your existing functions here)
-    function switchScanMode(mode) {
-      const singleMode = document.getElementById('singleScanMode');
-      const bulkMode = document.getElementById('bulkScanMode');
-      const singleBtn = document.getElementById('modeSingleBtn');
-      const bulkBtn = document.getElementById('modeBulkBtn');
-      
-      if (mode === 'single') {
-        singleMode.classList.remove('hidden');
-        bulkMode.classList.add('hidden');
-        singleBtn.classList.add('active');
-        bulkBtn.classList.remove('active');
-      } else {
-        singleMode.classList.add('hidden');
-        bulkMode.classList.remove('hidden');
-        singleBtn.classList.remove('active');
-        bulkBtn.classList.add('active');
-      }
-    }
 
     async function scanSingleURLPublic() {
       const input = document.getElementById('singleUrlInput');
@@ -2340,7 +2401,6 @@
           : `Scanning ${i + 1}/${selectedLeads.length}: ${lead.name}`;
         
         try {
-          // Call real API for each lead
           const response = await fetch(`${API_BASE_URL}/api/scan`, {
             method: 'POST',
             headers: {
@@ -2620,8 +2680,6 @@
 
     function showError(message) {
       console.error('Error:', message);
-      // You could implement a toast notification system here
-      // For now, just log to console
     }
 
     document.getElementById('singleUrlInput')?.addEventListener('keypress', (e) => {
@@ -2690,7 +2748,6 @@
       
       document.getElementById('freelancerForm')?.addEventListener('submit', async function(e) {
         e.preventDefault();
-        const formData = new FormData(this);
         
         try {
           const response = await fetch(`${API_BASE_URL}/api/freelancers/register`, {
@@ -2712,7 +2769,7 @@
           if (result.success) {
             alert(currentLang === 'nl' ? 'Bedankt voor je aanmelding! We nemen binnen 24 uur contact met je op.' : 'Thank you for your application! We will contact you within 24 hours.');
             closeModal();
-            loadFreelancers(); // Refresh the freelancers list
+            loadFreelancers();
           } else {
             alert(result.error || 'Registration failed');
           }
