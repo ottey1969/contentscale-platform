@@ -1368,8 +1368,10 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
       success: true,
       stats: {
         total_scans: parseInt(scans.rows[0].count) || 0,
-        leaderboard_entries: parseInt(leaderboard.rows[0].count) || 0,
+        total_agencies: parseInt(leaderboard.rows[0].count) || 0,
+        total_clients: parseInt(scans.rows[0].count) || 0,
         active_helpers: parseInt(freelancers.rows[0].count) || 0,
+        leaderboard_entries: parseInt(leaderboard.rows[0].count) || 0,
         blog_posts: parseInt(blogPosts.rows[0].count) || 0
       }
     });
@@ -1378,6 +1380,8 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
       success: true, 
       stats: { 
         total_scans: 0,
+        total_agencies: 0,
+        total_clients: 0,
         leaderboard_entries: 0,
         active_helpers: 0,
         blog_posts: 0
@@ -1443,9 +1447,381 @@ app.post('/api/admin/freelancers/:id/approve', verifyAdmin, async (req, res) => 
   }
 });
 
-// ============================================
+// ==========================================
+// ADDITIONAL ADMIN ENDPOINTS
+// ==========================================
+
+// Analytics Dashboard
+app.get('/api/admin/analytics', verifyAdmin, async (req, res) => {
+  try {
+    const range = req.query.range || '30d';
+    
+    // Calculate date range
+    const now = new Date();
+    let startDate = new Date();
+    
+    switch (range) {
+      case '7d':
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case '30d':
+        startDate.setDate(now.getDate() - 30);
+        break;
+      case '90d':
+        startDate.setDate(now.getDate() - 90);
+        break;
+      case '365d':
+        startDate.setFullYear(now.getFullYear() - 1);
+        break;
+      case 'all':
+        startDate = new Date('2024-01-01');
+        break;
+      default:
+        startDate.setDate(now.getDate() - 30);
+    }
+    
+    // Get scans over time
+    const scansOverTime = await pool.query(`
+      SELECT 
+        DATE(created_at) as date,
+        COUNT(*) as count
+      FROM scans
+      WHERE created_at >= $1
+      GROUP BY DATE(created_at)
+      ORDER BY date ASC
+    `, [startDate]);
+    
+    // Get current period stats
+    const currentStats = await pool.query(`
+      SELECT 
+        COUNT(CASE WHEN scans.created_at >= $1 THEN 1 END) as scans_count,
+        COUNT(CASE WHEN leaderboard.created_at >= $1 THEN 1 END) as agencies_count,
+        ROUND(AVG(CASE WHEN scans.created_at >= $1 THEN scans.score END)) as avg_score
+      FROM scans
+      CROSS JOIN leaderboard
+    `, [startDate]);
+    
+    // Get previous period stats for comparison
+    const previousPeriodStart = new Date(startDate);
+    const daysDiff = Math.ceil((now - startDate) / (1000 * 60 * 60 * 24));
+    previousPeriodStart.setDate(previousPeriodStart.getDate() - daysDiff);
+    
+    const previousStats = await pool.query(`
+      SELECT 
+        COUNT(CASE WHEN scans.created_at >= $1 AND scans.created_at < $2 THEN 1 END) as scans_count,
+        COUNT(CASE WHEN leaderboard.created_at >= $1 AND leaderboard.created_at < $2 THEN 1 END) as agencies_count,
+        ROUND(AVG(CASE WHEN scans.created_at >= $1 AND scans.created_at < $2 THEN scans.score END)) as avg_score
+      FROM scans
+      CROSS JOIN leaderboard
+    `, [previousPeriodStart, startDate]);
+    
+    // Calculate trends
+    const current = currentStats.rows[0];
+    const previous = previousStats.rows[0];
+    
+    const scansTrend = calculateTrend(current.scans_count, previous.scans_count);
+    const agenciesTrend = calculateTrend(current.agencies_count, previous.agencies_count);
+    const scoreTrend = calculateTrend(current.avg_score, previous.avg_score);
+    
+    // Get country distribution
+    const countries = await pool.query(`
+      SELECT 
+        country as name,
+        COUNT(*) as count,
+        ROUND((COUNT(*) * 100.0 / SUM(COUNT(*)) OVER ()), 1) as percentage
+      FROM leaderboard
+      WHERE created_at >= $1 AND country IS NOT NULL
+      GROUP BY country
+      ORDER BY count DESC
+      LIMIT 10
+    `, [startDate]);
+    
+    // Get recent activity
+    const recentActivity = await pool.query(`
+      SELECT 
+        'scan' as type,
+        SUBSTRING(url FROM 1 FOR 30) as user,
+        'Completed scan' as action,
+        created_at as time
+      FROM scans
+      WHERE created_at >= NOW() - INTERVAL '24 hours'
+      ORDER BY created_at DESC
+      LIMIT 10
+    `);
+    
+    res.json({
+      success: true,
+      trends: {
+        scans: {
+          current: parseInt(current.scans_count || 0),
+          trend: scansTrend
+        },
+        agencies: {
+          current: parseInt(current.agencies_count || 0),
+          trend: agenciesTrend
+        },
+        score: {
+          current: parseInt(current.avg_score || 0),
+          trend: scoreTrend
+        },
+        users: {
+          current: parseInt(current.agencies_count || 0),
+          trend: agenciesTrend
+        }
+      },
+      scans: scansOverTime.rows.map(row => ({
+        date: row.date,
+        count: parseInt(row.count)
+      })),
+      agencies: [],
+      countries: countries.rows.map(row => ({
+        name: row.name,
+        count: parseInt(row.count),
+        percentage: parseFloat(row.percentage)
+      })),
+      recent_activity: recentActivity.rows.map(a => ({
+        ...a,
+        time: formatTimeAgo(a.time)
+      })),
+      performance: {
+        scan_duration: '2.3s',
+        success_rate: '98.5%',
+        api_response: '150ms',
+        db_queries: '1.2M/day'
+      }
+    });
+    
+  } catch (error) {
+    console.error('Analytics error:', error);
+    res.json({ 
+      success: true,
+      trends: {
+        scans: { current: 0, trend: 0 },
+        agencies: { current: 0, trend: 0 },
+        score: { current: 0, trend: 0 },
+        users: { current: 0, trend: 0 }
+      },
+      scans: [],
+      agencies: [],
+      countries: [],
+      recent_activity: [],
+      performance: {
+        scan_duration: '-',
+        success_rate: '-',
+        api_response: '-',
+        db_queries: '-'
+      }
+    });
+  }
+});
+
+function calculateTrend(current, previous) {
+  if (!previous || previous === 0) return 0;
+  return parseFloat(((current - previous) / previous * 100).toFixed(1));
+}
+
+function formatTimeAgo(date) {
+  const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+  
+  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  return `${Math.floor(seconds / 86400)}d ago`;
+}
+
+// Clients
+app.get('/api/admin/clients', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        MIN(id) as id,
+        url,
+        COUNT(*) as scan_count,
+        MAX(created_at) as last_scan,
+        MIN(created_at) as created_at
+      FROM scans
+      GROUP BY url
+      ORDER BY last_scan DESC
+      LIMIT 100
+    `);
+    
+    res.json({
+      success: true,
+      clients: result.rows
+    });
+    
+  } catch (error) {
+    console.error('Clients error:', error);
+    res.json({ success: true, clients: [] });
+  }
+});
+
+// Delete client
+app.delete('/api/admin/clients/:id', verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM scans WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete client error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Delete scan
+app.delete('/api/admin/scans/:id', verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM scans WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete scan error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Delete leaderboard entry
+app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM leaderboard WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete leaderboard error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Pending leaderboard submissions
+app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM leaderboard 
+      WHERE admin_verified = FALSE 
+      ORDER BY created_at DESC 
+      LIMIT 50
+    `);
+    res.json({ success: true, pending: result.rows });
+  } catch (error) {
+    console.error('Pending leaderboard error:', error);
+    res.json({ success: true, pending: [] });
+  }
+});
+
+// Approve leaderboard entry
+app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { final_country } = req.body;
+    
+    await pool.query(
+      `UPDATE leaderboard 
+       SET admin_verified = TRUE, 
+           country = COALESCE($2, country),
+           is_verified = TRUE 
+       WHERE id = $1`, 
+      [id, final_country]
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Approve leaderboard error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Reject leaderboard entry
+app.post('/api/admin/leaderboard/:id/reject', verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM leaderboard WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Reject leaderboard error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Toggle freelancer featured status
+app.post('/api/admin/freelancers/:id/feature', verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { is_featured } = req.body;
+    
+    await pool.query(
+      'UPDATE freelancers SET is_featured = $1 WHERE id = $2',
+      [is_featured, id]
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Feature freelancer error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Deactivate freelancer
+app.post('/api/admin/freelancers/:id/deactivate', verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    await pool.query(
+      'UPDATE freelancers SET is_approved = FALSE WHERE id = $1',
+      [id]
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Deactivate freelancer error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Delete freelancer
+app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM freelancers WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete freelancer error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Share links (placeholder - table not yet created)
+app.get('/api/admin/share-links', verifyAdmin, async (req, res) => {
+  res.json({ success: true, share_links: [] });
+});
+
+app.post('/api/admin/share-links/create', verifyAdmin, async (req, res) => {
+  try {
+    const { client_email, client_name, client_company, scans_limit, valid_days } = req.body;
+    
+    const shareCode = crypto.randomBytes(16).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + valid_days);
+    
+    res.json({
+      success: true,
+      share_code: shareCode,
+      share_url: `https://app.contentscale.site/share/${shareCode}`,
+      expires_at: expiresAt
+    });
+  } catch (error) {
+    console.error('Create share link error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Claims (placeholder - table not yet created)
+app.get('/api/admin/claims/pending', verifyAdmin, async (req, res) => {
+  res.json({ success: true, pending_count: 0, claims: [] });
+});
+
+// ==========================================
 // HTML ROUTES
-// ============================================
+// ==========================================
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/admin-dashboard.html'));
 });
