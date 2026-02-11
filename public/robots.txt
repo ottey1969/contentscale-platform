@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /private/
+Disallow: /temp/
+Disallow: /tmp/
+Disallow: /cdn-cgi/
+Disallow: /_next/
+Disallow: /static/_
+
+Sitemap: https://contentscale.site/sitemap.xml
+Host: https://contentscale.site
