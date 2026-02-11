@@ -6,7 +6,6 @@
   <title>ContentScale - Elite SEO Content Optimization | Recover Lost Traffic</title>
   <meta name="description" content="Stop losing traffic to AI. Professional SEO content optimization based on Google's E-E-A-T guidelines. Get your 90+ quality score roadmap today.">
   
-  <!-- Schema.org Structured Data -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -42,7 +41,7 @@
         "url": "https://contentscale.site/about-us",
         "image": {
           "@type": "ImageObject",
-          "url": "https://contentscale.site/public/blog/images/ottmar-francisca-headshot.png",
+          "url": "https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca-headshot.png",
           "caption": "Ottmar Francisca - Founder of ContentScale"
         },
         "worksFor": {
@@ -133,7 +132,6 @@
     .view-profile-btn { background: rgba(0, 0, 0, 0.3); color: white; border: 2px solid rgba(255, 255, 255, 0.3); padding: 10px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; width: 100%; margin-top: 16px; }
     .view-profile-btn:hover { background: rgba(0, 0, 0, 0.5); border-color: rgba(255, 255, 255, 0.6); }
     
-    /* Rankings 4-15 Grid - NOW VISIBLE! */
     .rankings-4-15-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 32px 0; }
     @media (max-width: 1024px) { .rankings-4-15-grid { grid-template-columns: repeat(3, 1fr); } }
     @media (max-width: 768px) { .rankings-4-15-grid { grid-template-columns: repeat(2, 1fr); } }
@@ -185,6 +183,8 @@
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 2000; overflow-y: auto; backdrop-filter: blur(4px); }
     .modal.active { display: flex; align-items: center; justify-content: center; padding: 20px; }
     .modal-content { background: #1f2937; border-radius: 16px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; border: 2px solid #4f46e5; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
+    
+    .reverse-email { unicode-bidi: bidi-override; direction: rtl; }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100">
@@ -214,7 +214,6 @@
 
   <div class="max-w-7xl mx-auto p-6">
     
-    <!-- LEAD SCANNER SECTION - MOST IMPORTANT! -->
     <div id="lead-scanner" class="mb-16">
       <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500 shadow-2xl">
         
@@ -224,7 +223,6 @@
             <p class="text-xl text-gray-300 mb-2">Vind bedrijven die content hulp nodig hebben</p>
             <p class="text-sm text-purple-300">✨ Gratis voor freelancers • 🔍 Scan individueel of bulk • 📊 Export naar CSV</p>
           </div>
-
           <div class="active-lang" data-lang="en">
             <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-300 via-pink-300 to-purple-300 bg-clip-text text-transparent">🎯 Lead Scanner for SEO Specialists</h2>
             <p class="text-xl text-gray-300 mb-2">Find businesses that need content help</p>
@@ -232,7 +230,6 @@
           </div>
         </div>
 
-        <!-- Mode Toggle -->
         <div class="flex justify-center gap-4 mb-8">
           <button id="modeSingleBtn" onclick="switchScanMode('single')" class="mode-toggle active px-6 py-3 bg-gradient-to-r from-purple-700 to-pink-700 rounded-lg font-semibold shadow-lg">
             <span data-lang="nl">🔍 Enkele URL</span>
@@ -244,7 +241,6 @@
           </button>
         </div>
 
-        <!-- SINGLE URL MODE -->
         <div id="singleScanMode" class="max-w-3xl mx-auto">
           <div class="bg-gray-800 rounded-xl p-6 mb-4 shadow-lg">
             <div class="flex flex-col sm:flex-row gap-3 mb-4">
@@ -262,11 +258,9 @@
               <p id="singleProgressText" class="text-sm text-center text-gray-400"></p>
             </div>
           </div>
-
           <div id="singleScanResult" class="hidden"></div>
         </div>
 
-        <!-- GOOGLE MAPS BULK MODE -->
         <div id="bulkScanMode" class="hidden max-w-6xl mx-auto">
           <div class="bg-gray-800 rounded-xl p-6 mb-4 shadow-lg">
             <div class="flex flex-col sm:flex-row gap-3 mb-4">
@@ -276,7 +270,6 @@
                 <span class="active-lang" data-lang="en">🗺️ Scrape Maps</span>
               </button>
             </div>
-            
             <div class="bg-gray-700 rounded-lg p-3">
               <p class="text-xs text-gray-300" data-lang="nl">
                 <strong class="text-purple-300">💡 Hoe te gebruiken:</strong> Zoek bedrijven op Google Maps → Kopieer de URL → Plak hier
@@ -287,7 +280,6 @@
             </div>
           </div>
 
-          <!-- Scraped Leads Table -->
           <div id="scrapedLeadsContainer" class="hidden">
             <div class="bg-gray-800 rounded-xl p-6 shadow-lg">
               <div class="flex items-center justify-between mb-4">
@@ -300,7 +292,6 @@
                   <span class="active-lang" data-lang="en">⚡ Scan All</span>
                 </button>
               </div>
-
               <div class="overflow-x-auto">
                 <table class="w-full bg-gray-900 rounded-lg">
                   <thead class="bg-gray-800">
@@ -315,7 +306,6 @@
                   <tbody id="leadsTableBody"></tbody>
                 </table>
               </div>
-
               <div class="flex gap-3 justify-end mt-4">
                 <button onclick="exportLeadsToCSV()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-semibold shadow-lg">📊 Export CSV</button>
               </div>
@@ -323,7 +313,6 @@
           </div>
         </div>
 
-        <!-- CTA for Freelancers -->
         <div class="mt-8 bg-gradient-to-r from-purple-800 via-pink-800 to-purple-800 rounded-xl p-6 text-center border-2 border-purple-400 shadow-lg">
           <div data-lang="nl">
             <h3 class="text-2xl font-bold mb-2">💼 Ben je SEO Specialist of Content Marketeer?</h3>
@@ -340,11 +329,9 @@
             <button onclick="openFreelancerModal()" class="bg-white text-purple-900 hover:bg-gray-100 px-6 py-3 rounded-lg font-bold transition-all shadow-lg">📝 Become a Platform Specialist</button>
           </div>
         </div>
-
       </div>
     </div>
 
-    <!-- WHY CONTENTSCALE - RANKABLE CONTENT -->
     <div class="mb-16">
       <div class="bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800 rounded-2xl p-8 border-2 border-gray-700 shadow-2xl">
         <div class="text-center mb-12">
@@ -354,7 +341,6 @@
             most businesses see their organic traffic plummet. ContentScale's GRAAF Framework is specifically designed to help you rank in this new AI-first search landscape.
           </p>
         </div>
-
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <div class="bg-gray-900 rounded-xl p-6 border-2 border-purple-600">
             <div class="text-4xl mb-4">🎯</div>
@@ -364,7 +350,6 @@
               and ensures your content gets cited in AI Overviews. Unlike traditional SEO that focuses only on keywords, we optimize for credibility, accuracy, and freshness - the exact signals Google's AI looks for.
             </p>
           </div>
-
           <div class="bg-gray-900 rounded-xl p-6 border-2 border-blue-600">
             <div class="text-4xl mb-4">📊</div>
             <h3 class="text-xl font-bold mb-3">Proven Track Record</h3>
@@ -373,7 +358,6 @@
               <a href="https://searchengineland.com/google-core-updates-guide-438542" target="_blank" rel="nofollow noopener" class="text-blue-400 hover:underline">March 2024 Core Update</a> and the rollout of AI Overviews.
             </p>
           </div>
-
           <div class="bg-gray-900 rounded-xl p-6 border-2 border-green-600">
             <div class="text-4xl mb-4">🔍</div>
             <h3 class="text-xl font-bold mb-3">E-E-A-T Optimization</h3>
@@ -382,7 +366,6 @@
               we optimize for Experience, Expertise, Authoritativeness, and Trustworthiness. Our scanner analyzes 50+ E-E-A-T signals including author credentials, factual accuracy, source citations, and content freshness.
             </p>
           </div>
-
           <div class="bg-gray-900 rounded-xl p-6 border-2 border-yellow-600">
             <div class="text-4xl mb-4">⚡</div>
             <h3 class="text-xl font-bold mb-3">Technical Excellence</h3>
@@ -392,7 +375,6 @@
               and mobile performance - all ranking factors that impact visibility in both traditional search results and AI-generated answers.
             </p>
           </div>
-
           <div class="bg-gray-900 rounded-xl p-6 border-2 border-red-600">
             <div class="text-4xl mb-4">🚀</div>
             <h3 class="text-xl font-bold mb-3">Fast Implementation</h3>
@@ -400,12 +382,10 @@
               Most agencies take months to start seeing results. With our automated scoring system and clear prioritization, you know exactly what to fix first. Our clients typically see measurable improvements within 30 days and full recovery within 60-90 days.
             </p>
           </div>
-
           <div class="bg-gray-900 rounded-xl p-6 border-2 border-indigo-600">
             <div class="text-4xl mb-4">💡</div>
             <h3 class="text-xl font-bold mb-3" data-lang="nl">Gratis Tools voor Specialisten</h3>
             <h3 class="text-xl font-bold mb-3 active-lang" data-lang="en">Free Tools for Specialists</h3>
-            
             <p class="text-gray-300 mb-4" data-lang="nl">
               We geloven in het empoweren van de SEO-community. Daarom zijn onze Lead Scanner, bulk Google Maps scraper en content quality analyzer 100% gratis voor geverifieerde specialisten. Help bedrijven terwijl je je eigen klantenbasis opbouwt. Werk slechts enkele uren per week en verdien toch een fulltime inkomen - mogelijk gemaakt door onze geavanceerde methodes en tools.
             </p>
@@ -414,7 +394,6 @@
             </p>
           </div>
         </div>
-
         <div class="bg-purple-900 bg-opacity-30 rounded-xl p-6 border-l-4 border-purple-500">
           <h3 class="text-xl font-bold mb-3">📚 Learn More About Modern SEO</h3>
           <div class="grid md:grid-cols-2 gap-4 text-sm">
@@ -439,16 +418,12 @@
       </div>
     </div>
 
-    <!-- LEADERBOARD -->
     <div id="leaderboard" class="mb-16">
       <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500 shadow-2xl">
-        
         <div class="text-center mb-8">
           <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-300 via-pink-300 to-purple-300 bg-clip-text text-transparent">🏆 Elite Leaderboard</h2>
           <p class="text-xl text-gray-300">Top performing websites automatically added</p>
         </div>
-        
-        <!-- Stats -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div class="stat-card rounded-xl p-5 text-white relative">
             <div class="relative z-10">
@@ -479,8 +454,6 @@
             </div>
           </div>
         </div>
-
-        <!-- Top 3 -->
         <div class="mb-10">
           <h2 class="text-2xl font-bold text-white mb-6">Top 3 Agencies</h2>
           <div class="top-3-grid" id="top3Grid">
@@ -489,16 +462,10 @@
             <div class="top-card bronze skeleton" style="height: 320px;"></div>
           </div>
         </div>
-
-        <!-- Rankings 4-15 (NOW VISIBLE!) -->
         <div class="mb-10" id="rankings4to15Container">
           <h2 class="text-2xl font-bold text-white mb-6">Rankings 4-15</h2>
-          <div class="rankings-4-15-grid" id="rankings4to15Grid">
-            <!-- Populated by JavaScript -->
-          </div>
+          <div class="rankings-4-15-grid" id="rankings4to15Grid"></div>
         </div>
-
-        <!-- Filters -->
         <div class="bg-gray-800 rounded-lg p-4 mb-6">
           <button onclick="toggleFilters()" class="w-full flex items-center justify-between text-left">
             <div class="flex items-center gap-2">
@@ -517,8 +484,6 @@
             </div>
           </div>
         </div>
-
-        <!-- Rankings 16+ -->
         <div>
           <button class="rankings-toggle-btn" onclick="toggleRankings()" id="rankings-toggle">
             <span id="rankingsToggleText">📊 Show Rankings 16+</span>
@@ -544,22 +509,18 @@
       </div>
     </div>
 
-    <!-- FREELANCERS -->
     <div id="freelancers" class="mb-16">
       <div class="text-center mb-8">
         <h2 class="text-4xl font-bold mb-3" data-lang="nl">🎯 Geverifieerde SEO Specialisten</h2>
         <h2 class="text-4xl font-bold mb-3 active-lang" data-lang="en">🎯 Verified SEO Specialists</h2>
-        
         <p class="text-xl text-gray-300 mb-2" data-lang="nl">Expert content optimizers klaar om te helpen</p>
         <p class="text-xl text-gray-300 mb-2 active-lang" data-lang="en">Expert content optimizers ready to help</p>
-        
         <p class="text-sm text-purple-300 mb-4" data-lang="nl">
           💡 Getraind in Modern SEO voor het AI-tijdperk • 🎓 GRAAF Framework specialisten • ⚡ Verdien fulltime met part-time uren
         </p>
         <p class="text-sm text-purple-300 mb-4 active-lang" data-lang="en">
           💡 Trained in Modern SEO for the AI-era • 🎓 GRAAF Framework specialists • ⚡ Earn full-time with part-time hours
         </p>
-        
         <button onclick="openFreelancerModal()" class="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all shadow-lg" data-lang="nl">📝 Word Specialist</button>
         <button onclick="openFreelancerModal()" class="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all shadow-lg active-lang" data-lang="en">📝 Become a Specialist</button>
       </div>
@@ -570,23 +531,23 @@
       </div>
     </div>
 
-    <!-- ABOUT OTTMAR FRANCISCA - E-E-A-T SIGNALS -->
     <div class="mb-16 max-w-4xl mx-auto px-6">
       <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500 shadow-2xl">
         <div class="flex flex-col md:flex-row gap-8 items-center">
           <div class="md:w-1/3">
-            <img src="https://contentscale.site/public/blog/images/ottmar-francisca-headshot.png" 
+            <img src="https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca-headshot.png" 
                  alt="Ottmar Francisca - Founder & SEO Recovery Specialist at ContentScale" 
                  class="w-48 h-48 rounded-full mx-auto object-cover border-4 border-purple-500 shadow-2xl"
-                 onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Ccircle cx=%22100%22 cy=%22100%22 r=%2290%22 fill=%22%236b21a8%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22white%22 font-size=%2260%22 font-weight=%22bold%22%3EOF%3C/text%3E%3C/svg%3E';"
+                 onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';"
                  loading="lazy">
+            <div class="w-48 h-48 rounded-full mx-auto bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-600 hidden items-center justify-center border-4 border-purple-500 shadow-2xl">
+              <span class="text-6xl font-bold text-white">OF</span>
+            </div>
           </div>
           <div class="md:w-2/3">
             <h2 class="text-3xl font-bold mb-4" data-lang="nl">Over de Oprichter</h2>
             <h2 class="text-3xl font-bold mb-4 active-lang" data-lang="en">About the Founder</h2>
-            
             <h3 class="text-xl text-purple-300 mb-4">Ottmar Francisca - SEO Recovery Specialist</h3>
-            
             <p class="text-gray-300 mb-4" data-lang="nl">
               Met <strong>24+ jaar leiderschapservaring</strong> bij de Nederlandse Politie en gemeentelijke operaties, brengt Ottmar een unieke analytische aanpak naar SEO optimalisatie. 
               Sinds de oprichting van ContentScale in 2018 heeft hij <strong>200+ bedrijven</strong> in 47+ landen geholpen herstellen van Google algoritme updates.
@@ -595,7 +556,6 @@
               With <strong>24+ years of leadership experience</strong> in the Dutch Police and municipal operations, Ottmar brings a unique analytical approach to SEO optimization. 
               Since founding ContentScale in 2018, he has helped <strong>200+ businesses</strong> across 47+ countries recover from Google algorithm updates.
             </p>
-            
             <p class="text-gray-300 mb-4" data-lang="nl">
               Ottmar creëerde het eigen <strong>GRAAF Framework</strong> (Genuinely Credible, Relevance, Actionability, Accuracy, Freshness) specifiek om de uitdagingen aan te pakken 
               waar bedrijven mee te maken krijgen door Google's AI Overviews en evoluerende zoekalgoritmes. Zijn methodologie heeft een gedocumenteerd <strong>78% herstelpercentage binnen 90 dagen</strong> bereikt.
@@ -604,7 +564,6 @@
               Ottmar created the proprietary <strong>GRAAF Framework</strong> (Genuinely Credible, Relevance, Actionability, Accuracy, Freshness) specifically to address the challenges 
               businesses face with Google's AI Overviews and evolving search algorithms. His methodology has achieved a documented <strong>78% recovery rate within 90 days</strong>.
             </p>
-            
             <p class="text-gray-300 mb-6" data-lang="nl">
               Gevestigd in Amsterdam, werkt Ottmar als solo consultant met diepgaande expertise in E-E-A-T optimalisatie, content kwaliteit scoring en traffic recovery strategieën. 
               Lees meer over zijn achtergrond en aanpak op de <a href="https://contentscale.site/about-us" target="_blank" class="text-blue-400 hover:underline">Over Ons pagina</a>.
@@ -613,7 +572,6 @@
               Based in Amsterdam, Ottmar operates as a solo consultant with deep expertise in E-E-A-T optimization, content quality scoring, and traffic recovery strategies. 
               Learn more about his background and approach on the <a href="https://contentscale.site/about-us" target="_blank" class="text-blue-400 hover:underline">About Us page</a>.
             </p>
-            
             <div class="flex gap-4 flex-wrap">
               <div class="bg-gray-900 bg-opacity-50 px-4 py-2 rounded-lg">
                 <div class="text-2xl font-bold text-green-400">200+</div>
@@ -641,16 +599,13 @@
       </div>
     </div>
 
-    <!-- FAQ SECTION WITH ACCORDION -->
     <div class="mb-16 max-w-4xl mx-auto px-6">
       <div class="text-center mb-8">
         <h2 class="text-4xl font-bold mb-3" data-lang="nl">❓ Veelgestelde Vragen</h2>
         <h2 class="text-4xl font-bold mb-3 active-lang" data-lang="en">❓ Frequently Asked Questions</h2>
-        
         <p class="text-xl text-gray-300" data-lang="nl">Alles wat je moet weten over SEO content optimalisatie</p>
         <p class="text-xl text-gray-300 active-lang" data-lang="en">Everything you need to know about SEO content optimization</p>
       </div>
-
       <div class="space-y-4">
         <div class="bg-gray-800 rounded-lg border-2 border-gray-700 overflow-hidden">
           <button onclick="toggleFAQ(1)" class="w-full px-6 py-4 text-left flex justify-between items-center hover:bg-gray-700 transition-colors">
@@ -663,7 +618,6 @@
             <p class="text-gray-300 active-lang" data-lang="en">The GRAAF Framework is ContentScale's proprietary methodology for AI-era SEO optimization. It stands for: <strong>G</strong>enuinely Credible, <strong>R</strong>elevance, <strong>A</strong>ctionability, <strong>A</strong>ccuracy, and <strong>F</strong>reshness. This framework ensures your content meets Google's E-E-A-T guidelines and ranks well against AI Overviews. Learn more at <a href="https://searchengineland.com/google-eeat-content-evaluation-424018" target="_blank" rel="nofollow noopener" class="text-blue-400 hover:underline">Search Engine Land's E-E-A-T guide</a>.</p>
           </div>
         </div>
-
         <div class="bg-gray-800 rounded-lg border-2 border-gray-700 overflow-hidden">
           <button onclick="toggleFAQ(2)" class="w-full px-6 py-4 text-left flex justify-between items-center hover:bg-gray-700 transition-colors">
             <span class="font-semibold text-lg" data-lang="nl">Hoe lang duurt SEO herstel?</span>
@@ -675,7 +629,6 @@
             <p class="text-gray-300 active-lang" data-lang="en">Based on our work with 200+ businesses, typical SEO recovery takes 60-90 days. However, this depends on several factors: the severity of traffic loss, your current content quality score, implementation speed, and your niche's competitiveness. We've seen businesses recover 78% of lost traffic within this timeframe using our GRAAF Framework methodology.</p>
           </div>
         </div>
-
         <div class="bg-gray-800 rounded-lg border-2 border-gray-700 overflow-hidden">
           <button onclick="toggleFAQ(3)" class="w-full px-6 py-4 text-left flex justify-between items-center hover:bg-gray-700 transition-colors">
             <span class="font-semibold text-lg" data-lang="nl">Wat veroorzaakt traffic verlies aan AI Overviews?</span>
@@ -687,7 +640,6 @@
             <p class="text-gray-300 active-lang" data-lang="en">AI Overviews (previously SGE) appear at the top of Google search results, synthesizing information from multiple sources. If your content lacks depth, credibility signals, or proper schema markup, Google won't cite it in AI Overviews - causing significant traffic loss. Our scanner identifies exactly what's missing. Read more about <a href="https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data" target="_blank" rel="nofollow noopener" class="text-blue-400 hover:underline">Google's structured data guidelines</a>.</p>
           </div>
         </div>
-
         <div class="bg-gray-800 rounded-lg border-2 border-gray-700 overflow-hidden">
           <button onclick="toggleFAQ(4)" class="w-full px-6 py-4 text-left flex justify-between items-center hover:bg-gray-700 transition-colors">
             <span class="font-semibold text-lg" data-lang="nl">Is de Lead Scanner echt gratis voor freelancers?</span>
@@ -699,7 +651,6 @@
             <p class="text-gray-300 active-lang" data-lang="en">Yes! Our Lead Scanner is 100% free for verified SEO specialists and content marketers. You can scan unlimited websites, use Google Maps bulk scraping, and export leads to CSV at no cost. We built this tool to help freelancers find clients who genuinely need content optimization. Register as a specialist to get full access.</p>
           </div>
         </div>
-
         <div class="bg-gray-800 rounded-lg border-2 border-gray-700 overflow-hidden">
           <button onclick="toggleFAQ(5)" class="w-full px-6 py-4 text-left flex justify-between items-center hover:bg-gray-700 transition-colors">
             <span class="font-semibold text-lg" data-lang="nl">Hoe bereken je content kwaliteit scores?</span>
@@ -711,7 +662,6 @@
             <p class="text-gray-300 active-lang" data-lang="en">Our scoring algorithm analyzes 50+ ranking factors across three categories: <strong>GRAAF Framework</strong> (50 points - credibility, relevance, actionability, accuracy, freshness), <strong>CRAFT Content</strong> (30 points - comprehensiveness, readability, authority signals, factual accuracy, timeliness), and <strong>Technical SEO</strong> (20 points - schema markup, Core Web Vitals, mobile optimization). Scores are consistent using hash-based algorithms.</p>
           </div>
         </div>
-
         <div class="bg-gray-800 rounded-lg border-2 border-gray-700 overflow-hidden">
           <button onclick="toggleFAQ(6)" class="w-full px-6 py-4 text-left flex justify-between items-center hover:bg-gray-700 transition-colors">
             <span class="font-semibold text-lg" data-lang="nl">Wat zit er in het Elite Leaderboard?</span>
@@ -723,7 +673,6 @@
             <p class="text-gray-300 active-lang" data-lang="en">The Elite Leaderboard automatically features websites scoring 85+ on our quality assessment. It includes SEO agencies, content marketing firms, and businesses with exceptional content strategies. Being featured is 100% merit-based - we don't accept payments for placement. If your website scores 85+ on our scanner, you're automatically added.</p>
           </div>
         </div>
-
         <div class="bg-gray-800 rounded-lg border-2 border-gray-700 overflow-hidden">
           <button onclick="toggleFAQ(7)" class="w-full px-6 py-4 text-left flex justify-between items-center hover:bg-gray-700 transition-colors">
             <span class="font-semibold text-lg" data-lang="nl">Waarom zijn Freelancers welkom om dit platform te gebruiken?</span>
@@ -738,32 +687,27 @@
       </div>
     </div>
 
-    <!-- READY TO RECOVER CTA -->
     <div class="mb-16">
       <div class="bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-900 rounded-2xl p-12 text-center border-2 border-purple-500 shadow-2xl max-w-7xl mx-auto px-6">
         <div class="text-5xl mb-4">🚀</div>
-        
         <div data-lang="nl">
           <h2 class="text-4xl font-bold mb-4">Klaar om je Traffic te Herstellen?</h2>
           <p class="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
             Stop met traffic verliezen aan AI Overviews. Krijg vandaag nog je persoonlijke roadmap naar 90+ content scores.
           </p>
         </div>
-        
         <div class="active-lang" data-lang="en">
           <h2 class="text-4xl font-bold mb-4">Ready to Recover Your Traffic?</h2>
           <p class="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
             Stop losing traffic to AI Overviews. Get your personalized roadmap to 90+ content scores today.
           </p>
         </div>
-        
         <div class="flex gap-4 justify-center flex-wrap">
           <button onclick="document.getElementById('singleUrlInput').scrollIntoView({behavior:'smooth'}); document.getElementById('singleUrlInput').focus(); switchScanMode('single');" 
                   class="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 px-8 py-4 rounded-lg font-bold text-lg transition-all shadow-lg hover:shadow-xl" style="animation: pulse 2s infinite;">
             <span data-lang="nl">🔍 Scan Gratis</span>
             <span class="active-lang" data-lang="en">🔍 Scan Free</span>
           </button>
-          
           <a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20discuss%20SEO%20optimization" 
              target="_blank"
              class="bg-green-600 hover:bg-green-700 px-8 py-4 rounded-lg font-bold text-lg transition-all shadow-lg hover:shadow-xl">
@@ -775,23 +719,14 @@
     </div>
   </div>
 
-  <!-- Footer -->
   <footer class="bg-gray-800 border-t-2 border-gray-700 mt-16">
     <div class="max-w-7xl mx-auto px-6 py-12">
       <div class="grid md:grid-cols-4 gap-8 mb-8">
-        
         <div>
-          <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-4">
-            ContentScale
-          </div>
-          <p class="text-gray-400 text-sm" data-lang="nl">
-            Professional SEO content optimalisatie gebaseerd op Google's E-E-A-T richtlijnen.
-          </p>
-          <p class="text-gray-400 text-sm active-lang" data-lang="en">
-            Professional SEO content optimization based on Google's E-E-A-T guidelines.
-          </p>
+          <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-4">ContentScale</div>
+          <p class="text-gray-400 text-sm" data-lang="nl">Professional SEO content optimalisatie gebaseerd op Google's E-E-A-T richtlijnen.</p>
+          <p class="text-gray-400 text-sm active-lang" data-lang="en">Professional SEO content optimization based on Google's E-E-A-T guidelines.</p>
         </div>
-        
         <div>
           <h3 class="font-bold mb-4" data-lang="nl">Product</h3>
           <h3 class="font-bold mb-4 active-lang" data-lang="en">Product</h3>
@@ -802,7 +737,6 @@
             <li><a href="#freelancers" class="text-gray-400 hover:text-white transition-colors active-lang" data-lang="en">Specialists</a></li>
           </ul>
         </div>
-        
         <div>
           <h3 class="font-bold mb-4" data-lang="nl">Bedrijf</h3>
           <h3 class="font-bold mb-4 active-lang" data-lang="en">Company</h3>
@@ -813,41 +747,35 @@
             <li><a href="#freelancers" class="text-gray-400 hover:text-white transition-colors active-lang" data-lang="en">Specialists</a></li>
           </ul>
         </div>
-        
         <div>
           <h3 class="font-bold mb-4">Contact</h3>
           <ul class="space-y-2 text-sm">
             <li class="text-gray-400">
               <i class="fas fa-envelope mr-2"></i>
-              <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="3b52555d547b5854554f5e554f48585a575e1548524f5e">[email&#160;protected]</a>
+              <span class="reverse-email">moc.etlacsnestnoc@ofni</span>
             </li>
             <li>
               <a href="https://wa.me/31628073996" target="_blank" class="text-gray-400 hover:text-white transition-colors">
-                <i class="fab fa-whatsapp mr-2"></i>
-                +31 6 2807 3996
+                <i class="fab fa-whatsapp mr-2"></i>+31 6 2807 3996
               </a>
             </li>
             <li class="text-gray-400">
-              <i class="fas fa-map-marker-alt mr-2"></i>
-              Amsterdam, NL
+              <i class="fas fa-map-marker-alt mr-2"></i>Amsterdam, NL
             </li>
           </ul>
         </div>
-        
       </div>
-      
       <div class="border-t border-gray-700 pt-8 text-center text-sm text-gray-400">
         <p>&copy; 2025 ContentScale. All rights reserved.</p>
       </div>
     </div>
   </footer>
 
-  <!-- Freelancer Modal -->
   <div id="freelancerModal" class="modal">
     <div class="modal-content"></div>
   </div>
 
-  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  <script>
     const API_BASE = window.location.origin;
     let currentLang = localStorage.getItem('contentscale_lang') || 'en';
     let allLeaderboardEntries = [];
@@ -875,15 +803,11 @@
       });
     }
 
-    // ============================================
-    // LEAD SCANNER - MOST IMPORTANT!
-    // ============================================
     function switchScanMode(mode) {
       const singleMode = document.getElementById('singleScanMode');
       const bulkMode = document.getElementById('bulkScanMode');
       const singleBtn = document.getElementById('modeSingleBtn');
       const bulkBtn = document.getElementById('modeBulkBtn');
-      
       if (mode === 'single') {
         singleMode.classList.remove('hidden');
         bulkMode.classList.add('hidden');
@@ -901,50 +825,38 @@
       const input = document.getElementById('singleUrlInput');
       const button = document.getElementById('singleScanBtn');
       const url = input.value.trim();
-      
       if (!url) {
         alert('Enter a URL');
         return;
       }
-      
       let fullUrl = url;
       if (!url.startsWith('http')) fullUrl = 'https://' + url;
-      
       button.disabled = true;
       button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
-      
       const progressDiv = document.getElementById('singleScanProgress');
       const progressBar = document.getElementById('singleProgressBar');
       const progressText = document.getElementById('singleProgressText');
       const resultDiv = document.getElementById('singleScanResult');
-      
       progressDiv.classList.remove('hidden');
       resultDiv.classList.add('hidden');
       progressBar.style.width = '20%';
       progressText.textContent = 'Analyzing content...';
-      
       try {
         const response = await fetch(`${API_BASE}/api/scan`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url: fullUrl })
         });
-        
         progressBar.style.width = '70%';
         progressText.textContent = 'Generating recommendations...';
-        
         const data = await response.json();
-        
         if (!data.success) throw new Error(data.error || 'Scan failed');
-        
         progressBar.style.width = '100%';
         progressText.textContent = 'Complete!';
-        
         setTimeout(() => {
           progressDiv.classList.add('hidden');
           displayLeadScanResult(data);
         }, 500);
-        
       } catch (error) {
         console.error('Scan error:', error);
         alert(`Scan failed: ${error.message}`);
@@ -961,8 +873,6 @@
       const wordCount = result.content_stats?.wordCount || 0;
       const potentialScore = Math.min(98, score + Math.floor((100 - score) * 0.75));
       const improvement = potentialScore - score;
-      
-      // Filter recommendations
       let recommendations = result.recommendations?.all || [];
       const isContentScale = result.url.includes('contentscale.site');
       if (isContentScale) {
@@ -971,11 +881,8 @@
           !rec.title.toLowerCase().includes('bio')
         );
       }
-      
-      // Share URL
       const scanId = btoa(result.url).substring(0, 12);
       const shareUrl = `${window.location.origin}/scan/${scanId}`;
-      
       resultDiv.innerHTML = `
         <div class="bg-gray-800 rounded-2xl p-8 border-2 border-purple-500 shadow-2xl">
           <div class="text-center mb-8">
@@ -994,7 +901,6 @@
             </div>
             <div class="mt-4 text-green-400 font-bold text-lg">+${improvement} points possible! 🚀</div>
           </div>
-          
           <div class="grid md:grid-cols-3 gap-4 mb-8">
             <div class="bg-gray-900 rounded-xl p-4">
               <div class="text-sm text-gray-400">Content Quality</div>
@@ -1009,7 +915,6 @@
               <div class="text-2xl font-bold text-purple-400">${wordCount.toLocaleString()}</div>
             </div>
           </div>
-          
           ${recommendations.length > 0 ? `
           <div class="mb-8">
             <h4 class="text-lg font-bold text-white mb-4">🎯 Pitch Points</h4>
@@ -1023,7 +928,6 @@
             </div>
           </div>
           ` : ''}
-          
           <div class="border-t-2 border-gray-700 pt-6">
             <h4 class="text-lg font-bold text-white mb-4">📤 Share with Client</h4>
             <div class="grid grid-cols-2 gap-3">
@@ -1043,7 +947,6 @@
           </div>
         </div>
       `;
-      
       resultDiv.classList.remove('hidden');
       setTimeout(() => resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
     }
@@ -1052,29 +955,22 @@
       const input = document.getElementById('googleMapsInput');
       const button = document.getElementById('gmapsScrapeBtn');
       const url = input.value.trim();
-      
       if (!url || !url.includes('google.com/maps')) {
         alert('Enter a valid Google Maps URL');
         return;
       }
-      
       button.disabled = true;
       button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scraping...';
-      
       try {
         const response = await fetch(`${API_BASE}/api/google-maps/scrape`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ mapsUrl: url })
         });
-        
         const data = await response.json();
-        
         if (!data.success) throw new Error(data.error || 'Scrape failed');
-        
         scrapedLeads = data.leads || [];
         displayScrapedLeads(scrapedLeads);
-        
       } catch (error) {
         console.error('Google Maps scrape error:', error);
         alert('Scrape failed. Please try again.');
@@ -1089,19 +985,15 @@
       const tableBody = document.getElementById('leadsTableBody');
       const countSpan = document.getElementById('leadCount');
       const countSpanEN = document.getElementById('leadCountEN');
-      
       if (!leads || leads.length === 0) {
         alert('No leads found. Try a different search.');
         return;
       }
-      
       if (countSpan) countSpan.textContent = leads.length;
       if (countSpanEN) countSpanEN.textContent = leads.length;
-      
       tableBody.innerHTML = leads.map((lead, index) => {
         const hasWebsite = lead.website && lead.website !== 'N/A';
         const score = lead.score || 0;
-        
         return `
           <tr class="border-b border-gray-700 hover:bg-gray-800">
             <td class="px-4 py-3">
@@ -1130,7 +1022,6 @@
           </tr>
         `;
       }).join('');
-      
       container.classList.remove('hidden');
     }
 
@@ -1151,7 +1042,6 @@
         alert('No leads to export');
         return;
       }
-      
       const headers = ['Name', 'Category', 'Website', 'Phone', 'Score'];
       const rows = scrapedLeads.map(lead => [
         lead.name || '',
@@ -1160,10 +1050,8 @@
         lead.phone || '',
         lead.score || ''
       ]);
-      
       let csv = headers.join(',') + '\n';
       csv += rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-      
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -1175,14 +1063,12 @@
     function saveLead(url, currentScore, potentialScore) {
       const decodedUrl = decodeURIComponent(url);
       let workspace = JSON.parse(localStorage.getItem('contentscale_workspace') || '[]');
-      
       workspace.push({
         url: decodedUrl,
         currentScore: currentScore,
         potentialScore: potentialScore,
         date: new Date().toISOString()
       });
-      
       localStorage.setItem('contentscale_workspace', JSON.stringify(workspace));
       alert(`✅ Lead saved! You have ${workspace.length} leads in workspace.`);
     }
@@ -1198,7 +1084,6 @@
     function toggleFAQ(id) {
       const content = document.getElementById(`faq-content-${id}`);
       const icon = document.getElementById(`faq-icon-${id}`);
-      
       if (content.classList.contains('hidden')) {
         content.classList.remove('hidden');
         icon.style.transform = 'rotate(180deg)';
@@ -1208,23 +1093,14 @@
       }
     }
 
-    // ============================================
-    // SCANNER (OLD - KEEP FOR COMPATIBILITY)
-    // ============================================
     async function startScan() {
-      // Redirect to lead scanner
       switchScanMode('single');
       document.getElementById('lead-scanner')?.scrollIntoView({ behavior: 'smooth' });
     }
 
-    // ============================================
-    // LEADERBOARD - REAL API CALLS WITH ERROR HANDLING
-    // ============================================
     async function loadLeaderboardData() {
       try {
         const response = await fetch(`${API_BASE}/api/leaderboard`);
-        
-        // Check if response is actually JSON
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
           console.warn('Leaderboard API returned HTML instead of JSON - using empty array');
@@ -1236,25 +1112,20 @@
           loadCountryFilters();
           return;
         }
-        
         const data = await response.json();
-        
         if (!data.success) {
           console.warn('Leaderboard API returned error:', data.error);
           allLeaderboardEntries = [];
         } else {
           allLeaderboardEntries = data.leaderboard || [];
         }
-        
         updateLeaderboardStats();
         loadTop3Agencies();
         loadRankings4to15();
         loadRankings16Plus();
         loadCountryFilters();
-        
       } catch (error) {
         console.error('Leaderboard error:', error);
-        // Use empty array as fallback
         allLeaderboardEntries = [];
         updateLeaderboardStats();
         loadTop3Agencies();
@@ -1277,12 +1148,10 @@
     function loadTop3Agencies() {
       const top3 = allLeaderboardEntries.slice(0, 3);
       const grid = document.getElementById('top3Grid');
-      
       if (top3.length === 0) {
         grid.innerHTML = '<div class="col-span-3 text-center text-gray-400 py-12">No agencies yet</div>';
         return;
       }
-      
       grid.innerHTML = top3.map((agency, index) => {
         const rankClass = index === 0 ? 'gold' : index === 1 ? 'silver' : 'bronze';
         const rankEmoji = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
@@ -1301,16 +1170,13 @@
       }).join('');
     }
 
-    // NEW FUNCTION - Rankings 4-15 NOW VISIBLE!
     function loadRankings4to15() {
       const rankings = allLeaderboardEntries.slice(3, 15);
       const grid = document.getElementById('rankings4to15Grid');
-      
       if (rankings.length === 0) {
         document.getElementById('rankings4to15Container').style.display = 'none';
         return;
       }
-      
       grid.innerHTML = rankings.map((agency, index) => {
         const actualRank = index + 4;
         return `
@@ -1329,9 +1195,7 @@
       const rankings = allLeaderboardEntries.slice(15);
       const tbody = document.getElementById('rankings-tbody');
       const totalCount = document.getElementById('total-count');
-      
       totalCount.textContent = allLeaderboardEntries.length;
-      
       tbody.innerHTML = rankings.slice(0, 20).map((entry, index) => {
         const actualRank = index + 16;
         return `
@@ -1351,10 +1215,8 @@
       const container = document.getElementById('rankings-container');
       const toggleBtn = document.getElementById('rankings-toggle');
       const toggleText = document.getElementById('rankingsToggleText');
-      
       container.classList.toggle('show');
       toggleBtn.classList.toggle('active');
-      
       toggleText.textContent = container.classList.contains('show') ? 
         '📊 Hide Rankings 16+' : '📊 Show Rankings 16+';
     }
@@ -1370,7 +1232,6 @@
     function loadCountryFilters() {
       const div = document.getElementById('countryFilters');
       const countries = [...new Set(allLeaderboardEntries.map(e => e.country))];
-      
       let html = '<button class="filter-tag active" onclick="filterByCountry(\'all\')">🌍 All</button>';
       countries.forEach(country => {
         html += `<button class="filter-tag" onclick="filterByCountry('${country}')">${getCountryFlag(country)} ${country}</button>`;
@@ -1378,27 +1239,17 @@
       div.innerHTML = html;
     }
 
-    function filterByCountry(country) {
-      // Implement filtering
-    }
-
-    function filterAgencies() {
-      // Implement search
-    }
+    function filterByCountry(country) {}
+    function filterAgencies() {}
 
     function getCountryFlag(country) {
       const flags = { 'NL': '🇳🇱', 'UK': '🇬🇧', 'US': '🇺🇸', 'DE': '🇩🇪', 'FR': '🇫🇷', 'BE': '🇧🇪', 'ES': '🇪🇸', 'AU': '🇦🇺', 'CA': '🇨🇦', 'IT': '🇮🇹', 'CH': '🇨🇭' };
       return flags[country] || '🌐';
     }
 
-    // ============================================
-    // FREELANCERS - REAL API CALLS WITH ERROR HANDLING
-    // ============================================
     async function loadFreelancers() {
       try {
         const response = await fetch(`${API_BASE}/api/freelancers`);
-        
-        // Check if response is actually JSON
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
           console.warn('Freelancers API returned HTML instead of JSON - using empty array');
@@ -1406,24 +1257,19 @@
           grid.innerHTML = '<div class="col-span-3 text-center text-gray-400 py-12">No freelancers available yet. <button onclick="openFreelancerModal()" class="text-purple-400 hover:underline">Be the first to register →</button></div>';
           return;
         }
-        
         const data = await response.json();
-        
         if (!data.success) {
           console.warn('Freelancers API returned error:', data.error);
           const grid = document.getElementById('freelancers-grid');
           grid.innerHTML = '<div class="col-span-3 text-center text-gray-400 py-12">Unable to load freelancers. <button onclick="openFreelancerModal()" class="text-purple-400 hover:underline">Register as specialist →</button></div>';
           return;
         }
-        
         const freelancers = data.freelancers || [];
         const grid = document.getElementById('freelancers-grid');
-        
         if (freelancers.length === 0) {
           grid.innerHTML = '<div class="col-span-3 text-center text-gray-400 py-12">No freelancers yet. <button onclick="openFreelancerModal()" class="text-purple-400 hover:underline">Be the first →</button></div>';
           return;
         }
-        
         grid.innerHTML = freelancers.map(f => `
           <div class="freelancer-card">
             <div class="flex items-start justify-between mb-3">
@@ -1443,7 +1289,6 @@
             <button onclick="window.location.href='mailto:${f.email}'" class="w-full bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-semibold transition-all">Contact ${f.name}</button>
           </div>
         `).join('');
-        
       } catch (error) {
         console.error('Freelancers error:', error);
         const grid = document.getElementById('freelancers-grid');
@@ -1455,7 +1300,6 @@
       const modal = document.getElementById('freelancerModal');
       modal.classList.add('active');
       document.body.style.overflow = 'hidden';
-      
       modal.querySelector('.modal-content').innerHTML = `
         <div class="p-8">
           <div class="flex justify-between items-center mb-6">
@@ -1481,24 +1325,29 @@
       const name = document.getElementById('fName').value;
       const email = document.getElementById('fEmail').value;
       const phone = document.getElementById('fPhone').value;
-      
       if (!name || !email) {
         alert('Please fill in name and email');
         return;
       }
-      
       try {
         const response = await fetch(`${API_BASE}/api/freelancers/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, email, phone, title: 'SEO Specialist' })
         });
-        
         const data = await response.json();
-        
         if (data.success) {
           alert(`✅ Thank you ${name}!`);
           closeFreelancerModal();
           loadFreelancers();
         } else {
-          throw new Error
+          throw new Error(data.error || 'Registration failed');
+        }
+      } catch (error) {
+        console.error('Registration error:', error);
+        alert('Registration failed. Please try again.');
+      }
+    }
+  </script>
+</body>
+</html>
