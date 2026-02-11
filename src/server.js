@@ -750,8 +750,9 @@ app.post('/api/scan', async (req, res) => {
   }
 });
 
+
 // ============================================
-// GOOGLE MAPS SCRAPER ENDPOINT
+// GOOGLE MAPS SCRAPER ENDPOINT - REAL DATA
 // ============================================
 app.post('/api/google-maps/scrape', async (req, res) => {
   try {
@@ -764,54 +765,137 @@ app.post('/api/google-maps/scrape', async (req, res) => {
       });
     }
     
-    console.log(`🗺️ Google Maps scrape request: ${url}`);
+    console.log(`🗺️ Google Maps REAL scrape: ${url}`);
     
-    // Mock scraper for now (implement real scraper later)
-    const mockLeads = [];
-    const businessNames = [
-      'Amsterdam Digital Agency', 'Rotterdam SEO Experts', 'Utrecht Web Solutions',
-      'The Hague Marketing Pros', 'Eindhoven Tech Partners', 'Groningen Digital Studio'
-    ];
+    // Launch browser
+    const browser = await getBrowser();
+    const page = await browser.newPage();
     
-    const categories = ['SEO Agency', 'Digital Marketing', 'Web Design', 'Content Marketing'];
+    // Set viewport and user agent
+    await page.setViewport({ width: 1920, height: 1080 });
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     
-    for (let i = 0; i < Math.min(maxResults, businessNames.length); i++) {
-      const name = businessNames[i];
-      const hasWebsite = Math.random() > 0.2;
-      const website = hasWebsite ? `https://${name.toLowerCase().replace(/\s+/g, '')}.nl` : null;
-      const score = hasWebsite ? Math.floor(Math.random() * 40) + 60 : 0;
+    // Navigate to Google Maps
+    await page.goto(url, {
+      waitUntil: 'networkidle2',
+      timeout: 60000
+    });
+    
+    // Wait for results to load
+    await page.waitForSelector('[role="feed"]', { timeout: 10000 }).catch(() => {
+      console.log('⚠️ Feed selector not found, trying alternative...');
+    });
+    
+    // Scroll to load more results
+    for (let i = 0; i < 3; i++) {
+      await page.evaluate(() => {
+        window.scrollBy(0, 800);
+      });
+      await page.waitForTimeout(2000);
+    }
+    
+    // Extract business data
+    const leads = await page.evaluate((maxResults) => {
+      const businesses = [];
+      const items = document.querySelectorAll('[role="feed"] > div > div, .Nv2PK, .THOPZb, .lI9IFe');
       
-      const lead = {
-        name: name,
-        category: categories[Math.floor(Math.random() * categories.length)],
-        website: website,
-        phone: `+31 6 ${Math.floor(Math.random() * 9000000) + 1000000}`,
-        address: `${name.split(' ')[0]}straat ${Math.floor(Math.random() * 100) + 1}, Amsterdam`,
-        rating: (Math.random() * 2 + 3).toFixed(1),
-        reviews: Math.floor(Math.random() * 100),
-        score: score,
-        status: 'new'
-      };
+      for (let i = 0; i < Math.min(items.length, maxResults); i++) {
+        const item = items[i];
+        
+        // Business name
+        const nameEl = item.querySelector('.qBF1Pd, .d4r55, .fontHeadlineSmall, h3');
+        const name = nameEl ? nameEl.textContent.trim() : null;
+        
+        // Website
+        const websiteEl = item.querySelector('a[data-value="Website"], a[href^="http"]:not([href*="google.com"])');
+        const website = websiteEl ? websiteEl.href : null;
+        
+        // Phone
+        const phoneEl = item.querySelector('button[data-item-id*="phone"], a[href^="tel:"]');
+        const phone = phoneEl ? (phoneEl.href ? phoneEl.href.replace('tel:', '') : phoneEl.textContent.trim()) : null;
+        
+        // Category
+        const categoryEl = item.querySelector('.W4Efsd:not(.ZlAx9e), .YvY7kb, .Ahnjwc');
+        const category = categoryEl ? categoryEl.textContent.trim() : null;
+        
+        // Address
+        const addressEl = item.querySelector('button[data-item-id*="address"], .W4Efsd span');
+        const address = addressEl ? addressEl.textContent.trim() : null;
+        
+        // Rating
+        const ratingEl = item.querySelector('.MW4etd, .fontBodyMedium span[aria-hidden="true"]');
+        const rating = ratingEl ? parseFloat(ratingEl.textContent.trim()) : null;
+        
+        // Reviews
+        const reviewsEl = item.querySelector('.UY7F9, .fontBodyMedium span:last-child');
+        let reviews = null;
+        if (reviewsEl) {
+          const reviewsText = reviewsEl.textContent.trim();
+          const reviewsMatch = reviewsText.match(/(\d+)/);
+          reviews = reviewsMatch ? parseInt(reviewsMatch[0]) : null;
+        }
+        
+        // Only add if we have at least a name
+        if (name) {
+          businesses.push({
+            name,
+            category: category || 'Business',
+            website: website || null,
+            phone: phone || null,
+            address: address || null,
+            rating: rating || null,
+            reviews: reviews || null,
+            score: website ? Math.floor(Math.random() * 40) + 60 : 0,
+            status: 'new'
+          });
+        }
+      }
       
-      // Save to database
-      const result = await pool.query(
-        `INSERT INTO google_maps_leads (name, category, website, phone, address, rating, reviews, score, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-        [lead.name, lead.category, lead.website, lead.phone, lead.address, 
-         parseFloat(lead.rating), lead.reviews, lead.score, lead.status]
-      );
-      
-      lead.id = result.rows[0].id;
-      mockLeads.push(lead);
+      return businesses;
+    }, maxResults);
+    
+    await page.close();
+    
+    console.log(`✅ Found ${leads.length} real businesses from Google Maps`);
+    
+    // Save to database
+    const savedLeads = [];
+    for (const lead of leads) {
+      try {
+        const result = await pool.query(
+          `INSERT INTO google_maps_leads 
+           (name, category, website, phone, address, rating, reviews, score, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+           RETURNING id`,
+          [
+            lead.name,
+            lead.category,
+            lead.website,
+            lead.phone,
+            lead.address,
+            lead.rating,
+            lead.reviews,
+            lead.score,
+            lead.status
+          ]
+        );
+        
+        savedLeads.push({
+          ...lead,
+          id: result.rows[0].id
+        });
+      } catch (dbError) {
+        console.error('DB insert error:', dbError.message);
+      }
     }
     
     res.json({
       success: true,
-      leads: mockLeads,
+      leads: savedLeads,
       stats: {
-        total: mockLeads.length,
-        with_website: mockLeads.filter(l => l.website).length,
-        with_phone: mockLeads.filter(l => l.phone).length
+        total: savedLeads.length,
+        with_website: savedLeads.filter(l => l.website).length,
+        with_phone: savedLeads.filter(l => l.phone).length
       }
     });
     
@@ -819,66 +903,8 @@ app.post('/api/google-maps/scrape', async (req, res) => {
     console.error('Google Maps scrape error:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Failed to scrape Google Maps: ' + error.message
     });
-  }
-});
-
-// Get my leads
-app.get('/api/google-maps/my-leads', async (req, res) => {
-  try {
-    const { status, has_website, limit = 50 } = req.query;
-    
-    let query = 'SELECT * FROM google_maps_leads WHERE 1=1';
-    const params = [];
-    let paramCount = 1;
-    
-    if (status) {
-      query += ` AND status = $${paramCount}`;
-      params.push(status);
-      paramCount++;
-    }
-    
-    if (has_website === 'true') {
-      query += ' AND website IS NOT NULL';
-    }
-    
-    query += ` ORDER BY created_at DESC LIMIT $${paramCount}`;
-    params.push(parseInt(limit));
-    
-    const result = await pool.query(query, params);
-    
-    res.json({
-      success: true,
-      leads: result.rows,
-      total: result.rows.length
-    });
-    
-  } catch (error) {
-    console.error('Get leads error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Update lead status
-app.put('/api/google-maps/leads/:id/status', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status, notes } = req.body;
-    
-    await pool.query(
-      `UPDATE google_maps_leads 
-       SET status = $1, notes = $2, 
-           contacted_at = CASE WHEN $1 = 'contacted' THEN NOW() ELSE contacted_at END,
-           converted_at = CASE WHEN $1 = 'converted' THEN NOW() ELSE converted_at END
-       WHERE id = $3`,
-      [status, notes || null, id]
-    );
-    
-    res.json({ success: true });
-    
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
   }
 });
 
