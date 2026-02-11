@@ -1,6 +1,6 @@
 // ============================================
 // CONTENTSCALE SERVER.JS - FULLY INTEGRATED WITH INDEX.HTML
-// All endpoints work with real database data
+// All endpoints work with real database data - NO DEMO DATA
 // ============================================
 const express = require('express');
 const path = require('path');
@@ -300,8 +300,8 @@ async function createAllTables() {
     
     console.log('✅ All database tables ready');
     
-    // Populate with demo data if tables are empty
-    await populateDemoData(client);
+    // SKIP DEMO DATA - NO MOCK DATA INSERTED
+    // await populateDemoData(client); - REMOVED
     
   } catch (error) {
     console.error('❌ Database setup error:', error.message);
@@ -311,177 +311,12 @@ async function createAllTables() {
 }
 
 // ============================================
-// POPULATE DEMO DATA (for development)
+// DEMO DATA FUNCTION - KEPT BUT NEVER CALLED
 // ============================================
 async function populateDemoData(client) {
-  try {
-    // Check if leaderboard has data
-    const leaderboardCheck = await client.query('SELECT COUNT(*) FROM leaderboard');
-    if (parseInt(leaderboardCheck.rows[0].count) === 0) {
-      console.log('📊 Populating demo leaderboard data...');
-      
-      const demoAgencies = [
-        { name: 'SEO Masters International', url: 'https://seomasters.com', score: 97, country: 'US', city: 'New York' },
-        { name: 'Digital Growth Experts', url: 'https://digitalgrowthexperts.nl', score: 95, country: 'NL', city: 'Amsterdam' },
-        { name: 'Content Kings', url: 'https://contentkings.co.uk', score: 94, country: 'UK', city: 'London' },
-        { name: 'Ranking Revolution', url: 'https://rankingrevolution.de', score: 93, country: 'DE', city: 'Berlin' },
-        { name: 'Traffic Titans', url: 'https://traffictitans.com', score: 92, country: 'US', city: 'Los Angeles' },
-        { name: 'Dutch SEO Professionals', url: 'https://dutchseo.nl', score: 91, country: 'NL', city: 'Rotterdam' },
-        { name: 'Paris SEO Solutions', url: 'https://parisseo.fr', score: 90, country: 'FR', city: 'Paris' },
-        { name: 'Australian Web Wizards', url: 'https://webwizards.au', score: 89, country: 'AU', city: 'Sydney' },
-        { name: 'Canadian Content Creators', url: 'https://canadiancontent.ca', score: 88, country: 'CA', city: 'Toronto' },
-        { name: 'Barcelona Digital', url: 'https://barcelonadigital.es', score: 87, country: 'ES', city: 'Barcelona' },
-      ];
-      
-      for (const agency of demoAgencies) {
-        await client.query(
-          `INSERT INTO leaderboard (company_name, url, score, country, city, location, type, admin_verified, graaf_score, craft_score, technical_score)
-           VALUES ($1, $2, $3, $4, $5, $6, 'seo_agency', true, $7, $8, $9)`,
-          [
-            agency.name, 
-            agency.url, 
-            agency.score, 
-            agency.country, 
-            agency.city,
-            `${agency.city}, ${agency.country}`,
-            Math.floor(agency.score * 0.5),
-            Math.floor(agency.score * 0.3),
-            Math.floor(agency.score * 0.2)
-          ]
-        );
-      }
-      
-      // Add more entries to reach 35+
-      for (let i = 11; i <= 35; i++) {
-        const countries = ['NL', 'US', 'UK', 'DE', 'FR', 'ES', 'AU', 'CA', 'IT', 'BE'];
-        const country = countries[Math.floor(Math.random() * countries.length)];
-        const score = 100 - i;
-        
-        await client.query(
-          `INSERT INTO leaderboard (company_name, url, score, country, city, location, type, admin_verified, graaf_score, craft_score, technical_score)
-           VALUES ($1, $2, $3, $4, $5, $6, 'seo_agency', true, $7, $8, $9)`,
-          [
-            `Agency ${i} Solutions`,
-            `https://agency${i}.com`,
-            score,
-            country,
-            'Capital City',
-            `Capital City, ${country}`,
-            Math.floor(score * 0.5),
-            Math.floor(score * 0.3),
-            Math.floor(score * 0.2)
-          ]
-        );
-      }
-      
-      console.log('✅ Demo leaderboard data added');
-    }
-    
-    // Check if freelancers has data
-    const freelancersCheck = await client.query('SELECT COUNT(*) FROM freelancers');
-    if (parseInt(freelancersCheck.rows[0].count) === 0) {
-      console.log('👥 Populating demo freelancers data...');
-      
-      const demoFreelancers = [
-        { 
-          name: 'Mark van Dijk', 
-          email: 'mark@seoexpert.nl',
-          title: 'Senior SEO Specialist',
-          location: 'Amsterdam',
-          country: 'NL',
-          bio: '10+ years experience in E-E-A-T optimization and traffic recovery. Specialized in GRAAF framework implementation.',
-          hourly_rate: '€85-€120',
-          availability: 'Full-time',
-          is_approved: true,
-          is_verified: true
-        },
-        { 
-          name: 'Sarah Johnson', 
-          email: 'sarah@contentstrategy.com',
-          title: 'Content Strategist',
-          location: 'London',
-          country: 'UK',
-          bio: 'Expert in content scaling and AI-proof SEO strategies. Helped 50+ businesses recover traffic.',
-          hourly_rate: '€75-€110',
-          availability: 'Part-time',
-          is_approved: true,
-          is_verified: true
-        },
-        { 
-          name: 'Thomas Schmidt', 
-          email: 'thomas@techseo.de',
-          title: 'Technical SEO Expert',
-          location: 'Berlin',
-          country: 'DE',
-          bio: 'Specialized in technical SEO audits, site structure optimization, and Core Web Vitals improvement.',
-          hourly_rate: '€90-€130',
-          availability: 'Full-time',
-          is_approved: true,
-          is_verified: true
-        },
-        { 
-          name: 'Lisa Chen', 
-          email: 'lisa@ecomseo.nl',
-          title: 'E-commerce SEO Consultant',
-          location: 'Rotterdam',
-          country: 'NL',
-          bio: 'Helping e-commerce businesses recover lost traffic from AI Overviews. Focus on conversion optimization.',
-          hourly_rate: '€80-€115',
-          availability: 'Full-time',
-          is_approved: true,
-          is_verified: true
-        },
-        { 
-          name: 'David Miller', 
-          email: 'david@localseo.com',
-          title: 'Local SEO Specialist',
-          location: 'Utrecht',
-          country: 'NL',
-          bio: 'Expert in local SEO and Google Business Profile optimization. Specialized in service-based businesses.',
-          hourly_rate: '€70-€100',
-          availability: 'Full-time',
-          is_approved: true,
-          is_verified: true
-        },
-        { 
-          name: 'Emma Wilson', 
-          email: 'emma@contentquality.com',
-          title: 'Content Quality Analyst',
-          location: 'Remote',
-          country: 'UK',
-          bio: 'Focus on E-E-A-T alignment, content quality scoring, and editorial guideline development.',
-          hourly_rate: '€65-€95',
-          availability: 'Part-time',
-          is_approved: true,
-          is_verified: true
-        }
-      ];
-      
-      for (const freelancer of demoFreelancers) {
-        await client.query(
-          `INSERT INTO freelancers (name, email, title, location, country, bio, hourly_rate, availability, is_approved, is_verified)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-          [
-            freelancer.name,
-            freelancer.email,
-            freelancer.title,
-            freelancer.location,
-            freelancer.country,
-            freelancer.bio,
-            freelancer.hourly_rate,
-            freelancer.availability,
-            freelancer.is_approved,
-            freelancer.is_verified
-          ]
-        );
-      }
-      
-      console.log('✅ Demo freelancers data added');
-    }
-    
-  } catch (error) {
-    console.error('❌ Demo data population error:', error.message);
-  }
+  // This function is intentionally left empty and never called
+  // No demo data will ever be inserted
+  return;
 }
 
 // Initialize database
@@ -1083,6 +918,12 @@ app.get('/api/leaderboard', async (req, res) => {
       : 0;
     const countries = [...new Set(entries.map(e => e.country))].length;
     
+    // Get active freelancers count
+    const freelancersResult = await pool.query(
+      'SELECT COUNT(*) FROM freelancers WHERE is_approved = TRUE'
+    );
+    const activeHelpers = parseInt(freelancersResult.rows[0].count) || 0;
+    
     res.json({
       success: true, 
       entries: entries, 
@@ -1092,7 +933,7 @@ app.get('/api/leaderboard', async (req, res) => {
         totalAgencies: totalAgencies,
         avgScore: avgScore,
         countriesCount: countries,
-        activeHelpers: 6 // From freelancers table
+        activeHelpers: activeHelpers
       }
     });
   } catch (error) {
@@ -1909,10 +1750,9 @@ app.listen(PORT, () => {
   console.log('   • GET  /api/blog - Real blog posts');
   console.log('   • GET  /api/admin/stats - Dashboard stats');
   console.log('');
-  console.log('📊 DEMO DATA POPULATED:');
-  console.log('   • 35+ Leaderboard entries');
-  console.log('   • 6 Verified freelancers');
-  console.log('   • Real scoring system');
+  console.log('🚫 NO DEMO DATA - Only real database entries');
+  console.log('   • Leaderboard: Only auto-added scans with score ≥85');
+  console.log('   • Freelancers: Only real registrations');
   console.log('');
   console.log('👤 Default Admin: ot / admin123');
   console.log('');
