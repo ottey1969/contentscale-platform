@@ -17,18 +17,17 @@ const PORT = process.env.PORT || 3000;
 // RATE LIMITING - Security
 // ============================================
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: { success: false, error: 'Too many requests, please try again later.' }
 });
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5, // 5 login attempts per 15 minutes
+  max: 5,
   message: { success: false, error: 'Too many login attempts, please try again later.' }
 });
 
-// Apply rate limiting to API routes
 app.use('/api/', limiter);
 app.use('/api/setup/verify-admin', authLimiter);
 
@@ -98,7 +97,6 @@ process.on('SIGTERM', async () => {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// CORS - Production ready
 app.use((req, res, next) => {
   const allowedOrigins = [
     'https://app.contentscale.site',
@@ -120,24 +118,21 @@ app.use((req, res, next) => {
   next();
 });
 
-// Static files
 app.use(express.static('public'));
 
 // ============================================
 // CACHE SYSTEM
 // ============================================
 const scanCache = new Map();
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 function hashContent(html) {
   return crypto.createHash('sha256').update(html).digest('hex');
 }
 
-// Clear cache on startup
 scanCache.clear();
 console.log('🧹 Cache cleared on startup');
 
-// Cache cleanup interval
 setInterval(() => {
   const now = Date.now();
   let cleared = 0;
@@ -171,7 +166,6 @@ async function createAllTables() {
   const client = await pool.connect();
   
   try {
-    // SUPER ADMINS TABLE
     await client.query(`
       CREATE TABLE IF NOT EXISTS super_admins (
         id SERIAL PRIMARY KEY,
@@ -186,7 +180,6 @@ async function createAllTables() {
       )
     `);
     
-    // Add default admin with HASHED password
     const adminCheck = await client.query('SELECT COUNT(*) FROM super_admins WHERE username = $1', ['ot']);
     if (parseInt(adminCheck.rows[0].count) === 0) {
       const hashedPassword = await bcrypt.hash('admin123', 10);
@@ -197,7 +190,6 @@ async function createAllTables() {
       console.log('✅ Default admin created (ot/admin123) - Password hashed');
     }
     
-    // SCANS TABLE
     await client.query(`
       CREATE TABLE IF NOT EXISTS scans (
         id SERIAL PRIMARY KEY,
@@ -217,7 +209,6 @@ async function createAllTables() {
       )
     `);
     
-    // MIGRATE: Add missing columns to scans
     try {
       await client.query(`
         ALTER TABLE scans 
@@ -230,7 +221,6 @@ async function createAllTables() {
       console.log('ℹ️ Scans migration skipped');
     }
     
-    // LEADERBOARD TABLE
     await client.query(`
       CREATE TABLE IF NOT EXISTS leaderboard (
         id SERIAL PRIMARY KEY,
@@ -253,7 +243,6 @@ async function createAllTables() {
       )
     `);
     
-    // MIGRATE: Add missing columns to leaderboard
     try {
       await client.query(`
         ALTER TABLE leaderboard 
@@ -269,7 +258,6 @@ async function createAllTables() {
       console.log('ℹ️ Leaderboard migration skipped');
     }
     
-    // FREELANCERS TABLE
     await client.query(`
       CREATE TABLE IF NOT EXISTS freelancers (
         id SERIAL PRIMARY KEY,
@@ -289,7 +277,6 @@ async function createAllTables() {
       )
     `);
     
-    // MIGRATE: Add missing columns to freelancers
     try {
       await client.query(`
         ALTER TABLE freelancers 
@@ -303,7 +290,6 @@ async function createAllTables() {
       console.log('ℹ️ Freelancers migration skipped');
     }
     
-    // GOOGLE MAPS LEADS TABLE
     await client.query(`
       CREATE TABLE IF NOT EXISTS google_maps_leads (
         id SERIAL PRIMARY KEY,
@@ -324,7 +310,6 @@ async function createAllTables() {
       )
     `);
     
-    // BLOG POSTS TABLE
     await client.query(`
       CREATE TABLE IF NOT EXISTS blog_posts (
         id SERIAL PRIMARY KEY,
@@ -345,7 +330,6 @@ async function createAllTables() {
       )
     `);
     
-    // SHARE LINKS TABLE
     await client.query(`
       CREATE TABLE IF NOT EXISTS share_links (
         id SERIAL PRIMARY KEY,
@@ -363,7 +347,6 @@ async function createAllTables() {
     `);
     console.log('✅ Share links table created');
     
-    // CLAIMS TABLE
     await client.query(`
       CREATE TABLE IF NOT EXISTS claims (
         id SERIAL PRIMARY KEY,
@@ -391,7 +374,6 @@ async function createAllTables() {
   }
 }
 
-// Initialize database
 pool.connect((err, client, release) => {
   if (err) {
     console.error('❌ Database connection error:', err.message);
@@ -408,7 +390,6 @@ pool.connect((err, client, release) => {
 function calculateStableScores(content, stats, rawHtml) {
   const { wordCount = 0, h1Count = 0, h2Count = 0, h3Count = 0, listCount = 0 } = stats;
   
-  // FAQ DETECTION
   function detectFAQ(html, text) {
     const faqPatterns = [
       /<h[1-6][^>]*>.*?(faq|frequently asked|questions|vraag|antwoord|veelgestelde).*?<\/h[1-6]>/gi,
@@ -438,11 +419,9 @@ function calculateStableScores(content, stats, rawHtml) {
   
   const faqDetection = detectFAQ(rawHtml, content);
   
-  // GRAAF SCORES (50 points total)
   let graafScore = 0;
   const graafItems = {};
   
-  // Credibility (0-16)
   let credibility = 0;
   const hasAuthor = /by\s+\w+|author:|written\s+by|contributor/i.test(content);
   const hasQuotes = /["']|says|according|explains|notes/i.test(content);
@@ -452,11 +431,9 @@ function calculateStableScores(content, stats, rawHtml) {
   credibility += hasExpert ? 5 : 0;
   graafItems.credibility = Math.min(16, credibility);
   
-  // Relevance (0-18)
   const relevance = Math.min(18, Math.floor(wordCount / 55));
   graafItems.relevance = relevance;
   
-  // Accuracy (0-8)
   let accuracy = 0;
   const hasStats = /\d+%|\d+\s+of|\d+\s+out\s+of|\d+\s+studies|\d+\s+research/i.test(content);
   const hasSources = /source:|reference:|according to|study by/i.test(content);
@@ -464,7 +441,6 @@ function calculateStableScores(content, stats, rawHtml) {
   accuracy += hasSources ? 4 : 0;
   graafItems.accuracy = Math.min(8, accuracy);
   
-  // Freshness (0-8)
   let freshness = 0;
   const currentYear = new Date().getFullYear();
   const yearRegex = new RegExp(`20[2-9][0-9]|${currentYear}|${currentYear-1}`, 'gi');
@@ -474,7 +450,6 @@ function calculateStableScores(content, stats, rawHtml) {
   
   graafScore = graafItems.credibility + graafItems.relevance + graafItems.accuracy + graafItems.freshness;
   
-  // CRAFT SCORES (30 points total)
   let craftScore = 0;
   const craftItems = {};
   
@@ -492,7 +467,6 @@ function calculateStableScores(content, stats, rawHtml) {
   
   craftScore = craftItems.headingStructure + craftItems.subheadings + craftItems.paragraphs + craftItems.lists;
   
-  // TECHNICAL SCORES (20 points total)
   let technicalScore = 0;
   
   const metaDescMatch = rawHtml.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
@@ -670,7 +644,6 @@ app.post('/api/scan', async (req, res) => {
   try {
     console.log(`🔍 Scanning: ${scanUrl}`);
 
-    // Check cache first
     const cacheKey = hashContent(scanUrl);
     const cached = scanCache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp) < CACHE_TTL_MS) {
@@ -678,7 +651,6 @@ app.post('/api/scan', async (req, res) => {
       return res.json(cached.result);
     }
 
-    // Fetch content with Puppeteer
     const browser = await getBrowser();
     const page = await browser.newPage();
     
@@ -769,13 +741,11 @@ app.post('/api/scan', async (req, res) => {
       timestamp: new Date().toISOString()
     };
     
-    // Cache the result
     scanCache.set(cacheKey, {
       timestamp: Date.now(),
       result: result
     });
     
-    // Save to database
     try {
       await pool.query(
         `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, content_score, ux_score, breakdown, recommendations, scan_type)
@@ -785,9 +755,7 @@ app.post('/api/scan', async (req, res) => {
          JSON.stringify(result.breakdown), JSON.stringify(result.recommendations)]
       );
       
-      // Auto-add to leaderboard if score >= 85
       if (totalScore >= 85) {
-        // Detect country from domain
         let country = 'NL';
         try {
           const domain = new URL(scanUrl).hostname;
@@ -827,7 +795,7 @@ app.post('/api/scan', async (req, res) => {
 });
 
 // ============================================
-// GOOGLE MAPS SCRAPER ENDPOINT - 100% REAL DATA
+// GOOGLE MAPS SCRAPER ENDPOINT
 // ============================================
 app.post('/api/google-maps/scrape', async (req, res) => {
   try {
@@ -842,26 +810,21 @@ app.post('/api/google-maps/scrape', async (req, res) => {
     
     console.log(`🗺️ Google Maps REAL scrape: ${url}`);
     
-    // Launch browser
     const browser = await getBrowser();
     const page = await browser.newPage();
     
-    // Set viewport and user agent
     await page.setViewport({ width: 1920, height: 1080 });
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     
-    // Navigate to Google Maps
     await page.goto(url, {
       waitUntil: 'networkidle2',
       timeout: 60000
     });
     
-    // Wait for results to load
     await page.waitForSelector('[role="feed"]', { timeout: 10000 }).catch(() => {
       console.log('⚠️ Feed selector not found, trying alternative...');
     });
     
-    // Scroll to load more results
     for (let i = 0; i < 3; i++) {
       await page.evaluate(() => {
         window.scrollBy(0, 800);
@@ -869,7 +832,6 @@ app.post('/api/google-maps/scrape', async (req, res) => {
       await page.waitForTimeout(2000);
     }
     
-    // Extract business data
     const leads = await page.evaluate((maxResults) => {
       const businesses = [];
       const items = document.querySelectorAll('[role="feed"] > div > div, .Nv2PK, .THOPZb, .lI9IFe');
@@ -877,32 +839,25 @@ app.post('/api/google-maps/scrape', async (req, res) => {
       for (let i = 0; i < Math.min(items.length, maxResults); i++) {
         const item = items[i];
         
-        // Business name
         const nameEl = item.querySelector('.qBF1Pd, .d4r55, .fontHeadlineSmall, h3');
         const name = nameEl ? nameEl.textContent.trim() : null;
         if (!name) continue;
         
-        // Website
         const websiteEl = item.querySelector('a[data-value="Website"], a[href^="http"]:not([href*="google.com"])');
         const website = websiteEl ? websiteEl.href : null;
         
-        // Phone
         const phoneEl = item.querySelector('button[data-item-id*="phone"], a[href^="tel:"]');
         const phone = phoneEl ? (phoneEl.href ? phoneEl.href.replace('tel:', '') : phoneEl.textContent.trim()) : null;
         
-        // Category
         const categoryEl = item.querySelector('.W4Efsd:not(.ZlAx9e), .YvY7kb, .Ahnjwc');
         const category = categoryEl ? categoryEl.textContent.trim() : null;
         
-        // Address
         const addressEl = item.querySelector('button[data-item-id*="address"], .W4Efsd span');
         const address = addressEl ? addressEl.textContent.trim() : null;
         
-        // Rating
         const ratingEl = item.querySelector('.MW4etd, .fontBodyMedium span[aria-hidden="true"]');
         const rating = ratingEl ? parseFloat(ratingEl.textContent.trim()) : null;
         
-        // Reviews
         const reviewsEl = item.querySelector('.UY7F9, .fontBodyMedium span:last-child');
         let reviews = null;
         if (reviewsEl) {
@@ -911,8 +866,6 @@ app.post('/api/google-maps/scrape', async (req, res) => {
           reviews = reviewsMatch ? parseInt(reviewsMatch[0]) : null;
         }
         
-        // Score based on website presence AND if website is accessible
-        // We'll set to 0 initially and verify later
         businesses.push({
           name,
           category: category || 'Business',
@@ -921,7 +874,7 @@ app.post('/api/google-maps/scrape', async (req, res) => {
           address: address || null,
           rating: rating || null,
           reviews: reviews || null,
-          score: 0, // Will be updated after website verification
+          score: 0,
           status: 'new'
         });
       }
@@ -933,11 +886,9 @@ app.post('/api/google-maps/scrape', async (req, res) => {
     
     console.log(`✅ Found ${leads.length} real businesses from Google Maps`);
     
-    // Verify websites and calculate scores
     const savedLeads = [];
     for (const lead of leads) {
       try {
-        // Verify if website exists and is accessible
         let websiteScore = 0;
         let verifiedWebsite = lead.website;
         
@@ -951,9 +902,8 @@ app.post('/api/google-maps/scrape', async (req, res) => {
             }).catch(() => null);
             
             if (response && response.ok()) {
-              websiteScore = 75; // Has working website
+              websiteScore = 75;
               
-              // Check if website has basic SEO elements
               const content = await websitePage.content().catch(() => '');
               if (content) {
                 if (content.includes('<title>')) websiteScore += 5;
@@ -1022,284 +972,7 @@ app.post('/api/google-maps/scrape', async (req, res) => {
 });
 
 // ============================================
-// SHARE LINKS ENDPOINTS - REAL IMPLEMENTATION
-// ============================================
-app.get('/api/admin/share-links', verifyAdmin, async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT * FROM share_links 
-      ORDER BY created_at DESC 
-      LIMIT 100
-    `);
-    res.json({ success: true, share_links: result.rows });
-  } catch (error) {
-    console.error('Share links error:', error);
-    res.json({ success: true, share_links: [] });
-  }
-});
-
-app.post('/api/admin/share-links/create', verifyAdmin, async (req, res) => {
-  try {
-    const { client_email, client_name, client_company, scans_limit = 10, valid_days = 30 } = req.body;
-    
-    const shareCode = crypto.randomBytes(16).toString('hex');
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + valid_days);
-    
-    const result = await pool.query(
-      `INSERT INTO share_links 
-       (share_code, client_email, client_name, client_company, scans_limit, created_by, expires_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING *`,
-      [shareCode, client_email, client_name, client_company, scans_limit, req.admin.id, expiresAt]
-    );
-    
-    res.json({
-      success: true,
-      share_link: result.rows[0],
-      share_url: `https://app.contentscale.site/share/${shareCode}`,
-      expires_at: expiresAt
-    });
-  } catch (error) {
-    console.error('Create share link error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.delete('/api/admin/share-links/:id', verifyAdmin, async (req, res) => {
-  try {
-    await pool.query('DELETE FROM share_links WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Delete share link error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// ============================================
-// CLAIMS ENDPOINTS - REAL IMPLEMENTATION
-// ============================================
-app.get('/api/admin/claims/pending', verifyAdmin, async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT * FROM claims 
-      WHERE status = 'pending' 
-      ORDER BY created_at DESC 
-      LIMIT 50
-    `);
-    
-    const countResult = await pool.query(
-      'SELECT COUNT(*) FROM claims WHERE status = $1',
-      ['pending']
-    );
-    
-    res.json({ 
-      success: true, 
-      pending_count: parseInt(countResult.rows[0].count) || 0,
-      claims: result.rows 
-    });
-  } catch (error) {
-    console.error('Claims error:', error);
-    res.json({ success: true, pending_count: 0, claims: [] });
-  }
-});
-
-app.get('/api/admin/claims', verifyAdmin, async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT * FROM claims 
-      ORDER BY created_at DESC 
-      LIMIT 100
-    `);
-    res.json({ success: true, claims: result.rows });
-  } catch (error) {
-    console.error('Claims error:', error);
-    res.json({ success: true, claims: [] });
-  }
-});
-
-app.post('/api/claims/submit', async (req, res) => {
-  try {
-    const { business_name, business_url, contact_name, contact_email, contact_phone, verification_document } = req.body;
-    
-    if (!business_name || !business_url || !contact_name || !contact_email) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Required fields missing' 
-      });
-    }
-    
-    const result = await pool.query(
-      `INSERT INTO claims 
-       (business_name, business_url, contact_name, contact_email, contact_phone, verification_document)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id`,
-      [business_name, business_url, contact_name, contact_email, contact_phone, verification_document]
-    );
-    
-    res.json({ 
-      success: true, 
-      message: 'Claim submitted successfully',
-      id: result.rows[0].id 
-    });
-  } catch (error) {
-    console.error('Claim submission error:', error);
-    res.status(500).json({ success: false, error: 'Failed to submit claim' });
-  }
-});
-
-app.post('/api/admin/claims/:id/approve', verifyAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { notes } = req.body;
-    
-    // Get the claim details
-    const claim = await pool.query('SELECT * FROM claims WHERE id = $1', [id]);
-    
-    if (claim.rows.length > 0) {
-      // Update leaderboard with claimed business
-      await pool.query(
-        `UPDATE leaderboard 
-         SET is_verified = TRUE, 
-             company_name = COALESCE($1, company_name),
-             admin_verified = TRUE
-         WHERE url = $2 OR url LIKE $3`,
-        [
-          claim.rows[0].business_name,
-          claim.rows[0].business_url,
-          `%${claim.rows[0].business_url.replace(/^https?:\/\//, '')}%`
-        ]
-      );
-    }
-    
-    await pool.query(
-      `UPDATE claims 
-       SET status = 'approved', 
-           reviewed_by = $1, 
-           reviewed_at = NOW(),
-           notes = $2
-       WHERE id = $3`,
-      [req.admin.id, notes || null, id]
-    );
-    
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Approve claim error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.post('/api/admin/claims/:id/reject', verifyAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { notes } = req.body;
-    
-    await pool.query(
-      `UPDATE claims 
-       SET status = 'rejected', 
-           reviewed_by = $1, 
-           reviewed_at = NOW(),
-           notes = $2
-       WHERE id = $3`,
-      [req.admin.id, notes || null, id]
-    );
-    
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Reject claim error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// ============================================
-// BLOG ADMIN ENDPOINTS - REAL IMPLEMENTATION
-// ============================================
-app.get('/api/admin/blog', verifyAdmin, async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT * FROM blog_posts 
-      ORDER BY created_at DESC 
-      LIMIT 100
-    `);
-    res.json({ success: true, posts: result.rows });
-  } catch (error) {
-    console.error('Blog admin error:', error);
-    res.json({ success: true, posts: [] });
-  }
-});
-
-app.post('/api/admin/blog', verifyAdmin, async (req, res) => {
-  try {
-    const { title, slug, excerpt, content, category, tags, featured_image, author, meta_description, status, published_at } = req.body;
-    
-    if (!title || !slug || !content || !category || !author) {
-      return res.status(400).json({ success: false, error: 'Required fields missing' });
-    }
-    
-    const result = await pool.query(
-      `INSERT INTO blog_posts 
-       (title, slug, excerpt, content, category, tags, featured_image, author, meta_description, status, published_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-       RETURNING id`,
-      [
-        title, 
-        slug, 
-        excerpt || null, 
-        content, 
-        category, 
-        tags || [], 
-        featured_image || null, 
-        author, 
-        meta_description || null, 
-        status || 'draft',
-        published_at || null
-      ]
-    );
-    
-    res.json({ success: true, id: result.rows[0].id });
-  } catch (error) {
-    console.error('Blog create error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.put('/api/admin/blog/:id', verifyAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { title, slug, excerpt, content, category, tags, featured_image, author, meta_description, status, published_at } = req.body;
-    
-    await pool.query(
-      `UPDATE blog_posts 
-       SET title = $1, slug = $2, excerpt = $3, content = $4, category = $5, 
-           tags = $6, featured_image = $7, author = $8, meta_description = $9, 
-           status = $10, published_at = $11, updated_at = NOW()
-       WHERE id = $12`,
-      [
-        title, slug, excerpt, content, category, 
-        tags, featured_image, author, meta_description, 
-        status, published_at, id
-      ]
-    );
-    
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Blog update error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.delete('/api/admin/blog/:id', verifyAdmin, async (req, res) => {
-  try {
-    await pool.query('DELETE FROM blog_posts WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Blog delete error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// ============================================
-// LEADERBOARD ENDPOINTS
+// LEADERBOARD ENDPOINT
 // ============================================
 app.get('/api/leaderboard', async (req, res) => {
   try {
@@ -1327,14 +1000,12 @@ app.get('/api/leaderboard', async (req, res) => {
     
     const entries = result.rows;
     
-    // Calculate stats
     const totalAgencies = entries.length;
     const avgScore = totalAgencies > 0 
       ? Math.round(entries.reduce((sum, e) => sum + (e.score || 0), 0) / totalAgencies) 
       : 0;
     const countries = [...new Set(entries.map(e => e.country))].length;
     
-    // Get active freelancers count
     const freelancersResult = await pool.query(
       'SELECT COUNT(*) FROM freelancers WHERE is_approved = TRUE'
     );
@@ -1405,7 +1076,6 @@ app.post('/api/freelancers/register', async (req, res) => {
       });
     }
     
-    // Check if email already exists
     const existing = await pool.query(
       'SELECT id FROM freelancers WHERE email = $1',
       [email]
@@ -1541,7 +1211,40 @@ app.get('/api/blog/:slug', async (req, res) => {
 });
 
 // ============================================
-// ADMIN VERIFICATION MIDDLEWARE
+// CLAIMS SUBMIT ENDPOINT (PUBLIC)
+// ============================================
+app.post('/api/claims/submit', async (req, res) => {
+  try {
+    const { business_name, business_url, contact_name, contact_email, contact_phone, verification_document } = req.body;
+    
+    if (!business_name || !business_url || !contact_name || !contact_email) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Required fields missing' 
+      });
+    }
+    
+    const result = await pool.query(
+      `INSERT INTO claims 
+       (business_name, business_url, contact_name, contact_email, contact_phone, verification_document)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id`,
+      [business_name, business_url, contact_name, contact_email, contact_phone, verification_document]
+    );
+    
+    res.json({ 
+      success: true, 
+      message: 'Claim submitted successfully',
+      id: result.rows[0].id 
+    });
+  } catch (error) {
+    console.error('Claim submission error:', error);
+    res.status(500).json({ success: false, error: 'Failed to submit claim' });
+  }
+});
+
+// ============================================
+// ADMIN VERIFICATION MIDDLEWARE - VERPLAATST NAAR BOVEN!
 // ============================================
 const verifyAdmin = async (req, res, next) => {
   const adminKey = req.headers['x-admin-key'];
@@ -1567,10 +1270,10 @@ const verifyAdmin = async (req, res, next) => {
 };
 
 // ============================================
-// ADMIN ENDPOINTS
+// ADMIN ENDPOINTS - ALLEEN NA verifyAdmin!
 // ============================================
 
-// Login
+// Admin Login (geen verifyAdmin nodig)
 app.post('/api/setup/verify-admin', async (req, res) => {
   const { username, password } = req.body;
   
@@ -1590,7 +1293,6 @@ app.post('/api/setup/verify-admin', async (req, res) => {
     
     const admin = result.rows[0];
     
-    // Compare password with bcrypt
     const isValid = await bcrypt.compare(password, admin.password_hash);
     if (!isValid) {
       return res.status(401).json({ success: false, error: 'Invalid credentials' });
@@ -1613,7 +1315,7 @@ app.post('/api/setup/verify-admin', async (req, res) => {
   }
 });
 
-// Stats
+// Admin Stats
 app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
   try {
     const [scans, leaderboard, freelancers, blogPosts, shareLinks, claims] = await Promise.all([
@@ -1655,14 +1357,11 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
   }
 });
 
-// ============================================
-// ANALYTICS ENDPOINT - REAL METRICS
-// ============================================
+// Admin Analytics
 app.get('/api/admin/analytics', verifyAdmin, async (req, res) => {
   try {
     const range = req.query.range || '30d';
     
-    // Calculate date range
     const now = new Date();
     let startDate = new Date();
     
@@ -1675,7 +1374,6 @@ app.get('/api/admin/analytics', verifyAdmin, async (req, res) => {
       default: startDate.setDate(now.getDate() - 30);
     }
     
-    // Get scans over time
     const scansOverTime = await pool.query(`
       SELECT 
         DATE(created_at) as date,
@@ -1686,7 +1384,6 @@ app.get('/api/admin/analytics', verifyAdmin, async (req, res) => {
       ORDER BY date ASC
     `, [startDate]);
     
-    // Get current period stats
     const currentStats = await pool.query(`
       SELECT 
         COUNT(*) as scans_count,
@@ -1696,7 +1393,6 @@ app.get('/api/admin/analytics', verifyAdmin, async (req, res) => {
       WHERE created_at >= $1
     `, [startDate]);
     
-    // Get previous period stats for comparison
     const previousPeriodStart = new Date(startDate);
     const daysDiff = Math.ceil((now - startDate) / (1000 * 60 * 60 * 24));
     previousPeriodStart.setDate(previousPeriodStart.getDate() - daysDiff);
@@ -1710,7 +1406,6 @@ app.get('/api/admin/analytics', verifyAdmin, async (req, res) => {
       WHERE created_at >= $1 AND created_at < $2
     `, [previousPeriodStart, startDate]);
     
-    // Calculate trends
     const current = currentStats.rows[0];
     const previous = previousStats.rows[0];
     
@@ -1718,7 +1413,6 @@ app.get('/api/admin/analytics', verifyAdmin, async (req, res) => {
     const scoreTrend = calculateTrend(current.avg_score, previous.avg_score);
     const usersTrend = calculateTrend(current.unique_urls, previous.unique_urls);
     
-    // Get country distribution
     const countries = await pool.query(`
       SELECT 
         country as name,
@@ -1731,7 +1425,6 @@ app.get('/api/admin/analytics', verifyAdmin, async (req, res) => {
       LIMIT 10
     `, [startDate]);
     
-    // Get recent activity
     const recentActivity = await pool.query(`
       SELECT 
         'scan' as type,
@@ -1744,7 +1437,6 @@ app.get('/api/admin/analytics', verifyAdmin, async (req, res) => {
       LIMIT 10
     `);
     
-    // Calculate real performance metrics
     const performanceStats = await pool.query(`
       SELECT 
         ROUND(AVG(EXTRACT(EPOCH FROM (created_at - LAG(created_at) OVER (ORDER BY created_at))))::numeric, 1) as avg_scan_duration,
@@ -1825,9 +1517,7 @@ function formatTimeAgo(date) {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
-// ============================================
-// CLIENTS ENDPOINTS
-// ============================================
+// Admin Clients
 app.get('/api/admin/clients', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -1990,6 +1680,245 @@ app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
   }
 });
 
+// SHARE LINKS ENDPOINTS
+app.get('/api/admin/share-links', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM share_links 
+      ORDER BY created_at DESC 
+      LIMIT 100
+    `);
+    res.json({ success: true, share_links: result.rows });
+  } catch (error) {
+    console.error('Share links error:', error);
+    res.json({ success: true, share_links: [] });
+  }
+});
+
+app.post('/api/admin/share-links/create', verifyAdmin, async (req, res) => {
+  try {
+    const { client_email, client_name, client_company, scans_limit = 10, valid_days = 30 } = req.body;
+    
+    const shareCode = crypto.randomBytes(16).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + valid_days);
+    
+    const result = await pool.query(
+      `INSERT INTO share_links 
+       (share_code, client_email, client_name, client_company, scans_limit, created_by, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [shareCode, client_email, client_name, client_company, scans_limit, req.admin.id, expiresAt]
+    );
+    
+    res.json({
+      success: true,
+      share_link: result.rows[0],
+      share_url: `https://app.contentscale.site/share/${shareCode}`,
+      expires_at: expiresAt
+    });
+  } catch (error) {
+    console.error('Create share link error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/admin/share-links/:id', verifyAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM share_links WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete share link error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// CLAIMS ADMIN ENDPOINTS
+app.get('/api/admin/claims/pending', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM claims 
+      WHERE status = 'pending' 
+      ORDER BY created_at DESC 
+      LIMIT 50
+    `);
+    
+    const countResult = await pool.query(
+      'SELECT COUNT(*) FROM claims WHERE status = $1',
+      ['pending']
+    );
+    
+    res.json({ 
+      success: true, 
+      pending_count: parseInt(countResult.rows[0].count) || 0,
+      claims: result.rows 
+    });
+  } catch (error) {
+    console.error('Claims error:', error);
+    res.json({ success: true, pending_count: 0, claims: [] });
+  }
+});
+
+app.get('/api/admin/claims', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM claims 
+      ORDER BY created_at DESC 
+      LIMIT 100
+    `);
+    res.json({ success: true, claims: result.rows });
+  } catch (error) {
+    console.error('Claims error:', error);
+    res.json({ success: true, claims: [] });
+  }
+});
+
+app.post('/api/admin/claims/:id/approve', verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { notes } = req.body;
+    
+    const claim = await pool.query('SELECT * FROM claims WHERE id = $1', [id]);
+    
+    if (claim.rows.length > 0) {
+      await pool.query(
+        `UPDATE leaderboard 
+         SET is_verified = TRUE, 
+             company_name = COALESCE($1, company_name),
+             admin_verified = TRUE
+         WHERE url = $2 OR url LIKE $3`,
+        [
+          claim.rows[0].business_name,
+          claim.rows[0].business_url,
+          `%${claim.rows[0].business_url.replace(/^https?:\/\//, '')}%`
+        ]
+      );
+    }
+    
+    await pool.query(
+      `UPDATE claims 
+       SET status = 'approved', 
+           reviewed_by = $1, 
+           reviewed_at = NOW(),
+           notes = $2
+       WHERE id = $3`,
+      [req.admin.id, notes || null, id]
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Approve claim error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/admin/claims/:id/reject', verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { notes } = req.body;
+    
+    await pool.query(
+      `UPDATE claims 
+       SET status = 'rejected', 
+           reviewed_by = $1, 
+           reviewed_at = NOW(),
+           notes = $2
+       WHERE id = $3`,
+      [req.admin.id, notes || null, id]
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Reject claim error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// BLOG ADMIN ENDPOINTS
+app.get('/api/admin/blog', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM blog_posts 
+      ORDER BY created_at DESC 
+      LIMIT 100
+    `);
+    res.json({ success: true, posts: result.rows });
+  } catch (error) {
+    console.error('Blog admin error:', error);
+    res.json({ success: true, posts: [] });
+  }
+});
+
+app.post('/api/admin/blog', verifyAdmin, async (req, res) => {
+  try {
+    const { title, slug, excerpt, content, category, tags, featured_image, author, meta_description, status, published_at } = req.body;
+    
+    if (!title || !slug || !content || !category || !author) {
+      return res.status(400).json({ success: false, error: 'Required fields missing' });
+    }
+    
+    const result = await pool.query(
+      `INSERT INTO blog_posts 
+       (title, slug, excerpt, content, category, tags, featured_image, author, meta_description, status, published_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       RETURNING id`,
+      [
+        title, 
+        slug, 
+        excerpt || null, 
+        content, 
+        category, 
+        tags || [], 
+        featured_image || null, 
+        author, 
+        meta_description || null, 
+        status || 'draft',
+        published_at || null
+      ]
+    );
+    
+    res.json({ success: true, id: result.rows[0].id });
+  } catch (error) {
+    console.error('Blog create error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.put('/api/admin/blog/:id', verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, slug, excerpt, content, category, tags, featured_image, author, meta_description, status, published_at } = req.body;
+    
+    await pool.query(
+      `UPDATE blog_posts 
+       SET title = $1, slug = $2, excerpt = $3, content = $4, category = $5, 
+           tags = $6, featured_image = $7, author = $8, meta_description = $9, 
+           status = $10, published_at = $11, updated_at = NOW()
+       WHERE id = $12`,
+      [
+        title, slug, excerpt, content, category, 
+        tags, featured_image, author, meta_description, 
+        status, published_at, id
+      ]
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Blog update error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/admin/blog/:id', verifyAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM blog_posts WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Blog delete error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ==========================================
 // HTML ROUTES
 // ==========================================
@@ -2009,7 +1938,9 @@ app.get('/blog/:slug', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/blog-post.html'));
 });
 
-// Health check
+// ============================================
+// HEALTH CHECK
+// ============================================
 app.get('/api/health', async (req, res) => {
   try {
     await pool.query('SELECT 1');
@@ -2032,7 +1963,9 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// Catch-all route
+// ============================================
+// CATCH-ALL ROUTE
+// ============================================
 app.get('*', (req, res) => {
   const filePath = path.join(__dirname, '../public', req.path);
   res.sendFile(filePath, (err) => {
