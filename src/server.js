@@ -7,7 +7,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { Pool } = require('pg');
 const puppeteer = require('puppeteer');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
