@@ -11,5 +11,8 @@
     "pg": "^8.11.3",
     "playwright": "^1.40.0",
     "puppeteer": "^21.6.0"
+     "bcryptjs": "^2.4.3",
+  "express-rate-limit": "^7.1.5",
+    
   }
 }
