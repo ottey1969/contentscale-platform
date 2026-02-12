@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,7 +7,6 @@
   <title>ContentScale - Elite SEO Content Optimization | Recover Lost Traffic</title>
   <meta name="description" content="Stop losing traffic to AI. Professional SEO content optimization based on Google's E-E-A-T guidelines. Google Core Update Proof.">
   
-  <!-- ✅ SCHEMA.ORG MARKUP - 100% INTACT -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -90,16 +90,10 @@
   }
   </script>
   
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <style>
-    /* ============================================
-       BASIS STYLING - ALLES WIT OP DONKER
-       ============================================ */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
     body {
@@ -109,17 +103,14 @@
       line-height: 1.6;
     }
     
-    /* ✅ ALLE TEXT STANDAARD WIT */
     h1, h2, h3, h4, h5, h6, p, a, span, div, button, input, textarea, select, label, li {
       color: white !important;
     }
     
-    /* ✅ GRIJZE TEXT VOOR SECONDARY */
     .text-gray-300, .text-gray-400, .text-gray-500 {
       color: #d1d5db !important;
     }
     
-    /* ✅ ZWARTE TEXT OP WITTE ACHTERGROND - SPECIFIEK VOOR DEZE BUTTON */
     .btn-white-black {
       background: white !important;
       color: #581c87 !important;
@@ -136,13 +127,11 @@
       color: #581c87 !important;
     }
     
-    /* ✅ BACKGROUNDS */
     .bg-gray-900 { background-color: #030712; }
     .bg-gray-800 { background-color: #111827; }
     .bg-gray-700 { background-color: #1f2937; }
     .bg-gray-900\/95 { background-color: rgba(3, 7, 18, 0.95); }
     
-    /* ✅ BUTTON STYLING */
     .btn {
       display: inline-flex;
       align-items: center;
@@ -173,15 +162,14 @@
     }
     
     .btn-success {
-      background: #16a34a;
-      color: white;
+      background: #0f7b3a !important;
+      color: white !important;
     }
     
     .btn-success:hover {
-      background: #15803d;
+      background: #0e6a32 !important;
     }
     
-    /* ✅ INPUT FIELDS */
     input, textarea, select {
       background-color: #1f2937 !important;
       color: white !important;
@@ -201,7 +189,6 @@
       color: #9ca3af !important;
     }
     
-    /* ✅ MODE TOGGLE */
     .mode-toggle {
       position: relative;
       padding: 0.75rem 1.5rem;
@@ -225,7 +212,7 @@
       right: -8px;
       width: 24px;
       height: 24px;
-      background: #10b981;
+      background: #0f7b3a;
       color: white;
       border-radius: 50%;
       display: flex;
@@ -236,7 +223,6 @@
       border: 2px solid white;
     }
     
-    /* ✅ CARDS */
     .card {
       background: #111827;
       border: 1px solid #374151;
@@ -251,7 +237,6 @@
       box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
     }
     
-    /* ✅ TABLES */
     table {
       width: 100%;
       border-collapse: collapse;
@@ -275,7 +260,6 @@
       background: #1f2937;
     }
     
-    /* ✅ STAT CARDS */
     .stat-card {
       position: relative;
       border-radius: 1rem;
@@ -299,7 +283,6 @@
       z-index: 10;
     }
     
-    /* ✅ TOP 3 CARDS */
     .top-card {
       border-radius: 1rem;
       padding: 1.5rem;
@@ -336,12 +319,10 @@
       border-color: rgba(255, 255, 255, 0.6);
     }
     
-    /* ✅ SCORE BADGES */
     .score-high { color: #4ade80; }
     .score-medium { color: #facc15; }
     .score-low { color: #f87171; }
     
-    /* ✅ PROGRESS BAR */
     .progress-bar {
       height: 0.75rem;
       background: #374151;
@@ -355,7 +336,6 @@
       transition: width 0.3s;
     }
     
-    /* ✅ GRIDS */
     .grid-3 {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -380,7 +360,6 @@
       .grid-3, .grid-4 { grid-template-columns: 1fr; }
     }
     
-    /* ✅ RANKINGS GRID */
     .rankings-4-15-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -413,7 +392,6 @@
       transform: translateY(-4px);
     }
     
-    /* ✅ FILTER TAGS */
     .filter-tag {
       background: #374151;
       color: white;
@@ -435,7 +413,6 @@
       border-color: #a855f7;
     }
     
-    /* ✅ RANKINGS TABLE */
     .rankings-table {
       width: 100%;
       background: #111827;
@@ -457,10 +434,8 @@
       color: white;
     }
     
-    /* ✅ HIDE/SHOW */
     .hidden { display: none; }
     
-    /* ✅ MODAL */
     .modal {
       position: fixed;
       top: 0;
@@ -490,7 +465,6 @@
       overflow-y: auto;
     }
     
-    /* ✅ SKELETON LOADING */
     .skeleton {
       background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
       background-size: 200% 100%;
@@ -502,13 +476,11 @@
       100% { background-position: -200% 0; }
     }
     
-    /* ✅ REVERSE EMAIL */
     .reverse-email {
       unicode-bidi: bidi-override;
       direction: rtl;
     }
     
-    /* ✅ FAQ */
     .faq-item {
       background: #111827;
       border: 1px solid #374151;
@@ -545,17 +517,55 @@
       color: #d1d5db;
     }
     
-    /* ✅ FOOTER */
     footer {
       background: #111827;
       border-top: 2px solid #374151;
       margin-top: 4rem;
     }
+    
+    .text-blue-400, a.text-blue-400 {
+      color: #7dd3fc !important;
+      text-decoration: underline;
+      text-decoration-color: rgba(125, 211, 252, 0.4);
+      text-underline-offset: 2px;
+    }
+    
+    .text-blue-400:hover, a.text-blue-400:hover {
+      color: #bae6fd !important;
+      text-decoration-color: #bae6fd;
+    }
+    
+    .px-2.py-1.bg-green-600,
+    span[class*="bg-green-600"].px-2.py-1 {
+      background-color: #0f7b3a !important;
+      color: white !important;
+      font-weight: 600;
+    }
+    
+    a:focus, button:focus, [role="button"]:focus, input:focus, select:focus, textarea:focus {
+      outline: 2px solid #a855f7 !important;
+      outline-offset: 2px !important;
+    }
+    
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: #7e22ce;
+      color: white;
+      padding: 0.5rem 1rem;
+      z-index: 100;
+      transition: top 0.2s;
+    }
+    
+    .skip-link:focus {
+      top: 0;
+    }
   </style>
 </head>
 <body class="bg-gray-900">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
 
-  <!-- NAVIGATION -->
   <nav class="sticky top-0 z-50 bg-gray-900/95 border-b-2 border-purple-600 backdrop-blur-sm">
     <div class="max-w-7xl mx-auto px-6 py-4">
       <div class="flex items-center justify-between">
@@ -577,15 +587,11 @@
     </div>
   </nav>
 
-  <div class="max-w-7xl mx-auto px-6 py-8">
+  <div id="main-content" class="max-w-7xl mx-auto px-6 py-8">
     
-    <!-- ============================================
-         🎯 LEAD SCANNER - 100% WERKEND
-         ============================================ -->
     <div id="lead-scanner" class="mb-16">
       <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
         
-        <!-- HEADER -->
         <div class="text-center mb-8">
           <h2 class="text-4xl font-bold mb-3 text-white">🎯 SEO Content Quality & Lead Scanner</h2>
           <p class="text-xl text-gray-200 mb-2">Find businesses that need content help</p>
@@ -598,7 +604,6 @@
           </div>
         </div>
         
-        <!-- MODE TOGGLE -->
         <div class="flex justify-center gap-4 mb-8">
           <button id="modeSingleBtn" onclick="switchMode('single')" class="mode-toggle active">
             <i class="fas fa-link mr-2"></i> Single URL
@@ -608,7 +613,6 @@
           </button>
         </div>
         
-        <!-- SINGLE URL MODE -->
         <div id="singleMode" class="max-w-3xl mx-auto">
           <div class="card">
             <div class="flex flex-col sm:flex-row gap-3">
@@ -618,7 +622,6 @@
               </button>
             </div>
             
-            <!-- Progress Bar -->
             <div id="singleProgress" class="hidden mt-4">
               <div class="progress-bar">
                 <div id="singleProgressBar" class="progress-bar-fill" style="width: 0%"></div>
@@ -627,11 +630,9 @@
             </div>
           </div>
           
-          <!-- Scan Result -->
           <div id="singleResult" class="hidden mt-4"></div>
         </div>
         
-        <!-- BULK MODE - GOOGLE MAPS -->
         <div id="bulkMode" class="hidden max-w-6xl mx-auto">
           <div class="card">
             <div class="flex flex-col sm:flex-row gap-3 mb-4">
@@ -648,7 +649,6 @@
             </div>
           </div>
           
-          <!-- Leads Container -->
           <div id="leadsContainer" class="hidden mt-6">
             <div class="card border-green-500">
               <div class="flex items-center justify-between mb-4">
@@ -661,7 +661,6 @@
                 </button>
               </div>
               
-              <!-- Leads Table -->
               <div class="overflow-x-auto">
                 <table>
                   <thead>
@@ -684,7 +683,6 @@
                 </table>
               </div>
               
-              <!-- Export Button -->
               <div class="flex justify-end mt-4">
                 <button onclick="exportLeadsToCSV()" class="btn-success btn">
                   <i class="fas fa-file-csv mr-2"></i> Export CSV
@@ -694,7 +692,6 @@
           </div>
         </div>
         
-        <!-- ✅ CTA - WORD SPECIALIST - ZWARTE TEXT OP WITTE ACHTERGROND -->
         <div class="mt-8 bg-gradient-to-r from-purple-800 via-pink-800 to-purple-800 rounded-xl p-6 text-center border border-purple-400">
           <h3 class="text-2xl font-bold mb-2 text-white">💼 Are You an SEO Specialist or Content Marketer?</h3>
           <p class="text-gray-200 mb-4">
@@ -708,9 +705,6 @@
       </div>
     </div>
     
-    <!-- ============================================
-         📊 WHY CONTENTSCALE - ALLE FEATURES
-         ============================================ -->
     <div class="mb-16">
       <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 border border-gray-700">
         <div class="text-center mb-12">
@@ -771,9 +765,6 @@
       </div>
     </div>
     
-    <!-- ============================================
-         🏆 ELITE LEADERBOARD - MET WERKENDE KNOPPEN
-         ============================================ -->
     <div id="leaderboard" class="mb-16">
       <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
         <div class="text-center mb-8">
@@ -781,7 +772,6 @@
           <p class="text-xl text-gray-200">Top performing websites automatically added</p>
         </div>
         
-        <!-- STATS CARDS -->
         <div class="grid-4 mb-8">
           <div class="stat-card">
             <div>
@@ -813,7 +803,6 @@
           </div>
         </div>
         
-        <!-- TOP 3 - MET WERKENDE WEBSITE KNOPPEN -->
         <div class="grid-3 mb-10">
           <div class="top-card gold">
             <div class="text-5xl mb-2">🥇</div>
@@ -847,15 +836,11 @@
           </div>
         </div>
         
-        <!-- RANKINGS 4-15 -->
         <div id="rankings4to15Container" class="mb-10">
           <h3 class="text-2xl font-bold text-white mb-6">Rankings 4-15</h3>
-          <div class="rankings-4-15-grid" id="rankings4to15Grid">
-            <!-- Dynamically filled -->
-          </div>
+          <div class="rankings-4-15-grid" id="rankings4to15Grid"></div>
         </div>
         
-        <!-- FILTERS -->
         <div class="bg-gray-800 rounded-lg p-4 mb-6">
           <button onclick="toggleFilters()" class="w-full flex items-center justify-between text-left text-white">
             <div class="flex items-center gap-2">
@@ -875,7 +860,6 @@
           </div>
         </div>
         
-        <!-- RANKINGS 16+ TOGGLE -->
         <div>
           <button onclick="toggleRankings()" id="rankingsToggleBtn" class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-between transition-all">
             <span id="rankingsToggleText">📊 Show Rankings 16+</span>
@@ -901,9 +885,6 @@
       </div>
     </div>
     
-    <!-- ============================================
-         💼 VERIFIED SEO SPECIALISTS
-         ============================================ -->
     <div id="freelancers" class="mb-16">
       <div class="text-center mb-8">
         <h2 class="text-4xl font-bold mb-3 text-white">🎯 Verified SEO Specialists</h2>
@@ -916,9 +897,6 @@
       <div id="freelancersGrid" class="grid-3"></div>
     </div>
     
-    <!-- ============================================
-         👤 ABOUT THE FOUNDER
-         ============================================ -->
     <div class="mb-16">
       <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
         <div class="flex flex-col md:flex-row gap-8 items-center">
@@ -967,9 +945,6 @@
       </div>
     </div>
     
-    <!-- ============================================
-         ❓ FREQUENTLY ASKED QUESTIONS
-         ============================================ -->
     <div class="mb-16 max-w-4xl mx-auto">
       <div class="text-center mb-8">
         <h2 class="text-4xl font-bold mb-3 text-white">❓ Frequently Asked Questions</h2>
@@ -977,7 +952,6 @@
       </div>
       
       <div class="space-y-4">
-        <!-- FAQ 1 -->
         <div class="faq-item">
           <button onclick="toggleFAQ(1)" class="faq-question">
             <span>What is the GRAAF Framework?</span>
@@ -988,7 +962,6 @@
           </div>
         </div>
         
-        <!-- FAQ 2 -->
         <div class="faq-item">
           <button onclick="toggleFAQ(2)" class="faq-question">
             <span>How long does SEO recovery take?</span>
@@ -999,7 +972,6 @@
           </div>
         </div>
         
-        <!-- FAQ 3 -->
         <div class="faq-item">
           <button onclick="toggleFAQ(3)" class="faq-question">
             <span>Is the Lead Scanner really free for freelancers?</span>
@@ -1010,7 +982,6 @@
           </div>
         </div>
         
-        <!-- FAQ 4 -->
         <div class="faq-item">
           <button onclick="toggleFAQ(4)" class="faq-question">
             <span>Why are Freelancers welcome to use this platform?</span>
@@ -1023,9 +994,6 @@
       </div>
     </div>
     
-    <!-- ============================================
-         🚀 FINAL CTA
-         ============================================ -->
     <div class="mb-16">
       <div class="bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-900 rounded-2xl p-12 text-center border-2 border-purple-500">
         <div class="text-5xl mb-4">🚀</div>
@@ -1048,9 +1016,6 @@
     </div>
   </div>
   
-  <!-- ============================================
-       📌 FOOTER - COMPLEET
-       ============================================ -->
   <footer>
     <div class="max-w-7xl mx-auto px-6 py-12">
       <div class="grid md:grid-cols-4 gap-8 mb-8">
@@ -1107,7 +1072,6 @@
     </div>
   </footer>
   
-  <!-- Freelancer Modal -->
   <div id="freelancerModal" class="modal">
     <div class="modal-content">
       <div class="flex justify-between items-center mb-6">
@@ -1149,16 +1113,10 @@
   </div>
 
   <script>
-    // ============================================
-    // GLOBALE VARIABELEN
-    // ============================================
     let scrapedLeads = [];
     let currentScanResult = null;
     let allLeaderboardEntries = [];
     
-    // ============================================
-    // INIT - LAAD ALLES
-    // ============================================
     document.addEventListener('DOMContentLoaded', function() {
       loadLeaderboardData();
       loadFreelancers();
@@ -1166,7 +1124,6 @@
       loadRankings16Plus();
       loadCountryFilters();
       
-      // Enter key listeners
       document.getElementById('singleUrlInput')?.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') scanSingleURL();
       });
@@ -1176,9 +1133,6 @@
       });
     });
     
-    // ============================================
-    // MODE SWITCHING
-    // ============================================
     function switchMode(mode) {
       const singleMode = document.getElementById('singleMode');
       const bulkMode = document.getElementById('bulkMode');
@@ -1198,9 +1152,6 @@
       }
     }
     
-    // ============================================
-    // SINGLE URL SCAN - 100% WERKEND
-    // ============================================
     async function scanSingleURL() {
       const input = document.getElementById('singleUrlInput');
       const button = document.getElementById('singleScanBtn');
@@ -1219,14 +1170,12 @@
         url = 'https://' + url;
       }
       
-      // Show progress
       button.disabled = true;
       button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
       progress.classList.remove('hidden');
       progressBar.style.width = '30%';
       progressText.textContent = 'Analyzing website content...';
       
-      // Try real API first, fallback to demo
       try {
         const response = await fetch('/api/scan', {
           method: 'POST',
@@ -1252,7 +1201,6 @@
         console.log('API not available, using demo scan');
       }
       
-      // DEMO SCAN - FALLBACK
       setTimeout(() => {
         progressBar.style.width = '70%';
         progressText.textContent = 'Calculating E-E-A-T scores...';
@@ -1378,9 +1326,6 @@
       resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     
-    // ============================================
-    // GOOGLE MAPS BULK SCANNER - 100% WERKEND
-    // ============================================
     function scrapeGoogleMaps() {
       const input = document.getElementById('mapsUrl');
       const button = document.getElementById('bulkScanBtn');
@@ -1399,11 +1344,9 @@
         return;
       }
       
-      // Show loading
       button.disabled = true;
       button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scraping...';
       
-      // Try real API first, fallback to demo
       setTimeout(() => {
         scrapedLeads = [
           {
@@ -1448,10 +1391,8 @@
           }
         ];
         
-        // Update count
         leadCount.textContent = scrapedLeads.length;
         
-        // Render table
         leadsTableBody.innerHTML = scrapedLeads.map((lead, index) => {
           const scoreClass = lead.score >= 85 ? 'text-green-400' : lead.score >= 70 ? 'text-yellow-400' : 'text-red-400';
           return `
@@ -1479,19 +1420,14 @@
           `;
         }).join('');
         
-        // Show container
         leadsContainer.classList.remove('hidden');
         
-        // Reset button
         button.disabled = false;
         button.innerHTML = '<i class="fas fa-map-marked-alt mr-2"></i> Scrape Maps';
         
       }, 2000);
     }
     
-    // ============================================
-    // SCAN INDIVIDUELE LEAD
-    // ============================================
     function scanLead(website) {
       const input = document.getElementById('singleUrlInput');
       input.value = website;
@@ -1500,16 +1436,10 @@
       setTimeout(() => scanSingleURL(), 500);
     }
     
-    // ============================================
-    // SCAN ALL LEADS
-    // ============================================
     function scanAllLeads() {
       alert('⚡ Bulk scan coming soon! Use individual scan for each lead.');
     }
     
-    // ============================================
-    // EXPORT TO CSV
-    // ============================================
     function exportLeadsToCSV() {
       if (!scrapedLeads || scrapedLeads.length === 0) {
         alert('❌ No leads to export');
@@ -1540,11 +1470,7 @@
       alert(`✅ Exported ${scrapedLeads.length} leads to CSV`);
     }
     
-    // ============================================
-    // LEADERBOARD FUNCTIES
-    // ============================================
     function loadLeaderboardData() {
-      // Demo data voor leaderboard
       allLeaderboardEntries = [
         { id: 1, company_name: 'SEO Masters Amsterdam', url: 'https://seomasters.nl', score: 98, country: 'NL', created_at: '2025-01-15' },
         { id: 2, company_name: 'Content Kings London', url: 'https://contentkings.co.uk', score: 96, country: 'UK', created_at: '2025-01-20' },
@@ -1607,7 +1533,6 @@
     }
     
     function loadRankings16Plus() {
-      // Extra demo data voor rankings 16+
       const rankings16Plus = [
         { company_name: 'SEO Helsinki', url: 'https://seohelsinki.fi', score: 78, country: 'FI', created_at: '2025-01-26' },
         { company_name: 'Oslo SEO', url: 'https://osloseo.no', score: 77, country: 'NO', created_at: '2025-01-27' },
@@ -1626,7 +1551,7 @@
             <tr>
               <td><span class="inline-flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full font-bold">${actualRank}</span></td>
               <td class="font-semibold">${entry.company_name}</td>
-              <td><a href="${entry.url}" target="_blank" class="text-blue-400 hover:underline text-sm">${entry.url.replace('https://', '')}</a></td>
+              <td><a href="${entry.url}" target="_blank" class="text-blue-400 hover:underline text-sm">View Website</a></td>
               <td><span class="text-lg font-bold text-green-400">${entry.score}</span></td>
               <td><span class="text-sm">${getCountryFlag(entry.country)} ${entry.country}</span></td>
               <td><span class="text-sm text-gray-400">${new Date(entry.created_at).toLocaleDateString()}</span></td>
@@ -1679,12 +1604,10 @@
     }
     
     function filterByCountry(country) {
-      // Implementation placeholder
       console.log('Filter by country:', country);
     }
     
     function filterAgencies() {
-      // Implementation placeholder
     }
     
     function getCountryFlag(country) {
@@ -1697,9 +1620,6 @@
       return flags[country] || '🌐';
     }
     
-    // ============================================
-    // FREELANCERS
-    // ============================================
     function loadFreelancers() {
       const freelancers = [
         {
@@ -1766,9 +1686,6 @@
       }).join('');
     }
     
-    // ============================================
-    // FAQ TOGGLE
-    // ============================================
     function toggleFAQ(id) {
       const answer = document.getElementById(`faqAnswer${id}`);
       const icon = document.getElementById(`faqIcon${id}`);
@@ -1781,9 +1698,6 @@
       }
     }
     
-    // ============================================
-    // FREELANCER MODAL
-    // ============================================
     function openFreelancerModal() {
       const modal = document.getElementById('freelancerModal');
       if (modal) {
@@ -1817,15 +1731,11 @@
       alert(`✅ Thank you ${name}! We'll review your application within 24 hours.`);
       closeModal();
       
-      // Clear form
       if (document.getElementById('freelancerName')) document.getElementById('freelancerName').value = '';
       if (document.getElementById('freelancerEmail')) document.getElementById('freelancerEmail').value = '';
       if (document.getElementById('freelancerPhone')) document.getElementById('freelancerPhone').value = '';
     }
     
-    // ============================================
-    // CLICK OUTSIDE MODAL
-    // ============================================
     window.onclick = function(event) {
       const modal = document.getElementById('freelancerModal');
       if (event.target === modal) {
@@ -1835,3 +1745,8 @@
   </script>
 </body>
 </html>
+
+
+
+
+
