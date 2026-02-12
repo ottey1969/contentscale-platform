@@ -1,6 +1,6 @@
 // ============================================
 // CONTENTSCALE SERVER.JS - 100% WERKENDE VERSIE
-// MET DATABASE CONNECTIE RETRY & DUIDELIJKE FEEDBACK
+// ZONDER DOTENV - GEBRUIKT PROCESS.ENV DIRECT
 // ============================================
 
 // ============================================
@@ -21,12 +21,13 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ============================================
-// ENVIRONMENT VARIABLES - LAAD VROEG
+// GEEN DOTENV - GEBRUIK PROCESS.ENV DIRECT
 // ============================================
-require('dotenv').config();
+console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
+console.log('📊 Database URL:', process.env.DATABASE_URL ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
 
 // ============================================
-// DATABASE CONFIGURATIE - FIXED MET RETRY LOGIC
+// DATABASE CONFIGURATIE - FIXED ZONDER DOTENV
 // ============================================
 let dbConfig;
 let pool;
@@ -34,23 +35,28 @@ let pool;
 function initDatabaseConfig() {
   if (process.env.DATABASE_URL) {
     console.log('📊 Using DATABASE_URL from environment');
-    const url = new URL(process.env.DATABASE_URL);
-    dbConfig = {
-      user: url.username,
-      password: url.password,
-      host: url.hostname,
-      port: url.port || 5432,
-      database: url.pathname.slice(1),
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-      connectionTimeoutMillis: 10000,
-      idleTimeoutMillis: 30000,
-      max: 20
-    };
+    try {
+      const url = new URL(process.env.DATABASE_URL);
+      dbConfig = {
+        user: url.username,
+        password: url.password,
+        host: url.hostname,
+        port: url.port || 5432,
+        database: url.pathname.slice(1),
+        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+        connectionTimeoutMillis: 10000,
+        idleTimeoutMillis: 30000,
+        max: 20
+      };
+    } catch (e) {
+      console.error('❌ Ongeldige DATABASE_URL:', e.message);
+      return null;
+    }
   } else {
-    // Development defaults
+    // Gebruik losse environment variables of defaults
     dbConfig = {
       host: process.env.DB_HOST || 'localhost',
-      port: process.env.DB_PORT || 5432,
+      port: parseInt(process.env.DB_PORT || '5432'),
       database: process.env.DB_NAME || 'contentscale',
       user: process.env.DB_USER || 'postgres',
       password: process.env.DB_PASSWORD || 'postgres',
@@ -72,12 +78,22 @@ function initDatabaseConfig() {
 }
 
 // Initialiseer pool
-pool = initDatabaseConfig();
+try {
+  pool = initDatabaseConfig();
+} catch (e) {
+  console.error('❌ Fout bij initialiseren database pool:', e.message);
+  pool = null;
+}
 
 // ============================================
 // DATABASE CONNECTIE MET RETRY
 // ============================================
-async function waitForDatabase(retries = 10, delay = 3000) {
+async function waitForDatabase(retries = 5, delay = 3000) {
+  if (!pool) {
+    console.log('❌ Geen database pool - overslaan');
+    return false;
+  }
+  
   console.log('🔄 Verbinden met database...');
   
   for (let i = 0; i < retries; i++) {
@@ -103,19 +119,11 @@ async function waitForDatabase(retries = 10, delay = 3000) {
       if (i === retries - 1) {
         console.error('\n❌❌❌ KON GEEN VERBINDING MAKEN MET DATABASE ❌❌❌');
         console.error('\n📋 OPLOSSINGEN:');
-        console.error('   1. Start PostgreSQL:');
-        console.error('      • Mac:    brew services start postgresql');
-        console.error('      • Linux:  sudo service postgresql start');
-        console.error('      • Windows: net start postgresql');
-        console.error('\n   2. Maak database aan:');
-        console.error('      createdb -U postgres contentscale');
-        console.error('\n   3. Of gebruik .env bestand met:');
-        console.error('      DB_HOST=localhost');
-        console.error('      DB_USER=postgres');
-        console.error('      DB_PASSWORD=postgres');
-        console.error('      DB_NAME=contentscale');
-        console.error('\n⚠️  Server start ZONDER database - admin login werkt niet!');
-        console.error('   Gebruik CTRL+C om te stoppen en fix database eerst.\n');
+        console.error('   1. Controleer of PostgreSQL draait');
+        console.error('   2. Controleer environment variables:');
+        console.error('      - DATABASE_URL of');
+        console.error('      - DB_HOST, DB_USER, DB_PASSWORD, DB_NAME');
+        console.error('\n⚠️  Server start ZONDER database - admin login werkt niet!\n');
         
         return false;
       }
@@ -158,7 +166,8 @@ const limiter = rateLimit({
   max: 100,
   message: { success: false, error: 'Too many requests, please try again later.' },
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip || req.connection.remoteAddress
 });
 
 const authLimiter = rateLimit({
@@ -166,7 +175,8 @@ const authLimiter = rateLimit({
   max: 5,
   message: { success: false, error: 'Too many login attempts, please try again later.' },
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip || req.connection.remoteAddress
 });
 
 app.use('/api/', limiter);
@@ -218,12 +228,11 @@ const verifyAdmin = async (req, res, next) => {
     return res.status(401).json({ success: false, error: 'Admin authentication required' });
   }
   
+  if (!pool) {
+    return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  }
+  
   try {
-    // Check of database verbonden is
-    if (!pool) {
-      return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-    }
-    
     const result = await pool.query(
       'SELECT * FROM super_admins WHERE id = $1 AND is_active = TRUE',
       [adminKey]
@@ -259,8 +268,16 @@ async function getBrowser() {
         '--disable-gpu'
       ],
       timeout: 30000
+    }).catch(err => {
+      console.error('❌ Puppeteer launch error:', err.message);
+      return null;
     });
-    console.log('✅ Puppeteer browser ready');
+    
+    if (browserInstance) {
+      console.log('✅ Puppeteer browser ready');
+    } else {
+      console.log('❌ Puppeteer browser failed to start');
+    }
   }
   return browserInstance;
 }
@@ -315,9 +332,9 @@ async function createAllTables() {
     return;
   }
   
-  const client = await pool.connect();
-  
+  let client;
   try {
+    client = await pool.connect();
     console.log('📦 Database tabellen controleren...');
     
     await client.query(`
@@ -512,7 +529,7 @@ async function createAllTables() {
   } catch (error) {
     console.error('❌ Database setup error:', error.message);
   } finally {
-    client.release();
+    if (client) client.release();
   }
 }
 
@@ -776,6 +793,10 @@ app.post('/api/scan', async (req, res) => {
     }
     
     const browser = await getBrowser();
+    if (!browser) {
+      return res.status(500).json({ success: false, error: 'Puppeteer browser niet beschikbaar' });
+    }
+    
     const page = await browser.newPage();
     await page.setViewport({ width: 1920, height: 1080 });
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
@@ -859,6 +880,10 @@ app.post('/api/google-maps/scrape', async (req, res) => {
     
     console.log(`🗺️ Google Maps scrape: ${url}`);
     const browser = await getBrowser();
+    if (!browser) {
+      return res.status(500).json({ success: false, error: 'Puppeteer browser niet beschikbaar' });
+    }
+    
     const page = await browser.newPage();
     await page.setViewport({ width: 1920, height: 1080 });
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
@@ -1256,12 +1281,10 @@ app.post('/api/claims/submit', async (req, res) => {
 });
 
 // ============================================
-// ADMIN ENDPOINTS - ALLEEN ALS DATABASE BESCHIKBAAR
+// ADMIN ENDPOINTS
 // ============================================
 
-// --------------------------------------------
-// AUTHENTICATION - FIXED MET DUIDELIJKE FEEDBACK
-// --------------------------------------------
+// AUTHENTICATION
 app.post('/api/setup/verify-admin', async (req, res) => {
   const { username, password } = req.body;
   
@@ -1269,12 +1292,11 @@ app.post('/api/setup/verify-admin', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Credentials required' });
   }
   
-  // Check of database beschikbaar is
   if (!pool) {
     console.error('❌ Login poging maar database niet beschikbaar');
     return res.status(503).json({ 
       success: false, 
-      error: 'Database niet beschikbaar. Start PostgreSQL en herstart de server.',
+      error: 'Database niet beschikbaar. Controleer of PostgreSQL draait.',
       db_status: 'disconnected'
     });
   }
@@ -1314,15 +1336,12 @@ app.post('/api/setup/verify-admin', async (req, res) => {
   }
 });
 
-// ✅ Session verificatie endpoint
+// Session verificatie
 app.post('/api/admin/verify-session', verifyAdmin, async (req, res) => {
   res.json({ valid: true, admin: req.admin.username });
 });
 
-// Alle andere admin endpoints alleen als database beschikbaar
-// --------------------------------------------
 // DASHBOARD STATS
-// --------------------------------------------
 app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
   if (!pool) {
     return res.json({ success: true, stats: { 
@@ -1378,9 +1397,7 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
   }
 });
 
-// --------------------------------------------
 // LEADERBOARD MANAGEMENT
-// --------------------------------------------
 app.get('/api/admin/leaderboard', verifyAdmin, async (req, res) => {
   if (!pool) return res.json({ success: true, entries: [] });
   try {
@@ -1436,7 +1453,7 @@ app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
   }
 });
 
-// ✅ Admin scan and add to leaderboard
+// Admin scan and add to leaderboard
 app.post('/api/admin/leaderboard/scan-and-add', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   
@@ -1456,6 +1473,10 @@ app.post('/api/admin/leaderboard/scan-and-add', verifyAdmin, async (req, res) =>
     console.log(`👑 ADMIN SCAN for leaderboard: ${scanUrl}`);
     
     const browser = await getBrowser();
+    if (!browser) {
+      return res.status(500).json({ success: false, error: 'Puppeteer browser niet beschikbaar' });
+    }
+    
     const page = await browser.newPage();
     await page.setViewport({ width: 1920, height: 1080 });
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
@@ -1562,7 +1583,7 @@ app.post('/api/admin/leaderboard/scan-and-add', verifyAdmin, async (req, res) =>
   }
 });
 
-// ✅ Admin manual add to leaderboard
+// Admin manual add to leaderboard
 app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   
@@ -1633,9 +1654,7 @@ app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
   }
 });
 
-// --------------------------------------------
 // FREELANCERS MANAGEMENT
-// --------------------------------------------
 app.get('/api/admin/freelancers', verifyAdmin, async (req, res) => {
   if (!pool) return res.json({ success: true, freelancers: [] });
   try {
@@ -1698,9 +1717,7 @@ app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
   }
 });
 
-// --------------------------------------------
 // SHARE LINKS MANAGEMENT
-// --------------------------------------------
 app.get('/api/admin/share-links', verifyAdmin, async (req, res) => {
   if (!pool) return res.json({ success: true, share_links: [] });
   try {
@@ -1860,12 +1877,16 @@ async function startServer() {
     
     if (!dbConnected) {
       console.log('⚠️  WAARSCHUWING: Database niet verbonden!');
-      console.log('   Admin login werkt NIET. Start PostgreSQL en herstart de server.');
+      console.log('   Admin login werkt NIET. Controleer PostgreSQL.');
       console.log('');
       console.log('📋 Oplossing:');
-      console.log('   1. brew services start postgresql');
-      console.log('   2. createdb -U postgres contentscale');
-      console.log('   3. npm run dev');
+      console.log('   Zet environment variables:');
+      console.log('   - DATABASE_URL=postgresql://user:pass@host:5432/dbname');
+      console.log('   OF');
+      console.log('   - DB_HOST=localhost');
+      console.log('   - DB_USER=postgres');
+      console.log('   - DB_PASSWORD=postgres');
+      console.log('   - DB_NAME=contentscale');
       console.log('');
     }
     
