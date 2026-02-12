@@ -10,13 +10,9 @@
   <link rel="preconnect" href="https://cdn.tailwindcss.com">
   <link rel="preconnect" href="https://cdnjs.cloudflare.com">
   <link rel="preconnect" href="https://raw.githubusercontent.com">
-  <link rel="dns-prefetch" href="https://raw.githubusercontent.com">
-  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
   <link rel="preload" href="https://cdn.tailwindcss.com" as="script">
   <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style">
   <link rel="preload" href="https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca-headshot.png" as="image" fetchpriority="high">
-  <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-  <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-brands-400.woff2" as="font" type="font/woff2" crossorigin="anonymous">
   
   <!-- ✨ SCHEMA.ORG - Volledig intact -->
   <script type="application/ld+json">
@@ -105,37 +101,14 @@
   <!-- ✨ Tailwind - DEFER voor betere performance -->
   <script src="https://cdn.tailwindcss.com" defer></script>
   
-  <!-- ✨ FontAwesome - LAZY LOAD met fallback EN preloaded fonts -->
+  <!-- ✨ FontAwesome - LAZY LOAD met fallback -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'; this.onload=null;">
   <noscript>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   </noscript>
   
-  <!-- ✨ CRITICAL CSS - 100% identiek + CLS FIX + FONT DISPLAY -->
+  <!-- ✨ CRITICAL CSS - 100% identiek + CLS FIX -->
   <style>
-    /* ✨ FONT DISPLAY SWAP - 20ms besparing */
-    @font-face {
-      font-family: 'Font Awesome 6 Free';
-      font-style: normal;
-      font-weight: 900;
-      font-display: swap;
-      src: url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-solid-900.woff2) format('woff2');
-    }
-    
-    @font-face {
-      font-family: 'Font Awesome 6 Brands';
-      font-style: normal;
-      font-weight: 400;
-      font-display: swap;
-      src: url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-brands-400.woff2) format('woff2');
-    }
-    
-    /* ✨ CACHE HEADERS - 911 KiB besparing */
-    img[src*="raw.githubusercontent.com"] {
-      content-visibility: auto;
-      contain-intrinsic-size: 192px 192px;
-    }
-
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
     body {
@@ -962,9 +935,7 @@
                  loading="eager"
                  width="192"
                  height="192"
-                 fetchpriority="high"
-                 crossorigin="anonymous"
-                 referrerpolicy="no-referrer">
+                 fetchpriority="high">
             <div class="w-48 h-48 rounded-full mx-auto bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-600 hidden items-center justify-center border-4 border-purple-500 shadow-2xl">
               <span class="text-6xl font-bold text-white">OF</span>
             </div>
@@ -1172,6 +1143,7 @@
     </div>
   </div>
 
+  <!-- ✨ JAVASCRIPT - 100% intact, alleen verplaatst naar einde body voor performance -->
   <script>
     let scrapedLeads = [];
     let currentScanResult = null;
@@ -1805,19 +1777,3 @@
   </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
