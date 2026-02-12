@@ -9,10 +9,14 @@
   <!-- ✨ PERFORMANCE: Preconnects & Preloads - 100% veilig, breekt niets -->
   <link rel="preconnect" href="https://cdn.tailwindcss.com">
   <link rel="preconnect" href="https://cdnjs.cloudflare.com">
-  <link rel="preconnect" href="https://raw.githubusercontent.com">
+  <link rel="preconnect" href="https://raw.githubusercontent.com" crossorigin="anonymous">
+  <link rel="dns-prefetch" href="https://raw.githubusercontent.com">
+  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
   <link rel="preload" href="https://cdn.tailwindcss.com" as="script">
   <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style">
-  <link rel="preload" href="https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca-headshot.png" as="image" fetchpriority="high">
+  <link rel="preload" href="https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca-headshot.png" as="image" crossorigin="anonymous" fetchpriority="high">
+  <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+  <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-brands-400.woff2" as="font" type="font/woff2" crossorigin="anonymous">
   
   <!-- ✨ SCHEMA.ORG - Volledig intact -->
   <script type="application/ld+json">
@@ -588,6 +592,23 @@
     #main-content > div:first-child {
       min-height: 400px;
     }
+
+    /* ✨ FONT DISPLAY SWAP */
+    @font-face {
+      font-family: 'Font Awesome 6 Free';
+      font-style: normal;
+      font-weight: 900;
+      font-display: swap;
+      src: url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-solid-900.woff2) format('woff2');
+    }
+    
+    @font-face {
+      font-family: 'Font Awesome 6 Brands';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-brands-400.woff2) format('woff2');
+    }
   </style>
 </head>
 <body class="bg-gray-900">
@@ -935,7 +956,8 @@
                  loading="eager"
                  width="192"
                  height="192"
-                 fetchpriority="high">
+                 fetchpriority="high"
+                 crossorigin="anonymous">
             <div class="w-48 h-48 rounded-full mx-auto bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-600 hidden items-center justify-center border-4 border-purple-500 shadow-2xl">
               <span class="text-6xl font-bold text-white">OF</span>
             </div>
@@ -1143,7 +1165,6 @@
     </div>
   </div>
 
-  <!-- ✨ JAVASCRIPT - 100% intact, alleen verplaatst naar einde body voor performance -->
   <script>
     let scrapedLeads = [];
     let currentScanResult = null;
@@ -1184,6 +1205,7 @@
       }
     }
     
+    // ✅ REAL SCAN - GEEN DEMO DATA MEER!
     async function scanSingleURL() {
       const input = document.getElementById('singleUrlInput');
       const button = document.getElementById('singleScanBtn');
@@ -1202,104 +1224,121 @@
         url = 'https://' + url;
       }
       
+      // Show progress
       button.disabled = true;
-      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
+      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Launching Puppeteer...';
       progress.classList.remove('hidden');
-      progressBar.style.width = '30%';
-      progressText.textContent = 'Analyzing website content...';
+      progressBar.style.width = '20%';
+      progressText.textContent = 'Launching headless browser...';
       
       try {
+        // ✅ ECHTE API CALL - geen setTimeout, geen demo data!
         const response = await fetch('/api/scan', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache'
+          },
           body: JSON.stringify({ url: url })
         });
         
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            progressBar.style.width = '100%';
-            progressText.textContent = 'Complete!';
-            displayScanResult(data);
-            setTimeout(() => {
-              progress.classList.add('hidden');
-              button.disabled = false;
-              button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
-            }, 500);
-            return;
-          }
-        }
-      } catch (e) {
-        console.log('API not available, using demo scan');
-      }
-      
-      setTimeout(() => {
-        progressBar.style.width = '70%';
-        progressText.textContent = 'Calculating E-E-A-T scores...';
+        progressBar.style.width = '60%';
+        progressText.textContent = 'Analyzing HTML and calculating GRAAF scores...';
         
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Scan failed');
+        }
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Scan failed');
+        }
+        
+        progressBar.style.width = '90%';
+        progressText.textContent = 'Generating recommendations...';
+        
+        // ✅ KORTE PAUZE VOOR UX, MAAR DATA IS ECHT
         setTimeout(() => {
           progressBar.style.width = '100%';
-          progressText.textContent = 'Complete!';
+          progressText.textContent = 'Scan complete!';
           
-          const score = Math.floor(Math.random() * 30) + 65;
-          const demoResult = {
-            url: url,
-            score: score,
-            metrics: {
-              content: Math.floor(score * 0.7),
-              technical: Math.floor(score * 0.8)
-            },
-            content_stats: {
-              wordCount: Math.floor(Math.random() * 1200) + 800
-            },
-            recommendations: {
-              all: [
-                {
-                  priority: 'HIGH',
-                  title: 'Add Author Credentials',
-                  description: 'Add author bio with credentials and expertise for E-E-A-T'
-                },
-                {
-                  priority: 'HIGH',
-                  title: 'Implement Schema Markup',
-                  description: 'Add Article/FAQ/Organization schema for better SERP visibility'
-                },
-                {
-                  priority: 'MEDIUM',
-                  title: 'Expand Content Depth',
-                  description: `Increase from ${Math.floor(Math.random() * 500) + 800} to 2000+ words`
-                }
-              ]
-            }
-          };
-          
-          displayScanResult(demoResult);
+          // ✅ TOON ECHTE SCAN RESULTATEN
+          displayScanResult(data);
           
           setTimeout(() => {
             progress.classList.add('hidden');
             button.disabled = false;
             button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
           }, 500);
-          
-        }, 1000);
-      }, 1000);
+        }, 300);
+        
+      } catch (error) {
+        console.error('Scan error:', error);
+        progressBar.style.width = '100%';
+        progressText.textContent = 'Error!';
+        
+        // Toon foutmelding
+        resultDiv.innerHTML = `
+          <div class="card border-red-500 mt-4">
+            <div class="text-center mb-4">
+              <h3 class="text-2xl font-bold text-white mb-2">❌ Scan Failed</h3>
+              <p class="text-sm text-red-400">${error.message}</p>
+              <p class="text-xs text-gray-400 mt-2">Please check if the URL is accessible and try again.</p>
+            </div>
+            <button onclick="document.getElementById('singleResult').classList.add('hidden')" 
+                    class="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-semibold">
+              Close
+            </button>
+          </div>
+        `;
+        resultDiv.classList.remove('hidden');
+        
+        setTimeout(() => {
+          progress.classList.add('hidden');
+          button.disabled = false;
+          button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
+        }, 2000);
+      }
     }
     
+    // ✅ DISPLAY ECHTE SCAN RESULTATEN MET GRAAF/CRAFT SCORES
     function displayScanResult(result) {
       const resultDiv = document.getElementById('singleResult');
       const score = result.score || 0;
       const wordCount = result.content_stats?.wordCount || 0;
+      
+      // ✅ ECHTE GRAAF/CRAFT SCORES uit de server
+      const graafScore = result.metrics?.graaf || 0;
+      const craftScore = result.metrics?.craft || 0;
+      const technicalScore = result.metrics?.technical || 0;
+      const contentScore = result.metrics?.content || 0;
+      const uxScore = result.metrics?.ux || 0;
+      
+      // ✅ Bereken potentie op basis van echte data
       const potentialScore = Math.min(98, score + Math.floor((100 - score) * 0.75));
       const improvement = potentialScore - score;
       
+      // ✅ ECHTE aanbevelingen van de server
       let recommendations = result.recommendations?.all || [];
+      
+      // ✅ Quality badge
+      const quality = result.quality || 'unknown';
+      const qualityColor = quality === 'excellent' ? 'green' : 
+                          quality === 'good' ? 'blue' : 
+                          quality === 'average' ? 'yellow' : 'red';
       
       resultDiv.innerHTML = `
         <div class="card border-green-500 mt-4">
           <div class="text-center mb-4">
-            <h3 class="text-2xl font-bold text-white mb-2">📊 Scan Result</h3>
+            <h3 class="text-2xl font-bold text-white mb-2">📊 SEO Content Analysis</h3>
             <p class="text-sm text-gray-400 break-all">${result.url}</p>
+            <span class="inline-block mt-2 px-3 py-1 bg-${qualityColor}-600 rounded-full text-xs text-white font-semibold">
+              Quality: ${quality}
+            </span>
           </div>
+          
+          <!-- Score Overview -->
           <div class="flex items-center justify-center gap-6 mb-6">
             <div class="text-center">
               <div class="text-5xl font-black ${score >= 85 ? 'text-green-400' : score >= 70 ? 'text-yellow-400' : 'text-red-400'}">${score}</div>
@@ -1312,44 +1351,81 @@
             </div>
           </div>
           <div class="text-center mb-4">
-            <span class="text-green-400 font-bold text-lg">+${improvement} points possible!</span>
+            <span class="text-green-400 font-bold text-lg">+${improvement} points possible! 🚀</span>
           </div>
-          <div class="grid grid-cols-3 gap-3 mb-6">
-            <div class="bg-gray-700/50 rounded-lg p-3 text-center">
+          
+          <!-- GRAAF Framework Scores - ECHTE DATA -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <div class="bg-gray-900 rounded-lg p-3 text-center">
+              <div class="text-xs text-gray-400">GRAAF</div>
+              <div class="text-xl font-bold text-purple-400">${graafScore}/50</div>
+            </div>
+            <div class="bg-gray-900 rounded-lg p-3 text-center">
+              <div class="text-xs text-gray-400">CRAFT</div>
+              <div class="text-xl font-bold text-blue-400">${craftScore}/30</div>
+            </div>
+            <div class="bg-gray-900 rounded-lg p-3 text-center">
+              <div class="text-xs text-gray-400">Technical</div>
+              <div class="text-xl font-bold text-green-400">${technicalScore}/20</div>
+            </div>
+            <div class="bg-gray-900 rounded-lg p-3 text-center">
+              <div class="text-xs text-gray-400">Words</div>
+              <div class="text-xl font-bold text-yellow-400">${wordCount.toLocaleString()}</div>
+            </div>
+          </div>
+          
+          <!-- Content Metrics -->
+          <div class="grid grid-cols-2 gap-3 mb-6">
+            <div class="bg-gray-800/50 rounded-lg p-3">
               <div class="text-xs text-gray-400">Content Quality</div>
-              <div class="text-xl font-bold text-blue-400">${result.metrics?.content || 0}/100</div>
+              <div class="text-lg font-bold text-blue-400">${contentScore}/100</div>
             </div>
-            <div class="bg-gray-700/50 rounded-lg p-3 text-center">
-              <div class="text-xs text-gray-400">Technical SEO</div>
-              <div class="text-xl font-bold text-purple-400">${result.metrics?.technical || 0}/100</div>
-            </div>
-            <div class="bg-gray-700/50 rounded-lg p-3 text-center">
-              <div class="text-xs text-gray-400">Word Count</div>
-              <div class="text-xl font-bold text-green-400">${wordCount.toLocaleString()}</div>
+            <div class="bg-gray-800/50 rounded-lg p-3">
+              <div class="text-xs text-gray-400">UX Score</div>
+              <div class="text-lg font-bold text-purple-400">${uxScore}/100</div>
             </div>
           </div>
+          
+          <!-- ECHTE Recommendations van de server -->
           ${recommendations.length > 0 ? `
           <div class="border-t border-gray-700 pt-4">
-            <h4 class="font-bold text-white mb-3">🎯 Top Recommendations</h4>
+            <h4 class="font-bold text-white mb-3">🎯 Priority Recommendations</h4>
             <div class="space-y-2">
               ${recommendations.slice(0, 3).map(rec => `
-                <div class="bg-gray-700/50 rounded-lg p-3 border-l-4 ${rec.priority === 'HIGH' ? 'border-red-500' : 'border-yellow-500'}">
+                <div class="bg-gray-900 rounded-lg p-3 border-l-4 ${rec.priority === 'HIGH' ? 'border-red-500' : 'border-yellow-500'}">
                   <div class="font-semibold text-white">${rec.title}</div>
-                  <p class="text-xs text-gray-400">${rec.description}</p>
+                  <p class="text-xs text-gray-400 mt-1">${rec.description}</p>
+                  <div class="flex gap-2 mt-2 text-xs">
+                    <span class="text-gray-500">⚡ Impact: ${rec.impact || 8}/10</span>
+                    <span class="text-gray-500">💰 ${rec.cost || '€100-200'}</span>
+                  </div>
                 </div>
               `).join('')}
             </div>
           </div>
           ` : ''}
-          <div class="flex gap-2 mt-4">
-            <button onclick="window.open('https://wa.me/?text=${encodeURIComponent('I analyzed your website. Score: ' + score + '/100. Potential: ' + potentialScore + '/100.')}', '_blank', 'noopener')" 
-                    class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold">
-              <i class="fab fa-whatsapp mr-1"></i> Share
-            </button>
-            <button onclick="document.getElementById('singleResult').classList.add('hidden')" 
-                    class="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-semibold">
-              Close
-            </button>
+          
+          <!-- Share Actions -->
+          <div class="border-t border-gray-700 pt-4 mt-4">
+            <h4 class="font-bold text-white mb-3">📤 Share Analysis</h4>
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="window.open('https://wa.me/?text=${encodeURIComponent('I analyzed your website with ContentScale. Current score: ' + score + '/100. Potential: ' + potentialScore + '/100.')}', '_blank', 'noopener')" 
+                      class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm font-semibold">
+                <i class="fab fa-whatsapp mr-1"></i> WhatsApp
+              </button>
+              <button onclick="window.open('mailto:?subject=SEO Analysis for ${encodeURIComponent(result.url)}&body=${encodeURIComponent('I analyzed your website with ContentScale.\n\nCurrent Score: ' + score + '/100\nPotential Score: ' + potentialScore + '/100\n\nView full analysis: ' + result.url)}', '_blank')" 
+                      class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-semibold">
+                <i class="fas fa-envelope mr-1"></i> Email
+              </button>
+              <button onclick="copyToClipboard('${result.url}')" 
+                      class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg text-sm font-semibold">
+                <i class="fas fa-link mr-1"></i> Copy URL
+              </button>
+              <button onclick="document.getElementById('singleResult').classList.add('hidden')" 
+                      class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg text-sm font-semibold">
+                Close
+              </button>
+            </div>
           </div>
         </div>
       `;
@@ -1358,7 +1434,8 @@
       resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     
-    function scrapeGoogleMaps() {
+    // ✅ REAL GOOGLE MAPS SCRAPE - GEEN DEMO DATA!
+    async function scrapeGoogleMaps() {
       const input = document.getElementById('mapsUrl');
       const button = document.getElementById('bulkScanBtn');
       const leadsContainer = document.getElementById('leadsContainer');
@@ -1377,87 +1454,112 @@
       }
       
       button.disabled = true;
-      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scraping...';
+      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scraping with Puppeteer...';
       
-      setTimeout(() => {
-        scrapedLeads = [
-          {
-            name: 'SEO Agency Amsterdam',
-            website: 'https://seo-amsterdam.nl',
-            phone: '+31 20 123 4567',
-            score: 92,
-            category: 'SEO Agency',
-            address: 'Amsterdam'
+      try {
+        // ✅ ECHTE API CALL - geen setTimeout!
+        const response = await fetch('/api/google-maps/scrape', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache'
           },
-          {
-            name: 'Digital Marketing Rotterdam',
-            website: 'https://digitalrotterdam.nl',
-            phone: '+31 10 987 6543',
-            score: 87,
-            category: 'Digital Agency',
-            address: 'Rotterdam'
-          },
-          {
-            name: 'Content Studio Utrecht',
-            website: 'https://contentutrecht.nl',
-            phone: '+31 30 456 7890',
-            score: 94,
-            category: 'Content Marketing',
-            address: 'Utrecht'
-          },
-          {
-            name: 'SEO Den Haag',
-            website: 'https://seodenhaag.nl',
-            phone: '+31 70 234 5678',
-            score: 78,
-            category: 'SEO Agency',
-            address: 'Den Haag'
-          },
-          {
-            name: 'E-commerce Experts Eindhoven',
-            website: 'https://ecom-eindhoven.nl',
-            phone: '+31 40 876 5432',
-            score: 89,
-            category: 'E-commerce SEO',
-            address: 'Eindhoven'
-          }
-        ];
+          body: JSON.stringify({ 
+            url: url,
+            maxResults: 30 
+          })
+        });
         
+        const data = await response.json();
+        
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Scrape failed');
+        }
+        
+        scrapedLeads = data.leads || [];
+        
+        // Update count
         leadCount.textContent = scrapedLeads.length;
         
-        leadsTableBody.innerHTML = scrapedLeads.map((lead, index) => {
-          const scoreClass = lead.score >= 85 ? 'text-green-400' : lead.score >= 70 ? 'text-yellow-400' : 'text-red-400';
-          return `
+        if (scrapedLeads.length === 0) {
+          leadsTableBody.innerHTML = `
             <tr>
-              <td>
-                <div class="font-medium text-white">${lead.name}</div>
-                <div class="text-xs text-gray-400">${lead.category}</div>
-              </td>
-              <td>
-                <a href="${lead.website}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">
-                  ${lead.website.replace('https://', '').replace('http://', '')}
-                </a>
-              </td>
-              <td class="text-gray-300">${lead.phone}</td>
-              <td>
-                <span class="font-bold ${scoreClass}">${lead.score}</span>
-              </td>
-              <td>
-                <button onclick="scanLead('${lead.website}')" 
-                        class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm">
-                  <i class="fas fa-search mr-1"></i>Scan
-                </button>
+              <td colspan="5" class="text-center py-8 text-gray-400">
+                No businesses found. Try a different search or area.
               </td>
             </tr>
           `;
-        }).join('');
+        } else {
+          // Render leads table met ECHTE data
+          leadsTableBody.innerHTML = scrapedLeads.map((lead, index) => {
+            const scoreClass = lead.score >= 85 ? 'text-green-400' : 
+                              lead.score >= 70 ? 'text-yellow-400' : 
+                              'text-red-400';
+            const hasWebsite = lead.website && lead.website !== 'N/A' && lead.website !== null;
+            
+            return `
+              <tr class="border-b border-gray-700 hover:bg-gray-800">
+                <td class="px-4 py-3">
+                  <div class="font-medium text-white">${lead.name || 'Unknown'}</div>
+                  <div class="text-xs text-gray-400">${lead.category || 'SEO Agency'}</div>
+                  ${lead.rating ? `<div class="text-xs text-yellow-400 mt-1">⭐ ${lead.rating} (${lead.reviews || 0} reviews)</div>` : ''}
+                </td>
+                <td class="px-4 py-3">
+                  ${hasWebsite ? 
+                    `<a href="${lead.website}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">
+                      ${lead.website.replace('https://', '').replace('http://', '').substring(0, 30)}${lead.website.length > 30 ? '...' : ''}
+                    </a>` : 
+                    `<span class="text-red-400 text-sm">No website</span>`
+                  }
+                </td>
+                <td class="px-4 py-3 text-gray-300 text-sm">${lead.phone || '-'}</td>
+                <td class="px-4 py-3">
+                  ${lead.score > 0 ? 
+                    `<span class="font-bold ${scoreClass}">${lead.score}</span>` : 
+                    `<span class="text-gray-500">-</span>`
+                  }
+                </td>
+                <td class="px-4 py-3">
+                  ${hasWebsite ? 
+                    `<button onclick="scanLead('${lead.website}')" 
+                            class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm font-semibold">
+                      <i class="fas fa-search mr-1"></i>Scan
+                    </button>` : 
+                    `<span class="text-gray-600 text-sm">-</span>`
+                  }
+                </td>
+              </tr>
+            `;
+          }).join('');
+          
+          // Toon stats
+          const statsHtml = `
+            <div class="mt-4 grid grid-cols-3 gap-3 text-xs text-gray-400">
+              <div>✅ ${data.stats?.with_website || 0} with website</div>
+              <div>📞 ${data.stats?.with_phone || 0} with phone</div>
+              <div>📊 Avg score: ${data.stats?.avg_score || 0}</div>
+            </div>
+          `;
+          
+          // Verwijder oude stats en voeg nieuwe toe
+          const existingStats = leadsContainer.querySelector('.scrape-stats');
+          if (existingStats) existingStats.remove();
+          
+          const statsDiv = document.createElement('div');
+          statsDiv.className = 'scrape-stats mt-2';
+          statsDiv.innerHTML = statsHtml;
+          leadsContainer.querySelector('.card').appendChild(statsDiv);
+        }
         
         leadsContainer.classList.remove('hidden');
         
+      } catch (error) {
+        console.error('Google Maps scrape error:', error);
+        alert(`❌ Scrape failed: ${error.message}`);
+      } finally {
         button.disabled = false;
         button.innerHTML = '<i class="fas fa-map-marked-alt mr-2"></i> Scrape Maps';
-        
-      }, 2000);
+      }
     }
     
     function scanLead(website) {
@@ -1478,14 +1580,16 @@
         return;
       }
       
-      const headers = ['Name', 'Category', 'Website', 'Phone', 'Score', 'Address'];
+      const headers = ['Name', 'Category', 'Website', 'Phone', 'Score', 'Address', 'Rating', 'Reviews'];
       const rows = scrapedLeads.map(lead => [
-        lead.name,
-        lead.category,
-        lead.website,
-        lead.phone,
-        lead.score,
-        lead.address
+        lead.name || '',
+        lead.category || '',
+        lead.website || '',
+        lead.phone || '',
+        lead.score || '',
+        lead.address || '',
+        lead.rating || '',
+        lead.reviews || ''
       ]);
       
       let csv = headers.join(',') + '\n';
@@ -1500,6 +1604,14 @@
       URL.revokeObjectURL(url);
       
       alert(`✅ Exported ${scrapedLeads.length} leads to CSV`);
+    }
+    
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert('✅ Copied to clipboard!');
+      }).catch(() => {
+        alert('❌ Failed to copy');
+      });
     }
     
     function loadLeaderboardData() {
@@ -1777,3 +1889,6 @@
   </script>
 </body>
 </html>
+
+
+
