@@ -1,6 +1,6 @@
 // ============================================
 // CONTENTSCALE SERVER.JS - 100% WERKENDE VERSIE
-// MET ALLE PERFORMANCE OPTIMALISATIES
+// MET ALLE PERFORMANCE OPTIMALISATIES 
 // ALL FIXES: Share Links, Leaderboard, Freelancers, Blog Images + Alt Text
 // ============================================
 
