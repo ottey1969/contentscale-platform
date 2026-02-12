@@ -1,6 +1,7 @@
 // ============================================
 // CONTENTSCALE SERVER.JS - 100% WERKENDE VERSIE
 // MET ALLE PERFORMANCE OPTIMALISATIES
+// ALL FIXES: Share Links, Leaderboard, Freelancers, Blog Images + Alt Text
 // ============================================
 
 // ============================================
@@ -13,22 +14,41 @@ const { Pool } = require('pg');
 const puppeteer = require('puppeteer');
 const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
-const compression = require('compression'); // ✅ VOOR GZIP COMPRESSIE - 56 KiB BESPARING
+const compression = require('compression');
+const multer = require('multer');        // ✅ NEW - For image uploads
+const sharp = require('sharp');          // ✅ NEW - For image optimization
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ============================================
+// MULTER CONFIGURATION - BLOG IMAGE UPLOADS
+// ============================================
+const storage = multer.memoryStorage();
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, WebP and GIF are allowed.'));
+    }
+  }
+});
+
+// ============================================
 // TRUST PROXY - FIX VOOR RATE LIMITING ACHTER PROXY
 // ============================================
-app.set('trust proxy', 1); // ✅ Vertrouw de eerste proxy (Railway/Heroku)
+app.set('trust proxy', 1);
 
 // ============================================
 // COMPRESSIE - ALLE RESPONSES IN GZIP
 // ============================================
 app.use(compression({ 
-  level: 9, // Maximale compressie
-  threshold: 0 // Alles comprimeren, ook kleine bestanden
+  level: 9,
+  threshold: 0
 }));
 console.log('✅ GZIP compressie actief - 56 KiB besparing');
 
@@ -176,21 +196,22 @@ app.use((req, res, next) => {
 
 // ✅ STATIC FILES MET CACHE HEADERS - 1 JAAR CACHING
 app.use(express.static('public', {
-  maxAge: '1y',              // Cache voor 1 jaar
-  etag: true,               // Validatie met ETag
-  lastModified: true,       // Laatste wijziging doorgeven
-  immutable: true,          // Bestand verandert nooit
+  maxAge: '1y',
+  etag: true,
+  lastModified: true,
+  immutable: true,
   setHeaders: (res, path) => {
-    // ✅ FONTS KRIJGEN EXTRA HEADERS
     if (path.endsWith('.woff2') || path.endsWith('.woff') || path.endsWith('.ttf')) {
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     }
-    // ✅ AFBEELDINGEN KRIJGEN LAZY LOADING HEADER
     if (path.endsWith('.jpg') || path.endsWith('.png') || path.endsWith('.webp')) {
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     }
   }
 }));
+
+// ✅ SERVE UPLOADED IMAGES STATICALLY
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 console.log('✅ Static files cache: 1 jaar');
 console.log('✅ Lazy loading ready voor afbeeldingen');
@@ -235,7 +256,7 @@ function isValidUrl(string) {
 }
 
 // ============================================
-// DATABASE TABLES SETUP
+// DATABASE TABLES SETUP - WITH BLOG IMAGES + ALT TEXT
 // ============================================
 async function createAllTables() {
   const client = await pool.connect();
@@ -385,6 +406,7 @@ async function createAllTables() {
       )
     `);
     
+    // ✅ UPDATED: Blog posts table with alt_text for featured image
     await client.query(`
       CREATE TABLE IF NOT EXISTS blog_posts (
         id SERIAL PRIMARY KEY,
@@ -396,6 +418,8 @@ async function createAllTables() {
         status VARCHAR(50) DEFAULT 'draft',
         tags TEXT[] DEFAULT '{}',
         featured_image TEXT,
+        featured_image_alt VARCHAR(500),  -- ✅ NEW: Alt text for accessibility
+        featured_image_caption TEXT,      -- ✅ NEW: Optional caption
         author VARCHAR(255) NOT NULL,
         meta_description TEXT,
         views INTEGER DEFAULT 0,
@@ -404,6 +428,21 @@ async function createAllTables() {
         published_at TIMESTAMP
       )
     `);
+    console.log('✅ Blog posts table created with alt text support');
+    
+    // ✅ NEW: Blog images table for multiple images per post
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS blog_images (
+        id SERIAL PRIMARY KEY,
+        post_id INTEGER REFERENCES blog_posts(id) ON DELETE CASCADE,
+        image_url TEXT NOT NULL,
+        alt_text VARCHAR(500) NOT NULL,   -- ✅ Required alt text
+        caption TEXT,
+        position INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✅ Blog images table created with alt text support');
     
     await client.query(`
       CREATE TABLE IF NOT EXISTS share_links (
@@ -778,79 +817,6 @@ app.post('/api/scan', async (req, res) => {
          transparentScores.content_score, transparentScores.ux_score,
          JSON.stringify(result.breakdown), JSON.stringify(result.recommendations)]
       );
-      
-// Auto-add to leaderboard if score >= 85
-if (totalScore >= 85) {
-  // Detect country from domain
-  let country = 'NL';
-  let companyName = null;
-  
-  try {
-    const domain = new URL(scanUrl).hostname;
-    if (domain.endsWith('.nl')) country = 'NL';
-    else if (domain.endsWith('.be')) country = 'BE';
-    else if (domain.endsWith('.de')) country = 'DE';
-    else if (domain.endsWith('.fr')) country = 'FR';
-    else if (domain.endsWith('.uk') || domain.endsWith('.co.uk')) country = 'UK';
-    else if (domain.endsWith('.com')) country = 'US';
-    
-    // Set company name for contentscale.site
-    if (domain === 'contentscale.site' || domain === 'www.contentscale.site') {
-      companyName = 'ContentScale';
-    }
-  } catch (e) {}
-  
-  // Check if already exists
-  const existing = await pool.query(
-    'SELECT id FROM leaderboard WHERE url = $1',
-    [scanUrl]
-  );
-  
-  if (existing.rows.length === 0) {
-    // INSERT new entry
-    await pool.query(
-      `INSERT INTO leaderboard 
-       (url, company_name, score, country, admin_verified, graaf_score, craft_score, technical_score)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [
-        scanUrl, 
-        companyName, 
-        totalScore, 
-        country, 
-        false, 
-        
-        // admin_verified = false (pending approval)
-        scores.graafScore, 
-        scores.craftScore, 
-        scores.technicalScore
-      ]
-    );
-    console.log(`🎉 Added to leaderboard (PENDING): ${scanUrl} (score: ${totalScore})`);
-  } else {
-    // UPDATE existing entry
-    await pool.query(
-      `UPDATE leaderboard SET 
-         score = $1,
-         company_name = COALESCE($2, company_name),
-         country = $3,
-         admin_verified = false,
-         graaf_score = $4,
-         craft_score = $5,
-         technical_score = $6
-       WHERE url = $7`,
-      [
-        totalScore,
-        companyName,
-        country,
-        scores.graafScore,
-        scores.craftScore,
-        scores.technicalScore,
-        scanUrl
-      ]
-    );
-    console.log(`🔄 Updated leaderboard (PENDING RE-APPROVAL): ${scanUrl} (score: ${totalScore})`);
-  }
-}
     } catch (dbError) {
       console.error('DB save error:', dbError.message);
     }
@@ -982,7 +948,6 @@ app.post('/api/google-maps/scrape', async (req, res) => {
   }
 });
 
-// ✅ FIXED: Wrapped the route handler in an async function
 app.get('/api/leaderboard', async (req, res) => {
   try {
     const result = await pool.query(`
@@ -1004,7 +969,7 @@ app.get('/api/leaderboard', async (req, res) => {
       FROM leaderboard 
       WHERE score IS NOT NULL 
         AND is_opted_out = FALSE 
-        AND admin_verified = TRUE   -- ONLY SHOWS APPROVED ENTRIES
+        AND admin_verified = TRUE
       ORDER BY score DESC 
       LIMIT 100
     `);
@@ -1119,7 +1084,7 @@ app.get('/api/blog', async (req, res) => {
     const offset = (parseInt(page) - 1) * parseInt(limit);
     
     let query = `
-      SELECT id, title, slug, excerpt, category, featured_image, author, 
+      SELECT id, title, slug, excerpt, category, featured_image, featured_image_alt, author, 
              published_at, views, tags
       FROM blog_posts 
       WHERE status = 'published' AND published_at <= NOW()
@@ -1184,8 +1149,13 @@ app.get('/api/blog/:slug', async (req, res) => {
     
     await pool.query('UPDATE blog_posts SET views = views + 1 WHERE id = $1', [result.rows[0].id]);
     
+    const images = await pool.query(
+      'SELECT * FROM blog_images WHERE post_id = $1 ORDER BY position ASC',
+      [result.rows[0].id]
+    );
+    
     const related = await pool.query(
-      `SELECT id, title, slug, excerpt, featured_image, published_at
+      `SELECT id, title, slug, excerpt, featured_image, featured_image_alt, published_at
        FROM blog_posts 
        WHERE category = $1 AND id != $2 AND status = 'published' AND published_at <= NOW()
        ORDER BY published_at DESC LIMIT 3`,
@@ -1194,7 +1164,7 @@ app.get('/api/blog/:slug', async (req, res) => {
     
     res.json({
       success: true,
-      post: result.rows[0],
+      post: { ...result.rows[0], images: images.rows },
       related: related.rows
     });
   } catch (error) {
@@ -1237,9 +1207,12 @@ app.post('/api/claims/submit', async (req, res) => {
 });
 
 // ============================================
-// ADMIN ENDPOINTS
+// ADMIN ENDPOINTS - FIXED & COMPLETE
 // ============================================
 
+// --------------------------------------------
+// AUTHENTICATION
+// --------------------------------------------
 app.post('/api/setup/verify-admin', async (req, res) => {
   const { username, password } = req.body;
   
@@ -1281,15 +1254,20 @@ app.post('/api/setup/verify-admin', async (req, res) => {
   }
 });
 
+// --------------------------------------------
+// DASHBOARD STATS
+// --------------------------------------------
 app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
   try {
-    const [scans, leaderboard, freelancers, blogPosts, shareLinks, claims] = await Promise.all([
+    const [scans, leaderboard, freelancers, blogPosts, shareLinks, claims, pendingFreelancers, pendingLeaderboard] = await Promise.all([
       pool.query('SELECT COUNT(*) FROM scans').catch(() => ({ rows: [{ count: '0' }] })),
       pool.query('SELECT COUNT(*) FROM leaderboard WHERE is_opted_out = FALSE').catch(() => ({ rows: [{ count: '0' }] })),
       pool.query('SELECT COUNT(*) FROM freelancers WHERE is_approved = TRUE').catch(() => ({ rows: [{ count: '0' }] })),
       pool.query('SELECT COUNT(*) FROM blog_posts').catch(() => ({ rows: [{ count: '0' }] })),
       pool.query('SELECT COUNT(*) FROM share_links WHERE is_active = TRUE').catch(() => ({ rows: [{ count: '0' }] })),
-      pool.query('SELECT COUNT(*) FROM claims WHERE status = $1', ['pending']).catch(() => ({ rows: [{ count: '0' }] }))
+      pool.query('SELECT COUNT(*) FROM claims WHERE status = $1', ['pending']).catch(() => ({ rows: [{ count: '0' }] })),
+      pool.query('SELECT COUNT(*) FROM freelancers WHERE is_approved = FALSE').catch(() => ({ rows: [{ count: '0' }] })),
+      pool.query('SELECT COUNT(*) FROM leaderboard WHERE admin_verified = FALSE').catch(() => ({ rows: [{ count: '0' }] }))
     ]);
     
     res.json({
@@ -1302,7 +1280,9 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
         leaderboard_entries: parseInt(leaderboard.rows[0].count) || 0,
         blog_posts: parseInt(blogPosts.rows[0].count) || 0,
         active_share_links: parseInt(shareLinks.rows[0].count) || 0,
-        pending_claims: parseInt(claims.rows[0].count) || 0
+        pending_claims: parseInt(claims.rows[0].count) || 0,
+        pending_freelancers: parseInt(pendingFreelancers.rows[0].count) || 0,
+        pending_leaderboard: parseInt(pendingLeaderboard.rows[0].count) || 0
       }
     });
   } catch (error) {
@@ -1316,12 +1296,17 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
         active_helpers: 0,
         blog_posts: 0,
         active_share_links: 0,
-        pending_claims: 0
+        pending_claims: 0,
+        pending_freelancers: 0,
+        pending_leaderboard: 0
       } 
     });
   }
 });
 
+// --------------------------------------------
+// ANALYTICS
+// --------------------------------------------
 app.get('/api/admin/analytics', verifyAdmin, async (req, res) => {
   try {
     const range = req.query.range || '30d';
@@ -1394,7 +1379,8 @@ app.get('/api/admin/analytics', verifyAdmin, async (req, res) => {
       trends: {
         scans: { current: parseInt(current.scans_count || 0), trend: scansTrend },
         score: { current: parseInt(current.avg_score || 0), trend: scoreTrend },
-        users: { current: parseInt(current.unique_urls || 0), trend: usersTrend }
+        users: { current: parseInt(current.unique_urls || 0), trend: usersTrend },
+        agencies: { current: 0, trend: 0 }
       },
       scans: scansOverTime.rows.map(row => ({ date: row.date, count: parseInt(row.count) })),
       countries: countries.rows.map(row => ({ name: row.name, count: parseInt(row.count), percentage: parseFloat(row.percentage) })),
@@ -1410,7 +1396,7 @@ app.get('/api/admin/analytics', verifyAdmin, async (req, res) => {
     console.error('Analytics error:', error);
     res.json({ 
       success: true,
-      trends: { scans: { current: 0, trend: 0 }, score: { current: 0, trend: 0 }, users: { current: 0, trend: 0 } },
+      trends: { scans: { current: 0, trend: 0 }, score: { current: 0, trend: 0 }, users: { current: 0, trend: 0 }, agencies: { current: 0, trend: 0 } },
       scans: [], countries: [], recent_activity: [],
       performance: { scan_duration: '-', success_rate: '-', api_response: '-', db_queries: '-' }
     });
@@ -1430,6 +1416,9 @@ function formatTimeAgo(date) {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
+// --------------------------------------------
+// CLIENTS & SCANS MANAGEMENT
+// --------------------------------------------
 app.get('/api/admin/clients', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(
@@ -1452,6 +1441,18 @@ app.delete('/api/admin/clients/:id', verifyAdmin, async (req, res) => {
   }
 });
 
+app.get('/api/admin/scans', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM scans ORDER BY created_at DESC LIMIT 200`
+    );
+    res.json({ success: true, scans: result.rows });
+  } catch (error) {
+    console.error('Scans error:', error);
+    res.json({ success: true, scans: [] });
+  }
+});
+
 app.delete('/api/admin/scans/:id', verifyAdmin, async (req, res) => {
   try {
     await pool.query('DELETE FROM scans WHERE id = $1', [req.params.id]);
@@ -1461,12 +1462,18 @@ app.delete('/api/admin/scans/:id', verifyAdmin, async (req, res) => {
   }
 });
 
-app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
+// --------------------------------------------
+// LEADERBOARD MANAGEMENT - FIXED & COMPLETE
+// --------------------------------------------
+app.get('/api/admin/leaderboard', verifyAdmin, async (req, res) => {
   try {
-    await pool.query('DELETE FROM leaderboard WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
+    const result = await pool.query(
+      `SELECT * FROM leaderboard WHERE admin_verified = TRUE ORDER BY score DESC LIMIT 200`
+    );
+    res.json({ success: true, entries: result.rows });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Leaderboard error:', error);
+    res.json({ success: true, entries: [] });
   }
 });
 
@@ -1504,9 +1511,262 @@ app.post('/api/admin/leaderboard/:id/reject', verifyAdmin, async (req, res) => {
   }
 });
 
+app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM leaderboard WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ NEW: Admin-only scan and add to leaderboard
+app.post('/api/admin/leaderboard/scan-and-add', verifyAdmin, async (req, res) => {
+  const { url, company_name, country, city, type = 'seo_agency' } = req.body;
+  
+  if (!url) {
+    return res.status(400).json({ success: false, error: 'URL required' });
+  }
+  
+  let scanUrl = url;
+  if (!scanUrl.startsWith('http')) scanUrl = 'https://' + scanUrl;
+  if (!isValidUrl(scanUrl)) {
+    return res.status(400).json({ success: false, error: 'Invalid URL format' });
+  }
+  
+  try {
+    console.log(`👑 ADMIN SCAN for leaderboard: ${scanUrl}`);
+    
+    const browser = await getBrowser();
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1920, height: 1080 });
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+    await page.goto(scanUrl, { waitUntil: 'networkidle2', timeout: 25000 });
+    const rawHtml = await page.content();
+    await page.close();
+    
+    const textContent = rawHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+    const wordCount = textContent.split(/\s+/).length;
+    const h1Count = (rawHtml.match(/<h1[^>]*>/gi) || []).length;
+    const h2Count = (rawHtml.match(/<h2[^>]*>/gi) || []).length;
+    const h3Count = (rawHtml.match(/<h3[^>]*>/gi) || []).length;
+    const listCount = (rawHtml.match(/<li[^>]*>/gi) || []).length;
+    const stats = { wordCount, h1Count, h2Count, h3Count, listCount };
+    
+    const scores = calculateStableScores(textContent, stats, rawHtml);
+    const transparentScores = calculateTransparentScore(scores.graafScore, scores.craftScore, scores.technicalScore, stats);
+    const totalScore = transparentScores.overall;
+    const quality = transparentScores.quality;
+    
+    await pool.query(
+      `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, content_score, ux_score, scan_type)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'admin_leaderboard')`,
+      [scanUrl, totalScore, quality, scores.graafScore, scores.craftScore, scores.technicalScore,
+       transparentScores.content_score, transparentScores.ux_score]
+    );
+    
+    const existing = await pool.query(
+      'SELECT id FROM leaderboard WHERE url = $1',
+      [scanUrl]
+    );
+    
+    let leaderboardEntry;
+    
+    if (existing.rows.length === 0) {
+      const result = await pool.query(
+        `INSERT INTO leaderboard 
+         (url, company_name, score, country, city, type, admin_verified, is_verified, graaf_score, craft_score, technical_score)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         RETURNING id`,
+        [
+          scanUrl,
+          company_name || null,
+          totalScore,
+          country || 'NL',
+          city || null,
+          type,
+          true,
+          true,
+          scores.graafScore,
+          scores.craftScore,
+          scores.technicalScore
+        ]
+      );
+      leaderboardEntry = { id: result.rows[0].id, action: 'added' };
+      console.log(`👑 Admin added to leaderboard: ${scanUrl} (score: ${totalScore})`);
+    } else {
+      await pool.query(
+        `UPDATE leaderboard SET 
+           score = $1,
+           company_name = COALESCE($2, company_name),
+           country = COALESCE($3, country),
+           city = COALESCE($4, city),
+           type = COALESCE($5, type),
+           admin_verified = true,
+           is_verified = true,
+           graaf_score = $6,
+           craft_score = $7,
+           technical_score = $8
+         WHERE url = $9`,
+        [
+          totalScore,
+          company_name || null,
+          country || null,
+          city || null,
+          type,
+          scores.graafScore,
+          scores.craftScore,
+          scores.technicalScore,
+          scanUrl
+        ]
+      );
+      leaderboardEntry = { id: existing.rows[0].id, action: 'updated' };
+      console.log(`👑 Admin updated leaderboard: ${scanUrl} (score: ${totalScore})`);
+    }
+    
+    const recommendations = generateDetailedRecommendations(totalScore, {
+      content: transparentScores.content_score,
+      technical: transparentScores.technical_score,
+      ux: transparentScores.ux_score
+    }, wordCount, { hasFAQ: scores.hasFAQ || false });
+    
+    const quickWins = recommendations.filter(r => r.priority === 'HIGH').slice(0, 3);
+    
+    res.json({
+      success: true,
+      admin_action: leaderboardEntry.action,
+      leaderboard_id: leaderboardEntry.id,
+      url: scanUrl,
+      score: totalScore,
+      quality,
+      metrics: {
+        graaf: scores.graafScore,
+        craft: scores.craftScore,
+        technical: scores.technicalScore,
+        content: transparentScores.content_score,
+        ux: transparentScores.ux_score
+      },
+      recommendations: { all: recommendations, quickWins },
+      content_stats: stats,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Admin leaderboard scan error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ NEW: Admin manual add to leaderboard
+app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
+  try {
+    const { url, company_name, score, country, city, type, graaf_score, craft_score, technical_score } = req.body;
+    
+    if (!url || !score) {
+      return res.status(400).json({ success: false, error: 'URL and score are required' });
+    }
+    
+    const existing = await pool.query(
+      'SELECT id FROM leaderboard WHERE url = $1',
+      [url]
+    );
+    
+    if (existing.rows.length === 0) {
+      const result = await pool.query(
+        `INSERT INTO leaderboard 
+         (url, company_name, score, country, city, type, admin_verified, is_verified, graaf_score, craft_score, technical_score)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         RETURNING id`,
+        [
+          url,
+          company_name || null,
+          score,
+          country || 'NL',
+          city || null,
+          type || 'seo_agency',
+          true,
+          true,
+          graaf_score || null,
+          craft_score || null,
+          technical_score || null
+        ]
+      );
+      
+      res.json({
+        success: true,
+        action: 'added',
+        id: result.rows[0].id,
+        message: 'Entry added to leaderboard'
+      });
+    } else {
+      await pool.query(
+        `UPDATE leaderboard SET 
+           score = $1,
+           company_name = COALESCE($2, company_name),
+           country = COALESCE($3, country),
+           city = COALESCE($4, city),
+           type = COALESCE($5, type),
+           admin_verified = true,
+           is_verified = true,
+           graaf_score = COALESCE($6, graaf_score),
+           craft_score = COALESCE($7, craft_score),
+           technical_score = COALESCE($8, technical_score)
+         WHERE url = $9`,
+        [
+          score,
+          company_name || null,
+          country || null,
+          city || null,
+          type || 'seo_agency',
+          graaf_score || null,
+          craft_score || null,
+          technical_score || null,
+          url
+        ]
+      );
+      
+      res.json({
+        success: true,
+        action: 'updated',
+        id: existing.rows[0].id,
+        message: 'Leaderboard entry updated'
+      });
+    }
+  } catch (error) {
+    console.error('Manual leaderboard add error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// --------------------------------------------
+// FREELANCERS MANAGEMENT - FIXED & COMPLETE
+// --------------------------------------------
+app.get('/api/admin/freelancers', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM freelancers ORDER BY created_at DESC LIMIT 200`
+    );
+    res.json({ success: true, freelancers: result.rows });
+  } catch (error) {
+    console.error('Freelancers error:', error);
+    res.json({ success: true, freelancers: [] });
+  }
+});
+
+app.get('/api/admin/freelancers/pending', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM freelancers WHERE is_approved = FALSE ORDER BY created_at DESC LIMIT 50`
+    );
+    res.json({ success: true, pending: result.rows });
+  } catch (error) {
+    res.json({ success: true, pending: [] });
+  }
+});
+
 app.post('/api/admin/freelancers/:id/approve', verifyAdmin, async (req, res) => {
   try {
-    await pool.query('UPDATE freelancers SET is_approved = TRUE WHERE id = $1', [req.params.id]);
+    await pool.query('UPDATE freelancers SET is_approved = TRUE, is_verified = TRUE WHERE id = $1', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1542,11 +1802,20 @@ app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
   }
 });
 
+// --------------------------------------------
+// SHARE LINKS MANAGEMENT - FIXED & COMPLETE
+// --------------------------------------------
 app.get('/api/admin/share-links', verifyAdmin, async (req, res) => {
   try {
-    const result = await pool.query(`SELECT * FROM share_links ORDER BY created_at DESC LIMIT 100`);
+    const result = await pool.query(
+      `SELECT *, 
+        CASE WHEN expires_at > NOW() AND is_active = TRUE THEN 'active' ELSE 'inactive' END as status
+       FROM share_links 
+       ORDER BY created_at DESC LIMIT 100`
+    );
     res.json({ success: true, share_links: result.rows });
   } catch (error) {
+    console.error('Share links error:', error);
     res.json({ success: true, share_links: [] });
   }
 });
@@ -1575,6 +1844,24 @@ app.post('/api/admin/share-links/create', verifyAdmin, async (req, res) => {
   }
 });
 
+// ✅ FIXED: Toggle share link status by ID
+app.put('/api/admin/share-links/:id/toggle-status', verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    await pool.query(
+      'UPDATE share_links SET is_active = $1 WHERE id = $2',
+      [status === 'active', id]
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ FIXED: Delete share link by ID (not code)
 app.delete('/api/admin/share-links/:id', verifyAdmin, async (req, res) => {
   try {
     await pool.query('DELETE FROM share_links WHERE id = $1', [req.params.id]);
@@ -1584,6 +1871,9 @@ app.delete('/api/admin/share-links/:id', verifyAdmin, async (req, res) => {
   }
 });
 
+// --------------------------------------------
+// CLAIMS MANAGEMENT
+// --------------------------------------------
 app.get('/api/admin/claims/pending', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(
@@ -1656,57 +1946,197 @@ app.post('/api/admin/claims/:id/reject', verifyAdmin, async (req, res) => {
   }
 });
 
+// --------------------------------------------
+// BLOG MANAGEMENT - WITH IMAGE UPLOAD + ALT TEXT
+// --------------------------------------------
 app.get('/api/admin/blog', verifyAdmin, async (req, res) => {
   try {
-    const result = await pool.query(`SELECT * FROM blog_posts ORDER BY created_at DESC LIMIT 100`);
-    res.json({ success: true, posts: result.rows });
+    const result = await pool.query(
+      `SELECT * FROM blog_posts ORDER BY created_at DESC LIMIT 100`
+    );
+    
+    // Get image counts for each post
+    const posts = await Promise.all(result.rows.map(async (post) => {
+      const images = await pool.query(
+        'SELECT COUNT(*) as image_count FROM blog_images WHERE post_id = $1',
+        [post.id]
+      );
+      return { ...post, image_count: parseInt(images.rows[0].count) || 0 };
+    }));
+    
+    res.json({ success: true, posts });
   } catch (error) {
+    console.error('Blog posts error:', error);
     res.json({ success: true, posts: [] });
   }
 });
 
+// ✅ NEW: Upload blog image with alt text
+app.post('/api/admin/blog/upload-image', verifyAdmin, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No image uploaded' });
+    }
+    
+    const { alt_text, caption, post_id } = req.body;
+    
+    if (!alt_text) {
+      return res.status(400).json({ success: false, error: 'Alt text is required for accessibility' });
+    }
+    
+    // Generate unique filename
+    const filename = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}.webp`;
+    const uploadDir = path.join(__dirname, '../public/uploads/blog');
+    const filepath = path.join(uploadDir, filename);
+    
+    // Ensure directory exists
+    const fs = require('fs');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    
+    // Optimize image with Sharp
+    await sharp(req.file.buffer)
+      .resize({ width: 1200, withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toFile(filepath);
+    
+    const imageUrl = `/uploads/blog/${filename}`;
+    
+    // If post_id is provided, link image to post
+    if (post_id) {
+      // Get next position
+      const positionResult = await pool.query(
+        'SELECT COALESCE(MAX(position), -1) + 1 as next_pos FROM blog_images WHERE post_id = $1',
+        [post_id]
+      );
+      const position = positionResult.rows[0].next_pos || 0;
+      
+      await pool.query(
+        `INSERT INTO blog_images (post_id, image_url, alt_text, caption, position)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [post_id, imageUrl, alt_text, caption || null, position]
+      );
+    }
+    
+    res.json({
+      success: true,
+      image_url: imageUrl,
+      alt_text,
+      caption: caption || null,
+      message: 'Image uploaded successfully'
+    });
+    
+  } catch (error) {
+    console.error('Image upload error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ UPDATED: Create blog post with alt text support
 app.post('/api/admin/blog', verifyAdmin, async (req, res) => {
   try {
-    const { title, slug, excerpt, content, category, tags, featured_image, author, meta_description, status, published_at } = req.body;
+    const { 
+      title, slug, excerpt, content, category, tags, 
+      featured_image, featured_image_alt, featured_image_caption,
+      author, meta_description, status, published_at 
+    } = req.body;
     
     if (!title || !slug || !content || !category || !author) {
       return res.status(400).json({ success: false, error: 'Required fields missing' });
     }
     
     const result = await pool.query(
-      `INSERT INTO blog_posts (title, slug, excerpt, content, category, tags, featured_image, author, meta_description, status, published_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
-      [title, slug, excerpt || null, content, category, tags || [], featured_image || null, author, meta_description || null, status || 'draft', published_at || null]
+      `INSERT INTO blog_posts (
+        title, slug, excerpt, content, category, tags, 
+        featured_image, featured_image_alt, featured_image_caption,
+        author, meta_description, status, published_at
+      )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) 
+       RETURNING id`,
+      [
+        title, slug, excerpt || null, content, category, tags || [], 
+        featured_image || null, featured_image_alt || null, featured_image_caption || null,
+        author, meta_description || null, status || 'draft', 
+        published_at || (status === 'published' ? new Date() : null)
+      ]
     );
     
     res.json({ success: true, id: result.rows[0].id });
   } catch (error) {
+    console.error('Create blog post error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
+// ✅ UPDATED: Update blog post with alt text support
 app.put('/api/admin/blog/:id', verifyAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, slug, excerpt, content, category, tags, featured_image, author, meta_description, status, published_at } = req.body;
+    const { 
+      title, slug, excerpt, content, category, tags, 
+      featured_image, featured_image_alt, featured_image_caption,
+      author, meta_description, status, published_at 
+    } = req.body;
     
     await pool.query(
       `UPDATE blog_posts 
        SET title = $1, slug = $2, excerpt = $3, content = $4, category = $5, tags = $6, 
-           featured_image = $7, author = $8, meta_description = $9, status = $10, published_at = $11, updated_at = NOW()
-       WHERE id = $12`,
-      [title, slug, excerpt, content, category, tags, featured_image, author, meta_description, status, published_at, id]
+           featured_image = $7, featured_image_alt = $8, featured_image_caption = $9,
+           author = $10, meta_description = $11, status = $12, published_at = $13, updated_at = NOW()
+       WHERE id = $14`,
+      [
+        title, slug, excerpt, content, category, tags, 
+        featured_image, featured_image_alt, featured_image_caption,
+        author, meta_description, status, published_at, id
+      ]
     );
     
     res.json({ success: true });
   } catch (error) {
+    console.error('Update blog post error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
 app.delete('/api/admin/blog/:id', verifyAdmin, async (req, res) => {
   try {
+    // Delete will cascade to blog_images due to ON DELETE CASCADE
     await pool.query('DELETE FROM blog_posts WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ NEW: Get images for a blog post
+app.get('/api/admin/blog/:id/images', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM blog_images WHERE post_id = $1 ORDER BY position ASC',
+      [req.params.id]
+    );
+    res.json({ success: true, images: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ NEW: Delete blog image
+app.delete('/api/admin/blog-images/:id', verifyAdmin, async (req, res) => {
+  try {
+    const image = await pool.query('SELECT image_url FROM blog_images WHERE id = $1', [req.params.id]);
+    
+    if (image.rows.length > 0) {
+      // Delete file from filesystem
+      const filepath = path.join(__dirname, '../public', image.rows[0].image_url);
+      const fs = require('fs');
+      if (fs.existsSync(filepath)) {
+        fs.unlinkSync(filepath);
+      }
+    }
+    
+    await pool.query('DELETE FROM blog_images WHERE id = $1', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1800,16 +2230,24 @@ app.listen(PORT, async () => {
   console.log('   • ✅ Lazy loading headers - 39 KiB unused JS');
   console.log('   • ✅ ETag validatie - snellere requests');
   console.log('');
+  console.log('✅ ALL FIXES APPLIED:');
+  console.log('   • 🔗 Share Links - Fixed toggle & delete by ID');
+  console.log('   • 🏆 Leaderboard - Added admin-only scan & add');
+  console.log('   • 💼 Freelancers - Added GET all/pending endpoints');
+  console.log('   • 📝 Blog - Added image upload with alt text & caption');
+  console.log('');
   console.log('✅ ALLE ENDPOINTS REAL:');
   console.log('   • POST /api/scan - Real Puppeteer scanning');
   console.log('   • POST /api/google-maps/scrape - REAL Google Maps data');
   console.log('   • GET  /api/leaderboard - Real leaderboard data');
   console.log('   • GET  /api/freelancers - Real freelancers data');
-  console.log('   • GET  /api/blog - Real blog posts');
+  console.log('   • GET  /api/blog - Real blog posts with alt text');
   console.log('   • GET  /api/admin/stats - Real database stats');
   console.log('   • GET  /api/admin/analytics - Real analytics metrics');
   console.log('   • POST /api/admin/share-links/create - Real share links');
-  console.log('   • POST /api/claims/submit - Real business claims');
+  console.log('   • PUT  /api/admin/share-links/:id/toggle-status - Fixed toggle');
+  console.log('   • POST /api/admin/leaderboard/scan-and-add - Admin-only scan');
+  console.log('   • POST /api/admin/blog/upload-image - Image upload + alt text');
   console.log('');
   console.log('🔒 SECURITY ENHANCED:');
   console.log('   • ✅ bcrypt password hashing');
@@ -1817,6 +2255,7 @@ app.listen(PORT, async () => {
   console.log('   • ✅ URL validation');
   console.log('   • ✅ Production CORS');
   console.log('   • ✅ Admin authentication');
+  console.log('   • ✅ Image upload with Sharp optimization');
   console.log('');
   console.log('📊 NO DEMO DATA - ONLY REAL DATABASE ENTRIES');
   console.log('');
