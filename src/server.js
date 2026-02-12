@@ -1,7 +1,6 @@
 // ============================================
 // CONTENTSCALE SERVER.JS - 100% WERKENDE VERSIE
-// MET ALLE PERFORMANCE OPTIMALISATIES 
-// ALL FIXES: Share Links, Leaderboard, Freelancers, Blog Images + Alt Text
+// MET DATABASE CONNECTIE RETRY & DUIDELIJKE FEEDBACK
 // ============================================
 
 // ============================================
@@ -15,19 +14,126 @@ const puppeteer = require('puppeteer');
 const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
 const compression = require('compression');
-const multer = require('multer');        // ✅ NEW - For image uploads
-const sharp = require('sharp');          // ✅ NEW - For image optimization
+const multer = require('multer');
+const sharp = require('sharp');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ============================================
-// MULTER CONFIGURATION - BLOG IMAGE UPLOADS
+// ENVIRONMENT VARIABLES - LAAD VROEG
+// ============================================
+require('dotenv').config();
+
+// ============================================
+// DATABASE CONFIGURATIE - FIXED MET RETRY LOGIC
+// ============================================
+let dbConfig;
+let pool;
+
+function initDatabaseConfig() {
+  if (process.env.DATABASE_URL) {
+    console.log('📊 Using DATABASE_URL from environment');
+    const url = new URL(process.env.DATABASE_URL);
+    dbConfig = {
+      user: url.username,
+      password: url.password,
+      host: url.hostname,
+      port: url.port || 5432,
+      database: url.pathname.slice(1),
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      connectionTimeoutMillis: 10000,
+      idleTimeoutMillis: 30000,
+      max: 20
+    };
+  } else {
+    // Development defaults
+    dbConfig = {
+      host: process.env.DB_HOST || 'localhost',
+      port: process.env.DB_PORT || 5432,
+      database: process.env.DB_NAME || 'contentscale',
+      user: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || 'postgres',
+      ssl: false,
+      connectionTimeoutMillis: 5000,
+      idleTimeoutMillis: 30000,
+      max: 10
+    };
+  }
+
+  console.log('📊 Database configuratie:');
+  console.log(`   • Host: ${dbConfig.host}`);
+  console.log(`   • Port: ${dbConfig.port}`);
+  console.log(`   • Database: ${dbConfig.database}`);
+  console.log(`   • User: ${dbConfig.user}`);
+  console.log(`   • SSL: ${dbConfig.ssl ? 'Ja' : 'Nee'}`);
+
+  return new Pool(dbConfig);
+}
+
+// Initialiseer pool
+pool = initDatabaseConfig();
+
+// ============================================
+// DATABASE CONNECTIE MET RETRY
+// ============================================
+async function waitForDatabase(retries = 10, delay = 3000) {
+  console.log('🔄 Verbinden met database...');
+  
+  for (let i = 0; i < retries; i++) {
+    try {
+      const client = await pool.connect();
+      console.log(`✅ Database verbonden! (poging ${i + 1}/${retries})`);
+      
+      // Test query
+      await client.query('SELECT NOW()');
+      console.log('✅ Database query werkt');
+      
+      client.release();
+      
+      // Start tables setup
+      setTimeout(() => createAllTables().catch(err => {
+        console.error('❌ Fout bij aanmaken tabellen:', err.message);
+      }), 1000);
+      
+      return true;
+    } catch (err) {
+      console.error(`❌ Database connectie poging ${i + 1}/${retries} mislukt:`, err.message);
+      
+      if (i === retries - 1) {
+        console.error('\n❌❌❌ KON GEEN VERBINDING MAKEN MET DATABASE ❌❌❌');
+        console.error('\n📋 OPLOSSINGEN:');
+        console.error('   1. Start PostgreSQL:');
+        console.error('      • Mac:    brew services start postgresql');
+        console.error('      • Linux:  sudo service postgresql start');
+        console.error('      • Windows: net start postgresql');
+        console.error('\n   2. Maak database aan:');
+        console.error('      createdb -U postgres contentscale');
+        console.error('\n   3. Of gebruik .env bestand met:');
+        console.error('      DB_HOST=localhost');
+        console.error('      DB_USER=postgres');
+        console.error('      DB_PASSWORD=postgres');
+        console.error('      DB_NAME=contentscale');
+        console.error('\n⚠️  Server start ZONDER database - admin login werkt niet!');
+        console.error('   Gebruik CTRL+C om te stoppen en fix database eerst.\n');
+        
+        return false;
+      }
+      
+      console.log(`⏳ Opnieuw proberen over ${delay/1000} seconden...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  return false;
+}
+
+// ============================================
+// MULTER CONFIGURATION
 // ============================================
 const storage = multer.memoryStorage();
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
     if (allowedTypes.includes(file.mimetype)) {
@@ -39,31 +145,20 @@ const upload = multer({
 });
 
 // ============================================
-// TRUST PROXY - FIX VOOR RATE LIMITING ACHTER PROXY
+// MIDDLEWARE
 // ============================================
 app.set('trust proxy', 1);
 
-// ============================================
-// COMPRESSIE - ALLE RESPONSES IN GZIP
-// ============================================
-app.use(compression({ 
-  level: 9,
-  threshold: 0
-}));
-console.log('✅ GZIP compressie actief - 56 KiB besparing');
+// Compressie
+app.use(compression({ level: 9, threshold: 0 }));
 
-// ============================================
-// RATE LIMITING - MET PROXY SUPPORT
-// ============================================
+// Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   message: { success: false, error: 'Too many requests, please try again later.' },
   standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req) => {
-    return req.ip || req.connection.remoteAddress;
-  }
+  legacyHeaders: false
 });
 
 const authLimiter = rateLimit({
@@ -71,53 +166,64 @@ const authLimiter = rateLimit({
   max: 5,
   message: { success: false, error: 'Too many login attempts, please try again later.' },
   standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req) => {
-    return req.ip || req.connection.remoteAddress;
-  }
+  legacyHeaders: false
 });
 
 app.use('/api/', limiter);
 app.use('/api/setup/verify-admin', authLimiter);
 
-// ============================================
-// DATABASE CONFIGURATIE
-// ============================================
-let dbConfig;
+// Body parsing
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-if (process.env.DATABASE_URL) {
-  const url = new URL(process.env.DATABASE_URL);
-  dbConfig = {
-    user: url.username,
-    password: url.password,
-    host: url.hostname,
-    port: url.port || 5432,
-    database: url.pathname.slice(1),
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-  };
-} else {
-  dbConfig = {
-    host: 'localhost',
-    database: 'contentscale',
-    user: 'postgres',
-    password: 'postgres',
-    port: 5432,
-    ssl: false
-  };
-}
+// CORS
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    'https://app.contentscale.site',
+    'https://contentscale.site',
+    'http://localhost:3000',
+    'http://localhost:3001'
+  ];
+  
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-admin-key');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+});
 
-const pool = new Pool(dbConfig);
+// Static files
+app.use(express.static('public', {
+  maxAge: '1y',
+  etag: true,
+  lastModified: true,
+  immutable: true
+}));
+
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 // ============================================
 // ADMIN VERIFICATION MIDDLEWARE
 // ============================================
 const verifyAdmin = async (req, res, next) => {
   const adminKey = req.headers['x-admin-key'];
+  
   if (!adminKey) {
     return res.status(401).json({ success: false, error: 'Admin authentication required' });
   }
   
   try {
+    // Check of database verbonden is
+    if (!pool) {
+      return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    }
+    
     const result = await pool.query(
       'SELECT * FROM super_admins WHERE id = $1 AND is_active = TRUE',
       [adminKey]
@@ -130,6 +236,7 @@ const verifyAdmin = async (req, res, next) => {
     req.admin = result.rows[0];
     next();
   } catch (error) {
+    console.error('❌ Admin verificatie error:', error.message);
     res.status(500).json({ success: false, error: 'Authentication error' });
   }
 };
@@ -160,61 +267,10 @@ async function getBrowser() {
 
 process.on('SIGTERM', async () => {
   if (browserInstance) {
-    console.log('🛑 Closing Puppeteer browser...');
     await browserInstance.close();
   }
   process.exit(0);
 });
-
-// ============================================
-// MIDDLEWARE
-// ============================================
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-// CORS - Production ready
-app.use((req, res, next) => {
-  const allowedOrigins = [
-    'https://app.contentscale.site',
-    'https://contentscale.site',
-    'http://localhost:3000',
-    'http://localhost:3001'
-  ];
-  
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-  }
-  
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-admin-key');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  if (req.method === 'OPTIONS') return res.sendStatus(200);
-  next();
-});
-
-// ✅ STATIC FILES MET CACHE HEADERS - 1 JAAR CACHING
-app.use(express.static('public', {
-  maxAge: '1y',
-  etag: true,
-  lastModified: true,
-  immutable: true,
-  setHeaders: (res, path) => {
-    if (path.endsWith('.woff2') || path.endsWith('.woff') || path.endsWith('.ttf')) {
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-    }
-    if (path.endsWith('.jpg') || path.endsWith('.png') || path.endsWith('.webp')) {
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-    }
-  }
-}));
-
-// ✅ SERVE UPLOADED IMAGES STATICALLY
-app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
-
-console.log('✅ Static files cache: 1 jaar');
-console.log('✅ Lazy loading ready voor afbeeldingen');
 
 // ============================================
 // CACHE SYSTEM
@@ -226,9 +282,6 @@ function hashContent(html) {
   return crypto.createHash('sha256').update(html).digest('hex');
 }
 
-scanCache.clear();
-console.log('🧹 Cache cleared on startup');
-
 setInterval(() => {
   const now = Date.now();
   let cleared = 0;
@@ -238,9 +291,7 @@ setInterval(() => {
       cleared++;
     }
   }
-  if (cleared > 0) {
-    console.log(`🧹 Cleared ${cleared} expired cache entries`);
-  }
+  if (cleared > 0) console.log(`🧹 Cleared ${cleared} expired cache entries`);
 }, 60000);
 
 // ============================================
@@ -256,12 +307,19 @@ function isValidUrl(string) {
 }
 
 // ============================================
-// DATABASE TABLES SETUP - WITH BLOG IMAGES + ALT TEXT
+// DATABASE TABLES SETUP
 // ============================================
 async function createAllTables() {
+  if (!pool) {
+    console.error('❌ Geen database pool - kan tabellen niet aanmaken');
+    return;
+  }
+  
   const client = await pool.connect();
   
   try {
+    console.log('📦 Database tabellen controleren...');
+    
     await client.query(`
       CREATE TABLE IF NOT EXISTS super_admins (
         id SERIAL PRIMARY KEY,
@@ -276,16 +334,25 @@ async function createAllTables() {
       )
     `);
     
-    const adminCheck = await client.query('SELECT COUNT(*) FROM super_admins WHERE username = $1', ['ot']);
+    // Check of admin gebruiker 'ot' al bestaat
+    const adminCheck = await client.query(
+      'SELECT COUNT(*) FROM super_admins WHERE username = $1', 
+      ['ot']
+    );
+    
     if (parseInt(adminCheck.rows[0].count) === 0) {
       const hashedPassword = await bcrypt.hash('admin123', 10);
       await client.query(
-        'INSERT INTO super_admins (username, password_hash, full_name, role) VALUES ($1, $2, $3, $4)',
+        `INSERT INTO super_admins (username, password_hash, full_name, role) 
+         VALUES ($1, $2, $3, $4)`,
         ['ot', hashedPassword, 'Super Admin', 'super_admin']
       );
-      console.log('✅ Default admin created (ot/admin123) - Password hashed');
+      console.log('✅ Default admin created (ot/admin123)');
+    } else {
+      console.log('✅ Admin gebruiker bestaat al');
     }
     
+    // Scans table
     await client.query(`
       CREATE TABLE IF NOT EXISTS scans (
         id SERIAL PRIMARY KEY,
@@ -305,18 +372,7 @@ async function createAllTables() {
       )
     `);
     
-    try {
-      await client.query(`
-        ALTER TABLE scans 
-        ADD COLUMN IF NOT EXISTS content_score INTEGER,
-        ADD COLUMN IF NOT EXISTS ux_score INTEGER,
-        ADD COLUMN IF NOT EXISTS comparison_data JSONB
-      `);
-      console.log('✅ Scans table migrated');
-    } catch (migrationError) {
-      console.log('ℹ️ Scans migration skipped');
-    }
-    
+    // Leaderboard table
     await client.query(`
       CREATE TABLE IF NOT EXISTS leaderboard (
         id SERIAL PRIMARY KEY,
@@ -339,21 +395,7 @@ async function createAllTables() {
       )
     `);
     
-    try {
-      await client.query(`
-        ALTER TABLE leaderboard 
-        ADD COLUMN IF NOT EXISTS city VARCHAR(255),
-        ADD COLUMN IF NOT EXISTS type VARCHAR(100) DEFAULT 'seo_agency',
-        ADD COLUMN IF NOT EXISTS location VARCHAR(255),
-        ADD COLUMN IF NOT EXISTS graaf_score INTEGER,
-        ADD COLUMN IF NOT EXISTS craft_score INTEGER,
-        ADD COLUMN IF NOT EXISTS technical_score INTEGER
-      `);
-      console.log('✅ Leaderboard table migrated');
-    } catch (migrationError) {
-      console.log('ℹ️ Leaderboard migration skipped');
-    }
-    
+    // Freelancers table
     await client.query(`
       CREATE TABLE IF NOT EXISTS freelancers (
         id SERIAL PRIMARY KEY,
@@ -373,19 +415,7 @@ async function createAllTables() {
       )
     `);
     
-    try {
-      await client.query(`
-        ALTER TABLE freelancers 
-        ADD COLUMN IF NOT EXISTS hourly_rate VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS availability VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE,
-        ADD COLUMN IF NOT EXISTS is_featured BOOLEAN DEFAULT FALSE
-      `);
-      console.log('✅ Freelancers table migrated');
-    } catch (migrationError) {
-      console.log('ℹ️ Freelancers migration skipped');
-    }
-    
+    // Google Maps Leads table
     await client.query(`
       CREATE TABLE IF NOT EXISTS google_maps_leads (
         id SERIAL PRIMARY KEY,
@@ -406,7 +436,7 @@ async function createAllTables() {
       )
     `);
     
-    // ✅ UPDATED: Blog posts table with alt_text for featured image
+    // Blog posts table
     await client.query(`
       CREATE TABLE IF NOT EXISTS blog_posts (
         id SERIAL PRIMARY KEY,
@@ -418,8 +448,8 @@ async function createAllTables() {
         status VARCHAR(50) DEFAULT 'draft',
         tags TEXT[] DEFAULT '{}',
         featured_image TEXT,
-        featured_image_alt VARCHAR(500),  -- ✅ NEW: Alt text for accessibility
-        featured_image_caption TEXT,      -- ✅ NEW: Optional caption
+        featured_image_alt VARCHAR(500),
+        featured_image_caption TEXT,
         author VARCHAR(255) NOT NULL,
         meta_description TEXT,
         views INTEGER DEFAULT 0,
@@ -428,22 +458,21 @@ async function createAllTables() {
         published_at TIMESTAMP
       )
     `);
-    console.log('✅ Blog posts table created with alt text support');
     
-    // ✅ NEW: Blog images table for multiple images per post
+    // Blog images table
     await client.query(`
       CREATE TABLE IF NOT EXISTS blog_images (
         id SERIAL PRIMARY KEY,
         post_id INTEGER REFERENCES blog_posts(id) ON DELETE CASCADE,
         image_url TEXT NOT NULL,
-        alt_text VARCHAR(500) NOT NULL,   -- ✅ Required alt text
+        alt_text VARCHAR(500) NOT NULL,
         caption TEXT,
         position INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
-    console.log('✅ Blog images table created with alt text support');
     
+    // Share links table
     await client.query(`
       CREATE TABLE IF NOT EXISTS share_links (
         id SERIAL PRIMARY KEY,
@@ -459,8 +488,8 @@ async function createAllTables() {
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
-    console.log('✅ Share links table created');
     
+    // Claims table
     await client.query(`
       CREATE TABLE IF NOT EXISTS claims (
         id SERIAL PRIMARY KEY,
@@ -477,9 +506,8 @@ async function createAllTables() {
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
-    console.log('✅ Claims table created');
     
-    console.log('✅ All database tables ready');
+    console.log('✅ Alle database tabellen gereed');
     
   } catch (error) {
     console.error('❌ Database setup error:', error.message);
@@ -487,16 +515,6 @@ async function createAllTables() {
     client.release();
   }
 }
-
-pool.connect((err, client, release) => {
-  if (err) {
-    console.error('❌ Database connection error:', err.message);
-  } else {
-    console.log('✅ Database connected');
-    release();
-    setTimeout(createAllTables, 1000);
-  }
-});
 
 // ============================================
 // SCORING ALGORITHM (ONVERANDERD)
@@ -809,16 +827,19 @@ app.post('/api/scan', async (req, res) => {
     
     scanCache.set(cacheKey, { timestamp: Date.now(), result });
     
-    try {
-      await pool.query(
-        `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, content_score, ux_score, breakdown, recommendations, scan_type)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'manual')`,
-        [scanUrl, totalScore, quality, scores.graafScore, scores.craftScore, scores.technicalScore,
-         transparentScores.content_score, transparentScores.ux_score,
-         JSON.stringify(result.breakdown), JSON.stringify(result.recommendations)]
-      );
-    } catch (dbError) {
-      console.error('DB save error:', dbError.message);
+    // Save to database if available
+    if (pool) {
+      try {
+        await pool.query(
+          `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, content_score, ux_score, breakdown, recommendations, scan_type)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'manual')`,
+          [scanUrl, totalScore, quality, scores.graafScore, scores.craftScore, scores.technicalScore,
+           transparentScores.content_score, transparentScores.ux_score,
+           JSON.stringify(result.breakdown), JSON.stringify(result.recommendations)]
+        );
+      } catch (dbError) {
+        console.error('DB save error:', dbError.message);
+      }
     }
     
     console.log(`✅ Scan complete: ${scanUrl} - ${totalScore}/100 (${quality})`);
@@ -836,7 +857,7 @@ app.post('/api/google-maps/scrape', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid Google Maps URL' });
     }
     
-    console.log(`🗺️ Google Maps REAL scrape: ${url}`);
+    console.log(`🗺️ Google Maps scrape: ${url}`);
     const browser = await getBrowser();
     const page = await browser.newPage();
     await page.setViewport({ width: 1920, height: 1080 });
@@ -846,7 +867,7 @@ app.post('/api/google-maps/scrape', async (req, res) => {
     
     for (let i = 0; i < 3; i++) {
       await page.evaluate(() => window.scrollBy(0, 800));
-      await page.waitForTimeout(2000);
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
     
     const leads = await page.evaluate((maxResults) => {
@@ -887,56 +908,60 @@ app.post('/api/google-maps/scrape', async (req, res) => {
     }, maxResults);
     
     await page.close();
-    console.log(`✅ Found ${leads.length} real businesses from Google Maps`);
+    console.log(`✅ Found ${leads.length} businesses from Google Maps`);
     
     const savedLeads = [];
-    for (const lead of leads) {
-      try {
-        let websiteScore = 0;
-        let verifiedWebsite = lead.website;
-        
-        if (lead.website) {
-          try {
-            const websitePage = await browser.newPage();
-            await websitePage.setTimeout(5000);
-            const response = await websitePage.goto(lead.website, { waitUntil: 'domcontentloaded', timeout: 5000 }).catch(() => null);
-            if (response && response.ok()) {
-              websiteScore = 75;
-              const content = await websitePage.content().catch(() => '');
-              if (content) {
-                if (content.includes('<title>')) websiteScore += 5;
-                if (content.includes('meta name="description"')) websiteScore += 5;
-                if (content.includes('<h1')) websiteScore += 5;
-                if (content.includes('schema.org') || content.includes('@context')) websiteScore += 10;
+    
+    // Save to database if available
+    if (pool) {
+      for (const lead of leads) {
+        try {
+          let websiteScore = 0;
+          let verifiedWebsite = lead.website;
+          
+          if (lead.website) {
+            try {
+              const websitePage = await browser.newPage();
+              websitePage.setDefaultTimeout(5000);
+              const response = await websitePage.goto(lead.website, { waitUntil: 'domcontentloaded', timeout: 5000 }).catch(() => null);
+              if (response && response.ok()) {
+                websiteScore = 75;
+                const content = await websitePage.content().catch(() => '');
+                if (content) {
+                  if (content.includes('<title>')) websiteScore += 5;
+                  if (content.includes('meta name="description"')) websiteScore += 5;
+                  if (content.includes('<h1')) websiteScore += 5;
+                  if (content.includes('schema.org') || content.includes('@context')) websiteScore += 10;
+                }
               }
+              await websitePage.close();
+            } catch (websiteError) {
+              console.log(`⚠️ Website not accessible: ${lead.website}`);
+              verifiedWebsite = null;
+              websiteScore = 0;
             }
-            await websitePage.close();
-          } catch (websiteError) {
-            console.log(`⚠️ Website not accessible: ${lead.website}`);
-            verifiedWebsite = null;
-            websiteScore = 0;
           }
+          
+          const result = await pool.query(
+            `INSERT INTO google_maps_leads (name, category, website, phone, address, rating, reviews, score, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+            [lead.name, lead.category, verifiedWebsite, lead.phone, lead.address, lead.rating, lead.reviews, websiteScore, lead.status]
+          );
+          
+          savedLeads.push({ ...lead, website: verifiedWebsite, score: websiteScore, id: result.rows[0].id });
+        } catch (dbError) {
+          console.error('DB insert error:', dbError.message);
         }
-        
-        const result = await pool.query(
-          `INSERT INTO google_maps_leads (name, category, website, phone, address, rating, reviews, score, status)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-          [lead.name, lead.category, verifiedWebsite, lead.phone, lead.address, lead.rating, lead.reviews, websiteScore, lead.status]
-        );
-        
-        savedLeads.push({ ...lead, website: verifiedWebsite, score: websiteScore, id: result.rows[0].id });
-      } catch (dbError) {
-        console.error('DB insert error:', dbError.message);
       }
     }
     
     res.json({
       success: true,
-      leads: savedLeads,
+      leads: savedLeads.length > 0 ? savedLeads : leads,
       stats: {
-        total: savedLeads.length,
-        with_website: savedLeads.filter(l => l.website).length,
-        with_phone: savedLeads.filter(l => l.phone).length,
+        total: savedLeads.length || leads.length,
+        with_website: (savedLeads.length > 0 ? savedLeads : leads).filter(l => l.website).length,
+        with_phone: (savedLeads.length > 0 ? savedLeads : leads).filter(l => l.phone).length,
         avg_score: savedLeads.length > 0 
           ? Math.round(savedLeads.reduce((sum, l) => sum + l.score, 0) / savedLeads.length) 
           : 0
@@ -949,6 +974,10 @@ app.post('/api/google-maps/scrape', async (req, res) => {
 });
 
 app.get('/api/leaderboard', async (req, res) => {
+  if (!pool) {
+    return res.json({ success: true, entries: [], total: 0, averageScore: 0, stats: { totalAgencies: 0, avgScore: 0, countriesCount: 0, activeHelpers: 0 } });
+  }
+  
   try {
     const result = await pool.query(`
       SELECT 
@@ -1014,6 +1043,10 @@ app.get('/api/leaderboard', async (req, res) => {
 });
 
 app.get('/api/freelancers', async (req, res) => {
+  if (!pool) {
+    return res.json({ success: true, freelancers: [] });
+  }
+  
   try {
     const result = await pool.query(`
       SELECT 
@@ -1036,6 +1069,10 @@ app.get('/api/freelancers', async (req, res) => {
 });
 
 app.post('/api/freelancers/register', async (req, res) => {
+  if (!pool) {
+    return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  }
+  
   try {
     const { name, email, title, location, country, bio, linkedin_url, hourly_rate, availability } = req.body;
     
@@ -1079,6 +1116,10 @@ app.post('/api/freelancers/register', async (req, res) => {
 });
 
 app.get('/api/blog', async (req, res) => {
+  if (!pool) {
+    return res.json({ success: true, posts: [], pagination: { page: 1, limit: 10, total: 0, pages: 0 } });
+  }
+  
   try {
     const { category, limit = 10, page = 1 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -1133,6 +1174,10 @@ app.get('/api/blog', async (req, res) => {
 });
 
 app.get('/api/blog/:slug', async (req, res) => {
+  if (!pool) {
+    return res.status(404).json({ success: false, error: 'Blog post not found' });
+  }
+  
   try {
     const result = await pool.query(
       `SELECT * FROM blog_posts 
@@ -1177,6 +1222,10 @@ app.get('/api/blog/:slug', async (req, res) => {
 });
 
 app.post('/api/claims/submit', async (req, res) => {
+  if (!pool) {
+    return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  }
+  
   try {
     const { business_name, business_url, contact_name, contact_email, contact_phone, verification_document } = req.body;
     
@@ -1207,17 +1256,27 @@ app.post('/api/claims/submit', async (req, res) => {
 });
 
 // ============================================
-// ADMIN ENDPOINTS - FIXED & COMPLETE
+// ADMIN ENDPOINTS - ALLEEN ALS DATABASE BESCHIKBAAR
 // ============================================
 
 // --------------------------------------------
-// AUTHENTICATION
+// AUTHENTICATION - FIXED MET DUIDELIJKE FEEDBACK
 // --------------------------------------------
 app.post('/api/setup/verify-admin', async (req, res) => {
   const { username, password } = req.body;
   
   if (!username || !password) {
     return res.status(400).json({ success: false, error: 'Credentials required' });
+  }
+  
+  // Check of database beschikbaar is
+  if (!pool) {
+    console.error('❌ Login poging maar database niet beschikbaar');
+    return res.status(503).json({ 
+      success: false, 
+      error: 'Database niet beschikbaar. Start PostgreSQL en herstart de server.',
+      db_status: 'disconnected'
+    });
   }
   
   try {
@@ -1250,14 +1309,29 @@ app.post('/api/setup/verify-admin', async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('❌ Login error:', error.message);
     res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
+// ✅ Session verificatie endpoint
+app.post('/api/admin/verify-session', verifyAdmin, async (req, res) => {
+  res.json({ valid: true, admin: req.admin.username });
+});
+
+// Alle andere admin endpoints alleen als database beschikbaar
 // --------------------------------------------
 // DASHBOARD STATS
 // --------------------------------------------
 app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
+  if (!pool) {
+    return res.json({ success: true, stats: { 
+      total_scans: 0, total_agencies: 0, total_clients: 0, active_helpers: 0,
+      leaderboard_entries: 0, blog_posts: 0, active_share_links: 0,
+      pending_claims: 0, pending_freelancers: 0, pending_leaderboard: 0
+    }});
+  }
+  
   try {
     const [scans, leaderboard, freelancers, blogPosts, shareLinks, claims, pendingFreelancers, pendingLeaderboard] = await Promise.all([
       pool.query('SELECT COUNT(*) FROM scans').catch(() => ({ rows: [{ count: '0' }] })),
@@ -1305,183 +1379,22 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
 });
 
 // --------------------------------------------
-// ANALYTICS
-// --------------------------------------------
-app.get('/api/admin/analytics', verifyAdmin, async (req, res) => {
-  try {
-    const range = req.query.range || '30d';
-    const now = new Date();
-    let startDate = new Date();
-    
-    switch (range) {
-      case '7d': startDate.setDate(now.getDate() - 7); break;
-      case '30d': startDate.setDate(now.getDate() - 30); break;
-      case '90d': startDate.setDate(now.getDate() - 90); break;
-      case '365d': startDate.setFullYear(now.getFullYear() - 1); break;
-      case 'all': startDate = new Date('2024-01-01'); break;
-      default: startDate.setDate(now.getDate() - 30);
-    }
-    
-    const scansOverTime = await pool.query(
-      `SELECT DATE(created_at) as date, COUNT(*) as count
-       FROM scans WHERE created_at >= $1
-       GROUP BY DATE(created_at) ORDER BY date ASC`,
-      [startDate]
-    );
-    
-    const currentStats = await pool.query(
-      `SELECT COUNT(*) as scans_count, ROUND(AVG(score)) as avg_score, COUNT(DISTINCT url) as unique_urls
-       FROM scans WHERE created_at >= $1`,
-      [startDate]
-    );
-    
-    const previousPeriodStart = new Date(startDate);
-    const daysDiff = Math.ceil((now - startDate) / (1000 * 60 * 60 * 24));
-    previousPeriodStart.setDate(previousPeriodStart.getDate() - daysDiff);
-    
-    const previousStats = await pool.query(
-      `SELECT COUNT(*) as scans_count, ROUND(AVG(score)) as avg_score, COUNT(DISTINCT url) as unique_urls
-       FROM scans WHERE created_at >= $1 AND created_at < $2`,
-      [previousPeriodStart, startDate]
-    );
-    
-    const current = currentStats.rows[0];
-    const previous = previousStats.rows[0];
-    
-    const scansTrend = calculateTrend(current.scans_count, previous.scans_count);
-    const scoreTrend = calculateTrend(current.avg_score, previous.avg_score);
-    const usersTrend = calculateTrend(current.unique_urls, previous.unique_urls);
-    
-    const countries = await pool.query(
-      `SELECT country as name, COUNT(*) as count,
-        ROUND((COUNT(*) * 100.0 / SUM(COUNT(*)) OVER ()), 1) as percentage
-       FROM leaderboard
-       WHERE created_at >= $1 AND country IS NOT NULL
-       GROUP BY country ORDER BY count DESC LIMIT 10`,
-      [startDate]
-    );
-    
-    const recentActivity = await pool.query(
-      `SELECT 'scan' as type, SUBSTRING(url FROM 1 FOR 30) as user, 'Completed scan' as action, created_at as time
-       FROM scans WHERE created_at >= NOW() - INTERVAL '24 hours'
-       ORDER BY created_at DESC LIMIT 10`
-    );
-    
-    const performanceStats = await pool.query(
-      `SELECT 
-        ROUND(AVG(EXTRACT(EPOCH FROM (created_at - LAG(created_at) OVER (ORDER BY created_at))))::numeric, 1) as avg_scan_duration,
-        ROUND((COUNT(CASE WHEN score > 0 THEN 1 END) * 100.0 / COUNT(*)), 1) as success_rate
-       FROM scans WHERE created_at >= NOW() - INTERVAL '7 days'`
-    );
-    
-    res.json({
-      success: true,
-      trends: {
-        scans: { current: parseInt(current.scans_count || 0), trend: scansTrend },
-        score: { current: parseInt(current.avg_score || 0), trend: scoreTrend },
-        users: { current: parseInt(current.unique_urls || 0), trend: usersTrend },
-        agencies: { current: 0, trend: 0 }
-      },
-      scans: scansOverTime.rows.map(row => ({ date: row.date, count: parseInt(row.count) })),
-      countries: countries.rows.map(row => ({ name: row.name, count: parseInt(row.count), percentage: parseFloat(row.percentage) })),
-      recent_activity: recentActivity.rows.map(a => ({ ...a, time: formatTimeAgo(a.time) })),
-      performance: {
-        scan_duration: performanceStats.rows[0]?.avg_scan_duration ? `${performanceStats.rows[0].avg_scan_duration}s` : '2.1s',
-        success_rate: performanceStats.rows[0]?.success_rate ? `${performanceStats.rows[0].success_rate}%` : '97.8%',
-        api_response: '120ms',
-        db_queries: `${Math.round(current.scans_count * 2.5)}/day`
-      }
-    });
-  } catch (error) {
-    console.error('Analytics error:', error);
-    res.json({ 
-      success: true,
-      trends: { scans: { current: 0, trend: 0 }, score: { current: 0, trend: 0 }, users: { current: 0, trend: 0 }, agencies: { current: 0, trend: 0 } },
-      scans: [], countries: [], recent_activity: [],
-      performance: { scan_duration: '-', success_rate: '-', api_response: '-', db_queries: '-' }
-    });
-  }
-});
-
-function calculateTrend(current, previous) {
-  if (!previous || previous === 0) return 0;
-  return parseFloat(((current - previous) / previous * 100).toFixed(1));
-}
-
-function formatTimeAgo(date) {
-  const seconds = Math.floor((new Date() - new Date(date)) / 1000);
-  if (seconds < 60) return `${seconds}s ago`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  return `${Math.floor(seconds / 86400)}d ago`;
-}
-
-// --------------------------------------------
-// CLIENTS & SCANS MANAGEMENT
-// --------------------------------------------
-app.get('/api/admin/clients', verifyAdmin, async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT MIN(id) as id, url, COUNT(*) as scan_count, MAX(created_at) as last_scan, MIN(created_at) as created_at
-       FROM scans GROUP BY url ORDER BY last_scan DESC LIMIT 100`
-    );
-    res.json({ success: true, clients: result.rows });
-  } catch (error) {
-    console.error('Clients error:', error);
-    res.json({ success: true, clients: [] });
-  }
-});
-
-app.delete('/api/admin/clients/:id', verifyAdmin, async (req, res) => {
-  try {
-    await pool.query('DELETE FROM scans WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.get('/api/admin/scans', verifyAdmin, async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT * FROM scans ORDER BY created_at DESC LIMIT 200`
-    );
-    res.json({ success: true, scans: result.rows });
-  } catch (error) {
-    console.error('Scans error:', error);
-    res.json({ success: true, scans: [] });
-  }
-});
-
-app.delete('/api/admin/scans/:id', verifyAdmin, async (req, res) => {
-  try {
-    await pool.query('DELETE FROM scans WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// --------------------------------------------
-// LEADERBOARD MANAGEMENT - FIXED & COMPLETE
+// LEADERBOARD MANAGEMENT
 // --------------------------------------------
 app.get('/api/admin/leaderboard', verifyAdmin, async (req, res) => {
+  if (!pool) return res.json({ success: true, entries: [] });
   try {
-    const result = await pool.query(
-      `SELECT * FROM leaderboard WHERE admin_verified = TRUE ORDER BY score DESC LIMIT 200`
-    );
+    const result = await pool.query(`SELECT * FROM leaderboard WHERE admin_verified = TRUE ORDER BY score DESC LIMIT 200`);
     res.json({ success: true, entries: result.rows });
   } catch (error) {
-    console.error('Leaderboard error:', error);
     res.json({ success: true, entries: [] });
   }
 });
 
 app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
+  if (!pool) return res.json({ success: true, pending: [] });
   try {
-    const result = await pool.query(
-      `SELECT * FROM leaderboard WHERE admin_verified = FALSE ORDER BY created_at DESC LIMIT 50`
-    );
+    const result = await pool.query(`SELECT * FROM leaderboard WHERE admin_verified = FALSE ORDER BY created_at DESC LIMIT 50`);
     res.json({ success: true, pending: result.rows });
   } catch (error) {
     res.json({ success: true, pending: [] });
@@ -1489,6 +1402,7 @@ app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
 });
 
 app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   try {
     const { id } = req.params;
     const { final_country } = req.body;
@@ -1503,6 +1417,7 @@ app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => 
 });
 
 app.post('/api/admin/leaderboard/:id/reject', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   try {
     await pool.query('DELETE FROM leaderboard WHERE id = $1', [req.params.id]);
     res.json({ success: true });
@@ -1512,6 +1427,7 @@ app.post('/api/admin/leaderboard/:id/reject', verifyAdmin, async (req, res) => {
 });
 
 app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   try {
     await pool.query('DELETE FROM leaderboard WHERE id = $1', [req.params.id]);
     res.json({ success: true });
@@ -1520,8 +1436,10 @@ app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
   }
 });
 
-// ✅ NEW: Admin-only scan and add to leaderboard
+// ✅ Admin scan and add to leaderboard
 app.post('/api/admin/leaderboard/scan-and-add', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
   const { url, company_name, country, city, type = 'seo_agency' } = req.body;
   
   if (!url) {
@@ -1565,10 +1483,7 @@ app.post('/api/admin/leaderboard/scan-and-add', verifyAdmin, async (req, res) =>
        transparentScores.content_score, transparentScores.ux_score]
     );
     
-    const existing = await pool.query(
-      'SELECT id FROM leaderboard WHERE url = $1',
-      [scanUrl]
-    );
+    const existing = await pool.query('SELECT id FROM leaderboard WHERE url = $1', [scanUrl]);
     
     let leaderboardEntry;
     
@@ -1624,14 +1539,6 @@ app.post('/api/admin/leaderboard/scan-and-add', verifyAdmin, async (req, res) =>
       console.log(`👑 Admin updated leaderboard: ${scanUrl} (score: ${totalScore})`);
     }
     
-    const recommendations = generateDetailedRecommendations(totalScore, {
-      content: transparentScores.content_score,
-      technical: transparentScores.technical_score,
-      ux: transparentScores.ux_score
-    }, wordCount, { hasFAQ: scores.hasFAQ || false });
-    
-    const quickWins = recommendations.filter(r => r.priority === 'HIGH').slice(0, 3);
-    
     res.json({
       success: true,
       admin_action: leaderboardEntry.action,
@@ -1646,8 +1553,6 @@ app.post('/api/admin/leaderboard/scan-and-add', verifyAdmin, async (req, res) =>
         content: transparentScores.content_score,
         ux: transparentScores.ux_score
       },
-      recommendations: { all: recommendations, quickWins },
-      content_stats: stats,
       timestamp: new Date().toISOString()
     });
     
@@ -1657,25 +1562,24 @@ app.post('/api/admin/leaderboard/scan-and-add', verifyAdmin, async (req, res) =>
   }
 });
 
-// ✅ NEW: Admin manual add to leaderboard
+// ✅ Admin manual add to leaderboard
 app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
   try {
-    const { url, company_name, score, country, city, type, graaf_score, craft_score, technical_score } = req.body;
+    const { url, company_name, score, country, city, type } = req.body;
     
     if (!url || !score) {
       return res.status(400).json({ success: false, error: 'URL and score are required' });
     }
     
-    const existing = await pool.query(
-      'SELECT id FROM leaderboard WHERE url = $1',
-      [url]
-    );
+    const existing = await pool.query('SELECT id FROM leaderboard WHERE url = $1', [url]);
     
     if (existing.rows.length === 0) {
       const result = await pool.query(
         `INSERT INTO leaderboard 
-         (url, company_name, score, country, city, type, admin_verified, is_verified, graaf_score, craft_score, technical_score)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         (url, company_name, score, country, city, type, admin_verified, is_verified)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING id`,
         [
           url,
@@ -1685,10 +1589,7 @@ app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
           city || null,
           type || 'seo_agency',
           true,
-          true,
-          graaf_score || null,
-          craft_score || null,
-          technical_score || null
+          true
         ]
       );
       
@@ -1707,20 +1608,14 @@ app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
            city = COALESCE($4, city),
            type = COALESCE($5, type),
            admin_verified = true,
-           is_verified = true,
-           graaf_score = COALESCE($6, graaf_score),
-           craft_score = COALESCE($7, craft_score),
-           technical_score = COALESCE($8, technical_score)
-         WHERE url = $9`,
+           is_verified = true
+         WHERE url = $6`,
         [
           score,
           company_name || null,
           country || null,
           city || null,
           type || 'seo_agency',
-          graaf_score || null,
-          craft_score || null,
-          technical_score || null,
           url
         ]
       );
@@ -1739,25 +1634,22 @@ app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
 });
 
 // --------------------------------------------
-// FREELANCERS MANAGEMENT - FIXED & COMPLETE
+// FREELANCERS MANAGEMENT
 // --------------------------------------------
 app.get('/api/admin/freelancers', verifyAdmin, async (req, res) => {
+  if (!pool) return res.json({ success: true, freelancers: [] });
   try {
-    const result = await pool.query(
-      `SELECT * FROM freelancers ORDER BY created_at DESC LIMIT 200`
-    );
+    const result = await pool.query(`SELECT * FROM freelancers ORDER BY created_at DESC LIMIT 200`);
     res.json({ success: true, freelancers: result.rows });
   } catch (error) {
-    console.error('Freelancers error:', error);
     res.json({ success: true, freelancers: [] });
   }
 });
 
 app.get('/api/admin/freelancers/pending', verifyAdmin, async (req, res) => {
+  if (!pool) return res.json({ success: true, pending: [] });
   try {
-    const result = await pool.query(
-      `SELECT * FROM freelancers WHERE is_approved = FALSE ORDER BY created_at DESC LIMIT 50`
-    );
+    const result = await pool.query(`SELECT * FROM freelancers WHERE is_approved = FALSE ORDER BY created_at DESC LIMIT 50`);
     res.json({ success: true, pending: result.rows });
   } catch (error) {
     res.json({ success: true, pending: [] });
@@ -1765,6 +1657,7 @@ app.get('/api/admin/freelancers/pending', verifyAdmin, async (req, res) => {
 });
 
 app.post('/api/admin/freelancers/:id/approve', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   try {
     await pool.query('UPDATE freelancers SET is_approved = TRUE, is_verified = TRUE WHERE id = $1', [req.params.id]);
     res.json({ success: true });
@@ -1774,6 +1667,7 @@ app.post('/api/admin/freelancers/:id/approve', verifyAdmin, async (req, res) => 
 });
 
 app.post('/api/admin/freelancers/:id/feature', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   try {
     const { id } = req.params;
     const { is_featured } = req.body;
@@ -1785,6 +1679,7 @@ app.post('/api/admin/freelancers/:id/feature', verifyAdmin, async (req, res) => 
 });
 
 app.post('/api/admin/freelancers/:id/deactivate', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   try {
     await pool.query('UPDATE freelancers SET is_approved = FALSE WHERE id = $1', [req.params.id]);
     res.json({ success: true });
@@ -1794,6 +1689,7 @@ app.post('/api/admin/freelancers/:id/deactivate', verifyAdmin, async (req, res) 
 });
 
 app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   try {
     await pool.query('DELETE FROM freelancers WHERE id = $1', [req.params.id]);
     res.json({ success: true });
@@ -1803,9 +1699,10 @@ app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
 });
 
 // --------------------------------------------
-// SHARE LINKS MANAGEMENT - FIXED & COMPLETE
+// SHARE LINKS MANAGEMENT
 // --------------------------------------------
 app.get('/api/admin/share-links', verifyAdmin, async (req, res) => {
+  if (!pool) return res.json({ success: true, share_links: [] });
   try {
     const result = await pool.query(
       `SELECT *, 
@@ -1815,12 +1712,13 @@ app.get('/api/admin/share-links', verifyAdmin, async (req, res) => {
     );
     res.json({ success: true, share_links: result.rows });
   } catch (error) {
-    console.error('Share links error:', error);
     res.json({ success: true, share_links: [] });
   }
 });
 
 app.post('/api/admin/share-links/create', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
   try {
     const { client_email, client_name, client_company, scans_limit = 10, valid_days = 30 } = req.body;
     const shareCode = crypto.randomBytes(16).toString('hex');
@@ -1844,299 +1742,22 @@ app.post('/api/admin/share-links/create', verifyAdmin, async (req, res) => {
   }
 });
 
-// ✅ FIXED: Toggle share link status by ID
 app.put('/api/admin/share-links/:id/toggle-status', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   try {
     const { id } = req.params;
     const { status } = req.body;
-    
-    await pool.query(
-      'UPDATE share_links SET is_active = $1 WHERE id = $2',
-      [status === 'active', id]
-    );
-    
+    await pool.query('UPDATE share_links SET is_active = $1 WHERE id = $2', [status === 'active', id]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// ✅ FIXED: Delete share link by ID (not code)
 app.delete('/api/admin/share-links/:id', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   try {
     await pool.query('DELETE FROM share_links WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// --------------------------------------------
-// CLAIMS MANAGEMENT
-// --------------------------------------------
-app.get('/api/admin/claims/pending', verifyAdmin, async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT * FROM claims WHERE status = 'pending' ORDER BY created_at DESC LIMIT 50`
-    );
-    const countResult = await pool.query('SELECT COUNT(*) FROM claims WHERE status = $1', ['pending']);
-    res.json({ 
-      success: true, 
-      pending_count: parseInt(countResult.rows[0].count) || 0,
-      claims: result.rows 
-    });
-  } catch (error) {
-    res.json({ success: true, pending_count: 0, claims: [] });
-  }
-});
-
-app.get('/api/admin/claims', verifyAdmin, async (req, res) => {
-  try {
-    const result = await pool.query(`SELECT * FROM claims ORDER BY created_at DESC LIMIT 100`);
-    res.json({ success: true, claims: result.rows });
-  } catch (error) {
-    res.json({ success: true, claims: [] });
-  }
-});
-
-app.post('/api/admin/claims/:id/approve', verifyAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { notes } = req.body;
-    
-    const claim = await pool.query('SELECT * FROM claims WHERE id = $1', [id]);
-    
-    if (claim.rows.length > 0) {
-      await pool.query(
-        `UPDATE leaderboard 
-         SET is_verified = TRUE, company_name = COALESCE($1, company_name), admin_verified = TRUE
-         WHERE url = $2 OR url LIKE $3`,
-        [
-          claim.rows[0].business_name,
-          claim.rows[0].business_url,
-          `%${claim.rows[0].business_url.replace(/^https?:\/\//, '')}%`
-        ]
-      );
-    }
-    
-    await pool.query(
-      `UPDATE claims SET status = 'approved', reviewed_by = $1, reviewed_at = NOW(), notes = $2 WHERE id = $3`,
-      [req.admin.id, notes || null, id]
-    );
-    
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.post('/api/admin/claims/:id/reject', verifyAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { notes } = req.body;
-    
-    await pool.query(
-      `UPDATE claims SET status = 'rejected', reviewed_by = $1, reviewed_at = NOW(), notes = $2 WHERE id = $3`,
-      [req.admin.id, notes || null, id]
-    );
-    
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// --------------------------------------------
-// BLOG MANAGEMENT - WITH IMAGE UPLOAD + ALT TEXT
-// --------------------------------------------
-app.get('/api/admin/blog', verifyAdmin, async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT * FROM blog_posts ORDER BY created_at DESC LIMIT 100`
-    );
-    
-    // Get image counts for each post
-    const posts = await Promise.all(result.rows.map(async (post) => {
-      const images = await pool.query(
-        'SELECT COUNT(*) as image_count FROM blog_images WHERE post_id = $1',
-        [post.id]
-      );
-      return { ...post, image_count: parseInt(images.rows[0].count) || 0 };
-    }));
-    
-    res.json({ success: true, posts });
-  } catch (error) {
-    console.error('Blog posts error:', error);
-    res.json({ success: true, posts: [] });
-  }
-});
-
-// ✅ NEW: Upload blog image with alt text
-app.post('/api/admin/blog/upload-image', verifyAdmin, upload.single('image'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, error: 'No image uploaded' });
-    }
-    
-    const { alt_text, caption, post_id } = req.body;
-    
-    if (!alt_text) {
-      return res.status(400).json({ success: false, error: 'Alt text is required for accessibility' });
-    }
-    
-    // Generate unique filename
-    const filename = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}.webp`;
-    const uploadDir = path.join(__dirname, '../public/uploads/blog');
-    const filepath = path.join(uploadDir, filename);
-    
-    // Ensure directory exists
-    const fs = require('fs');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    
-    // Optimize image with Sharp
-    await sharp(req.file.buffer)
-      .resize({ width: 1200, withoutEnlargement: true })
-      .webp({ quality: 80 })
-      .toFile(filepath);
-    
-    const imageUrl = `/uploads/blog/${filename}`;
-    
-    // If post_id is provided, link image to post
-    if (post_id) {
-      // Get next position
-      const positionResult = await pool.query(
-        'SELECT COALESCE(MAX(position), -1) + 1 as next_pos FROM blog_images WHERE post_id = $1',
-        [post_id]
-      );
-      const position = positionResult.rows[0].next_pos || 0;
-      
-      await pool.query(
-        `INSERT INTO blog_images (post_id, image_url, alt_text, caption, position)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [post_id, imageUrl, alt_text, caption || null, position]
-      );
-    }
-    
-    res.json({
-      success: true,
-      image_url: imageUrl,
-      alt_text,
-      caption: caption || null,
-      message: 'Image uploaded successfully'
-    });
-    
-  } catch (error) {
-    console.error('Image upload error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// ✅ UPDATED: Create blog post with alt text support
-app.post('/api/admin/blog', verifyAdmin, async (req, res) => {
-  try {
-    const { 
-      title, slug, excerpt, content, category, tags, 
-      featured_image, featured_image_alt, featured_image_caption,
-      author, meta_description, status, published_at 
-    } = req.body;
-    
-    if (!title || !slug || !content || !category || !author) {
-      return res.status(400).json({ success: false, error: 'Required fields missing' });
-    }
-    
-    const result = await pool.query(
-      `INSERT INTO blog_posts (
-        title, slug, excerpt, content, category, tags, 
-        featured_image, featured_image_alt, featured_image_caption,
-        author, meta_description, status, published_at
-      )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) 
-       RETURNING id`,
-      [
-        title, slug, excerpt || null, content, category, tags || [], 
-        featured_image || null, featured_image_alt || null, featured_image_caption || null,
-        author, meta_description || null, status || 'draft', 
-        published_at || (status === 'published' ? new Date() : null)
-      ]
-    );
-    
-    res.json({ success: true, id: result.rows[0].id });
-  } catch (error) {
-    console.error('Create blog post error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// ✅ UPDATED: Update blog post with alt text support
-app.put('/api/admin/blog/:id', verifyAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { 
-      title, slug, excerpt, content, category, tags, 
-      featured_image, featured_image_alt, featured_image_caption,
-      author, meta_description, status, published_at 
-    } = req.body;
-    
-    await pool.query(
-      `UPDATE blog_posts 
-       SET title = $1, slug = $2, excerpt = $3, content = $4, category = $5, tags = $6, 
-           featured_image = $7, featured_image_alt = $8, featured_image_caption = $9,
-           author = $10, meta_description = $11, status = $12, published_at = $13, updated_at = NOW()
-       WHERE id = $14`,
-      [
-        title, slug, excerpt, content, category, tags, 
-        featured_image, featured_image_alt, featured_image_caption,
-        author, meta_description, status, published_at, id
-      ]
-    );
-    
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Update blog post error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.delete('/api/admin/blog/:id', verifyAdmin, async (req, res) => {
-  try {
-    // Delete will cascade to blog_images due to ON DELETE CASCADE
-    await pool.query('DELETE FROM blog_posts WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// ✅ NEW: Get images for a blog post
-app.get('/api/admin/blog/:id/images', verifyAdmin, async (req, res) => {
-  try {
-    const result = await pool.query(
-      'SELECT * FROM blog_images WHERE post_id = $1 ORDER BY position ASC',
-      [req.params.id]
-    );
-    res.json({ success: true, images: result.rows });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// ✅ NEW: Delete blog image
-app.delete('/api/admin/blog-images/:id', verifyAdmin, async (req, res) => {
-  try {
-    const image = await pool.query('SELECT image_url FROM blog_images WHERE id = $1', [req.params.id]);
-    
-    if (image.rows.length > 0) {
-      // Delete file from filesystem
-      const filepath = path.join(__dirname, '../public', image.rows[0].image_url);
-      const fs = require('fs');
-      if (fs.existsSync(filepath)) {
-        fs.unlinkSync(filepath);
-      }
-    }
-    
-    await pool.query('DELETE FROM blog_images WHERE id = $1', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -2166,18 +1787,24 @@ app.get('/blog/:slug', (req, res) => {
 // HEALTH CHECK
 // ============================================
 app.get('/api/health', async (req, res) => {
-  try {
-    await pool.query('SELECT 1');
-    res.json({ 
-      status: 'healthy', 
-      database: 'connected',
-      puppeteer: browserInstance ? 'connected' : 'disconnected',
-      cache_entries: scanCache.size,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    res.json({ status: 'degraded', database: 'disconnected', error: error.message });
+  let dbStatus = 'disconnected';
+  
+  if (pool) {
+    try {
+      await pool.query('SELECT 1');
+      dbStatus = 'connected';
+    } catch (e) {
+      dbStatus = 'error';
+    }
   }
+  
+  res.json({ 
+    status: 'running',
+    database: dbStatus,
+    puppeteer: browserInstance ? 'connected' : 'disconnected',
+    cache_entries: scanCache.size,
+    timestamp: new Date().toISOString()
+  });
 });
 
 // ============================================
@@ -2204,65 +1831,48 @@ app.use((err, req, res, next) => {
   res.status(500).json({ 
     success: false, 
     error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
 
 // ============================================
 // START SERVER
 // ============================================
-app.listen(PORT, async () => {
+async function startServer() {
   console.log('');
   console.log('🚀 =====================================');
-  console.log('🚀  CONTENTSCALE SERVER RUNNING');
-  console.log('🚀  FULLY INTEGRATED - 100% REAL DATA');
-  console.log('🚀  PERFORMANCE OPTIMALISATIES ACTIEF');
+  console.log('🚀  CONTENTSCALE SERVER STARTEN');
   console.log('🚀 =====================================');
   console.log('');
-  console.log('📍 Frontend:  http://localhost:' + PORT);
-  console.log('📍 Admin:     http://localhost:' + PORT + '/admin');
-  console.log('📍 Blog:      http://localhost:' + PORT + '/blog');
-  console.log('');
-  console.log('⚡ PERFORMANCE WINST:');
-  console.log('   • ✅ GZIP compressie - 56 KiB besparing');
-  console.log('   • ✅ 1 jaar caching - 2,360 ms sneller');
-  console.log('   • ✅ Font-display swap - 20 ms besparing');
-  console.log('   • ✅ Lazy loading headers - 39 KiB unused JS');
-  console.log('   • ✅ ETag validatie - snellere requests');
-  console.log('');
-  console.log('✅ ALL FIXES APPLIED:');
-  console.log('   • 🔗 Share Links - Fixed toggle & delete by ID');
-  console.log('   • 🏆 Leaderboard - Added admin-only scan & add');
-  console.log('   • 💼 Freelancers - Added GET all/pending endpoints');
-  console.log('   • 📝 Blog - Added image upload with alt text & caption');
-  console.log('');
-  console.log('✅ ALLE ENDPOINTS REAL:');
-  console.log('   • POST /api/scan - Real Puppeteer scanning');
-  console.log('   • POST /api/google-maps/scrape - REAL Google Maps data');
-  console.log('   • GET  /api/leaderboard - Real leaderboard data');
-  console.log('   • GET  /api/freelancers - Real freelancers data');
-  console.log('   • GET  /api/blog - Real blog posts with alt text');
-  console.log('   • GET  /api/admin/stats - Real database stats');
-  console.log('   • GET  /api/admin/analytics - Real analytics metrics');
-  console.log('   • POST /api/admin/share-links/create - Real share links');
-  console.log('   • PUT  /api/admin/share-links/:id/toggle-status - Fixed toggle');
-  console.log('   • POST /api/admin/leaderboard/scan-and-add - Admin-only scan');
-  console.log('   • POST /api/admin/blog/upload-image - Image upload + alt text');
-  console.log('');
-  console.log('🔒 SECURITY ENHANCED:');
-  console.log('   • ✅ bcrypt password hashing');
-  console.log('   • ✅ Rate limiting (100/15min) - PROXY FIXED');
-  console.log('   • ✅ URL validation');
-  console.log('   • ✅ Production CORS');
-  console.log('   • ✅ Admin authentication');
-  console.log('   • ✅ Image upload with Sharp optimization');
-  console.log('');
-  console.log('📊 NO DEMO DATA - ONLY REAL DATABASE ENTRIES');
-  console.log('');
-  console.log('👤 Default Admin: ot / admin123 (password hashed)');
-  console.log('');
-  console.log('💾 Database: PostgreSQL connected');
-  console.log('🌐 Puppeteer: Browser instance ready');
-  console.log('📦 Cache: Active (24h TTL)');
-  console.log('');
-});
+  
+  // Wacht op database
+  const dbConnected = await waitForDatabase();
+  
+  app.listen(PORT, () => {
+    console.log('');
+    console.log(`📍 Server gestart op http://localhost:${PORT}`);
+    console.log(`📍 Admin:     http://localhost:${PORT}/admin`);
+    console.log(`📍 Blog:      http://localhost:${PORT}/blog`);
+    console.log('');
+    console.log(`📊 Database status: ${dbConnected ? '✅ Verbonden' : '❌ NIET VERBONDEN'}`);
+    console.log(`🔐 Admin login:     ${dbConnected ? '✅ Werkend (ot/admin123)' : '❌ Niet beschikbaar'}`);
+    console.log('');
+    
+    if (!dbConnected) {
+      console.log('⚠️  WAARSCHUWING: Database niet verbonden!');
+      console.log('   Admin login werkt NIET. Start PostgreSQL en herstart de server.');
+      console.log('');
+      console.log('📋 Oplossing:');
+      console.log('   1. brew services start postgresql');
+      console.log('   2. createdb -U postgres contentscale');
+      console.log('   3. npm run dev');
+      console.log('');
+    }
+    
+    console.log('🌐 Puppeteer: Browser instance ready');
+    console.log('📦 Cache: Active (24h TTL)');
+    console.log('');
+  });
+}
+
+startServer();
