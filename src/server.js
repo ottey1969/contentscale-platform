@@ -982,29 +982,32 @@ app.post('/api/google-maps/scrape', async (req, res) => {
   }
 });
 
-const result = await pool.query(`
-  SELECT 
-    id, 
-    ROW_NUMBER() OVER (ORDER BY score DESC) as rank,
-    company_name, 
-    url, 
-    score,
-    country, 
-    city,
-    location,
-    type,
-    is_verified as is_claimed, 
-    created_at,
-    graaf_score,
-    craft_score,
-    technical_score
-  FROM leaderboard 
-  WHERE score IS NOT NULL 
-    AND is_opted_out = FALSE 
-    AND admin_verified = TRUE   ← ONLY SHOWS APPROVED ENTRIES
-  ORDER BY score DESC 
-  LIMIT 100
-`);
+// ✅ FIXED: Wrapped the route handler in an async function
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        id, 
+        ROW_NUMBER() OVER (ORDER BY score DESC) as rank,
+        company_name, 
+        url, 
+        score,
+        country, 
+        city,
+        location,
+        type,
+        is_verified as is_claimed, 
+        created_at,
+        graaf_score,
+        craft_score,
+        technical_score
+      FROM leaderboard 
+      WHERE score IS NOT NULL 
+        AND is_opted_out = FALSE 
+        AND admin_verified = TRUE   -- ONLY SHOWS APPROVED ENTRIES
+      ORDER BY score DESC 
+      LIMIT 100
+    `);
 
     const entries = result.rows;
     const totalAgencies = entries.length;
