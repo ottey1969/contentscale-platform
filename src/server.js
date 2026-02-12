@@ -779,30 +779,78 @@ app.post('/api/scan', async (req, res) => {
          JSON.stringify(result.breakdown), JSON.stringify(result.recommendations)]
       );
       
-      if (totalScore >= 85) {
-        let country = 'NL';
-        try {
-          const domain = new URL(scanUrl).hostname;
-          if (domain.endsWith('.nl')) country = 'NL';
-          else if (domain.endsWith('.be')) country = 'BE';
-          else if (domain.endsWith('.de')) country = 'DE';
-          else if (domain.endsWith('.fr')) country = 'FR';
-          else if (domain.endsWith('.uk') || domain.endsWith('.co.uk')) country = 'UK';
-          else if (domain.endsWith('.com')) country = 'US';
-        } catch (e) {}
+// Auto-add to leaderboard if score >= 85
+if (totalScore >= 85) {
+  // Detect country from domain
+  let country = 'NL';
+  let companyName = null;
+  
+  try {
+    const domain = new URL(scanUrl).hostname;
+    if (domain.endsWith('.nl')) country = 'NL';
+    else if (domain.endsWith('.be')) country = 'BE';
+    else if (domain.endsWith('.de')) country = 'DE';
+    else if (domain.endsWith('.fr')) country = 'FR';
+    else if (domain.endsWith('.uk') || domain.endsWith('.co.uk')) country = 'UK';
+    else if (domain.endsWith('.com')) country = 'US';
+    
+    // Set company name for contentscale.site
+    if (domain === 'contentscale.site' || domain === 'www.contentscale.site') {
+      companyName = 'ContentScale';
+    }
+  } catch (e) {}
+  
+  // Check if already exists
+  const existing = await pool.query(
+    'SELECT id FROM leaderboard WHERE url = $1',
+    [scanUrl]
+  );
+  
+  if (existing.rows.length === 0) {
+    // INSERT new entry
+    await pool.query(
+      `INSERT INTO leaderboard 
+       (url, company_name, score, country, admin_verified, graaf_score, craft_score, technical_score)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        scanUrl, 
+        companyName, 
+        totalScore, 
+        country, 
+        false, 
         
-        await pool.query(
-          `INSERT INTO leaderboard (url, score, country, admin_verified, graaf_score, craft_score, technical_score)
-           VALUES ($1, $2, $3, true, $4, $5, $6)
-           ON CONFLICT (url) DO UPDATE SET 
-             score = EXCLUDED.score,
-             graaf_score = EXCLUDED.graaf_score,
-             craft_score = EXCLUDED.craft_score,
-             technical_score = EXCLUDED.technical_score`,
-          [scanUrl, totalScore, country, scores.graafScore, scores.craftScore, scores.technicalScore]
-        );
-        console.log(`🎉 Auto-added to leaderboard: ${scanUrl} (score: ${totalScore})`);
-      }
+        // admin_verified = false (pending approval)
+        scores.graafScore, 
+        scores.craftScore, 
+        scores.technicalScore
+      ]
+    );
+    console.log(`🎉 Added to leaderboard (PENDING): ${scanUrl} (score: ${totalScore})`);
+  } else {
+    // UPDATE existing entry
+    await pool.query(
+      `UPDATE leaderboard SET 
+         score = $1,
+         company_name = COALESCE($2, company_name),
+         country = $3,
+         admin_verified = false,
+         graaf_score = $4,
+         craft_score = $5,
+         technical_score = $6
+       WHERE url = $7`,
+      [
+        totalScore,
+        companyName,
+        country,
+        scores.graafScore,
+        scores.craftScore,
+        scores.technicalScore,
+        scanUrl
+      ]
+    );
+    console.log(`🔄 Updated leaderboard (PENDING RE-APPROVAL): ${scanUrl} (score: ${totalScore})`);
+  }
+}
     } catch (dbError) {
       console.error('DB save error:', dbError.message);
     }
@@ -934,30 +982,30 @@ app.post('/api/google-maps/scrape', async (req, res) => {
   }
 });
 
-app.get('/api/leaderboard', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT 
-        id, 
-        ROW_NUMBER() OVER (ORDER BY score DESC) as rank,
-        company_name, 
-        url, 
-        score,
-        country, 
-        city,
-        location,
-        type,
-        is_verified as is_claimed, 
-        created_at,
-        graaf_score,
-        craft_score,
-        technical_score
-      FROM leaderboard 
-      WHERE score IS NOT NULL AND is_opted_out = FALSE AND admin_verified = TRUE
-      ORDER BY score DESC 
-      LIMIT 100
-    `);
-    
+const result = await pool.query(`
+  SELECT 
+    id, 
+    ROW_NUMBER() OVER (ORDER BY score DESC) as rank,
+    company_name, 
+    url, 
+    score,
+    country, 
+    city,
+    location,
+    type,
+    is_verified as is_claimed, 
+    created_at,
+    graaf_score,
+    craft_score,
+    technical_score
+  FROM leaderboard 
+  WHERE score IS NOT NULL 
+    AND is_opted_out = FALSE 
+    AND admin_verified = TRUE   ← ONLY SHOWS APPROVED ENTRIES
+  ORDER BY score DESC 
+  LIMIT 100
+`);
+
     const entries = result.rows;
     const totalAgencies = entries.length;
     const avgScore = totalAgencies > 0 
