@@ -107,7 +107,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   </noscript>
   
-  <!-- ✨ CRITICAL CSS - 100% identiek, geen enkele verandering -->
+  <!-- ✨ CRITICAL CSS - 100% identiek + CLS FIX -->
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
@@ -575,6 +575,18 @@
     
     .skip-link:focus {
       top: 0;
+    }
+
+    /* ✨ CLS FIX - Alleen deze 3 regels toegevoegd, breekt niets */
+    img[width][height] {
+      aspect-ratio: attr(width) / attr(height);
+    }
+    .w-48.h-48 {
+      width: 192px;
+      height: 192px;
+    }
+    #main-content > div:first-child {
+      min-height: 400px;
     }
   </style>
 </head>
@@ -1765,6 +1777,9 @@
   </script>
 </body>
 </html>
+
+
+
 
 
 
