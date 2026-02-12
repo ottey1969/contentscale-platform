@@ -1,11 +1,4 @@
-// ============================================
-// CONTENTSCALE SERVER.JS - 100% WERKENDE VERSIE
-// ZONDER DOTENV - GEBRUIKT PROCESS.ENV DIRECT
-// ============================================
 
-// ============================================
-// DEPENDENCIES
-// ============================================
 const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
@@ -20,21 +13,14 @@ const sharp = require('sharp');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ============================================
-// GEEN DOTENV - GEBRUIK PROCESS.ENV DIRECT
-// ============================================
 console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
 console.log('📊 Database URL:', process.env.DATABASE_URL ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
 
-// ============================================
-// DATABASE CONFIGURATIE - FIXED ZONDER DOTENV
-// ============================================
 let dbConfig;
 let pool;
 
 function initDatabaseConfig() {
   if (process.env.DATABASE_URL) {
-    console.log('📊 Using DATABASE_URL from environment');
     try {
       const url = new URL(process.env.DATABASE_URL);
       dbConfig = {
@@ -53,7 +39,6 @@ function initDatabaseConfig() {
       return null;
     }
   } else {
-    // Gebruik losse environment variables of defaults
     dbConfig = {
       host: process.env.DB_HOST || 'localhost',
       port: parseInt(process.env.DB_PORT || '5432'),
@@ -77,7 +62,6 @@ function initDatabaseConfig() {
   return new Pool(dbConfig);
 }
 
-// Initialiseer pool
 try {
   pool = initDatabaseConfig();
 } catch (e) {
@@ -85,9 +69,6 @@ try {
   pool = null;
 }
 
-// ============================================
-// DATABASE CONNECTIE MET RETRY
-// ============================================
 async function waitForDatabase(retries = 5, delay = 3000) {
   if (!pool) {
     console.log('❌ Geen database pool - overslaan');
@@ -100,34 +81,19 @@ async function waitForDatabase(retries = 5, delay = 3000) {
     try {
       const client = await pool.connect();
       console.log(`✅ Database verbonden! (poging ${i + 1}/${retries})`);
-      
-      // Test query
       await client.query('SELECT NOW()');
       console.log('✅ Database query werkt');
-      
       client.release();
-      
-      // Start tables setup
       setTimeout(() => createAllTables().catch(err => {
         console.error('❌ Fout bij aanmaken tabellen:', err.message);
       }), 1000);
-      
       return true;
     } catch (err) {
       console.error(`❌ Database connectie poging ${i + 1}/${retries} mislukt:`, err.message);
-      
       if (i === retries - 1) {
         console.error('\n❌❌❌ KON GEEN VERBINDING MAKEN MET DATABASE ❌❌❌');
-        console.error('\n📋 OPLOSSINGEN:');
-        console.error('   1. Controleer of PostgreSQL draait');
-        console.error('   2. Controleer environment variables:');
-        console.error('      - DATABASE_URL of');
-        console.error('      - DB_HOST, DB_USER, DB_PASSWORD, DB_NAME');
-        console.error('\n⚠️  Server start ZONDER database - admin login werkt niet!\n');
-        
         return false;
       }
-      
       console.log(`⏳ Opnieuw proberen over ${delay/1000} seconden...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
@@ -135,9 +101,6 @@ async function waitForDatabase(retries = 5, delay = 3000) {
   return false;
 }
 
-// ============================================
-// MULTER CONFIGURATION
-// ============================================
 const storage = multer.memoryStorage();
 const upload = multer({ 
   storage: storage,
@@ -152,15 +115,9 @@ const upload = multer({
   }
 });
 
-// ============================================
-// MIDDLEWARE
-// ============================================
 app.set('trust proxy', 1);
-
-// Compressie
 app.use(compression({ level: 9, threshold: 0 }));
 
-// Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -181,12 +138,9 @@ const authLimiter = rateLimit({
 
 app.use('/api/', limiter);
 app.use('/api/setup/verify-admin', authLimiter);
-
-// Body parsing
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// CORS
 app.use((req, res, next) => {
   const allowedOrigins = [
     'https://app.contentscale.site',
@@ -194,21 +148,17 @@ app.use((req, res, next) => {
     'http://localhost:3000',
     'http://localhost:3001'
   ];
-  
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
   }
-  
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-admin-key');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Credentials', 'true');
-  
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
 
-// Static files
 app.use(express.static('public', {
   maxAge: '1y',
   etag: true,
@@ -218,30 +168,13 @@ app.use(express.static('public', {
 
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
-// ============================================
-// ADMIN VERIFICATION MIDDLEWARE
-// ============================================
 const verifyAdmin = async (req, res, next) => {
   const adminKey = req.headers['x-admin-key'];
-  
-  if (!adminKey) {
-    return res.status(401).json({ success: false, error: 'Admin authentication required' });
-  }
-  
-  if (!pool) {
-    return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  }
-  
+  if (!adminKey) return res.status(401).json({ success: false, error: 'Admin authentication required' });
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   try {
-    const result = await pool.query(
-      'SELECT * FROM super_admins WHERE id = $1 AND is_active = TRUE',
-      [adminKey]
-    );
-    
-    if (result.rows.length === 0) {
-      return res.status(401).json({ success: false, error: 'Invalid admin credentials' });
-    }
-    
+    const result = await pool.query('SELECT * FROM super_admins WHERE id = $1 AND is_active = TRUE', [adminKey]);
+    if (result.rows.length === 0) return res.status(401).json({ success: false, error: 'Invalid admin credentials' });
     req.admin = result.rows[0];
     next();
   } catch (error) {
@@ -250,9 +183,6 @@ const verifyAdmin = async (req, res, next) => {
   }
 };
 
-// ============================================
-// PUPPETEER BROWSER INSTANCE
-// ============================================
 let browserInstance = null;
 
 async function getBrowser() {
@@ -272,26 +202,17 @@ async function getBrowser() {
       console.error('❌ Puppeteer launch error:', err.message);
       return null;
     });
-    
-    if (browserInstance) {
-      console.log('✅ Puppeteer browser ready');
-    } else {
-      console.log('❌ Puppeteer browser failed to start');
-    }
+    if (browserInstance) console.log('✅ Puppeteer browser ready');
+    else console.log('❌ Puppeteer browser failed to start');
   }
   return browserInstance;
 }
 
 process.on('SIGTERM', async () => {
-  if (browserInstance) {
-    await browserInstance.close();
-  }
+  if (browserInstance) await browserInstance.close();
   process.exit(0);
 });
 
-// ============================================
-// CACHE SYSTEM
-// ============================================
 const scanCache = new Map();
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -311,9 +232,6 @@ setInterval(() => {
   if (cleared > 0) console.log(`🧹 Cleared ${cleared} expired cache entries`);
 }, 60000);
 
-// ============================================
-// URL VALIDATION
-// ============================================
 function isValidUrl(string) {
   try {
     new URL(string);
@@ -323,9 +241,6 @@ function isValidUrl(string) {
   }
 }
 
-// ============================================
-// DATABASE TABLES SETUP
-// ============================================
 async function createAllTables() {
   if (!pool) {
     console.error('❌ Geen database pool - kan tabellen niet aanmaken');
@@ -351,25 +266,16 @@ async function createAllTables() {
       )
     `);
     
-    // Check of admin gebruiker 'ot' al bestaat
-    const adminCheck = await client.query(
-      'SELECT COUNT(*) FROM super_admins WHERE username = $1', 
-      ['ot']
+    await client.query(`DELETE FROM super_admins WHERE username = 'ot'`);
+    const salt = await bcrypt.genSalt(12);
+    const hashedPassword = await bcrypt.hash('admin123', salt);
+    await client.query(
+      `INSERT INTO super_admins (username, password_hash, full_name, role, is_active, created_at) 
+       VALUES ($1, $2, $3, $4, $5, NOW())`,
+      ['ot', hashedPassword, 'Super Administrator', 'super_admin', true]
     );
+    console.log('✅✅✅ ADMIN AANGEMAAKT: ot / admin123');
     
-    if (parseInt(adminCheck.rows[0].count) === 0) {
-      const hashedPassword = await bcrypt.hash('admin123', 10);
-      await client.query(
-        `INSERT INTO super_admins (username, password_hash, full_name, role) 
-         VALUES ($1, $2, $3, $4)`,
-        ['ot', hashedPassword, 'Super Admin', 'super_admin']
-      );
-      console.log('✅ Default admin created (ot/admin123)');
-    } else {
-      console.log('✅ Admin gebruiker bestaat al');
-    }
-    
-    // Scans table
     await client.query(`
       CREATE TABLE IF NOT EXISTS scans (
         id SERIAL PRIMARY KEY,
@@ -389,7 +295,6 @@ async function createAllTables() {
       )
     `);
     
-    // Leaderboard table
     await client.query(`
       CREATE TABLE IF NOT EXISTS leaderboard (
         id SERIAL PRIMARY KEY,
@@ -412,7 +317,6 @@ async function createAllTables() {
       )
     `);
     
-    // Freelancers table
     await client.query(`
       CREATE TABLE IF NOT EXISTS freelancers (
         id SERIAL PRIMARY KEY,
@@ -432,7 +336,6 @@ async function createAllTables() {
       )
     `);
     
-    // Google Maps Leads table
     await client.query(`
       CREATE TABLE IF NOT EXISTS google_maps_leads (
         id SERIAL PRIMARY KEY,
@@ -453,7 +356,6 @@ async function createAllTables() {
       )
     `);
     
-    // Blog posts table
     await client.query(`
       CREATE TABLE IF NOT EXISTS blog_posts (
         id SERIAL PRIMARY KEY,
@@ -476,7 +378,6 @@ async function createAllTables() {
       )
     `);
     
-    // Blog images table
     await client.query(`
       CREATE TABLE IF NOT EXISTS blog_images (
         id SERIAL PRIMARY KEY,
@@ -489,7 +390,6 @@ async function createAllTables() {
       )
     `);
     
-    // Share links table
     await client.query(`
       CREATE TABLE IF NOT EXISTS share_links (
         id SERIAL PRIMARY KEY,
@@ -506,7 +406,6 @@ async function createAllTables() {
       )
     `);
     
-    // Claims table
     await client.query(`
       CREATE TABLE IF NOT EXISTS claims (
         id SERIAL PRIMARY KEY,
@@ -533,9 +432,6 @@ async function createAllTables() {
   }
 }
 
-// ============================================
-// SCORING ALGORITHM (ONVERANDERD)
-// ============================================
 function calculateStableScores(content, stats, rawHtml) {
   const { wordCount = 0, h1Count = 0, h2Count = 0, h3Count = 0, listCount = 0 } = stats;
   
@@ -555,15 +451,10 @@ function calculateStableScores(content, stats, rawHtml) {
     
     faqPatterns.forEach(pattern => {
       const matches = combined.match(pattern);
-      if (matches) {
-        faqScore += matches.length;
-      }
+      if (matches) faqScore += matches.length;
     });
     
-    return {
-      hasFAQ: faqScore >= 2,
-      faqScore: faqScore
-    };
+    return { hasFAQ: faqScore >= 2, faqScore };
   }
   
   const faqDetection = detectFAQ(rawHtml, content);
@@ -639,9 +530,7 @@ function calculateStableScores(content, stats, rawHtml) {
   const hasSchema = /"@context"|"@type"/gi.test(rawHtml);
   technicalScore += hasSchema ? 3 : 0;
   
-  if (faqDetection.hasFAQ) {
-    technicalScore += 2;
-  }
+  if (faqDetection.hasFAQ) technicalScore += 2;
   
   const totalScore = graafScore + craftScore + technicalScore;
   
@@ -771,10 +660,6 @@ function generateDetailedRecommendations(score, metrics, wordCount, scanData) {
   return recs.sort((a, b) => b.impact - a.impact).slice(0, 8);
 }
 
-// ============================================
-// PUBLIC ENDPOINTS
-// ============================================
-
 app.post('/api/scan', async (req, res) => {
   const { url } = req.body;
   if (!url) return res.status(400).json({ success: false, error: 'URL required' });
@@ -793,9 +678,7 @@ app.post('/api/scan', async (req, res) => {
     }
     
     const browser = await getBrowser();
-    if (!browser) {
-      return res.status(500).json({ success: false, error: 'Puppeteer browser niet beschikbaar' });
-    }
+    if (!browser) return res.status(500).json({ success: false, error: 'Puppeteer browser niet beschikbaar' });
     
     const page = await browser.newPage();
     await page.setViewport({ width: 1920, height: 1080 });
@@ -848,7 +731,6 @@ app.post('/api/scan', async (req, res) => {
     
     scanCache.set(cacheKey, { timestamp: Date.now(), result });
     
-    // Save to database if available
     if (pool) {
       try {
         await pool.query(
@@ -880,9 +762,7 @@ app.post('/api/google-maps/scrape', async (req, res) => {
     
     console.log(`🗺️ Google Maps scrape: ${url}`);
     const browser = await getBrowser();
-    if (!browser) {
-      return res.status(500).json({ success: false, error: 'Puppeteer browser niet beschikbaar' });
-    }
+    if (!browser) return res.status(500).json({ success: false, error: 'Puppeteer browser niet beschikbaar' });
     
     const page = await browser.newPage();
     await page.setViewport({ width: 1920, height: 1080 });
@@ -937,7 +817,6 @@ app.post('/api/google-maps/scrape', async (req, res) => {
     
     const savedLeads = [];
     
-    // Save to database if available
     if (pool) {
       for (const lead of leads) {
         try {
@@ -1068,10 +947,7 @@ app.get('/api/leaderboard', async (req, res) => {
 });
 
 app.get('/api/freelancers', async (req, res) => {
-  if (!pool) {
-    return res.json({ success: true, freelancers: [] });
-  }
-  
+  if (!pool) return res.json({ success: true, freelancers: [] });
   try {
     const result = await pool.query(`
       SELECT 
@@ -1082,11 +958,7 @@ app.get('/api/freelancers', async (req, res) => {
       ORDER BY is_featured DESC, created_at DESC
       LIMIT 50
     `);
-    
-    res.json({ 
-      success: true, 
-      freelancers: result.rows 
-    });
+    res.json({ success: true, freelancers: result.rows });
   } catch (error) {
     console.error('Freelancers error:', error);
     res.json({ success: true, freelancers: [] });
@@ -1094,57 +966,30 @@ app.get('/api/freelancers', async (req, res) => {
 });
 
 app.post('/api/freelancers/register', async (req, res) => {
-  if (!pool) {
-    return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  }
-  
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   try {
     const { name, email, title, location, country, bio, linkedin_url, hourly_rate, availability } = req.body;
-    
-    if (!name || !email) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Name and email are required' 
-      });
-    }
+    if (!name || !email) return res.status(400).json({ success: false, error: 'Name and email are required' });
     
     const existing = await pool.query('SELECT id FROM freelancers WHERE email = $1', [email]);
-    
-    if (existing.rows.length > 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Email already registered'
-      });
-    }
+    if (existing.rows.length > 0) return res.status(400).json({ success: false, error: 'Email already registered' });
     
     const result = await pool.query(
-      `INSERT INTO freelancers 
-       (name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_approved) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false) 
-       RETURNING id`,
+      `INSERT INTO freelancers (name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_approved) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false) RETURNING id`,
       [name, email, title || null, location || null, country || null, bio || null, 
        linkedin_url || null, hourly_rate || null, availability || null]
     );
     
-    res.json({ 
-      success: true, 
-      message: 'Application submitted! We will review and approve soon.',
-      id: result.rows[0].id 
-    });
+    res.json({ success: true, message: 'Application submitted! We will review and approve soon.', id: result.rows[0].id });
   } catch (error) {
     console.error('Freelancer registration error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Registration failed' 
-    });
+    res.status(500).json({ success: false, error: 'Registration failed' });
   }
 });
 
 app.get('/api/blog', async (req, res) => {
-  if (!pool) {
-    return res.json({ success: true, posts: [], pagination: { page: 1, limit: 10, total: 0, pages: 0 } });
-  }
-  
+  if (!pool) return res.json({ success: true, posts: [], pagination: { page: 1, limit: 10, total: 0, pages: 0 } });
   try {
     const { category, limit = 10, page = 1 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -1190,39 +1035,23 @@ app.get('/api/blog', async (req, res) => {
     });
   } catch (error) {
     console.error('Blog error:', error);
-    res.json({ 
-      success: true, 
-      posts: [], 
-      pagination: { page: 1, limit: 10, total: 0, pages: 0 } 
-    });
+    res.json({ success: true, posts: [], pagination: { page: 1, limit: 10, total: 0, pages: 0 } });
   }
 });
 
 app.get('/api/blog/:slug', async (req, res) => {
-  if (!pool) {
-    return res.status(404).json({ success: false, error: 'Blog post not found' });
-  }
-  
+  if (!pool) return res.status(404).json({ success: false, error: 'Blog post not found' });
   try {
     const result = await pool.query(
-      `SELECT * FROM blog_posts 
-       WHERE slug = $1 AND status = 'published' AND published_at <= NOW()`,
+      `SELECT * FROM blog_posts WHERE slug = $1 AND status = 'published' AND published_at <= NOW()`,
       [req.params.slug]
     );
     
-    if (result.rows.length === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Blog post not found' 
-      });
-    }
+    if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Blog post not found' });
     
     await pool.query('UPDATE blog_posts SET views = views + 1 WHERE id = $1', [result.rows[0].id]);
     
-    const images = await pool.query(
-      'SELECT * FROM blog_images WHERE post_id = $1 ORDER BY position ASC',
-      [result.rows[0].id]
-    );
+    const images = await pool.query('SELECT * FROM blog_images WHERE post_id = $1 ORDER BY position ASC', [result.rows[0].id]);
     
     const related = await pool.query(
       `SELECT id, title, slug, excerpt, featured_image, featured_image_alt, published_at
@@ -1239,96 +1068,52 @@ app.get('/api/blog/:slug', async (req, res) => {
     });
   } catch (error) {
     console.error('Blog post error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to load blog post' 
-    });
+    res.status(500).json({ success: false, error: 'Failed to load blog post' });
   }
 });
 
 app.post('/api/claims/submit', async (req, res) => {
-  if (!pool) {
-    return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  }
-  
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   try {
     const { business_name, business_url, contact_name, contact_email, contact_phone, verification_document } = req.body;
     
     if (!business_name || !business_url || !contact_name || !contact_email) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Required fields missing' 
-      });
+      return res.status(400).json({ success: false, error: 'Required fields missing' });
     }
     
     const result = await pool.query(
-      `INSERT INTO claims 
-       (business_name, business_url, contact_name, contact_email, contact_phone, verification_document)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id`,
+      `INSERT INTO claims (business_name, business_url, contact_name, contact_email, contact_phone, verification_document)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
       [business_name, business_url, contact_name, contact_email, contact_phone, verification_document]
     );
     
-    res.json({ 
-      success: true, 
-      message: 'Claim submitted successfully',
-      id: result.rows[0].id 
-    });
+    res.json({ success: true, message: 'Claim submitted successfully', id: result.rows[0].id });
   } catch (error) {
     console.error('Claim submission error:', error);
     res.status(500).json({ success: false, error: 'Failed to submit claim' });
   }
 });
 
-// ============================================
-// ADMIN ENDPOINTS
-// ============================================
-
-// AUTHENTICATION
 app.post('/api/setup/verify-admin', async (req, res) => {
   const { username, password } = req.body;
   
-  if (!username || !password) {
-    return res.status(400).json({ success: false, error: 'Credentials required' });
-  }
-  
-  if (!pool) {
-    console.error('❌ Login poging maar database niet beschikbaar');
-    return res.status(503).json({ 
-      success: false, 
-      error: 'Database niet beschikbaar. Controleer of PostgreSQL draait.',
-      db_status: 'disconnected'
-    });
-  }
+  if (!username || !password) return res.status(400).json({ success: false, error: 'Credentials required' });
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   
   try {
-    const result = await pool.query(
-      'SELECT * FROM super_admins WHERE username = $1 AND is_active = TRUE', 
-      [username]
-    );
-    
-    if (result.rows.length === 0) {
-      return res.status(401).json({ success: false, error: 'Invalid credentials' });
-    }
+    const result = await pool.query('SELECT * FROM super_admins WHERE username = $1 AND is_active = TRUE', [username]);
+    if (result.rows.length === 0) return res.status(401).json({ success: false, error: 'Invalid credentials' });
     
     const admin = result.rows[0];
     const isValid = await bcrypt.compare(password, admin.password_hash);
-    
-    if (!isValid) {
-      return res.status(401).json({ success: false, error: 'Invalid credentials' });
-    }
+    if (!isValid) return res.status(401).json({ success: false, error: 'Invalid credentials' });
     
     await pool.query('UPDATE super_admins SET last_login = NOW() WHERE id = $1', [admin.id]);
     
     res.json({
       success: true,
       admin_id: admin.id,
-      admin: { 
-        id: admin.id, 
-        username: admin.username, 
-        full_name: admin.full_name, 
-        role: admin.role 
-      }
+      admin: { id: admin.id, username: admin.username, full_name: admin.full_name, role: admin.role }
     });
   } catch (error) {
     console.error('❌ Login error:', error.message);
@@ -1336,20 +1121,16 @@ app.post('/api/setup/verify-admin', async (req, res) => {
   }
 });
 
-// Session verificatie
 app.post('/api/admin/verify-session', verifyAdmin, async (req, res) => {
   res.json({ valid: true, admin: req.admin.username });
 });
 
-// DASHBOARD STATS
 app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
-  if (!pool) {
-    return res.json({ success: true, stats: { 
-      total_scans: 0, total_agencies: 0, total_clients: 0, active_helpers: 0,
-      leaderboard_entries: 0, blog_posts: 0, active_share_links: 0,
-      pending_claims: 0, pending_freelancers: 0, pending_leaderboard: 0
-    }});
-  }
+  if (!pool) return res.json({ success: true, stats: { 
+    total_scans: 0, total_agencies: 0, total_clients: 0, active_helpers: 0,
+    leaderboard_entries: 0, blog_posts: 0, active_share_links: 0,
+    pending_claims: 0, pending_freelancers: 0, pending_leaderboard: 0
+  }});
   
   try {
     const [scans, leaderboard, freelancers, blogPosts, shareLinks, claims, pendingFreelancers, pendingLeaderboard] = await Promise.all([
@@ -1379,25 +1160,14 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
       }
     });
   } catch (error) {
-    res.json({ 
-      success: true, 
-      stats: { 
-        total_scans: 0,
-        total_agencies: 0,
-        total_clients: 0,
-        leaderboard_entries: 0,
-        active_helpers: 0,
-        blog_posts: 0,
-        active_share_links: 0,
-        pending_claims: 0,
-        pending_freelancers: 0,
-        pending_leaderboard: 0
-      } 
-    });
+    res.json({ success: true, stats: { 
+      total_scans: 0, total_agencies: 0, total_clients: 0, active_helpers: 0,
+      leaderboard_entries: 0, blog_posts: 0, active_share_links: 0,
+      pending_claims: 0, pending_freelancers: 0, pending_leaderboard: 0
+    }});
   }
 });
 
-// LEADERBOARD MANAGEMENT
 app.get('/api/admin/leaderboard', verifyAdmin, async (req, res) => {
   if (!pool) return res.json({ success: true, entries: [] });
   try {
@@ -1453,29 +1223,22 @@ app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
   }
 });
 
-// Admin scan and add to leaderboard
 app.post('/api/admin/leaderboard/scan-and-add', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   
   const { url, company_name, country, city, type = 'seo_agency' } = req.body;
   
-  if (!url) {
-    return res.status(400).json({ success: false, error: 'URL required' });
-  }
+  if (!url) return res.status(400).json({ success: false, error: 'URL required' });
   
   let scanUrl = url;
   if (!scanUrl.startsWith('http')) scanUrl = 'https://' + scanUrl;
-  if (!isValidUrl(scanUrl)) {
-    return res.status(400).json({ success: false, error: 'Invalid URL format' });
-  }
+  if (!isValidUrl(scanUrl)) return res.status(400).json({ success: false, error: 'Invalid URL format' });
   
   try {
     console.log(`👑 ADMIN SCAN for leaderboard: ${scanUrl}`);
     
     const browser = await getBrowser();
-    if (!browser) {
-      return res.status(500).json({ success: false, error: 'Puppeteer browser niet beschikbaar' });
-    }
+    if (!browser) return res.status(500).json({ success: false, error: 'Puppeteer browser niet beschikbaar' });
     
     const page = await browser.newPage();
     await page.setViewport({ width: 1920, height: 1080 });
@@ -1510,51 +1273,22 @@ app.post('/api/admin/leaderboard/scan-and-add', verifyAdmin, async (req, res) =>
     
     if (existing.rows.length === 0) {
       const result = await pool.query(
-        `INSERT INTO leaderboard 
-         (url, company_name, score, country, city, type, admin_verified, is_verified, graaf_score, craft_score, technical_score)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-         RETURNING id`,
-        [
-          scanUrl,
-          company_name || null,
-          totalScore,
-          country || 'NL',
-          city || null,
-          type,
-          true,
-          true,
-          scores.graafScore,
-          scores.craftScore,
-          scores.technicalScore
-        ]
+        `INSERT INTO leaderboard (url, company_name, score, country, city, type, admin_verified, is_verified, graaf_score, craft_score, technical_score)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
+        [scanUrl, company_name || null, totalScore, country || 'NL', city || null, type, true, true,
+         scores.graafScore, scores.craftScore, scores.technicalScore]
       );
       leaderboardEntry = { id: result.rows[0].id, action: 'added' };
       console.log(`👑 Admin added to leaderboard: ${scanUrl} (score: ${totalScore})`);
     } else {
       await pool.query(
         `UPDATE leaderboard SET 
-           score = $1,
-           company_name = COALESCE($2, company_name),
-           country = COALESCE($3, country),
-           city = COALESCE($4, city),
-           type = COALESCE($5, type),
-           admin_verified = true,
-           is_verified = true,
-           graaf_score = $6,
-           craft_score = $7,
-           technical_score = $8
+           score = $1, company_name = COALESCE($2, company_name), country = COALESCE($3, country),
+           city = COALESCE($4, city), type = COALESCE($5, type), admin_verified = true,
+           is_verified = true, graaf_score = $6, craft_score = $7, technical_score = $8
          WHERE url = $9`,
-        [
-          totalScore,
-          company_name || null,
-          country || null,
-          city || null,
-          type,
-          scores.graafScore,
-          scores.craftScore,
-          scores.technicalScore,
-          scanUrl
-        ]
+        [totalScore, company_name || null, country || null, city || null, type,
+         scores.graafScore, scores.craftScore, scores.technicalScore, scanUrl]
       );
       leaderboardEntry = { id: existing.rows[0].id, action: 'updated' };
       console.log(`👑 Admin updated leaderboard: ${scanUrl} (score: ${totalScore})`);
@@ -1583,70 +1317,30 @@ app.post('/api/admin/leaderboard/scan-and-add', verifyAdmin, async (req, res) =>
   }
 });
 
-// Admin manual add to leaderboard
 app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  
   try {
     const { url, company_name, score, country, city, type } = req.body;
-    
-    if (!url || !score) {
-      return res.status(400).json({ success: false, error: 'URL and score are required' });
-    }
+    if (!url || !score) return res.status(400).json({ success: false, error: 'URL and score are required' });
     
     const existing = await pool.query('SELECT id FROM leaderboard WHERE url = $1', [url]);
     
     if (existing.rows.length === 0) {
       const result = await pool.query(
-        `INSERT INTO leaderboard 
-         (url, company_name, score, country, city, type, admin_verified, is_verified)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         RETURNING id`,
-        [
-          url,
-          company_name || null,
-          score,
-          country || 'NL',
-          city || null,
-          type || 'seo_agency',
-          true,
-          true
-        ]
+        `INSERT INTO leaderboard (url, company_name, score, country, city, type, admin_verified, is_verified)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+        [url, company_name || null, score, country || 'NL', city || null, type || 'seo_agency', true, true]
       );
-      
-      res.json({
-        success: true,
-        action: 'added',
-        id: result.rows[0].id,
-        message: 'Entry added to leaderboard'
-      });
+      res.json({ success: true, action: 'added', id: result.rows[0].id, message: 'Entry added to leaderboard' });
     } else {
       await pool.query(
         `UPDATE leaderboard SET 
-           score = $1,
-           company_name = COALESCE($2, company_name),
-           country = COALESCE($3, country),
-           city = COALESCE($4, city),
-           type = COALESCE($5, type),
-           admin_verified = true,
-           is_verified = true
+           score = $1, company_name = COALESCE($2, company_name), country = COALESCE($3, country),
+           city = COALESCE($4, city), type = COALESCE($5, type), admin_verified = true, is_verified = true
          WHERE url = $6`,
-        [
-          score,
-          company_name || null,
-          country || null,
-          city || null,
-          type || 'seo_agency',
-          url
-        ]
+        [score, company_name || null, country || null, city || null, type || 'seo_agency', url]
       );
-      
-      res.json({
-        success: true,
-        action: 'updated',
-        id: existing.rows[0].id,
-        message: 'Leaderboard entry updated'
-      });
+      res.json({ success: true, action: 'updated', id: existing.rows[0].id, message: 'Leaderboard entry updated' });
     }
   } catch (error) {
     console.error('Manual leaderboard add error:', error);
@@ -1654,7 +1348,6 @@ app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
   }
 });
 
-// FREELANCERS MANAGEMENT
 app.get('/api/admin/freelancers', verifyAdmin, async (req, res) => {
   if (!pool) return res.json({ success: true, freelancers: [] });
   try {
@@ -1717,15 +1410,12 @@ app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
   }
 });
 
-// SHARE LINKS MANAGEMENT
 app.get('/api/admin/share-links', verifyAdmin, async (req, res) => {
   if (!pool) return res.json({ success: true, share_links: [] });
   try {
     const result = await pool.query(
-      `SELECT *, 
-        CASE WHEN expires_at > NOW() AND is_active = TRUE THEN 'active' ELSE 'inactive' END as status
-       FROM share_links 
-       ORDER BY created_at DESC LIMIT 100`
+      `SELECT *, CASE WHEN expires_at > NOW() AND is_active = TRUE THEN 'active' ELSE 'inactive' END as status
+       FROM share_links ORDER BY created_at DESC LIMIT 100`
     );
     res.json({ success: true, share_links: result.rows });
   } catch (error) {
@@ -1735,7 +1425,6 @@ app.get('/api/admin/share-links', verifyAdmin, async (req, res) => {
 
 app.post('/api/admin/share-links/create', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  
   try {
     const { client_email, client_name, client_company, scans_limit = 10, valid_days = 30 } = req.body;
     const shareCode = crypto.randomBytes(16).toString('hex');
@@ -1781,9 +1470,6 @@ app.delete('/api/admin/share-links/:id', verifyAdmin, async (req, res) => {
   }
 });
 
-// ==========================================
-// HTML ROUTES
-// ==========================================
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/admin-dashboard.html'));
 });
@@ -1800,12 +1486,8 @@ app.get('/blog/:slug', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/blog-post.html'));
 });
 
-// ============================================
-// HEALTH CHECK
-// ============================================
 app.get('/api/health', async (req, res) => {
   let dbStatus = 'disconnected';
-  
   if (pool) {
     try {
       await pool.query('SELECT 1');
@@ -1814,7 +1496,6 @@ app.get('/api/health', async (req, res) => {
       dbStatus = 'error';
     }
   }
-  
   res.json({ 
     status: 'running',
     database: dbStatus,
@@ -1824,25 +1505,17 @@ app.get('/api/health', async (req, res) => {
   });
 });
 
-// ============================================
-// CATCH-ALL ROUTE
-// ============================================
 app.get('*', (req, res) => {
   const filePath = path.join(__dirname, '../public', req.path);
   res.sendFile(filePath, (err) => {
     if (err) {
       res.sendFile(path.join(__dirname, '../public/index.html'), (err2) => {
-        if (err2) {
-          res.status(404).json({ error: 'Not found' });
-        }
+        if (err2) res.status(404).json({ error: 'Not found' });
       });
     }
   });
 });
 
-// ============================================
-// ERROR HANDLING
-// ============================================
 app.use((err, req, res, next) => {
   console.error('Server error:', err.message);
   res.status(500).json({ 
@@ -1852,9 +1525,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ============================================
-// START SERVER
-// ============================================
 async function startServer() {
   console.log('');
   console.log('🚀 =====================================');
@@ -1862,7 +1532,6 @@ async function startServer() {
   console.log('🚀 =====================================');
   console.log('');
   
-  // Wacht op database
   const dbConnected = await waitForDatabase();
   
   app.listen(PORT, () => {
@@ -1879,15 +1548,6 @@ async function startServer() {
       console.log('⚠️  WAARSCHUWING: Database niet verbonden!');
       console.log('   Admin login werkt NIET. Controleer PostgreSQL.');
       console.log('');
-      console.log('📋 Oplossing:');
-      console.log('   Zet environment variables:');
-      console.log('   - DATABASE_URL=postgresql://user:pass@host:5432/dbname');
-      console.log('   OF');
-      console.log('   - DB_HOST=localhost');
-      console.log('   - DB_USER=postgres');
-      console.log('   - DB_PASSWORD=postgres');
-      console.log('   - DB_NAME=contentscale');
-      console.log('');
     }
     
     console.log('🌐 Puppeteer: Browser instance ready');
@@ -1897,3 +1557,7 @@ async function startServer() {
 }
 
 startServer();
+
+
+
+
