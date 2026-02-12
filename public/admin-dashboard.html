@@ -9,28 +9,31 @@
   <title>Admin Dashboard - ContentScale</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    .tab-button {
-      transition: all 0.2s;
-    }
+    .tab-button { transition: all 0.2s; }
     .tab-button.active {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
     }
-    .stat-card {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-    .score-badge {
-      font-size: 14px;
-      font-weight: bold;
-      padding: 4px 12px;
-      border-radius: 20px;
-    }
+    .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .score-badge { font-size: 14px; font-weight: bold; padding: 4px 12px; border-radius: 20px; }
     .score-high { background: #10b981; color: white; }
     .score-medium { background: #f59e0b; color: white; }
     .score-low { background: #ef4444; color: white; }
     .pending-card {
       background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
       border: 1px solid #f59e0b;
+    }
+    .recommendation-card {
+      background: #1e293b;
+      border-left: 4px solid;
+      transition: all 0.2s;
+    }
+    .priority-HIGH { border-left-color: #ef4444; }
+    .priority-MEDIUM { border-left-color: #f59e0b; }
+    .priority-LOW { border-left-color: #3b82f6; }
+    .scanner-card {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 1px solid #334155;
     }
   </style>
 </head>
@@ -104,10 +107,10 @@
             🎯 Freelancers
           </button>
           <button onclick="switchTab('scanner')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🔍 Scanner
+            🔍 Dual Scanner
           </button>
           <button onclick="switchTab('pending')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            ⏳ Pending (Admin Only)
+            ⏳ Pending (Admin)
           </button>
         </div>
       </div>
@@ -117,11 +120,11 @@
     <main class="max-w-7xl mx-auto px-4 py-8">
       
       <!-- ============================================
-           TAB 1: LEADERBOARD - ZELFDE DATA ALS FRONTEND
+           TAB 1: LEADERBOARD - PUBLIEK + ADMIN DELETE
            ============================================ -->
       <div id="tab-leaderboard" class="tab-content">
         <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">🏆 Leaderboard - Publieke Lijst</h2>
+          <h2 class="text-2xl font-bold">🏆 Leaderboard Management</h2>
           <div class="flex gap-3">
             <button onclick="loadLeaderboard()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
               🔄 Refresh
@@ -132,7 +135,7 @@
           </div>
         </div>
 
-        <!-- Stats Cards - Zelfde als frontend -->
+        <!-- Stats Cards -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div class="stat-card p-6 rounded-lg shadow-lg text-white">
             <div class="flex items-center justify-between">
@@ -172,12 +175,16 @@
           </div>
         </div>
 
-        <!-- INFO BANNER -->
-        <div class="bg-blue-900 border border-blue-600 rounded-lg p-4 mb-6">
-          <p class="text-sm text-blue-200">
-            ⚡ Dit is de PUBLIEKE leaderboard - toont alleen goedgekeurde entries (admin_verified = TRUE).
-            <button onclick="switchTab('pending')" class="underline ml-2">Bekijk pending submissions →</button>
-          </p>
+        <!-- BULK ACTIONS -->
+        <div class="bg-gray-800 rounded-lg p-4 mb-6 flex gap-4 items-center">
+          <div class="flex items-center gap-2">
+            <input type="checkbox" id="select-all-leaderboard" onchange="toggleSelectAllLeaderboard()" class="w-5 h-5">
+            <label class="text-sm">Selecteer alles</label>
+          </div>
+          <button onclick="bulkDeleteLeaderboard()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">
+            🗑️ Delete Geselecteerd
+          </button>
+          <span id="selected-count-leaderboard" class="text-sm text-gray-400">0 geselecteerd</span>
         </div>
 
         <!-- SEARCH -->
@@ -189,12 +196,13 @@
           </button>
         </div>
 
-        <!-- LEADERBOARD TABLE - ZELFDE DATA ALS FRONTEND -->
+        <!-- LEADERBOARD TABLE MET CHECKBOXES -->
         <div class="bg-gray-800 rounded-lg overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full">
               <thead class="bg-gray-700">
                 <tr>
+                  <th class="px-4 py-3 text-left text-sm font-semibold w-10"></th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Rank</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Bedrijf</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">URL</th>
@@ -203,10 +211,11 @@
                   <th class="px-4 py-3 text-left text-sm font-semibold">C.R.A.F.T.</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Technical</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Land</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Acties</th>
                 </tr>
               </thead>
               <tbody id="leaderboard-tbody" class="divide-y divide-gray-700">
-                <tr><td colspan="8" class="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+                <tr><td colspan="10" class="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
               </tbody>
             </table>
           </div>
@@ -214,60 +223,138 @@
       </div>
 
       <!-- ============================================
-           TAB 2: FREELANCERS - ZELFDE DATA ALS FRONTEND
+           TAB 2: FREELANCERS - PUBLIEK + ADMIN DELETE
            ============================================ -->
       <div id="tab-freelancers" class="tab-content hidden">
         <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">🎯 Freelancers - Publieke Lijst</h2>
+          <h2 class="text-2xl font-bold">🎯 Freelancers Management</h2>
           <button onclick="loadFreelancers()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
             🔄 Refresh
           </button>
         </div>
 
-        <!-- INFO BANNER -->
-        <div class="bg-blue-900 border border-blue-600 rounded-lg p-4 mb-6">
-          <p class="text-sm text-blue-200">
-            ⚡ Dit is de PUBLIEKE freelancer lijst - toont alleen goedgekeurde freelancers (is_approved = TRUE).
-            <button onclick="switchTab('pending')" class="underline ml-2">Bekijk pending aanmeldingen →</button>
-          </p>
+        <!-- BULK ACTIONS -->
+        <div class="bg-gray-800 rounded-lg p-4 mb-6 flex gap-4 items-center">
+          <div class="flex items-center gap-2">
+            <input type="checkbox" id="select-all-freelancers" onchange="toggleSelectAllFreelancers()" class="w-5 h-5">
+            <label class="text-sm">Selecteer alles</label>
+          </div>
+          <button onclick="bulkDeleteFreelancers()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">
+            🗑️ Delete Geselecteerd
+          </button>
+          <span id="selected-count-freelancers" class="text-sm text-gray-400">0 geselecteerd</span>
         </div>
 
-        <!-- FREELANCERS GRID - ZELFDE ALS FRONTEND -->
-        <div id="freelancers-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div class="col-span-full text-center py-8 text-gray-400">Loading freelancers...</div>
+        <!-- FREELANCERS TABLE -->
+        <div class="bg-gray-800 rounded-lg overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-700">
+                <tr>
+                  <th class="px-4 py-3 text-left text-sm font-semibold w-10"></th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Naam</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Email</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Titel</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Land</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Acties</th>
+                </tr>
+              </thead>
+              <tbody id="freelancers-tbody" class="divide-y divide-gray-700">
+                <tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
       <!-- ============================================
-           TAB 3: SCANNER - VOLLEDIGE FUNCTIONALITEIT
+           TAB 3: DUAL SCANNER - ZELFDE ALS INDEX
            ============================================ -->
       <div id="tab-scanner" class="tab-content hidden">
         <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">🔍 Content Scanner</h2>
+          <h2 class="text-2xl font-bold">🔍 Dual Scanner - Content & Leads</h2>
+          <button onclick="resetScanners()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
+            🆕 Reset All
+          </button>
         </div>
 
-        <!-- Single URL Scanner -->
-        <div class="bg-gradient-to-r from-purple-900 to-blue-900 rounded-lg p-8 mb-8 border-2 border-purple-600">
-          <h3 class="text-2xl font-bold mb-6">🔍 Single URL Analyse</h3>
-          <div class="flex flex-col md:flex-row gap-4">
-            <input type="url" id="scan-url" 
-              placeholder="https://voorbeeld.nl" 
-              class="flex-1 px-6 py-4 bg-gray-800 border-2 border-gray-700 rounded-lg text-white text-lg focus:border-purple-500 focus:outline-none">
-            <button onclick="performScan()" id="scan-btn" 
-              class="px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 rounded-lg font-bold text-lg">
-              🔍 Start Scan
-            </button>
+        <!-- SCANNER SELECTOR -->
+        <div class="grid md:grid-cols-2 gap-6 mb-8">
+          <div id="scanner-single-card" onclick="activateScanner('single')" class="scanner-card rounded-lg p-6 border-2 border-purple-600 hover:border-purple-400 transition-all cursor-pointer">
+            <div class="text-center">
+              <span class="text-5xl mb-4 inline-block">🔍</span>
+              <h3 class="text-2xl font-bold mb-2">Single URL Scanner</h3>
+              <p class="text-gray-400">Analyseer één website met G.R.A.A.F. methodologie</p>
+              <div class="mt-4 text-purple-400" id="single-scanner-status">✓ Actief</div>
+            </div>
+          </div>
+          <div id="scanner-maps-card" onclick="activateScanner('maps')" class="scanner-card rounded-lg p-6 border-2 border-gray-700 hover:border-orange-400 transition-all cursor-pointer">
+            <div class="text-center">
+              <span class="text-5xl mb-4 inline-block">🗺️</span>
+              <h3 class="text-2xl font-bold mb-2">Google Maps Scanner</h3>
+              <p class="text-gray-400">Vind bedrijven en lead candidates in bulk</p>
+              <div class="mt-4 text-gray-400" id="maps-scanner-status">Inactief</div>
+            </div>
           </div>
         </div>
 
-        <!-- Scan Result (wordt getoond na scan) -->
-        <div id="scan-result" class="hidden space-y-6">
-          <!-- Score en metrics hier... (ingekort voor leesbaarheid) -->
+        <!-- SINGLE URL SCANNER SECTION -->
+        <div id="single-scanner-section">
+          <div class="bg-gradient-to-r from-purple-900 to-blue-900 rounded-lg p-8 mb-8 border-2 border-purple-600">
+            <h3 class="text-2xl font-bold mb-6">🔍 Single URL Content Analyse</h3>
+            <div class="flex flex-col md:flex-row gap-4">
+              <input type="url" id="single-scan-url" 
+                placeholder="https://voorbeeld.nl" 
+                class="flex-1 px-6 py-4 bg-gray-800 border-2 border-gray-700 rounded-lg text-white text-lg focus:border-purple-500 focus:outline-none">
+              <button onclick="performSingleScan()" id="single-scan-btn" 
+                class="px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 rounded-lg font-bold text-lg transition-all transform hover:scale-105">
+                🔍 Start Content Analyse
+              </button>
+            </div>
+          </div>
+          <div id="single-scan-result" class="hidden space-y-6">
+            <!-- Scan result wordt hier dynamisch ingeladen -->
+            <div class="bg-gradient-to-r from-purple-800 to-indigo-800 rounded-lg p-6 border-2 border-purple-500">
+              <p class="text-center text-gray-300">Scan result komt hier...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- GOOGLE MAPS SCANNER SECTION -->
+        <div id="maps-scanner-section" class="hidden">
+          <div class="bg-gradient-to-r from-orange-900 to-red-900 rounded-lg p-8 mb-8 border-2 border-orange-600">
+            <h3 class="text-2xl font-bold mb-6">🗺️ Google Maps Lead Scanner</h3>
+            <p class="text-sm text-gray-300 mb-4">
+              Plak een Google Maps zoek-URL. Bijvoorbeeld:<br>
+              <code class="text-blue-400 bg-gray-800 px-3 py-1 rounded">https://www.google.com/maps/search/seo+agency+amsterdam/</code>
+            </p>
+            <div class="flex flex-col md:flex-row gap-4">
+              <input type="url" id="maps-scan-url" 
+                placeholder="https://www.google.com/maps/search/..." 
+                class="flex-1 px-6 py-4 bg-gray-800 border-2 border-gray-700 rounded-lg text-white text-lg focus:border-orange-500 focus:outline-none">
+              <button onclick="performMapsScan()" id="maps-scan-btn" 
+                class="px-8 py-4 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 rounded-lg font-bold text-lg transition-all transform hover:scale-105">
+                🗺️ Start Google Maps Scan
+              </button>
+            </div>
+          </div>
+          <div id="maps-results-container" class="hidden">
+            <div class="bg-gray-800 rounded-lg p-6 border-2 border-green-600">
+              <h4 class="text-xl font-bold mb-4">✅ <span id="maps-leads-count">0</span> Bedrijven gevonden</h4>
+              <div id="maps-leads-list" class="space-y-3 max-h-96 overflow-y-auto"></div>
+              <div class="mt-6 pt-6 border-t border-gray-700">
+                <button onclick="addSelectedMapsToLeaderboard()" class="w-full py-4 bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg font-bold text-lg">
+                  ✅ Voeg geselecteerde toe aan Leaderboard
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- ============================================
-           TAB 4: PENDING - ALLEEN VOOR ADMIN (NIET PUBLIEK)
+           TAB 4: PENDING - ADMIN ONLY (MET DELETE)
            ============================================ -->
       <div id="tab-pending" class="tab-content hidden">
         <div class="flex justify-between items-center mb-6">
@@ -277,20 +364,16 @@
           </button>
         </div>
 
-        <!-- PENDING LEADERBOARD SUBMISSIONS -->
+        <!-- PENDING LEADERBOARD -->
         <div class="mb-8">
           <h3 class="text-xl font-bold mb-4 text-yellow-400">🏆 Pending Leaderboard Submissions</h3>
-          <div id="pending-leaderboard-container" class="space-y-4">
-            <div class="text-center py-8 text-gray-400">Loading pending submissions...</div>
-          </div>
+          <div id="pending-leaderboard-container" class="space-y-4"></div>
         </div>
 
-        <!-- PENDING FREELANCER APPLICATIONS -->
+        <!-- PENDING FREELANCERS -->
         <div class="mb-8">
           <h3 class="text-xl font-bold mb-4 text-yellow-400">🎯 Pending Freelancer Applications</h3>
-          <div id="pending-freelancers-container" class="space-y-4">
-            <div class="text-center py-8 text-gray-400">Loading pending applications...</div>
-          </div>
+          <div id="pending-freelancers-container" class="space-y-4"></div>
         </div>
       </div>
     </main>
@@ -303,16 +386,25 @@
     let currentAdminId = localStorage.getItem('admin_id');
     let currentUsername = localStorage.getItem('admin_username');
     let allLeaderboard = [];
+    let allFreelancers = [];
+    let selectedLeaderboardIds = new Set();
+    let selectedFreelancerIds = new Set();
+    let currentScanData = null;
+    let currentMapsLeads = [];
 
     // ==========================================
-    // AUTHENTICATIE
+    // AUTHENTICATIE - FIXED
     // ==========================================
     window.onload = function() {
+      console.log('📋 Admin Dashboard geladen');
+      console.log('🔑 Admin ID:', currentAdminId);
+      
       if (currentAdminId && currentUsername) {
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('main-dashboard').classList.remove('hidden');
         document.getElementById('admin-username').textContent = currentUsername;
         loadAllData();
+        activateScanner('single');
       }
     };
 
@@ -320,6 +412,8 @@
       const username = document.getElementById('login-username').value;
       const password = document.getElementById('login-password').value;
       const errorDiv = document.getElementById('login-error');
+      
+      errorDiv.classList.add('hidden');
       
       try {
         const response = await fetch('/api/setup/verify-admin', {
@@ -331,21 +425,26 @@
         const data = await response.json();
         
         if (data.success) {
+          // SLA ADMIN ID CORRECT OP!
           currentAdminId = data.admin_id;
           currentUsername = username;
-          localStorage.setItem('admin_id', currentAdminId);
+          localStorage.setItem('admin_id', data.admin_id);
           localStorage.setItem('admin_username', username);
+          
+          console.log('✅ Admin ID opgeslagen:', data.admin_id);
           
           document.getElementById('login-screen').classList.add('hidden');
           document.getElementById('main-dashboard').classList.remove('hidden');
           document.getElementById('admin-username').textContent = username;
           
           loadAllData();
+          activateScanner('single');
         } else {
           errorDiv.textContent = data.error || 'Login mislukt';
           errorDiv.classList.remove('hidden');
         }
       } catch (error) {
+        console.error('❌ Login error:', error);
         errorDiv.textContent = 'Verbindingsfout met server';
         errorDiv.classList.remove('hidden');
       }
@@ -354,7 +453,47 @@
     function logout() {
       localStorage.removeItem('admin_id');
       localStorage.removeItem('admin_username');
+      currentAdminId = null;
+      currentUsername = null;
       location.reload();
+    }
+
+    // ==========================================
+    // API CALLS - MET JUISTE AUTH HEADERS
+    // ==========================================
+    async function apiCall(endpoint, method = 'GET', body = null) {
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      // ALLEEN admin-key voor admin endpoints
+      if (endpoint.includes('/admin/')) {
+        const adminId = localStorage.getItem('admin_id');
+        if (!adminId) {
+          throw new Error('Admin authentication required');
+        }
+        headers['x-admin-key'] = adminId;
+        console.log(`🔑 Admin API call: ${endpoint} met key: ${adminId}`);
+      }
+      
+      const options = { 
+        method, 
+        headers,
+        credentials: 'include'
+      };
+      
+      if (body) options.body = JSON.stringify(body);
+      
+      const response = await fetch(endpoint, options);
+      
+      if (response.status === 401) {
+        console.error(`❌ 401 Unauthorized voor ${endpoint}`);
+        throw new Error('Invalid admin credentials - login opnieuw');
+      }
+      
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error || 'API call failed');
+      return data;
     }
 
     // ==========================================
@@ -366,14 +505,12 @@
       
       document.getElementById(`tab-${tabName}`).classList.remove('hidden');
       
-      const buttons = document.querySelectorAll('.tab-button');
-      buttons.forEach(btn => {
+      document.querySelectorAll('.tab-button').forEach(btn => {
         if (btn.textContent.toLowerCase().includes(tabName)) {
           btn.classList.add('active');
         }
       });
       
-      // Load data op basis van tab
       if (tabName === 'leaderboard') {
         loadLeaderboard();
         loadStats();
@@ -381,55 +518,33 @@
       if (tabName === 'freelancers') {
         loadFreelancers();
       }
+      if (tabName === 'scanner') {
+        activateScanner('single');
+      }
       if (tabName === 'pending') {
+        if (!localStorage.getItem('admin_id')) {
+          alert('❌ Je moet opnieuw inloggen');
+          logout();
+          return;
+        }
         loadPendingData();
       }
     }
 
     // ==========================================
-    // API CALLS
-    // ==========================================
-    async function apiCall(endpoint, method = 'GET', body = null) {
-      const headers = {
-        'Content-Type': 'application/json'
-      };
-      
-      // Alleen admin-key voor admin endpoints
-      if (endpoint.includes('/admin/')) {
-        headers['x-admin-key'] = currentAdminId;
-      }
-      
-      const options = { method, headers };
-      if (body) options.body = JSON.stringify(body);
-      
-      const response = await fetch(endpoint, options);
-      const data = await response.json();
-      if (!data.success) throw new Error(data.error || 'API call failed');
-      return data;
-    }
-
-    // ==========================================
-    // LEADERBOARD - ZELFDE ALS FRONTEND
+    // LEADERBOARD - MET DELETE FUNCTIONALITEIT
     // ==========================================
     async function loadLeaderboard() {
       try {
-        // GEBRUIK DEZELFDE API ALS FRONTEND!
         const data = await apiCall('/api/leaderboard');
-        
-        // Sla op voor search/export
         allLeaderboard = data.entries || [];
+        renderLeaderboard(allLeaderboard);
         
-        // Update stats
         document.getElementById('stat-total-agencies').textContent = data.stats?.totalAgencies || 0;
         document.getElementById('stat-avg-score').textContent = data.averageScore || 0;
         document.getElementById('stat-active-seo').textContent = data.stats?.activeHelpers || 0;
-        
-        // Render de tabel
-        renderLeaderboard(allLeaderboard);
       } catch (error) {
         console.error('Leaderboard error:', error);
-        document.getElementById('leaderboard-tbody').innerHTML = 
-          '<tr><td colspan="8" class="px-4 py-8 text-center text-red-400">❌ Fout bij laden leaderboard</td></tr>';
       }
     }
 
@@ -437,7 +552,7 @@
       const tbody = document.getElementById('leaderboard-tbody');
       
       if (!entries || entries.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="px-4 py-8 text-center text-gray-400">Geen entries gevonden</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="px-4 py-8 text-center text-gray-400">Geen entries gevonden</td></tr>';
         return;
       }
       
@@ -445,9 +560,13 @@
         const score = entry.score || 0;
         const scoreClass = score >= 80 ? 'score-high' : score >= 60 ? 'score-medium' : 'score-low';
         const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`;
+        const checked = selectedLeaderboardIds.has(entry.id) ? 'checked' : '';
         
         return `
           <tr>
+            <td class="px-4 py-3">
+              <input type="checkbox" class="leaderboard-checkbox" data-id="${entry.id}" onchange="toggleSelectLeaderboard(${entry.id})" ${checked}>
+            </td>
             <td class="px-4 py-3 font-bold">${medal}</td>
             <td class="px-4 py-3">${entry.company_name || 'Unknown'}</td>
             <td class="px-4 py-3 text-blue-400 text-sm">${entry.url}</td>
@@ -456,26 +575,505 @@
             <td class="px-4 py-3">${entry.craft_score || '-'}/30</td>
             <td class="px-4 py-3">${entry.technical_score || '-'}/20</td>
             <td class="px-4 py-3">${entry.country || 'NL'}</td>
+            <td class="px-4 py-3">
+              <button onclick="deleteLeaderboardEntry(${entry.id})" class="text-red-400 hover:text-red-300">🗑️</button>
+            </td>
           </tr>
         `;
       }).join('');
+      
+      updateSelectedCountLeaderboard();
     }
 
-    function searchLeaderboard() {
-      const query = document.getElementById('leaderboard-search').value.toLowerCase();
-      if (!query) {
-        renderLeaderboard(allLeaderboard);
+    // LEADERBOARD DELETE FUNCTIES
+    function toggleSelectLeaderboard(id) {
+      if (selectedLeaderboardIds.has(id)) {
+        selectedLeaderboardIds.delete(id);
+      } else {
+        selectedLeaderboardIds.add(id);
+      }
+      updateSelectedCountLeaderboard();
+    }
+
+    function toggleSelectAllLeaderboard() {
+      const selectAll = document.getElementById('select-all-leaderboard');
+      const checkboxes = document.querySelectorAll('.leaderboard-checkbox');
+      
+      if (selectAll.checked) {
+        allLeaderboard.forEach(entry => selectedLeaderboardIds.add(entry.id));
+        checkboxes.forEach(cb => cb.checked = true);
+      } else {
+        selectedLeaderboardIds.clear();
+        checkboxes.forEach(cb => cb.checked = false);
+      }
+      updateSelectedCountLeaderboard();
+    }
+
+    function updateSelectedCountLeaderboard() {
+      const count = selectedLeaderboardIds.size;
+      document.getElementById('selected-count-leaderboard').textContent = `${count} geselecteerd`;
+    }
+
+    async function deleteLeaderboardEntry(id) {
+      if (!confirm('❌ Verwijder deze entry permanent?')) return;
+      try {
+        await apiCall(`/api/admin/leaderboard/${id}`, 'DELETE');
+        alert('✅ Entry verwijderd');
+        selectedLeaderboardIds.delete(id);
+        loadLeaderboard();
+        loadStats();
+      } catch (error) {
+        alert('❌ Fout: ' + error.message);
+      }
+    }
+
+    async function bulkDeleteLeaderboard() {
+      if (selectedLeaderboardIds.size === 0) {
+        alert('❌ Selecteer entries om te verwijderen');
         return;
       }
       
-      const filtered = allLeaderboard.filter(entry => 
-        (entry.company_name || '').toLowerCase().includes(query) ||
-        (entry.url || '').toLowerCase().includes(query)
-      );
+      if (!confirm(`❌ Verwijder ${selectedLeaderboardIds.size} entries permanent?`)) return;
       
-      renderLeaderboard(filtered);
+      let success = 0;
+      let failed = 0;
+      
+      for (const id of selectedLeaderboardIds) {
+        try {
+          await apiCall(`/api/admin/leaderboard/${id}`, 'DELETE');
+          success++;
+        } catch (e) {
+          failed++;
+        }
+      }
+      
+      alert(`✅ ${success} verwijderd, ${failed} mislukt`);
+      selectedLeaderboardIds.clear();
+      loadLeaderboard();
+      loadStats();
     }
 
+    // ==========================================
+    // FREELANCERS - MET DELETE FUNCTIONALITEIT
+    // ==========================================
+    async function loadFreelancers() {
+      try {
+        const data = await apiCall('/api/freelancers');
+        allFreelancers = data.freelancers || [];
+        renderFreelancers(allFreelancers);
+      } catch (error) {
+        console.error('Freelancers error:', error);
+      }
+    }
+
+    function renderFreelancers(freelancers) {
+      const tbody = document.getElementById('freelancers-tbody');
+      
+      if (!freelancers || freelancers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">Geen freelancers gevonden</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = freelancers.map(f => {
+        const checked = selectedFreelancerIds.has(f.id) ? 'checked' : '';
+        
+        return `
+          <tr>
+            <td class="px-4 py-3">
+              <input type="checkbox" class="freelancer-checkbox" data-id="${f.id}" onchange="toggleSelectFreelancer(${f.id})" ${checked}>
+            </td>
+            <td class="px-4 py-3 font-medium">${f.name}</td>
+            <td class="px-4 py-3">${f.email}</td>
+            <td class="px-4 py-3">${f.title || 'SEO Specialist'}</td>
+            <td class="px-4 py-3">${f.country || 'NL'}</td>
+            <td class="px-4 py-3">
+              <span class="px-3 py-1 rounded-full bg-green-600 text-xs">✅ Actief</span>
+            </td>
+            <td class="px-4 py-3">
+              <button onclick="deleteFreelancer(${f.id})" class="text-red-400 hover:text-red-300">🗑️</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      
+      updateSelectedCountFreelancers();
+    }
+
+    // FREELANCER DELETE FUNCTIES
+    function toggleSelectFreelancer(id) {
+      if (selectedFreelancerIds.has(id)) {
+        selectedFreelancerIds.delete(id);
+      } else {
+        selectedFreelancerIds.add(id);
+      }
+      updateSelectedCountFreelancers();
+    }
+
+    function toggleSelectAllFreelancers() {
+      const selectAll = document.getElementById('select-all-freelancers');
+      const checkboxes = document.querySelectorAll('.freelancer-checkbox');
+      
+      if (selectAll.checked) {
+        allFreelancers.forEach(f => selectedFreelancerIds.add(f.id));
+        checkboxes.forEach(cb => cb.checked = true);
+      } else {
+        selectedFreelancerIds.clear();
+        checkboxes.forEach(cb => cb.checked = false);
+      }
+      updateSelectedCountFreelancers();
+    }
+
+    function updateSelectedCountFreelancers() {
+      const count = selectedFreelancerIds.size;
+      document.getElementById('selected-count-freelancers').textContent = `${count} geselecteerd`;
+    }
+
+    async function deleteFreelancer(id) {
+      if (!confirm('❌ Verwijder deze freelancer permanent?')) return;
+      try {
+        await apiCall(`/api/admin/freelancers/${id}`, 'DELETE');
+        alert('✅ Freelancer verwijderd');
+        selectedFreelancerIds.delete(id);
+        loadFreelancers();
+        loadStats();
+      } catch (error) {
+        alert('❌ Fout: ' + error.message);
+      }
+    }
+
+    async function bulkDeleteFreelancers() {
+      if (selectedFreelancerIds.size === 0) {
+        alert('❌ Selecteer freelancers om te verwijderen');
+        return;
+      }
+      
+      if (!confirm(`❌ Verwijder ${selectedFreelancerIds.size} freelancers permanent?`)) return;
+      
+      let success = 0;
+      let failed = 0;
+      
+      for (const id of selectedFreelancerIds) {
+        try {
+          await apiCall(`/api/admin/freelancers/${id}`, 'DELETE');
+          success++;
+        } catch (e) {
+          failed++;
+        }
+      }
+      
+      alert(`✅ ${success} verwijderd, ${failed} mislukt`);
+      selectedFreelancerIds.clear();
+      loadFreelancers();
+      loadStats();
+    }
+
+    // ==========================================
+    // STATS
+    // ==========================================
+    async function loadStats() {
+      try {
+        if (localStorage.getItem('admin_id')) {
+          const data = await apiCall('/api/admin/stats');
+          document.getElementById('stat-total-scans').textContent = data.stats?.total_scans || 0;
+        }
+      } catch (error) {
+        console.error('Stats error:', error);
+      }
+    }
+
+    function loadAllData() {
+      loadLeaderboard();
+      loadFreelancers();
+      loadStats();
+    }
+
+    // ==========================================
+    // PENDING DATA - ADMIN ONLY
+    // ==========================================
+    async function loadPendingData() {
+      try {
+        await Promise.all([
+          loadPendingLeaderboard(),
+          loadPendingFreelancers()
+        ]);
+      } catch (error) {
+        console.error('❌ Pending data error:', error);
+        if (error.message.includes('Invalid admin credentials')) {
+          alert('❌ Admin sessie verlopen. Log opnieuw in.');
+          logout();
+        }
+      }
+    }
+
+    async function loadPendingLeaderboard() {
+      try {
+        const data = await apiCall('/api/admin/leaderboard/pending');
+        const container = document.getElementById('pending-leaderboard-container');
+        
+        if (data.pending.length === 0) {
+          container.innerHTML = '<div class="text-center py-8 text-gray-400">✅ Geen pending submissions</div>';
+          return;
+        }
+        
+        container.innerHTML = data.pending.map(entry => `
+          <div class="pending-card p-6 rounded-lg">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="text-xl font-bold mb-2">${entry.company_name || 'Unknown'}</h4>
+                <p class="text-blue-400 mb-3">${entry.url}</p>
+                <div class="bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 rounded-lg inline-block">
+                  <div class="text-xs">Score</div>
+                  <div class="text-2xl font-bold">${entry.score}/100</div>
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-2">Land</label>
+                <select id="country-${entry.id}" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                  <option value="${entry.country || 'Netherlands'}">${entry.country || 'Netherlands'}</option>
+                  <option value="Netherlands">🇳🇱 Netherlands</option>
+                  <option value="Belgium">🇧🇪 Belgium</option>
+                  <option value="Germany">🇩🇪 Germany</option>
+                </select>
+              </div>
+            </div>
+            <div class="flex gap-3 mt-6">
+              <button onclick="approveLeaderboardEntry(${entry.id})" class="flex-1 bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold">✅ Approve</button>
+              <button onclick="rejectLeaderboardEntry(${entry.id})" class="flex-1 bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">❌ Reject</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Pending leaderboard error:', error);
+      }
+    }
+
+    async function loadPendingFreelancers() {
+      try {
+        const data = await apiCall('/api/admin/freelancers/pending');
+        const container = document.getElementById('pending-freelancers-container');
+        
+        if (data.pending.length === 0) {
+          container.innerHTML = '<div class="text-center py-8 text-gray-400">✅ Geen pending aanmeldingen</div>';
+          return;
+        }
+        
+        container.innerHTML = data.pending.map(f => `
+          <div class="pending-card p-6 rounded-lg">
+            <div class="grid md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="text-xl font-bold mb-2">${f.name}</h4>
+                <p class="text-purple-400 mb-2">${f.title || 'SEO Specialist'}</p>
+                <p class="text-sm text-gray-400 mb-2">📧 ${f.email}</p>
+                <p class="text-sm text-gray-400">📍 ${f.location || f.country || 'Unknown'}</p>
+              </div>
+              <div>
+                <p class="text-sm mb-4">${f.bio || 'Geen bio beschikbaar'}</p>
+                <button onclick="approveFreelancer(${f.id})" class="w-full bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold mb-2">✅ Goedkeuren</button>
+                <button onclick="rejectFreelancer(${f.id})" class="w-full bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">❌ Weigeren</button>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Pending freelancers error:', error);
+      }
+    }
+
+    // ==========================================
+    // ADMIN ACTIONS
+    // ==========================================
+    async function approveLeaderboardEntry(id) {
+      const finalCountry = document.getElementById(`country-${id}`)?.value;
+      try {
+        await apiCall(`/api/admin/leaderboard/${id}/approve`, 'POST', { final_country: finalCountry });
+        alert('✅ Entry goedgekeurd!');
+        loadPendingLeaderboard();
+        loadLeaderboard();
+      } catch (error) {
+        alert('❌ Fout: ' + error.message);
+      }
+    }
+
+    async function rejectLeaderboardEntry(id) {
+      if (!confirm('❌ Weiger deze submission?')) return;
+      try {
+        await apiCall(`/api/admin/leaderboard/${id}/reject`, 'POST');
+        alert('✅ Entry verwijderd');
+        loadPendingLeaderboard();
+      } catch (error) {
+        alert('❌ Fout: ' + error.message);
+      }
+    }
+
+    async function approveFreelancer(id) {
+      try {
+        await apiCall(`/api/admin/freelancers/${id}/approve`, 'POST');
+        alert('✅ Freelancer goedgekeurd!');
+        loadPendingFreelancers();
+        loadFreelancers();
+      } catch (error) {
+        alert('❌ Fout: ' + error.message);
+      }
+    }
+
+    async function rejectFreelancer(id) {
+      if (!confirm('❌ Weiger deze aanmelding?')) return;
+      try {
+        await apiCall(`/api/admin/freelancers/${id}`, 'DELETE');
+        alert('✅ Aanmelding geweigerd');
+        loadPendingFreelancers();
+      } catch (error) {
+        alert('❌ Fout: ' + error.message);
+      }
+    }
+
+    // ==========================================
+    // SCANNER FUNCTIES
+    // ==========================================
+    function activateScanner(type) {
+      if (type === 'single') {
+        document.getElementById('single-scanner-section').style.display = 'block';
+        document.getElementById('maps-scanner-section').classList.add('hidden');
+        
+        document.getElementById('scanner-single-card').classList.add('border-purple-600');
+        document.getElementById('scanner-single-card').classList.remove('border-gray-700');
+        document.getElementById('scanner-maps-card').classList.add('border-gray-700');
+        document.getElementById('scanner-maps-card').classList.remove('border-orange-600');
+        
+        document.getElementById('single-scanner-status').innerHTML = '✓ Actief';
+        document.getElementById('single-scanner-status').classList.add('text-purple-400');
+        document.getElementById('maps-scanner-status').innerHTML = 'Inactief';
+        document.getElementById('maps-scanner-status').classList.add('text-gray-400');
+      } else {
+        document.getElementById('single-scanner-section').style.display = 'none';
+        document.getElementById('maps-scanner-section').classList.remove('hidden');
+        
+        document.getElementById('scanner-maps-card').classList.add('border-orange-600');
+        document.getElementById('scanner-maps-card').classList.remove('border-gray-700');
+        document.getElementById('scanner-single-card').classList.add('border-gray-700');
+        document.getElementById('scanner-single-card').classList.remove('border-purple-600');
+        
+        document.getElementById('maps-scanner-status').innerHTML = '✓ Actief';
+        document.getElementById('maps-scanner-status').classList.add('text-orange-400');
+        document.getElementById('single-scanner-status').innerHTML = 'Inactief';
+        document.getElementById('single-scanner-status').classList.add('text-gray-400');
+      }
+    }
+
+    function resetScanners() {
+      activateScanner('single');
+      document.getElementById('single-scan-url').value = '';
+      document.getElementById('maps-scan-url').value = '';
+      document.getElementById('single-scan-result').classList.add('hidden');
+      document.getElementById('maps-results-container').classList.add('hidden');
+    }
+
+    async function performSingleScan() {
+      const url = document.getElementById('single-scan-url').value;
+      if (!url) {
+        alert('❌ Voer een URL in');
+        return;
+      }
+      
+      const scanBtn = document.getElementById('single-scan-btn');
+      scanBtn.disabled = true;
+      scanBtn.textContent = '🔍 Scannen...';
+      
+      try {
+        const response = await fetch('/api/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          currentScanData = data;
+          alert(`✅ Scan compleet! Score: ${data.score}/100`);
+          document.getElementById('single-scan-result').classList.remove('hidden');
+        } else {
+          alert('❌ Scan mislukt: ' + data.error);
+        }
+      } catch (error) {
+        alert('❌ Scan fout: ' + error.message);
+      } finally {
+        scanBtn.disabled = false;
+        scanBtn.textContent = '🔍 Start Content Analyse';
+      }
+    }
+
+    async function performMapsScan() {
+      const url = document.getElementById('maps-scan-url').value;
+      if (!url || !url.includes('google.com/maps')) {
+        alert('❌ Voer een geldige Google Maps URL in');
+        return;
+      }
+      
+      const scanBtn = document.getElementById('maps-scan-btn');
+      scanBtn.disabled = true;
+      scanBtn.textContent = '🗺️ Scrapen...';
+      
+      try {
+        const data = await apiCall('/api/google-maps/scrape', 'POST', { url, maxResults: 20 });
+        
+        currentMapsLeads = data.leads || [];
+        document.getElementById('maps-leads-count').textContent = currentMapsLeads.length;
+        
+        const listContainer = document.getElementById('maps-leads-list');
+        listContainer.innerHTML = currentMapsLeads.map((lead, index) => `
+          <div class="lead-card p-4 rounded-lg flex items-start gap-4">
+            <input type="checkbox" class="maps-lead-checkbox" data-index="${index}" checked>
+            <div class="flex-1">
+              <div class="flex justify-between">
+                <h4 class="font-bold">${lead.name}</h4>
+                <span class="text-sm ${lead.score >= 70 ? 'text-green-400' : 'text-yellow-400'}">${lead.score}/100</span>
+              </div>
+              <p class="text-sm text-gray-400">${lead.category || 'SEO Agency'}</p>
+              ${lead.website ? `<p class="text-xs text-blue-400 mt-1">${lead.website}</p>` : ''}
+            </div>
+          </div>
+        `).join('');
+        
+        document.getElementById('maps-results-container').classList.remove('hidden');
+      } catch (error) {
+        alert('❌ Scrape fout: ' + error.message);
+      } finally {
+        scanBtn.disabled = false;
+        scanBtn.textContent = '🗺️ Start Google Maps Scan';
+      }
+    }
+
+    async function addSelectedMapsToLeaderboard() {
+      const selected = Array.from(document.querySelectorAll('.maps-lead-checkbox:checked'))
+        .map(cb => currentMapsLeads[parseInt(cb.dataset.index)])
+        .filter(lead => lead.website);
+      
+      if (selected.length === 0) {
+        alert('❌ Selecteer bedrijven met een website');
+        return;
+      }
+      
+      let added = 0;
+      for (const lead of selected) {
+        try {
+          await apiCall('/api/admin/leaderboard/manual-add', 'POST', {
+            url: lead.website,
+            company_name: lead.name,
+            score: lead.score || 75,
+            country: 'Netherlands'
+          });
+          added++;
+        } catch (e) {}
+      }
+      
+      alert(`✅ ${added} toegevoegd aan leaderboard`);
+      loadLeaderboard();
+    }
+
+    // ==========================================
+    // EXPORT FUNCTIES
+    // ==========================================
     function exportLeaderboardCSV() {
       if (allLeaderboard.length === 0) return alert('Geen data om te exporteren');
       
@@ -492,226 +1090,19 @@
       a.click();
     }
 
-    // ==========================================
-    // FREELANCERS - ZELFDE ALS FRONTEND
-    // ==========================================
-    async function loadFreelancers() {
-      try {
-        // GEBRUIK DEZELFDE API ALS FRONTEND!
-        const data = await apiCall('/api/freelancers');
-        
-        const container = document.getElementById('freelancers-container');
-        const freelancers = data.freelancers || [];
-        
-        if (freelancers.length === 0) {
-          container.innerHTML = '<div class="col-span-full text-center py-8 text-gray-400">Geen freelancers gevonden</div>';
-          return;
-        }
-        
-        container.innerHTML = freelancers.map(f => `
-          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-purple-500 transition-all">
-            <div class="flex items-start justify-between mb-4">
-              <div>
-                <h3 class="text-xl font-bold">${f.name}</h3>
-                <p class="text-purple-400 text-sm">${f.title || 'SEO Specialist'}</p>
-              </div>
-              ${f.is_featured ? '<span class="px-2 py-1 bg-yellow-600 rounded text-xs">⭐ Featured</span>' : ''}
-            </div>
-            <p class="text-sm text-gray-400 mb-4 line-clamp-3">${f.bio || 'Geen bio beschikbaar'}</p>
-            <div class="flex flex-wrap gap-2 text-sm text-gray-400">
-              <span class="px-3 py-1 bg-gray-700 rounded">📍 ${f.location || f.country || 'Remote'}</span>
-              ${f.hourly_rate ? `<span class="px-3 py-1 bg-gray-700 rounded">💰 ${f.hourly_rate}</span>` : ''}
-              ${f.availability ? `<span class="px-3 py-1 bg-gray-700 rounded">📅 ${f.availability}</span>` : ''}
-            </div>
-          </div>
-        `).join('');
-      } catch (error) {
-        console.error('Freelancers error:', error);
+    function searchLeaderboard() {
+      const query = document.getElementById('leaderboard-search').value.toLowerCase();
+      if (!query) {
+        renderLeaderboard(allLeaderboard);
+        return;
       }
-    }
-
-    // ==========================================
-    // PENDING DATA - ALLEEN ADMIN
-    // ==========================================
-    async function loadPendingData() {
-      await Promise.all([
-        loadPendingLeaderboard(),
-        loadPendingFreelancers()
-      ]);
-    }
-
-    async function loadPendingLeaderboard() {
-      try {
-        // ADMIN ONLY - toont ALLE pending submissions
-        const data = await apiCall('/api/admin/leaderboard/pending');
-        const container = document.getElementById('pending-leaderboard-container');
-        
-        if (data.pending.length === 0) {
-          container.innerHTML = `
-            <div class="text-center py-8 text-gray-400">
-              <div class="text-6xl mb-4">✅</div>
-              <p class="text-lg">Geen pending submissions</p>
-            </div>
-          `;
-          return;
-        }
-        
-        container.innerHTML = data.pending.map(entry => `
-          <div class="pending-card p-6 rounded-lg">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h4 class="text-xl font-bold mb-2">${entry.company_name || 'Unknown'}</h4>
-                <p class="text-blue-400 mb-3">${entry.url}</p>
-                <div class="bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 rounded-lg inline-block">
-                  <div class="text-xs text-purple-200">Score</div>
-                  <div class="text-2xl font-bold">${entry.score}/100</div>
-                </div>
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-2">Land</label>
-                <select id="country-${entry.id}" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
-                  <option value="${entry.country || 'Netherlands'}">${entry.country || 'Netherlands'}</option>
-                  <option value="Netherlands">🇳🇱 Netherlands</option>
-                  <option value="Belgium">🇧🇪 Belgium</option>
-                  <option value="Germany">🇩🇪 Germany</option>
-                </select>
-              </div>
-            </div>
-            <div class="flex gap-3 mt-6">
-              <button onclick="approveLeaderboardEntry(${entry.id})" class="flex-1 bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold">
-                ✅ Approve
-              </button>
-              <button onclick="rejectLeaderboardEntry(${entry.id})" class="flex-1 bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">
-                ❌ Reject
-              </button>
-            </div>
-          </div>
-        `).join('');
-      } catch (error) {
-        console.error('Pending leaderboard error:', error);
-      }
-    }
-
-    async function loadPendingFreelancers() {
-      try {
-        // ADMIN ONLY - toont ALLE pending applications
-        const data = await apiCall('/api/admin/freelancers/pending');
-        const container = document.getElementById('pending-freelancers-container');
-        
-        if (data.pending.length === 0) {
-          container.innerHTML = `
-            <div class="text-center py-8 text-gray-400">
-              <div class="text-6xl mb-4">✅</div>
-              <p class="text-lg">Geen pending aanmeldingen</p>
-            </div>
-          `;
-          return;
-        }
-        
-        container.innerHTML = data.pending.map(f => `
-          <div class="pending-card p-6 rounded-lg">
-            <div class="grid md:grid-cols-2 gap-6">
-              <div>
-                <h4 class="text-xl font-bold mb-2">${f.name}</h4>
-                <p class="text-purple-400 mb-2">${f.title || 'SEO Specialist'}</p>
-                <p class="text-sm text-gray-400 mb-2">📧 ${f.email}</p>
-                <p class="text-sm text-gray-400">📍 ${f.location || f.country || 'Unknown'}</p>
-                ${f.linkedin_url ? `<p class="text-sm mt-2"><a href="${f.linkedin_url}" target="_blank" class="text-blue-400">🔗 LinkedIn</a></p>` : ''}
-              </div>
-              <div>
-                <p class="text-sm mb-4">${f.bio || 'Geen bio beschikbaar'}</p>
-                <button onclick="approveFreelancer(${f.id})" class="w-full bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold mb-2">
-                  ✅ Goedkeuren
-                </button>
-                <button onclick="rejectFreelancer(${f.id})" class="w-full bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">
-                  ❌ Weigeren
-                </button>
-              </div>
-            </div>
-          </div>
-        `).join('');
-      } catch (error) {
-        console.error('Pending freelancers error:', error);
-      }
-    }
-
-    // ==========================================
-    // ADMIN ACTIONS - ALLEEN VOOR PENDING TAB
-    // ==========================================
-    async function approveLeaderboardEntry(id) {
-      const finalCountry = document.getElementById(`country-${id}`)?.value;
-      try {
-        await apiCall(`/api/admin/leaderboard/${id}/approve`, 'POST', { final_country: finalCountry });
-        alert('✅ Entry goedgekeurd en zichtbaar in publieke leaderboard!');
-        loadPendingLeaderboard();
-        loadLeaderboard(); // Refresh publieke lijst
-      } catch (error) {
-        alert('❌ Fout: ' + error.message);
-      }
-    }
-
-    async function rejectLeaderboardEntry(id) {
-      if (!confirm('Weiger deze submission? Deze wordt permanent verwijderd.')) return;
-      try {
-        await apiCall(`/api/admin/leaderboard/${id}/reject`, 'POST');
-        alert('✅ Entry verwijderd');
-        loadPendingLeaderboard();
-      } catch (error) {
-        alert('❌ Fout: ' + error.message);
-      }
-    }
-
-    async function approveFreelancer(id) {
-      try {
-        await apiCall(`/api/admin/freelancers/${id}/approve`, 'POST');
-        alert('✅ Freelancer goedgekeurd en zichtbaar in publieke lijst!');
-        loadPendingFreelancers();
-        loadFreelancers(); // Refresh publieke lijst
-      } catch (error) {
-        alert('❌ Fout: ' + error.message);
-      }
-    }
-
-    async function rejectFreelancer(id) {
-      if (!confirm('Weiger deze aanmelding?')) return;
-      try {
-        await apiCall(`/api/admin/freelancers/${id}`, 'DELETE');
-        alert('✅ Aanmelding geweigerd');
-        loadPendingFreelancers();
-      } catch (error) {
-        alert('❌ Fout: ' + error.message);
-      }
-    }
-
-    // ==========================================
-    // STATS - GEBRUIKT PUBLIEKE DATA
-    // ==========================================
-    async function loadStats() {
-      try {
-        const [scans, leaderboard] = await Promise.all([
-          fetch('/api/admin/stats').then(r => r.json()).catch(() => ({ stats: {} })),
-          fetch('/api/leaderboard').then(r => r.json()).catch(() => ({}))
-        ]);
-        
-        document.getElementById('stat-total-scans').textContent = scans.stats?.total_scans || 0;
-        document.getElementById('stat-active-seo').textContent = leaderboard.stats?.activeHelpers || 0;
-      } catch (error) {
-        console.error('Stats error:', error);
-      }
-    }
-
-    function loadAllData() {
-      loadLeaderboard();
-      loadFreelancers();
-      loadStats();
-    }
-
-    // ==========================================
-    // SCANNER FUNCTIES (ingekort voor leesbaarheid)
-    // ==========================================
-    async function performScan() {
-      // Implementatie zoals eerder - gebruikt /api/scan
-      alert('Scan functionaliteit - gebruik de volledige implementatie');
+      
+      const filtered = allLeaderboard.filter(entry => 
+        (entry.company_name || '').toLowerCase().includes(query) ||
+        (entry.url || '').toLowerCase().includes(query)
+      );
+      
+      renderLeaderboard(filtered);
     }
   </script>
 </body>
