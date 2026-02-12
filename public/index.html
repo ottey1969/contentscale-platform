@@ -633,7 +633,7 @@
     </div>
     
     <!-- ============================================
-         LEADERBOARD - ECHTE DATA VAN API
+         LEADERBOARD - ALLEEN ECHTE DATA, GEEN DEMO
          ============================================ -->
     <div id="leaderboard" class="mb-16">
       <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
@@ -642,7 +642,7 @@
           <p class="text-xl text-gray-200">Top performing websites automatically added</p>
         </div>
         
-        <!-- STATS CARDS - ECHTE DATA -->
+        <!-- STATS CARDS - ALTIJD ECHTE DATA -->
         <div class="grid-4 mb-8">
           <div class="stat-card">
             <div>
@@ -674,7 +674,7 @@
           </div>
         </div>
         
-        <!-- TOP 3 CARDS - ECHTE DATA VAN API -->
+        <!-- TOP 3 CARDS - ECHTE DATA -->
         <div id="top3-container" class="grid-3 mb-10"></div>
         
         <!-- RANKINGS 4-15 - ECHTE DATA -->
@@ -730,7 +730,7 @@
     </div>
     
     <!-- ============================================
-         FREELANCERS - ECHTE DATA VAN API
+         FREELANCERS - ALLEEN ECHTE DATA, GEEN DEMO
          ============================================ -->
     <div id="freelancers" class="mb-16">
       <div class="text-center mb-8">
@@ -978,12 +978,12 @@
     let allLeaderboardEntries = [];
 
     // ==========================================
-    // INIT - LAAD ECHTE DATA
+    // INIT - LAAD ALLEEN ECHTE DATA
     // ==========================================
     document.addEventListener('DOMContentLoaded', function() {
-      console.log('📋 Publieke pagina geladen - laden van echte data...');
+      console.log('📋 Publieke pagina geladen - laden van ECHTE data...');
       
-      // Laad ECHTE data van de API
+      // Laad ECHTE data - GEEN DEMO FALLBACK!
       loadLeaderboardData();
       loadFreelancers();
       
@@ -998,14 +998,14 @@
     });
 
     // ==========================================
-    // LEADERBOARD - ECHTE DATA VAN API
+    // LEADERBOARD - ALLEEN ECHTE DATA, GEEN DEMO
     // ==========================================
     async function loadLeaderboardData() {
       try {
         const response = await fetch('/api/leaderboard');
         const data = await response.json();
         
-        if (data.success && data.entries) {
+        if (data.success && data.entries && data.entries.length > 0) {
           allLeaderboardEntries = data.entries;
           
           // Update stats met ECHTE data
@@ -1019,10 +1019,29 @@
           renderRankings4to15();
           renderRankings16Plus();
           renderCountryFilters();
+        } else {
+          // Toon lege staat - GEEN DEMO DATA!
+          showEmptyLeaderboard();
         }
       } catch (error) {
         console.error('❌ Fout bij laden leaderboard:', error);
+        showEmptyLeaderboard();
       }
+    }
+
+    function showEmptyLeaderboard() {
+      document.getElementById('totalAgencies').textContent = '0';
+      document.getElementById('avgScore').textContent = '0';
+      document.getElementById('countriesCount').textContent = '0';
+      document.getElementById('activeHelpers').textContent = '0';
+      
+      const container = document.getElementById('top3-container');
+      if (container) {
+        container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Geen leaderboard entries gevonden</div>';
+      }
+      
+      document.getElementById('rankings4to15Container').style.display = 'none';
+      document.getElementById('totalCount').textContent = '0';
     }
 
     function renderTop3() {
@@ -1100,6 +1119,11 @@
         totalCount.textContent = allLeaderboardEntries.length;
       }
       
+      if (rankings.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-400">Geen rankings 16+</td></tr>';
+        return;
+      }
+      
       tbody.innerHTML = rankings.map((entry, index) => {
         const actualRank = index + 16;
         const companyName = entry.company_name || extractDomainFromUrl(entry.url);
@@ -1118,7 +1142,7 @@
     }
 
     // ==========================================
-    // FREELANCERS - ECHTE DATA VAN API
+    // FREELANCERS - ALLEEN ECHTE DATA, GEEN DEMO
     // ==========================================
     async function loadFreelancers() {
       try {
@@ -1166,6 +1190,8 @@
         }).join('');
       } catch (error) {
         console.error('❌ Fout bij laden freelancers:', error);
+        document.getElementById('freelancersGrid').innerHTML = 
+          '<div class="col-span-3 text-center py-8 text-gray-400">Kon freelancers niet laden</div>';
       }
     }
 
@@ -1211,14 +1237,16 @@
       
       let html = '<button class="filter-tag active" onclick="filterByCountry(\'all\')">🌍 All</button>';
       countries.forEach(country => {
-        html += `<button class="filter-tag" onclick="filterByCountry('${country}')">${getCountryFlag(country)} ${country}</button>`;
+        if (country) {
+          html += `<button class="filter-tag" onclick="filterByCountry('${country}')">${getCountryFlag(country)} ${country}</button>`;
+        }
       });
       
       div.innerHTML = html;
     }
 
     // ==========================================
-    // SCANNER FUNCTIES (IDENTIEK AAN ADMIN)
+    // SCANNER FUNCTIES
     // ==========================================
     function switchMode(mode) {
       const singleMode = document.getElementById('singleMode');
@@ -1473,6 +1501,7 @@
     }
 
     function filterByCountry(country) {
+      // Implementatie later
       console.log('Filter by country:', country);
     }
 
@@ -1491,7 +1520,6 @@
         extractDomainFromUrl(entry.url).toLowerCase().includes(query)
       );
       
-      // Update rankings met gefilterde data
       const rankings4to15Grid = document.getElementById('rankings4to15Grid');
       const rankings4to15 = filtered.slice(3, 15);
       
@@ -1558,12 +1586,31 @@
         return;
       }
       
-      alert(`✅ Thank you ${name}! We'll review your application within 24 hours.`);
-      closeModal();
-      
-      document.getElementById('freelancerName').value = '';
-      document.getElementById('freelancerEmail').value = '';
-      document.getElementById('freelancerPhone').value = '';
+      fetch('/api/freelancers/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name,
+          email: email,
+          phone: document.getElementById('freelancerPhone')?.value,
+          specialization: document.getElementById('freelancerSpecialization')?.value
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert(`✅ Thank you ${name}! We'll review your application within 24 hours.`);
+          closeModal();
+          document.getElementById('freelancerName').value = '';
+          document.getElementById('freelancerEmail').value = '';
+          document.getElementById('freelancerPhone').value = '';
+        } else {
+          alert('❌ ' + (data.error || 'Registration failed'));
+        }
+      })
+      .catch(error => {
+        alert('❌ Registration failed: ' + error.message);
+      });
     }
 
     window.onclick = function(event) {
