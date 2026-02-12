@@ -3,16 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  
-  <title>Super Admin Dashboard - ContentScale</title>
+  <title>Admin Dashboard - ContentScale</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    /* All CSS styles remain exactly the same */
     .tab-button {
       transition: all 0.2s;
     }
@@ -23,39 +19,6 @@
     .stat-card {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     }
-    input[type="checkbox"] {
-      cursor: pointer;
-      width: 18px;
-      height: 18px;
-    }
-    .blog-card {
-      transition: all 0.2s;
-    }
-    .blog-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-    }
-    .category-tag {
-      font-size: 10px;
-      padding: 2px 8px;
-      border-radius: 9999px;
-    }
-    .category-agency { background: #3b82f6; }
-    .category-case-study { background: #10b981; }
-    .category-guide { background: #8b5cf6; }
-    .category-tips { background: #f59e0b; }
-    .category-news { background: #ef4444; }
-    .category-freelancer { background: #8b5cf6; }
-    
-    .lead-card {
-      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-      border: 1px solid #334155;
-      transition: all 0.3s;
-    }
-    .lead-card:hover {
-      border-color: #8b5cf6;
-      transform: translateY(-2px);
-    }
     .score-badge {
       font-size: 14px;
       font-weight: bold;
@@ -65,126 +28,43 @@
     .score-high { background: #10b981; color: white; }
     .score-medium { background: #f59e0b; color: white; }
     .score-low { background: #ef4444; color: white; }
-    .scan-progress {
-      height: 8px;
-      background: #374151;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    .scan-progress-bar {
-      height: 100%;
-      background: linear-gradient(90deg, #8b5cf6 0%, #3b82f6 100%);
-      transition: width 0.3s;
-    }
-    @keyframes pulse-glow {
-      0%, 100% { box-shadow: 0 0 5px rgba(139, 92, 246, 0.5); }
-      50% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.8); }
-    }
-    .scanning-active {
-      animation: pulse-glow 1.5s infinite;
-    }
-    .quick-actions-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 1rem;
-    }
-    .return-btn {
-      position: sticky;
-      top: 140px;
-      z-index: 30;
-      margin-bottom: 20px;
-    }
-    .blog-editor {
-      background: #1f2937;
-      border: 1px solid #4b5563;
-      min-height: 300px;
-    }
-    .blog-editor:focus {
-      outline: none;
-      border-color: #8b5cf6;
-    }
-    .blog-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 12px;
-      background: #374151;
-      border-radius: 20px;
-      font-size: 12px;
-    }
-    .blog-status-badge {
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 600;
-    }
-    .blog-status-draft { background: #6b7280; color: white; }
-    .blog-status-published { background: #10b981; color: white; }
-    .blog-status-scheduled { background: #f59e0b; color: white; }
-    .blog-status-archived { background: #ef4444; color: white; }
-    .line-clamp-2 {
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-    .line-clamp-3 {
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-    .analytics-card {
+    .lead-card {
       background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
       border: 1px solid #334155;
       transition: all 0.3s;
     }
-    .analytics-card:hover {
+    .lead-card:hover {
       border-color: #8b5cf6;
       transform: translateY(-2px);
     }
-    .metric-badge {
-      font-size: 12px;
-      padding: 2px 8px;
-      border-radius: 12px;
-      background: rgba(139, 92, 246, 0.2);
-      border: 1px solid #8b5cf6;
-    }
-    .trend-up { color: #10b981; }
-    .trend-down { color: #ef4444; }
-    .trend-neutral { color: #9ca3af; }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen">
   
-  <!-- Login Screen -->
+  <!-- LOGIN SCREEN -->
   <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
     <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-md border border-purple-500">
       <div class="flex items-center justify-center mb-6">
         <span class="text-4xl">👑</span>
         <h1 class="text-2xl font-bold ml-3 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-          Super Admin Dashboard
+          Admin Dashboard
         </h1>
       </div>
-      <p class="text-gray-400 text-center mb-6">ContentScale Platform Control Center</p>
+      <p class="text-gray-400 text-center mb-6">ContentScale Platform Control</p>
       
       <div id="login-error" class="hidden mb-4 p-3 bg-red-900 border border-red-700 rounded text-red-200 text-sm"></div>
       
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-300 mb-2">Username</label>
-          <input type="text" id="login-username" 
-            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
-            placeholder="Enter username">
+          <input type="text" id="login-username" value="ot" 
+            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white">
         </div>
-        
         <div>
           <label class="block text-sm font-medium text-gray-300 mb-2">Password</label>
-          <input type="password" id="login-password" 
-            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
-            placeholder="Enter password">
+          <input type="password" id="login-password" value="admin123" 
+            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white">
         </div>
-        
         <button onclick="login()" id="login-btn"
           class="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg font-semibold transition-all transform hover:scale-105">
           Login
@@ -193,626 +73,114 @@
     </div>
   </div>
 
-  <!-- Main Dashboard -->
+  <!-- MAIN DASHBOARD - ALLEEN ESSENTIËLE TABS -->
   <div id="main-dashboard" class="hidden">
-    <!-- Header -->
+    <!-- HEADER -->
     <header class="bg-gray-800 border-b border-gray-700 sticky top-0 z-50">
       <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
         <div class="flex items-center space-x-3">
           <span class="text-3xl">👑</span>
           <div>
             <h1 class="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              Super Admin Dashboard
+              Admin Dashboard
             </h1>
-            <p class="text-xs text-gray-400">ContentScale Platform Control Center</p>
+            <p class="text-xs text-gray-400">ContentScale Platform Control</p>
           </div>
         </div>
         <div class="flex items-center space-x-4">
           <span class="text-sm text-gray-400">
-            Logged in as: <span class="text-blue-400 font-semibold" id="admin-username"></span>
+            Ingelogd als: <span class="text-blue-400 font-semibold" id="admin-username"></span>
           </span>
-          <button onclick="logout()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold transition-all">
+          <button onclick="logout()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold">
             Logout
           </button>
         </div>
       </div>
     </header>
 
-    <!-- Navigation Tabs -->
+    <!-- 🎯 ALLEEN ESSENTIËLE TABS - GEEN OVERBODIGE TABS -->
     <nav class="bg-gray-800 border-b border-gray-700 sticky top-[73px] z-40">
       <div class="max-w-7xl mx-auto px-4">
         <div class="flex space-x-1 overflow-x-auto">
-          <button onclick="switchTab('overview')" class="tab-button active px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap">
-            📊 Overview
+          <!-- 🎯 ALLEEN DEZE 3 TABS ZICHTBAAR -->
+          <button onclick="switchTab('leaderboard-scans')" class="tab-button active px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap">
+            🏆 Leaderboard & Scans
           </button>
-          <button onclick="switchTab('analytics')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            📈 Elite Analytics
-          </button>
-          <button onclick="switchTab('admins')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            👥 Admins
-          </button>
-          <button onclick="switchTab('agencies')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🏢 Agencies
-          </button>
-          <button onclick="switchTab('clients')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            👤 All Clients
-          </button>
-          <button onclick="switchTab('scans')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🔍 All Scans
-          </button>
-          <button onclick="switchTab('share-links')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🔗 Share Links
-          </button>
-          <button onclick="switchTab('leaderboard')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🏆 Leaderboard
-          </button>
-          <button onclick="switchTab('freelancers')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            💼 Freelancers
-          </button>
-          <button onclick="switchTab('blog')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            📝 Blog
-          </button>
-          <button onclick="switchTab('email-notifications')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            📧 Email & Notifications
-          </button>
-          <button onclick="switchTab('claims')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🏢 Claims Management
-          </button>
-          <button onclick="switchTab('opt-out')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🚫 Opt-Out
+          <button onclick="switchTab('seo-specialists')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
+            🎯 Verified SEO Specialists
           </button>
           <button onclick="switchTab('lead-scanner')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🎯 Lead Scanner
-          </button>
-          <button onclick="switchTab('contentscore')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            📊 ContentScore
-          </button>
-          <button onclick="switchTab('code-generators')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            🎨 Code Generators
-          </button>
-          <button onclick="switchTab('ltd-codes')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            💰 LTD Codes
-          </button>
-          <button onclick="switchTab('settings')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            ⚙️ Settings
-          </button>
-          <button onclick="switchTab('handleiding')" class="tab-button px-4 py-3 rounded-t-lg text-sm font-medium whitespace-nowrap hover:bg-gray-700">
-            📚 Handleiding
+            🔍 Content Quality & Lead Scanner
           </button>
         </div>
       </div>
     </nav>
 
-    <!-- Tab Content -->
+    <!-- MAIN CONTENT -->
     <main class="max-w-7xl mx-auto px-4 py-8">
       
-      <!-- Overview Tab -->
-      <div id="tab-overview" class="tab-content">
-        <h2 class="text-2xl font-bold mb-6">Platform Overview</h2>
-        
-        <!-- Stats Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <!-- ============================================
+           TAB 1: 🏆 LEADERBOARD & SCANS (PUBLIC HTML)
+           ============================================ -->
+      <div id="tab-leaderboard-scans" class="tab-content">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold">🏆 Leaderboard Management</h2>
+          <div class="flex gap-3">
+            <button onclick="refreshLeaderboard()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
+              🔄 Refresh
+            </button>
+            <button onclick="exportLeaderboardCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
+              📊 Export CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div class="stat-card p-6 rounded-lg shadow-lg text-white">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-sm opacity-90">Total Agencies</p>
-                <p class="text-3xl font-bold mt-2" id="stat-total-agencies">-</p>
+                <p class="text-sm opacity-90">Totaal Agencies</p>
+                <p class="text-3xl font-bold mt-2" id="stat-total-agencies">0</p>
               </div>
               <span class="text-5xl opacity-50">🏢</span>
             </div>
           </div>
-          
-          <div class="stat-card p-6 rounded-lg shadow-lg text-white">
+          <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-sm opacity-90">Total Clients</p>
-                <p class="text-3xl font-bold mt-2" id="stat-total-clients">-</p>
+                <p class="text-sm text-gray-400">Gemiddelde Score</p>
+                <p class="text-3xl font-bold mt-2 text-blue-400" id="stat-avg-score">0</p>
               </div>
-              <span class="text-5xl opacity-50">👥</span>
+              <span class="text-5xl opacity-50">📊</span>
             </div>
           </div>
-          
-          <div class="stat-card p-6 rounded-lg shadow-lg text-white">
+          <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-sm opacity-90">Total Scans</p>
-                <p class="text-3xl font-bold mt-2" id="stat-total-scans">-</p>
+                <p class="text-sm text-gray-400">Totaal Scans</p>
+                <p class="text-3xl font-bold mt-2" id="stat-total-scans">0</p>
               </div>
               <span class="text-5xl opacity-50">🔍</span>
             </div>
           </div>
-          
-          <div class="stat-card p-6 rounded-lg shadow-lg text-white">
+          <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-sm opacity-90">Active Freelancers</p>
-                <p class="text-3xl font-bold mt-2" id="stat-active-helpers">-</p>
+                <p class="text-sm text-gray-400">Actieve SEO's</p>
+                <p class="text-3xl font-bold mt-2" id="stat-active-seo">0</p>
               </div>
-              <span class="text-5xl opacity-50">💼</span>
+              <span class="text-5xl opacity-50">🎯</span>
             </div>
           </div>
         </div>
 
-        <!-- Quick Actions Grid -->
-        <div class="bg-gray-800 rounded-lg p-6 shadow-lg mb-8">
-          <h3 class="text-xl font-bold mb-4">Quick Actions - All Tabs</h3>
-          <div class="quick-actions-grid">
-            <button onclick="switchTab('analytics')" class="p-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-lg font-semibold text-sm">📈 Elite Analytics</button>
-            <button onclick="switchTab('admins')" class="p-4 bg-green-600 hover:bg-green-700 rounded-lg font-semibold text-sm">👥 Admins</button>
-            <button onclick="switchTab('agencies')" class="p-4 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-sm">🏢 Agencies</button>
-            <button onclick="switchTab('blog')" class="p-4 bg-yellow-600 hover:bg-yellow-700 rounded-lg font-semibold text-sm">📝 Blog</button>
-            <button onclick="switchTab('claims')" class="p-4 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold text-sm">🏢 Claims</button>
-            <button onclick="switchTab('clients')" class="p-4 bg-cyan-600 hover:bg-cyan-700 rounded-lg font-semibold text-sm">👤 Clients</button>
-            <button onclick="switchTab('code-generators')" class="p-4 bg-pink-600 hover:bg-pink-700 rounded-lg font-semibold text-sm">🎨 Code Gen</button>
-            <button onclick="switchTab('contentscore')" class="p-4 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-semibold text-sm">📊 ContentScore</button>
-            <button onclick="switchTab('email-notifications')" class="p-4 bg-red-600 hover:bg-red-700 rounded-lg font-semibold text-sm">📧 Email</button>
-            <button onclick="switchTab('freelancers')" class="p-4 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold text-sm">💼 Freelancers</button>
-            <button onclick="switchTab('handleiding')" class="p-4 bg-teal-600 hover:bg-teal-700 rounded-lg font-semibold text-sm">📚 Guide</button>
-            <button onclick="switchTab('lead-scanner')" class="p-4 bg-lime-600 hover:bg-lime-700 rounded-lg font-semibold text-sm">🎯 Lead Scanner</button>
-            <button onclick="switchTab('leaderboard')" class="p-4 bg-amber-600 hover:bg-amber-700 rounded-lg font-semibold text-sm">🏆 Leaderboard</button>
-            <button onclick="switchTab('ltd-codes')" class="p-4 bg-emerald-600 hover:bg-emerald-700 rounded-lg font-semibold text-sm">💰 LTD</button>
-            <button onclick="switchTab('opt-out')" class="p-4 bg-rose-600 hover:bg-rose-700 rounded-lg font-semibold text-sm">🚫 Opt-Out</button>
-            <button onclick="switchTab('scans')" class="p-4 bg-violet-600 hover:bg-violet-700 rounded-lg font-semibold text-sm">🔍 Scans</button>
-            <button onclick="switchTab('settings')" class="p-4 bg-slate-600 hover:bg-slate-700 rounded-lg font-semibold text-sm">⚙️ Settings</button>
-            <button onclick="switchTab('share-links')" class="p-4 bg-fuchsia-600 hover:bg-fuchsia-700 rounded-lg font-semibold text-sm">🔗 Share Links</button>
-          </div>
-        </div>
-
-        <!-- Platform Health -->
-        <div class="bg-gray-800 rounded-lg p-6 shadow-lg">
-          <h3 class="text-xl font-bold mb-4">Platform Health</h3>
-          <div class="space-y-3">
-            <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
-              <span>Database Connection</span>
-              <span id="db-status" class="text-yellow-400 font-semibold">🔍 Checking...</span>
-            </div>
-            <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
-              <span>API Status</span>
-              <span id="api-status" class="text-yellow-400 font-semibold">🔍 Checking...</span>
-            </div>
-            <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
-              <span>Auto-Scan Service</span>
-              <span id="scan-service-status" class="text-yellow-400 font-semibold">⏸️ Paused</span>
-            </div>
-            <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
-              <span>Last Backup</span>
-              <span class="text-gray-400" id="last-backup">-</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 📈 ELITE ANALYTICS TAB -->
-      <div id="tab-analytics" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
-        
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">📈 Elite Analytics Dashboard</h2>
-          <div class="flex gap-3">
-            <button onclick="refreshAnalytics()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition-all">
-              🔄 Refresh Analytics
-            </button>
-            <button onclick="exportAnalyticsReport()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all">
-              📊 Export Report
-            </button>
-          </div>
-        </div>
-
-        <!-- Date Range Selector -->
-        <div class="bg-gray-800 rounded-lg p-6 mb-6">
-          <h3 class="text-xl font-bold mb-4">📅 Analytics Period</h3>
-          <div class="grid md:grid-cols-4 gap-4">
-            <div>
-              <label class="block text-sm font-medium mb-2">Time Range</label>
-              <select id="analytics-range" onchange="loadAnalyticsData()" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-                <option value="7d">Last 7 Days</option>
-                <option value="30d" selected>Last 30 Days</option>
-                <option value="90d">Last 90 Days</option>
-                <option value="365d">Last Year</option>
-                <option value="all">All Time</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-2">From Date</label>
-              <input type="date" id="analytics-start" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-2">To Date</label>
-              <input type="date" id="analytics-end" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-            </div>
-            <div class="flex items-end">
-              <button onclick="applyCustomDateRange()" class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
-                Apply Range
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- KPI Metrics -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div class="analytics-card p-6 rounded-lg">
-            <div class="flex justify-between items-start mb-4">
-              <div>
-                <p class="text-sm text-gray-400">Total Scans</p>
-                <p class="text-3xl font-bold mt-2" id="kpi-total-scans">0</p>
-              </div>
-              <span class="metric-badge">🔍</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-400">vs previous period</span>
-              <span id="kpi-scans-trend" class="text-sm font-semibold trend-neutral">0%</span>
-            </div>
-          </div>
-
-          <div class="analytics-card p-6 rounded-lg">
-            <div class="flex justify-between items-start mb-4">
-              <div>
-                <p class="text-sm text-gray-400">New Agencies</p>
-                <p class="text-3xl font-bold mt-2" id="kpi-new-agencies">0</p>
-              </div>
-              <span class="metric-badge">🏢</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-400">vs previous period</span>
-              <span id="kpi-agencies-trend" class="text-sm font-semibold trend-neutral">0%</span>
-            </div>
-          </div>
-
-          <div class="analytics-card p-6 rounded-lg">
-            <div class="flex justify-between items-start mb-4">
-              <div>
-                <p class="text-sm text-gray-400">Avg. Score</p>
-                <p class="text-3xl font-bold mt-2" id="kpi-avg-score">0</p>
-              </div>
-              <span class="metric-badge">📊</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-400">vs previous period</span>
-              <span id="kpi-score-trend" class="text-sm font-semibold trend-neutral">0%</span>
-            </div>
-          </div>
-
-          <div class="analytics-card p-6 rounded-lg">
-            <div class="flex justify-between items-start mb-4">
-              <div>
-                <p class="text-sm text-gray-400">Active Users</p>
-                <p class="text-3xl font-bold mt-2" id="kpi-active-users">0</p>
-              </div>
-              <span class="metric-badge">👥</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-400">vs previous period</span>
-              <span id="kpi-users-trend" class="text-sm font-semibold trend-neutral">0%</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Charts Section -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <!-- Scans Over Time -->
-          <div class="analytics-card p-6 rounded-lg">
-            <h3 class="text-xl font-bold mb-4">📈 Scans Over Time</h3>
-            <div class="h-64">
-              <canvas id="scansChart"></canvas>
-            </div>
-          </div>
-
-          <!-- Score Distribution -->
-          <div class="analytics-card p-6 rounded-lg">
-            <h3 class="text-xl font-bold mb-4">📊 Score Distribution</h3>
-            <div class="h-64">
-              <canvas id="scoreDistributionChart"></canvas>
-            </div>
-          </div>
-
-          <!-- Top Agencies by Scans -->
-          <div class="analytics-card p-6 rounded-lg">
-            <h3 class="text-xl font-bold mb-4">🏆 Top Agencies by Scans</h3>
-            <div class="h-64">
-              <canvas id="agenciesChart"></canvas>
-            </div>
-          </div>
-
-          <!-- Platform Growth -->
-          <div class="analytics-card p-6 rounded-lg">
-            <h3 class="text-xl font-bold mb-4">🚀 Platform Growth</h3>
-            <div class="h-64">
-              <canvas id="growthChart"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <!-- Detailed Analytics -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <!-- Geographic Distribution -->
-          <div class="analytics-card p-6 rounded-lg">
-            <h3 class="text-xl font-bold mb-4">🌍 Geographic Distribution</h3>
-            <div id="country-distribution" class="space-y-3">
-              <div class="text-center py-8 text-gray-400">
-                <div class="inline-block animate-spin text-4xl mb-4">⏳</div>
-                <p>Loading geographic data...</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Performance Metrics -->
-          <div class="analytics-card p-6 rounded-lg">
-            <h3 class="text-xl font-bold mb-4">⚡ Performance Metrics</h3>
-            <div class="space-y-4">
-              <div class="flex justify-between items-center p-3 bg-gray-800 rounded">
-                <span>Average Scan Duration</span>
-                <span class="font-bold" id="metric-scan-duration">-</span>
-              </div>
-              <div class="flex justify-between items-center p-3 bg-gray-800 rounded">
-                <span>Success Rate</span>
-                <span class="font-bold" id="metric-success-rate">-</span>
-              </div>
-              <div class="flex justify-between items-center p-3 bg-gray-800 rounded">
-                <span>API Response Time</span>
-                <span class="font-bold" id="metric-api-response">-</span>
-              </div>
-              <div class="flex justify-between items-center p-3 bg-gray-800 rounded">
-                <span>Database Queries</span>
-                <span class="font-bold" id="metric-db-queries">-</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Recent Activity -->
-          <div class="analytics-card p-6 rounded-lg">
-            <h3 class="text-xl font-bold mb-4">🔄 Recent Activity</h3>
-            <div id="recent-activity" class="space-y-3 max-h-64 overflow-y-auto">
-              <div class="text-center py-8 text-gray-400">
-                <div class="inline-block animate-spin text-4xl mb-4">⏳</div>
-                <p>Loading recent activity...</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Data Export & Reports -->
-        <div class="bg-gray-800 rounded-lg p-6">
-          <h3 class="text-xl font-bold mb-4">📋 Data Export & Reports</h3>
-          <div class="grid md:grid-cols-4 gap-4">
-            <button onclick="exportAnalyticsData('scans')" class="p-4 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
-              📥 Export Scans
-            </button>
-            <button onclick="exportAnalyticsData('agencies')" class="p-4 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
-              📥 Export Agencies
-            </button>
-            <button onclick="exportAnalyticsData('leaderboard')" class="p-4 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold">
-              📥 Export Leaderboard
-            </button>
-            <button onclick="generateAnalyticsReport()" class="p-4 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 rounded-lg font-semibold">
-              📄 Generate Full Report
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Admins Tab -->
-      <div id="tab-admins" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">Admin & Helper Management</h2>
-          <button onclick="showAddAdminModal()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all">
-            ➕ Add Admin/Helper
-          </button>
-        </div>
-
-        <div id="admins-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading admins...</p>
-        </div>
-
-        <div id="admins-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Username</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Full Name</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Email</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Role</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Created</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Last Login</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="admins-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Agencies Tab -->
-      <div id="tab-agencies" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">All Agencies</h2>
-          <div class="flex gap-3">
-            <button onclick="loadAgencies()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition-all">
-              🔄 Refresh
-            </button>
-            <button onclick="showAddAgencyModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-all">
-              ➕ Add Agency
-            </button>
-          </div>
-        </div>
-
-        <div id="agencies-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading agencies...</p>
-        </div>
-
-        <div id="agencies-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="agency-select-all" onchange="toggleSelectAllAgencies()"></th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Name</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Domain</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Country</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Plan</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Clients</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Scans</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Admin URL</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="agencies-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="mt-4 flex gap-2">
-          <button onclick="deleteSelectedAgencies()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
-          <button onclick="exportAgenciesToCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">📊 Export CSV</button>
-          <button onclick="exportAgenciesToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
-        </div>
-      </div>
-
-      <!-- Clients Tab -->
-      <div id="tab-clients" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
-        <h2 class="text-2xl font-bold mb-6">All Clients</h2>
-
-        <div id="clients-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading clients...</p>
-        </div>
-
-        <div id="clients-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="client-select-all" onchange="toggleSelectAllClients()"></th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Client URL</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Agency</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Scans</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Last Scan</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="clients-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="mt-4 flex gap-2">
-          <button onclick="deleteSelectedClients()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
-          <button onclick="exportClientsToCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">📊 Export CSV</button>
-          <button onclick="exportClientsToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
-        </div>
-      </div>
-
-      <!-- Scans Tab -->
-      <div id="tab-scans" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
-        <h2 class="text-2xl font-bold mb-6">All Scans</h2>
-
-        <div id="scans-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading scans...</p>
-        </div>
-
-        <div id="scans-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="scan-select-all" onchange="toggleSelectAllScans()"></th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">URL</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Score</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Quality</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Agency/Client</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Type</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Date</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="scans-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="mt-4 flex gap-2">
-          <button onclick="deleteSelectedScans()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
-          <button onclick="exportScansToCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">📊 Export CSV</button>
-          <button onclick="exportScansToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
-        </div>
-      </div>
-
-      <!-- Share Links Tab -->
-      <div id="tab-share-links" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">Share Links</h2>
-          <div class="flex gap-3">
-            <button onclick="loadShareLinks()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition-all">
-              🔄 Refresh
-            </button>
-            <button onclick="showCreateShareLinkModal()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all">
-              ➕ Create Share Link
-            </button>
-          </div>
-        </div>
-
-        <div id="share-links-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading share links...</p>
-        </div>
-
-        <div id="share-links-list" class="hidden bg-gray-800 rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="sharelink-select-all" onchange="toggleSelectAllShareLinks()"></th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Client</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Email</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Share URL</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Usage</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Expires</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="share-links-tbody" class="divide-y divide-gray-700">
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="mt-4 flex gap-2">
-          <button onclick="deleteSelectedShareLinks()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
-        </div>
-      </div>
-
-      <!-- Leaderboard Tab -->
-      <div id="tab-leaderboard" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">Global Leaderboard Management</h2>
-          <button onclick="scanAllAgencies()" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold transition-all">
-            🔍 Scan Alle Agencies Nu
-          </button>
-        </div>
-
-        <!-- ✅ PENDING SUBMISSIONS SECTION -->
+        <!-- PENDING SUBMISSIONS -->
         <div class="mb-8 bg-gradient-to-r from-yellow-900 to-orange-900 rounded-lg p-6 border-2 border-yellow-600">
           <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xl font-bold">⏳ Pending Leaderboard Submissions</h3>
+            <h3 class="text-xl font-bold">⏳ Pending Submissions</h3>
             <button onclick="loadPendingLeaderboard()" class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded-lg font-semibold">
-              🔄 Refresh Pending
+              🔄 Refresh
             </button>
           </div>
           <div id="pending-leaderboard-container" class="space-y-4">
@@ -823,379 +191,142 @@
           </div>
         </div>
 
+        <!-- SEARCH -->
         <div class="mb-4 flex gap-4">
-          <input type="text" id="leaderboard-search" placeholder="Search by URL, company, or score..." 
+          <input type="text" id="leaderboard-search" placeholder="Zoek op URL, bedrijfsnaam of score..." 
             class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
           <button onclick="searchLeaderboard()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
-            Search
+            Zoeken
           </button>
         </div>
 
-        <div id="leaderboard-list" class="bg-gray-800 rounded-lg overflow-hidden">
+        <!-- LEADERBOARD TABLE -->
+        <div class="bg-gray-800 rounded-lg overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full">
               <thead class="bg-gray-700">
                 <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="leaderboard-select-all" onchange="toggleSelectAllLeaderboard()"></th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Rank</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Company</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Bedrijf</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">URL</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Score</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Country</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Added Date</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Toegevoegd</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Acties</th>
                 </tr>
               </thead>
               <tbody id="leaderboard-tbody" class="divide-y divide-gray-700">
+                <tr><td colspan="8" class="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
               </tbody>
             </table>
           </div>
         </div>
 
         <div class="mt-4 flex gap-2">
-          <button onclick="deleteSelectedLeaderboard()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
-          <button onclick="exportLeaderboardToCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">📊 Export CSV</button>
-          <button onclick="exportLeaderboardToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
+          <button onclick="deleteSelectedLeaderboard()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">
+            🗑️ Delete Selected
+          </button>
+          <button onclick="exportLeaderboardJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
+            📄 Export JSON
+          </button>
         </div>
       </div>
 
-      <!-- ✅ FREELANCERS TAB -->
-      <div id="tab-freelancers" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
+      <!-- ============================================
+           TAB 2: 🎯 VERIFIED SEO SPECIALISTS (AANMELDINGEN)
+           ============================================ -->
+      <div id="tab-seo-specialists" class="tab-content hidden">
         <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">💼 Freelancer Management</h2>
-          <button onclick="loadFreelancers()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all">
+          <h2 class="text-2xl font-bold">🎯 Verified SEO Specialists</h2>
+          <button onclick="loadSEOSpecialists()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold">
             🔄 Refresh
           </button>
         </div>
 
-        <!-- Pending Freelancer Applications -->
+        <!-- PENDING APPLICATIONS -->
         <div class="mb-8 bg-gradient-to-r from-purple-900 to-pink-900 rounded-lg p-6 border-2 border-purple-600">
-          <h3 class="text-xl font-bold mb-4">⏳ Pending Applications</h3>
-          <div id="pending-freelancers-container" class="space-y-4">
+          <h3 class="text-xl font-bold mb-4">⏳ Aanmeldingen - Wacht op goedkeuring</h3>
+          <div id="pending-specialists-container" class="space-y-4">
             <div class="text-center py-8 text-gray-400">
               <div class="inline-block animate-spin text-4xl mb-4">⏳</div>
-              <p>Loading pending applications...</p>
+              <p>Loading applications...</p>
             </div>
           </div>
         </div>
 
-        <!-- Active Freelancers -->
-        <h3 class="text-xl font-bold mb-4">✅ Active Freelancers</h3>
+        <!-- ACTIVE SPECIALISTS -->
+        <h3 class="text-xl font-bold mb-4">✅ Actieve SEO Specialisten</h3>
         <div class="bg-gray-800 rounded-lg overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full">
               <thead class="bg-gray-700">
                 <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Name</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Naam</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Email</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Title</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Titel</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Score</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Land</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Featured</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Acties</th>
                 </tr>
               </thead>
-              <tbody id="freelancers-tbody" class="divide-y divide-gray-700">
-                <tr>
-                  <td colspan="7" class="px-4 py-8 text-center text-gray-400">Loading...</td>
-                </tr>
+              <tbody id="specialists-tbody" class="divide-y divide-gray-700">
+                <tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
               </tbody>
             </table>
           </div>
         </div>
       </div>
 
-      <!-- Blog Tab -->
-      <div id="tab-blog" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
-        
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">📝 Blog Management</h2>
-          <div class="flex gap-3">
-            <button onclick="loadBlogPosts()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition-all">
-              🔄 Refresh
-            </button>
-            <button onclick="showAddBlogPostModal()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all">
-              ➕ New Post
-            </button>
-          </div>
-        </div>
-
-        <!-- View Toggle -->
-        <div class="flex gap-2 mb-6">
-          <button onclick="setBlogView('grid')" id="blog-view-grid" class="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-lg font-semibold">
-            📊 Grid View
-          </button>
-          <button onclick="setBlogView('list')" id="blog-view-list" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">
-            📋 List View
-          </button>
-        </div>
-
-        <!-- Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div class="bg-gradient-to-br from-blue-900 to-blue-800 rounded-lg p-4">
-            <div class="text-sm text-blue-200">Total Posts</div>
-            <div class="text-3xl font-bold mt-2" id="blog-total-count">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-green-900 to-green-800 rounded-lg p-4">
-            <div class="text-sm text-green-200">Published</div>
-            <div class="text-3xl font-bold mt-2" id="blog-published-count">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-yellow-900 to-yellow-800 rounded-lg p-4">
-            <div class="text-sm text-yellow-200">Drafts</div>
-            <div class="text-3xl font-bold mt-2" id="blog-drafts-count">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-purple-900 to-purple-800 rounded-lg p-4">
-            <div class="text-sm text-purple-200">Scheduled</div>
-            <div class="text-3xl font-bold mt-2" id="blog-scheduled-count">0</div>
-          </div>
-        </div>
-
-        <!-- Search & Filter -->
-        <div class="bg-gray-800 rounded-lg p-4 mb-6">
-          <div class="grid md:grid-cols-3 gap-4">
-            <div>
-              <input type="text" id="blog-search" placeholder="Search posts..." 
-                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                onkeyup="searchBlogPosts()">
-            </div>
-            <div>
-              <select id="blog-category-filter" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" onchange="filterBlogPosts()">
-                <option value="">All Categories</option>
-                <option value="agency">Agency</option>
-                <option value="case-study">Case Study</option>
-                <option value="guide">Guide</option>
-                <option value="tips">Tips & Tricks</option>
-                <option value="news">News</option>
-                <option value="freelancer">Freelancer</option>
-              </select>
-            </div>
-            <div>
-              <select id="blog-status-filter" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" onchange="filterBlogPosts()">
-                <option value="">All Status</option>
-                <option value="published">Published</option>
-                <option value="draft">Draft</option>
-                <option value="scheduled">Scheduled</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <!-- Loading State -->
-        <div id="blog-loading" class="text-center py-12">
-          <div class="inline-block animate-spin text-4xl">⏳</div>
-          <p class="text-gray-400 mt-4">Loading blog posts...</p>
-        </div>
-
-        <!-- Grid View -->
-        <div id="blog-grid-view" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          <!-- Posts will be loaded here -->
-        </div>
-
-        <!-- List View -->
-        <div id="blog-list-view" class="hidden">
-          <div class="bg-gray-800 rounded-lg overflow-hidden">
-            <div class="overflow-x-auto">
-              <table class="w-full">
-                <thead class="bg-gray-700">
-                  <tr>
-                    <th class="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" id="blog-select-all" onchange="toggleSelectAllBlogPosts()"></th>
-                    <th class="px-4 py-3 text-left text-sm font-semibold">Title</th>
-                    <th class="px-4 py-3 text-left text-sm font-semibold">Category</th>
-                    <th class="px-4 py-3 text-left text-sm font-semibold">Author</th>
-                    <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                    <th class="px-4 py-3 text-left text-sm font-semibold">Views</th>
-                    <th class="px-4 py-3 text-left text-sm font-semibold">Published</th>
-                    <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="blog-list-tbody" class="divide-y divide-gray-700">
-                </tbody>
-              </table>
-            </div>
-          </div>
-          
-          <div class="mt-4 flex gap-2">
-            <button onclick="deleteSelectedBlogPosts()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">🗑️ Delete Selected</button>
-            <button onclick="exportBlogToCSV()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">📊 Export CSV</button>
-            <button onclick="exportBlogToJSON()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">📄 Export JSON</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Email & Notifications Tab -->
-      <div id="tab-email-notifications" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
-        <h2 class="text-2xl font-bold mb-6">📧 Email & Notifications</h2>
-        <div class="bg-gray-800 rounded-lg p-6">
-          <h3 class="text-xl font-bold mb-4">Send Bulk Email</h3>
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm mb-2">Recipients</label>
-              <select id="bulk-email-recipients" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-                <option value="all-leaderboard">All Leaderboard Agencies</option>
-                <option value="unclaimed">Unclaimed Profiles Only</option>
-                <option value="claimed">Claimed Profiles Only</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm mb-2">Subject</label>
-              <input type="text" id="bulk-email-subject" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-            </div>
-            <div>
-              <label class="block text-sm mb-2">Message</label>
-              <textarea id="bulk-email-body" rows="6" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"></textarea>
-            </div>
-            <button onclick="sendBulkEmail()" class="w-full py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
-              📧 Send to All Recipients
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Claims Management Tab -->
-      <div id="tab-claims" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
-        <h2 class="text-2xl font-bold mb-6">🏢 Claims Management</h2>
-        
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div class="bg-gradient-to-br from-purple-900 to-purple-800 rounded-lg p-4">
-            <div class="text-sm text-purple-200">Pending Claims</div>
-            <div class="text-3xl font-bold mt-2" id="pending-claims-count">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-green-900 to-green-800 rounded-lg p-4">
-            <div class="text-sm text-green-200">Approved Claims</div>
-            <div class="text-3xl font-bold mt-2" id="approved-claims-count">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-blue-900 to-blue-800 rounded-lg p-4">
-            <div class="text-sm text-blue-200">Total Claimed</div>
-            <div class="text-3xl font-bold mt-2" id="total-claimed-count">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-orange-900 to-orange-800 rounded-lg p-4">
-            <div class="text-sm text-orange-200">Unclaimed Profiles</div>
-            <div class="text-3xl font-bold mt-2" id="unclaimed-profiles-count">0</div>
-          </div>
-        </div>
-
-        <div class="bg-gray-800 rounded-lg p-6">
-          <h3 class="text-xl font-bold mb-4">⏳ Pending Claims</h3>
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm">Agency Name</th>
-                  <th class="px-4 py-3 text-left text-sm">URL</th>
-                  <th class="px-4 py-3 text-left text-sm">Email</th>
-                  <th class="px-4 py-3 text-left text-sm">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="pending-claims-tbody" class="divide-y divide-gray-700">
-                <tr>
-                  <td colspan="4" class="px-4 py-8 text-center text-gray-400">No pending claims</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Opt-Out Tab -->
-      <div id="tab-opt-out" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
-        <h2 class="text-2xl font-bold mb-6">🚫 Opt-Out Management</h2>
-        
-        <div class="bg-gray-800 rounded-lg p-6 mb-6">
-          <h3 class="text-xl font-bold mb-4">Manual Opt-Out</h3>
-          <div class="flex gap-4">
-            <input type="text" id="manual-optout-url" placeholder="Agency website URL" 
-              class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-            <button onclick="manualOptOut()" class="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">
-              Remove from Leaderboard
-            </button>
-          </div>
-        </div>
-
-        <div class="bg-gray-800 rounded-lg p-6">
-          <h3 class="text-xl font-bold mb-4">Opt-Out Requests</h3>
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Website</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Reason</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Date</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="optout-tbody" class="divide-y divide-gray-700">
-                <tr>
-                  <td colspan="4" class="px-4 py-8 text-center text-gray-400">No opt-out requests</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Lead Scanner Tab -->
+      <!-- ============================================
+           TAB 3: 🔍 CONTENT QUALITY & LEAD SCANNER
+           (GOOGLE MAPS SCANNER + SINGLE URL SCAN)
+           ============================================ -->
       <div id="tab-lead-scanner" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
-        
         <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">🎯 Lead Scanner - Single + Google Maps Bulk</h2>
-          <button onclick="refreshLeadScanner()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
+          <h2 class="text-2xl font-bold">🔍 Content Quality & Lead Scanner</h2>
+          <button onclick="refreshScannerStats()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
             🔄 Refresh
           </button>
         </div>
 
-        <!-- Mode Selector -->
+        <!-- MODE SELECTOR -->
         <div class="flex gap-4 mb-6">
-          <button onclick="switchLeadMode('single')" id="mode-single-btn" class="flex-1 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-lg font-bold text-lg transition-all">
+          <button onclick="switchScannerMode('single')" id="mode-single-btn" class="flex-1 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-lg font-bold text-lg transition-all">
             🔍 Single URL Scan
           </button>
-          <button onclick="switchLeadMode('google-maps')" id="mode-maps-btn" class="flex-1 py-4 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold text-lg transition-all">
-            🗺️ Google Maps Scraping
+          <button onclick="switchScannerMode('google-maps')" id="mode-maps-btn" class="flex-1 py-4 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold text-lg transition-all">
+            🗺️ Google Maps Scanner
           </button>
         </div>
 
-        <!-- ============================================
-             SINGLE URL MODE
-             ============================================ -->
+        <!-- SINGLE URL SCAN MODE -->
         <div id="single-url-mode">
           <div class="bg-gradient-to-r from-purple-900 to-blue-900 rounded-lg p-6 mb-6 border-2 border-purple-600">
-            <h3 class="text-xl font-bold mb-4">🔍 Scan Enkele URL</h3>
+            <h3 class="text-xl font-bold mb-4">🔍 Scan enkele URL</h3>
             
             <div class="grid md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label class="block text-sm font-medium mb-2">Website URL *</label>
-                <input 
-                  type="url" 
-                  id="single-url-input" 
-                  placeholder="https://example.com"
-                  class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                >
+                <input type="url" id="single-url-input" placeholder="https://example.com"
+                  class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
               </div>
-              
               <div>
                 <label class="block text-sm font-medium mb-2">Bedrijfsnaam (optioneel)</label>
-                <input 
-                  type="text" 
-                  id="single-company-input" 
-                  placeholder="Automatisch detecteren..."
-                  class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                >
+                <input type="text" id="single-company-input" placeholder="Automatisch detecteren..."
+                  class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
               </div>
             </div>
 
-            <button onclick="scanSingleURL()" id="scan-single-btn" class="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 rounded-lg font-bold text-lg transition-all">
-              🔍 Scan URL
+            <button onclick="scanSingleURL()" id="scan-single-btn" class="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 rounded-lg font-bold text-lg">
+              🔍 Start Scan
             </button>
           </div>
 
-          <!-- Single Scan Result -->
+          <!-- SCAN RESULT -->
           <div id="single-scan-result" class="hidden bg-gray-800 rounded-lg p-6 mb-6 border-2 border-green-600">
-            <h3 class="text-xl font-bold mb-4">✅ Scan Compleet - Pas Gegevens Aan</h3>
+            <h3 class="text-xl font-bold mb-4">✅ Scan Compleet</h3>
             
             <div class="grid md:grid-cols-2 gap-6">
               <div class="space-y-4">
@@ -1204,458 +335,144 @@
                   <div class="text-5xl font-bold mt-2" id="single-score-display">-</div>
                   <div class="text-sm text-purple-200 mt-1">/ 100</div>
                 </div>
-                
-                <div class="bg-gray-700 rounded-lg p-4">
-                  <div class="text-sm text-gray-400 mb-1">Gescande URL</div>
-                  <div class="text-sm text-blue-400 break-all" id="single-scanned-url">-</div>
-                </div>
               </div>
 
               <div class="space-y-4">
                 <div>
-                  <label class="block text-sm font-medium mb-2 text-yellow-400">Bedrijfsnaam *</label>
-                  <input type="text" id="single-company-name" class="w-full px-4 py-3 bg-gray-700 border-2 border-yellow-500 rounded-lg text-white font-medium">
+                  <label class="block text-sm font-medium mb-2 text-yellow-400">Bedrijfsnaam</label>
+                  <input type="text" id="single-company-name" class="w-full px-4 py-3 bg-gray-700 border-2 border-yellow-500 rounded-lg text-white">
                 </div>
-
                 <div>
-                  <label class="block text-sm font-medium mb-2 text-yellow-400">Land *</label>
-                  <select id="single-country" class="w-full px-4 py-3 bg-gray-700 border-2 border-yellow-500 rounded-lg text-white font-medium">
-                    <option value="">-- Selecteer Land --</option>
+                  <label class="block text-sm font-medium mb-2 text-yellow-400">Land</label>
+                  <select id="single-country" class="w-full px-4 py-3 bg-gray-700 border-2 border-yellow-500 rounded-lg text-white">
                     <option value="Netherlands">🇳🇱 Netherlands</option>
                     <option value="Belgium">🇧🇪 Belgium</option>
                     <option value="Germany">🇩🇪 Germany</option>
-                    <option value="France">🇫🇷 France</option>
                     <option value="United Kingdom">🇬🇧 United Kingdom</option>
                     <option value="United States">🇺🇸 United States</option>
-                    <option value="Canada">🇨🇦 Canada</option>
-                    <option value="Australia">🇦🇺 Australia</option>
-                    <option value="Spain">🇪🇸 Spain</option>
-                    <option value="Italy">🇮🇹 Italy</option>
                     <option value="Other">🌍 Other</option>
                   </select>
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium mb-2">SEO Score (van scan)</label>
-                  <input type="number" id="single-score-input" readonly class="w-full px-4 py-3 bg-gray-600 border border-gray-500 rounded-lg text-white font-bold cursor-not-allowed">
                 </div>
               </div>
             </div>
 
             <div class="flex gap-4 mt-6">
-              <button onclick="addSingleToLeaderboard()" class="flex-1 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 rounded-lg font-bold text-lg">
-                ✅ Voeg Toe aan Leaderboard
+              <button onclick="addToLeaderboard()" class="flex-1 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 rounded-lg font-bold text-lg">
+                ✅ Voeg toe aan Leaderboard
               </button>
-              <button onclick="cancelSingleScan()" class="px-6 py-4 bg-red-600 hover:bg-red-700 rounded-lg font-bold">
+              <button onclick="cancelScan()" class="px-6 py-4 bg-red-600 hover:bg-red-700 rounded-lg font-bold">
                 ❌ Annuleer
               </button>
             </div>
           </div>
         </div>
 
-        <!-- ============================================
-             GOOGLE MAPS MODE
-             ============================================ -->
+        <!-- GOOGLE MAPS SCANNER MODE -->
         <div id="google-maps-mode" class="hidden">
           <div class="bg-gradient-to-r from-orange-900 to-red-900 rounded-lg p-6 mb-6 border-2 border-orange-600">
-            <h3 class="text-xl font-bold mb-4">🗺️ Google Maps URL Scraping</h3>
+            <h3 class="text-xl font-bold mb-4">🗺️ Google Maps Scanner</h3>
             
             <p class="text-sm text-gray-300 mb-4">
-              Plak een Google Maps zoek-URL om automatisch alle bedrijven te vinden. Bijvoorbeeld:<br>
-              <code class="text-blue-400 text-xs">https://www.google.com/maps/search/seo+agency+new+york/@...</code>
+              Plak een Google Maps zoek-URL. Bijvoorbeeld:<br>
+              <code class="text-blue-400">https://www.google.com/maps/search/seo+agency+amsterdam/</code>
             </p>
 
             <div class="mb-4">
-              <label class="block text-sm font-medium mb-2">Google Maps Search URL *</label>
-              <input 
-                type="url" 
-                id="gmaps-url-input" 
-                placeholder="https://www.google.com/maps/search/seo+agency+amsterdam/@..."
-                class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white"
-              >
+              <label class="block text-sm font-medium mb-2">Google Maps URL *</label>
+              <input type="url" id="gmaps-url-input" 
+                placeholder="https://www.google.com/maps/search/seo+agency+amsterdam/"
+                class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
             </div>
 
-            <button onclick="scrapeGoogleMaps()" id="scrape-gmaps-btn" class="w-full py-3 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 rounded-lg font-bold text-lg transition-all">
-              🗺️ Scrape Google Maps
+            <button onclick="scrapeGoogleMaps()" id="scrape-gmaps-btn" class="w-full py-3 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 rounded-lg font-bold text-lg">
+              🗺️ Start Google Maps Scan
             </button>
-
-            <div class="mt-4 bg-gray-800 rounded-lg p-4">
-              <p class="text-xs text-gray-400">
-                <strong>Let op:</strong> Scraping duurt 30-60 seconden. Het script scrollt door de resultaten en haalt namen, websites, adressen en ratings op.
-              </p>
-            </div>
           </div>
 
-          <!-- Scraped Leads List -->
+          <!-- SCANNED LEADS -->
           <div id="gmaps-leads-container" class="hidden">
             <div class="bg-gray-800 rounded-lg p-6 mb-4 border-2 border-green-600">
               <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold">✅ <span id="gmaps-leads-count">0</span> Bedrijven Gevonden</h3>
+                <h3 class="text-xl font-bold">✅ <span id="gmaps-leads-count">0</span> Bedrijven gevonden</h3>
                 <div class="flex gap-3">
-                  <button onclick="scanAllGmapsLeads()" id="scan-all-gmaps-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
-                    🔍 Scan Alle URLs
-                  </button>
-                  <button onclick="selectAllGmapsLeads()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
-                    ✅ Selecteer Alles
+                  <button onclick="selectAllLeads()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold">
+                    ✅ Selecteer alles
                   </button>
                 </div>
               </div>
 
               <div id="gmaps-leads-list" class="space-y-3 max-h-96 overflow-y-auto">
-                <!-- Dynamically filled -->
+                <!-- Dynamisch gevuld -->
               </div>
 
               <div class="mt-6 pt-6 border-t border-gray-700">
-                <button onclick="addSelectedGmapsToLeaderboard()" id="add-gmaps-btn" class="w-full py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 rounded-lg font-bold text-lg">
-                  ✅ Voeg <span id="selected-gmaps-count">0</span> Geselecteerde Toe aan Leaderboard
+                <button onclick="addSelectedToLeaderboard()" class="w-full py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 rounded-lg font-bold text-lg">
+                  ✅ Voeg <span id="selected-leads-count">0</span> geselecteerde toe aan Leaderboard
                 </button>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Recent Additions -->
-        <div class="bg-gray-800 rounded-lg p-6">
+        <!-- RECENT TOEVOEGINGEN -->
+        <div class="bg-gray-800 rounded-lg p-6 mt-6">
           <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xl font-bold">📊 Recent Toegevoegd aan Leaderboard</h3>
-            <button onclick="loadRecentLeads()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg text-sm font-semibold">
+            <h3 class="text-xl font-bold">📊 Recent toegevoegd aan Leaderboard</h3>
+            <button onclick="loadRecentLeads()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg text-sm">
               🔄 Refresh
             </button>
           </div>
-          
           <div id="recent-leads-list" class="space-y-3">
             <div class="text-center py-8 text-gray-400">
-              <div class="text-4xl mb-2">📋</div>
               <p>Geen recente toevoegingen</p>
             </div>
           </div>
         </div>
       </div>
-
-      <!-- ContentScore Tab -->
-      <div id="tab-contentscore" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
-        <div class="mb-4">
-          <button onclick="refreshContentScore()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">🔄 Refresh ContentScore</button>
-        </div>
-        <iframe src="/seo-contentscore" class="w-full h-screen border-0 rounded-lg"></iframe>
-      </div>
-
-      <!-- Code Generators Tab -->
-      <div id="tab-code-generators" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
-        <iframe src="/contentscale-complete-generator.html" style="width:100%; height:100vh; border:none; border-radius:8px;"></iframe>
-      </div>
-
-      <!-- LTD Codes Tab -->
-      <div id="tab-ltd-codes" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
-        <h2 class="text-2xl font-bold mb-6">💰 Lifetime Deal (LTD) Management</h2>
-        
-        <div class="grid md:grid-cols-3 gap-6 mb-6">
-          <div class="bg-gradient-to-br from-yellow-900 to-orange-900 rounded-lg p-6 border-2 border-yellow-600">
-            <div class="text-sm text-yellow-200">Total LTD Codes</div>
-            <div class="text-3xl font-bold mt-2" id="ltd-total-codes">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-green-900 to-emerald-900 rounded-lg p-6 border-2 border-green-600">
-            <div class="text-sm text-green-200">Active Codes</div>
-            <div class="text-3xl font-bold mt-2" id="ltd-active-codes">0</div>
-          </div>
-          <div class="bg-gradient-to-br from-purple-900 to-pink-900 rounded-lg p-6 border-2 border-purple-600">
-            <div class="text-sm text-purple-200">Revenue</div>
-            <div class="text-3xl font-bold mt-2" id="ltd-revenue">€0</div>
-          </div>
-        </div>
-
-        <div class="bg-gray-800 rounded-lg p-6 mb-6">
-          <h3 class="text-xl font-bold mb-4">Generate LTD Code</h3>
-          <div class="grid md:grid-cols-3 gap-4">
-            <select id="ltd-tier" class="px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
-              <option value="tier1">Tier 1 - €49 (50 scans/month)</option>
-              <option value="tier2">Tier 2 - €99 (150 scans/month)</option>
-              <option value="tier3">Tier 3 - €199 (400 scans/month)</option>
-            </select>
-            <input type="email" id="ltd-buyer-email" placeholder="Buyer Email" 
-              class="px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
-            <button onclick="generateLTDCode()" class="px-6 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-bold">
-              ✨ Generate Code
-            </button>
-          </div>
-        </div>
-
-        <div class="bg-gray-800 rounded-lg p-6">
-          <h3 class="text-xl font-bold mb-4">LTD Codes List</h3>
-          <div id="ltd-codes-list" class="text-gray-400">No LTD codes yet</div>
-        </div>
-      </div>
-
-      <!-- Settings Tab -->
-      <div id="tab-settings" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
-        <h2 class="text-2xl font-bold mb-6">Platform Settings</h2>
-        <div class="bg-gray-800 rounded-lg p-6"><p class="text-gray-400">Settings content...</p></div>
-      </div>
-
-      <!-- Handleiding Tab -->
-      <div id="tab-handleiding" class="tab-content hidden">
-        <button onclick="switchTab('overview')" class="return-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">← Return to Overview</button>
-        <h2 class="text-2xl font-bold mb-6">📚 Handleiding</h2>
-        <div class="bg-gray-800 rounded-lg p-6"><p class="text-gray-400">Guide content...</p></div>
-      </div>
-
     </main>
-
-    <!-- Footer -->
-    <footer class="bg-gray-900 border-t border-gray-700 mt-12">
-      <div class="max-w-7xl mx-auto px-4 py-8">
-        <div class="text-center text-gray-400">
-          <p class="mb-2">© 2026 ContentScale - Ottmar Francisca</p>
-          <div class="flex justify-center gap-6 text-sm">
-            <a href="/app-privacy-policy.html" target="_blank" class="hover:text-blue-400 underline">Privacy Policy</a>
-            <a href="https://contentscale.site" target="_blank" class="hover:text-blue-400">Main Site</a>
-            <a href="https://wa.me/31628073996" target="_blank" class="hover:text-blue-400">WhatsApp Support</a>
-          </div>
-        </div>
-      </div>
-    </footer>
-  </div>
-
-  <!-- MODALS -->
-  <div id="modal-add-agency" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-    <div class="bg-gray-800 rounded-lg p-8 max-w-2xl w-full mx-4">
-      <h3 class="text-2xl font-bold mb-6">Add New Agency</h3>
-      <div class="space-y-4">
-        <input type="text" id="agency-name" placeholder="Agency Name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <input type="text" id="agency-domain" placeholder="Domain (example.com)" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <select id="agency-country" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-          <option value="NL">🇳🇱 Netherlands</option>
-          <option value="BE">🇧🇪 Belgium</option>
-          <option value="DE">🇩🇪 Germany</option>
-        </select>
-        <div class="flex gap-4">
-          <button onclick="submitAddAgency()" class="flex-1 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">Create</button>
-          <button onclick="closeModal('modal-add-agency')" class="flex-1 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="modal-create-share-link" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-    <div class="bg-gray-800 rounded-lg p-8 max-w-2xl w-full mx-4">
-      <h3 class="text-2xl font-bold mb-6">Create Share Link</h3>
-      <div class="space-y-4">
-        <input type="email" id="share-client-email" placeholder="Client Email" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <input type="text" id="share-client-name" placeholder="Client Name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <input type="text" id="share-client-company" placeholder="Company Name (Optional)" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <input type="number" id="share-scans-limit" value="5" min="1" placeholder="Scans Limit" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <input type="number" id="share-valid-days" value="30" min="1" placeholder="Valid Days" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <div class="flex gap-4">
-          <button onclick="submitCreateShareLink()" class="flex-1 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold">Create</button>
-          <button onclick="closeModal('modal-create-share-link')" class="flex-1 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="modal-add-admin" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-    <div class="bg-gray-800 rounded-lg p-8 max-w-2xl w-full mx-4">
-      <h3 class="text-2xl font-bold mb-6">Add Admin/Helper</h3>
-      <div class="space-y-4">
-        <input type="text" id="admin-username-input" placeholder="Username" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <input type="password" id="admin-password-input" placeholder="Password (min 8)" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <select id="admin-role-input" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-          <option value="">Select Role</option>
-          <option value="super_admin">👑 Super Admin</option>
-          <option value="helper">🤝 Helper</option>
-        </select>
-        <input type="text" id="admin-full-name-input" placeholder="Full Name" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <input type="email" id="admin-email-input" placeholder="Email" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        <div class="flex gap-4">
-          <button onclick="submitAddAdmin()" class="flex-1 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">Create</button>
-          <button onclick="closeModal('modal-add-admin')" class="flex-1 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Add Blog Post Modal -->
-  <div id="modal-add-blog-post" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-    <div class="bg-gray-800 rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-      <div class="flex justify-between items-center mb-6">
-        <h3 class="text-2xl font-bold" id="blog-modal-title">Add New Blog Post</h3>
-        <button onclick="closeModal('modal-add-blog-post')" class="text-gray-400 hover:text-white text-2xl">&times;</button>
-      </div>
-
-      <div class="space-y-6">
-        <div class="grid md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium mb-2">Title *</label>
-            <input type="text" id="blog-post-title" 
-              class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white text-lg font-medium">
-          </div>
-          
-          <div>
-            <label class="block text-sm font-medium mb-2">Slug (URL) *</label>
-            <input type="text" id="blog-post-slug" 
-              class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium mb-2">Excerpt (Short Description)</label>
-          <textarea id="blog-post-excerpt" rows="3" 
-            class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white"></textarea>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium mb-2">Content *</label>
-          <div class="border-2 border-gray-600 rounded-lg overflow-hidden">
-            <div class="bg-gray-700 px-4 py-2 border-b border-gray-600 flex gap-2">
-              <button onclick="formatText('bold')" class="px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded" type="button"><b>B</b></button>
-              <button onclick="formatText('italic')" class="px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded" type="button"><i>I</i></button>
-              <button onclick="formatText('link')" class="px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded" type="button">🔗</button>
-              <button onclick="formatText('h2')" class="px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded" type="button">H2</button>
-              <button onclick="formatText('ul')" class="px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded" type="button">• List</button>
-            </div>
-            <div contenteditable="true" id="blog-post-content" 
-              class="blog-editor w-full px-4 py-4 min-h-64 text-white"></div>
-          </div>
-        </div>
-
-        <div class="grid md:grid-cols-3 gap-4">
-          <div>
-            <label class="block text-sm font-medium mb-2">Category *</label>
-            <select id="blog-post-category" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
-              <option value="">Select Category</option>
-              <option value="agency">Agency</option>
-              <option value="case-study">Case Study</option>
-              <option value="guide">Guide</option>
-              <option value="tips">Tips & Tricks</option>
-              <option value="news">News</option>
-              <option value="freelancer">Freelancer</option>
-            </select>
-          </div>
-          
-          <div>
-            <label class="block text-sm font-medium mb-2">Status *</label>
-            <select id="blog-post-status" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white" onchange="toggleScheduleDate()">
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-              <option value="scheduled">Scheduled</option>
-              <option value="archived">Archived</option>
-            </select>
-          </div>
-          
-          <div id="schedule-date-container" class="hidden">
-            <label class="block text-sm font-medium mb-2">Schedule Date</label>
-            <input type="datetime-local" id="blog-post-schedule-date" 
-              class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium mb-2">Tags (comma separated)</label>
-          <input type="text" id="blog-post-tags" placeholder="seo, marketing, freelance, agency" 
-            class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium mb-2">Featured Image URL</label>
-          <input type="url" id="blog-post-featured-image" placeholder="https://example.com/image.jpg" 
-            class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
-        </div>
-
-        <div class="grid md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium mb-2">Author *</label>
-            <input type="text" id="blog-post-author" value="ContentScale Team" 
-              class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
-          </div>
-          
-          <div>
-            <label class="block text-sm font-medium mb-2">Meta Description</label>
-            <textarea id="blog-post-meta-description" rows="2" 
-              class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white"></textarea>
-          </div>
-        </div>
-
-        <div class="flex gap-4 pt-4 border-t border-gray-700">
-          <button onclick="saveBlogPost()" id="blog-save-btn" class="flex-1 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-bold text-lg">
-            💾 Save Post
-          </button>
-          <button onclick="closeModal('modal-add-blog-post')" class="px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-bold">
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Preview Blog Post Modal -->
-  <div id="modal-preview-blog-post" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-    <div class="bg-gray-800 rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-      <div class="flex justify-between items-center mb-6">
-        <h3 class="text-2xl font-bold">👁️ Blog Post Preview</h3>
-        <button onclick="closeModal('modal-preview-blog-post')" class="text-gray-400 hover:text-white text-2xl">&times;</button>
-      </div>
-      <div id="blog-preview-content" class="prose prose-invert max-w-none">
-        <!-- Preview content will be inserted here -->
-      </div>
-      <div class="mt-6 flex justify-end">
-        <button onclick="closeModal('modal-preview-blog-post')" class="px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-bold">
-          Close Preview
-        </button>
-      </div>
-    </div>
   </div>
 
   <script>
     // ==========================================
-    // GLOBAL VARIABLES
+    // GLOBALE VARIABELEN
     // ==========================================
-    let currentAdminId = null;
-    let allAgencies = [];
-    let allClients = [];
-    let allScans = [];
+    let currentAdminId = localStorage.getItem('admin_id');
+    let currentUsername = localStorage.getItem('admin_username');
     let allLeaderboard = [];
-    let allFreelancers = [];
-    let allShareLinks = [];
-    let allBlogPosts = [];
-    let currentBlogView = 'grid';
-    let editingBlogPostId = null;
-    
-    // Chart instances
-    let scansChart = null;
-    let scoreDistributionChart = null;
-    let agenciesChart = null;
-    let growthChart = null;
+    let allSpecialists = [];
+    let pendingSpecialists = [];
+    let currentScanResult = null;
+    let currentGmapsLeads = [];
 
     // ==========================================
-    // AUTHENTICATION FUNCTIONS
+    // AUTHENTICATIE - FIXED
     // ==========================================
+    window.onload = function() {
+      if (currentAdminId && currentUsername) {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('main-dashboard').classList.remove('hidden');
+        document.getElementById('admin-username').textContent = currentUsername;
+        loadAllData();
+      }
+    };
+
     async function login() {
       const username = document.getElementById('login-username').value;
       const password = document.getElementById('login-password').value;
-      const loginBtn = document.getElementById('login-btn');
       const errorDiv = document.getElementById('login-error');
       
       errorDiv.classList.add('hidden');
       
       if (!username || !password) {
-        errorDiv.textContent = 'Please enter both username and password';
+        errorDiv.textContent = 'Gebruikersnaam en wachtwoord vereist';
         errorDiv.classList.remove('hidden');
         return;
       }
       
-      loginBtn.disabled = true;
-      loginBtn.textContent = 'Logging in...';
-      
       try {
         const response = await fetch('/api/setup/verify-admin', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
         });
         
@@ -1663,6 +480,7 @@
         
         if (data.success) {
           currentAdminId = data.admin_id;
+          currentUsername = username;
           localStorage.setItem('admin_id', currentAdminId);
           localStorage.setItem('admin_username', username);
           
@@ -1671,18 +489,13 @@
           document.getElementById('admin-username').textContent = username;
           
           loadAllData();
-          checkPlatformHealth();
         } else {
-          errorDiv.textContent = data.error || 'Login failed';
+          errorDiv.textContent = data.error || 'Login mislukt';
           errorDiv.classList.remove('hidden');
         }
       } catch (error) {
-        errorDiv.textContent = 'Connection error. Please check the server.';
+        errorDiv.textContent = 'Verbindingsfout met server';
         errorDiv.classList.remove('hidden');
-        console.error('Login error:', error);
-      } finally {
-        loginBtn.disabled = false;
-        loginBtn.textContent = 'Login';
       }
     }
 
@@ -1692,54 +505,6 @@
       location.reload();
     }
 
-    // Auto-check for existing session
-    window.onload = function() {
-      const savedAdminId = localStorage.getItem('admin_id');
-      const savedUsername = localStorage.getItem('admin_username');
-      
-      if (savedAdminId && savedUsername) {
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('main-dashboard').classList.remove('hidden');
-        document.getElementById('admin-username').textContent = savedUsername;
-        currentAdminId = savedAdminId;
-        loadAllData();
-        checkPlatformHealth();
-      }
-    };
-
-    // ==========================================
-    // API HELPER FUNCTIONS
-    // ==========================================
-    async function apiCall(endpoint, method = 'GET', body = null) {
-      const headers = {
-        'Content-Type': 'application/json',
-        'x-admin-key': currentAdminId
-      };
-      
-      const options = {
-        method,
-        headers
-      };
-      
-      if (body) {
-        options.body = JSON.stringify(body);
-      }
-      
-      try {
-        const response = await fetch(endpoint, options);
-        const data = await response.json();
-        
-        if (!data.success) {
-          throw new Error(data.error || 'API call failed');
-        }
-        
-        return data;
-      } catch (error) {
-        console.error('API call error:', error);
-        throw error;
-      }
-    }
-
     // ==========================================
     // TAB MANAGEMENT
     // ==========================================
@@ -1747,13 +512,8 @@
       document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
       document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
       
-      // Show selected tab
-      const tabElement = document.getElementById(`tab-${tabName}`);
-      if (tabElement) {
-        tabElement.classList.remove('hidden');
-      }
+      document.getElementById(`tab-${tabName}`).classList.remove('hidden');
       
-      // Set active tab button
       const buttons = document.querySelectorAll('.tab-button');
       buttons.forEach(btn => {
         if (btn.textContent.toLowerCase().includes(tabName.replace('-', ' ').toLowerCase())) {
@@ -1761,1001 +521,54 @@
         }
       });
       
-      // Load data for specific tabs
-      if (tabName === 'overview') loadStats();
-      if (tabName === 'analytics') loadAnalyticsData();
-      if (tabName === 'admins') loadAdmins();
-      if (tabName === 'agencies') loadAgencies();
-      if (tabName === 'clients') loadClients();
-      if (tabName === 'scans') loadScans();
-      if (tabName === 'share-links') loadShareLinks();
-      if (tabName === 'leaderboard') {
+      if (tabName === 'leaderboard-scans') {
         loadLeaderboard();
         loadPendingLeaderboard();
+        loadStats();
       }
-      if (tabName === 'freelancers') loadFreelancers();
-      if (tabName === 'claims') loadClaims();
-      if (tabName === 'blog') loadBlogPosts();
+      if (tabName === 'seo-specialists') loadSEOSpecialists();
     }
 
     // ==========================================
-    // OVERVIEW & STATS FUNCTIONS
+    // API CALLS
     // ==========================================
-    async function loadAllData() {
-      await loadStats();
-      checkPlatformHealth();
+    async function apiCall(endpoint, method = 'GET', body = null) {
+      const headers = {
+        'Content-Type': 'application/json',
+        'x-admin-key': currentAdminId
+      };
+      
+      const options = { method, headers };
+      if (body) options.body = JSON.stringify(body);
+      
+      const response = await fetch(endpoint, options);
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error || 'API call failed');
+      return data;
     }
 
+    // ==========================================
+    // STATISTIEKEN
+    // ==========================================
     async function loadStats() {
       try {
         const data = await apiCall('/api/admin/stats');
+        document.getElementById('stat-total-agencies').textContent = data.stats.total_agencies || 0;
+        document.getElementById('stat-total-scans').textContent = data.stats.total_scans || 0;
+        document.getElementById('stat-active-seo').textContent = data.stats.active_helpers || 0;
         
-        document.getElementById('stat-total-agencies').textContent = data.stats.total_agencies;
-        document.getElementById('stat-total-clients').textContent = data.stats.total_clients;
-        document.getElementById('stat-total-scans').textContent = data.stats.total_scans;
-        document.getElementById('stat-active-helpers').textContent = data.stats.active_helpers;
+        const leaderboard = await apiCall('/api/leaderboard');
+        document.getElementById('stat-avg-score').textContent = leaderboard.averageScore || 0;
       } catch (error) {
         console.error('Stats error:', error);
       }
     }
 
-    async function checkPlatformHealth() {
-      try {
-        // Check database
-        await apiCall('/api/admin/stats');
-        document.getElementById('db-status').textContent = '✅ Connected';
-        document.getElementById('db-status').className = 'text-green-400 font-semibold';
-        
-        // Check API
-        document.getElementById('api-status').textContent = '✅ Operational';
-        document.getElementById('api-status').className = 'text-green-400 font-semibold';
-        
-        // Set last backup time
-        document.getElementById('last-backup').textContent = 'Today at ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      } catch (error) {
-        document.getElementById('db-status').textContent = '❌ Disconnected';
-        document.getElementById('db-status').className = 'text-red-400 font-semibold';
-      }
-    }
-
-    // ==========================================
-    // ANALYTICS FUNCTIONS
-    // ==========================================
-    async function loadAnalyticsData() {
-      const range = document.getElementById('analytics-range').value;
-      
-      try {
-        const data = await apiCall(`/api/admin/analytics?range=${range}`);
-        
-        updateAnalyticsUI(data);
-        renderAnalyticsCharts(data);
-      } catch (error) {
-        console.error('Analytics error:', error);
-      }
-    }
-
-    function updateAnalyticsUI(data) {
-      // Update KPI metrics
-      document.getElementById('kpi-total-scans').textContent = data.trends.scans.current.toLocaleString();
-      document.getElementById('kpi-new-agencies').textContent = data.trends.agencies.current;
-      document.getElementById('kpi-avg-score').textContent = data.trends.score.current;
-      document.getElementById('kpi-active-users').textContent = data.trends.users.current;
-      
-      // Update trend indicators
-      updateTrendIndicator('scans', data.trends.scans.trend);
-      updateTrendIndicator('agencies', data.trends.agencies.trend);
-      updateTrendIndicator('score', data.trends.score.trend);
-      updateTrendIndicator('users', data.trends.users.trend);
-      
-      // Update performance metrics
-      document.getElementById('metric-scan-duration').textContent = data.performance.scan_duration;
-      document.getElementById('metric-success-rate').textContent = data.performance.success_rate;
-      document.getElementById('metric-api-response').textContent = data.performance.api_response;
-      document.getElementById('metric-db-queries').textContent = data.performance.db_queries;
-      
-      // Update country distribution
-      renderCountryDistribution(data.countries);
-      
-      // Update recent activity
-      renderRecentActivity(data.recent_activity);
-    }
-
-    function updateTrendIndicator(type, trend) {
-      const element = document.getElementById(`kpi-${type}-trend`);
-      const absTrend = Math.abs(trend).toFixed(1);
-      
-      if (trend > 0) {
-        element.textContent = `+${absTrend}%`;
-        element.className = 'text-sm font-semibold trend-up';
-      } else if (trend < 0) {
-        element.textContent = `-${absTrend}%`;
-        element.className = 'text-sm font-semibold trend-down';
-      } else {
-        element.textContent = '0%';
-        element.className = 'text-sm font-semibold trend-neutral';
-      }
-    }
-
-    function renderCountryDistribution(countries) {
-      const container = document.getElementById('country-distribution');
-      if (!container) return;
-      
-      container.innerHTML = countries.map(country => `
-        <div class="flex items-center justify-between p-3 bg-gray-800 rounded">
-          <div class="flex items-center gap-3">
-            <span class="text-xl">${getFlagEmoji(country.name)}</span>
-            <span>${country.name}</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <div class="w-32 h-2 bg-gray-700 rounded-full overflow-hidden">
-              <div class="h-full bg-blue-500" style="width: ${country.percentage}%"></div>
-            </div>
-            <span class="text-sm font-semibold">${country.count} (${country.percentage}%)</span>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    function getFlagEmoji(country) {
-      const flags = {
-        'Netherlands': '🇳🇱',
-        'Belgium': '🇧🇪',
-        'Germany': '🇩🇪',
-        'United Kingdom': '🇬🇧',
-        'United States': '🇺🇸',
-        'Other': '🌍'
-      };
-      return flags[country] || '🇺🇳';
-    }
-
-    function renderRecentActivity(activities) {
-      const container = document.getElementById('recent-activity');
-      if (!container) return;
-      
-      container.innerHTML = activities.map(activity => `
-        <div class="flex items-center gap-3 p-3 bg-gray-800 rounded">
-          <span class="text-xl">${getActivityIcon(activity.type)}</span>
-          <div class="flex-1">
-            <div class="font-medium">${activity.user}</div>
-            <div class="text-sm text-gray-400">${activity.action}</div>
-          </div>
-          <span class="text-sm text-gray-500">${activity.time}</span>
-        </div>
-      `).join('');
-    }
-
-    function getActivityIcon(type) {
-      const icons = {
-        'scan': '🔍',
-        'agency': '🏢',
-        'claim': '✅',
-        'freelancer': '💼',
-        'blog': '📝'
-      };
-      return icons[type] || '⚡';
-    }
-
-    function renderAnalyticsCharts(data) {
-      // Destroy existing charts
-      if (scansChart) scansChart.destroy();
-      if (scoreDistributionChart) scoreDistributionChart.destroy();
-      if (agenciesChart) agenciesChart.destroy();
-      if (growthChart) growthChart.destroy();
-      
-      // Render Scans Over Time Chart
-      const scansCtx = document.getElementById('scansChart')?.getContext('2d');
-      if (scansCtx && data.scans) {
-        scansChart = new Chart(scansCtx, {
-          type: 'line',
-          data: {
-            labels: data.scans.map(s => s.date),
-            datasets: [{
-              label: 'Daily Scans',
-              data: data.scans.map(s => s.count),
-              borderColor: '#8b5cf6',
-              backgroundColor: 'rgba(139, 92, 246, 0.1)',
-              borderWidth: 2,
-              fill: true,
-              tension: 0.4
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                display: false
-              }
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                grid: {
-                  color: 'rgba(255, 255, 255, 0.1)'
-                },
-                ticks: {
-                  color: '#9ca3af'
-                }
-              },
-              x: {
-                grid: {
-                  color: 'rgba(255, 255, 255, 0.1)'
-                },
-                ticks: {
-                  color: '#9ca3af'
-                }
-              }
-            }
-          }
-        });
-      }
-      
-      // Render Score Distribution Chart
-      const scoreCtx = document.getElementById('scoreDistributionChart')?.getContext('2d');
-      if (scoreCtx) {
-        scoreDistributionChart = new Chart(scoreCtx, {
-          type: 'bar',
-          data: {
-            labels: ['0-20', '21-40', '41-60', '61-80', '81-100'],
-            datasets: [{
-              label: 'Score Distribution',
-              data: [5, 12, 28, 35, 20],
-              backgroundColor: [
-                '#ef4444',
-                '#f59e0b',
-                '#3b82f6',
-                '#10b981',
-                '#8b5cf6'
-              ],
-              borderColor: [
-                '#dc2626',
-                '#d97706',
-                '#2563eb',
-                '#059669',
-                '#7c3aed'
-              ],
-              borderWidth: 1
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                display: false
-              }
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                grid: {
-                  color: 'rgba(255, 255, 255, 0.1)'
-                },
-                ticks: {
-                  color: '#9ca3af'
-                }
-              },
-              x: {
-                grid: {
-                  color: 'rgba(255, 255, 255, 0.1)'
-                },
-                ticks: {
-                  color: '#9ca3af'
-                }
-              }
-            }
-          }
-        });
-      }
-      
-      // Render Top Agencies Chart
-      const agenciesCtx = document.getElementById('agenciesChart')?.getContext('2d');
-      if (agenciesCtx && data.agencies) {
-        agenciesChart = new Chart(agenciesCtx, {
-          type: 'bar',
-          data: {
-            labels: data.agencies.map(a => a.name),
-            datasets: [{
-              label: 'Total Scans',
-              data: data.agencies.map(a => a.scans),
-              backgroundColor: 'rgba(59, 130, 246, 0.7)',
-              borderColor: '#3b82f6',
-              borderWidth: 1
-            }]
-          },
-          options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                display: false
-              }
-            },
-            scales: {
-              x: {
-                beginAtZero: true,
-                grid: {
-                  color: 'rgba(255, 255, 255, 0.1)'
-                },
-                ticks: {
-                  color: '#9ca3af'
-                }
-              },
-              y: {
-                grid: {
-                  color: 'rgba(255, 255, 255, 0.1)'
-                },
-                ticks: {
-                  color: '#9ca3af'
-                }
-              }
-            }
-          }
-        });
-      }
-      
-      // Render Growth Chart
-      const growthCtx = document.getElementById('growthChart')?.getContext('2d');
-      if (growthCtx) {
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-        growthChart = new Chart(growthCtx, {
-          type: 'line',
-          data: {
-            labels: months,
-            datasets: [
-              {
-                label: 'Agencies',
-                data: [12, 18, 25, 32, 38, 45],
-                borderColor: '#8b5cf6',
-                backgroundColor: 'transparent',
-                borderWidth: 2,
-                tension: 0.4
-              },
-              {
-                label: 'Scans (in hundreds)',
-                data: [8, 15, 28, 42, 55, 68],
-                borderColor: '#3b82f6',
-                backgroundColor: 'transparent',
-                borderWidth: 2,
-                tension: 0.4
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                labels: {
-                  color: '#9ca3af'
-                }
-              }
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                grid: {
-                  color: 'rgba(255, 255, 255, 0.1)'
-                },
-                ticks: {
-                  color: '#9ca3af'
-                }
-              },
-              x: {
-                grid: {
-                  color: 'rgba(255, 255, 255, 0.1)'
-                },
-                ticks: {
-                  color: '#9ca3af'
-                }
-              }
-            }
-          }
-        });
-      }
-    }
-
-    function refreshAnalytics() {
-      loadAnalyticsData();
-      alert('📊 Analytics data refreshed!');
-    }
-
-    function applyCustomDateRange() {
-      const start = document.getElementById('analytics-start').value;
-      const end = document.getElementById('analytics-end').value;
-      
-      if (!start || !end) {
-        alert('Please select both start and end dates');
-        return;
-      }
-      
-      alert(`Custom date range applied: ${start} to ${end}`);
-      loadAnalyticsData();
-    }
-
-    function exportAnalyticsReport() {
-      alert('📊 Exporting analytics report...');
-    }
-
-    function exportAnalyticsData(type) {
-      alert(`Exporting ${type} data...`);
-    }
-
-    function generateAnalyticsReport() {
-      alert('📄 Generating comprehensive analytics report...');
-    }
-
-    // ==========================================
-    // ADMINS MANAGEMENT
-    // ==========================================
-    async function loadAdmins() {
-      try {
-        const data = await apiCall('/api/admins');
-        
-        const tbody = document.getElementById('admins-tbody');
-        tbody.innerHTML = '';
-        
-        data.admins.forEach(admin => {
-          tbody.innerHTML += `
-            <tr>
-              <td class="px-4 py-3">${admin.username}</td>
-              <td class="px-4 py-3">${admin.full_name || '-'}</td>
-              <td class="px-4 py-3">${admin.email || '-'}</td>
-              <td class="px-4 py-3"><span class="px-2 py-1 bg-purple-600 rounded text-xs">${admin.role}</span></td>
-              <td class="px-4 py-3">${admin.is_active ? '✅' : '❌'}</td>
-              <td class="px-4 py-3">${new Date(admin.created_at).toLocaleDateString()}</td>
-              <td class="px-4 py-3">${admin.last_login ? new Date(admin.last_login).toLocaleDateString() : '-'}</td>
-              <td class="px-4 py-3">
-                <button onclick="deleteAdmin(${admin.id})" class="text-red-400 hover:text-red-300">🗑️</button>
-              </td>
-            </tr>
-          `;
-        });
-        
-        document.getElementById('admins-loading').classList.add('hidden');
-        document.getElementById('admins-list').classList.remove('hidden');
-      } catch (error) {
-        console.error('Admins error:', error);
-        document.getElementById('admins-loading').innerHTML = '<p class="text-red-400">Error loading admins</p>';
-      }
-    }
-
-    function showAddAdminModal() {
-      document.getElementById('modal-add-admin').classList.remove('hidden');
-    }
-
-    async function submitAddAdmin() {
-      const username = document.getElementById('admin-username-input').value;
-      const password = document.getElementById('admin-password-input').value;
-      const role = document.getElementById('admin-role-input').value;
-      const fullName = document.getElementById('admin-full-name-input').value;
-      const email = document.getElementById('admin-email-input').value;
-      
-      if (!username || !password || !role) {
-        alert('❌ Username, password, and role are required');
-        return;
-      }
-      
-      if (password.length < 8) {
-        alert('❌ Password must be at least 8 characters');
-        return;
-      }
-      
-      try {
-        await apiCall('/api/admins', 'POST', {
-          username,
-          password,
-          role,
-          full_name: fullName,
-          email
-        });
-        
-        alert('✅ Admin created successfully!');
-        closeModal('modal-add-admin');
-        loadAdmins();
-      } catch (error) {
-        alert('❌ Error creating admin: ' + error.message);
-      }
-    }
-
-    async function deleteAdmin(id) {
-      if (!confirm('Are you sure you want to delete this admin?')) return;
-      
-      try {
-        await apiCall(`/api/admins/${id}`, 'DELETE');
-        alert('✅ Admin deleted!');
-        loadAdmins();
-      } catch (error) {
-        alert('❌ Error deleting admin: ' + error.message);
-      }
-    }
-
-    // ==========================================
-    // AGENCIES MANAGEMENT
-    // ==========================================
-    async function loadAgencies() {
-      try {
-        const data = await apiCall('/api/super-admin/agencies');
-        allAgencies = data.agencies;
-        
-        const tbody = document.getElementById('agencies-tbody');
-        tbody.innerHTML = '';
-        
-        data.agencies.forEach(agency => {
-          const adminUrl = `https://app.contentscale.site/agency-admin?key=${agency.admin_key}`;
-          const uniqueId = `agency-url-${agency.id}`;
-          
-          tbody.innerHTML += `
-            <tr>
-              <td class="px-4 py-3"><input type="checkbox" class="agency-checkbox" value="${agency.id}"></td>
-              <td class="px-4 py-3">${agency.name}</td>
-              <td class="px-4 py-3">${agency.domain}</td>
-              <td class="px-4 py-3">${agency.country}</td>
-              <td class="px-4 py-3"><span class="px-2 py-1 bg-blue-600 rounded text-xs">${agency.plan}</span></td>
-              <td class="px-4 py-3">${agency.client_count || 0}</td>
-              <td class="px-4 py-3">${agency.total_scans || 0}</td>
-              <td class="px-4 py-3">${agency.is_active ? '✅' : '❌'}</td>
-              <td class="px-4 py-3">
-                <div class="flex items-center gap-2">
-                  <input type="text" value="${adminUrl}" 
-                    readonly class="flex-1 px-2 py-1 bg-gray-700 text-xs rounded text-blue-400"
-                    id="${uniqueId}">
-                  <button onclick="copyToClipboard('${uniqueId}')" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs">📋</button>
-                </div>
-              </td>
-              <td class="px-4 py-3">
-                <button onclick="deleteAgency(${agency.id})" class="text-red-400 hover:text-red-300">🗑️</button>
-              </td>
-            </tr>
-          `;
-        });
-        
-        document.getElementById('agencies-loading').classList.add('hidden');
-        document.getElementById('agencies-list').classList.remove('hidden');
-      } catch (error) {
-        console.error('Agencies error:', error);
-      }
-    }
-
-    function showAddAgencyModal() {
-      document.getElementById('modal-add-agency').classList.remove('hidden');
-    }
-
-    async function submitAddAgency() {
-      const name = document.getElementById('agency-name').value;
-      const domain = document.getElementById('agency-domain').value;
-      const country = document.getElementById('agency-country').value;
-      
-      if (!name || !domain) {
-        alert('❌ Agency name and domain are required');
-        return;
-      }
-      
-      try {
-        await apiCall('/api/agencies', 'POST', {
-          name,
-          domain,
-          country,
-          plan: 'free'
-        });
-        
-        alert('✅ Agency created successfully!');
-        closeModal('modal-add-agency');
-        loadAgencies();
-        loadStats();
-      } catch (error) {
-        alert('❌ Error creating agency: ' + error.message);
-      }
-    }
-
-    async function deleteAgency(id) {
-      if (!confirm('Are you sure you want to delete this agency?')) return;
-      
-      try {
-        await apiCall(`/api/agencies/${id}`, 'DELETE');
-        alert('✅ Agency deleted!');
-        loadAgencies();
-        loadStats();
-      } catch (error) {
-        alert('❌ Error deleting agency: ' + error.message);
-      }
-    }
-
-    function toggleSelectAllAgencies() {
-      const isChecked = document.getElementById('agency-select-all').checked;
-      document.querySelectorAll('.agency-checkbox').forEach(cb => cb.checked = isChecked);
-    }
-
-    async function deleteSelectedAgencies() {
-      const selected = Array.from(document.querySelectorAll('.agency-checkbox:checked')).map(cb => parseInt(cb.value));
-      if (selected.length === 0) return alert('Please select agencies to delete');
-      
-      if (!confirm(`Delete ${selected.length} agencies?`)) return;
-      
-      try {
-        for (const id of selected) {
-          await apiCall(`/api/agencies/${id}`, 'DELETE');
-        }
-        alert(`✅ ${selected.length} agencies deleted!`);
-        loadAgencies();
-        loadStats();
-      } catch (error) {
-        alert('❌ Error deleting agencies: ' + error.message);
-      }
-    }
-
-    function exportAgenciesToCSV() {
-      if (allAgencies.length === 0) {
-        alert('No agencies to export');
-        return;
-      }
-      
-      const headers = ['ID', 'Name', 'Domain', 'Country', 'Plan', 'Clients', 'Scans', 'Status'];
-      const rows = allAgencies.map(a => [
-        a.id,
-        a.name,
-        a.domain,
-        a.country,
-        a.plan,
-        a.client_count || 0,
-        a.total_scans || 0,
-        a.is_active ? 'Active' : 'Inactive'
-      ]);
-      
-      exportToCSV('agencies.csv', headers, rows);
-    }
-
-    function exportAgenciesToJSON() {
-      if (allAgencies.length === 0) {
-        alert('No agencies to export');
-        return;
-      }
-      
-      const data = JSON.stringify(allAgencies, null, 2);
-      downloadFile('agencies.json', data);
-    }
-
-    // ==========================================
-    // CLIENTS MANAGEMENT
-    // ==========================================
-    async function loadClients() {
-      try {
-        const data = await apiCall('/api/admin/clients');
-        allClients = data.clients;
-        
-        const tbody = document.getElementById('clients-tbody');
-        tbody.innerHTML = '';
-        
-        data.clients.forEach(client => {
-          tbody.innerHTML += `
-            <tr>
-              <td class="px-4 py-3"><input type="checkbox" class="client-checkbox" value="${client.id}"></td>
-              <td class="px-4 py-3 text-blue-400">${client.url}</td>
-              <td class="px-4 py-3">${client.agency_name || '-'}</td>
-              <td class="px-4 py-3">${client.scan_count || 0}</td>
-              <td class="px-4 py-3">${new Date(client.created_at).toLocaleDateString()}</td>
-              <td class="px-4 py-3">
-                <button onclick="deleteClient(${client.id})" class="text-red-400 hover:text-red-300">🗑️</button>
-              </td>
-            </tr>
-          `;
-        });
-        
-        document.getElementById('clients-loading').classList.add('hidden');
-        document.getElementById('clients-list').classList.remove('hidden');
-      } catch (error) {
-        console.error('Clients error:', error);
-      }
-    }
-
-    async function deleteClient(id) {
-      if (!confirm('Are you sure you want to delete this client?')) return;
-      
-      try {
-        await apiCall(`/api/admin/clients/${id}`, 'DELETE');
-        alert('✅ Client deleted!');
-        loadClients();
-        loadStats();
-      } catch (error) {
-        alert('❌ Error deleting client: ' + error.message);
-      }
-    }
-
-    function toggleSelectAllClients() {
-      const isChecked = document.getElementById('client-select-all').checked;
-      document.querySelectorAll('.client-checkbox').forEach(cb => cb.checked = isChecked);
-    }
-
-    async function deleteSelectedClients() {
-      const selected = Array.from(document.querySelectorAll('.client-checkbox:checked')).map(cb => parseInt(cb.value));
-      if (selected.length === 0) return alert('Please select clients to delete');
-      
-      if (!confirm(`Delete ${selected.length} clients?`)) return;
-      
-      try {
-        for (const id of selected) {
-          await apiCall(`/api/admin/clients/${id}`, 'DELETE');
-        }
-        alert(`✅ ${selected.length} clients deleted!`);
-        loadClients();
-        loadStats();
-      } catch (error) {
-        alert('❌ Error deleting clients: ' + error.message);
-      }
-    }
-
-    function exportClientsToCSV() {
-      if (allClients.length === 0) {
-        alert('No clients to export');
-        return;
-      }
-      
-      const headers = ['ID', 'URL', 'Agency', 'Scans', 'Created'];
-      const rows = allClients.map(c => [
-        c.id,
-        c.url,
-        c.agency_name || '-',
-        c.scan_count || 0,
-        new Date(c.created_at).toLocaleDateString()
-      ]);
-      
-      exportToCSV('clients.csv', headers, rows);
-    }
-
-    function exportClientsToJSON() {
-      if (allClients.length === 0) {
-        alert('No clients to export');
-        return;
-      }
-      
-      const data = JSON.stringify(allClients, null, 2);
-      downloadFile('clients.json', data);
-    }
-
-    // ==========================================
-    // SCANS MANAGEMENT
-    // ==========================================
-    async function loadScans() {
-      try {
-        const data = await apiCall('/api/admin/scans');
-        allScans = data.scans;
-        
-        const tbody = document.getElementById('scans-tbody');
-        tbody.innerHTML = '';
-        
-        data.scans.forEach(scan => {
-          tbody.innerHTML += `
-            <tr>
-              <td class="px-4 py-3"><input type="checkbox" class="scan-checkbox" value="${scan.id}"></td>
-              <td class="px-4 py-3 text-blue-400 text-sm">${(scan.url || '').substring(0, 40)}...</td>
-              <td class="px-4 py-3 font-bold">${scan.score || 0}/100</td>
-              <td class="px-4 py-3"><span class="px-2 py-1 bg-gray-700 rounded text-xs">${scan.quality || 'unknown'}</span></td>
-              <td class="px-4 py-3 text-sm">${scan.agency_name || '-'}</td>
-              <td class="px-4 py-3"><span class="px-2 py-1 bg-gray-700 rounded text-xs">${scan.scan_type || 'manual'}</span></td>
-              <td class="px-4 py-3 text-sm">${new Date(scan.created_at).toLocaleDateString()}</td>
-              <td class="px-4 py-3">
-                <button onclick="deleteScan(${scan.id})" class="text-red-400 hover:text-red-300">🗑️</button>
-              </td>
-            </tr>
-          `;
-        });
-        
-        document.getElementById('scans-loading').classList.add('hidden');
-        document.getElementById('scans-list').classList.remove('hidden');
-      } catch (error) {
-        console.error('Scans error:', error);
-      }
-    }
-
-    async function deleteScan(id) {
-      if (!confirm('Are you sure you want to delete this scan?')) return;
-      
-      try {
-        await apiCall(`/api/admin/scans/${id}`, 'DELETE');
-        alert('✅ Scan deleted!');
-        loadScans();
-        loadStats();
-      } catch (error) {
-        alert('❌ Error deleting scan: ' + error.message);
-      }
-    }
-
-    function toggleSelectAllScans() {
-      const isChecked = document.getElementById('scan-select-all').checked;
-      document.querySelectorAll('.scan-checkbox').forEach(cb => cb.checked = isChecked);
-    }
-
-    async function deleteSelectedScans() {
-      const selected = Array.from(document.querySelectorAll('.scan-checkbox:checked')).map(cb => parseInt(cb.value));
-      if (selected.length === 0) return alert('Please select scans to delete');
-      
-      if (!confirm(`Delete ${selected.length} scans?`)) return;
-      
-      try {
-        for (const id of selected) {
-          await apiCall(`/api/admin/scans/${id}`, 'DELETE');
-        }
-        alert(`✅ ${selected.length} scans deleted!`);
-        loadScans();
-        loadStats();
-      } catch (error) {
-        alert('❌ Error deleting scans: ' + error.message);
-      }
-    }
-
-    function exportScansToCSV() {
-      if (allScans.length === 0) {
-        alert('No scans to export');
-        return;
-      }
-      
-      const headers = ['ID', 'URL', 'Score', 'Quality', 'Agency', 'Type', 'Date'];
-      const rows = allScans.map(s => [
-        s.id,
-        s.url,
-        s.score || 0,
-        s.quality || 'unknown',
-        s.agency_name || '-',
-        s.scan_type || 'manual',
-        new Date(s.created_at).toLocaleDateString()
-      ]);
-      
-      exportToCSV('scans.csv', headers, rows);
-    }
-
-    function exportScansToJSON() {
-      if (allScans.length === 0) {
-        alert('No scans to export');
-        return;
-      }
-      
-      const data = JSON.stringify(allScans, null, 2);
-      downloadFile('scans.json', data);
-    }
-
-    // ==========================================
-    // SHARE LINKS MANAGEMENT
-    // ==========================================
-    async function loadShareLinks() {
-      try {
-        const data = await apiCall('/api/admin/share-links');
-        allShareLinks = data.share_links;
-        
-        const tbody = document.getElementById('share-links-tbody');
-        tbody.innerHTML = '';
-        
-        data.share_links.forEach(link => {
-          const shareUrl = `https://app.contentscale.site/share/${link.share_code}`;
-          const uniqueId = `share-url-${link.id}`;
-          
-          tbody.innerHTML += `
-            <tr>
-              <td class="px-4 py-3"><input type="checkbox" class="sharelink-checkbox" value="${link.share_code}"></td>
-              <td class="px-4 py-3">${link.client_name || '-'}</td>
-              <td class="px-4 py-3">${link.client_email}</td>
-              <td class="px-4 py-3">
-                <div class="flex items-center gap-2">
-                  <input type="text" value="${shareUrl}" 
-                    readonly class="flex-1 px-2 py-1 bg-gray-700 text-xs rounded text-blue-400"
-                    id="${uniqueId}">
-                  <button onclick="copyToClipboard('${uniqueId}')" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs">📋</button>
-                </div>
-              </td>
-              <td class="px-4 py-3">${link.scans_used || 0}/${link.scans_limit || 5}</td>
-              <td class="px-4 py-3 text-sm">${new Date(link.expires_at).toLocaleDateString()}</td>
-              <td class="px-4 py-3">
-                <span class="px-2 py-1 ${link.status === 'active' ? 'bg-green-900' : 'bg-red-900'} rounded text-xs">
-                  ${link.status || 'inactive'}
-                </span>
-              </td>
-              <td class="px-4 py-3">
-                <button onclick="toggleShareLinkStatus('${link.share_code}', '${link.status === 'active' ? 'inactive' : 'active'}')" 
-                  class="px-3 py-1 ${link.status === 'active' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} rounded text-sm mb-1">
-                  ${link.status === 'active' ? 'Deactivate' : 'Activate'}
-                </button>
-                <button onclick="deleteShareLink('${link.share_code}')" class="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-sm">
-                  🗑️
-                </button>
-              </td>
-            </tr>
-          `;
-        });
-        
-        document.getElementById('share-links-loading').classList.add('hidden');
-        document.getElementById('share-links-list').classList.remove('hidden');
-      } catch (error) {
-        console.error('Share links error:', error);
-      }
-    }
-
-    function showCreateShareLinkModal() {
-      document.getElementById('modal-create-share-link').classList.remove('hidden');
-    }
-
-    async function submitCreateShareLink() {
-      const email = document.getElementById('share-client-email').value;
-      const name = document.getElementById('share-client-name').value;
-      const company = document.getElementById('share-client-company')?.value || '';
-      const scansLimit = parseInt(document.getElementById('share-scans-limit').value) || 5;
-      const validDays = parseInt(document.getElementById('share-valid-days').value) || 30;
-      
-      if (!email || !name) {
-        alert('❌ Email and name are required');
-        return;
-      }
-      
-      if (!email.includes('@')) {
-        alert('❌ Invalid email address');
-        return;
-      }
-      
-      try {
-        const data = await apiCall('/api/admin/share-links/create', 'POST', {
-          client_email: email,
-          client_name: name,
-          client_company: company,
-          scans_limit: scansLimit,
-          valid_days: validDays
-        });
-        
-        alert(`✅ Link created!\n\n${data.share_url}\n\nCopied to clipboard!`);
-        navigator.clipboard.writeText(data.share_url);
-        
-        closeModal('modal-create-share-link');
-        loadShareLinks();
-      } catch (error) {
-        alert('❌ Error creating share link: ' + error.message);
-      }
-    }
-
-    async function toggleShareLinkStatus(code, newStatus) {
-      if (!confirm(`${newStatus === 'active' ? 'Activate' : 'Deactivate'} this share link?`)) return;
-      
-      try {
-        await apiCall(`/api/admin/share-links/${code}/toggle-status`, 'PUT', {
-          status: newStatus
-        });
-        
-        alert(`✅ Share link ${newStatus === 'active' ? 'activated' : 'deactivated'}!`);
-        loadShareLinks();
-      } catch (error) {
-        alert('❌ Error updating share link: ' + error.message);
-      }
-    }
-
-    async function deleteShareLink(code) {
-      if (!confirm('Delete this share link?')) return;
-      
-      try {
-        await apiCall(`/api/admin/share-links/${code}`, 'DELETE');
-        alert('✅ Share link deleted!');
-        loadShareLinks();
-      } catch (error) {
-        alert('❌ Error deleting share link: ' + error.message);
-      }
-    }
-
-    function toggleSelectAllShareLinks() {
-      const isChecked = document.getElementById('sharelink-select-all').checked;
-      document.querySelectorAll('.sharelink-checkbox').forEach(cb => cb.checked = isChecked);
-    }
-
-    async function deleteSelectedShareLinks() {
-      const selected = Array.from(document.querySelectorAll('.sharelink-checkbox:checked')).map(cb => cb.value);
-      if (selected.length === 0) return alert('Please select share links to delete');
-      
-      if (!confirm(`Delete ${selected.length} share links?`)) return;
-      
-      try {
-        for (const code of selected) {
-          await apiCall(`/api/admin/share-links/${code}`, 'DELETE');
-        }
-        alert(`✅ ${selected.length} share links deleted!`);
-        loadShareLinks();
-      } catch (error) {
-        alert('❌ Error deleting share links: ' + error.message);
-      }
+    function loadAllData() {
+      loadStats();
+      loadLeaderboard();
+      loadPendingLeaderboard();
+      loadSEOSpecialists();
     }
 
     // ==========================================
@@ -2764,259 +577,157 @@
     async function loadLeaderboard() {
       try {
         const data = await apiCall('/api/admin/leaderboard');
-        allLeaderboard = data.entries;
-        
-        const tbody = document.getElementById('leaderboard-tbody');
-        tbody.innerHTML = '';
-        
-        data.entries.forEach((entry, index) => {
-          const medals = ['🥇', '🥈', '🥉'];
-          const medal = index < 3 ? medals[index] : '';
-          
-          tbody.innerHTML += `
-            <tr>
-              <td class="px-4 py-3"><input type="checkbox" class="leaderboard-checkbox" value="${entry.id}"></td>
-              <td class="px-4 py-3 font-bold">${medal} #${entry.rank || index + 1}</td>
-              <td class="px-4 py-3">${entry.company_name || 'Unknown'}</td>
-              <td class="px-4 py-3 text-blue-400 text-sm">${entry.url}</td>
-              <td class="px-4 py-3 font-bold">${entry.score || 0}/100</td>
-              <td class="px-4 py-3">${entry.country || 'NL'}</td>
-              <td class="px-4 py-3 text-sm text-gray-400">${new Date(entry.created_at).toLocaleDateString()}</td>
-              <td class="px-4 py-3">
-                <button onclick="deleteLeaderboardEntry(${entry.id})" class="text-red-400 hover:text-red-300">🗑️</button>
-              </td>
-            </tr>
-          `;
-        });
+        allLeaderboard = data.entries || [];
+        renderLeaderboard();
       } catch (error) {
         console.error('Leaderboard error:', error);
       }
     }
 
+    function renderLeaderboard() {
+      const tbody = document.getElementById('leaderboard-tbody');
+      if (allLeaderboard.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="px-4 py-8 text-center text-gray-400">Geen entries gevonden</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = allLeaderboard.map((entry, index) => {
+        const score = entry.score || 0;
+        const scoreClass = score >= 80 ? 'score-high' : score >= 60 ? 'score-medium' : 'score-low';
+        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`;
+        
+        return `
+          <tr>
+            <td class="px-4 py-3 font-bold">${medal}</td>
+            <td class="px-4 py-3">${entry.company_name || 'Unknown'}</td>
+            <td class="px-4 py-3 text-blue-400 text-sm">${entry.url}</td>
+            <td class="px-4 py-3"><span class="score-badge ${scoreClass}">${score}/100</span></td>
+            <td class="px-4 py-3">${entry.country || 'NL'}</td>
+            <td class="px-4 py-3 text-sm">${new Date(entry.created_at).toLocaleDateString('nl-NL')}</td>
+            <td class="px-4 py-3"><span class="px-2 py-1 bg-green-600 rounded text-xs">${entry.is_verified ? '✅ Verified' : '⏳ Pending'}</span></td>
+            <td class="px-4 py-3">
+              <button onclick="deleteLeaderboardEntry(${entry.id})" class="text-red-400 hover:text-red-300">🗑️</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
     async function loadPendingLeaderboard() {
       try {
         const data = await apiCall('/api/admin/leaderboard/pending');
-        
         const container = document.getElementById('pending-leaderboard-container');
         
         if (data.pending.length === 0) {
           container.innerHTML = `
             <div class="text-center py-8 text-gray-400">
               <div class="text-6xl mb-4">✅</div>
-              <p class="text-lg">No pending submissions - all entries approved!</p>
+              <p class="text-lg">Geen pending submissions</p>
             </div>
           `;
           return;
         }
         
         container.innerHTML = data.pending.map(entry => {
-          const mismatch = entry.country !== entry.auto_detected_country && 
-                           entry.auto_detected_country !== 'Unknown';
+          const mismatch = entry.country !== entry.auto_detected_country;
           
           return `
             <div class="bg-gray-800 p-6 rounded-lg border-2 ${mismatch ? 'border-red-500' : 'border-green-600'}">
-              
-              ${mismatch ? `
-                <div class="bg-red-900 border border-red-600 rounded-lg p-3 mb-4 flex items-center gap-3">
-                  <span class="text-3xl">⚠️</span>
-                  <div>
-                    <div class="font-bold text-red-300">COUNTRY MISMATCH DETECTED</div>
-                    <div class="text-sm text-red-400">User claim doesn't match domain analysis</div>
-                  </div>
-                </div>
-              ` : ''}
-              
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
                 <div>
-                  <h3 class="text-2xl font-bold text-white mb-2">${entry.company_name}</h3>
-                  <p class="text-blue-400 mb-3 break-all">${entry.url}</p>
-                  
+                  <h3 class="text-2xl font-bold mb-2">${entry.company_name || 'Unknown'}</h3>
+                  <p class="text-blue-400 mb-3">${entry.url}</p>
                   <div class="flex items-center gap-4 mb-4">
                     <div class="bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 rounded-lg">
                       <div class="text-xs text-purple-200">Score</div>
                       <div class="text-2xl font-bold">${entry.score}/100</div>
                     </div>
-                    <div class="bg-gray-700 px-4 py-2 rounded-lg">
-                      <div class="text-xs text-gray-400">Submitted</div>
-                      <div class="text-sm">${new Date(entry.created_at).toLocaleDateString()}</div>
-                    </div>
-                    <div class="bg-gray-700 px-4 py-2 rounded-lg">
-                      <div class="text-xs text-gray-400">IP</div>
-                      <div class="text-sm">${entry.submission_ip}</div>
-                    </div>
                   </div>
                 </div>
                 
-                <div class="bg-gray-900 rounded-lg p-4 border ${mismatch ? 'border-red-600' : 'border-green-600'}">
-                  <h4 class="text-lg font-bold mb-3 flex items-center gap-2">
-                    🌍 Country Verification
-                  </h4>
-                  
+                <div class="bg-gray-900 rounded-lg p-4">
+                  <h4 class="text-lg font-bold mb-3">🌍 Land verificatie</h4>
                   <div class="space-y-3 mb-4">
-                    <div class="flex items-center justify-between p-2 bg-gray-800 rounded">
-                      <span class="text-gray-400 text-sm">User Claimed:</span>
+                    <div class="flex justify-between p-2 bg-gray-800 rounded">
+                      <span class="text-gray-400">Gekozen land:</span>
                       <span class="font-bold ${mismatch ? 'text-red-400' : 'text-green-400'}">${entry.country}</span>
                     </div>
-                    
-                    <div class="flex items-center justify-between p-2 bg-gray-800 rounded">
-                      <span class="text-gray-400 text-sm">Auto-Detected:</span>
-                      <span class="font-bold text-blue-400">${entry.auto_detected_country} ✅</span>
+                    <div class="flex justify-between p-2 bg-gray-800 rounded">
+                      <span class="text-gray-400">Auto-gedetecteerd:</span>
+                      <span class="font-bold text-blue-400">${entry.auto_detected_country || 'Unknown'}</span>
                     </div>
                   </div>
                   
-                  <div class="mt-4">
-                    <label class="block text-sm font-medium text-gray-300 mb-2">
-                      Final Country (Your Decision):
-                    </label>
-                    <select id="country-${entry.id}" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white font-medium">
-                      <option value="${entry.auto_detected_country}" selected>
-                        ${entry.auto_detected_country} (Auto-detected ✅)
-                      </option>
-                      ${entry.country !== entry.auto_detected_country && entry.country !== 'Unknown' ? `
-                        <option value="${entry.country}">${entry.country} (User claimed)</option>
-                      ` : ''}
-                      <option disabled>──────────</option>
-                      <option value="Netherlands">🇳🇱 Netherlands</option>
-                      <option value="Belgium">🇧🇪 Belgium</option>
-                      <option value="Germany">🇩🇪 Germany</option>
-                      <option value="France">🇫🇷 France</option>
-                      <option value="United Kingdom">🇬🇧 United Kingdom</option>
-                      <option value="United States">🇺🇸 United States</option>
-                      <option value="Canada">🇨🇦 Canada</option>
-                      <option value="Australia">🇦🇺 Australia</option>
-                      <option value="Spain">🇪🇸 Spain</option>
-                      <option value="Italy">🇮🇹 Italy</option>
-                      <option value="Portugal">🇵🇹 Portugal</option>
-                      <option value="Sweden">🇸🇪 Sweden</option>
-                      <option value="Other">🌍 Other</option>
-                    </select>
-                  </div>
+                  <select id="country-${entry.id}" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                    <option value="${entry.auto_detected_country || entry.country}" selected>
+                      ${entry.auto_detected_country || entry.country} (${mismatch ? 'auto' : 'bevestigd'})
+                    </option>
+                    <option value="Netherlands">🇳🇱 Netherlands</option>
+                    <option value="Belgium">🇧🇪 Belgium</option>
+                    <option value="Germany">🇩🇪 Germany</option>
+                    <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                    <option value="United States">🇺🇸 United States</option>
+                  </select>
                 </div>
               </div>
               
               <div class="flex gap-3 mt-6">
                 <button onclick="approveLeaderboardEntry(${entry.id})" 
-                  class="flex-1 bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold text-lg transition-all transform hover:scale-105">
-                  ✅ Approve & Publish
+                  class="flex-1 bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold text-lg">
+                  ✅ Approve
                 </button>
                 <button onclick="rejectLeaderboardEntry(${entry.id})" 
-                  class="flex-1 bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold text-lg transition-all transform hover:scale-105">
+                  class="flex-1 bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold text-lg">
                   ❌ Reject
                 </button>
               </div>
             </div>
           `;
         }).join('');
-        
       } catch (error) {
-        console.error('Load pending error:', error);
-        container.innerHTML = `
-          <div class="text-center py-8 text-red-400">
-            <div class="text-4xl mb-4">❌</div>
-            <p>Error loading pending submissions</p>
-          </div>
-        `;
+        console.error('Pending error:', error);
       }
     }
 
     async function approveLeaderboardEntry(id) {
-      const finalCountry = document.getElementById(`country-${id}`).value;
-      
-      if (!finalCountry || finalCountry === 'Unknown') {
-        if (!confirm('No country selected. Approve anyway?')) return;
-      }
-      
+      const finalCountry = document.getElementById(`country-${id}`)?.value;
       try {
-        await apiCall(`/api/admin/leaderboard/${id}/approve`, 'POST', {
-          final_country: finalCountry
-        });
-        
-        alert(`✅ Approved!\n\nCountry: ${finalCountry}\nEntry is now live on the public leaderboard.`);
+        await apiCall(`/api/admin/leaderboard/${id}/approve`, 'POST', { final_country: finalCountry });
+        alert('✅ Entry goedgekeurd!');
         loadPendingLeaderboard();
         loadLeaderboard();
         loadStats();
       } catch (error) {
-        alert('❌ Error approving entry: ' + error.message);
+        alert('❌ Fout bij goedkeuren: ' + error.message);
       }
     }
 
     async function rejectLeaderboardEntry(id) {
-      if (!confirm('❌ Reject this submission?\n\nThis will permanently delete the entry.')) return;
-      
+      if (!confirm('❌ Weiger deze submission?')) return;
       try {
         await apiCall(`/api/admin/leaderboard/${id}/reject`, 'POST');
-        alert('✅ Entry rejected and removed');
+        alert('✅ Entry verwijderd');
         loadPendingLeaderboard();
-        loadStats();
+        loadLeaderboard();
       } catch (error) {
-        alert('❌ Error rejecting entry: ' + error.message);
+        alert('❌ Fout: ' + error.message);
       }
     }
 
     async function deleteLeaderboardEntry(id) {
-      if (!confirm('Delete this leaderboard entry?')) return;
-      
+      if (!confirm('Verwijder deze entry?')) return;
       try {
         await apiCall(`/api/admin/leaderboard/${id}`, 'DELETE');
-        alert('✅ Leaderboard entry deleted!');
+        alert('✅ Entry verwijderd');
         loadLeaderboard();
         loadStats();
       } catch (error) {
-        alert('❌ Error deleting entry: ' + error.message);
+        alert('❌ Fout: ' + error.message);
       }
     }
 
-    function toggleSelectAllLeaderboard() {
-      const isChecked = document.getElementById('leaderboard-select-all').checked;
-      document.querySelectorAll('.leaderboard-checkbox').forEach(cb => cb.checked = isChecked);
-    }
-
-    async function deleteSelectedLeaderboard() {
-      const selected = Array.from(document.querySelectorAll('.leaderboard-checkbox:checked')).map(cb => parseInt(cb.value));
-      if (selected.length === 0) return alert('Please select leaderboard entries to delete');
-      
-      if (!confirm(`Delete ${selected.length} leaderboard entries?`)) return;
-      
-      try {
-        for (const id of selected) {
-          await apiCall(`/api/admin/leaderboard/${id}`, 'DELETE');
-        }
-        alert(`✅ ${selected.length} leaderboard entries deleted!`);
-        loadLeaderboard();
-        loadStats();
-      } catch (error) {
-        alert('❌ Error deleting entries: ' + error.message);
-      }
-    }
-
-    function exportLeaderboardToCSV() {
-      if (allLeaderboard.length === 0) {
-        alert('No leaderboard entries to export');
-        return;
-      }
-      
-      const headers = ['Rank', 'Company', 'URL', 'Score', 'Country', 'Created'];
-      const rows = allLeaderboard.map((entry, index) => [
-        index + 1,
-        entry.company_name || 'Unknown',
-        entry.url,
-        entry.score || 0,
-        entry.country || 'NL',
-        new Date(entry.created_at).toLocaleDateString()
-      ]);
-      
-      exportToCSV('leaderboard.csv', headers, rows);
-    }
-
-    function exportLeaderboardToJSON() {
-      if (allLeaderboard.length === 0) {
-        alert('No leaderboard entries to export');
-        return;
-      }
-      
-      const data = JSON.stringify(allLeaderboard, null, 2);
-      downloadFile('leaderboard.json', data);
+    function deleteSelectedLeaderboard() {
+      alert('Selecteer entries om te verwijderen (checkbox functionaliteit)');
     }
 
     function searchLeaderboard() {
@@ -3028,651 +739,383 @@
       
       const filtered = allLeaderboard.filter(entry => 
         (entry.company_name || '').toLowerCase().includes(query) ||
-        (entry.url || '').toLowerCase().includes(query) ||
-        (entry.score || '').toString().includes(query)
+        (entry.url || '').toLowerCase().includes(query)
       );
       
       const tbody = document.getElementById('leaderboard-tbody');
-      tbody.innerHTML = '';
-      
-      filtered.forEach((entry, index) => {
-        tbody.innerHTML += `
+      tbody.innerHTML = filtered.map((entry, index) => {
+        const score = entry.score || 0;
+        const scoreClass = score >= 80 ? 'score-high' : score >= 60 ? 'score-medium' : 'score-low';
+        return `
           <tr>
-            <td class="px-4 py-3"><input type="checkbox" class="leaderboard-checkbox" value="${entry.id}"></td>
             <td class="px-4 py-3 font-bold">#${index + 1}</td>
             <td class="px-4 py-3">${entry.company_name || 'Unknown'}</td>
-            <td class="px-4 py-3 text-blue-400 text-sm">${entry.url}</td>
-            <td class="px-4 py-3 font-bold">${entry.score || 0}/100</td>
+            <td class="px-4 py-3 text-blue-400">${entry.url}</td>
+            <td class="px-4 py-3"><span class="score-badge ${scoreClass}">${score}/100</span></td>
             <td class="px-4 py-3">${entry.country || 'NL'}</td>
-            <td class="px-4 py-3 text-sm text-gray-400">${new Date(entry.created_at).toLocaleDateString()}</td>
+            <td class="px-4 py-3">${new Date(entry.created_at).toLocaleDateString('nl-NL')}</td>
+            <td class="px-4 py-3">✅</td>
             <td class="px-4 py-3">
               <button onclick="deleteLeaderboardEntry(${entry.id})" class="text-red-400 hover:text-red-300">🗑️</button>
             </td>
           </tr>
         `;
+      }).join('');
+    }
+
+    function refreshLeaderboard() {
+      loadLeaderboard();
+      loadPendingLeaderboard();
+      loadStats();
+    }
+
+    function exportLeaderboardCSV() {
+      if (allLeaderboard.length === 0) return alert('Geen data om te exporteren');
+      
+      let csv = 'Rank,Bedrijf,URL,Score,Land,Datum\n';
+      allLeaderboard.forEach((entry, i) => {
+        csv += `${i+1},"${entry.company_name || 'Unknown'}","${entry.url}",${entry.score || 0},${entry.country || 'NL'},${new Date(entry.created_at).toLocaleDateString('nl-NL')}\n`;
       });
+      
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `leaderboard-${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
     }
 
-    function scanAllAgencies() {
-      alert('🔍 Scanning all agencies...\n\nThis feature would scan all agencies and update their scores.');
+    function exportLeaderboardJSON() {
+      if (allLeaderboard.length === 0) return alert('Geen data om te exporteren');
+      const data = JSON.stringify(allLeaderboard, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `leaderboard-${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
     }
 
     // ==========================================
-    // FREELANCERS MANAGEMENT
+    // SEO SPECIALISTS MANAGEMENT
     // ==========================================
-    async function loadFreelancers() {
+    async function loadSEOSpecialists() {
       try {
         const data = await apiCall('/api/admin/freelancers');
-        allFreelancers = data.freelancers;
+        allSpecialists = data.freelancers || [];
+        pendingSpecialists = allSpecialists.filter(s => !s.is_approved);
         
-        const pending = data.freelancers.filter(f => !f.is_approved);
-        const active = data.freelancers.filter(f => f.is_approved);
-        
-        renderPendingFreelancers(pending);
-        renderActiveFreelancers(active);
-        
-        loadStats();
+        renderPendingSpecialists();
+        renderActiveSpecialists();
       } catch (error) {
-        console.error('Load freelancers error:', error);
+        console.error('Specialists error:', error);
       }
     }
 
-    function renderPendingFreelancers(freelancers) {
-      const container = document.getElementById('pending-freelancers-container');
+    function renderPendingSpecialists() {
+      const container = document.getElementById('pending-specialists-container');
       
-      if (freelancers.length === 0) {
+      if (pendingSpecialists.length === 0) {
         container.innerHTML = `
           <div class="text-center py-8 text-gray-400">
             <div class="text-6xl mb-4">✅</div>
-            <p class="text-lg">No pending applications</p>
+            <p class="text-lg">Geen openstaande aanmeldingen</p>
           </div>
         `;
         return;
       }
-
-      container.innerHTML = freelancers.map(f => `
+      
+      container.innerHTML = pendingSpecialists.map(s => `
         <div class="bg-gray-800 p-6 rounded-lg border-2 border-purple-600">
           <div class="grid md:grid-cols-2 gap-6">
             <div>
-              <h4 class="text-xl font-bold mb-2">${f.name}</h4>
-              <p class="text-purple-400 mb-2">${f.title || 'No title'}</p>
-              <p class="text-sm text-gray-400 mb-2">📧 ${f.email}</p>
-              <p class="text-sm text-gray-400 mb-2">📍 ${f.location || 'Unknown'}</p>
-              <p class="text-sm text-gray-400">🌍 ${f.country || 'Unknown'}</p>
-              ${f.linkedin_url ? `<p class="text-sm mt-2"><a href="${f.linkedin_url}" target="_blank" class="text-blue-400 hover:underline">🔗 LinkedIn</a></p>` : ''}
+              <h4 class="text-xl font-bold mb-2">${s.name}</h4>
+              <p class="text-purple-400 mb-2">${s.title || 'SEO Specialist'}</p>
+              <p class="text-sm text-gray-400 mb-2">📧 ${s.email}</p>
+              <p class="text-sm text-gray-400">📍 ${s.location || s.country || 'Unknown'}</p>
+              ${s.linkedin_url ? `<p class="text-sm mt-2"><a href="${s.linkedin_url}" target="_blank" class="text-blue-400 hover:underline">🔗 LinkedIn</a></p>` : ''}
             </div>
             <div>
-              <p class="text-sm mb-4">${f.bio || 'No bio provided'}</p>
-              <button onclick="approveFreelancer(${f.id})" class="w-full bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold mb-2">✅ Approve</button>
-              <button onclick="rejectFreelancer(${f.id})" class="w-full bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">❌ Reject Application</button>
+              <p class="text-sm mb-4">${s.bio || 'Geen bio beschikbaar'}</p>
+              <button onclick="approveSpecialist(${s.id})" class="w-full bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold mb-2">
+                ✅ Goedkeuren
+              </button>
+              <button onclick="rejectSpecialist(${s.id})" class="w-full bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">
+                ❌ Weigeren
+              </button>
             </div>
           </div>
         </div>
       `).join('');
     }
 
-    function renderActiveFreelancers(freelancers) {
-      const tbody = document.getElementById('freelancers-tbody');
+    function renderActiveSpecialists() {
+      const tbody = document.getElementById('specialists-tbody');
+      const active = allSpecialists.filter(s => s.is_approved);
       
-      if (freelancers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">No active freelancers</td></tr>';
+      if (active.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">Geen actieve specialisten</td></tr>';
         return;
       }
-
-      tbody.innerHTML = freelancers.map(f => `
+      
+      tbody.innerHTML = active.map(s => `
         <tr>
-          <td class="px-4 py-3">${f.name}</td>
-          <td class="px-4 py-3">${f.email}</td>
-          <td class="px-4 py-3">${f.title || '-'}</td>
-          <td class="px-4 py-3">${f.score ? `<span class="px-3 py-1 rounded-full ${f.score >= 80 ? 'bg-green-600' : 'bg-yellow-600'}">${f.score}/100</span>` : 'No score'}</td>
-          <td class="px-4 py-3"><span class="px-3 py-1 rounded-full bg-green-600">Active</span></td>
-          <td class="px-4 py-3"><span class="px-3 py-1 rounded-full ${f.is_featured ? 'bg-yellow-600' : 'bg-gray-600'}">${f.is_featured ? '⭐ Yes' : 'No'}</span></td>
+          <td class="px-4 py-3 font-medium">${s.name}</td>
+          <td class="px-4 py-3">${s.email}</td>
+          <td class="px-4 py-3">${s.title || 'SEO Specialist'}</td>
+          <td class="px-4 py-3">${s.score ? `<span class="px-3 py-1 rounded-full bg-green-600">${s.score}/100</span>` : '-'}</td>
+          <td class="px-4 py-3">${s.country || 'NL'}</td>
+          <td class="px-4 py-3"><span class="px-3 py-1 rounded-full bg-green-600">✅ Actief</span></td>
           <td class="px-4 py-3">
-            <button onclick="toggleFreelancerFeatured(${f.id}, ${!f.is_featured})" class="px-3 py-1 bg-purple-600 hover:bg-purple-700 rounded text-sm mb-1">⭐ ${f.is_featured ? 'Unfeature' : 'Feature'}</button>
-            <button onclick="deactivateFreelancer(${f.id})" class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm">🚫 Deactivate</button>
+            <button onclick="deactivateSpecialist(${s.id})" class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm">
+              🚫 Deactivate
+            </button>
           </td>
         </tr>
       `).join('');
     }
 
-    async function approveFreelancer(id) {
+    async function approveSpecialist(id) {
       try {
         await apiCall(`/api/admin/freelancers/${id}/approve`, 'POST');
-        alert('✅ Freelancer approved! They are now live on the site.');
-        loadFreelancers();
+        alert('✅ SEO Specialist goedgekeurd!');
+        loadSEOSpecialists();
+        loadStats();
       } catch (error) {
-        alert('❌ Approval failed: ' + error.message);
+        alert('❌ Fout: ' + error.message);
       }
     }
 
-    async function rejectFreelancer(id) {
-      if (!confirm('Reject this freelancer application?')) return;
-      
+    async function rejectSpecialist(id) {
+      if (!confirm('Weiger deze aanmelding?')) return;
       try {
         await apiCall(`/api/admin/freelancers/${id}`, 'DELETE');
-        alert('✅ Application rejected');
-        loadFreelancers();
+        alert('✅ Aanmelding geweigerd');
+        loadSEOSpecialists();
       } catch (error) {
-        alert('❌ Rejection failed: ' + error.message);
+        alert('❌ Fout: ' + error.message);
       }
     }
 
-    async function toggleFreelancerFeatured(id, featured) {
-      try {
-        await apiCall(`/api/admin/freelancers/${id}/feature`, 'POST', {
-          is_featured: featured
-        });
-        alert(featured ? '⭐ Freelancer featured!' : 'Freelancer unfeatured');
-        loadFreelancers();
-      } catch (error) {
-        alert('❌ Error: ' + error.message);
-      }
-    }
-
-    async function deactivateFreelancer(id) {
-      if (!confirm('Deactivate this freelancer? They will be hidden from the public site.')) return;
-      
+    async function deactivateSpecialist(id) {
+      if (!confirm('Deactiveer deze specialist?')) return;
       try {
         await apiCall(`/api/admin/freelancers/${id}/deactivate`, 'POST');
-        alert('✅ Freelancer deactivated');
-        loadFreelancers();
+        alert('✅ Specialist gedeactiveerd');
+        loadSEOSpecialists();
+        loadStats();
       } catch (error) {
-        alert('❌ Error: ' + error.message);
+        alert('❌ Fout: ' + error.message);
       }
     }
 
     // ==========================================
-    // CLAIMS MANAGEMENT
+    // LEAD SCANNER FUNCTIES
     // ==========================================
-    async function loadClaims() {
+    function switchScannerMode(mode) {
+      if (mode === 'single') {
+        document.getElementById('single-url-mode').style.display = 'block';
+        document.getElementById('google-maps-mode').classList.add('hidden');
+        document.getElementById('mode-single-btn').className = 'flex-1 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-lg font-bold text-lg';
+        document.getElementById('mode-maps-btn').className = 'flex-1 py-4 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold text-lg';
+      } else {
+        document.getElementById('single-url-mode').style.display = 'none';
+        document.getElementById('google-maps-mode').classList.remove('hidden');
+        document.getElementById('mode-single-btn').className = 'flex-1 py-4 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold text-lg';
+        document.getElementById('mode-maps-btn').className = 'flex-1 py-4 bg-gradient-to-r from-orange-600 to-red-600 rounded-lg font-bold text-lg';
+      }
+    }
+
+    async function scanSingleURL() {
+      const url = document.getElementById('single-url-input').value;
+      if (!url) return alert('❌ Voer een URL in');
+      
+      const scanBtn = document.getElementById('scan-single-btn');
+      scanBtn.disabled = true;
+      scanBtn.textContent = '🔍 Scannen...';
+      
       try {
-        const data = await apiCall('/api/admin/claims/pending');
-        
-        document.getElementById('pending-claims-count').textContent = data.pending_count;
-        
-        const tbody = document.getElementById('pending-claims-tbody');
-        tbody.innerHTML = '';
-        
-        data.claims.forEach(claim => {
-          tbody.innerHTML += `
-            <tr>
-              <td class="px-4 py-3">${claim.agency_name}</td>
-              <td class="px-4 py-3 text-blue-400">${claim.url}</td>
-              <td class="px-4 py-3">${claim.email}</td>
-              <td class="px-4 py-3">
-                <button onclick="approveClaim(${claim.id})" class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm mr-2">✅ Approve</button>
-                <button onclick="rejectClaim(${claim.id})" class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm">❌ Reject</button>
-              </td>
-            </tr>
-          `;
+        const response = await fetch('/api/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
         });
         
-        if (data.claims.length === 0) {
-          tbody.innerHTML = `
-            <tr>
-              <td colspan="4" class="px-4 py-8 text-center text-gray-400">
-                No pending claims
-              </td>
-            </tr>
-          `;
+        const data = await response.json();
+        
+        if (data.success) {
+          currentScanResult = {
+            url: data.url,
+            score: data.score,
+            quality: data.quality
+          };
+          
+          document.getElementById('single-score-display').textContent = data.score;
+          document.getElementById('single-scanned-url').textContent = data.url;
+          document.getElementById('single-company-name').value = extractDomain(data.url);
+          document.getElementById('single-score-input').value = data.score;
+          document.getElementById('single-scan-result').classList.remove('hidden');
+        } else {
+          alert('❌ Scan mislukt: ' + data.error);
         }
       } catch (error) {
-        console.error('Claims error:', error);
+        alert('❌ Scan fout: ' + error.message);
+      } finally {
+        scanBtn.disabled = false;
+        scanBtn.textContent = '🔍 Start Scan';
       }
     }
 
-    // ==========================================
-    // BLOG MANAGEMENT
-    // ==========================================
-    async function loadBlogPosts() {
-      // Note: You'll need to implement blog API endpoints first
-      // This is a placeholder implementation
-      allBlogPosts = getSampleBlogPosts();
-      updateBlogStats();
-      renderBlogPosts();
-      document.getElementById('blog-loading').classList.add('hidden');
-    }
-
-    function getSampleBlogPosts() {
-      return [
-        {
-          id: 1,
-          title: "How SEO Agencies Can Scale Using ContentScore",
-          excerpt: "Learn how agencies use ContentScore to automate client reporting and scale their services.",
-          content: "<h2>Introduction</h2><p>ContentScore helps agencies automate SEO reporting...</p>",
-          slug: "seo-agencies-scale-contentscore",
-          category: "agency",
-          tags: ["seo", "agency", "automation"],
-          status: "published",
-          author: "ContentScale Team",
-          featured_image: "",
-          views: 1250,
-          created_at: "2024-01-15T10:30:00Z",
-          published_at: "2024-01-16T09:00:00Z",
-          meta_description: "Scale your SEO agency with automated reporting"
-        }
-      ];
-    }
-
-    function updateBlogStats() {
-      const total = allBlogPosts.length;
-      const published = allBlogPosts.filter(p => p.status === 'published').length;
-      const drafts = allBlogPosts.filter(p => p.status === 'draft').length;
-      const scheduled = allBlogPosts.filter(p => p.status === 'scheduled').length;
-      
-      document.getElementById('blog-total-count').textContent = total;
-      document.getElementById('blog-published-count').textContent = published;
-      document.getElementById('blog-drafts-count').textContent = drafts;
-      document.getElementById('blog-scheduled-count').textContent = scheduled;
-    }
-
-    function renderBlogPosts() {
-      renderBlogGridView();
-      renderBlogListView();
-    }
-
-    function renderBlogGridView() {
-      const container = document.getElementById('blog-grid-view');
-      const filteredPosts = getFilteredBlogPosts();
-      
-      if (filteredPosts.length === 0) {
-        container.innerHTML = `
-          <div class="col-span-3 text-center py-12">
-            <div class="text-6xl mb-4">📝</div>
-            <p class="text-gray-400 text-lg">No blog posts found</p>
-          </div>
-        `;
-        return;
-      }
-      
-      container.innerHTML = filteredPosts.map(post => {
-        const categoryClass = `category-${post.category.replace('-', ' ').split(' ')[0]}`;
-        const statusClass = `blog-status-${post.status}`;
-        const categoryLabel = post.category.split('-').map(word => 
-          word.charAt(0).toUpperCase() + word.slice(1)
-        ).join(' ');
-        
-        return `
-          <div class="blog-card bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
-            ${post.featured_image ? `
-              <div class="h-48 overflow-hidden">
-                <img src="${post.featured_image}" alt="${post.title}" class="w-full h-full object-cover">
-              </div>
-            ` : `
-              <div class="h-48 bg-gradient-to-br from-purple-900 to-blue-900 flex items-center justify-center">
-                <span class="text-6xl">📝</span>
-              </div>
-            `}
-            
-            <div class="p-6">
-              <div class="flex justify-between items-start mb-3">
-                <span class="category-tag ${categoryClass}">${categoryLabel}</span>
-                <span class="blog-status-badge ${statusClass}">${post.status}</span>
-              </div>
-              
-              <h3 class="text-xl font-bold mb-2 line-clamp-2">${post.title}</h3>
-              <p class="text-gray-400 text-sm mb-4 line-clamp-3">${post.excerpt || 'No excerpt'}</p>
-              
-              <div class="flex justify-between items-center text-sm text-gray-500">
-                <div>
-                  <span>👁️ ${post.views || 0}</span>
-                  <span class="mx-2">•</span>
-                  <span>📅 ${post.published_at ? new Date(post.published_at).toLocaleDateString() : 'Not published'}</span>
-                </div>
-                <div class="flex gap-2">
-                  <button onclick="editBlogPost(${post.id})" class="text-blue-400 hover:text-blue-300">✏️</button>
-                  <button onclick="deleteBlogPost(${post.id})" class="text-red-400 hover:text-red-300">🗑️</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
-      
-      if (currentBlogView === 'grid') {
-        container.classList.remove('hidden');
-      }
-    }
-
-    function renderBlogListView() {
-      const tbody = document.getElementById('blog-list-tbody');
-      const filteredPosts = getFilteredBlogPosts();
-      
-      if (filteredPosts.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="8" class="px-4 py-8 text-center text-gray-400">
-              <div class="text-4xl mb-2">📝</div>
-              <p>No blog posts found</p>
-            </td>
-          </tr>
-        `;
-        return;
-      }
-      
-      tbody.innerHTML = filteredPosts.map(post => {
-        const categoryLabel = post.category.split('-').map(word => 
-          word.charAt(0).toUpperCase() + word.slice(1)
-        ).join(' ');
-        const statusClass = `blog-status-${post.status}`;
-        
-        return `
-          <tr>
-            <td class="px-4 py-3"><input type="checkbox" class="blog-checkbox" value="${post.id}"></td>
-            <td class="px-4 py-3">
-              <div class="font-medium">${post.title}</div>
-              <div class="text-xs text-gray-500">/${post.slug}</div>
-            </td>
-            <td class="px-4 py-3">
-              <span class="category-tag category-${post.category.replace('-', ' ').split(' ')[0]}">${categoryLabel}</span>
-            </td>
-            <td class="px-4 py-3">${post.author}</td>
-            <td class="px-4 py-3"><span class="blog-status-badge ${statusClass}">${post.status}</span></td>
-            <td class="px-4 py-3">${post.views || 0}</td>
-            <td class="px-4 py-3 text-sm">${post.published_at ? new Date(post.published_at).toLocaleDateString() : '-'}</td>
-            <td class="px-4 py-3">
-              <div class="flex gap-2">
-                <button onclick="editBlogPost(${post.id})" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm">Edit</button>
-                <button onclick="deleteBlogPost(${post.id})" class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm">Delete</button>
-              </div>
-            </td>
-          </tr>
-        `;
-      }).join('');
-      
-      if (currentBlogView === 'list') {
-        document.getElementById('blog-list-view').classList.remove('hidden');
-      }
-    }
-
-    function getFilteredBlogPosts() {
-      const searchTerm = document.getElementById('blog-search').value.toLowerCase();
-      const categoryFilter = document.getElementById('blog-category-filter').value;
-      const statusFilter = document.getElementById('blog-status-filter').value;
-      
-      return allBlogPosts.filter(post => {
-        if (searchTerm && !post.title.toLowerCase().includes(searchTerm) && 
-            !post.excerpt.toLowerCase().includes(searchTerm)) {
-          return false;
-        }
-        
-        if (categoryFilter && post.category !== categoryFilter) {
-          return false;
-        }
-        
-        if (statusFilter && post.status !== statusFilter) {
-          return false;
-        }
-        
-        return true;
-      });
-    }
-
-    function searchBlogPosts() {
-      if (currentBlogView === 'grid') {
-        renderBlogGridView();
-      } else {
-        renderBlogListView();
-      }
-    }
-
-    function filterBlogPosts() {
-      searchBlogPosts();
-    }
-
-    function setBlogView(view) {
-      currentBlogView = view;
-      
-      if (view === 'grid') {
-        document.getElementById('blog-grid-view').classList.remove('hidden');
-        document.getElementById('blog-list-view').classList.add('hidden');
-        document.getElementById('blog-view-grid').className = 'px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-lg font-semibold';
-        document.getElementById('blog-view-list').className = 'px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold';
-      } else {
-        document.getElementById('blog-grid-view').classList.add('hidden');
-        document.getElementById('blog-list-view').classList.remove('hidden');
-        document.getElementById('blog-view-grid').className = 'px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold';
-        document.getElementById('blog-view-list').className = 'px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-lg font-semibold';
-      }
-      
-      renderBlogPosts();
-    }
-
-    function showAddBlogPostModal() {
-      editingBlogPostId = null;
-      document.getElementById('blog-modal-title').textContent = 'Add New Blog Post';
-      document.getElementById('blog-post-title').value = '';
-      document.getElementById('blog-post-slug').value = '';
-      document.getElementById('blog-post-excerpt').value = '';
-      document.getElementById('blog-post-content').innerHTML = '<p>Start writing your blog post here...</p>';
-      document.getElementById('blog-post-category').value = '';
-      document.getElementById('blog-post-status').value = 'draft';
-      document.getElementById('blog-post-tags').value = '';
-      document.getElementById('blog-post-featured-image').value = '';
-      document.getElementById('blog-post-author').value = 'ContentScale Team';
-      document.getElementById('blog-post-meta-description').value = '';
-      document.getElementById('modal-add-blog-post').classList.remove('hidden');
-    }
-
-    function toggleScheduleDate() {
-      const status = document.getElementById('blog-post-status').value;
-      const container = document.getElementById('schedule-date-container');
-      
-      if (status === 'scheduled') {
-        container.classList.remove('hidden');
-      } else {
-        container.classList.add('hidden');
-      }
-    }
-
-    function formatText(command) {
-      const editor = document.getElementById('blog-post-content');
-      document.execCommand(command, false, null);
-      editor.focus();
-    }
-
-    function saveBlogPost() {
-      alert('Blog post saved (placeholder)');
-      closeModal('modal-add-blog-post');
-    }
-
-    function editBlogPost(id) {
-      const post = allBlogPosts.find(p => p.id === id);
-      if (!post) return;
-      
-      editingBlogPostId = id;
-      document.getElementById('blog-modal-title').textContent = 'Edit Blog Post';
-      document.getElementById('blog-post-title').value = post.title || '';
-      document.getElementById('blog-post-slug').value = post.slug || '';
-      document.getElementById('blog-post-excerpt').value = post.excerpt || '';
-      document.getElementById('blog-post-content').innerHTML = post.content || '';
-      document.getElementById('blog-post-category').value = post.category || '';
-      document.getElementById('blog-post-status').value = post.status || 'draft';
-      document.getElementById('blog-post-tags').value = post.tags ? post.tags.join(', ') : '';
-      document.getElementById('blog-post-featured-image').value = post.featured_image || '';
-      document.getElementById('blog-post-author').value = post.author || '';
-      document.getElementById('blog-post-meta-description').value = post.meta_description || '';
-      document.getElementById('modal-add-blog-post').classList.remove('hidden');
-    }
-
-    function deleteBlogPost(id) {
-      if (!confirm('Delete this blog post?')) return;
-      
-      allBlogPosts = allBlogPosts.filter(p => p.id !== id);
-      updateBlogStats();
-      renderBlogPosts();
-      alert('✅ Blog post deleted!');
-    }
-
-    function toggleSelectAllBlogPosts() {
-      const isChecked = document.getElementById('blog-select-all').checked;
-      document.querySelectorAll('.blog-checkbox').forEach(cb => cb.checked = isChecked);
-    }
-
-    function deleteSelectedBlogPosts() {
-      const selected = Array.from(document.querySelectorAll('.blog-checkbox:checked')).map(cb => parseInt(cb.value));
-      if (selected.length === 0) return alert('Select blog posts to delete');
-      
-      if (!confirm(`Delete ${selected.length} blog posts?`)) return;
-      
-      allBlogPosts = allBlogPosts.filter(p => !selected.includes(p.id));
-      updateBlogStats();
-      renderBlogPosts();
-      alert(`✅ ${selected.length} blog posts deleted!`);
-    }
-
-    function exportBlogToCSV() {
-      if (allBlogPosts.length === 0) {
-        alert('No blog posts to export');
-        return;
-      }
-      
-      const headers = ['Title', 'Category', 'Author', 'Status', 'Views', 'Published'];
-      const rows = allBlogPosts.map(p => [
-        p.title,
-        p.category,
-        p.author,
-        p.status,
-        p.views || 0,
-        p.published_at ? new Date(p.published_at).toLocaleDateString() : ''
-      ]);
-      
-      exportToCSV('blog.csv', headers, rows);
-    }
-
-    function exportBlogToJSON() {
-      if (allBlogPosts.length === 0) {
-        alert('No blog posts to export');
-        return;
-      }
-      
-      const data = JSON.stringify(allBlogPosts, null, 2);
-      downloadFile('blog.json', data);
-    }
-
-    // ==========================================
-    // UTILITY FUNCTIONS
-    // ==========================================
-    function closeModal(id) {
-      document.getElementById(id).classList.add('hidden');
-    }
-
-    function copyToClipboard(elementId) {
-      const input = document.getElementById(elementId);
-      if (input) {
-        input.select();
-        document.execCommand('copy');
-        alert('✅ Copied to clipboard!');
-      }
-    }
-
-    function exportToCSV(filename, headers, rows) {
-      const csvContent = [
-        headers.join(','),
-        ...rows.map(row => row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(','))
-      ].join('\n');
-      
-      downloadFile(filename, csvContent, 'text/csv');
-    }
-
-    function downloadFile(filename, content, type = 'application/json') {
-      const blob = new Blob([content], { type });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    }
-
-    // ==========================================
-    // PLACEHOLDER FUNCTIONS FOR OTHER TABS
-    // ==========================================
-    function sendBulkEmail() {
-      alert('📧 Bulk email feature coming soon!');
-    }
-
-    function manualOptOut() {
-      const url = document.getElementById('manual-optout-url').value;
-      if (!url) {
-        alert('Please enter a URL');
-        return;
-      }
-      
-      alert(`🚫 ${url} removed from leaderboard!`);
-      document.getElementById('manual-optout-url').value = '';
-    }
-
-    function switchLeadMode(mode) {
-      alert(`Lead scanner mode: ${mode}`);
-    }
-
-    function scanSingleURL() {
-      alert('🔍 Scanning URL...');
-    }
-
-    function scrapeGoogleMaps() {
-      alert('🗺️ Scraping Google Maps...');
-    }
-
-    function refreshContentScore() {
-      alert('🔄 Refreshing ContentScore...');
-    }
-
-    async function loadLTDCodes() {
+    function extractDomain(url) {
       try {
-        const data = await apiCall('/api/admin/ltd-codes');
-        
-        const container = document.getElementById('ltd-codes-list');
-        if (data.codes && data.codes.length > 0) {
-          container.innerHTML = data.codes.map(code => `
-            <div class="bg-gray-700 p-4 rounded-lg mb-3">
-              <div class="flex justify-between items-center">
-                <div>
-                  <div class="font-bold">${code.code}</div>
-                  <div class="text-sm text-gray-400">${code.tier} - ${code.email}</div>
-                </div>
-                <div class="text-right">
-                  <div class="font-bold">€${code.amount}</div>
-                  <div class="text-sm ${code.status === 'active' ? 'text-green-400' : 'text-red-400'}">${code.status}</div>
-                </div>
-              </div>
-            </div>
-          `).join('');
-        }
-      } catch (error) {
-        console.error('LTD codes error:', error);
+        const hostname = new URL(url).hostname;
+        return hostname.replace('www.', '').split('.')[0];
+      } catch {
+        return url.split('/')[0] || 'Bedrijf';
       }
     }
 
-    async function generateLTDCode() {
-      const tier = document.getElementById('ltd-tier').value;
-      const email = document.getElementById('ltd-buyer-email').value;
+    async function addToLeaderboard() {
+      if (!currentScanResult) return;
       
-      if (!email) {
-        alert('Please enter buyer email');
-        return;
-      }
+      const company = document.getElementById('single-company-name').value;
+      const country = document.getElementById('single-country').value;
       
       try {
-        const data = await apiCall('/api/admin/ltd-codes/generate', 'POST', {
-          tier,
-          email
+        const data = await apiCall('/api/admin/leaderboard/manual-add', 'POST', {
+          url: currentScanResult.url,
+          company_name: company || extractDomain(currentScanResult.url),
+          score: currentScanResult.score,
+          country: country
         });
         
-        alert(`✅ LTD Code generated: ${data.code}\n\nTier: ${tier}\nEmail: ${email}`);
-        document.getElementById('ltd-buyer-email').value = '';
-        loadLTDCodes();
+        alert(`✅ ${data.action === 'added' ? 'Toegevoegd aan' : 'Bijgewerkt in'} leaderboard!`);
+        document.getElementById('single-scan-result').classList.add('hidden');
+        document.getElementById('single-url-input').value = '';
+        loadLeaderboard();
+        loadStats();
+        loadRecentLeads();
       } catch (error) {
-        alert('❌ Error generating code: ' + error.message);
+        alert('❌ Fout bij toevoegen: ' + error.message);
       }
     }
 
-    // ==========================================
-    // INITIALIZATION
-    // ==========================================
-    // Set default blog view
-    setBlogView('grid');
+    function cancelScan() {
+      document.getElementById('single-scan-result').classList.add('hidden');
+      currentScanResult = null;
+    }
+
+    async function scrapeGoogleMaps() {
+      const url = document.getElementById('gmaps-url-input').value;
+      if (!url || !url.includes('google.com/maps')) {
+        return alert('❌ Voer een geldige Google Maps URL in');
+      }
+      
+      const scrapeBtn = document.getElementById('scrape-gmaps-btn');
+      scrapeBtn.disabled = true;
+      scrapeBtn.textContent = '🗺️ Scrapen... (30-60 sec)';
+      
+      try {
+        const data = await apiCall('/api/google-maps/scrape', 'POST', { url, maxResults: 30 });
+        
+        currentGmapsLeads = data.leads || [];
+        document.getElementById('gmaps-leads-count').textContent = currentGmapsLeads.length;
+        
+        const listContainer = document.getElementById('gmaps-leads-list');
+        listContainer.innerHTML = currentGmapsLeads.map((lead, index) => `
+          <div class="lead-card p-4 rounded-lg flex items-start gap-4">
+            <input type="checkbox" class="lead-checkbox mt-1" data-index="${index}" checked>
+            <div class="flex-1">
+              <div class="flex justify-between">
+                <h4 class="font-bold">${lead.name}</h4>
+                <span class="text-sm ${lead.score >= 70 ? 'text-green-400' : lead.score >= 40 ? 'text-yellow-400' : 'text-gray-400'}">
+                  ${lead.score}/100
+                </span>
+              </div>
+              <p class="text-sm text-gray-400">${lead.category || 'SEO Agency'}</p>
+              ${lead.website ? `<p class="text-xs text-blue-400 mt-1">${lead.website}</p>` : ''}
+              ${lead.phone ? `<p class="text-xs text-gray-400">📞 ${lead.phone}</p>` : ''}
+            </div>
+          </div>
+        `).join('');
+        
+        document.getElementById('gmaps-leads-container').classList.remove('hidden');
+        updateSelectedCount();
+      } catch (error) {
+        alert('❌ Scrape fout: ' + error.message);
+      } finally {
+        scrapeBtn.disabled = false;
+        scrapeBtn.textContent = '🗺️ Start Google Maps Scan';
+      }
+    }
+
+    function selectAllLeads() {
+      const checkboxes = document.querySelectorAll('.lead-checkbox');
+      const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+      checkboxes.forEach(cb => cb.checked = !allChecked);
+      updateSelectedCount();
+    }
+
+    function updateSelectedCount() {
+      const count = document.querySelectorAll('.lead-checkbox:checked').length;
+      document.getElementById('selected-leads-count').textContent = count;
+    }
+
+    async function addSelectedToLeaderboard() {
+      const selected = Array.from(document.querySelectorAll('.lead-checkbox:checked'))
+        .map(cb => currentGmapsLeads[parseInt(cb.dataset.index)])
+        .filter(lead => lead.website);
+      
+      if (selected.length === 0) {
+        return alert('❌ Selecteer bedrijven met een website');
+      }
+      
+      let added = 0;
+      let errors = 0;
+      
+      for (const lead of selected) {
+        try {
+          await apiCall('/api/admin/leaderboard/manual-add', 'POST', {
+            url: lead.website,
+            company_name: lead.name,
+            score: lead.score || 75,
+            country: 'NL'
+          });
+          added++;
+        } catch (e) {
+          errors++;
+        }
+      }
+      
+      alert(`✅ ${added} toegevoegd aan leaderboard${errors > 0 ? `, ${errors} fouten` : ''}`);
+      loadLeaderboard();
+      loadRecentLeads();
+    }
+
+    function loadRecentLeads() {
+      const recent = allLeaderboard.slice(0, 5);
+      const container = document.getElementById('recent-leads-list');
+      
+      if (recent.length === 0) {
+        container.innerHTML = '<div class="text-center py-8 text-gray-400">Geen recente toevoegingen</div>';
+        return;
+      }
+      
+      container.innerHTML = recent.map(entry => `
+        <div class="flex justify-between items-center p-3 bg-gray-700 rounded">
+          <div>
+            <span class="font-medium">${entry.company_name || 'Unknown'}</span>
+            <span class="text-sm text-gray-400 ml-2">${entry.score}/100</span>
+          </div>
+          <span class="text-sm text-gray-400">${new Date(entry.created_at).toLocaleDateString('nl-NL')}</span>
+        </div>
+      `).join('');
+    }
+
+    function refreshScannerStats() {
+      loadLeaderboard();
+      loadRecentLeads();
+    }
   </script>
 </body>
 </html>
