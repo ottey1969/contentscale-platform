@@ -35,10 +35,6 @@
       color: #6b21a8 !important;
     }
     
-    .btn-white-black i {
-      color: #581c87 !important;
-    }
-    
     .bg-gray-900 { background-color: #030712; }
     .bg-gray-800 { background-color: #111827; }
     .bg-gray-700 { background-color: #1f2937; }
@@ -76,29 +72,6 @@
     .btn-success {
       background: #0f7b3a !important;
       color: white !important;
-    }
-    
-    .btn-success:hover {
-      background: #0e6a32 !important;
-    }
-    
-    input, textarea, select {
-      background-color: #1f2937 !important;
-      color: white !important;
-      border: 1px solid #4b5563 !important;
-      border-radius: 0.5rem;
-      padding: 0.75rem 1rem;
-      width: 100%;
-      outline: none;
-    }
-    
-    input:focus, textarea:focus, select:focus {
-      border-color: #a855f7 !important;
-      box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.3);
-    }
-    
-    input::placeholder, textarea::placeholder {
-      color: #9ca3af !important;
     }
     
     .mode-toggle {
@@ -260,22 +233,16 @@
       gap: 1.5rem;
     }
     
-    .grid-5 {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 1.5rem;
-    }
-    
     @media (max-width: 1024px) {
-      .grid-4, .grid-5 { grid-template-columns: repeat(3, 1fr); }
+      .grid-4 { grid-template-columns: repeat(3, 1fr); }
     }
     
     @media (max-width: 768px) {
-      .grid-3, .grid-4, .grid-5 { grid-template-columns: repeat(2, 1fr); }
+      .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
     }
     
     @media (max-width: 640px) {
-      .grid-3, .grid-4, .grid-5 { grid-template-columns: 1fr; }
+      .grid-3, .grid-4 { grid-template-columns: 1fr; }
     }
     
     .rankings-4-15-grid {
@@ -390,14 +357,30 @@
       padding: 1.5rem;
     }
     
+    .company-name-input {
+      background: #1f2937;
+      border: 2px solid #a855f7;
+      color: white;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      width: 100%;
+      font-size: 1.125rem;
+      font-weight: 600;
+    }
+    
+    .company-name-input:focus {
+      outline: none;
+      border-color: #c084fc;
+      box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.3);
+    }
+    
     .checkbox-custom {
       width: 1.25rem;
       height: 1.25rem;
-      border: 2px solid #6b7280;
       border-radius: 0.25rem;
+      border: 2px solid #4b5563;
       background: #1f2937;
       cursor: pointer;
-      transition: all 0.2s;
     }
     
     .checkbox-custom:checked {
@@ -423,11 +406,6 @@
       color: white;
     }
     
-    .badge-purple {
-      background: #6d28d9;
-      color: white;
-    }
-    
     .lead-card {
       background: #1f2937;
       border: 1px solid #374151;
@@ -439,19 +417,13 @@
     .lead-card:hover {
       border-color: #a855f7;
     }
-    
-    .reverse-email {
-      unicode-bidi: bidi-override;
-      direction: rtl;
-    }
   </style>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-gray-900">
-  <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-purple-600 text-white px-4 py-2 rounded z-50">
-    Skip to main content
-  </a>
 
-  <!-- LOGIN SCREEN - ZELFDE STIJL ALS INDEX -->
+  <!-- LOGIN SCREEN -->
   <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
     <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border-2 border-purple-500">
       <div class="flex items-center justify-center mb-6">
@@ -483,9 +455,9 @@
     </div>
   </div>
 
-  <!-- MAIN DASHBOARD - ZELFDE STIJL ALS INDEX -->
+  <!-- MAIN DASHBOARD -->
   <div id="main-dashboard" class="hidden">
-    <!-- NAVIGATIE - ZELFDE STIJL ALS INDEX -->
+    <!-- NAVIGATION -->
     <nav class="sticky top-0 z-50 bg-gray-900/95 border-b-2 border-purple-600 backdrop-blur-sm">
       <div class="max-w-7xl mx-auto px-6 py-4">
         <div class="flex items-center justify-between">
@@ -506,9 +478,9 @@
       </div>
     </nav>
 
-    <!-- TABS - ZELFDE STIJL ALS INDEX -->
+    <!-- TABS -->
     <div class="max-w-7xl mx-auto px-6 py-8">
-      <div class="flex justify-center gap-4 mb-8">
+      <div class="flex justify-center gap-4 mb-8 flex-wrap">
         <button onclick="switchTab('leaderboard')" id="tabLeaderboardBtn" class="mode-toggle active">
           <i class="fas fa-trophy mr-2"></i> Leaderboard
         </button>
@@ -524,12 +496,12 @@
       </div>
 
       <!-- ============================================
-           TAB 1: LEADERBOARD - ZELFDE UI ALS INDEX
+           TAB 1: LEADERBOARD - ECHTE DATA VAN API
            ============================================ -->
       <div id="tab-leaderboard" class="tab-content">
         <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
           <div class="flex justify-between items-center mb-6">
-            <h2 class="text-3xl font-bold text-white">🏆 Leaderboard Management</h2>
+            <h2 class="text-3xl font-bold text-white">🏆 Leaderboard</h2>
             <div class="flex gap-3">
               <button onclick="loadLeaderboard()" class="btn bg-blue-600 hover:bg-blue-700">
                 <i class="fas fa-sync-alt mr-2"></i> Refresh
@@ -540,7 +512,7 @@
             </div>
           </div>
 
-          <!-- STATS CARDS - IDENTIEK AAN INDEX -->
+          <!-- STATS CARDS -->
           <div class="grid-4 mb-8">
             <div class="stat-card">
               <div>
@@ -572,8 +544,8 @@
             </div>
           </div>
 
-          <!-- BULK ACTIONS - ADMIN ONLY -->
-          <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700">
+          <!-- BULK ACTIONS -->
+          <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
             <div class="flex items-center gap-2">
               <input type="checkbox" id="select-all-leaderboard" onchange="toggleSelectAllLeaderboard()" 
                      class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
@@ -585,18 +557,16 @@
             <span id="selected-count-leaderboard" class="text-sm text-gray-400 ml-auto">0 geselecteerd</span>
           </div>
 
-          <!-- TOP 3 CARDS - IDENTIEK AAN INDEX -->
-          <div id="top3-container" class="grid-3 mb-10">
-            <!-- Dynamisch gevuld met top 3 -->
-          </div>
+          <!-- TOP 3 CARDS -->
+          <div id="top3-container" class="grid-3 mb-10"></div>
 
-          <!-- RANKINGS 4-15 - IDENTIEK AAN INDEX -->
+          <!-- RANKINGS 4-15 -->
           <div id="rankings4to15Container" class="mb-10">
             <h3 class="text-2xl font-bold text-white mb-6">Rankings 4-15</h3>
             <div id="rankings4to15Grid" class="rankings-4-15-grid"></div>
           </div>
 
-          <!-- FILTERS - IDENTIEK AAN INDEX -->
+          <!-- FILTERS -->
           <div class="bg-gray-800 rounded-lg p-4 mb-6 border border-gray-700">
             <button onclick="toggleFilters()" class="w-full flex items-center justify-between text-left text-white">
               <div class="flex items-center gap-2">
@@ -616,7 +586,7 @@
             </div>
           </div>
 
-          <!-- RANKINGS 16+ - IDENTIEK AAN INDEX -->
+          <!-- RANKINGS 16+ -->
           <div>
             <button onclick="toggleRankings()" id="rankingsToggleBtn" 
                     class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-between transition-all">
@@ -628,7 +598,7 @@
               <table class="rankings-table">
                 <thead>
                   <tr>
-                    <th></th>
+                    <th class="w-10"></th>
                     <th>Rank</th>
                     <th>Company</th>
                     <th>Website</th>
@@ -646,19 +616,19 @@
       </div>
 
       <!-- ============================================
-           TAB 2: FREELANCERS - ZELFDE UI ALS INDEX
+           TAB 2: FREELANCERS - ECHTE DATA VAN API
            ============================================ -->
       <div id="tab-freelancers" class="tab-content hidden">
         <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
           <div class="flex justify-between items-center mb-6">
-            <h2 class="text-3xl font-bold text-white">🎯 Freelancers Management</h2>
+            <h2 class="text-3xl font-bold text-white">🎯 Freelancers</h2>
             <button onclick="loadFreelancers()" class="btn bg-blue-600 hover:bg-blue-700">
               <i class="fas fa-sync-alt mr-2"></i> Refresh
             </button>
           </div>
 
-          <!-- BULK ACTIONS - ADMIN ONLY -->
-          <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700">
+          <!-- BULK ACTIONS -->
+          <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
             <div class="flex items-center gap-2">
               <input type="checkbox" id="select-all-freelancers" onchange="toggleSelectAllFreelancers()" 
                      class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
@@ -670,47 +640,56 @@
             <span id="selected-count-freelancers" class="text-sm text-gray-400 ml-auto">0 geselecteerd</span>
           </div>
 
-          <!-- FREELANCERS GRID - IDENTIEK AAN INDEX -->
-          <div id="freelancersGrid" class="grid-3"></div>
+          <!-- FREELANCERS TABLE -->
+          <div class="overflow-x-auto">
+            <table class="rankings-table w-full">
+              <thead>
+                <tr>
+                  <th class="w-10"></th>
+                  <th>Naam</th>
+                  <th>Email</th>
+                  <th>Titel</th>
+                  <th>Locatie</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="freelancers-tbody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
       <!-- ============================================
-           TAB 3: DUAL SCANNER - IDENTIEK AAN INDEX
+           TAB 3: SCANNER - IDENTIEK AAN INDEX
            ============================================ -->
       <div id="tab-scanner" class="tab-content hidden">
         <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+          
           <div class="text-center mb-8">
-            <h2 class="text-4xl font-bold mb-3 text-white">🎯 SEO Content Quality & Lead Scanner</h2>
-            <p class="text-xl text-gray-200 mb-2">Find businesses that need content help</p>
-            <div class="flex flex-wrap gap-3 justify-center text-sm text-gray-300">
-              <span>✨ Free for freelancers</span>
-              <span>•</span>
-              <span>🔍 Single or bulk scanning</span>
-              <span>•</span>
-              <span>📊 Export to CSV</span>
-            </div>
+            <h2 class="text-4xl font-bold mb-3 text-white">🎯 SEO Content Quality Scanner</h2>
+            <p class="text-xl text-gray-200">Scan any URL and add to leaderboard</p>
           </div>
-
-          <!-- MODE SELECTOR - IDENTIEK AAN INDEX -->
+          
           <div class="flex justify-center gap-4 mb-8">
             <button id="modeSingleBtn" onclick="switchScannerMode('single')" class="mode-toggle active">
               <i class="fas fa-link mr-2"></i> Single URL
             </button>
             <button id="modeBulkBtn" onclick="switchScannerMode('bulk')" class="mode-toggle">
-              <i class="fas fa-map-marked-alt mr-2"></i> Google Maps Bulk
+              <i class="fas fa-map-marked-alt mr-2"></i> Google Maps
             </button>
           </div>
-
-          <!-- SINGLE URL MODE - IDENTIEK AAN INDEX -->
+          
+          <!-- SINGLE URL MODE -->
           <div id="singleMode" class="max-w-3xl mx-auto">
             <div class="card">
               <div class="flex flex-col sm:flex-row gap-3">
-                <input type="text" id="singleUrlInput" placeholder="https://business-website.com" class="flex-1">
+                <input type="text" id="singleUrlInput" placeholder="https://example.com" class="flex-1">
                 <button onclick="scanSingleURL()" id="singleScanBtn" class="btn-primary btn whitespace-nowrap">
                   <i class="fas fa-search mr-2"></i> Start Scan
                 </button>
               </div>
+              
               <div id="singleProgress" class="hidden mt-4">
                 <div class="progress-bar">
                   <div id="singleProgressBar" class="progress-bar-fill" style="width: 0%"></div>
@@ -718,10 +697,11 @@
                 <p id="singleProgressText" class="text-sm text-gray-300 text-center mt-2"></p>
               </div>
             </div>
+            
             <div id="singleResult" class="hidden mt-4"></div>
           </div>
-
-          <!-- BULK MODE - IDENTIEK AAN INDEX -->
+          
+          <!-- GOOGLE MAPS MODE -->
           <div id="bulkMode" class="hidden max-w-6xl mx-auto">
             <div class="card">
               <div class="flex flex-col sm:flex-row gap-3 mb-4">
@@ -729,12 +709,6 @@
                 <button onclick="scrapeGoogleMaps()" id="bulkScanBtn" class="btn-secondary btn whitespace-nowrap">
                   <i class="fas fa-map-marked-alt mr-2"></i> Scrape Maps
                 </button>
-              </div>
-              <div class="bg-gray-700/50 rounded-lg p-4 border border-gray-600">
-                <p class="text-sm text-gray-300">
-                  <span class="text-purple-400 font-bold">💡 How to use:</span> 
-                  Search businesses on Google Maps → Copy the URL → Paste here
-                </p>
               </div>
             </div>
             
@@ -745,9 +719,6 @@
                     <i class="fas fa-database mr-2 text-green-400"></i>
                     Found Leads (<span id="leadCount">0</span>)
                   </h3>
-                  <button onclick="scanAllLeads()" class="btn bg-purple-600 hover:bg-purple-700">
-                    <i class="fas fa-bolt mr-2"></i> Scan All
-                  </button>
                 </div>
                 
                 <div class="overflow-x-auto">
@@ -764,12 +735,6 @@
                     <tbody id="leadsTableBody"></tbody>
                   </table>
                 </div>
-                
-                <div class="flex justify-end mt-4">
-                  <button onclick="exportLeadsToCSV()" class="btn-success btn">
-                    <i class="fas fa-file-csv mr-2"></i> Export CSV
-                  </button>
-                </div>
               </div>
             </div>
           </div>
@@ -777,7 +742,7 @@
       </div>
 
       <!-- ============================================
-           TAB 4: PENDING - ADMIN ONLY
+           TAB 4: PENDING - WIJZIGBARE BEDRIJFSNAAM
            ============================================ -->
       <div id="tab-pending" class="tab-content hidden">
         <div class="bg-gradient-to-br from-yellow-900 via-orange-900 to-yellow-800 rounded-2xl p-8 border-2 border-yellow-500">
@@ -788,7 +753,7 @@
             </button>
           </div>
 
-          <!-- PENDING LEADERBOARD -->
+          <!-- PENDING LEADERBOARD - MET WIJZIGBARE BEDRIJFSNAAM -->
           <div class="mb-8">
             <h3 class="text-xl font-bold mb-4 text-yellow-400">🏆 Pending Leaderboard Submissions</h3>
             <div id="pending-leaderboard-container" class="space-y-4"></div>
@@ -803,9 +768,6 @@
       </div>
     </div>
   </div>
-
-  <!-- FONT AWESOME -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
   <script>
     // ==========================================
@@ -825,7 +787,6 @@
     // ==========================================
     window.onload = function() {
       console.log('📋 Admin Dashboard loaded');
-      console.log('🔑 Admin ID:', currentAdminId);
       
       if (currentAdminId && currentUsername) {
         document.getElementById('login-screen').classList.add('hidden');
@@ -907,20 +868,16 @@
     // TAB MANAGEMENT
     // ==========================================
     function switchTab(tabName) {
-      // Hide all tabs
       document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
       document.querySelectorAll('.mode-toggle').forEach(b => b.classList.remove('active'));
       
-      // Show selected tab
       document.getElementById(`tab-${tabName}`).classList.remove('hidden');
       
-      // Update active button
       if (tabName === 'leaderboard') document.getElementById('tabLeaderboardBtn').classList.add('active');
       if (tabName === 'freelancers') document.getElementById('tabFreelancersBtn').classList.add('active');
       if (tabName === 'scanner') document.getElementById('tabScannerBtn').classList.add('active');
       if (tabName === 'pending') document.getElementById('tabPendingBtn').classList.add('active');
       
-      // Load data
       if (tabName === 'leaderboard') loadLeaderboard();
       if (tabName === 'freelancers') loadFreelancers();
       if (tabName === 'scanner') switchScannerMode('single');
@@ -928,7 +885,7 @@
     }
 
     // ==========================================
-    // LEADERBOARD - ZELFDE UI ALS INDEX
+    // LEADERBOARD - ECHTE DATA VAN API
     // ==========================================
     async function loadLeaderboard() {
       try {
@@ -956,16 +913,22 @@
       
       const top3 = allLeaderboard.slice(0, 3);
       
+      if (top3.length === 0) {
+        container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Geen entries gevonden</div>';
+        return;
+      }
+      
       container.innerHTML = top3.map((entry, index) => {
         const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
         const medalClass = index === 0 ? 'gold' : index === 1 ? 'silver' : 'bronze';
         const rankText = index === 0 ? '1st Worldwide' : index === 1 ? '2nd Worldwide' : '3rd Worldwide';
+        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
         
         return `
           <div class="top-card ${medalClass}">
             <div class="text-5xl mb-2">${medal}</div>
             <div class="text-xs font-bold uppercase tracking-wider mb-2 text-white/80">${rankText}</div>
-            <h3 class="text-xl font-bold mb-2">${entry.company_name || 'Unknown'}</h3>
+            <h3 class="text-xl font-bold mb-2">${companyName}</h3>
             <div class="text-4xl font-black mb-2">${entry.score}/100</div>
             <div class="text-white/80 mb-3">${getCountryFlag(entry.country)} ${entry.country}</div>
             <button onclick="window.open('${entry.url}', '_blank', 'noopener')" class="w-full bg-black/30 hover:bg-black/50 text-white px-4 py-2 rounded-lg border border-white/30 transition-all">
@@ -991,10 +954,12 @@
       
       grid.innerHTML = rankings.map((entry, index) => {
         const actualRank = index + 4;
+        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+        
         return `
           <div class="rank-card">
             <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
-            <h4 class="font-bold text-white text-sm mb-2 truncate">${entry.company_name || 'Unknown'}</h4>
+            <h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
             <div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
             <div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
             <a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">
@@ -1013,14 +978,16 @@
       
       tbody.innerHTML = rankings.map((entry, index) => {
         const actualRank = index + 16;
+        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+        const isSelected = selectedLeaderboardIds.has(entry.id);
+        
         return `
           <tr>
             <td class="w-10">
-              <input type="checkbox" class="leaderboard-checkbox" data-id="${entry.id}" onchange="toggleSelectLeaderboard(${entry.id})"
-                     class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600">
+              <input type="checkbox" class="leaderboard-checkbox" data-id="${entry.id}" onchange="toggleSelectLeaderboard(${entry.id})" ${isSelected ? 'checked' : ''}>
             </td>
             <td><span class="inline-flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full font-bold">${actualRank}</span></td>
-            <td class="font-semibold">${entry.company_name || 'Unknown'}</td>
+            <td class="font-semibold">${companyName}</td>
             <td><a href="${entry.url}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">${entry.url.replace('https://', '').substring(0, 25)}...</a></td>
             <td><span class="text-lg font-bold ${entry.score >= 85 ? 'text-green-400' : entry.score >= 70 ? 'text-yellow-400' : 'text-red-400'}">${entry.score}</span></td>
             <td><span class="text-sm">${getCountryFlag(entry.country)} ${entry.country}</span></td>
@@ -1037,7 +1004,30 @@
       document.getElementById('totalCount').textContent = allLeaderboard.length;
     }
 
+    // ==========================================
+    // EXTRACT DOMAIN FROM URL - GEEN "UNKNOWN" MEER!
+    // ==========================================
+    function extractDomainFromUrl(url) {
+      if (!url) return 'Bedrijf';
+      try {
+        const hostname = new URL(url).hostname;
+        // Verwijder www. en neem eerste deel
+        let domain = hostname.replace('www.', '');
+        // Splits op punt en neem eerste deel als bedrijfsnaam
+        let name = domain.split('.')[0];
+        // Capitalize eerste letter
+        return name.charAt(0).toUpperCase() + name.slice(1);
+      } catch (e) {
+        // Fallback: haal eerste deel voor slash
+        const parts = url.split('/');
+        const domain = parts[2] || parts[0];
+        return domain.replace('www.', '').split('.')[0] || 'Bedrijf';
+      }
+    }
+
+    // ==========================================
     // LEADERBOARD DELETE FUNCTIES
+    // ==========================================
     function toggleSelectLeaderboard(id) {
       if (selectedLeaderboardIds.has(id)) {
         selectedLeaderboardIds.delete(id);
@@ -1104,7 +1094,7 @@
     }
 
     // ==========================================
-    // FREELANCERS - ZELFDE UI ALS INDEX
+    // FREELANCERS - ECHTE DATA
     // ==========================================
     async function loadFreelancers() {
       try {
@@ -1117,52 +1107,33 @@
     }
 
     function renderFreelancers() {
-      const grid = document.getElementById('freelancersGrid');
-      if (!grid) return;
+      const tbody = document.getElementById('freelancers-tbody');
+      if (!tbody) return;
       
       if (allFreelancers.length === 0) {
-        grid.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Geen freelancers gevonden</div>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-400">Geen freelancers gevonden</td></tr>';
         return;
       }
       
-      grid.innerHTML = allFreelancers.map(f => {
-        const firstName = f.name.split(' ')[0];
-        const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase();
+      tbody.innerHTML = allFreelancers.map(f => {
+        const isSelected = selectedFreelancerIds.has(f.id);
         
         return `
-          <div class="card hover:border-purple-500">
-            <div class="flex items-start gap-4 mb-4">
-              <div class="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl font-bold text-white">
-                ${initials}
-              </div>
-              <div class="flex-1">
-                <div class="flex items-center justify-between">
-                  <h3 class="font-bold text-lg text-white">${f.name}</h3>
-                  <span class="px-2 py-1 bg-green-600 rounded text-xs text-white font-semibold">
-                    <i class="fas fa-check-circle mr-1"></i> Verified
-                  </span>
-                </div>
-                <p class="text-sm text-gray-400">${f.title || 'SEO Specialist'}</p>
-                <div class="flex items-center gap-2 mt-2">
-                  <input type="checkbox" class="freelancer-checkbox" data-id="${f.id}" onchange="toggleSelectFreelancer(${f.id})"
-                         class="w-4 h-4 rounded border-gray-600 bg-gray-700 text-purple-600">
-                </div>
-              </div>
-            </div>
-            <p class="text-gray-300 text-sm mb-4">${f.bio || 'Geen bio beschikbaar'}</p>
-            <div class="flex items-center justify-between text-sm mb-4">
-              <span class="text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i> ${f.location || f.country || 'Remote'}</span>
-              ${f.hourly_rate ? `<span class="text-purple-400">💰 ${f.hourly_rate}</span>` : ''}
-            </div>
-            <div class="flex gap-2">
-              <button onclick="window.location.href='mailto:${f.email}'" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold transition-all">
-                Contact ${firstName}
-              </button>
-              <button onclick="deleteFreelancer(${f.id})" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">
+          <tr>
+            <td class="w-10">
+              <input type="checkbox" class="freelancer-checkbox" data-id="${f.id}" onchange="toggleSelectFreelancer(${f.id})" ${isSelected ? 'checked' : ''}>
+            </td>
+            <td class="font-semibold">${f.name}</td>
+            <td>${f.email}</td>
+            <td>${f.title || 'SEO Specialist'}</td>
+            <td>${f.location || f.country || 'Remote'}</td>
+            <td><span class="badge badge-success">✓ Verified</span></td>
+            <td>
+              <button onclick="deleteFreelancer(${f.id})" class="text-red-400 hover:text-red-300">
                 <i class="fas fa-trash"></i>
               </button>
-            </div>
-          </div>
+            </td>
+          </tr>
         `;
       }).join('');
     }
@@ -1234,7 +1205,7 @@
     }
 
     // ==========================================
-    // SCANNER - IDENTIEK AAN INDEX
+    // SCANNER FUNCTIES
     // ==========================================
     function switchScannerMode(mode) {
       const singleMode = document.getElementById('singleMode');
@@ -1274,23 +1245,20 @@
       }
       
       button.disabled = true;
-      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Launching Puppeteer...';
+      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scannen...';
       progress.classList.remove('hidden');
       progressBar.style.width = '20%';
-      progressText.textContent = 'Launching headless browser...';
+      progressText.textContent = 'Browser starten...';
       
       try {
         const response = await fetch('/api/scan', {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url: url })
         });
         
         progressBar.style.width = '60%';
-        progressText.textContent = 'Analyzing HTML and calculating GRAAF scores...';
+        progressText.textContent = 'Content analyseren...';
         
         const data = await response.json();
         
@@ -1298,79 +1266,35 @@
           throw new Error(data.error || 'Scan failed');
         }
         
-        displayScanResult(data);
+        currentScanResult = data;
         
-        progressBar.style.width = '100%';
-        progressText.textContent = 'Scan complete!';
+        // ✅ Toon scan resultaat met bedrijfsnaam suggestie
+        const companyName = extractDomainFromUrl(url);
         
-        setTimeout(() => {
-          progress.classList.add('hidden');
-          button.disabled = false;
-          button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
-        }, 500);
-        
-      } catch (error) {
-        console.error('Scan error:', error);
-        alert(`❌ Scan failed: ${error.message}`);
-        
-        progress.classList.add('hidden');
-        button.disabled = false;
-        button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
-      }
-    }
-
-    function displayScanResult(result) {
-      const resultDiv = document.getElementById('singleResult');
-      const score = result.score || 0;
-      const wordCount = result.content_stats?.wordCount || 0;
-      const graafScore = result.metrics?.graaf || 0;
-      const craftScore = result.metrics?.craft || 0;
-      const technicalScore = result.metrics?.technical || 0;
-      const quality = result.quality || 'unknown';
-      
-      const qualityColor = quality === 'excellent' ? 'green' : 
-                          quality === 'good' ? 'blue' : 
-                          quality === 'average' ? 'yellow' : 'red';
-      
-      resultDiv.innerHTML = `
-        <div class="card border-green-500 mt-4">
-          <div class="text-center mb-4">
-            <h3 class="text-2xl font-bold text-white mb-2">📊 SEO Content Analysis</h3>
-            <p class="text-sm text-gray-400 break-all">${result.url}</p>
-            <span class="inline-block mt-2 px-3 py-1 bg-${qualityColor}-600 rounded-full text-xs text-white font-semibold">
-              Quality: ${quality}
-            </span>
-          </div>
-          
-          <div class="flex items-center justify-center gap-6 mb-6">
-            <div class="text-center">
-              <div class="text-5xl font-black ${score >= 85 ? 'text-green-400' : score >= 70 ? 'text-yellow-400' : 'text-red-400'}">${score}</div>
-              <div class="text-sm text-gray-400">Current Score</div>
+        resultDiv.innerHTML = `
+          <div class="card border-green-500 mt-4">
+            <div class="text-center mb-4">
+              <h3 class="text-2xl font-bold text-white mb-2">✅ Scan Complete</h3>
+              <p class="text-sm text-gray-400 break-all">${url}</p>
             </div>
-          </div>
-          
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-            <div class="bg-gray-900 rounded-lg p-3 text-center">
-              <div class="text-xs text-gray-400">GRAAF</div>
-              <div class="text-xl font-bold text-purple-400">${graafScore}/50</div>
+            
+            <div class="text-center mb-6">
+              <div class="text-6xl font-black ${data.score >= 85 ? 'text-green-400' : data.score >= 70 ? 'text-yellow-400' : 'text-red-400'}">${data.score}</div>
+              <div class="text-sm text-gray-400">Score /100</div>
+              <span class="inline-block mt-2 px-3 py-1 bg-${data.quality === 'excellent' ? 'green' : data.quality === 'good' ? 'blue' : 'yellow'}-600 rounded-full text-xs">
+                ${data.quality}
+              </span>
             </div>
-            <div class="bg-gray-900 rounded-lg p-3 text-center">
-              <div class="text-xs text-gray-400">CRAFT</div>
-              <div class="text-xl font-bold text-blue-400">${craftScore}/30</div>
+            
+            <div class="bg-gray-800 rounded-lg p-4 mb-4">
+              <label class="block text-sm font-medium mb-2 text-gray-300">Bedrijfsnaam (aanpasbaar)</label>
+              <input type="text" id="scan-company-name" value="${companyName}" 
+                     class="w-full px-4 py-3 bg-gray-700 border-2 border-purple-500 rounded-lg text-white font-semibold">
+              <p class="text-xs text-gray-400 mt-2">✏️ Je kunt de naam aanpassen voordat je toevoegt</p>
             </div>
-            <div class="bg-gray-900 rounded-lg p-3 text-center">
-              <div class="text-xs text-gray-400">Technical</div>
-              <div class="text-xl font-bold text-green-400">${technicalScore}/20</div>
-            </div>
-            <div class="bg-gray-900 rounded-lg p-3 text-center">
-              <div class="text-xs text-gray-400">Words</div>
-              <div class="text-xl font-bold text-yellow-400">${wordCount.toLocaleString()}</div>
-            </div>
-          </div>
-          
-          <div class="border-t border-gray-700 pt-4 mt-4">
-            <div class="flex gap-2">
-              <button onclick="addToLeaderboardFromScan('${result.url}', ${score})" 
+            
+            <div class="flex gap-3">
+              <button onclick="addScanToLeaderboard('${url}', ${data.score})" 
                       class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-semibold">
                 <i class="fas fa-plus-circle mr-2"></i> Add to Leaderboard
               </button>
@@ -1380,11 +1304,54 @@
               </button>
             </div>
           </div>
-        </div>
-      `;
+        `;
+        
+        resultDiv.classList.remove('hidden');
+        
+        progressBar.style.width = '100%';
+        progressText.textContent = 'Scan compleet!';
+        
+        setTimeout(() => {
+          progress.classList.add('hidden');
+          button.disabled = false;
+          button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
+        }, 500);
+        
+      } catch (error) {
+        console.error('Scan error:', error);
+        alert('❌ Scan failed: ' + error.message);
+        
+        progress.classList.add('hidden');
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
+      }
+    }
+
+    async function addScanToLeaderboard(url, score) {
+      const companyInput = document.getElementById('scan-company-name');
+      const companyName = companyInput ? companyInput.value.trim() : extractDomainFromUrl(url);
       
-      resultDiv.classList.remove('hidden');
-      resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      if (!companyName) {
+        alert('❌ Voer een bedrijfsnaam in');
+        return;
+      }
+      
+      try {
+        // ✅ Voeg toe aan leaderboard via admin API
+        await apiCall('/api/admin/leaderboard/manual-add', 'POST', {
+          url: url,
+          company_name: companyName,
+          score: score,
+          country: 'Netherlands'
+        });
+        
+        alert(`✅ "${companyName}" toegevoegd aan leaderboard!`);
+        document.getElementById('singleResult').classList.add('hidden');
+        document.getElementById('singleUrlInput').value = '';
+        loadLeaderboard(); // Refresh leaderboard
+      } catch (error) {
+        alert('❌ Fout bij toevoegen: ' + error.message);
+      }
     }
 
     async function scrapeGoogleMaps() {
@@ -1395,18 +1362,13 @@
       const leadCount = document.getElementById('leadCount');
       
       let url = input.value.trim();
-      if (!url) {
-        alert('❌ Please enter a Google Maps URL');
-        return;
-      }
-      
-      if (!url.includes('google.com/maps')) {
-        alert('❌ Please enter a valid Google Maps URL');
+      if (!url || !url.includes('google.com/maps')) {
+        alert('❌ Voer een geldige Google Maps URL in');
         return;
       }
       
       button.disabled = true;
-      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scraping with Puppeteer...';
+      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scrapen...';
       
       try {
         const data = await apiCall('/api/google-maps/scrape', 'POST', { 
@@ -1418,29 +1380,24 @@
         leadCount.textContent = scrapedLeads.length;
         
         if (scrapedLeads.length === 0) {
-          leadsTableBody.innerHTML = `
-            <tr>
-              <td colspan="5" class="text-center py-8 text-gray-400">
-                No businesses found. Try a different search or area.
-              </td>
-            </tr>
-          `;
+          leadsTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-400">Geen bedrijven gevonden</td></tr>';
         } else {
           leadsTableBody.innerHTML = scrapedLeads.map((lead, index) => {
             const hasWebsite = lead.website && lead.website !== 'N/A' && lead.website !== null;
+            const companyName = lead.name || extractDomainFromUrl(lead.website) || 'Onbekend';
             
             return `
               <tr class="border-b border-gray-700 hover:bg-gray-800">
                 <td class="px-4 py-3">
-                  <div class="font-medium text-white">${lead.name || 'Unknown'}</div>
+                  <div class="font-medium text-white">${companyName}</div>
                   <div class="text-xs text-gray-400">${lead.category || 'SEO Agency'}</div>
                 </td>
                 <td class="px-4 py-3">
                   ${hasWebsite ? 
                     `<a href="${lead.website}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">
-                      ${lead.website.replace('https://', '').replace('http://', '').substring(0, 30)}...
+                      ${lead.website.replace('https://', '').substring(0, 30)}...
                     </a>` : 
-                    `<span class="text-red-400 text-sm">No website</span>`
+                    `<span class="text-red-400 text-sm">Geen website</span>`
                   }
                 </td>
                 <td class="px-4 py-3 text-gray-300 text-sm">${lead.phone || '-'}</td>
@@ -1452,9 +1409,9 @@
                 </td>
                 <td class="px-4 py-3">
                   ${hasWebsite ? 
-                    `<button onclick="scanLead('${lead.website}')" 
-                            class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm font-semibold">
-                      <i class="fas fa-search mr-1"></i>Scan
+                    `<button onclick="quickAddToLeaderboard('${lead.website}', '${companyName}', ${lead.score || 75})" 
+                            class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm font-semibold">
+                      <i class="fas fa-plus-circle mr-1"></i>Add
                     </button>` : 
                     `<span class="text-gray-600 text-sm">-</span>`
                   }
@@ -1467,81 +1424,31 @@
         leadsContainer.classList.remove('hidden');
         
       } catch (error) {
-        alert(`❌ Scrape failed: ${error.message}`);
+        alert('❌ Scrape failed: ' + error.message);
       } finally {
         button.disabled = false;
         button.innerHTML = '<i class="fas fa-map-marked-alt mr-2"></i> Scrape Maps';
       }
     }
 
-    function scanLead(website) {
-      document.getElementById('singleUrlInput').value = website;
-      switchScannerMode('single');
-      setTimeout(() => scanSingleURL(), 500);
-    }
-
-    function exportLeadsToCSV() {
-      if (!scrapedLeads || scrapedLeads.length === 0) {
-        alert('❌ No leads to export');
-        return;
-      }
-      
-      const headers = ['Name', 'Category', 'Website', 'Phone', 'Score', 'Address', 'Rating', 'Reviews'];
-      const rows = scrapedLeads.map(lead => [
-        lead.name || '',
-        lead.category || '',
-        lead.website || '',
-        lead.phone || '',
-        lead.score || '',
-        lead.address || '',
-        lead.rating || '',
-        lead.reviews || ''
-      ]);
-      
-      let csv = headers.join(',') + '\n';
-      csv += rows.map(row => row.map(cell => `"${cell || ''}"`).join(',')).join('\n');
-      
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `contentscale-leads-${Date.now()}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      
-      alert(`✅ Exported ${scrapedLeads.length} leads to CSV`);
-    }
-
-    async function addToLeaderboardFromScan(url, score) {
-      const company = prompt('Enter company name:', extractDomain(url));
-      if (!company) return;
-      
+    async function quickAddToLeaderboard(url, name, score) {
       try {
         await apiCall('/api/admin/leaderboard/manual-add', 'POST', {
           url: url,
-          company_name: company,
+          company_name: name,
           score: score,
           country: 'Netherlands'
         });
         
-        alert('✅ Added to leaderboard!');
+        alert(`✅ "${name}" toegevoegd aan leaderboard!`);
         loadLeaderboard();
       } catch (error) {
-        alert('❌ Failed: ' + error.message);
-      }
-    }
-
-    function extractDomain(url) {
-      try {
-        const hostname = new URL(url).hostname;
-        return hostname.replace('www.', '').split('.')[0];
-      } catch {
-        return 'Company';
+        alert('❌ Fout: ' + error.message);
       }
     }
 
     // ==========================================
-    // PENDING DATA - ADMIN ONLY
+    // PENDING DATA - MET WIJZIGBARE BEDRIJFSNAAM
     // ==========================================
     async function loadPendingData() {
       try {
@@ -1552,7 +1459,7 @@
       } catch (error) {
         console.error('❌ Pending data error:', error);
         if (error.message.includes('Invalid admin credentials')) {
-          alert('❌ Admin session expired. Please login again.');
+          alert('❌ Admin sessie verlopen. Log opnieuw in.');
           logout();
         }
       }
@@ -1573,39 +1480,63 @@
           return;
         }
         
-        container.innerHTML = data.pending.map(entry => `
-          <div class="pending-card">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h4 class="text-xl font-bold mb-2">${entry.company_name || 'Unknown'}</h4>
-                <p class="text-blue-400 mb-3">${entry.url}</p>
-                <div class="bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 rounded-lg inline-block">
-                  <div class="text-xs text-purple-200">Score</div>
-                  <div class="text-2xl font-bold">${entry.score}/100</div>
+        container.innerHTML = data.pending.map(entry => {
+          // ✅ Automatische bedrijfsnaam suggestie uit URL
+          const suggestedName = entry.company_name || extractDomainFromUrl(entry.url);
+          
+          return `
+            <div class="pending-card">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 class="text-xl font-bold mb-2">✏️ Bedrijfsnaam</h4>
+                  <input type="text" id="company-${entry.id}" value="${suggestedName}" 
+                         class="company-name-input mb-3" placeholder="Voer bedrijfsnaam in">
+                  
+                  <p class="text-blue-400 mb-2 text-sm">${entry.url}</p>
+                  
+                  <div class="bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 rounded-lg inline-block">
+                    <div class="text-xs text-purple-200">Score</div>
+                    <div class="text-2xl font-bold">${entry.score}/100</div>
+                  </div>
+                  
+                  ${entry.graaf_score ? `
+                    <div class="mt-3 text-xs text-gray-400">
+                      G.R.A.A.F: ${entry.graaf_score}/50 | C.R.A.F.T: ${entry.craft_score}/30 | Technical: ${entry.technical_score}/20
+                    </div>
+                  ` : ''}
+                </div>
+                
+                <div>
+                  <label class="block text-sm font-medium mb-2">Land</label>
+                  <select id="country-${entry.id}" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                    <option value="${entry.country || 'Netherlands'}">${entry.country || 'Netherlands'}</option>
+                    <option value="Netherlands">🇳🇱 Netherlands</option>
+                    <option value="Belgium">🇧🇪 Belgium</option>
+                    <option value="Germany">🇩🇪 Germany</option>
+                    <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                    <option value="United States">🇺🇸 United States</option>
+                  </select>
+                  
+                  <div class="mt-4 p-3 bg-gray-800 rounded-lg border border-yellow-600">
+                    <p class="text-xs text-yellow-400">
+                      <i class="fas fa-pencil-alt mr-1"></i> 
+                      Je kunt de bedrijfsnaam hierboven aanpassen voordat je goedkeurt.
+                    </p>
+                  </div>
                 </div>
               </div>
-              <div>
-                <label class="block text-sm font-medium mb-2">Country</label>
-                <select id="country-${entry.id}" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
-                  <option value="${entry.country || 'Netherlands'}">${entry.country || 'Netherlands'}</option>
-                  <option value="Netherlands">🇳🇱 Netherlands</option>
-                  <option value="Belgium">🇧🇪 Belgium</option>
-                  <option value="Germany">🇩🇪 Germany</option>
-                  <option value="United Kingdom">🇬🇧 United Kingdom</option>
-                  <option value="United States">🇺🇸 United States</option>
-                </select>
+              
+              <div class="flex gap-3 mt-6">
+                <button onclick="approveLeaderboardEntry(${entry.id})" class="flex-1 bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold">
+                  <i class="fas fa-check mr-2"></i> Approve met deze naam
+                </button>
+                <button onclick="rejectLeaderboardEntry(${entry.id})" class="flex-1 bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">
+                  <i class="fas fa-times mr-2"></i> Reject
+                </button>
               </div>
             </div>
-            <div class="flex gap-3 mt-6">
-              <button onclick="approveLeaderboardEntry(${entry.id})" class="flex-1 bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold">
-                <i class="fas fa-check mr-2"></i> Approve
-              </button>
-              <button onclick="rejectLeaderboardEntry(${entry.id})" class="flex-1 bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">
-                <i class="fas fa-times mr-2"></i> Reject
-              </button>
-            </div>
-          </div>
-        `).join('');
+          `;
+        }).join('');
       } catch (error) {
         console.error('Pending leaderboard error:', error);
       }
@@ -1653,13 +1584,36 @@
     }
 
     // ==========================================
-    // ADMIN ACTIONS
+    // ADMIN ACTIONS - MET WIJZIGBARE BEDRIJFSNAAM
     // ==========================================
     async function approveLeaderboardEntry(id) {
+      // ✅ Haal de gewijzigde bedrijfsnaam op uit het input veld
+      const companyInput = document.getElementById(`company-${id}`);
+      const finalCompanyName = companyInput ? companyInput.value.trim() : null;
+      
       const finalCountry = document.getElementById(`country-${id}`)?.value;
+      
+      if (!finalCompanyName) {
+        alert('❌ Voer een bedrijfsnaam in');
+        companyInput?.focus();
+        return;
+      }
+      
       try {
-        await apiCall(`/api/admin/leaderboard/${id}/approve`, 'POST', { final_country: finalCountry });
-        alert('✅ Entry goedgekeurd!');
+        // ✅ Eerst de bedrijfsnaam updaten via manual-add
+        await apiCall('/api/admin/leaderboard/manual-add', 'POST', {
+          url: document.querySelector(`#country-${id}`)?.closest('.pending-card')?.querySelector('.text-blue-400')?.textContent || '',
+          company_name: finalCompanyName,
+          score: 0, // Wordt overschreven door approve
+          country: finalCountry
+        });
+        
+        // ✅ Daarna goedkeuren
+        await apiCall(`/api/admin/leaderboard/${id}/approve`, 'POST', { 
+          final_country: finalCountry 
+        });
+        
+        alert(`✅ "${finalCompanyName}" goedgekeurd!`);
         loadPendingLeaderboard();
         loadLeaderboard();
       } catch (error) {
@@ -1732,15 +1686,7 @@
         'France': '🇫🇷', 'FR': '🇫🇷',
         'Belgium': '🇧🇪', 'BE': '🇧🇪',
         'Spain': '🇪🇸', 'ES': '🇪🇸',
-        'Italy': '🇮🇹', 'IT': '🇮🇹',
-        'Sweden': '🇸🇪', 'SE': '🇸🇪',
-        'Denmark': '🇩🇰', 'DK': '🇩🇰',
-        'Austria': '🇦🇹', 'AT': '🇦🇹',
-        'Switzerland': '🇨🇭', 'CH': '🇨🇭',
-        'Portugal': '🇵🇹', 'PT': '🇵🇹',
-        'Finland': '🇫🇮', 'FI': '🇫🇮',
-        'Norway': '🇳🇴', 'NO': '🇳🇴',
-        'Ireland': '🇮🇪', 'IE': '🇮🇪'
+        'Italy': '🇮🇹', 'IT': '🇮🇹'
       };
       return flags[country] || '🌐';
     }
@@ -1760,6 +1706,7 @@
     }
 
     function filterByCountry(country) {
+      // Implementatie later
       console.log('Filter by country:', country);
     }
 
@@ -1774,24 +1721,27 @@
       
       const filtered = allLeaderboard.filter(entry => 
         (entry.company_name || '').toLowerCase().includes(query) ||
-        (entry.url || '').toLowerCase().includes(query)
+        (entry.url || '').toLowerCase().includes(query) ||
+        extractDomainFromUrl(entry.url).toLowerCase().includes(query)
       );
       
-      // Update rankings with filtered data
+      // Update rankings met gefilterde data
       const rankings4to15Grid = document.getElementById('rankings4to15Grid');
       const rankings4to15 = filtered.slice(3, 15);
       
       if (rankings4to15Grid) {
         rankings4to15Grid.innerHTML = rankings4to15.map((entry, index) => {
           const actualRank = index + 4;
+          const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+          
           return `
             <div class="rank-card">
               <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
-              <h4 class="font-bold text-white text-sm mb-2 truncate">${entry.company_name || 'Unknown'}</h4>
+              <h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
               <div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
               <div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
               <a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">
-                View Website <i class="fas fa-external-link-alt ml-1"></i>
+                View Website
               </a>
             </div>
           `;
@@ -1805,10 +1755,8 @@
       
       if (panel) {
         panel.classList.toggle('hidden');
-        if (icon) {
-          icon.classList.toggle('fa-chevron-down');
-          icon.classList.toggle('fa-chevron-up');
-        }
+        icon.classList.toggle('fa-chevron-down');
+        icon.classList.toggle('fa-chevron-up');
       }
     }
 
@@ -1829,21 +1777,18 @@
         return;
       }
       
-      let csv = 'Rank,Bedrijf,URL,Score,G.R.A.A.F.,C.R.A.F.T.,Technical,Land,Datum\n';
+      let csv = 'Rank,Bedrijf,URL,Score,Land,Datum\n';
       allLeaderboard.forEach((entry, i) => {
-        csv += `${i+1},"${entry.company_name || 'Unknown'}","${entry.url}",${entry.score || 0},${entry.graaf_score || 0},${entry.craft_score || 0},${entry.technical_score || 0},${entry.country || 'NL'},${new Date(entry.created_at).toLocaleDateString('nl-NL')}\n`;
+        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+        csv += `${i+1},"${companyName}","${entry.url}",${entry.score || 0},${entry.country || 'NL'},${new Date(entry.created_at).toLocaleDateString('nl-NL')}\n`;
       });
       
       const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `leaderboard-${new Date().toISOString().slice(0,10)}.csv`;
       a.click();
-    }
-
-    function scanAllLeads() {
-      alert('⚡ Bulk scan coming soon! Use individual scan for each lead.');
     }
   </script>
 </body>
