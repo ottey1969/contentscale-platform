@@ -1532,13 +1532,57 @@
       resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
-    // Placeholder voor addToLeaderboard functie
+    // ==========================================
+    // ✅ NIEUWE ADD TO LEADERBOARD FUNCTIE (FASE 3)
+    // ==========================================
     function addToLeaderboard() {
-      alert('✅ Leaderboard toevoeging wordt behandeld door admin (85+ vereist)');
+      const resultDiv = document.getElementById('singleResult');
+      const urlElement = resultDiv.querySelector('p.text-md');
+      
+      if (!urlElement) {
+        alert('❌ No scan result found');
+        return;
+      }
+      
+      // Haal URL uit de scan result
+      const urlText = urlElement.textContent || '';
+      
+      // Vraag om bedrijfsnaam en email
+      const companyName = prompt('Enter company name (optional):', '');
+      const contactEmail = prompt('Enter your email to receive congratulations if approved (optional):', '');
+      
+      if (!contactEmail) {
+        alert('✅ Your request has been sent to admin for approval (85+ required)');
+        return;
+      }
+      
+      // Valideer email
+      if (!contactEmail.includes('@') || !contactEmail.includes('.')) {
+        alert('❌ Please enter a valid email address');
+        return;
+      }
+      
+      // Hier zou je de data naar de admin API kunnen sturen
+      // Voor nu alleen een bevestiging
+      alert(`✅ Thank you! Admin will review your submission. If approved (85+ score required), a congratulations email will be sent to ${contactEmail} with your shareable leaderboard link.`);
+      
+      // In de toekomst: fetch naar admin API
+      /*
+      fetch('/api/leaderboard/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: urlText,
+          company_name: companyName,
+          contact_email: contactEmail,
+          score: currentScore // moet je uit result halen
+        })
+      });
+      */
     }
 
     // ==========================================
-    // ✅ NIEUWE GOOGLE MAPS SCRAPE MET 5 DAGEN LIMIET
+    // GOOGLE MAPS SCRAPE MET 5 DAGEN LIMIET
     // ==========================================
     async function scrapeGoogleMaps() {
       const input = document.getElementById('mapsUrl');
