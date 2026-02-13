@@ -575,7 +575,8 @@
             <div class="stat-card">
               <div>
                 <div class="text-4xl mb-2">💼</div>
-                <div class="text-3xl font-bold" id="stat-active-seo">0</div>
+                <!-- ✅ FIXED: ID changed from stat-active-seo to stat-active-helpers to match API response -->
+                <div class="text-3xl font-bold" id="stat-active-helpers">0</div>
                 <div class="text-sm text-gray-200">Freelancers</div>
               </div>
             </div>
@@ -924,7 +925,8 @@
         document.getElementById('stat-total-agencies').textContent = data.stats?.totalAgencies || 0;
         document.getElementById('stat-avg-score').textContent = data.averageScore || 0;
         document.getElementById('stat-countries').textContent = data.stats?.countriesCount || 0;
-        document.getElementById('stat-active-seo').textContent = data.stats?.activeHelpers || 0;
+        // ✅ FIXED: Using correct ID stat-active-helpers that matches the HTML
+        document.getElementById('stat-active-helpers').textContent = data.stats?.activeHelpers || 0;
         
         renderTop3();
         renderRankings4to15();
