@@ -428,14 +428,40 @@
       min-height: 400px;
     }
     
-    input, textarea {
-      color: white !important;
-      background-color: #1f2937 !important;
+    .modal input, .modal textarea {
+      color: #111827 !important;
+      background-color: #f9fafb !important;
+      border: 1px solid #d1d5db !important;
     }
     
-    input::placeholder, textarea::placeholder {
-      color: #9ca3af !important;
+    .modal input::placeholder, .modal textarea::placeholder {
+      color: #6b7280 !important;
       opacity: 1 !important;
+    }
+    
+    .modal label {
+      color: #374151 !important;
+      font-weight: 500;
+    }
+    
+    .modal .modal-content {
+      background: white !important;
+    }
+    
+    .modal .modal-content h2 {
+      color: #111827 !important;
+    }
+    
+    .modal .modal-content button {
+      color: white !important;
+    }
+    
+    .modal .modal-content p {
+      color: #6b7280 !important;
+    }
+    
+    .modal .modal-content .text-gray-400 {
+      color: #6b7280 !important;
     }
   </style>
 </head>
@@ -915,40 +941,40 @@
   <div id="freelancerModal" class="modal">
     <div class="modal-content">
       <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold text-white">Register as Specialist</h2>
-        <button onclick="closeModal()" class="text-gray-400 hover:text-white text-2xl">
+        <h2 class="text-2xl font-bold text-gray-900">Register as Specialist</h2>
+        <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
           <i class="fas fa-times"></i>
         </button>
       </div>
       <div class="space-y-4">
         <div>
-          <label class="block text-sm mb-2 text-gray-300">Full Name *</label>
-          <input type="text" id="freelancerName" placeholder="Your name" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
+          <label class="block text-sm mb-2 text-gray-700">Full Name *</label>
+          <input type="text" id="freelancerName" placeholder="Your name" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
         </div>
         <div>
-          <label class="block text-sm mb-2 text-gray-300">Email *</label>
-          <input type="email" id="freelancerEmail" placeholder="your@email.com" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
+          <label class="block text-sm mb-2 text-gray-700">Email *</label>
+          <input type="email" id="freelancerEmail" placeholder="your@email.com" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
         </div>
         <div>
-          <label class="block text-sm mb-2 text-gray-300">Phone (optional)</label>
-          <input type="tel" id="freelancerPhone" placeholder="+31 6 12345678" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
+          <label class="block text-sm mb-2 text-gray-700">Phone (optional)</label>
+          <input type="tel" id="freelancerPhone" placeholder="+31 6 12345678" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
         </div>
         <div>
-          <label class="block text-sm mb-2 text-gray-300">Professional Title *</label>
-          <input type="text" id="freelancerTitle" placeholder="e.g. SEO Content Strategist" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
+          <label class="block text-sm mb-2 text-gray-700">Professional Title *</label>
+          <input type="text" id="freelancerTitle" placeholder="e.g. SEO Content Strategist" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
         </div>
         <div>
-          <label class="block text-sm mb-2 text-gray-300">Bio (max 120 characters)</label>
-          <textarea id="freelancerBio" rows="3" maxlength="120" placeholder="Tell us about your expertise and experience..." class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white resize-none"></textarea>
+          <label class="block text-sm mb-2 text-gray-700">Bio (max 200 characters)</label>
+          <textarea id="freelancerBio" rows="3" maxlength="200" placeholder="Tell us about your expertise and experience..." class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"></textarea>
           <div class="flex justify-between mt-1">
-            <span class="text-xs text-gray-400">Maximum 120 characters</span>
-            <span id="bioCharCount" class="text-xs text-gray-400">0/120</span>
+            <span class="text-xs text-gray-500">Maximum 200 characters</span>
+            <span id="bioCharCount" class="text-xs text-gray-500">0/200</span>
           </div>
         </div>
         <button onclick="submitFreelancer()" class="btn-primary btn w-full py-3">
           Submit Application
         </button>
-        <p class="text-xs text-gray-400 text-center">
+        <p class="text-xs text-gray-500 text-center">
           We'll review and approve within 24 hours. You'll receive an email with your verified specialist badge.
         </p>
       </div>
@@ -978,7 +1004,7 @@
       if (bioTextarea) {
         bioTextarea.addEventListener('input', function() {
           const count = this.value.length;
-          document.getElementById('bioCharCount').textContent = count + '/120';
+          document.getElementById('bioCharCount').textContent = count + '/200';
         });
       }
     });
@@ -1573,7 +1599,7 @@
           document.getElementById('freelancerPhone').value = '';
           document.getElementById('freelancerTitle').value = '';
           document.getElementById('freelancerBio').value = '';
-          document.getElementById('bioCharCount').textContent = '0/120';
+          document.getElementById('bioCharCount').textContent = '0/200';
         } else {
           alert('❌ ' + (data.error || 'Registration failed'));
         }
