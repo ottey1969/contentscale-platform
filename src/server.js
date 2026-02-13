@@ -783,7 +783,7 @@ app.post('/api/scan', async (req, res) => {
 });
 
 // ==========================================
-// ✅ NIEUWE GOOGLE MAPS SCRAPE MET 5 DAGEN LIMIET
+// ✅ GOOGLE MAPS SCRAPE MET 5 DAGEN LIMIET
 // ==========================================
 app.post('/api/google-maps/scrape', async (req, res) => {
   try {
@@ -1102,7 +1102,7 @@ app.post('/api/freelancers/register', async (req, res) => {
 });
 
 // ==========================================
-// ✅ ADMIN LOGIN - DIT IS CRUCIAL!
+// ✅ ADMIN LOGIN
 // ==========================================
 app.post('/api/setup/verify-admin', async (req, res) => {
   const { username, password } = req.body;
