@@ -1,3 +1,11 @@
+// ============================================
+// CONTENTSCALE SERVER.JS - 100% WERKENDE VERSIE
+// MET VERBETERDE RECOMMENDATIONS
+// ============================================
+
+// ============================================
+// DEPENDENCIES
+// ============================================
 const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
@@ -8,314 +16,25 @@ const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 const multer = require('multer');
 const sharp = require('sharp');
-const nodemailer = require('nodemailer');
-const axios = require('axios'); // Voor WHOIS API calls
-const sgMail = require('@sendgrid/mail'); // Sendgrid
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ============================================
+// GEEN DOTENV - GEBRUIK PROCESS.ENV DIRECT
+// ============================================
 console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
 console.log('📊 Database URL:', process.env.DATABASE_URL ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
 
+// ============================================
+// DATABASE CONFIGURATIE - FIXED ZONDER DOTENV
+// ============================================
 let dbConfig;
 let pool;
 
-// Email configuratie (gebruik environment variables voor productie)
-const emailConfig = {
-  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.EMAIL_PORT || '587'),
-  secure: process.env.EMAIL_SECURE === 'true',
-  auth: {
-    user: process.env.EMAIL_USER || 'your-email@gmail.com',
-    pass: process.env.EMAIL_PASS || 'your-app-password'
-  }
-};
-
-// Maak email transporter voor systeem emails (leaderboard felicitaties)
-let emailTransporter = null;
-try {
-  emailTransporter = nodemailer.createTransport(emailConfig);
-  console.log('📧 Email transporter geconfigureerd');
-} catch (e) {
-  console.error('❌ Email configuratie error:', e.message);
-}
-
-// ==========================================
-// NIEUW: SENDGRID + QUEUE SYSTEEM (FASE 4)
-// ==========================================
-
-// Queue processing status
-let queueActive = false;
-let queueInterval = null;
-const DAILY_LIMIT = 100;
-
-// Helper functie om e-mails te versturen via Sendgrid
-async function sendEmailViaSendgrid(apiKey, to, subject, html) {
-  try {
-    sgMail.setApiKey(apiKey);
-    const msg = {
-      to: to,
-      from: 'noreply@contentscale.site', // Moet geverifieerd zijn in Sendgrid
-      subject: subject,
-      html: html
-    };
-    await sgMail.send(msg);
-    return { success: true };
-  } catch (error) {
-    console.error('❌ Sendgrid error:', error.message);
-    return { success: false, error: error.message };
-  }
-}
-
-// Helper voor WHOIS email lookup
-async function findEmailViaWhois(domain) {
-  try {
-    // Gebruik een WHOIS API (bijv. whoisxmlapi.com)
-    const response = await axios.get(`https://www.whoisxmlapi.com/whoisserver/WhoisService`, {
-      params: {
-        apiKey: process.env.WHOIS_API_KEY || 'demo',
-        domainName: domain,
-        outputFormat: 'JSON'
-      }
-    });
-    
-    // Parse response voor email
-    const data = response.data;
-    if (data.WhoisRecord && data.WhoisRecord.registrant && data.WhoisRecord.registrant.email) {
-      return { email: data.WhoisRecord.registrant.email, method: 'whois' };
-    }
-    
-    // Zoek in contact emails
-    if (data.WhoisRecord && data.WhoisRecord.contactEmail) {
-      return { email: data.WhoisRecord.contactEmail, method: 'whois' };
-    }
-    
-    return null;
-  } catch (error) {
-    console.log(`⚠️ WHOIS lookup failed for ${domain}:`, error.message);
-    return null;
-  }
-}
-
-// Helper voor contact pagina crawling
-async function findEmailViaContactPage(website) {
-  try {
-    const browser = await getBrowser();
-    if (!browser) return null;
-    
-    const page = await browser.newPage();
-    await page.setDefaultTimeout(5000);
-    
-    // Probeer /contact en /about paginas
-    const urlsToTry = [
-      website,
-      website.replace(/\/$/, '') + '/contact',
-      website.replace(/\/$/, '') + '/contact-us',
-      website.replace(/\/$/, '') + '/about',
-      website.replace(/\/$/, '') + '/about-us',
-      website.replace(/\/$/, '') + '/impressum'
-    ];
-    
-    for (const url of urlsToTry) {
-      try {
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 3000 });
-        const content = await page.content();
-        
-        // Zoek naar email patronen
-        const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-        const emails = content.match(emailRegex);
-        
-        if (emails && emails.length > 0) {
-          // Filter out common false positives
-          const validEmail = emails.find(e => 
-            !e.includes('example.com') && 
-            !e.includes('domain.com') &&
-            !e.includes('@yoursite') &&
-            e.split('@')[1].split('.').length >= 2
-          );
-          
-          if (validEmail) {
-            await page.close();
-            return { email: validEmail, method: 'contact_page' };
-          }
-        }
-      } catch (e) {
-        // Negeer fouten, probeer volgende URL
-      }
-    }
-    
-    await page.close();
-    return null;
-  } catch (error) {
-    console.log(`⚠️ Contact page crawl failed:`, error.message);
-    return null;
-  }
-}
-
-// Helper om domein uit URL te halen
-function extractDomain(url) {
-  try {
-    const hostname = new URL(url).hostname;
-    return hostname.replace('www.', '');
-  } catch {
-    return null;
-  }
-}
-
-// Queue processor
-async function processEmailQueue() {
-  if (!pool || !queueActive) return;
-  
-  try {
-    // Check vandaag's limiet voor elke gebruiker
-    const today = new Date().toISOString().split('T')[0];
-    
-    // Haal pending emails op
-    const pendingEmails = await pool.query(
-      `SELECT eq.*, f.name as freelancer_name, f.email as freelancer_email, 
-              s.api_key_encrypted, gml.name as lead_name, gml.website
-       FROM email_queue eq
-       JOIN freelancers f ON eq.user_id = f.id
-       JOIN sendgrid_config s ON s.freelancer_id = f.id
-       JOIN google_maps_leads gml ON eq.lead_id = gml.id
-       WHERE eq.status = 'pending' 
-         AND (eq.scheduled_for <= NOW() OR eq.scheduled_for IS NULL)
-       ORDER BY eq.created_at ASC
-       LIMIT 10`, // Verwerk in batches
-    );
-    
-    if (pendingEmails.rows.length === 0) {
-      return;
-    }
-    
-    // Group by user voor limiet check
-    const byUser = {};
-    pendingEmails.rows.forEach(row => {
-      if (!byUser[row.user_id]) {
-        byUser[row.user_id] = [];
-      }
-      byUser[row.user_id].push(row);
-    });
-    
-    for (const [userId, emails] of Object.entries(byUser)) {
-      // Check hoeveel er vandaag al verstuurd zijn
-      const sentToday = await pool.query(
-        `SELECT COUNT(*) as count FROM email_queue 
-         WHERE user_id = $1 AND status = 'sent' AND DATE(sent_at) = $2`,
-        [userId, today]
-      );
-      
-      const sentCount = parseInt(sentToday.rows[0].count);
-      const remaining = DAILY_LIMIT - sentCount;
-      
-      if (remaining <= 0) {
-        console.log(`⏸️ User ${userId} has reached daily limit (${DAILY_LIMIT})`);
-        continue;
-      }
-      
-      // Verwerk alleen zoveel als de limiet toestaat
-      const toProcess = emails.slice(0, remaining);
-      
-      for (const email of toProcess) {
-        try {
-          // Decrypt API key (in productie gebruik je echte encryptie)
-          const apiKey = email.api_key_encrypted; // Simpele versie
-          
-          // Stuur email
-          const subject = `SEO Opportunity for ${email.lead_name}`;
-          const html = `
-            <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-              <h2>Hi ${email.lead_name},</h2>
-              <p>We analyzed your website ${email.website} and found opportunities to improve your SEO score.</p>
-              <p>Would you like a free consultation?</p>
-              <p>Best regards,<br>${email.freelancer_name}</p>
-            </div>
-          `;
-          
-          const result = await sendEmailViaSendgrid(apiKey, email.recipient_email, subject, html);
-          
-          if (result.success) {
-            await pool.query(
-              `UPDATE email_queue SET status = 'sent', sent_at = NOW() WHERE id = $1`,
-              [email.id]
-            );
-            console.log(`✅ Email sent to ${email.recipient_email}`);
-          } else {
-            await pool.query(
-              `UPDATE email_queue SET status = 'failed', error_message = $2, retry_count = retry_count + 1 WHERE id = $1`,
-              [email.id, result.error]
-            );
-          }
-        } catch (error) {
-          console.error('❌ Queue processing error:', error.message);
-          await pool.query(
-            `UPDATE email_queue SET status = 'failed', error_message = $2, retry_count = retry_count + 1 WHERE id = $1`,
-            [email.id, error.message]
-          );
-        }
-        
-        // Kleine vertraging tussen emails
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    }
-    
-  } catch (error) {
-    console.error('❌ Queue processor error:', error.message);
-  }
-}
-
-// Start queue processor
-function startQueueProcessor() {
-  if (queueInterval) clearInterval(queueInterval);
-  queueActive = true;
-  queueInterval = setInterval(processEmailQueue, 60000); // Elke minuut
-  console.log('▶️ Email queue processor started');
-}
-
-// Stop queue processor
-function stopQueueProcessor() {
-  queueActive = false;
-  if (queueInterval) {
-    clearInterval(queueInterval);
-    queueInterval = null;
-  }
-  console.log('⏸️ Email queue processor stopped');
-}
-
-// Helper functie om systeem e-mails te versturen (voor leaderboard)
-async function sendEmail(to, subject, html) {
-  if (!emailTransporter) {
-    console.error('❌ Email transporter niet beschikbaar');
-    return false;
-  }
-  
-  try {
-    const info = await emailTransporter.sendMail({
-      from: `"ContentScale" <${emailConfig.auth.user}>`,
-      to: to,
-      subject: subject,
-      html: html
-    });
-    console.log(`✅ Email sent: ${info.messageId}`);
-    return true;
-  } catch (error) {
-    console.error('❌ Email send error:', error.message);
-    return false;
-  }
-}
-
-// Helper om share code te genereren
-function generateShareCode(url, id) {
-  const hash = crypto.createHash('sha256')
-    .update(url + id + Date.now().toString())
-    .digest('hex')
-    .substring(0, 12);
-  return hash;
-}
-
 function initDatabaseConfig() {
   if (process.env.DATABASE_URL) {
+    console.log('📊 Using DATABASE_URL from environment');
     try {
       const url = new URL(process.env.DATABASE_URL);
       dbConfig = {
@@ -334,6 +53,7 @@ function initDatabaseConfig() {
       return null;
     }
   } else {
+    // Gebruik losse environment variables of defaults
     dbConfig = {
       host: process.env.DB_HOST || 'localhost',
       port: parseInt(process.env.DB_PORT || '5432'),
@@ -357,6 +77,7 @@ function initDatabaseConfig() {
   return new Pool(dbConfig);
 }
 
+// Initialiseer pool
 try {
   pool = initDatabaseConfig();
 } catch (e) {
@@ -364,6 +85,9 @@ try {
   pool = null;
 }
 
+// ============================================
+// DATABASE CONNECTIE MET RETRY
+// ============================================
 async function waitForDatabase(retries = 5, delay = 3000) {
   if (!pool) {
     console.log('❌ Geen database pool - overslaan');
@@ -376,19 +100,34 @@ async function waitForDatabase(retries = 5, delay = 3000) {
     try {
       const client = await pool.connect();
       console.log(`✅ Database verbonden! (poging ${i + 1}/${retries})`);
+      
+      // Test query
       await client.query('SELECT NOW()');
       console.log('✅ Database query werkt');
+      
       client.release();
+      
+      // Start tables setup
       setTimeout(() => createAllTables().catch(err => {
         console.error('❌ Fout bij aanmaken tabellen:', err.message);
       }), 1000);
+      
       return true;
     } catch (err) {
       console.error(`❌ Database connectie poging ${i + 1}/${retries} mislukt:`, err.message);
+      
       if (i === retries - 1) {
         console.error('\n❌❌❌ KON GEEN VERBINDING MAKEN MET DATABASE ❌❌❌');
+        console.error('\n📋 OPLOSSINGEN:');
+        console.error('   1. Controleer of PostgreSQL draait');
+        console.error('   2. Controleer environment variables:');
+        console.error('      - DATABASE_URL of');
+        console.error('      - DB_HOST, DB_USER, DB_PASSWORD, DB_NAME');
+        console.error('\n⚠️  Server start ZONDER database - admin login werkt niet!\n');
+        
         return false;
       }
+      
       console.log(`⏳ Opnieuw proberen over ${delay/1000} seconden...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
@@ -396,6 +135,9 @@ async function waitForDatabase(retries = 5, delay = 3000) {
   return false;
 }
 
+// ============================================
+// MULTER CONFIGURATION
+// ============================================
 const storage = multer.memoryStorage();
 const upload = multer({ 
   storage: storage,
@@ -410,9 +152,15 @@ const upload = multer({
   }
 });
 
+// ============================================
+// MIDDLEWARE
+// ============================================
 app.set('trust proxy', 1);
+
+// Compressie
 app.use(compression({ level: 9, threshold: 0 }));
 
+// Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -433,9 +181,12 @@ const authLimiter = rateLimit({
 
 app.use('/api/', limiter);
 app.use('/api/setup/verify-admin', authLimiter);
+
+// Body parsing
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// CORS
 app.use((req, res, next) => {
   const allowedOrigins = [
     'https://app.contentscale.site',
@@ -443,37 +194,54 @@ app.use((req, res, next) => {
     'http://localhost:3000',
     'http://localhost:3001'
   ];
+  
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
   }
+  
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-admin-key');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Credentials', 'true');
+  
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
 
-const publicPath = process.env.NODE_ENV === 'production' 
-  ? path.join(process.cwd(), 'public')
-  : path.join(__dirname, 'public');
-
-app.use(express.static(publicPath, {
+// Static files
+app.use(express.static('public', {
   maxAge: '1y',
   etag: true,
   lastModified: true,
   immutable: true
 }));
 
-app.use('/uploads', express.static(path.join(publicPath, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
+// ============================================
+// ADMIN VERIFICATION MIDDLEWARE
+// ============================================
 const verifyAdmin = async (req, res, next) => {
   const adminKey = req.headers['x-admin-key'];
-  if (!adminKey) return res.status(401).json({ success: false, error: 'Admin authentication required' });
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  if (!adminKey) {
+    return res.status(401).json({ success: false, error: 'Admin authentication required' });
+  }
+  
+  if (!pool) {
+    return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  }
+  
   try {
-    const result = await pool.query('SELECT * FROM super_admins WHERE id = $1 AND is_active = TRUE', [adminKey]);
-    if (result.rows.length === 0) return res.status(401).json({ success: false, error: 'Invalid admin credentials' });
+    const result = await pool.query(
+      'SELECT * FROM super_admins WHERE id = $1 AND is_active = TRUE',
+      [adminKey]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json({ success: false, error: 'Invalid admin credentials' });
+    }
+    
     req.admin = result.rows[0];
     next();
   } catch (error) {
@@ -482,6 +250,9 @@ const verifyAdmin = async (req, res, next) => {
   }
 };
 
+// ============================================
+// PUPPETEER BROWSER INSTANCE
+// ============================================
 let browserInstance = null;
 
 async function getBrowser() {
@@ -501,17 +272,26 @@ async function getBrowser() {
       console.error('❌ Puppeteer launch error:', err.message);
       return null;
     });
-    if (browserInstance) console.log('✅ Puppeteer browser ready');
-    else console.log('❌ Puppeteer browser failed to start');
+    
+    if (browserInstance) {
+      console.log('✅ Puppeteer browser ready');
+    } else {
+      console.log('❌ Puppeteer browser failed to start');
+    }
   }
   return browserInstance;
 }
 
 process.on('SIGTERM', async () => {
-  if (browserInstance) await browserInstance.close();
+  if (browserInstance) {
+    await browserInstance.close();
+  }
   process.exit(0);
 });
 
+// ============================================
+// CACHE SYSTEM
+// ============================================
 const scanCache = new Map();
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -531,6 +311,9 @@ setInterval(() => {
   if (cleared > 0) console.log(`🧹 Cleared ${cleared} expired cache entries`);
 }, 60000);
 
+// ============================================
+// URL VALIDATION
+// ============================================
 function isValidUrl(string) {
   try {
     new URL(string);
@@ -540,6 +323,9 @@ function isValidUrl(string) {
   }
 }
 
+// ============================================
+// DATABASE TABLES SETUP
+// ============================================
 async function createAllTables() {
   if (!pool) {
     console.error('❌ Geen database pool - kan tabellen niet aanmaken');
@@ -565,16 +351,25 @@ async function createAllTables() {
       )
     `);
     
-    await client.query(`DELETE FROM super_admins WHERE username = 'ot'`);
-    const salt = await bcrypt.genSalt(12);
-    const hashedPassword = await bcrypt.hash('admin123', salt);
-    await client.query(
-      `INSERT INTO super_admins (username, password_hash, full_name, role, is_active, created_at) 
-       VALUES ($1, $2, $3, $4, $5, NOW())`,
-      ['ot', hashedPassword, 'Super Administrator', 'super_admin', true]
+    // Check of admin gebruiker 'ot' al bestaat
+    const adminCheck = await client.query(
+      'SELECT COUNT(*) FROM super_admins WHERE username = $1', 
+      ['ot']
     );
-    console.log('✅✅✅ ADMIN AANGEMAAKT: ot / admin123');
     
+    if (parseInt(adminCheck.rows[0].count) === 0) {
+      const hashedPassword = await bcrypt.hash('admin123', 10);
+      await client.query(
+        `INSERT INTO super_admins (username, password_hash, full_name, role) 
+         VALUES ($1, $2, $3, $4)`,
+        ['ot', hashedPassword, 'Super Admin', 'super_admin']
+      );
+      console.log('✅ Default admin created (ot/admin123)');
+    } else {
+      console.log('✅ Admin gebruiker bestaat al');
+    }
+    
+    // Scans table
     await client.query(`
       CREATE TABLE IF NOT EXISTS scans (
         id SERIAL PRIMARY KEY,
@@ -594,6 +389,7 @@ async function createAllTables() {
       )
     `);
     
+    // Leaderboard table
     await client.query(`
       CREATE TABLE IF NOT EXISTS leaderboard (
         id SERIAL PRIMARY KEY,
@@ -607,30 +403,16 @@ async function createAllTables() {
         is_verified BOOLEAN DEFAULT FALSE,
         is_opted_out BOOLEAN DEFAULT FALSE,
         submission_ip VARCHAR(50),
-        admin_verified BOOLEAN DEFAULT FALSE,
+        admin_verified BOOLEAN DEFAULT TRUE,
         auto_detected_country VARCHAR(100),
         graaf_score INTEGER,
         craft_score INTEGER,
         technical_score INTEGER,
-        share_code VARCHAR(64) UNIQUE,
-        email_sent_at TIMESTAMP,
-        contact_email VARCHAR(255),
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
     
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS leaderboard_shares (
-        id SERIAL PRIMARY KEY,
-        leaderboard_id INTEGER REFERENCES leaderboard(id) ON DELETE CASCADE,
-        share_code VARCHAR(64) NOT NULL,
-        shared_via VARCHAR(50),
-        clicked_at TIMESTAMP DEFAULT NOW(),
-        ip_address VARCHAR(50),
-        user_agent TEXT
-      )
-    `);
-    
+    // Freelancers table
     await client.query(`
       CREATE TABLE IF NOT EXISTS freelancers (
         id SERIAL PRIMARY KEY,
@@ -650,6 +432,7 @@ async function createAllTables() {
       )
     `);
     
+    // Google Maps Leads table
     await client.query(`
       CREATE TABLE IF NOT EXISTS google_maps_leads (
         id SERIAL PRIMARY KEY,
@@ -661,10 +444,6 @@ async function createAllTables() {
         rating DECIMAL(2,1),
         reviews INTEGER,
         score INTEGER DEFAULT 0,
-        email VARCHAR(255),
-        email_status VARCHAR(50) DEFAULT 'pending',
-        email_found_at TIMESTAMP,
-        email_method VARCHAR(50),
         status VARCHAR(50) DEFAULT 'new',
         notes TEXT,
         contacted_at TIMESTAMP,
@@ -674,97 +453,7 @@ async function createAllTables() {
       )
     `);
     
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS google_maps_scan_sessions (
-        id SERIAL PRIMARY KEY,
-        session_id VARCHAR(255) NOT NULL,
-        maps_url TEXT NOT NULL,
-        search_query VARCHAR(500),
-        scanned_at TIMESTAMP DEFAULT NOW(),
-        next_scan_allowed_at TIMESTAMP DEFAULT NOW() + INTERVAL '5 days',
-        ip_address VARCHAR(50),
-        user_agent TEXT
-      )
-    `);
-    
-    await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_scan_sessions_session_id 
-      ON google_maps_scan_sessions(session_id)
-    `);
-    
-    // ==========================================
-    // NIEUWE TABELLEN VOOR FASE 4
-    // ==========================================
-    
-    // Sendgrid configuratie per freelancer
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS sendgrid_config (
-        id SERIAL PRIMARY KEY,
-        freelancer_id INTEGER UNIQUE REFERENCES freelancers(id) ON DELETE CASCADE,
-        api_key_encrypted TEXT NOT NULL,
-        daily_limit INTEGER DEFAULT 100,
-        emails_sent_today INTEGER DEFAULT 0,
-        last_sent_date DATE,
-        is_active BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-    
-    // Email queue voor bulk verzending
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS email_queue (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES freelancers(id) ON DELETE CASCADE,
-        lead_id INTEGER REFERENCES google_maps_leads(id) ON DELETE CASCADE,
-        recipient_email VARCHAR(255) NOT NULL,
-        recipient_name VARCHAR(255),
-        subject TEXT NOT NULL,
-        template_name VARCHAR(100) DEFAULT 'default',
-        status VARCHAR(50) DEFAULT 'pending',
-        scheduled_for TIMESTAMP DEFAULT NOW(),
-        sent_at TIMESTAMP,
-        error_message TEXT,
-        retry_count INTEGER DEFAULT 0,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-    
-    // Email templates
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS email_templates (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES freelancers(id) ON DELETE CASCADE,
-        name VARCHAR(100) NOT NULL,
-        subject TEXT NOT NULL,
-        body TEXT NOT NULL,
-        is_default BOOLEAN DEFAULT FALSE,
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-    
-    // Email finder log
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS email_finder_log (
-        id SERIAL PRIMARY KEY,
-        lead_id INTEGER REFERENCES google_maps_leads(id) ON DELETE CASCADE,
-        domain VARCHAR(255),
-        email_found VARCHAR(255),
-        method VARCHAR(50),
-        confidence INTEGER,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-    
-    // Indexen voor performance
-    await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_email_queue_status ON email_queue(status);
-      CREATE INDEX IF NOT EXISTS idx_email_queue_user ON email_queue(user_id);
-      CREATE INDEX IF NOT EXISTS idx_email_queue_scheduled ON email_queue(scheduled_for);
-      CREATE INDEX IF NOT EXISTS idx_leads_email ON google_maps_leads(email_status);
-    `);
-    
+    // Blog posts table
     await client.query(`
       CREATE TABLE IF NOT EXISTS blog_posts (
         id SERIAL PRIMARY KEY,
@@ -787,6 +476,7 @@ async function createAllTables() {
       )
     `);
     
+    // Blog images table
     await client.query(`
       CREATE TABLE IF NOT EXISTS blog_images (
         id SERIAL PRIMARY KEY,
@@ -799,6 +489,7 @@ async function createAllTables() {
       )
     `);
     
+    // Share links table
     await client.query(`
       CREATE TABLE IF NOT EXISTS share_links (
         id SERIAL PRIMARY KEY,
@@ -815,6 +506,7 @@ async function createAllTables() {
       )
     `);
     
+    // Claims table
     await client.query(`
       CREATE TABLE IF NOT EXISTS claims (
         id SERIAL PRIMARY KEY,
@@ -841,9 +533,9 @@ async function createAllTables() {
   }
 }
 
-// ==========================================
-// SCORE CALCULATIE FUNCTIES
-// ==========================================
+// ============================================
+// SCORING ALGORITHM (ONVERANDERD)
+// ============================================
 function calculateStableScores(content, stats, rawHtml) {
   const { wordCount = 0, h1Count = 0, h2Count = 0, h3Count = 0, listCount = 0 } = stats;
   
@@ -863,10 +555,15 @@ function calculateStableScores(content, stats, rawHtml) {
     
     faqPatterns.forEach(pattern => {
       const matches = combined.match(pattern);
-      if (matches) faqScore += matches.length;
+      if (matches) {
+        faqScore += matches.length;
+      }
     });
     
-    return { hasFAQ: faqScore >= 2, faqScore };
+    return {
+      hasFAQ: faqScore >= 2,
+      faqScore: faqScore
+    };
   }
   
   const faqDetection = detectFAQ(rawHtml, content);
@@ -942,7 +639,9 @@ function calculateStableScores(content, stats, rawHtml) {
   const hasSchema = /"@context"|"@type"/gi.test(rawHtml);
   technicalScore += hasSchema ? 3 : 0;
   
-  if (faqDetection.hasFAQ) technicalScore += 2;
+  if (faqDetection.hasFAQ) {
+    technicalScore += 2;
+  }
   
   const totalScore = graafScore + craftScore + technicalScore;
   
@@ -1000,81 +699,332 @@ function calculateTransparentScore(graafScore, craftScore, technicalScore, stats
   };
 }
 
-function generateDetailedRecommendations(score, metrics, wordCount, scanData) {
+// ============================================
+// ✅ VERBETERDE RECOMMENDATIONS FUNCTIE
+// ============================================
+function generateDetailedRecommendations(score, metrics, wordCount, scanData, rawHtml, stats) {
   const recs = [];
   
-  if (metrics.content < 45) {
+  // ============================================
+  // 1. AFBEELDINGEN CHECK (ALT TEXT)
+  // ============================================
+  const images = rawHtml.match(/<img[^>]*>/gi) || [];
+  const imagesWithAlt = images.filter(img => img.includes('alt=') && !img.includes('alt=""'));
+  const imagesWithoutAlt = images.filter(img => !img.includes('alt=') || img.includes('alt=""'));
+  
+  if (imagesWithoutAlt.length > 0) {
+    const percentage = Math.round((imagesWithoutAlt.length / images.length) * 100);
+    const examples = imagesWithoutAlt.slice(0, 3).map(img => {
+      const srcMatch = img.match(/src=["']([^"']*)["']/);
+      return srcMatch ? srcMatch[1].split('/').pop() : 'afbeelding';
+    }).join(', ');
+    
+    recs.push({
+      priority: percentage > 30 ? 'HIGH' : 'MEDIUM',
+      title: 'Optimize Images',
+      impact: 7,
+      effort: 'Medium (2-3 hours)',
+      cost: '€100-200',
+      description: `${imagesWithoutAlt.length} of ${images.length} images (${percentage}%) missing alt text. Examples: ${examples}. Add descriptive alt text for better accessibility and SEO.`
+    });
+  }
+
+  // ============================================
+  // 2. META DESCRIPTION CHECK
+  // ============================================
+  const metaDescMatch = rawHtml.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
+  const metaDesc = metaDescMatch ? metaDescMatch[1] : null;
+  
+  if (!metaDesc) {
     recs.push({
       priority: 'HIGH',
-      title: 'Add Author Credentials',
+      title: 'Add Meta Description',
       impact: 8,
-      effort: 'Low (1-2 hours)',
-      cost: '€75-150',
-      description: 'Add author bio with credentials and expertise for E-E-A-T'
+      effort: 'Low (15 min)',
+      cost: '€50-75',
+      description: 'No meta description found. Essential for click-through rates in search results.'
     });
-  }
-  
-  if (wordCount < 2000) {
+  } else if (metaDesc.length < 120) {
     recs.push({
-      priority: wordCount < 1500 ? 'HIGH' : 'MEDIUM',
-      title: 'Expand Content Depth',
-      impact: wordCount < 1500 ? 10 : 6,
-      effort: 'Medium (4-6 hours)',
-      cost: '€200-350',
-      description: `Increase from ${wordCount} to 2000+ words with in-depth coverage`
+      priority: 'MEDIUM',
+      title: 'Improve Meta Description',
+      impact: 6,
+      effort: 'Low (15 min)',
+      cost: '€50-75',
+      description: `Meta description too short (${metaDesc.length} chars). Minimum 120 recommended for optimal CTR.`
+    });
+  }
+
+  // ============================================
+  // 3. TITLE TAG CHECK
+  // ============================================
+  const titleMatch = rawHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
+  const title = titleMatch ? titleMatch[1] : null;
+  
+  if (!title) {
+    recs.push({
+      priority: 'HIGH',
+      title: 'Add Title Tag',
+      impact: 10,
+      effort: 'Low (15 min)',
+      cost: '€50-75',
+      description: 'No title tag found. This is the most important SEO element.'
+    });
+  } else if (title.length < 30) {
+    recs.push({
+      priority: 'MEDIUM',
+      title: 'Improve Title Tag',
+      impact: 7,
+      effort: 'Low (15 min)',
+      cost: '€50-75',
+      description: `Title too short (${title.length} chars). Minimum 30 recommended for good visibility.`
+    });
+  } else if (title.length > 60) {
+    recs.push({
+      priority: 'LOW',
+      title: 'Shorten Title Tag',
+      impact: 5,
+      effort: 'Low (15 min)',
+      cost: '€50-75',
+      description: `Title too long (${title.length} chars). Maximum 60 recommended for full display in search results.`
+    });
+  }
+
+  // ============================================
+  // 4. HEADING STRUCTURE CHECK
+  // ============================================
+  const h1Count = stats?.h1Count || 0;
+  const h2Count = stats?.h2Count || 0;
+  
+  if (h1Count === 0) {
+    recs.push({
+      priority: 'HIGH',
+      title: 'Add H1 Heading',
+      impact: 9,
+      effort: 'Low (30 min)',
+      cost: '€75-100',
+      description: 'No H1 tag found. Every page needs exactly one H1 for proper structure.'
+    });
+  } else if (h1Count > 1) {
+    recs.push({
+      priority: 'MEDIUM',
+      title: 'Fix Multiple H1 Headings',
+      impact: 6,
+      effort: 'Low (30 min)',
+      cost: '€75-100',
+      description: `${h1Count} H1 tags found. Ideally a page has exactly one H1.`
     });
   }
   
-  if (metrics.technical < 16) {
+  if (h2Count < 2) {
+    recs.push({
+      priority: 'MEDIUM',
+      title: 'Add More H2 Headings',
+      impact: 5,
+      effort: 'Medium (1-2 hours)',
+      cost: '€100-150',
+      description: `Only ${h2Count} H2 headings found. Add more structure with 3-7 H2 sections.`
+    });
+  }
+
+  // ============================================
+  // 5. SCHEMA MARKUP CHECK
+  // ============================================
+  const hasSchema = rawHtml.includes('"@context"') || rawHtml.includes('application/ld+json');
+  const hasFAQSchema = rawHtml.includes('"@type":"FAQPage"');
+  const hasArticleSchema = rawHtml.includes('"@type":"Article"');
+  const hasOrganizationSchema = rawHtml.includes('"@type":"Organization"');
+  
+  if (!hasSchema) {
     recs.push({
       priority: 'HIGH',
       title: 'Implement Schema Markup',
       impact: 12,
       effort: 'Medium (2-4 hours)',
       cost: '€150-250',
-      description: 'Add Article/FAQ/Organization schema for better SERP visibility'
+      description: 'No schema markup found. Add Article/FAQ/Organization schema for better SERP visibility.'
+    });
+  } else {
+    if (!hasArticleSchema) {
+      recs.push({
+        priority: 'MEDIUM',
+        title: 'Add Article Schema',
+        impact: 8,
+        effort: 'Low (1-2 hours)',
+        cost: '€100-150',
+        description: 'You have some schema, but Article schema is missing for better content visibility.'
+      });
+    }
+    if (!hasFAQSchema && scanData?.hasFAQ) {
+      recs.push({
+        priority: 'MEDIUM',
+        title: 'Add FAQ Schema',
+        impact: 8,
+        effort: 'Low (1-2 hours)',
+        cost: '€100-150',
+        description: 'FAQ section detected but FAQ schema missing. Add for rich results in search.'
+      });
+    }
+  }
+
+  // ============================================
+  // 6. CONTENT DEPTH CHECK
+  // ============================================
+  if (wordCount < 500) {
+    recs.push({
+      priority: 'HIGH',
+      title: 'Expand Content Depth',
+      impact: 10,
+      effort: 'High (6-8 hours)',
+      cost: '€300-500',
+      description: `Only ${wordCount} words. Expand to 2500+ words for comprehensive coverage.`
+    });
+  } else if (wordCount < 1500) {
+    recs.push({
+      priority: 'MEDIUM',
+      title: 'Increase Content Length',
+      impact: 8,
+      effort: 'Medium (4-6 hours)',
+      cost: '€200-350',
+      description: `Current: ${wordCount} words. Aim for 2500+ words for in-depth coverage.`
+    });
+  } else if (wordCount < 2500) {
+    recs.push({
+      priority: 'LOW',
+      title: 'Expand Content',
+      impact: 6,
+      effort: 'Medium (3-5 hours)',
+      cost: '€150-250',
+      description: `Good start with ${wordCount} words. 2500+ words recommended for optimal depth.`
+    });
+  }
+
+  // ============================================
+  // 7. CONTENT QUALITY CHECKS (GRAAF)
+  // ============================================
+  const textContent = rawHtml.replace(/<[^>]*>/g, ' ');
+  
+  const hasAuthor = /by\s+\w+|author:|written\s+by|contributor/i.test(textContent);
+  const hasQuotes = /["']|says|according|explains|notes/i.test(textContent);
+  const hasStats = /\d+%|\d+\s+of|\d+\s+out\s+of|\d+\s+studies|\d+\s+research/i.test(textContent);
+  const hasSources = /source:|reference:|according to|study by/i.test(textContent);
+  const hasRecentDate = /202[3-5]|2025/i.test(textContent);
+  
+  if (!hasAuthor && metrics.content < 70) {
+    recs.push({
+      priority: 'MEDIUM',
+      title: 'Add Author Credentials',
+      impact: 8,
+      effort: 'Low (1-2 hours)',
+      cost: '€75-150',
+      description: 'No author attribution found. Add author bio with credentials for E-E-A-T.'
     });
   }
   
-  const hasFAQ = scanData?.hasFAQ || false;
+  if (!hasQuotes && !hasStats) {
+    recs.push({
+      priority: 'MEDIUM',
+      title: 'Add Expert Quotes & Statistics',
+      impact: 9,
+      effort: 'Medium (3-5 hours)',
+      cost: '€150-250',
+      description: 'Missing expert quotes and statistics. Add 3-5 quotes and 5-8 statistics with sources.'
+    });
+  }
   
-  if (!hasFAQ) {
+  if (!hasSources) {
+    recs.push({
+      priority: 'MEDIUM',
+      title: 'Add Source Citations',
+      impact: 7,
+      effort: 'Medium (2-4 hours)',
+      cost: '€100-200',
+      description: 'No sources cited. Add references for all statistics and claims.'
+    });
+  }
+  
+  if (!hasRecentDate) {
+    recs.push({
+      priority: 'LOW',
+      title: 'Update Content Freshness',
+      impact: 6,
+      effort: 'Medium (2-3 hours)',
+      cost: '€100-175',
+      description: 'No recent dates found. Add 2024-2025 data and references.'
+    });
+  }
+
+  // ============================================
+  // 8. FAQ SECTION CHECK
+  // ============================================
+  const hasFAQ = scanData?.hasFAQ || false;
+  const faqQuestions = (textContent.match(/\?/g) || []).length;
+  
+  if (!hasFAQ && faqQuestions > 5) {
     recs.push({
       priority: 'HIGH',
       title: 'Add FAQ Section',
       impact: 8,
       effort: 'Low (2-3 hours)',
       cost: '€100-175',
-      description: 'Answer 8-12 common questions with FAQ schema markup to capture AI Overview opportunities'
+      description: `${faqQuestions} questions detected but no FAQ section. Add 8-12 FAQ items with schema markup.`
+    });
+  } else if (!hasFAQ && metrics.content > 70) {
+    recs.push({
+      priority: 'MEDIUM',
+      title: 'Consider Adding FAQ Section',
+      impact: 6,
+      effort: 'Low (2-3 hours)',
+      cost: '€100-175',
+      description: 'FAQ section missing. Add 8-12 common questions with answers to capture AI Overview opportunities.'
     });
   }
-  
-  if (score < 80) {
+
+  // ============================================
+  // 9. PAGE SPEED CHECK (OP basis van score)
+  // ============================================
+  if (score < 70) {
     recs.push({
-      priority: score < 70 ? 'HIGH' : 'MEDIUM',
+      priority: 'HIGH',
       title: 'Optimize Page Speed',
       impact: 9,
       effort: 'Medium (3-5 hours)',
       cost: '€200-400',
-      description: 'Reduce load time to <2s via image compression, lazy loading and CDN'
+      description: 'Low score may indicate slow loading. Reduce load time to <2s via image compression, lazy loading and CDN.'
+    });
+  } else if (score < 85) {
+    recs.push({
+      priority: 'MEDIUM',
+      title: 'Improve Page Speed',
+      impact: 7,
+      effort: 'Medium (3-5 hours)',
+      cost: '€200-400',
+      description: 'Optimize images, enable lazy loading, and consider CDN for faster performance.'
     });
   }
-  
-  recs.push({
-    priority: 'MEDIUM',
-    title: 'Optimize Images',
-    impact: 7,
-    effort: 'Medium (2-3 hours)',
-    cost: '€100-200',
-    description: 'Add alt-text, compress images and use WebP format'
-  });
-  
+
+  // ============================================
+  // 10. BEHANDEL GEVAL WAAR GEEN RECOMMENDATIONS ZIJN
+  // ============================================
+  if (recs.length === 0) {
+    recs.push({
+      priority: 'LOW',
+      title: 'Minor Optimizations Possible',
+      impact: 5,
+      effort: 'Low (1-2 hours)',
+      cost: '€50-100',
+      description: 'Your content scores well. Consider fine-tuning images, adding internal links, or updating statistics.'
+    });
+  }
+
+  // Sorteer op impact en return max 8
   return recs.sort((a, b) => b.impact - a.impact).slice(0, 8);
 }
 
-// ==========================================
-// API ROUTES
-// ==========================================
+// ============================================
+// PUBLIC ENDPOINTS
+// ============================================
+
 app.post('/api/scan', async (req, res) => {
   const { url } = req.body;
   if (!url) return res.status(400).json({ success: false, error: 'URL required' });
@@ -1093,7 +1043,9 @@ app.post('/api/scan', async (req, res) => {
     }
     
     const browser = await getBrowser();
-    if (!browser) return res.status(500).json({ success: false, error: 'Puppeteer browser niet beschikbaar' });
+    if (!browser) {
+      return res.status(500).json({ success: false, error: 'Puppeteer browser niet beschikbaar' });
+    }
     
     const page = await browser.newPage();
     await page.setViewport({ width: 1920, height: 1080 });
@@ -1118,7 +1070,7 @@ app.post('/api/scan', async (req, res) => {
       content: transparentScores.content_score,
       technical: transparentScores.technical_score,
       ux: transparentScores.ux_score
-    }, wordCount, { hasFAQ: scores.hasFAQ || false });
+    }, wordCount, { hasFAQ: scores.hasFAQ || false }, rawHtml, stats);
     
     const quickWins = recommendations.filter(r => r.priority === 'HIGH').slice(0, 3);
     
@@ -1146,6 +1098,7 @@ app.post('/api/scan', async (req, res) => {
     
     scanCache.set(cacheKey, { timestamp: Date.now(), result });
     
+    // Save to database if available
     if (pool) {
       try {
         await pool.query(
@@ -1168,9 +1121,6 @@ app.post('/api/scan', async (req, res) => {
   }
 });
 
-// ==========================================
-// GOOGLE MAPS SCRAPE MET 5 DAGEN LIMIET
-// ==========================================
 app.post('/api/google-maps/scrape', async (req, res) => {
   try {
     const { url, maxResults = 20 } = req.body;
@@ -1178,56 +1128,11 @@ app.post('/api/google-maps/scrape', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid Google Maps URL' });
     }
     
-    // Genereer session ID van IP + User Agent (anoniem)
-    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
-    const userAgent = req.headers['user-agent'] || 'unknown';
-    const sessionId = crypto
-      .createHash('sha256')
-      .update(ipAddress + userAgent)
-      .digest('hex')
-      .substring(0, 32);
-    
-    console.log(`🗺️ Google Maps scrape attempt - Session: ${sessionId.substring(0, 8)}...`);
-    
-    // Check 5 dagen limiet (alleen als pool bestaat)
-    if (pool) {
-      try {
-        const lastScan = await pool.query(
-          `SELECT next_scan_allowed_at FROM google_maps_scan_sessions 
-           WHERE session_id = $1 
-           ORDER BY scanned_at DESC 
-           LIMIT 1`,
-          [sessionId]
-        );
-        
-        if (lastScan.rows.length > 0) {
-          const nextAllowedAt = new Date(lastScan.rows[0].next_scan_allowed_at);
-          const now = new Date();
-          
-          if (now < nextAllowedAt) {
-            const daysRemaining = Math.ceil((nextAllowedAt - now) / (1000 * 60 * 60 * 24));
-            const hoursRemaining = Math.ceil((nextAllowedAt - now) / (1000 * 60 * 60));
-            
-            return res.status(429).json({
-              success: false,
-              error: 'Scan limit reached',
-              message: `You can scan again in ${daysRemaining} day${daysRemaining > 1 ? 's' : ''}`,
-              next_allowed_at: nextAllowedAt,
-              days_remaining: daysRemaining,
-              hours_remaining: hoursRemaining,
-              limit_days: 5
-            });
-          }
-        }
-      } catch (dbError) {
-        console.error('DB scan limit check error:', dbError.message);
-        // Doorgaan zonder limiet als DB error
-      }
-    }
-    
-    console.log(`🗺️ Starting scrape: ${url}`);
+    console.log(`🗺️ Google Maps scrape: ${url}`);
     const browser = await getBrowser();
-    if (!browser) return res.status(500).json({ success: false, error: 'Puppeteer browser niet beschikbaar' });
+    if (!browser) {
+      return res.status(500).json({ success: false, error: 'Puppeteer browser niet beschikbaar' });
+    }
     
     const page = await browser.newPage();
     await page.setViewport({ width: 1920, height: 1080 });
@@ -1280,37 +1185,9 @@ app.post('/api/google-maps/scrape', async (req, res) => {
     await page.close();
     console.log(`✅ Found ${leads.length} businesses from Google Maps`);
     
-    // Sla de scan sessie op in database
-    if (pool) {
-      try {
-        // Extract search query from URL for better tracking
-        let searchQuery = '';
-        try {
-          const urlObj = new URL(url);
-          const pathParts = urlObj.pathname.split('/');
-          if (pathParts.includes('search')) {
-            const searchIndex = pathParts.indexOf('search');
-            if (searchIndex + 1 < pathParts.length) {
-              searchQuery = decodeURIComponent(pathParts[searchIndex + 1].replace(/\+/g, ' '));
-            }
-          }
-        } catch (e) {}
-        
-        await pool.query(
-          `INSERT INTO google_maps_scan_sessions 
-           (session_id, maps_url, search_query, ip_address, user_agent, scanned_at, next_scan_allowed_at) 
-           VALUES ($1, $2, $3, $4, $5, NOW(), NOW() + INTERVAL '5 days')`,
-          [sessionId, url, searchQuery, ipAddress, userAgent]
-        );
-        console.log(`✅ Scan session saved - next scan allowed: ${new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString()}`);
-      } catch (dbError) {
-        console.error('DB scan session save error:', dbError.message);
-      }
-    }
-    
-    // Sla leads op in database
     const savedLeads = [];
     
+    // Save to database if available
     if (pool) {
       for (const lead of leads) {
         try {
@@ -1341,18 +1218,12 @@ app.post('/api/google-maps/scrape', async (req, res) => {
           }
           
           const result = await pool.query(
-            `INSERT INTO google_maps_leads (name, category, website, phone, address, rating, reviews, score, status, email_status)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
-            [lead.name, lead.category, verifiedWebsite, lead.phone, lead.address, lead.rating, lead.reviews, websiteScore, lead.status, 'pending']
+            `INSERT INTO google_maps_leads (name, category, website, phone, address, rating, reviews, score, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+            [lead.name, lead.category, verifiedWebsite, lead.phone, lead.address, lead.rating, lead.reviews, websiteScore, lead.status]
           );
           
-          savedLeads.push({ 
-            ...lead, 
-            website: verifiedWebsite, 
-            score: websiteScore, 
-            id: result.rows[0].id,
-            email_status: 'pending'
-          });
+          savedLeads.push({ ...lead, website: verifiedWebsite, score: websiteScore, id: result.rows[0].id });
         } catch (dbError) {
           console.error('DB insert error:', dbError.message);
         }
@@ -1369,449 +1240,11 @@ app.post('/api/google-maps/scrape', async (req, res) => {
         avg_score: savedLeads.length > 0 
           ? Math.round(savedLeads.reduce((sum, l) => sum + l.score, 0) / savedLeads.length) 
           : 0
-      },
-      scan_limit: {
-        days: 5,
-        next_allowed_at: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)
       }
     });
-    
   } catch (error) {
     console.error('Google Maps scrape error:', error);
     res.status(500).json({ success: false, error: 'Failed to scrape Google Maps: ' + error.message });
-  }
-});
-
-// ==========================================
-// NIEUWE SENDGRID ENDPOINTS (FASE 4)
-// ==========================================
-
-// Sendgrid configuratie opslaan
-app.post('/api/sendgrid/configure', async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  
-  // In productie haal je de freelancer ID uit de sessie
-  // Voor nu gebruiken we een header of query param
-  const freelancerId = req.headers['x-freelancer-id'] || 1; // Simpele versie
-  
-  const { api_key } = req.body;
-  if (!api_key) {
-    return res.status(400).json({ success: false, error: 'API key required' });
-  }
-  
-  try {
-    // Check of freelancer bestaat
-    const freelancer = await pool.query(
-      `SELECT id FROM freelancers WHERE id = $1 AND is_approved = TRUE`,
-      [freelancerId]
-    );
-    
-    if (freelancer.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Freelancer not found or not approved' });
-    }
-    
-    // Simpele encryptie (in productie gebruik je echte encryptie)
-    const encryptedKey = api_key; // TODO: echte encryptie
-    
-    // UPSERT: insert of update
-    await pool.query(
-      `INSERT INTO sendgrid_config (freelancer_id, api_key_encrypted, updated_at)
-       VALUES ($1, $2, NOW())
-       ON CONFLICT (freelancer_id) 
-       DO UPDATE SET api_key_encrypted = EXCLUDED.api_key_encrypted, updated_at = NOW()`,
-      [freelancerId, encryptedKey]
-    );
-    
-    res.json({ success: true, message: 'Sendgrid configuration saved' });
-    
-  } catch (error) {
-    console.error('Sendgrid configure error:', error.message);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Sendgrid status ophalen
-app.get('/api/sendgrid/status', async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  
-  const freelancerId = req.headers['x-freelancer-id'] || 1;
-  
-  try {
-    // Check of Sendgrid geconfigureerd is
-    const config = await pool.query(
-      `SELECT * FROM sendgrid_config WHERE freelancer_id = $1`,
-      [freelancerId]
-    );
-    
-    const configured = config.rows.length > 0;
-    
-    // Haal queue status op
-    const today = new Date().toISOString().split('T')[0];
-    const pending = await pool.query(
-      `SELECT COUNT(*) as count FROM email_queue 
-       WHERE user_id = $1 AND status = 'pending'`,
-      [freelancerId]
-    );
-    
-    const sentToday = await pool.query(
-      `SELECT COUNT(*) as count FROM email_queue 
-       WHERE user_id = $1 AND status = 'sent' AND DATE(sent_at) = $2`,
-      [freelancerId, today]
-    );
-    
-    res.json({
-      success: true,
-      configured: configured,
-      queue_active: queueActive,
-      pending: parseInt(pending.rows[0].count),
-      sent_today: parseInt(sentToday.rows[0].count),
-      daily_limit: DAILY_LIMIT
-    });
-    
-  } catch (error) {
-    console.error('Sendgrid status error:', error.message);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Test Sendgrid configuratie
-app.post('/api/sendgrid/test', async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  
-  const freelancerId = req.headers['x-freelancer-id'] || 1;
-  
-  try {
-    const config = await pool.query(
-      `SELECT * FROM sendgrid_config WHERE freelancer_id = $1`,
-      [freelancerId]
-    );
-    
-    if (config.rows.length === 0) {
-      return res.status(400).json({ success: false, error: 'Sendgrid not configured' });
-    }
-    
-    const apiKey = config.rows[0].api_key_encrypted;
-    
-    // Stuur test email naar freelancer's eigen email
-    const freelancer = await pool.query(
-      `SELECT email FROM freelancers WHERE id = $1`,
-      [freelancerId]
-    );
-    
-    if (freelancer.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Freelancer not found' });
-    }
-    
-    const result = await sendEmailViaSendgrid(
-      apiKey,
-      freelancer.rows[0].email,
-      'Test Email from ContentScale',
-      '<h1>Test</h1><p>Your Sendgrid configuration is working!</p>'
-    );
-    
-    if (result.success) {
-      res.json({ success: true, message: 'Test email sent' });
-    } else {
-      res.status(500).json({ success: false, error: result.error });
-    }
-    
-  } catch (error) {
-    console.error('Sendgrid test error:', error.message);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// ==========================================
-// EMAIL FINDER ENDPOINTS (FASE 4)
-// ==========================================
-
-// Vind email voor 1 lead
-app.post('/api/leads/:id/find-email', async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  
-  const { id } = req.params;
-  
-  try {
-    // Haal lead op
-    const leadResult = await pool.query(
-      `SELECT * FROM google_maps_leads WHERE id = $1`,
-      [id]
-    );
-    
-    if (leadResult.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Lead not found' });
-    }
-    
-    const lead = leadResult.rows[0];
-    
-    if (!lead.website) {
-      return res.json({ success: false, error: 'No website to search' });
-    }
-    
-    const domain = extractDomain(lead.website);
-    if (!domain) {
-      return res.json({ success: false, error: 'Invalid domain' });
-    }
-    
-    // Stap 1: Probeer WHOIS
-    let emailResult = await findEmailViaWhois(domain);
-    
-    // Stap 2: Als WHOIS niets vindt, crawl contact pagina
-    if (!emailResult) {
-      emailResult = await findEmailViaContactPage(lead.website);
-    }
-    
-    if (emailResult) {
-      // Update lead met gevonden email
-      await pool.query(
-        `UPDATE google_maps_leads SET 
-           email = $1, 
-           email_status = 'found', 
-           email_found_at = NOW(),
-           email_method = $2
-         WHERE id = $3`,
-        [emailResult.email, emailResult.method, id]
-      );
-      
-      // Log de vondst
-      await pool.query(
-        `INSERT INTO email_finder_log (lead_id, domain, email_found, method, confidence)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [id, domain, emailResult.email, emailResult.method, 80]
-      );
-      
-      res.json({ 
-        success: true, 
-        email: emailResult.email, 
-        method: emailResult.method 
-      });
-    } else {
-      // Geen email gevonden
-      await pool.query(
-        `UPDATE google_maps_leads SET email_status = 'not_found' WHERE id = $1`,
-        [id]
-      );
-      
-      res.json({ success: false, error: 'No email found' });
-    }
-    
-  } catch (error) {
-    console.error('Email finder error:', error.message);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Bulk email finder voor meerdere leads
-app.post('/api/leads/bulk/find-emails', async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  
-  const { lead_ids } = req.body;
-  if (!lead_ids || !Array.isArray(lead_ids) || lead_ids.length === 0) {
-    return res.status(400).json({ success: false, error: 'Lead IDs required' });
-  }
-  
-  try {
-    let found = 0;
-    let total = lead_ids.length;
-    
-    for (const id of lead_ids) {
-      // Haal lead op
-      const leadResult = await pool.query(
-        `SELECT * FROM google_maps_leads WHERE id = $1`,
-        [id]
-      );
-      
-      if (leadResult.rows.length === 0) continue;
-      
-      const lead = leadResult.rows[0];
-      
-      if (!lead.website) continue;
-      
-      const domain = extractDomain(lead.website);
-      if (!domain) continue;
-      
-      // Stap 1: WHOIS
-      let emailResult = await findEmailViaWhois(domain);
-      
-      // Stap 2: Contact pagina
-      if (!emailResult) {
-        emailResult = await findEmailViaContactPage(lead.website);
-      }
-      
-      if (emailResult) {
-        await pool.query(
-          `UPDATE google_maps_leads SET 
-             email = $1, 
-             email_status = 'found', 
-             email_found_at = NOW(),
-             email_method = $2
-           WHERE id = $3`,
-          [emailResult.email, emailResult.method, id]
-        );
-        
-        await pool.query(
-          `INSERT INTO email_finder_log (lead_id, domain, email_found, method, confidence)
-           VALUES ($1, $2, $3, $4, $5)`,
-          [id, domain, emailResult.email, emailResult.method, 80]
-        );
-        
-        found++;
-      } else {
-        await pool.query(
-          `UPDATE google_maps_leads SET email_status = 'not_found' WHERE id = $1`,
-          [id]
-        );
-      }
-      
-      // Kleine vertraging om rate limiting te voorkomen
-      await new Promise(resolve => setTimeout(resolve, 500));
-    }
-    
-    res.json({ 
-      success: true, 
-      found: found,
-      total: total,
-      message: `Found ${found} emails out of ${total} leads`
-    });
-    
-  } catch (error) {
-    console.error('Bulk email finder error:', error.message);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// ==========================================
-// EMAIL QUEUE ENDPOINTS (FASE 4)
-// ==========================================
-
-// Voeg leads toe aan email queue
-app.post('/api/email/queue', async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  
-  const freelancerId = req.headers['x-freelancer-id'] || 1;
-  const { lead_ids } = req.body;
-  
-  if (!lead_ids || !Array.isArray(lead_ids) || lead_ids.length === 0) {
-    return res.status(400).json({ success: false, error: 'Lead IDs required' });
-  }
-  
-  try {
-    // Check of freelancer Sendgrid heeft geconfigureerd
-    const config = await pool.query(
-      `SELECT * FROM sendgrid_config WHERE freelancer_id = $1`,
-      [freelancerId]
-    );
-    
-    if (config.rows.length === 0) {
-      return res.status(400).json({ success: false, error: 'Sendgrid not configured' });
-    }
-    
-    let queued = 0;
-    
-    for (const lead_id of lead_ids) {
-      // Haal lead op
-      const leadResult = await pool.query(
-        `SELECT * FROM google_maps_leads WHERE id = $1`,
-        [lead_id]
-      );
-      
-      if (leadResult.rows.length === 0) continue;
-      
-      const lead = leadResult.rows[0];
-      
-      // Alleen als er een email is
-      if (!lead.email || !lead.email.includes('@')) continue;
-      
-      // Check of al in queue
-      const existing = await pool.query(
-        `SELECT id FROM email_queue 
-         WHERE lead_id = $1 AND user_id = $2 AND status IN ('pending', 'sent')`,
-        [lead_id, freelancerId]
-      );
-      
-      if (existing.rows.length > 0) continue;
-      
-      // Voeg toe aan queue
-      await pool.query(
-        `INSERT INTO email_queue (user_id, lead_id, recipient_email, recipient_name, subject, status)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [freelancerId, lead_id, lead.email, lead.name, 'SEO Opportunity for your business', 'pending']
-      );
-      
-      queued++;
-    }
-    
-    res.json({ 
-      success: true, 
-      queued: queued,
-      message: `Added ${queued} leads to email queue`
-    });
-    
-  } catch (error) {
-    console.error('Email queue error:', error.message);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Start queue processing
-app.post('/api/email/start', async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  
-  startQueueProcessor();
-  res.json({ success: true, message: 'Email queue started' });
-});
-
-// Pause queue processing
-app.post('/api/email/pause', async (req, res) => {
-  stopQueueProcessor();
-  res.json({ success: true, message: 'Email queue paused' });
-});
-
-// Resume queue processing
-app.post('/api/email/resume', async (req, res) => {
-  startQueueProcessor();
-  res.json({ success: true, message: 'Email queue resumed' });
-});
-
-// Queue status
-app.get('/api/email/queue/status', async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  
-  const freelancerId = req.headers['x-freelancer-id'] || 1;
-  
-  try {
-    const today = new Date().toISOString().split('T')[0];
-    
-    const pending = await pool.query(
-      `SELECT COUNT(*) as count FROM email_queue 
-       WHERE user_id = $1 AND status = 'pending'`,
-      [freelancerId]
-    );
-    
-    const sentToday = await pool.query(
-      `SELECT COUNT(*) as count FROM email_queue 
-       WHERE user_id = $1 AND status = 'sent' AND DATE(sent_at) = $2`,
-      [freelancerId, today]
-    );
-    
-    const failed = await pool.query(
-      `SELECT COUNT(*) as count FROM email_queue 
-       WHERE user_id = $1 AND status = 'failed'`,
-      [freelancerId]
-    );
-    
-    res.json({
-      success: true,
-      queue_active: queueActive,
-      pending: parseInt(pending.rows[0].count),
-      sent_today: parseInt(sentToday.rows[0].count),
-      failed: parseInt(failed.rows[0].count),
-      daily_limit: DAILY_LIMIT
-    });
-    
-  } catch (error) {
-    console.error('Queue status error:', error.message);
-    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -1836,8 +1269,7 @@ app.get('/api/leaderboard', async (req, res) => {
         created_at,
         graaf_score,
         craft_score,
-        technical_score,
-        share_code
+        technical_score
       FROM leaderboard 
       WHERE score IS NOT NULL 
         AND is_opted_out = FALSE 
@@ -1885,83 +1317,11 @@ app.get('/api/leaderboard', async (req, res) => {
   }
 });
 
-// Shareable leaderboard page
-app.get('/share/:code', async (req, res) => {
-  const { code } = req.params;
-  
-  if (!pool) {
-    return res.status(503).send('Database niet beschikbaar');
-  }
-  
-  try {
-    const result = await pool.query(
-      `SELECT * FROM leaderboard WHERE share_code = $1 AND admin_verified = TRUE`,
-      [code]
-    );
-    
-    if (result.rows.length === 0) {
-      return res.status(404).send('Leaderboard entry niet gevonden');
-    }
-    
-    const entry = result.rows[0];
-    
-    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
-    const userAgent = req.headers['user-agent'] || 'unknown';
-    
-    await pool.query(
-      `INSERT INTO leaderboard_shares (leaderboard_id, share_code, shared_via, ip_address, user_agent)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [entry.id, code, 'direct', ipAddress, userAgent]
-    );
-    
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>${entry.company_name || 'Website'} - ContentScale Leaderboard</title>
-        <meta property="og:title" content="${entry.company_name || 'Website'} scored ${entry.score}/100 on ContentScale" />
-        <meta property="og:description" content="Check out this elite website's SEO performance using GRAAF & CRAFT frameworks" />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://app.contentscale.site/share/${code}" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <style>
-          body { font-family: system-ui, sans-serif; background: #030712; color: white; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; }
-          .card { background: #111827; border: 2px solid #a855f7; border-radius: 1rem; padding: 2rem; max-width: 500px; text-align: center; }
-          .score { font-size: 5rem; font-weight: bold; color: #4ade80; line-height: 1; margin: 1rem 0; }
-          .url { color: #9ca3af; word-break: break-all; margin-bottom: 1.5rem; }
-          .badge { background: #a855f7; color: white; padding: 0.5rem 1rem; border-radius: 9999px; display: inline-block; margin-bottom: 1rem; }
-          .frameworks { display: flex; gap: 1rem; justify-content: center; margin: 1.5rem 0; }
-          .framework { background: #1f2937; padding: 0.75rem; border-radius: 0.5rem; flex: 1; }
-          .btn { background: #7e22ce; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 1rem; }
-        </style>
-      </head>
-      <body>
-        <div class="card">
-          <div class="badge">🏆 Elite Leaderboard</div>
-          <h1>${entry.company_name || 'Website'}</h1>
-          <div class="url">${entry.url}</div>
-          <div class="score">${entry.score}/100</div>
-          <div class="frameworks">
-            <div class="framework">GRAAF<br><strong>${entry.graaf_score || '?'}/50</strong></div>
-            <div class="framework">CRAFT<br><strong>${entry.craft_score || '?'}/30</strong></div>
-            <div class="framework">Technical<br><strong>${entry.technical_score || '?'}/20</strong></div>
-          </div>
-          <a href="https://app.contentscale.site" class="btn">Scan your website →</a>
-        </div>
-      </body>
-      </html>
-    `;
-    
-    res.send(html);
-    
-  } catch (error) {
-    console.error('Share error:', error);
-    res.status(500).send('Internal server error');
-  }
-});
-
 app.get('/api/freelancers', async (req, res) => {
-  if (!pool) return res.json({ success: true, freelancers: [] });
+  if (!pool) {
+    return res.json({ success: true, freelancers: [] });
+  }
+  
   try {
     const result = await pool.query(`
       SELECT 
@@ -1972,7 +1332,11 @@ app.get('/api/freelancers', async (req, res) => {
       ORDER BY is_featured DESC, created_at DESC
       LIMIT 50
     `);
-    res.json({ success: true, freelancers: result.rows });
+    
+    res.json({ 
+      success: true, 
+      freelancers: result.rows 
+    });
   } catch (error) {
     console.error('Freelancers error:', error);
     res.json({ success: true, freelancers: [] });
@@ -1980,31 +1344,197 @@ app.get('/api/freelancers', async (req, res) => {
 });
 
 app.post('/api/freelancers/register', async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  if (!pool) {
+    return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  }
+  
   try {
-    const { name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_featured } = req.body;
-    if (!name || !email) return res.status(400).json({ success: false, error: 'Name and email are required' });
+    const { name, email, title, location, country, bio, linkedin_url, hourly_rate, availability } = req.body;
+    
+    if (!name || !email) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Name and email are required' 
+      });
+    }
     
     const existing = await pool.query('SELECT id FROM freelancers WHERE email = $1', [email]);
-    if (existing.rows.length > 0) return res.status(400).json({ success: false, error: 'Email already registered' });
+    
+    if (existing.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email already registered'
+      });
+    }
     
     const result = await pool.query(
-      `INSERT INTO freelancers (name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_approved, is_featured) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, $10) RETURNING id`,
+      `INSERT INTO freelancers 
+       (name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_approved) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false) 
+       RETURNING id`,
       [name, email, title || null, location || null, country || null, bio || null, 
-       linkedin_url || null, hourly_rate || null, availability || null, is_featured || false]
+       linkedin_url || null, hourly_rate || null, availability || null]
     );
     
-    res.json({ success: true, message: 'Application submitted! We will review and approve soon.', id: result.rows[0].id });
+    res.json({ 
+      success: true, 
+      message: 'Application submitted! We will review and approve soon.',
+      id: result.rows[0].id 
+    });
   } catch (error) {
     console.error('Freelancer registration error:', error);
-    res.status(500).json({ success: false, error: 'Registration failed' });
+    res.status(500).json({ 
+      success: false, 
+      error: 'Registration failed' 
+    });
   }
 });
 
-// ==========================================
-// ADMIN LOGIN
-// ==========================================
+app.get('/api/blog', async (req, res) => {
+  if (!pool) {
+    return res.json({ success: true, posts: [], pagination: { page: 1, limit: 10, total: 0, pages: 0 } });
+  }
+  
+  try {
+    const { category, limit = 10, page = 1 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    
+    let query = `
+      SELECT id, title, slug, excerpt, category, featured_image, featured_image_alt, author, 
+             published_at, views, tags
+      FROM blog_posts 
+      WHERE status = 'published' AND published_at <= NOW()
+    `;
+    
+    const params = [];
+    let paramCount = 1;
+    
+    if (category) {
+      query += ` AND category = $${paramCount}`;
+      params.push(category);
+      paramCount++;
+    }
+    
+    query += ` ORDER BY published_at DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+    params.push(parseInt(limit), offset);
+    
+    const result = await pool.query(query, params);
+    
+    const countQuery = category ? 
+      'SELECT COUNT(*) FROM blog_posts WHERE status = \'published\' AND published_at <= NOW() AND category = $1' :
+      'SELECT COUNT(*) FROM blog_posts WHERE status = \'published\' AND published_at <= NOW()';
+    
+    const countParams = category ? [category] : [];
+    const countResult = await pool.query(countQuery, countParams);
+    const total = parseInt(countResult.rows[0].count);
+    
+    res.json({
+      success: true,
+      posts: result.rows,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Blog error:', error);
+    res.json({ 
+      success: true, 
+      posts: [], 
+      pagination: { page: 1, limit: 10, total: 0, pages: 0 } 
+    });
+  }
+});
+
+app.get('/api/blog/:slug', async (req, res) => {
+  if (!pool) {
+    return res.status(404).json({ success: false, error: 'Blog post not found' });
+  }
+  
+  try {
+    const result = await pool.query(
+      `SELECT * FROM blog_posts 
+       WHERE slug = $1 AND status = 'published' AND published_at <= NOW()`,
+      [req.params.slug]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Blog post not found' 
+      });
+    }
+    
+    await pool.query('UPDATE blog_posts SET views = views + 1 WHERE id = $1', [result.rows[0].id]);
+    
+    const images = await pool.query(
+      'SELECT * FROM blog_images WHERE post_id = $1 ORDER BY position ASC',
+      [result.rows[0].id]
+    );
+    
+    const related = await pool.query(
+      `SELECT id, title, slug, excerpt, featured_image, featured_image_alt, published_at
+       FROM blog_posts 
+       WHERE category = $1 AND id != $2 AND status = 'published' AND published_at <= NOW()
+       ORDER BY published_at DESC LIMIT 3`,
+      [result.rows[0].category, result.rows[0].id]
+    );
+    
+    res.json({
+      success: true,
+      post: { ...result.rows[0], images: images.rows },
+      related: related.rows
+    });
+  } catch (error) {
+    console.error('Blog post error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to load blog post' 
+    });
+  }
+});
+
+app.post('/api/claims/submit', async (req, res) => {
+  if (!pool) {
+    return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  }
+  
+  try {
+    const { business_name, business_url, contact_name, contact_email, contact_phone, verification_document } = req.body;
+    
+    if (!business_name || !business_url || !contact_name || !contact_email) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Required fields missing' 
+      });
+    }
+    
+    const result = await pool.query(
+      `INSERT INTO claims 
+       (business_name, business_url, contact_name, contact_email, contact_phone, verification_document)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id`,
+      [business_name, business_url, contact_name, contact_email, contact_phone, verification_document]
+    );
+    
+    res.json({ 
+      success: true, 
+      message: 'Claim submitted successfully',
+      id: result.rows[0].id 
+    });
+  } catch (error) {
+    console.error('Claim submission error:', error);
+    res.status(500).json({ success: false, error: 'Failed to submit claim' });
+  }
+});
+
+// ============================================
+// ADMIN ENDPOINTS
+// ============================================
+
+// AUTHENTICATION
 app.post('/api/setup/verify-admin', async (req, res) => {
   const { username, password } = req.body;
   
@@ -2013,12 +1543,15 @@ app.post('/api/setup/verify-admin', async (req, res) => {
   }
   
   if (!pool) {
-    return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    console.error('❌ Login poging maar database niet beschikbaar');
+    return res.status(503).json({ 
+      success: false, 
+      error: 'Database niet beschikbaar. Controleer of PostgreSQL draait.',
+      db_status: 'disconnected'
+    });
   }
   
   try {
-    console.log(`🔐 Login poging voor: ${username}`);
-    
     const result = await pool.query(
       'SELECT * FROM super_admins WHERE username = $1 AND is_active = TRUE', 
       [username]
@@ -2035,43 +1568,38 @@ app.post('/api/setup/verify-admin', async (req, res) => {
       return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
     
-    await pool.query(
-      'UPDATE super_admins SET last_login = NOW() WHERE id = $1', 
-      [admin.id]
-    );
-    
-    console.log(`✅ Login succesvol voor: ${username}, admin ID: ${admin.id}`);
+    await pool.query('UPDATE super_admins SET last_login = NOW() WHERE id = $1', [admin.id]);
     
     res.json({
       success: true,
       admin_id: admin.id,
-      admin: {
-        id: admin.id,
-        username: admin.username,
-        full_name: admin.full_name,
-        role: admin.role
+      admin: { 
+        id: admin.id, 
+        username: admin.username, 
+        full_name: admin.full_name, 
+        role: admin.role 
       }
     });
-    
   } catch (error) {
     console.error('❌ Login error:', error.message);
     res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
-// ==========================================
-// ADMIN ROUTES
-// ==========================================
+// Session verificatie
 app.post('/api/admin/verify-session', verifyAdmin, async (req, res) => {
   res.json({ valid: true, admin: req.admin.username });
 });
 
+// DASHBOARD STATS
 app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
-  if (!pool) return res.json({ success: true, stats: { 
-    total_scans: 0, total_agencies: 0, total_clients: 0, active_helpers: 0,
-    leaderboard_entries: 0, blog_posts: 0, active_share_links: 0,
-    pending_claims: 0, pending_freelancers: 0, pending_leaderboard: 0
-  }});
+  if (!pool) {
+    return res.json({ success: true, stats: { 
+      total_scans: 0, total_agencies: 0, total_clients: 0, active_helpers: 0,
+      leaderboard_entries: 0, blog_posts: 0, active_share_links: 0,
+      pending_claims: 0, pending_freelancers: 0, pending_leaderboard: 0
+    }});
+  }
   
   try {
     const [scans, leaderboard, freelancers, blogPosts, shareLinks, claims, pendingFreelancers, pendingLeaderboard] = await Promise.all([
@@ -2101,14 +1629,25 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
       }
     });
   } catch (error) {
-    res.json({ success: true, stats: { 
-      total_scans: 0, total_agencies: 0, total_clients: 0, active_helpers: 0,
-      leaderboard_entries: 0, blog_posts: 0, active_share_links: 0,
-      pending_claims: 0, pending_freelancers: 0, pending_leaderboard: 0
-    }});
+    res.json({ 
+      success: true, 
+      stats: { 
+        total_scans: 0,
+        total_agencies: 0,
+        total_clients: 0,
+        leaderboard_entries: 0,
+        active_helpers: 0,
+        blog_posts: 0,
+        active_share_links: 0,
+        pending_claims: 0,
+        pending_freelancers: 0,
+        pending_leaderboard: 0
+      } 
+    });
   }
 });
 
+// LEADERBOARD MANAGEMENT
 app.get('/api/admin/leaderboard', verifyAdmin, async (req, res) => {
   if (!pool) return res.json({ success: true, entries: [] });
   try {
@@ -2131,125 +1670,15 @@ app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
 
 app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  
-  const { id } = req.params;
-  const { final_country, contact_email } = req.body;
-  
   try {
-    const entryResult = await pool.query(
-      `SELECT * FROM leaderboard WHERE id = $1`,
-      [id]
-    );
-    
-    if (entryResult.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Entry not found' });
-    }
-    
-    const entry = entryResult.rows[0];
-    
-    let shareCode = entry.share_code;
-    if (!shareCode) {
-      shareCode = generateShareCode(entry.url, entry.id);
-    }
-    
-    const positionResult = await pool.query(
-      `SELECT COUNT(*) + 1 as position FROM leaderboard 
-       WHERE admin_verified = TRUE AND score > $1`,
-      [entry.score]
-    );
-    const position = parseInt(positionResult.rows[0].position) || 1;
-    
+    const { id } = req.params;
+    const { final_country } = req.body;
     await pool.query(
-      `UPDATE leaderboard SET 
-         admin_verified = TRUE, 
-         country = COALESCE($2, country), 
-         is_verified = TRUE,
-         share_code = COALESCE($3, share_code),
-         contact_email = COALESCE($4, contact_email)
-       WHERE id = $1`,
-      [id, final_country, shareCode, contact_email]
+      `UPDATE leaderboard SET admin_verified = TRUE, country = COALESCE($2, country), is_verified = TRUE WHERE id = $1`,
+      [id, final_country]
     );
-    
-    let emailSent = false;
-    if (contact_email) {
-      const shareUrl = `https://app.contentscale.site/share/${shareCode}`;
-      const baseUrl = `https://app.contentscale.site`;
-      
-      const emailHtml = `
-        <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #111827; color: white; border-radius: 12px; border: 2px solid #a855f7;">
-          <div style="text-align: center; margin-bottom: 30px;">
-            <span style="background: #a855f7; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold;">🏆 ContentScale Leaderboard</span>
-          </div>
-          
-          <h1 style="color: white; text-align: center; font-size: 28px; margin-bottom: 20px;">🎉 Congratulations!</h1>
-          
-          <p style="color: #d1d5db; font-size: 18px; text-align: center; margin-bottom: 30px;">
-            Your website <strong style="color: white;">${entry.url}</strong> has been reviewed and scored an impressive 
-            <strong style="color: #4ade80; font-size: 24px;">${entry.score}/100</strong>.
-          </p>
-          
-          <div style="background: #1f2937; border-radius: 12px; padding: 25px; margin-bottom: 30px;">
-            <p style="color: white; margin-top: 0; margin-bottom: 20px; font-size: 18px;">
-              Your content quality, technical SEO, and user experience are outstanding. 
-              That's why we've added you to the <strong>ContentScale Elite Leaderboard</strong> at position #${position}.
-            </p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${shareUrl}" style="background: #7e22ce; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 18px; display: inline-block;">
-                👉 View Your Position
-              </a>
-            </div>
-            
-            <p style="color: #9ca3af; margin-bottom: 20px;">
-              Want to share this achievement? Use this link to show your clients or team:
-            </p>
-            
-            <div style="background: #111827; border: 1px solid #374151; border-radius: 8px; padding: 15px; word-break: break-all;">
-              <a href="${shareUrl}" style="color: #7dd3fc; text-decoration: underline;">${shareUrl}</a>
-            </div>
-          </div>
-          
-          <div style="background: linear-gradient(135deg, #7e22ce, #be185d); border-radius: 12px; padding: 20px; text-align: center;">
-            <p style="color: white; margin: 0 0 15px 0; font-size: 16px;">
-              ⭐ Keep up the excellent work. Sites that maintain 85+ often see 2-3x more organic traffic within 3 months.
-            </p>
-            <a href="${baseUrl}" style="background: white; color: #7e22ce; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block;">
-              Scan your website again →
-            </a>
-          </div>
-          
-          <p style="color: #6b7280; text-align: center; margin-top: 30px; font-size: 14px;">
-            —<br>
-            ContentScale Team<br>
-            <a href="${baseUrl}" style="color: #7dd3fc;">www.contentscale.site</a>
-          </p>
-        </div>
-      `;
-      
-      emailSent = await sendEmail(
-        contact_email,
-        `🎉 Congratulations! Your site is now on the Contentscale Leaderboard`,
-        emailHtml
-      );
-      
-      if (emailSent) {
-        await pool.query(
-          `UPDATE leaderboard SET email_sent_at = NOW() WHERE id = $1`,
-          [id]
-        );
-      }
-    }
-    
-    res.json({ 
-      success: true, 
-      message: 'Entry approved',
-      email_sent: emailSent,
-      share_code: shareCode,
-      position: position
-    });
-    
+    res.json({ success: true });
   } catch (error) {
-    console.error('Approve error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -2274,22 +1703,29 @@ app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
   }
 });
 
+// Admin scan and add to leaderboard
 app.post('/api/admin/leaderboard/scan-and-add', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   
-  const { url, company_name, country, city, type = 'seo_agency', contact_email } = req.body;
+  const { url, company_name, country, city, type = 'seo_agency' } = req.body;
   
-  if (!url) return res.status(400).json({ success: false, error: 'URL required' });
+  if (!url) {
+    return res.status(400).json({ success: false, error: 'URL required' });
+  }
   
   let scanUrl = url;
   if (!scanUrl.startsWith('http')) scanUrl = 'https://' + scanUrl;
-  if (!isValidUrl(scanUrl)) return res.status(400).json({ success: false, error: 'Invalid URL format' });
+  if (!isValidUrl(scanUrl)) {
+    return res.status(400).json({ success: false, error: 'Invalid URL format' });
+  }
   
   try {
     console.log(`👑 ADMIN SCAN for leaderboard: ${scanUrl}`);
     
     const browser = await getBrowser();
-    if (!browser) return res.status(500).json({ success: false, error: 'Puppeteer browser niet beschikbaar' });
+    if (!browser) {
+      return res.status(500).json({ success: false, error: 'Puppeteer browser niet beschikbaar' });
+    }
     
     const page = await browser.newPage();
     await page.setViewport({ width: 1920, height: 1080 });
@@ -2321,107 +1757,57 @@ app.post('/api/admin/leaderboard/scan-and-add', verifyAdmin, async (req, res) =>
     const existing = await pool.query('SELECT id FROM leaderboard WHERE url = $1', [scanUrl]);
     
     let leaderboardEntry;
-    let shareCode = generateShareCode(scanUrl, Date.now());
     
     if (existing.rows.length === 0) {
       const result = await pool.query(
-        `INSERT INTO leaderboard (url, company_name, score, country, city, type, admin_verified, is_verified, graaf_score, craft_score, technical_score, share_code, contact_email)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id`,
-        [scanUrl, company_name || null, totalScore, country || 'NL', city || null, type, true, true,
-         scores.graafScore, scores.craftScore, scores.technicalScore, shareCode, contact_email]
+        `INSERT INTO leaderboard 
+         (url, company_name, score, country, city, type, admin_verified, is_verified, graaf_score, craft_score, technical_score)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         RETURNING id`,
+        [
+          scanUrl,
+          company_name || null,
+          totalScore,
+          country || 'NL',
+          city || null,
+          type,
+          true,
+          true,
+          scores.graafScore,
+          scores.craftScore,
+          scores.technicalScore
+        ]
       );
       leaderboardEntry = { id: result.rows[0].id, action: 'added' };
       console.log(`👑 Admin added to leaderboard: ${scanUrl} (score: ${totalScore})`);
     } else {
       await pool.query(
         `UPDATE leaderboard SET 
-           score = $1, company_name = COALESCE($2, company_name), country = COALESCE($3, country),
-           city = COALESCE($4, city), type = COALESCE($5, type), admin_verified = true,
-           is_verified = true, graaf_score = $6, craft_score = $7, technical_score = $8,
-           contact_email = COALESCE($9, contact_email)
-         WHERE url = $10`,
-        [totalScore, company_name || null, country || null, city || null, type,
-         scores.graafScore, scores.craftScore, scores.technicalScore, contact_email, scanUrl]
+           score = $1,
+           company_name = COALESCE($2, company_name),
+           country = COALESCE($3, country),
+           city = COALESCE($4, city),
+           type = COALESCE($5, type),
+           admin_verified = true,
+           is_verified = true,
+           graaf_score = $6,
+           craft_score = $7,
+           technical_score = $8
+         WHERE url = $9`,
+        [
+          totalScore,
+          company_name || null,
+          country || null,
+          city || null,
+          type,
+          scores.graafScore,
+          scores.craftScore,
+          scores.technicalScore,
+          scanUrl
+        ]
       );
       leaderboardEntry = { id: existing.rows[0].id, action: 'updated' };
       console.log(`👑 Admin updated leaderboard: ${scanUrl} (score: ${totalScore})`);
-    }
-    
-    let emailSent = false;
-    if (contact_email) {
-      const positionResult = await pool.query(
-        `SELECT COUNT(*) + 1 as position FROM leaderboard 
-         WHERE admin_verified = TRUE AND score > $1`,
-        [totalScore]
-      );
-      const position = parseInt(positionResult.rows[0].position) || 1;
-      
-      const shareUrl = `https://app.contentscale.site/share/${shareCode}`;
-      const baseUrl = `https://app.contentscale.site`;
-      
-      const emailHtml = `
-        <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #111827; color: white; border-radius: 12px; border: 2px solid #a855f7;">
-          <div style="text-align: center; margin-bottom: 30px;">
-            <span style="background: #a855f7; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold;">🏆 ContentScale Leaderboard</span>
-          </div>
-          
-          <h1 style="color: white; text-align: center; font-size: 28px; margin-bottom: 20px;">🎉 Congratulations!</h1>
-          
-          <p style="color: #d1d5db; font-size: 18px; text-align: center; margin-bottom: 30px;">
-            Your website <strong style="color: white;">${scanUrl}</strong> has been reviewed and scored an impressive 
-            <strong style="color: #4ade80; font-size: 24px;">${totalScore}/100</strong>.
-          </p>
-          
-          <div style="background: #1f2937; border-radius: 12px; padding: 25px; margin-bottom: 30px;">
-            <p style="color: white; margin-top: 0; margin-bottom: 20px; font-size: 18px;">
-              Your content quality, technical SEO, and user experience are outstanding. 
-              That's why we've added you to the <strong>ContentScale Elite Leaderboard</strong> at position #${position}.
-            </p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${shareUrl}" style="background: #7e22ce; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 18px; display: inline-block;">
-                👉 View Your Position
-              </a>
-            </div>
-            
-            <p style="color: #9ca3af; margin-bottom: 20px;">
-              Want to share this achievement? Use this link to show your clients or team:
-            </p>
-            
-            <div style="background: #111827; border: 1px solid #374151; border-radius: 8px; padding: 15px; word-break: break-all;">
-              <a href="${shareUrl}" style="color: #7dd3fc; text-decoration: underline;">${shareUrl}</a>
-            </div>
-          </div>
-          
-          <div style="background: linear-gradient(135deg, #7e22ce, #be185d); border-radius: 12px; padding: 20px; text-align: center;">
-            <p style="color: white; margin: 0 0 15px 0; font-size: 16px;">
-              ⭐ Keep up the excellent work. Sites that maintain 85+ often see 2-3x more organic traffic within 3 months.
-            </p>
-            <a href="${baseUrl}" style="background: white; color: #7e22ce; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block;">
-              Scan your website again →
-            </a>
-          </div>
-          
-          <p style="color: #6b7280; text-align: center; margin-top: 30px; font-size: 14px;">
-            —<br>
-            ContentScale Team<br>
-            <a href="${baseUrl}" style="color: #7dd3fc;">www.contentscale.site</a>
-          </p>
-        </div>
-      `;
-      
-      emailSent = await sendEmail(
-        contact_email,
-        `🎉 Congratulations! Your site is now on the Contentscale Leaderboard`,
-        emailHtml
-      );
-      
-      if (emailSent) {
-        await pool.query(
-          `UPDATE leaderboard SET email_sent_at = NOW() WHERE url = $1`,
-          [scanUrl]
-        );
-      }
     }
     
     res.json({
@@ -2438,8 +1824,6 @@ app.post('/api/admin/leaderboard/scan-and-add', verifyAdmin, async (req, res) =>
         content: transparentScores.content_score,
         ux: transparentScores.ux_score
       },
-      share_code: shareCode,
-      email_sent: emailSent,
       timestamp: new Date().toISOString()
     });
     
@@ -2449,117 +1833,70 @@ app.post('/api/admin/leaderboard/scan-and-add', verifyAdmin, async (req, res) =>
   }
 });
 
+// Admin manual add to leaderboard
 app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
   try {
-    const { url, company_name, score, country, city, type, contact_email } = req.body;
-    if (!url || !score) return res.status(400).json({ success: false, error: 'URL and score are required' });
+    const { url, company_name, score, country, city, type } = req.body;
     
-    const shareCode = generateShareCode(url, Date.now());
+    if (!url || !score) {
+      return res.status(400).json({ success: false, error: 'URL and score are required' });
+    }
+    
     const existing = await pool.query('SELECT id FROM leaderboard WHERE url = $1', [url]);
     
     if (existing.rows.length === 0) {
       const result = await pool.query(
-        `INSERT INTO leaderboard (url, company_name, score, country, city, type, admin_verified, is_verified, share_code, contact_email)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
-        [url, company_name || null, score, country || 'NL', city || null, type || 'seo_agency', true, true, shareCode, contact_email]
+        `INSERT INTO leaderboard 
+         (url, company_name, score, country, city, type, admin_verified, is_verified)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING id`,
+        [
+          url,
+          company_name || null,
+          score,
+          country || 'NL',
+          city || null,
+          type || 'seo_agency',
+          true,
+          true
+        ]
       );
       
-      let emailSent = false;
-      if (contact_email) {
-        const positionResult = await pool.query(
-          `SELECT COUNT(*) + 1 as position FROM leaderboard 
-           WHERE admin_verified = TRUE AND score > $1`,
-          [score]
-        );
-        const position = parseInt(positionResult.rows[0].position) || 1;
-        
-        const shareUrl = `https://app.contentscale.site/share/${shareCode}`;
-        const baseUrl = `https://app.contentscale.site`;
-        
-        const emailHtml = `
-          <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #111827; color: white; border-radius: 12px; border: 2px solid #a855f7;">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <span style="background: #a855f7; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold;">🏆 ContentScale Leaderboard</span>
-            </div>
-            
-            <h1 style="color: white; text-align: center; font-size: 28px; margin-bottom: 20px;">🎉 Congratulations!</h1>
-            
-            <p style="color: #d1d5db; font-size: 18px; text-align: center; margin-bottom: 30px;">
-              Your website <strong style="color: white;">${url}</strong> has been reviewed and scored an impressive 
-              <strong style="color: #4ade80; font-size: 24px;">${score}/100</strong>.
-            </p>
-            
-            <div style="background: #1f2937; border-radius: 12px; padding: 25px; margin-bottom: 30px;">
-              <p style="color: white; margin-top: 0; margin-bottom: 20px; font-size: 18px;">
-                Your content quality, technical SEO, and user experience are outstanding. 
-                That's why we've added you to the <strong>ContentScale Elite Leaderboard</strong> at position #${position}.
-              </p>
-              
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${shareUrl}" style="background: #7e22ce; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 18px; display: inline-block;">
-                  👉 View Your Position
-                </a>
-              </div>
-              
-              <p style="color: #9ca3af; margin-bottom: 20px;">
-                Want to share this achievement? Use this link to show your clients or team:
-              </p>
-              
-              <div style="background: #111827; border: 1px solid #374151; border-radius: 8px; padding: 15px; word-break: break-all;">
-                <a href="${shareUrl}" style="color: #7dd3fc; text-decoration: underline;">${shareUrl}</a>
-              </div>
-            </div>
-            
-            <div style="background: linear-gradient(135deg, #7e22ce, #be185d); border-radius: 12px; padding: 20px; text-align: center;">
-              <p style="color: white; margin: 0 0 15px 0; font-size: 16px;">
-                ⭐ Keep up the excellent work. Sites that maintain 85+ often see 2-3x more organic traffic within 3 months.
-              </p>
-              <a href="${baseUrl}" style="background: white; color: #7e22ce; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block;">
-                Scan your website again →
-              </a>
-            </div>
-            
-            <p style="color: #6b7280; text-align: center; margin-top: 30px; font-size: 14px;">
-              —<br>
-              ContentScale Team<br>
-              <a href="${baseUrl}" style="color: #7dd3fc;">www.contentscale.site</a>
-            </p>
-          </div>
-        `;
-        
-        emailSent = await sendEmail(
-          contact_email,
-          `🎉 Congratulations! Your site is now on the Contentscale Leaderboard`,
-          emailHtml
-        );
-        
-        if (emailSent) {
-          await pool.query(
-            `UPDATE leaderboard SET email_sent_at = NOW() WHERE id = $1`,
-            [result.rows[0].id]
-          );
-        }
-      }
-      
-      res.json({ 
-        success: true, 
-        action: 'added', 
-        id: result.rows[0].id, 
-        message: 'Entry added to leaderboard',
-        share_code: shareCode,
-        email_sent: emailSent
+      res.json({
+        success: true,
+        action: 'added',
+        id: result.rows[0].id,
+        message: 'Entry added to leaderboard'
       });
     } else {
       await pool.query(
         `UPDATE leaderboard SET 
-           score = $1, company_name = COALESCE($2, company_name), country = COALESCE($3, country),
-           city = COALESCE($4, city), type = COALESCE($5, type), admin_verified = true, 
-           is_verified = true, contact_email = COALESCE($6, contact_email)
-         WHERE url = $7`,
-        [score, company_name || null, country || null, city || null, type || 'seo_agency', contact_email, url]
+           score = $1,
+           company_name = COALESCE($2, company_name),
+           country = COALESCE($3, country),
+           city = COALESCE($4, city),
+           type = COALESCE($5, type),
+           admin_verified = true,
+           is_verified = true
+         WHERE url = $6`,
+        [
+          score,
+          company_name || null,
+          country || null,
+          city || null,
+          type || 'seo_agency',
+          url
+        ]
       );
-      res.json({ success: true, action: 'updated', id: existing.rows[0].id, message: 'Leaderboard entry updated' });
+      
+      res.json({
+        success: true,
+        action: 'updated',
+        id: existing.rows[0].id,
+        message: 'Leaderboard entry updated'
+      });
     }
   } catch (error) {
     console.error('Manual leaderboard add error:', error);
@@ -2567,19 +1904,13 @@ app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
   }
 });
 
-// ✅ ADMIN FREELANCERS
+// FREELANCERS MANAGEMENT
 app.get('/api/admin/freelancers', verifyAdmin, async (req, res) => {
   if (!pool) return res.json({ success: true, freelancers: [] });
   try {
-    const result = await pool.query(`
-      SELECT * FROM freelancers 
-      WHERE is_approved = TRUE 
-      ORDER BY is_featured DESC, created_at DESC 
-      LIMIT 200
-    `);
+    const result = await pool.query(`SELECT * FROM freelancers ORDER BY created_at DESC LIMIT 200`);
     res.json({ success: true, freelancers: result.rows });
   } catch (error) {
-    console.error('Admin freelancers error:', error);
     res.json({ success: true, freelancers: [] });
   }
 });
@@ -2604,64 +1935,24 @@ app.post('/api/admin/freelancers/:id/approve', verifyAdmin, async (req, res) => 
   }
 });
 
-app.post('/api/admin/freelancers/:id/toggle-featured', verifyAdmin, async (req, res) => {
+app.post('/api/admin/freelancers/:id/feature', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   try {
     const { id } = req.params;
-    const freelancer = await pool.query('SELECT is_featured FROM freelancers WHERE id = $1', [id]);
-    if (freelancer.rows.length === 0) return res.status(404).json({ success: false, error: 'Freelancer not found' });
-    
-    const newFeatured = !freelancer.rows[0].is_featured;
-    await pool.query('UPDATE freelancers SET is_featured = $1 WHERE id = $2', [newFeatured, id]);
-    
-    res.json({ success: true, is_featured: newFeatured, message: `Featured ${newFeatured ? 'aangezet' : 'uitgezet'}` });
+    const { is_featured } = req.body;
+    await pool.query('UPDATE freelancers SET is_featured = $1 WHERE id = $2', [is_featured, id]);
+    res.json({ success: true });
   } catch (error) {
-    console.error('Toggle featured error:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.post('/api/admin/freelancers/bulk-delete', verifyAdmin, async (req, res) => {
+app.post('/api/admin/freelancers/:id/deactivate', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   try {
-    const { ids } = req.body;
-    if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
-    }
-    
-    const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
-    await pool.query(`DELETE FROM freelancers WHERE id IN (${placeholders})`, ids);
-    
-    res.json({ success: true, message: `${ids.length} freelancers verwijderd` });
+    await pool.query('UPDATE freelancers SET is_approved = FALSE WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
   } catch (error) {
-    console.error('Bulk delete freelancers error:', error.message);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  try {
-    const { id } = req.params;
-    const { name, email, title, location, country, bio, hourly_rate, is_featured } = req.body;
-    
-    await pool.query(
-      `UPDATE freelancers SET 
-        name = COALESCE($1, name),
-        email = COALESCE($2, email),
-        title = COALESCE($3, title),
-        location = COALESCE($4, location),
-        country = COALESCE($5, country),
-        bio = COALESCE($6, bio),
-        hourly_rate = COALESCE($7, hourly_rate),
-        is_featured = COALESCE($8, is_featured)
-      WHERE id = $9`,
-      [name, email, title, location, country, bio, hourly_rate, is_featured, id]
-    );
-    
-    res.json({ success: true, message: 'Freelancer bijgewerkt' });
-  } catch (error) {
-    console.error('Update freelancer error:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -2676,70 +1967,95 @@ app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
   }
 });
 
-// ✅ LEADERBOARD BULK DELETE
-app.post('/api/admin/leaderboard/bulk-delete', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+// SHARE LINKS MANAGEMENT
+app.get('/api/admin/share-links', verifyAdmin, async (req, res) => {
+  if (!pool) return res.json({ success: true, share_links: [] });
   try {
-    const { ids } = req.body;
-    if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
-    }
-    
-    const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
-    await pool.query(`DELETE FROM leaderboard WHERE id IN (${placeholders})`, ids);
-    
-    res.json({ success: true, message: `${ids.length} entries verwijderd` });
+    const result = await pool.query(
+      `SELECT *, 
+        CASE WHEN expires_at > NOW() AND is_active = TRUE THEN 'active' ELSE 'inactive' END as status
+       FROM share_links 
+       ORDER BY created_at DESC LIMIT 100`
+    );
+    res.json({ success: true, share_links: result.rows });
   } catch (error) {
-    console.error('Bulk delete leaderboard error:', error.message);
+    res.json({ success: true, share_links: [] });
+  }
+});
+
+app.post('/api/admin/share-links/create', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  try {
+    const { client_email, client_name, client_company, scans_limit = 10, valid_days = 30 } = req.body;
+    const shareCode = crypto.randomBytes(16).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + valid_days);
+    
+    const result = await pool.query(
+      `INSERT INTO share_links (share_code, client_email, client_name, client_company, scans_limit, created_by, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [shareCode, client_email, client_name, client_company, scans_limit, req.admin.id, expiresAt]
+    );
+    
+    res.json({
+      success: true,
+      share_link: result.rows[0],
+      share_url: `https://app.contentscale.site/share/${shareCode}`,
+      expires_at: expiresAt
+    });
+  } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
+app.put('/api/admin/share-links/:id/toggle-status', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   try {
     const { id } = req.params;
-    const { company_name, url, score, country, contact_email } = req.body;
-    
-    await pool.query(
-      `UPDATE leaderboard SET 
-        company_name = COALESCE($1, company_name),
-        url = COALESCE($2, url),
-        score = COALESCE($3, score),
-        country = COALESCE($4, country),
-        contact_email = COALESCE($5, contact_email)
-      WHERE id = $6`,
-      [company_name, url, score, country, contact_email, id]
-    );
-    
-    res.json({ success: true, message: 'Leaderboard entry bijgewerkt' });
+    const { status } = req.body;
+    await pool.query('UPDATE share_links SET is_active = $1 WHERE id = $2', [status === 'active', id]);
+    res.json({ success: true });
   } catch (error) {
-    console.error('Update leaderboard error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/admin/share-links/:id', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    await pool.query('DELETE FROM share_links WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
 // ==========================================
-// PAGE ROUTES
+// HTML ROUTES
 // ==========================================
 app.get('/admin', (req, res) => {
-  res.sendFile(path.join(publicPath, 'admin-dashboard.html'));
+  res.sendFile(path.join(__dirname, '../public/admin-dashboard.html'));
 });
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(publicPath, 'index.html'));
+  res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 app.get('/blog', (req, res) => {
-  res.sendFile(path.join(publicPath, 'blog.html'));
+  res.sendFile(path.join(__dirname, '../public/blog.html'));
 });
 
 app.get('/blog/:slug', (req, res) => {
-  res.sendFile(path.join(publicPath, 'blog-post.html'));
+  res.sendFile(path.join(__dirname, '../public/blog-post.html'));
 });
 
+// ============================================
+// HEALTH CHECK
+// ============================================
 app.get('/api/health', async (req, res) => {
   let dbStatus = 'disconnected';
+  
   if (pool) {
     try {
       await pool.query('SELECT 1');
@@ -2748,6 +2064,7 @@ app.get('/api/health', async (req, res) => {
       dbStatus = 'error';
     }
   }
+  
   res.json({ 
     status: 'running',
     database: dbStatus,
@@ -2757,19 +2074,25 @@ app.get('/api/health', async (req, res) => {
   });
 });
 
+// ============================================
+// CATCH-ALL ROUTE
+// ============================================
 app.get('*', (req, res) => {
-  if (req.path.startsWith('/api/')) {
-    return res.status(404).json({ error: 'API endpoint not found' });
-  }
-  
-  const filePath = path.join(publicPath, req.path);
+  const filePath = path.join(__dirname, '../public', req.path);
   res.sendFile(filePath, (err) => {
     if (err) {
-      res.sendFile(path.join(publicPath, 'index.html'));
+      res.sendFile(path.join(__dirname, '../public/index.html'), (err2) => {
+        if (err2) {
+          res.status(404).json({ error: 'Not found' });
+        }
+      });
     }
   });
 });
 
+// ============================================
+// ERROR HANDLING
+// ============================================
 app.use((err, req, res, next) => {
   console.error('Server error:', err.message);
   res.status(500).json({ 
@@ -2779,6 +2102,9 @@ app.use((err, req, res, next) => {
   });
 });
 
+// ============================================
+// START SERVER
+// ============================================
 async function startServer() {
   console.log('');
   console.log('🚀 =====================================');
@@ -2786,12 +2112,8 @@ async function startServer() {
   console.log('🚀 =====================================');
   console.log('');
   
+  // Wacht op database
   const dbConnected = await waitForDatabase();
-  
-  // Start queue processor als database verbonden is
-  if (dbConnected) {
-    startQueueProcessor();
-  }
   
   app.listen(PORT, () => {
     console.log('');
@@ -2801,12 +2123,20 @@ async function startServer() {
     console.log('');
     console.log(`📊 Database status: ${dbConnected ? '✅ Verbonden' : '❌ NIET VERBONDEN'}`);
     console.log(`🔐 Admin login:     ${dbConnected ? '✅ Werkend (ot/admin123)' : '❌ Niet beschikbaar'}`);
-    console.log(`📧 Queue processor: ${queueActive ? '✅ Actief' : '❌ Inactief'}`);
     console.log('');
     
     if (!dbConnected) {
       console.log('⚠️  WAARSCHUWING: Database niet verbonden!');
       console.log('   Admin login werkt NIET. Controleer PostgreSQL.');
+      console.log('');
+      console.log('📋 Oplossing:');
+      console.log('   Zet environment variables:');
+      console.log('   - DATABASE_URL=postgresql://user:pass@host:5432/dbname');
+      console.log('   OF');
+      console.log('   - DB_HOST=localhost');
+      console.log('   - DB_USER=postgres');
+      console.log('   - DB_PASSWORD=postgres');
+      console.log('   - DB_NAME=contentscale');
       console.log('');
     }
     
