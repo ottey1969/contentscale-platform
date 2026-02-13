@@ -158,7 +158,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// ✅ EENMALIGE DECLARATIE - ALLEEN HIER!
 const publicPath = process.env.NODE_ENV === 'production' 
   ? path.join(process.cwd(), 'public')
   : path.join(__dirname, 'public');
@@ -972,17 +971,17 @@ app.get('/api/freelancers', async (req, res) => {
 app.post('/api/freelancers/register', async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   try {
-    const { name, email, title, location, country, bio, linkedin_url, hourly_rate, availability } = req.body;
+    const { name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_featured } = req.body;
     if (!name || !email) return res.status(400).json({ success: false, error: 'Name and email are required' });
     
     const existing = await pool.query('SELECT id FROM freelancers WHERE email = $1', [email]);
     if (existing.rows.length > 0) return res.status(400).json({ success: false, error: 'Email already registered' });
     
     const result = await pool.query(
-      `INSERT INTO freelancers (name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_approved) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false) RETURNING id`,
+      `INSERT INTO freelancers (name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_approved, is_featured) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, $10) RETURNING id`,
       [name, email, title || null, location || null, country || null, bio || null, 
-       linkedin_url || null, hourly_rate || null, availability || null]
+       linkedin_url || null, hourly_rate || null, availability || null, is_featured || false]
     );
     
     res.json({ success: true, message: 'Application submitted! We will review and approve soon.', id: result.rows[0].id });
@@ -1219,12 +1218,21 @@ app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
   }
 });
 
+// ==========================================
+// ✅ GEFIXT: ADMIN FREELANCERS - TOONT ALLEEN GOEDGEKEURDE FREELANCERS
+// ==========================================
 app.get('/api/admin/freelancers', verifyAdmin, async (req, res) => {
   if (!pool) return res.json({ success: true, freelancers: [] });
   try {
-    const result = await pool.query(`SELECT * FROM freelancers ORDER BY created_at DESC LIMIT 200`);
+    const result = await pool.query(`
+      SELECT * FROM freelancers 
+      WHERE is_approved = TRUE 
+      ORDER BY is_featured DESC, created_at DESC 
+      LIMIT 200
+    `);
     res.json({ success: true, freelancers: result.rows });
   } catch (error) {
+    console.error('Admin freelancers error:', error);
     res.json({ success: true, freelancers: [] });
   }
 });
@@ -1245,6 +1253,114 @@ app.post('/api/admin/freelancers/:id/approve', verifyAdmin, async (req, res) => 
     await pool.query('UPDATE freelancers SET is_approved = TRUE, is_verified = TRUE WHERE id = $1', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ FREELANCER TOGGLE FEATURED
+app.post('/api/admin/freelancers/:id/toggle-featured', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { id } = req.params;
+    const freelancer = await pool.query('SELECT is_featured FROM freelancers WHERE id = $1', [id]);
+    if (freelancer.rows.length === 0) return res.status(404).json({ success: false, error: 'Freelancer not found' });
+    
+    const newFeatured = !freelancer.rows[0].is_featured;
+    await pool.query('UPDATE freelancers SET is_featured = $1 WHERE id = $2', [newFeatured, id]);
+    
+    res.json({ success: true, is_featured: newFeatured, message: `Featured ${newFeatured ? 'aangezet' : 'uitgezet'}` });
+  } catch (error) {
+    console.error('Toggle featured error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ FREELANCER BULK DELETE
+app.post('/api/admin/freelancers/bulk-delete', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
+    }
+    
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
+    await pool.query(`DELETE FROM freelancers WHERE id IN (${placeholders})`, ids);
+    
+    res.json({ success: true, message: `${ids.length} freelancers verwijderd` });
+  } catch (error) {
+    console.error('Bulk delete freelancers error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ LEADERBOARD BULK DELETE (VOOR PENDING)
+app.post('/api/admin/leaderboard/bulk-delete', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
+    }
+    
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
+    await pool.query(`DELETE FROM leaderboard WHERE id IN (${placeholders})`, ids);
+    
+    res.json({ success: true, message: `${ids.length} entries verwijderd` });
+  } catch (error) {
+    console.error('Bulk delete leaderboard error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ FREELANCER BEWERKEN
+app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { id } = req.params;
+    const { name, email, title, location, country, bio, hourly_rate, is_featured } = req.body;
+    
+    await pool.query(
+      `UPDATE freelancers SET 
+        name = COALESCE($1, name),
+        email = COALESCE($2, email),
+        title = COALESCE($3, title),
+        location = COALESCE($4, location),
+        country = COALESCE($5, country),
+        bio = COALESCE($6, bio),
+        hourly_rate = COALESCE($7, hourly_rate),
+        is_featured = COALESCE($8, is_featured)
+      WHERE id = $9`,
+      [name, email, title, location, country, bio, hourly_rate, is_featured, id]
+    );
+    
+    res.json({ success: true, message: 'Freelancer bijgewerkt' });
+  } catch (error) {
+    console.error('Update freelancer error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ LEADERBOARD BEWERKEN (VOOR PENDING)
+app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { id } = req.params;
+    const { company_name, url, score, country } = req.body;
+    
+    await pool.query(
+      `UPDATE leaderboard SET 
+        company_name = COALESCE($1, company_name),
+        url = COALESCE($2, url),
+        score = COALESCE($3, score),
+        country = COALESCE($4, country)
+      WHERE id = $5`,
+      [company_name, url, score, country, id]
+    );
+    
+    res.json({ success: true, message: 'Leaderboard entry bijgewerkt' });
+  } catch (error) {
+    console.error('Update leaderboard error:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1447,7 +1563,7 @@ app.post('/api/claims/submit', async (req, res) => {
   }
 });
 
-// ✅ PAGE ROUTES - GEBRUIK DE BESTAANDE publicPath VARIABELE
+// ✅ PAGE ROUTES
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(publicPath, 'admin-dashboard.html'));
 });
