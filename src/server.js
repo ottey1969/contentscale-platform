@@ -158,6 +158,7 @@ app.use((req, res, next) => {
   next();
 });
 
+// ✅ EENMALIGE DECLARATIE - ALLEEN HIER!
 const publicPath = process.env.NODE_ENV === 'production' 
   ? path.join(process.cwd(), 'public')
   : path.join(__dirname, 'public');
@@ -1446,10 +1447,7 @@ app.post('/api/claims/submit', async (req, res) => {
   }
 });
 
-const publicPath = process.env.NODE_ENV === 'production' 
-  ? path.join(process.cwd(), 'public')
-  : path.join(__dirname, 'public');
-
+// ✅ PAGE ROUTES - GEBRUIK DE BESTAANDE publicPath VARIABELE
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(publicPath, 'admin-dashboard.html'));
 });
