@@ -8,6 +8,7 @@ const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 const multer = require('multer');
 const sharp = require('sharp');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,6 +18,57 @@ console.log('📊 Database URL:', process.env.DATABASE_URL ? '✅ GEVONDEN' : '�
 
 let dbConfig;
 let pool;
+
+// Email configuratie (gebruik environment variables voor productie)
+const emailConfig = {
+  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+  port: parseInt(process.env.EMAIL_PORT || '587'),
+  secure: process.env.EMAIL_SECURE === 'true',
+  auth: {
+    user: process.env.EMAIL_USER || 'your-email@gmail.com',
+    pass: process.env.EMAIL_PASS || 'your-app-password'
+  }
+};
+
+// Maak email transporter
+let emailTransporter = null;
+try {
+  emailTransporter = nodemailer.createTransport(emailConfig);
+  console.log('📧 Email transporter geconfigureerd');
+} catch (e) {
+  console.error('❌ Email configuratie error:', e.message);
+}
+
+// Helper functie om e-mails te versturen
+async function sendEmail(to, subject, html) {
+  if (!emailTransporter) {
+    console.error('❌ Email transporter niet beschikbaar');
+    return false;
+  }
+  
+  try {
+    const info = await emailTransporter.sendMail({
+      from: `"ContentScale" <${emailConfig.auth.user}>`,
+      to: to,
+      subject: subject,
+      html: html
+    });
+    console.log(`✅ Email sent: ${info.messageId}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Email send error:', error.message);
+    return false;
+  }
+}
+
+// Helper om share code te genereren
+function generateShareCode(url, id) {
+  const hash = crypto.createHash('sha256')
+    .update(url + id + Date.now().toString())
+    .digest('hex')
+    .substring(0, 12);
+  return hash;
+}
 
 function initDatabaseConfig() {
   if (process.env.DATABASE_URL) {
@@ -311,12 +363,28 @@ async function createAllTables() {
         is_verified BOOLEAN DEFAULT FALSE,
         is_opted_out BOOLEAN DEFAULT FALSE,
         submission_ip VARCHAR(50),
-        admin_verified BOOLEAN DEFAULT TRUE,
+        admin_verified BOOLEAN DEFAULT FALSE, -- VERANDERD: nu standaard FALSE
         auto_detected_country VARCHAR(100),
         graaf_score INTEGER,
         craft_score INTEGER,
         technical_score INTEGER,
+        share_code VARCHAR(64) UNIQUE, -- NIEUW: voor shareable URLs
+        email_sent_at TIMESTAMP, -- NIEUW: wanneer felicitatie is verstuurd
+        contact_email VARCHAR(255), -- NIEUW: email voor felicitatie
         created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // NIEUWE TABEL: leaderboard shares voor tracking
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS leaderboard_shares (
+        id SERIAL PRIMARY KEY,
+        leaderboard_id INTEGER REFERENCES leaderboard(id) ON DELETE CASCADE,
+        share_code VARCHAR(64) NOT NULL,
+        shared_via VARCHAR(50),
+        clicked_at TIMESTAMP DEFAULT NOW(),
+        ip_address VARCHAR(50),
+        user_agent TEXT
       )
     `);
     
@@ -359,7 +427,6 @@ async function createAllTables() {
       )
     `);
     
-    // ========== NIEUWE TABEL VOOR SCAN SESSIES ==========
     await client.query(`
       CREATE TABLE IF NOT EXISTS google_maps_scan_sessions (
         id SERIAL PRIMARY KEY,
@@ -373,7 +440,6 @@ async function createAllTables() {
       )
     `);
     
-    // Index voor snelle lookup
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_scan_sessions_session_id 
       ON google_maps_scan_sessions(session_id)
@@ -783,7 +849,7 @@ app.post('/api/scan', async (req, res) => {
 });
 
 // ==========================================
-// ✅ GOOGLE MAPS SCRAPE MET 5 DAGEN LIMIET
+// GOOGLE MAPS SCRAPE MET 5 DAGEN LIMIET
 // ==========================================
 app.post('/api/google-maps/scrape', async (req, res) => {
   try {
@@ -1011,7 +1077,8 @@ app.get('/api/leaderboard', async (req, res) => {
         created_at,
         graaf_score,
         craft_score,
-        technical_score
+        technical_score,
+        share_code
       FROM leaderboard 
       WHERE score IS NOT NULL 
         AND is_opted_out = FALSE 
@@ -1059,6 +1126,84 @@ app.get('/api/leaderboard', async (req, res) => {
   }
 });
 
+// NIEUWE ROUTE: shareable leaderboard page
+app.get('/share/:code', async (req, res) => {
+  const { code } = req.params;
+  
+  if (!pool) {
+    return res.status(503).send('Database niet beschikbaar');
+  }
+  
+  try {
+    // Vind de leaderboard entry met deze share code
+    const result = await pool.query(
+      `SELECT * FROM leaderboard WHERE share_code = $1 AND admin_verified = TRUE`,
+      [code]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).send('Leaderboard entry niet gevonden');
+    }
+    
+    const entry = result.rows[0];
+    
+    // Log de share (voor tracking)
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    
+    await pool.query(
+      `INSERT INTO leaderboard_shares (leaderboard_id, share_code, shared_via, ip_address, user_agent)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [entry.id, code, 'direct', ipAddress, userAgent]
+    );
+    
+    // Stuur een simpele HTML pagina met de leaderboard info
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${entry.company_name || 'Website'} - ContentScale Leaderboard</title>
+        <meta property="og:title" content="${entry.company_name || 'Website'} scored ${entry.score}/100 on ContentScale" />
+        <meta property="og:description" content="Check out this elite website's SEO performance using GRAAF & CRAFT frameworks" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://app.contentscale.site/share/${code}" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <style>
+          body { font-family: system-ui, sans-serif; background: #030712; color: white; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; }
+          .card { background: #111827; border: 2px solid #a855f7; border-radius: 1rem; padding: 2rem; max-width: 500px; text-align: center; }
+          .score { font-size: 5rem; font-weight: bold; color: #4ade80; line-height: 1; margin: 1rem 0; }
+          .url { color: #9ca3af; word-break: break-all; margin-bottom: 1.5rem; }
+          .badge { background: #a855f7; color: white; padding: 0.5rem 1rem; border-radius: 9999px; display: inline-block; margin-bottom: 1rem; }
+          .frameworks { display: flex; gap: 1rem; justify-content: center; margin: 1.5rem 0; }
+          .framework { background: #1f2937; padding: 0.75rem; border-radius: 0.5rem; flex: 1; }
+          .btn { background: #7e22ce; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 1rem; }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <div class="badge">🏆 Elite Leaderboard</div>
+          <h1>${entry.company_name || 'Website'}</h1>
+          <div class="url">${entry.url}</div>
+          <div class="score">${entry.score}/100</div>
+          <div class="frameworks">
+            <div class="framework">GRAAF<br><strong>${entry.graaf_score || '?'}/50</strong></div>
+            <div class="framework">CRAFT<br><strong>${entry.craft_score || '?'}/30</strong></div>
+            <div class="framework">Technical<br><strong>${entry.technical_score || '?'}/20</strong></div>
+          </div>
+          <a href="https://app.contentscale.site" class="btn">Scan your website →</a>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    res.send(html);
+    
+  } catch (error) {
+    console.error('Share error:', error);
+    res.status(500).send('Internal server error');
+  }
+});
+
 app.get('/api/freelancers', async (req, res) => {
   if (!pool) return res.json({ success: true, freelancers: [] });
   try {
@@ -1102,7 +1247,7 @@ app.post('/api/freelancers/register', async (req, res) => {
 });
 
 // ==========================================
-// ✅ ADMIN LOGIN
+// ADMIN LOGIN
 // ==========================================
 app.post('/api/setup/verify-admin', async (req, res) => {
   const { username, password } = req.body;
@@ -1228,17 +1373,134 @@ app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
   }
 });
 
+// ✅ NIEUWE GOEDKEURINGSROUTE MET E-MAIL
 app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  const { id } = req.params;
+  const { final_country, contact_email } = req.body;
+  
   try {
-    const { id } = req.params;
-    const { final_country } = req.body;
-    await pool.query(
-      `UPDATE leaderboard SET admin_verified = TRUE, country = COALESCE($2, country), is_verified = TRUE WHERE id = $1`,
-      [id, final_country]
+    // Haal de leaderboard entry op
+    const entryResult = await pool.query(
+      `SELECT * FROM leaderboard WHERE id = $1`,
+      [id]
     );
-    res.json({ success: true });
+    
+    if (entryResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Entry not found' });
+    }
+    
+    const entry = entryResult.rows[0];
+    
+    // Genereer share code als die nog niet bestaat
+    let shareCode = entry.share_code;
+    if (!shareCode) {
+      shareCode = generateShareCode(entry.url, entry.id);
+    }
+    
+    // Bereken positie voor leaderboard
+    const positionResult = await pool.query(
+      `SELECT COUNT(*) + 1 as position FROM leaderboard 
+       WHERE admin_verified = TRUE AND score > $1`,
+      [entry.score]
+    );
+    const position = parseInt(positionResult.rows[0].position) || 1;
+    
+    // Update de leaderboard entry
+    await pool.query(
+      `UPDATE leaderboard SET 
+         admin_verified = TRUE, 
+         country = COALESCE($2, country), 
+         is_verified = TRUE,
+         share_code = COALESCE($3, share_code),
+         contact_email = COALESCE($4, contact_email)
+       WHERE id = $1`,
+      [id, final_country, shareCode, contact_email]
+    );
+    
+    // Stuur e-mail als er een contact_email is
+    let emailSent = false;
+    if (contact_email) {
+      const shareUrl = `https://app.contentscale.site/share/${shareCode}`;
+      const baseUrl = `https://app.contentscale.site`;
+      
+      const emailHtml = `
+        <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #111827; color: white; border-radius: 12px; border: 2px solid #a855f7;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <span style="background: #a855f7; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold;">🏆 ContentScale Leaderboard</span>
+          </div>
+          
+          <h1 style="color: white; text-align: center; font-size: 28px; margin-bottom: 20px;">🎉 Congratulations!</h1>
+          
+          <p style="color: #d1d5db; font-size: 18px; text-align: center; margin-bottom: 30px;">
+            Your website <strong style="color: white;">${entry.url}</strong> has been reviewed and scored an impressive 
+            <strong style="color: #4ade80; font-size: 24px;">${entry.score}/100</strong>.
+          </p>
+          
+          <div style="background: #1f2937; border-radius: 12px; padding: 25px; margin-bottom: 30px;">
+            <p style="color: white; margin-top: 0; margin-bottom: 20px; font-size: 18px;">
+              Your content quality, technical SEO, and user experience are outstanding. 
+              That's why we've added you to the <strong>ContentScale Elite Leaderboard</strong> at position #${position}.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${shareUrl}" style="background: #7e22ce; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 18px; display: inline-block;">
+                👉 View Your Position
+              </a>
+            </div>
+            
+            <p style="color: #9ca3af; margin-bottom: 20px;">
+              Want to share this achievement? Use this link to show your clients or team:
+            </p>
+            
+            <div style="background: #111827; border: 1px solid #374151; border-radius: 8px; padding: 15px; word-break: break-all;">
+              <a href="${shareUrl}" style="color: #7dd3fc; text-decoration: underline;">${shareUrl}</a>
+            </div>
+          </div>
+          
+          <div style="background: linear-gradient(135deg, #7e22ce, #be185d); border-radius: 12px; padding: 20px; text-align: center;">
+            <p style="color: white; margin: 0 0 15px 0; font-size: 16px;">
+              ⭐ Keep up the excellent work. Sites that maintain 85+ often see 2-3x more organic traffic within 3 months.
+            </p>
+            <a href="${baseUrl}" style="background: white; color: #7e22ce; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block;">
+              Scan your website again →
+            </a>
+          </div>
+          
+          <p style="color: #6b7280; text-align: center; margin-top: 30px; font-size: 14px;">
+            —<br>
+            ContentScale Team<br>
+            <a href="${baseUrl}" style="color: #7dd3fc;">www.contentscale.site</a>
+          </p>
+        </div>
+      `;
+      
+      emailSent = await sendEmail(
+        contact_email,
+        `🎉 Congratulations! Your site is now on the Contentscale Leaderboard`,
+        emailHtml
+      );
+      
+      // Update email_sent_at timestamp
+      if (emailSent) {
+        await pool.query(
+          `UPDATE leaderboard SET email_sent_at = NOW() WHERE id = $1`,
+          [id]
+        );
+      }
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Entry approved',
+      email_sent: emailSent,
+      share_code: shareCode,
+      position: position
+    });
+    
   } catch (error) {
+    console.error('Approve error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1266,7 +1528,7 @@ app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
 app.post('/api/admin/leaderboard/scan-and-add', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   
-  const { url, company_name, country, city, type = 'seo_agency' } = req.body;
+  const { url, company_name, country, city, type = 'seo_agency', contact_email } = req.body;
   
   if (!url) return res.status(400).json({ success: false, error: 'URL required' });
   
@@ -1310,13 +1572,14 @@ app.post('/api/admin/leaderboard/scan-and-add', verifyAdmin, async (req, res) =>
     const existing = await pool.query('SELECT id FROM leaderboard WHERE url = $1', [scanUrl]);
     
     let leaderboardEntry;
+    let shareCode = generateShareCode(scanUrl, Date.now());
     
     if (existing.rows.length === 0) {
       const result = await pool.query(
-        `INSERT INTO leaderboard (url, company_name, score, country, city, type, admin_verified, is_verified, graaf_score, craft_score, technical_score)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
+        `INSERT INTO leaderboard (url, company_name, score, country, city, type, admin_verified, is_verified, graaf_score, craft_score, technical_score, share_code, contact_email)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id`,
         [scanUrl, company_name || null, totalScore, country || 'NL', city || null, type, true, true,
-         scores.graafScore, scores.craftScore, scores.technicalScore]
+         scores.graafScore, scores.craftScore, scores.technicalScore, shareCode, contact_email]
       );
       leaderboardEntry = { id: result.rows[0].id, action: 'added' };
       console.log(`👑 Admin added to leaderboard: ${scanUrl} (score: ${totalScore})`);
@@ -1325,13 +1588,92 @@ app.post('/api/admin/leaderboard/scan-and-add', verifyAdmin, async (req, res) =>
         `UPDATE leaderboard SET 
            score = $1, company_name = COALESCE($2, company_name), country = COALESCE($3, country),
            city = COALESCE($4, city), type = COALESCE($5, type), admin_verified = true,
-           is_verified = true, graaf_score = $6, craft_score = $7, technical_score = $8
-         WHERE url = $9`,
+           is_verified = true, graaf_score = $6, craft_score = $7, technical_score = $8,
+           contact_email = COALESCE($9, contact_email)
+         WHERE url = $10`,
         [totalScore, company_name || null, country || null, city || null, type,
-         scores.graafScore, scores.craftScore, scores.technicalScore, scanUrl]
+         scores.graafScore, scores.craftScore, scores.technicalScore, contact_email, scanUrl]
       );
       leaderboardEntry = { id: existing.rows[0].id, action: 'updated' };
       console.log(`👑 Admin updated leaderboard: ${scanUrl} (score: ${totalScore})`);
+    }
+    
+    // Stuur e-mail als contact_email is opgegeven
+    let emailSent = false;
+    if (contact_email) {
+      const positionResult = await pool.query(
+        `SELECT COUNT(*) + 1 as position FROM leaderboard 
+         WHERE admin_verified = TRUE AND score > $1`,
+        [totalScore]
+      );
+      const position = parseInt(positionResult.rows[0].position) || 1;
+      
+      const shareUrl = `https://app.contentscale.site/share/${shareCode}`;
+      const baseUrl = `https://app.contentscale.site`;
+      
+      const emailHtml = `
+        <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #111827; color: white; border-radius: 12px; border: 2px solid #a855f7;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <span style="background: #a855f7; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold;">🏆 ContentScale Leaderboard</span>
+          </div>
+          
+          <h1 style="color: white; text-align: center; font-size: 28px; margin-bottom: 20px;">🎉 Congratulations!</h1>
+          
+          <p style="color: #d1d5db; font-size: 18px; text-align: center; margin-bottom: 30px;">
+            Your website <strong style="color: white;">${scanUrl}</strong> has been reviewed and scored an impressive 
+            <strong style="color: #4ade80; font-size: 24px;">${totalScore}/100</strong>.
+          </p>
+          
+          <div style="background: #1f2937; border-radius: 12px; padding: 25px; margin-bottom: 30px;">
+            <p style="color: white; margin-top: 0; margin-bottom: 20px; font-size: 18px;">
+              Your content quality, technical SEO, and user experience are outstanding. 
+              That's why we've added you to the <strong>ContentScale Elite Leaderboard</strong> at position #${position}.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${shareUrl}" style="background: #7e22ce; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 18px; display: inline-block;">
+                👉 View Your Position
+              </a>
+            </div>
+            
+            <p style="color: #9ca3af; margin-bottom: 20px;">
+              Want to share this achievement? Use this link to show your clients or team:
+            </p>
+            
+            <div style="background: #111827; border: 1px solid #374151; border-radius: 8px; padding: 15px; word-break: break-all;">
+              <a href="${shareUrl}" style="color: #7dd3fc; text-decoration: underline;">${shareUrl}</a>
+            </div>
+          </div>
+          
+          <div style="background: linear-gradient(135deg, #7e22ce, #be185d); border-radius: 12px; padding: 20px; text-align: center;">
+            <p style="color: white; margin: 0 0 15px 0; font-size: 16px;">
+              ⭐ Keep up the excellent work. Sites that maintain 85+ often see 2-3x more organic traffic within 3 months.
+            </p>
+            <a href="${baseUrl}" style="background: white; color: #7e22ce; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block;">
+              Scan your website again →
+            </a>
+          </div>
+          
+          <p style="color: #6b7280; text-align: center; margin-top: 30px; font-size: 14px;">
+            —<br>
+            ContentScale Team<br>
+            <a href="${baseUrl}" style="color: #7dd3fc;">www.contentscale.site</a>
+          </p>
+        </div>
+      `;
+      
+      emailSent = await sendEmail(
+        contact_email,
+        `🎉 Congratulations! Your site is now on the Contentscale Leaderboard`,
+        emailHtml
+      );
+      
+      if (emailSent) {
+        await pool.query(
+          `UPDATE leaderboard SET email_sent_at = NOW() WHERE url = $1`,
+          [scanUrl]
+        );
+      }
     }
     
     res.json({
@@ -1348,6 +1690,8 @@ app.post('/api/admin/leaderboard/scan-and-add', verifyAdmin, async (req, res) =>
         content: transparentScores.content_score,
         ux: transparentScores.ux_score
       },
+      share_code: shareCode,
+      email_sent: emailSent,
       timestamp: new Date().toISOString()
     });
     
@@ -1360,25 +1704,113 @@ app.post('/api/admin/leaderboard/scan-and-add', verifyAdmin, async (req, res) =>
 app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   try {
-    const { url, company_name, score, country, city, type } = req.body;
+    const { url, company_name, score, country, city, type, contact_email } = req.body;
     if (!url || !score) return res.status(400).json({ success: false, error: 'URL and score are required' });
     
+    const shareCode = generateShareCode(url, Date.now());
     const existing = await pool.query('SELECT id FROM leaderboard WHERE url = $1', [url]);
     
     if (existing.rows.length === 0) {
       const result = await pool.query(
-        `INSERT INTO leaderboard (url, company_name, score, country, city, type, admin_verified, is_verified)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-        [url, company_name || null, score, country || 'NL', city || null, type || 'seo_agency', true, true]
+        `INSERT INTO leaderboard (url, company_name, score, country, city, type, admin_verified, is_verified, share_code, contact_email)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+        [url, company_name || null, score, country || 'NL', city || null, type || 'seo_agency', true, true, shareCode, contact_email]
       );
-      res.json({ success: true, action: 'added', id: result.rows[0].id, message: 'Entry added to leaderboard' });
+      
+      // Stuur e-mail als contact_email is opgegeven
+      let emailSent = false;
+      if (contact_email) {
+        const positionResult = await pool.query(
+          `SELECT COUNT(*) + 1 as position FROM leaderboard 
+           WHERE admin_verified = TRUE AND score > $1`,
+          [score]
+        );
+        const position = parseInt(positionResult.rows[0].position) || 1;
+        
+        const shareUrl = `https://app.contentscale.site/share/${shareCode}`;
+        const baseUrl = `https://app.contentscale.site`;
+        
+        const emailHtml = `
+          <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #111827; color: white; border-radius: 12px; border: 2px solid #a855f7;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <span style="background: #a855f7; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold;">🏆 ContentScale Leaderboard</span>
+            </div>
+            
+            <h1 style="color: white; text-align: center; font-size: 28px; margin-bottom: 20px;">🎉 Congratulations!</h1>
+            
+            <p style="color: #d1d5db; font-size: 18px; text-align: center; margin-bottom: 30px;">
+              Your website <strong style="color: white;">${url}</strong> has been reviewed and scored an impressive 
+              <strong style="color: #4ade80; font-size: 24px;">${score}/100</strong>.
+            </p>
+            
+            <div style="background: #1f2937; border-radius: 12px; padding: 25px; margin-bottom: 30px;">
+              <p style="color: white; margin-top: 0; margin-bottom: 20px; font-size: 18px;">
+                Your content quality, technical SEO, and user experience are outstanding. 
+                That's why we've added you to the <strong>ContentScale Elite Leaderboard</strong> at position #${position}.
+              </p>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${shareUrl}" style="background: #7e22ce; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 18px; display: inline-block;">
+                  👉 View Your Position
+                </a>
+              </div>
+              
+              <p style="color: #9ca3af; margin-bottom: 20px;">
+                Want to share this achievement? Use this link to show your clients or team:
+              </p>
+              
+              <div style="background: #111827; border: 1px solid #374151; border-radius: 8px; padding: 15px; word-break: break-all;">
+                <a href="${shareUrl}" style="color: #7dd3fc; text-decoration: underline;">${shareUrl}</a>
+              </div>
+            </div>
+            
+            <div style="background: linear-gradient(135deg, #7e22ce, #be185d); border-radius: 12px; padding: 20px; text-align: center;">
+              <p style="color: white; margin: 0 0 15px 0; font-size: 16px;">
+                ⭐ Keep up the excellent work. Sites that maintain 85+ often see 2-3x more organic traffic within 3 months.
+              </p>
+              <a href="${baseUrl}" style="background: white; color: #7e22ce; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block;">
+                Scan your website again →
+              </a>
+            </div>
+            
+            <p style="color: #6b7280; text-align: center; margin-top: 30px; font-size: 14px;">
+              —<br>
+              ContentScale Team<br>
+              <a href="${baseUrl}" style="color: #7dd3fc;">www.contentscale.site</a>
+            </p>
+          </div>
+        `;
+        
+        emailSent = await sendEmail(
+          contact_email,
+          `🎉 Congratulations! Your site is now on the Contentscale Leaderboard`,
+          emailHtml
+        );
+        
+        if (emailSent) {
+          await pool.query(
+            `UPDATE leaderboard SET email_sent_at = NOW() WHERE id = $1`,
+            [result.rows[0].id]
+          );
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        action: 'added', 
+        id: result.rows[0].id, 
+        message: 'Entry added to leaderboard',
+        share_code: shareCode,
+        email_sent: emailSent
+      });
     } else {
       await pool.query(
         `UPDATE leaderboard SET 
            score = $1, company_name = COALESCE($2, company_name), country = COALESCE($3, country),
-           city = COALESCE($4, city), type = COALESCE($5, type), admin_verified = true, is_verified = true
-         WHERE url = $6`,
-        [score, company_name || null, country || null, city || null, type || 'seo_agency', url]
+           city = COALESCE($4, city), type = COALESCE($5, type), admin_verified = true, 
+           is_verified = true, contact_email = COALESCE($6, contact_email)
+         WHERE url = $7`,
+        [score, company_name || null, country || null, city || null, type || 'seo_agency', contact_email, url]
       );
       res.json({ success: true, action: 'updated', id: existing.rows[0].id, message: 'Leaderboard entry updated' });
     }
@@ -1520,16 +1952,17 @@ app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   try {
     const { id } = req.params;
-    const { company_name, url, score, country } = req.body;
+    const { company_name, url, score, country, contact_email } = req.body;
     
     await pool.query(
       `UPDATE leaderboard SET 
         company_name = COALESCE($1, company_name),
         url = COALESCE($2, url),
         score = COALESCE($3, score),
-        country = COALESCE($4, country)
-      WHERE id = $5`,
-      [company_name, url, score, country, id]
+        country = COALESCE($4, country),
+        contact_email = COALESCE($5, contact_email)
+      WHERE id = $6`,
+      [company_name, url, score, country, contact_email, id]
     );
     
     res.json({ success: true, message: 'Leaderboard entry bijgewerkt' });
