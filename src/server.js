@@ -435,6 +435,9 @@ async function createAllTables() {
   }
 }
 
+// ==========================================
+// SCORE CALCULATIE FUNCTIES
+// ==========================================
 function calculateStableScores(content, stats, rawHtml) {
   const { wordCount = 0, h1Count = 0, h2Count = 0, h3Count = 0, listCount = 0 } = stats;
   
@@ -663,6 +666,9 @@ function generateDetailedRecommendations(score, metrics, wordCount, scanData) {
   return recs.sort((a, b) => b.impact - a.impact).slice(0, 8);
 }
 
+// ==========================================
+// API ROUTES
+// ==========================================
 app.post('/api/scan', async (req, res) => {
   const { url } = req.body;
   if (!url) return res.status(400).json({ success: false, error: 'URL required' });
@@ -991,11 +997,72 @@ app.post('/api/freelancers/register', async (req, res) => {
   }
 });
 
+// ==========================================
+// ✅ ADMIN LOGIN - DIT IS CRUCIAL!
+// ==========================================
+app.post('/api/setup/verify-admin', async (req, res) => {
+  const { username, password } = req.body;
+  
+  if (!username || !password) {
+    return res.status(400).json({ success: false, error: 'Credentials required' });
+  }
+  
+  if (!pool) {
+    return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  }
+  
+  try {
+    console.log(`🔐 Login poging voor: ${username}`);
+    
+    const result = await pool.query(
+      'SELECT * FROM super_admins WHERE username = $1 AND is_active = TRUE', 
+      [username]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json({ success: false, error: 'Invalid credentials' });
+    }
+    
+    const admin = result.rows[0];
+    const isValid = await bcrypt.compare(password, admin.password_hash);
+    
+    if (!isValid) {
+      return res.status(401).json({ success: false, error: 'Invalid credentials' });
+    }
+    
+    await pool.query(
+      'UPDATE super_admins SET last_login = NOW() WHERE id = $1', 
+      [admin.id]
+    );
+    
+    console.log(`✅ Login succesvol voor: ${username}, admin ID: ${admin.id}`);
+    
+    res.json({
+      success: true,
+      admin_id: admin.id,
+      admin: {
+        id: admin.id,
+        username: admin.username,
+        full_name: admin.full_name,
+        role: admin.role
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Login error:', error.message);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// ==========================================
+// ADMIN ROUTES
+// ==========================================
 app.post('/api/admin/verify-session', verifyAdmin, async (req, res) => {
   res.json({ valid: true, admin: req.admin.username });
 });
 
 app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
+  // ... (bestaande code)
   if (!pool) return res.json({ success: true, stats: { 
     total_scans: 0, total_agencies: 0, total_clients: 0, active_helpers: 0,
     leaderboard_entries: 0, blog_posts: 0, active_share_links: 0,
@@ -1218,9 +1285,7 @@ app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
   }
 });
 
-// ==========================================
-// ✅ GEFIXT: ADMIN FREELANCERS - TOONT ALLEEN GOEDGEKEURDE FREELANCERS
-// ==========================================
+// ✅ ADMIN FREELANCERS
 app.get('/api/admin/freelancers', verifyAdmin, async (req, res) => {
   if (!pool) return res.json({ success: true, freelancers: [] });
   try {
@@ -1257,7 +1322,6 @@ app.post('/api/admin/freelancers/:id/approve', verifyAdmin, async (req, res) => 
   }
 });
 
-// ✅ FREELANCER TOGGLE FEATURED
 app.post('/api/admin/freelancers/:id/toggle-featured', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   try {
@@ -1275,7 +1339,6 @@ app.post('/api/admin/freelancers/:id/toggle-featured', verifyAdmin, async (req, 
   }
 });
 
-// ✅ FREELANCER BULK DELETE
 app.post('/api/admin/freelancers/bulk-delete', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   try {
@@ -1294,26 +1357,6 @@ app.post('/api/admin/freelancers/bulk-delete', verifyAdmin, async (req, res) => 
   }
 });
 
-// ✅ LEADERBOARD BULK DELETE (VOOR PENDING)
-app.post('/api/admin/leaderboard/bulk-delete', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  try {
-    const { ids } = req.body;
-    if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
-    }
-    
-    const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
-    await pool.query(`DELETE FROM leaderboard WHERE id IN (${placeholders})`, ids);
-    
-    res.json({ success: true, message: `${ids.length} entries verwijderd` });
-  } catch (error) {
-    console.error('Bulk delete leaderboard error:', error.message);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// ✅ FREELANCER BEWERKEN
 app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   try {
@@ -1341,7 +1384,35 @@ app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
   }
 });
 
-// ✅ LEADERBOARD BEWERKEN (VOOR PENDING)
+app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    await pool.query('DELETE FROM freelancers WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ LEADERBOARD BULK DELETE
+app.post('/api/admin/leaderboard/bulk-delete', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
+    }
+    
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
+    await pool.query(`DELETE FROM leaderboard WHERE id IN (${placeholders})`, ids);
+    
+    res.json({ success: true, message: `${ids.length} entries verwijderd` });
+  } catch (error) {
+    console.error('Bulk delete leaderboard error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   try {
@@ -1365,205 +1436,9 @@ app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
   }
 });
 
-app.post('/api/admin/freelancers/:id/feature', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  try {
-    const { id } = req.params;
-    const { is_featured } = req.body;
-    await pool.query('UPDATE freelancers SET is_featured = $1 WHERE id = $2', [is_featured, id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.post('/api/admin/freelancers/:id/deactivate', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  try {
-    await pool.query('UPDATE freelancers SET is_approved = FALSE WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  try {
-    await pool.query('DELETE FROM freelancers WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.get('/api/admin/share-links', verifyAdmin, async (req, res) => {
-  if (!pool) return res.json({ success: true, share_links: [] });
-  try {
-    const result = await pool.query(
-      `SELECT *, CASE WHEN expires_at > NOW() AND is_active = TRUE THEN 'active' ELSE 'inactive' END as status
-       FROM share_links ORDER BY created_at DESC LIMIT 100`
-    );
-    res.json({ success: true, share_links: result.rows });
-  } catch (error) {
-    res.json({ success: true, share_links: [] });
-  }
-});
-
-app.post('/api/admin/share-links/create', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  try {
-    const { client_email, client_name, client_company, scans_limit = 10, valid_days = 30 } = req.body;
-    const shareCode = crypto.randomBytes(16).toString('hex');
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + valid_days);
-    
-    const result = await pool.query(
-      `INSERT INTO share_links (share_code, client_email, client_name, client_company, scans_limit, created_by, expires_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [shareCode, client_email, client_name, client_company, scans_limit, req.admin.id, expiresAt]
-    );
-    
-    res.json({
-      success: true,
-      share_link: result.rows[0],
-      share_url: `https://app.contentscale.site/share/${shareCode}`,
-      expires_at: expiresAt
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.put('/api/admin/share-links/:id/toggle-status', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-    await pool.query('UPDATE share_links SET is_active = $1 WHERE id = $2', [status === 'active', id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.delete('/api/admin/share-links/:id', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  try {
-    await pool.query('DELETE FROM share_links WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.get('/api/blog', async (req, res) => {
-  if (!pool) return res.json({ success: true, posts: [], pagination: { page: 1, limit: 10, total: 0, pages: 0 } });
-  try {
-    const { category, limit = 10, page = 1 } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    
-    let query = `
-      SELECT id, title, slug, excerpt, category, featured_image, featured_image_alt, author, 
-             published_at, views, tags
-      FROM blog_posts 
-      WHERE status = 'published' AND published_at <= NOW()
-    `;
-    
-    const params = [];
-    let paramCount = 1;
-    
-    if (category) {
-      query += ` AND category = $${paramCount}`;
-      params.push(category);
-      paramCount++;
-    }
-    
-    query += ` ORDER BY published_at DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
-    params.push(parseInt(limit), offset);
-    
-    const result = await pool.query(query, params);
-    
-    const countQuery = category ? 
-      'SELECT COUNT(*) FROM blog_posts WHERE status = \'published\' AND published_at <= NOW() AND category = $1' :
-      'SELECT COUNT(*) FROM blog_posts WHERE status = \'published\' AND published_at <= NOW()';
-    
-    const countParams = category ? [category] : [];
-    const countResult = await pool.query(countQuery, countParams);
-    const total = parseInt(countResult.rows[0].count);
-    
-    res.json({
-      success: true,
-      posts: result.rows,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / parseInt(limit))
-      }
-    });
-  } catch (error) {
-    console.error('Blog error:', error);
-    res.json({ success: true, posts: [], pagination: { page: 1, limit: 10, total: 0, pages: 0 } });
-  }
-});
-
-app.get('/api/blog/:slug', async (req, res) => {
-  if (!pool) return res.status(404).json({ success: false, error: 'Blog post not found' });
-  try {
-    const result = await pool.query(
-      `SELECT * FROM blog_posts WHERE slug = $1 AND status = 'published' AND published_at <= NOW()`,
-      [req.params.slug]
-    );
-    
-    if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Blog post not found' });
-    
-    await pool.query('UPDATE blog_posts SET views = views + 1 WHERE id = $1', [result.rows[0].id]);
-    
-    const images = await pool.query('SELECT * FROM blog_images WHERE post_id = $1 ORDER BY position ASC', [result.rows[0].id]);
-    
-    const related = await pool.query(
-      `SELECT id, title, slug, excerpt, featured_image, featured_image_alt, published_at
-       FROM blog_posts 
-       WHERE category = $1 AND id != $2 AND status = 'published' AND published_at <= NOW()
-       ORDER BY published_at DESC LIMIT 3`,
-      [result.rows[0].category, result.rows[0].id]
-    );
-    
-    res.json({
-      success: true,
-      post: { ...result.rows[0], images: images.rows },
-      related: related.rows
-    });
-  } catch (error) {
-    console.error('Blog post error:', error);
-    res.status(500).json({ success: false, error: 'Failed to load blog post' });
-  }
-});
-
-app.post('/api/claims/submit', async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  try {
-    const { business_name, business_url, contact_name, contact_email, contact_phone, verification_document } = req.body;
-    
-    if (!business_name || !business_url || !contact_name || !contact_email) {
-      return res.status(400).json({ success: false, error: 'Required fields missing' });
-    }
-    
-    const result = await pool.query(
-      `INSERT INTO claims (business_name, business_url, contact_name, contact_email, contact_phone, verification_document)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-      [business_name, business_url, contact_name, contact_email, contact_phone, verification_document]
-    );
-    
-    res.json({ success: true, message: 'Claim submitted successfully', id: result.rows[0].id });
-  } catch (error) {
-    console.error('Claim submission error:', error);
-    res.status(500).json({ success: false, error: 'Failed to submit claim' });
-  }
-});
-
-// ✅ PAGE ROUTES
+// ==========================================
+// PAGE ROUTES
+// ==========================================
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(publicPath, 'admin-dashboard.html'));
 });
