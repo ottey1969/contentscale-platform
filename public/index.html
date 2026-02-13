@@ -515,6 +515,10 @@
             <span>🔍 Single or bulk scanning</span>
             <span>•</span>
             <span>📊 Export to CSV</span>
+            <span>•</span>
+            <span>📧 Email finder</span>
+            <span>•</span>
+            <span>⚡ Auto-queue (100/day)</span>
           </div>
         </div>
         
@@ -563,6 +567,56 @@
             </div>
           </div>
           
+          <!-- ========================================== -->
+          <!-- NIEUW: SENDGRID CONFIGURATIE PANEEL         -->
+          <!-- ========================================== -->
+          <div id="sendgridConfig" class="mt-4 p-4 bg-gray-800 rounded-lg border border-purple-500">
+            <h3 class="text-lg font-bold text-white mb-3 flex items-center gap-2">
+              <i class="fas fa-envelope text-purple-400"></i>
+              Email Automation Setup
+            </h3>
+            <div class="space-y-3">
+              <div>
+                <label class="block text-sm text-gray-300 mb-1">Your Sendgrid API Key</label>
+                <input type="password" id="sendgridApiKey" placeholder="SG.xxxxxxxxxx" class="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-purple-500">
+              </div>
+              <div class="flex gap-2">
+                <button onclick="saveSendgridConfig()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm font-semibold flex items-center gap-2">
+                  <i class="fas fa-save"></i> Save Configuration
+                </button>
+                <button onclick="testSendgridConfig()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-semibold flex items-center gap-2">
+                  <i class="fas fa-vial"></i> Test
+                </button>
+              </div>
+              <div id="queueStatus" class="text-sm bg-gray-900 p-3 rounded border border-gray-700">
+                <div class="flex justify-between items-center mb-2">
+                  <span class="text-gray-300">Queue status:</span>
+                  <span class="text-green-400" id="queueStatusText">● Inactive</span>
+                </div>
+                <div class="flex justify-between items-center mb-2">
+                  <span class="text-gray-300">Pending emails:</span>
+                  <span class="text-white font-bold" id="queuePendingCount">0</span>
+                </div>
+                <div class="flex justify-between items-center mb-2">
+                  <span class="text-gray-300">Sent today:</span>
+                  <span class="text-white font-bold" id="queueSentToday">0</span>
+                  <span class="text-gray-400 text-xs" id="queueLimit">/100</span>
+                </div>
+                <div class="flex gap-2 mt-3">
+                  <button onclick="startEmailQueue()" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-semibold flex-1">
+                    <i class="fas fa-play mr-1"></i> Start Queue
+                  </button>
+                  <button onclick="pauseEmailQueue()" class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded text-xs font-semibold flex-1">
+                    <i class="fas fa-pause mr-1"></i> Pause
+                  </button>
+                  <button onclick="resumeEmailQueue()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs font-semibold flex-1">
+                    <i class="fas fa-redo mr-1"></i> Resume
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
           <div id="leadsContainer" class="hidden mt-6">
             <div class="card border-green-500">
               <div class="flex items-center justify-between mb-4">
@@ -570,6 +624,14 @@
                   <i class="fas fa-database mr-2 text-green-400"></i>
                   Found Leads (<span id="leadCount">0</span>)
                 </h3>
+                <div class="flex gap-2">
+                  <button onclick="bulkFindEmails()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm font-semibold">
+                    <i class="fas fa-search mr-1"></i> Find All Emails
+                  </button>
+                  <button onclick="queueAllLeads()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm font-semibold">
+                    <i class="fas fa-clock mr-1"></i> Queue All
+                  </button>
+                </div>
               </div>
               
               <div class="overflow-x-auto">
@@ -580,6 +642,8 @@
                       <th>Website</th>
                       <th>Phone</th>
                       <th>Score</th>
+                      <th>Email</th>
+                      <th>Status</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -587,7 +651,7 @@
                 </table>
               </div>
               
-              <div class="flex justify-end mt-4">
+              <div class="flex justify-end mt-4 gap-2">
                 <button onclick="exportLeadsToCSV()" class="btn-success btn">
                   <i class="fas fa-file-csv mr-2"></i> Export CSV
                 </button>
@@ -1024,12 +1088,15 @@
     let scrapedLeads = [];
     let currentScanResult = null;
     let allLeaderboardEntries = [];
+    let sendgridConfigured = false;
+    let queueInterval = null;
 
     document.addEventListener('DOMContentLoaded', function() {
       console.log('📋 Publieke pagina geladen - laden van ECHTE data...');
       
       loadLeaderboardData();
       loadFreelancers();
+      loadSendgridStatus();
       
       document.getElementById('singleUrlInput')?.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') scanSingleURL();
@@ -1047,6 +1114,355 @@
         });
       }
     });
+
+    // ==========================================
+    // SENDGRID FUNCTIES (FASE 4)
+    // ==========================================
+    async function loadSendgridStatus() {
+      try {
+        const response = await fetch('/api/sendgrid/status');
+        const data = await response.json();
+        
+        if (data.success && data.configured) {
+          sendgridConfigured = true;
+          document.getElementById('sendgridApiKey').value = '•••••••• (configured)';
+          document.getElementById('queueStatusText').textContent = data.queue_active ? '● Active' : '○ Inactive';
+          document.getElementById('queueStatusText').className = data.queue_active ? 'text-green-400' : 'text-gray-400';
+          document.getElementById('queuePendingCount').textContent = data.pending || 0;
+          document.getElementById('queueSentToday').textContent = data.sent_today || 0;
+        }
+      } catch (error) {
+        console.error('Error loading Sendgrid status:', error);
+      }
+    }
+
+    async function saveSendgridConfig() {
+      const apiKey = document.getElementById('sendgridApiKey').value;
+      if (!apiKey || apiKey.includes('••••')) {
+        alert('❌ Please enter your Sendgrid API key');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/sendgrid/configure', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ api_key: apiKey })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          alert('✅ Sendgrid configuration saved successfully');
+          sendgridConfigured = true;
+          loadSendgridStatus();
+        } else {
+          alert('❌ ' + (data.error || 'Failed to save configuration'));
+        }
+      } catch (error) {
+        alert('❌ Error: ' + error.message);
+      }
+    }
+
+    async function testSendgridConfig() {
+      try {
+        const response = await fetch('/api/sendgrid/test', {
+          method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          alert('✅ Test email sent successfully! Check your inbox.');
+        } else {
+          alert('❌ ' + (data.error || 'Test failed'));
+        }
+      } catch (error) {
+        alert('❌ Error: ' + error.message);
+      }
+    }
+
+    async function startEmailQueue() {
+      if (!sendgridConfigured) {
+        alert('❌ Please configure Sendgrid first');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/email/start', {
+          method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          alert('✅ Email queue started');
+          document.getElementById('queueStatusText').textContent = '● Active';
+          document.getElementById('queueStatusText').className = 'text-green-400';
+          
+          // Start polling for updates
+          if (queueInterval) clearInterval(queueInterval);
+          queueInterval = setInterval(loadSendgridStatus, 5000);
+        } else {
+          alert('❌ ' + (data.error || 'Failed to start queue'));
+        }
+      } catch (error) {
+        alert('❌ Error: ' + error.message);
+      }
+    }
+
+    async function pauseEmailQueue() {
+      try {
+        const response = await fetch('/api/email/pause', {
+          method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          alert('⏸️ Email queue paused');
+          document.getElementById('queueStatusText').textContent = '○ Paused';
+          document.getElementById('queueStatusText').className = 'text-yellow-400';
+        }
+      } catch (error) {
+        alert('❌ Error: ' + error.message);
+      }
+    }
+
+    async function resumeEmailQueue() {
+      try {
+        const response = await fetch('/api/email/resume', {
+          method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          alert('▶️ Email queue resumed');
+          document.getElementById('queueStatusText').textContent = '● Active';
+          document.getElementById('queueStatusText').className = 'text-green-400';
+        }
+      } catch (error) {
+        alert('❌ Error: ' + error.message);
+      }
+    }
+
+    // ==========================================
+    // EMAIL FINDER FUNCTIES (FASE 4)
+    // ==========================================
+    async function findEmail(leadId, index) {
+      if (!leadId) {
+        alert('❌ Lead ID not found');
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/leads/${leadId}/find-email`, {
+          method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // Update de lead in de array
+          if (scrapedLeads[index]) {
+            scrapedLeads[index].email = data.email;
+            scrapedLeads[index].email_status = 'found';
+          }
+          
+          // Refresh de tabel
+          refreshLeadsTable();
+          
+          alert(`✅ Email found: ${data.email}`);
+        } else {
+          alert('❌ ' + (data.error || 'No email found'));
+          
+          // Update status
+          if (scrapedLeads[index]) {
+            scrapedLeads[index].email_status = 'not found';
+          }
+          refreshLeadsTable();
+        }
+      } catch (error) {
+        alert('❌ Error: ' + error.message);
+      }
+    }
+
+    async function bulkFindEmails() {
+      const leadsWithWebsites = scrapedLeads.filter(l => l.website && l.website !== 'N/A' && l.website !== null);
+      
+      if (leadsWithWebsites.length === 0) {
+        alert('❌ No leads with websites to search');
+        return;
+      }
+      
+      if (!confirm(`🔍 Search emails for ${leadsWithWebsites.length} leads? This may take a few minutes.`)) {
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/leads/bulk/find-emails', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lead_ids: leadsWithWebsites.map(l => l.id) })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          alert(`✅ Found ${data.found} emails out of ${data.total} leads`);
+          // Reload leads from server or update locally
+          // For now, we'll just show a message
+        } else {
+          alert('❌ ' + (data.error || 'Bulk search failed'));
+        }
+      } catch (error) {
+        alert('❌ Error: ' + error.message);
+      }
+    }
+
+    async function queueAllLeads() {
+      const leadsWithEmail = scrapedLeads.filter(l => l.email && l.email.includes('@'));
+      
+      if (leadsWithEmail.length === 0) {
+        alert('❌ No leads with email addresses. Use "Find All Emails" first.');
+        return;
+      }
+      
+      if (!confirm(`📧 Add ${leadsWithEmail.length} leads to email queue?`)) {
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/email/queue', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lead_ids: leadsWithEmail.map(l => l.id) })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          alert(`✅ Added ${data.queued} leads to queue`);
+          loadSendgridStatus();
+        } else {
+          alert('❌ ' + (data.error || 'Failed to queue leads'));
+        }
+      } catch (error) {
+        alert('❌ Error: ' + error.message);
+      }
+    }
+
+    async function queueLead(leadId) {
+      if (!leadId) {
+        alert('❌ Lead ID not found');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/email/queue', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lead_ids: [leadId] })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          alert('✅ Lead added to email queue');
+          loadSendgridStatus();
+        } else {
+          alert('❌ ' + (data.error || 'Failed to queue lead'));
+        }
+      } catch (error) {
+        alert('❌ Error: ' + error.message);
+      }
+    }
+
+    function refreshLeadsTable() {
+      const leadsTableBody = document.getElementById('leadsTableBody');
+      const newLeads = []; // We gebruiken de bestaande scrapedLeads
+      
+      if (scrapedLeads.length === 0) {
+        leadsTableBody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-400">Geen bedrijven gevonden</td></tr>';
+        return;
+      }
+      
+      leadsTableBody.innerHTML = scrapedLeads.map((lead, index) => {
+        const hasWebsite = lead.website && lead.website !== 'N/A' && lead.website !== null;
+        const hasEmail = lead.email && lead.email.includes('@');
+        
+        // Bepaal status kleur
+        let statusColor = 'text-gray-400';
+        let statusText = 'pending';
+        if (lead.email_status === 'found') {
+          statusColor = 'text-green-400';
+          statusText = 'found';
+        } else if (lead.email_status === 'not found') {
+          statusColor = 'text-red-400';
+          statusText = 'not found';
+        }
+        
+        return `
+          <tr class="border-b border-gray-700 hover:bg-gray-800">
+            <td class="px-4 py-3">
+              <div class="font-medium text-white">${lead.name || 'Unknown'}</div>
+              <div class="text-xs text-gray-400">${lead.category || 'SEO Agency'}</div>
+            </td>
+            <td class="px-4 py-3">
+              ${hasWebsite ? 
+                `<a href="${lead.website}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">
+                  ${lead.website.replace('https://', '').substring(0, 30)}...
+                </a>` : 
+                `<span class="text-red-400 text-sm">Geen website</span>`
+              }
+            </td>
+            <td class="px-4 py-3 text-gray-300 text-sm">${lead.phone || '-'}</td>
+            <td class="px-4 py-3">
+              ${lead.score > 0 ? 
+                `<span class="font-bold ${lead.score >= 70 ? 'text-green-400' : 'text-yellow-400'}">${lead.score}</span>` : 
+                `<span class="text-gray-500">-</span>`
+              }
+            </td>
+            <td class="px-4 py-3">
+              ${hasEmail ? 
+                `<span class="text-green-400 text-sm">${lead.email}</span>` : 
+                (hasWebsite ? 
+                  `<button onclick="findEmail(${lead.id}, ${index})" 
+                          class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs font-semibold">
+                    <i class="fas fa-search mr-1"></i>Find
+                  </button>` : 
+                  `<span class="text-gray-600 text-sm">-</span>`
+                )
+              }
+            </td>
+            <td class="px-4 py-3">
+              <span class="text-xs ${statusColor}">${statusText}</span>
+            </td>
+            <td class="px-4 py-3">
+              <div class="flex gap-1">
+                ${hasWebsite ? 
+                  `<button onclick="scanLead('${lead.website}')" 
+                          class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded text-xs font-semibold"
+                          title="Scan website">
+                    <i class="fas fa-search"></i>
+                  </button>` : 
+                  ''
+                }
+                ${hasEmail ? 
+                  `<button onclick="queueLead(${lead.id})" 
+                          class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs font-semibold"
+                          title="Add to email queue">
+                    <i class="fas fa-clock"></i>
+                  </button>` : 
+                  ''
+                }
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
 
     async function loadLeaderboardData() {
       try {
@@ -1532,9 +1948,7 @@
       resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
-    // ==========================================
-    // ✅ NIEUWE ADD TO LEADERBOARD FUNCTIE (FASE 3)
-    // ==========================================
+    // Add to Leaderboard functie
     function addToLeaderboard() {
       const resultDiv = document.getElementById('singleResult');
       const urlElement = resultDiv.querySelector('p.text-md');
@@ -1562,28 +1976,10 @@
         return;
       }
       
-      // Hier zou je de data naar de admin API kunnen sturen
-      // Voor nu alleen een bevestiging
       alert(`✅ Thank you! Admin will review your submission. If approved (85+ score required), a congratulations email will be sent to ${contactEmail} with your shareable leaderboard link.`);
-      
-      // In de toekomst: fetch naar admin API
-      /*
-      fetch('/api/leaderboard/request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url: urlText,
-          company_name: companyName,
-          contact_email: contactEmail,
-          score: currentScore // moet je uit result halen
-        })
-      });
-      */
     }
 
-    // ==========================================
-    // GOOGLE MAPS SCRAPE MET 5 DAGEN LIMIET
-    // ==========================================
+    // Google Maps scrape functie
     async function scrapeGoogleMaps() {
       const input = document.getElementById('mapsUrl');
       const button = document.getElementById('bulkScanBtn');
@@ -1621,10 +2017,8 @@
             timeText = `${hours} hour${hours > 1 ? 's' : ''}`;
           }
           
-          // Toon notificatie met WhatsApp CTA
           alert(`⏳ Scan limit reached. You can scan again in ${timeText}.`);
           
-          // Maak een notificatie banner
           const notificationDiv = document.createElement('div');
           notificationDiv.className = 'mt-4 p-4 bg-yellow-600 bg-opacity-20 border border-yellow-500 rounded-lg';
           notificationDiv.id = 'scanLimitNotification';
@@ -1646,11 +2040,9 @@
             </div>
           `;
           
-          // Verwijder oude notificatie als die er is
           const oldNotification = document.getElementById('scanLimitNotification');
           if (oldNotification) oldNotification.remove();
           
-          // Voeg nieuwe notificatie toe
           document.querySelector('#bulkMode .card').appendChild(notificationDiv);
           
           button.disabled = false;
@@ -1662,14 +2054,11 @@
           throw new Error(data.error || 'Scrape failed');
         }
         
-        // Verwijder eventuele oude limit notificatie
         const oldNotification = document.getElementById('scanLimitNotification');
         if (oldNotification) oldNotification.remove();
         
-        // Nieuwe leads bovenaan toevoegen
         const newLeads = data.leads || [];
         
-        // Toon succes notificatie met volgende scan datum
         if (data.scan_limit) {
           const nextDate = new Date(data.scan_limit.next_allowed_at);
           const formattedDate = nextDate.toLocaleDateString('en-US', { 
@@ -1691,13 +2080,11 @@
             </div>
           `;
           
-          // Verwijder oude success notificatie
           const oldSuccess = document.getElementById('scanSuccessNotification');
           if (oldSuccess) oldSuccess.remove();
           
           document.querySelector('#bulkMode .card').appendChild(successNotification);
           
-          // Auto-verdwijnen na 8 seconden
           setTimeout(() => {
             const notif = document.getElementById('scanSuccessNotification');
             if (notif) notif.remove();
@@ -1708,51 +2095,7 @@
         scrapedLeads = [...newLeads, ...scrapedLeads];
         
         leadCount.textContent = scrapedLeads.length;
-        
-        if (scrapedLeads.length === 0) {
-          leadsTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-400">Geen bedrijven gevonden</td></tr>';
-        } else {
-          leadsTableBody.innerHTML = scrapedLeads.map((lead, index) => {
-            const hasWebsite = lead.website && lead.website !== 'N/A' && lead.website !== null;
-            
-            // Markeer nieuwe leads (eerste `newLeads.length` items)
-            const isNew = index < newLeads.length;
-            
-            return `
-              <tr class="border-b border-gray-700 hover:bg-gray-800 ${isNew ? 'bg-purple-900 bg-opacity-20' : ''}">
-                <td class="px-4 py-3">
-                  <div class="font-medium text-white">${lead.name || 'Unknown'}</div>
-                  <div class="text-xs text-gray-400">${lead.category || 'SEO Agency'} ${isNew ? '<span class="ml-2 text-xs bg-green-600 px-2 py-0.5 rounded-full text-white">New</span>' : ''}</div>
-                </td>
-                <td class="px-4 py-3">
-                  ${hasWebsite ? 
-                    `<a href="${lead.website}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">
-                      ${lead.website.replace('https://', '').substring(0, 30)}...
-                    </a>` : 
-                    `<span class="text-red-400 text-sm">Geen website</span>`
-                  }
-                </td>
-                <td class="px-4 py-3 text-gray-300 text-sm">${lead.phone || '-'}</td>
-                <td class="px-4 py-3">
-                  ${lead.score > 0 ? 
-                    `<span class="font-bold ${lead.score >= 70 ? 'text-green-400' : 'text-yellow-400'}">${lead.score}</span>` : 
-                    `<span class="text-gray-500">-</span>`
-                  }
-                </td>
-                <td class="px-4 py-3">
-                  ${hasWebsite ? 
-                    `<button onclick="scanLead('${lead.website}')" 
-                            class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm font-semibold">
-                      <i class="fas fa-search mr-1"></i>Scan
-                    </button>` : 
-                    `<span class="text-gray-600 text-sm">-</span>`
-                  }
-                </td>
-              </tr>
-            `;
-          }).join('');
-        }
-        
+        refreshLeadsTable();
         leadsContainer.classList.remove('hidden');
         
       } catch (error) {
@@ -1776,13 +2119,14 @@
         return;
       }
       
-      const headers = ['Name', 'Category', 'Website', 'Phone', 'Score', 'Address', 'Rating', 'Reviews'];
+      const headers = ['Name', 'Category', 'Website', 'Phone', 'Score', 'Email', 'Address', 'Rating', 'Reviews'];
       const rows = scrapedLeads.map(lead => [
         lead.name || '',
         lead.category || '',
         lead.website || '',
         lead.phone || '',
         lead.score || '',
+        lead.email || '',
         lead.address || '',
         lead.rating || '',
         lead.reviews || ''
