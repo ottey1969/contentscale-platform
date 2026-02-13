@@ -1,1795 +1,1645 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Dashboard - ContentScale</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    
-    body {
-      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-      background: #030712;
-      color: white;
-      line-height: 1.6;
-    }
-    
-    h1, h2, h3, h4, h5, h6, p, a, span, div, button, input, textarea, select, label, li {
-      color: white !important;
-    }
-    
-    .text-gray-300, .text-gray-400, .text-gray-500 {
-      color: #d1d5db !important;
-    }
-    
-    .btn-white-black {
-      background: white !important;
-      color: #581c87 !important;
-      font-weight: 700;
-      border: 2px solid white;
-    }
-    
-    .btn-white-black:hover {
-      background: #f3f4f6 !important;
-      color: #6b21a8 !important;
-    }
-    
-    .bg-gray-900 { background-color: #030712; }
-    .bg-gray-800 { background-color: #111827; }
-    .bg-gray-700 { background-color: #1f2937; }
-    .bg-gray-900\/95 { background-color: rgba(3, 7, 18, 0.95); }
-    
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      padding: 0.75rem 1.5rem;
-      border-radius: 0.5rem;
-      font-weight: 600;
-      transition: all 0.2s;
-      border: none;
-      cursor: pointer;
-    }
-    
-    .btn-primary {
-      background: linear-gradient(135deg, #7e22ce, #be185d);
-      color: white;
-    }
-    
-    .btn-primary:hover {
-      background: linear-gradient(135deg, #6b21a8, #9d174d);
-      transform: translateY(-2px);
-      box-shadow: 0 10px 20px -5px rgba(126, 34, 206, 0.5);
-    }
-    
-    .btn-secondary {
-      background: linear-gradient(135deg, #1e40af, #0891b2);
-      color: white;
-    }
-    
-    .btn-success {
-      background: #0f7b3a !important;
-      color: white !important;
-    }
-    
-    .mode-toggle {
-      position: relative;
-      padding: 0.75rem 1.5rem;
-      border-radius: 0.5rem;
-      font-weight: 600;
-      background: #374151;
-      color: white;
-      border: 2px solid transparent;
-      transition: all 0.2s;
-    }
-    
-    .mode-toggle.active {
-      background: linear-gradient(135deg, #7e22ce, #be185d);
-      border: 2px solid rgba(255, 255, 255, 0.3);
-    }
-    
-    .mode-toggle.active::after {
-      content: '✓';
-      position: absolute;
-      top: -8px;
-      right: -8px;
-      width: 24px;
-      height: 24px;
-      background: #0f7b3a;
-      color: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      font-weight: bold;
-      border: 2px solid white;
-    }
-    
-    .card {
-      background: #111827;
-      border: 1px solid #374151;
-      border-radius: 1rem;
-      padding: 1.5rem;
-      transition: all 0.2s;
-    }
-    
-    .card:hover {
-      border-color: #a855f7;
-      transform: translateY(-4px);
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-    }
-    
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    
-    th {
-      background: #1f2937;
-      color: white;
-      font-weight: 600;
-      text-align: left;
-      padding: 0.75rem 1rem;
-    }
-    
-    td {
-      padding: 0.75rem 1rem;
-      border-bottom: 1px solid #374151;
-      color: white;
-    }
-    
-    tr:hover {
-      background: #1f2937;
-    }
-    
-    .stat-card {
-      position: relative;
-      border-radius: 1rem;
-      padding: 1.25rem;
-      overflow: hidden;
-    }
-    
-    .stat-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: linear-gradient(135deg, #7e22ce, #6b21a8);
-      opacity: 0.9;
-    }
-    
-    .stat-card > div {
-      position: relative;
-      z-index: 10;
-    }
-    
-    .top-card {
-      border-radius: 1rem;
-      padding: 1.5rem;
-      text-align: center;
-      color: white;
-    }
-    
-    .top-card.gold {
-      background: linear-gradient(135deg, #fbbf24, #d97706);
-    }
-    
-    .top-card.silver {
-      background: linear-gradient(135deg, #e5e7eb, #6b7280);
-    }
-    
-    .top-card.bronze {
-      background: linear-gradient(135deg, #f97316, #c2410c);
-    }
-    
-    .top-card button {
-      background: rgba(0, 0, 0, 0.3);
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      color: white;
-      padding: 0.5rem 1rem;
-      border-radius: 0.5rem;
-      font-weight: 600;
-      transition: all 0.2s;
-      width: 100%;
-      margin-top: 1rem;
-    }
-    
-    .top-card button:hover {
-      background: rgba(0, 0, 0, 0.5);
-      border-color: rgba(255, 255, 255, 0.6);
-    }
-    
-    .score-high { color: #4ade80; }
-    .score-medium { color: #facc15; }
-    .score-low { color: #f87171; }
-    
-    .progress-bar {
-      height: 0.75rem;
-      background: #374151;
-      border-radius: 9999px;
-      overflow: hidden;
-    }
-    
-    .progress-bar-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #a855f7, #ec4899);
-      transition: width 0.3s;
-    }
-    
-    .grid-3 {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1.5rem;
-    }
-    
-    .grid-4 {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1.5rem;
-    }
-    
-    @media (max-width: 1024px) {
-      .grid-4 { grid-template-columns: repeat(3, 1fr); }
-    }
-    
-    @media (max-width: 768px) {
-      .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
-    }
-    
-    @media (max-width: 640px) {
-      .grid-3, .grid-4 { grid-template-columns: 1fr; }
-    }
-    
-    .rankings-4-15-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1rem;
-    }
-    
-    @media (max-width: 1024px) {
-      .rankings-4-15-grid { grid-template-columns: repeat(3, 1fr); }
-    }
-    
-    @media (max-width: 768px) {
-      .rankings-4-15-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-    
-    @media (max-width: 480px) {
-      .rankings-4-15-grid { grid-template-columns: 1fr; }
-    }
-    
-    .rank-card {
-      background: #1f2937;
-      border: 1px solid #374151;
-      border-radius: 0.75rem;
-      padding: 1rem;
-      text-align: center;
-      transition: all 0.2s;
-    }
-    
-    .rank-card:hover {
-      border-color: #a855f7;
-      transform: translateY(-4px);
-    }
-    
-    .filter-tag {
-      background: #374151;
-      color: white;
-      padding: 0.5rem 1rem;
-      border-radius: 9999px;
-      font-size: 0.875rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-      border: 1px solid #4b5563;
-    }
-    
-    .filter-tag:hover {
-      background: #4b5563;
-    }
-    
-    .filter-tag.active {
-      background: #7e22ce;
-      border-color: #a855f7;
-    }
-    
-    .rankings-table {
-      width: 100%;
-      background: #111827;
-      border-radius: 0.75rem;
-      overflow: hidden;
-    }
-    
-    .rankings-table th {
-      background: #1f2937;
-      padding: 1rem;
-      text-align: left;
-      font-weight: 600;
-      color: white;
-    }
-    
-    .rankings-table td {
-      padding: 1rem;
-      border-bottom: 1px solid #374151;
-      color: white;
-    }
-    
-    .hidden { display: none; }
-    
-    .modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(4px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-    }
-    
-    .modal.active {
-      display: flex;
-    }
-    
-    .modal-content {
-      background: #111827;
-      border: 2px solid #a855f7;
-      border-radius: 1rem;
-      padding: 2rem;
-      max-width: 500px;
-      width: 90%;
-      max-height: 90vh;
-      overflow-y: auto;
-    }
-    
-    .pending-card {
-      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-      border: 1px solid #f59e0b;
-      border-radius: 1rem;
-      padding: 1.5rem;
-    }
-    
-    .company-name-input {
-      background: #1f2937;
-      border: 2px solid #a855f7;
-      color: white;
-      padding: 0.75rem 1rem;
-      border-radius: 0.5rem;
-      width: 100%;
-      font-size: 1.125rem;
-      font-weight: 600;
-    }
-    
-    .company-name-input:focus {
-      outline: none;
-      border-color: #c084fc;
-      box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.3);
-    }
-    
-    .checkbox-custom {
-      width: 1.25rem;
-      height: 1.25rem;
-      border-radius: 0.25rem;
-      border: 2px solid #4b5563;
-      background: #1f2937;
-      cursor: pointer;
-    }
-    
-    .checkbox-custom:checked {
-      background: #7e22ce;
-      border-color: #a855f7;
-    }
-    
-    .badge {
-      display: inline-block;
-      padding: 0.25rem 0.75rem;
-      border-radius: 9999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
-    
-    .badge-success {
-      background: #0f7b3a;
-      color: white;
-    }
-    
-    .badge-warning {
-      background: #b45309;
-      color: white;
-    }
-    
-    .lead-card {
-      background: #1f2937;
-      border: 1px solid #374151;
-      border-radius: 0.75rem;
-      padding: 1rem;
-      transition: all 0.2s;
-    }
-    
-    .lead-card:hover {
-      border-color: #a855f7;
-    }
-  </style>
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body class="bg-gray-900">
+const express = require('express');
+const path = require('path');
+const crypto = require('crypto');
+const { Pool } = require('pg');
+const puppeteer = require('puppeteer');
+const bcrypt = require('bcryptjs');
+const rateLimit = require('express-rate-limit');
+const compression = require('compression');
+const multer = require('multer');
+const sharp = require('sharp');
 
-  <!-- LOGIN SCREEN -->
-  <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
-    <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border-2 border-purple-500">
-      <div class="flex items-center justify-center mb-6">
-        <span class="text-5xl">👑</span>
-        <h1 class="text-3xl font-bold ml-3 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-          Admin
-        </h1>
-      </div>
-      <p class="text-gray-400 text-center mb-8">ContentScale Platform Control</p>
-      
-      <div id="login-error" class="hidden mb-6 p-4 bg-red-900/50 border border-red-700 rounded-lg text-red-200 text-sm"></div>
-      
-      <div class="space-y-6">
-        <div>
-          <label class="block text-sm font-medium text-gray-300 mb-2">Username</label>
-          <input type="text" id="login-username" value="ot" 
-            class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white">
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-300 mb-2">Password</label>
-          <input type="password" id="login-password" value="admin123" 
-            class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white">
-        </div>
-        <button onclick="login()" id="login-btn"
-          class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-lg font-bold text-lg transition-all transform hover:scale-105">
-          <i class="fas fa-lock mr-2"></i> Login
-        </button>
-      </div>
-    </div>
-  </div>
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-  <!-- MAIN DASHBOARD -->
-  <div id="main-dashboard" class="hidden">
-    <!-- NAVIGATION -->
-    <nav class="sticky top-0 z-50 bg-gray-900/95 border-b-2 border-purple-600 backdrop-blur-sm">
-      <div class="max-w-7xl mx-auto px-6 py-4">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <span class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-              Admin Dashboard
-            </span>
-            <span class="hidden sm:inline-block text-xs px-2 py-1 bg-purple-600 rounded text-white font-semibold">
-              <span id="admin-username">Admin</span>
-            </span>
-          </div>
-          <div class="flex gap-3">
-            <button onclick="logout()" class="btn bg-red-600 hover:bg-red-700">
-              <i class="fas fa-sign-out-alt mr-2"></i> Logout
-            </button>
-          </div>
-        </div>
-      </div>
-    </nav>
+console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
+console.log('📊 Database URL:', process.env.DATABASE_URL ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
 
-    <!-- TABS -->
-    <div class="max-w-7xl mx-auto px-6 py-8">
-      <div class="flex justify-center gap-4 mb-8 flex-wrap">
-        <button onclick="switchTab('leaderboard')" id="tabLeaderboardBtn" class="mode-toggle active">
-          <i class="fas fa-trophy mr-2"></i> Leaderboard
-        </button>
-        <button onclick="switchTab('freelancers')" id="tabFreelancersBtn" class="mode-toggle">
-          <i class="fas fa-users mr-2"></i> Freelancers
-        </button>
-        <button onclick="switchTab('scanner')" id="tabScannerBtn" class="mode-toggle">
-          <i class="fas fa-search mr-2"></i> Scanner
-        </button>
-        <button onclick="switchTab('pending')" id="tabPendingBtn" class="mode-toggle">
-          <i class="fas fa-clock mr-2"></i> Pending
-        </button>
-      </div>
+let dbConfig;
+let pool;
 
-      <!-- ============================================
-           TAB 1: LEADERBOARD - ECHTE DATA VAN API
-           ============================================ -->
-      <div id="tab-leaderboard" class="tab-content">
-        <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-          <div class="flex justify-between items-center mb-6">
-            <h2 class="text-3xl font-bold text-white">🏆 Leaderboard</h2>
-            <div class="flex gap-3">
-              <button onclick="loadLeaderboard()" class="btn bg-blue-600 hover:bg-blue-700">
-                <i class="fas fa-sync-alt mr-2"></i> Refresh
-              </button>
-              <button onclick="exportLeaderboardCSV()" class="btn-success btn">
-                <i class="fas fa-file-csv mr-2"></i> Export CSV
-              </button>
-            </div>
-          </div>
-
-          <!-- STATS CARDS -->
-          <div class="grid-4 mb-8">
-            <div class="stat-card">
-              <div>
-                <div class="text-4xl mb-2">🏢</div>
-                <div class="text-3xl font-bold" id="stat-total-agencies">0</div>
-                <div class="text-sm text-gray-200">Agencies</div>
-              </div>
-            </div>
-            <div class="stat-card">
-              <div>
-                <div class="text-4xl mb-2">📊</div>
-                <div class="text-3xl font-bold" id="stat-avg-score">0</div>
-                <div class="text-sm text-gray-200">Avg. Score</div>
-              </div>
-            </div>
-            <div class="stat-card">
-              <div>
-                <div class="text-4xl mb-2">🌍</div>
-                <div class="text-3xl font-bold" id="stat-countries">0</div>
-                <div class="text-sm text-gray-200">Countries</div>
-              </div>
-            </div>
-            <div class="stat-card">
-              <div>
-                <div class="text-4xl mb-2">💼</div>
-                <div class="text-3xl font-bold" id="stat-active-seo">0</div>
-                <div class="text-sm text-gray-200">Freelancers</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- BULK ACTIONS -->
-          <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
-            <div class="flex items-center gap-2">
-              <input type="checkbox" id="select-all-leaderboard" onchange="toggleSelectAllLeaderboard()" 
-                     class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
-              <label class="text-sm text-gray-300">Selecteer alles</label>
-            </div>
-            <button onclick="bulkDeleteLeaderboard()" class="btn bg-red-600 hover:bg-red-700">
-              <i class="fas fa-trash mr-2"></i> Delete Geselecteerd
-            </button>
-            <span id="selected-count-leaderboard" class="text-sm text-gray-400 ml-auto">0 geselecteerd</span>
-          </div>
-
-          <!-- TOP 3 CARDS -->
-          <div id="top3-container" class="grid-3 mb-10"></div>
-
-          <!-- RANKINGS 4-15 -->
-          <div id="rankings4to15Container" class="mb-10">
-            <h3 class="text-2xl font-bold text-white mb-6">Rankings 4-15</h3>
-            <div id="rankings4to15Grid" class="rankings-4-15-grid"></div>
-          </div>
-
-          <!-- FILTERS -->
-          <div class="bg-gray-800 rounded-lg p-4 mb-6 border border-gray-700">
-            <button onclick="toggleFilters()" class="w-full flex items-center justify-between text-left text-white">
-              <div class="flex items-center gap-2">
-                <i class="fas fa-filter text-purple-400"></i>
-                <span class="font-semibold">Filters</span>
-              </div>
-              <i class="fas fa-chevron-down" id="filterIcon"></i>
-            </button>
-            <div id="filterPanel" class="hidden mt-4">
-              <div class="mb-4">
-                <div class="text-sm text-gray-300 mb-2">Country:</div>
-                <div class="flex flex-wrap gap-2" id="countryFilters"></div>
-              </div>
-              <div>
-                <input type="text" id="searchInput" placeholder="Search agencies..." oninput="filterAgencies()" class="w-full">
-              </div>
-            </div>
-          </div>
-
-          <!-- RANKINGS 16+ -->
-          <div>
-            <button onclick="toggleRankings()" id="rankingsToggleBtn" 
-                    class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-between transition-all">
-              <span id="rankingsToggleText">📊 Show Rankings 16+</span>
-              <span class="arrow">▼</span>
-            </button>
-            <div id="rankingsContainer" class="hidden mt-4">
-              <p class="text-sm text-gray-300 mb-2">Showing 16-35 of <span id="totalCount">0</span> agencies</p>
-              <table class="rankings-table">
-                <thead>
-                  <tr>
-                    <th class="w-10"></th>
-                    <th>Rank</th>
-                    <th>Company</th>
-                    <th>Website</th>
-                    <th>Score</th>
-                    <th>Country</th>
-                    <th>Added</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="rankingsTbody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ============================================
-           TAB 2: FREELANCERS - ECHTE DATA VAN API
-           ============================================ -->
-      <div id="tab-freelancers" class="tab-content hidden">
-        <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-          <div class="flex justify-between items-center mb-6">
-            <h2 class="text-3xl font-bold text-white">🎯 Freelancers</h2>
-            <button onclick="loadFreelancers()" class="btn bg-blue-600 hover:bg-blue-700">
-              <i class="fas fa-sync-alt mr-2"></i> Refresh
-            </button>
-          </div>
-
-          <!-- BULK ACTIONS -->
-          <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
-            <div class="flex items-center gap-2">
-              <input type="checkbox" id="select-all-freelancers" onchange="toggleSelectAllFreelancers()" 
-                     class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
-              <label class="text-sm text-gray-300">Selecteer alles</label>
-            </div>
-            <button onclick="bulkDeleteFreelancers()" class="btn bg-red-600 hover:bg-red-700">
-              <i class="fas fa-trash mr-2"></i> Delete Geselecteerd
-            </button>
-            <span id="selected-count-freelancers" class="text-sm text-gray-400 ml-auto">0 geselecteerd</span>
-          </div>
-
-          <!-- FREELANCERS TABLE -->
-          <div class="overflow-x-auto">
-            <table class="rankings-table w-full">
-              <thead>
-                <tr>
-                  <th class="w-10"></th>
-                  <th>Naam</th>
-                  <th>Email</th>
-                  <th>Titel</th>
-                  <th>Locatie</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="freelancers-tbody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- ============================================
-           TAB 3: SCANNER - IDENTIEK AAN INDEX
-           ============================================ -->
-      <div id="tab-scanner" class="tab-content hidden">
-        <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-          
-          <div class="text-center mb-8">
-            <h2 class="text-4xl font-bold mb-3 text-white">🎯 SEO Content Quality Scanner</h2>
-            <p class="text-xl text-gray-200">Scan any URL and add to leaderboard</p>
-          </div>
-          
-          <div class="flex justify-center gap-4 mb-8">
-            <button id="modeSingleBtn" onclick="switchScannerMode('single')" class="mode-toggle active">
-              <i class="fas fa-link mr-2"></i> Single URL
-            </button>
-            <button id="modeBulkBtn" onclick="switchScannerMode('bulk')" class="mode-toggle">
-              <i class="fas fa-map-marked-alt mr-2"></i> Google Maps
-            </button>
-          </div>
-          
-          <!-- SINGLE URL MODE -->
-          <div id="singleMode" class="max-w-3xl mx-auto">
-            <div class="card">
-              <div class="flex flex-col sm:flex-row gap-3">
-                <input type="text" id="singleUrlInput" placeholder="https://example.com" class="flex-1">
-                <button onclick="scanSingleURL()" id="singleScanBtn" class="btn-primary btn whitespace-nowrap">
-                  <i class="fas fa-search mr-2"></i> Start Scan
-                </button>
-              </div>
-              
-              <div id="singleProgress" class="hidden mt-4">
-                <div class="progress-bar">
-                  <div id="singleProgressBar" class="progress-bar-fill" style="width: 0%"></div>
-                </div>
-                <p id="singleProgressText" class="text-sm text-gray-300 text-center mt-2"></p>
-              </div>
-            </div>
-            
-            <div id="singleResult" class="hidden mt-4"></div>
-          </div>
-          
-          <!-- GOOGLE MAPS MODE -->
-          <div id="bulkMode" class="hidden max-w-6xl mx-auto">
-            <div class="card">
-              <div class="flex flex-col sm:flex-row gap-3 mb-4">
-                <input type="text" id="mapsUrl" placeholder="https://www.google.com/maps/search/seo+agency+amsterdam" class="flex-1">
-                <button onclick="scrapeGoogleMaps()" id="bulkScanBtn" class="btn-secondary btn whitespace-nowrap">
-                  <i class="fas fa-map-marked-alt mr-2"></i> Scrape Maps
-                </button>
-              </div>
-            </div>
-            
-            <div id="leadsContainer" class="hidden mt-6">
-              <div class="card border-green-500">
-                <div class="flex items-center justify-between mb-4">
-                  <h3 class="text-xl font-bold text-white">
-                    <i class="fas fa-database mr-2 text-green-400"></i>
-                    Found Leads (<span id="leadCount">0</span>)
-                  </h3>
-                </div>
-                
-                <div class="overflow-x-auto">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Business</th>
-                        <th>Website</th>
-                        <th>Phone</th>
-                        <th>Score</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody id="leadsTableBody"></tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ============================================
-           TAB 4: PENDING - WIJZIGBARE BEDRIJFSNAAM
-           ============================================ -->
-      <div id="tab-pending" class="tab-content hidden">
-        <div class="bg-gradient-to-br from-yellow-900 via-orange-900 to-yellow-800 rounded-2xl p-8 border-2 border-yellow-500">
-          <div class="flex justify-between items-center mb-6">
-            <h2 class="text-3xl font-bold text-white">⏳ Pending Approvals</h2>
-            <button onclick="loadPendingData()" class="btn bg-yellow-600 hover:bg-yellow-700">
-              <i class="fas fa-sync-alt mr-2"></i> Refresh
-            </button>
-          </div>
-
-          <!-- PENDING LEADERBOARD - MET WIJZIGBARE BEDRIJFSNAAM -->
-          <div class="mb-8">
-            <h3 class="text-xl font-bold mb-4 text-yellow-400">🏆 Pending Leaderboard Submissions</h3>
-            <div id="pending-leaderboard-container" class="space-y-4"></div>
-          </div>
-
-          <!-- PENDING FREELANCERS -->
-          <div class="mb-8">
-            <h3 class="text-xl font-bold mb-4 text-yellow-400">🎯 Pending Freelancer Applications</h3>
-            <div id="pending-freelancers-container" class="space-y-4"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // ==========================================
-    // GLOBALE VARIABELEN
-    // ==========================================
-    let currentAdminId = localStorage.getItem('admin_id');
-    let currentUsername = localStorage.getItem('admin_username');
-    let allLeaderboard = [];
-    let allFreelancers = [];
-    let selectedLeaderboardIds = new Set();
-    let selectedFreelancerIds = new Set();
-    let scrapedLeads = [];
-    let currentScanResult = null;
-
-    // ==========================================
-    // AUTHENTICATIE
-    // ==========================================
-    window.onload = function() {
-      console.log('📋 Admin Dashboard loaded');
-      
-      if (currentAdminId && currentUsername) {
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('main-dashboard').classList.remove('hidden');
-        document.getElementById('admin-username').textContent = currentUsername;
-        loadAllData();
-        switchTab('leaderboard');
-      }
-    };
-
-    async function login() {
-      const username = document.getElementById('login-username').value;
-      const password = document.getElementById('login-password').value;
-      const errorDiv = document.getElementById('login-error');
-      
-      errorDiv.classList.add('hidden');
-      
-      try {
-        const response = await fetch('/api/setup/verify-admin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          currentAdminId = data.admin_id;
-          currentUsername = username;
-          localStorage.setItem('admin_id', data.admin_id);
-          localStorage.setItem('admin_username', username);
-          
-          document.getElementById('login-screen').classList.add('hidden');
-          document.getElementById('main-dashboard').classList.remove('hidden');
-          document.getElementById('admin-username').textContent = username;
-          
-          loadAllData();
-          switchTab('leaderboard');
-        } else {
-          errorDiv.textContent = data.error || 'Login failed';
-          errorDiv.classList.remove('hidden');
-        }
-      } catch (error) {
-        errorDiv.textContent = 'Connection error';
-        errorDiv.classList.remove('hidden');
-      }
-    }
-
-    function logout() {
-      localStorage.removeItem('admin_id');
-      localStorage.removeItem('admin_username');
-      location.reload();
-    }
-
-    // ==========================================
-    // API CALLS
-    // ==========================================
-    async function apiCall(endpoint, method = 'GET', body = null) {
-      const headers = { 'Content-Type': 'application/json' };
-      
-      if (endpoint.includes('/admin/')) {
-        const adminId = localStorage.getItem('admin_id');
-        if (!adminId) throw new Error('Admin authentication required');
-        headers['x-admin-key'] = adminId;
-      }
-      
-      const options = { method, headers, credentials: 'include' };
-      if (body) options.body = JSON.stringify(body);
-      
-      const response = await fetch(endpoint, options);
-      if (response.status === 401) throw new Error('Invalid admin credentials');
-      
-      const data = await response.json();
-      if (!data.success) throw new Error(data.error || 'API call failed');
-      return data;
-    }
-
-    // ==========================================
-    // TAB MANAGEMENT
-    // ==========================================
-    function switchTab(tabName) {
-      document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
-      document.querySelectorAll('.mode-toggle').forEach(b => b.classList.remove('active'));
-      
-      document.getElementById(`tab-${tabName}`).classList.remove('hidden');
-      
-      if (tabName === 'leaderboard') document.getElementById('tabLeaderboardBtn').classList.add('active');
-      if (tabName === 'freelancers') document.getElementById('tabFreelancersBtn').classList.add('active');
-      if (tabName === 'scanner') document.getElementById('tabScannerBtn').classList.add('active');
-      if (tabName === 'pending') document.getElementById('tabPendingBtn').classList.add('active');
-      
-      if (tabName === 'leaderboard') loadLeaderboard();
-      if (tabName === 'freelancers') loadFreelancers();
-      if (tabName === 'scanner') switchScannerMode('single');
-      if (tabName === 'pending') loadPendingData();
-    }
-
-    // ==========================================
-    // LEADERBOARD - ECHTE DATA VAN API
-    // ==========================================
-    async function loadLeaderboard() {
-      try {
-        const data = await apiCall('/api/leaderboard');
-        allLeaderboard = data.entries || [];
-        
-        // Update stats
-        document.getElementById('stat-total-agencies').textContent = data.stats?.totalAgencies || 0;
-        document.getElementById('stat-avg-score').textContent = data.averageScore || 0;
-        document.getElementById('stat-countries').textContent = data.stats?.countriesCount || 0;
-        document.getElementById('stat-active-seo').textContent = data.stats?.activeHelpers || 0;
-        
-        renderTop3();
-        renderRankings4to15();
-        renderRankings16Plus();
-        renderCountryFilters();
-      } catch (error) {
-        console.error('Leaderboard error:', error);
-      }
-    }
-
-    function renderTop3() {
-      const container = document.getElementById('top3-container');
-      if (!container) return;
-      
-      const top3 = allLeaderboard.slice(0, 3);
-      
-      if (top3.length === 0) {
-        container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Geen entries gevonden</div>';
-        return;
-      }
-      
-      container.innerHTML = top3.map((entry, index) => {
-        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
-        const medalClass = index === 0 ? 'gold' : index === 1 ? 'silver' : 'bronze';
-        const rankText = index === 0 ? '1st Worldwide' : index === 1 ? '2nd Worldwide' : '3rd Worldwide';
-        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-        
-        return `
-          <div class="top-card ${medalClass}">
-            <div class="text-5xl mb-2">${medal}</div>
-            <div class="text-xs font-bold uppercase tracking-wider mb-2 text-white/80">${rankText}</div>
-            <h3 class="text-xl font-bold mb-2">${companyName}</h3>
-            <div class="text-4xl font-black mb-2">${entry.score}/100</div>
-            <div class="text-white/80 mb-3">${getCountryFlag(entry.country)} ${entry.country}</div>
-            <button onclick="window.open('${entry.url}', '_blank', 'noopener')" class="w-full bg-black/30 hover:bg-black/50 text-white px-4 py-2 rounded-lg border border-white/30 transition-all">
-              <i class="fas fa-external-link-alt mr-2"></i> Visit Website
-            </button>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function renderRankings4to15() {
-      const grid = document.getElementById('rankings4to15Grid');
-      if (!grid) return;
-      
-      const rankings = allLeaderboard.slice(3, 15);
-      
-      if (rankings.length === 0) {
-        document.getElementById('rankings4to15Container').style.display = 'none';
-        return;
-      }
-      
-      document.getElementById('rankings4to15Container').style.display = 'block';
-      
-      grid.innerHTML = rankings.map((entry, index) => {
-        const actualRank = index + 4;
-        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-        
-        return `
-          <div class="rank-card">
-            <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
-            <h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
-            <div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
-            <div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
-            <a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">
-              View Website <i class="fas fa-external-link-alt ml-1"></i>
-            </a>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function renderRankings16Plus() {
-      const tbody = document.getElementById('rankingsTbody');
-      if (!tbody) return;
-      
-      const rankings = allLeaderboard.slice(15, 35);
-      
-      tbody.innerHTML = rankings.map((entry, index) => {
-        const actualRank = index + 16;
-        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-        const isSelected = selectedLeaderboardIds.has(entry.id);
-        
-        return `
-          <tr>
-            <td class="w-10">
-              <input type="checkbox" class="leaderboard-checkbox" data-id="${entry.id}" onchange="toggleSelectLeaderboard(${entry.id})" ${isSelected ? 'checked' : ''}>
-            </td>
-            <td><span class="inline-flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full font-bold">${actualRank}</span></td>
-            <td class="font-semibold">${companyName}</td>
-            <td><a href="${entry.url}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">${entry.url.replace('https://', '').substring(0, 25)}...</a></td>
-            <td><span class="text-lg font-bold ${entry.score >= 85 ? 'text-green-400' : entry.score >= 70 ? 'text-yellow-400' : 'text-red-400'}">${entry.score}</span></td>
-            <td><span class="text-sm">${getCountryFlag(entry.country)} ${entry.country}</span></td>
-            <td><span class="text-sm text-gray-400">${new Date(entry.created_at).toLocaleDateString()}</span></td>
-            <td>
-              <button onclick="deleteLeaderboardEntry(${entry.id})" class="text-red-400 hover:text-red-300">
-                <i class="fas fa-trash"></i>
-              </button>
-            </td>
-          </tr>
-        `;
-      }).join('');
-      
-      document.getElementById('totalCount').textContent = allLeaderboard.length;
-    }
-
-    // ==========================================
-    // EXTRACT DOMAIN FROM URL - GEEN "UNKNOWN" MEER!
-    // ==========================================
-    function extractDomainFromUrl(url) {
-      if (!url) return 'Bedrijf';
-      try {
-        const hostname = new URL(url).hostname;
-        // Verwijder www. en neem eerste deel
-        let domain = hostname.replace('www.', '');
-        // Splits op punt en neem eerste deel als bedrijfsnaam
-        let name = domain.split('.')[0];
-        // Capitalize eerste letter
-        return name.charAt(0).toUpperCase() + name.slice(1);
-      } catch (e) {
-        // Fallback: haal eerste deel voor slash
-        const parts = url.split('/');
-        const domain = parts[2] || parts[0];
-        return domain.replace('www.', '').split('.')[0] || 'Bedrijf';
-      }
-    }
-
-    // ==========================================
-    // LEADERBOARD DELETE FUNCTIES
-    // ==========================================
-    function toggleSelectLeaderboard(id) {
-      if (selectedLeaderboardIds.has(id)) {
-        selectedLeaderboardIds.delete(id);
-      } else {
-        selectedLeaderboardIds.add(id);
-      }
-      updateSelectedCountLeaderboard();
-    }
-
-    function toggleSelectAllLeaderboard() {
-      const selectAll = document.getElementById('select-all-leaderboard');
-      const checkboxes = document.querySelectorAll('.leaderboard-checkbox');
-      
-      if (selectAll.checked) {
-        allLeaderboard.forEach(entry => selectedLeaderboardIds.add(entry.id));
-        checkboxes.forEach(cb => cb.checked = true);
-      } else {
-        selectedLeaderboardIds.clear();
-        checkboxes.forEach(cb => cb.checked = false);
-      }
-      updateSelectedCountLeaderboard();
-    }
-
-    function updateSelectedCountLeaderboard() {
-      document.getElementById('selected-count-leaderboard').textContent = 
-        `${selectedLeaderboardIds.size} geselecteerd`;
-    }
-
-    async function deleteLeaderboardEntry(id) {
-      if (!confirm('❌ Verwijder deze entry permanent?')) return;
-      try {
-        await apiCall(`/api/admin/leaderboard/${id}`, 'DELETE');
-        alert('✅ Entry verwijderd');
-        selectedLeaderboardIds.delete(id);
-        loadLeaderboard();
-      } catch (error) {
-        alert('❌ Fout: ' + error.message);
-      }
-    }
-
-    async function bulkDeleteLeaderboard() {
-      if (selectedLeaderboardIds.size === 0) {
-        alert('❌ Selecteer entries om te verwijderen');
-        return;
-      }
-      
-      if (!confirm(`❌ Verwijder ${selectedLeaderboardIds.size} entries permanent?`)) return;
-      
-      let success = 0;
-      let failed = 0;
-      
-      for (const id of selectedLeaderboardIds) {
-        try {
-          await apiCall(`/api/admin/leaderboard/${id}`, 'DELETE');
-          success++;
-        } catch (e) {
-          failed++;
-        }
-      }
-      
-      alert(`✅ ${success} verwijderd, ${failed} mislukt`);
-      selectedLeaderboardIds.clear();
-      loadLeaderboard();
-    }
-
-    // ==========================================
-    // FREELANCERS - ECHTE DATA
-    // ==========================================
-    async function loadFreelancers() {
-      try {
-        const data = await apiCall('/api/freelancers');
-        allFreelancers = data.freelancers || [];
-        renderFreelancers();
-      } catch (error) {
-        console.error('Freelancers error:', error);
-      }
-    }
-
-    function renderFreelancers() {
-      const tbody = document.getElementById('freelancers-tbody');
-      if (!tbody) return;
-      
-      if (allFreelancers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-400">Geen freelancers gevonden</td></tr>';
-        return;
-      }
-      
-      tbody.innerHTML = allFreelancers.map(f => {
-        const isSelected = selectedFreelancerIds.has(f.id);
-        
-        return `
-          <tr>
-            <td class="w-10">
-              <input type="checkbox" class="freelancer-checkbox" data-id="${f.id}" onchange="toggleSelectFreelancer(${f.id})" ${isSelected ? 'checked' : ''}>
-            </td>
-            <td class="font-semibold">${f.name}</td>
-            <td>${f.email}</td>
-            <td>${f.title || 'SEO Specialist'}</td>
-            <td>${f.location || f.country || 'Remote'}</td>
-            <td><span class="badge badge-success">✓ Verified</span></td>
-            <td>
-              <button onclick="deleteFreelancer(${f.id})" class="text-red-400 hover:text-red-300">
-                <i class="fas fa-trash"></i>
-              </button>
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    // FREELANCER DELETE FUNCTIES
-    function toggleSelectFreelancer(id) {
-      if (selectedFreelancerIds.has(id)) {
-        selectedFreelancerIds.delete(id);
-      } else {
-        selectedFreelancerIds.add(id);
-      }
-      updateSelectedCountFreelancers();
-    }
-
-    function toggleSelectAllFreelancers() {
-      const selectAll = document.getElementById('select-all-freelancers');
-      const checkboxes = document.querySelectorAll('.freelancer-checkbox');
-      
-      if (selectAll.checked) {
-        allFreelancers.forEach(f => selectedFreelancerIds.add(f.id));
-        checkboxes.forEach(cb => cb.checked = true);
-      } else {
-        selectedFreelancerIds.clear();
-        checkboxes.forEach(cb => cb.checked = false);
-      }
-      updateSelectedCountFreelancers();
-    }
-
-    function updateSelectedCountFreelancers() {
-      document.getElementById('selected-count-freelancers').textContent = 
-        `${selectedFreelancerIds.size} geselecteerd`;
-    }
-
-    async function deleteFreelancer(id) {
-      if (!confirm('❌ Verwijder deze freelancer permanent?')) return;
-      try {
-        await apiCall(`/api/admin/freelancers/${id}`, 'DELETE');
-        alert('✅ Freelancer verwijderd');
-        selectedFreelancerIds.delete(id);
-        loadFreelancers();
-      } catch (error) {
-        alert('❌ Fout: ' + error.message);
-      }
-    }
-
-    async function bulkDeleteFreelancers() {
-      if (selectedFreelancerIds.size === 0) {
-        alert('❌ Selecteer freelancers om te verwijderen');
-        return;
-      }
-      
-      if (!confirm(`❌ Verwijder ${selectedFreelancerIds.size} freelancers permanent?`)) return;
-      
-      let success = 0;
-      let failed = 0;
-      
-      for (const id of selectedFreelancerIds) {
-        try {
-          await apiCall(`/api/admin/freelancers/${id}`, 'DELETE');
-          success++;
-        } catch (e) {
-          failed++;
-        }
-      }
-      
-      alert(`✅ ${success} verwijderd, ${failed} mislukt`);
-      selectedFreelancerIds.clear();
-      loadFreelancers();
-    }
-
-    // ==========================================
-    // SCANNER FUNCTIES
-    // ==========================================
-    function switchScannerMode(mode) {
-      const singleMode = document.getElementById('singleMode');
-      const bulkMode = document.getElementById('bulkMode');
-      const singleBtn = document.getElementById('modeSingleBtn');
-      const bulkBtn = document.getElementById('modeBulkBtn');
-      
-      if (mode === 'single') {
-        singleMode.classList.remove('hidden');
-        bulkMode.classList.add('hidden');
-        singleBtn.classList.add('active');
-        bulkBtn.classList.remove('active');
-      } else {
-        singleMode.classList.add('hidden');
-        bulkMode.classList.remove('hidden');
-        singleBtn.classList.remove('active');
-        bulkBtn.classList.add('active');
-      }
-    }
-
-    async function scanSingleURL() {
-      const input = document.getElementById('singleUrlInput');
-      const button = document.getElementById('singleScanBtn');
-      const progress = document.getElementById('singleProgress');
-      const progressBar = document.getElementById('singleProgressBar');
-      const progressText = document.getElementById('singleProgressText');
-      const resultDiv = document.getElementById('singleResult');
-      
-      let url = input.value.trim();
-      if (!url) {
-        alert('❌ Please enter a URL');
-        return;
-      }
-      
-      if (!url.startsWith('http')) {
-        url = 'https://' + url;
-      }
-      
-      button.disabled = true;
-      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scannen...';
-      progress.classList.remove('hidden');
-      progressBar.style.width = '20%';
-      progressText.textContent = 'Browser starten...';
-      
-      try {
-        const response = await fetch('/api/scan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: url })
-        });
-        
-        progressBar.style.width = '60%';
-        progressText.textContent = 'Content analyseren...';
-        
-        const data = await response.json();
-        
-        if (!response.ok || !data.success) {
-          throw new Error(data.error || 'Scan failed');
-        }
-        
-        currentScanResult = data;
-        
-        // ✅ Toon scan resultaat met bedrijfsnaam suggestie
-        const companyName = extractDomainFromUrl(url);
-        
-        resultDiv.innerHTML = `
-          <div class="card border-green-500 mt-4">
-            <div class="text-center mb-4">
-              <h3 class="text-2xl font-bold text-white mb-2">✅ Scan Complete</h3>
-              <p class="text-sm text-gray-400 break-all">${url}</p>
-            </div>
-            
-            <div class="text-center mb-6">
-              <div class="text-6xl font-black ${data.score >= 85 ? 'text-green-400' : data.score >= 70 ? 'text-yellow-400' : 'text-red-400'}">${data.score}</div>
-              <div class="text-sm text-gray-400">Score /100</div>
-              <span class="inline-block mt-2 px-3 py-1 bg-${data.quality === 'excellent' ? 'green' : data.quality === 'good' ? 'blue' : 'yellow'}-600 rounded-full text-xs">
-                ${data.quality}
-              </span>
-            </div>
-            
-            <div class="bg-gray-800 rounded-lg p-4 mb-4">
-              <label class="block text-sm font-medium mb-2 text-gray-300">Bedrijfsnaam (aanpasbaar)</label>
-              <input type="text" id="scan-company-name" value="${companyName}" 
-                     class="w-full px-4 py-3 bg-gray-700 border-2 border-purple-500 rounded-lg text-white font-semibold">
-              <p class="text-xs text-gray-400 mt-2">✏️ Je kunt de naam aanpassen voordat je toevoegt</p>
-            </div>
-            
-            <div class="flex gap-3">
-              <button onclick="addScanToLeaderboard('${url}', ${data.score})" 
-                      class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-semibold">
-                <i class="fas fa-plus-circle mr-2"></i> Add to Leaderboard
-              </button>
-              <button onclick="document.getElementById('singleResult').classList.add('hidden')" 
-                      class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg font-semibold">
-                Close
-              </button>
-            </div>
-          </div>
-        `;
-        
-        resultDiv.classList.remove('hidden');
-        
-        progressBar.style.width = '100%';
-        progressText.textContent = 'Scan compleet!';
-        
-        setTimeout(() => {
-          progress.classList.add('hidden');
-          button.disabled = false;
-          button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
-        }, 500);
-        
-      } catch (error) {
-        console.error('Scan error:', error);
-        alert('❌ Scan failed: ' + error.message);
-        
-        progress.classList.add('hidden');
-        button.disabled = false;
-        button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
-      }
-    }
-
-    async function addScanToLeaderboard(url, score) {
-      const companyInput = document.getElementById('scan-company-name');
-      const companyName = companyInput ? companyInput.value.trim() : extractDomainFromUrl(url);
-      
-      if (!companyName) {
-        alert('❌ Voer een bedrijfsnaam in');
-        return;
-      }
-      
-      try {
-        // ✅ Voeg toe aan leaderboard via admin API
-        await apiCall('/api/admin/leaderboard/manual-add', 'POST', {
-          url: url,
-          company_name: companyName,
-          score: score,
-          country: 'Netherlands'
-        });
-        
-        alert(`✅ "${companyName}" toegevoegd aan leaderboard!`);
-        document.getElementById('singleResult').classList.add('hidden');
-        document.getElementById('singleUrlInput').value = '';
-        loadLeaderboard(); // Refresh leaderboard
-      } catch (error) {
-        alert('❌ Fout bij toevoegen: ' + error.message);
-      }
-    }
-
-    async function scrapeGoogleMaps() {
-      const input = document.getElementById('mapsUrl');
-      const button = document.getElementById('bulkScanBtn');
-      const leadsContainer = document.getElementById('leadsContainer');
-      const leadsTableBody = document.getElementById('leadsTableBody');
-      const leadCount = document.getElementById('leadCount');
-      
-      let url = input.value.trim();
-      if (!url || !url.includes('google.com/maps')) {
-        alert('❌ Voer een geldige Google Maps URL in');
-        return;
-      }
-      
-      button.disabled = true;
-      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scrapen...';
-      
-      try {
-        const data = await apiCall('/api/google-maps/scrape', 'POST', { 
-          url: url,
-          maxResults: 30 
-        });
-        
-        scrapedLeads = data.leads || [];
-        leadCount.textContent = scrapedLeads.length;
-        
-        if (scrapedLeads.length === 0) {
-          leadsTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-400">Geen bedrijven gevonden</td></tr>';
-        } else {
-          leadsTableBody.innerHTML = scrapedLeads.map((lead, index) => {
-            const hasWebsite = lead.website && lead.website !== 'N/A' && lead.website !== null;
-            const companyName = lead.name || extractDomainFromUrl(lead.website) || 'Onbekend';
-            
-            return `
-              <tr class="border-b border-gray-700 hover:bg-gray-800">
-                <td class="px-4 py-3">
-                  <div class="font-medium text-white">${companyName}</div>
-                  <div class="text-xs text-gray-400">${lead.category || 'SEO Agency'}</div>
-                </td>
-                <td class="px-4 py-3">
-                  ${hasWebsite ? 
-                    `<a href="${lead.website}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">
-                      ${lead.website.replace('https://', '').substring(0, 30)}...
-                    </a>` : 
-                    `<span class="text-red-400 text-sm">Geen website</span>`
-                  }
-                </td>
-                <td class="px-4 py-3 text-gray-300 text-sm">${lead.phone || '-'}</td>
-                <td class="px-4 py-3">
-                  ${lead.score > 0 ? 
-                    `<span class="font-bold ${lead.score >= 70 ? 'text-green-400' : 'text-yellow-400'}">${lead.score}</span>` : 
-                    `<span class="text-gray-500">-</span>`
-                  }
-                </td>
-                <td class="px-4 py-3">
-                  ${hasWebsite ? 
-                    `<button onclick="quickAddToLeaderboard('${lead.website}', '${companyName}', ${lead.score || 75})" 
-                            class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm font-semibold">
-                      <i class="fas fa-plus-circle mr-1"></i>Add
-                    </button>` : 
-                    `<span class="text-gray-600 text-sm">-</span>`
-                  }
-                </td>
-              </tr>
-            `;
-          }).join('');
-        }
-        
-        leadsContainer.classList.remove('hidden');
-        
-      } catch (error) {
-        alert('❌ Scrape failed: ' + error.message);
-      } finally {
-        button.disabled = false;
-        button.innerHTML = '<i class="fas fa-map-marked-alt mr-2"></i> Scrape Maps';
-      }
-    }
-
-    async function quickAddToLeaderboard(url, name, score) {
-      try {
-        await apiCall('/api/admin/leaderboard/manual-add', 'POST', {
-          url: url,
-          company_name: name,
-          score: score,
-          country: 'Netherlands'
-        });
-        
-        alert(`✅ "${name}" toegevoegd aan leaderboard!`);
-        loadLeaderboard();
-      } catch (error) {
-        alert('❌ Fout: ' + error.message);
-      }
-    }
-
-    // ==========================================
-    // PENDING DATA - MET WIJZIGBARE BEDRIJFSNAAM
-    // ==========================================
-    async function loadPendingData() {
-      try {
-        await Promise.all([
-          loadPendingLeaderboard(),
-          loadPendingFreelancers()
-        ]);
-      } catch (error) {
-        console.error('❌ Pending data error:', error);
-        if (error.message.includes('Invalid admin credentials')) {
-          alert('❌ Admin sessie verlopen. Log opnieuw in.');
-          logout();
-        }
-      }
-    }
-
-    async function loadPendingLeaderboard() {
-      try {
-        const data = await apiCall('/api/admin/leaderboard/pending');
-        const container = document.getElementById('pending-leaderboard-container');
-        
-        if (data.pending.length === 0) {
-          container.innerHTML = `
-            <div class="text-center py-8 text-gray-400">
-              <i class="fas fa-check-circle text-6xl mb-4 text-green-400"></i>
-              <p class="text-lg">Geen pending submissions</p>
-            </div>
-          `;
-          return;
-        }
-        
-        container.innerHTML = data.pending.map(entry => {
-          // ✅ Automatische bedrijfsnaam suggestie uit URL
-          const suggestedName = entry.company_name || extractDomainFromUrl(entry.url);
-          
-          return `
-            <div class="pending-card">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h4 class="text-xl font-bold mb-2">✏️ Bedrijfsnaam</h4>
-                  <input type="text" id="company-${entry.id}" value="${suggestedName}" 
-                         class="company-name-input mb-3" placeholder="Voer bedrijfsnaam in">
-                  
-                  <p class="text-blue-400 mb-2 text-sm">${entry.url}</p>
-                  
-                  <div class="bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 rounded-lg inline-block">
-                    <div class="text-xs text-purple-200">Score</div>
-                    <div class="text-2xl font-bold">${entry.score}/100</div>
-                  </div>
-                  
-                  ${entry.graaf_score ? `
-                    <div class="mt-3 text-xs text-gray-400">
-                      G.R.A.A.F: ${entry.graaf_score}/50 | C.R.A.F.T: ${entry.craft_score}/30 | Technical: ${entry.technical_score}/20
-                    </div>
-                  ` : ''}
-                </div>
-                
-                <div>
-                  <label class="block text-sm font-medium mb-2">Land</label>
-                  <select id="country-${entry.id}" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
-                    <option value="${entry.country || 'Netherlands'}">${entry.country || 'Netherlands'}</option>
-                    <option value="Netherlands">🇳🇱 Netherlands</option>
-                    <option value="Belgium">🇧🇪 Belgium</option>
-                    <option value="Germany">🇩🇪 Germany</option>
-                    <option value="United Kingdom">🇬🇧 United Kingdom</option>
-                    <option value="United States">🇺🇸 United States</option>
-                  </select>
-                  
-                  <div class="mt-4 p-3 bg-gray-800 rounded-lg border border-yellow-600">
-                    <p class="text-xs text-yellow-400">
-                      <i class="fas fa-pencil-alt mr-1"></i> 
-                      Je kunt de bedrijfsnaam hierboven aanpassen voordat je goedkeurt.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="flex gap-3 mt-6">
-                <button onclick="approveLeaderboardEntry(${entry.id})" class="flex-1 bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold">
-                  <i class="fas fa-check mr-2"></i> Approve met deze naam
-                </button>
-                <button onclick="rejectLeaderboardEntry(${entry.id})" class="flex-1 bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">
-                  <i class="fas fa-times mr-2"></i> Reject
-                </button>
-              </div>
-            </div>
-          `;
-        }).join('');
-      } catch (error) {
-        console.error('Pending leaderboard error:', error);
-      }
-    }
-
-    async function loadPendingFreelancers() {
-      try {
-        const data = await apiCall('/api/admin/freelancers/pending');
-        const container = document.getElementById('pending-freelancers-container');
-        
-        if (data.pending.length === 0) {
-          container.innerHTML = `
-            <div class="text-center py-8 text-gray-400">
-              <i class="fas fa-check-circle text-6xl mb-4 text-green-400"></i>
-              <p class="text-lg">Geen pending aanmeldingen</p>
-            </div>
-          `;
-          return;
-        }
-        
-        container.innerHTML = data.pending.map(f => `
-          <div class="pending-card">
-            <div class="grid md:grid-cols-2 gap-6">
-              <div>
-                <h4 class="text-xl font-bold mb-2">${f.name}</h4>
-                <p class="text-purple-400 mb-2">${f.title || 'SEO Specialist'}</p>
-                <p class="text-sm text-gray-400 mb-2"><i class="fas fa-envelope mr-2"></i> ${f.email}</p>
-                <p class="text-sm text-gray-400"><i class="fas fa-map-marker-alt mr-2"></i> ${f.location || f.country || 'Unknown'}</p>
-              </div>
-              <div>
-                <p class="text-sm mb-4">${f.bio || 'Geen bio beschikbaar'}</p>
-                <button onclick="approveFreelancer(${f.id})" class="w-full bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold mb-2">
-                  <i class="fas fa-check mr-2"></i> Goedkeuren
-                </button>
-                <button onclick="rejectFreelancer(${f.id})" class="w-full bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">
-                  <i class="fas fa-times mr-2"></i> Weigeren
-                </button>
-              </div>
-            </div>
-          </div>
-        `).join('');
-      } catch (error) {
-        console.error('Pending freelancers error:', error);
-      }
-    }
-
-    // ==========================================
-    // ADMIN ACTIONS - MET WIJZIGBARE BEDRIJFSNAAM
-    // ==========================================
-    async function approveLeaderboardEntry(id) {
-      // ✅ Haal de gewijzigde bedrijfsnaam op uit het input veld
-      const companyInput = document.getElementById(`company-${id}`);
-      const finalCompanyName = companyInput ? companyInput.value.trim() : null;
-      
-      const finalCountry = document.getElementById(`country-${id}`)?.value;
-      
-      if (!finalCompanyName) {
-        alert('❌ Voer een bedrijfsnaam in');
-        companyInput?.focus();
-        return;
-      }
-      
-      try {
-        // ✅ Eerst de bedrijfsnaam updaten via manual-add
-        await apiCall('/api/admin/leaderboard/manual-add', 'POST', {
-          url: document.querySelector(`#country-${id}`)?.closest('.pending-card')?.querySelector('.text-blue-400')?.textContent || '',
-          company_name: finalCompanyName,
-          score: 0, // Wordt overschreven door approve
-          country: finalCountry
-        });
-        
-        // ✅ Daarna goedkeuren
-        await apiCall(`/api/admin/leaderboard/${id}/approve`, 'POST', { 
-          final_country: finalCountry 
-        });
-        
-        alert(`✅ "${finalCompanyName}" goedgekeurd!`);
-        loadPendingLeaderboard();
-        loadLeaderboard();
-      } catch (error) {
-        alert('❌ Fout: ' + error.message);
-      }
-    }
-
-    async function rejectLeaderboardEntry(id) {
-      if (!confirm('❌ Weiger deze submission?')) return;
-      try {
-        await apiCall(`/api/admin/leaderboard/${id}/reject`, 'POST');
-        alert('✅ Entry verwijderd');
-        loadPendingLeaderboard();
-      } catch (error) {
-        alert('❌ Fout: ' + error.message);
-      }
-    }
-
-    async function approveFreelancer(id) {
-      try {
-        await apiCall(`/api/admin/freelancers/${id}/approve`, 'POST');
-        alert('✅ Freelancer goedgekeurd!');
-        loadPendingFreelancers();
-        loadFreelancers();
-      } catch (error) {
-        alert('❌ Fout: ' + error.message);
-      }
-    }
-
-    async function rejectFreelancer(id) {
-      if (!confirm('❌ Weiger deze aanmelding?')) return;
-      try {
-        await apiCall(`/api/admin/freelancers/${id}`, 'DELETE');
-        alert('✅ Aanmelding geweigerd');
-        loadPendingFreelancers();
-      } catch (error) {
-        alert('❌ Fout: ' + error.message);
-      }
-    }
-
-    // ==========================================
-    // STATS
-    // ==========================================
-    async function loadStats() {
-      try {
-        if (localStorage.getItem('admin_id')) {
-          const data = await apiCall('/api/admin/stats');
-          document.getElementById('stat-total-scans').textContent = data.stats?.total_scans || 0;
-        }
-      } catch (error) {
-        console.error('Stats error:', error);
-      }
-    }
-
-    function loadAllData() {
-      loadLeaderboard();
-      loadFreelancers();
-      loadStats();
-    }
-
-    // ==========================================
-    // UTILITY FUNCTIES
-    // ==========================================
-    function getCountryFlag(country) {
-      const flags = { 
-        'Netherlands': '🇳🇱', 'NL': '🇳🇱', 
-        'United Kingdom': '🇬🇧', 'UK': '🇬🇧', 
-        'US': '🇺🇸', 'United States': '🇺🇸',
-        'Germany': '🇩🇪', 'DE': '🇩🇪',
-        'France': '🇫🇷', 'FR': '🇫🇷',
-        'Belgium': '🇧🇪', 'BE': '🇧🇪',
-        'Spain': '🇪🇸', 'ES': '🇪🇸',
-        'Italy': '🇮🇹', 'IT': '🇮🇹'
+function initDatabaseConfig() {
+  if (process.env.DATABASE_URL) {
+    try {
+      const url = new URL(process.env.DATABASE_URL);
+      dbConfig = {
+        user: url.username,
+        password: url.password,
+        host: url.hostname,
+        port: url.port || 5432,
+        database: url.pathname.slice(1),
+        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+        connectionTimeoutMillis: 10000,
+        idleTimeoutMillis: 30000,
+        max: 20
       };
-      return flags[country] || '🌐';
+    } catch (e) {
+      console.error('❌ Ongeldige DATABASE_URL:', e.message);
+      return null;
     }
+  } else {
+    dbConfig = {
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432'),
+      database: process.env.DB_NAME || 'contentscale',
+      user: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || 'postgres',
+      ssl: false,
+      connectionTimeoutMillis: 5000,
+      idleTimeoutMillis: 30000,
+      max: 10
+    };
+  }
 
-    function renderCountryFilters() {
-      const div = document.getElementById('countryFilters');
-      if (!div) return;
-      
-      const countries = [...new Set(allLeaderboard.map(e => e.country))];
-      
-      let html = '<button class="filter-tag active" onclick="filterByCountry(\'all\')">🌍 All</button>';
-      countries.forEach(country => {
-        html += `<button class="filter-tag" onclick="filterByCountry('${country}')">${getCountryFlag(country)} ${country}</button>`;
-      });
-      
-      div.innerHTML = html;
-    }
+  console.log('📊 Database configuratie:');
+  console.log(`   • Host: ${dbConfig.host}`);
+  console.log(`   • Port: ${dbConfig.port}`);
+  console.log(`   • Database: ${dbConfig.database}`);
+  console.log(`   • User: ${dbConfig.user}`);
+  console.log(`   • SSL: ${dbConfig.ssl ? 'Ja' : 'Nee'}`);
 
-    function filterByCountry(country) {
-      // Implementatie later
-      console.log('Filter by country:', country);
-    }
+  return new Pool(dbConfig);
+}
 
-    function filterAgencies() {
-      const query = document.getElementById('searchInput')?.value.toLowerCase() || '';
-      
-      if (!query) {
-        renderRankings4to15();
-        renderRankings16Plus();
-        return;
+try {
+  pool = initDatabaseConfig();
+} catch (e) {
+  console.error('❌ Fout bij initialiseren database pool:', e.message);
+  pool = null;
+}
+
+async function waitForDatabase(retries = 5, delay = 3000) {
+  if (!pool) {
+    console.log('❌ Geen database pool - overslaan');
+    return false;
+  }
+  
+  console.log('🔄 Verbinden met database...');
+  
+  for (let i = 0; i < retries; i++) {
+    try {
+      const client = await pool.connect();
+      console.log(`✅ Database verbonden! (poging ${i + 1}/${retries})`);
+      await client.query('SELECT NOW()');
+      console.log('✅ Database query werkt');
+      client.release();
+      setTimeout(() => createAllTables().catch(err => {
+        console.error('❌ Fout bij aanmaken tabellen:', err.message);
+      }), 1000);
+      return true;
+    } catch (err) {
+      console.error(`❌ Database connectie poging ${i + 1}/${retries} mislukt:`, err.message);
+      if (i === retries - 1) {
+        console.error('\n❌❌❌ KON GEEN VERBINDING MAKEN MET DATABASE ❌❌❌');
+        return false;
       }
-      
-      const filtered = allLeaderboard.filter(entry => 
-        (entry.company_name || '').toLowerCase().includes(query) ||
-        (entry.url || '').toLowerCase().includes(query) ||
-        extractDomainFromUrl(entry.url).toLowerCase().includes(query)
-      );
-      
-      // Update rankings met gefilterde data
-      const rankings4to15Grid = document.getElementById('rankings4to15Grid');
-      const rankings4to15 = filtered.slice(3, 15);
-      
-      if (rankings4to15Grid) {
-        rankings4to15Grid.innerHTML = rankings4to15.map((entry, index) => {
-          const actualRank = index + 4;
-          const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+      console.log(`⏳ Opnieuw proberen over ${delay/1000} seconden...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  return false;
+}
+
+const storage = multer.memoryStorage();
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, WebP and GIF are allowed.'));
+    }
+  }
+});
+
+app.set('trust proxy', 1);
+app.use(compression({ level: 9, threshold: 0 }));
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { success: false, error: 'Too many requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip || req.connection.remoteAddress
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { success: false, error: 'Too many login attempts, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip || req.connection.remoteAddress
+});
+
+app.use('/api/', limiter);
+app.use('/api/setup/verify-admin', authLimiter);
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    'https://app.contentscale.site',
+    'https://contentscale.site',
+    'http://localhost:3000',
+    'http://localhost:3001'
+  ];
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-admin-key');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+});
+
+const publicPath = process.env.NODE_ENV === 'production' 
+  ? path.join(process.cwd(), 'public')
+  : path.join(__dirname, 'public');
+
+app.use(express.static(publicPath, {
+  maxAge: '1y',
+  etag: true,
+  lastModified: true,
+  immutable: true
+}));
+
+app.use('/uploads', express.static(path.join(publicPath, 'uploads')));
+
+const verifyAdmin = async (req, res, next) => {
+  const adminKey = req.headers['x-admin-key'];
+  if (!adminKey) return res.status(401).json({ success: false, error: 'Admin authentication required' });
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const result = await pool.query('SELECT * FROM super_admins WHERE id = $1 AND is_active = TRUE', [adminKey]);
+    if (result.rows.length === 0) return res.status(401).json({ success: false, error: 'Invalid admin credentials' });
+    req.admin = result.rows[0];
+    next();
+  } catch (error) {
+    console.error('❌ Admin verificatie error:', error.message);
+    res.status(500).json({ success: false, error: 'Authentication error' });
+  }
+};
+
+let browserInstance = null;
+
+async function getBrowser() {
+  if (!browserInstance) {
+    console.log('🚀 Launching Puppeteer browser...');
+    browserInstance = await puppeteer.launch({
+      headless: 'new',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--disable-gpu'
+      ],
+      timeout: 30000
+    }).catch(err => {
+      console.error('❌ Puppeteer launch error:', err.message);
+      return null;
+    });
+    if (browserInstance) console.log('✅ Puppeteer browser ready');
+    else console.log('❌ Puppeteer browser failed to start');
+  }
+  return browserInstance;
+}
+
+process.on('SIGTERM', async () => {
+  if (browserInstance) await browserInstance.close();
+  process.exit(0);
+});
+
+const scanCache = new Map();
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+function hashContent(html) {
+  return crypto.createHash('sha256').update(html).digest('hex');
+}
+
+setInterval(() => {
+  const now = Date.now();
+  let cleared = 0;
+  for (const [key, value] of scanCache.entries()) {
+    if (now - value.timestamp > CACHE_TTL_MS) {
+      scanCache.delete(key);
+      cleared++;
+    }
+  }
+  if (cleared > 0) console.log(`🧹 Cleared ${cleared} expired cache entries`);
+}, 60000);
+
+function isValidUrl(string) {
+  try {
+    new URL(string);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+async function createAllTables() {
+  if (!pool) {
+    console.error('❌ Geen database pool - kan tabellen niet aanmaken');
+    return;
+  }
+  
+  let client;
+  try {
+    client = await pool.connect();
+    console.log('📦 Database tabellen controleren...');
+    
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS super_admins (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(100) UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        full_name VARCHAR(255),
+        email VARCHAR(255),
+        role VARCHAR(50) DEFAULT 'admin',
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        last_login TIMESTAMP
+      )
+    `);
+    
+    await client.query(`DELETE FROM super_admins WHERE username = 'ot'`);
+    const salt = await bcrypt.genSalt(12);
+    const hashedPassword = await bcrypt.hash('admin123', salt);
+    await client.query(
+      `INSERT INTO super_admins (username, password_hash, full_name, role, is_active, created_at) 
+       VALUES ($1, $2, $3, $4, $5, NOW())`,
+      ['ot', hashedPassword, 'Super Administrator', 'super_admin', true]
+    );
+    console.log('✅✅✅ ADMIN AANGEMAAKT: ot / admin123');
+    
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS scans (
+        id SERIAL PRIMARY KEY,
+        url TEXT NOT NULL,
+        score INTEGER,
+        quality VARCHAR(50),
+        graaf_score INTEGER,
+        craft_score INTEGER,
+        technical_score INTEGER,
+        content_score INTEGER,
+        ux_score INTEGER,
+        breakdown JSONB,
+        comparison_data JSONB,
+        recommendations JSONB DEFAULT '[]',
+        scan_type VARCHAR(50) DEFAULT 'manual',
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS leaderboard (
+        id SERIAL PRIMARY KEY,
+        url TEXT NOT NULL UNIQUE,
+        company_name VARCHAR(255),
+        score INTEGER NOT NULL,
+        country VARCHAR(10) DEFAULT 'NL',
+        city VARCHAR(255),
+        type VARCHAR(100) DEFAULT 'seo_agency',
+        location VARCHAR(255),
+        is_verified BOOLEAN DEFAULT FALSE,
+        is_opted_out BOOLEAN DEFAULT FALSE,
+        submission_ip VARCHAR(50),
+        admin_verified BOOLEAN DEFAULT TRUE,
+        auto_detected_country VARCHAR(100),
+        graaf_score INTEGER,
+        craft_score INTEGER,
+        technical_score INTEGER,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS freelancers (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        title VARCHAR(255),
+        location VARCHAR(255),
+        country VARCHAR(100),
+        bio TEXT,
+        linkedin_url TEXT,
+        hourly_rate VARCHAR(50),
+        availability VARCHAR(100),
+        is_approved BOOLEAN DEFAULT FALSE,
+        is_verified BOOLEAN DEFAULT FALSE,
+        is_featured BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS google_maps_leads (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        category VARCHAR(255),
+        website TEXT,
+        phone VARCHAR(100),
+        address TEXT,
+        rating DECIMAL(2,1),
+        reviews INTEGER,
+        score INTEGER DEFAULT 0,
+        status VARCHAR(50) DEFAULT 'new',
+        notes TEXT,
+        contacted_at TIMESTAMP,
+        converted_at TIMESTAMP,
+        user_id INTEGER,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS blog_posts (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(500) NOT NULL,
+        slug VARCHAR(500) UNIQUE NOT NULL,
+        excerpt TEXT,
+        content TEXT NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        status VARCHAR(50) DEFAULT 'draft',
+        tags TEXT[] DEFAULT '{}',
+        featured_image TEXT,
+        featured_image_alt VARCHAR(500),
+        featured_image_caption TEXT,
+        author VARCHAR(255) NOT NULL,
+        meta_description TEXT,
+        views INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
+        published_at TIMESTAMP
+      )
+    `);
+    
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS blog_images (
+        id SERIAL PRIMARY KEY,
+        post_id INTEGER REFERENCES blog_posts(id) ON DELETE CASCADE,
+        image_url TEXT NOT NULL,
+        alt_text VARCHAR(500) NOT NULL,
+        caption TEXT,
+        position INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS share_links (
+        id SERIAL PRIMARY KEY,
+        share_code VARCHAR(64) UNIQUE NOT NULL,
+        client_email VARCHAR(255),
+        client_name VARCHAR(255),
+        client_company VARCHAR(255),
+        scans_limit INTEGER DEFAULT 10,
+        scans_used INTEGER DEFAULT 0,
+        created_by INTEGER REFERENCES super_admins(id),
+        expires_at TIMESTAMP NOT NULL,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS claims (
+        id SERIAL PRIMARY KEY,
+        business_name VARCHAR(255) NOT NULL,
+        business_url TEXT NOT NULL,
+        contact_name VARCHAR(255) NOT NULL,
+        contact_email VARCHAR(255) NOT NULL,
+        contact_phone VARCHAR(100),
+        verification_document TEXT,
+        status VARCHAR(50) DEFAULT 'pending',
+        reviewed_by INTEGER REFERENCES super_admins(id),
+        reviewed_at TIMESTAMP,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    console.log('✅ Alle database tabellen gereed');
+    
+  } catch (error) {
+    console.error('❌ Database setup error:', error.message);
+  } finally {
+    if (client) client.release();
+  }
+}
+
+function calculateStableScores(content, stats, rawHtml) {
+  const { wordCount = 0, h1Count = 0, h2Count = 0, h3Count = 0, listCount = 0 } = stats;
+  
+  function detectFAQ(html, text) {
+    const faqPatterns = [
+      /<h[1-6][^>]*>.*?(faq|frequently asked|questions|vraag|antwoord|veelgestelde).*?<\/h[1-6]>/gi,
+      /"@type"\s*:\s*"FAQPage"/gi,
+      /<details>/gi,
+      /<summary>/gi,
+      /class="(accordion|collapse|faq|qa-|faq-|vraag|antwoord)/gi,
+      /veelgestelde vragen/gi,
+      /vaak gestelde vragen/gi
+    ];
+    
+    let faqScore = 0;
+    const combined = html + ' ' + text;
+    
+    faqPatterns.forEach(pattern => {
+      const matches = combined.match(pattern);
+      if (matches) faqScore += matches.length;
+    });
+    
+    return { hasFAQ: faqScore >= 2, faqScore };
+  }
+  
+  const faqDetection = detectFAQ(rawHtml, content);
+  
+  let graafScore = 0;
+  const graafItems = {};
+  
+  let credibility = 0;
+  const hasAuthor = /by\s+\w+|author:|written\s+by|contributor/i.test(content);
+  const hasQuotes = /["']|says|according|explains|notes/i.test(content);
+  const hasExpert = /expert|specialist|professional|certified/i.test(content);
+  credibility += hasAuthor ? 6 : 0;
+  credibility += hasQuotes ? 5 : 0;
+  credibility += hasExpert ? 5 : 0;
+  graafItems.credibility = Math.min(16, credibility);
+  
+  const relevance = Math.min(18, Math.floor(wordCount / 55));
+  graafItems.relevance = relevance;
+  
+  let accuracy = 0;
+  const hasStats = /\d+%|\d+\s+of|\d+\s+out\s+of|\d+\s+studies|\d+\s+research/i.test(content);
+  const hasSources = /source:|reference:|according to|study by/i.test(content);
+  accuracy += hasStats ? 4 : 0;
+  accuracy += hasSources ? 4 : 0;
+  graafItems.accuracy = Math.min(8, accuracy);
+  
+  let freshness = 0;
+  const currentYear = new Date().getFullYear();
+  const yearRegex = new RegExp(`20[2-9][0-9]|${currentYear}|${currentYear-1}`, 'gi');
+  const hasRecentDate = yearRegex.test(content);
+  freshness += hasRecentDate ? 6 : 2;
+  graafItems.freshness = Math.min(8, freshness);
+  
+  graafScore = graafItems.credibility + graafItems.relevance + graafItems.accuracy + graafItems.freshness;
+  
+  let craftScore = 0;
+  const craftItems = {};
+  
+  const headingStructure = h1Count === 1 ? 8 : h1Count > 1 ? 4 : 2;
+  craftItems.headingStructure = headingStructure;
+  
+  const subheadings = Math.min(10, (h2Count * 2) + (h3Count * 1));
+  craftItems.subheadings = subheadings;
+  
+  const paragraphs = Math.min(8, Math.floor(wordCount / 125));
+  craftItems.paragraphs = paragraphs;
+  
+  const lists = listCount >= 3 ? 4 : listCount >= 1 ? 2 : 0;
+  craftItems.lists = lists;
+  
+  craftScore = craftItems.headingStructure + craftItems.subheadings + craftItems.paragraphs + craftItems.lists;
+  
+  let technicalScore = 0;
+  
+  const metaDescMatch = rawHtml.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
+  const metaDesc = metaDescMatch ? metaDescMatch[1] : null;
+  technicalScore += metaDesc && metaDesc.length > 50 ? 4 : metaDesc ? 2 : 0;
+  
+  const titleMatch = rawHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
+  const title = titleMatch ? titleMatch[1] : null;
+  technicalScore += title && title.length > 30 ? 4 : title ? 2 : 0;
+  
+  const allImages = (rawHtml.match(/<img[^>]*>/gi) || []).length;
+  const imagesWithAlt = (rawHtml.match(/<img[^>]*alt="/gi) || []).length;
+  if (allImages > 0) {
+    const imageScore = Math.floor((imagesWithAlt / allImages) * 4);
+    technicalScore += Math.min(4, imageScore);
+  }
+  
+  const hasViewport = /<meta\s+name="viewport"/gi.test(rawHtml);
+  technicalScore += hasViewport ? 3 : 0;
+  
+  const hasSchema = /"@context"|"@type"/gi.test(rawHtml);
+  technicalScore += hasSchema ? 3 : 0;
+  
+  if (faqDetection.hasFAQ) technicalScore += 2;
+  
+  const totalScore = graafScore + craftScore + technicalScore;
+  
+  return {
+    graafScore,
+    craftScore,
+    technicalScore,
+    totalScore,
+    graafItems,
+    craftItems,
+    hasFAQ: faqDetection.hasFAQ,
+    faqScore: faqDetection.faqScore
+  };
+}
+
+function calculateTransparentScore(graafScore, craftScore, technicalScore, stats) {
+  const contentScore = Math.round(
+    (graafScore / 50 * 100 * 0.6) +
+    (craftScore / 30 * 100 * 0.4)
+  );
+
+  function getUXScore(stats) {
+    let ux = 70;
+    if (stats.h1Count === 1) ux += 10;
+    if (stats.h2Count >= 2) ux += 10;
+    if (stats.h3Count >= 3) ux += 5;
+    if (stats.listCount >= 3) ux += 5;
+    if (stats.wordCount > 800) ux += 10;
+    else if (stats.wordCount < 300) ux -= 20;
+    return Math.min(100, Math.max(0, ux));
+  }
+  
+  const uxScore = getUXScore(stats);
+  
+  const overall = Math.round(
+    (technicalScore / 20 * 100 * 0.4) +
+    (contentScore * 0.4) +
+    (uxScore * 0.2)
+  );
+  
+  const getQuality = (score) => {
+    if (score >= 90) return 'excellent';
+    if (score >= 75) return 'good';
+    if (score >= 60) return 'average';
+    if (score >= 45) return 'below-average';
+    return 'poor';
+  };
+  
+  return {
+    overall: Math.min(100, Math.max(0, overall)),
+    content_score: Math.min(100, Math.max(0, contentScore)),
+    technical_score: Math.min(100, Math.max(0, technicalScore)),
+    ux_score: uxScore,
+    quality: getQuality(overall)
+  };
+}
+
+function generateDetailedRecommendations(score, metrics, wordCount, scanData) {
+  const recs = [];
+  
+  if (metrics.content < 45) {
+    recs.push({
+      priority: 'HIGH',
+      title: 'Add Author Credentials',
+      impact: 8,
+      effort: 'Low (1-2 hours)',
+      cost: '€75-150',
+      description: 'Add author bio with credentials and expertise for E-E-A-T'
+    });
+  }
+  
+  if (wordCount < 2000) {
+    recs.push({
+      priority: wordCount < 1500 ? 'HIGH' : 'MEDIUM',
+      title: 'Expand Content Depth',
+      impact: wordCount < 1500 ? 10 : 6,
+      effort: 'Medium (4-6 hours)',
+      cost: '€200-350',
+      description: `Increase from ${wordCount} to 2000+ words with in-depth coverage`
+    });
+  }
+  
+  if (metrics.technical < 16) {
+    recs.push({
+      priority: 'HIGH',
+      title: 'Implement Schema Markup',
+      impact: 12,
+      effort: 'Medium (2-4 hours)',
+      cost: '€150-250',
+      description: 'Add Article/FAQ/Organization schema for better SERP visibility'
+    });
+  }
+  
+  const hasFAQ = scanData?.hasFAQ || false;
+  
+  if (!hasFAQ) {
+    recs.push({
+      priority: 'HIGH',
+      title: 'Add FAQ Section',
+      impact: 8,
+      effort: 'Low (2-3 hours)',
+      cost: '€100-175',
+      description: 'Answer 8-12 common questions with FAQ schema markup to capture AI Overview opportunities'
+    });
+  }
+  
+  if (score < 80) {
+    recs.push({
+      priority: score < 70 ? 'HIGH' : 'MEDIUM',
+      title: 'Optimize Page Speed',
+      impact: 9,
+      effort: 'Medium (3-5 hours)',
+      cost: '€200-400',
+      description: 'Reduce load time to <2s via image compression, lazy loading and CDN'
+    });
+  }
+  
+  recs.push({
+    priority: 'MEDIUM',
+    title: 'Optimize Images',
+    impact: 7,
+    effort: 'Medium (2-3 hours)',
+    cost: '€100-200',
+    description: 'Add alt-text, compress images and use WebP format'
+  });
+  
+  return recs.sort((a, b) => b.impact - a.impact).slice(0, 8);
+}
+
+app.post('/api/scan', async (req, res) => {
+  const { url } = req.body;
+  if (!url) return res.status(400).json({ success: false, error: 'URL required' });
+  
+  let scanUrl = url;
+  if (!scanUrl.startsWith('http')) scanUrl = 'https://' + scanUrl;
+  if (!isValidUrl(scanUrl)) return res.status(400).json({ success: false, error: 'Invalid URL format' });
+  
+  try {
+    console.log(`🔍 Scanning: ${scanUrl}`);
+    const cacheKey = hashContent(scanUrl);
+    const cached = scanCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL_MS) {
+      console.log(`📦 Cache hit for ${scanUrl}`);
+      return res.json(cached.result);
+    }
+    
+    const browser = await getBrowser();
+    if (!browser) return res.status(500).json({ success: false, error: 'Puppeteer browser niet beschikbaar' });
+    
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1920, height: 1080 });
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+    await page.goto(scanUrl, { waitUntil: 'networkidle2', timeout: 25000 });
+    const rawHtml = await page.content();
+    await page.close();
+    
+    const textContent = rawHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+    const wordCount = textContent.split(/\s+/).length;
+    const h1Count = (rawHtml.match(/<h1[^>]*>/gi) || []).length;
+    const h2Count = (rawHtml.match(/<h2[^>]*>/gi) || []).length;
+    const h3Count = (rawHtml.match(/<h3[^>]*>/gi) || []).length;
+    const listCount = (rawHtml.match(/<li[^>]*>/gi) || []).length;
+    const stats = { wordCount, h1Count, h2Count, h3Count, listCount };
+    
+    const scores = calculateStableScores(textContent, stats, rawHtml);
+    const transparentScores = calculateTransparentScore(scores.graafScore, scores.craftScore, scores.technicalScore, stats);
+    const totalScore = transparentScores.overall;
+    const quality = transparentScores.quality;
+    const recommendations = generateDetailedRecommendations(totalScore, {
+      content: transparentScores.content_score,
+      technical: transparentScores.technical_score,
+      ux: transparentScores.ux_score
+    }, wordCount, { hasFAQ: scores.hasFAQ || false });
+    
+    const quickWins = recommendations.filter(r => r.priority === 'HIGH').slice(0, 3);
+    
+    const result = {
+      success: true,
+      url: scanUrl,
+      score: totalScore,
+      quality,
+      metrics: { 
+        graaf: scores.graafScore, 
+        craft: scores.craftScore, 
+        technical: scores.technicalScore,
+        content: transparentScores.content_score,
+        ux: transparentScores.ux_score
+      },
+      breakdown: { category_scores: {
+        technical: { raw: scores.technicalScore, max: 20, weighted: Math.round(scores.technicalScore / 20 * 100 * 0.4) },
+        content: { raw_graaf: scores.graafScore, raw_craft: scores.craftScore, calculated: transparentScores.content_score, weighted: Math.round(transparentScores.content_score * 0.4) },
+        ux: { score: transparentScores.ux_score, weighted: Math.round(transparentScores.ux_score * 0.2) }
+      } },
+      recommendations: { all: recommendations, quickWins },
+      content_stats: stats,
+      timestamp: new Date().toISOString()
+    };
+    
+    scanCache.set(cacheKey, { timestamp: Date.now(), result });
+    
+    if (pool) {
+      try {
+        await pool.query(
+          `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, content_score, ux_score, breakdown, recommendations, scan_type)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'manual')`,
+          [scanUrl, totalScore, quality, scores.graafScore, scores.craftScore, scores.technicalScore,
+           transparentScores.content_score, transparentScores.ux_score,
+           JSON.stringify(result.breakdown), JSON.stringify(result.recommendations)]
+        );
+      } catch (dbError) {
+        console.error('DB save error:', dbError.message);
+      }
+    }
+    
+    console.log(`✅ Scan complete: ${scanUrl} - ${totalScore}/100 (${quality})`);
+    res.json(result);
+  } catch (error) {
+    console.error('Scan error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/google-maps/scrape', async (req, res) => {
+  try {
+    const { url, maxResults = 20 } = req.body;
+    if (!url || !url.includes('google.com/maps')) {
+      return res.status(400).json({ success: false, error: 'Invalid Google Maps URL' });
+    }
+    
+    console.log(`🗺️ Google Maps scrape: ${url}`);
+    const browser = await getBrowser();
+    if (!browser) return res.status(500).json({ success: false, error: 'Puppeteer browser niet beschikbaar' });
+    
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1920, height: 1080 });
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
+    await page.waitForSelector('[role="feed"]', { timeout: 10000 }).catch(() => {});
+    
+    for (let i = 0; i < 3; i++) {
+      await page.evaluate(() => window.scrollBy(0, 800));
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    
+    const leads = await page.evaluate((maxResults) => {
+      const businesses = [];
+      const items = document.querySelectorAll('[role="feed"] > div > div, .Nv2PK, .THOPZb, .lI9IFe');
+      for (let i = 0; i < Math.min(items.length, maxResults); i++) {
+        const item = items[i];
+        const nameEl = item.querySelector('.qBF1Pd, .d4r55, .fontHeadlineSmall, h3');
+        const name = nameEl ? nameEl.textContent.trim() : null;
+        if (!name) continue;
+        
+        businesses.push({
+          name,
+          category: item.querySelector('.W4Efsd:not(.ZlAx9e), .YvY7kb, .Ahnjwc')?.textContent?.trim() || 'Business',
+          website: item.querySelector('a[data-value="Website"], a[href^="http"]:not([href*="google.com"])')?.href || null,
+          phone: (() => {
+            const el = item.querySelector('button[data-item-id*="phone"], a[href^="tel:"]');
+            return el ? (el.href ? el.href.replace('tel:', '') : el.textContent.trim()) : null;
+          })(),
+          address: item.querySelector('button[data-item-id*="address"], .W4Efsd span')?.textContent?.trim() || null,
+          rating: (() => {
+            const el = item.querySelector('.MW4etd, .fontBodyMedium span[aria-hidden="true"]');
+            return el ? parseFloat(el.textContent.trim()) : null;
+          })(),
+          reviews: (() => {
+            const el = item.querySelector('.UY7F9, .fontBodyMedium span:last-child');
+            if (el) {
+              const match = el.textContent.trim().match(/(\d+)/);
+              return match ? parseInt(match[0]) : null;
+            }
+            return null;
+          })(),
+          score: 0,
+          status: 'new'
+        });
+      }
+      return businesses;
+    }, maxResults);
+    
+    await page.close();
+    console.log(`✅ Found ${leads.length} businesses from Google Maps`);
+    
+    const savedLeads = [];
+    
+    if (pool) {
+      for (const lead of leads) {
+        try {
+          let websiteScore = 0;
+          let verifiedWebsite = lead.website;
           
-          return `
-            <div class="rank-card">
-              <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
-              <h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
-              <div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
-              <div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
-              <a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">
-                View Website
-              </a>
-            </div>
-          `;
-        }).join('');
+          if (lead.website) {
+            try {
+              const websitePage = await browser.newPage();
+              websitePage.setDefaultTimeout(5000);
+              const response = await websitePage.goto(lead.website, { waitUntil: 'domcontentloaded', timeout: 5000 }).catch(() => null);
+              if (response && response.ok()) {
+                websiteScore = 75;
+                const content = await websitePage.content().catch(() => '');
+                if (content) {
+                  if (content.includes('<title>')) websiteScore += 5;
+                  if (content.includes('meta name="description"')) websiteScore += 5;
+                  if (content.includes('<h1')) websiteScore += 5;
+                  if (content.includes('schema.org') || content.includes('@context')) websiteScore += 10;
+                }
+              }
+              await websitePage.close();
+            } catch (websiteError) {
+              console.log(`⚠️ Website not accessible: ${lead.website}`);
+              verifiedWebsite = null;
+              websiteScore = 0;
+            }
+          }
+          
+          const result = await pool.query(
+            `INSERT INTO google_maps_leads (name, category, website, phone, address, rating, reviews, score, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+            [lead.name, lead.category, verifiedWebsite, lead.phone, lead.address, lead.rating, lead.reviews, websiteScore, lead.status]
+          );
+          
+          savedLeads.push({ ...lead, website: verifiedWebsite, score: websiteScore, id: result.rows[0].id });
+        } catch (dbError) {
+          console.error('DB insert error:', dbError.message);
+        }
       }
     }
+    
+    res.json({
+      success: true,
+      leads: savedLeads.length > 0 ? savedLeads : leads,
+      stats: {
+        total: savedLeads.length || leads.length,
+        with_website: (savedLeads.length > 0 ? savedLeads : leads).filter(l => l.website).length,
+        with_phone: (savedLeads.length > 0 ? savedLeads : leads).filter(l => l.phone).length,
+        avg_score: savedLeads.length > 0 
+          ? Math.round(savedLeads.reduce((sum, l) => sum + l.score, 0) / savedLeads.length) 
+          : 0
+      }
+    });
+  } catch (error) {
+    console.error('Google Maps scrape error:', error);
+    res.status(500).json({ success: false, error: 'Failed to scrape Google Maps: ' + error.message });
+  }
+});
 
-    function toggleFilters() {
-      const panel = document.getElementById('filterPanel');
-      const icon = document.getElementById('filterIcon');
-      
-      if (panel) {
-        panel.classList.toggle('hidden');
-        icon.classList.toggle('fa-chevron-down');
-        icon.classList.toggle('fa-chevron-up');
-      }
-    }
+app.get('/api/leaderboard', async (req, res) => {
+  if (!pool) {
+    return res.json({ success: true, entries: [], total: 0, averageScore: 0, stats: { totalAgencies: 0, avgScore: 0, countriesCount: 0, activeHelpers: 0 } });
+  }
+  
+  try {
+    const result = await pool.query(`
+      SELECT 
+        id, 
+        ROW_NUMBER() OVER (ORDER BY score DESC) as rank,
+        company_name, 
+        url, 
+        score,
+        country, 
+        city,
+        location,
+        type,
+        is_verified as is_claimed, 
+        created_at,
+        graaf_score,
+        craft_score,
+        technical_score
+      FROM leaderboard 
+      WHERE score IS NOT NULL 
+        AND is_opted_out = FALSE 
+        AND admin_verified = TRUE
+      ORDER BY score DESC 
+      LIMIT 100
+    `);
 
-    function toggleRankings() {
-      const container = document.getElementById('rankingsContainer');
-      const toggleText = document.getElementById('rankingsToggleText');
-      
-      if (container) {
-        container.classList.toggle('hidden');
-        toggleText.textContent = container.classList.contains('hidden') ? 
-          '📊 Show Rankings 16+' : '📊 Hide Rankings 16+';
+    const entries = result.rows;
+    const totalAgencies = entries.length;
+    const avgScore = totalAgencies > 0 
+      ? Math.round(entries.reduce((sum, e) => sum + (e.score || 0), 0) / totalAgencies) 
+      : 0;
+    const countries = [...new Set(entries.map(e => e.country))].length;
+    
+    const freelancersResult = await pool.query('SELECT COUNT(*) FROM freelancers WHERE is_approved = TRUE');
+    const activeHelpers = parseInt(freelancersResult.rows[0].count) || 0;
+    
+    res.json({
+      success: true, 
+      entries: entries, 
+      total: totalAgencies,
+      averageScore: avgScore,
+      stats: {
+        totalAgencies: totalAgencies,
+        avgScore: avgScore,
+        countriesCount: countries,
+        activeHelpers: activeHelpers
       }
-    }
+    });
+  } catch (error) {
+    console.error('Leaderboard error:', error);
+    res.json({ 
+      success: true, 
+      entries: [], 
+      total: 0, 
+      averageScore: 0,
+      stats: {
+        totalAgencies: 0,
+        avgScore: 0,
+        countriesCount: 0,
+        activeHelpers: 0
+      }
+    });
+  }
+});
 
-    function exportLeaderboardCSV() {
-      if (allLeaderboard.length === 0) {
-        alert('❌ Geen data om te exporteren');
-        return;
+app.get('/api/freelancers', async (req, res) => {
+  if (!pool) return res.json({ success: true, freelancers: [] });
+  try {
+    const result = await pool.query(`
+      SELECT 
+        id, name, email, title, location, country, bio, 
+        hourly_rate, availability, is_verified, is_featured
+      FROM freelancers 
+      WHERE is_approved = TRUE 
+      ORDER BY is_featured DESC, created_at DESC
+      LIMIT 50
+    `);
+    res.json({ success: true, freelancers: result.rows });
+  } catch (error) {
+    console.error('Freelancers error:', error);
+    res.json({ success: true, freelancers: [] });
+  }
+});
+
+app.post('/api/freelancers/register', async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_featured } = req.body;
+    if (!name || !email) return res.status(400).json({ success: false, error: 'Name and email are required' });
+    
+    const existing = await pool.query('SELECT id FROM freelancers WHERE email = $1', [email]);
+    if (existing.rows.length > 0) return res.status(400).json({ success: false, error: 'Email already registered' });
+    
+    const result = await pool.query(
+      `INSERT INTO freelancers (name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_approved, is_featured) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, $10) RETURNING id`,
+      [name, email, title || null, location || null, country || null, bio || null, 
+       linkedin_url || null, hourly_rate || null, availability || null, is_featured || false]
+    );
+    
+    res.json({ success: true, message: 'Application submitted! We will review and approve soon.', id: result.rows[0].id });
+  } catch (error) {
+    console.error('Freelancer registration error:', error);
+    res.status(500).json({ success: false, error: 'Registration failed' });
+  }
+});
+
+app.post('/api/admin/verify-session', verifyAdmin, async (req, res) => {
+  res.json({ valid: true, admin: req.admin.username });
+});
+
+app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
+  if (!pool) return res.json({ success: true, stats: { 
+    total_scans: 0, total_agencies: 0, total_clients: 0, active_helpers: 0,
+    leaderboard_entries: 0, blog_posts: 0, active_share_links: 0,
+    pending_claims: 0, pending_freelancers: 0, pending_leaderboard: 0
+  }});
+  
+  try {
+    const [scans, leaderboard, freelancers, blogPosts, shareLinks, claims, pendingFreelancers, pendingLeaderboard] = await Promise.all([
+      pool.query('SELECT COUNT(*) FROM scans').catch(() => ({ rows: [{ count: '0' }] })),
+      pool.query('SELECT COUNT(*) FROM leaderboard WHERE is_opted_out = FALSE').catch(() => ({ rows: [{ count: '0' }] })),
+      pool.query('SELECT COUNT(*) FROM freelancers WHERE is_approved = TRUE').catch(() => ({ rows: [{ count: '0' }] })),
+      pool.query('SELECT COUNT(*) FROM blog_posts').catch(() => ({ rows: [{ count: '0' }] })),
+      pool.query('SELECT COUNT(*) FROM share_links WHERE is_active = TRUE').catch(() => ({ rows: [{ count: '0' }] })),
+      pool.query('SELECT COUNT(*) FROM claims WHERE status = $1', ['pending']).catch(() => ({ rows: [{ count: '0' }] })),
+      pool.query('SELECT COUNT(*) FROM freelancers WHERE is_approved = FALSE').catch(() => ({ rows: [{ count: '0' }] })),
+      pool.query('SELECT COUNT(*) FROM leaderboard WHERE admin_verified = FALSE').catch(() => ({ rows: [{ count: '0' }] }))
+    ]);
+    
+    res.json({
+      success: true,
+      stats: {
+        total_scans: parseInt(scans.rows[0].count) || 0,
+        total_agencies: parseInt(leaderboard.rows[0].count) || 0,
+        total_clients: parseInt(scans.rows[0].count) || 0,
+        active_helpers: parseInt(freelancers.rows[0].count) || 0,
+        leaderboard_entries: parseInt(leaderboard.rows[0].count) || 0,
+        blog_posts: parseInt(blogPosts.rows[0].count) || 0,
+        active_share_links: parseInt(shareLinks.rows[0].count) || 0,
+        pending_claims: parseInt(claims.rows[0].count) || 0,
+        pending_freelancers: parseInt(pendingFreelancers.rows[0].count) || 0,
+        pending_leaderboard: parseInt(pendingLeaderboard.rows[0].count) || 0
       }
-      
-      let csv = 'Rank,Bedrijf,URL,Score,Land,Datum\n';
-      allLeaderboard.forEach((entry, i) => {
-        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-        csv += `${i+1},"${companyName}","${entry.url}",${entry.score || 0},${entry.country || 'NL'},${new Date(entry.created_at).toLocaleDateString('nl-NL')}\n`;
-      });
-      
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `leaderboard-${new Date().toISOString().slice(0,10)}.csv`;
-      a.click();
+    });
+  } catch (error) {
+    res.json({ success: true, stats: { 
+      total_scans: 0, total_agencies: 0, total_clients: 0, active_helpers: 0,
+      leaderboard_entries: 0, blog_posts: 0, active_share_links: 0,
+      pending_claims: 0, pending_freelancers: 0, pending_leaderboard: 0
+    }});
+  }
+});
+
+app.get('/api/admin/leaderboard', verifyAdmin, async (req, res) => {
+  if (!pool) return res.json({ success: true, entries: [] });
+  try {
+    const result = await pool.query(`SELECT * FROM leaderboard WHERE admin_verified = TRUE ORDER BY score DESC LIMIT 200`);
+    res.json({ success: true, entries: result.rows });
+  } catch (error) {
+    res.json({ success: true, entries: [] });
+  }
+});
+
+app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
+  if (!pool) return res.json({ success: true, pending: [] });
+  try {
+    const result = await pool.query(`SELECT * FROM leaderboard WHERE admin_verified = FALSE ORDER BY created_at DESC LIMIT 50`);
+    res.json({ success: true, pending: result.rows });
+  } catch (error) {
+    res.json({ success: true, pending: [] });
+  }
+});
+
+app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { id } = req.params;
+    const { final_country } = req.body;
+    await pool.query(
+      `UPDATE leaderboard SET admin_verified = TRUE, country = COALESCE($2, country), is_verified = TRUE WHERE id = $1`,
+      [id, final_country]
+    );
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/admin/leaderboard/:id/reject', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    await pool.query('DELETE FROM leaderboard WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    await pool.query('DELETE FROM leaderboard WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/admin/leaderboard/scan-and-add', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  const { url, company_name, country, city, type = 'seo_agency' } = req.body;
+  
+  if (!url) return res.status(400).json({ success: false, error: 'URL required' });
+  
+  let scanUrl = url;
+  if (!scanUrl.startsWith('http')) scanUrl = 'https://' + scanUrl;
+  if (!isValidUrl(scanUrl)) return res.status(400).json({ success: false, error: 'Invalid URL format' });
+  
+  try {
+    console.log(`👑 ADMIN SCAN for leaderboard: ${scanUrl}`);
+    
+    const browser = await getBrowser();
+    if (!browser) return res.status(500).json({ success: false, error: 'Puppeteer browser niet beschikbaar' });
+    
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1920, height: 1080 });
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+    await page.goto(scanUrl, { waitUntil: 'networkidle2', timeout: 25000 });
+    const rawHtml = await page.content();
+    await page.close();
+    
+    const textContent = rawHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+    const wordCount = textContent.split(/\s+/).length;
+    const h1Count = (rawHtml.match(/<h1[^>]*>/gi) || []).length;
+    const h2Count = (rawHtml.match(/<h2[^>]*>/gi) || []).length;
+    const h3Count = (rawHtml.match(/<h3[^>]*>/gi) || []).length;
+    const listCount = (rawHtml.match(/<li[^>]*>/gi) || []).length;
+    const stats = { wordCount, h1Count, h2Count, h3Count, listCount };
+    
+    const scores = calculateStableScores(textContent, stats, rawHtml);
+    const transparentScores = calculateTransparentScore(scores.graafScore, scores.craftScore, scores.technicalScore, stats);
+    const totalScore = transparentScores.overall;
+    const quality = transparentScores.quality;
+    
+    await pool.query(
+      `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, content_score, ux_score, scan_type)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'admin_leaderboard')`,
+      [scanUrl, totalScore, quality, scores.graafScore, scores.craftScore, scores.technicalScore,
+       transparentScores.content_score, transparentScores.ux_score]
+    );
+    
+    const existing = await pool.query('SELECT id FROM leaderboard WHERE url = $1', [scanUrl]);
+    
+    let leaderboardEntry;
+    
+    if (existing.rows.length === 0) {
+      const result = await pool.query(
+        `INSERT INTO leaderboard (url, company_name, score, country, city, type, admin_verified, is_verified, graaf_score, craft_score, technical_score)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
+        [scanUrl, company_name || null, totalScore, country || 'NL', city || null, type, true, true,
+         scores.graafScore, scores.craftScore, scores.technicalScore]
+      );
+      leaderboardEntry = { id: result.rows[0].id, action: 'added' };
+      console.log(`👑 Admin added to leaderboard: ${scanUrl} (score: ${totalScore})`);
+    } else {
+      await pool.query(
+        `UPDATE leaderboard SET 
+           score = $1, company_name = COALESCE($2, company_name), country = COALESCE($3, country),
+           city = COALESCE($4, city), type = COALESCE($5, type), admin_verified = true,
+           is_verified = true, graaf_score = $6, craft_score = $7, technical_score = $8
+         WHERE url = $9`,
+        [totalScore, company_name || null, country || null, city || null, type,
+         scores.graafScore, scores.craftScore, scores.technicalScore, scanUrl]
+      );
+      leaderboardEntry = { id: existing.rows[0].id, action: 'updated' };
+      console.log(`👑 Admin updated leaderboard: ${scanUrl} (score: ${totalScore})`);
     }
-  </script>
-</body>
-</html>
+    
+    res.json({
+      success: true,
+      admin_action: leaderboardEntry.action,
+      leaderboard_id: leaderboardEntry.id,
+      url: scanUrl,
+      score: totalScore,
+      quality,
+      metrics: {
+        graaf: scores.graafScore,
+        craft: scores.craftScore,
+        technical: scores.technicalScore,
+        content: transparentScores.content_score,
+        ux: transparentScores.ux_score
+      },
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Admin leaderboard scan error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { url, company_name, score, country, city, type } = req.body;
+    if (!url || !score) return res.status(400).json({ success: false, error: 'URL and score are required' });
+    
+    const existing = await pool.query('SELECT id FROM leaderboard WHERE url = $1', [url]);
+    
+    if (existing.rows.length === 0) {
+      const result = await pool.query(
+        `INSERT INTO leaderboard (url, company_name, score, country, city, type, admin_verified, is_verified)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+        [url, company_name || null, score, country || 'NL', city || null, type || 'seo_agency', true, true]
+      );
+      res.json({ success: true, action: 'added', id: result.rows[0].id, message: 'Entry added to leaderboard' });
+    } else {
+      await pool.query(
+        `UPDATE leaderboard SET 
+           score = $1, company_name = COALESCE($2, company_name), country = COALESCE($3, country),
+           city = COALESCE($4, city), type = COALESCE($5, type), admin_verified = true, is_verified = true
+         WHERE url = $6`,
+        [score, company_name || null, country || null, city || null, type || 'seo_agency', url]
+      );
+      res.json({ success: true, action: 'updated', id: existing.rows[0].id, message: 'Leaderboard entry updated' });
+    }
+  } catch (error) {
+    console.error('Manual leaderboard add error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/admin/freelancers', verifyAdmin, async (req, res) => {
+  if (!pool) return res.json({ success: true, freelancers: [] });
+  try {
+    const result = await pool.query(`SELECT * FROM freelancers ORDER BY created_at DESC LIMIT 200`);
+    res.json({ success: true, freelancers: result.rows });
+  } catch (error) {
+    res.json({ success: true, freelancers: [] });
+  }
+});
+
+app.get('/api/admin/freelancers/pending', verifyAdmin, async (req, res) => {
+  if (!pool) return res.json({ success: true, pending: [] });
+  try {
+    const result = await pool.query(`SELECT * FROM freelancers WHERE is_approved = FALSE ORDER BY created_at DESC LIMIT 50`);
+    res.json({ success: true, pending: result.rows });
+  } catch (error) {
+    res.json({ success: true, pending: [] });
+  }
+});
+
+app.post('/api/admin/freelancers/:id/approve', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    await pool.query('UPDATE freelancers SET is_approved = TRUE, is_verified = TRUE WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ FREELANCER TOGGLE FEATURED
+app.post('/api/admin/freelancers/:id/toggle-featured', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { id } = req.params;
+    const freelancer = await pool.query('SELECT is_featured FROM freelancers WHERE id = $1', [id]);
+    if (freelancer.rows.length === 0) return res.status(404).json({ success: false, error: 'Freelancer not found' });
+    
+    const newFeatured = !freelancer.rows[0].is_featured;
+    await pool.query('UPDATE freelancers SET is_featured = $1 WHERE id = $2', [newFeatured, id]);
+    
+    res.json({ success: true, is_featured: newFeatured, message: `Featured ${newFeatured ? 'aangezet' : 'uitgezet'}` });
+  } catch (error) {
+    console.error('Toggle featured error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ FREELANCER BULK DELETE
+app.post('/api/admin/freelancers/bulk-delete', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
+    }
+    
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
+    await pool.query(`DELETE FROM freelancers WHERE id IN (${placeholders})`, ids);
+    
+    res.json({ success: true, message: `${ids.length} freelancers verwijderd` });
+  } catch (error) {
+    console.error('Bulk delete freelancers error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ LEADERBOARD BULK DELETE (VOOR PENDING)
+app.post('/api/admin/leaderboard/bulk-delete', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
+    }
+    
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
+    await pool.query(`DELETE FROM leaderboard WHERE id IN (${placeholders})`, ids);
+    
+    res.json({ success: true, message: `${ids.length} entries verwijderd` });
+  } catch (error) {
+    console.error('Bulk delete leaderboard error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ FREELANCER BEWERKEN
+app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { id } = req.params;
+    const { name, email, title, location, country, bio, hourly_rate, is_featured } = req.body;
+    
+    await pool.query(
+      `UPDATE freelancers SET 
+        name = COALESCE($1, name),
+        email = COALESCE($2, email),
+        title = COALESCE($3, title),
+        location = COALESCE($4, location),
+        country = COALESCE($5, country),
+        bio = COALESCE($6, bio),
+        hourly_rate = COALESCE($7, hourly_rate),
+        is_featured = COALESCE($8, is_featured)
+      WHERE id = $9`,
+      [name, email, title, location, country, bio, hourly_rate, is_featured, id]
+    );
+    
+    res.json({ success: true, message: 'Freelancer bijgewerkt' });
+  } catch (error) {
+    console.error('Update freelancer error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ LEADERBOARD BEWERKEN (VOOR PENDING)
+app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { id } = req.params;
+    const { company_name, url, score, country } = req.body;
+    
+    await pool.query(
+      `UPDATE leaderboard SET 
+        company_name = COALESCE($1, company_name),
+        url = COALESCE($2, url),
+        score = COALESCE($3, score),
+        country = COALESCE($4, country)
+      WHERE id = $5`,
+      [company_name, url, score, country, id]
+    );
+    
+    res.json({ success: true, message: 'Leaderboard entry bijgewerkt' });
+  } catch (error) {
+    console.error('Update leaderboard error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/admin/freelancers/:id/feature', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { id } = req.params;
+    const { is_featured } = req.body;
+    await pool.query('UPDATE freelancers SET is_featured = $1 WHERE id = $2', [is_featured, id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/admin/freelancers/:id/deactivate', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    await pool.query('UPDATE freelancers SET is_approved = FALSE WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    await pool.query('DELETE FROM freelancers WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/admin/share-links', verifyAdmin, async (req, res) => {
+  if (!pool) return res.json({ success: true, share_links: [] });
+  try {
+    const result = await pool.query(
+      `SELECT *, CASE WHEN expires_at > NOW() AND is_active = TRUE THEN 'active' ELSE 'inactive' END as status
+       FROM share_links ORDER BY created_at DESC LIMIT 100`
+    );
+    res.json({ success: true, share_links: result.rows });
+  } catch (error) {
+    res.json({ success: true, share_links: [] });
+  }
+});
+
+app.post('/api/admin/share-links/create', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { client_email, client_name, client_company, scans_limit = 10, valid_days = 30 } = req.body;
+    const shareCode = crypto.randomBytes(16).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + valid_days);
+    
+    const result = await pool.query(
+      `INSERT INTO share_links (share_code, client_email, client_name, client_company, scans_limit, created_by, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [shareCode, client_email, client_name, client_company, scans_limit, req.admin.id, expiresAt]
+    );
+    
+    res.json({
+      success: true,
+      share_link: result.rows[0],
+      share_url: `https://app.contentscale.site/share/${shareCode}`,
+      expires_at: expiresAt
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.put('/api/admin/share-links/:id/toggle-status', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    await pool.query('UPDATE share_links SET is_active = $1 WHERE id = $2', [status === 'active', id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/admin/share-links/:id', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    await pool.query('DELETE FROM share_links WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/blog', async (req, res) => {
+  if (!pool) return res.json({ success: true, posts: [], pagination: { page: 1, limit: 10, total: 0, pages: 0 } });
+  try {
+    const { category, limit = 10, page = 1 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    
+    let query = `
+      SELECT id, title, slug, excerpt, category, featured_image, featured_image_alt, author, 
+             published_at, views, tags
+      FROM blog_posts 
+      WHERE status = 'published' AND published_at <= NOW()
+    `;
+    
+    const params = [];
+    let paramCount = 1;
+    
+    if (category) {
+      query += ` AND category = $${paramCount}`;
+      params.push(category);
+      paramCount++;
+    }
+    
+    query += ` ORDER BY published_at DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+    params.push(parseInt(limit), offset);
+    
+    const result = await pool.query(query, params);
+    
+    const countQuery = category ? 
+      'SELECT COUNT(*) FROM blog_posts WHERE status = \'published\' AND published_at <= NOW() AND category = $1' :
+      'SELECT COUNT(*) FROM blog_posts WHERE status = \'published\' AND published_at <= NOW()';
+    
+    const countParams = category ? [category] : [];
+    const countResult = await pool.query(countQuery, countParams);
+    const total = parseInt(countResult.rows[0].count);
+    
+    res.json({
+      success: true,
+      posts: result.rows,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Blog error:', error);
+    res.json({ success: true, posts: [], pagination: { page: 1, limit: 10, total: 0, pages: 0 } });
+  }
+});
+
+app.get('/api/blog/:slug', async (req, res) => {
+  if (!pool) return res.status(404).json({ success: false, error: 'Blog post not found' });
+  try {
+    const result = await pool.query(
+      `SELECT * FROM blog_posts WHERE slug = $1 AND status = 'published' AND published_at <= NOW()`,
+      [req.params.slug]
+    );
+    
+    if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Blog post not found' });
+    
+    await pool.query('UPDATE blog_posts SET views = views + 1 WHERE id = $1', [result.rows[0].id]);
+    
+    const images = await pool.query('SELECT * FROM blog_images WHERE post_id = $1 ORDER BY position ASC', [result.rows[0].id]);
+    
+    const related = await pool.query(
+      `SELECT id, title, slug, excerpt, featured_image, featured_image_alt, published_at
+       FROM blog_posts 
+       WHERE category = $1 AND id != $2 AND status = 'published' AND published_at <= NOW()
+       ORDER BY published_at DESC LIMIT 3`,
+      [result.rows[0].category, result.rows[0].id]
+    );
+    
+    res.json({
+      success: true,
+      post: { ...result.rows[0], images: images.rows },
+      related: related.rows
+    });
+  } catch (error) {
+    console.error('Blog post error:', error);
+    res.status(500).json({ success: false, error: 'Failed to load blog post' });
+  }
+});
+
+app.post('/api/claims/submit', async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { business_name, business_url, contact_name, contact_email, contact_phone, verification_document } = req.body;
+    
+    if (!business_name || !business_url || !contact_name || !contact_email) {
+      return res.status(400).json({ success: false, error: 'Required fields missing' });
+    }
+    
+    const result = await pool.query(
+      `INSERT INTO claims (business_name, business_url, contact_name, contact_email, contact_phone, verification_document)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+      [business_name, business_url, contact_name, contact_email, contact_phone, verification_document]
+    );
+    
+    res.json({ success: true, message: 'Claim submitted successfully', id: result.rows[0].id });
+  } catch (error) {
+    console.error('Claim submission error:', error);
+    res.status(500).json({ success: false, error: 'Failed to submit claim' });
+  }
+});
+
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(publicPath, 'admin-dashboard.html'));
+});
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(publicPath, 'index.html'));
+});
+
+app.get('/blog', (req, res) => {
+  res.sendFile(path.join(publicPath, 'blog.html'));
+});
+
+app.get('/blog/:slug', (req, res) => {
+  res.sendFile(path.join(publicPath, 'blog-post.html'));
+});
+
+app.get('/api/health', async (req, res) => {
+  let dbStatus = 'disconnected';
+  if (pool) {
+    try {
+      await pool.query('SELECT 1');
+      dbStatus = 'connected';
+    } catch (e) {
+      dbStatus = 'error';
+    }
+  }
+  res.json({ 
+    status: 'running',
+    database: dbStatus,
+    puppeteer: browserInstance ? 'connected' : 'disconnected',
+    cache_entries: scanCache.size,
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get('*', (req, res) => {
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'API endpoint not found' });
+  }
+  
+  const filePath = path.join(publicPath, req.path);
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      res.sendFile(path.join(publicPath, 'index.html'));
+    }
+  });
+});
+
+app.use((err, req, res, next) => {
+  console.error('Server error:', err.message);
+  res.status(500).json({ 
+    success: false, 
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
+async function startServer() {
+  console.log('');
+  console.log('🚀 =====================================');
+  console.log('🚀  CONTENTSCALE SERVER STARTEN');
+  console.log('🚀 =====================================');
+  console.log('');
+  
+  const dbConnected = await waitForDatabase();
+  
+  app.listen(PORT, () => {
+    console.log('');
+    console.log(`📍 Server gestart op http://localhost:${PORT}`);
+    console.log(`📍 Admin:     http://localhost:${PORT}/admin`);
+    console.log(`📍 Blog:      http://localhost:${PORT}/blog`);
+    console.log('');
+    console.log(`📊 Database status: ${dbConnected ? '✅ Verbonden' : '❌ NIET VERBONDEN'}`);
+    console.log(`🔐 Admin login:     ${dbConnected ? '✅ Werkend (ot/admin123)' : '❌ Niet beschikbaar'}`);
+    console.log('');
+    
+    if (!dbConnected) {
+      console.log('⚠️  WAARSCHUWING: Database niet verbonden!');
+      console.log('   Admin login werkt NIET. Controleer PostgreSQL.');
+      console.log('');
+    }
+    
+    console.log('🌐 Puppeteer: Browser instance ready');
+    console.log('📦 Cache: Active (24h TTL)');
+    console.log('');
+  });
+}
+
+startServer();
