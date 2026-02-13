@@ -359,6 +359,26 @@ async function createAllTables() {
       )
     `);
     
+    // ========== NIEUWE TABEL VOOR SCAN SESSIES ==========
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS google_maps_scan_sessions (
+        id SERIAL PRIMARY KEY,
+        session_id VARCHAR(255) NOT NULL,
+        maps_url TEXT NOT NULL,
+        search_query VARCHAR(500),
+        scanned_at TIMESTAMP DEFAULT NOW(),
+        next_scan_allowed_at TIMESTAMP DEFAULT NOW() + INTERVAL '5 days',
+        ip_address VARCHAR(50),
+        user_agent TEXT
+      )
+    `);
+    
+    // Index voor snelle lookup
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_scan_sessions_session_id 
+      ON google_maps_scan_sessions(session_id)
+    `);
+    
     await client.query(`
       CREATE TABLE IF NOT EXISTS blog_posts (
         id SERIAL PRIMARY KEY,
@@ -762,6 +782,9 @@ app.post('/api/scan', async (req, res) => {
   }
 });
 
+// ==========================================
+// ✅ NIEUWE GOOGLE MAPS SCRAPE MET 5 DAGEN LIMIET
+// ==========================================
 app.post('/api/google-maps/scrape', async (req, res) => {
   try {
     const { url, maxResults = 20 } = req.body;
@@ -769,7 +792,54 @@ app.post('/api/google-maps/scrape', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid Google Maps URL' });
     }
     
-    console.log(`🗺️ Google Maps scrape: ${url}`);
+    // Genereer session ID van IP + User Agent (anoniem)
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    const sessionId = crypto
+      .createHash('sha256')
+      .update(ipAddress + userAgent)
+      .digest('hex')
+      .substring(0, 32);
+    
+    console.log(`🗺️ Google Maps scrape attempt - Session: ${sessionId.substring(0, 8)}...`);
+    
+    // Check 5 dagen limiet (alleen als pool bestaat)
+    if (pool) {
+      try {
+        const lastScan = await pool.query(
+          `SELECT next_scan_allowed_at FROM google_maps_scan_sessions 
+           WHERE session_id = $1 
+           ORDER BY scanned_at DESC 
+           LIMIT 1`,
+          [sessionId]
+        );
+        
+        if (lastScan.rows.length > 0) {
+          const nextAllowedAt = new Date(lastScan.rows[0].next_scan_allowed_at);
+          const now = new Date();
+          
+          if (now < nextAllowedAt) {
+            const daysRemaining = Math.ceil((nextAllowedAt - now) / (1000 * 60 * 60 * 24));
+            const hoursRemaining = Math.ceil((nextAllowedAt - now) / (1000 * 60 * 60));
+            
+            return res.status(429).json({
+              success: false,
+              error: 'Scan limit reached',
+              message: `You can scan again in ${daysRemaining} day${daysRemaining > 1 ? 's' : ''}`,
+              next_allowed_at: nextAllowedAt,
+              days_remaining: daysRemaining,
+              hours_remaining: hoursRemaining,
+              limit_days: 5
+            });
+          }
+        }
+      } catch (dbError) {
+        console.error('DB scan limit check error:', dbError.message);
+        // Doorgaan zonder limiet als DB error
+      }
+    }
+    
+    console.log(`🗺️ Starting scrape: ${url}`);
     const browser = await getBrowser();
     if (!browser) return res.status(500).json({ success: false, error: 'Puppeteer browser niet beschikbaar' });
     
@@ -824,6 +894,35 @@ app.post('/api/google-maps/scrape', async (req, res) => {
     await page.close();
     console.log(`✅ Found ${leads.length} businesses from Google Maps`);
     
+    // Sla de scan sessie op in database
+    if (pool) {
+      try {
+        // Extract search query from URL for better tracking
+        let searchQuery = '';
+        try {
+          const urlObj = new URL(url);
+          const pathParts = urlObj.pathname.split('/');
+          if (pathParts.includes('search')) {
+            const searchIndex = pathParts.indexOf('search');
+            if (searchIndex + 1 < pathParts.length) {
+              searchQuery = decodeURIComponent(pathParts[searchIndex + 1].replace(/\+/g, ' '));
+            }
+          }
+        } catch (e) {}
+        
+        await pool.query(
+          `INSERT INTO google_maps_scan_sessions 
+           (session_id, maps_url, search_query, ip_address, user_agent, scanned_at, next_scan_allowed_at) 
+           VALUES ($1, $2, $3, $4, $5, NOW(), NOW() + INTERVAL '5 days')`,
+          [sessionId, url, searchQuery, ipAddress, userAgent]
+        );
+        console.log(`✅ Scan session saved - next scan allowed: ${new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString()}`);
+      } catch (dbError) {
+        console.error('DB scan session save error:', dbError.message);
+      }
+    }
+    
+    // Sla leads op in database
     const savedLeads = [];
     
     if (pool) {
@@ -878,8 +977,13 @@ app.post('/api/google-maps/scrape', async (req, res) => {
         avg_score: savedLeads.length > 0 
           ? Math.round(savedLeads.reduce((sum, l) => sum + l.score, 0) / savedLeads.length) 
           : 0
+      },
+      scan_limit: {
+        days: 5,
+        next_allowed_at: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)
       }
     });
+    
   } catch (error) {
     console.error('Google Maps scrape error:', error);
     res.status(500).json({ success: false, error: 'Failed to scrape Google Maps: ' + error.message });
@@ -1062,7 +1166,6 @@ app.post('/api/admin/verify-session', verifyAdmin, async (req, res) => {
 });
 
 app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
-  // ... (bestaande code)
   if (!pool) return res.json({ success: true, stats: { 
     total_scans: 0, total_agencies: 0, total_clients: 0, active_helpers: 0,
     leaderboard_entries: 0, blog_posts: 0, active_share_links: 0,
