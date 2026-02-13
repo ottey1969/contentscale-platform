@@ -6,7 +6,6 @@
   <title>ContentScale - Elite SEO Content Optimization | Recover Lost Traffic</title>
   <meta name="description" content="Stop losing traffic to AI. Professional SEO content optimization based on Google's E-E-A-T guidelines. Google Core Update Proof.">
   
-  <!-- ✨ PERFORMANCE: Preconnects & Preloads -->
   <link rel="preconnect" href="https://cdn.tailwindcss.com">
   <link rel="preconnect" href="https://cdnjs.cloudflare.com">
   <link rel="preconnect" href="https://raw.githubusercontent.com" crossorigin="anonymous">
@@ -15,16 +14,13 @@
   <link rel="preload" href="https://cdn.tailwindcss.com" as="script">
   <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style">
   
-  <!-- ✨ Tailwind -->
   <script src="https://cdn.tailwindcss.com" defer></script>
   
-  <!-- ✨ FontAwesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'; this.onload=null;">
   <noscript>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   </noscript>
   
-  <!-- ✨ CRITICAL CSS -->
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
@@ -421,7 +417,6 @@
       top: 0;
     }
 
-    /* CLS FIX */
     img[width][height] {
       aspect-ratio: attr(width) / attr(height);
     }
@@ -432,12 +427,16 @@
     #main-content > div:first-child {
       min-height: 400px;
     }
+    
+    input::placeholder, textarea::placeholder {
+      color: #6b7280 !important;
+      opacity: 1 !important;
+    }
   </style>
 </head>
 <body class="bg-gray-900">
   <a href="#main-content" class="skip-link">Skip to main content</a>
 
-  <!-- NAVIGATION -->
   <nav class="sticky top-0 z-50 bg-gray-900/95 border-b-2 border-purple-600 backdrop-blur-sm">
     <div class="max-w-7xl mx-auto px-6 py-4">
       <div class="flex items-center justify-between">
@@ -461,7 +460,6 @@
 
   <div id="main-content" class="max-w-7xl mx-auto px-6 py-8">
     
-    <!-- LEAD SCANNER SECTION -->
     <div id="lead-scanner" class="mb-16">
       <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
         
@@ -486,7 +484,6 @@
           </button>
         </div>
         
-        <!-- SINGLE URL MODE -->
         <div id="singleMode" class="max-w-3xl mx-auto">
           <div class="card">
             <div class="flex flex-col sm:flex-row gap-3">
@@ -507,7 +504,6 @@
           <div id="singleResult" class="hidden mt-4"></div>
         </div>
         
-        <!-- BULK MODE -->
         <div id="bulkMode" class="hidden max-w-6xl mx-auto">
           <div class="card">
             <div class="flex flex-col sm:flex-row gap-3 mb-4">
@@ -557,7 +553,6 @@
           </div>
         </div>
         
-        <!-- CTA -->
         <div class="mt-8 bg-gradient-to-r from-purple-800 via-pink-800 to-purple-800 rounded-xl p-6 text-center border border-purple-400">
           <h3 class="text-2xl font-bold mb-2 text-white">💼 Are You an SEO Specialist or Content Marketer?</h3>
           <p class="text-gray-200 mb-4">
@@ -571,7 +566,6 @@
       </div>
     </div>
     
-    <!-- WHY CONTENTSCALE SECTION -->
     <div class="mb-16">
       <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 border border-gray-700">
         <div class="text-center mb-12">
@@ -632,9 +626,6 @@
       </div>
     </div>
     
-    <!-- ============================================
-         LEADERBOARD - ALLEEN ECHTE DATA, GEEN DEMO
-         ============================================ -->
     <div id="leaderboard" class="mb-16">
       <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
         <div class="text-center mb-8">
@@ -642,7 +633,6 @@
           <p class="text-xl text-gray-200">Top performing websites automatically added</p>
         </div>
         
-        <!-- STATS CARDS - ALTIJD ECHTE DATA -->
         <div class="grid-4 mb-8">
           <div class="stat-card">
             <div>
@@ -674,16 +664,13 @@
           </div>
         </div>
         
-        <!-- TOP 3 CARDS - ECHTE DATA -->
         <div id="top3-container" class="grid-3 mb-10"></div>
         
-        <!-- RANKINGS 4-15 - ECHTE DATA -->
         <div id="rankings4to15Container" class="mb-10">
           <h3 class="text-2xl font-bold text-white mb-6">Rankings 4-15</h3>
           <div class="rankings-4-15-grid" id="rankings4to15Grid"></div>
         </div>
         
-        <!-- FILTERS -->
         <div class="bg-gray-800 rounded-lg p-4 mb-6">
           <button onclick="toggleFilters()" class="w-full flex items-center justify-between text-left text-white">
             <div class="flex items-center gap-2">
@@ -703,7 +690,6 @@
           </div>
         </div>
         
-        <!-- RANKINGS 16+ -->
         <div>
           <button onclick="toggleRankings()" id="rankingsToggleBtn" class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-between transition-all">
             <span id="rankingsToggleText">📊 Show Rankings 16+</span>
@@ -729,9 +715,6 @@
       </div>
     </div>
     
-    <!-- ============================================
-         FREELANCERS - ALLEEN ECHTE DATA, GEEN DEMO
-         ============================================ -->
     <div id="freelancers" class="mb-16">
       <div class="text-center mb-8">
         <h2 class="text-4xl font-bold mb-3 text-white">🎯 Verified SEO Specialists</h2>
@@ -744,7 +727,6 @@
       <div id="freelancersGrid" class="grid-3"></div>
     </div>
     
-    <!-- ABOUT THE FOUNDER -->
     <div class="mb-16">
       <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
         <div class="flex flex-col md:flex-row gap-8 items-center">
@@ -797,7 +779,6 @@
       </div>
     </div>
     
-    <!-- FAQ -->
     <div class="mb-16 max-w-4xl mx-auto">
       <div class="text-center mb-8">
         <h2 class="text-4xl font-bold mb-3 text-white">❓ Frequently Asked Questions</h2>
@@ -841,13 +822,12 @@
             <i class="fas fa-chevron-down" id="faqIcon4"></i>
           </button>
           <div id="faqAnswer4" class="faq-answer hidden">
-            <p>At ContentScale, we believe the future of work is flexible. We help specialists who want to work just a few hours per week while still earning a full-time income. This is only possible with our advanced methods and tools. We train freelancers in Modern SEO for the AI-era - focusing on the GRAAF Framework, E-E-A-T optimization, and AI Overviews. Our goal is to elevate the SEO standard globally by giving specialists access to professional tools, training, and a steady stream of high-quality leads.</p>
+            <p>At ContentScale, we believe the future of work is flexible. We help specialists who want to work just a few hours per week while earning a full-time income. This is only possible with our advanced methods and tools. We train freelancers in Modern SEO for the AI-era - focusing on the GRAAF Framework, E-E-A-T optimization, and AI Overviews. Our goal is to elevate the SEO standard globally by giving specialists access to professional tools, training, and a steady stream of high-quality leads.</p>
           </div>
         </div>
       </div>
     </div>
     
-    <!-- CTA BOTTOM -->
     <div class="mb-16">
       <div class="bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-900 rounded-2xl p-12 text-center border-2 border-purple-500">
         <div class="text-5xl mb-4">🚀</div>
@@ -871,7 +851,6 @@
     </div>
   </div>
   
-  <!-- FOOTER -->
   <footer>
     <div class="max-w-7xl mx-auto px-6 py-12">
       <div class="grid md:grid-cols-4 gap-8 mb-8">
@@ -928,7 +907,6 @@
     </div>
   </footer>
   
-  <!-- FREELANCER MODAL -->
   <div id="freelancerModal" class="modal">
     <div class="modal-content">
       <div class="flex justify-between items-center mb-6">
@@ -951,13 +929,8 @@
           <input type="tel" id="freelancerPhone" placeholder="+31 6 12345678">
         </div>
         <div>
-          <label class="block text-sm mb-2 text-gray-300">Specialization</label>
-          <select id="freelancerSpecialization" class="w-full">
-            <option value="seo">SEO Specialist</option>
-            <option value="content">Content Marketer</option>
-            <option value="technical">Technical SEO</option>
-            <option value="other">Other</option>
-          </select>
+          <label class="block text-sm mb-2 text-gray-300">Professional Title *</label>
+          <input type="text" id="freelancerTitle" placeholder="e.g. SEO Content Strategist" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
         </div>
         <button onclick="submitFreelancer()" class="btn-primary btn w-full py-3">
           Submit Application
@@ -970,24 +943,16 @@
   </div>
 
   <script>
-    // ==========================================
-    // GLOBALE VARIABELEN
-    // ==========================================
     let scrapedLeads = [];
     let currentScanResult = null;
     let allLeaderboardEntries = [];
 
-    // ==========================================
-    // INIT - LAAD ALLEEN ECHTE DATA
-    // ==========================================
     document.addEventListener('DOMContentLoaded', function() {
       console.log('📋 Publieke pagina geladen - laden van ECHTE data...');
       
-      // Laad ECHTE data - GEEN DEMO FALLBACK!
       loadLeaderboardData();
       loadFreelancers();
       
-      // Event listeners
       document.getElementById('singleUrlInput')?.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') scanSingleURL();
       });
@@ -997,9 +962,6 @@
       });
     });
 
-    // ==========================================
-    // LEADERBOARD - ALLEEN ECHTE DATA, GEEN DEMO
-    // ==========================================
     async function loadLeaderboardData() {
       try {
         const response = await fetch('/api/leaderboard');
@@ -1008,19 +970,16 @@
         if (data.success && data.entries && data.entries.length > 0) {
           allLeaderboardEntries = data.entries;
           
-          // Update stats met ECHTE data
           document.getElementById('totalAgencies').textContent = data.stats?.totalAgencies || 0;
           document.getElementById('avgScore').textContent = data.averageScore || 0;
           document.getElementById('countriesCount').textContent = data.stats?.countriesCount || 0;
           document.getElementById('activeHelpers').textContent = data.stats?.activeHelpers || 0;
           
-          // Render alle secties
           renderTop3();
           renderRankings4to15();
           renderRankings16Plus();
           renderCountryFilters();
         } else {
-          // Toon lege staat - GEEN DEMO DATA!
           showEmptyLeaderboard();
         }
       } catch (error) {
@@ -1141,9 +1100,6 @@
       }).join('');
     }
 
-    // ==========================================
-    // FREELANCERS - ALLEEN ECHTE DATA, GEEN DEMO
-    // ==========================================
     async function loadFreelancers() {
       try {
         const response = await fetch('/api/freelancers');
@@ -1195,9 +1151,6 @@
       }
     }
 
-    // ==========================================
-    // HELPER FUNCTIES
-    // ==========================================
     function extractDomainFromUrl(url) {
       if (!url) return 'Bedrijf';
       try {
@@ -1245,9 +1198,6 @@
       div.innerHTML = html;
     }
 
-    // ==========================================
-    // SCANNER FUNCTIES
-    // ==========================================
     function switchMode(mode) {
       const singleMode = document.getElementById('singleMode');
       const bulkMode = document.getElementById('bulkMode');
@@ -1475,9 +1425,6 @@
       alert(`✅ Exported ${scrapedLeads.length} leads to CSV`);
     }
 
-    // ==========================================
-    // FILTER FUNCTIES
-    // ==========================================
     function toggleFilters() {
       const panel = document.getElementById('filterPanel');
       const icon = document.getElementById('filterIcon');
@@ -1501,7 +1448,6 @@
     }
 
     function filterByCountry(country) {
-      // Implementatie later
       console.log('Filter by country:', country);
     }
 
@@ -1543,9 +1489,6 @@
       }
     }
 
-    // ==========================================
-    // FAQ & MODAL FUNCTIES
-    // ==========================================
     function toggleFAQ(id) {
       const answer = document.getElementById(`faqAnswer${id}`);
       const icon = document.getElementById(`faqIcon${id}`);
@@ -1575,6 +1518,7 @@
     function submitFreelancer() {
       const name = document.getElementById('freelancerName')?.value;
       const email = document.getElementById('freelancerEmail')?.value;
+      const title = document.getElementById('freelancerTitle')?.value;
       
       if (!name || !email) {
         alert('❌ Name and email are required');
@@ -1593,7 +1537,7 @@
           name: name,
           email: email,
           phone: document.getElementById('freelancerPhone')?.value,
-          specialization: document.getElementById('freelancerSpecialization')?.value
+          title: title || 'SEO Specialist'
         })
       })
       .then(response => response.json())
@@ -1604,6 +1548,7 @@
           document.getElementById('freelancerName').value = '';
           document.getElementById('freelancerEmail').value = '';
           document.getElementById('freelancerPhone').value = '';
+          document.getElementById('freelancerTitle').value = '';
         } else {
           alert('❌ ' + (data.error || 'Registration failed'));
         }
