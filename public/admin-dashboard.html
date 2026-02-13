@@ -444,6 +444,7 @@
 </head>
 <body class="bg-gray-900">
 
+  <!-- LOGIN SCREEN -->
   <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
     <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border-2 border-purple-500">
       <div class="flex items-center justify-center mb-6">
@@ -470,7 +471,9 @@
     </div>
   </div>
 
+  <!-- MAIN DASHBOARD -->
   <div id="main-dashboard" class="hidden">
+    <!-- NAVIGATION -->
     <nav class="sticky top-0 z-50 bg-gray-900/95 border-b-2 border-purple-600 backdrop-blur-sm">
       <div class="max-w-7xl mx-auto px-6 py-4">
         <div class="flex items-center justify-between">
@@ -489,6 +492,7 @@
       </div>
     </nav>
 
+    <!-- TABS -->
     <div class="max-w-7xl mx-auto px-6 py-8">
       <div class="flex justify-center gap-4 mb-8 flex-wrap">
         <button onclick="switchTab('leaderboard')" id="tabLeaderboardBtn" class="mode-toggle active">
@@ -505,6 +509,7 @@
         </button>
       </div>
 
+      <!-- TAB 1: LEADERBOARD -->
       <div id="tab-leaderboard" class="tab-content">
         <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
           <div class="flex justify-between items-center mb-6">
@@ -519,6 +524,7 @@
             </div>
           </div>
 
+          <!-- STATS CARDS -->
           <div class="grid-4 mb-8">
             <div class="stat-card">
               <div>
@@ -550,6 +556,7 @@
             </div>
           </div>
 
+          <!-- BULK ACTIONS -->
           <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
             <div class="flex items-center gap-2">
               <input type="checkbox" id="select-all-leaderboard" onchange="toggleSelectAllLeaderboard()" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
@@ -561,12 +568,16 @@
             <span id="selected-count-leaderboard" class="text-sm text-gray-400 ml-auto">0 geselecteerd</span>
           </div>
 
+          <!-- TOP 3 CARDS -->
           <div id="top3-container" class="grid-3 mb-10"></div>
+
+          <!-- RANKINGS 4-15 -->
           <div id="rankings4to15Container" class="mb-10">
             <h3 class="text-2xl font-bold text-white mb-6">Rankings 4-15</h3>
             <div id="rankings4to15Grid" class="rankings-4-15-grid"></div>
           </div>
 
+          <!-- FILTERS -->
           <div class="bg-gray-800 rounded-lg p-4 mb-6 border border-gray-700">
             <button onclick="toggleFilters()" class="w-full flex items-center justify-between text-left text-white">
               <div class="flex items-center gap-2">
@@ -586,6 +597,7 @@
             </div>
           </div>
 
+          <!-- RANKINGS 16+ -->
           <div>
             <button onclick="toggleRankings()" id="rankingsToggleBtn" class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-between transition-all">
               <span id="rankingsToggleText">📊 Show Rankings 16+</span>
@@ -613,6 +625,7 @@
         </div>
       </div>
 
+      <!-- TAB 2: FREELANCERS - MET CARDS ZOALS IN INDEX -->
       <div id="tab-freelancers" class="tab-content hidden">
         <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
           <div class="flex justify-between items-center mb-6">
@@ -621,12 +634,10 @@
               <button onclick="loadFreelancers()" class="btn bg-blue-600 hover:bg-blue-700">
                 <i class="fas fa-sync-alt mr-2"></i> Refresh
               </button>
-              <button onclick="approveAllFreelancers()" class="btn bg-green-600 hover:bg-green-700">
-                <i class="fas fa-check-double mr-2"></i> Keur alle goed
-              </button>
             </div>
           </div>
 
+          <!-- BULK ACTIONS -->
           <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
             <div class="flex items-center gap-2">
               <input type="checkbox" id="select-all-freelancers" onchange="toggleSelectAllFreelancers()" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
@@ -638,10 +649,12 @@
             <span id="selected-count-freelancers" class="text-sm text-gray-400 ml-auto">0 geselecteerd</span>
           </div>
 
+          <!-- FREELANCERS GRID -->
           <div id="freelancers-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         </div>
       </div>
 
+      <!-- TAB 3: SCANNER -->
       <div id="tab-scanner" class="tab-content hidden">
         <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
           <div class="text-center mb-8">
@@ -714,6 +727,7 @@
         </div>
       </div>
 
+      <!-- TAB 4: PENDING -->
       <div id="tab-pending" class="tab-content hidden">
         <div class="bg-gradient-to-br from-yellow-900 via-orange-900 to-yellow-800 rounded-2xl p-8 border-2 border-yellow-500">
           <div class="flex justify-between items-center mb-6">
@@ -738,6 +752,9 @@
   </div>
 
   <script>
+    // ==========================================
+    // GLOBALE VARIABELEN
+    // ==========================================
     let currentAdminId = localStorage.getItem('admin_id');
     let currentUsername = localStorage.getItem('admin_username');
     let allLeaderboard = [];
@@ -748,11 +765,22 @@
     let scrapedLeads = [];
     let currentScanResult = null;
 
+    // ==========================================
+    // AUTHENTICATIE - GEFIXT
+    // ==========================================
     window.onload = function() {
-      if (currentAdminId && currentUsername) {
+      console.log('📋 Admin Dashboard loaded');
+      console.log('🔑 Admin ID uit storage:', localStorage.getItem('admin_id'));
+      console.log('👤 Admin username uit storage:', localStorage.getItem('admin_username'));
+      
+      if (localStorage.getItem('admin_id') && localStorage.getItem('admin_username')) {
+        currentAdminId = localStorage.getItem('admin_id');
+        currentUsername = localStorage.getItem('admin_username');
+        
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('main-dashboard').classList.remove('hidden');
         document.getElementById('admin-username').textContent = currentUsername;
+        
         loadAllData();
         switchTab('leaderboard');
       }
@@ -766,19 +794,31 @@
       errorDiv.classList.add('hidden');
       
       try {
+        console.log('🔐 Login poging voor:', username);
+        
         const response = await fetch('/api/setup/verify-admin', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
         });
         
+        if (!response.ok) {
+          throw new Error('Login failed');
+        }
+        
         const data = await response.json();
+        console.log('📦 Login response:', data);
         
         if (data.success) {
-          currentAdminId = data.admin_id;
-          currentUsername = username;
+          // ✅ SLA ADMIN ID CORRECT OP
           localStorage.setItem('admin_id', data.admin_id);
           localStorage.setItem('admin_username', username);
+          
+          currentAdminId = data.admin_id;
+          currentUsername = username;
+          
+          console.log('✅ Admin ID opgeslagen:', data.admin_id);
+          console.log('✅ Admin username opgeslagen:', username);
           
           document.getElementById('login-screen').classList.add('hidden');
           document.getElementById('main-dashboard').classList.remove('hidden');
@@ -791,6 +831,7 @@
           errorDiv.classList.remove('hidden');
         }
       } catch (error) {
+        console.error('❌ Login error:', error);
         errorDiv.textContent = 'Connection error';
         errorDiv.classList.remove('hidden');
       }
@@ -799,29 +840,68 @@
     function logout() {
       localStorage.removeItem('admin_id');
       localStorage.removeItem('admin_username');
+      currentAdminId = null;
+      currentUsername = null;
       location.reload();
     }
 
+    // ==========================================
+    // API CALLS - GEFIXT MET JUISTE HEADERS
+    // ==========================================
     async function apiCall(endpoint, method = 'GET', body = null) {
-      const headers = { 'Content-Type': 'application/json' };
+      const headers = {
+        'Content-Type': 'application/json'
+      };
       
+      // ✅ ALTIJD admin key toevoegen voor admin endpoints
       if (endpoint.includes('/admin/')) {
         const adminId = localStorage.getItem('admin_id');
-        if (!adminId) throw new Error('Admin authentication required');
+        if (!adminId) {
+          console.error('❌ Geen admin ID in localStorage');
+          throw new Error('Admin authentication required');
+        }
         headers['x-admin-key'] = adminId;
+        console.log(`🔑 Admin call naar ${endpoint} met key: ${adminId}`);
       }
       
-      const options = { method, headers, credentials: 'include' };
-      if (body) options.body = JSON.stringify(body);
+      const options = {
+        method,
+        headers,
+        credentials: 'include'
+      };
+      
+      if (body) {
+        options.body = JSON.stringify(body);
+      }
       
       const response = await fetch(endpoint, options);
-      if (response.status === 401) throw new Error('Invalid admin credentials');
+      
+      // ✅ Check voor 401 Unauthorized
+      if (response.status === 401) {
+        console.error(`❌ 401 Unauthorized voor ${endpoint}`);
+        throw new Error('Invalid admin credentials');
+      }
+      
+      // ✅ Check of response JSON is
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('❌ Non-JSON response:', text.substring(0, 100));
+        throw new Error('Server returned non-JSON response');
+      }
       
       const data = await response.json();
-      if (!data.success) throw new Error(data.error || 'API call failed');
+      
+      if (!data.success) {
+        throw new Error(data.error || 'API call failed');
+      }
+      
       return data;
     }
 
+    // ==========================================
+    // TAB MANAGEMENT
+    // ==========================================
     function switchTab(tabName) {
       document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
       document.querySelectorAll('.mode-toggle').forEach(b => b.classList.remove('active'));
@@ -839,6 +919,9 @@
       if (tabName === 'pending') loadPendingData();
     }
 
+    // ==========================================
+    // LEADERBOARD FUNCTIES
+    // ==========================================
     async function loadLeaderboard() {
       try {
         const data = await apiCall('/api/leaderboard');
@@ -955,6 +1038,9 @@
       document.getElementById('totalCount').textContent = allLeaderboard.length;
     }
 
+    // ==========================================
+    // EXTRACT DOMAIN FROM URL
+    // ==========================================
     function extractDomainFromUrl(url) {
       if (!url) return 'Bedrijf';
       try {
@@ -969,6 +1055,9 @@
       }
     }
 
+    // ==========================================
+    // LEADERBOARD DELETE FUNCTIES
+    // ==========================================
     function toggleSelectLeaderboard(id) {
       if (selectedLeaderboardIds.has(id)) {
         selectedLeaderboardIds.delete(id);
@@ -1033,13 +1122,25 @@
       loadLeaderboard();
     }
 
+    // ==========================================
+    // FREELANCERS - GEFIXT MET JUISTE API CALL
+    // ==========================================
     async function loadFreelancers() {
       try {
+        console.log('📥 Laden freelancers met admin ID:', localStorage.getItem('admin_id'));
         const data = await apiCall('/api/admin/freelancers');
+        console.log('📦 Freelancers response:', data);
         allFreelancers = data.freelancers || [];
         renderFreelancers();
       } catch (error) {
-        console.error('Freelancers error:', error);
+        console.error('❌ Freelancers error:', error);
+        document.getElementById('freelancers-grid').innerHTML = `
+          <div class="col-span-3 text-center py-8 text-gray-400">
+            <i class="fas fa-exclamation-triangle text-4xl mb-4 text-yellow-500"></i>
+            <p class="text-lg">Kon freelancers niet laden</p>
+            <p class="text-sm text-gray-500 mt-2">${error.message}</p>
+          </div>
+        `;
       }
     }
 
@@ -1097,19 +1198,7 @@
       }).join('');
     }
 
-    async function approveAllFreelancers() {
-      if (!confirm('✅ Alle freelancers goedkeuren? Dit zet alle pending freelancers op goedgekeurd.')) return;
-      
-      try {
-        await apiCall('/api/admin/freelancers/approve-all', 'POST');
-        alert('✅ Alle freelancers zijn goedgekeurd!');
-        loadFreelancers();
-        loadPendingFreelancers();
-      } catch (error) {
-        alert('❌ Fout: ' + error.message);
-      }
-    }
-
+    // FREELANCER FUNCTIES
     function toggleSelectFreelancer(id) {
       if (selectedFreelancerIds.has(id)) {
         selectedFreelancerIds.delete(id);
@@ -1205,6 +1294,9 @@
       }
     }
 
+    // ==========================================
+    // SCANNER FUNCTIES
+    // ==========================================
     function switchScannerMode(mode) {
       const singleMode = document.getElementById('singleMode');
       const bulkMode = document.getElementById('bulkMode');
@@ -1252,7 +1344,7 @@
         const response = await fetch('/api/scan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: url })
+          body: JSON.stringify({ url })
         });
         
         progressBar.style.width = '60%';
@@ -1329,9 +1421,9 @@
       
       try {
         await apiCall('/api/admin/leaderboard/manual-add', 'POST', {
-          url: url,
+          url,
           company_name: companyName,
-          score: score,
+          score,
           country: 'Netherlands'
         });
         
@@ -1362,7 +1454,7 @@
       
       try {
         const data = await apiCall('/api/google-maps/scrape', 'POST', { 
-          url: url,
+          url,
           maxResults: 30 
         });
         
@@ -1424,9 +1516,9 @@
     async function quickAddToLeaderboard(url, name, score) {
       try {
         await apiCall('/api/admin/leaderboard/manual-add', 'POST', {
-          url: url,
+          url,
           company_name: name,
-          score: score,
+          score,
           country: 'Netherlands'
         });
         
@@ -1437,6 +1529,9 @@
       }
     }
 
+    // ==========================================
+    // PENDING DATA FUNCTIES
+    // ==========================================
     async function loadPendingData() {
       selectedPendingIds.clear();
       try {
@@ -1593,7 +1688,7 @@
       try {
         await apiCall(`/api/admin/leaderboard/${id}`, 'PUT', {
           company_name: companyName,
-          country: country
+          country
         });
         alert('✅ Opgeslagen');
         loadPendingLeaderboard();
@@ -1707,6 +1802,9 @@
       }
     }
 
+    // ==========================================
+    // STATS
+    // ==========================================
     async function loadStats() {
       try {
         if (localStorage.getItem('admin_id')) {
@@ -1724,6 +1822,9 @@
       loadStats();
     }
 
+    // ==========================================
+    // UTILITY FUNCTIES
+    // ==========================================
     function getCountryFlag(country) {
       const flags = { 
         'Netherlands': '🇳🇱', 'NL': '🇳🇱', 
