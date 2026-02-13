@@ -14,8 +14,6 @@ const PORT = process.env.PORT || 3000;
 
 console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
 console.log('📊 Database URL:', process.env.DATABASE_URL ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
-console.log('📁 Current directory:', process.cwd());
-console.log('📁 Public path:', path.join(process.cwd(), 'public'));
 
 let dbConfig;
 let pool;
@@ -160,15 +158,16 @@ app.use((req, res, next) => {
   next();
 });
 
-// ✅ FIXED: Gebruik process.cwd() in plaats van __dirname
-app.use(express.static(path.join(process.cwd(), 'public'), {
+// ✅ FIX 1: Gebruik __dirname, niet 'public' string
+app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: '1y',
   etag: true,
   lastModified: true,
   immutable: true
 }));
 
-app.use('/uploads', express.static(path.join(process.cwd(), 'public/uploads')));
+// ✅ FIX 2: Verwijder ../ uit pad
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 const verifyAdmin = async (req, res, next) => {
   const adminKey = req.headers['x-admin-key'];
@@ -434,9 +433,6 @@ async function createAllTables() {
   }
 }
 
-// ==========================================
-// SCORE CALCULATIE FUNCTIES
-// ==========================================
 function calculateStableScores(content, stats, rawHtml) {
   const { wordCount = 0, h1Count = 0, h2Count = 0, h3Count = 0, listCount = 0 } = stats;
   
@@ -665,9 +661,6 @@ function generateDetailedRecommendations(score, metrics, wordCount, scanData) {
   return recs.sort((a, b) => b.impact - a.impact).slice(0, 8);
 }
 
-// ==========================================
-// API ROUTES
-// ==========================================
 app.post('/api/scan', async (req, res) => {
   const { url } = req.body;
   if (!url) return res.status(400).json({ success: false, error: 'URL required' });
@@ -1458,22 +1451,22 @@ app.post('/api/claims/submit', async (req, res) => {
 });
 
 // ==========================================
-// PAGE ROUTES - ✅ GEFIXT MET process.cwd()
+// PAGE ROUTES - ✅ GEFIXT MET __dirname
 // ==========================================
 app.get('/admin', (req, res) => {
-  res.sendFile(path.join(process.cwd(), 'public', 'admin-dashboard.html'));
+  res.sendFile(path.join(__dirname, 'public', 'admin-dashboard.html'));
 });
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.get('/blog', (req, res) => {
-  res.sendFile(path.join(process.cwd(), 'public', 'blog.html'));
+  res.sendFile(path.join(__dirname, 'public', 'blog.html'));
 });
 
 app.get('/blog/:slug', (req, res) => {
-  res.sendFile(path.join(process.cwd(), 'public', 'blog-post.html'));
+  res.sendFile(path.join(__dirname, 'public', 'blog-post.html'));
 });
 
 app.get('/api/health', async (req, res) => {
@@ -1500,10 +1493,10 @@ app.get('*', (req, res) => {
     return res.status(404).json({ error: 'API endpoint not found' });
   }
   
-  const filePath = path.join(process.cwd(), 'public', req.path);
+  const filePath = path.join(__dirname, 'public', req.path);
   res.sendFile(filePath, (err) => {
     if (err) {
-      res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
+      res.sendFile(path.join(__dirname, 'public', 'index.html'));
     }
   });
 });
