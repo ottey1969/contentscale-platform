@@ -6,7 +6,1929 @@
   <title>Admin Dashboard - ContentScale</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - ContentScale</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background: #030712;
+      color: white;
+      line-height: 1.6;
+    }
+    
+    h1, h2, h3, h4, h5, h6, p, a, span, div, button, input, textarea, select, label, li {
+      color: white !important;
+    }
+    
+    .text-gray-300, .text-gray-400, .text-gray-500 {
+      color: #d1d5db !important;
+    }
+    
+    .btn-white-black {
+      background: white !important;
+      color: #581c87 !important;
+      font-weight: 700;
+      border: 2px solid white;
+    }
+    
+    .btn-white-black:hover {
+      background: #f3f4f6 !important;
+      color: #6b21a8 !important;
+    }
+    
+    .bg-gray-900 { background-color: #030712; }
+    .bg-gray-800 { background-color: #111827; }
+    .bg-gray-700 { background-color: #1f2937; }
+    .bg-gray-900\/95 { background-color: rgba(3, 7, 18, 0.95); }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #7e22ce, #be185d);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #6b21a8, #9d174d);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px -5px rgba(126, 34, 206, 0.5);
+    }
+    
+    .btn-secondary {
+      background: linear-gradient(135deg, #1e40af, #0891b2);
+      color: white;
+    }
+    
+    .btn-success {
+      background: #0f7b3a !important;
+      color: white !important;
+    }
+    
+    .mode-toggle {
+      position: relative;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      background: #374151;
+      color: white;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    
+    .mode-toggle.active {
+      background: linear-gradient(135deg, #7e22ce, #be185d);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .mode-toggle.active::after {
+      content: '✓';
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      width: 24px;
+      height: 24px;
+      background: #0f7b3a;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: bold;
+      border: 2px solid white;
+    }
+    
+    .card {
+      background: #111827;
+      border: 1px solid #374151;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    
+    .card:hover {
+      border-color: #a855f7;
+      transform: translateY(-4px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+    
+    .card-content {
+      flex: 1;
+    }
+    
+    .card-footer {
+      margin-top: auto;
+      padding-top: 1rem;
+    }
+    
+    .stat-card {
+      position: relative;
+      border-radius: 1rem;
+      padding: 1.25rem;
+      overflow: hidden;
+    }
+    
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, #7e22ce, #6b21a8);
+      opacity: 0.9;
+    }
+    
+    .stat-card > div {
+      position: relative;
+      z-index: 10;
+    }
+    
+    .top-card {
+      border-radius: 1rem;
+      padding: 1.5rem;
+      text-align: center;
+      color: white;
+    }
+    
+    .top-card.gold {
+      background: linear-gradient(135deg, #fbbf24, #d97706);
+    }
+    
+    .top-card.silver {
+      background: linear-gradient(135deg, #e5e7eb, #6b7280);
+    }
+    
+    .top-card.bronze {
+      background: linear-gradient(135deg, #f97316, #c2410c);
+    }
+    
+    .top-card button {
+      background: rgba(0, 0, 0, 0.3);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      width: 100%;
+      margin-top: 1rem;
+    }
+    
+    .top-card button:hover {
+      background: rgba(0, 0, 0, 0.5);
+      border-color: rgba(255, 255, 255, 0.6);
+    }
+    
+    .score-high { color: #4ade80; }
+    .score-medium { color: #facc15; }
+    .score-low { color: #f87171; }
+    
+    .progress-bar {
+      height: 0.75rem;
+      background: #374151;
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+    
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #a855f7, #ec4899);
+      transition: width 0.3s;
+    }
+    
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+    
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+    }
+    
+    @media (max-width: 1024px) {
+      .grid-4 { grid-template-columns: repeat(3, 1fr); }
+    }
+    
+    @media (max-width: 768px) {
+      .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
+    }
+    
+    @media (max-width: 640px) {
+      .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    }
+    
+    .rankings-4-15-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+    }
+    
+    @media (max-width: 1024px) {
+      .rankings-4-15-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    
+    @media (max-width: 768px) {
+      .rankings-4-15-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    
+    @media (max-width: 480px) {
+      .rankings-4-15-grid { grid-template-columns: 1fr; }
+    }
+    
+    .rank-card {
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    
+    .rank-card:hover {
+      border-color: #a855f7;
+      transform: translateY(-4px);
+    }
+    
+    .filter-tag {
+      background: #374151;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid #4b5563;
+    }
+    
+    .filter-tag:hover {
+      background: #4b5563;
+    }
+    
+    .filter-tag.active {
+      background: #7e22ce;
+      border-color: #a855f7;
+    }
+    
+    .rankings-table {
+      width: 100%;
+      background: #111827;
+      border-radius: 0.75rem;
+      overflow: hidden;
+    }
+    
+    .rankings-table th {
+      background: #1f2937;
+      padding: 1rem;
+      text-align: left;
+      font-weight: 600;
+      color: white;
+    }
+    
+    .rankings-table td {
+      padding: 1rem;
+      border-bottom: 1px solid #374151;
+      color: white;
+    }
+    
+    .hidden { display: none; }
+    
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    
+    .modal.active {
+      display: flex;
+    }
+    
+    .modal-content {
+      background: #111827;
+      border: 2px solid #a855f7;
+      border-radius: 1rem;
+      padding: 2rem;
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    .pending-card {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 1px solid #f59e0b;
+      border-radius: 1rem;
+      padding: 1.5rem;
+    }
+    
+    .company-name-input {
+      background: #1f2937;
+      border: 2px solid #a855f7;
+      color: white;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      width: 100%;
+      font-size: 1.125rem;
+      font-weight: 600;
+    }
+    
+    .company-name-input:focus {
+      outline: none;
+      border-color: #c084fc;
+      box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.3);
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .badge-success {
+      background: #0f7b3a;
+      color: white;
+    }
+    
+    .badge-featured {
+      background: #f59e0b;
+      color: white;
+    }
+    
+    .reverse-email {
+      unicode-bidi: bidi-override;
+      direction: rtl;
+    }
+    
+    .faq-item {
+      background: #111827;
+      border: 1px solid #374151;
+      border-radius: 0.75rem;
+      overflow: hidden;
+      transition: all 0.2s;
+    }
+    
+    .faq-item:hover {
+      border-color: #a855f7;
+    }
+    
+    .faq-question {
+      width: 100%;
+      padding: 1.25rem 1.5rem;
+      text-align: left;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: transparent;
+      border: none;
+      color: white;
+      font-weight: 600;
+      font-size: 1.125rem;
+      cursor: pointer;
+    }
+    
+    .faq-question:hover {
+      background: #1f2937;
+    }
+    
+    .faq-answer {
+      padding: 0 1.5rem 1.25rem 1.5rem;
+      color: #d1d5db;
+    }
+    
+    footer {
+      background: #111827;
+      border-top: 2px solid #374151;
+      margin-top: 4rem;
+    }
+    
+    .text-blue-400, a.text-blue-400 {
+      color: #7dd3fc !important;
+      text-decoration: underline;
+      text-decoration-color: rgba(125, 211, 252, 0.4);
+      text-underline-offset: 2px;
+    }
+    
+    .text-blue-400:hover, a.text-blue-400:hover {
+      color: #bae6fd !important;
+      text-decoration-color: #bae6fd;
+    }
+    
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: #7e22ce;
+      color: white;
+      padding: 0.5rem 1rem;
+      z-index: 100;
+      transition: top 0.2s;
+    }
+    
+    .skip-link:focus {
+      top: 0;
+    }
+
+    img[width][height] {
+      aspect-ratio: attr(width) / attr(height);
+    }
+    .w-48.h-48 {
+      width: 192px;
+      height: 192px;
+    }
+    #main-content > div:first-child {
+      min-height: 400px;
+    }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-900">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
+    <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border-2 border-purple-500">
+      <div class="flex items-center justify-center mb-6">
+        <span class="text-5xl">👑</span>
+        <h1 class="text-3xl font-bold ml-3 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Admin</h1>
+      </div>
+      <p class="text-gray-400 text-center mb-8">ContentScale Platform Control</p>
+      
+      <div id="login-error" class="hidden mb-6 p-4 bg-red-900/50 border border-red-700 rounded-lg text-red-200 text-sm"></div>
+      
+      <div class="space-y-6">
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">Username</label>
+          <input type="text" id="login-username" value="ot" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+          <input type="password" id="login-password" value="admin123" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white">
+        </div>
+        <button onclick="login()" id="login-btn" class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-lg font-bold text-lg transition-all transform hover:scale-105">
+          <i class="fas fa-lock mr-2"></i> Login
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN DASHBOARD -->
+  <div id="main-dashboard" class="hidden">
+    <nav class="sticky top-0 z-50 bg-gray-900/95 border-b-2 border-purple-600 backdrop-blur-sm">
+      <div class="max-w-7xl mx-auto px-6 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Admin Dashboard</span>
+            <span class="hidden sm:inline-block text-xs px-2 py-1 bg-purple-600 rounded text-white font-semibold">
+              <span id="admin-username">Admin</span>
+            </span>
+          </div>
+          <div class="flex gap-3">
+            <button onclick="logout()" class="btn bg-red-600 hover:bg-red-700">
+              <i class="fas fa-sign-out-alt mr-2"></i> Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-6 py-8">
+      <div class="flex justify-center gap-4 mb-8 flex-wrap">
+        <button onclick="switchTab('leaderboard')" id="tabLeaderboardBtn" class="mode-toggle active">
+          <i class="fas fa-trophy mr-2"></i> Leaderboard
+        </button>
+        <button onclick="switchTab('freelancers')" id="tabFreelancersBtn" class="mode-toggle">
+          <i class="fas fa-users mr-2"></i> Freelancers
+        </button>
+        <button onclick="switchTab('scanner')" id="tabScannerBtn" class="mode-toggle">
+          <i class="fas fa-search mr-2"></i> Scanner
+        </button>
+        <button onclick="switchTab('pending')" id="tabPendingBtn" class="mode-toggle">
+          <i class="fas fa-clock mr-2"></i> Pending
+        </button>
+      </div>
+
+      <!-- TAB 1: LEADERBOARD -->
+      <div id="tab-leaderboard" class="tab-content">
+        <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold text-white">🏆 Leaderboard</h2>
+            <div class="flex gap-3">
+              <button onclick="loadLeaderboard()" class="btn bg-blue-600 hover:bg-blue-700">
+                <i class="fas fa-sync-alt mr-2"></i> Refresh
+              </button>
+              <button onclick="exportLeaderboardCSV()" class="btn-success btn">
+                <i class="fas fa-file-csv mr-2"></i> Export CSV
+              </button>
+            </div>
+          </div>
+
+          <!-- STATS CARDS -->
+          <div class="grid-4 mb-8">
+            <div class="stat-card">
+              <div>
+                <div class="text-4xl mb-2">🏢</div>
+                <div class="text-3xl font-bold" id="stat-total-agencies">0</div>
+                <div class="text-sm text-gray-200">Agencies</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div>
+                <div class="text-4xl mb-2">📊</div>
+                <div class="text-3xl font-bold" id="stat-avg-score">0</div>
+                <div class="text-sm text-gray-200">Avg. Score</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div>
+                <div class="text-4xl mb-2">🌍</div>
+                <div class="text-3xl font-bold" id="stat-countries">0</div>
+                <div class="text-sm text-gray-200">Countries</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div>
+                <div class="text-4xl mb-2">💼</div>
+                <div class="text-3xl font-bold" id="stat-freelancers">0</div>
+                <div class="text-sm text-gray-200">Freelancers</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- BULK ACTIONS -->
+          <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
+            <div class="flex items-center gap-2">
+              <input type="checkbox" id="select-all-leaderboard" onchange="toggleSelectAllLeaderboard()" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
+              <label class="text-sm text-gray-300">Selecteer alles</label>
+            </div>
+            <button onclick="bulkDeleteLeaderboard()" class="btn bg-red-600 hover:bg-red-700">
+              <i class="fas fa-trash mr-2"></i> Delete Geselecteerd
+            </button>
+            <span id="selected-count-leaderboard" class="text-sm text-gray-400 ml-auto">0 geselecteerd</span>
+          </div>
+
+          <!-- TOP 3 CARDS -->
+          <div id="top3-container" class="grid-3 mb-10"></div>
+
+          <!-- RANKINGS 4-15 -->
+          <div id="rankings4to15Container" class="mb-10">
+            <h3 class="text-2xl font-bold text-white mb-6">Rankings 4-15</h3>
+            <div id="rankings4to15Grid" class="rankings-4-15-grid"></div>
+          </div>
+
+          <!-- FILTERS -->
+          <div class="bg-gray-800 rounded-lg p-4 mb-6 border border-gray-700">
+            <button onclick="toggleFilters()" class="w-full flex items-center justify-between text-left text-white">
+              <div class="flex items-center gap-2">
+                <i class="fas fa-filter text-purple-400"></i>
+                <span class="font-semibold">Filters</span>
+              </div>
+              <i class="fas fa-chevron-down" id="filterIcon"></i>
+            </button>
+            <div id="filterPanel" class="hidden mt-4">
+              <div class="mb-4">
+                <div class="text-sm text-gray-300 mb-2">Country:</div>
+                <div class="flex flex-wrap gap-2" id="countryFilters"></div>
+              </div>
+              <div>
+                <input type="text" id="searchInput" placeholder="Search agencies..." oninput="filterAgencies()" class="w-full">
+              </div>
+            </div>
+          </div>
+
+          <!-- RANKINGS 16+ -->
+          <div>
+            <button onclick="toggleRankings()" id="rankingsToggleBtn" class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-between transition-all">
+              <span id="rankingsToggleText">📊 Show Rankings 16+</span>
+              <span class="arrow">▼</span>
+            </button>
+            <div id="rankingsContainer" class="hidden mt-4">
+              <p class="text-sm text-gray-300 mb-2">Showing 16-35 of <span id="totalCount">0</span> agencies</p>
+              <table class="rankings-table">
+                <thead>
+                  <tr>
+                    <th class="w-10"></th>
+                    <th>Rank</th>
+                    <th>Company</th>
+                    <th>Website</th>
+                    <th>Score</th>
+                    <th>Country</th>
+                    <th>Added</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="rankingsTbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: FREELANCERS -->
+      <div id="tab-freelancers" class="tab-content hidden">
+        <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold text-white">🎯 Freelancers</h2>
+            <div class="flex gap-3">
+              <button onclick="loadFreelancers()" class="btn bg-blue-600 hover:bg-blue-700">
+                <i class="fas fa-sync-alt mr-2"></i> Refresh
+              </button>
+            </div>
+          </div>
+
+          <!-- BULK ACTIONS -->
+          <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
+            <div class="flex items-center gap-2">
+              <input type="checkbox" id="select-all-freelancers" onchange="toggleSelectAllFreelancers()" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
+              <label class="text-sm text-gray-300">Selecteer alles</label>
+            </div>
+            <button onclick="bulkDeleteFreelancers()" class="btn bg-red-600 hover:bg-red-700">
+              <i class="fas fa-trash mr-2"></i> Delete Geselecteerd
+            </button>
+            <span id="selected-count-freelancers" class="text-sm text-gray-400 ml-auto">0 geselecteerd</span>
+          </div>
+
+          <!-- FREELANCERS GRID -->
+          <div id="freelancersGrid" class="grid-3"></div>
+        </div>
+      </div>
+
+      <!-- TAB 3: SCANNER -->
+      <div id="tab-scanner" class="tab-content hidden">
+        <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+          <div class="text-center mb-8">
+            <h2 class="text-4xl font-bold mb-3 text-white">🎯 SEO Content Quality Scanner</h2>
+            <p class="text-xl text-gray-200">Scan any URL and add to leaderboard</p>
+          </div>
+          
+          <div class="flex justify-center gap-4 mb-8">
+            <button id="modeSingleBtn" onclick="switchScannerMode('single')" class="mode-toggle active">
+              <i class="fas fa-link mr-2"></i> Single URL
+            </button>
+            <button id="modeBulkBtn" onclick="switchScannerMode('bulk')" class="mode-toggle">
+              <i class="fas fa-map-marked-alt mr-2"></i> Google Maps
+            </button>
+          </div>
+          
+          <div id="singleMode" class="max-w-3xl mx-auto">
+            <div class="card">
+              <div class="flex flex-col sm:flex-row gap-3">
+                <input type="text" id="singleUrlInput" placeholder="https://example.com" class="flex-1">
+                <button onclick="scanSingleURL()" id="singleScanBtn" class="btn-primary btn whitespace-nowrap">
+                  <i class="fas fa-search mr-2"></i> Start Scan
+                </button>
+              </div>
+              <div id="singleProgress" class="hidden mt-4">
+                <div class="progress-bar">
+                  <div id="singleProgressBar" class="progress-bar-fill" style="width: 0%"></div>
+                </div>
+                <p id="singleProgressText" class="text-sm text-gray-300 text-center mt-2"></p>
+              </div>
+            </div>
+            <div id="singleResult" class="hidden mt-4"></div>
+          </div>
+          
+          <div id="bulkMode" class="hidden max-w-6xl mx-auto">
+            <div class="card">
+              <div class="flex flex-col sm:flex-row gap-3 mb-4">
+                <input type="text" id="mapsUrl" placeholder="https://www.google.com/maps/search/seo+agency+amsterdam" class="flex-1">
+                <button onclick="scrapeGoogleMaps()" id="bulkScanBtn" class="btn-secondary btn whitespace-nowrap">
+                  <i class="fas fa-map-marked-alt mr-2"></i> Scrape Maps
+                </button>
+              </div>
+            </div>
+            
+            <div id="leadsContainer" class="hidden mt-6">
+              <div class="card border-green-500">
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="text-xl font-bold text-white">
+                    <i class="fas fa-database mr-2 text-green-400"></i>
+                    Found Leads (<span id="leadCount">0</span>)
+                  </h3>
+                </div>
+                <div class="overflow-x-auto">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Business</th>
+                        <th>Website</th>
+                        <th>Phone</th>
+                        <th>Score</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="leadsTableBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: PENDING -->
+      <div id="tab-pending" class="tab-content hidden">
+        <div class="bg-gradient-to-br from-yellow-900 via-orange-900 to-yellow-800 rounded-2xl p-8 border-2 border-yellow-500">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold text-white">⏳ Pending Approvals</h2>
+            <button onclick="loadPendingData()" class="btn bg-yellow-600 hover:bg-yellow-700">
+              <i class="fas fa-sync-alt mr-2"></i> Refresh
+            </button>
+          </div>
+
+          <div class="mb-8">
+            <h3 class="text-xl font-bold mb-4 text-yellow-400">🏆 Pending Leaderboard Submissions</h3>
+            <div id="pending-leaderboard-container" class="space-y-4"></div>
+          </div>
+
+          <div class="mb-8">
+            <h3 class="text-xl font-bold mb-4 text-yellow-400">🎯 Pending Freelancer Applications</h3>
+            <div id="pending-freelancers-container" class="space-y-4"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // GLOBALE VARIABELEN
+    // ==========================================
+    let currentAdminId = localStorage.getItem('admin_id');
+    let currentUsername = localStorage.getItem('admin_username');
+    let allLeaderboard = [];
+    let allFreelancers = [];
+    let selectedLeaderboardIds = new Set();
+    let selectedFreelancerIds = new Set();
+    let selectedPendingIds = new Set();
+    let scrapedLeads = [];
+    let currentScanResult = null;
+
+    // ==========================================
+    // AUTHENTICATIE
+    // ==========================================
+    window.onload = function() {
+      console.log('📋 Admin Dashboard loaded');
+      
+      if (localStorage.getItem('admin_id') && localStorage.getItem('admin_username')) {
+        currentAdminId = localStorage.getItem('admin_id');
+        currentUsername = localStorage.getItem('admin_username');
+        
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('main-dashboard').classList.remove('hidden');
+        document.getElementById('admin-username').textContent = currentUsername;
+        
+        loadAllData();
+        switchTab('leaderboard');
+      }
+    };
+
+    async function login() {
+      const username = document.getElementById('login-username').value;
+      const password = document.getElementById('login-password').value;
+      const errorDiv = document.getElementById('login-error');
+      
+      errorDiv.classList.add('hidden');
+      
+      try {
+        console.log('🔐 Login poging voor:', username);
+        
+        const response = await fetch('/api/setup/verify-admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        
+        const data = await response.json();
+        console.log('📦 Login response:', data);
+        
+        if (data.success) {
+          localStorage.setItem('admin_id', data.admin_id);
+          localStorage.setItem('admin_username', username);
+          
+          currentAdminId = data.admin_id;
+          currentUsername = username;
+          
+          console.log('✅ Admin ID opgeslagen:', data.admin_id);
+          
+          document.getElementById('login-screen').classList.add('hidden');
+          document.getElementById('main-dashboard').classList.remove('hidden');
+          document.getElementById('admin-username').textContent = username;
+          
+          loadAllData();
+          switchTab('leaderboard');
+        } else {
+          errorDiv.textContent = data.error || 'Login failed';
+          errorDiv.classList.remove('hidden');
+        }
+      } catch (error) {
+        console.error('❌ Login error:', error);
+        errorDiv.textContent = 'Connection error';
+        errorDiv.classList.remove('hidden');
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('admin_id');
+      localStorage.removeItem('admin_username');
+      location.reload();
+    }
+
+    // ==========================================
+    // API CALLS
+    // ==========================================
+    async function apiCall(endpoint, method = 'GET', body = null) {
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (endpoint.includes('/admin/')) {
+        const adminId = localStorage.getItem('admin_id');
+        if (!adminId) throw new Error('Admin authentication required');
+        headers['x-admin-key'] = adminId;
+      }
+      
+      const options = {
+        method,
+        headers,
+        credentials: 'include'
+      };
+      
+      if (body) options.body = JSON.stringify(body);
+      
+      const response = await fetch(endpoint, options);
+      
+      if (response.status === 401) {
+        throw new Error('Invalid admin credentials');
+      }
+      
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error || 'API call failed');
+      return data;
+    }
+
+    // ==========================================
+    // TAB MANAGEMENT
+    // ==========================================
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+      document.querySelectorAll('.mode-toggle').forEach(b => b.classList.remove('active'));
+      
+      document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+      
+      if (tabName === 'leaderboard') document.getElementById('tabLeaderboardBtn').classList.add('active');
+      if (tabName === 'freelancers') document.getElementById('tabFreelancersBtn').classList.add('active');
+      if (tabName === 'scanner') document.getElementById('tabScannerBtn').classList.add('active');
+      if (tabName === 'pending') document.getElementById('tabPendingBtn').classList.add('active');
+      
+      if (tabName === 'leaderboard') loadLeaderboard();
+      if (tabName === 'freelancers') loadFreelancers();
+      if (tabName === 'scanner') switchScannerMode('single');
+      if (tabName === 'pending') loadPendingData();
+    }
+
+    // ==========================================
+    // LEADERBOARD FUNCTIES
+    // ==========================================
+    async function loadLeaderboard() {
+      try {
+        const data = await apiCall('/api/leaderboard');
+        allLeaderboard = data.entries || [];
+        
+        document.getElementById('stat-total-agencies').textContent = data.stats?.totalAgencies || 0;
+        document.getElementById('stat-avg-score').textContent = data.averageScore || 0;
+        document.getElementById('stat-countries').textContent = data.stats?.countriesCount || 0;
+        
+        renderTop3();
+        renderRankings4to15();
+        renderRankings16Plus();
+        renderCountryFilters();
+      } catch (error) {
+        console.error('Leaderboard error:', error);
+      }
+    }
+
+    function renderTop3() {
+      const container = document.getElementById('top3-container');
+      if (!container) return;
+      
+      const top3 = allLeaderboard.slice(0, 3);
+      
+      if (top3.length === 0) {
+        container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Geen entries gevonden</div>';
+        return;
+      }
+      
+      container.innerHTML = top3.map((entry, index) => {
+        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
+        const medalClass = index === 0 ? 'gold' : index === 1 ? 'silver' : 'bronze';
+        const rankText = index === 0 ? '1st Worldwide' : index === 1 ? '2nd Worldwide' : '3rd Worldwide';
+        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+        
+        return `
+          <div class="top-card ${medalClass}">
+            <div class="text-5xl mb-2">${medal}</div>
+            <div class="text-xs font-bold uppercase tracking-wider mb-2 text-white/80">${rankText}</div>
+            <h3 class="text-xl font-bold mb-2">${companyName}</h3>
+            <div class="text-4xl font-black mb-2">${entry.score}/100</div>
+            <div class="text-white/80 mb-3">${getCountryFlag(entry.country)} ${entry.country}</div>
+            <button onclick="window.open('${entry.url}', '_blank', 'noopener')" class="w-full bg-black/30 hover:bg-black/50 text-white px-4 py-2 rounded-lg border border-white/30 transition-all">
+              <i class="fas fa-external-link-alt mr-2"></i> Visit Website
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderRankings4to15() {
+      const grid = document.getElementById('rankings4to15Grid');
+      if (!grid) return;
+      
+      const rankings = allLeaderboard.slice(3, 15);
+      
+      if (rankings.length === 0) {
+        document.getElementById('rankings4to15Container').style.display = 'none';
+        return;
+      }
+      
+      document.getElementById('rankings4to15Container').style.display = 'block';
+      
+      grid.innerHTML = rankings.map((entry, index) => {
+        const actualRank = index + 4;
+        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+        
+        return `
+          <div class="rank-card">
+            <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
+            <h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
+            <div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
+            <div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
+            <a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">
+              View Website <i class="fas fa-external-link-alt ml-1"></i>
+            </a>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderRankings16Plus() {
+      const tbody = document.getElementById('rankingsTbody');
+      if (!tbody) return;
+      
+      const rankings = allLeaderboard.slice(15, 35);
+      
+      tbody.innerHTML = rankings.map((entry, index) => {
+        const actualRank = index + 16;
+        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+        const isSelected = selectedLeaderboardIds.has(entry.id);
+        
+        return `
+          <tr>
+            <td class="w-10">
+              <input type="checkbox" class="leaderboard-checkbox" data-id="${entry.id}" onchange="toggleSelectLeaderboard(${entry.id})" ${isSelected ? 'checked' : ''}>
+            </td>
+            <td><span class="inline-flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full font-bold">${actualRank}</span></td>
+            <td class="font-semibold">${companyName}</td>
+            <td><a href="${entry.url}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">${entry.url.replace('https://', '').substring(0, 25)}...</a></td>
+            <td><span class="text-lg font-bold ${entry.score >= 85 ? 'text-green-400' : entry.score >= 70 ? 'text-yellow-400' : 'text-red-400'}">${entry.score}</span></td>
+            <td><span class="text-sm">${getCountryFlag(entry.country)} ${entry.country}</span></td>
+            <td><span class="text-sm text-gray-400">${new Date(entry.created_at).toLocaleDateString()}</span></td>
+            <td>
+              <button onclick="deleteLeaderboardEntry(${entry.id})" class="text-red-400 hover:text-red-300">
+                <i class="fas fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      
+      document.getElementById('totalCount').textContent = allLeaderboard.length;
+    }
+
+    // ==========================================
+    // EXTRACT DOMAIN FROM URL
+    // ==========================================
+    function extractDomainFromUrl(url) {
+      if (!url) return 'Bedrijf';
+      try {
+        const hostname = new URL(url).hostname;
+        let domain = hostname.replace('www.', '');
+        let name = domain.split('.')[0];
+        return name.charAt(0).toUpperCase() + name.slice(1);
+      } catch (e) {
+        const parts = url.split('/');
+        const domain = parts[2] || parts[0];
+        return domain.replace('www.', '').split('.')[0] || 'Bedrijf';
+      }
+    }
+
+    // ==========================================
+    // LEADERBOARD DELETE FUNCTIES
+    // ==========================================
+    function toggleSelectLeaderboard(id) {
+      if (selectedLeaderboardIds.has(id)) {
+        selectedLeaderboardIds.delete(id);
+      } else {
+        selectedLeaderboardIds.add(id);
+      }
+      updateSelectedCountLeaderboard();
+    }
+
+    function toggleSelectAllLeaderboard() {
+      const selectAll = document.getElementById('select-all-leaderboard');
+      const checkboxes = document.querySelectorAll('.leaderboard-checkbox');
+      
+      if (selectAll.checked) {
+        allLeaderboard.forEach(entry => selectedLeaderboardIds.add(entry.id));
+        checkboxes.forEach(cb => cb.checked = true);
+      } else {
+        selectedLeaderboardIds.clear();
+        checkboxes.forEach(cb => cb.checked = false);
+      }
+      updateSelectedCountLeaderboard();
+    }
+
+    function updateSelectedCountLeaderboard() {
+      document.getElementById('selected-count-leaderboard').textContent = `${selectedLeaderboardIds.size} geselecteerd`;
+    }
+
+    async function deleteLeaderboardEntry(id) {
+      if (!confirm('❌ Verwijder deze entry permanent?')) return;
+      try {
+        await apiCall(`/api/admin/leaderboard/${id}`, 'DELETE');
+        alert('✅ Entry verwijderd');
+        selectedLeaderboardIds.delete(id);
+        loadLeaderboard();
+      } catch (error) {
+        alert('❌ Fout: ' + error.message);
+      }
+    }
+
+    async function bulkDeleteLeaderboard() {
+      if (selectedLeaderboardIds.size === 0) {
+        alert('❌ Selecteer entries om te verwijderen');
+        return;
+      }
+      
+      if (!confirm(`❌ Verwijder ${selectedLeaderboardIds.size} entries permanent?`)) return;
+      
+      let success = 0;
+      let failed = 0;
+      
+      for (const id of selectedLeaderboardIds) {
+        try {
+          await apiCall(`/api/admin/leaderboard/${id}`, 'DELETE');
+          success++;
+        } catch (e) {
+          failed++;
+        }
+      }
+      
+      alert(`✅ ${success} verwijderd, ${failed} mislukt`);
+      selectedLeaderboardIds.clear();
+      loadLeaderboard();
+    }
+
+    // ==========================================
+    // FREELANCERS - ALLEEN GOEDGEKEURDE VIA ADMIN API
+    // ==========================================
+    async function loadFreelancers() {
+      try {
+        console.log('📥 Laden freelancers via admin API...');
+        const data = await apiCall('/api/admin/freelancers');
+        allFreelancers = data.freelancers || [];
+        renderFreelancers();
+      } catch (error) {
+        console.error('❌ Freelancers error:', error);
+        document.getElementById('freelancersGrid').innerHTML = 
+          '<div class="col-span-3 text-center py-8 text-gray-400">Kon freelancers niet laden</div>';
+      }
+    }
+
+    function renderFreelancers() {
+      const container = document.getElementById('freelancersGrid');
+      if (!container) return;
+      
+      if (allFreelancers.length === 0) {
+        container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Geen freelancers gevonden</div>';
+        return;
+      }
+      
+      container.innerHTML = allFreelancers.map(f => {
+        const firstName = f.name.split(' ')[0];
+        const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase();
+        const isSelected = selectedFreelancerIds.has(f.id);
+        
+        return `
+          <div class="card hover:border-purple-500">
+            <div class="card-content">
+              <div class="flex items-start gap-4 mb-4">
+                <div class="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl font-bold text-white">
+                  ${initials}
+                </div>
+                <div class="flex-1">
+                  <div class="flex items-center justify-between">
+                    <h3 class="font-bold text-lg text-white">${f.name}</h3>
+                    ${f.is_featured 
+                      ? '<span class="px-2 py-1 bg-yellow-600 rounded text-xs text-white font-semibold flex items-center gap-1">⭐ Featured</span>' 
+                      : '<span class="px-2 py-1 bg-green-600 rounded text-xs text-white font-semibold">✓ Verified</span>'}
+                  </div>
+                  <p class="text-sm text-gray-400">${f.title || 'SEO Specialist'}</p>
+                </div>
+              </div>
+              <p class="text-gray-300 text-sm mb-4">${f.bio || 'Geen bio beschikbaar'}</p>
+              <div class="flex items-center justify-between text-sm mb-4">
+                <span class="text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i> ${f.location || f.country || 'Remote'}</span>
+                ${f.hourly_rate ? `<span class="text-purple-400">💰 ${f.hourly_rate}</span>` : ''}
+              </div>
+            </div>
+            <div class="card-footer">
+              <div class="flex gap-2">
+                <button onclick="toggleFeatured(${f.id})" class="flex-1 ${f.is_featured ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-gray-600 hover:bg-gray-700'} text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all">
+                  ${f.is_featured ? '⭐ Featured uit' : '⭐ Featured aan'}
+                </button>
+                <button onclick="editFreelancer(${f.id})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="deleteFreelancer(${f.id})" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+              <div class="mt-2 flex items-center gap-2">
+                <input type="checkbox" class="freelancer-checkbox w-4 h-4 rounded border-gray-600 bg-gray-700 text-purple-600" data-id="${f.id}" onchange="toggleSelectFreelancer(${f.id})" ${isSelected ? 'checked' : ''}>
+                <span class="text-xs text-gray-400">Selecteer voor bulk delete</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // FREELANCER ADMIN FUNCTIES
+    function toggleSelectFreelancer(id) {
+      if (selectedFreelancerIds.has(id)) {
+        selectedFreelancerIds.delete(id);
+      } else {
+        selectedFreelancerIds.add(id);
+      }
+      updateSelectedCountFreelancers();
+    }
+
+    function toggleSelectAllFreelancers() {
+      const selectAll = document.getElementById('select-all-freelancers');
+      const checkboxes = document.querySelectorAll('.freelancer-checkbox');
+      
+      if (selectAll.checked) {
+        allFreelancers.forEach(f => selectedFreelancerIds.add(f.id));
+        checkboxes.forEach(cb => cb.checked = true);
+      } else {
+        selectedFreelancerIds.clear();
+        checkboxes.forEach(cb => cb.checked = false);
+      }
+      updateSelectedCountFreelancers();
+    }
+
+    function updateSelectedCountFreelancers() {
+      document.getElementById('selected-count-freelancers').textContent = `${selectedFreelancerIds.size} geselecteerd`;
+    }
+
+    async function toggleFeatured(id) {
+      try {
+        const data = await apiCall(`/api/admin/freelancers/${id}/toggle-featured`, 'POST');
+        alert(`✅ Featured ${data.is_featured ? 'aangezet' : 'uitgezet'}`);
+        loadFreelancers();
+      } catch (error) {
+        alert('❌ Fout: ' + error.message);
+      }
+    }
+
+    async function editFreelancer(id) {
+      const freelancer = allFreelancers.find(f => f.id === id);
+      if (!freelancer) return;
+      
+      const newName = prompt('Naam:', freelancer.name);
+      if (!newName) return;
+      
+      const newTitle = prompt('Titel:', freelancer.title || 'SEO Specialist');
+      const newLocation = prompt('Locatie:', freelancer.location || freelancer.country || 'Remote');
+      const newBio = prompt('Bio (max 200 tekens):', freelancer.bio || '');
+      const newRate = prompt('Uurtarief (bijv. €75-€100):', freelancer.hourly_rate || '');
+      
+      try {
+        await apiCall(`/api/admin/freelancers/${id}`, 'PUT', {
+          name: newName,
+          title: newTitle,
+          location: newLocation,
+          bio: newBio,
+          hourly_rate: newRate
+        });
+        alert('✅ Freelancer bijgewerkt');
+        loadFreelancers();
+      } catch (error) {
+        alert('❌ Fout: ' + error.message);
+      }
+    }
+
+    async function deleteFreelancer(id) {
+      if (!confirm('❌ Verwijder deze freelancer permanent?')) return;
+      try {
+        await apiCall(`/api/admin/freelancers/${id}`, 'DELETE');
+        alert('✅ Freelancer verwijderd');
+        selectedFreelancerIds.delete(id);
+        loadFreelancers();
+      } catch (error) {
+        alert('❌ Fout: ' + error.message);
+      }
+    }
+
+    async function bulkDeleteFreelancers() {
+      if (selectedFreelancerIds.size === 0) {
+        alert('❌ Selecteer freelancers om te verwijderen');
+        return;
+      }
+      
+      if (!confirm(`❌ Verwijder ${selectedFreelancerIds.size} freelancers permanent?`)) return;
+      
+      try {
+        const ids = Array.from(selectedFreelancerIds);
+        await apiCall('/api/admin/freelancers/bulk-delete', 'POST', { ids });
+        alert(`✅ ${ids.length} freelancers verwijderd`);
+        selectedFreelancerIds.clear();
+        loadFreelancers();
+      } catch (error) {
+        alert('❌ Fout: ' + error.message);
+      }
+    }
+
+    // ==========================================
+    // SCANNER FUNCTIES
+    // ==========================================
+    function switchScannerMode(mode) {
+      const singleMode = document.getElementById('singleMode');
+      const bulkMode = document.getElementById('bulkMode');
+      const singleBtn = document.getElementById('modeSingleBtn');
+      const bulkBtn = document.getElementById('modeBulkBtn');
+      
+      if (mode === 'single') {
+        singleMode.classList.remove('hidden');
+        bulkMode.classList.add('hidden');
+        singleBtn.classList.add('active');
+        bulkBtn.classList.remove('active');
+      } else {
+        singleMode.classList.add('hidden');
+        bulkMode.classList.remove('hidden');
+        singleBtn.classList.remove('active');
+        bulkBtn.classList.add('active');
+      }
+    }
+
+    async function scanSingleURL() {
+      const input = document.getElementById('singleUrlInput');
+      const button = document.getElementById('singleScanBtn');
+      const progress = document.getElementById('singleProgress');
+      const progressBar = document.getElementById('singleProgressBar');
+      const progressText = document.getElementById('singleProgressText');
+      const resultDiv = document.getElementById('singleResult');
+      
+      let url = input.value.trim();
+      if (!url) {
+        alert('❌ Please enter a URL');
+        return;
+      }
+      
+      if (!url.startsWith('http')) {
+        url = 'https://' + url;
+      }
+      
+      button.disabled = true;
+      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scannen...';
+      progress.classList.remove('hidden');
+      progressBar.style.width = '20%';
+      progressText.textContent = 'Browser starten...';
+      
+      try {
+        const response = await fetch('/api/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+        
+        progressBar.style.width = '60%';
+        progressText.textContent = 'Content analyseren...';
+        
+        const data = await response.json();
+        
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Scan failed');
+        }
+        
+        currentScanResult = data;
+        
+        const companyName = extractDomainFromUrl(url);
+        
+        resultDiv.innerHTML = `
+          <div class="card border-green-500 mt-4">
+            <div class="text-center mb-4">
+              <h3 class="text-2xl font-bold text-white mb-2">✅ Scan Complete</h3>
+              <p class="text-sm text-gray-400 break-all">${url}</p>
+            </div>
+            <div class="text-center mb-6">
+              <div class="text-6xl font-black ${data.score >= 85 ? 'text-green-400' : data.score >= 70 ? 'text-yellow-400' : 'text-red-400'}">${data.score}</div>
+              <div class="text-sm text-gray-400">Score /100</div>
+              <span class="inline-block mt-2 px-3 py-1 bg-${data.quality === 'excellent' ? 'green' : data.quality === 'good' ? 'blue' : 'yellow'}-600 rounded-full text-xs">
+                ${data.quality}
+              </span>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4 mb-4">
+              <label class="block text-sm font-medium mb-2 text-gray-300">Bedrijfsnaam (aanpasbaar)</label>
+              <input type="text" id="scan-company-name" value="${companyName}" class="w-full px-4 py-3 bg-gray-700 border-2 border-purple-500 rounded-lg text-white font-semibold">
+              <p class="text-xs text-gray-400 mt-2">✏️ Je kunt de naam aanpassen voordat je toevoegt</p>
+            </div>
+            <div class="flex gap-3">
+              <button onclick="addScanToLeaderboard('${url}', ${data.score})" class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-semibold">
+                <i class="fas fa-plus-circle mr-2"></i> Add to Leaderboard
+              </button>
+              <button onclick="document.getElementById('singleResult').classList.add('hidden')" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg font-semibold">
+                Close
+              </button>
+            </div>
+          </div>
+        `;
+        
+        resultDiv.classList.remove('hidden');
+        
+        progressBar.style.width = '100%';
+        progressText.textContent = 'Scan compleet!';
+        
+        setTimeout(() => {
+          progress.classList.add('hidden');
+          button.disabled = false;
+          button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
+        }, 500);
+        
+      } catch (error) {
+        console.error('Scan error:', error);
+        alert('❌ Scan failed: ' + error.message);
+        
+        progress.classList.add('hidden');
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
+      }
+    }
+
+    async function addScanToLeaderboard(url, score) {
+      const companyInput = document.getElementById('scan-company-name');
+      const companyName = companyInput ? companyInput.value.trim() : extractDomainFromUrl(url);
+      
+      if (!companyName) {
+        alert('❌ Voer een bedrijfsnaam in');
+        return;
+      }
+      
+      try {
+        await apiCall('/api/admin/leaderboard/manual-add', 'POST', {
+          url,
+          company_name: companyName,
+          score,
+          country: 'Netherlands'
+        });
+        
+        alert(`✅ "${companyName}" toegevoegd aan leaderboard!`);
+        document.getElementById('singleResult').classList.add('hidden');
+        document.getElementById('singleUrlInput').value = '';
+        loadLeaderboard();
+      } catch (error) {
+        alert('❌ Fout bij toevoegen: ' + error.message);
+      }
+    }
+
+    async function scrapeGoogleMaps() {
+      const input = document.getElementById('mapsUrl');
+      const button = document.getElementById('bulkScanBtn');
+      const leadsContainer = document.getElementById('leadsContainer');
+      const leadsTableBody = document.getElementById('leadsTableBody');
+      const leadCount = document.getElementById('leadCount');
+      
+      let url = input.value.trim();
+      if (!url || !url.includes('google.com/maps')) {
+        alert('❌ Voer een geldige Google Maps URL in');
+        return;
+      }
+      
+      button.disabled = true;
+      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scrapen...';
+      
+      try {
+        const data = await apiCall('/api/google-maps/scrape', 'POST', { 
+          url,
+          maxResults: 30 
+        });
+        
+        scrapedLeads = data.leads || [];
+        leadCount.textContent = scrapedLeads.length;
+        
+        if (scrapedLeads.length === 0) {
+          leadsTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-400">Geen bedrijven gevonden</td></tr>';
+        } else {
+          leadsTableBody.innerHTML = scrapedLeads.map((lead, index) => {
+            const hasWebsite = lead.website && lead.website !== 'N/A' && lead.website !== null;
+            const companyName = lead.name || extractDomainFromUrl(lead.website) || 'Onbekend';
+            
+            return `
+              <tr class="border-b border-gray-700 hover:bg-gray-800">
+                <td class="px-4 py-3">
+                  <div class="font-medium text-white">${companyName}</div>
+                  <div class="text-xs text-gray-400">${lead.category || 'SEO Agency'}</div>
+                </td>
+                <td class="px-4 py-3">
+                  ${hasWebsite ? 
+                    `<a href="${lead.website}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">
+                      ${lead.website.replace('https://', '').substring(0, 30)}...
+                    </a>` : 
+                    `<span class="text-red-400 text-sm">Geen website</span>`
+                  }
+                </td>
+                <td class="px-4 py-3 text-gray-300 text-sm">${lead.phone || '-'}</td>
+                <td class="px-4 py-3">
+                  ${lead.score > 0 ? 
+                    `<span class="font-bold ${lead.score >= 70 ? 'text-green-400' : 'text-yellow-400'}">${lead.score}</span>` : 
+                    `<span class="text-gray-500">-</span>`
+                  }
+                </td>
+                <td class="px-4 py-3">
+                  ${hasWebsite ? 
+                    `<button onclick="quickAddToLeaderboard('${lead.website}', '${companyName}', ${lead.score || 75})" 
+                            class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm font-semibold">
+                      <i class="fas fa-plus-circle mr-1"></i>Add
+                    </button>` : 
+                    `<span class="text-gray-600 text-sm">-</span>`
+                  }
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+        
+        leadsContainer.classList.remove('hidden');
+        
+      } catch (error) {
+        alert('❌ Scrape failed: ' + error.message);
+      } finally {
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-map-marked-alt mr-2"></i> Scrape Maps';
+      }
+    }
+
+    async function quickAddToLeaderboard(url, name, score) {
+      try {
+        await apiCall('/api/admin/leaderboard/manual-add', 'POST', {
+          url,
+          company_name: name,
+          score,
+          country: 'Netherlands'
+        });
+        
+        alert(`✅ "${name}" toegevoegd aan leaderboard!`);
+        loadLeaderboard();
+      } catch (error) {
+        alert('❌ Fout: ' + error.message);
+      }
+    }
+
+    // ==========================================
+    // PENDING DATA FUNCTIES
+    // ==========================================
+    async function loadPendingData() {
+      selectedPendingIds.clear();
+      try {
+        await Promise.all([
+          loadPendingLeaderboard(),
+          loadPendingFreelancers()
+        ]);
+      } catch (error) {
+        console.error('❌ Pending data error:', error);
+      }
+    }
+
+    async function loadPendingLeaderboard() {
+      try {
+        const data = await apiCall('/api/admin/leaderboard/pending');
+        const container = document.getElementById('pending-leaderboard-container');
+        
+        if (data.pending.length === 0) {
+          container.innerHTML = `
+            <div class="text-center py-8 text-gray-400">
+              <i class="fas fa-check-circle text-6xl mb-4 text-green-400"></i>
+              <p class="text-lg">Geen pending submissions</p>
+            </div>
+          `;
+          return;
+        }
+        
+        let html = `
+          <div class="bg-gray-800 rounded-lg p-4 mb-4 flex items-center gap-4 border border-gray-700">
+            <div class="flex items-center gap-2">
+              <input type="checkbox" id="select-all-pending" onchange="toggleSelectAllPending()" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600">
+              <label class="text-sm text-gray-300">Selecteer alles</label>
+            </div>
+            <button onclick="bulkDeletePending()" class="btn bg-red-600 hover:bg-red-700">
+              <i class="fas fa-trash mr-2"></i> Delete Geselecteerd
+            </button>
+            <span id="selected-count-pending" class="text-sm text-gray-400 ml-auto">0 geselecteerd</span>
+          </div>
+        `;
+        
+        html += data.pending.map(entry => {
+          const suggestedName = entry.company_name || extractDomainFromUrl(entry.url);
+          
+          return `
+            <div class="pending-card" data-id="${entry.id}">
+              <div class="flex items-start gap-4 mb-3">
+                <input type="checkbox" class="pending-checkbox" data-id="${entry.id}" onchange="toggleSelectPending(${entry.id})" class="w-5 h-5 mt-1">
+                <div class="flex-1">
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h4 class="text-xl font-bold mb-2">✏️ Bedrijfsnaam</h4>
+                      <input type="text" id="company-${entry.id}" value="${suggestedName}" class="company-name-input mb-3" placeholder="Voer bedrijfsnaam in">
+                      <p class="text-blue-400 mb-2 text-sm">${entry.url}</p>
+                      <div class="bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 rounded-lg inline-block">
+                        <div class="text-xs text-purple-200">Score</div>
+                        <div class="text-2xl font-bold">${entry.score}/100</div>
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium mb-2">Land</label>
+                      <select id="country-${entry.id}" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                        <option value="${entry.country || 'Netherlands'}">${entry.country || 'Netherlands'}</option>
+                        <option value="Netherlands">🇳🇱 Netherlands</option>
+                        <option value="Belgium">🇧🇪 Belgium</option>
+                        <option value="Germany">🇩🇪 Germany</option>
+                        <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                        <option value="United States">🇺🇸 United States</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="flex gap-3 mt-6">
+                    <button onclick="editPendingEntry(${entry.id})" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
+                      <i class="fas fa-save mr-2"></i> Opslaan
+                    </button>
+                    <button onclick="approveLeaderboardEntry(${entry.id})" class="flex-1 bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold">
+                      <i class="fas fa-check mr-2"></i> Approve
+                    </button>
+                    <button onclick="rejectLeaderboardEntry(${entry.id})" class="flex-1 bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">
+                      <i class="fas fa-times mr-2"></i> Reject
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+        
+        container.innerHTML = html;
+        
+      } catch (error) {
+        console.error('Pending leaderboard error:', error);
+      }
+    }
+
+    function toggleSelectPending(id) {
+      if (selectedPendingIds.has(id)) {
+        selectedPendingIds.delete(id);
+      } else {
+        selectedPendingIds.add(id);
+      }
+      document.getElementById('selected-count-pending').textContent = `${selectedPendingIds.size} geselecteerd`;
+    }
+
+    function toggleSelectAllPending() {
+      const selectAll = document.getElementById('select-all-pending');
+      const checkboxes = document.querySelectorAll('.pending-checkbox');
+      
+      if (selectAll.checked) {
+        checkboxes.forEach(cb => {
+          cb.checked = true;
+          selectedPendingIds.add(parseInt(cb.dataset.id));
+        });
+      } else {
+        checkboxes.forEach(cb => {
+          cb.checked = false;
+          selectedPendingIds.delete(parseInt(cb.dataset.id));
+        });
+      }
+      document.getElementById('selected-count-pending').textContent = `${selectedPendingIds.size} geselecteerd`;
+    }
+
+    async function bulkDeletePending() {
+      if (selectedPendingIds.size === 0) {
+        alert('❌ Selecteer entries om te verwijderen');
+        return;
+      }
+      
+      if (!confirm(`❌ Verwijder ${selectedPendingIds.size} pending entries permanent?`)) return;
+      
+      try {
+        const ids = Array.from(selectedPendingIds);
+        await apiCall('/api/admin/leaderboard/bulk-delete', 'POST', { ids });
+        alert(`✅ ${ids.length} entries verwijderd`);
+        selectedPendingIds.clear();
+        loadPendingLeaderboard();
+      } catch (error) {
+        alert('❌ Fout: ' + error.message);
+      }
+    }
+
+    async function editPendingEntry(id) {
+      const companyName = document.getElementById(`company-${id}`)?.value;
+      const country = document.getElementById(`country-${id}`)?.value;
+      
+      if (!companyName) {
+        alert('❌ Voer een bedrijfsnaam in');
+        return;
+      }
+      
+      try {
+        await apiCall(`/api/admin/leaderboard/${id}`, 'PUT', {
+          company_name: companyName,
+          country
+        });
+        alert('✅ Opgeslagen');
+        loadPendingLeaderboard();
+      } catch (error) {
+        alert('❌ Fout: ' + error.message);
+      }
+    }
+
+    async function approveLeaderboardEntry(id) {
+      const companyInput = document.getElementById(`company-${id}`);
+      const finalCompanyName = companyInput ? companyInput.value.trim() : null;
+      const finalCountry = document.getElementById(`country-${id}`)?.value;
+      
+      if (!finalCompanyName) {
+        alert('❌ Voer een bedrijfsnaam in');
+        companyInput?.focus();
+        return;
+      }
+      
+      try {
+        await apiCall('/api/admin/leaderboard/manual-add', 'POST', {
+          url: document.querySelector(`#country-${id}`)?.closest('.pending-card')?.querySelector('.text-blue-400')?.textContent || '',
+          company_name: finalCompanyName,
+          score: 0,
+          country: finalCountry
+        });
+        
+        await apiCall(`/api/admin/leaderboard/${id}/approve`, 'POST', { 
+          final_country: finalCountry 
+        });
+        
+        alert(`✅ "${finalCompanyName}" goedgekeurd!`);
+        loadPendingLeaderboard();
+        loadLeaderboard();
+      } catch (error) {
+        alert('❌ Fout: ' + error.message);
+      }
+    }
+
+    async function rejectLeaderboardEntry(id) {
+      if (!confirm('❌ Weiger deze submission?')) return;
+      try {
+        await apiCall(`/api/admin/leaderboard/${id}/reject`, 'POST');
+        alert('✅ Entry verwijderd');
+        loadPendingLeaderboard();
+      } catch (error) {
+        alert('❌ Fout: ' + error.message);
+      }
+    }
+
+    async function loadPendingFreelancers() {
+      try {
+        const data = await apiCall('/api/admin/freelancers/pending');
+        const container = document.getElementById('pending-freelancers-container');
+        
+        if (data.pending.length === 0) {
+          container.innerHTML = `
+            <div class="text-center py-8 text-gray-400">
+              <i class="fas fa-check-circle text-6xl mb-4 text-green-400"></i>
+              <p class="text-lg">Geen pending aanmeldingen</p>
+            </div>
+          `;
+          return;
+        }
+        
+        container.innerHTML = data.pending.map(f => `
+          <div class="pending-card">
+            <div class="grid md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="text-xl font-bold mb-2">${f.name}</h4>
+                <p class="text-purple-400 mb-2">${f.title || 'SEO Specialist'}</p>
+                <p class="text-sm text-gray-400 mb-2"><i class="fas fa-envelope mr-2"></i> ${f.email}</p>
+                <p class="text-sm text-gray-400"><i class="fas fa-map-marker-alt mr-2"></i> ${f.location || f.country || 'Unknown'}</p>
+              </div>
+              <div>
+                <p class="text-sm mb-4">${f.bio || 'Geen bio beschikbaar'}</p>
+                <button onclick="approveFreelancer(${f.id})" class="w-full bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold mb-2">
+                  <i class="fas fa-check mr-2"></i> Goedkeuren
+                </button>
+                <button onclick="rejectFreelancer(${f.id})" class="w-full bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">
+                  <i class="fas fa-times mr-2"></i> Weigeren
+                </button>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Pending freelancers error:', error);
+      }
+    }
+
+    async function approveFreelancer(id) {
+      try {
+        await apiCall(`/api/admin/freelancers/${id}/approve`, 'POST');
+        alert('✅ Freelancer goedgekeurd!');
+        loadPendingFreelancers();
+        loadFreelancers();
+      } catch (error) {
+        alert('❌ Fout: ' + error.message);
+      }
+    }
+
+    async function rejectFreelancer(id) {
+      if (!confirm('❌ Weiger deze aanmelding?')) return;
+      try {
+        await apiCall(`/api/admin/freelancers/${id}`, 'DELETE');
+        alert('✅ Aanmelding geweigerd');
+        loadPendingFreelancers();
+      } catch (error) {
+        alert('❌ Fout: ' + error.message);
+      }
+    }
+
+    // ==========================================
+    // STATS - GEFIXT: VERWIJDERD NIET-BESTAANDE ELEMENTEN
+    // ==========================================
+    async function loadStats() {
+      // Deze functie is niet meer nodig omdat we geen stats elementen hebben
+      // We houden hem leeg om errors te voorkomen
+      return;
+    }
+
+    function loadAllData() {
+      loadLeaderboard();
+      loadFreelancers();
+      // loadStats() verwijderd omdat het element niet bestaat
+    }
+
+    // ==========================================
+    // UTILITY FUNCTIES
+    // ==========================================
+    function getCountryFlag(country) {
+      const flags = { 
+        'Netherlands': '🇳🇱', 'NL': '🇳🇱', 
+        'United Kingdom': '🇬🇧', 'UK': '🇬🇧', 
+        'US': '🇺🇸', 'United States': '🇺🇸',
+        'Germany': '🇩🇪', 'DE': '🇩🇪',
+        'France': '🇫🇷', 'FR': '🇫🇷',
+        'Belgium': '🇧🇪', 'BE': '🇧🇪',
+        'Spain': '🇪🇸', 'ES': '🇪🇸',
+        'Italy': '🇮🇹', 'IT': '🇮🇹'
+      };
+      return flags[country] || '🌐';
+    }
+
+    function renderCountryFilters() {
+      const div = document.getElementById('countryFilters');
+      if (!div) return;
+      
+      const countries = [...new Set(allLeaderboard.map(e => e.country))];
+      
+      let html = '<button class="filter-tag active" onclick="filterByCountry(\'all\')">🌍 All</button>';
+      countries.forEach(country => {
+        html += `<button class="filter-tag" onclick="filterByCountry('${country}')">${getCountryFlag(country)} ${country}</button>`;
+      });
+      
+      div.innerHTML = html;
+    }
+
+    function filterByCountry(country) {
+      console.log('Filter by country:', country);
+    }
+
+    function filterAgencies() {
+      const query = document.getElementById('searchInput')?.value.toLowerCase() || '';
+      
+      if (!query) {
+        renderRankings4to15();
+        renderRankings16Plus();
+        return;
+      }
+      
+      const filtered = allLeaderboard.filter(entry => 
+        (entry.company_name || '').toLowerCase().includes(query) ||
+        (entry.url || '').toLowerCase().includes(query) ||
+        extractDomainFromUrl(entry.url).toLowerCase().includes(query)
+      );
+      
+      const rankings4to15Grid = document.getElementById('rankings4to15Grid');
+      const rankings4to15 = filtered.slice(3, 15);
+      
+      if (rankings4to15Grid) {
+        rankings4to15Grid.innerHTML = rankings4to15.map((entry, index) => {
+          const actualRank = index + 4;
+          const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+          
+          return `
+            <div class="rank-card">
+              <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
+              <h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
+              <div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
+              <div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
+              <a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">
+                View Website
+              </a>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    function toggleFilters() {
+      const panel = document.getElementById('filterPanel');
+      const icon = document.getElementById('filterIcon');
+      
+      if (panel) {
+        panel.classList.toggle('hidden');
+        icon.classList.toggle('fa-chevron-down');
+        icon.classList.toggle('fa-chevron-up');
+      }
+    }
+
+    function toggleRankings() {
+      const container = document.getElementById('rankingsContainer');
+      const toggleText = document.getElementById('rankingsToggleText');
+      
+      if (container) {
+        container.classList.toggle('hidden');
+        toggleText.textContent = container.classList.contains('hidden') ? '📊 Show Rankings 16+' : '📊 Hide Rankings 16+';
+      }
+    }
+
+    function exportLeaderboardCSV() {
+      if (allLeaderboard.length === 0) {
+        alert('❌ Geen data om te exporteren');
+        return;
+      }
+      
+      let csv = 'Rank,Bedrijf,URL,Score,Land,Datum\n';
+      allLeaderboard.forEach((entry, i) => {
+        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+        csv += `${i+1},"${companyName}","${entry.url}",${entry.score || 0},${entry.country || 'NL'},${new Date(entry.created_at).toLocaleDateString('nl-NL')}\n`;
+      });
+      
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `leaderboard-${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+    }
+  </script>
+</body>
+</html>
     
     body {
       font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
