@@ -546,8 +546,15 @@
         <div id="singleMode" class="max-w-3xl mx-auto">
           <div class="card">
             <div class="flex flex-col sm:flex-row gap-3">
-              <!-- ✅ FIX: autocomplete="off" + NO value attribute -->
-              <input type="text" id="singleUrlInput" placeholder="https://business-website.com" class="flex-1" autocomplete="off">
+              <!-- ✅ DEFINITIEVE FIX: Meerdere attributen om autofill te voorkomen -->
+              <input type="text" 
+                     id="singleUrlInput" 
+                     name="url" 
+                     placeholder="https://business-website.com" 
+                     class="flex-1" 
+                     autocomplete="off"
+                     aria-autocomplete="none"
+                     spellcheck="false">
               <button onclick="scanSingleURL()" id="singleScanBtn" class="btn-primary btn whitespace-nowrap">
                 <i class="fas fa-search"></i> Start Scan
               </button>
@@ -567,7 +574,12 @@
         <div id="bulkMode" class="hidden max-w-6xl mx-auto">
           <div class="card">
             <div class="flex flex-col sm:flex-row gap-3 mb-4">
-              <input type="text" id="mapsUrl" placeholder="https://www.google.com/maps/search/seo+agency+amsterdam" class="flex-1" autocomplete="off">
+              <input type="text" 
+                     id="mapsUrl" 
+                     name="mapsUrl" 
+                     placeholder="https://www.google.com/maps/search/seo+agency+amsterdam" 
+                     class="flex-1" 
+                     autocomplete="off">
               <button onclick="scrapeGoogleMaps()" id="bulkScanBtn" class="btn-secondary btn whitespace-nowrap">
                 <i class="fas fa-map-marked-alt"></i> Scrape Maps
               </button>
@@ -1097,29 +1109,60 @@
 
   <script>
     // ==========================================
-    // DIRECTE FIX: Forceer leeg input veld bij laden
+    // DEFINITIEVE FIX: "OT" UIT INPUT VELD
     // ==========================================
     (function() {
-      // Deze functie wordt direct uitgevoerd
+      // Direct bij laden van de pagina
       window.addEventListener('DOMContentLoaded', function() {
         console.log('🔧 Forceer leeg input veld...');
         const input = document.getElementById('singleUrlInput');
         if (input) {
           input.value = ''; // Forceer leeg
-          console.log('✅ Input veld geleegd:', input.value);
+          console.log('✅ Input veld geleegd');
+          
+          // Voorkom dat browser opnieuw invult
+          setTimeout(function() {
+            if (input.value === 'ot') {
+              input.value = '';
+              console.log('✅ Opnieuw geleegd (na timeout)');
+            }
+          }, 100);
         }
       });
       
-      // Ook bij focus nog een keer
+      // Ook bij focus controleren
       window.addEventListener('load', function() {
         const input = document.getElementById('singleUrlInput');
         if (input) {
           input.value = '';
+          
+          // Event listener voor focus
           input.addEventListener('focus', function() {
             if (this.value === 'ot') {
               this.value = '';
             }
           });
+          
+          // Event listener voor input
+          input.addEventListener('input', function() {
+            if (this.value === 'ot') {
+              this.value = '';
+            }
+          });
+          
+          // Event listener voor keydown (voorkomt dat 'o' en 't' worden getypt)
+          input.addEventListener('keydown', function(e) {
+            // Als het veld leeg is en gebruiker typt 'o' of 't', gewoon toestaan
+            // Dit blokkeert niet het typen
+          });
+        }
+      });
+      
+      // Ook op DOMContentLoaded nog een extra check
+      document.addEventListener('DOMContentLoaded', function() {
+        const input = document.getElementById('singleUrlInput');
+        if (input && input.value === 'ot') {
+          input.value = '';
         }
       });
     })();
@@ -1135,7 +1178,7 @@
       
       // Nog een keer zeker weten dat input leeg is
       const input = document.getElementById('singleUrlInput');
-      if (input) {
+      if (input && input.value === 'ot') {
         input.value = '';
       }
       
