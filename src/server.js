@@ -158,16 +158,18 @@ app.use((req, res, next) => {
   next();
 });
 
-// ✅ FIX 1: Gebruik __dirname, niet 'public' string
-app.use(express.static(path.join(__dirname, 'public'), {
+const publicPath = process.env.NODE_ENV === 'production' 
+  ? path.join(process.cwd(), 'public')
+  : path.join(__dirname, 'public');
+
+app.use(express.static(publicPath, {
   maxAge: '1y',
   etag: true,
   lastModified: true,
   immutable: true
 }));
 
-// ✅ FIX 2: Verwijder ../ uit pad
-app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+app.use('/uploads', express.static(path.join(publicPath, 'uploads')));
 
 const verifyAdmin = async (req, res, next) => {
   const adminKey = req.headers['x-admin-key'];
@@ -989,9 +991,6 @@ app.post('/api/freelancers/register', async (req, res) => {
   }
 });
 
-// ==========================================
-// ADMIN ROUTES
-// ==========================================
 app.post('/api/admin/verify-session', verifyAdmin, async (req, res) => {
   res.json({ valid: true, admin: req.admin.username });
 });
@@ -1341,9 +1340,6 @@ app.delete('/api/admin/share-links/:id', verifyAdmin, async (req, res) => {
   }
 });
 
-// ==========================================
-// BLOG ROUTES
-// ==========================================
 app.get('/api/blog', async (req, res) => {
   if (!pool) return res.json({ success: true, posts: [], pagination: { page: 1, limit: 10, total: 0, pages: 0 } });
   try {
@@ -1450,23 +1446,24 @@ app.post('/api/claims/submit', async (req, res) => {
   }
 });
 
-// ==========================================
-// PAGE ROUTES - ✅ GEFIXT MET __dirname
-// ==========================================
+const publicPath = process.env.NODE_ENV === 'production' 
+  ? path.join(process.cwd(), 'public')
+  : path.join(__dirname, 'public');
+
 app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin-dashboard.html'));
+  res.sendFile(path.join(publicPath, 'admin-dashboard.html'));
 });
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(publicPath, 'index.html'));
 });
 
 app.get('/blog', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'blog.html'));
+  res.sendFile(path.join(publicPath, 'blog.html'));
 });
 
 app.get('/blog/:slug', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'blog-post.html'));
+  res.sendFile(path.join(publicPath, 'blog-post.html'));
 });
 
 app.get('/api/health', async (req, res) => {
@@ -1493,10 +1490,10 @@ app.get('*', (req, res) => {
     return res.status(404).json({ error: 'API endpoint not found' });
   }
   
-  const filePath = path.join(__dirname, 'public', req.path);
+  const filePath = path.join(publicPath, req.path);
   res.sendFile(filePath, (err) => {
     if (err) {
-      res.sendFile(path.join(__dirname, 'public', 'index.html'));
+      res.sendFile(path.join(publicPath, 'index.html'));
     }
   });
 });
