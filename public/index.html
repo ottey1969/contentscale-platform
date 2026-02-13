@@ -428,8 +428,13 @@
       min-height: 400px;
     }
     
+    input, textarea {
+      color: white !important;
+      background-color: #1f2937 !important;
+    }
+    
     input::placeholder, textarea::placeholder {
-      color: #6b7280 !important;
+      color: #9ca3af !important;
       opacity: 1 !important;
     }
   </style>
@@ -918,19 +923,27 @@
       <div class="space-y-4">
         <div>
           <label class="block text-sm mb-2 text-gray-300">Full Name *</label>
-          <input type="text" id="freelancerName" placeholder="Your name">
+          <input type="text" id="freelancerName" placeholder="Your name" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
         </div>
         <div>
           <label class="block text-sm mb-2 text-gray-300">Email *</label>
-          <input type="email" id="freelancerEmail" placeholder="your@email.com">
+          <input type="email" id="freelancerEmail" placeholder="your@email.com" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
         </div>
         <div>
           <label class="block text-sm mb-2 text-gray-300">Phone (optional)</label>
-          <input type="tel" id="freelancerPhone" placeholder="+31 6 12345678">
+          <input type="tel" id="freelancerPhone" placeholder="+31 6 12345678" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
         </div>
         <div>
           <label class="block text-sm mb-2 text-gray-300">Professional Title *</label>
           <input type="text" id="freelancerTitle" placeholder="e.g. SEO Content Strategist" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        </div>
+        <div>
+          <label class="block text-sm mb-2 text-gray-300">Bio (max 120 characters)</label>
+          <textarea id="freelancerBio" rows="3" maxlength="120" placeholder="Tell us about your expertise and experience..." class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white resize-none"></textarea>
+          <div class="flex justify-between mt-1">
+            <span class="text-xs text-gray-400">Maximum 120 characters</span>
+            <span id="bioCharCount" class="text-xs text-gray-400">0/120</span>
+          </div>
         </div>
         <button onclick="submitFreelancer()" class="btn-primary btn w-full py-3">
           Submit Application
@@ -960,6 +973,14 @@
       document.getElementById('mapsUrl')?.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') scrapeGoogleMaps();
       });
+      
+      const bioTextarea = document.getElementById('freelancerBio');
+      if (bioTextarea) {
+        bioTextarea.addEventListener('input', function() {
+          const count = this.value.length;
+          document.getElementById('bioCharCount').textContent = count + '/120';
+        });
+      }
     });
 
     async function loadLeaderboardData() {
@@ -1138,8 +1159,8 @@
                 <span class="text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i> ${f.location || f.country || 'Remote'}</span>
                 ${f.hourly_rate ? `<span class="text-purple-400">💰 ${f.hourly_rate}</span>` : ''}
               </div>
-              <button onclick="window.location.href='mailto:${f.email}'" class="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold transition-all">
-                Contact ${firstName}
+              <button onclick="window.location.href='https://wa.me/31628073996?text=Hi!%20I%20want%20to%20discuss%20SEO%20optimization%20with%20${encodeURIComponent(f.name)}'" class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2">
+                <i class="fab fa-whatsapp"></i> Contact ${firstName}
               </button>
             </div>
           `;
@@ -1519,6 +1540,7 @@
       const name = document.getElementById('freelancerName')?.value;
       const email = document.getElementById('freelancerEmail')?.value;
       const title = document.getElementById('freelancerTitle')?.value;
+      const bio = document.getElementById('freelancerBio')?.value;
       
       if (!name || !email) {
         alert('❌ Name and email are required');
@@ -1537,7 +1559,8 @@
           name: name,
           email: email,
           phone: document.getElementById('freelancerPhone')?.value,
-          title: title || 'SEO Specialist'
+          title: title || 'SEO Specialist',
+          bio: bio || null
         })
       })
       .then(response => response.json())
@@ -1549,6 +1572,8 @@
           document.getElementById('freelancerEmail').value = '';
           document.getElementById('freelancerPhone').value = '';
           document.getElementById('freelancerTitle').value = '';
+          document.getElementById('freelancerBio').value = '';
+          document.getElementById('bioCharCount').textContent = '0/120';
         } else {
           alert('❌ ' + (data.error || 'Registration failed'));
         }
