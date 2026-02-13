@@ -422,6 +422,23 @@
     .lead-card:hover {
       border-color: #a855f7;
     }
+
+    .freelancer-card {
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    
+    .freelancer-card:hover {
+      border-color: #a855f7;
+      transform: translateY(-4px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
   </style>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -600,9 +617,14 @@
         <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
           <div class="flex justify-between items-center mb-6">
             <h2 class="text-3xl font-bold text-white">🎯 Freelancers</h2>
-            <button onclick="loadFreelancers()" class="btn bg-blue-600 hover:bg-blue-700">
-              <i class="fas fa-sync-alt mr-2"></i> Refresh
-            </button>
+            <div class="flex gap-3">
+              <button onclick="loadFreelancers()" class="btn bg-blue-600 hover:bg-blue-700">
+                <i class="fas fa-sync-alt mr-2"></i> Refresh
+              </button>
+              <button onclick="approveAllFreelancers()" class="btn bg-green-600 hover:bg-green-700">
+                <i class="fas fa-check-double mr-2"></i> Keur alle goed
+              </button>
+            </div>
           </div>
 
           <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
@@ -616,23 +638,7 @@
             <span id="selected-count-freelancers" class="text-sm text-gray-400 ml-auto">0 geselecteerd</span>
           </div>
 
-          <div class="overflow-x-auto">
-            <table class="rankings-table w-full">
-              <thead>
-                <tr>
-                  <th class="w-10"></th>
-                  <th>Naam</th>
-                  <th>Email</th>
-                  <th>Titel</th>
-                  <th>Locatie</th>
-                  <th>Status</th>
-                  <th>Featured</th>
-                  <th>Acties</th>
-                </tr>
-              </thead>
-              <tbody id="freelancers-tbody"></tbody>
-            </table>
-          </div>
+          <div id="freelancers-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         </div>
       </div>
 
@@ -1038,46 +1044,70 @@
     }
 
     function renderFreelancers() {
-      const tbody = document.getElementById('freelancers-tbody');
-      if (!tbody) return;
+      const container = document.getElementById('freelancers-grid');
+      if (!container) return;
       
       if (allFreelancers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-gray-400">Geen freelancers gevonden</td></tr>';
+        container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Geen freelancers gevonden</div>';
         return;
       }
       
-      tbody.innerHTML = allFreelancers.map(f => {
+      container.innerHTML = allFreelancers.map(f => {
+        const firstName = f.name.split(' ')[0];
+        const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase();
         const isSelected = selectedFreelancerIds.has(f.id);
-        const featuredBadge = f.is_featured 
-          ? '<span class="badge badge-featured">⭐ Featured</span>' 
-          : '<span class="badge badge-success">✓ Verified</span>';
         
         return `
-          <tr>
-            <td class="w-10">
-              <input type="checkbox" class="freelancer-checkbox" data-id="${f.id}" onchange="toggleSelectFreelancer(${f.id})" ${isSelected ? 'checked' : ''}>
-            </td>
-            <td class="font-semibold">${f.name}</td>
-            <td>${f.email}</td>
-            <td>${f.title || 'SEO Specialist'}</td>
-            <td>${f.location || f.country || 'Remote'}</td>
-            <td>${featuredBadge}</td>
-            <td>
-              <button onclick="toggleFeatured(${f.id})" class="px-3 py-1 rounded text-xs font-semibold ${f.is_featured ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-gray-600 hover:bg-gray-700'} mr-2">
-                ${f.is_featured ? '⭐ Uit' : '⭐ Aan'}
+          <div class="freelancer-card relative">
+            <div class="absolute top-4 left-4">
+              <input type="checkbox" class="freelancer-checkbox w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600" data-id="${f.id}" onchange="toggleSelectFreelancer(${f.id})" ${isSelected ? 'checked' : ''}>
+            </div>
+            <div class="flex items-start gap-4 mb-4 mt-6">
+              <div class="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl font-bold text-white flex-shrink-0">
+                ${initials}
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center justify-between">
+                  <h3 class="font-bold text-lg text-white">${f.name}</h3>
+                  ${f.is_featured 
+                    ? '<span class="px-2 py-1 bg-yellow-600 rounded text-xs text-white font-semibold flex items-center gap-1">⭐ Featured</span>' 
+                    : '<span class="px-2 py-1 bg-green-600 rounded text-xs text-white font-semibold">✓ Verified</span>'}
+                </div>
+                <p class="text-sm text-gray-400">${f.title || 'SEO Specialist'}</p>
+              </div>
+            </div>
+            <p class="text-gray-300 text-sm mb-4">${f.bio || 'Geen bio beschikbaar'}</p>
+            <div class="flex items-center justify-between text-sm mb-4">
+              <span class="text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i> ${f.location || f.country || 'Remote'}</span>
+              ${f.hourly_rate ? `<span class="text-purple-400">💰 ${f.hourly_rate}</span>` : ''}
+            </div>
+            <div class="flex gap-2 mt-2">
+              <button onclick="toggleFeatured(${f.id})" class="flex-1 ${f.is_featured ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-gray-600 hover:bg-gray-700'} text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all">
+                ${f.is_featured ? '⭐ Featured uit' : '⭐ Featured aan'}
               </button>
-            </td>
-            <td>
-              <button onclick="editFreelancer(${f.id})" class="text-blue-400 hover:text-blue-300 mr-2">
+              <button onclick="editFreelancer(${f.id})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all">
                 <i class="fas fa-edit"></i>
               </button>
-              <button onclick="deleteFreelancer(${f.id})" class="text-red-400 hover:text-red-300">
+              <button onclick="deleteFreelancer(${f.id})" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all">
                 <i class="fas fa-trash"></i>
               </button>
-            </td>
-          </tr>
+            </div>
+          </div>
         `;
       }).join('');
+    }
+
+    async function approveAllFreelancers() {
+      if (!confirm('✅ Alle freelancers goedkeuren? Dit zet alle pending freelancers op goedgekeurd.')) return;
+      
+      try {
+        await apiCall('/api/admin/freelancers/approve-all', 'POST');
+        alert('✅ Alle freelancers zijn goedgekeurd!');
+        loadFreelancers();
+        loadPendingFreelancers();
+      } catch (error) {
+        alert('❌ Fout: ' + error.message);
+      }
     }
 
     function toggleSelectFreelancer(id) {
