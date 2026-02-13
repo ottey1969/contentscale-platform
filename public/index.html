@@ -1537,6 +1537,9 @@
       alert('✅ Leaderboard toevoeging wordt behandeld door admin (85+ vereist)');
     }
 
+    // ==========================================
+    // ✅ NIEUWE GOOGLE MAPS SCRAPE MET 5 DAGEN LIMIET
+    // ==========================================
     async function scrapeGoogleMaps() {
       const input = document.getElementById('mapsUrl');
       const button = document.getElementById('bulkScanBtn');
@@ -1562,14 +1565,102 @@
         
         const data = await response.json();
         
+        // Check voor rate limit (429)
+        if (response.status === 429) {
+          const days = data.days_remaining || 5;
+          const hours = data.hours_remaining || 120;
+          
+          let timeText = '';
+          if (days >= 1) {
+            timeText = `${days} day${days > 1 ? 's' : ''}`;
+          } else {
+            timeText = `${hours} hour${hours > 1 ? 's' : ''}`;
+          }
+          
+          // Toon notificatie met WhatsApp CTA
+          alert(`⏳ Scan limit reached. You can scan again in ${timeText}.`);
+          
+          // Maak een notificatie banner
+          const notificationDiv = document.createElement('div');
+          notificationDiv.className = 'mt-4 p-4 bg-yellow-600 bg-opacity-20 border border-yellow-500 rounded-lg';
+          notificationDiv.id = 'scanLimitNotification';
+          notificationDiv.innerHTML = `
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <span class="text-yellow-400 text-xl">⏳</span>
+                <div>
+                  <p class="text-white font-semibold">Scan limit reached</p>
+                  <p class="text-sm text-gray-300">You can scan again in <span class="font-bold text-yellow-400">${timeText}</span></p>
+                </div>
+              </div>
+              <a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20scan%20more%20Google%20Maps%20leads" 
+                 target="_blank" 
+                 rel="noopener"
+                 class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2">
+                <i class="fab fa-whatsapp"></i> Contact for unlimited
+              </a>
+            </div>
+          `;
+          
+          // Verwijder oude notificatie als die er is
+          const oldNotification = document.getElementById('scanLimitNotification');
+          if (oldNotification) oldNotification.remove();
+          
+          // Voeg nieuwe notificatie toe
+          document.querySelector('#bulkMode .card').appendChild(notificationDiv);
+          
+          button.disabled = false;
+          button.innerHTML = '<i class="fas fa-map-marked-alt mr-2"></i> Scrape Maps';
+          return;
+        }
+        
         if (!response.ok || !data.success) {
           throw new Error(data.error || 'Scrape failed');
         }
         
-        // NIEUW: Voeg nieuwe leads toe aan bestaande lijst (geen overschrijving)
+        // Verwijder eventuele oude limit notificatie
+        const oldNotification = document.getElementById('scanLimitNotification');
+        if (oldNotification) oldNotification.remove();
+        
+        // Nieuwe leads bovenaan toevoegen
         const newLeads = data.leads || [];
         
-        // Voeg nieuwe leads bovenaan toe
+        // Toon succes notificatie met volgende scan datum
+        if (data.scan_limit) {
+          const nextDate = new Date(data.scan_limit.next_allowed_at);
+          const formattedDate = nextDate.toLocaleDateString('en-US', { 
+            weekday: 'short', 
+            month: 'short', 
+            day: 'numeric' 
+          });
+          
+          const successNotification = document.createElement('div');
+          successNotification.className = 'mt-4 p-4 bg-green-600 bg-opacity-20 border border-green-500 rounded-lg';
+          successNotification.id = 'scanSuccessNotification';
+          successNotification.innerHTML = `
+            <div class="flex items-center gap-3">
+              <span class="text-green-400 text-xl">✅</span>
+              <div>
+                <p class="text-white font-semibold">Scan successful! Found ${newLeads.length} businesses</p>
+                <p class="text-sm text-gray-300">Next scan allowed: <span class="font-bold text-green-400">${formattedDate}</span></p>
+              </div>
+            </div>
+          `;
+          
+          // Verwijder oude success notificatie
+          const oldSuccess = document.getElementById('scanSuccessNotification');
+          if (oldSuccess) oldSuccess.remove();
+          
+          document.querySelector('#bulkMode .card').appendChild(successNotification);
+          
+          // Auto-verdwijnen na 8 seconden
+          setTimeout(() => {
+            const notif = document.getElementById('scanSuccessNotification');
+            if (notif) notif.remove();
+          }, 8000);
+        }
+        
+        // Voeg nieuwe leads toe aan BEGIN van de lijst
         scrapedLeads = [...newLeads, ...scrapedLeads];
         
         leadCount.textContent = scrapedLeads.length;
@@ -1580,11 +1671,14 @@
           leadsTableBody.innerHTML = scrapedLeads.map((lead, index) => {
             const hasWebsite = lead.website && lead.website !== 'N/A' && lead.website !== null;
             
+            // Markeer nieuwe leads (eerste `newLeads.length` items)
+            const isNew = index < newLeads.length;
+            
             return `
-              <tr class="border-b border-gray-700 hover:bg-gray-800">
+              <tr class="border-b border-gray-700 hover:bg-gray-800 ${isNew ? 'bg-purple-900 bg-opacity-20' : ''}">
                 <td class="px-4 py-3">
                   <div class="font-medium text-white">${lead.name || 'Unknown'}</div>
-                  <div class="text-xs text-gray-400">${lead.category || 'SEO Agency'}</div>
+                  <div class="text-xs text-gray-400">${lead.category || 'SEO Agency'} ${isNew ? '<span class="ml-2 text-xs bg-green-600 px-2 py-0.5 rounded-full text-white">New</span>' : ''}</div>
                 </td>
                 <td class="px-4 py-3">
                   ${hasWebsite ? 
