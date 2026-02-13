@@ -114,6 +114,9 @@
       border-radius: 1rem;
       padding: 1.5rem;
       transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
     }
     
     .card:hover {
@@ -122,27 +125,13 @@
       box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
     }
     
-    table {
-      width: 100%;
-      border-collapse: collapse;
+    .card-content {
+      flex: 1;
     }
     
-    th {
-      background: #1f2937;
-      color: white;
-      font-weight: 600;
-      text-align: left;
-      padding: 0.75rem 1rem;
-    }
-    
-    td {
-      padding: 0.75rem 1rem;
-      border-bottom: 1px solid #374151;
-      color: white;
-    }
-    
-    tr:hover {
-      background: #1f2937;
+    .card-footer {
+      margin-top: auto;
+      padding-top: 1rem;
     }
     
     .stat-card {
@@ -423,26 +412,95 @@
       border-color: #a855f7;
     }
 
-    .freelancer-card {
-      background: #1f2937;
-      border: 1px solid #374151;
-      border-radius: 1rem;
-      padding: 1.5rem;
-      transition: all 0.2s;
-      display: flex;
-      flex-direction: column;
-      height: 100%;
+    .reverse-email {
+      unicode-bidi: bidi-override;
+      direction: rtl;
     }
     
-    .freelancer-card:hover {
+    .faq-item {
+      background: #111827;
+      border: 1px solid #374151;
+      border-radius: 0.75rem;
+      overflow: hidden;
+      transition: all 0.2s;
+    }
+    
+    .faq-item:hover {
       border-color: #a855f7;
-      transform: translateY(-4px);
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+    
+    .faq-question {
+      width: 100%;
+      padding: 1.25rem 1.5rem;
+      text-align: left;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: transparent;
+      border: none;
+      color: white;
+      font-weight: 600;
+      font-size: 1.125rem;
+      cursor: pointer;
+    }
+    
+    .faq-question:hover {
+      background: #1f2937;
+    }
+    
+    .faq-answer {
+      padding: 0 1.5rem 1.25rem 1.5rem;
+      color: #d1d5db;
+    }
+    
+    footer {
+      background: #111827;
+      border-top: 2px solid #374151;
+      margin-top: 4rem;
+    }
+    
+    .text-blue-400, a.text-blue-400 {
+      color: #7dd3fc !important;
+      text-decoration: underline;
+      text-decoration-color: rgba(125, 211, 252, 0.4);
+      text-underline-offset: 2px;
+    }
+    
+    .text-blue-400:hover, a.text-blue-400:hover {
+      color: #bae6fd !important;
+      text-decoration-color: #bae6fd;
+    }
+    
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: #7e22ce;
+      color: white;
+      padding: 0.5rem 1rem;
+      z-index: 100;
+      transition: top 0.2s;
+    }
+    
+    .skip-link:focus {
+      top: 0;
+    }
+
+    img[width][height] {
+      aspect-ratio: attr(width) / attr(height);
+    }
+    .w-48.h-48 {
+      width: 192px;
+      height: 192px;
+    }
+    #main-content > div:first-child {
+      min-height: 400px;
     }
   </style>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-gray-900">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
 
   <!-- LOGIN SCREEN -->
   <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
@@ -473,7 +531,6 @@
 
   <!-- MAIN DASHBOARD -->
   <div id="main-dashboard" class="hidden">
-    <!-- NAVIGATION -->
     <nav class="sticky top-0 z-50 bg-gray-900/95 border-b-2 border-purple-600 backdrop-blur-sm">
       <div class="max-w-7xl mx-auto px-6 py-4">
         <div class="flex items-center justify-between">
@@ -492,7 +549,6 @@
       </div>
     </nav>
 
-    <!-- TABS -->
     <div class="max-w-7xl mx-auto px-6 py-8">
       <div class="flex justify-center gap-4 mb-8 flex-wrap">
         <button onclick="switchTab('leaderboard')" id="tabLeaderboardBtn" class="mode-toggle active">
@@ -524,7 +580,6 @@
             </div>
           </div>
 
-          <!-- STATS CARDS -->
           <div class="grid-4 mb-8">
             <div class="stat-card">
               <div>
@@ -556,7 +611,6 @@
             </div>
           </div>
 
-          <!-- BULK ACTIONS -->
           <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
             <div class="flex items-center gap-2">
               <input type="checkbox" id="select-all-leaderboard" onchange="toggleSelectAllLeaderboard()" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
@@ -568,16 +622,12 @@
             <span id="selected-count-leaderboard" class="text-sm text-gray-400 ml-auto">0 geselecteerd</span>
           </div>
 
-          <!-- TOP 3 CARDS -->
           <div id="top3-container" class="grid-3 mb-10"></div>
-
-          <!-- RANKINGS 4-15 -->
           <div id="rankings4to15Container" class="mb-10">
             <h3 class="text-2xl font-bold text-white mb-6">Rankings 4-15</h3>
             <div id="rankings4to15Grid" class="rankings-4-15-grid"></div>
           </div>
 
-          <!-- FILTERS -->
           <div class="bg-gray-800 rounded-lg p-4 mb-6 border border-gray-700">
             <button onclick="toggleFilters()" class="w-full flex items-center justify-between text-left text-white">
               <div class="flex items-center gap-2">
@@ -597,7 +647,6 @@
             </div>
           </div>
 
-          <!-- RANKINGS 16+ -->
           <div>
             <button onclick="toggleRankings()" id="rankingsToggleBtn" class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-between transition-all">
               <span id="rankingsToggleText">📊 Show Rankings 16+</span>
@@ -625,11 +674,11 @@
         </div>
       </div>
 
-      <!-- TAB 2: FREELANCERS - MET CARDS ZOALS IN INDEX -->
+      <!-- TAB 2: FREELANCERS - IDENTIEK AAN INDEX.HTML -->
       <div id="tab-freelancers" class="tab-content hidden">
         <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
           <div class="flex justify-between items-center mb-6">
-            <h2 class="text-3xl font-bold text-white">🎯 Freelancers</h2>
+            <h2 class="text-3xl font-bold text-white">🎯 Verified SEO Specialists</h2>
             <div class="flex gap-3">
               <button onclick="loadFreelancers()" class="btn bg-blue-600 hover:bg-blue-700">
                 <i class="fas fa-sync-alt mr-2"></i> Refresh
@@ -637,7 +686,7 @@
             </div>
           </div>
 
-          <!-- BULK ACTIONS -->
+          <!-- BULK ACTIONS VOOR ADMIN -->
           <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
             <div class="flex items-center gap-2">
               <input type="checkbox" id="select-all-freelancers" onchange="toggleSelectAllFreelancers()" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
@@ -649,8 +698,8 @@
             <span id="selected-count-freelancers" class="text-sm text-gray-400 ml-auto">0 geselecteerd</span>
           </div>
 
-          <!-- FREELANCERS GRID -->
-          <div id="freelancers-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+          <!-- FREELANCERS GRID - ZELFDE STYLING ALS INDEX.HTML -->
+          <div id="freelancersGrid" class="grid-3"></div>
         </div>
       </div>
 
@@ -770,9 +819,8 @@
     // ==========================================
     window.onload = function() {
       console.log('📋 Admin Dashboard loaded');
-      console.log('🔑 Admin ID uit storage:', localStorage.getItem('admin_id'));
-      console.log('👤 Admin username uit storage:', localStorage.getItem('admin_username'));
       
+      // Check of admin is ingelogd
       if (localStorage.getItem('admin_id') && localStorage.getItem('admin_username')) {
         currentAdminId = localStorage.getItem('admin_id');
         currentUsername = localStorage.getItem('admin_username');
@@ -781,8 +829,11 @@
         document.getElementById('main-dashboard').classList.remove('hidden');
         document.getElementById('admin-username').textContent = currentUsername;
         
+        // Laad data
         loadAllData();
         switchTab('leaderboard');
+      } else {
+        console.log('❌ Geen admin credentials gevonden');
       }
     };
 
@@ -802,10 +853,6 @@
           body: JSON.stringify({ username, password })
         });
         
-        if (!response.ok) {
-          throw new Error('Login failed');
-        }
-        
         const data = await response.json();
         console.log('📦 Login response:', data);
         
@@ -824,6 +871,7 @@
           document.getElementById('main-dashboard').classList.remove('hidden');
           document.getElementById('admin-username').textContent = username;
           
+          // Laad data
           loadAllData();
           switchTab('leaderboard');
         } else {
@@ -840,20 +888,18 @@
     function logout() {
       localStorage.removeItem('admin_id');
       localStorage.removeItem('admin_username');
-      currentAdminId = null;
-      currentUsername = null;
       location.reload();
     }
 
     // ==========================================
-    // API CALLS - GEFIXT MET JUISTE HEADERS
+    // API CALLS - GEFIXT
     // ==========================================
     async function apiCall(endpoint, method = 'GET', body = null) {
       const headers = {
         'Content-Type': 'application/json'
       };
       
-      // ✅ ALTIJD admin key toevoegen voor admin endpoints
+      // ✅ Admin key toevoegen voor admin endpoints
       if (endpoint.includes('/admin/')) {
         const adminId = localStorage.getItem('admin_id');
         if (!adminId) {
@@ -879,7 +925,7 @@
       // ✅ Check voor 401 Unauthorized
       if (response.status === 401) {
         console.error(`❌ 401 Unauthorized voor ${endpoint}`);
-        throw new Error('Invalid admin credentials');
+        throw new Error('Invalid admin credentials - login opnieuw');
       }
       
       // ✅ Check of response JSON is
@@ -1123,82 +1169,94 @@
     }
 
     // ==========================================
-    // FREELANCERS - GEFIXT MET JUISTE API CALL
+    // FREELANCERS - IDENTIEK AAN INDEX.HTML
     // ==========================================
     async function loadFreelancers() {
       try {
-        console.log('📥 Laden freelancers met admin ID:', localStorage.getItem('admin_id'));
-        const data = await apiCall('/api/admin/freelancers');
-        console.log('📦 Freelancers response:', data);
-        allFreelancers = data.freelancers || [];
-        renderFreelancers();
-      } catch (error) {
-        console.error('❌ Freelancers error:', error);
-        document.getElementById('freelancers-grid').innerHTML = `
-          <div class="col-span-3 text-center py-8 text-gray-400">
-            <i class="fas fa-exclamation-triangle text-4xl mb-4 text-yellow-500"></i>
-            <p class="text-lg">Kon freelancers niet laden</p>
-            <p class="text-sm text-gray-500 mt-2">${error.message}</p>
-          </div>
-        `;
-      }
-    }
-
-    function renderFreelancers() {
-      const container = document.getElementById('freelancers-grid');
-      if (!container) return;
-      
-      if (allFreelancers.length === 0) {
-        container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Geen freelancers gevonden</div>';
-        return;
-      }
-      
-      container.innerHTML = allFreelancers.map(f => {
-        const firstName = f.name.split(' ')[0];
-        const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase();
-        const isSelected = selectedFreelancerIds.has(f.id);
+        console.log('📥 Laden freelancers...');
         
-        return `
-          <div class="freelancer-card relative">
-            <div class="absolute top-4 left-4">
-              <input type="checkbox" class="freelancer-checkbox w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600" data-id="${f.id}" onchange="toggleSelectFreelancer(${f.id})" ${isSelected ? 'checked' : ''}>
-            </div>
-            <div class="flex items-start gap-4 mb-4 mt-6">
-              <div class="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl font-bold text-white flex-shrink-0">
-                ${initials}
-              </div>
-              <div class="flex-1">
-                <div class="flex items-center justify-between">
-                  <h3 class="font-bold text-lg text-white">${f.name}</h3>
-                  ${f.is_featured 
-                    ? '<span class="px-2 py-1 bg-yellow-600 rounded text-xs text-white font-semibold flex items-center gap-1">⭐ Featured</span>' 
-                    : '<span class="px-2 py-1 bg-green-600 rounded text-xs text-white font-semibold">✓ Verified</span>'}
+        // ✅ GEBRUIK DEZELFDE API ALS INDEX.HTML
+        const response = await fetch('/api/freelancers');
+        const data = await response.json();
+        
+        console.log('📦 Freelancers response:', data);
+        
+        const grid = document.getElementById('freelancersGrid');
+        if (!grid) return;
+        
+        const freelancers = data.freelancers || [];
+        allFreelancers = freelancers;
+        
+        if (freelancers.length === 0) {
+          grid.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Geen freelancers gevonden</div>';
+          return;
+        }
+        
+        // ✅ EXACT DEZELFDE RENDER CODE ALS INDEX.HTML
+        grid.innerHTML = freelancers.map(f => {
+          const firstName = f.name.split(' ')[0];
+          const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase();
+          const isSelected = selectedFreelancerIds.has(f.id);
+          
+          return `
+            <div class="card hover:border-purple-500">
+              <div class="card-content">
+                <div class="flex items-start gap-4 mb-4">
+                  <div class="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl font-bold text-white">
+                    ${initials}
+                  </div>
+                  <div class="flex-1">
+                    <div class="flex items-center justify-between">
+                      <h3 class="font-bold text-lg text-white">${f.name}</h3>
+                      ${f.is_featured 
+                        ? '<span class="px-2 py-1 bg-yellow-600 rounded text-xs text-white font-semibold flex items-center gap-1">⭐ Featured</span>' 
+                        : '<span class="px-2 py-1 bg-green-600 rounded text-xs text-white font-semibold">✓ Verified</span>'}
+                    </div>
+                    <p class="text-sm text-gray-400">${f.title || 'SEO Specialist'}</p>
+                  </div>
                 </div>
-                <p class="text-sm text-gray-400">${f.title || 'SEO Specialist'}</p>
+                <p class="text-gray-300 text-sm mb-4">${f.bio || 'Geen bio beschikbaar'}</p>
+                <div class="flex items-center justify-between text-sm mb-4">
+                  <span class="text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i> ${f.location || f.country || 'Remote'}</span>
+                  ${f.hourly_rate ? `<span class="text-purple-400">💰 ${f.hourly_rate}</span>` : ''}
+                </div>
+              </div>
+              <div class="card-footer">
+                <div class="flex gap-2">
+                  <a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20discuss%20SEO%20optimization%20with%20${encodeURIComponent(f.name)}" 
+                     target="_blank" 
+                     rel="noopener" 
+                     class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 no-underline">
+                    <i class="fab fa-whatsapp"></i> Contact ${firstName}
+                  </a>
+                  <div class="flex gap-1">
+                    <button onclick="toggleFeatured(${f.id})" class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded-lg text-sm transition-all" title="Toggle featured">
+                      <i class="fas fa-star"></i>
+                    </button>
+                    <button onclick="editFreelancer(${f.id})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm transition-all" title="Bewerken">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="deleteFreelancer(${f.id})" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm transition-all" title="Verwijderen">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="mt-2 flex items-center gap-2">
+                  <input type="checkbox" class="freelancer-checkbox w-4 h-4 rounded border-gray-600 bg-gray-700 text-purple-600" data-id="${f.id}" onchange="toggleSelectFreelancer(${f.id})" ${isSelected ? 'checked' : ''}>
+                  <span class="text-xs text-gray-400">Selecteer voor bulk delete</span>
+                </div>
               </div>
             </div>
-            <p class="text-gray-300 text-sm mb-4">${f.bio || 'Geen bio beschikbaar'}</p>
-            <div class="flex items-center justify-between text-sm mb-4">
-              <span class="text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i> ${f.location || f.country || 'Remote'}</span>
-              ${f.hourly_rate ? `<span class="text-purple-400">💰 ${f.hourly_rate}</span>` : ''}
-            </div>
-            <div class="flex gap-2 mt-2">
-              <button onclick="toggleFeatured(${f.id})" class="flex-1 ${f.is_featured ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-gray-600 hover:bg-gray-700'} text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all">
-                ${f.is_featured ? '⭐ Featured uit' : '⭐ Featured aan'}
-              </button>
-              <button onclick="editFreelancer(${f.id})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all">
-                <i class="fas fa-edit"></i>
-              </button>
-              <button onclick="deleteFreelancer(${f.id})" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all">
-                <i class="fas fa-trash"></i>
-              </button>
-            </div>
-          </div>
-        `;
-      }).join('');
+          `;
+        }).join('');
+      } catch (error) {
+        console.error('❌ Fout bij laden freelancers:', error);
+        document.getElementById('freelancersGrid').innerHTML = 
+          '<div class="col-span-3 text-center py-8 text-gray-400">Kon freelancers niet laden</div>';
+      }
     }
 
-    // FREELANCER FUNCTIES
+    // FREELANCER ADMIN FUNCTIES
     function toggleSelectFreelancer(id) {
       if (selectedFreelancerIds.has(id)) {
         selectedFreelancerIds.delete(id);
@@ -1227,6 +1285,11 @@
     }
 
     async function toggleFeatured(id) {
+      if (!localStorage.getItem('admin_id')) {
+        alert('❌ Je moet ingelogd zijn als admin');
+        return;
+      }
+      
       try {
         const data = await apiCall(`/api/admin/freelancers/${id}/toggle-featured`, 'POST');
         alert(`✅ Featured ${data.is_featured ? 'aangezet' : 'uitgezet'}`);
@@ -1237,6 +1300,11 @@
     }
 
     async function editFreelancer(id) {
+      if (!localStorage.getItem('admin_id')) {
+        alert('❌ Je moet ingelogd zijn als admin');
+        return;
+      }
+      
       const freelancer = allFreelancers.find(f => f.id === id);
       if (!freelancer) return;
       
@@ -1264,6 +1332,11 @@
     }
 
     async function deleteFreelancer(id) {
+      if (!localStorage.getItem('admin_id')) {
+        alert('❌ Je moet ingelogd zijn als admin');
+        return;
+      }
+      
       if (!confirm('❌ Verwijder deze freelancer permanent?')) return;
       try {
         await apiCall(`/api/admin/freelancers/${id}`, 'DELETE');
@@ -1276,6 +1349,11 @@
     }
 
     async function bulkDeleteFreelancers() {
+      if (!localStorage.getItem('admin_id')) {
+        alert('❌ Je moet ingelogd zijn als admin');
+        return;
+      }
+      
       if (selectedFreelancerIds.size === 0) {
         alert('❌ Selecteer freelancers om te verwijderen');
         return;
@@ -1411,6 +1489,11 @@
     }
 
     async function addScanToLeaderboard(url, score) {
+      if (!localStorage.getItem('admin_id')) {
+        alert('❌ Je moet ingelogd zijn als admin');
+        return;
+      }
+      
       const companyInput = document.getElementById('scan-company-name');
       const companyName = companyInput ? companyInput.value.trim() : extractDomainFromUrl(url);
       
@@ -1514,6 +1597,11 @@
     }
 
     async function quickAddToLeaderboard(url, name, score) {
+      if (!localStorage.getItem('admin_id')) {
+        alert('❌ Je moet ingelogd zijn als admin');
+        return;
+      }
+      
       try {
         await apiCall('/api/admin/leaderboard/manual-add', 'POST', {
           url,
@@ -1533,6 +1621,11 @@
     // PENDING DATA FUNCTIES
     // ==========================================
     async function loadPendingData() {
+      if (!localStorage.getItem('admin_id')) {
+        alert('❌ Je moet ingelogd zijn als admin');
+        return;
+      }
+      
       selectedPendingIds.clear();
       try {
         await Promise.all([
