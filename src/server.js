@@ -14,6 +14,8 @@ const PORT = process.env.PORT || 3000;
 
 console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
 console.log('📊 Database URL:', process.env.DATABASE_URL ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
+console.log('📁 Current directory:', process.cwd());
+console.log('📁 Public path:', path.join(process.cwd(), 'public'));
 
 let dbConfig;
 let pool;
@@ -158,16 +160,15 @@ app.use((req, res, next) => {
   next();
 });
 
-// ✅ FIX 1: STATIC FILES - GEBRUIK path.join(__dirname, 'public')
-app.use(express.static(path.join(__dirname, 'public'), {
+// ✅ FIXED: Gebruik process.cwd() in plaats van __dirname
+app.use(express.static(path.join(process.cwd(), 'public'), {
   maxAge: '1y',
   etag: true,
   lastModified: true,
   immutable: true
 }));
 
-// ✅ FIX 2: UPLOADS - OOK path.join(__dirname, 'public/uploads')
-app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+app.use('/uploads', express.static(path.join(process.cwd(), 'public/uploads')));
 
 const verifyAdmin = async (req, res, next) => {
   const adminKey = req.headers['x-admin-key'];
@@ -1287,6 +1288,66 @@ app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
   }
 });
 
+app.get('/api/admin/share-links', verifyAdmin, async (req, res) => {
+  if (!pool) return res.json({ success: true, share_links: [] });
+  try {
+    const result = await pool.query(
+      `SELECT *, CASE WHEN expires_at > NOW() AND is_active = TRUE THEN 'active' ELSE 'inactive' END as status
+       FROM share_links ORDER BY created_at DESC LIMIT 100`
+    );
+    res.json({ success: true, share_links: result.rows });
+  } catch (error) {
+    res.json({ success: true, share_links: [] });
+  }
+});
+
+app.post('/api/admin/share-links/create', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { client_email, client_name, client_company, scans_limit = 10, valid_days = 30 } = req.body;
+    const shareCode = crypto.randomBytes(16).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + valid_days);
+    
+    const result = await pool.query(
+      `INSERT INTO share_links (share_code, client_email, client_name, client_company, scans_limit, created_by, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [shareCode, client_email, client_name, client_company, scans_limit, req.admin.id, expiresAt]
+    );
+    
+    res.json({
+      success: true,
+      share_link: result.rows[0],
+      share_url: `https://app.contentscale.site/share/${shareCode}`,
+      expires_at: expiresAt
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.put('/api/admin/share-links/:id/toggle-status', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    await pool.query('UPDATE share_links SET is_active = $1 WHERE id = $2', [status === 'active', id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/admin/share-links/:id', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    await pool.query('DELETE FROM share_links WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ==========================================
 // BLOG ROUTES
 // ==========================================
@@ -1396,83 +1457,23 @@ app.post('/api/claims/submit', async (req, res) => {
   }
 });
 
-app.get('/api/admin/share-links', verifyAdmin, async (req, res) => {
-  if (!pool) return res.json({ success: true, share_links: [] });
-  try {
-    const result = await pool.query(
-      `SELECT *, CASE WHEN expires_at > NOW() AND is_active = TRUE THEN 'active' ELSE 'inactive' END as status
-       FROM share_links ORDER BY created_at DESC LIMIT 100`
-    );
-    res.json({ success: true, share_links: result.rows });
-  } catch (error) {
-    res.json({ success: true, share_links: [] });
-  }
-});
-
-app.post('/api/admin/share-links/create', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  try {
-    const { client_email, client_name, client_company, scans_limit = 10, valid_days = 30 } = req.body;
-    const shareCode = crypto.randomBytes(16).toString('hex');
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + valid_days);
-    
-    const result = await pool.query(
-      `INSERT INTO share_links (share_code, client_email, client_name, client_company, scans_limit, created_by, expires_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [shareCode, client_email, client_name, client_company, scans_limit, req.admin.id, expiresAt]
-    );
-    
-    res.json({
-      success: true,
-      share_link: result.rows[0],
-      share_url: `https://app.contentscale.site/share/${shareCode}`,
-      expires_at: expiresAt
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.put('/api/admin/share-links/:id/toggle-status', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-    await pool.query('UPDATE share_links SET is_active = $1 WHERE id = $2', [status === 'active', id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.delete('/api/admin/share-links/:id', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-  try {
-    await pool.query('DELETE FROM share_links WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
 // ==========================================
-// ✅ FIX 3: PAGE ROUTES - ALLES ZONDER ../public/
+// PAGE ROUTES - ✅ GEFIXT MET process.cwd()
 // ==========================================
 app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin-dashboard.html'));
+  res.sendFile(path.join(process.cwd(), 'public', 'admin-dashboard.html'));
 });
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
 });
 
 app.get('/blog', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'blog.html'));
+  res.sendFile(path.join(process.cwd(), 'public', 'blog.html'));
 });
 
 app.get('/blog/:slug', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'blog-post.html'));
+  res.sendFile(path.join(process.cwd(), 'public', 'blog-post.html'));
 });
 
 app.get('/api/health', async (req, res) => {
@@ -1494,19 +1495,15 @@ app.get('/api/health', async (req, res) => {
   });
 });
 
-// ✅ FIX 4: CATCH-ALLE - ALLEEN HTML BESTANDEN, GEEN JSON
 app.get('*', (req, res) => {
-  // Skip API routes
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'API endpoint not found' });
   }
   
-  // Probeer het bestand te vinden in de public folder
-  const filePath = path.join(__dirname, 'public', req.path);
+  const filePath = path.join(process.cwd(), 'public', req.path);
   res.sendFile(filePath, (err) => {
     if (err) {
-      // Fallback naar index.html voor client-side routing
-      res.sendFile(path.join(__dirname, 'public', 'index.html'));
+      res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
     }
   });
 });
