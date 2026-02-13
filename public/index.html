@@ -130,12 +130,24 @@
       border-radius: 1rem;
       padding: 1.5rem;
       transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
     }
     
     .card:hover {
       border-color: #a855f7;
       transform: translateY(-4px);
       box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+    
+    .card-content {
+      flex: 1;
+    }
+    
+    .card-footer {
+      margin-top: auto;
+      padding-top: 1rem;
     }
     
     .stat-card {
@@ -1168,26 +1180,33 @@
           
           return `
             <div class="card hover:border-purple-500">
-              <div class="flex items-start gap-4 mb-4">
-                <div class="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl font-bold text-white">
-                  ${initials}
-                </div>
-                <div class="flex-1">
-                  <div class="flex items-center justify-between">
-                    <h3 class="font-bold text-lg text-white">${f.name}</h3>
-                    <span class="px-2 py-1 bg-green-600 rounded text-xs text-white font-semibold">✓ Verified</span>
+              <div class="card-content">
+                <div class="flex items-start gap-4 mb-4">
+                  <div class="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl font-bold text-white">
+                    ${initials}
                   </div>
-                  <p class="text-sm text-gray-400">${f.title || 'SEO Specialist'}</p>
+                  <div class="flex-1">
+                    <div class="flex items-center justify-between">
+                      <h3 class="font-bold text-lg text-white">${f.name}</h3>
+                      <span class="px-2 py-1 bg-green-600 rounded text-xs text-white font-semibold">✓ Verified</span>
+                    </div>
+                    <p class="text-sm text-gray-400">${f.title || 'SEO Specialist'}</p>
+                  </div>
+                </div>
+                <p class="text-gray-300 text-sm mb-4">${f.bio || 'Geen bio beschikbaar'}</p>
+                <div class="flex items-center justify-between text-sm mb-4">
+                  <span class="text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i> ${f.location || f.country || 'Remote'}</span>
+                  ${f.hourly_rate ? `<span class="text-purple-400">💰 ${f.hourly_rate}</span>` : ''}
                 </div>
               </div>
-              <p class="text-gray-300 text-sm mb-4">${f.bio || 'Geen bio beschikbaar'}</p>
-              <div class="flex items-center justify-between text-sm mb-4">
-                <span class="text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i> ${f.location || f.country || 'Remote'}</span>
-                ${f.hourly_rate ? `<span class="text-purple-400">💰 ${f.hourly_rate}</span>` : ''}
+              <div class="card-footer">
+                <a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20discuss%20SEO%20optimization%20with%20${encodeURIComponent(f.name)}" 
+                   target="_blank" 
+                   rel="noopener" 
+                   class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 no-underline">
+                  <i class="fab fa-whatsapp"></i> Contact ${firstName}
+                </a>
               </div>
-              <button onclick="window.location.href='https://wa.me/31628073996?text=Hi!%20I%20want%20to%20discuss%20SEO%20optimization%20with%20${encodeURIComponent(f.name)}'" class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2">
-                <i class="fab fa-whatsapp"></i> Contact ${firstName}
-              </button>
             </div>
           `;
         }).join('');
