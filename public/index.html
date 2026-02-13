@@ -983,6 +983,33 @@
             <span id="bioCharCount" class="text-xs text-gray-500">0/200</span>
           </div>
         </div>
+        
+        <!-- FEATURED LISTING OPTIE -->
+        <div class="border-t border-gray-200 pt-4 mt-2">
+          <div class="flex items-start gap-3">
+            <div class="flex items-center h-5">
+              <input type="checkbox" id="featuredListing" class="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500">
+            </div>
+            <div class="flex flex-col">
+              <label for="featuredListing" class="text-sm font-medium text-gray-900">
+                ⭐ Featured Listing - €29/month
+              </label>
+              <p class="text-xs text-gray-500 mt-0.5">
+                Word uitgelicht bovenaan de specialist lijst, krijg een speciale badge en 3x meer zichtbaarheid. 
+                <a href="https://paypal.me/ojgmedia?locale.x=en_US&country.x=NL" 
+                   target="_blank" 
+                   rel="noopener"
+                   class="text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1">
+                  <i class="fab fa-paypal text-sm"></i> Betaal via PayPal
+                </a>
+              </p>
+              <p class="text-xs text-gray-400 mt-1">
+                Betaal €29 per maand. Na betaling wordt je vermelding binnen 24 uur geüpgraded naar featured.
+              </p>
+            </div>
+          </div>
+        </div>
+        
         <button onclick="submitFreelancer()" class="btn-primary btn w-full py-3">
           Submit Application
         </button>
@@ -1188,7 +1215,7 @@
                   <div class="flex-1">
                     <div class="flex items-center justify-between">
                       <h3 class="font-bold text-lg text-white">${f.name}</h3>
-                      <span class="px-2 py-1 bg-green-600 rounded text-xs text-white font-semibold">✓ Verified</span>
+                      ${f.is_featured ? '<span class="px-2 py-1 bg-yellow-600 rounded text-xs text-white font-semibold flex items-center gap-1">⭐ Featured</span>' : '<span class="px-2 py-1 bg-green-600 rounded text-xs text-white font-semibold">✓ Verified</span>'}
                     </div>
                     <p class="text-sm text-gray-400">${f.title || 'SEO Specialist'}</p>
                   </div>
@@ -1586,6 +1613,7 @@
       const email = document.getElementById('freelancerEmail')?.value;
       const title = document.getElementById('freelancerTitle')?.value;
       const bio = document.getElementById('freelancerBio')?.value;
+      const isFeatured = document.getElementById('featuredListing')?.checked || false;
       
       if (!name || !email) {
         alert('❌ Name and email are required');
@@ -1597,6 +1625,10 @@
         return;
       }
       
+      if (isFeatured) {
+        window.open('https://paypal.me/ojgmedia?locale.x=en_US&country.x=NL', '_blank', 'noopener');
+      }
+      
       fetch('/api/freelancers/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1605,13 +1637,14 @@
           email: email,
           phone: document.getElementById('freelancerPhone')?.value,
           title: title || 'SEO Specialist',
-          bio: bio || null
+          bio: bio || null,
+          is_featured: isFeatured
         })
       })
       .then(response => response.json())
       .then(data => {
         if (data.success) {
-          alert(`✅ Thank you ${name}! We'll review your application within 24 hours.`);
+          alert(`✅ Thank you ${name}! We'll review your application within 24 hours.${isFeatured ? ' Please complete the payment via PayPal.' : ''}`);
           closeModal();
           document.getElementById('freelancerName').value = '';
           document.getElementById('freelancerEmail').value = '';
@@ -1619,6 +1652,7 @@
           document.getElementById('freelancerTitle').value = '';
           document.getElementById('freelancerBio').value = '';
           document.getElementById('bioCharCount').textContent = '0/200';
+          document.getElementById('featuredListing').checked = false;
         } else {
           alert('❌ ' + (data.error || 'Registration failed'));
         }
