@@ -9,6 +9,8 @@ const compression = require('compression');
 const multer = require('multer');
 const sharp = require('sharp');
 const nodemailer = require('nodemailer');
+const axios = require('axios'); // Voor WHOIS API calls
+const sgMail = require('@sendgrid/mail'); // Sendgrid
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -30,7 +32,7 @@ const emailConfig = {
   }
 };
 
-// Maak email transporter
+// Maak email transporter voor systeem emails (leaderboard felicitaties)
 let emailTransporter = null;
 try {
   emailTransporter = nodemailer.createTransport(emailConfig);
@@ -39,7 +41,249 @@ try {
   console.error('❌ Email configuratie error:', e.message);
 }
 
-// Helper functie om e-mails te versturen
+// ==========================================
+// NIEUW: SENDGRID + QUEUE SYSTEEM (FASE 4)
+// ==========================================
+
+// Queue processing status
+let queueActive = false;
+let queueInterval = null;
+const DAILY_LIMIT = 100;
+
+// Helper functie om e-mails te versturen via Sendgrid
+async function sendEmailViaSendgrid(apiKey, to, subject, html) {
+  try {
+    sgMail.setApiKey(apiKey);
+    const msg = {
+      to: to,
+      from: 'noreply@contentscale.site', // Moet geverifieerd zijn in Sendgrid
+      subject: subject,
+      html: html
+    };
+    await sgMail.send(msg);
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Sendgrid error:', error.message);
+    return { success: false, error: error.message };
+  }
+}
+
+// Helper voor WHOIS email lookup
+async function findEmailViaWhois(domain) {
+  try {
+    // Gebruik een WHOIS API (bijv. whoisxmlapi.com)
+    const response = await axios.get(`https://www.whoisxmlapi.com/whoisserver/WhoisService`, {
+      params: {
+        apiKey: process.env.WHOIS_API_KEY || 'demo',
+        domainName: domain,
+        outputFormat: 'JSON'
+      }
+    });
+    
+    // Parse response voor email
+    const data = response.data;
+    if (data.WhoisRecord && data.WhoisRecord.registrant && data.WhoisRecord.registrant.email) {
+      return { email: data.WhoisRecord.registrant.email, method: 'whois' };
+    }
+    
+    // Zoek in contact emails
+    if (data.WhoisRecord && data.WhoisRecord.contactEmail) {
+      return { email: data.WhoisRecord.contactEmail, method: 'whois' };
+    }
+    
+    return null;
+  } catch (error) {
+    console.log(`⚠️ WHOIS lookup failed for ${domain}:`, error.message);
+    return null;
+  }
+}
+
+// Helper voor contact pagina crawling
+async function findEmailViaContactPage(website) {
+  try {
+    const browser = await getBrowser();
+    if (!browser) return null;
+    
+    const page = await browser.newPage();
+    await page.setDefaultTimeout(5000);
+    
+    // Probeer /contact en /about paginas
+    const urlsToTry = [
+      website,
+      website.replace(/\/$/, '') + '/contact',
+      website.replace(/\/$/, '') + '/contact-us',
+      website.replace(/\/$/, '') + '/about',
+      website.replace(/\/$/, '') + '/about-us',
+      website.replace(/\/$/, '') + '/impressum'
+    ];
+    
+    for (const url of urlsToTry) {
+      try {
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 3000 });
+        const content = await page.content();
+        
+        // Zoek naar email patronen
+        const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+        const emails = content.match(emailRegex);
+        
+        if (emails && emails.length > 0) {
+          // Filter out common false positives
+          const validEmail = emails.find(e => 
+            !e.includes('example.com') && 
+            !e.includes('domain.com') &&
+            !e.includes('@yoursite') &&
+            e.split('@')[1].split('.').length >= 2
+          );
+          
+          if (validEmail) {
+            await page.close();
+            return { email: validEmail, method: 'contact_page' };
+          }
+        }
+      } catch (e) {
+        // Negeer fouten, probeer volgende URL
+      }
+    }
+    
+    await page.close();
+    return null;
+  } catch (error) {
+    console.log(`⚠️ Contact page crawl failed:`, error.message);
+    return null;
+  }
+}
+
+// Helper om domein uit URL te halen
+function extractDomain(url) {
+  try {
+    const hostname = new URL(url).hostname;
+    return hostname.replace('www.', '');
+  } catch {
+    return null;
+  }
+}
+
+// Queue processor
+async function processEmailQueue() {
+  if (!pool || !queueActive) return;
+  
+  try {
+    // Check vandaag's limiet voor elke gebruiker
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Haal pending emails op
+    const pendingEmails = await pool.query(
+      `SELECT eq.*, f.name as freelancer_name, f.email as freelancer_email, 
+              s.api_key_encrypted, gml.name as lead_name, gml.website
+       FROM email_queue eq
+       JOIN freelancers f ON eq.user_id = f.id
+       JOIN sendgrid_config s ON s.freelancer_id = f.id
+       JOIN google_maps_leads gml ON eq.lead_id = gml.id
+       WHERE eq.status = 'pending' 
+         AND (eq.scheduled_for <= NOW() OR eq.scheduled_for IS NULL)
+       ORDER BY eq.created_at ASC
+       LIMIT 10`, // Verwerk in batches
+    );
+    
+    if (pendingEmails.rows.length === 0) {
+      return;
+    }
+    
+    // Group by user voor limiet check
+    const byUser = {};
+    pendingEmails.rows.forEach(row => {
+      if (!byUser[row.user_id]) {
+        byUser[row.user_id] = [];
+      }
+      byUser[row.user_id].push(row);
+    });
+    
+    for (const [userId, emails] of Object.entries(byUser)) {
+      // Check hoeveel er vandaag al verstuurd zijn
+      const sentToday = await pool.query(
+        `SELECT COUNT(*) as count FROM email_queue 
+         WHERE user_id = $1 AND status = 'sent' AND DATE(sent_at) = $2`,
+        [userId, today]
+      );
+      
+      const sentCount = parseInt(sentToday.rows[0].count);
+      const remaining = DAILY_LIMIT - sentCount;
+      
+      if (remaining <= 0) {
+        console.log(`⏸️ User ${userId} has reached daily limit (${DAILY_LIMIT})`);
+        continue;
+      }
+      
+      // Verwerk alleen zoveel als de limiet toestaat
+      const toProcess = emails.slice(0, remaining);
+      
+      for (const email of toProcess) {
+        try {
+          // Decrypt API key (in productie gebruik je echte encryptie)
+          const apiKey = email.api_key_encrypted; // Simpele versie
+          
+          // Stuur email
+          const subject = `SEO Opportunity for ${email.lead_name}`;
+          const html = `
+            <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+              <h2>Hi ${email.lead_name},</h2>
+              <p>We analyzed your website ${email.website} and found opportunities to improve your SEO score.</p>
+              <p>Would you like a free consultation?</p>
+              <p>Best regards,<br>${email.freelancer_name}</p>
+            </div>
+          `;
+          
+          const result = await sendEmailViaSendgrid(apiKey, email.recipient_email, subject, html);
+          
+          if (result.success) {
+            await pool.query(
+              `UPDATE email_queue SET status = 'sent', sent_at = NOW() WHERE id = $1`,
+              [email.id]
+            );
+            console.log(`✅ Email sent to ${email.recipient_email}`);
+          } else {
+            await pool.query(
+              `UPDATE email_queue SET status = 'failed', error_message = $2, retry_count = retry_count + 1 WHERE id = $1`,
+              [email.id, result.error]
+            );
+          }
+        } catch (error) {
+          console.error('❌ Queue processing error:', error.message);
+          await pool.query(
+            `UPDATE email_queue SET status = 'failed', error_message = $2, retry_count = retry_count + 1 WHERE id = $1`,
+            [email.id, error.message]
+          );
+        }
+        
+        // Kleine vertraging tussen emails
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ Queue processor error:', error.message);
+  }
+}
+
+// Start queue processor
+function startQueueProcessor() {
+  if (queueInterval) clearInterval(queueInterval);
+  queueActive = true;
+  queueInterval = setInterval(processEmailQueue, 60000); // Elke minuut
+  console.log('▶️ Email queue processor started');
+}
+
+// Stop queue processor
+function stopQueueProcessor() {
+  queueActive = false;
+  if (queueInterval) {
+    clearInterval(queueInterval);
+    queueInterval = null;
+  }
+  console.log('⏸️ Email queue processor stopped');
+}
+
+// Helper functie om systeem e-mails te versturen (voor leaderboard)
 async function sendEmail(to, subject, html) {
   if (!emailTransporter) {
     console.error('❌ Email transporter niet beschikbaar');
@@ -363,19 +607,18 @@ async function createAllTables() {
         is_verified BOOLEAN DEFAULT FALSE,
         is_opted_out BOOLEAN DEFAULT FALSE,
         submission_ip VARCHAR(50),
-        admin_verified BOOLEAN DEFAULT FALSE, -- VERANDERD: nu standaard FALSE
+        admin_verified BOOLEAN DEFAULT FALSE,
         auto_detected_country VARCHAR(100),
         graaf_score INTEGER,
         craft_score INTEGER,
         technical_score INTEGER,
-        share_code VARCHAR(64) UNIQUE, -- NIEUW: voor shareable URLs
-        email_sent_at TIMESTAMP, -- NIEUW: wanneer felicitatie is verstuurd
-        contact_email VARCHAR(255), -- NIEUW: email voor felicitatie
+        share_code VARCHAR(64) UNIQUE,
+        email_sent_at TIMESTAMP,
+        contact_email VARCHAR(255),
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
     
-    // NIEUWE TABEL: leaderboard shares voor tracking
     await client.query(`
       CREATE TABLE IF NOT EXISTS leaderboard_shares (
         id SERIAL PRIMARY KEY,
@@ -418,6 +661,10 @@ async function createAllTables() {
         rating DECIMAL(2,1),
         reviews INTEGER,
         score INTEGER DEFAULT 0,
+        email VARCHAR(255),
+        email_status VARCHAR(50) DEFAULT 'pending',
+        email_found_at TIMESTAMP,
+        email_method VARCHAR(50),
         status VARCHAR(50) DEFAULT 'new',
         notes TEXT,
         contacted_at TIMESTAMP,
@@ -443,6 +690,79 @@ async function createAllTables() {
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_scan_sessions_session_id 
       ON google_maps_scan_sessions(session_id)
+    `);
+    
+    // ==========================================
+    // NIEUWE TABELLEN VOOR FASE 4
+    // ==========================================
+    
+    // Sendgrid configuratie per freelancer
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS sendgrid_config (
+        id SERIAL PRIMARY KEY,
+        freelancer_id INTEGER UNIQUE REFERENCES freelancers(id) ON DELETE CASCADE,
+        api_key_encrypted TEXT NOT NULL,
+        daily_limit INTEGER DEFAULT 100,
+        emails_sent_today INTEGER DEFAULT 0,
+        last_sent_date DATE,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // Email queue voor bulk verzending
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS email_queue (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES freelancers(id) ON DELETE CASCADE,
+        lead_id INTEGER REFERENCES google_maps_leads(id) ON DELETE CASCADE,
+        recipient_email VARCHAR(255) NOT NULL,
+        recipient_name VARCHAR(255),
+        subject TEXT NOT NULL,
+        template_name VARCHAR(100) DEFAULT 'default',
+        status VARCHAR(50) DEFAULT 'pending',
+        scheduled_for TIMESTAMP DEFAULT NOW(),
+        sent_at TIMESTAMP,
+        error_message TEXT,
+        retry_count INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // Email templates
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS email_templates (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES freelancers(id) ON DELETE CASCADE,
+        name VARCHAR(100) NOT NULL,
+        subject TEXT NOT NULL,
+        body TEXT NOT NULL,
+        is_default BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // Email finder log
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS email_finder_log (
+        id SERIAL PRIMARY KEY,
+        lead_id INTEGER REFERENCES google_maps_leads(id) ON DELETE CASCADE,
+        domain VARCHAR(255),
+        email_found VARCHAR(255),
+        method VARCHAR(50),
+        confidence INTEGER,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // Indexen voor performance
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_email_queue_status ON email_queue(status);
+      CREATE INDEX IF NOT EXISTS idx_email_queue_user ON email_queue(user_id);
+      CREATE INDEX IF NOT EXISTS idx_email_queue_scheduled ON email_queue(scheduled_for);
+      CREATE INDEX IF NOT EXISTS idx_leads_email ON google_maps_leads(email_status);
     `);
     
     await client.query(`
@@ -1021,12 +1341,18 @@ app.post('/api/google-maps/scrape', async (req, res) => {
           }
           
           const result = await pool.query(
-            `INSERT INTO google_maps_leads (name, category, website, phone, address, rating, reviews, score, status)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-            [lead.name, lead.category, verifiedWebsite, lead.phone, lead.address, lead.rating, lead.reviews, websiteScore, lead.status]
+            `INSERT INTO google_maps_leads (name, category, website, phone, address, rating, reviews, score, status, email_status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+            [lead.name, lead.category, verifiedWebsite, lead.phone, lead.address, lead.rating, lead.reviews, websiteScore, lead.status, 'pending']
           );
           
-          savedLeads.push({ ...lead, website: verifiedWebsite, score: websiteScore, id: result.rows[0].id });
+          savedLeads.push({ 
+            ...lead, 
+            website: verifiedWebsite, 
+            score: websiteScore, 
+            id: result.rows[0].id,
+            email_status: 'pending'
+          });
         } catch (dbError) {
           console.error('DB insert error:', dbError.message);
         }
@@ -1053,6 +1379,439 @@ app.post('/api/google-maps/scrape', async (req, res) => {
   } catch (error) {
     console.error('Google Maps scrape error:', error);
     res.status(500).json({ success: false, error: 'Failed to scrape Google Maps: ' + error.message });
+  }
+});
+
+// ==========================================
+// NIEUWE SENDGRID ENDPOINTS (FASE 4)
+// ==========================================
+
+// Sendgrid configuratie opslaan
+app.post('/api/sendgrid/configure', async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  // In productie haal je de freelancer ID uit de sessie
+  // Voor nu gebruiken we een header of query param
+  const freelancerId = req.headers['x-freelancer-id'] || 1; // Simpele versie
+  
+  const { api_key } = req.body;
+  if (!api_key) {
+    return res.status(400).json({ success: false, error: 'API key required' });
+  }
+  
+  try {
+    // Check of freelancer bestaat
+    const freelancer = await pool.query(
+      `SELECT id FROM freelancers WHERE id = $1 AND is_approved = TRUE`,
+      [freelancerId]
+    );
+    
+    if (freelancer.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Freelancer not found or not approved' });
+    }
+    
+    // Simpele encryptie (in productie gebruik je echte encryptie)
+    const encryptedKey = api_key; // TODO: echte encryptie
+    
+    // UPSERT: insert of update
+    await pool.query(
+      `INSERT INTO sendgrid_config (freelancer_id, api_key_encrypted, updated_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (freelancer_id) 
+       DO UPDATE SET api_key_encrypted = EXCLUDED.api_key_encrypted, updated_at = NOW()`,
+      [freelancerId, encryptedKey]
+    );
+    
+    res.json({ success: true, message: 'Sendgrid configuration saved' });
+    
+  } catch (error) {
+    console.error('Sendgrid configure error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Sendgrid status ophalen
+app.get('/api/sendgrid/status', async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  const freelancerId = req.headers['x-freelancer-id'] || 1;
+  
+  try {
+    // Check of Sendgrid geconfigureerd is
+    const config = await pool.query(
+      `SELECT * FROM sendgrid_config WHERE freelancer_id = $1`,
+      [freelancerId]
+    );
+    
+    const configured = config.rows.length > 0;
+    
+    // Haal queue status op
+    const today = new Date().toISOString().split('T')[0];
+    const pending = await pool.query(
+      `SELECT COUNT(*) as count FROM email_queue 
+       WHERE user_id = $1 AND status = 'pending'`,
+      [freelancerId]
+    );
+    
+    const sentToday = await pool.query(
+      `SELECT COUNT(*) as count FROM email_queue 
+       WHERE user_id = $1 AND status = 'sent' AND DATE(sent_at) = $2`,
+      [freelancerId, today]
+    );
+    
+    res.json({
+      success: true,
+      configured: configured,
+      queue_active: queueActive,
+      pending: parseInt(pending.rows[0].count),
+      sent_today: parseInt(sentToday.rows[0].count),
+      daily_limit: DAILY_LIMIT
+    });
+    
+  } catch (error) {
+    console.error('Sendgrid status error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Test Sendgrid configuratie
+app.post('/api/sendgrid/test', async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  const freelancerId = req.headers['x-freelancer-id'] || 1;
+  
+  try {
+    const config = await pool.query(
+      `SELECT * FROM sendgrid_config WHERE freelancer_id = $1`,
+      [freelancerId]
+    );
+    
+    if (config.rows.length === 0) {
+      return res.status(400).json({ success: false, error: 'Sendgrid not configured' });
+    }
+    
+    const apiKey = config.rows[0].api_key_encrypted;
+    
+    // Stuur test email naar freelancer's eigen email
+    const freelancer = await pool.query(
+      `SELECT email FROM freelancers WHERE id = $1`,
+      [freelancerId]
+    );
+    
+    if (freelancer.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Freelancer not found' });
+    }
+    
+    const result = await sendEmailViaSendgrid(
+      apiKey,
+      freelancer.rows[0].email,
+      'Test Email from ContentScale',
+      '<h1>Test</h1><p>Your Sendgrid configuration is working!</p>'
+    );
+    
+    if (result.success) {
+      res.json({ success: true, message: 'Test email sent' });
+    } else {
+      res.status(500).json({ success: false, error: result.error });
+    }
+    
+  } catch (error) {
+    console.error('Sendgrid test error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ==========================================
+// EMAIL FINDER ENDPOINTS (FASE 4)
+// ==========================================
+
+// Vind email voor 1 lead
+app.post('/api/leads/:id/find-email', async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  const { id } = req.params;
+  
+  try {
+    // Haal lead op
+    const leadResult = await pool.query(
+      `SELECT * FROM google_maps_leads WHERE id = $1`,
+      [id]
+    );
+    
+    if (leadResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Lead not found' });
+    }
+    
+    const lead = leadResult.rows[0];
+    
+    if (!lead.website) {
+      return res.json({ success: false, error: 'No website to search' });
+    }
+    
+    const domain = extractDomain(lead.website);
+    if (!domain) {
+      return res.json({ success: false, error: 'Invalid domain' });
+    }
+    
+    // Stap 1: Probeer WHOIS
+    let emailResult = await findEmailViaWhois(domain);
+    
+    // Stap 2: Als WHOIS niets vindt, crawl contact pagina
+    if (!emailResult) {
+      emailResult = await findEmailViaContactPage(lead.website);
+    }
+    
+    if (emailResult) {
+      // Update lead met gevonden email
+      await pool.query(
+        `UPDATE google_maps_leads SET 
+           email = $1, 
+           email_status = 'found', 
+           email_found_at = NOW(),
+           email_method = $2
+         WHERE id = $3`,
+        [emailResult.email, emailResult.method, id]
+      );
+      
+      // Log de vondst
+      await pool.query(
+        `INSERT INTO email_finder_log (lead_id, domain, email_found, method, confidence)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [id, domain, emailResult.email, emailResult.method, 80]
+      );
+      
+      res.json({ 
+        success: true, 
+        email: emailResult.email, 
+        method: emailResult.method 
+      });
+    } else {
+      // Geen email gevonden
+      await pool.query(
+        `UPDATE google_maps_leads SET email_status = 'not_found' WHERE id = $1`,
+        [id]
+      );
+      
+      res.json({ success: false, error: 'No email found' });
+    }
+    
+  } catch (error) {
+    console.error('Email finder error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Bulk email finder voor meerdere leads
+app.post('/api/leads/bulk/find-emails', async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  const { lead_ids } = req.body;
+  if (!lead_ids || !Array.isArray(lead_ids) || lead_ids.length === 0) {
+    return res.status(400).json({ success: false, error: 'Lead IDs required' });
+  }
+  
+  try {
+    let found = 0;
+    let total = lead_ids.length;
+    
+    for (const id of lead_ids) {
+      // Haal lead op
+      const leadResult = await pool.query(
+        `SELECT * FROM google_maps_leads WHERE id = $1`,
+        [id]
+      );
+      
+      if (leadResult.rows.length === 0) continue;
+      
+      const lead = leadResult.rows[0];
+      
+      if (!lead.website) continue;
+      
+      const domain = extractDomain(lead.website);
+      if (!domain) continue;
+      
+      // Stap 1: WHOIS
+      let emailResult = await findEmailViaWhois(domain);
+      
+      // Stap 2: Contact pagina
+      if (!emailResult) {
+        emailResult = await findEmailViaContactPage(lead.website);
+      }
+      
+      if (emailResult) {
+        await pool.query(
+          `UPDATE google_maps_leads SET 
+             email = $1, 
+             email_status = 'found', 
+             email_found_at = NOW(),
+             email_method = $2
+           WHERE id = $3`,
+          [emailResult.email, emailResult.method, id]
+        );
+        
+        await pool.query(
+          `INSERT INTO email_finder_log (lead_id, domain, email_found, method, confidence)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [id, domain, emailResult.email, emailResult.method, 80]
+        );
+        
+        found++;
+      } else {
+        await pool.query(
+          `UPDATE google_maps_leads SET email_status = 'not_found' WHERE id = $1`,
+          [id]
+        );
+      }
+      
+      // Kleine vertraging om rate limiting te voorkomen
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    res.json({ 
+      success: true, 
+      found: found,
+      total: total,
+      message: `Found ${found} emails out of ${total} leads`
+    });
+    
+  } catch (error) {
+    console.error('Bulk email finder error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ==========================================
+// EMAIL QUEUE ENDPOINTS (FASE 4)
+// ==========================================
+
+// Voeg leads toe aan email queue
+app.post('/api/email/queue', async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  const freelancerId = req.headers['x-freelancer-id'] || 1;
+  const { lead_ids } = req.body;
+  
+  if (!lead_ids || !Array.isArray(lead_ids) || lead_ids.length === 0) {
+    return res.status(400).json({ success: false, error: 'Lead IDs required' });
+  }
+  
+  try {
+    // Check of freelancer Sendgrid heeft geconfigureerd
+    const config = await pool.query(
+      `SELECT * FROM sendgrid_config WHERE freelancer_id = $1`,
+      [freelancerId]
+    );
+    
+    if (config.rows.length === 0) {
+      return res.status(400).json({ success: false, error: 'Sendgrid not configured' });
+    }
+    
+    let queued = 0;
+    
+    for (const lead_id of lead_ids) {
+      // Haal lead op
+      const leadResult = await pool.query(
+        `SELECT * FROM google_maps_leads WHERE id = $1`,
+        [lead_id]
+      );
+      
+      if (leadResult.rows.length === 0) continue;
+      
+      const lead = leadResult.rows[0];
+      
+      // Alleen als er een email is
+      if (!lead.email || !lead.email.includes('@')) continue;
+      
+      // Check of al in queue
+      const existing = await pool.query(
+        `SELECT id FROM email_queue 
+         WHERE lead_id = $1 AND user_id = $2 AND status IN ('pending', 'sent')`,
+        [lead_id, freelancerId]
+      );
+      
+      if (existing.rows.length > 0) continue;
+      
+      // Voeg toe aan queue
+      await pool.query(
+        `INSERT INTO email_queue (user_id, lead_id, recipient_email, recipient_name, subject, status)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [freelancerId, lead_id, lead.email, lead.name, 'SEO Opportunity for your business', 'pending']
+      );
+      
+      queued++;
+    }
+    
+    res.json({ 
+      success: true, 
+      queued: queued,
+      message: `Added ${queued} leads to email queue`
+    });
+    
+  } catch (error) {
+    console.error('Email queue error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Start queue processing
+app.post('/api/email/start', async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  startQueueProcessor();
+  res.json({ success: true, message: 'Email queue started' });
+});
+
+// Pause queue processing
+app.post('/api/email/pause', async (req, res) => {
+  stopQueueProcessor();
+  res.json({ success: true, message: 'Email queue paused' });
+});
+
+// Resume queue processing
+app.post('/api/email/resume', async (req, res) => {
+  startQueueProcessor();
+  res.json({ success: true, message: 'Email queue resumed' });
+});
+
+// Queue status
+app.get('/api/email/queue/status', async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  const freelancerId = req.headers['x-freelancer-id'] || 1;
+  
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const pending = await pool.query(
+      `SELECT COUNT(*) as count FROM email_queue 
+       WHERE user_id = $1 AND status = 'pending'`,
+      [freelancerId]
+    );
+    
+    const sentToday = await pool.query(
+      `SELECT COUNT(*) as count FROM email_queue 
+       WHERE user_id = $1 AND status = 'sent' AND DATE(sent_at) = $2`,
+      [freelancerId, today]
+    );
+    
+    const failed = await pool.query(
+      `SELECT COUNT(*) as count FROM email_queue 
+       WHERE user_id = $1 AND status = 'failed'`,
+      [freelancerId]
+    );
+    
+    res.json({
+      success: true,
+      queue_active: queueActive,
+      pending: parseInt(pending.rows[0].count),
+      sent_today: parseInt(sentToday.rows[0].count),
+      failed: parseInt(failed.rows[0].count),
+      daily_limit: DAILY_LIMIT
+    });
+    
+  } catch (error) {
+    console.error('Queue status error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -1126,7 +1885,7 @@ app.get('/api/leaderboard', async (req, res) => {
   }
 });
 
-// NIEUWE ROUTE: shareable leaderboard page
+// Shareable leaderboard page
 app.get('/share/:code', async (req, res) => {
   const { code } = req.params;
   
@@ -1135,7 +1894,6 @@ app.get('/share/:code', async (req, res) => {
   }
   
   try {
-    // Vind de leaderboard entry met deze share code
     const result = await pool.query(
       `SELECT * FROM leaderboard WHERE share_code = $1 AND admin_verified = TRUE`,
       [code]
@@ -1147,7 +1905,6 @@ app.get('/share/:code', async (req, res) => {
     
     const entry = result.rows[0];
     
-    // Log de share (voor tracking)
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     const userAgent = req.headers['user-agent'] || 'unknown';
     
@@ -1157,7 +1914,6 @@ app.get('/share/:code', async (req, res) => {
       [entry.id, code, 'direct', ipAddress, userAgent]
     );
     
-    // Stuur een simpele HTML pagina met de leaderboard info
     const html = `
       <!DOCTYPE html>
       <html>
@@ -1373,7 +2129,6 @@ app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
   }
 });
 
-// ✅ NIEUWE GOEDKEURINGSROUTE MET E-MAIL
 app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   
@@ -1381,7 +2136,6 @@ app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => 
   const { final_country, contact_email } = req.body;
   
   try {
-    // Haal de leaderboard entry op
     const entryResult = await pool.query(
       `SELECT * FROM leaderboard WHERE id = $1`,
       [id]
@@ -1393,13 +2147,11 @@ app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => 
     
     const entry = entryResult.rows[0];
     
-    // Genereer share code als die nog niet bestaat
     let shareCode = entry.share_code;
     if (!shareCode) {
       shareCode = generateShareCode(entry.url, entry.id);
     }
     
-    // Bereken positie voor leaderboard
     const positionResult = await pool.query(
       `SELECT COUNT(*) + 1 as position FROM leaderboard 
        WHERE admin_verified = TRUE AND score > $1`,
@@ -1407,7 +2159,6 @@ app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => 
     );
     const position = parseInt(positionResult.rows[0].position) || 1;
     
-    // Update de leaderboard entry
     await pool.query(
       `UPDATE leaderboard SET 
          admin_verified = TRUE, 
@@ -1419,7 +2170,6 @@ app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => 
       [id, final_country, shareCode, contact_email]
     );
     
-    // Stuur e-mail als er een contact_email is
     let emailSent = false;
     if (contact_email) {
       const shareUrl = `https://app.contentscale.site/share/${shareCode}`;
@@ -1482,7 +2232,6 @@ app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => 
         emailHtml
       );
       
-      // Update email_sent_at timestamp
       if (emailSent) {
         await pool.query(
           `UPDATE leaderboard SET email_sent_at = NOW() WHERE id = $1`,
@@ -1598,7 +2347,6 @@ app.post('/api/admin/leaderboard/scan-and-add', verifyAdmin, async (req, res) =>
       console.log(`👑 Admin updated leaderboard: ${scanUrl} (score: ${totalScore})`);
     }
     
-    // Stuur e-mail als contact_email is opgegeven
     let emailSent = false;
     if (contact_email) {
       const positionResult = await pool.query(
@@ -1717,7 +2465,6 @@ app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
         [url, company_name || null, score, country || 'NL', city || null, type || 'seo_agency', true, true, shareCode, contact_email]
       );
       
-      // Stuur e-mail als contact_email is opgegeven
       let emailSent = false;
       if (contact_email) {
         const positionResult = await pool.query(
@@ -2041,6 +2788,11 @@ async function startServer() {
   
   const dbConnected = await waitForDatabase();
   
+  // Start queue processor als database verbonden is
+  if (dbConnected) {
+    startQueueProcessor();
+  }
+  
   app.listen(PORT, () => {
     console.log('');
     console.log(`📍 Server gestart op http://localhost:${PORT}`);
@@ -2049,6 +2801,7 @@ async function startServer() {
     console.log('');
     console.log(`📊 Database status: ${dbConnected ? '✅ Verbonden' : '❌ NIET VERBONDEN'}`);
     console.log(`🔐 Admin login:     ${dbConnected ? '✅ Werkend (ot/admin123)' : '❌ Niet beschikbaar'}`);
+    console.log(`📧 Queue processor: ${queueActive ? '✅ Actief' : '❌ Inactief'}`);
     console.log('');
     
     if (!dbConnected) {
