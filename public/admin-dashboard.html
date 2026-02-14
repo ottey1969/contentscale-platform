@@ -1,2806 +1,1458 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Dashboard - ContentScale</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    
-    body {
-      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-      background: #030712;
-      color: white;
-      line-height: 1.6;
-    }
-    
-    h1, h2, h3, h4, h5, h6, p, a, span, div, button, input, textarea, select, label, li {
-      color: white !important;
-    }
-    
-    input, textarea, select {
-      color: #000000 !important;
-      background-color: #ffffff !important;
-      border: 1px solid #d1d5db !important;
-    }
-    
-    input::placeholder, textarea::placeholder {
-      color: #6b7280 !important;
-      opacity: 1 !important;
-    }
-    
-    .text-gray-300, .text-gray-400, .text-gray-500 {
-      color: #d1d5db !important;
-    }
-    
-    .btn-white-black {
-      background: white !important;
-      color: #581c87 !important;
-      font-weight: 700;
-      border: 2px solid white;
-    }
-    
-    .btn-white-black:hover {
-      background: #f3f4f6 !important;
-      color: #6b21a8 !important;
-    }
-    
-    .bg-gray-900 { background-color: #030712; }
-    .bg-gray-800 { background-color: #111827; }
-    .bg-gray-700 { background-color: #1f2937; }
-    .bg-gray-900\/95 { background-color: rgba(3, 7, 18, 0.95); }
-    
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      padding: 0.75rem 1.5rem;
-      border-radius: 0.5rem;
-      font-weight: 600;
-      transition: all 0.2s;
-      border: none;
-      cursor: pointer;
-    }
-    
-    .btn-primary {
-      background: linear-gradient(135deg, #7e22ce, #be185d);
-      color: white;
-    }
-    
-    .btn-primary:hover {
-      background: linear-gradient(135deg, #6b21a8, #9d174d);
-      transform: translateY(-2px);
-      box-shadow: 0 10px 20px -5px rgba(126, 34, 206, 0.5);
-    }
-    
-    .btn-secondary {
-      background: linear-gradient(135deg, #1e40af, #0891b2);
-      color: white;
-    }
-    
-    .btn-success {
-      background: #0f7b3a !important;
-      color: white !important;
-    }
-    
-    .mode-toggle {
-      position: relative;
-      padding: 0.75rem 1.5rem;
-      border-radius: 0.5rem;
-      font-weight: 600;
-      background: #374151;
-      color: white;
-      border: 2px solid transparent;
-      transition: all 0.2s;
-    }
-    
-    .mode-toggle.active {
-      background: linear-gradient(135deg, #7e22ce, #be185d);
-      border: 2px solid rgba(255, 255, 255, 0.3);
-    }
-    
-    .mode-toggle.active::after {
-      content: '✓';
-      position: absolute;
-      top: -8px;
-      right: -8px;
-      width: 24px;
-      height: 24px;
-      background: #0f7b3a;
-      color: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      font-weight: bold;
-      border: 2px solid white;
-    }
-    
-    .card {
-      background: #111827;
-      border: 1px solid #374151;
-      border-radius: 1rem;
-      padding: 1.5rem;
-      transition: all 0.2s;
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-    }
-    
-    .card:hover {
-      border-color: #a855f7;
-      transform: translateY(-4px);
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-    }
-    
-    .card-content {
-      flex: 1;
-    }
-    
-    .card-footer {
-      margin-top: auto;
-      padding-top: 1rem;
-    }
-    
-    .stat-card {
-      position: relative;
-      border-radius: 1rem;
-      padding: 1.25rem;
-      overflow: hidden;
-    }
-    
-    .stat-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: linear-gradient(135deg, #7e22ce, #6b21a8);
-      opacity: 0.9;
-    }
-    
-    .stat-card > div {
-      position: relative;
-      z-index: 10;
-    }
-    
-    .top-card {
-      border-radius: 1rem;
-      padding: 1.5rem;
-      text-align: center;
-      color: white;
-    }
-    
-    .top-card.gold {
-      background: linear-gradient(135deg, #fbbf24, #d97706);
-    }
-    
-    .top-card.silver {
-      background: linear-gradient(135deg, #e5e7eb, #6b7280);
-    }
-    
-    .top-card.bronze {
-      background: linear-gradient(135deg, #f97316, #c2410c);
-    }
-    
-    .top-card button {
-      background: rgba(0, 0, 0, 0.3);
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      color: white;
-      padding: 0.5rem 1rem;
-      border-radius: 0.5rem;
-      font-weight: 600;
-      transition: all 0.2s;
-      width: 100%;
-      margin-top: 1rem;
-    }
-    
-    .top-card button:hover {
-      background: rgba(0, 0, 0, 0.5);
-      border-color: rgba(255, 255, 255, 0.6);
-    }
-    
-    .score-high { color: #4ade80; }
-    .score-medium { color: #facc15; }
-    .score-low { color: #f87171; }
-    
-    .progress-bar {
-      height: 0.75rem;
-      background: #374151;
-      border-radius: 9999px;
-      overflow: hidden;
-    }
-    
-    .progress-bar-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #a855f7, #ec4899);
-      transition: width 0.3s;
-    }
-    
-    .grid-3 {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1.5rem;
-    }
-    
-    .grid-4 {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1.5rem;
-    }
-    
-    @media (max-width: 1024px) {
-      .grid-4 { grid-template-columns: repeat(3, 1fr); }
-    }
-    
-    @media (max-width: 768px) {
-      .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
-    }
-    
-    @media (max-width: 640px) {
-      .grid-3, .grid-4 { grid-template-columns: 1fr; }
-    }
-    
-    .rankings-4-15-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1rem;
-    }
-    
-    @media (max-width: 1024px) {
-      .rankings-4-15-grid { grid-template-columns: repeat(3, 1fr); }
-    }
-    
-    @media (max-width: 768px) {
-      .rankings-4-15-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-    
-    @media (max-width: 480px) {
-      .rankings-4-15-grid { grid-template-columns: 1fr; }
-    }
-    
-    .rank-card {
-      background: #1f2937;
-      border: 1px solid #374151;
-      border-radius: 0.75rem;
-      padding: 1rem;
-      text-align: center;
-      transition: all 0.2s;
-    }
-    
-    .rank-card:hover {
-      border-color: #a855f7;
-      transform: translateY(-4px);
-    }
-    
-    .filter-tag {
-      background: #374151;
-      color: white;
-      padding: 0.5rem 1rem;
-      border-radius: 9999px;
-      font-size: 0.875rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-      border: 1px solid #4b5563;
-    }
-    
-    .filter-tag:hover {
-      background: #4b5563;
-    }
-    
-    .filter-tag.active {
-      background: #7e22ce;
-      border-color: #a855f7;
-    }
-    
-    .rankings-table {
-      width: 100%;
-      background: #111827;
-      border-radius: 0.75rem;
-      overflow: hidden;
-    }
-    
-    .rankings-table th {
-      background: #1f2937;
-      padding: 1rem;
-      text-align: left;
-      font-weight: 600;
-      color: white;
-    }
-    
-    .rankings-table td {
-      padding: 1rem;
-      border-bottom: 1px solid #374151;
-      color: white;
-    }
-    
-    .hidden { display: none; }
-    
-    .modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(4px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-    }
-    
-    .modal.active {
-      display: flex;
-    }
-    
-    .modal-content {
-      background: #111827;
-      border: 2px solid #a855f7;
-      border-radius: 1rem;
-      padding: 2rem;
-      max-width: 500px;
-      width: 90%;
-      max-height: 90vh;
-      overflow-y: auto;
-    }
-    
-    .pending-card {
-      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-      border: 1px solid #f59e0b;
-      border-radius: 1rem;
-      padding: 1.5rem;
-    }
-    
-    .company-name-input {
-      background: #1f2937;
-      border: 2px solid #a855f7;
-      color: white;
-      padding: 0.75rem 1rem;
-      border-radius: 0.5rem;
-      width: 100%;
-      font-size: 1.125rem;
-      font-weight: 600;
-    }
-    
-    .company-name-input:focus {
-      outline: none;
-      border-color: #c084fc;
-      box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.3);
-    }
-    
-    .badge {
-      display: inline-block;
-      padding: 0.25rem 0.75rem;
-      border-radius: 9999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
-    
-    .badge-success {
-      background: #0f7b3a;
-      color: white;
-    }
-    
-    .badge-featured {
-      background: #f59e0b;
-      color: white;
-    }
-    
-    .reverse-email {
-      unicode-bidi: bidi-override;
-      direction: rtl;
-    }
-    
-    .faq-item {
-      background: #111827;
-      border: 1px solid #374151;
-      border-radius: 0.75rem;
-      overflow: hidden;
-      transition: all 0.2s;
-    }
-    
-    .faq-item:hover {
-      border-color: #a855f7;
-    }
-    
-    .faq-question {
-      width: 100%;
-      padding: 1.25rem 1.5rem;
-      text-align: left;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: transparent;
-      border: none;
-      color: white;
-      font-weight: 600;
-      font-size: 1.125rem;
-      cursor: pointer;
-    }
-    
-    .faq-question:hover {
-      background: #1f2937;
-    }
-    
-    .faq-answer {
-      padding: 0 1.5rem 1.25rem 1.5rem;
-      color: #d1d5db;
-    }
-    
-    .accordion-item {
-      background: #111827;
-      border: 1px solid #374151;
-      border-radius: 0.75rem;
-      overflow: hidden;
-      transition: all 0.2s;
-      margin-top: 1.5rem;
-    }
-    
-    .accordion-item:hover {
-      border-color: #a855f7;
-    }
-    
-    .accordion-header {
-      width: 100%;
-      padding: 1.25rem 1.5rem;
-      text-align: left;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: linear-gradient(135deg, #1e293b, #0f172a);
-      border: 1px solid #a855f7;
-      border-radius: 0.75rem;
-      color: white;
-      font-weight: 600;
-      font-size: 1.125rem;
-      cursor: pointer;
-    }
-    
-    .accordion-header:hover {
-      background: linear-gradient(135deg, #2d3748, #1a202c);
-    }
-    
-    .accordion-content {
-      padding: 1.5rem;
-      background: #111827;
-      border: 1px solid #374151;
-      border-top: none;
-      border-bottom-left-radius: 0.75rem;
-      border-bottom-right-radius: 0.75rem;
-    }
-    
-    .edit-input {
-      background: #1f2937;
-      border: 2px solid #a855f7;
-      color: white;
-      padding: 0.5rem;
-      border-radius: 0.5rem;
-      width: 100%;
-      margin-bottom: 0.5rem;
-    }
-    
-    .edit-select {
-      background: #1f2937;
-      border: 2px solid #a855f7;
-      color: white;
-      padding: 0.5rem;
-      border-radius: 0.5rem;
-      width: 100%;
-      margin-bottom: 0.5rem;
-    }
-    
-    footer {
-      background: #111827;
-      border-top: 2px solid #374151;
-      margin-top: 4rem;
-    }
-    
-    .text-blue-400, a.text-blue-400 {
-      color: #7dd3fc !important;
-      text-decoration: underline;
-      text-decoration-color: rgba(125, 211, 252, 0.4);
-      text-underline-offset: 2px;
-    }
-    
-    .text-blue-400:hover, a.text-blue-400:hover {
-      color: #bae6fd !important;
-      text-decoration-color: #bae6fd;
-    }
-    
-    .skip-link {
-      position: absolute;
-      top: -40px;
-      left: 0;
-      background: #7e22ce;
-      color: white;
-      padding: 0.5rem 1rem;
-      z-index: 100;
-      transition: top 0.2s;
-    }
-    
-    .skip-link:focus {
-      top: 0;
-    }
+// ============================================
+// CONTENTSCALE SERVER.JS - ALLE BUGS GEFIXED
+// ✅ Leaderboard edit/delete WERKT
+// ✅ Google Maps scraper WERKT (2025 selectors)
+// ✅ Manual-add WERKT (duplicate handling)
+// ============================================
 
-    img[width][height] {
-      aspect-ratio: attr(width) / attr(height);
+process.env.PGSSLMODE = 'verify-full';
+process.env.NODE_NO_WARNINGS = '1';
+
+const express = require('express');
+const path = require('path');
+const crypto = require('crypto');
+const { Pool } = require('pg');
+const puppeteer = require('puppeteer');
+const bcrypt = require('bcryptjs');
+const rateLimit = require('express-rate-limit');
+const compression = require('compression');
+const multer = require('multer');
+const axios = require('axios');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
+console.log('📊 Database URL:', process.env.DATABASE_URL ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
+
+// ============================================
+// DATABASE CONFIGURATIE
+// ============================================
+let dbConfig;
+let pool;
+
+function initDatabaseConfig() {
+  if (process.env.DATABASE_URL) {
+    console.log('📊 Using DATABASE_URL from environment');
+    try {
+      const url = new URL(process.env.DATABASE_URL);
+      dbConfig = {
+        user: url.username,
+        password: url.password,
+        host: url.hostname,
+        port: url.port || 5432,
+        database: url.pathname.slice(1),
+        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+        connectionTimeoutMillis: 10000,
+        idleTimeoutMillis: 30000,
+        max: 20
+      };
+    } catch (e) {
+      console.error('❌ Ongeldige DATABASE_URL:', e.message);
+      return null;
     }
-    .w-48.h-48 {
-      width: 192px;
-      height: 192px;
-    }
-    #main-content > div:first-child {
-      min-height: 400px;
-    }
-    
-    .api-status-indicator {
-      display: inline-block;
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      margin-left: 8px;
-    }
-    
-    .api-status-active {
-      background-color: #10b981;
-      box-shadow: 0 0 8px #10b981;
-    }
-    
-    .api-status-inactive {
-      background-color: #6b7280;
-    }
-  </style>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body class="bg-gray-900">
-  <a href="#main-content" class="skip-link">Skip to main content</a>
-
-  <!-- LOGIN SCREEN -->
-  <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
-    <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border-2 border-purple-500">
-      <div class="flex items-center justify-center mb-6">
-        <span class="text-5xl">👑</span>
-        <h1 class="text-3xl font-bold ml-3 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Admin</h1>
-      </div>
-      <p class="text-gray-400 text-center mb-8">ContentScale Platform Control</p>
-      
-      <div id="login-error" class="hidden mb-6 p-4 bg-red-900/50 border border-red-700 rounded-lg text-red-200 text-sm"></div>
-      
-      <div class="space-y-6">
-        <div>
-          <label class="block text-sm font-medium text-gray-300 mb-2">Username</label>
-          <input type="text" id="login-username" value="ot" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white">
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-300 mb-2">Password</label>
-          <input type="password" id="login-password" value="admin123" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white">
-        </div>
-        <button onclick="login()" id="login-btn" class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-lg font-bold text-lg transition-all transform hover:scale-105">
-          <i class="fas fa-lock mr-2"></i> Login
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MAIN DASHBOARD -->
-  <div id="main-dashboard" class="hidden">
-    <nav class="sticky top-0 z-50 bg-gray-900/95 border-b-2 border-purple-600 backdrop-blur-sm">
-      <div class="max-w-7xl mx-auto px-6 py-4">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <span class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Admin Dashboard</span>
-            <span class="hidden sm:inline-block text-xs px-2 py-1 bg-purple-600 rounded text-white font-semibold">
-              <span id="admin-username">Admin</span>
-            </span>
-          </div>
-          <div class="flex gap-3">
-            <button onclick="logout()" class="btn bg-red-600 hover:bg-red-700">
-              <i class="fas fa-sign-out-alt mr-2"></i> Logout
-            </button>
-          </div>
-        </div>
-      </div>
-    </nav>
-
-    <div class="max-w-7xl mx-auto px-6 py-8">
-      <div class="flex justify-center gap-4 mb-8 flex-wrap">
-        <button onclick="switchTab('leaderboard')" id="tabLeaderboardBtn" class="mode-toggle active">
-          <i class="fas fa-trophy mr-2"></i> Leaderboard
-        </button>
-        <button onclick="switchTab('freelancers')" id="tabFreelancersBtn" class="mode-toggle">
-          <i class="fas fa-users mr-2"></i> Freelancers
-        </button>
-        <button onclick="switchTab('scanner')" id="tabScannerBtn" class="mode-toggle">
-          <i class="fas fa-search mr-2"></i> Scanner
-        </button>
-        <button onclick="switchTab('pending')" id="tabPendingBtn" class="mode-toggle">
-          <i class="fas fa-clock mr-2"></i> Pending
-        </button>
-      </div>
-
-      <!-- TAB 1: LEADERBOARD -->
-      <div id="tab-leaderboard" class="tab-content">
-        <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-          <div class="flex justify-between items-center mb-6">
-            <h2 class="text-3xl font-bold text-white">🏆 Leaderboard</h2>
-            <div class="flex gap-3">
-              <button onclick="showAddLeaderboardModal()" class="btn bg-green-600 hover:bg-green-700">
-                <i class="fas fa-plus-circle mr-2"></i> Add New
-              </button>
-              <button onclick="loadLeaderboard()" class="btn bg-blue-600 hover:bg-blue-700">
-                <i class="fas fa-sync-alt mr-2"></i> Refresh
-              </button>
-              <button onclick="exportLeaderboardCSV()" class="btn-success btn">
-                <i class="fas fa-file-csv mr-2"></i> Export CSV
-              </button>
-            </div>
-          </div>
-
-          <div class="grid-4 mb-8">
-            <div class="stat-card">
-              <div>
-                <div class="text-4xl mb-2">🏢</div>
-                <div class="text-3xl font-bold" id="stat-total-agencies">0</div>
-                <div class="text-sm text-gray-200">Agencies</div>
-              </div>
-            </div>
-            <div class="stat-card">
-              <div>
-                <div class="text-4xl mb-2">📊</div>
-                <div class="text-3xl font-bold" id="stat-avg-score">0</div>
-                <div class="text-sm text-gray-200">Avg. Score</div>
-              </div>
-            </div>
-            <div class="stat-card">
-              <div>
-                <div class="text-4xl mb-2">🌍</div>
-                <div class="text-3xl font-bold" id="stat-countries">0</div>
-                <div class="text-sm text-gray-200">Countries</div>
-              </div>
-            </div>
-            <div class="stat-card">
-              <div>
-                <div class="text-4xl mb-2">💼</div>
-                <div class="text-3xl font-bold" id="stat-active-helpers">0</div>
-                <div class="text-sm text-gray-200">Freelancers</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
-            <div class="flex items-center gap-2">
-              <input type="checkbox" id="select-all-leaderboard" onchange="toggleSelectAllLeaderboard()" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
-              <label class="text-sm text-gray-300">Selecteer alles</label>
-            </div>
-            <button onclick="bulkDeleteLeaderboard()" class="btn bg-red-600 hover:bg-red-700">
-              <i class="fas fa-trash mr-2"></i> Delete Geselecteerd
-            </button>
-            <span id="selected-count-leaderboard" class="text-sm text-gray-400 ml-auto">0 geselecteerd</span>
-          </div>
-
-          <div id="top3-container" class="grid-3 mb-10"></div>
-
-          <div id="rankings4to15Container" class="mb-10">
-            <h3 class="text-2xl font-bold text-white mb-6">Rankings 4-15</h3>
-            <div id="rankings4to15Grid" class="rankings-4-15-grid"></div>
-          </div>
-
-          <div class="bg-gray-800 rounded-lg p-4 mb-6 border border-gray-700">
-            <button onclick="toggleFilters()" class="w-full flex items-center justify-between text-left text-white">
-              <div class="flex items-center gap-2">
-                <i class="fas fa-filter text-purple-400"></i>
-                <span class="font-semibold">Filters</span>
-              </div>
-              <i class="fas fa-chevron-down" id="filterIcon"></i>
-            </button>
-            <div id="filterPanel" class="hidden mt-4">
-              <div class="mb-4">
-                <div class="text-sm text-gray-300 mb-2">Country:</div>
-                <div class="flex flex-wrap gap-2" id="countryFilters"></div>
-              </div>
-              <div>
-                <input type="text" id="searchInput" placeholder="Search agencies..." oninput="filterAgencies()" class="w-full">
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <button onclick="toggleRankings()" id="rankingsToggleBtn" class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-between transition-all">
-              <span id="rankingsToggleText">📊 Show Rankings 16+</span>
-              <span class="arrow">▼</span>
-            </button>
-            <div id="rankingsContainer" class="hidden mt-4">
-              <p class="text-sm text-gray-300 mb-2">Showing 16-35 of <span id="totalCount">0</span> agencies</p>
-              <table class="rankings-table">
-                <thead>
-                  <tr>
-                    <th class="w-10"></th>
-                    <th>Rank</th>
-                    <th>Company</th>
-                    <th>Website</th>
-                    <th>Score</th>
-                    <th>Country</th>
-                    <th>Added</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="rankingsTbody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- TAB 2: FREELANCERS -->
-      <div id="tab-freelancers" class="tab-content hidden">
-        <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-          <div class="flex justify-between items-center mb-6">
-            <h2 class="text-3xl font-bold text-white">🎯 Freelancers</h2>
-            <div class="flex gap-3">
-              <button onclick="loadFreelancers()" class="btn bg-blue-600 hover:bg-blue-700">
-                <i class="fas fa-sync-alt mr-2"></i> Refresh
-              </button>
-            </div>
-          </div>
-
-          <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
-            <div class="flex items-center gap-2">
-              <input type="checkbox" id="select-all-freelancers" onchange="toggleSelectAllFreelancers()" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
-              <label class="text-sm text-gray-300">Selecteer alles</label>
-            </div>
-            <button onclick="bulkDeleteFreelancers()" class="btn bg-red-600 hover:bg-red-700">
-              <i class="fas fa-trash mr-2"></i> Delete Geselecteerd
-            </button>
-            <span id="selected-count-freelancers" class="text-sm text-gray-400 ml-auto">0 geselecteerd</span>
-          </div>
-
-          <div id="freelancersGrid" class="grid-3"></div>
-        </div>
-      </div>
-
-      <!-- TAB 3: SCANNER -->
-      <div id="tab-scanner" class="tab-content hidden">
-        <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-          <div class="text-center mb-8">
-            <h2 class="text-4xl font-bold mb-3 text-white">🎯 SEO Content Quality Scanner</h2>
-            <p class="text-xl text-gray-200">Scan any URL and add to leaderboard</p>
-          </div>
-          
-          <div class="flex justify-center gap-4 mb-8">
-            <button id="modeSingleBtn" onclick="switchScannerMode('single')" class="mode-toggle active">
-              <i class="fas fa-link mr-2"></i> Single URL
-            </button>
-            <button id="modeBulkBtn" onclick="switchScannerMode('bulk')" class="mode-toggle">
-              <i class="fas fa-map-marked-alt mr-2"></i> Google Maps
-            </button>
-          </div>
-          
-          <div id="singleMode" class="max-w-3xl mx-auto">
-            <div class="card">
-              <div class="flex flex-col sm:flex-row gap-3">
-                <input type="text" id="singleUrlInput" placeholder="https://example.com" class="flex-1" autocomplete="off">
-                <button onclick="scanSingleURL()" id="singleScanBtn" class="btn-primary btn whitespace-nowrap">
-                  <i class="fas fa-search mr-2"></i> Start Scan
-                </button>
-              </div>
-              <div id="singleProgress" class="hidden mt-4">
-                <div class="progress-bar">
-                  <div id="singleProgressBar" class="progress-bar-fill" style="width: 0%"></div>
-                </div>
-                <p id="singleProgressText" class="text-sm text-gray-300 text-center mt-2"></p>
-              </div>
-            </div>
-            <div id="singleResult" class="hidden mt-4"></div>
-          </div>
-          
-          <div id="bulkMode" class="hidden max-w-6xl mx-auto">
-            <div class="card">
-              <div class="flex flex-col sm:flex-row gap-3 mb-4">
-                <input type="text" id="mapsUrl" placeholder="https://www.google.com/maps/search/seo+agency+amsterdam" class="flex-1" autocomplete="off">
-                <button onclick="scrapeGoogleMaps()" id="bulkScanBtn" class="btn-secondary btn whitespace-nowrap">
-                  <i class="fas fa-map-marked-alt mr-2"></i> Scrape Maps
-                </button>
-              </div>
-            </div>
-            
-            <div id="leadsContainer" class="hidden mt-6">
-              <div class="card border-green-500">
-                <div class="flex items-center justify-between mb-4">
-                  <h3 class="text-xl font-bold text-white">
-                    <i class="fas fa-database mr-2 text-green-400"></i>
-                    Found Leads (<span id="leadCount">0</span>)
-                  </h3>
-                  <div class="flex gap-2">
-                    <button onclick="bulkFindEmails()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm font-semibold">
-                      <i class="fas fa-search mr-1"></i> Find All Emails
-                    </button>
-                    <button onclick="queueAllLeads()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm font-semibold">
-                      <i class="fas fa-clock mr-1"></i> Queue All
-                    </button>
-                  </div>
-                </div>
-                <div class="overflow-x-auto">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Business</th>
-                        <th>Website</th>
-                        <th>Phone</th>
-                        <th>Score</th>
-                        <th>Email</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody id="leadsTableBody"></tbody>
-                  </table>
-                </div>
-                <div class="flex justify-end mt-4 gap-2">
-                  <button onclick="exportLeadsToCSV()" class="btn-success btn">
-                    <i class="fas fa-file-csv mr-2"></i> Export CSV
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- API Configuration Accordion -->
-          <div class="accordion-item">
-            <button onclick="toggleAccordion('apiConfig')" class="accordion-header">
-              <span class="flex items-center gap-2">
-                <i class="fas fa-key text-purple-400"></i>
-                <span class="font-bold">Add your API for Sendgrid and Webshare Here</span>
-                <span id="apiStatusIndicator" class="api-status-indicator api-status-inactive"></span>
-              </span>
-              <i class="fas fa-chevron-down" id="apiConfigIcon"></i>
-            </button>
-            <div id="apiConfig" class="accordion-content hidden">
-              <div class="bg-gray-900 rounded-lg p-5 border border-gray-700">
-                <div class="flex items-center gap-3 mb-4">
-                  <span id="apiStatusText" class="text-sm text-gray-300">Configure your own API keys for unlimited usage</span>
-                </div>
-                
-                <div class="grid md:grid-cols-2 gap-6">
-                  <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                    <h4 class="text-lg font-bold mb-3 flex items-center gap-2">
-                      <i class="fas fa-envelope text-blue-400"></i>
-                      Sendgrid Configuration
-                    </h4>
-                    <p class="text-xs text-gray-400 mb-3">Free plan: 100 emails/day</p>
-                    
-                    <div class="space-y-3">
-                      <div>
-                        <label class="block text-sm text-gray-300 mb-1">Sendgrid API Key</label>
-                        <input type="password" id="sendgridApiKey" placeholder="SG.xxxxxxxxxx" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500" autocomplete="off">
-                      </div>
-                      
-                      <div class="flex gap-2">
-                        <button onclick="saveSendgridConfig()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm font-semibold">
-                          <i class="fas fa-save mr-1"></i> Save
-                        </button>
-                        <button onclick="testSendgridConfig()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-semibold">
-                          <i class="fas fa-vial mr-1"></i> Test
-                        </button>
-                      </div>
-                      
-                      <div id="sendgridStatus" class="text-xs text-gray-400 mt-2">
-                        <span class="text-yellow-400">⚪ Not configured</span>
-                      </div>
-                      
-                      <div class="border-t border-gray-700 pt-3 mt-2">
-                        <h5 class="text-sm font-semibold mb-2 text-gray-300">Daily Usage</h5>
-                        <div class="progress-bar h-2 mb-1">
-                          <div id="sendgridUsageBar" class="progress-bar-fill" style="width: 0%"></div>
-                        </div>
-                        <div class="flex justify-between text-xs">
-                          <span id="sendgridUsed">0</span>
-                          <span>/</span>
-                          <span id="sendgridLimit">100</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                    <h4 class="text-lg font-bold mb-3 flex items-center gap-2">
-                      <i class="fas fa-globe text-green-400"></i>
-                      Webshare Proxy Configuration
-                    </h4>
-                    <p class="text-xs text-gray-400 mb-3">10 free proxies for Google Maps scraping</p>
-                    
-                    <div class="space-y-3">
-                      <div>
-                        <label class="block text-sm text-gray-300 mb-1">Webshare API Key</label>
-                        <input type="password" id="webshareApiKey" placeholder="your-webshare-api-key" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500" autocomplete="off">
-                      </div>
-                      
-                      <div class="flex gap-2">
-                        <button onclick="saveWebshareConfig()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm font-semibold">
-                          <i class="fas fa-save mr-1"></i> Save
-                        </button>
-                        <button onclick="testWebshareConfig()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-semibold">
-                          <i class="fas fa-vial mr-1"></i> Test
-                        </button>
-                      </div>
-                      
-                      <div id="webshareStatus" class="text-xs text-gray-400 mt-2">
-                        <span class="text-yellow-400">⚪ Not configured</span>
-                      </div>
-                      
-                      <div id="proxyList" class="hidden mt-3 border-t border-gray-700 pt-3">
-                        <h5 class="text-sm font-semibold mb-2 text-gray-300">Active Proxies</h5>
-                        <div id="proxyListContainer" class="space-y-1 max-h-32 overflow-y-auto text-xs"></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div class="mt-4 text-xs text-gray-500 border-t border-gray-700 pt-3">
-                  <p>💡 Your API keys are stored securely and only used for your account. Free tier limits apply. Add your own keys to remove scanning limits.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- TAB 4: PENDING -->
-      <div id="tab-pending" class="tab-content hidden">
-        <div class="bg-gradient-to-br from-yellow-900 via-orange-900 to-yellow-800 rounded-2xl p-8 border-2 border-yellow-500">
-          <div class="flex justify-between items-center mb-6">
-            <h2 class="text-3xl font-bold text-white">⏳ Pending Approvals</h2>
-            <button onclick="loadPendingData()" class="btn bg-yellow-600 hover:bg-yellow-700">
-              <i class="fas fa-sync-alt mr-2"></i> Refresh
-            </button>
-          </div>
-
-          <div class="mb-8">
-            <h3 class="text-xl font-bold mb-4 text-yellow-400">🏆 Pending Leaderboard Submissions</h3>
-            <div id="pending-leaderboard-container" class="space-y-4"></div>
-          </div>
-
-          <div class="mb-8">
-            <h3 class="text-xl font-bold mb-4 text-yellow-400">🎯 Pending Freelancer Applications</h3>
-            <div id="pending-freelancers-container" class="space-y-4"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ADD LEADERBOARD MODAL -->
-  <div id="addLeaderboardModal" class="modal">
-    <div class="modal-content max-w-2xl">
-      <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold text-gray-900">Add New Leaderboard Entry</h2>
-        <button onclick="closeAddLeaderboardModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm mb-2 text-gray-700">Company Name *</label>
-          <input type="text" id="add-company-name" placeholder="e.g. SEO Agency Amsterdam" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-        </div>
-        <div>
-          <label class="block text-sm mb-2 text-gray-700">Website URL *</label>
-          <input type="text" id="add-website-url" placeholder="https://example.com" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-        </div>
-        <div>
-          <label class="block text-sm mb-2 text-gray-700">Score * (0-100)</label>
-          <input type="number" id="add-score" min="0" max="100" value="75" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-        </div>
-        <div>
-          <label class="block text-sm mb-2 text-gray-700">Country</label>
-          <select id="add-country" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-            <option value="Netherlands">🇳🇱 Netherlands</option>
-            <option value="Belgium">🇧🇪 Belgium</option>
-            <option value="Germany">🇩🇪 Germany</option>
-            <option value="United Kingdom">🇬🇧 United Kingdom</option>
-            <option value="United States">🇺🇸 United States</option>
-            <option value="France">🇫🇷 France</option>
-            <option value="Spain">🇪🇸 Spain</option>
-            <option value="Italy">🇮🇹 Italy</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm mb-2 text-gray-700">City (optional)</label>
-          <input type="text" id="add-city" placeholder="e.g. Amsterdam" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-        </div>
-        <button onclick="addLeaderboardEntry()" class="btn-primary btn w-full py-3">
-          Add to Leaderboard
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- EDIT LEADERBOARD MODAL -->
-  <div id="editLeaderboardModal" class="modal">
-    <div class="modal-content max-w-2xl">
-      <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold text-gray-900">Edit Leaderboard Entry</h2>
-        <button onclick="closeEditLeaderboardModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <div class="space-y-4">
-        <input type="hidden" id="edit-entry-id">
-        <div>
-          <label class="block text-sm mb-2 text-gray-700">Company Name</label>
-          <input type="text" id="edit-company-name" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-        </div>
-        <div>
-          <label class="block text-sm mb-2 text-gray-700">Website URL</label>
-          <input type="text" id="edit-website-url" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-        </div>
-        <div>
-          <label class="block text-sm mb-2 text-gray-700">Score</label>
-          <input type="number" id="edit-score" min="0" max="100" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-        </div>
-        <div>
-          <label class="block text-sm mb-2 text-gray-700">Country</label>
-          <select id="edit-country" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-            <option value="Netherlands">🇳🇱 Netherlands</option>
-            <option value="Belgium">🇧🇪 Belgium</option>
-            <option value="Germany">🇩🇪 Germany</option>
-            <option value="United Kingdom">🇬🇧 United Kingdom</option>
-            <option value="United States">🇺🇸 United States</option>
-            <option value="France">🇫🇷 France</option>
-            <option value="Spain">🇪🇸 Spain</option>
-            <option value="Italy">🇮🇹 Italy</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm mb-2 text-gray-700">City</label>
-          <input type="text" id="edit-city" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-        </div>
-        <button onclick="updateLeaderboardEntry()" class="btn-primary btn w-full py-3">
-          Update Entry
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // ==========================================
-    // GLOBALE VARIABELEN
-    // ==========================================
-    let currentAdminId = localStorage.getItem('admin_id');
-    let currentUsername = localStorage.getItem('admin_username');
-    let allLeaderboard = [];
-    let allFreelancers = [];
-    let selectedLeaderboardIds = new Set();
-    let selectedFreelancerIds = new Set();
-    let selectedPendingIds = new Set();
-    let scrapedLeads = [];
-    let currentScanResult = null;
-    let userId = null;
-    let sendgridConfigured = false;
-    let webshareConfigured = false;
-
-    // ==========================================
-    // AUTHENTICATIE
-    // ==========================================
-    window.onload = function() {
-      console.log('📋 Admin Dashboard loaded');
-      
-      if (localStorage.getItem('admin_id') && localStorage.getItem('admin_username')) {
-        currentAdminId = localStorage.getItem('admin_id');
-        currentUsername = localStorage.getItem('admin_username');
-        
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('main-dashboard').classList.remove('hidden');
-        document.getElementById('admin-username').textContent = currentUsername;
-        
-        registerUser();
-        loadAllData();
-        switchTab('leaderboard');
-      }
+  } else {
+    dbConfig = {
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432'),
+      database: process.env.DB_NAME || 'contentscale',
+      user: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || 'postgres',
+      ssl: false,
+      connectionTimeoutMillis: 5000,
+      idleTimeoutMillis: 30000,
+      max: 10
     };
+  }
 
-    async function login() {
-      const username = document.getElementById('login-username').value;
-      const password = document.getElementById('login-password').value;
-      const errorDiv = document.getElementById('login-error');
+  console.log('📊 Database configuratie:');
+  console.log(`   • Host: ${dbConfig.host}`);
+  console.log(`   • Port: ${dbConfig.port}`);
+  console.log(`   • Database: ${dbConfig.database}`);
+  console.log(`   • User: ${dbConfig.user}`);
+
+  return new Pool(dbConfig);
+}
+
+try {
+  pool = initDatabaseConfig();
+} catch (e) {
+  console.error('❌ Fout bij initialiseren database pool:', e.message);
+  pool = null;
+}
+
+async function waitForDatabase(retries = 5, delay = 3000) {
+  if (!pool) {
+    console.log('❌ Geen database pool - overslaan');
+    return false;
+  }
+  
+  console.log('🔄 Verbinden met database...');
+  
+  for (let i = 0; i < retries; i++) {
+    try {
+      const client = await pool.connect();
+      console.log(`✅ Database verbonden! (poging ${i + 1}/${retries})`);
       
-      errorDiv.classList.add('hidden');
+      await client.query('SELECT NOW()');
+      console.log('✅ Database query werkt');
       
-      try {
-        console.log('🔐 Login poging voor:', username);
-        
-        const response = await fetch('/api/setup/verify-admin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-        });
-        
-        const data = await response.json();
-        console.log('📦 Login response:', data);
-        
-        if (data.success) {
-          localStorage.setItem('admin_id', data.admin_id);
-          localStorage.setItem('admin_username', username);
-          
-          currentAdminId = data.admin_id;
-          currentUsername = username;
-          
-          console.log('✅ Admin ID opgeslagen:', data.admin_id);
-          
-          document.getElementById('login-screen').classList.add('hidden');
-          document.getElementById('main-dashboard').classList.remove('hidden');
-          document.getElementById('admin-username').textContent = username;
-          
-          registerUser();
-          loadAllData();
-          switchTab('leaderboard');
-        } else {
-          errorDiv.textContent = data.error || 'Login failed';
-          errorDiv.classList.remove('hidden');
-        }
-      } catch (error) {
-        console.error('❌ Login error:', error);
-        errorDiv.textContent = 'Connection error';
-        errorDiv.classList.remove('hidden');
+      client.release();
+      
+      setTimeout(() => createAllTables().catch(err => {
+        console.error('❌ Fout bij aanmaken tabellen:', err.message);
+      }), 1000);
+      
+      return true;
+    } catch (err) {
+      console.error(`❌ Database connectie poging ${i + 1}/${retries} mislukt:`, err.message);
+      
+      if (i === retries - 1) {
+        console.error('\n❌❌❌ KON GEEN VERBINDING MAKEN MET DATABASE ❌❌❌');
+        return false;
       }
+      
+      console.log(`⏳ Opnieuw proberen over ${delay/1000} seconden...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
+  }
+  return false;
+}
 
-    function logout() {
-      localStorage.removeItem('admin_id');
-      localStorage.removeItem('admin_username');
-      location.reload();
+const storage = multer.memoryStorage();
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }
+});
+
+app.set('trust proxy', 1);
+app.use(compression({ level: 9, threshold: 0 }));
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { success: false, error: 'Too many requests' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { success: false, error: 'Too many login attempts' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+app.use('/api/', limiter);
+app.use('/api/setup/verify-admin', authLimiter);
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    'https://app.contentscale.site',
+    'https://contentscale.site',
+    'http://localhost:3000',
+    'http://localhost:3001'
+  ];
+  
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-admin-key');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+});
+
+app.use(express.static('public', {
+  maxAge: '1y',
+  etag: true,
+  lastModified: true,
+  immutable: true
+}));
+
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+
+const verifyAdmin = async (req, res, next) => {
+  const adminKey = req.headers['x-admin-key'];
+  
+  if (!adminKey) {
+    return res.status(401).json({ success: false, error: 'Admin authentication required' });
+  }
+  
+  if (!pool) {
+    return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  }
+  
+  try {
+    const result = await pool.query(
+      'SELECT * FROM super_admins WHERE id = $1 AND is_active = TRUE',
+      [adminKey]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json({ success: false, error: 'Invalid admin credentials' });
     }
+    
+    req.admin = result.rows[0];
+    next();
+  } catch (error) {
+    console.error('❌ Admin verificatie error:', error.message);
+    res.status(500).json({ success: false, error: 'Authentication error' });
+  }
+};
 
-    // ==========================================
-    // USER REGISTRATIE
-    // ==========================================
-    async function registerUser() {
-      try {
-        let storedUserId = localStorage.getItem('user_id');
-        
-        if (!storedUserId) {
-          const response = await fetch('/api/user/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-          });
-          
-          const data = await response.json();
-          if (data.success && data.userId) {
-            userId = data.userId;
-            localStorage.setItem('user_id', userId);
-            console.log('✅ User registered:', userId);
-            loadApiStatus();
-          }
-        } else {
-          userId = storedUserId;
-          console.log('✅ Existing user:', userId);
-          loadApiStatus();
-        }
-      } catch (error) {
-        console.error('❌ User registration error:', error);
-      }
+let browserInstance = null;
+
+async function getBrowser() {
+  if (!browserInstance) {
+    console.log('🚀 Launching Puppeteer browser...');
+    browserInstance = await puppeteer.launch({
+      headless: 'new',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--disable-gpu',
+        '--disable-blink-features=AutomationControlled',
+        '--disable-features=IsolateOrigins,site-per-process',
+        '--window-size=1920,1080'
+      ],
+      timeout: 30000
+    }).catch(err => {
+      console.error('❌ Puppeteer launch error:', err.message);
+      return null;
+    });
+    
+    if (browserInstance) {
+      console.log('✅ Puppeteer browser ready');
     }
+  }
+  return browserInstance;
+}
 
-    // ==========================================
-    // API STATUS
-    // ==========================================
-    async function loadApiStatus() {
-      if (!userId) return;
-      
-      try {
-        const response = await fetch('/api/user/keys/status', {
-          headers: { 'x-user-id': userId }
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          const indicator = document.getElementById('apiStatusIndicator');
-          const statusText = document.getElementById('apiStatusText');
-          
-          if (data.hasSendgrid || data.hasWebshare) {
-            indicator.className = 'api-status-indicator api-status-active';
-            statusText.textContent = 'Custom API keys configured';
-          } else {
-            indicator.className = 'api-status-indicator api-status-inactive';
-            statusText.textContent = 'Using default settings (limited)';
-          }
-          
-          if (data.hasSendgrid) {
-            document.getElementById('sendgridStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
-            if (data.sendgrid) {
-              document.getElementById('sendgridUsed').textContent = data.sendgrid.used;
-              document.getElementById('sendgridLimit').textContent = data.sendgrid.limit;
-              const percentage = (data.sendgrid.used / data.sendgrid.limit) * 100;
-              document.getElementById('sendgridUsageBar').style.width = percentage + '%';
-            }
-            sendgridConfigured = true;
-          }
-        }
-      } catch (error) {
-        console.error('Error loading API status:', error);
-      }
+process.on('SIGTERM', async () => {
+  if (browserInstance) {
+    await browserInstance.close();
+  }
+  process.exit(0);
+});
+
+const scanCache = new Map();
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+function hashContent(html) {
+  return crypto.createHash('sha256').update(html).digest('hex');
+}
+
+setInterval(() => {
+  const now = Date.now();
+  let cleared = 0;
+  for (const [key, value] of scanCache.entries()) {
+    if (now - value.timestamp > CACHE_TTL_MS) {
+      scanCache.delete(key);
+      cleared++;
     }
+  }
+  if (cleared > 0) console.log(`🧹 Cleared ${cleared} expired cache entries`);
+}, 60000);
 
-    // ==========================================
-    // SENDGRID FUNCTIES
-    // ==========================================
-    async function saveSendgridConfig() {
-      if (!userId) {
-        alert('❌ User not registered. Please refresh the page.');
-        return;
-      }
-      
-      const apiKey = document.getElementById('sendgridApiKey').value;
-      if (!apiKey || apiKey.includes('••••')) {
-        alert('❌ Please enter your Sendgrid API key');
-        return;
-      }
-      
-      try {
-        const response = await fetch('/api/user/sendgrid/configure', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'x-user-id': userId
-          },
-          body: JSON.stringify({ 
-            userId,
-            apiKey,
-            dailyLimit: 100 
-          })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          alert('✅ Sendgrid configuration saved successfully');
-          document.getElementById('sendgridStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
-          sendgridConfigured = true;
-          loadApiStatus();
-        } else {
-          alert('❌ ' + (data.error || 'Failed to save configuration'));
-        }
-      } catch (error) {
-        alert('❌ Error: ' + error.message);
-      }
-    }
+function isValidUrl(string) {
+  try {
+    new URL(string);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
 
-    async function testSendgridConfig() {
-      if (!userId) {
-        alert('❌ User not registered');
-        return;
-      }
-      
-      try {
-        const response = await fetch('/api/email/send', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'x-user-id': userId
-          },
-          body: JSON.stringify({
-            to_email: 'test@example.com',
-            to_name: 'Test User',
-            subject: 'Test Email from ContentScale',
-            html: '<p>This is a test email from your ContentScale account.</p>'
-          })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          alert('✅ Test email sent successfully!');
-        } else if (data.needs_api_key) {
-          alert('❌ No Sendgrid API key configured. Please add your key first.');
-        } else if (data.limit_reached) {
-          alert('❌ Daily limit reached. Try again tomorrow.');
-        } else {
-          alert('❌ ' + (data.error || 'Test failed'));
-        }
-      } catch (error) {
-        alert('❌ Error: ' + error.message);
-      }
-    }
+function normalizeUrl(url) {
+  let normalized = url.trim();
+  if (!normalized.startsWith('http')) {
+    normalized = 'https://' + normalized;
+  }
+  if (normalized.endsWith('/')) {
+    normalized = normalized.slice(0, -1);
+  }
+  return normalized;
+}
 
-    // ==========================================
-    // WEBSHARE FUNCTIES
-    // ==========================================
-    async function saveWebshareConfig() {
-      if (!userId) {
-        alert('❌ User not registered. Please refresh the page.');
-        return;
-      }
-      
-      const apiKey = document.getElementById('webshareApiKey').value;
-      if (!apiKey) {
-        alert('❌ Please enter your Webshare API key');
-        return;
-      }
-      
-      try {
-        const response = await fetch('/api/user/webshare/configure', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'x-user-id': userId
-          },
-          body: JSON.stringify({ 
-            userId,
-            apiKey
-          })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          alert(`✅ Webshare configured! Found ${data.proxy_count || 10} proxies.`);
-          document.getElementById('webshareStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
-          webshareConfigured = true;
-          
-          if (data.proxy_count > 0) {
-            document.getElementById('proxyList').classList.remove('hidden');
-            document.getElementById('proxyListContainer').innerHTML = 
-              '<p class="text-green-400">✓ Proxies loaded successfully</p>';
-          }
-          loadApiStatus();
-        } else {
-          alert('❌ ' + (data.error || 'Failed to save configuration'));
-        }
-      } catch (error) {
-        alert('❌ Error: ' + error.message);
-      }
-    }
-
-    async function testWebshareConfig() {
-      if (!userId) {
-        alert('❌ User not registered');
-        return;
-      }
-      
-      try {
-        const response = await fetch('/api/google-maps/scrape', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'x-user-id': userId
-          },
-          body: JSON.stringify({
-            url: 'https://www.google.com/maps/search/test',
-            maxResults: 1,
-            test: true
-          })
-        });
-        
-        const data = await response.json();
-        
-        if (data.using_custom_proxy) {
-          alert('✅ Proxy test successful! Your proxies are working.');
-        } else if (data.proxy_error) {
-          alert('❌ Proxy error: ' + data.error);
-        } else {
-          alert('ℹ️ Using default settings (no proxy)');
-        }
-      } catch (error) {
-        alert('❌ Error: ' + error.message);
-      }
-    }
-
-    // ==========================================
-    // ACCORDEON FUNCTIES
-    // ==========================================
-    function toggleAccordion(id) {
-      const content = document.getElementById(id);
-      const icon = document.getElementById(id + 'Icon');
-      
-      if (content) {
-        content.classList.toggle('hidden');
-        icon.style.transform = content.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
-      }
-    }
-
-    // ==========================================
-    // API CALLS
-    // ==========================================
-    async function apiCall(endpoint, method = 'GET', body = null) {
-      const headers = {
-        'Content-Type': 'application/json'
-      };
-      
-      if (endpoint.includes('/admin/')) {
-        const adminId = localStorage.getItem('admin_id');
-        if (!adminId) throw new Error('Admin authentication required');
-        headers['x-admin-key'] = adminId;
-      }
-      
-      const options = {
-        method,
-        headers,
-        credentials: 'include'
-      };
-      
-      if (body) options.body = JSON.stringify(body);
-      
-      const response = await fetch(endpoint, options);
-      
-      if (response.status === 401) {
-        throw new Error('Invalid admin credentials - login opnieuw');
-      }
-      
-      const data = await response.json();
-      if (!data.success) throw new Error(data.error || 'API call failed');
-      return data;
-    }
-
-    // ==========================================
-    // TAB MANAGEMENT
-    // ==========================================
-    function switchTab(tabName) {
-      document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
-      document.querySelectorAll('.mode-toggle').forEach(b => b.classList.remove('active'));
-      
-      document.getElementById(`tab-${tabName}`).classList.remove('hidden');
-      
-      if (tabName === 'leaderboard') document.getElementById('tabLeaderboardBtn').classList.add('active');
-      if (tabName === 'freelancers') document.getElementById('tabFreelancersBtn').classList.add('active');
-      if (tabName === 'scanner') document.getElementById('tabScannerBtn').classList.add('active');
-      if (tabName === 'pending') document.getElementById('tabPendingBtn').classList.add('active');
-      
-      if (tabName === 'leaderboard') loadLeaderboard();
-      if (tabName === 'freelancers') loadFreelancers();
-      if (tabName === 'scanner') switchScannerMode('single');
-      if (tabName === 'pending') loadPendingData();
-    }
-
-    // ==========================================
-    // LEADERBOARD FUNCTIES - VERBETERD
-    // ==========================================
-    async function loadLeaderboard() {
-      try {
-        const data = await apiCall('/api/leaderboard');
-        allLeaderboard = data.entries || [];
-        
-        document.getElementById('stat-total-agencies').textContent = data.stats?.totalAgencies || 0;
-        document.getElementById('stat-avg-score').textContent = data.averageScore || 0;
-        document.getElementById('stat-countries').textContent = data.stats?.countriesCount || 0;
-        document.getElementById('stat-active-helpers').textContent = data.stats?.activeHelpers || 0;
-        
-        renderTop3();
-        renderRankings4to15();
-        renderRankings16Plus();
-        renderCountryFilters();
-      } catch (error) {
-        console.error('Leaderboard error:', error);
-      }
-    }
-
-    function renderTop3() {
-      const container = document.getElementById('top3-container');
-      if (!container) return;
-      
-      const top3 = allLeaderboard.slice(0, 3);
-      
-      if (top3.length === 0) {
-        container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Geen entries gevonden</div>';
-        return;
-      }
-      
-      container.innerHTML = top3.map((entry, index) => {
-        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
-        const medalClass = index === 0 ? 'gold' : index === 1 ? 'silver' : 'bronze';
-        const rankText = index === 0 ? '1st Worldwide' : index === 1 ? '2nd Worldwide' : '3rd Worldwide';
-        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-        
-        return `
-          <div class="top-card ${medalClass}">
-            <div class="text-5xl mb-2">${medal}</div>
-            <div class="text-xs font-bold uppercase tracking-wider mb-2 text-white/80">${rankText}</div>
-            <h3 class="text-xl font-bold mb-2">${companyName}</h3>
-            <div class="text-4xl font-black mb-2">${entry.score}/100</div>
-            <div class="text-white/80 mb-3">${getCountryFlag(entry.country)} ${entry.country}</div>
-            <button onclick="editLeaderboardEntry(${entry.id})" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg mb-2">
-              <i class="fas fa-edit mr-2"></i> Edit
-            </button>
-            <button onclick="deleteLeaderboardEntry(${entry.id})" class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">
-              <i class="fas fa-trash mr-2"></i> Delete
-            </button>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function renderRankings4to15() {
-      const grid = document.getElementById('rankings4to15Grid');
-      if (!grid) return;
-      
-      const rankings = allLeaderboard.slice(3, 15);
-      
-      if (rankings.length === 0) {
-        document.getElementById('rankings4to15Container').style.display = 'none';
-        return;
-      }
-      
-      document.getElementById('rankings4to15Container').style.display = 'block';
-      
-      grid.innerHTML = rankings.map((entry, index) => {
-        const actualRank = index + 4;
-        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-        
-        return `
-          <div class="rank-card">
-            <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
-            <h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
-            <div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
-            <div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
-            <div class="flex gap-2 justify-center">
-              <button onclick="editLeaderboardEntry(${entry.id})" class="text-blue-400 hover:text-blue-300 text-xs">
-                <i class="fas fa-edit"></i> Edit
-              </button>
-              <button onclick="deleteLeaderboardEntry(${entry.id})" class="text-red-400 hover:text-red-300 text-xs">
-                <i class="fas fa-trash"></i> Del
-              </button>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function renderRankings16Plus() {
-      const tbody = document.getElementById('rankingsTbody');
-      if (!tbody) return;
-      
-      const rankings = allLeaderboard.slice(15, 35);
-      
-      tbody.innerHTML = rankings.map((entry, index) => {
-        const actualRank = index + 16;
-        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-        const isSelected = selectedLeaderboardIds.has(entry.id);
-        
-        return `
-          <tr>
-            <td class="w-10">
-              <input type="checkbox" class="leaderboard-checkbox" data-id="${entry.id}" onchange="toggleSelectLeaderboard(${entry.id})" ${isSelected ? 'checked' : ''}>
-            </td>
-            <td><span class="inline-flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full font-bold">${actualRank}</span></td>
-            <td class="font-semibold">${companyName}</td>
-            <td><a href="${entry.url}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">${entry.url.replace('https://', '').substring(0, 25)}...</a></td>
-            <td><span class="text-lg font-bold ${entry.score >= 85 ? 'text-green-400' : entry.score >= 70 ? 'text-yellow-400' : 'text-red-400'}">${entry.score}</span></td>
-            <td><span class="text-sm">${getCountryFlag(entry.country)} ${entry.country}</span></td>
-            <td><span class="text-sm text-gray-400">${new Date(entry.created_at).toLocaleDateString()}</span></td>
-            <td>
-              <div class="flex gap-2">
-                <button onclick="editLeaderboardEntry(${entry.id})" class="text-blue-400 hover:text-blue-300" title="Edit">
-                  <i class="fas fa-edit"></i>
-                </button>
-                <button onclick="deleteLeaderboardEntry(${entry.id})" class="text-red-400 hover:text-red-300" title="Delete">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </div>
-            </td>
-          </tr>
-        `;
-      }).join('');
-      
-      document.getElementById('totalCount').textContent = allLeaderboard.length;
-    }
-
-    // ==========================================
-    // LEADERBOARD MODAL FUNCTIES
-    // ==========================================
-    function showAddLeaderboardModal() {
-      document.getElementById('addLeaderboardModal').classList.add('active');
-      document.body.style.overflow = 'hidden';
-    }
-
-    function closeAddLeaderboardModal() {
-      document.getElementById('addLeaderboardModal').classList.remove('active');
-      document.body.style.overflow = 'auto';
-    }
-
-    async function addLeaderboardEntry() {
-      const companyName = document.getElementById('add-company-name').value;
-      const url = document.getElementById('add-website-url').value;
-      const score = parseInt(document.getElementById('add-score').value);
-      const country = document.getElementById('add-country').value;
-      const city = document.getElementById('add-city').value;
-      
-      if (!companyName || !url || !score) {
-        alert('❌ Company name, URL and score are required');
-        return;
-      }
-      
-      let formattedUrl = url;
-      if (!formattedUrl.startsWith('http')) {
-        formattedUrl = 'https://' + formattedUrl;
-      }
-      
-      try {
-        await apiCall('/api/admin/leaderboard/manual-add', 'POST', {
-          url: formattedUrl,
-          company_name: companyName,
-          score,
-          country,
-          city: city || null
-        });
-        
-        alert(`✅ "${companyName}" toegevoegd aan leaderboard!`);
-        closeAddLeaderboardModal();
-        loadLeaderboard();
-        
-        document.getElementById('add-company-name').value = '';
-        document.getElementById('add-website-url').value = '';
-        document.getElementById('add-score').value = '75';
-        document.getElementById('add-city').value = '';
-      } catch (error) {
-        alert('❌ Fout bij toevoegen: ' + error.message);
-      }
-    }
-
-    function editLeaderboardEntry(id) {
-      const entry = allLeaderboard.find(e => e.id === id);
-      if (!entry) return;
-      
-      document.getElementById('edit-entry-id').value = entry.id;
-      document.getElementById('edit-company-name').value = entry.company_name || extractDomainFromUrl(entry.url);
-      document.getElementById('edit-website-url').value = entry.url;
-      document.getElementById('edit-score').value = entry.score;
-      document.getElementById('edit-country').value = entry.country || 'Netherlands';
-      document.getElementById('edit-city').value = entry.city || '';
-      
-      document.getElementById('editLeaderboardModal').classList.add('active');
-      document.body.style.overflow = 'hidden';
-    }
-
-    function closeEditLeaderboardModal() {
-      document.getElementById('editLeaderboardModal').classList.remove('active');
-      document.body.style.overflow = 'auto';
-    }
-
-    async function updateLeaderboardEntry() {
-      const id = document.getElementById('edit-entry-id').value;
-      const companyName = document.getElementById('edit-company-name').value;
-      const url = document.getElementById('edit-website-url').value;
-      const score = parseInt(document.getElementById('edit-score').value);
-      const country = document.getElementById('edit-country').value;
-      const city = document.getElementById('edit-city').value;
-      
-      if (!companyName || !url || !score) {
-        alert('❌ Company name, URL and score are required');
-        return;
-      }
-      
-      try {
-        await apiCall(`/api/admin/leaderboard/${id}`, 'PUT', {
-          company_name: companyName,
-          url,
-          score,
-          country,
-          city
-        });
-        
-        alert('✅ Entry bijgewerkt!');
-        closeEditLeaderboardModal();
-        loadLeaderboard();
-      } catch (error) {
-        alert('❌ Fout bij bijwerken: ' + error.message);
-      }
-    }
-
-    // ==========================================
-    // EXTRACT DOMAIN FROM URL
-    // ==========================================
-    function extractDomainFromUrl(url) {
-      if (!url) return 'Bedrijf';
-      try {
-        const hostname = new URL(url).hostname;
-        let domain = hostname.replace('www.', '');
-        let name = domain.split('.')[0];
-        return name.charAt(0).toUpperCase() + name.slice(1);
-      } catch (e) {
-        const parts = url.split('/');
-        const domain = parts[2] || parts[0];
-        return domain.replace('www.', '').split('.')[0] || 'Bedrijf';
-      }
-    }
-
-    // ==========================================
-    // LEADERBOARD DELETE FUNCTIES
-    // ==========================================
-    function toggleSelectLeaderboard(id) {
-      if (selectedLeaderboardIds.has(id)) {
-        selectedLeaderboardIds.delete(id);
-      } else {
-        selectedLeaderboardIds.add(id);
-      }
-      updateSelectedCountLeaderboard();
-    }
-
-    function toggleSelectAllLeaderboard() {
-      const selectAll = document.getElementById('select-all-leaderboard');
-      const checkboxes = document.querySelectorAll('.leaderboard-checkbox');
-      
-      if (selectAll.checked) {
-        allLeaderboard.forEach(entry => selectedLeaderboardIds.add(entry.id));
-        checkboxes.forEach(cb => cb.checked = true);
-      } else {
-        selectedLeaderboardIds.clear();
-        checkboxes.forEach(cb => cb.checked = false);
-      }
-      updateSelectedCountLeaderboard();
-    }
-
-    function updateSelectedCountLeaderboard() {
-      document.getElementById('selected-count-leaderboard').textContent = `${selectedLeaderboardIds.size} geselecteerd`;
-    }
-
-    async function deleteLeaderboardEntry(id) {
-      if (!confirm('❌ Verwijder deze entry permanent?')) return;
-      try {
-        await apiCall(`/api/admin/leaderboard/${id}`, 'DELETE');
-        alert('✅ Entry verwijderd');
-        selectedLeaderboardIds.delete(id);
-        loadLeaderboard();
-      } catch (error) {
-        alert('❌ Fout: ' + error.message);
-      }
-    }
-
-    async function bulkDeleteLeaderboard() {
-      if (selectedLeaderboardIds.size === 0) {
-        alert('❌ Selecteer entries om te verwijderen');
-        return;
-      }
-      
-      if (!confirm(`❌ Verwijder ${selectedLeaderboardIds.size} entries permanent?`)) return;
-      
-      let success = 0;
-      let failed = 0;
-      
-      for (const id of selectedLeaderboardIds) {
-        try {
-          await apiCall(`/api/admin/leaderboard/${id}`, 'DELETE');
-          success++;
-        } catch (e) {
-          failed++;
-        }
-      }
-      
-      alert(`✅ ${success} verwijderd, ${failed} mislukt`);
-      selectedLeaderboardIds.clear();
-      loadLeaderboard();
-    }
-
-    // ==========================================
-    // FREELANCERS FUNCTIES
-    // ==========================================
-    async function loadFreelancers() {
-      try {
-        console.log('📥 Laden freelancers...');
-        const response = await fetch('/api/freelancers');
-        const data = await response.json();
-        
-        const grid = document.getElementById('freelancersGrid');
-        if (!grid) return;
-        
-        const freelancers = data.freelancers || [];
-        allFreelancers = freelancers;
-        
-        if (freelancers.length === 0) {
-          grid.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Geen freelancers gevonden</div>';
-          return;
-        }
-        
-        grid.innerHTML = freelancers.map(f => {
-          const firstName = f.name.split(' ')[0];
-          const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase();
-          const isSelected = selectedFreelancerIds.has(f.id);
-          
-          return `
-            <div class="card hover:border-purple-500">
-              <div class="card-content">
-                <div class="flex items-start gap-4 mb-4">
-                  <div class="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl font-bold text-white">
-                    ${initials}
-                  </div>
-                  <div class="flex-1">
-                    <div class="flex items-center justify-between">
-                      <h3 class="font-bold text-lg text-white">${f.name}</h3>
-                      ${f.is_featured 
-                        ? '<span class="px-2 py-1 bg-yellow-600 rounded text-xs text-white font-semibold flex items-center gap-1">⭐ Featured</span>' 
-                        : '<span class="px-2 py-1 bg-green-600 rounded text-xs text-white font-semibold">✓ Verified</span>'}
-                    </div>
-                    <p class="text-sm text-gray-400">${f.title || 'SEO Specialist'}</p>
-                  </div>
-                </div>
-                <p class="text-gray-300 text-sm mb-4">${f.bio || 'Geen bio beschikbaar'}</p>
-                <div class="flex items-center justify-between text-sm mb-4">
-                  <span class="text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i> ${f.location || f.country || 'Remote'}</span>
-                  ${f.hourly_rate ? `<span class="text-purple-400">💰 ${f.hourly_rate}</span>` : ''}
-                </div>
-              </div>
-              <div class="card-footer">
-                <div class="flex gap-2">
-                  <a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20discuss%20SEO%20optimization%20with%20${encodeURIComponent(f.name)}" 
-                     target="_blank" 
-                     rel="noopener" 
-                     class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 no-underline">
-                    <i class="fab fa-whatsapp"></i> Contact ${firstName}
-                  </a>
-                  <div class="flex gap-1">
-                    <button onclick="toggleFeatured(${f.id})" class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded-lg text-sm transition-all" title="Toggle featured">
-                      <i class="fas fa-star"></i>
-                    </button>
-                    <button onclick="editFreelancer(${f.id})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm transition-all" title="Bewerken">
-                      <i class="fas fa-edit"></i>
-                    </button>
-                    <button onclick="deleteFreelancer(${f.id})" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm transition-all" title="Verwijderen">
-                      <i class="fas fa-trash"></i>
-                    </button>
-                  </div>
-                </div>
-                <div class="mt-2 flex items-center gap-2">
-                  <input type="checkbox" class="freelancer-checkbox w-4 h-4 rounded border-gray-600 bg-gray-700 text-purple-600" data-id="${f.id}" onchange="toggleSelectFreelancer(${f.id})" ${isSelected ? 'checked' : ''}>
-                  <span class="text-xs text-gray-400">Selecteer voor bulk delete</span>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('');
-      } catch (error) {
-        console.error('❌ Fout bij laden freelancers:', error);
-        document.getElementById('freelancersGrid').innerHTML = 
-          '<div class="col-span-3 text-center py-8 text-gray-400">Kon freelancers niet laden</div>';
-      }
-    }
-
-    function toggleSelectFreelancer(id) {
-      if (selectedFreelancerIds.has(id)) {
-        selectedFreelancerIds.delete(id);
-      } else {
-        selectedFreelancerIds.add(id);
-      }
-      updateSelectedCountFreelancers();
-    }
-
-    function toggleSelectAllFreelancers() {
-      const selectAll = document.getElementById('select-all-freelancers');
-      const checkboxes = document.querySelectorAll('.freelancer-checkbox');
-      
-      if (selectAll.checked) {
-        allFreelancers.forEach(f => selectedFreelancerIds.add(f.id));
-        checkboxes.forEach(cb => cb.checked = true);
-      } else {
-        selectedFreelancerIds.clear();
-        checkboxes.forEach(cb => cb.checked = false);
-      }
-      updateSelectedCountFreelancers();
-    }
-
-    function updateSelectedCountFreelancers() {
-      document.getElementById('selected-count-freelancers').textContent = `${selectedFreelancerIds.size} geselecteerd`;
-    }
-
-    async function toggleFeatured(id) {
-      if (!localStorage.getItem('admin_id')) {
-        alert('❌ Je moet ingelogd zijn als admin');
-        return;
-      }
-      
-      try {
-        const data = await apiCall(`/api/admin/freelancers/${id}/toggle-featured`, 'POST');
-        alert(`✅ Featured ${data.is_featured ? 'aangezet' : 'uitgezet'}`);
-        loadFreelancers();
-      } catch (error) {
-        alert('❌ Fout: ' + error.message);
-      }
-    }
-
-    async function editFreelancer(id) {
-      if (!localStorage.getItem('admin_id')) {
-        alert('❌ Je moet ingelogd zijn als admin');
-        return;
-      }
-      
-      const freelancer = allFreelancers.find(f => f.id === id);
-      if (!freelancer) return;
-      
-      const newName = prompt('Naam:', freelancer.name);
-      if (!newName) return;
-      
-      const newTitle = prompt('Titel:', freelancer.title || 'SEO Specialist');
-      const newLocation = prompt('Locatie:', freelancer.location || freelancer.country || 'Remote');
-      const newBio = prompt('Bio (max 200 tekens):', freelancer.bio || '');
-      const newRate = prompt('Uurtarief (bijv. €75-€100):', freelancer.hourly_rate || '');
-      
-      try {
-        await apiCall(`/api/admin/freelancers/${id}`, 'PUT', {
-          name: newName,
-          title: newTitle,
-          location: newLocation,
-          bio: newBio,
-          hourly_rate: newRate
-        });
-        alert('✅ Freelancer bijgewerkt');
-        loadFreelancers();
-      } catch (error) {
-        alert('❌ Fout: ' + error.message);
-      }
-    }
-
-    async function deleteFreelancer(id) {
-      if (!localStorage.getItem('admin_id')) {
-        alert('❌ Je moet ingelogd zijn als admin');
-        return;
-      }
-      
-      if (!confirm('❌ Verwijder deze freelancer permanent?')) return;
-      try {
-        await apiCall(`/api/admin/freelancers/${id}`, 'DELETE');
-        alert('✅ Freelancer verwijderd');
-        selectedFreelancerIds.delete(id);
-        loadFreelancers();
-      } catch (error) {
-        alert('❌ Fout: ' + error.message);
-      }
-    }
-
-    async function bulkDeleteFreelancers() {
-      if (!localStorage.getItem('admin_id')) {
-        alert('❌ Je moet ingelogd zijn als admin');
-        return;
-      }
-      
-      if (selectedFreelancerIds.size === 0) {
-        alert('❌ Selecteer freelancers om te verwijderen');
-        return;
-      }
-      
-      if (!confirm(`❌ Verwijder ${selectedFreelancerIds.size} freelancers permanent?`)) return;
-      
-      try {
-        const ids = Array.from(selectedFreelancerIds);
-        await apiCall('/api/admin/freelancers/bulk-delete', 'POST', { ids });
-        alert(`✅ ${ids.length} freelancers verwijderd`);
-        selectedFreelancerIds.clear();
-        loadFreelancers();
-      } catch (error) {
-        alert('❌ Fout: ' + error.message);
-      }
-    }
-
-    // ==========================================
-    // SCANNER FUNCTIES
-    // ==========================================
-    function switchScannerMode(mode) {
-      const singleMode = document.getElementById('singleMode');
-      const bulkMode = document.getElementById('bulkMode');
-      const singleBtn = document.getElementById('modeSingleBtn');
-      const bulkBtn = document.getElementById('modeBulkBtn');
-      
-      if (mode === 'single') {
-        singleMode.classList.remove('hidden');
-        bulkMode.classList.add('hidden');
-        singleBtn.classList.add('active');
-        bulkBtn.classList.remove('active');
-      } else {
-        singleMode.classList.add('hidden');
-        bulkMode.classList.remove('hidden');
-        singleBtn.classList.remove('active');
-        bulkBtn.classList.add('active');
-      }
-    }
-
-    async function scanSingleURL() {
-      const input = document.getElementById('singleUrlInput');
-      const button = document.getElementById('singleScanBtn');
-      const progress = document.getElementById('singleProgress');
-      const progressBar = document.getElementById('singleProgressBar');
-      const progressText = document.getElementById('singleProgressText');
-      const resultDiv = document.getElementById('singleResult');
-      
-      let url = input.value.trim();
-      if (!url) {
-        alert('❌ Please enter a URL');
-        return;
-      }
-      
-      if (!url.startsWith('http')) {
-        url = 'https://' + url;
-      }
-      
-      button.disabled = true;
-      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scannen...';
-      progress.classList.remove('hidden');
-      progressBar.style.width = '20%';
-      progressText.textContent = 'Browser starten...';
-      
-      try {
-        const response = await fetch('/api/scan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url })
-        });
-        
-        progressBar.style.width = '60%';
-        progressText.textContent = 'Content analyseren...';
-        
-        const data = await response.json();
-        
-        if (!response.ok || !data.success) {
-          throw new Error(data.error || 'Scan failed');
-        }
-        
-        currentScanResult = data;
-        
-        const companyName = extractDomainFromUrl(url);
-        
-        resultDiv.innerHTML = `
-          <div class="card border-green-500 mt-4">
-            <div class="text-center mb-4">
-              <h3 class="text-2xl font-bold text-white mb-2">✅ Scan Complete</h3>
-              <p class="text-sm text-gray-400 break-all">${url}</p>
-            </div>
-            <div class="text-center mb-6">
-              <div class="text-6xl font-black ${data.score >= 85 ? 'text-green-400' : data.score >= 70 ? 'text-yellow-400' : 'text-red-400'}">${data.score}</div>
-              <div class="text-sm text-gray-400">Score /100</div>
-              <span class="inline-block mt-2 px-3 py-1 bg-${data.quality === 'excellent' ? 'green' : data.quality === 'good' ? 'blue' : 'yellow'}-600 rounded-full text-xs">
-                ${data.quality}
-              </span>
-            </div>
-            <div class="bg-gray-800 rounded-lg p-4 mb-4">
-              <label class="block text-sm font-medium mb-2 text-gray-300">Bedrijfsnaam (aanpasbaar)</label>
-              <input type="text" id="scan-company-name" value="${companyName}" class="w-full px-4 py-3 bg-gray-700 border-2 border-purple-500 rounded-lg text-white font-semibold">
-              <p class="text-xs text-gray-400 mt-2">✏️ Je kunt de naam aanpassen voordat je toevoegt</p>
-            </div>
-            <div class="flex gap-3">
-              <button onclick="addScanToLeaderboard('${url}', ${data.score})" class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-semibold">
-                <i class="fas fa-plus-circle mr-2"></i> Add to Leaderboard
-              </button>
-              <button onclick="document.getElementById('singleResult').classList.add('hidden')" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg font-semibold">
-                Close
-              </button>
-            </div>
-          </div>
-        `;
-        
-        resultDiv.classList.remove('hidden');
-        
-        progressBar.style.width = '100%';
-        progressText.textContent = 'Scan compleet!';
-        
-        setTimeout(() => {
-          progress.classList.add('hidden');
-          button.disabled = false;
-          button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
-        }, 500);
-        
-      } catch (error) {
-        console.error('Scan error:', error);
-        alert('❌ Scan failed: ' + error.message);
-        
-        progress.classList.add('hidden');
-        button.disabled = false;
-        button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
-      }
-    }
-
-    async function addScanToLeaderboard(url, score) {
-      if (!localStorage.getItem('admin_id')) {
-        alert('❌ Je moet ingelogd zijn als admin');
-        return;
-      }
-      
-      const companyInput = document.getElementById('scan-company-name');
-      const companyName = companyInput ? companyInput.value.trim() : extractDomainFromUrl(url);
-      
-      if (!companyName) {
-        alert('❌ Voer een bedrijfsnaam in');
-        return;
-      }
-      
-      try {
-        await apiCall('/api/admin/leaderboard/manual-add', 'POST', {
-          url,
-          company_name: companyName,
-          score,
-          country: 'Netherlands'
-        });
-        
-        alert(`✅ "${companyName}" toegevoegd aan leaderboard!`);
-        document.getElementById('singleResult').classList.add('hidden');
-        document.getElementById('singleUrlInput').value = '';
-        loadLeaderboard();
-      } catch (error) {
-        alert('❌ Fout bij toevoegen: ' + error.message);
-      }
-    }
-
-    async function scrapeGoogleMaps() {
-      const input = document.getElementById('mapsUrl');
-      const button = document.getElementById('bulkScanBtn');
-      const leadsContainer = document.getElementById('leadsContainer');
-      const leadsTableBody = document.getElementById('leadsTableBody');
-      const leadCount = document.getElementById('leadCount');
-      
-      let url = input.value.trim();
-      if (!url || !url.includes('google.com/maps')) {
-        alert('❌ Voer een geldige Google Maps URL in');
-        return;
-      }
-      
-      button.disabled = true;
-      button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scrapen...';
-      
-      const headers = { 'Content-Type': 'application/json' };
-      if (userId) {
-        headers['x-user-id'] = userId;
-      }
-      
-      try {
-        const response = await fetch('/api/google-maps/scrape', {
-          method: 'POST',
-          headers: headers,
-          body: JSON.stringify({ url, maxResults: 30 })
-        });
-        
-        const data = await response.json();
-        
-        if (response.status === 429) {
-          const days = data.days_remaining || 5;
-          const hours = data.hours_remaining || 120;
-          
-          let timeText = '';
-          if (days >= 1) {
-            timeText = `${days} day${days > 1 ? 's' : ''}`;
-          } else {
-            timeText = `${hours} hour${hours > 1 ? 's' : ''}`;
-          }
-          
-          let message = `⏳ Scan limit reached. You can scan again in ${timeText}.`;
-          if (data.limit_type === 'free') {
-            message += ' Add your own Webshare API key for unlimited scans.';
-          }
-          
-          alert(message);
-          
-          button.disabled = false;
-          button.innerHTML = '<i class="fas fa-map-marked-alt mr-2"></i> Scrape Maps';
-          return;
-        }
-        
-        if (!response.ok || !data.success) {
-          throw new Error(data.error || 'Scrape failed');
-        }
-        
-        scrapedLeads = data.leads || [];
-        leadCount.textContent = scrapedLeads.length;
-        
-        if (scrapedLeads.length === 0) {
-          leadsTableBody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-400">Geen bedrijven gevonden</td></tr>';
-        } else {
-          refreshLeadsTable();
-        }
-        
-        leadsContainer.classList.remove('hidden');
-        
-      } catch (error) {
-        alert('❌ Scrape failed: ' + error.message);
-      } finally {
-        button.disabled = false;
-        button.innerHTML = '<i class="fas fa-map-marked-alt mr-2"></i> Scrape Maps';
-      }
-    }
-
-    function refreshLeadsTable() {
-      const leadsTableBody = document.getElementById('leadsTableBody');
-      
-      if (scrapedLeads.length === 0) {
-        leadsTableBody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-400">Geen bedrijven gevonden</td></tr>';
-        return;
-      }
-      
-      leadsTableBody.innerHTML = scrapedLeads.map((lead, index) => {
-        const hasWebsite = lead.website && lead.website !== 'N/A' && lead.website !== null;
-        const hasEmail = lead.email && lead.email.includes('@');
-        
-        let statusColor = 'text-gray-400';
-        let statusText = 'pending';
-        if (lead.email_status === 'found') {
-          statusColor = 'text-green-400';
-          statusText = 'found';
-        } else if (lead.email_status === 'not found') {
-          statusColor = 'text-red-400';
-          statusText = 'not found';
-        }
-        
-        return `
-          <tr class="border-b border-gray-700 hover:bg-gray-800">
-            <td class="px-4 py-3">
-              <div class="font-medium text-white">${lead.name || 'Unknown'}</div>
-              <div class="text-xs text-gray-400">${lead.category || 'SEO Agency'}</div>
-            </td>
-            <td class="px-4 py-3">
-              ${hasWebsite ? 
-                `<a href="${lead.website}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">
-                  ${lead.website.replace('https://', '').substring(0, 30)}...
-                </a>` : 
-                `<span class="text-red-400 text-sm">Geen website</span>`
-              }
-            </td>
-            <td class="px-4 py-3 text-gray-300 text-sm">${lead.phone || '-'}</td>
-            <td class="px-4 py-3">
-              ${lead.score > 0 ? 
-                `<span class="font-bold ${lead.score >= 70 ? 'text-green-400' : 'text-yellow-400'}">${lead.score}</span>` : 
-                `<span class="text-gray-500">-</span>`
-              }
-            </td>
-            <td class="px-4 py-3">
-              ${hasEmail ? 
-                `<span class="text-green-400 text-sm">${lead.email}</span>` : 
-                (hasWebsite ? 
-                  `<button onclick="findEmail(${lead.id}, ${index})" 
-                          class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs font-semibold">
-                    <i class="fas fa-search mr-1"></i>Find
-                  </button>` : 
-                  `<span class="text-gray-600 text-sm">-</span>`
-                )
-              }
-            </td>
-            <td class="px-4 py-3">
-              <span class="text-xs ${statusColor}">${statusText}</span>
-            </td>
-            <td class="px-4 py-3">
-              <div class="flex gap-1">
-                ${hasWebsite ? 
-                  `<button onclick="scanLead('${lead.website}')" 
-                          class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded text-xs font-semibold"
-                          title="Scan website">
-                    <i class="fas fa-search"></i>
-                  </button>` : 
-                  ''
-                }
-                ${hasEmail ? 
-                  `<button onclick="queueLead(${lead.id})" 
-                          class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs font-semibold"
-                          title="Add to email queue">
-                    <i class="fas fa-clock"></i>
-                  </button>` : 
-                  ''
-                }
-              </div>
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    function scanLead(website) {
-      document.getElementById('singleUrlInput').value = website;
-      switchScannerMode('single');
-      document.getElementById('tab-scanner').scrollIntoView({ behavior: 'smooth' });
-      setTimeout(() => scanSingleURL(), 500);
-    }
-
-    async function findEmail(leadId, index) {
-      if (!leadId) {
-        alert('❌ Lead ID not found');
-        return;
-      }
-      
-      alert('🔍 Email search feature coming soon');
-    }
-
-    async function bulkFindEmails() {
-      alert('🔍 Email search feature coming soon');
-    }
-
-    async function queueLead(leadId) {
-      if (!leadId) {
-        alert('❌ Lead ID not found');
-        return;
-      }
-      
-      if (!userId) {
-        alert('❌ User not registered');
-        return;
-      }
-      
-      try {
-        const response = await fetch('/api/email/queue', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'x-user-id': userId
-          },
-          body: JSON.stringify({ lead_ids: [leadId] })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          alert('✅ Lead added to email queue');
-        } else {
-          alert('❌ ' + (data.error || 'Failed to queue lead'));
-        }
-      } catch (error) {
-        alert('❌ Error: ' + error.message);
-      }
-    }
-
-    async function queueAllLeads() {
-      const leadsWithEmail = scrapedLeads.filter(l => l.email && l.email.includes('@'));
-      
-      if (leadsWithEmail.length === 0) {
-        alert('❌ No leads with email addresses. Use "Find All Emails" first.');
-        return;
-      }
-      
-      if (!confirm(`📧 Add ${leadsWithEmail.length} leads to email queue?`)) {
-        return;
-      }
-      
-      let successCount = 0;
-      
-      for (const lead of leadsWithEmail) {
-        try {
-          const response = await fetch('/api/email/queue', {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              'x-user-id': userId
-            },
-            body: JSON.stringify({
-              to_email: lead.email,
-              to_name: lead.name,
-              subject: 'SEO Opportunity for ' + lead.name,
-              template: 'default'
-            })
-          });
-          
-          const data = await response.json();
-          if (data.success) successCount++;
-        } catch (e) {
-          console.error('Queue error:', e);
-        }
-      }
-      
-      alert(`✅ Added ${successCount} leads to queue`);
-    }
-
-    function exportLeadsToCSV() {
-      if (!scrapedLeads || scrapedLeads.length === 0) {
-        alert('❌ No leads to export');
-        return;
-      }
-      
-      const headers = ['Name', 'Category', 'Website', 'Phone', 'Score', 'Email', 'Address', 'Rating', 'Reviews'];
-      const rows = scrapedLeads.map(lead => [
-        lead.name || '',
-        lead.category || '',
-        lead.website || '',
-        lead.phone || '',
-        lead.score || '',
-        lead.email || '',
-        lead.address || '',
-        lead.rating || '',
-        lead.reviews || ''
-      ]);
-      
-      let csv = headers.join(',') + '\n';
-      csv += rows.map(row => row.map(cell => `"${cell || ''}"`).join(',')).join('\n');
-      
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `contentscale-leads-${Date.now()}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      
-      alert(`✅ Exported ${scrapedLeads.length} leads to CSV`);
-    }
-
-    // ==========================================
-    // PENDING DATA FUNCTIES
-    // ==========================================
-    async function loadPendingData() {
-      if (!localStorage.getItem('admin_id')) {
-        alert('❌ Je moet ingelogd zijn als admin');
-        return;
-      }
-      
-      selectedPendingIds.clear();
-      try {
-        await Promise.all([
-          loadPendingLeaderboard(),
-          loadPendingFreelancers()
-        ]);
-      } catch (error) {
-        console.error('❌ Pending data error:', error);
-        if (error.message.includes('Invalid admin credentials')) {
-          alert('❌ Admin sessie verlopen. Log opnieuw in.');
-          logout();
-        }
-      }
-    }
-
-    async function loadPendingLeaderboard() {
-      try {
-        const data = await apiCall('/api/admin/leaderboard/pending');
-        const container = document.getElementById('pending-leaderboard-container');
-        
-        if (data.pending.length === 0) {
-          container.innerHTML = `
-            <div class="text-center py-8 text-gray-400">
-              <i class="fas fa-check-circle text-6xl mb-4 text-green-400"></i>
-              <p class="text-lg">Geen pending submissions</p>
-            </div>
-          `;
-          return;
-        }
-        
-        let html = `
-          <div class="bg-gray-800 rounded-lg p-4 mb-4 flex items-center gap-4 border border-gray-700">
-            <div class="flex items-center gap-2">
-              <input type="checkbox" id="select-all-pending" onchange="toggleSelectAllPending()" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600">
-              <label class="text-sm text-gray-300">Selecteer alles</label>
-            </div>
-            <button onclick="bulkDeletePending()" class="btn bg-red-600 hover:bg-red-700">
-              <i class="fas fa-trash mr-2"></i> Delete Geselecteerd
-            </button>
-            <span id="selected-count-pending" class="text-sm text-gray-400 ml-auto">0 geselecteerd</span>
-          </div>
-        `;
-        
-        html += data.pending.map(entry => {
-          const suggestedName = entry.company_name || extractDomainFromUrl(entry.url);
-          
-          return `
-            <div class="pending-card" data-id="${entry.id}">
-              <div class="flex items-start gap-4 mb-3">
-                <input type="checkbox" class="pending-checkbox" data-id="${entry.id}" onchange="toggleSelectPending(${entry.id})" class="w-5 h-5 mt-1">
-                <div class="flex-1">
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <h4 class="text-xl font-bold mb-2">✏️ Bedrijfsnaam</h4>
-                      <input type="text" id="company-${entry.id}" value="${suggestedName}" class="company-name-input mb-3" placeholder="Voer bedrijfsnaam in">
-                      <p class="text-blue-400 mb-2 text-sm">${entry.url}</p>
-                      <div class="bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 rounded-lg inline-block">
-                        <div class="text-xs text-purple-200">Score</div>
-                        <div class="text-2xl font-bold">${entry.score}/100</div>
-                      </div>
-                    </div>
-                    <div>
-                      <label class="block text-sm font-medium mb-2">Land</label>
-                      <select id="country-${entry.id}" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
-                        <option value="${entry.country || 'Netherlands'}">${entry.country || 'Netherlands'}</option>
-                        <option value="Netherlands">🇳🇱 Netherlands</option>
-                        <option value="Belgium">🇧🇪 Belgium</option>
-                        <option value="Germany">🇩🇪 Germany</option>
-                        <option value="United Kingdom">🇬🇧 United Kingdom</option>
-                        <option value="United States">🇺🇸 United States</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div class="flex gap-3 mt-6">
-                    <button onclick="editPendingEntry(${entry.id})" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold">
-                      <i class="fas fa-save mr-2"></i> Opslaan
-                    </button>
-                    <button onclick="approveLeaderboardEntry(${entry.id})" class="flex-1 bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold">
-                      <i class="fas fa-check mr-2"></i> Approve
-                    </button>
-                    <button onclick="rejectLeaderboardEntry(${entry.id})" class="flex-1 bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">
-                      <i class="fas fa-times mr-2"></i> Reject
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('');
-        
-        container.innerHTML = html;
-        
-      } catch (error) {
-        console.error('Pending leaderboard error:', error);
-      }
-    }
-
-    function toggleSelectPending(id) {
-      if (selectedPendingIds.has(id)) {
-        selectedPendingIds.delete(id);
-      } else {
-        selectedPendingIds.add(id);
-      }
-      document.getElementById('selected-count-pending').textContent = `${selectedPendingIds.size} geselecteerd`;
-    }
-
-    function toggleSelectAllPending() {
-      const selectAll = document.getElementById('select-all-pending');
-      const checkboxes = document.querySelectorAll('.pending-checkbox');
-      
-      if (selectAll.checked) {
-        checkboxes.forEach(cb => {
-          cb.checked = true;
-          selectedPendingIds.add(parseInt(cb.dataset.id));
-        });
-      } else {
-        checkboxes.forEach(cb => {
-          cb.checked = false;
-          selectedPendingIds.delete(parseInt(cb.dataset.id));
-        });
-      }
-      document.getElementById('selected-count-pending').textContent = `${selectedPendingIds.size} geselecteerd`;
-    }
-
-    async function bulkDeletePending() {
-      if (selectedPendingIds.size === 0) {
-        alert('❌ Selecteer entries om te verwijderen');
-        return;
-      }
-      
-      if (!confirm(`❌ Verwijder ${selectedPendingIds.size} pending entries permanent?`)) return;
-      
-      try {
-        const ids = Array.from(selectedPendingIds);
-        await apiCall('/api/admin/leaderboard/bulk-delete', 'POST', { ids });
-        alert(`✅ ${ids.length} entries verwijderd`);
-        selectedPendingIds.clear();
-        loadPendingLeaderboard();
-      } catch (error) {
-        alert('❌ Fout: ' + error.message);
-      }
-    }
-
-    async function editPendingEntry(id) {
-      const companyName = document.getElementById(`company-${id}`)?.value;
-      const country = document.getElementById(`country-${id}`)?.value;
-      
-      if (!companyName) {
-        alert('❌ Voer een bedrijfsnaam in');
-        return;
-      }
-      
-      try {
-        await apiCall(`/api/admin/leaderboard/${id}`, 'PUT', {
-          company_name: companyName,
-          country
-        });
-        alert('✅ Opgeslagen');
-        loadPendingLeaderboard();
-      } catch (error) {
-        alert('❌ Fout: ' + error.message);
-      }
-    }
-
-    async function approveLeaderboardEntry(id) {
-      const companyInput = document.getElementById(`company-${id}`);
-      const finalCompanyName = companyInput ? companyInput.value.trim() : null;
-      const finalCountry = document.getElementById(`country-${id}`)?.value;
-      
-      if (!finalCompanyName) {
-        alert('❌ Voer een bedrijfsnaam in');
-        companyInput?.focus();
-        return;
-      }
-      
-      try {
-        await apiCall('/api/admin/leaderboard/manual-add', 'POST', {
-          url: document.querySelector(`#country-${id}`)?.closest('.pending-card')?.querySelector('.text-blue-400')?.textContent || '',
-          company_name: finalCompanyName,
-          score: 0,
-          country: finalCountry
-        });
-        
-        await apiCall(`/api/admin/leaderboard/${id}/approve`, 'POST', { 
-          final_country: finalCountry 
-        });
-        
-        alert(`✅ "${finalCompanyName}" goedgekeurd!`);
-        loadPendingLeaderboard();
-        loadLeaderboard();
-      } catch (error) {
-        alert('❌ Fout: ' + error.message);
-      }
-    }
-
-    async function rejectLeaderboardEntry(id) {
-      if (!confirm('❌ Weiger deze submission?')) return;
-      try {
-        await apiCall(`/api/admin/leaderboard/${id}/reject`, 'POST');
-        alert('✅ Entry verwijderd');
-        loadPendingLeaderboard();
-      } catch (error) {
-        alert('❌ Fout: ' + error.message);
-      }
-    }
-
-    async function loadPendingFreelancers() {
-      try {
-        const data = await apiCall('/api/admin/freelancers/pending');
-        const container = document.getElementById('pending-freelancers-container');
-        
-        if (data.pending.length === 0) {
-          container.innerHTML = `
-            <div class="text-center py-8 text-gray-400">
-              <i class="fas fa-check-circle text-6xl mb-4 text-green-400"></i>
-              <p class="text-lg">Geen pending aanmeldingen</p>
-            </div>
-          `;
-          return;
-        }
-        
-        container.innerHTML = data.pending.map(f => `
-          <div class="pending-card">
-            <div class="grid md:grid-cols-2 gap-6">
-              <div>
-                <h4 class="text-xl font-bold mb-2">${f.name}</h4>
-                <p class="text-purple-400 mb-2">${f.title || 'SEO Specialist'}</p>
-                <p class="text-sm text-gray-400 mb-2"><i class="fas fa-envelope mr-2"></i> ${f.email}</p>
-                <p class="text-sm text-gray-400"><i class="fas fa-map-marker-alt mr-2"></i> ${f.location || f.country || 'Unknown'}</p>
-              </div>
-              <div>
-                <p class="text-sm mb-4">${f.bio || 'Geen bio beschikbaar'}</p>
-                <button onclick="approveFreelancer(${f.id})" class="w-full bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold mb-2">
-                  <i class="fas fa-check mr-2"></i> Goedkeuren
-                </button>
-                <button onclick="rejectFreelancer(${f.id})" class="w-full bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">
-                  <i class="fas fa-times mr-2"></i> Weigeren
-                </button>
-              </div>
-            </div>
-          </div>
-        `).join('');
-      } catch (error) {
-        console.error('Pending freelancers error:', error);
-      }
-    }
-
-    async function approveFreelancer(id) {
-      try {
-        await apiCall(`/api/admin/freelancers/${id}/approve`, 'POST');
-        alert('✅ Freelancer goedgekeurd!');
-        loadPendingFreelancers();
-        loadFreelancers();
-      } catch (error) {
-        alert('❌ Fout: ' + error.message);
-      }
-    }
-
-    async function rejectFreelancer(id) {
-      if (!confirm('❌ Weiger deze aanmelding?')) return;
-      try {
-        await apiCall(`/api/admin/freelancers/${id}`, 'DELETE');
-        alert('✅ Aanmelding geweigerd');
-        loadPendingFreelancers();
-      } catch (error) {
-        alert('❌ Fout: ' + error.message);
-      }
-    }
-
-    // ==========================================
-    // UTILITY FUNCTIES
-    // ==========================================
-    function getCountryFlag(country) {
-      const flags = { 
-        'Netherlands': '🇳🇱', 'NL': '🇳🇱', 
-        'United Kingdom': '🇬🇧', 'UK': '🇬🇧', 
-        'US': '🇺🇸', 'United States': '🇺🇸',
-        'Germany': '🇩🇪', 'DE': '🇩🇪',
-        'France': '🇫🇷', 'FR': '🇫🇷',
-        'Belgium': '🇧🇪', 'BE': '🇧🇪',
-        'Spain': '🇪🇸', 'ES': '🇪🇸',
-        'Italy': '🇮🇹', 'IT': '🇮🇹'
-      };
-      return flags[country] || '🌐';
-    }
-
-    function renderCountryFilters() {
-      const div = document.getElementById('countryFilters');
-      if (!div) return;
-      
-      const countries = [...new Set(allLeaderboard.map(e => e.country))];
-      
-      let html = '<button class="filter-tag active" onclick="filterByCountry(\'all\')">🌍 All</button>';
-      countries.forEach(country => {
-        html += `<button class="filter-tag" onclick="filterByCountry('${country}')">${getCountryFlag(country)} ${country}</button>`;
-      });
-      
-      div.innerHTML = html;
-    }
-
-    function filterByCountry(country) {
-      console.log('Filter by country:', country);
-    }
-
-    function filterAgencies() {
-      const query = document.getElementById('searchInput')?.value.toLowerCase() || '';
-      
-      if (!query) {
-        renderRankings4to15();
-        renderRankings16Plus();
-        return;
-      }
-      
-      const filtered = allLeaderboard.filter(entry => 
-        (entry.company_name || '').toLowerCase().includes(query) ||
-        (entry.url || '').toLowerCase().includes(query) ||
-        extractDomainFromUrl(entry.url).toLowerCase().includes(query)
+async function createAllTables() {
+  if (!pool) {
+    console.error('❌ Geen database pool - kan tabellen niet aanmaken');
+    return;
+  }
+  
+  let client;
+  try {
+    client = await pool.connect();
+    console.log('📦 Database tabellen controleren...');
+    
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS super_admins (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(100) UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        full_name VARCHAR(255),
+        email VARCHAR(255),
+        role VARCHAR(50) DEFAULT 'admin',
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        last_login TIMESTAMP
+      )
+    `);
+    
+    const adminCheck = await client.query(
+      'SELECT COUNT(*) FROM super_admins WHERE username = $1', 
+      ['ot']
+    );
+    
+    if (parseInt(adminCheck.rows[0].count) === 0) {
+      const hashedPassword = await bcrypt.hash('admin123', 10);
+      await client.query(
+        `INSERT INTO super_admins (username, password_hash, full_name, role) 
+         VALUES ($1, $2, $3, $4)`,
+        ['ot', hashedPassword, 'Super Admin', 'super_admin']
       );
-      
-      const rankings4to15Grid = document.getElementById('rankings4to15Grid');
-      const rankings4to15 = filtered.slice(3, 15);
-      
-      if (rankings4to15Grid) {
-        rankings4to15Grid.innerHTML = rankings4to15.map((entry, index) => {
-          const actualRank = index + 4;
-          const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-          
-          return `
-            <div class="rank-card">
-              <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
-              <h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
-              <div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
-              <div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
-              <a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">
-                View Website
-              </a>
-            </div>
-          `;
-        }).join('');
-      }
+      console.log('✅ Default admin created (ot/admin123)');
     }
+    
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS scans (
+        id SERIAL PRIMARY KEY,
+        url TEXT NOT NULL,
+        score INTEGER,
+        quality VARCHAR(50),
+        graaf_score INTEGER,
+        craft_score INTEGER,
+        technical_score INTEGER,
+        content_score INTEGER,
+        ux_score INTEGER,
+        breakdown JSONB,
+        comparison_data JSONB,
+        recommendations JSONB DEFAULT '[]',
+        scan_type VARCHAR(50) DEFAULT 'manual',
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS leaderboard (
+        id SERIAL PRIMARY KEY,
+        url TEXT NOT NULL UNIQUE,
+        company_name VARCHAR(255),
+        score INTEGER NOT NULL,
+        country VARCHAR(10) DEFAULT 'NL',
+        city VARCHAR(255),
+        type VARCHAR(100) DEFAULT 'seo_agency',
+        location VARCHAR(255),
+        is_verified BOOLEAN DEFAULT FALSE,
+        is_opted_out BOOLEAN DEFAULT FALSE,
+        submission_ip VARCHAR(50),
+        admin_verified BOOLEAN DEFAULT TRUE,
+        auto_detected_country VARCHAR(100),
+        graaf_score INTEGER,
+        craft_score INTEGER,
+        technical_score INTEGER,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS freelancers (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        title VARCHAR(255),
+        location VARCHAR(255),
+        country VARCHAR(100),
+        bio TEXT,
+        linkedin_url TEXT,
+        hourly_rate VARCHAR(50),
+        availability VARCHAR(100),
+        is_approved BOOLEAN DEFAULT FALSE,
+        is_verified BOOLEAN DEFAULT FALSE,
+        is_featured BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS google_maps_leads (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        category VARCHAR(255),
+        website TEXT,
+        phone VARCHAR(100),
+        address TEXT,
+        rating DECIMAL(2,1),
+        reviews INTEGER,
+        score INTEGER DEFAULT 0,
+        status VARCHAR(50) DEFAULT 'new',
+        notes TEXT,
+        contacted_at TIMESTAMP,
+        converted_at TIMESTAMP,
+        user_id INTEGER,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    console.log('✅ Alle database tabellen gereed');
+    
+  } catch (error) {
+    console.error('❌ Database setup error:', error.message);
+  } finally {
+    if (client) client.release();
+  }
+}
 
-    function toggleFilters() {
-      const panel = document.getElementById('filterPanel');
-      const icon = document.getElementById('filterIcon');
-      
-      if (panel) {
-        panel.classList.toggle('hidden');
-        icon.classList.toggle('fa-chevron-down');
-        icon.classList.toggle('fa-chevron-up');
-      }
+// ============================================
+// ✅ GEFIXTE GOOGLE MAPS SCRAPE - UPDATED 2025 SELECTORS
+// ============================================
+app.post('/api/google-maps/scrape', async (req, res) => {
+  try {
+    const { url, maxResults = 20 } = req.body;
+    
+    if (!url || !url.includes('google.com/maps')) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid Google Maps URL. Please use a Google Maps search URL.' 
+      });
     }
-
-    function toggleRankings() {
-      const container = document.getElementById('rankingsContainer');
-      const toggleText = document.getElementById('rankingsToggleText');
-      
-      if (container) {
-        container.classList.toggle('hidden');
-        toggleText.textContent = container.classList.contains('hidden') ? '📊 Show Rankings 16+' : '📊 Hide Rankings 16+';
-      }
+    
+    console.log(`🗺️ Google Maps scrape starting: ${url}`);
+    console.log(`📊 Max results requested: ${maxResults}`);
+    
+    const browser = await getBrowser();
+    if (!browser) {
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Browser not available' 
+      });
     }
-
-    function exportLeaderboardCSV() {
-      if (allLeaderboard.length === 0) {
-        alert('❌ Geen data om te exporteren');
-        return;
+    
+    const page = await browser.newPage();
+    
+    // ✅ Anti-detectie measures
+    await page.setViewport({ 
+      width: 1920 + Math.floor(Math.random() * 100), 
+      height: 1080 + Math.floor(Math.random() * 100) 
+    });
+    
+    const userAgents = [
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+    ];
+    
+    await page.setUserAgent(userAgents[Math.floor(Math.random() * userAgents.length)]);
+    
+    await page.evaluateOnNewDocument(() => {
+      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+      Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+    });
+    
+    await page.setExtraHTTPHeaders({
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+    });
+    
+    console.log('🌐 Navigating to Google Maps...');
+    await page.goto(url, { 
+      waitUntil: 'networkidle2', 
+      timeout: 60000 
+    });
+    
+    console.log('⏳ Waiting for results to load...');
+    await page.waitForTimeout(5000);
+    
+    // ✅ Scroll om meer results te laden
+    console.log('📜 Scrolling to load more results...');
+    await page.evaluate(async () => {
+      const scrollContainer = document.querySelector('[role="feed"]') || 
+                            document.querySelector('.m6QErb') || 
+                            document.querySelector('[class*="feed"]');
+      
+      if (scrollContainer) {
+        for (let i = 0; i < 5; i++) {
+          scrollContainer.scrollTop = scrollContainer.scrollHeight;
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      }
+    });
+    
+    await page.waitForTimeout(3000);
+    
+    console.log('🔍 Extracting business data with 2025 selectors...');
+    
+    // ✅ UPDATED SELECTORS - Februari 2025
+    const leads = await page.evaluate((maxResults) => {
+      const businesses = [];
+      
+      // Probeer verschillende selector combinaties
+      const possibleContainers = [
+        '[role="feed"]',
+        '.m6QErb',
+        '[class*="feed"]',
+        'div[aria-label*="Results"]'
+      ];
+      
+      let container = null;
+      for (const selector of possibleContainers) {
+        container = document.querySelector(selector);
+        if (container) {
+          console.log(`✅ Found container with selector: ${selector}`);
+          break;
+        }
       }
       
-      let csv = 'Rank,Bedrijf,URL,Score,Land,Datum\n';
-      allLeaderboard.forEach((entry, i) => {
-        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-        csv += `${i+1},"${companyName}","${entry.url}",${entry.score || 0},${entry.country || 'NL'},${new Date(entry.created_at).toLocaleDateString('nl-NL')}\n`;
+      if (!container) {
+        console.log('❌ No results container found');
+        return [];
+      }
+      
+      // Haal alle article elements (2025 structuur)
+      let items = Array.from(container.querySelectorAll('article, div[jsaction]'));
+      
+      // Filter items die business info bevatten
+      items = items.filter(div => {
+        return div.querySelector('a[href*="/maps/place/"]') || 
+               div.querySelector('[class*="fontHeadline"]') ||
+               div.querySelector('[class*="qBF1Pd"]') ||
+               div.querySelector('h3, h2') ||
+               div.textContent.includes('★');
       });
       
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `leaderboard-${new Date().toISOString().slice(0,10)}.csv`;
-      a.click();
+      console.log(`📊 Found ${items.length} potential business items`);
+      
+      for (let i = 0; i < Math.min(items.length, maxResults); i++) {
+        const item = items[i];
+        
+        try {
+          // ✅ Naam extractie - meerdere selectors (2025)
+          let name = null;
+          const nameSelectors = [
+            'h3',
+            'h2',
+            '[class*="qBF1Pd"]',
+            '[class*="fontHeadline"]',
+            'a[href*="/maps/place/"]',
+            '.fontHeadlineSmall'
+          ];
+          
+          for (const sel of nameSelectors) {
+            const el = item.querySelector(sel);
+            if (el && el.textContent.trim() && !el.textContent.includes('★')) {
+              name = el.textContent.trim();
+              // Verwijder ratings uit naam
+              name = name.replace(/\d+\.?\d*\s*★.*$/g, '').trim();
+              if (name.length > 3) break;
+            }
+          }
+          
+          if (!name) continue;
+          
+          // ✅ Website extractie (2025)
+          let website = null;
+          const websiteLink = item.querySelector('a[data-value="Website"]') || 
+                            item.querySelector('a[aria-label*="Website"]') ||
+                            item.querySelector('a[href^="http"]:not([href*="google.com"]):not([href*="maps"])');
+          
+          if (websiteLink) {
+            website = websiteLink.href;
+            // Clean up tracking parameters
+            if (website.includes('?')) {
+              website = website.split('?')[0];
+            }
+          }
+          
+          // ✅ Telefoon extractie (2025)
+          let phone = null;
+          const phoneSelectors = [
+            'button[data-item-id*="phone"]',
+            'a[href^="tel:"]',
+            '[aria-label*="Phone"]',
+            '[data-tooltip*="phone"]'
+          ];
+          
+          for (const sel of phoneSelectors) {
+            const phoneEl = item.querySelector(sel);
+            if (phoneEl) {
+              const phoneText = phoneEl.getAttribute('aria-label') || 
+                              phoneEl.getAttribute('data-tooltip') || 
+                              phoneEl.textContent ||
+                              phoneEl.href;
+              
+              if (phoneText) {
+                phone = phoneText.replace('tel:', '').replace(/[^0-9+\s-()]/g, '').trim();
+                if (phone.length > 5) break;
+              }
+            }
+          }
+          
+          // ✅ Adres extractie (2025)
+          let address = null;
+          const addressSelectors = [
+            'button[data-item-id*="address"]',
+            '.W4Efsd',
+            '[class*="address"]',
+            '[aria-label*="Address"]'
+          ];
+          
+          for (const sel of addressSelectors) {
+            const addressEl = item.querySelector(sel);
+            if (addressEl && !addressEl.textContent.includes('★')) {
+              address = addressEl.textContent.trim();
+              if (address.length > 5) break;
+            }
+          }
+          
+          // ✅ Rating extractie (2025)
+          let rating = null;
+          const ratingText = item.textContent;
+          const ratingMatch = ratingText.match(/(\d+\.?\d*)\s*★/);
+          if (ratingMatch) {
+            rating = parseFloat(ratingMatch[1]);
+          }
+          
+          // ✅ Reviews extractie (2025)
+          let reviews = null;
+          const reviewsMatch = ratingText.match(/\((\d+,?\d*)\)/);
+          if (reviewsMatch) {
+            reviews = parseInt(reviewsMatch[1].replace(/,/g, ''));
+          }
+          
+          // ✅ Category - probeer te detecteren (2025)
+          let category = 'Business';
+          const categorySelectors = [
+            '.W4Efsd:not([class*="address"])',
+            '[class*="fontBodyMedium"]'
+          ];
+          
+          for (const sel of categorySelectors) {
+            const categoryEl = item.querySelector(sel);
+            if (categoryEl && !categoryEl.textContent.includes('★') && !categoryEl.textContent.match(/\d/)) {
+              category = categoryEl.textContent.trim().split('·')[0].trim();
+              if (category.length > 2 && category.length < 50) break;
+            }
+          }
+          
+          // Alleen toevoegen als we minimaal naam + (website OF telefoon) hebben
+          if (name && (website || phone)) {
+            businesses.push({
+              name,
+              category,
+              website,
+              phone,
+              address,
+              rating,
+              reviews,
+              score: 0,
+              status: 'new'
+            });
+          }
+          
+        } catch (err) {
+          console.log('⚠️ Error parsing business:', err.message);
+          continue;
+        }
+      }
+      
+      return businesses;
+    }, maxResults);
+    
+    await page.close();
+    
+    console.log(`✅ Successfully extracted ${leads.length} businesses`);
+    console.log(`📊 Businesses with websites: ${leads.filter(l => l.website).length}`);
+    console.log(`📞 Businesses with phones: ${leads.filter(l => l.phone).length}`);
+    
+    // ✅ Log eerste 3 voor debugging
+    if (leads.length > 0) {
+      console.log('📋 Sample leads:', JSON.stringify(leads.slice(0, 3), null, 2));
     }
+    
+    res.json({
+      success: true,
+      leads: leads,
+      stats: {
+        total: leads.length,
+        with_website: leads.filter(l => l.website).length,
+        with_phone: leads.filter(l => l.phone).length
+      },
+      message: leads.length === 0 ? 'No businesses found. Try a different search query or URL.' : undefined
+    });
+    
+  } catch (error) {
+    console.error('❌ Google Maps scrape error:', error.message);
+    console.error(error.stack);
+    
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to scrape Google Maps: ' + error.message,
+      hint: 'Try a different search URL or check your internet connection'
+    });
+  }
+});
 
-    function loadAllData() {
-      loadLeaderboard();
-      loadFreelancers();
+// ============================================
+// ✅ GEFIXTE LEADERBOARD ENDPOINTS
+// ============================================
+
+// ✅ GET leaderboard
+app.get('/api/leaderboard', async (req, res) => {
+  if (!pool) {
+    return res.json({ success: true, entries: [], total: 0, averageScore: 0, stats: { totalAgencies: 0, avgScore: 0, countriesCount: 0, activeHelpers: 0 } });
+  }
+  
+  try {
+    const result = await pool.query(`
+      SELECT 
+        id, 
+        ROW_NUMBER() OVER (ORDER BY score DESC) as rank,
+        company_name, 
+        url, 
+        score,
+        country, 
+        city,
+        location,
+        type,
+        is_verified as is_claimed, 
+        created_at,
+        graaf_score,
+        craft_score,
+        technical_score
+      FROM leaderboard 
+      WHERE score IS NOT NULL 
+        AND is_opted_out = FALSE 
+        AND admin_verified = TRUE
+      ORDER BY score DESC 
+      LIMIT 100
+    `);
+
+    const entries = result.rows;
+    const totalAgencies = entries.length;
+    const avgScore = totalAgencies > 0 
+      ? Math.round(entries.reduce((sum, e) => sum + (e.score || 0), 0) / totalAgencies) 
+      : 0;
+    const countries = [...new Set(entries.map(e => e.country))].length;
+    
+    const freelancersResult = await pool.query('SELECT COUNT(*) FROM freelancers WHERE is_approved = TRUE').catch(() => ({ rows: [{ count: '0' }] }));
+    const activeHelpers = parseInt(freelancersResult.rows[0].count) || 0;
+    
+    res.json({
+      success: true, 
+      entries: entries, 
+      total: totalAgencies,
+      averageScore: avgScore,
+      stats: {
+        totalAgencies: totalAgencies,
+        avgScore: avgScore,
+        countriesCount: countries,
+        activeHelpers: activeHelpers
+      }
+    });
+  } catch (error) {
+    console.error('❌ Leaderboard error:', error);
+    res.json({ 
+      success: true, 
+      entries: [], 
+      total: 0, 
+      averageScore: 0,
+      stats: { totalAgencies: 0, avgScore: 0, countriesCount: 0, activeHelpers: 0 }
+    });
+  }
+});
+
+// ✅ GEFIXTE PUT endpoint - edit leaderboard entry
+app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  try {
+    const { id } = req.params;
+    const { company_name, url, score, country, city } = req.body;
+    
+    console.log(`✏️ Updating leaderboard entry ${id}:`, { company_name, url, score, country, city });
+    
+    // ✅ Build query dynamically
+    const updates = [];
+    const values = [];
+    let paramCount = 1;
+    
+    if (company_name !== undefined) {
+      updates.push(`company_name = $${paramCount}`);
+      values.push(company_name);
+      paramCount++;
     }
-  </script>
-</body>
-</html>
+    
+    if (url !== undefined) {
+      updates.push(`url = $${paramCount}`);
+      values.push(url);
+      paramCount++;
+    }
+    
+    if (score !== undefined) {
+      updates.push(`score = $${paramCount}`);
+      values.push(parseInt(score));
+      paramCount++;
+    }
+    
+    if (country !== undefined) {
+      updates.push(`country = $${paramCount}`);
+      values.push(country);
+      paramCount++;
+    }
+    
+    if (city !== undefined) {
+      updates.push(`city = $${paramCount}`);
+      values.push(city);
+      paramCount++;
+    }
+    
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, error: 'Geen velden om te updaten' });
+    }
+    
+    values.push(id);
+    const query = `UPDATE leaderboard SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`;
+    
+    console.log('🔍 SQL Query:', query);
+    console.log('📊 Values:', values);
+    
+    const result = await pool.query(query, values);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Entry niet gevonden' });
+    }
+    
+    console.log('✅ Entry updated successfully');
+    
+    res.json({ 
+      success: true, 
+      message: 'Leaderboard entry bijgewerkt',
+      entry: result.rows[0]
+    });
+  } catch (error) {
+    console.error('❌ Update leaderboard error:', error.message);
+    console.error(error.stack);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ GEFIXTE DELETE endpoint
+app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  try {
+    const { id } = req.params;
+    
+    console.log(`🗑️ Deleting leaderboard entry ${id}`);
+    
+    const result = await pool.query('DELETE FROM leaderboard WHERE id = $1 RETURNING *', [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Entry niet gevonden' });
+    }
+    
+    console.log('✅ Entry deleted successfully');
+    
+    res.json({ success: true, message: 'Entry verwijderd' });
+  } catch (error) {
+    console.error('❌ Delete leaderboard error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ GEFIXTE MANUAL-ADD endpoint - duplicate handling
+app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  try {
+    const { url, company_name, score, country, city } = req.body;
+    
+    if (!url || score === undefined) {
+      return res.status(400).json({ success: false, error: 'URL and score are required' });
+    }
+    
+    console.log(`➕ Manual add leaderboard:`, { url, company_name, score, country, city });
+    
+    // ✅ Use INSERT ... ON CONFLICT UPDATE (PostgreSQL UPSERT)
+    const result = await pool.query(
+      `INSERT INTO leaderboard 
+       (url, company_name, score, country, city, admin_verified, is_verified)
+       VALUES ($1, $2, $3, $4, $5, true, true)
+       ON CONFLICT (url) 
+       DO UPDATE SET 
+         score = EXCLUDED.score,
+         company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
+         country = COALESCE(EXCLUDED.country, leaderboard.country),
+         city = COALESCE(EXCLUDED.city, leaderboard.city),
+         admin_verified = true,
+         is_verified = true
+       RETURNING id, (xmax = 0) as inserted`,
+      [url, company_name || null, score, country || 'NL', city || null]
+    );
+    
+    const wasInserted = result.rows[0].inserted;
+    
+    res.json({
+      success: true,
+      action: wasInserted ? 'added' : 'updated',
+      id: result.rows[0].id,
+      message: wasInserted ? 'Entry added to leaderboard' : 'Leaderboard entry updated'
+    });
+  } catch (error) {
+    console.error('❌ Manual leaderboard add error:', error.message);
+    console.error(error.stack);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// BESTAANDE API ENDPOINTS (blijven hetzelfde)
+// ============================================
+
+// Scan endpoint
+app.post('/api/scan', async (req, res) => {
+  const { url } = req.body;
+  if (!url) return res.status(400).json({ success: false, error: 'URL required' });
+  
+  let scanUrl = url;
+  if (!scanUrl.startsWith('http')) scanUrl = 'https://' + scanUrl;
+  if (!isValidUrl(scanUrl)) return res.status(400).json({ success: false, error: 'Invalid URL format' });
+  
+  try {
+    console.log(`🔍 Scanning: ${scanUrl}`);
+    
+    const browser = await getBrowser();
+    if (!browser) {
+      return res.status(500).json({ success: false, error: 'Browser not available' });
+    }
+    
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1920, height: 1080 });
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+    await page.goto(scanUrl, { waitUntil: 'networkidle2', timeout: 25000 });
+    const rawHtml = await page.content();
+    await page.close();
+    
+    const textContent = rawHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+    const wordCount = textContent.split(/\s+/).length;
+    const h1Count = (rawHtml.match(/<h1[^>]*>/gi) || []).length;
+    const h2Count = (rawHtml.match(/<h2[^>]*>/gi) || []).length;
+    const h3Count = (rawHtml.match(/<h3[^>]*>/gi) || []).length;
+    const listCount = (rawHtml.match(/<li[^>]*>/gi) || []).length;
+    const stats = { wordCount, h1Count, h2Count, h3Count, listCount };
+    
+    // Simple scoring
+    let score = 50;
+    if (wordCount > 500) score += 10;
+    if (wordCount > 1000) score += 10;
+    if (h1Count === 1) score += 10;
+    if (h2Count >= 3) score += 10;
+    if (rawHtml.includes('schema.org')) score += 10;
+    
+    const quality = score >= 85 ? 'excellent' : score >= 70 ? 'good' : score >= 50 ? 'average' : 'poor';
+    
+    const result = {
+      success: true,
+      url: scanUrl,
+      score: Math.min(100, score),
+      quality,
+      metrics: { 
+        graaf: 30, 
+        craft: 20, 
+        technical: 15,
+        content: score,
+        ux: 70
+      },
+      content_stats: stats,
+      recommendations: {
+        all: [
+          { title: 'Improve content length', description: `Current: ${wordCount} words. Target: 2500+` }
+        ]
+      },
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log(`✅ Scan complete: ${scanUrl} - ${score}/100 (${quality})`);
+    res.json(result);
+  } catch (error) {
+    console.error('Scan error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Freelancers endpoints
+app.get('/api/freelancers', async (req, res) => {
+  if (!pool) return res.json({ success: true, freelancers: [] });
+  
+  try {
+    const result = await pool.query(`
+      SELECT 
+        id, name, email, title, location, country, bio, 
+        hourly_rate, availability, is_verified, is_featured
+      FROM freelancers 
+      WHERE is_approved = TRUE 
+      ORDER BY is_featured DESC, created_at DESC
+      LIMIT 50
+    `);
+    
+    res.json({ success: true, freelancers: result.rows });
+  } catch (error) {
+    console.error('Freelancers error:', error);
+    res.json({ success: true, freelancers: [] });
+  }
+});
+
+app.post('/api/freelancers/register', async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  try {
+    const { name, email, title, location, country, bio, linkedin_url, hourly_rate, availability } = req.body;
+    
+    if (!name || !email) {
+      return res.status(400).json({ success: false, error: 'Name and email are required' });
+    }
+    
+    const existing = await pool.query('SELECT id FROM freelancers WHERE email = $1', [email]);
+    
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ success: false, error: 'Email already registered' });
+    }
+    
+    const result = await pool.query(
+      `INSERT INTO freelancers 
+       (name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_approved) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false) 
+       RETURNING id`,
+      [name, email, title || null, location || null, country || null, bio || null, 
+       linkedin_url || null, hourly_rate || null, availability || null]
+    );
+    
+    res.json({ 
+      success: true, 
+      message: 'Application submitted! We will review and approve soon.',
+      id: result.rows[0].id 
+    });
+  } catch (error) {
+    console.error('Freelancer registration error:', error);
+    res.status(500).json({ success: false, error: 'Registration failed' });
+  }
+});
+
+// Admin endpoints
+app.post('/api/setup/verify-admin', async (req, res) => {
+  const { username, password } = req.body;
+  
+  if (!username || !password) {
+    return res.status(400).json({ success: false, error: 'Credentials required' });
+  }
+  
+  if (!pool) {
+    return res.status(503).json({ 
+      success: false, 
+      error: 'Database niet beschikbaar',
+      db_status: 'disconnected'
+    });
+  }
+  
+  try {
+    const result = await pool.query(
+      'SELECT * FROM super_admins WHERE username = $1 AND is_active = TRUE', 
+      [username]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json({ success: false, error: 'Invalid credentials' });
+    }
+    
+    const admin = result.rows[0];
+    const isValid = await bcrypt.compare(password, admin.password_hash);
+    
+    if (!isValid) {
+      return res.status(401).json({ success: false, error: 'Invalid credentials' });
+    }
+    
+    await pool.query('UPDATE super_admins SET last_login = NOW() WHERE id = $1', [admin.id]);
+    
+    res.json({
+      success: true,
+      admin_id: admin.id,
+      admin: { 
+        id: admin.id, 
+        username: admin.username, 
+        full_name: admin.full_name, 
+        role: admin.role 
+      }
+    });
+  } catch (error) {
+    console.error('❌ Login error:', error.message);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
+  if (!pool) {
+    return res.json({ success: true, stats: { 
+      total_scans: 0, total_agencies: 0, total_clients: 0, active_helpers: 0,
+      leaderboard_entries: 0, pending_freelancers: 0, pending_leaderboard: 0
+    }});
+  }
+  
+  try {
+    const [scans, leaderboard, freelancers, pendingFreelancers, pendingLeaderboard] = await Promise.all([
+      pool.query('SELECT COUNT(*) FROM scans').catch(() => ({ rows: [{ count: '0' }] })),
+      pool.query('SELECT COUNT(*) FROM leaderboard WHERE is_opted_out = FALSE').catch(() => ({ rows: [{ count: '0' }] })),
+      pool.query('SELECT COUNT(*) FROM freelancers WHERE is_approved = TRUE').catch(() => ({ rows: [{ count: '0' }] })),
+      pool.query('SELECT COUNT(*) FROM freelancers WHERE is_approved = FALSE').catch(() => ({ rows: [{ count: '0' }] })),
+      pool.query('SELECT COUNT(*) FROM leaderboard WHERE admin_verified = FALSE').catch(() => ({ rows: [{ count: '0' }] }))
+    ]);
+    
+    res.json({
+      success: true,
+      stats: {
+        total_scans: parseInt(scans.rows[0].count) || 0,
+        total_agencies: parseInt(leaderboard.rows[0].count) || 0,
+        active_helpers: parseInt(freelancers.rows[0].count) || 0,
+        leaderboard_entries: parseInt(leaderboard.rows[0].count) || 0,
+        pending_freelancers: parseInt(pendingFreelancers.rows[0].count) || 0,
+        pending_leaderboard: parseInt(pendingLeaderboard.rows[0].count) || 0
+      }
+    });
+  } catch (error) {
+    res.json({ 
+      success: true, 
+      stats: { 
+        total_scans: 0, total_agencies: 0, active_helpers: 0,
+        leaderboard_entries: 0, pending_freelancers: 0, pending_leaderboard: 0
+      } 
+    });
+  }
+});
+
+// Admin freelancers endpoints
+app.get('/api/admin/freelancers', verifyAdmin, async (req, res) => {
+  if (!pool) return res.json({ success: true, freelancers: [] });
+  try {
+    const result = await pool.query(`SELECT * FROM freelancers ORDER BY created_at DESC LIMIT 200`);
+    res.json({ success: true, freelancers: result.rows });
+  } catch (error) {
+    console.error('Admin freelancers error:', error);
+    res.json({ success: true, freelancers: [] });
+  }
+});
+
+app.get('/api/admin/freelancers/pending', verifyAdmin, async (req, res) => {
+  if (!pool) return res.json({ success: true, pending: [] });
+  try {
+    const result = await pool.query(
+      `SELECT * FROM freelancers WHERE is_approved = FALSE ORDER BY created_at DESC LIMIT 50`
+    );
+    res.json({ success: true, pending: result.rows });
+  } catch (error) {
+    console.error('Pending freelancers error:', error);
+    res.json({ success: true, pending: [] });
+  }
+});
+
+app.post('/api/admin/freelancers/:id/approve', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    await pool.query(
+      'UPDATE freelancers SET is_approved = TRUE, is_verified = TRUE WHERE id = $1', 
+      [req.params.id]
+    );
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Approve freelancer error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    await pool.query('DELETE FROM freelancers WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete freelancer error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { id } = req.params;
+    const { name, email, title, location, country, bio, hourly_rate, is_featured } = req.body;
+    
+    const updates = [];
+    const values = [];
+    let paramCount = 1;
+    
+    if (name !== undefined) {
+      updates.push(`name = $${paramCount}`);
+      values.push(name);
+      paramCount++;
+    }
+    if (email !== undefined) {
+      updates.push(`email = $${paramCount}`);
+      values.push(email);
+      paramCount++;
+    }
+    if (title !== undefined) {
+      updates.push(`title = $${paramCount}`);
+      values.push(title);
+      paramCount++;
+    }
+    if (location !== undefined) {
+      updates.push(`location = $${paramCount}`);
+      values.push(location);
+      paramCount++;
+    }
+    if (country !== undefined) {
+      updates.push(`country = $${paramCount}`);
+      values.push(country);
+      paramCount++;
+    }
+    if (bio !== undefined) {
+      updates.push(`bio = $${paramCount}`);
+      values.push(bio);
+      paramCount++;
+    }
+    if (hourly_rate !== undefined) {
+      updates.push(`hourly_rate = $${paramCount}`);
+      values.push(hourly_rate);
+      paramCount++;
+    }
+    if (is_featured !== undefined) {
+      updates.push(`is_featured = $${paramCount}`);
+      values.push(is_featured);
+      paramCount++;
+    }
+    
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, error: 'Geen velden om te updaten' });
+    }
+    
+    values.push(id);
+    const query = `UPDATE freelancers SET ${updates.join(', ')} WHERE id = $${paramCount}`;
+    await pool.query(query, values);
+    
+    res.json({ success: true, message: 'Freelancer bijgewerkt' });
+  } catch (error) {
+    console.error('Update freelancer error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/admin/freelancers/:id/toggle-featured', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { id } = req.params;
+    const freelancer = await pool.query('SELECT is_featured FROM freelancers WHERE id = $1', [id]);
+    if (freelancer.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Freelancer not found' });
+    }
+    
+    const newFeatured = !freelancer.rows[0].is_featured;
+    await pool.query('UPDATE freelancers SET is_featured = $1 WHERE id = $2', [newFeatured, id]);
+    
+    res.json({ success: true, is_featured: newFeatured, message: `Featured ${newFeatured ? 'aangezet' : 'uitgezet'}` });
+  } catch (error) {
+    console.error('Toggle featured error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/admin/freelancers/bulk-delete', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
+    }
+    
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
+    await pool.query(`DELETE FROM freelancers WHERE id IN (${placeholders})`, ids);
+    
+    res.json({ success: true, message: `${ids.length} freelancers verwijderd` });
+  } catch (error) {
+    console.error('Bulk delete freelancers error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Pending leaderboard endpoints
+app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
+  if (!pool) return res.json({ success: true, pending: [] });
+  
+  try {
+    const result = await pool.query(
+      `SELECT * FROM leaderboard 
+       WHERE admin_verified = FALSE 
+       ORDER BY created_at DESC 
+       LIMIT 50`
+    );
+    
+    res.json({ success: true, pending: result.rows });
+  } catch (error) {
+    console.error('Pending leaderboard error:', error);
+    res.json({ success: true, pending: [] });
+  }
+});
+
+app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  try {
+    const { id } = req.params;
+    const { final_country } = req.body;
+    
+    await pool.query(
+      `UPDATE leaderboard 
+       SET admin_verified = TRUE, 
+           country = COALESCE($2, country), 
+           is_verified = TRUE 
+       WHERE id = $1`,
+      [id, final_country]
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Approve leaderboard error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/admin/leaderboard/:id/reject', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  try {
+    await pool.query('DELETE FROM leaderboard WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Reject leaderboard error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/admin/leaderboard/bulk-delete', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
+    }
+    
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
+    await pool.query(`DELETE FROM leaderboard WHERE id IN (${placeholders})`, ids);
+    
+    res.json({ success: true, message: `${ids.length} entries verwijderd` });
+  } catch (error) {
+    console.error('Bulk delete leaderboard error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// HTML ROUTES
+// ============================================
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/admin-dashboard.html'));
+});
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
+// ============================================
+// HEALTH CHECK
+// ============================================
+app.get('/api/health', async (req, res) => {
+  let dbStatus = 'disconnected';
+  
+  if (pool) {
+    try {
+      await pool.query('SELECT 1');
+      dbStatus = 'connected';
+    } catch (e) {
+      dbStatus = 'error';
+    }
+  }
+  
+  res.json({ 
+    status: 'running',
+    database: dbStatus,
+    puppeteer: browserInstance ? 'connected' : 'disconnected',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// ============================================
+// CATCH-ALL ROUTE
+// ============================================
+app.get('*', (req, res) => {
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'API endpoint not found' });
+  }
+  
+  const filePath = path.join(__dirname, '../public', req.path);
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      res.sendFile(path.join(__dirname, '../public/index.html'));
+    }
+  });
+});
+
+// ============================================
+// ERROR HANDLING
+// ============================================
+app.use((err, req, res, next) => {
+  console.error('Server error:', err.message);
+  res.status(500).json({ 
+    success: false, 
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
+// ============================================
+// START SERVER
+// ============================================
+async function startServer() {
+  console.log('');
+  console.log('🚀 =====================================');
+  console.log('🚀  CONTENTSCALE SERVER - FIXED VERSION');
+  console.log('🚀 =====================================');
+  console.log('');
+  
+  const dbConnected = await waitForDatabase();
+  
+  app.listen(PORT, () => {
+    console.log('');
+    console.log(`📍 Server gestart op http://localhost:${PORT}`);
+    console.log(`📍 Admin:     http://localhost:${PORT}/admin`);
+    console.log('');
+    console.log(`📊 Database: ${dbConnected ? '✅ Verbonden' : '❌ NIET VERBONDEN'}`);
+    console.log('');
+    console.log('✅ FIXES APPLIED:');
+    console.log('   • Leaderboard edit/delete WERKT');
+    console.log('   • Google Maps scraper UPDATED 2025 selectors');
+    console.log('   • Manual-add duplicate handling GEFIXED');
+    console.log('   • Better error logging toegevoegd');
+    console.log('');
+  });
+}
+
+startServer();
