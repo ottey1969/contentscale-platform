@@ -21,7 +21,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
-console.log('📊 Database URL:', process.env.DATABASE_URL ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
+console.log('📊 Database URL:', process.env.DATABASE_URL ? '✅ FOUND' : '❌ NOT FOUND');
 
 // ============================================
 // NIEUW: GEBRUIKERSSESSIE MANAGEMENT
@@ -56,7 +56,7 @@ function initDatabaseConfig() {
         max: 20
       };
     } catch (e) {
-      console.error('❌ Ongeldige DATABASE_URL:', e.message);
+      console.error('❌ Invalid DATABASE_URL:', e.message);
       return null;
     }
   } else {
@@ -73,12 +73,12 @@ function initDatabaseConfig() {
     };
   }
 
-  console.log('📊 Database configuratie:');
+  console.log('📊 Database configuration:');
   console.log(`   • Host: ${dbConfig.host}`);
   console.log(`   • Port: ${dbConfig.port}`);
   console.log(`   • Database: ${dbConfig.database}`);
   console.log(`   • User: ${dbConfig.user}`);
-  console.log(`   • SSL: ${dbConfig.ssl ? 'Ja' : 'Nee'}`);
+  console.log(`   • SSL: ${dbConfig.ssl ? 'Yes' : 'No'}`);
 
   return new Pool(dbConfig);
 }
@@ -86,49 +86,49 @@ function initDatabaseConfig() {
 try {
   pool = initDatabaseConfig();
 } catch (e) {
-  console.error('❌ Fout bij initialiseren database pool:', e.message);
+  console.error('❌ Error initializing database pool:', e.message);
   pool = null;
 }
 
 async function waitForDatabase(retries = 5, delay = 3000) {
   if (!pool) {
-    console.log('❌ Geen database pool - overslaan');
+    console.log('❌ No database pool - skipping');
     return false;
   }
   
-  console.log('🔄 Verbinden met database...');
+  console.log('🔄 Connecting to database...');
   
   for (let i = 0; i < retries; i++) {
     try {
       const client = await pool.connect();
-      console.log(`✅ Database verbonden! (poging ${i + 1}/${retries})`);
+      console.log(`✅ Database connected! (attempt ${i + 1}/${retries})`);
       
       await client.query('SELECT NOW()');
-      console.log('✅ Database query werkt');
+      console.log('✅ Database query working');
       
       client.release();
       
       setTimeout(() => createAllTables().catch(err => {
-        console.error('❌ Fout bij aanmaken tabellen:', err.message);
+        console.error('❌ Error creating tables:', err.message);
       }), 1000);
       
       return true;
     } catch (err) {
-      console.error(`❌ Database connectie poging ${i + 1}/${retries} mislukt:`, err.message);
+      console.error(`❌ Database connection attempt ${i + 1}/${retries} failed:`, err.message);
       
       if (i === retries - 1) {
-        console.error('\n❌❌❌ KON GEEN VERBINDING MAKEN MET DATABASE ❌❌❌');
-        console.error('\n📋 OPLOSSINGEN:');
-        console.error('   1. Controleer of PostgreSQL draait');
-        console.error('   2. Controleer environment variables:');
-        console.error('      - DATABASE_URL of');
+        console.error('\n❌❌❌ COULD NOT CONNECT TO DATABASE ❌❌❌');
+        console.error('\n📋 SOLUTIONS:');
+        console.error('   1. Check if PostgreSQL is running');
+        console.error('   2. Check environment variables:');
+        console.error('      - DATABASE_URL or');
         console.error('      - DB_HOST, DB_USER, DB_PASSWORD, DB_NAME');
-        console.error('\n⚠️  Server start ZONDER database - admin login werkt niet!\n');
+        console.error('\n⚠️  Server starting WITHOUT database - admin login will not work!\n');
         
         return false;
       }
       
-      console.log(`⏳ Opnieuw proberen over ${delay/1000} seconden...`);
+      console.log(`⏳ Retrying in ${delay/1000} seconds...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -213,7 +213,7 @@ const verifyAdmin = async (req, res, next) => {
   }
   
   if (!pool) {
-    return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    return res.status(503).json({ success: false, error: 'Database not available' });
   }
   
   try {
@@ -229,7 +229,7 @@ const verifyAdmin = async (req, res, next) => {
     req.admin = result.rows[0];
     next();
   } catch (error) {
-    console.error('❌ Admin verificatie error:', error.message);
+    console.error('❌ Admin verification error:', error.message);
     res.status(500).json({ success: false, error: 'Authentication error' });
   }
 };
@@ -313,14 +313,14 @@ function normalizeUrl(url) {
 
 async function createAllTables() {
   if (!pool) {
-    console.error('❌ Geen database pool - kan tabellen niet aanmaken');
+    console.error('❌ No database pool - cannot create tables');
     return;
   }
   
   let client;
   try {
     client = await pool.connect();
-    console.log('📦 Database tabellen controleren...');
+    console.log('📦 Checking database tables...');
     
     // BESTAANDE TABELLEN
     await client.query(`
@@ -351,7 +351,7 @@ async function createAllTables() {
       );
       console.log('✅ Default admin created (ot/admin123)');
     } else {
-      console.log('✅ Admin gebruiker bestaat al');
+      console.log('✅ Admin user already exists');
     }
     
     await client.query(`
@@ -563,7 +563,7 @@ async function createAllTables() {
       )
     `);
     
-    console.log('✅ Alle database tabellen gereed (incl. user API keys)');
+    console.log('✅ All database tables ready (incl. user API keys)');
     
   } catch (error) {
     console.error('❌ Database setup error:', error.message);
@@ -702,7 +702,7 @@ app.post('/api/user/sendgrid/configure', async (req, res) => {
   }
   
   if (!pool) {
-    return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    return res.status(503).json({ success: false, error: 'Database not available' });
   }
   
   try {
@@ -754,7 +754,7 @@ app.post('/api/user/webshare/configure', async (req, res) => {
   }
   
   if (!pool) {
-    return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    return res.status(503).json({ success: false, error: 'Database not available' });
   }
   
   try {
@@ -803,7 +803,7 @@ app.post('/api/user/webshare/configure', async (req, res) => {
         timeout: 8000
       });
       
-      console.log(`✅ Test proxy werkt - IP: ${testResponse.data.origin}`);
+      console.log(`✅ Test proxy working - IP: ${testResponse.data.origin}`);
     } catch (proxyError) {
       console.log('⚠️ Proxy test failed, but saving anyway:', proxyError.message);
     }
@@ -895,11 +895,11 @@ app.delete('/api/user/keys/:service', async (req, res) => {
 });
 
 // ============================================
-// AANGEPASTE GOOGLE MAPS SCRAPE MET OPTIONELE PROXY
+// VERBETERDE GOOGLE MAPS SCRAPE MET OPTIONELE PROXY
 // ============================================
 app.post('/api/google-maps/scrape', async (req, res) => {
   try {
-    const { url, maxResults = 20 } = req.body;
+    const { url, maxResults = 30 } = req.body;
     if (!url || !url.includes('google.com/maps')) {
       return res.status(400).json({ success: false, error: 'Invalid Google Maps URL' });
     }
@@ -934,7 +934,7 @@ app.post('/api/google-maps/scrape', async (req, res) => {
     
     const browser = await getBrowser();
     if (!browser) {
-      return res.status(500).json({ success: false, error: 'Puppeteer browser niet beschikbaar' });
+      return res.status(500).json({ success: false, error: 'Puppeteer browser not available' });
     }
     
     // Krijg proxies van gebruiker (als die er zijn)
@@ -952,7 +952,7 @@ app.post('/api/google-maps/scrape', async (req, res) => {
     // Maak een nieuwe pagina met anti-detectie
     const page = await browser.newPage();
     
-    // ✅ ANTI-DETECTIE MAATREGELEN
+    // ✅ VERBETERDE ANTI-DETECTIE MAATREGELEN
     await page.setViewport({ 
       width: 1920 + Math.floor(Math.random() * 100), 
       height: 1080 + Math.floor(Math.random() * 100) 
@@ -1003,17 +1003,17 @@ app.post('/api/google-maps/scrape', async (req, res) => {
     // Navigeer met langere timeout
     await page.goto(url, { 
       waitUntil: 'networkidle2', 
-      timeout: 90000
+      timeout: 60000
     });
     
     // Wacht tot de pagina geladen is
-    await page.waitForTimeout(3000 + Math.random() * 2000);
+    await page.waitForTimeout(5000);
     
-    // Scroll langzaam en natuurlijk
+    // ✅ VERBETERD SCROLLEN
     await page.evaluate(async () => {
       await new Promise((resolve) => {
         let totalHeight = 0;
-        const distance = 100 + Math.random() * 100;
+        const distance = 300;
         const timer = setInterval(() => {
           const scrollHeight = document.body.scrollHeight;
           window.scrollBy(0, distance);
@@ -1023,28 +1023,25 @@ app.post('/api/google-maps/scrape', async (req, res) => {
             clearInterval(timer);
             resolve();
           }
-        }, 200 + Math.random() * 200);
+        }, 1000);
       });
     });
     
-    // Wacht op resultaten
-    try {
-      await page.waitForSelector('[role="feed"]', { timeout: 30000 });
-      await page.waitForTimeout(2000);
-    } catch (e) {
-      console.log('⚠️ Geen feed gevonden, misschien andere structuur');
-    }
+    await page.waitForTimeout(2000);
     
-    // Haal leads op
+    // ✅ VERBETERDE SELECTOREN
     const leads = await page.evaluate((maxResults) => {
       const businesses = [];
       
+      // Probeer meerdere selectoren
       const selectors = [
         '[role="feed"] > div > div',
         '.Nv2PK',
         '.THOPZb',
         '.lI9IFe',
-        'div[data-place-id]'
+        'div[data-place-id]',
+        '.bfdQ9c', // Nieuwe selector
+        '.NrDZNb'  // Nieuwe selector
       ];
       
       let items = [];
@@ -1052,41 +1049,132 @@ app.post('/api/google-maps/scrape', async (req, res) => {
         const found = document.querySelectorAll(selector);
         if (found.length > 0) {
           items = found;
+          console.log(`✅ Found ${found.length} items with selector: ${selector}`);
           break;
         }
+      }
+      
+      // Als we nog steeds niets hebben, probeer dan een algemenere selector
+      if (items.length === 0) {
+        items = document.querySelectorAll('div[jsaction]');
       }
       
       for (let i = 0; i < Math.min(items.length, maxResults); i++) {
         const item = items[i];
         
-        const nameSelectors = ['.qBF1Pd', '.d4r55', '.fontHeadlineSmall', 'h3'];
+        // Naam zoeken - meerdere selectoren
+        const nameSelectors = [
+          '.qBF1Pd', 
+          '.d4r55', 
+          '.fontHeadlineSmall', 
+          'h3',
+          '.DUwDvf',  // Nieuwe selector
+          '.lI9IFe'   // Nieuwe selector
+        ];
+        
         let name = null;
         for (const sel of nameSelectors) {
           const el = item.querySelector(sel);
-          if (el) {
+          if (el && el.textContent.trim()) {
             name = el.textContent.trim();
             break;
           }
         }
+        
         if (!name) continue;
         
-        const websiteLink = item.querySelector('a[data-value="Website"], a[href^="http"]:not([href*="google.com"])');
-        const website = websiteLink ? websiteLink.href : null;
+        // Website zoeken
+        let website = null;
+        const websiteSelectors = [
+          'a[data-value="Website"]',
+          'a[href^="http"]:not([href*="google.com"])',
+          'a[aria-label*="website"]',
+          'a[jsaction*="website"]'
+        ];
         
-        const phoneEl = item.querySelector('button[data-item-id*="phone"], a[href^="tel:"]');
-        const phone = phoneEl ? (phoneEl.href ? phoneEl.href.replace('tel:', '') : phoneEl.textContent.trim()) : null;
+        for (const sel of websiteSelectors) {
+          const el = item.querySelector(sel);
+          if (el && el.href && !el.href.includes('google.com')) {
+            website = el.href;
+            break;
+          }
+        }
         
-        const addressEl = item.querySelector('button[data-item-id*="address"], .W4Efsd span');
-        const address = addressEl ? addressEl.textContent.trim() : null;
+        // Telefoon zoeken
+        let phone = null;
+        const phoneSelectors = [
+          'button[data-item-id*="phone"]',
+          'a[href^="tel:"]',
+          'span[aria-label*="phone"]',
+          'div[aria-label*="phone"]'
+        ];
         
-        const ratingEl = item.querySelector('.MW4etd, .fontBodyMedium span[aria-hidden="true"]');
-        const rating = ratingEl ? parseFloat(ratingEl.textContent.trim()) : null;
+        for (const sel of phoneSelectors) {
+          const el = item.querySelector(sel);
+          if (el) {
+            if (el.href) {
+              phone = el.href.replace('tel:', '');
+            } else {
+              phone = el.textContent.trim();
+            }
+            break;
+          }
+        }
         
-        const reviewsEl = item.querySelector('.UY7F9, .fontBodyMedium span:last-child');
+        // Adres zoeken
+        let address = null;
+        const addressSelectors = [
+          'button[data-item-id*="address"]',
+          '.W4Efsd span',
+          'div[aria-label*="address"]'
+        ];
+        
+        for (const sel of addressSelectors) {
+          const el = item.querySelector(sel);
+          if (el) {
+            address = el.textContent.trim();
+            break;
+          }
+        }
+        
+        // Rating zoeken
+        let rating = null;
+        const ratingSelectors = [
+          '.MW4etd',
+          '.fontBodyMedium span[aria-hidden="true"]',
+          'span[aria-label*="stars"]'
+        ];
+        
+        for (const sel of ratingSelectors) {
+          const el = item.querySelector(sel);
+          if (el) {
+            const ratingText = el.textContent.trim();
+            const ratingMatch = ratingText.match(/(\d+\.?\d*)/);
+            if (ratingMatch) {
+              rating = parseFloat(ratingMatch[0]);
+              break;
+            }
+          }
+        }
+        
+        // Reviews zoeken
         let reviews = null;
-        if (reviewsEl) {
-          const match = reviewsEl.textContent.trim().match(/(\d+)/);
-          if (match) reviews = parseInt(match[0]);
+        const reviewsSelectors = [
+          '.UY7F9',
+          '.fontBodyMedium span:last-child',
+          'span[aria-label*="reviews"]'
+        ];
+        
+        for (const sel of reviewsSelectors) {
+          const el = item.querySelector(sel);
+          if (el) {
+            const reviewsText = el.textContent.trim();
+            const reviewsMatch = reviewsText.match(/(\d+)/);
+            if (reviewsMatch) {
+              reviews = parseInt(reviewsMatch[0]);
+              break;
+            }
+          }
         }
         
         businesses.push({
@@ -1116,6 +1204,21 @@ app.post('/api/google-maps/scrape', async (req, res) => {
          VALUES ($1, $2, $3, $4, $5, NOW())`,
         [userId || null, req.ip, url, leads.length, usedProxy]
       );
+      
+      // Sla leads op in database
+      for (const lead of leads) {
+        try {
+          await pool.query(
+            `INSERT INTO google_maps_leads 
+             (name, category, website, phone, address, rating, reviews, score, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            [lead.name, lead.category, lead.website, lead.phone, lead.address, 
+             lead.rating, lead.reviews, lead.score, lead.status]
+          );
+        } catch (dbError) {
+          console.error('Error saving lead:', dbError.message);
+        }
+      }
     }
     
     // Bereken volgende scan datum
@@ -1131,7 +1234,7 @@ app.post('/api/google-maps/scrape', async (req, res) => {
         with_phone: leads.filter(l => l.phone).length
       },
       using_custom_proxy: usedProxy,
-      scan_limit: userId ? null : {  // Geen limiet voor gebruikers met eigen API
+      scan_limit: userId ? null : {
         next_allowed_at: nextScanDate,
         days_remaining: 5,
         message: 'Add your own Webshare API key for unlimited scans'
@@ -1171,7 +1274,7 @@ app.post('/api/email/queue', async (req, res) => {
   }
   
   if (!pool) {
-    return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    return res.status(503).json({ success: false, error: 'Database not available' });
   }
   
   try {
@@ -1203,7 +1306,7 @@ app.post('/api/email/send', async (req, res) => {
   }
   
   if (!pool) {
-    return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    return res.status(503).json({ success: false, error: 'Database not available' });
   }
   
   try {
@@ -1328,7 +1431,7 @@ app.post('/api/scan', async (req, res) => {
     
     const browser = await getBrowser();
     if (!browser) {
-      return res.status(500).json({ success: false, error: 'Puppeteer browser niet beschikbaar' });
+      return res.status(500).json({ success: false, error: 'Puppeteer browser not available' });
     }
     
     const page = await browser.newPage();
@@ -1501,7 +1604,7 @@ app.get('/api/freelancers', async (req, res) => {
 
 app.post('/api/freelancers/register', async (req, res) => {
   if (!pool) {
-    return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    return res.status(503).json({ success: false, error: 'Database not available' });
   }
   
   try {
@@ -1654,7 +1757,7 @@ app.get('/api/blog/:slug', async (req, res) => {
 
 app.post('/api/claims/submit', async (req, res) => {
   if (!pool) {
-    return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    return res.status(503).json({ success: false, error: 'Database not available' });
   }
   
   try {
@@ -1698,10 +1801,10 @@ app.post('/api/setup/verify-admin', async (req, res) => {
   }
   
   if (!pool) {
-    console.error('❌ Login poging maar database niet beschikbaar');
+    console.error('❌ Login attempt but database not available');
     return res.status(503).json({ 
       success: false, 
-      error: 'Database niet beschikbaar. Controleer of PostgreSQL draait.',
+      error: 'Database not available. Check if PostgreSQL is running.',
       db_status: 'disconnected'
     });
   }
@@ -1801,7 +1904,7 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
 });
 
 // ============================================
-// ✅ FREELANCERS MANAGEMENT ENDPOINTS - TOEGEVOEGD
+// ✅ FREELANCERS MANAGEMENT ENDPOINTS
 // ============================================
 
 // ✅ ALLE FREELANCERS (voor admin)
@@ -1832,7 +1935,7 @@ app.get('/api/admin/freelancers/pending', verifyAdmin, async (req, res) => {
 
 // ✅ FREELANCER GOEDKEUREN
 app.post('/api/admin/freelancers/:id/approve', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  if (!pool) return res.status(503).json({ success: false, error: 'Database not available' });
   try {
     await pool.query(
       'UPDATE freelancers SET is_approved = TRUE, is_verified = TRUE WHERE id = $1', 
@@ -1847,7 +1950,7 @@ app.post('/api/admin/freelancers/:id/approve', verifyAdmin, async (req, res) => 
 
 // ✅ FREELANCER AFWIJZEN/VERWIJDEREN
 app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  if (!pool) return res.status(503).json({ success: false, error: 'Database not available' });
   try {
     await pool.query('DELETE FROM freelancers WHERE id = $1', [req.params.id]);
     res.json({ success: true });
@@ -1859,7 +1962,7 @@ app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
 
 // ✅ FREELANCER BEWERKEN
 app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  if (!pool) return res.status(503).json({ success: false, error: 'Database not available' });
   try {
     const { id } = req.params;
     const { name, email, title, location, country, bio, hourly_rate, is_featured } = req.body;
@@ -1910,14 +2013,14 @@ app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
     }
     
     if (updates.length === 0) {
-      return res.status(400).json({ success: false, error: 'Geen velden om te updaten' });
+      return res.status(400).json({ success: false, error: 'No fields to update' });
     }
     
     values.push(id);
     const query = `UPDATE freelancers SET ${updates.join(', ')} WHERE id = $${paramCount}`;
     await pool.query(query, values);
     
-    res.json({ success: true, message: 'Freelancer bijgewerkt' });
+    res.json({ success: true, message: 'Freelancer updated' });
   } catch (error) {
     console.error('Update freelancer error:', error.message);
     res.status(500).json({ success: false, error: error.message });
@@ -1926,7 +2029,7 @@ app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
 
 // ✅ FREELANCER FEATURE TOGGLE
 app.post('/api/admin/freelancers/:id/feature', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  if (!pool) return res.status(503).json({ success: false, error: 'Database not available' });
   try {
     const { id } = req.params;
     const { is_featured } = req.body;
@@ -1940,7 +2043,7 @@ app.post('/api/admin/freelancers/:id/feature', verifyAdmin, async (req, res) => 
 
 // ✅ FREELANCER DEACTIVEREN
 app.post('/api/admin/freelancers/:id/deactivate', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  if (!pool) return res.status(503).json({ success: false, error: 'Database not available' });
   try {
     await pool.query('UPDATE freelancers SET is_approved = FALSE WHERE id = $1', [req.params.id]);
     res.json({ success: true });
@@ -1952,7 +2055,7 @@ app.post('/api/admin/freelancers/:id/deactivate', verifyAdmin, async (req, res) 
 
 // ✅ FREELANCER TOGGLE FEATURED (specifiek voor toggle functie)
 app.post('/api/admin/freelancers/:id/toggle-featured', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  if (!pool) return res.status(503).json({ success: false, error: 'Database not available' });
   try {
     const { id } = req.params;
     const freelancer = await pool.query('SELECT is_featured FROM freelancers WHERE id = $1', [id]);
@@ -1963,7 +2066,7 @@ app.post('/api/admin/freelancers/:id/toggle-featured', verifyAdmin, async (req, 
     const newFeatured = !freelancer.rows[0].is_featured;
     await pool.query('UPDATE freelancers SET is_featured = $1 WHERE id = $2', [newFeatured, id]);
     
-    res.json({ success: true, is_featured: newFeatured, message: `Featured ${newFeatured ? 'aangezet' : 'uitgezet'}` });
+    res.json({ success: true, is_featured: newFeatured, message: `Featured ${newFeatured ? 'enabled' : 'disabled'}` });
   } catch (error) {
     console.error('Toggle featured error:', error.message);
     res.status(500).json({ success: false, error: error.message });
@@ -1972,17 +2075,17 @@ app.post('/api/admin/freelancers/:id/toggle-featured', verifyAdmin, async (req, 
 
 // ✅ FREELANCER BULK DELETE
 app.post('/api/admin/freelancers/bulk-delete', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  if (!pool) return res.status(503).json({ success: false, error: 'Database not available' });
   try {
     const { ids } = req.body;
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
+      return res.status(400).json({ success: false, error: 'No IDs received' });
     }
     
     const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
     await pool.query(`DELETE FROM freelancers WHERE id IN (${placeholders})`, ids);
     
-    res.json({ success: true, message: `${ids.length} freelancers verwijderd` });
+    res.json({ success: true, message: `${ids.length} freelancers deleted` });
   } catch (error) {
     console.error('Bulk delete freelancers error:', error.message);
     res.status(500).json({ success: false, error: error.message });
@@ -2014,7 +2117,7 @@ app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
 
 // ✅ LEADERBOARD GOEDKEUREN
 app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  if (!pool) return res.status(503).json({ success: false, error: 'Database not available' });
   
   try {
     const { id } = req.params;
@@ -2038,7 +2141,7 @@ app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => 
 
 // ✅ LEADERBOARD AFWIJZEN
 app.post('/api/admin/leaderboard/:id/reject', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  if (!pool) return res.status(503).json({ success: false, error: 'Database not available' });
   
   try {
     await pool.query('DELETE FROM leaderboard WHERE id = $1', [req.params.id]);
@@ -2049,13 +2152,27 @@ app.post('/api/admin/leaderboard/:id/reject', verifyAdmin, async (req, res) => {
   }
 });
 
-// ✅ LEADERBOARD BEWERKEN (voor bestaande entries)
+// ✅ LEADERBOARD BEWERKEN (voor bestaande entries) - GEFIXT
 app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  if (!pool) return res.status(503).json({ success: false, error: 'Database not available' });
   
   try {
     const { id } = req.params;
     const { company_name, url, score, country, city } = req.body;
+    
+    // Haal eerst de huidige entry op
+    const current = await pool.query('SELECT * FROM leaderboard WHERE id = $1', [id]);
+    if (current.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Entry not found' });
+    }
+    
+    // Alleen unieke url check als url verandert
+    if (url && url !== current.rows[0].url) {
+      const existing = await pool.query('SELECT id FROM leaderboard WHERE url = $1 AND id != $2', [url, id]);
+      if (existing.rows.length > 0) {
+        return res.status(400).json({ success: false, error: 'URL already exists in leaderboard' });
+      }
+    }
     
     // Bouw de update query dynamisch
     const updates = [];
@@ -2093,7 +2210,7 @@ app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
     }
     
     if (updates.length === 0) {
-      return res.status(400).json({ success: false, error: 'Geen velden om te updaten' });
+      return res.status(400).json({ success: false, error: 'No fields to update' });
     }
     
     values.push(id);
@@ -2101,13 +2218,9 @@ app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
     
     const result = await pool.query(query, values);
     
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Entry niet gevonden' });
-    }
-    
     res.json({ 
       success: true, 
-      message: 'Leaderboard entry bijgewerkt',
+      message: 'Leaderboard entry updated',
       entry: result.rows[0]
     });
   } catch (error) {
@@ -2118,7 +2231,7 @@ app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
 
 // ✅ LEADERBOARD HANDMATIG TOEVOEGEN
 app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  if (!pool) return res.status(503).json({ success: false, error: 'Database not available' });
   
   try {
     const { url, company_name, score, country, city } = req.body;
@@ -2175,7 +2288,7 @@ app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
 
 // ✅ LEADERBOARD VERWIJDEREN
 app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  if (!pool) return res.status(503).json({ success: false, error: 'Database not available' });
   
   try {
     await pool.query('DELETE FROM leaderboard WHERE id = $1', [req.params.id]);
@@ -2188,18 +2301,18 @@ app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
 
 // ✅ LEADERBOARD BULK DELETE
 app.post('/api/admin/leaderboard/bulk-delete', verifyAdmin, async (req, res) => {
-  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  if (!pool) return res.status(503).json({ success: false, error: 'Database not available' });
   
   try {
     const { ids } = req.body;
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
+      return res.status(400).json({ success: false, error: 'No IDs received' });
     }
     
     const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
     await pool.query(`DELETE FROM leaderboard WHERE id IN (${placeholders})`, ids);
     
-    res.json({ success: true, message: `${ids.length} entries verwijderd` });
+    res.json({ success: true, message: `${ids.length} entries deleted` });
   } catch (error) {
     console.error('Bulk delete leaderboard error:', error.message);
     res.status(500).json({ success: false, error: error.message });
@@ -2287,7 +2400,7 @@ app.use((err, req, res, next) => {
 async function startServer() {
   console.log('');
   console.log('🚀 =====================================');
-  console.log('🚀  CONTENTSCALE SERVER STARTEN');
+  console.log('🚀  CONTENTSCALE SERVER STARTING');
   console.log('🚀 =====================================');
   console.log('');
   
@@ -2295,25 +2408,30 @@ async function startServer() {
   
   app.listen(PORT, () => {
     console.log('');
-    console.log(`📍 Server gestart op http://localhost:${PORT}`);
+    console.log(`📍 Server started on http://localhost:${PORT}`);
     console.log(`📍 Admin:     http://localhost:${PORT}/admin`);
     console.log(`📍 Blog:      http://localhost:${PORT}/blog`);
     console.log('');
-    console.log(`📊 Database status: ${dbConnected ? '✅ Verbonden' : '❌ NIET VERBONDEN'}`);
-    console.log(`🔐 Admin login:     ${dbConnected ? '✅ Werkend (ot/admin123)' : '❌ Niet beschikbaar'}`);
+    console.log(`📊 Database status: ${dbConnected ? '✅ Connected' : '❌ NOT CONNECTED'}`);
+    console.log(`🔐 Admin login:     ${dbConnected ? '✅ Working (ot/admin123)' : '❌ Not available'}`);
     console.log('');
-    console.log('🔑 NIEUW: Gebruikers kunnen eigen API keys toevoegen:');
-    console.log('   • Sendgrid - voor emails (100/dag gratis)');
-    console.log('   • Webshare - voor 10 gratis proxies');
+    console.log('🔑 NEW: Users can add their own API keys:');
+    console.log('   • Sendgrid - for emails (100/day free)');
+    console.log('   • Webshare - for 10 free proxies');
     console.log('');
-    console.log('📋 ADMIN ENDPOINTS:');
-    console.log('   • Freelancers management (8 endpoints)');
-    console.log('   • Leaderboard management (7 endpoints)');
+    console.log('📋 NEW ADMIN ENDPOINTS:');
+    console.log('   • GET    /api/admin/leaderboard/pending - Pending entries');
+    console.log('   • POST   /api/admin/leaderboard/:id/approve - Approve');
+    console.log('   • POST   /api/admin/leaderboard/:id/reject - Reject');
+    console.log('   • PUT    /api/admin/leaderboard/:id - Edit entry (FIXED)');
+    console.log('   • POST   /api/admin/leaderboard/manual-add - Add');
+    console.log('   • DELETE /api/admin/leaderboard/:id - Delete');
+    console.log('   • POST   /api/admin/leaderboard/bulk-delete - Bulk delete');
     console.log('');
     
     if (!dbConnected) {
-      console.log('⚠️  WAARSCHUWING: Database niet verbonden!');
-      console.log('   Admin login werkt NIET. Controleer PostgreSQL.');
+      console.log('⚠️  WARNING: Database not connected!');
+      console.log('   Admin login will NOT work. Check PostgreSQL.');
       console.log('');
     }
     
@@ -2501,7 +2619,7 @@ function generateDetailedRecommendations(score, metrics, wordCount, scanData, ra
     const percentage = Math.round((imagesWithoutAlt.length / images.length) * 100);
     const examples = imagesWithoutAlt.slice(0, 3).map(img => {
       const srcMatch = img.match(/src=["']([^"']*)["']/);
-      return srcMatch ? srcMatch[1].split('/').pop() : 'afbeelding';
+      return srcMatch ? srcMatch[1].split('/').pop() : 'image';
     }).join(', ');
     
     recs.push({
