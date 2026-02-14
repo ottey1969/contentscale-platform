@@ -545,6 +545,16 @@
       background-color: #ef4444;
       box-shadow: 0 0 8px #ef4444;
     }
+
+    .api-accordion-wrapper {
+      margin-top: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .api-accordion-header {
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border: 1px solid #a855f7;
+    }
   </style>
 </head>
 <body class="bg-gray-900">
@@ -687,6 +697,108 @@
                 <button onclick="exportLeadsToCSV()" class="btn-success btn">
                   <i class="fas fa-file-csv mr-2"></i> Export CSV
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- API Configuration Accordion - Direct onder scanner -->
+        <div class="api-accordion-wrapper">
+          <div class="accordion-item api-accordion-header">
+            <button onclick="toggleAccordion('apiConfig')" class="accordion-header">
+              <span class="flex items-center gap-2">
+                <i class="fas fa-key text-purple-400"></i>
+                <span class="font-bold">Add your API for Sendgrid and Webshare Here</span>
+                <span id="apiStatusIndicator" class="api-status-indicator api-status-inactive"></span>
+              </span>
+              <i class="fas fa-chevron-down" id="apiConfigIcon"></i>
+            </button>
+            <div id="apiConfig" class="accordion-content hidden">
+              <div class="bg-gray-900 rounded-lg p-5 border border-gray-700">
+                <div class="flex items-center gap-3 mb-4">
+                  <span id="apiStatusText" class="text-sm text-gray-300">Configure your own API keys for unlimited usage</span>
+                </div>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                  <!-- Sendgrid Config -->
+                  <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                    <h4 class="text-lg font-bold mb-3 flex items-center gap-2">
+                      <i class="fas fa-envelope text-blue-400"></i>
+                      Sendgrid Configuration
+                    </h4>
+                    <p class="text-xs text-gray-400 mb-3">Free plan: 100 emails/day</p>
+                    
+                    <div class="space-y-3">
+                      <div>
+                        <label class="block text-sm text-gray-300 mb-1">Sendgrid API Key</label>
+                        <input type="password" id="sendgridApiKey" placeholder="SG.xxxxxxxxxx" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500" autocomplete="off">
+                      </div>
+                      
+                      <div class="flex gap-2">
+                        <button onclick="saveSendgridConfig()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm font-semibold">
+                          <i class="fas fa-save mr-1"></i> Save
+                        </button>
+                        <button onclick="testSendgridConfig()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-semibold">
+                          <i class="fas fa-vial mr-1"></i> Test
+                        </button>
+                      </div>
+                      
+                      <div id="sendgridStatus" class="text-xs text-gray-400 mt-2">
+                        <span class="text-yellow-400">⚪ Not configured</span>
+                      </div>
+                      
+                      <div class="border-t border-gray-700 pt-3 mt-2">
+                        <h5 class="text-sm font-semibold mb-2 text-gray-300">Daily Usage</h5>
+                        <div class="progress-bar h-2 mb-1">
+                          <div id="sendgridUsageBar" class="progress-bar-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                          <span id="sendgridUsed">0</span>
+                          <span>/</span>
+                          <span id="sendgridLimit">100</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Webshare Config -->
+                  <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                    <h4 class="text-lg font-bold mb-3 flex items-center gap-2">
+                      <i class="fas fa-globe text-green-400"></i>
+                      Webshare Proxy Configuration
+                    </h4>
+                    <p class="text-xs text-gray-400 mb-3">10 free proxies for Google Maps scraping</p>
+                    
+                    <div class="space-y-3">
+                      <div>
+                        <label class="block text-sm text-gray-300 mb-1">Webshare API Key</label>
+                        <input type="password" id="webshareApiKey" placeholder="your-webshare-api-key" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500" autocomplete="off">
+                      </div>
+                      
+                      <div class="flex gap-2">
+                        <button onclick="saveWebshareConfig()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm font-semibold">
+                          <i class="fas fa-save mr-1"></i> Save
+                        </button>
+                        <button onclick="testWebshareConfig()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-semibold">
+                          <i class="fas fa-vial mr-1"></i> Test
+                        </button>
+                      </div>
+                      
+                      <div id="webshareStatus" class="text-xs text-gray-400 mt-2">
+                        <span class="text-yellow-400">⚪ Not configured</span>
+                      </div>
+                      
+                      <div id="proxyList" class="hidden mt-3 border-t border-gray-700 pt-3">
+                        <h5 class="text-sm font-semibold mb-2 text-gray-300">Active Proxies</h5>
+                        <div id="proxyListContainer" class="space-y-1 max-h-32 overflow-y-auto text-xs"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="mt-4 text-xs text-gray-500 border-t border-gray-700 pt-3">
+                  <p>💡 Your API keys are stored securely and only used for your account. Free tier limits apply. Add your own keys to remove scanning limits.</p>
+                </div>
               </div>
             </div>
           </div>
@@ -912,108 +1024,6 @@
                 <div class="text-2xl font-bold text-yellow-400">90d</div>
                 <div class="text-sm text-gray-300">Avg. Recovery</div>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- API Configuration Accordion -->
-    <div class="mb-16">
-      <div class="accordion-item">
-        <button onclick="toggleAccordion('apiConfig')" class="accordion-header">
-          <span class="flex items-center gap-2">
-            <i class="fas fa-key text-purple-400"></i>
-            API Configuration (Sendgrid & Proxies)
-            <span id="apiStatusIndicator" class="api-status-indicator api-status-inactive"></span>
-          </span>
-          <i class="fas fa-chevron-down" id="apiConfigIcon"></i>
-        </button>
-        <div id="apiConfig" class="accordion-content hidden">
-          <div class="bg-gray-900 rounded-lg p-5 border border-gray-700">
-            <div class="flex items-center gap-3 mb-4">
-              <span id="apiStatusText" class="text-sm text-gray-300">Checking API status...</span>
-            </div>
-            
-            <div class="grid md:grid-cols-2 gap-6">
-              <!-- Sendgrid Config -->
-              <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                <h4 class="text-lg font-bold mb-3 flex items-center gap-2">
-                  <i class="fas fa-envelope text-blue-400"></i>
-                  Sendgrid Configuration
-                </h4>
-                <p class="text-xs text-gray-400 mb-3">Free plan: 100 emails/day</p>
-                
-                <div class="space-y-3">
-                  <div>
-                    <label class="block text-sm text-gray-300 mb-1">Sendgrid API Key</label>
-                    <input type="password" id="sendgridApiKey" placeholder="SG.xxxxxxxxxx" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500" autocomplete="off">
-                  </div>
-                  
-                  <div class="flex gap-2">
-                    <button onclick="saveSendgridConfig()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm font-semibold">
-                      <i class="fas fa-save mr-1"></i> Save
-                    </button>
-                    <button onclick="testSendgridConfig()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-semibold">
-                      <i class="fas fa-vial mr-1"></i> Test
-                    </button>
-                  </div>
-                  
-                  <div id="sendgridStatus" class="text-xs text-gray-400 mt-2">
-                    <span class="text-yellow-400">⚪ Not configured</span>
-                  </div>
-                  
-                  <div class="border-t border-gray-700 pt-3 mt-2">
-                    <h5 class="text-sm font-semibold mb-2 text-gray-300">Daily Usage</h5>
-                    <div class="progress-bar h-2 mb-1">
-                      <div id="sendgridUsageBar" class="progress-bar-fill" style="width: 0%"></div>
-                    </div>
-                    <div class="flex justify-between text-xs">
-                      <span id="sendgridUsed">0</span>
-                      <span>/</span>
-                      <span id="sendgridLimit">100</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Webshare Config -->
-              <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                <h4 class="text-lg font-bold mb-3 flex items-center gap-2">
-                  <i class="fas fa-globe text-green-400"></i>
-                  Webshare Proxy Configuration
-                </h4>
-                <p class="text-xs text-gray-400 mb-3">10 free proxies for Google Maps scraping</p>
-                
-                <div class="space-y-3">
-                  <div>
-                    <label class="block text-sm text-gray-300 mb-1">Webshare API Key</label>
-                    <input type="password" id="webshareApiKey" placeholder="your-webshare-api-key" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500" autocomplete="off">
-                  </div>
-                  
-                  <div class="flex gap-2">
-                    <button onclick="saveWebshareConfig()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm font-semibold">
-                      <i class="fas fa-save mr-1"></i> Save
-                    </button>
-                    <button onclick="testWebshareConfig()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-semibold">
-                      <i class="fas fa-vial mr-1"></i> Test
-                    </button>
-                  </div>
-                  
-                  <div id="webshareStatus" class="text-xs text-gray-400 mt-2">
-                    <span class="text-yellow-400">⚪ Not configured</span>
-                  </div>
-                  
-                  <div id="proxyList" class="hidden mt-3 border-t border-gray-700 pt-3">
-                    <h5 class="text-sm font-semibold mb-2 text-gray-300">Active Proxies</h5>
-                    <div id="proxyListContainer" class="space-y-1 max-h-32 overflow-y-auto text-xs"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div class="mt-4 text-xs text-gray-500 border-t border-gray-700 pt-3">
-              <p>💡 Your API keys are stored securely and only used for your account. Free tier limits apply.</p>
             </div>
           </div>
         </div>
