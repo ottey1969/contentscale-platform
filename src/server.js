@@ -1,6 +1,7 @@
 // ============================================
 // CONTENTSCALE SERVER.JS - 100% WERKENDE VERSIE
 // MET FIXED DATABASE CONNECTIE EN ERROR HANDLING
+// EN SSL WARNING FIX
 // ============================================
 
 const express = require('express');
@@ -15,6 +16,14 @@ const multer = require('multer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ============================================
+// SSL WARNING FIX - VOEG DIT TOE
+// ============================================
+// Deze regel voorkomt de SSL warning door expliciet de mode te zetten
+process.env.PGSSLMODE = 'verify-full';
+// Of gebruik dit als je de warning wilt onderdrukken:
+// process.env.NODE_NO_WARNINGS = '1';
 
 // ============================================
 // MIDDLEWARE - ALTIJD EERST
