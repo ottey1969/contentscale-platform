@@ -524,7 +524,7 @@
       color: #6b7280 !important;
     }
     
-    .api-status {
+    .api-status-indicator {
       display: inline-block;
       width: 10px;
       height: 10px;
@@ -532,16 +532,16 @@
       margin-right: 6px;
     }
     
-    .api-status.active {
+    .api-status-active {
       background-color: #10b981;
       box-shadow: 0 0 8px #10b981;
     }
     
-    .api-status.inactive {
+    .api-status-inactive {
       background-color: #6b7280;
     }
     
-    .api-status.error {
+    .api-status-error {
       background-color: #ef4444;
       box-shadow: 0 0 8px #ef4444;
     }
@@ -611,8 +611,7 @@
                      class="flex-1" 
                      autocomplete="off"
                      aria-autocomplete="none"
-                     spellcheck="false"
-                     value="">
+                     spellcheck="false">
               <button onclick="scanSingleURL()" id="singleScanBtn" class="btn-primary btn whitespace-nowrap">
                 <i class="fas fa-search"></i> Start Scan
               </button>
@@ -923,17 +922,21 @@
     <div class="mb-16">
       <div class="accordion-item">
         <button onclick="toggleAccordion('apiConfig')" class="accordion-header">
-          <span><i class="fas fa-key mr-2 text-purple-400"></i> API Configuration (Sendgrid & Proxies)</span>
+          <span class="flex items-center gap-2">
+            <i class="fas fa-key text-purple-400"></i>
+            API Configuration (Sendgrid & Proxies)
+            <span id="apiStatusIndicator" class="api-status-indicator api-status-inactive"></span>
+          </span>
           <i class="fas fa-chevron-down" id="apiConfigIcon"></i>
         </button>
         <div id="apiConfig" class="accordion-content hidden">
           <div class="bg-gray-900 rounded-lg p-5 border border-gray-700">
             <div class="flex items-center gap-3 mb-4">
-              <span id="apiStatusIndicator" class="api-status inactive"></span>
               <span id="apiStatusText" class="text-sm text-gray-300">Checking API status...</span>
             </div>
             
             <div class="grid md:grid-cols-2 gap-6">
+              <!-- Sendgrid Config -->
               <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
                 <h4 class="text-lg font-bold mb-3 flex items-center gap-2">
                   <i class="fas fa-envelope text-blue-400"></i>
@@ -956,8 +959,8 @@
                     </button>
                   </div>
                   
-                  <div class="text-xs text-gray-400 mt-2">
-                    <span id="sendgridStatus" class="text-yellow-400">⚪ Not configured</span>
+                  <div id="sendgridStatus" class="text-xs text-gray-400 mt-2">
+                    <span class="text-yellow-400">⚪ Not configured</span>
                   </div>
                   
                   <div class="border-t border-gray-700 pt-3 mt-2">
@@ -967,12 +970,14 @@
                     </div>
                     <div class="flex justify-between text-xs">
                       <span id="sendgridUsed">0</span>
+                      <span>/</span>
                       <span id="sendgridLimit">100</span>
                     </div>
                   </div>
                 </div>
               </div>
               
+              <!-- Webshare Config -->
               <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
                 <h4 class="text-lg font-bold mb-3 flex items-center gap-2">
                   <i class="fas fa-globe text-green-400"></i>
@@ -995,8 +1000,8 @@
                     </button>
                   </div>
                   
-                  <div class="text-xs text-gray-400 mt-2">
-                    <span id="webshareStatus" class="text-yellow-400">⚪ Not configured</span>
+                  <div id="webshareStatus" class="text-xs text-gray-400 mt-2">
+                    <span class="text-yellow-400">⚪ Not configured</span>
                   </div>
                   
                   <div id="proxyList" class="hidden mt-3 border-t border-gray-700 pt-3">
@@ -1059,16 +1064,6 @@
           </button>
           <div id="faqAnswer4" class="faq-answer hidden">
             <p>At ContentScale, we believe the future of work is flexible. We help specialists who want to work just a few hours per week while earning a full-time income. This is only possible with our advanced methods and tools. We train freelancers in Modern SEO for the AI-era - focusing on the GRAAF Framework, E-E-A-T optimization, and AI Overviews. Our goal is to elevate the SEO standard globally by giving specialists access to professional tools, training, and a steady stream of high-quality leads.</p>
-          </div>
-        </div>
-        
-        <div class="faq-item">
-          <button onclick="toggleFAQ(5)" class="faq-question">
-            <span>How do I add my own API keys?</span>
-            <i class="fas fa-chevron-down" id="faqIcon5"></i>
-          </button>
-          <div id="faqAnswer5" class="faq-answer hidden">
-            <p>Click on the "API Configuration" section above to add your Sendgrid and Webshare API keys. Sendgrid is used for email automation (100 free emails/day). Webshare provides 10 free proxies for Google Maps scraping. Your keys are stored securely and only used for your account. If you don't add keys, the platform works with built-in limits (5 days between scans).</p>
           </div>
         </div>
       </div>
@@ -1224,15 +1219,13 @@
 
   <script>
     // ==========================================
-    // DEFINITIEVE FIX: "OT" UIT INPUT VELD
+    // "OT" UIT INPUT VELD FIX
     // ==========================================
     (function() {
       function forceEmptyInput() {
         const input = document.getElementById('singleUrlInput');
         if (input) {
           input.value = '';
-          input.setAttribute('value', '');
-          console.log('✅ Input veld geleegd');
         }
       }
       
@@ -1244,18 +1237,8 @@
         const input = document.getElementById('singleUrlInput');
         if (input && input.value === 'ot') {
           input.value = '';
-          console.log('✅ Interval: input geleegd');
         }
       }, 100);
-      
-      document.addEventListener('focusin', function() {
-        setTimeout(function() {
-          const input = document.getElementById('singleUrlInput');
-          if (input && input.value === 'ot') {
-            input.value = '';
-          }
-        }, 10);
-      });
     })();
 
     let scrapedLeads = [];
@@ -1267,7 +1250,7 @@
     let userId = null;
 
     document.addEventListener('DOMContentLoaded', function() {
-      console.log('📋 Publieke pagina geladen - laden van ECHTE data...');
+      console.log('📋 Publieke pagina geladen');
       
       forceEmptyInput();
       
@@ -1292,6 +1275,19 @@
         });
       }
     });
+
+    // ==========================================
+    // ACCORDEON FUNCTIES
+    // ==========================================
+    function toggleAccordion(id) {
+      const content = document.getElementById(id);
+      const icon = document.getElementById(id + 'Icon');
+      
+      if (content) {
+        content.classList.toggle('hidden');
+        icon.style.transform = content.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+      }
+    }
 
     // ==========================================
     // USER REGISTRATIE
@@ -1339,10 +1335,10 @@
           const statusText = document.getElementById('apiStatusText');
           
           if (data.hasSendgrid || data.hasWebshare) {
-            indicator.className = 'api-status active';
+            indicator.className = 'api-status-indicator api-status-active';
             statusText.textContent = 'Custom API keys configured';
           } else {
-            indicator.className = 'api-status inactive';
+            indicator.className = 'api-status-indicator api-status-inactive';
             statusText.textContent = 'Using default settings (limited)';
           }
           
@@ -1568,19 +1564,137 @@
       alert(`✅ Added ${successCount} leads to queue`);
     }
 
-    // ==========================================
-    // ACCORDEON FUNCTIES
-    // ==========================================
-    function toggleAccordion(id) {
-      const content = document.getElementById(id);
-      const icon = document.getElementById(id + 'Icon');
+    async function findEmail(leadId, index) {
+      alert('🔍 Email search feature coming soon');
+    }
+
+    async function bulkFindEmails() {
+      alert('🔍 Email search feature coming soon');
+    }
+
+    async function queueLead(leadId) {
+      const lead = scrapedLeads.find(l => l.id === leadId);
+      if (!lead || !lead.email) {
+        alert('❌ No email to queue');
+        return;
+      }
       
-      if (content) {
-        content.classList.toggle('hidden');
-        icon.style.transform = content.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+      if (!userId) {
+        alert('❌ User not registered');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/email/queue', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-user-id': userId
+          },
+          body: JSON.stringify({
+            to_email: lead.email,
+            to_name: lead.name,
+            subject: 'SEO Opportunity for ' + lead.name
+          })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          alert('✅ Lead added to email queue');
+        } else {
+          alert('❌ ' + (data.error || 'Failed to queue'));
+        }
+      } catch (error) {
+        alert('❌ Error: ' + error.message);
       }
     }
 
+    function refreshLeadsTable() {
+      const leadsTableBody = document.getElementById('leadsTableBody');
+      
+      if (scrapedLeads.length === 0) {
+        leadsTableBody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-400">Geen bedrijven gevonden</td></tr>';
+        return;
+      }
+      
+      leadsTableBody.innerHTML = scrapedLeads.map((lead, index) => {
+        const hasWebsite = lead.website && lead.website !== 'N/A' && lead.website !== null;
+        const hasEmail = lead.email && lead.email.includes('@');
+        
+        let statusColor = 'text-gray-400';
+        let statusText = 'pending';
+        if (lead.email_status === 'found') {
+          statusColor = 'text-green-400';
+          statusText = 'found';
+        } else if (lead.email_status === 'not found') {
+          statusColor = 'text-red-400';
+          statusText = 'not found';
+        }
+        
+        return `
+          <tr class="border-b border-gray-700 hover:bg-gray-800">
+            <td class="px-4 py-3">
+              <div class="font-medium text-white">${lead.name || 'Unknown'}</div>
+              <div class="text-xs text-gray-400">${lead.category || 'SEO Agency'}</div>
+            </td>
+            <td class="px-4 py-3">
+              ${hasWebsite ? 
+                `<a href="${lead.website}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">
+                  ${lead.website.replace('https://', '').substring(0, 30)}...
+                </a>` : 
+                `<span class="text-red-400 text-sm">Geen website</span>`
+              }
+            </td>
+            <td class="px-4 py-3 text-gray-300 text-sm">${lead.phone || '-'}</td>
+            <td class="px-4 py-3">
+              ${lead.score > 0 ? 
+                `<span class="font-bold ${lead.score >= 70 ? 'text-green-400' : 'text-yellow-400'}">${lead.score}</span>` : 
+                `<span class="text-gray-500">-</span>`
+              }
+            </td>
+            <td class="px-4 py-3">
+              ${hasEmail ? 
+                `<span class="text-green-400 text-sm">${lead.email}</span>` : 
+                (hasWebsite ? 
+                  `<button onclick="findEmail(${lead.id}, ${index})" 
+                          class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs font-semibold">
+                    <i class="fas fa-search mr-1"></i>Find
+                  </button>` : 
+                  `<span class="text-gray-600 text-sm">-</span>`
+                )
+              }
+            </td>
+            <td class="px-4 py-3">
+              <span class="text-xs ${statusColor}">${statusText}</span>
+            </td>
+            <td class="px-4 py-3">
+              <div class="flex gap-1">
+                ${hasWebsite ? 
+                  `<button onclick="scanLead('${lead.website}')" 
+                          class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded text-xs font-semibold"
+                          title="Scan website">
+                    <i class="fas fa-search"></i>
+                  </button>` : 
+                  ''
+                }
+                ${hasEmail ? 
+                  `<button onclick="queueLead(${lead.id})" 
+                          class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs font-semibold"
+                          title="Add to email queue">
+                    <i class="fas fa-clock"></i>
+                  </button>` : 
+                  ''
+                }
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // ==========================================
+    // LEADERBOARD FUNCTIES
+    // ==========================================
     async function loadLeaderboardData() {
       try {
         const response = await fetch('/api/leaderboard');
@@ -2117,13 +2231,7 @@
         scrapedLeads = [...newLeads, ...scrapedLeads];
         
         leadCount.textContent = scrapedLeads.length;
-        
-        if (scrapedLeads.length === 0) {
-          leadsTableBody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-400">Geen bedrijven gevonden</td></tr>';
-        } else {
-          refreshLeadsTable();
-        }
-        
+        refreshLeadsTable();
         leadsContainer.classList.remove('hidden');
         
       } catch (error) {
@@ -2134,145 +2242,11 @@
       }
     }
 
-    function refreshLeadsTable() {
-      const leadsTableBody = document.getElementById('leadsTableBody');
-      
-      if (scrapedLeads.length === 0) {
-        leadsTableBody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-400">Geen bedrijven gevonden</td></tr>';
-        return;
-      }
-      
-      leadsTableBody.innerHTML = scrapedLeads.map((lead, index) => {
-        const hasWebsite = lead.website && lead.website !== 'N/A' && lead.website !== null;
-        const hasEmail = lead.email && lead.email.includes('@');
-        
-        let statusColor = 'text-gray-400';
-        let statusText = 'pending';
-        if (lead.email_status === 'found') {
-          statusColor = 'text-green-400';
-          statusText = 'found';
-        } else if (lead.email_status === 'not found') {
-          statusColor = 'text-red-400';
-          statusText = 'not found';
-        }
-        
-        return `
-          <tr class="border-b border-gray-700 hover:bg-gray-800">
-            <td class="px-4 py-3">
-              <div class="font-medium text-white">${lead.name || 'Unknown'}</div>
-              <div class="text-xs text-gray-400">${lead.category || 'SEO Agency'}</div>
-            </td>
-            <td class="px-4 py-3">
-              ${hasWebsite ? 
-                `<a href="${lead.website}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">
-                  ${lead.website.replace('https://', '').substring(0, 30)}...
-                </a>` : 
-                `<span class="text-red-400 text-sm">Geen website</span>`
-              }
-            </td>
-            <td class="px-4 py-3 text-gray-300 text-sm">${lead.phone || '-'}</td>
-            <td class="px-4 py-3">
-              ${lead.score > 0 ? 
-                `<span class="font-bold ${lead.score >= 70 ? 'text-green-400' : 'text-yellow-400'}">${lead.score}</span>` : 
-                `<span class="text-gray-500">-</span>`
-              }
-            </td>
-            <td class="px-4 py-3">
-              ${hasEmail ? 
-                `<span class="text-green-400 text-sm">${lead.email}</span>` : 
-                (hasWebsite ? 
-                  `<button onclick="findEmail(${index})" 
-                          class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs font-semibold">
-                    <i class="fas fa-search mr-1"></i>Find
-                  </button>` : 
-                  `<span class="text-gray-600 text-sm">-</span>`
-                )
-              }
-            </td>
-            <td class="px-4 py-3">
-              <span class="text-xs ${statusColor}">${statusText}</span>
-            </td>
-            <td class="px-4 py-3">
-              <div class="flex gap-1">
-                ${hasWebsite ? 
-                  `<button onclick="scanLead('${lead.website}')" 
-                          class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded text-xs font-semibold"
-                          title="Scan website">
-                    <i class="fas fa-search"></i>
-                  </button>` : 
-                  ''
-                }
-                ${hasEmail ? 
-                  `<button onclick="queueLead(${index})" 
-                          class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs font-semibold"
-                          title="Add to email queue">
-                    <i class="fas fa-clock"></i>
-                  </button>` : 
-                  ''
-                }
-              </div>
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
-
     function scanLead(website) {
       document.getElementById('singleUrlInput').value = website;
       switchMode('single');
       document.getElementById('lead-scanner').scrollIntoView({ behavior: 'smooth' });
       setTimeout(() => scanSingleURL(), 500);
-    }
-
-    async function findEmail(index) {
-      const lead = scrapedLeads[index];
-      if (!lead || !lead.website) {
-        alert('❌ No website to search');
-        return;
-      }
-      
-      alert(`🔍 Email search would contact: ${lead.website}`);
-    }
-
-    async function queueLead(index) {
-      const lead = scrapedLeads[index];
-      if (!lead || !lead.email) {
-        alert('❌ No email to queue');
-        return;
-      }
-      
-      if (!userId) {
-        alert('❌ User not registered');
-        return;
-      }
-      
-      try {
-        const response = await fetch('/api/email/queue', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'x-user-id': userId
-          },
-          body: JSON.stringify({
-            to_email: lead.email,
-            to_name: lead.name,
-            subject: 'SEO Opportunity for ' + lead.name
-          })
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-          alert('✅ Lead added to email queue');
-        } else {
-          alert('❌ ' + (data.error || 'Failed to queue'));
-        }
-      } catch (error) {
-        alert('❌ Error: ' + error.message);
-      }
-    }
-
-    async function bulkFindEmails() {
-      alert('🔍 Email search feature coming soon');
     }
 
     function exportLeadsToCSV() {
@@ -2298,12 +2272,12 @@
       csv += rows.map(row => row.map(cell => `"${cell || ''}"`).join(',')).join('\n');
       
       const blob = new Blob([csv], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `contentscale-leads-${Date.now()}.csv`;
       a.click();
-      window.URL.revokeObjectURL(url);
+      URL.revokeObjectURL(url);
       
       alert(`✅ Exported ${scrapedLeads.length} leads to CSV`);
     }
