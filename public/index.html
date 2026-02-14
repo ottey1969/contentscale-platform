@@ -546,7 +546,6 @@
         <div id="singleMode" class="max-w-3xl mx-auto">
           <div class="card">
             <div class="flex flex-col sm:flex-row gap-3">
-              <!-- ✅ DEFINITIEVE FIX: Meerdere attributen om autofill te voorkomen -->
               <input type="text" 
                      id="singleUrlInput" 
                      name="url" 
@@ -1843,6 +1842,7 @@
           throw new Error(data.error || 'Scan failed');
         }
         
+        // ✅ GEFIXTE DISPLAY FUNCTIE - gebruikt alleen echte data
         displayScanResult(data);
         
         progressBar.style.width = '100%';
@@ -1864,133 +1864,129 @@
       }
     }
 
+    // ==========================================
+    // ✅ GEFIXTE DISPLAY SCAN RESULT FUNCTIE
+    // ==========================================
     function displayScanResult(result) {
       const resultDiv = document.getElementById('singleResult');
       
-      const url = result.url || 'https://www.kindercoachkrioyo.be';
-      const quality = result.quality || 'good';
-      const currentScore = result.score || 77;
+      // Gebruik alleen echte data van de server
+      const url = result.url || '';
+      const quality = result.quality || 'unknown';
+      const currentScore = result.score || 0;
       
-      let potentialScore = 94;
-      if (result.potential_score) {
-        potentialScore = result.potential_score;
-      } else {
-        potentialScore = currentScore + 17;
-      }
+      // Metrics van de server
+      const graaf = result.metrics?.graaf || 0;
+      const craft = result.metrics?.craft || 0;
+      const technical = result.metrics?.technical || 0;
+      const words = result.content_stats?.wordCount || 0;
       
-      const pointsPossible = potentialScore - currentScore;
+      const contentQuality = result.metrics?.content || 0;
+      const uxScore = result.metrics?.ux || 0;
       
-      const graaf = result.metrics?.graaf || 43;
-      const craft = result.metrics?.craft || 26;
-      const technical = result.metrics?.technical || 12;
-      const words = result.content_stats?.wordCount || 4904;
-      
-      const contentQuality = result.metrics?.content || 86;
-      const uxScore = result.metrics?.ux || 95;
-      
+      // Recommendations direct van server
       let recommendations = [];
-      
       if (result.recommendations?.all && result.recommendations.all.length > 0) {
-        recommendations = result.recommendations.all.slice(0, 3);
-      } else {
-        recommendations = [
-          {
-            title: "Implement Schema Markup",
-            description: "Add Article/FAQ/Organization schema for better SERP visibility",
-            impact: "12/10",
-            cost: "€150–250"
-          },
-          {
-            title: "Optimize Page Speed",
-            description: "Reduce load time to <2s via image compression, lazy loading and CDN",
-            impact: "9/10",
-            cost: "€200–400"
-          },
-          {
-            title: "Add FAQ Section",
-            description: "Answer 8–12 common questions with FAQ schema markup to capture AI Overview opportunities",
-            impact: null,
-            cost: null
-          }
-        ];
+        recommendations = result.recommendations.all.slice(0, 4);
       }
       
+      // Bouw recommendations HTML
       let recsHtml = '';
-      recommendations.forEach(rec => {
-        recsHtml += `
-          <div class="mb-4 pb-4 border-b border-gray-700 last:border-0">
-            <h4 class="font-bold text-white mb-1">${rec.title}</h4>
-            <p class="text-gray-300 text-sm mb-2">${rec.description}</p>
-            <div class="flex items-center gap-4 text-sm">
-              ${rec.impact ? `<span class="text-purple-400">📎 Impact: ${rec.impact}</span>` : ''}
-              ${rec.cost ? `<span class="text-green-400">📈 ${rec.cost}</span>` : ''}
+      if (recommendations.length > 0) {
+        recommendations.forEach(rec => {
+          const impactText = rec.impact ? `${rec.impact}/10` : '';
+          const costText = rec.cost || '';
+          
+          recsHtml += `
+            <div class="mb-4 pb-4 border-b border-gray-700 last:border-0">
+              <h4 class="font-bold text-white mb-1">${rec.title || 'Recommendation'}</h4>
+              <p class="text-gray-300 text-sm mb-2">${rec.description || ''}</p>
+              <div class="flex items-center gap-4 text-sm">
+                ${impactText ? `<span class="text-purple-400">📎 Impact: ${impactText}</span>` : ''}
+                ${costText ? `<span class="text-green-400">💰 ${costText}</span>` : ''}
+              </div>
             </div>
-          </div>
-        `;
-      });
+          `;
+        });
+      } else {
+        recsHtml = '<p class="text-gray-400 text-sm">No specific recommendations available for this page.</p>';
+      }
       
+      // Quality badge kleur
+      let qualityColor = 'bg-gray-600';
+      if (quality === 'excellent') qualityColor = 'bg-green-600';
+      else if (quality === 'good') qualityColor = 'bg-blue-600';
+      else if (quality === 'average') qualityColor = 'bg-yellow-600';
+      else if (quality === 'poor') qualityColor = 'bg-red-600';
+      else if (quality === 'below-average') qualityColor = 'bg-orange-600';
+      
+      // ✅ ALLEEN ECHTE DATA - GEEN MOCK SCORES OF VASTE +17
       resultDiv.innerHTML = `
         <div class="bg-gray-800 rounded-xl border-2 border-purple-500 p-6 mt-4">
+          <!-- Header -->
           <div class="text-center mb-4">
-            <h2 class="text-2xl font-bold text-white mb-1"># SEO Content Analysis</h2>
+            <h2 class="text-2xl font-bold text-white mb-1">📊 SEO Content Analysis</h2>
             <p class="text-md text-gray-300 break-all">${url}</p>
-            <span class="inline-block mt-2 px-3 py-1 bg-green-600 text-white text-sm rounded-full">
-              Quality: ${quality}
+            <span class="inline-block mt-2 px-3 py-1 ${qualityColor} text-white text-sm rounded-full">
+              Quality: ${quality.charAt(0).toUpperCase() + quality.slice(1)}
             </span>
           </div>
           
-          <div class="flex justify-between items-end mb-2">
-            <div class="text-center flex-1">
-              <div class="text-4xl font-bold text-white">${currentScore}</div>
-              <div class="text-xs text-gray-400">Current Score</div>
-            </div>
-            <div class="text-3xl text-gray-500 mb-1">→</div>
-            <div class="text-center flex-1">
-              <div class="text-4xl font-bold text-green-400">${potentialScore}</div>
-              <div class="text-xs text-gray-400">Potential</div>
-            </div>
-          </div>
-          
+          <!-- Main Score - Alleen huidige score, geen potential -->
           <div class="text-center mb-6">
-            <span class="inline-block bg-green-600 text-white px-5 py-2 rounded-full text-lg font-bold">
-              +${pointsPossible} points possible! 🥳
-            </span>
+            <div class="text-6xl font-bold text-white">${currentScore}</div>
+            <div class="text-sm text-gray-400">out of 100</div>
           </div>
           
-          <div class="flex justify-between gap-4 mb-3">
-            <div class="flex-1 bg-gray-900 rounded-lg p-3 text-center">
-              <div class="text-xl font-bold text-purple-400">GRAAF: ${graaf}/50</div>
+          <!-- Core Metrics Grid -->
+          <div class="grid grid-cols-2 gap-4 mb-5">
+            <div class="bg-gray-900 rounded-lg p-4 text-center">
+              <div class="text-sm text-gray-400 mb-1">GRAAF</div>
+              <div class="text-2xl font-bold text-purple-400">${graaf}/50</div>
             </div>
-            <div class="flex-1 bg-gray-900 rounded-lg p-3 text-center">
-              <div class="text-xl font-bold text-blue-400">CRAFT: ${craft}/30</div>
+            <div class="bg-gray-900 rounded-lg p-4 text-center">
+              <div class="text-sm text-gray-400 mb-1">CRAFT</div>
+              <div class="text-2xl font-bold text-blue-400">${craft}/30</div>
             </div>
-          </div>
-          
-          <div class="flex justify-between gap-4 mb-5">
-            <div class="flex-1 bg-gray-900 rounded-lg p-3 text-center">
-              <div class="text-xl font-bold text-yellow-400">Technical: ${technical}/20</div>
+            <div class="bg-gray-900 rounded-lg p-4 text-center">
+              <div class="text-sm text-gray-400 mb-1">Technical</div>
+              <div class="text-2xl font-bold text-yellow-400">${technical}/20</div>
             </div>
-            <div class="flex-1 bg-gray-900 rounded-lg p-3 text-center">
-              <div class="text-xl font-bold text-white">Words: ${words}</div>
-            </div>
-          </div>
-          
-          <div class="space-y-2 mb-6">
-            <div class="flex justify-between items-center">
-              <span class="text-gray-300">Content Quality:</span>
-              <span class="text-xl font-bold text-green-400">${contentQuality}/100</span>
-            </div>
-            <div class="flex justify-between items-center">
-              <span class="text-gray-300">UX Score:</span>
-              <span class="text-xl font-bold text-green-400">${uxScore}/100</span>
+            <div class="bg-gray-900 rounded-lg p-4 text-center">
+              <div class="text-sm text-gray-400 mb-1">Words</div>
+              <div class="text-2xl font-bold text-white">${words.toLocaleString()}</div>
             </div>
           </div>
           
+          <!-- Content Quality & UX Score -->
+          <div class="space-y-3 mb-6">
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-gray-300">Content Quality</span>
+                <span class="text-lg font-bold text-green-400">${contentQuality}/100</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-bar-fill" style="width: ${contentQuality}%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-gray-300">UX Score</span>
+                <span class="text-lg font-bold text-green-400">${uxScore}/100</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-bar-fill" style="width: ${uxScore}%"></div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Priority Recommendations -->
           <div class="border-t border-gray-700 pt-5 mb-5">
             <h3 class="text-xl font-bold text-white mb-4">📋 Priority Recommendations</h3>
             ${recsHtml}
           </div>
           
+          <!-- Buttons -->
           <div class="flex gap-3">
             <button onclick="addToLeaderboard()" 
                     class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-semibold transition-all">
