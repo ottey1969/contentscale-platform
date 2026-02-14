@@ -1,37 +1,14 @@
-
-// ============================================
-// CONTENTSCALE SERVER.JS - COMPLETE FIX
-// ============================================
-
-// ============================================
-// SSL WARNING FIX - MOET HELEMAAL BOVENIN
-// ============================================
-// Voorkom SSL warning door environment variables
-process.env.PGSSLMODE = 'verify-full';
-process.env.NODE_NO_WARNINGS = '1';  // Onderdrukt alle warnings
-
-// Of als je de warning wilt zien maar oplossen:
-// Vervang de connection string in DATABASE_URL
-if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('sslmode=')) {
-  // Voeg sslmode toe aan de URL als die nog niet bestaat
-  process.env.DATABASE_URL = process.env.DATABASE_URL + '?sslmode=verify-full';
-}
-
-const express = require('express');
-const path = require('path');
-const crypto = require('crypto');
-const { Pool } = require('pg');  // pg wordt nu geladen met juiste SSL mode
-const puppeteer = require('puppeteer');
-const bcrypt = require('bcryptjs');
-const rateLimit = require('express-rate-limit');
-const compression = require('compression');
-const multer = require('multer');
-
 // ============================================
 // CONTENTSCALE SERVER.JS - 100% WERKENDE VERSIE
 // MET FIXED DATABASE CONNECTIE EN ERROR HANDLING
-// EN SSL WARNING FIX
+// EN SSL WARNING FIX - JUISTE PLEK
 // ============================================
+
+// ============================================
+// SSL WARNING FIX - DIT MOET EERST KOMEN!
+// ============================================
+process.env.PGSSLMODE = 'verify-full';
+process.env.NODE_NO_WARNINGS = '1';
 
 const express = require('express');
 const path = require('path');
@@ -45,14 +22,6 @@ const multer = require('multer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-// ============================================
-// SSL WARNING FIX - VOEG DIT TOE
-// ============================================
-// Deze regel voorkomt de SSL warning door expliciet de mode te zetten
-process.env.PGSSLMODE = 'verify-full';
-// Of gebruik dit als je de warning wilt onderdrukken:
-// process.env.NODE_NO_WARNINGS = '1';
 
 // ============================================
 // MIDDLEWARE - ALTIJD EERST
