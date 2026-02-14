@@ -19,6 +19,17 @@
       color: white !important;
     }
     
+    input, textarea, select {
+      color: #000000 !important;
+      background-color: #ffffff !important;
+      border: 1px solid #d1d5db !important;
+    }
+    
+    input::placeholder, textarea::placeholder {
+      color: #6b7280 !important;
+      opacity: 1 !important;
+    }
+    
     .text-gray-300, .text-gray-400, .text-gray-500 {
       color: #d1d5db !important;
     }
@@ -422,6 +433,48 @@
       color: #d1d5db;
     }
     
+    .accordion-item {
+      background: #111827;
+      border: 1px solid #374151;
+      border-radius: 0.75rem;
+      overflow: hidden;
+      transition: all 0.2s;
+      margin-top: 1.5rem;
+    }
+    
+    .accordion-item:hover {
+      border-color: #a855f7;
+    }
+    
+    .accordion-header {
+      width: 100%;
+      padding: 1.25rem 1.5rem;
+      text-align: left;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border: 1px solid #a855f7;
+      border-radius: 0.75rem;
+      color: white;
+      font-weight: 600;
+      font-size: 1.125rem;
+      cursor: pointer;
+    }
+    
+    .accordion-header:hover {
+      background: linear-gradient(135deg, #2d3748, #1a202c);
+    }
+    
+    .accordion-content {
+      padding: 1.5rem;
+      background: #111827;
+      border: 1px solid #374151;
+      border-top: none;
+      border-bottom-left-radius: 0.75rem;
+      border-bottom-right-radius: 0.75rem;
+    }
+    
     footer {
       background: #111827;
       border-top: 2px solid #374151;
@@ -464,6 +517,23 @@
     }
     #main-content > div:first-child {
       min-height: 400px;
+    }
+    
+    .api-status-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-left: 8px;
+    }
+    
+    .api-status-active {
+      background-color: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+    
+    .api-status-inactive {
+      background-color: #6b7280;
     }
   </style>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -549,7 +619,6 @@
             </div>
           </div>
 
-          <!-- STATS CARDS -->
           <div class="grid-4 mb-8">
             <div class="stat-card">
               <div>
@@ -575,14 +644,12 @@
             <div class="stat-card">
               <div>
                 <div class="text-4xl mb-2">💼</div>
-                <!-- ✅ FIXED: ID changed from stat-active-seo to stat-active-helpers to match API response -->
                 <div class="text-3xl font-bold" id="stat-active-helpers">0</div>
                 <div class="text-sm text-gray-200">Freelancers</div>
               </div>
             </div>
           </div>
 
-          <!-- BULK ACTIONS -->
           <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
             <div class="flex items-center gap-2">
               <input type="checkbox" id="select-all-leaderboard" onchange="toggleSelectAllLeaderboard()" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
@@ -594,16 +661,13 @@
             <span id="selected-count-leaderboard" class="text-sm text-gray-400 ml-auto">0 geselecteerd</span>
           </div>
 
-          <!-- TOP 3 CARDS -->
           <div id="top3-container" class="grid-3 mb-10"></div>
 
-          <!-- RANKINGS 4-15 -->
           <div id="rankings4to15Container" class="mb-10">
             <h3 class="text-2xl font-bold text-white mb-6">Rankings 4-15</h3>
             <div id="rankings4to15Grid" class="rankings-4-15-grid"></div>
           </div>
 
-          <!-- FILTERS -->
           <div class="bg-gray-800 rounded-lg p-4 mb-6 border border-gray-700">
             <button onclick="toggleFilters()" class="w-full flex items-center justify-between text-left text-white">
               <div class="flex items-center gap-2">
@@ -623,7 +687,6 @@
             </div>
           </div>
 
-          <!-- RANKINGS 16+ -->
           <div>
             <button onclick="toggleRankings()" id="rankingsToggleBtn" class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-between transition-all">
               <span id="rankingsToggleText">📊 Show Rankings 16+</span>
@@ -663,7 +726,6 @@
             </div>
           </div>
 
-          <!-- BULK ACTIONS -->
           <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
             <div class="flex items-center gap-2">
               <input type="checkbox" id="select-all-freelancers" onchange="toggleSelectAllFreelancers()" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
@@ -675,7 +737,6 @@
             <span id="selected-count-freelancers" class="text-sm text-gray-400 ml-auto">0 geselecteerd</span>
           </div>
 
-          <!-- FREELANCERS GRID -->
           <div id="freelancersGrid" class="grid-3"></div>
         </div>
       </div>
@@ -700,7 +761,7 @@
           <div id="singleMode" class="max-w-3xl mx-auto">
             <div class="card">
               <div class="flex flex-col sm:flex-row gap-3">
-                <input type="text" id="singleUrlInput" placeholder="https://example.com" class="flex-1">
+                <input type="text" id="singleUrlInput" placeholder="https://example.com" class="flex-1" autocomplete="off">
                 <button onclick="scanSingleURL()" id="singleScanBtn" class="btn-primary btn whitespace-nowrap">
                   <i class="fas fa-search mr-2"></i> Start Scan
                 </button>
@@ -718,7 +779,7 @@
           <div id="bulkMode" class="hidden max-w-6xl mx-auto">
             <div class="card">
               <div class="flex flex-col sm:flex-row gap-3 mb-4">
-                <input type="text" id="mapsUrl" placeholder="https://www.google.com/maps/search/seo+agency+amsterdam" class="flex-1">
+                <input type="text" id="mapsUrl" placeholder="https://www.google.com/maps/search/seo+agency+amsterdam" class="flex-1" autocomplete="off">
                 <button onclick="scrapeGoogleMaps()" id="bulkScanBtn" class="btn-secondary btn whitespace-nowrap">
                   <i class="fas fa-map-marked-alt mr-2"></i> Scrape Maps
                 </button>
@@ -732,6 +793,14 @@
                     <i class="fas fa-database mr-2 text-green-400"></i>
                     Found Leads (<span id="leadCount">0</span>)
                   </h3>
+                  <div class="flex gap-2">
+                    <button onclick="bulkFindEmails()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm font-semibold">
+                      <i class="fas fa-search mr-1"></i> Find All Emails
+                    </button>
+                    <button onclick="queueAllLeads()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm font-semibold">
+                      <i class="fas fa-clock mr-1"></i> Queue All
+                    </button>
+                  </div>
                 </div>
                 <div class="overflow-x-auto">
                   <table>
@@ -741,11 +810,116 @@
                         <th>Website</th>
                         <th>Phone</th>
                         <th>Score</th>
+                        <th>Email</th>
+                        <th>Status</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody id="leadsTableBody"></tbody>
                   </table>
+                </div>
+                <div class="flex justify-end mt-4 gap-2">
+                  <button onclick="exportLeadsToCSV()" class="btn-success btn">
+                    <i class="fas fa-file-csv mr-2"></i> Export CSV
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- API Configuration Accordion -->
+          <div class="accordion-item">
+            <button onclick="toggleAccordion('apiConfig')" class="accordion-header">
+              <span class="flex items-center gap-2">
+                <i class="fas fa-key text-purple-400"></i>
+                <span class="font-bold">Add your API for Sendgrid and Webshare Here</span>
+                <span id="apiStatusIndicator" class="api-status-indicator api-status-inactive"></span>
+              </span>
+              <i class="fas fa-chevron-down" id="apiConfigIcon"></i>
+            </button>
+            <div id="apiConfig" class="accordion-content hidden">
+              <div class="bg-gray-900 rounded-lg p-5 border border-gray-700">
+                <div class="flex items-center gap-3 mb-4">
+                  <span id="apiStatusText" class="text-sm text-gray-300">Configure your own API keys for unlimited usage</span>
+                </div>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                  <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                    <h4 class="text-lg font-bold mb-3 flex items-center gap-2">
+                      <i class="fas fa-envelope text-blue-400"></i>
+                      Sendgrid Configuration
+                    </h4>
+                    <p class="text-xs text-gray-400 mb-3">Free plan: 100 emails/day</p>
+                    
+                    <div class="space-y-3">
+                      <div>
+                        <label class="block text-sm text-gray-300 mb-1">Sendgrid API Key</label>
+                        <input type="password" id="sendgridApiKey" placeholder="SG.xxxxxxxxxx" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500" autocomplete="off">
+                      </div>
+                      
+                      <div class="flex gap-2">
+                        <button onclick="saveSendgridConfig()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm font-semibold">
+                          <i class="fas fa-save mr-1"></i> Save
+                        </button>
+                        <button onclick="testSendgridConfig()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-semibold">
+                          <i class="fas fa-vial mr-1"></i> Test
+                        </button>
+                      </div>
+                      
+                      <div id="sendgridStatus" class="text-xs text-gray-400 mt-2">
+                        <span class="text-yellow-400">⚪ Not configured</span>
+                      </div>
+                      
+                      <div class="border-t border-gray-700 pt-3 mt-2">
+                        <h5 class="text-sm font-semibold mb-2 text-gray-300">Daily Usage</h5>
+                        <div class="progress-bar h-2 mb-1">
+                          <div id="sendgridUsageBar" class="progress-bar-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                          <span id="sendgridUsed">0</span>
+                          <span>/</span>
+                          <span id="sendgridLimit">100</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                    <h4 class="text-lg font-bold mb-3 flex items-center gap-2">
+                      <i class="fas fa-globe text-green-400"></i>
+                      Webshare Proxy Configuration
+                    </h4>
+                    <p class="text-xs text-gray-400 mb-3">10 free proxies for Google Maps scraping</p>
+                    
+                    <div class="space-y-3">
+                      <div>
+                        <label class="block text-sm text-gray-300 mb-1">Webshare API Key</label>
+                        <input type="password" id="webshareApiKey" placeholder="your-webshare-api-key" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500" autocomplete="off">
+                      </div>
+                      
+                      <div class="flex gap-2">
+                        <button onclick="saveWebshareConfig()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm font-semibold">
+                          <i class="fas fa-save mr-1"></i> Save
+                        </button>
+                        <button onclick="testWebshareConfig()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-semibold">
+                          <i class="fas fa-vial mr-1"></i> Test
+                        </button>
+                      </div>
+                      
+                      <div id="webshareStatus" class="text-xs text-gray-400 mt-2">
+                        <span class="text-yellow-400">⚪ Not configured</span>
+                      </div>
+                      
+                      <div id="proxyList" class="hidden mt-3 border-t border-gray-700 pt-3">
+                        <h5 class="text-sm font-semibold mb-2 text-gray-300">Active Proxies</h5>
+                        <div id="proxyListContainer" class="space-y-1 max-h-32 overflow-y-auto text-xs"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="mt-4 text-xs text-gray-500 border-t border-gray-700 pt-3">
+                  <p>💡 Your API keys are stored securely and only used for your account. Free tier limits apply. Add your own keys to remove scanning limits.</p>
                 </div>
               </div>
             </div>
@@ -790,6 +964,9 @@
     let selectedPendingIds = new Set();
     let scrapedLeads = [];
     let currentScanResult = null;
+    let userId = null;
+    let sendgridConfigured = false;
+    let webshareConfigured = false;
 
     // ==========================================
     // AUTHENTICATIE
@@ -805,6 +982,7 @@
         document.getElementById('main-dashboard').classList.remove('hidden');
         document.getElementById('admin-username').textContent = currentUsername;
         
+        registerUser();
         loadAllData();
         switchTab('leaderboard');
       }
@@ -842,6 +1020,7 @@
           document.getElementById('main-dashboard').classList.remove('hidden');
           document.getElementById('admin-username').textContent = username;
           
+          registerUser();
           loadAllData();
           switchTab('leaderboard');
         } else {
@@ -859,6 +1038,254 @@
       localStorage.removeItem('admin_id');
       localStorage.removeItem('admin_username');
       location.reload();
+    }
+
+    // ==========================================
+    // USER REGISTRATIE
+    // ==========================================
+    async function registerUser() {
+      try {
+        let storedUserId = localStorage.getItem('user_id');
+        
+        if (!storedUserId) {
+          const response = await fetch('/api/user/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          
+          const data = await response.json();
+          if (data.success && data.userId) {
+            userId = data.userId;
+            localStorage.setItem('user_id', userId);
+            console.log('✅ User registered:', userId);
+            loadApiStatus();
+          }
+        } else {
+          userId = storedUserId;
+          console.log('✅ Existing user:', userId);
+          loadApiStatus();
+        }
+      } catch (error) {
+        console.error('❌ User registration error:', error);
+      }
+    }
+
+    // ==========================================
+    // API STATUS
+    // ==========================================
+    async function loadApiStatus() {
+      if (!userId) return;
+      
+      try {
+        const response = await fetch('/api/user/keys/status', {
+          headers: { 'x-user-id': userId }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          const indicator = document.getElementById('apiStatusIndicator');
+          const statusText = document.getElementById('apiStatusText');
+          
+          if (data.hasSendgrid || data.hasWebshare) {
+            indicator.className = 'api-status-indicator api-status-active';
+            statusText.textContent = 'Custom API keys configured';
+          } else {
+            indicator.className = 'api-status-indicator api-status-inactive';
+            statusText.textContent = 'Using default settings (limited)';
+          }
+          
+          if (data.hasSendgrid) {
+            document.getElementById('sendgridStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
+            if (data.sendgrid) {
+              document.getElementById('sendgridUsed').textContent = data.sendgrid.used;
+              document.getElementById('sendgridLimit').textContent = data.sendgrid.limit;
+              const percentage = (data.sendgrid.used / data.sendgrid.limit) * 100;
+              document.getElementById('sendgridUsageBar').style.width = percentage + '%';
+            }
+            sendgridConfigured = true;
+          }
+        }
+      } catch (error) {
+        console.error('Error loading API status:', error);
+      }
+    }
+
+    // ==========================================
+    // SENDGRID FUNCTIES
+    // ==========================================
+    async function saveSendgridConfig() {
+      if (!userId) {
+        alert('❌ User not registered. Please refresh the page.');
+        return;
+      }
+      
+      const apiKey = document.getElementById('sendgridApiKey').value;
+      if (!apiKey || apiKey.includes('••••')) {
+        alert('❌ Please enter your Sendgrid API key');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/user/sendgrid/configure', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-user-id': userId
+          },
+          body: JSON.stringify({ 
+            userId,
+            apiKey,
+            dailyLimit: 100 
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          alert('✅ Sendgrid configuration saved successfully');
+          document.getElementById('sendgridStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
+          sendgridConfigured = true;
+          loadApiStatus();
+        } else {
+          alert('❌ ' + (data.error || 'Failed to save configuration'));
+        }
+      } catch (error) {
+        alert('❌ Error: ' + error.message);
+      }
+    }
+
+    async function testSendgridConfig() {
+      if (!userId) {
+        alert('❌ User not registered');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/email/send', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-user-id': userId
+          },
+          body: JSON.stringify({
+            to_email: 'test@example.com',
+            to_name: 'Test User',
+            subject: 'Test Email from ContentScale',
+            html: '<p>This is a test email from your ContentScale account.</p>'
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          alert('✅ Test email sent successfully!');
+        } else if (data.needs_api_key) {
+          alert('❌ No Sendgrid API key configured. Please add your key first.');
+        } else if (data.limit_reached) {
+          alert('❌ Daily limit reached. Try again tomorrow.');
+        } else {
+          alert('❌ ' + (data.error || 'Test failed'));
+        }
+      } catch (error) {
+        alert('❌ Error: ' + error.message);
+      }
+    }
+
+    // ==========================================
+    // WEBSHARE FUNCTIES
+    // ==========================================
+    async function saveWebshareConfig() {
+      if (!userId) {
+        alert('❌ User not registered. Please refresh the page.');
+        return;
+      }
+      
+      const apiKey = document.getElementById('webshareApiKey').value;
+      if (!apiKey) {
+        alert('❌ Please enter your Webshare API key');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/user/webshare/configure', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-user-id': userId
+          },
+          body: JSON.stringify({ 
+            userId,
+            apiKey
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          alert(`✅ Webshare configured! Found ${data.proxy_count || 10} proxies.`);
+          document.getElementById('webshareStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
+          webshareConfigured = true;
+          
+          if (data.proxy_count > 0) {
+            document.getElementById('proxyList').classList.remove('hidden');
+            document.getElementById('proxyListContainer').innerHTML = 
+              '<p class="text-green-400">✓ Proxies loaded successfully</p>';
+          }
+          loadApiStatus();
+        } else {
+          alert('❌ ' + (data.error || 'Failed to save configuration'));
+        }
+      } catch (error) {
+        alert('❌ Error: ' + error.message);
+      }
+    }
+
+    async function testWebshareConfig() {
+      if (!userId) {
+        alert('❌ User not registered');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/google-maps/scrape', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-user-id': userId
+          },
+          body: JSON.stringify({
+            url: 'https://www.google.com/maps/search/test',
+            maxResults: 1,
+            test: true
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.using_custom_proxy) {
+          alert('✅ Proxy test successful! Your proxies are working.');
+        } else if (data.proxy_error) {
+          alert('❌ Proxy error: ' + data.error);
+        } else {
+          alert('ℹ️ Using default settings (no proxy)');
+        }
+      } catch (error) {
+        alert('❌ Error: ' + error.message);
+      }
+    }
+
+    // ==========================================
+    // ACCORDEON FUNCTIES
+    // ==========================================
+    function toggleAccordion(id) {
+      const content = document.getElementById(id);
+      const icon = document.getElementById(id + 'Icon');
+      
+      if (content) {
+        content.classList.toggle('hidden');
+        icon.style.transform = content.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+      }
     }
 
     // ==========================================
@@ -925,7 +1352,6 @@
         document.getElementById('stat-total-agencies').textContent = data.stats?.totalAgencies || 0;
         document.getElementById('stat-avg-score').textContent = data.averageScore || 0;
         document.getElementById('stat-countries').textContent = data.stats?.countriesCount || 0;
-        // ✅ FIXED: Using correct ID stat-active-helpers that matches the HTML
         document.getElementById('stat-active-helpers').textContent = data.stats?.activeHelpers || 0;
         
         renderTop3();
@@ -1201,7 +1627,6 @@
       }
     }
 
-    // FREELANCER ADMIN FUNCTIES
     function toggleSelectFreelancer(id) {
       if (selectedFreelancerIds.has(id)) {
         selectedFreelancerIds.delete(id);
@@ -1480,55 +1905,54 @@
       button.disabled = true;
       button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scrapen...';
       
+      const headers = { 'Content-Type': 'application/json' };
+      if (userId) {
+        headers['x-user-id'] = userId;
+      }
+      
       try {
-        const data = await apiCall('/api/google-maps/scrape', 'POST', { 
-          url,
-          maxResults: 30 
+        const response = await fetch('/api/google-maps/scrape', {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify({ url, maxResults: 30 })
         });
+        
+        const data = await response.json();
+        
+        if (response.status === 429) {
+          const days = data.days_remaining || 5;
+          const hours = data.hours_remaining || 120;
+          
+          let timeText = '';
+          if (days >= 1) {
+            timeText = `${days} day${days > 1 ? 's' : ''}`;
+          } else {
+            timeText = `${hours} hour${hours > 1 ? 's' : ''}`;
+          }
+          
+          let message = `⏳ Scan limit reached. You can scan again in ${timeText}.`;
+          if (data.limit_type === 'free') {
+            message += ' Add your own Webshare API key for unlimited scans.';
+          }
+          
+          alert(message);
+          
+          button.disabled = false;
+          button.innerHTML = '<i class="fas fa-map-marked-alt mr-2"></i> Scrape Maps';
+          return;
+        }
+        
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Scrape failed');
+        }
         
         scrapedLeads = data.leads || [];
         leadCount.textContent = scrapedLeads.length;
         
         if (scrapedLeads.length === 0) {
-          leadsTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-400">Geen bedrijven gevonden</td></tr>';
+          leadsTableBody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-400">Geen bedrijven gevonden</td></tr>';
         } else {
-          leadsTableBody.innerHTML = scrapedLeads.map((lead, index) => {
-            const hasWebsite = lead.website && lead.website !== 'N/A' && lead.website !== null;
-            const companyName = lead.name || extractDomainFromUrl(lead.website) || 'Onbekend';
-            
-            return `
-              <tr class="border-b border-gray-700 hover:bg-gray-800">
-                <td class="px-4 py-3">
-                  <div class="font-medium text-white">${companyName}</div>
-                  <div class="text-xs text-gray-400">${lead.category || 'SEO Agency'}</div>
-                </td>
-                <td class="px-4 py-3">
-                  ${hasWebsite ? 
-                    `<a href="${lead.website}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">
-                      ${lead.website.replace('https://', '').substring(0, 30)}...
-                    </a>` : 
-                    `<span class="text-red-400 text-sm">Geen website</span>`
-                  }
-                </td>
-                <td class="px-4 py-3 text-gray-300 text-sm">${lead.phone || '-'}</td>
-                <td class="px-4 py-3">
-                  ${lead.score > 0 ? 
-                    `<span class="font-bold ${lead.score >= 70 ? 'text-green-400' : 'text-yellow-400'}">${lead.score}</span>` : 
-                    `<span class="text-gray-500">-</span>`
-                  }
-                </td>
-                <td class="px-4 py-3">
-                  ${hasWebsite ? 
-                    `<button onclick="quickAddToLeaderboard('${lead.website}', '${companyName}', ${lead.score || 75})" 
-                            class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm font-semibold">
-                      <i class="fas fa-plus-circle mr-1"></i>Add
-                    </button>` : 
-                    `<span class="text-gray-600 text-sm">-</span>`
-                  }
-                </td>
-              </tr>
-            `;
-          }).join('');
+          refreshLeadsTable();
         }
         
         leadsContainer.classList.remove('hidden');
@@ -1541,25 +1965,213 @@
       }
     }
 
-    async function quickAddToLeaderboard(url, name, score) {
-      if (!localStorage.getItem('admin_id')) {
-        alert('❌ Je moet ingelogd zijn als admin');
+    function refreshLeadsTable() {
+      const leadsTableBody = document.getElementById('leadsTableBody');
+      
+      if (scrapedLeads.length === 0) {
+        leadsTableBody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-400">Geen bedrijven gevonden</td></tr>';
+        return;
+      }
+      
+      leadsTableBody.innerHTML = scrapedLeads.map((lead, index) => {
+        const hasWebsite = lead.website && lead.website !== 'N/A' && lead.website !== null;
+        const hasEmail = lead.email && lead.email.includes('@');
+        
+        let statusColor = 'text-gray-400';
+        let statusText = 'pending';
+        if (lead.email_status === 'found') {
+          statusColor = 'text-green-400';
+          statusText = 'found';
+        } else if (lead.email_status === 'not found') {
+          statusColor = 'text-red-400';
+          statusText = 'not found';
+        }
+        
+        return `
+          <tr class="border-b border-gray-700 hover:bg-gray-800">
+            <td class="px-4 py-3">
+              <div class="font-medium text-white">${lead.name || 'Unknown'}</div>
+              <div class="text-xs text-gray-400">${lead.category || 'SEO Agency'}</div>
+            </td>
+            <td class="px-4 py-3">
+              ${hasWebsite ? 
+                `<a href="${lead.website}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">
+                  ${lead.website.replace('https://', '').substring(0, 30)}...
+                </a>` : 
+                `<span class="text-red-400 text-sm">Geen website</span>`
+              }
+            </td>
+            <td class="px-4 py-3 text-gray-300 text-sm">${lead.phone || '-'}</td>
+            <td class="px-4 py-3">
+              ${lead.score > 0 ? 
+                `<span class="font-bold ${lead.score >= 70 ? 'text-green-400' : 'text-yellow-400'}">${lead.score}</span>` : 
+                `<span class="text-gray-500">-</span>`
+              }
+            </td>
+            <td class="px-4 py-3">
+              ${hasEmail ? 
+                `<span class="text-green-400 text-sm">${lead.email}</span>` : 
+                (hasWebsite ? 
+                  `<button onclick="findEmail(${lead.id}, ${index})" 
+                          class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs font-semibold">
+                    <i class="fas fa-search mr-1"></i>Find
+                  </button>` : 
+                  `<span class="text-gray-600 text-sm">-</span>`
+                )
+              }
+            </td>
+            <td class="px-4 py-3">
+              <span class="text-xs ${statusColor}">${statusText}</span>
+            </td>
+            <td class="px-4 py-3">
+              <div class="flex gap-1">
+                ${hasWebsite ? 
+                  `<button onclick="scanLead('${lead.website}')" 
+                          class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded text-xs font-semibold"
+                          title="Scan website">
+                    <i class="fas fa-search"></i>
+                  </button>` : 
+                  ''
+                }
+                ${hasEmail ? 
+                  `<button onclick="queueLead(${lead.id})" 
+                          class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs font-semibold"
+                          title="Add to email queue">
+                    <i class="fas fa-clock"></i>
+                  </button>` : 
+                  ''
+                }
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function scanLead(website) {
+      document.getElementById('singleUrlInput').value = website;
+      switchScannerMode('single');
+      document.getElementById('tab-scanner').scrollIntoView({ behavior: 'smooth' });
+      setTimeout(() => scanSingleURL(), 500);
+    }
+
+    async function findEmail(leadId, index) {
+      if (!leadId) {
+        alert('❌ Lead ID not found');
+        return;
+      }
+      
+      alert('🔍 Email search feature coming soon');
+    }
+
+    async function bulkFindEmails() {
+      alert('🔍 Email search feature coming soon');
+    }
+
+    async function queueLead(leadId) {
+      if (!leadId) {
+        alert('❌ Lead ID not found');
+        return;
+      }
+      
+      if (!userId) {
+        alert('❌ User not registered');
         return;
       }
       
       try {
-        await apiCall('/api/admin/leaderboard/manual-add', 'POST', {
-          url,
-          company_name: name,
-          score,
-          country: 'Netherlands'
+        const response = await fetch('/api/email/queue', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-user-id': userId
+          },
+          body: JSON.stringify({ lead_ids: [leadId] })
         });
         
-        alert(`✅ "${name}" toegevoegd aan leaderboard!`);
-        loadLeaderboard();
+        const data = await response.json();
+        
+        if (data.success) {
+          alert('✅ Lead added to email queue');
+        } else {
+          alert('❌ ' + (data.error || 'Failed to queue lead'));
+        }
       } catch (error) {
-        alert('❌ Fout: ' + error.message);
+        alert('❌ Error: ' + error.message);
       }
+    }
+
+    async function queueAllLeads() {
+      const leadsWithEmail = scrapedLeads.filter(l => l.email && l.email.includes('@'));
+      
+      if (leadsWithEmail.length === 0) {
+        alert('❌ No leads with email addresses. Use "Find All Emails" first.');
+        return;
+      }
+      
+      if (!confirm(`📧 Add ${leadsWithEmail.length} leads to email queue?`)) {
+        return;
+      }
+      
+      let successCount = 0;
+      
+      for (const lead of leadsWithEmail) {
+        try {
+          const response = await fetch('/api/email/queue', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'x-user-id': userId
+            },
+            body: JSON.stringify({
+              to_email: lead.email,
+              to_name: lead.name,
+              subject: 'SEO Opportunity for ' + lead.name,
+              template: 'default'
+            })
+          });
+          
+          const data = await response.json();
+          if (data.success) successCount++;
+        } catch (e) {
+          console.error('Queue error:', e);
+        }
+      }
+      
+      alert(`✅ Added ${successCount} leads to queue`);
+    }
+
+    function exportLeadsToCSV() {
+      if (!scrapedLeads || scrapedLeads.length === 0) {
+        alert('❌ No leads to export');
+        return;
+      }
+      
+      const headers = ['Name', 'Category', 'Website', 'Phone', 'Score', 'Email', 'Address', 'Rating', 'Reviews'];
+      const rows = scrapedLeads.map(lead => [
+        lead.name || '',
+        lead.category || '',
+        lead.website || '',
+        lead.phone || '',
+        lead.score || '',
+        lead.email || '',
+        lead.address || '',
+        lead.rating || '',
+        lead.reviews || ''
+      ]);
+      
+      let csv = headers.join(',') + '\n';
+      csv += rows.map(row => row.map(cell => `"${cell || ''}"`).join(',')).join('\n');
+      
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `contentscale-leads-${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      alert(`✅ Exported ${scrapedLeads.length} leads to CSV`);
     }
 
     // ==========================================
