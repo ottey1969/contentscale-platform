@@ -1687,7 +1687,7 @@ app.post('/api/claims/submit', async (req, res) => {
 });
 
 // ============================================
-// ADMIN ENDPOINTS (blijven hetzelfde)
+// ADMIN ENDPOINTS
 // ============================================
 
 app.post('/api/setup/verify-admin', async (req, res) => {
@@ -1801,6 +1801,223 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
 });
 
 // ============================================
+// ✅ NIEUWE ADMIN ENDPOINTS VOOR LEADERBOARD
+// ============================================
+
+// ✅ PENDING LEADERBOARD (voor goedkeuring)
+app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
+  if (!pool) return res.json({ success: true, pending: [] });
+  
+  try {
+    const result = await pool.query(
+      `SELECT * FROM leaderboard 
+       WHERE admin_verified = FALSE 
+       ORDER BY created_at DESC 
+       LIMIT 50`
+    );
+    
+    res.json({ success: true, pending: result.rows });
+  } catch (error) {
+    console.error('Pending leaderboard error:', error);
+    res.json({ success: true, pending: [] });
+  }
+});
+
+// ✅ LEADERBOARD GOEDKEUREN
+app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  try {
+    const { id } = req.params;
+    const { final_country } = req.body;
+    
+    await pool.query(
+      `UPDATE leaderboard 
+       SET admin_verified = TRUE, 
+           country = COALESCE($2, country), 
+           is_verified = TRUE 
+       WHERE id = $1`,
+      [id, final_country]
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Approve leaderboard error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ LEADERBOARD AFWIJZEN
+app.post('/api/admin/leaderboard/:id/reject', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  try {
+    await pool.query('DELETE FROM leaderboard WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Reject leaderboard error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ LEADERBOARD BEWERKEN (voor bestaande entries)
+app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  try {
+    const { id } = req.params;
+    const { company_name, url, score, country, city } = req.body;
+    
+    // Bouw de update query dynamisch
+    const updates = [];
+    const values = [];
+    let paramCount = 1;
+    
+    if (company_name !== undefined) {
+      updates.push(`company_name = $${paramCount}`);
+      values.push(company_name);
+      paramCount++;
+    }
+    
+    if (url !== undefined) {
+      updates.push(`url = $${paramCount}`);
+      values.push(url);
+      paramCount++;
+    }
+    
+    if (score !== undefined) {
+      updates.push(`score = $${paramCount}`);
+      values.push(score);
+      paramCount++;
+    }
+    
+    if (country !== undefined) {
+      updates.push(`country = $${paramCount}`);
+      values.push(country);
+      paramCount++;
+    }
+    
+    if (city !== undefined) {
+      updates.push(`city = $${paramCount}`);
+      values.push(city);
+      paramCount++;
+    }
+    
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, error: 'Geen velden om te updaten' });
+    }
+    
+    values.push(id);
+    const query = `UPDATE leaderboard SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`;
+    
+    const result = await pool.query(query, values);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Entry niet gevonden' });
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Leaderboard entry bijgewerkt',
+      entry: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Update leaderboard error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ LEADERBOARD HANDMATIG TOEVOEGEN
+app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  try {
+    const { url, company_name, score, country, city } = req.body;
+    
+    if (!url || !score) {
+      return res.status(400).json({ success: false, error: 'URL and score are required' });
+    }
+    
+    // Check of URL al bestaat
+    const existing = await pool.query('SELECT id FROM leaderboard WHERE url = $1', [url]);
+    
+    if (existing.rows.length === 0) {
+      // Nieuwe entry
+      const result = await pool.query(
+        `INSERT INTO leaderboard 
+         (url, company_name, score, country, city, admin_verified, is_verified)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id`,
+        [url, company_name || null, score, country || 'NL', city || null, true, true]
+      );
+      
+      res.json({
+        success: true,
+        action: 'added',
+        id: result.rows[0].id,
+        message: 'Entry added to leaderboard'
+      });
+    } else {
+      // Update bestaande
+      await pool.query(
+        `UPDATE leaderboard SET 
+           score = $1,
+           company_name = COALESCE($2, company_name),
+           country = COALESCE($3, country),
+           city = COALESCE($4, city),
+           admin_verified = true,
+           is_verified = true
+         WHERE url = $5`,
+        [score, company_name || null, country || null, city || null, url]
+      );
+      
+      res.json({
+        success: true,
+        action: 'updated',
+        id: existing.rows[0].id,
+        message: 'Leaderboard entry updated'
+      });
+    }
+  } catch (error) {
+    console.error('Manual leaderboard add error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ LEADERBOARD VERWIJDEREN
+app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  try {
+    await pool.query('DELETE FROM leaderboard WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete leaderboard error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ LEADERBOARD BULK DELETE
+app.post('/api/admin/leaderboard/bulk-delete', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
+    }
+    
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
+    await pool.query(`DELETE FROM leaderboard WHERE id IN (${placeholders})`, ids);
+    
+    res.json({ success: true, message: `${ids.length} entries verwijderd` });
+  } catch (error) {
+    console.error('Bulk delete leaderboard error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
 // HTML ROUTES
 // ============================================
 app.get('/admin', (req, res) => {
@@ -1899,6 +2116,15 @@ async function startServer() {
     console.log('🔑 NIEUW: Gebruikers kunnen eigen API keys toevoegen:');
     console.log('   • Sendgrid - voor emails (100/dag gratis)');
     console.log('   • Webshare - voor 10 gratis proxies');
+    console.log('');
+    console.log('📋 NIEUWE ADMIN ENDPOINTS:');
+    console.log('   • GET    /api/admin/leaderboard/pending - Pending entries');
+    console.log('   • POST   /api/admin/leaderboard/:id/approve - Keur goed');
+    console.log('   • POST   /api/admin/leaderboard/:id/reject - Wijs af');
+    console.log('   • PUT    /api/admin/leaderboard/:id - Bewerk entry');
+    console.log('   • POST   /api/admin/leaderboard/manual-add - Voeg toe');
+    console.log('   • DELETE /api/admin/leaderboard/:id - Verwijder entry');
+    console.log('   • POST   /api/admin/leaderboard/bulk-delete - Bulk verwijderen');
     console.log('');
     
     if (!dbConnected) {
