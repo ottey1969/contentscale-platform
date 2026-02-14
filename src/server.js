@@ -3,11 +3,11 @@
 // ✅ Leaderboard edit/delete WERKT
 // ✅ Google Maps scraper WERKT (2025 selectors)
 // ✅ Manual-add WERKT (duplicate handling)
+// ✅ API key status endpoint GEFIXED (was 404)
+// ✅ Leaderboard PUT endpoint GEFIXED (was 500)
 // ============================================
-
 process.env.PGSSLMODE = 'verify-full';
 process.env.NODE_NO_WARNINGS = '1';
-
 const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
@@ -18,10 +18,8 @@ const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 const multer = require('multer');
 const axios = require('axios');
-
 const app = express();
 const PORT = process.env.PORT || 3000;
-
 console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
 console.log('📊 Database URL:', process.env.DATABASE_URL ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
 
@@ -64,13 +62,11 @@ function initDatabaseConfig() {
       max: 10
     };
   }
-
   console.log('📊 Database configuratie:');
   console.log(`   • Host: ${dbConfig.host}`);
   console.log(`   • Port: ${dbConfig.port}`);
   console.log(`   • Database: ${dbConfig.database}`);
   console.log(`   • User: ${dbConfig.user}`);
-
   return new Pool(dbConfig);
 }
 
@@ -86,32 +82,24 @@ async function waitForDatabase(retries = 5, delay = 3000) {
     console.log('❌ Geen database pool - overslaan');
     return false;
   }
-  
   console.log('🔄 Verbinden met database...');
-  
   for (let i = 0; i < retries; i++) {
     try {
       const client = await pool.connect();
       console.log(`✅ Database verbonden! (poging ${i + 1}/${retries})`);
-      
       await client.query('SELECT NOW()');
       console.log('✅ Database query werkt');
-      
       client.release();
-      
       setTimeout(() => createAllTables().catch(err => {
         console.error('❌ Fout bij aanmaken tabellen:', err.message);
       }), 1000);
-      
       return true;
     } catch (err) {
       console.error(`❌ Database connectie poging ${i + 1}/${retries} mislukt:`, err.message);
-      
       if (i === retries - 1) {
         console.error('\n❌❌❌ KON GEEN VERBINDING MAKEN MET DATABASE ❌❌❌');
         return false;
       }
-      
       console.log(`⏳ Opnieuw proberen over ${delay/1000} seconden...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
@@ -120,7 +108,7 @@ async function waitForDatabase(retries = 5, delay = 3000) {
 }
 
 const storage = multer.memoryStorage();
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }
 });
@@ -156,16 +144,13 @@ app.use((req, res, next) => {
     'http://localhost:3000',
     'http://localhost:3001'
   ];
-  
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
   }
-  
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-admin-key');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Credentials', 'true');
-  
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
@@ -181,25 +166,20 @@ app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 const verifyAdmin = async (req, res, next) => {
   const adminKey = req.headers['x-admin-key'];
-  
   if (!adminKey) {
     return res.status(401).json({ success: false, error: 'Admin authentication required' });
   }
-  
   if (!pool) {
     return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   }
-  
   try {
     const result = await pool.query(
       'SELECT * FROM super_admins WHERE id = $1 AND is_active = TRUE',
       [adminKey]
     );
-    
     if (result.rows.length === 0) {
       return res.status(401).json({ success: false, error: 'Invalid admin credentials' });
     }
-    
     req.admin = result.rows[0];
     next();
   } catch (error) {
@@ -230,7 +210,6 @@ async function getBrowser() {
       console.error('❌ Puppeteer launch error:', err.message);
       return null;
     });
-    
     if (browserInstance) {
       console.log('✅ Puppeteer browser ready');
     }
@@ -289,7 +268,6 @@ async function createAllTables() {
     console.error('❌ Geen database pool - kan tabellen niet aanmaken');
     return;
   }
-  
   let client;
   try {
     client = await pool.connect();
@@ -310,14 +288,14 @@ async function createAllTables() {
     `);
     
     const adminCheck = await client.query(
-      'SELECT COUNT(*) FROM super_admins WHERE username = $1', 
+      'SELECT COUNT(*) FROM super_admins WHERE username = $1',
       ['ot']
     );
     
     if (parseInt(adminCheck.rows[0].count) === 0) {
       const hashedPassword = await bcrypt.hash('admin123', 10);
       await client.query(
-        `INSERT INTO super_admins (username, password_hash, full_name, role) 
+        `INSERT INTO super_admins (username, password_hash, full_name, role)
          VALUES ($1, $2, $3, $4)`,
         ['ot', hashedPassword, 'Super Admin', 'super_admin']
       );
@@ -405,13 +383,84 @@ async function createAllTables() {
     `);
     
     console.log('✅ Alle database tabellen gereed');
-    
   } catch (error) {
     console.error('❌ Database setup error:', error.message);
   } finally {
     if (client) client.release();
   }
 }
+
+// ============================================
+// ✅ FIX #1: API KEY STATUS ENDPOINT - WAS 404 ERROR
+// ============================================
+app.get('/api/user/keys/status', async (req, res) => {
+  const adminKey = req.headers['x-admin-key'];
+  
+  if (!adminKey) {
+    return res.json({
+      success: true,
+      has_key: false,
+      status: 'unauthenticated',
+      message: 'No API key provided'
+    });
+  }
+  
+  if (!pool) {
+    return res.json({
+      success: true,
+      has_key: false,
+      status: 'error',
+      message: 'Database unavailable'
+    });
+  }
+  
+  try {
+    const result = await pool.query(
+      'SELECT id, username, role, is_active FROM super_admins WHERE id = $1',
+      [adminKey]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.json({
+        success: true,
+        has_key: false,
+        status: 'invalid',
+        message: 'Invalid API key'
+      });
+    }
+    
+    const admin = result.rows[0];
+    
+    if (!admin.is_active) {
+      return res.json({
+        success: true,
+        has_key: false,
+        status: 'inactive',
+        message: 'API key is inactive'
+      });
+    }
+    
+    res.json({
+      success: true,
+      has_key: true,
+      status: 'active',
+      admin: {
+        id: admin.id,
+        username: admin.username,
+        role: admin.role
+      },
+      message: 'API key is valid'
+    });
+  } catch (error) {
+    console.error('❌ API key status error:', error.message);
+    res.json({
+      success: true,
+      has_key: false,
+      status: 'error',
+      message: 'Server error'
+    });
+  }
+});
 
 // ============================================
 // ✅ GEFIXTE GOOGLE MAPS SCRAPE - UPDATED 2025 SELECTORS
@@ -421,9 +470,9 @@ app.post('/api/google-maps/scrape', async (req, res) => {
     const { url, maxResults = 20 } = req.body;
     
     if (!url || !url.includes('google.com/maps')) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Invalid Google Maps URL. Please use a Google Maps search URL.' 
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid Google Maps URL. Please use a Google Maps search URL.'
       });
     }
     
@@ -432,18 +481,18 @@ app.post('/api/google-maps/scrape', async (req, res) => {
     
     const browser = await getBrowser();
     if (!browser) {
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Browser not available' 
+      return res.status(500).json({
+        success: false,
+        error: 'Browser not available'
       });
     }
     
     const page = await browser.newPage();
     
     // ✅ Anti-detectie measures
-    await page.setViewport({ 
-      width: 1920 + Math.floor(Math.random() * 100), 
-      height: 1080 + Math.floor(Math.random() * 100) 
+    await page.setViewport({
+      width: 1920 + Math.floor(Math.random() * 100),
+      height: 1080 + Math.floor(Math.random() * 100)
     });
     
     const userAgents = [
@@ -466,9 +515,9 @@ app.post('/api/google-maps/scrape', async (req, res) => {
     });
     
     console.log('🌐 Navigating to Google Maps...');
-    await page.goto(url, { 
-      waitUntil: 'networkidle2', 
-      timeout: 60000 
+    await page.goto(url, {
+      waitUntil: 'networkidle2',
+      timeout: 60000
     });
     
     console.log('⏳ Waiting for results to load...');
@@ -477,9 +526,9 @@ app.post('/api/google-maps/scrape', async (req, res) => {
     // ✅ Scroll om meer results te laden
     console.log('📜 Scrolling to load more results...');
     await page.evaluate(async () => {
-      const scrollContainer = document.querySelector('[role="feed"]') || 
-                            document.querySelector('.m6QErb') || 
-                            document.querySelector('[class*="feed"]');
+      const scrollContainer = document.querySelector('[role="feed"]') ||
+        document.querySelector('.m6QErb') ||
+        document.querySelector('[class*="feed"]');
       
       if (scrollContainer) {
         for (let i = 0; i < 5; i++) {
@@ -524,18 +573,17 @@ app.post('/api/google-maps/scrape', async (req, res) => {
       
       // Filter items die business info bevatten
       items = items.filter(div => {
-        return div.querySelector('a[href*="/maps/place/"]') || 
-               div.querySelector('[class*="fontHeadline"]') ||
-               div.querySelector('[class*="qBF1Pd"]') ||
-               div.querySelector('h3, h2') ||
-               div.textContent.includes('★');
+        return div.querySelector('a[href*="/maps/place/"]') ||
+          div.querySelector('[class*="fontHeadline"]') ||
+          div.querySelector('[class*="qBF1Pd"]') ||
+          div.querySelector('h3, h2') ||
+          div.textContent.includes('★');
       });
       
       console.log(`📊 Found ${items.length} potential business items`);
       
       for (let i = 0; i < Math.min(items.length, maxResults); i++) {
         const item = items[i];
-        
         try {
           // ✅ Naam extractie - meerdere selectors (2025)
           let name = null;
@@ -562,9 +610,9 @@ app.post('/api/google-maps/scrape', async (req, res) => {
           
           // ✅ Website extractie (2025)
           let website = null;
-          const websiteLink = item.querySelector('a[data-value="Website"]') || 
-                            item.querySelector('a[aria-label*="Website"]') ||
-                            item.querySelector('a[href^="http"]:not([href*="google.com"]):not([href*="maps"])');
+          const websiteLink = item.querySelector('a[data-value="Website"]') ||
+            item.querySelector('a[aria-label*="Website"]') ||
+            item.querySelector('a[href^="http"]:not([href*="google.com"]):not([href*="maps"])');
           
           if (websiteLink) {
             website = websiteLink.href;
@@ -586,10 +634,10 @@ app.post('/api/google-maps/scrape', async (req, res) => {
           for (const sel of phoneSelectors) {
             const phoneEl = item.querySelector(sel);
             if (phoneEl) {
-              const phoneText = phoneEl.getAttribute('aria-label') || 
-                              phoneEl.getAttribute('data-tooltip') || 
-                              phoneEl.textContent ||
-                              phoneEl.href;
+              const phoneText = phoneEl.getAttribute('aria-label') ||
+                phoneEl.getAttribute('data-tooltip') ||
+                phoneEl.textContent ||
+                phoneEl.href;
               
               if (phoneText) {
                 phone = phoneText.replace('tel:', '').replace(/[^0-9+\s-()]/g, '').trim();
@@ -659,7 +707,6 @@ app.post('/api/google-maps/scrape', async (req, res) => {
               status: 'new'
             });
           }
-          
         } catch (err) {
           console.log('⚠️ Error parsing business:', err.message);
           continue;
@@ -690,13 +737,11 @@ app.post('/api/google-maps/scrape', async (req, res) => {
       },
       message: leads.length === 0 ? 'No businesses found. Try a different search query or URL.' : undefined
     });
-    
   } catch (error) {
     console.error('❌ Google Maps scrape error:', error.message);
     console.error(error.stack);
-    
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: 'Failed to scrape Google Maps: ' + error.message,
       hint: 'Try a different search URL or check your internet connection'
     });
@@ -710,47 +755,54 @@ app.post('/api/google-maps/scrape', async (req, res) => {
 // ✅ GET leaderboard
 app.get('/api/leaderboard', async (req, res) => {
   if (!pool) {
-    return res.json({ success: true, entries: [], total: 0, averageScore: 0, stats: { totalAgencies: 0, avgScore: 0, countriesCount: 0, activeHelpers: 0 } });
+    return res.json({ 
+      success: true, 
+      entries: [], 
+      total: 0, 
+      averageScore: 0, 
+      stats: { totalAgencies: 0, avgScore: 0, countriesCount: 0, activeHelpers: 0 } 
+    });
   }
   
   try {
     const result = await pool.query(`
-      SELECT 
-        id, 
+      SELECT
+        id,
         ROW_NUMBER() OVER (ORDER BY score DESC) as rank,
-        company_name, 
-        url, 
+        company_name,
+        url,
         score,
-        country, 
+        country,
         city,
         location,
         type,
-        is_verified as is_claimed, 
+        is_verified as is_claimed,
         created_at,
         graaf_score,
         craft_score,
         technical_score
-      FROM leaderboard 
-      WHERE score IS NOT NULL 
-        AND is_opted_out = FALSE 
+      FROM leaderboard
+      WHERE score IS NOT NULL
+        AND is_opted_out = FALSE
         AND admin_verified = TRUE
-      ORDER BY score DESC 
+      ORDER BY score DESC
       LIMIT 100
     `);
-
+    
     const entries = result.rows;
     const totalAgencies = entries.length;
     const avgScore = totalAgencies > 0 
-      ? Math.round(entries.reduce((sum, e) => sum + (e.score || 0), 0) / totalAgencies) 
+      ? Math.round(entries.reduce((sum, e) => sum + (e.score || 0), 0) / totalAgencies)
       : 0;
     const countries = [...new Set(entries.map(e => e.country))].length;
     
-    const freelancersResult = await pool.query('SELECT COUNT(*) FROM freelancers WHERE is_approved = TRUE').catch(() => ({ rows: [{ count: '0' }] }));
+    const freelancersResult = await pool.query('SELECT COUNT(*) FROM freelancers WHERE is_approved = TRUE')
+      .catch(() => ({ rows: [{ count: '0' }] }));
     const activeHelpers = parseInt(freelancersResult.rows[0].count) || 0;
     
     res.json({
-      success: true, 
-      entries: entries, 
+      success: true,
+      entries: entries,
       total: totalAgencies,
       averageScore: avgScore,
       stats: {
@@ -762,17 +814,19 @@ app.get('/api/leaderboard', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Leaderboard error:', error);
-    res.json({ 
-      success: true, 
-      entries: [], 
-      total: 0, 
+    res.json({
+      success: true,
+      entries: [],
+      total: 0,
       averageScore: 0,
       stats: { totalAgencies: 0, avgScore: 0, countriesCount: 0, activeHelpers: 0 }
     });
   }
 });
 
-// ✅ GEFIXTE PUT endpoint - edit leaderboard entry
+// ============================================
+// ✅ FIX #2: LEADERBOARD PUT ENDPOINT - WAS 500 ERROR
+// ============================================
 app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   
@@ -782,38 +836,52 @@ app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
     
     console.log(`✏️ Updating leaderboard entry ${id}:`, { company_name, url, score, country, city });
     
-    // ✅ Build query dynamically
+    // ✅ Validate ID is a number
+    const entryId = parseInt(id);
+    if (isNaN(entryId)) {
+      return res.status(400).json({ success: false, error: 'Invalid entry ID' });
+    }
+    
+    // ✅ Build query dynamically with proper validation
     const updates = [];
     const values = [];
     let paramCount = 1;
     
-    if (company_name !== undefined) {
+    if (company_name !== undefined && company_name !== null) {
       updates.push(`company_name = $${paramCount}`);
-      values.push(company_name);
+      values.push(company_name.trim());
       paramCount++;
     }
     
-    if (url !== undefined) {
+    if (url !== undefined && url !== null) {
+      const normalizedUrl = normalizeUrl(url);
       updates.push(`url = $${paramCount}`);
-      values.push(url);
+      values.push(normalizedUrl);
       paramCount++;
     }
     
-    if (score !== undefined) {
+    if (score !== undefined && score !== null) {
+      const parsedScore = parseInt(score);
+      if (isNaN(parsedScore) || parsedScore < 0 || parsedScore > 100) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Score must be a number between 0 and 100' 
+        });
+      }
       updates.push(`score = $${paramCount}`);
-      values.push(parseInt(score));
+      values.push(parsedScore);
       paramCount++;
     }
     
-    if (country !== undefined) {
+    if (country !== undefined && country !== null) {
       updates.push(`country = $${paramCount}`);
-      values.push(country);
+      values.push(country.trim().toUpperCase());
       paramCount++;
     }
     
-    if (city !== undefined) {
+    if (city !== undefined && city !== null) {
       updates.push(`city = $${paramCount}`);
-      values.push(city);
+      values.push(city.trim());
       paramCount++;
     }
     
@@ -821,7 +889,8 @@ app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Geen velden om te updaten' });
     }
     
-    values.push(id);
+    values.push(entryId);
+    
     const query = `UPDATE leaderboard SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`;
     
     console.log('🔍 SQL Query:', query);
@@ -835,15 +904,19 @@ app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
     
     console.log('✅ Entry updated successfully');
     
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: 'Leaderboard entry bijgewerkt',
       entry: result.rows[0]
     });
   } catch (error) {
     console.error('❌ Update leaderboard error:', error.message);
     console.error(error.stack);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ 
+      success: false, 
+      error: 'Server error: ' + error.message,
+      hint: 'Check if all required fields are provided and valid'
+    });
   }
 });
 
@@ -853,7 +926,6 @@ app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
   
   try {
     const { id } = req.params;
-    
     console.log(`🗑️ Deleting leaderboard entry ${id}`);
     
     const result = await pool.query('DELETE FROM leaderboard WHERE id = $1 RETURNING *', [id]);
@@ -863,7 +935,6 @@ app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
     }
     
     console.log('✅ Entry deleted successfully');
-    
     res.json({ success: true, message: 'Entry verwijderd' });
   } catch (error) {
     console.error('❌ Delete leaderboard error:', error.message);
@@ -884,13 +955,25 @@ app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
     
     console.log(`➕ Manual add leaderboard:`, { url, company_name, score, country, city });
     
+    // ✅ Validate score
+    const parsedScore = parseInt(score);
+    if (isNaN(parsedScore) || parsedScore < 0 || parsedScore > 100) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Score must be a number between 0 and 100' 
+      });
+    }
+    
+    // ✅ Normalize URL
+    const normalizedUrl = normalizeUrl(url);
+    
     // ✅ Use INSERT ... ON CONFLICT UPDATE (PostgreSQL UPSERT)
     const result = await pool.query(
-      `INSERT INTO leaderboard 
-       (url, company_name, score, country, city, admin_verified, is_verified)
+      `INSERT INTO leaderboard
+        (url, company_name, score, country, city, admin_verified, is_verified)
        VALUES ($1, $2, $3, $4, $5, true, true)
-       ON CONFLICT (url) 
-       DO UPDATE SET 
+       ON CONFLICT (url)
+       DO UPDATE SET
          score = EXCLUDED.score,
          company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
          country = COALESCE(EXCLUDED.country, leaderboard.country),
@@ -898,7 +981,7 @@ app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
          admin_verified = true,
          is_verified = true
        RETURNING id, (xmax = 0) as inserted`,
-      [url, company_name || null, score, country || 'NL', city || null]
+      [normalizedUrl, company_name || null, parsedScore, country || 'NL', city || null]
     );
     
     const wasInserted = result.rows[0].inserted;
@@ -941,6 +1024,7 @@ app.post('/api/scan', async (req, res) => {
     await page.setViewport({ width: 1920, height: 1080 });
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
     await page.goto(scanUrl, { waitUntil: 'networkidle2', timeout: 25000 });
+    
     const rawHtml = await page.content();
     await page.close();
     
@@ -950,6 +1034,7 @@ app.post('/api/scan', async (req, res) => {
     const h2Count = (rawHtml.match(/<h2[^>]*>/gi) || []).length;
     const h3Count = (rawHtml.match(/<h3[^>]*>/gi) || []).length;
     const listCount = (rawHtml.match(/<li[^>]*>/gi) || []).length;
+    
     const stats = { wordCount, h1Count, h2Count, h3Count, listCount };
     
     // Simple scoring
@@ -967,9 +1052,9 @@ app.post('/api/scan', async (req, res) => {
       url: scanUrl,
       score: Math.min(100, score),
       quality,
-      metrics: { 
-        graaf: 30, 
-        craft: 20, 
+      metrics: {
+        graaf: 30,
+        craft: 20,
         technical: 15,
         content: score,
         ux: 70
@@ -997,11 +1082,11 @@ app.get('/api/freelancers', async (req, res) => {
   
   try {
     const result = await pool.query(`
-      SELECT 
-        id, name, email, title, location, country, bio, 
+      SELECT
+        id, name, email, title, location, country, bio,
         hourly_rate, availability, is_verified, is_featured
-      FROM freelancers 
-      WHERE is_approved = TRUE 
+      FROM freelancers
+      WHERE is_approved = TRUE
       ORDER BY is_featured DESC, created_at DESC
       LIMIT 50
     `);
@@ -1030,18 +1115,18 @@ app.post('/api/freelancers/register', async (req, res) => {
     }
     
     const result = await pool.query(
-      `INSERT INTO freelancers 
-       (name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_approved) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false) 
+      `INSERT INTO freelancers
+        (name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_approved)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false)
        RETURNING id`,
-      [name, email, title || null, location || null, country || null, bio || null, 
+      [name, email, title || null, location || null, country || null, bio || null,
        linkedin_url || null, hourly_rate || null, availability || null]
     );
     
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: 'Application submitted! We will review and approve soon.',
-      id: result.rows[0].id 
+      id: result.rows[0].id
     });
   } catch (error) {
     console.error('Freelancer registration error:', error);
@@ -1058,8 +1143,8 @@ app.post('/api/setup/verify-admin', async (req, res) => {
   }
   
   if (!pool) {
-    return res.status(503).json({ 
-      success: false, 
+    return res.status(503).json({
+      success: false,
       error: 'Database niet beschikbaar',
       db_status: 'disconnected'
     });
@@ -1067,7 +1152,7 @@ app.post('/api/setup/verify-admin', async (req, res) => {
   
   try {
     const result = await pool.query(
-      'SELECT * FROM super_admins WHERE username = $1 AND is_active = TRUE', 
+      'SELECT * FROM super_admins WHERE username = $1 AND is_active = TRUE',
       [username]
     );
     
@@ -1087,11 +1172,11 @@ app.post('/api/setup/verify-admin', async (req, res) => {
     res.json({
       success: true,
       admin_id: admin.id,
-      admin: { 
-        id: admin.id, 
-        username: admin.username, 
-        full_name: admin.full_name, 
-        role: admin.role 
+      admin: {
+        id: admin.id,
+        username: admin.username,
+        full_name: admin.full_name,
+        role: admin.role
       }
     });
   } catch (error) {
@@ -1102,10 +1187,13 @@ app.post('/api/setup/verify-admin', async (req, res) => {
 
 app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
   if (!pool) {
-    return res.json({ success: true, stats: { 
-      total_scans: 0, total_agencies: 0, total_clients: 0, active_helpers: 0,
-      leaderboard_entries: 0, pending_freelancers: 0, pending_leaderboard: 0
-    }});
+    return res.json({ 
+      success: true, 
+      stats: {
+        total_scans: 0, total_agencies: 0, total_clients: 0, active_helpers: 0,
+        leaderboard_entries: 0, pending_freelancers: 0, pending_leaderboard: 0
+      }
+    });
   }
   
   try {
@@ -1129,12 +1217,12 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
       }
     });
   } catch (error) {
-    res.json({ 
-      success: true, 
-      stats: { 
+    res.json({
+      success: true,
+      stats: {
         total_scans: 0, total_agencies: 0, active_helpers: 0,
         leaderboard_entries: 0, pending_freelancers: 0, pending_leaderboard: 0
-      } 
+      }
     });
   }
 });
@@ -1142,6 +1230,7 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
 // Admin freelancers endpoints
 app.get('/api/admin/freelancers', verifyAdmin, async (req, res) => {
   if (!pool) return res.json({ success: true, freelancers: [] });
+  
   try {
     const result = await pool.query(`SELECT * FROM freelancers ORDER BY created_at DESC LIMIT 200`);
     res.json({ success: true, freelancers: result.rows });
@@ -1153,6 +1242,7 @@ app.get('/api/admin/freelancers', verifyAdmin, async (req, res) => {
 
 app.get('/api/admin/freelancers/pending', verifyAdmin, async (req, res) => {
   if (!pool) return res.json({ success: true, pending: [] });
+  
   try {
     const result = await pool.query(
       `SELECT * FROM freelancers WHERE is_approved = FALSE ORDER BY created_at DESC LIMIT 50`
@@ -1166,9 +1256,10 @@ app.get('/api/admin/freelancers/pending', verifyAdmin, async (req, res) => {
 
 app.post('/api/admin/freelancers/:id/approve', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
   try {
     await pool.query(
-      'UPDATE freelancers SET is_approved = TRUE, is_verified = TRUE WHERE id = $1', 
+      'UPDATE freelancers SET is_approved = TRUE, is_verified = TRUE WHERE id = $1',
       [req.params.id]
     );
     res.json({ success: true });
@@ -1180,6 +1271,7 @@ app.post('/api/admin/freelancers/:id/approve', verifyAdmin, async (req, res) => 
 
 app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
   try {
     await pool.query('DELETE FROM freelancers WHERE id = $1', [req.params.id]);
     res.json({ success: true });
@@ -1191,6 +1283,7 @@ app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
 
 app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
   try {
     const { id } = req.params;
     const { name, email, title, location, country, bio, hourly_rate, is_featured } = req.body;
@@ -1204,36 +1297,43 @@ app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
       values.push(name);
       paramCount++;
     }
+    
     if (email !== undefined) {
       updates.push(`email = $${paramCount}`);
       values.push(email);
       paramCount++;
     }
+    
     if (title !== undefined) {
       updates.push(`title = $${paramCount}`);
       values.push(title);
       paramCount++;
     }
+    
     if (location !== undefined) {
       updates.push(`location = $${paramCount}`);
       values.push(location);
       paramCount++;
     }
+    
     if (country !== undefined) {
       updates.push(`country = $${paramCount}`);
       values.push(country);
       paramCount++;
     }
+    
     if (bio !== undefined) {
       updates.push(`bio = $${paramCount}`);
       values.push(bio);
       paramCount++;
     }
+    
     if (hourly_rate !== undefined) {
       updates.push(`hourly_rate = $${paramCount}`);
       values.push(hourly_rate);
       paramCount++;
     }
+    
     if (is_featured !== undefined) {
       updates.push(`is_featured = $${paramCount}`);
       values.push(is_featured);
@@ -1245,6 +1345,7 @@ app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
     }
     
     values.push(id);
+    
     const query = `UPDATE freelancers SET ${updates.join(', ')} WHERE id = $${paramCount}`;
     await pool.query(query, values);
     
@@ -1257,9 +1358,12 @@ app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
 
 app.post('/api/admin/freelancers/:id/toggle-featured', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
   try {
     const { id } = req.params;
+    
     const freelancer = await pool.query('SELECT is_featured FROM freelancers WHERE id = $1', [id]);
+    
     if (freelancer.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Freelancer not found' });
     }
@@ -1267,7 +1371,11 @@ app.post('/api/admin/freelancers/:id/toggle-featured', verifyAdmin, async (req, 
     const newFeatured = !freelancer.rows[0].is_featured;
     await pool.query('UPDATE freelancers SET is_featured = $1 WHERE id = $2', [newFeatured, id]);
     
-    res.json({ success: true, is_featured: newFeatured, message: `Featured ${newFeatured ? 'aangezet' : 'uitgezet'}` });
+    res.json({ 
+      success: true, 
+      is_featured: newFeatured, 
+      message: `Featured ${newFeatured ? 'aangezet' : 'uitgezet'}` 
+    });
   } catch (error) {
     console.error('Toggle featured error:', error.message);
     res.status(500).json({ success: false, error: error.message });
@@ -1276,8 +1384,10 @@ app.post('/api/admin/freelancers/:id/toggle-featured', verifyAdmin, async (req, 
 
 app.post('/api/admin/freelancers/bulk-delete', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  
   try {
     const { ids } = req.body;
+    
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
     }
@@ -1298,12 +1408,11 @@ app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
   
   try {
     const result = await pool.query(
-      `SELECT * FROM leaderboard 
-       WHERE admin_verified = FALSE 
-       ORDER BY created_at DESC 
+      `SELECT * FROM leaderboard
+       WHERE admin_verified = FALSE
+       ORDER BY created_at DESC
        LIMIT 50`
     );
-    
     res.json({ success: true, pending: result.rows });
   } catch (error) {
     console.error('Pending leaderboard error:', error);
@@ -1319,10 +1428,10 @@ app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => 
     const { final_country } = req.body;
     
     await pool.query(
-      `UPDATE leaderboard 
-       SET admin_verified = TRUE, 
-           country = COALESCE($2, country), 
-           is_verified = TRUE 
+      `UPDATE leaderboard
+       SET admin_verified = TRUE,
+           country = COALESCE($2, country),
+           is_verified = TRUE
        WHERE id = $1`,
       [id, final_country]
     );
@@ -1351,6 +1460,7 @@ app.post('/api/admin/leaderboard/bulk-delete', verifyAdmin, async (req, res) => 
   
   try {
     const { ids } = req.body;
+    
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
     }
@@ -1391,7 +1501,7 @@ app.get('/api/health', async (req, res) => {
     }
   }
   
-  res.json({ 
+  res.json({
     status: 'running',
     database: dbStatus,
     puppeteer: browserInstance ? 'connected' : 'disconnected',
@@ -1420,8 +1530,8 @@ app.get('*', (req, res) => {
 // ============================================
 app.use((err, req, res, next) => {
   console.error('Server error:', err.message);
-  res.status(500).json({ 
-    success: false, 
+  res.status(500).json({
+    success: false,
     error: 'Internal server error',
     message: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
@@ -1447,10 +1557,11 @@ async function startServer() {
     console.log(`📊 Database: ${dbConnected ? '✅ Verbonden' : '❌ NIET VERBONDEN'}`);
     console.log('');
     console.log('✅ FIXES APPLIED:');
-    console.log('   • Leaderboard edit/delete WERKT');
-    console.log('   • Google Maps scraper UPDATED 2025 selectors');
-    console.log('   • Manual-add duplicate handling GEFIXED');
-    console.log('   • Better error logging toegevoegd');
+    console.log('   • API key status endpoint GEFIXED (was 404)');
+    console.log('   • Leaderboard PUT endpoint GEFIXED (was 500)');
+    console.log('   • Better score validation toegevoegd');
+    console.log('   • URL normalization toegevoegd');
+    console.log('   • Better error messages toegevoegd');
     console.log('');
   });
 }
