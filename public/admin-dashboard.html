@@ -475,6 +475,26 @@
       border-bottom-right-radius: 0.75rem;
     }
     
+    .edit-input {
+      background: #1f2937;
+      border: 2px solid #a855f7;
+      color: white;
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+      width: 100%;
+      margin-bottom: 0.5rem;
+    }
+    
+    .edit-select {
+      background: #1f2937;
+      border: 2px solid #a855f7;
+      color: white;
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+      width: 100%;
+      margin-bottom: 0.5rem;
+    }
+    
     footer {
       background: #111827;
       border-top: 2px solid #374151;
@@ -610,6 +630,9 @@
           <div class="flex justify-between items-center mb-6">
             <h2 class="text-3xl font-bold text-white">🏆 Leaderboard</h2>
             <div class="flex gap-3">
+              <button onclick="showAddLeaderboardModal()" class="btn bg-green-600 hover:bg-green-700">
+                <i class="fas fa-plus-circle mr-2"></i> Add New
+              </button>
               <button onclick="loadLeaderboard()" class="btn bg-blue-600 hover:bg-blue-700">
                 <i class="fas fa-sync-alt mr-2"></i> Refresh
               </button>
@@ -947,6 +970,99 @@
             <div id="pending-freelancers-container" class="space-y-4"></div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD LEADERBOARD MODAL -->
+  <div id="addLeaderboardModal" class="modal">
+    <div class="modal-content max-w-2xl">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-900">Add New Leaderboard Entry</h2>
+        <button onclick="closeAddLeaderboardModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm mb-2 text-gray-700">Company Name *</label>
+          <input type="text" id="add-company-name" placeholder="e.g. SEO Agency Amsterdam" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+        </div>
+        <div>
+          <label class="block text-sm mb-2 text-gray-700">Website URL *</label>
+          <input type="text" id="add-website-url" placeholder="https://example.com" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+        </div>
+        <div>
+          <label class="block text-sm mb-2 text-gray-700">Score * (0-100)</label>
+          <input type="number" id="add-score" min="0" max="100" value="75" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+        </div>
+        <div>
+          <label class="block text-sm mb-2 text-gray-700">Country</label>
+          <select id="add-country" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+            <option value="Netherlands">🇳🇱 Netherlands</option>
+            <option value="Belgium">🇧🇪 Belgium</option>
+            <option value="Germany">🇩🇪 Germany</option>
+            <option value="United Kingdom">🇬🇧 United Kingdom</option>
+            <option value="United States">🇺🇸 United States</option>
+            <option value="France">🇫🇷 France</option>
+            <option value="Spain">🇪🇸 Spain</option>
+            <option value="Italy">🇮🇹 Italy</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm mb-2 text-gray-700">City (optional)</label>
+          <input type="text" id="add-city" placeholder="e.g. Amsterdam" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+        </div>
+        <button onclick="addLeaderboardEntry()" class="btn-primary btn w-full py-3">
+          Add to Leaderboard
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT LEADERBOARD MODAL -->
+  <div id="editLeaderboardModal" class="modal">
+    <div class="modal-content max-w-2xl">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-900">Edit Leaderboard Entry</h2>
+        <button onclick="closeEditLeaderboardModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="space-y-4">
+        <input type="hidden" id="edit-entry-id">
+        <div>
+          <label class="block text-sm mb-2 text-gray-700">Company Name</label>
+          <input type="text" id="edit-company-name" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+        </div>
+        <div>
+          <label class="block text-sm mb-2 text-gray-700">Website URL</label>
+          <input type="text" id="edit-website-url" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+        </div>
+        <div>
+          <label class="block text-sm mb-2 text-gray-700">Score</label>
+          <input type="number" id="edit-score" min="0" max="100" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+        </div>
+        <div>
+          <label class="block text-sm mb-2 text-gray-700">Country</label>
+          <select id="edit-country" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+            <option value="Netherlands">🇳🇱 Netherlands</option>
+            <option value="Belgium">🇧🇪 Belgium</option>
+            <option value="Germany">🇩🇪 Germany</option>
+            <option value="United Kingdom">🇬🇧 United Kingdom</option>
+            <option value="United States">🇺🇸 United States</option>
+            <option value="France">🇫🇷 France</option>
+            <option value="Spain">🇪🇸 Spain</option>
+            <option value="Italy">🇮🇹 Italy</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm mb-2 text-gray-700">City</label>
+          <input type="text" id="edit-city" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+        </div>
+        <button onclick="updateLeaderboardEntry()" class="btn-primary btn w-full py-3">
+          Update Entry
+        </button>
       </div>
     </div>
   </div>
@@ -1342,7 +1458,7 @@
     }
 
     // ==========================================
-    // LEADERBOARD FUNCTIES
+    // LEADERBOARD FUNCTIES - VERBETERD
     // ==========================================
     async function loadLeaderboard() {
       try {
@@ -1387,8 +1503,11 @@
             <h3 class="text-xl font-bold mb-2">${companyName}</h3>
             <div class="text-4xl font-black mb-2">${entry.score}/100</div>
             <div class="text-white/80 mb-3">${getCountryFlag(entry.country)} ${entry.country}</div>
-            <button onclick="window.open('${entry.url}', '_blank', 'noopener')" class="w-full bg-black/30 hover:bg-black/50 text-white px-4 py-2 rounded-lg border border-white/30 transition-all">
-              <i class="fas fa-external-link-alt mr-2"></i> Visit Website
+            <button onclick="editLeaderboardEntry(${entry.id})" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg mb-2">
+              <i class="fas fa-edit mr-2"></i> Edit
+            </button>
+            <button onclick="deleteLeaderboardEntry(${entry.id})" class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">
+              <i class="fas fa-trash mr-2"></i> Delete
             </button>
           </div>
         `;
@@ -1418,9 +1537,14 @@
             <h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
             <div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
             <div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
-            <a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">
-              View Website <i class="fas fa-external-link-alt ml-1"></i>
-            </a>
+            <div class="flex gap-2 justify-center">
+              <button onclick="editLeaderboardEntry(${entry.id})" class="text-blue-400 hover:text-blue-300 text-xs">
+                <i class="fas fa-edit"></i> Edit
+              </button>
+              <button onclick="deleteLeaderboardEntry(${entry.id})" class="text-red-400 hover:text-red-300 text-xs">
+                <i class="fas fa-trash"></i> Del
+              </button>
+            </div>
           </div>
         `;
       }).join('');
@@ -1449,15 +1573,122 @@
             <td><span class="text-sm">${getCountryFlag(entry.country)} ${entry.country}</span></td>
             <td><span class="text-sm text-gray-400">${new Date(entry.created_at).toLocaleDateString()}</span></td>
             <td>
-              <button onclick="deleteLeaderboardEntry(${entry.id})" class="text-red-400 hover:text-red-300">
-                <i class="fas fa-trash"></i>
-              </button>
+              <div class="flex gap-2">
+                <button onclick="editLeaderboardEntry(${entry.id})" class="text-blue-400 hover:text-blue-300" title="Edit">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="deleteLeaderboardEntry(${entry.id})" class="text-red-400 hover:text-red-300" title="Delete">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
             </td>
           </tr>
         `;
       }).join('');
       
       document.getElementById('totalCount').textContent = allLeaderboard.length;
+    }
+
+    // ==========================================
+    // LEADERBOARD MODAL FUNCTIES
+    // ==========================================
+    function showAddLeaderboardModal() {
+      document.getElementById('addLeaderboardModal').classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeAddLeaderboardModal() {
+      document.getElementById('addLeaderboardModal').classList.remove('active');
+      document.body.style.overflow = 'auto';
+    }
+
+    async function addLeaderboardEntry() {
+      const companyName = document.getElementById('add-company-name').value;
+      const url = document.getElementById('add-website-url').value;
+      const score = parseInt(document.getElementById('add-score').value);
+      const country = document.getElementById('add-country').value;
+      const city = document.getElementById('add-city').value;
+      
+      if (!companyName || !url || !score) {
+        alert('❌ Company name, URL and score are required');
+        return;
+      }
+      
+      let formattedUrl = url;
+      if (!formattedUrl.startsWith('http')) {
+        formattedUrl = 'https://' + formattedUrl;
+      }
+      
+      try {
+        await apiCall('/api/admin/leaderboard/manual-add', 'POST', {
+          url: formattedUrl,
+          company_name: companyName,
+          score,
+          country,
+          city: city || null
+        });
+        
+        alert(`✅ "${companyName}" toegevoegd aan leaderboard!`);
+        closeAddLeaderboardModal();
+        loadLeaderboard();
+        
+        document.getElementById('add-company-name').value = '';
+        document.getElementById('add-website-url').value = '';
+        document.getElementById('add-score').value = '75';
+        document.getElementById('add-city').value = '';
+      } catch (error) {
+        alert('❌ Fout bij toevoegen: ' + error.message);
+      }
+    }
+
+    function editLeaderboardEntry(id) {
+      const entry = allLeaderboard.find(e => e.id === id);
+      if (!entry) return;
+      
+      document.getElementById('edit-entry-id').value = entry.id;
+      document.getElementById('edit-company-name').value = entry.company_name || extractDomainFromUrl(entry.url);
+      document.getElementById('edit-website-url').value = entry.url;
+      document.getElementById('edit-score').value = entry.score;
+      document.getElementById('edit-country').value = entry.country || 'Netherlands';
+      document.getElementById('edit-city').value = entry.city || '';
+      
+      document.getElementById('editLeaderboardModal').classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeEditLeaderboardModal() {
+      document.getElementById('editLeaderboardModal').classList.remove('active');
+      document.body.style.overflow = 'auto';
+    }
+
+    async function updateLeaderboardEntry() {
+      const id = document.getElementById('edit-entry-id').value;
+      const companyName = document.getElementById('edit-company-name').value;
+      const url = document.getElementById('edit-website-url').value;
+      const score = parseInt(document.getElementById('edit-score').value);
+      const country = document.getElementById('edit-country').value;
+      const city = document.getElementById('edit-city').value;
+      
+      if (!companyName || !url || !score) {
+        alert('❌ Company name, URL and score are required');
+        return;
+      }
+      
+      try {
+        await apiCall(`/api/admin/leaderboard/${id}`, 'PUT', {
+          company_name: companyName,
+          url,
+          score,
+          country,
+          city
+        });
+        
+        alert('✅ Entry bijgewerkt!');
+        closeEditLeaderboardModal();
+        loadLeaderboard();
+      } catch (error) {
+        alert('❌ Fout bij bijwerken: ' + error.message);
+      }
     }
 
     // ==========================================
