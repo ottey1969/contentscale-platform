@@ -1801,6 +1801,195 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
 });
 
 // ============================================
+// ✅ FREELANCERS MANAGEMENT ENDPOINTS - TOEGEVOEGD
+// ============================================
+
+// ✅ ALLE FREELANCERS (voor admin)
+app.get('/api/admin/freelancers', verifyAdmin, async (req, res) => {
+  if (!pool) return res.json({ success: true, freelancers: [] });
+  try {
+    const result = await pool.query(`SELECT * FROM freelancers ORDER BY created_at DESC LIMIT 200`);
+    res.json({ success: true, freelancers: result.rows });
+  } catch (error) {
+    console.error('Admin freelancers error:', error);
+    res.json({ success: true, freelancers: [] });
+  }
+});
+
+// ✅ PENDING FREELANCERS (voor admin)
+app.get('/api/admin/freelancers/pending', verifyAdmin, async (req, res) => {
+  if (!pool) return res.json({ success: true, pending: [] });
+  try {
+    const result = await pool.query(
+      `SELECT * FROM freelancers WHERE is_approved = FALSE ORDER BY created_at DESC LIMIT 50`
+    );
+    res.json({ success: true, pending: result.rows });
+  } catch (error) {
+    console.error('Pending freelancers error:', error);
+    res.json({ success: true, pending: [] });
+  }
+});
+
+// ✅ FREELANCER GOEDKEUREN
+app.post('/api/admin/freelancers/:id/approve', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    await pool.query(
+      'UPDATE freelancers SET is_approved = TRUE, is_verified = TRUE WHERE id = $1', 
+      [req.params.id]
+    );
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Approve freelancer error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ FREELANCER AFWIJZEN/VERWIJDEREN
+app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    await pool.query('DELETE FROM freelancers WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete freelancer error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ FREELANCER BEWERKEN
+app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { id } = req.params;
+    const { name, email, title, location, country, bio, hourly_rate, is_featured } = req.body;
+    
+    const updates = [];
+    const values = [];
+    let paramCount = 1;
+    
+    if (name !== undefined) {
+      updates.push(`name = $${paramCount}`);
+      values.push(name);
+      paramCount++;
+    }
+    if (email !== undefined) {
+      updates.push(`email = $${paramCount}`);
+      values.push(email);
+      paramCount++;
+    }
+    if (title !== undefined) {
+      updates.push(`title = $${paramCount}`);
+      values.push(title);
+      paramCount++;
+    }
+    if (location !== undefined) {
+      updates.push(`location = $${paramCount}`);
+      values.push(location);
+      paramCount++;
+    }
+    if (country !== undefined) {
+      updates.push(`country = $${paramCount}`);
+      values.push(country);
+      paramCount++;
+    }
+    if (bio !== undefined) {
+      updates.push(`bio = $${paramCount}`);
+      values.push(bio);
+      paramCount++;
+    }
+    if (hourly_rate !== undefined) {
+      updates.push(`hourly_rate = $${paramCount}`);
+      values.push(hourly_rate);
+      paramCount++;
+    }
+    if (is_featured !== undefined) {
+      updates.push(`is_featured = $${paramCount}`);
+      values.push(is_featured);
+      paramCount++;
+    }
+    
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, error: 'Geen velden om te updaten' });
+    }
+    
+    values.push(id);
+    const query = `UPDATE freelancers SET ${updates.join(', ')} WHERE id = $${paramCount}`;
+    await pool.query(query, values);
+    
+    res.json({ success: true, message: 'Freelancer bijgewerkt' });
+  } catch (error) {
+    console.error('Update freelancer error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ FREELANCER FEATURE TOGGLE
+app.post('/api/admin/freelancers/:id/feature', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { id } = req.params;
+    const { is_featured } = req.body;
+    await pool.query('UPDATE freelancers SET is_featured = $1 WHERE id = $2', [is_featured, id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Feature toggle error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ FREELANCER DEACTIVEREN
+app.post('/api/admin/freelancers/:id/deactivate', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    await pool.query('UPDATE freelancers SET is_approved = FALSE WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Deactivate freelancer error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ FREELANCER TOGGLE FEATURED (specifiek voor toggle functie)
+app.post('/api/admin/freelancers/:id/toggle-featured', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { id } = req.params;
+    const freelancer = await pool.query('SELECT is_featured FROM freelancers WHERE id = $1', [id]);
+    if (freelancer.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Freelancer not found' });
+    }
+    
+    const newFeatured = !freelancer.rows[0].is_featured;
+    await pool.query('UPDATE freelancers SET is_featured = $1 WHERE id = $2', [newFeatured, id]);
+    
+    res.json({ success: true, is_featured: newFeatured, message: `Featured ${newFeatured ? 'aangezet' : 'uitgezet'}` });
+  } catch (error) {
+    console.error('Toggle featured error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ FREELANCER BULK DELETE
+app.post('/api/admin/freelancers/bulk-delete', verifyAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
+    }
+    
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
+    await pool.query(`DELETE FROM freelancers WHERE id IN (${placeholders})`, ids);
+    
+    res.json({ success: true, message: `${ids.length} freelancers verwijderd` });
+  } catch (error) {
+    console.error('Bulk delete freelancers error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
 // ✅ NIEUWE ADMIN ENDPOINTS VOOR LEADERBOARD
 // ============================================
 
@@ -2117,14 +2306,9 @@ async function startServer() {
     console.log('   • Sendgrid - voor emails (100/dag gratis)');
     console.log('   • Webshare - voor 10 gratis proxies');
     console.log('');
-    console.log('📋 NIEUWE ADMIN ENDPOINTS:');
-    console.log('   • GET    /api/admin/leaderboard/pending - Pending entries');
-    console.log('   • POST   /api/admin/leaderboard/:id/approve - Keur goed');
-    console.log('   • POST   /api/admin/leaderboard/:id/reject - Wijs af');
-    console.log('   • PUT    /api/admin/leaderboard/:id - Bewerk entry');
-    console.log('   • POST   /api/admin/leaderboard/manual-add - Voeg toe');
-    console.log('   • DELETE /api/admin/leaderboard/:id - Verwijder entry');
-    console.log('   • POST   /api/admin/leaderboard/bulk-delete - Bulk verwijderen');
+    console.log('📋 ADMIN ENDPOINTS:');
+    console.log('   • Freelancers management (8 endpoints)');
+    console.log('   • Leaderboard management (7 endpoints)');
     console.log('');
     
     if (!dbConnected) {
