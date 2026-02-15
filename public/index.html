@@ -83,6 +83,12 @@ color: white;
 background: #0f7b3a !important;
 color: white !important;
 }
+.btn-disabled {
+background: #6b7280 !important;
+color: white !important;
+cursor: not-allowed;
+opacity: 0.6;
+}
 .mode-toggle {
 position: relative;
 padding: 0.75rem 1.5rem;
@@ -527,6 +533,42 @@ font-size: 0.75rem;
 .recommendation-action { color: #f3f4f6; }
 .recommendation-learning { color: #60a5fa; }
 .recommendation-target { color: #34d399; }
+/* COMING SOON BANNER */
+.coming-soon-banner {
+background: linear-gradient(135deg, #6b7280, #4b5563);
+border-left: 4px solid #9ca3af;
+border-radius: 0.75rem;
+padding: 1.5rem;
+margin-bottom: 1.5rem;
+}
+.coming-soon-banner h3 {
+color: #f3f4f6 !important;
+margin-bottom: 0.5rem;
+}
+.coming-soon-banner p {
+color: #d1d5db !important;
+margin-bottom: 1rem;
+}
+/* CSV UPLOAD INFO */
+.csv-info-card {
+background: linear-gradient(135deg, #1e293b, #0f172a);
+border: 1px solid #374151;
+border-radius: 1rem;
+padding: 1.5rem;
+margin-bottom: 1.5rem;
+}
+.csv-info-card h3 {
+margin-bottom: 1rem;
+color: #f3f4f6 !important;
+}
+.csv-info-card ul {
+margin-left: 1.5rem;
+margin-top: 0.5rem;
+}
+.csv-info-card li {
+margin-bottom: 0.5rem;
+color: #d1d5db !important;
+}
 </style>
 </head>
 <body class="bg-gray-900">
@@ -539,7 +581,7 @@ font-size: 0.75rem;
 <span class="hidden sm:inline-block text-xs px-2 py-1 bg-purple-600 rounded text-white font-semibold">Pro</span>
 </div>
 <div class="hidden md:flex gap-6">
-<a href="#lead-scanner" class="text-gray-300 hover:text-white transition-colors">Lead Scanner</a>
+<a href="#lead-scanner" class="text-gray-300 hover:text-white transition-colors">Scanner</a>
 <a href="#leaderboard" class="text-gray-300 hover:text-white transition-colors">Leaderboard</a>
 <a href="#freelancers" class="text-gray-300 hover:text-white transition-colors">Experts</a>
 </div>
@@ -555,29 +597,46 @@ font-size: 0.75rem;
 <div id="lead-scanner" class="mb-16">
 <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 <div class="text-center mb-8">
-<h2 class="text-4xl font-bold mb-3 text-white">🎯 SEO Content Quality & Lead Scanner</h2>
-<p class="text-xl text-gray-200 mb-2">Check Your SEO Content Quality or Find Businesses That Need Help</p>
+<h2 class="text-4xl font-bold mb-3 text-white">🎯 SEO Content Quality Scanner</h2>
+<p class="text-xl text-gray-200 mb-2">Check Your SEO Content Quality in Seconds</p>
 <div class="flex flex-wrap gap-3 justify-center text-sm text-gray-300">
 <span>✨ Free for freelancers</span>
 <span>•</span>
-<span>🔍 Single or bulk scanning</span>
+<span>🔍 Single URL scanning</span>
 <span>•</span>
-<span>📊 Export to CSV</span>
+<span>📊 Detailed analysis</span>
 <span>•</span>
 <span>📧 Email finder</span>
-<span>•</span>
-<span>⚡ Auto-queue (100/day)</span>
 </div>
 </div>
-<div class="flex justify-center gap-4 mb-8">
-<button id="modeSingleBtn" onclick="switchMode('single')" class="mode-toggle active">
-<i class="fas fa-link mr-2"></i> Single URL
-</button>
-<button id="modeBulkBtn" onclick="switchMode('bulk')" class="mode-toggle">
-<i class="fas fa-map-marked-alt mr-2"></i> Google Maps Bulk
-</button>
+<!-- COMING SOON BANNER VOOR BULK SCANNER -->
+<div class="coming-soon-banner">
+<div class="flex items-start gap-3">
+<div class="text-4xl">⏳</div>
+<div>
+<h3 class="text-xl font-bold">Bulk Scanner & Google Maps - Coming Soon</h3>
+<p class="text-sm">We're working on bulk scanning features and CSV upload functionality. Stay tuned for updates!</p>
+<p class="text-xs mt-2">💡 <strong>Need bulk scanning now?</strong> Contact us via WhatsApp for custom solutions.</p>
 </div>
-<div id="singleMode" class="max-w-3xl mx-auto">
+</div>
+</div>
+<!-- CSV UPLOAD INFO -->
+<div class="csv-info-card">
+<h3 class="text-xl font-bold">📋 CSV Upload - What You Can Do</h3>
+<p class="text-sm mb-2">When CSV upload is available, you'll be able to:</p>
+<ul class="text-sm space-y-1">
+<li>✅ Upload a list of URLs to scan in bulk</li>
+<li>✅ Get detailed SEO scores for all URLs at once</li>
+<li>✅ Export results to CSV with all metrics</li>
+<li>✅ Filter by score, country, or category</li>
+<li>✅ Schedule automatic scans for your URLs</li>
+<li>✅ Track SEO improvements over time</li>
+</ul>
+<p class="text-xs mt-3 text-yellow-400">
+⚠️ <strong>Note:</strong> CSV upload requires API key configuration for unlimited scans.
+</p>
+</div>
+<div class="max-w-3xl mx-auto">
 <div class="card">
 <div class="flex flex-col sm:flex-row gap-3">
 <input type="text"
@@ -601,72 +660,13 @@ spellcheck="false">
 </div>
 <div id="singleResult" class="hidden mt-4"></div>
 </div>
-<div id="bulkMode" class="hidden max-w-6xl mx-auto">
-<div class="card">
-<div class="flex flex-col sm:flex-row gap-3 mb-4">
-<input type="text"
-id="mapsUrl"
-name="mapsUrl"
-placeholder="https://www.google.com/maps/search/seo+agency+amsterdam"
-class="flex-1"
-autocomplete="off">
-<button onclick="scrapeGoogleMaps()" id="bulkScanBtn" class="btn-secondary btn whitespace-nowrap">
-<i class="fas fa-map-marked-alt"></i> Scrape Maps
-</button>
-</div>
-<div class="bg-gray-700/50 rounded-lg p-4 border border-gray-600">
-<p class="text-sm text-gray-300">
-<span class="text-purple-400 font-bold">💡 How to use:</span>
-Search businesses on Google Maps → Copy the URL → Paste here
-</p>
-</div>
-</div>
-<div id="leadsContainer" class="hidden mt-6">
-<div class="card border-green-500">
-<div class="flex items-center justify-between mb-4">
-<h3 class="text-xl font-bold text-white">
-<i class="fas fa-database mr-2 text-green-400"></i>
-Found Leads (<span id="leadCount">0</span>)
-</h3>
-<div class="flex gap-2">
-<button onclick="bulkFindEmails()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm font-semibold">
-<i class="fas fa-search mr-1"></i> Find All Emails
-</button>
-<button onclick="queueAllLeads()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm font-semibold">
-<i class="fas fa-clock mr-1"></i> Queue All
-</button>
-</div>
-</div>
-<div class="overflow-x-auto">
-<table>
-<thead>
-<tr>
-<th>Business</th>
-<th>Website</th>
-<th>Phone</th>
-<th>Score</th>
-<th>Email</th>
-<th>Status</th>
-<th>Actions</th>
-</tr>
-</thead>
-<tbody id="leadsTableBody"></tbody>
-</table>
-</div>
-<div class="flex justify-end mt-4 gap-2">
-<button onclick="exportLeadsToCSV()" class="btn-success btn">
-<i class="fas fa-file-csv mr-2"></i> Export CSV
-</button>
-</div>
-</div>
-</div>
 </div>
 <!-- API Configuration Accordion - Direct onder scanner -->
 <div class="accordion-item">
 <button onclick="toggleAccordion('apiConfig')" class="accordion-header">
 <span class="flex items-center gap-2">
 <i class="fas fa-key text-purple-400"></i>
-<span class="font-bold">Don't Get Blocked by Google - Add Your Free Webshare Proxies Here</span>
+<span class="font-bold">Configure API Keys for Unlimited Scans</span>
 <span id="apiStatusIndicator" class="api-status-indicator api-status-inactive"></span>
 </button>
 <div id="apiConfig" class="accordion-content hidden">
@@ -717,7 +717,7 @@ Sendgrid Configuration
 <i class="fas fa-globe text-green-400"></i>
 Webshare Proxy Configuration
 </h4>
-<p class="text-xs text-gray-400 mb-3">10 free proxies for Google Maps scraping</p>
+<p class="text-xs text-gray-400 mb-3">10 free proxies for enhanced scanning</p>
 <div class="space-y-3">
 <div>
 <label class="block text-sm text-gray-300 mb-1">Webshare API Key</label>
@@ -1013,7 +1013,7 @@ His methodology has achieved a documented <strong>78% recovery rate within 90 da
 Stop losing traffic to AI Overviews. Get your personalized roadmap today.
 </p>
 <div class="flex gap-4 justify-center flex-wrap">
-<button onclick="switchMode('single'); document.getElementById('singleUrlInput').scrollIntoView({behavior:'smooth'})"
+<button onclick="document.getElementById('singleUrlInput').focus(); document.getElementById('singleUrlInput').scrollIntoView({behavior:'smooth'})"
 class="btn-primary btn text-lg px-8 py-4">
 <i class="fas fa-search mr-2"></i> Scan Free
 </button>
@@ -1199,9 +1199,6 @@ loadApiStatus();
 document.getElementById('singleUrlInput')?.addEventListener('keypress', function(e) {
 if (e.key === 'Enter') scanSingleURL();
 });
-document.getElementById('mapsUrl')?.addEventListener('keypress', function(e) {
-if (e.key === 'Enter') scrapeGoogleMaps();
-});
 const bioTextarea = document.getElementById('freelancerBio');
 if (bioTextarea) {
 bioTextarea.addEventListener('input', function() {
@@ -1275,6 +1272,10 @@ const percentage = (data.sendgrid.used / data.sendgrid.limit) * 100;
 document.getElementById('sendgridUsageBar').style.width = percentage + '%';
 }
 sendgridConfigured = true;
+}
+if (data.hasWebshare) {
+document.getElementById('webshareStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
+webshareConfigured = true;
 }
 }
 } catch (error) {
@@ -1426,194 +1427,219 @@ alert('❌ Error: ' + error.message);
 }
 }
 // ==========================================
-// EMAIL QUEUE FUNCTIES
+// SINGLE URL SCAN FUNCTIE
 // ==========================================
-async function queueAllLeads() {
-const leadsWithEmail = scrapedLeads.filter(l => l.email && l.email.includes('@'));
-if (leadsWithEmail.length === 0) {
-alert('❌ No leads with email addresses. Use "Find All Emails" first.');
+async function scanSingleURL() {
+const input = document.getElementById('singleUrlInput');
+const button = document.getElementById('singleScanBtn');
+const progress = document.getElementById('singleProgress');
+const progressBar = document.getElementById('singleProgressBar');
+const progressText = document.getElementById('singleProgressText');
+const resultDiv = document.getElementById('singleResult');
+let url = input.value.trim();
+if (!url) {
+alert('❌ Please enter a URL');
 return;
 }
-if (!confirm(`📧 Add ${leadsWithEmail.length} leads to email queue?`)) {
-return;
+if (!url.startsWith('http')) {
+url = 'https://' + url;
 }
-let successCount = 0;
-for (const lead of leadsWithEmail) {
+button.disabled = true;
+button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scannen...';
+progress.classList.remove('hidden');
+progressBar.style.width = '20%';
+progressText.textContent = 'Browser starten...';
 try {
-const response = await fetch('/api/email/queue', {
-method: 'POST',
-headers: {
-'Content-Type': 'application/json',
-'x-user-id': userId
-},
-body: JSON.stringify({
-to_email: lead.email,
-to_name: lead.name,
-subject: 'SEO Opportunity for ' + lead.name,
-template: 'default'
-})
-});
-const data = await response.json();
-if (data.success) successCount++;
-} catch (e) {
-console.error('Queue error:', e);
-}
-}
-alert(`✅ Added ${successCount} leads to queue`);
-}
-async function findEmail(leadId, index) {
-if (!leadId) {
-alert('❌ Lead ID not found');
-return;
-}
-try {
-const response = await fetch(`/api/leads/${leadId}/find-email`, {
-method: 'POST'
-});
-const data = await response.json();
-if (data.success) {
-if (scrapedLeads[index]) {
-scrapedLeads[index].email = data.email;
-scrapedLeads[index].email_status = 'found';
-}
-refreshLeadsTable();
-alert(`✅ Email found: ${data.email}`);
-} else {
-alert('❌ ' + (data.error || 'No email found'));
-if (scrapedLeads[index]) {
-scrapedLeads[index].email_status = 'not found';
-}
-refreshLeadsTable();
-}
-} catch (error) {
-alert('❌ Error: ' + error.message);
-}
-}
-async function bulkFindEmails() {
-const leadsWithWebsites = scrapedLeads.filter(l => l.website && l.website !== 'N/A' && l.website !== null);
-if (leadsWithWebsites.length === 0) {
-alert('❌ No leads with websites to search');
-return;
-}
-if (!confirm(`🔍 Search emails for ${leadsWithWebsites.length} leads? This may take a few minutes.`)) {
-return;
-}
-try {
-const response = await fetch('/api/leads/bulk/find-emails', {
+const response = await fetch('/api/scan', {
 method: 'POST',
 headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({ lead_ids: leadsWithWebsites.map(l => l.id) })
+body: JSON.stringify({ url: url })
 });
+progressBar.style.width = '60%';
+progressText.textContent = 'Content analyseren...';
 const data = await response.json();
-if (data.success) {
-alert(`✅ Found ${data.found} emails out of ${data.total} leads`);
-} else {
-alert('❌ ' + (data.error || 'Bulk search failed'));
+if (!response.ok || !data.success) {
+throw new Error(data.error || 'Scan failed');
 }
+displayScanResult(data);
+progressBar.style.width = '100%';
+progressText.textContent = 'Scan compleet!';
+setTimeout(() => {
+progress.classList.add('hidden');
+button.disabled = false;
+button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
+}, 500);
 } catch (error) {
-alert('❌ Error: ' + error.message);
+console.error('Scan error:', error);
+alert('❌ Scan failed: ' + error.message);
+progress.classList.add('hidden');
+button.disabled = false;
+button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
 }
 }
-async function queueLead(leadId) {
-if (!leadId) {
-alert('❌ Lead ID not found');
-return;
+// ==========================================
+// DISPLAY SCAN RESULT
+// ==========================================
+function displayScanResult(result) {
+const resultDiv = document.getElementById('singleResult');
+const url = result.url || '';
+const quality = result.quality || 'unknown';
+const currentScore = result.score || 0;
+const graaf = result.metrics?.graaf || 0;
+const craft = result.metrics?.craft || 0;
+const technical = result.metrics?.technical || 0;
+const words = result.content_stats?.wordCount || 0;
+const contentQuality = result.metrics?.content || 0;
+const uxScore = result.metrics?.ux || 0;
+// ✅ NIEUWE AANBEVELINGEN MET LEERPUNTEN
+let recommendations = [];
+if (result.recommendations?.all && result.recommendations.all.length > 0) {
+recommendations = result.recommendations.all;
 }
-try {
-const response = await fetch('/api/email/queue', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({ lead_ids: [leadId] })
-});
-const data = await response.json();
-if (data.success) {
-alert('✅ Lead added to email queue');
-loadSendgridStatus();
-} else {
-alert('❌ ' + (data.error || 'Failed to queue lead'));
-}
-} catch (error) {
-alert('❌ Error: ' + error.message);
-}
-}
-function refreshLeadsTable() {
-const leadsTableBody = document.getElementById('leadsTableBody');
-if (scrapedLeads.length === 0) {
-leadsTableBody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-400">Geen bedrijven gevonden</td></tr>';
-return;
-}
-leadsTableBody.innerHTML = scrapedLeads.map((lead, index) => {
-const hasWebsite = lead.website && lead.website !== 'N/A' && lead.website !== null;
-const hasEmail = lead.email && lead.email.includes('@');
-let statusColor = 'text-gray-400';
-let statusText = 'pending';
-if (lead.email_status === 'found') {
-statusColor = 'text-green-400';
-statusText = 'found';
-} else if (lead.email_status === 'not found') {
-statusColor = 'text-red-400';
-statusText = 'not found';
-}
-return `
-<tr class="border-b border-gray-700 hover:bg-gray-800">
-<td class="px-4 py-3">
-<div class="font-medium text-white">${lead.name || 'Unknown'}</div>
-<div class="text-xs text-gray-400">${lead.category || 'SEO Agency'}</div>
-</td>
-<td class="px-4 py-3">
-${hasWebsite ?
-`<a href="${lead.website}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">
-${lead.website.replace('https://', '').substring(0, 30)}...
-</a>` :
-`<span class="text-red-400 text-sm">Geen website</span>`
-}
-</td>
-<td class="px-4 py-3 text-gray-300 text-sm">${lead.phone || '-'}</td>
-<td class="px-4 py-3">
-${lead.score > 0 ?
-`<span class="font-bold ${lead.score >= 70 ? 'text-green-400' : 'text-yellow-400'}">${lead.score}</span>` :
-`<span class="text-gray-500">-</span>`
-}
-</td>
-<td class="px-4 py-3">
-${hasEmail ?
-`<span class="text-green-400 text-sm">${lead.email}</span>` :
-(hasWebsite ?
-`<button onclick="findEmail(${lead.id}, ${index})"
-class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs font-semibold">
-<i class="fas fa-search mr-1"></i>Find
-</button>` :
-`<span class="text-gray-600 text-sm">-</span>`
-)
-}
-</td>
-<td class="px-4 py-3">
-<span class="text-xs ${statusColor}">${statusText}</span>
-</td>
-<td class="px-4 py-3">
-<div class="flex gap-1">
-${hasWebsite ?
-`<button onclick="scanLead('${lead.website}')"
-class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded text-xs font-semibold"
-title="Scan website">
-<i class="fas fa-search"></i>
-</button>` :
-''
-}
-${hasEmail ?
-`<button onclick="queueLead(${lead.id})"
-class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs font-semibold"
-title="Add to email queue">
-<i class="fas fa-clock"></i>
-</button>` :
-''
-}
+let recsHtml = '';
+if (recommendations.length > 0) {
+recommendations.forEach(rec => {
+// Bepaal priority badge class
+let priorityClass = 'priority-none';
+if (rec.priority === 'high') priorityClass = 'priority-high';
+else if (rec.priority === 'medium') priorityClass = 'priority-medium';
+else if (rec.priority === 'low') priorityClass = 'priority-low';
+recsHtml += `
+<div class="recommendation-card">
+<div class="flex items-start justify-between mb-2">
+<h4 class="recommendation-title">${rec.title || 'Recommendation'}</h4>
+${rec.priority ? `<span class="priority-badge ${priorityClass}">${rec.priority.toUpperCase()}</span>` : ''}
 </div>
-</td>
-</tr>
+<p class="recommendation-desc">${rec.description || ''}</p>
+${rec.action ? `
+<div class="recommendation-section">
+<div class="recommendation-section-title">
+<i class="fas fa-wrench"></i> <span>Action</span>
+</div>
+<p class="recommendation-action">${rec.action}</p>
+</div>
+` : ''}
+${rec.learning ? `
+<div class="recommendation-section">
+<div class="recommendation-section-title">
+<i class="fas fa-graduation-cap"></i> <span>Learning</span>
+</div>
+<p class="recommendation-learning">${rec.learning}</p>
+</div>
+` : ''}
+${rec.target ? `
+<div class="recommendation-section">
+<div class="recommendation-section-title">
+<i class="fas fa-bullseye"></i> <span>Target</span>
+</div>
+<p class="recommendation-target">${rec.target}</p>
+</div>
+` : ''}
+</div>
 `;
-}).join('');
+});
+} else {
+recsHtml = '<p class="text-gray-400 text-sm">No specific recommendations available for this page.</p>';
 }
+let qualityColor = 'bg-gray-600';
+if (quality === 'excellent') qualityColor = 'bg-green-600';
+else if (quality === 'good') qualityColor = 'bg-blue-600';
+else if (quality === 'average') qualityColor = 'bg-yellow-600';
+else if (quality === 'poor') qualityColor = 'bg-red-600';
+else if (quality === 'below-average') qualityColor = 'bg-orange-600';
+resultDiv.innerHTML = `
+<div class="bg-gray-800 rounded-xl border-2 border-purple-500 p-6 mt-4">
+<div class="text-center mb-4">
+<h2 class="text-2xl font-bold text-white mb-1">📊 SEO Content Analysis</h2>
+<p class="text-md text-gray-300 break-all">${url}</p>
+<span class="inline-block mt-2 px-3 py-1 ${qualityColor} text-white text-sm rounded-full">
+Quality: ${quality.charAt(0).toUpperCase() + quality.slice(1)}
+</span>
+</div>
+<div class="text-center mb-6">
+<div class="text-6xl font-bold text-white">${currentScore}</div>
+<div class="text-sm text-gray-400">out of 100</div>
+</div>
+<div class="grid grid-cols-2 gap-4 mb-5">
+<div class="bg-gray-900 rounded-lg p-4 text-center">
+<div class="text-sm text-gray-400 mb-1">GRAAF (50)</div>
+<div class="text-2xl font-bold text-purple-400">${graaf}/50</div>
+</div>
+<div class="bg-gray-900 rounded-lg p-4 text-center">
+<div class="text-sm text-gray-400 mb-1">CRAFT (30)</div>
+<div class="text-2xl font-bold text-blue-400">${craft}/30</div>
+</div>
+<div class="bg-gray-900 rounded-lg p-4 text-center">
+<div class="text-sm text-gray-400 mb-1">Technical (20)</div>
+<div class="text-2xl font-bold text-yellow-400">${technical}/20</div>
+</div>
+<div class="bg-gray-900 rounded-lg p-4 text-center">
+<div class="text-sm text-gray-400 mb-1">Words</div>
+<div class="text-2xl font-bold text-white">${words.toLocaleString()}</div>
+</div>
+</div>
+<div class="space-y-3 mb-6">
+<div>
+<div class="flex justify-between items-center mb-1">
+<span class="text-gray-300">Content Quality</span>
+<span class="text-lg font-bold text-green-400">${contentQuality}/100</span>
+</div>
+<div class="progress-bar">
+<div class="progress-bar-fill" style="width: ${contentQuality}%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-center mb-1">
+<span class="text-gray-300">UX Score</span>
+<span class="text-lg font-bold text-green-400">${uxScore}/100</span>
+</div>
+<div class="progress-bar">
+<div class="progress-bar-fill" style="width: ${uxScore}%"></div>
+</div>
+</div>
+</div>
+<div class="border-t border-gray-700 pt-5 mb-5">
+<h3 class="text-xl font-bold text-white mb-4">📋 Priority Recommendations</h3>
+${recsHtml}
+</div>
+<div class="flex gap-3">
+<button onclick="addToLeaderboard()"
+class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-semibold transition-all">
+<i class="fas fa-trophy mr-2"></i> Add to Leaderboard
+</button>
+<button onclick="document.getElementById('singleResult').classList.add('hidden')"
+class="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold transition-all">
+Close
+</button>
+</div>
+</div>
+`;
+resultDiv.classList.remove('hidden');
+resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function addToLeaderboard() {
+const resultDiv = document.getElementById('singleResult');
+const urlElement = resultDiv.querySelector('p.text-md');
+if (!urlElement) {
+alert('❌ No scan result found');
+return;
+}
+const urlText = urlElement.textContent || '';
+const companyName = prompt('Enter company name (optional):', '');
+const contactEmail = prompt('Enter your email to receive congratulations if approved (optional):', '');
+if (!contactEmail) {
+alert('✅ Your request has been sent to admin for approval (85+ required)');
+return;
+}
+if (!contactEmail.includes('@') || !contactEmail.includes('.')) {
+alert('❌ Please enter a valid email address');
+return;
+}
+alert(`✅ Thank you! Admin will review your submission. If approved (85+ score required), a congratulations email will be sent to ${contactEmail} with your shareable leaderboard link.`);
+}
+// ==========================================
+// LEADERBOARD & FREELANCERS FUNCTIES
+// ==========================================
 async function loadLeaderboardData() {
 try {
 const response = await fetch('/api/leaderboard');
@@ -1819,322 +1845,6 @@ html += `<button class="filter-tag" onclick="filterByCountry('${country}')">${ge
 }
 });
 div.innerHTML = html;
-}
-function switchMode(mode) {
-const singleMode = document.getElementById('singleMode');
-const bulkMode = document.getElementById('bulkMode');
-const singleBtn = document.getElementById('modeSingleBtn');
-const bulkBtn = document.getElementById('modeBulkBtn');
-if (mode === 'single') {
-singleMode.classList.remove('hidden');
-bulkMode.classList.add('hidden');
-singleBtn.classList.add('active');
-bulkBtn.classList.remove('active');
-} else {
-singleMode.classList.add('hidden');
-bulkMode.classList.remove('hidden');
-singleBtn.classList.remove('active');
-bulkBtn.classList.add('active');
-}
-}
-async function scanSingleURL() {
-const input = document.getElementById('singleUrlInput');
-const button = document.getElementById('singleScanBtn');
-const progress = document.getElementById('singleProgress');
-const progressBar = document.getElementById('singleProgressBar');
-const progressText = document.getElementById('singleProgressText');
-const resultDiv = document.getElementById('singleResult');
-let url = input.value.trim();
-if (!url) {
-alert('❌ Please enter a URL');
-return;
-}
-if (!url.startsWith('http')) {
-url = 'https://' + url;
-}
-button.disabled = true;
-button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scannen...';
-progress.classList.remove('hidden');
-progressBar.style.width = '20%';
-progressText.textContent = 'Browser starten...';
-try {
-const response = await fetch('/api/scan', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({ url: url })
-});
-progressBar.style.width = '60%';
-progressText.textContent = 'Content analyseren...';
-const data = await response.json();
-if (!response.ok || !data.success) {
-throw new Error(data.error || 'Scan failed');
-}
-displayScanResult(data);
-progressBar.style.width = '100%';
-progressText.textContent = 'Scan compleet!';
-setTimeout(() => {
-progress.classList.add('hidden');
-button.disabled = false;
-button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
-}, 500);
-} catch (error) {
-console.error('Scan error:', error);
-alert('❌ Scan failed: ' + error.message);
-progress.classList.add('hidden');
-button.disabled = false;
-button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
-}
-}
-// ==========================================
-// ✅ FIX: DISPLAY SCAN RESULT MET PROFESSIONELE AANBEVELINGEN
-// ==========================================
-function displayScanResult(result) {
-const resultDiv = document.getElementById('singleResult');
-const url = result.url || '';
-const quality = result.quality || 'unknown';
-const currentScore = result.score || 0;
-const graaf = result.metrics?.graaf || 0;
-const craft = result.metrics?.craft || 0;
-const technical = result.metrics?.technical || 0;
-const words = result.content_stats?.wordCount || 0;
-const contentQuality = result.metrics?.content || 0;
-const uxScore = result.metrics?.ux || 0;
-// ✅ NIEUWE AANBEVELINGEN MET LEERPUNTEN
-let recommendations = [];
-if (result.recommendations?.all && result.recommendations.all.length > 0) {
-recommendations = result.recommendations.all;
-}
-let recsHtml = '';
-if (recommendations.length > 0) {
-recommendations.forEach(rec => {
-// Bepaal priority badge class
-let priorityClass = 'priority-none';
-if (rec.priority === 'high') priorityClass = 'priority-high';
-else if (rec.priority === 'medium') priorityClass = 'priority-medium';
-else if (rec.priority === 'low') priorityClass = 'priority-low';
-recsHtml += `
-<div class="recommendation-card">
-<div class="flex items-start justify-between mb-2">
-<h4 class="recommendation-title">${rec.title || 'Recommendation'}</h4>
-${rec.priority ? `<span class="priority-badge ${priorityClass}">${rec.priority.toUpperCase()}</span>` : ''}
-</div>
-<p class="recommendation-desc">${rec.description || ''}</p>
-${rec.action ? `
-<div class="recommendation-section">
-<div class="recommendation-section-title">
-<i class="fas fa-wrench"></i> <span>Action</span>
-</div>
-<p class="recommendation-action">${rec.action}</p>
-</div>
-` : ''}
-${rec.learning ? `
-<div class="recommendation-section">
-<div class="recommendation-section-title">
-<i class="fas fa-graduation-cap"></i> <span>Learning</span>
-</div>
-<p class="recommendation-learning">${rec.learning}</p>
-</div>
-` : ''}
-${rec.target ? `
-<div class="recommendation-section">
-<div class="recommendation-section-title">
-<i class="fas fa-bullseye"></i> <span>Target</span>
-</div>
-<p class="recommendation-target">${rec.target}</p>
-</div>
-` : ''}
-</div>
-`;
-});
-} else {
-recsHtml = '<p class="text-gray-400 text-sm">No specific recommendations available for this page.</p>';
-}
-let qualityColor = 'bg-gray-600';
-if (quality === 'excellent') qualityColor = 'bg-green-600';
-else if (quality === 'good') qualityColor = 'bg-blue-600';
-else if (quality === 'average') qualityColor = 'bg-yellow-600';
-else if (quality === 'poor') qualityColor = 'bg-red-600';
-else if (quality === 'below-average') qualityColor = 'bg-orange-600';
-resultDiv.innerHTML = `
-<div class="bg-gray-800 rounded-xl border-2 border-purple-500 p-6 mt-4">
-<div class="text-center mb-4">
-<h2 class="text-2xl font-bold text-white mb-1">📊 SEO Content Analysis</h2>
-<p class="text-md text-gray-300 break-all">${url}</p>
-<span class="inline-block mt-2 px-3 py-1 ${qualityColor} text-white text-sm rounded-full">
-Quality: ${quality.charAt(0).toUpperCase() + quality.slice(1)}
-</span>
-</div>
-<div class="text-center mb-6">
-<div class="text-6xl font-bold text-white">${currentScore}</div>
-<div class="text-sm text-gray-400">out of 100</div>
-</div>
-<div class="grid grid-cols-2 gap-4 mb-5">
-<div class="bg-gray-900 rounded-lg p-4 text-center">
-<div class="text-sm text-gray-400 mb-1">GRAAF (50)</div>
-<div class="text-2xl font-bold text-purple-400">${graaf}/50</div>
-</div>
-<div class="bg-gray-900 rounded-lg p-4 text-center">
-<div class="text-sm text-gray-400 mb-1">CRAFT (30)</div>
-<div class="text-2xl font-bold text-blue-400">${craft}/30</div>
-</div>
-<div class="bg-gray-900 rounded-lg p-4 text-center">
-<div class="text-sm text-gray-400 mb-1">Technical (20)</div>
-<div class="text-2xl font-bold text-yellow-400">${technical}/20</div>
-</div>
-<div class="bg-gray-900 rounded-lg p-4 text-center">
-<div class="text-sm text-gray-400 mb-1">Words</div>
-<div class="text-2xl font-bold text-white">${words.toLocaleString()}</div>
-</div>
-</div>
-<div class="space-y-3 mb-6">
-<div>
-<div class="flex justify-between items-center mb-1">
-<span class="text-gray-300">Content Quality</span>
-<span class="text-lg font-bold text-green-400">${contentQuality}/100</span>
-</div>
-<div class="progress-bar">
-<div class="progress-bar-fill" style="width: ${contentQuality}%"></div>
-</div>
-</div>
-<div>
-<div class="flex justify-between items-center mb-1">
-<span class="text-gray-300">UX Score</span>
-<span class="text-lg font-bold text-green-400">${uxScore}/100</span>
-</div>
-<div class="progress-bar">
-<div class="progress-bar-fill" style="width: ${uxScore}%"></div>
-</div>
-</div>
-</div>
-<div class="border-t border-gray-700 pt-5 mb-5">
-<h3 class="text-xl font-bold text-white mb-4">📋 Priority Recommendations</h3>
-${recsHtml}
-</div>
-<div class="flex gap-3">
-<button onclick="addToLeaderboard()"
-class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-semibold transition-all">
-<i class="fas fa-trophy mr-2"></i> Add to Leaderboard
-</button>
-<button onclick="document.getElementById('singleResult').classList.add('hidden')"
-class="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold transition-all">
-Close
-</button>
-</div>
-</div>
-`;
-resultDiv.classList.remove('hidden');
-resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-function addToLeaderboard() {
-const resultDiv = document.getElementById('singleResult');
-const urlElement = resultDiv.querySelector('p.text-md');
-if (!urlElement) {
-alert('❌ No scan result found');
-return;
-}
-const urlText = urlElement.textContent || '';
-const companyName = prompt('Enter company name (optional):', '');
-const contactEmail = prompt('Enter your email to receive congratulations if approved (optional):', '');
-if (!contactEmail) {
-alert('✅ Your request has been sent to admin for approval (85+ required)');
-return;
-}
-if (!contactEmail.includes('@') || !contactEmail.includes('.')) {
-alert('❌ Please enter a valid email address');
-return;
-}
-alert(`✅ Thank you! Admin will review your submission. If approved (85+ score required), a congratulations email will be sent to ${contactEmail} with your shareable leaderboard link.`);
-}
-async function scrapeGoogleMaps() {
-const input = document.getElementById('mapsUrl');
-const button = document.getElementById('bulkScanBtn');
-const leadsContainer = document.getElementById('leadsContainer');
-const leadsTableBody = document.getElementById('leadsTableBody');
-const leadCount = document.getElementById('leadCount');
-let url = input.value.trim();
-if (!url || !url.includes('google.com/maps')) {
-alert('❌ Voer een geldige Google Maps URL in');
-return;
-}
-button.disabled = true;
-button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scrapen...';
-const headers = { 'Content-Type': 'application/json' };
-if (userId) {
-headers['x-user-id'] = userId;
-}
-try {
-const response = await fetch('/api/google-maps/scrape', {
-method: 'POST',
-headers: headers,
-body: JSON.stringify({ url: url, maxResults: 30 })
-});
-const data = await response.json();
-if (response.status === 429) {
-const days = data.days_remaining || 5;
-const hours = data.hours_remaining || 120;
-let timeText = '';
-if (days >= 1) {
-timeText = `${days} day${days > 1 ? 's' : ''}`;
-} else {
-timeText = `${hours} hour${hours > 1 ? 's' : ''}`;
-}
-let message = `⏳ Scan limit reached. You can scan again in ${timeText}.`;
-if (data.limit_type === 'free') {
-message += ' Add your own Webshare API key for unlimited scans.';
-}
-alert(message);
-button.disabled = false;
-button.innerHTML = '<i class="fas fa-map-marked-alt mr-2"></i> Scrape Maps';
-return;
-}
-if (!response.ok || !data.success) {
-throw new Error(data.error || 'Scrape failed');
-}
-const newLeads = data.leads || [];
-scrapedLeads = [...newLeads, ...scrapedLeads];
-leadCount.textContent = scrapedLeads.length;
-refreshLeadsTable();
-leadsContainer.classList.remove('hidden');
-} catch (error) {
-alert('❌ Scrape failed: ' + error.message);
-} finally {
-button.disabled = false;
-button.innerHTML = '<i class="fas fa-map-marked-alt mr-2"></i> Scrape Maps';
-}
-}
-function scanLead(website) {
-document.getElementById('singleUrlInput').value = website;
-switchMode('single');
-document.getElementById('lead-scanner').scrollIntoView({ behavior: 'smooth' });
-setTimeout(() => scanSingleURL(), 500);
-}
-function exportLeadsToCSV() {
-if (!scrapedLeads || scrapedLeads.length === 0) {
-alert('❌ No leads to export');
-return;
-}
-const headers = ['Name', 'Category', 'Website', 'Phone', 'Score', 'Email', 'Address', 'Rating', 'Reviews'];
-const rows = scrapedLeads.map(lead => [
-lead.name || '',
-lead.category || '',
-lead.website || '',
-lead.phone || '',
-lead.score || '',
-lead.email || '',
-lead.address || '',
-lead.rating || '',
-lead.reviews || ''
-]);
-let csv = headers.join(',') + '\n';
-csv += rows.map(row => row.map(cell => `"${cell || ''}"`).join(',')).join('\n');
-const blob = new Blob([csv], { type: 'text/csv' });
-const url = URL.createObjectURL(blob);
-const a = document.createElement('a');
-a.href = url;
-a.download = `contentscale-leads-${Date.now()}.csv`;
-a.click();
-URL.revokeObjectURL(url);
-alert(`✅ Exported ${scrapedLeads.length} leads to CSV`);
 }
 function toggleFilters() {
 const panel = document.getElementById('filterPanel');
