@@ -1,9 +1,10 @@
 // ============================================
-// CONTENTSCALE SERVER.JS - 100% WERKEND MET DEBUGGING
+// CONTENTSCALE SERVER.JS - PROFESSIONELE SEO SCORING MET LEERPUNTEN
 // ✅ API key status endpoint GEFIXED (was 404)
 // ✅ Google Maps scraper MET MINIMALISTISCHE, ROBUUSTE LOGICA
 // ✅ Country field truncation GEFIXED
 // ✅ Debug screenshots voor foutopsporing
+// ✅ Professionele SEO scoring met relevante aanbevelingen
 // ============================================
 process.env.PGSSLMODE = 'verify-full';
 process.env.NODE_NO_WARNINGS = '1';
@@ -695,6 +696,327 @@ app.post('/api/google-maps/scrape', async (req, res) => {
 });
 
 // ============================================
+// ✅ FIX: SEO SCAN - PROFESSIONELE SCORING MET RELEVANTE AANBEVELINGEN
+// ============================================
+app.post('/api/scan', async (req, res) => {
+  const { url } = req.body;
+  if (!url) return res.status(400).json({ success: false, error: 'URL required' });
+  
+  let scanUrl = url;
+  if (!scanUrl.startsWith('http')) scanUrl = 'https://' + scanUrl;
+  if (!isValidUrl(scanUrl)) return res.status(400).json({ success: false, error: 'Invalid URL format' });
+  
+  try {
+    console.log(`🔍 Scanning: ${scanUrl}`);
+    
+    const browser = await getBrowser();
+    if (!browser) {
+      return res.status(500).json({ success: false, error: 'Browser not available' });
+    }
+    
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1920, height: 1080 });
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+    await page.goto(scanUrl, { waitUntil: 'networkidle2', timeout: 25000 });
+    
+    const rawHtml = await page.content();
+    await page.close();
+    
+    // ✅ ANALYSEER DE HTML
+    const textContent = rawHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+    const wordCount = textContent.split(/\s+/).length;
+    const h1Count = (rawHtml.match(/<h1[^>]*>/gi) || []).length;
+    const h2Count = (rawHtml.match(/<h2[^>]*>/gi) || []).length;
+    const h3Count = (rawHtml.match(/<h3[^>]*>/gi) || []).length;
+    const listCount = (rawHtml.match(/<li[^>]*>/gi) || []).length;
+    const hasMetaDescription = rawHtml.includes('meta name="description"');
+    const hasMetaTitle = rawHtml.includes('<title>') || rawHtml.includes('meta property="og:title"');
+    const hasSchemaOrg = rawHtml.includes('schema.org');
+    const hasViewport = rawHtml.includes('viewport');
+    const hasCanonical = rawHtml.includes('rel="canonical"');
+    const hasAltTags = rawHtml.includes('alt=');
+    const hasInternalLinks = rawHtml.match(/<a[^>]*href=["'][^"']*\.(html|php|asp)/gi) || [];
+    const hasExternalLinks = rawHtml.match(/<a[^>]*href=["']https?:\/\//gi) || [];
+    const hasImages = rawHtml.match(/<img/gi) || [];
+    const hasVideos = rawHtml.match(/<video/gi) || [];
+    
+    const stats = { 
+      wordCount, 
+      h1Count, 
+      h2Count, 
+      h3Count, 
+      listCount,
+      hasMetaDescription,
+      hasMetaTitle,
+      hasSchemaOrg,
+      hasViewport,
+      hasCanonical,
+      hasAltTags,
+      internalLinks: hasInternalLinks.length,
+      externalLinks: hasExternalLinks.length,
+      images: hasImages.length,
+      videos: hasVideos.length
+    };
+    
+    // ✅ PROFESSIONELE SCORING MET GEWICHTEN
+    let graafScore = 0;
+    let craftScore = 0;
+    let technicalScore = 0;
+    let contentScore = 0;
+    let uxScore = 0;
+    
+    // GRAAF Score (30% van totaal) - Content kwaliteit
+    if (wordCount >= 2500) graafScore += 25;
+    else if (wordCount >= 1500) graafScore += 20;
+    else if (wordCount >= 1000) graafScore += 15;
+    else if (wordCount >= 500) graafScore += 10;
+    else if (wordCount >= 300) graafScore += 5;
+    
+    if (listCount >= 10) graafScore += 10;
+    else if (listCount >= 5) graafScore += 5;
+    
+    if (h2Count >= 5) graafScore += 10;
+    else if (h2Count >= 3) graafScore += 5;
+    
+    if (h3Count >= 8) graafScore += 5;
+    else if (h3Count >= 5) graafScore += 3;
+    
+    graafScore = Math.min(50, graafScore);
+    
+    // CRAFT Score (20% van totaal) - Content structuur
+    if (h1Count === 1) craftScore += 15;
+    else if (h1Count === 0) craftScore += 0;
+    else craftScore += 5; // Meerdere H1 tags = slecht
+    
+    if (h2Count >= 3) craftScore += 10;
+    else if (h2Count >= 2) craftScore += 5;
+    
+    if (h3Count >= 5) craftScore += 5;
+    
+    craftScore = Math.min(30, craftScore);
+    
+    // Technical Score (15% van totaal) - Technische SEO
+    if (hasMetaTitle) technicalScore += 10;
+    if (hasMetaDescription) technicalScore += 10;
+    if (hasSchemaOrg) technicalScore += 10;
+    if (hasViewport) technicalScore += 5;
+    if (hasCanonical) technicalScore += 5;
+    if (hasAltTags && hasImages.length > 0) technicalScore += 10;
+    if (hasInternalLinks.length >= 5) technicalScore += 10;
+    if (hasExternalLinks.length >= 3) technicalScore += 5;
+    
+    technicalScore = Math.min(20, technicalScore);
+    
+    // Content Score (25% van totaal) - Content inhoud
+    contentScore = graafScore + craftScore;
+    contentScore = Math.min(100, contentScore);
+    
+    // UX Score (10% van totaal) - User experience
+    if (hasImages.length >= 5) uxScore += 15;
+    else if (hasImages.length >= 3) uxScore += 10;
+    else if (hasImages.length >= 1) uxScore += 5;
+    
+    if (hasVideos.length >= 1) uxScore += 10;
+    if (wordCount >= 1500) uxScore += 15;
+    if (listCount >= 5) uxScore += 10;
+    if (hasInternalLinks.length >= 10) uxScore += 10;
+    if (hasExternalLinks.length >= 5) uxScore += 10;
+    
+    uxScore = Math.min(100, uxScore);
+    
+    // ✅ TOTALE SCORE BEREKENING
+    const totalScore = Math.round(
+      (graafScore / 50 * 30) + 
+      (craftScore / 30 * 20) + 
+      (technicalScore / 20 * 15) + 
+      (contentScore / 100 * 25) + 
+      (uxScore / 100 * 10)
+    );
+    
+    const quality = totalScore >= 85 ? 'excellent' : 
+                    totalScore >= 70 ? 'good' : 
+                    totalScore >= 50 ? 'average' : 'poor';
+    
+    // ✅ RELEVANTE AANBEVELINGEN MET LEERPUNTEN
+    const recommendations = [];
+    
+    // Content lengte aanbevelingen
+    if (wordCount < 300) {
+      recommendations.push({
+        title: '🚀 Urgent: Content Length',
+        description: `Your page has only ${wordCount} words. For good SEO, aim for at least 1,500-2,500 words.`,
+        priority: 'high',
+        action: 'Add comprehensive content covering your topic in depth. Include examples, case studies, and detailed explanations.',
+        learning: 'Search engines favor comprehensive content that thoroughly answers user queries. Longer content typically ranks better.',
+        target: '1,500+ words minimum, 2,500+ for competitive topics'
+      });
+    } else if (wordCount < 1000) {
+      recommendations.push({
+        title: '📝 Improve Content Length',
+        description: `Current: ${wordCount} words. Target: 1,500-2,500 words for optimal SEO.`,
+        priority: 'medium',
+        action: 'Expand your content with more detailed information, examples, and related topics.',
+        learning: 'Pages with 1,500+ words typically rank 2-3 positions higher than shorter content.',
+        target: '1,500+ words'
+      });
+    } else if (wordCount < 1500) {
+      recommendations.push({
+        title: '📈 Optimize Content Length',
+        description: `Current: ${wordCount} words. Target: 2,500+ words for competitive advantage.`,
+        priority: 'low',
+        action: 'Add more depth to your content with case studies, examples, and detailed explanations.',
+        learning: 'Top-ranking pages average 2,500+ words. More comprehensive content = better rankings.',
+        target: '2,500+ words'
+      });
+    }
+    
+    // H1 tag aanbevelingen
+    if (h1Count === 0) {
+      recommendations.push({
+        title: '🏷️ Missing H1 Tag',
+        description: 'Every page should have exactly one H1 tag for SEO.',
+        priority: 'high',
+        action: 'Add a single, descriptive H1 tag that includes your main keyword.',
+        learning: 'The H1 tag tells search engines what your page is about. It should be unique and keyword-rich.',
+        target: '1 H1 tag per page'
+      });
+    } else if (h1Count > 1) {
+      recommendations.push({
+        title: '🏷️ Multiple H1 Tags',
+        description: `You have ${h1Count} H1 tags. Use only one per page.`,
+        priority: 'medium',
+        action: 'Keep only one H1 tag and change others to H2 or H3.',
+        learning: 'Multiple H1 tags confuse search engines about your page\'s main topic.',
+        target: '1 H1 tag per page'
+      });
+    }
+    
+    // H2 tag aanbevelingen
+    if (h2Count < 2) {
+      recommendations.push({
+        title: '📄 Add More H2 Headings',
+        description: `Current: ${h2Count} H2 tags. Target: 3+ for better structure.`,
+        priority: 'medium',
+        action: 'Break your content into sections with descriptive H2 headings.',
+        learning: 'H2 tags help organize content and signal topic relevance to search engines.',
+        target: '3+ H2 tags'
+      });
+    } else if (h2Count < 5) {
+      recommendations.push({
+        title: '📄 Optimize H2 Structure',
+        description: `Current: ${h2Count} H2 tags. Target: 5+ for comprehensive coverage.`,
+        priority: 'low',
+        action: 'Add more section headings to improve content organization.',
+        learning: 'Well-structured content with multiple H2 tags ranks better and improves readability.',
+        target: '5+ H2 tags'
+      });
+    }
+    
+    // Meta description aanbevelingen
+    if (!hasMetaDescription) {
+      recommendations.push({
+        title: '📝 Missing Meta Description',
+        description: 'Add a compelling meta description to improve click-through rate.',
+        priority: 'high',
+        action: 'Add a meta description tag (150-160 characters) with your main keyword.',
+        learning: 'Meta descriptions don\'t directly affect rankings but significantly impact CTR from search results.',
+        target: '150-160 character meta description'
+      });
+    }
+    
+    // Schema.org aanbevelingen
+    if (!hasSchemaOrg) {
+      recommendations.push({
+        title: '📊 Add Structured Data',
+        description: 'Your page is missing schema.org structured data.',
+        priority: 'medium',
+        action: 'Implement schema markup relevant to your content (Article, Product, etc.).',
+        learning: 'Structured data helps search engines understand your content and can enable rich snippets in results.',
+        target: 'Relevant schema.org markup'
+      });
+    }
+    
+    // Image alt tags aanbevelingen
+    if (hasImages.length > 0 && !hasAltTags) {
+      recommendations.push({
+        title: '🖼️ Missing Alt Tags',
+        description: `You have ${hasImages.length} images without alt text.`,
+        priority: 'medium',
+        action: 'Add descriptive alt tags to all images for accessibility and SEO.',
+        learning: 'Alt tags help search engines understand image content and improve accessibility for screen readers.',
+        target: 'Descriptive alt tags on all images'
+      });
+    }
+    
+    // Internal links aanbevelingen
+    if (hasInternalLinks.length < 3) {
+      recommendations.push({
+        title: '🔗 Add Internal Links',
+        description: `Current: ${hasInternalLinks.length} internal links. Target: 5+ for better site structure.`,
+        priority: 'medium',
+        action: 'Link to related pages on your site using descriptive anchor text.',
+        learning: 'Internal links help distribute page authority and keep users engaged on your site longer.',
+        target: '5+ relevant internal links'
+      });
+    }
+    
+    // List aanbevelingen
+    if (listCount < 3) {
+      recommendations.push({
+        title: '📋 Add More Lists',
+        description: `Current: ${listCount} lists. Target: 5+ for better readability.`,
+        priority: 'low',
+        action: 'Use bullet points and numbered lists to break up text and improve scannability.',
+        learning: 'Lists make content more readable and help highlight key points for both users and search engines.',
+        target: '5+ lists'
+      });
+    }
+    
+    // ✅ GEEN AANBEVELINGEN = PERFECT
+    const finalRecommendations = recommendations.length > 0 ? recommendations : [{
+      title: '🎉 Excellent Work!',
+      description: 'Your page meets all SEO best practices. Keep up the great work!',
+      priority: 'none',
+      action: 'Continue creating high-quality content and monitor your rankings.',
+      learning: 'Maintaining high SEO standards consistently is key to long-term success.',
+      target: 'Maintain current quality'
+    }];
+    
+    const result = {
+      success: true,
+      url: scanUrl,
+      score: totalScore,
+      quality,
+      metrics: {
+        graaf: graafScore,
+        craft: craftScore,
+        technical: technicalScore,
+        content: contentScore,
+        ux: uxScore
+      },
+      content_stats: stats,
+      recommendations: {
+        all: finalRecommendations
+      },
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log(`✅ Scan complete: ${scanUrl} - ${totalScore}/100 (${quality})`);
+    console.log(`   • GRAAF: ${graafScore}/50`);
+    console.log(`   • CRAFT: ${craftScore}/30`);
+    console.log(`   • Technical: ${technicalScore}/20`);
+    console.log(`   • Content: ${contentScore}/100`);
+    console.log(`   • UX: ${uxScore}/100`);
+    console.log(`   • Recommendations: ${finalRecommendations.length}`);
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Scan error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
 // ✅ GEFIXTE LEADERBOARD ENDPOINTS
 // ============================================
 
@@ -925,79 +1247,6 @@ app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
 // ============================================
 // BESTAANDE API ENDPOINTS (blijven hetzelfde)
 // ============================================
-
-// Scan endpoint
-app.post('/api/scan', async (req, res) => {
-  const { url } = req.body;
-  if (!url) return res.status(400).json({ success: false, error: 'URL required' });
-  
-  let scanUrl = url;
-  if (!scanUrl.startsWith('http')) scanUrl = 'https://' + scanUrl;
-  if (!isValidUrl(scanUrl)) return res.status(400).json({ success: false, error: 'Invalid URL format' });
-  
-  try {
-    console.log(`🔍 Scanning: ${scanUrl}`);
-    
-    const browser = await getBrowser();
-    if (!browser) {
-      return res.status(500).json({ success: false, error: 'Browser not available' });
-    }
-    
-    const page = await browser.newPage();
-    await page.setViewport({ width: 1920, height: 1080 });
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-    await page.goto(scanUrl, { waitUntil: 'networkidle2', timeout: 25000 });
-    
-    const rawHtml = await page.content();
-    await page.close();
-    
-    const textContent = rawHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
-    const wordCount = textContent.split(/\s+/).length;
-    const h1Count = (rawHtml.match(/<h1[^>]*>/gi) || []).length;
-    const h2Count = (rawHtml.match(/<h2[^>]*>/gi) || []).length;
-    const h3Count = (rawHtml.match(/<h3[^>]*>/gi) || []).length;
-    const listCount = (rawHtml.match(/<li[^>]*>/gi) || []).length;
-    
-    const stats = { wordCount, h1Count, h2Count, h3Count, listCount };
-    
-    // Simple scoring
-    let score = 50;
-    if (wordCount > 500) score += 10;
-    if (wordCount > 1000) score += 10;
-    if (h1Count === 1) score += 10;
-    if (h2Count >= 3) score += 10;
-    if (rawHtml.includes('schema.org')) score += 10;
-    
-    const quality = score >= 85 ? 'excellent' : score >= 70 ? 'good' : score >= 50 ? 'average' : 'poor';
-    
-    const result = {
-      success: true,
-      url: scanUrl,
-      score: Math.min(100, score),
-      quality,
-      metrics: {
-        graaf: 30,
-        craft: 20,
-        technical: 15,
-        content: score,
-        ux: 70
-      },
-      content_stats: stats,
-      recommendations: {
-        all: [
-          { title: 'Improve content length', description: `Current: ${wordCount} words. Target: 2500+` }
-        ]
-      },
-      timestamp: new Date().toISOString()
-    };
-    
-    console.log(`✅ Scan complete: ${scanUrl} - ${score}/100 (${quality})`);
-    res.json(result);
-  } catch (error) {
-    console.error('Scan error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
 
 // Freelancers endpoints
 app.get('/api/freelancers', async (req, res) => {
@@ -1466,7 +1715,7 @@ app.use((err, req, res, next) => {
 async function startServer() {
   console.log('');
   console.log('🚀 =====================================');
-  console.log('🚀  CONTENTSCALE SERVER - 100% WERKEND');
+  console.log('🚀  CONTENTSCALE SERVER - PROFESSIONELE SEO SCORING');
   console.log('🚀 =====================================');
   console.log('');
   
@@ -1485,14 +1734,19 @@ async function startServer() {
     console.log('   • Debug screenshots bij fouten');
     console.log('   • Country field truncation GEFIXED (max 10 tekens)');
     console.log('   • Leaderboard edit/delete WERKT perfect');
+    console.log('   • Professionele SEO scoring MET RELEVANTE AANBEVELINGEN');
     console.log('');
-    console.log('⚠️  BELANGRIJK OVER GOOGLE MAPS SCRAPING:');
-    console.log('   • Google heeft STERKE anti-bot maatregelen in 2026');
-    console.log('   • Wacht 2-3 minuten tussen pogingen');
-    console.log('   • Gebruik brede zoekopdrachten:');
-    console.log('     ✅ Goed:    "SEO agencies Netherlands"');
-    console.log('     ⚠️  Minder goed: "SEO agencies Amsterdam Netherlands"');
-    console.log('   • Als het blijft falen: gebruik handmatige CSV upload');
+    console.log('💡 SEO SCORING SYSTEM:');
+    console.log('   • GRAAF (30%): Content lengte, lists, H2/H3 structuur');
+    console.log('   • CRAFT (20%): H1/H2/H3 tags, content organisatie');
+    console.log('   • Technical (15%): Meta tags, schema.org, canonical, alt tags');
+    console.log('   • Content (25%): Combinatie van GRAAF + CRAFT');
+    console.log('   • UX (10%): Images, videos, internal links, readability');
+    console.log('');
+    console.log('📚 AANBEVELINGEN MET LEERPUNTEN:');
+    console.log('   • Elke aanbeveling bevat actie + leerdoel + target');
+    console.log('   • Prioriteiten: high, medium, low, none');
+    console.log('   • Geen irrelevante aanbevelingen meer!');
     console.log('');
   });
 }
