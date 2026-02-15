@@ -54,6 +54,21 @@ color: #6b21a8 !important;
 .bg-gray-800 { background-color: #111827; }
 .bg-gray-700 { background-color: #1f2937; }
 .bg-gray-900\/95 { background-color: rgba(3, 7, 18, 0.95); }
+
+/* WIDTH CONSISTENCY FIX - All sections max 1280px */
+.max-w-7xl {
+max-width: 1280px !important;
+}
+.scanner-container,
+.why-contentscale-section,
+#lead-scanner > div,
+#leaderboard > div,
+.feature-grid-wrapper {
+max-width: 1280px;
+margin-left: auto;
+margin-right: auto;
+}
+
 .btn {
 display: inline-flex;
 align-items: center;
@@ -533,63 +548,6 @@ font-size: 0.75rem;
 .recommendation-action { color: #f3f4f6; }
 .recommendation-learning { color: #60a5fa; }
 .recommendation-target { color: #34d399; }
-/* COMING SOON BANNER */
-.coming-soon-banner {
-background: linear-gradient(135deg, #6b7280, #4b5563);
-border-left: 4px solid #9ca3af;
-border-radius: 0.75rem;
-padding: 1.5rem;
-margin-bottom: 1.5rem;
-}
-.coming-soon-banner h3 {
-color: #f3f4f6 !important;
-margin-bottom: 0.5rem;
-}
-.coming-soon-banner p {
-color: #d1d5db !important;
-margin-bottom: 1rem;
-}
-/* CSV UPLOAD INFO */
-.csv-info-card {
-background: linear-gradient(135deg, #1e293b, #0f172a);
-border: 1px solid #374151;
-border-radius: 1rem;
-padding: 1.5rem;
-margin-bottom: 1.5rem;
-}
-.csv-info-card h3 {
-margin-bottom: 1rem;
-color: #f3f4f6 !important;
-}
-.csv-info-card ul {
-margin-left: 1.5rem;
-margin-top: 0.5rem;
-}
-.csv-info-card li {
-margin-bottom: 0.5rem;
-color: #d1d5db !important;
-}
-/* LEAD CATEGORIES */
-.lead-category {
-padding: 0.5rem 1rem;
-border-radius: 0.5rem;
-margin: 0.25rem 0;
-}
-.lead-category-high {
-background: #4ade8010;
-border: 1px solid #4ade80;
-color: #4ade80;
-}
-.lead-category-medium {
-background: #facc1510;
-border: 1px solid #facc15;
-color: #facc15;
-}
-.lead-category-low {
-background: #f8717110;
-border: 1px solid #f87171;
-color: #f87171;
-}
 </style>
 </head>
 <body class="bg-gray-900">
@@ -632,54 +590,7 @@ color: #f87171;
 <span>⚡ Auto-queue (100/day)</span>
 </div>
 </div>
-<!-- COMING SOON BANNER VOOR BULK SCANNER -->
-<div class="coming-soon-banner">
-<div class="flex items-start gap-3">
-<div class="text-4xl">⏳</div>
-<div>
-<h3 class="text-xl font-bold">Bulk Scanner & Google Maps - Coming Soon</h3>
-<p class="text-sm mb-2">We're working on bulk scanning features and CSV upload functionality. Stay tuned for updates!</p>
-<p class="text-xs mt-2 text-yellow-400">
-💡 <strong>Need bulk scanning now?</strong> Contact us via WhatsApp for custom solutions.
-</p>
-</div>
-</div>
-</div>
-<!-- CSV UPLOAD INFO -->
-<div class="csv-info-card">
-<h3 class="text-xl font-bold">📋 CSV Upload - What You Can Do</h3>
-<p class="text-sm mb-2">When CSV upload is available, you'll be able to:</p>
-<ul class="text-sm space-y-1">
-<li>✅ <strong>Upload a list of URLs to scan in bulk</strong></li>
-<li>✅ <strong>Get detailed SEO scores for all URLs at once</strong></li>
-<li>✅ <strong>Export results to CSV with all metrics</strong></li>
-<li>✅ <strong>Filter by score, country, or category</strong></li>
-<li>✅ <strong>Schedule automatic scans for your URLs</strong></li>
-<li>✅ <strong>Track SEO improvements over time</strong></li>
-</ul>
-<p class="text-xs mt-3 text-yellow-400">
-⚠️ <strong>Note:</strong> CSV upload requires API key configuration for unlimited scans.
-</p>
-</div>
-<!-- LEAD CATEGORIES INFO -->
-<div class="csv-info-card">
-<h3 class="text-xl font-bold">📊 Lead Categories Explained</h3>
-<p class="text-sm mb-2">How we classify leads from your CSV uploads:</p>
-<div class="lead-category lead-category-high">
-<strong>85+ Score:</strong> Leaderboard candidate - automatically submitted for admin review
-</div>
-<div class="lead-category lead-category-medium">
-<strong>60-84 Score:</strong> Lead with existing website - SEO optimization offer
-</div>
-<div class="lead-category lead-category-low">
-<strong>Below 60 Score:</strong> Lead without website - offer to build website
-</div>
-<p class="text-sm mt-2">
-<strong>How it works:</strong> After scanning your CSV, leads will be automatically categorized based on their SEO score. 
-85+ scores go directly to the leaderboard for admin review, 60-84 scores become SEO optimization leads, 
-and scores below 60 become website building leads. All leads can be exported and contacted via email.
-</p>
-</div>
+
 <div class="max-w-3xl mx-auto">
 <div class="card">
 <div class="flex flex-col sm:flex-row gap-3">
@@ -705,6 +616,7 @@ spellcheck="false">
 <div id="singleResult" class="hidden mt-4"></div>
 </div>
 </div>
+
 <!-- API Configuration Accordion - Direct onder scanner -->
 <div class="accordion-item">
 <button onclick="toggleAccordion('apiConfig')" class="accordion-header">
@@ -712,6 +624,8 @@ spellcheck="false">
 <i class="fas fa-key text-purple-400"></i>
 <span class="font-bold">Configure API Keys for Unlimited Scans</span>
 <span id="apiStatusIndicator" class="api-status-indicator api-status-inactive"></span>
+</span>
+<i class="fas fa-chevron-down" id="apiConfigIcon"></i>
 </button>
 <div id="apiConfig" class="accordion-content hidden">
 <div class="bg-gray-900 rounded-lg p-5 border border-gray-700">
@@ -791,6 +705,7 @@ Webshare Proxy Configuration
 </div>
 </div>
 </div>
+
 <div class="mt-8 bg-gradient-to-r from-purple-800 via-pink-800 to-purple-800 rounded-xl p-6 text-center border border-purple-400">
 <h3 class="text-2xl font-bold mb-2 text-white">💼 Are You an SEO Specialist or Content Marketer?</h3>
 <p class="text-xl text-gray-200 mb-4">
@@ -803,6 +718,7 @@ We train you in Modern SEO for the AI-era.
 </div>
 </div>
 </div>
+
 <div class="mb-16">
 <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 border border-gray-700">
 <div class="text-center mb-12">
@@ -861,6 +777,7 @@ Our Lead Scanner, Google Maps bulk scraper, and content quality analyzer are 100
 </div>
 </div>
 </div>
+
 <div id="leaderboard" class="mb-16">
 <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 <div class="text-center mb-8">
@@ -944,6 +861,7 @@ Our Lead Scanner, Google Maps bulk scraper, and content quality analyzer are 100
 </div>
 </div>
 </div>
+
 <div id="freelancers" class="mb-16">
 <div class="text-center mb-8">
 <h2 class="text-4xl font-bold mb-3 text-white">🎯 Verified SEO Specialists</h2>
@@ -954,6 +872,7 @@ Our Lead Scanner, Google Maps bulk scraper, and content quality analyzer are 100
 </div>
 <div id="freelancersGrid" class="grid-3"></div>
 </div>
+
 <div class="mb-16">
 <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 <div class="flex flex-col md:flex-row gap-8 items-center">
@@ -1005,6 +924,7 @@ His methodology has achieved a documented <strong>78% recovery rate within 90 da
 </div>
 </div>
 </div>
+
 <div class="mb-16 max-w-4xl mx-auto">
 <div class="text-center mb-8">
 <h2 class="text-4xl font-bold mb-3 text-white">❓ Frequently Asked Questions</h2>
@@ -1049,6 +969,7 @@ His methodology has achieved a documented <strong>78% recovery rate within 90 da
 </div>
 </div>
 </div>
+
 <div class="mb-16">
 <div class="bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-900 rounded-2xl p-12 text-center border-2 border-purple-500">
 <div class="text-5xl mb-4">🚀</div>
@@ -1071,6 +992,7 @@ class="btn-success btn text-lg px-8 py-4">
 </div>
 </div>
 </div>
+
 <footer>
 <div class="max-w-7xl mx-auto px-6 py-12">
 <div class="grid md:grid-cols-4 gap-8 mb-8">
@@ -1126,6 +1048,7 @@ Helping businesses recover traffic from AI Overviews since 2018.
 </div>
 </div>
 </footer>
+
 <div id="freelancerModal" class="modal">
 <div class="modal-content">
 <div class="flex justify-between items-center mb-6">
@@ -1192,6 +1115,7 @@ We'll review and approve within 24 hours. You'll receive an email with your veri
 </div>
 </div>
 </div>
+
 <script>
 // ==========================================
 // FUNCTIE DEFINISIES - MOETEN BOVENAAN STAAN
@@ -1203,6 +1127,7 @@ input.value = '';
 console.log('✅ Input veld geleegd');
 }
 }
+
 // ==========================================
 // "OT" UIT INPUT VELD FIX
 // ==========================================
@@ -1210,6 +1135,7 @@ console.log('✅ Input veld geleegd');
 window.addEventListener('DOMContentLoaded', forceEmptyInput);
 window.addEventListener('load', forceEmptyInput);
 window.addEventListener('pageshow', forceEmptyInput);
+
 setInterval(function() {
 const input = document.getElementById('singleUrlInput');
 if (input && input.value === 'ot') {
@@ -1217,6 +1143,7 @@ input.value = '';
 console.log('✅ Interval: input geleegd');
 }
 }, 100);
+
 document.addEventListener('focusin', function() {
 setTimeout(function() {
 const input = document.getElementById('singleUrlInput');
@@ -1226,6 +1153,7 @@ input.value = '';
 }, 10);
 });
 })();
+
 let scrapedLeads = [];
 let currentScanResult = null;
 let allLeaderboardEntries = [];
@@ -1233,6 +1161,7 @@ let sendgridConfigured = false;
 let webshareConfigured = false;
 let queueInterval = null;
 let userId = null;
+
 document.addEventListener('DOMContentLoaded', function() {
 console.log('📋 Publieke pagina geladen');
 forceEmptyInput();
@@ -1240,9 +1169,11 @@ loadLeaderboardData();
 loadFreelancers();
 registerUser();
 loadApiStatus();
+
 document.getElementById('singleUrlInput')?.addEventListener('keypress', function(e) {
 if (e.key === 'Enter') scanSingleURL();
 });
+
 const bioTextarea = document.getElementById('freelancerBio');
 if (bioTextarea) {
 bioTextarea.addEventListener('input', function() {
@@ -1251,6 +1182,7 @@ document.getElementById('bioCharCount').textContent = count + '/200';
 });
 }
 });
+
 // ==========================================
 // ACCORDEON FUNCTIES
 // ==========================================
@@ -1259,9 +1191,12 @@ const content = document.getElementById(id);
 const icon = document.getElementById(id + 'Icon');
 if (content) {
 content.classList.toggle('hidden');
+if (icon) {
 icon.style.transform = content.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
 }
 }
+}
+
 // ==========================================
 // USER REGISTRATIE
 // ==========================================
@@ -1287,6 +1222,7 @@ console.log('✅ Existing user:', userId);
 console.error('❌ User registration error:', error);
 }
 }
+
 // ==========================================
 // API STATUS
 // ==========================================
@@ -1299,9 +1235,11 @@ const response = await fetch('/api/user/keys/status', {
 headers: { 'x-user-id': userId }
 });
 const data = await response.json();
+
 if (data.success) {
 const indicator = document.getElementById('apiStatusIndicator');
 const statusText = document.getElementById('apiStatusText');
+
 if (data.hasSendgrid || data.hasWebshare) {
 indicator.className = 'api-status-indicator api-status-active';
 statusText.textContent = 'Custom API keys configured';
@@ -1309,6 +1247,7 @@ statusText.textContent = 'Custom API keys configured';
 indicator.className = 'api-status-indicator api-status-inactive';
 statusText.textContent = 'Using default settings (limited)';
 }
+
 if (data.hasSendgrid) {
 document.getElementById('sendgridStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
 if (data.sendgrid) {
@@ -1319,6 +1258,7 @@ document.getElementById('sendgridUsageBar').style.width = percentage + '%';
 }
 sendgridConfigured = true;
 }
+
 if (data.hasWebshare) {
 document.getElementById('webshareStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
 webshareConfigured = true;
@@ -1328,6 +1268,7 @@ webshareConfigured = true;
 console.error('Error loading API status:', error);
 }
 }
+
 // ==========================================
 // SENDGRID FUNCTIES
 // ==========================================
@@ -1336,11 +1277,13 @@ if (!userId) {
 alert('❌ User not registered. Please refresh the page.');
 return;
 }
+
 const apiKey = document.getElementById('sendgridApiKey').value;
 if (!apiKey || apiKey.includes('••••')) {
 alert('❌ Please enter your Sendgrid API key');
 return;
 }
+
 try {
 const response = await fetch('/api/user/sendgrid/configure', {
 method: 'POST',
@@ -1355,6 +1298,7 @@ dailyLimit: 100
 })
 });
 const data = await response.json();
+
 if (data.success) {
 alert('✅ Sendgrid configuration saved successfully');
 document.getElementById('sendgridStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
@@ -1367,11 +1311,13 @@ alert('❌ ' + (data.error || 'Failed to save configuration'));
 alert('❌ Error: ' + error.message);
 }
 }
+
 async function testSendgridConfig() {
 if (!userId) {
 alert('❌ User not registered');
 return;
 }
+
 try {
 const response = await fetch('/api/email/send', {
 method: 'POST',
@@ -1387,6 +1333,7 @@ html: '<p>This is a test email from your ContentScale account.</p>'
 })
 });
 const data = await response.json();
+
 if (data.success) {
 alert('✅ Test email sent successfully!');
 } else if (data.needs_api_key) {
@@ -1400,6 +1347,7 @@ alert('❌ ' + (data.error || 'Test failed'));
 alert('❌ Error: ' + error.message);
 }
 }
+
 // ==========================================
 // WEBSHARE FUNCTIES
 // ==========================================
@@ -1408,11 +1356,13 @@ if (!userId) {
 alert('❌ User not registered. Please refresh the page.');
 return;
 }
+
 const apiKey = document.getElementById('webshareApiKey').value;
 if (!apiKey) {
 alert('❌ Please enter your Webshare API key');
 return;
 }
+
 try {
 const response = await fetch('/api/user/webshare/configure', {
 method: 'POST',
@@ -1426,6 +1376,7 @@ apiKey
 })
 });
 const data = await response.json();
+
 if (data.success) {
 alert(`✅ Webshare configured! Found ${data.proxy_count || 10} proxies.`);
 document.getElementById('webshareStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
@@ -1442,11 +1393,13 @@ alert('❌ ' + (data.error || 'Failed to save configuration'));
 alert('❌ Error: ' + error.message);
 }
 }
+
 async function testWebshareConfig() {
 if (!userId) {
 alert('❌ User not registered');
 return;
 }
+
 try {
 const response = await fetch('/api/google-maps/scrape', {
 method: 'POST',
@@ -1461,6 +1414,7 @@ test: true
 })
 });
 const data = await response.json();
+
 if (data.using_custom_proxy) {
 alert('✅ Proxy test successful! Your proxies are working.');
 } else if (data.proxy_error) {
@@ -1472,6 +1426,7 @@ alert('ℹ️ Using default settings (no proxy)');
 alert('❌ Error: ' + error.message);
 }
 }
+
 // ==========================================
 // SINGLE URL SCAN FUNCTIE
 // ==========================================
@@ -1482,39 +1437,50 @@ const progress = document.getElementById('singleProgress');
 const progressBar = document.getElementById('singleProgressBar');
 const progressText = document.getElementById('singleProgressText');
 const resultDiv = document.getElementById('singleResult');
+
 let url = input.value.trim();
 if (!url) {
 alert('❌ Please enter a URL');
 return;
 }
+
 if (!url.startsWith('http')) {
 url = 'https://' + url;
 }
+
 button.disabled = true;
 button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scannen...';
 progress.classList.remove('hidden');
 progressBar.style.width = '20%';
 progressText.textContent = 'Browser starten...';
+
 try {
 const response = await fetch('/api/scan', {
 method: 'POST',
 headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({ url: url })
 });
+
 progressBar.style.width = '60%';
 progressText.textContent = 'Content analyseren...';
+
 const data = await response.json();
+
 if (!response.ok || !data.success) {
 throw new Error(data.error || 'Scan failed');
 }
+
 displayScanResult(data);
+
 progressBar.style.width = '100%';
 progressText.textContent = 'Scan compleet!';
+
 setTimeout(() => {
 progress.classList.add('hidden');
 button.disabled = false;
 button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
 }, 500);
+
 } catch (error) {
 console.error('Scan error:', error);
 alert('❌ Scan failed: ' + error.message);
@@ -1523,6 +1489,7 @@ button.disabled = false;
 button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
 }
 }
+
 // ==========================================
 // DISPLAY SCAN RESULT
 // ==========================================
@@ -1537,11 +1504,13 @@ const technical = result.metrics?.technical || 0;
 const words = result.content_stats?.wordCount || 0;
 const contentQuality = result.metrics?.content || 0;
 const uxScore = result.metrics?.ux || 0;
+
 // ✅ NIEUWE AANBEVELINGEN MET LEERPUNTEN
 let recommendations = [];
 if (result.recommendations?.all && result.recommendations.all.length > 0) {
 recommendations = result.recommendations.all;
 }
+
 let recsHtml = '';
 if (recommendations.length > 0) {
 recommendations.forEach(rec => {
@@ -1550,6 +1519,7 @@ let priorityClass = 'priority-none';
 if (rec.priority === 'high') priorityClass = 'priority-high';
 else if (rec.priority === 'medium') priorityClass = 'priority-medium';
 else if (rec.priority === 'low') priorityClass = 'priority-low';
+
 recsHtml += `
 <div class="recommendation-card">
 <div class="flex items-start justify-between mb-2">
@@ -1587,12 +1557,14 @@ ${rec.target ? `
 } else {
 recsHtml = '<p class="text-gray-400 text-sm">No specific recommendations available for this page.</p>';
 }
+
 let qualityColor = 'bg-gray-600';
 if (quality === 'excellent') qualityColor = 'bg-green-600';
 else if (quality === 'good') qualityColor = 'bg-blue-600';
 else if (quality === 'average') qualityColor = 'bg-yellow-600';
 else if (quality === 'poor') qualityColor = 'bg-red-600';
 else if (quality === 'below-average') qualityColor = 'bg-orange-600';
+
 resultDiv.innerHTML = `
 <div class="bg-gray-800 rounded-xl border-2 border-purple-500 p-6 mt-4">
 <div class="text-center mb-4">
@@ -1602,10 +1574,12 @@ resultDiv.innerHTML = `
 Quality: ${quality.charAt(0).toUpperCase() + quality.slice(1)}
 </span>
 </div>
+
 <div class="text-center mb-6">
 <div class="text-6xl font-bold text-white">${currentScore}</div>
 <div class="text-sm text-gray-400">out of 100</div>
 </div>
+
 <div class="grid grid-cols-2 gap-4 mb-5">
 <div class="bg-gray-900 rounded-lg p-4 text-center">
 <div class="text-sm text-gray-400 mb-1">GRAAF (50)</div>
@@ -1624,6 +1598,7 @@ Quality: ${quality.charAt(0).toUpperCase() + quality.slice(1)}
 <div class="text-2xl font-bold text-white">${words.toLocaleString()}</div>
 </div>
 </div>
+
 <div class="space-y-3 mb-6">
 <div>
 <div class="flex justify-between items-center mb-1">
@@ -1644,10 +1619,12 @@ Quality: ${quality.charAt(0).toUpperCase() + quality.slice(1)}
 </div>
 </div>
 </div>
+
 <div class="border-t border-gray-700 pt-5 mb-5">
 <h3 class="text-xl font-bold text-white mb-4">📋 Priority Recommendations</h3>
 ${recsHtml}
 </div>
+
 <div class="flex gap-3">
 <button onclick="addToLeaderboard()"
 class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-semibold transition-all">
@@ -1660,9 +1637,11 @@ Close
 </div>
 </div>
 `;
+
 resultDiv.classList.remove('hidden');
 resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
+
 function addToLeaderboard() {
 const resultDiv = document.getElementById('singleResult');
 const urlElement = resultDiv.querySelector('p.text-md');
@@ -1670,19 +1649,24 @@ if (!urlElement) {
 alert('❌ No scan result found');
 return;
 }
+
 const urlText = urlElement.textContent || '';
 const companyName = prompt('Enter company name (optional):', '');
 const contactEmail = prompt('Enter your email to receive congratulations if approved (optional):', '');
+
 if (!contactEmail) {
 alert('✅ Your request has been sent to admin for approval (85+ required)');
 return;
 }
+
 if (!contactEmail.includes('@') || !contactEmail.includes('.')) {
 alert('❌ Please enter a valid email address');
 return;
 }
+
 alert(`✅ Thank you! Admin will review your submission. If approved (85+ score required), a congratulations email will be sent to ${contactEmail} with your shareable leaderboard link.`);
 }
+
 // ==========================================
 // LEADERBOARD & FREELANCERS FUNCTIES
 // ==========================================
@@ -1690,12 +1674,15 @@ async function loadLeaderboardData() {
 try {
 const response = await fetch('/api/leaderboard');
 const data = await response.json();
+
 if (data.success && data.entries && data.entries.length > 0) {
 allLeaderboardEntries = data.entries;
+
 document.getElementById('totalAgencies').textContent = data.stats?.totalAgencies || 0;
 document.getElementById('avgScore').textContent = data.averageScore || 0;
 document.getElementById('countriesCount').textContent = data.stats?.countriesCount || 0;
 document.getElementById('activeHelpers').textContent = data.stats?.activeHelpers || 0;
+
 renderTop3();
 renderRankings4to15();
 renderRankings16Plus();
@@ -1708,31 +1695,38 @@ console.error('❌ Fout bij laden leaderboard:', error);
 showEmptyLeaderboard();
 }
 }
+
 function showEmptyLeaderboard() {
 document.getElementById('totalAgencies').textContent = '0';
 document.getElementById('avgScore').textContent = '0';
 document.getElementById('countriesCount').textContent = '0';
 document.getElementById('activeHelpers').textContent = '0';
+
 const container = document.getElementById('top3-container');
 if (container) {
 container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Geen leaderboard entries gevonden</div>';
 }
+
 document.getElementById('rankings4to15Container').style.display = 'none';
 document.getElementById('totalCount').textContent = '0';
 }
+
 function renderTop3() {
 const container = document.getElementById('top3-container');
 if (!container) return;
+
 const top3 = allLeaderboardEntries.slice(0, 3);
 if (top3.length === 0) {
 container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Geen entries gevonden</div>';
 return;
 }
+
 container.innerHTML = top3.map((entry, index) => {
 const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
 const medalClass = index === 0 ? 'gold' : index === 1 ? 'silver' : 'bronze';
 const rankText = index === 0 ? '1st Worldwide' : index === 1 ? '2nd Worldwide' : '3rd Worldwide';
 const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+
 return `
 <div class="top-card ${medalClass}">
 <div class="text-5xl mb-2">${medal}</div>
@@ -1747,18 +1741,23 @@ return `
 `;
 }).join('');
 }
+
 function renderRankings4to15() {
 const grid = document.getElementById('rankings4to15Grid');
 if (!grid) return;
+
 const rankings = allLeaderboardEntries.slice(3, 15);
 if (rankings.length === 0) {
 document.getElementById('rankings4to15Container').style.display = 'none';
 return;
 }
+
 document.getElementById('rankings4to15Container').style.display = 'block';
+
 grid.innerHTML = rankings.map((entry, index) => {
 const actualRank = index + 4;
 const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+
 return `
 <div class="rank-card">
 <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
@@ -1772,21 +1771,27 @@ View Website <i class="fas fa-external-link-alt ml-1"></i>
 `;
 }).join('');
 }
+
 function renderRankings16Plus() {
 const tbody = document.getElementById('rankingsTbody');
 const totalCount = document.getElementById('totalCount');
 if (!tbody) return;
+
 const rankings = allLeaderboardEntries.slice(15, 35);
+
 if (totalCount) {
 totalCount.textContent = allLeaderboardEntries.length;
 }
+
 if (rankings.length === 0) {
 tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-400">Geen rankings 16+</td></tr>';
 return;
 }
+
 tbody.innerHTML = rankings.map((entry, index) => {
 const actualRank = index + 16;
 const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+
 return `
 <tr>
 <td><span class="inline-flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full font-bold">${actualRank}</span></td>
@@ -1799,20 +1804,26 @@ return `
 `;
 }).join('');
 }
+
 async function loadFreelancers() {
 try {
 const response = await fetch('/api/freelancers');
 const data = await response.json();
+
 const grid = document.getElementById('freelancersGrid');
 if (!grid) return;
+
 const freelancers = data.freelancers || [];
+
 if (freelancers.length === 0) {
 grid.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Geen freelancers gevonden</div>';
 return;
 }
+
 grid.innerHTML = freelancers.map(f => {
 const firstName = f.name.split(' ')[0];
 const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase();
+
 return `
 <div class="card hover:border-purple-500">
 <div class="card-content">
@@ -1851,6 +1862,7 @@ document.getElementById('freelancersGrid').innerHTML =
 '<div class="col-span-3 text-center py-8 text-gray-400">Kon freelancers niet laden</div>';
 }
 }
+
 function extractDomainFromUrl(url) {
 if (!url) return 'Bedrijf';
 try {
@@ -1862,6 +1874,7 @@ return name.charAt(0).toUpperCase() + name.slice(1);
 return 'Bedrijf';
 }
 }
+
 function getCountryFlag(country) {
 const flags = {
 'Netherlands': '🇳🇱', 'NL': '🇳🇱',
@@ -1880,18 +1893,23 @@ const flags = {
 };
 return flags[country] || '🌐';
 }
+
 function renderCountryFilters() {
 const div = document.getElementById('countryFilters');
 if (!div) return;
+
 const countries = [...new Set(allLeaderboardEntries.map(e => e.country))];
+
 let html = '<button class="filter-tag active" onclick="filterByCountry(\'all\')">🌍 All</button>';
 countries.forEach(country => {
 if (country) {
 html += `<button class="filter-tag" onclick="filterByCountry('${country}')">${getCountryFlag(country)} ${country}</button>`;
 }
 });
+
 div.innerHTML = html;
 }
+
 function toggleFilters() {
 const panel = document.getElementById('filterPanel');
 const icon = document.getElementById('filterIcon');
@@ -1901,6 +1919,7 @@ icon.classList.toggle('fa-chevron-down');
 icon.classList.toggle('fa-chevron-up');
 }
 }
+
 function toggleRankings() {
 const container = document.getElementById('rankingsContainer');
 const toggleText = document.getElementById('rankingsToggleText');
@@ -1909,27 +1928,34 @@ container.classList.toggle('hidden');
 toggleText.textContent = container.classList.contains('hidden') ? '📊 Show Rankings 16+' : '📊 Hide Rankings 16+';
 }
 }
+
 function filterByCountry(country) {
 console.log('Filter by country:', country);
 }
+
 function filterAgencies() {
 const query = document.getElementById('searchInput')?.value.toLowerCase() || '';
+
 if (!query) {
 renderRankings4to15();
 renderRankings16Plus();
 return;
 }
+
 const filtered = allLeaderboardEntries.filter(entry =>
 (entry.company_name || '').toLowerCase().includes(query) ||
 (entry.url || '').toLowerCase().includes(query) ||
 extractDomainFromUrl(entry.url).toLowerCase().includes(query)
 );
+
 const rankings4to15Grid = document.getElementById('rankings4to15Grid');
 const rankings4to15 = filtered.slice(3, 15);
+
 if (rankings4to15Grid) {
 rankings4to15Grid.innerHTML = rankings4to15.map((entry, index) => {
 const actualRank = index + 4;
 const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+
 return `
 <div class="rank-card">
 <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
@@ -1944,6 +1970,7 @@ View Website
 }).join('');
 }
 }
+
 function toggleFAQ(id) {
 const answer = document.getElementById(`faqAnswer${id}`);
 const icon = document.getElementById(`faqIcon${id}`);
@@ -1952,6 +1979,7 @@ answer.classList.toggle('hidden');
 icon.style.transform = answer.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
 }
 }
+
 function openFreelancerModal() {
 const modal = document.getElementById('freelancerModal');
 if (modal) {
@@ -1959,6 +1987,7 @@ modal.classList.add('active');
 document.body.style.overflow = 'hidden';
 }
 }
+
 function closeModal() {
 const modal = document.getElementById('freelancerModal');
 if (modal) {
@@ -1966,23 +1995,28 @@ modal.classList.remove('active');
 document.body.style.overflow = 'auto';
 }
 }
+
 function submitFreelancer() {
 const name = document.getElementById('freelancerName')?.value;
 const email = document.getElementById('freelancerEmail')?.value;
 const title = document.getElementById('freelancerTitle')?.value;
 const bio = document.getElementById('freelancerBio')?.value;
 const isFeatured = document.getElementById('featuredListing')?.checked || false;
+
 if (!name || !email) {
 alert('❌ Name and email are required');
 return;
 }
+
 if (!email.includes('@')) {
 alert('❌ Please enter a valid email');
 return;
 }
+
 if (isFeatured) {
 window.open('https://paypal.me/ojgmedia?locale.x=en_US&country.x=NL', '_blank', 'noopener');
 }
+
 fetch('/api/freelancers/register', {
 method: 'POST',
 headers: { 'Content-Type': 'application/json' },
@@ -2015,6 +2049,7 @@ alert('❌ ' + (data.error || 'Registration failed'));
 alert('❌ Registration failed: ' + error.message);
 });
 }
+
 window.onclick = function(event) {
 const modal = document.getElementById('freelancerModal');
 if (event.target === modal) {
