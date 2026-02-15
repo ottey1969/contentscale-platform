@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ContentScale - Elite SEO Content Optimization | Recover Lost Traffic</title>
-<meta name="description" content="Stop losing traffic to AI. Professional SEO content optimization based on Google's E-E-A-T guidelines. Google Core Update Proof. ContentScale measures what Google rewards: Experience, Expertise, Authoritativeness, Trustworthiness.">
+<meta name="description" content="Stop losing traffic to AI. Professional SEO content optimization based on Google's E-E-A-T guidelines. Google Core Update Proof.">
 <link rel="preconnect" href="https://cdn.tailwindcss.com">
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://raw.githubusercontent.com" crossorigin="anonymous">
@@ -17,47 +17,6 @@
 <noscript>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </noscript>
-<!-- ✅ CRITICAL: Schema.org Article Markup -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "Article",
-  "headline": "ContentScale - Elite SEO Content Optimization Platform",
-  "description": "Professional SEO content optimization based on Google's E-E-A-T guidelines. Google Core Update Proof.",
-  "author": {
-    "@type": "Person",
-    "name": "Ottmar Francisca",
-    "url": "https://contentscale.site",
-    "image": "https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca-headshot.png",
-    "sameAs": [
-      "https://linkedin.com/in/ottmarfrancisca",
-      "https://twitter.com/ottmarfrancisca"
-    ],
-    "jobTitle": "SEO Recovery Specialist & Founder",
-    "worksFor": {
-      "@type": "Organization",
-      "name": "ContentScale"
-    }
-  },
-  "publisher": {
-    "@type": "Organization",
-    "name": "ContentScale",
-    "logo": {
-      "@type": "ImageObject",
-      "url": "https://contentscale.site/logo.png",
-      "width": 600,
-      "height": 60
-    }
-  },
-  "datePublished": "2024-01-15",
-  "dateModified": "2026-02-15",
-  "mainEntityOfPage": {
-    "@type": "WebPage",
-    "@id": "https://contentscale.site"
-  },
-  "wordCount": 2850
-}
-</script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
@@ -95,6 +54,92 @@ color: #6b21a8 !important;
 .bg-gray-800 { background-color: #111827; }
 .bg-gray-700 { background-color: #1f2937; }
 .bg-gray-900\/95 { background-color: rgba(3, 7, 18, 0.95); }
+
+/* WIDTH CONSISTENCY FIX - ALL sections max 1280px centered */
+/* Uncomment line below to see section boundaries for testing */
+/* .max-w-7xl, nav > div, #main-content > div, section { outline: 2px solid red !important; } */
+
+.max-w-7xl,
+nav > div,
+#main-content,
+#main-content > div,
+#lead-scanner,
+#lead-scanner > div,
+#leaderboard,
+#leaderboard > div,
+#freelancers,
+footer > div,
+section,
+section > div,
+.scanner-container,
+.why-contentscale-section,
+.feature-grid-wrapper,
+.bg-gradient-to-br,
+.bg-gradient-to-r {
+max-width: 1280px !important;
+margin-left: auto !important;
+margin-right: auto !important;
+}
+
+/* Padding for main containers */
+.max-w-7xl,
+nav > div,
+#main-content,
+footer > div {
+padding-left: 2rem;
+padding-right: 2rem;
+}
+
+/* Ensure nested divs don't override */
+.max-w-3xl {
+max-width: 48rem !important;
+margin-left: auto !important;
+margin-right: auto !important;
+}
+
+.max-w-4xl {
+max-width: 56rem !important;
+margin-left: auto !important;
+margin-right: auto !important;
+}
+
+/* Responsive */
+@media (max-width: 1400px) {
+.max-w-7xl,
+nav > div,
+#main-content,
+#main-content > div,
+#lead-scanner,
+#lead-scanner > div,
+#leaderboard,
+#leaderboard > div,
+#freelancers,
+footer > div,
+section,
+section > div {
+max-width: 90% !important;
+}
+}
+
+@media (max-width: 768px) {
+.max-w-7xl,
+nav > div,
+#main-content,
+#main-content > div,
+#lead-scanner,
+#lead-scanner > div,
+#leaderboard,
+#leaderboard > div,
+#freelancers,
+footer > div,
+section,
+section > div {
+max-width: 95% !important;
+padding-left: 1rem;
+padding-right: 1rem;
+}
+}
+
 .btn {
 display: inline-flex;
 align-items: center;
@@ -574,218 +619,6 @@ font-size: 0.75rem;
 .recommendation-action { color: #f3f4f6; }
 .recommendation-learning { color: #60a5fa; }
 .recommendation-target { color: #34d399; }
-/* COMING SOON BANNER */
-.coming-soon-banner {
-background: linear-gradient(135deg, #6b7280, #4b5563);
-border-left: 4px solid #9ca3af;
-border-radius: 0.75rem;
-padding: 1.5rem;
-margin-bottom: 1.5rem;
-}
-.coming-soon-banner h3 {
-color: #f3f4f6 !important;
-margin-bottom: 0.5rem;
-}
-.coming-soon-banner p {
-color: #d1d5db !important;
-margin-bottom: 1rem;
-}
-/* CSV UPLOAD INFO */
-.csv-info-card {
-background: linear-gradient(135deg, #1e293b, #0f172a);
-border: 1px solid #374151;
-border-radius: 1rem;
-padding: 1.5rem;
-margin-bottom: 1.5rem;
-}
-.csv-info-card h3 {
-margin-bottom: 1rem;
-color: #f3f4f6 !important;
-}
-.csv-info-card ul {
-margin-left: 1.5rem;
-margin-top: 0.5rem;
-}
-.csv-info-card li {
-margin-bottom: 0.5rem;
-color: #d1d5db !important;
-}
-/* LEAD CATEGORIES */
-.lead-category {
-padding: 0.5rem 1rem;
-border-radius: 0.5rem;
-margin: 0.25rem 0;
-}
-.lead-category-high {
-background: #4ade8010;
-border: 1px solid #4ade80;
-color: #4ade80;
-}
-.lead-category-medium {
-background: #facc1510;
-border: 1px solid #facc15;
-color: #facc15;
-}
-.lead-category-low {
-background: #f8717110;
-border: 1px solid #f87171;
-color: #f87171;
-}
-/* ✅ CRITICAL FIXES FOR SCANNER DETECTION */
-/* 1. Direct Answer Box - First paragraph must be 40-60 words */
-.direct-answer-box {
-font-size: 1.125rem;
-line-height: 1.75;
-margin-bottom: 1.5rem;
-padding: 1.25rem;
-background: rgba(126, 34, 206, 0.1);
-border-left: 4px solid #a855f7;
-border-radius: 0.5rem;
-}
-/* 2. TL;DR Section with exactly 5 bullet points */
-.tldr-section {
-background: rgba(30, 41, 59, 0.7);
-border: 1px solid #374151;
-border-radius: 1rem;
-padding: 1.5rem;
-margin: 2rem 0;
-}
-.tldr-section h3 {
-display: flex;
-align-items: center;
-gap: 0.5rem;
-margin-bottom: 1rem;
-}
-.tldr-section ul {
-list-style-type: none;
-padding-left: 0;
-}
-.tldr-section li {
-padding: 0.5rem 0;
-padding-left: 1.5rem;
-position: relative;
-border-bottom: 1px solid #374151;
-}
-.tldr-section li:last-child {
-border-bottom: none;
-}
-.tldr-section li::before {
-content: "✓";
-position: absolute;
-left: 0;
-color: #4ade80;
-font-weight: bold;
-}
-/* 3. Table of Contents with anchor links */
-.toc-section {
-background: rgba(30, 41, 59, 0.7);
-border: 1px solid #374151;
-border-radius: 1rem;
-padding: 1.5rem;
-margin: 2rem 0;
-}
-.toc-section h3 {
-margin-bottom: 1rem;
-display: flex;
-align-items: center;
-gap: 0.5rem;
-}
-.toc-section ol {
-padding-left: 1.5rem;
-margin-top: 0.5rem;
-}
-.toc-section li {
-margin-bottom: 0.5rem;
-}
-.toc-section a {
-color: #a78bfa !important;
-text-decoration: none;
-transition: all 0.2s;
-}
-.toc-section a:hover {
-color: #c4b5fd !important;
-text-decoration: underline;
-}
-/* 4. Expert Quotes Section */
-.expert-quotes-section {
-margin: 2rem 0;
-}
-.quote-card {
-background: rgba(30, 41, 59, 0.8);
-border-left: 4px solid #a855f7;
-border-radius: 0.75rem;
-padding: 1.5rem;
-margin-bottom: 1.5rem;
-position: relative;
-}
-.quote-card::before {
-content: """;
-position: absolute;
-top: -15px;
-left: 10px;
-font-size: 5rem;
-color: rgba(168, 85, 247, 0.2);
-font-family: Georgia, serif;
-line-height: 1;
-}
-.quote-text {
-font-style: italic;
-margin-bottom: 1rem;
-line-height: 1.6;
-position: relative;
-z-index: 10;
-}
-.quote-attribution {
-font-weight: 600;
-color: #f3f4f6;
-display: block;
-margin-top: 0.5rem;
-font-size: 0.95rem;
-}
-.quote-title {
-color: #a78bfa;
-font-size: 0.875rem;
-display: block;
-margin-top: 0.25rem;
-}
-/* 5. Author Bio Section - Optimized for detection */
-.author-bio-section {
-margin: 2rem 0;
-padding: 2rem;
-background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-border: 1px solid #a855f7;
-border-radius: 1.5rem;
-}
-.author-bio-section h2 {
-margin-bottom: 1.5rem;
-display: flex;
-align-items: center;
-gap: 0.75rem;
-}
-.author-bio-content {
-line-height: 1.7;
-margin-bottom: 1.5rem;
-}
-.author-credentials {
-display: flex;
-flex-wrap: wrap;
-gap: 1rem;
-margin-top: 1.5rem;
-padding-top: 1.5rem;
-border-top: 1px solid #374151;
-}
-.credential-badge {
-background: rgba(126, 34, 206, 0.2);
-border: 1px solid #a855f7;
-border-radius: 9999px;
-padding: 0.25rem 1rem;
-font-size: 0.875rem;
-font-weight: 500;
-}
-/* 6. FAQ Section - Exactly 10 questions */
-.faq-container {
-margin: 2rem 0;
-}
 </style>
 </head>
 <body class="bg-gray-900">
@@ -811,44 +644,6 @@ margin: 2rem 0;
 </div>
 </nav>
 <div id="main-content" class="max-w-7xl mx-auto px-6 py-8">
-<!-- ✅ CRITICAL FIX #1: DIRECT ANSWER BOX (40-60 words) -->
-<p class="direct-answer-box">
-ContentScale is a professional SEO content optimization platform that measures what Google rewards: Experience, Expertise, Authoritativeness, and Trustworthiness (E-E-A-T). Our proprietary GRAAF Framework helps businesses recover lost organic traffic from Google's AI Overviews and algorithm updates through content quality verification and optimization strategies proven across 200+ successful recovery projects worldwide.
-</p>
-
-<!-- ✅ CRITICAL FIX #2: TL;DR SECTION (Exactly 5 bullet points) -->
-<div class="tldr-section">
-<h3 class="text-xl font-bold flex items-center">
-<i class="fas fa-list-check text-green-400"></i> Key Takeaways
-</h3>
-<ul>
-<li>ContentScale's GRAAF Framework recovers 78% of lost traffic within 90 days for businesses affected by Google's AI Overviews</li>
-<li>Our scanner analyzes 50+ SEO factors including E-E-A-T signals, content depth, technical optimization, and user experience metrics</li>
-<li>Verified SEO specialists get free unlimited access to lead generation tools and client matching services</li>
-<li>All optimization strategies align with Google's Search Quality Rater Guidelines and Helpful Content System updates</li>
-<li>Platform includes automated email campaigns, CSV bulk processing, and leaderboard recognition for top-performing websites</li>
-</ul>
-</div>
-
-<!-- ✅ CRITICAL FIX #3: TABLE OF CONTENTS (With anchor links) -->
-<div class="toc-section">
-<h3 class="text-xl font-bold flex items-center">
-<i class="fas fa-bookmark text-purple-400"></i> Table of Contents
-</h3>
-<ol>
-<li><a href="#lead-scanner">SEO Content Quality Scanner</a></li>
-<li><a href="#csv-upload">CSV Bulk Upload Information</a></li>
-<li><a href="#api-configuration">API Key Configuration</a></li>
-<li><a href="#why-contentscale">Why ContentScale for SEO Recovery?</a></li>
-<li><a href="#leaderboard">Elite Leaderboard</a></li>
-<li><a href="#freelancers">Verified SEO Specialists</a></li>
-<li><a href="#about-author">About the Author</a></li>
-<li><a href="#expert-quotes">Industry Expert Endorsements</a></li>
-<li><a href="#faq">Frequently Asked Questions</a></li>
-<li><a href="#ready">Ready to Recover Your Traffic?</a></li>
-</ol>
-</div>
-
 <div id="lead-scanner" class="mb-16">
 <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 <div class="text-center mb-8">
@@ -866,54 +661,7 @@ ContentScale is a professional SEO content optimization platform that measures w
 <span>⚡ Auto-queue (100/day)</span>
 </div>
 </div>
-<!-- COMING SOON BANNER VOOR BULK SCANNER -->
-<div class="coming-soon-banner">
-<div class="flex items-start gap-3">
-<div class="text-4xl">⏳</div>
-<div>
-<h3 class="text-xl font-bold">Bulk Scanner & Google Maps - Coming Soon</h3>
-<p class="text-sm mb-2">We're working on bulk scanning features and CSV upload functionality. Stay tuned for updates!</p>
-<p class="text-xs mt-2 text-yellow-400">
-💡 <strong>Need bulk scanning now?</strong> Contact us via WhatsApp for custom solutions.
-</p>
-</div>
-</div>
-</div>
-<!-- CSV UPLOAD INFO -->
-<div class="csv-info-card">
-<h3 class="text-xl font-bold">📋 CSV Upload - What You Can Do</h3>
-<p class="text-sm mb-2">When CSV upload is available, you'll be able to:</p>
-<ul class="text-sm space-y-1">
-<li>✅ <strong>Upload a list of URLs to scan in bulk</strong></li>
-<li>✅ <strong>Get detailed SEO scores for all URLs at once</strong></li>
-<li>✅ <strong>Export results to CSV with all metrics</strong></li>
-<li>✅ <strong>Filter by score, country, or category</strong></li>
-<li>✅ <strong>Schedule automatic scans for your URLs</strong></li>
-<li>✅ <strong>Track SEO improvements over time</strong></li>
-</ul>
-<p class="text-xs mt-3 text-yellow-400">
-⚠️ <strong>Note:</strong> CSV upload requires API key configuration for unlimited scans.
-</p>
-</div>
-<!-- LEAD CATEGORIES INFO -->
-<div class="csv-info-card">
-<h3 class="text-xl font-bold">📊 Lead Categories Explained</h3>
-<p class="text-sm mb-2">How we classify leads from your CSV uploads:</p>
-<div class="lead-category lead-category-high">
-<strong>85+ Score:</strong> Leaderboard candidate - automatically submitted for admin review
-</div>
-<div class="lead-category lead-category-medium">
-<strong>60-84 Score:</strong> Lead with existing website - SEO optimization offer
-</div>
-<div class="lead-category lead-category-low">
-<strong>Below 60 Score:</strong> Lead without website - offer to build website
-</div>
-<p class="text-sm mt-2">
-<strong>How it works:</strong> After scanning your CSV, leads will be automatically categorized based on their SEO score. 
-85+ scores go directly to the leaderboard for admin review, 60-84 scores become SEO optimization leads, 
-and scores below 60 become website building leads. All leads can be exported and contacted via email.
-</p>
-</div>
+
 <div class="max-w-3xl mx-auto">
 <div class="card">
 <div class="flex flex-col sm:flex-row gap-3">
@@ -937,8 +685,67 @@ spellcheck="false">
 </div>
 </div>
 <div id="singleResult" class="hidden mt-4"></div>
+
+<!-- BULK SCANNING SECTION -->
+<div class="card mt-6">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-xl font-bold text-white">📋 Bulk Scanning</h3>
+<button onclick="toggleBulkScanner()" class="text-purple-400 hover:text-purple-300 text-sm">
+<i class="fas fa-chevron-down" id="bulkScannerIcon"></i>
+</button>
+</div>
+<div id="bulkScannerContent" class="hidden">
+<p class="text-gray-300 text-sm mb-4">
+Scan up to 100 websites at once. Based on scores, we automatically:
+</p>
+<ul class="text-sm text-gray-300 mb-4" style="margin-left: 1.5rem;">
+<li>✅ <strong>85+ Score:</strong> Submit to leaderboard (admin approval)</li>
+<li>📧 <strong>&lt;85 with website:</strong> Email business owner with improvement pitch</li>
+<li>🌐 <strong>&lt;85 without website:</strong> Email owner offering website creation</li>
+</ul>
+<div class="mb-4">
+<label class="block text-sm text-gray-300 mb-2">Enter URLs (one per line, max 100)</label>
+<textarea 
+id="bulkUrlInput" 
+rows="8" 
+placeholder="https://example1.com
+https://example2.com
+https://example3.com"
+class="w-full p-3 rounded border border-gray-600 focus:border-purple-500 resize-none"
+style="color: #000000 !important; background-color: #ffffff !important;"></textarea>
+<div class="flex justify-between mt-1">
+<span class="text-xs text-gray-400">Up to 100 URLs</span>
+<span id="bulkUrlCount" class="text-xs text-gray-400">0/100</span>
 </div>
 </div>
+<div class="grid grid-cols-2 gap-3 mb-4">
+<div>
+<label class="block text-sm text-gray-300 mb-2">Your Email *</label>
+<input type="email" id="bulkScanEmail" placeholder="your@email.com" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500">
+</div>
+<div>
+<label class="block text-sm text-gray-300 mb-2">Your Name *</label>
+<input type="text" id="bulkScanName" placeholder="Your name" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500">
+</div>
+</div>
+<button onclick="startBulkScan()" id="bulkScanBtn" class="btn-primary btn w-full">
+<i class="fas fa-rocket mr-2"></i> Start Bulk Scan
+</button>
+<div id="bulkProgress" class="hidden mt-4">
+<div class="progress-bar">
+<div id="bulkProgressBar" class="progress-bar-fill" style="width: 0%"></div>
+</div>
+<p id="bulkProgressText" class="text-sm text-gray-300 text-center mt-2"></p>
+</div>
+<div id="bulkResults" class="hidden mt-4">
+<h4 class="text-lg font-bold text-white mb-3">Scan Results</h4>
+<div id="bulkResultsContainer"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
 <!-- API Configuration Accordion - Direct onder scanner -->
 <div class="accordion-item">
 <button onclick="toggleAccordion('apiConfig')" class="accordion-header">
@@ -946,6 +753,8 @@ spellcheck="false">
 <i class="fas fa-key text-purple-400"></i>
 <span class="font-bold">Configure API Keys for Unlimited Scans</span>
 <span id="apiStatusIndicator" class="api-status-indicator api-status-inactive"></span>
+</span>
+<i class="fas fa-chevron-down" id="apiConfigIcon"></i>
 </button>
 <div id="apiConfig" class="accordion-content hidden">
 <div class="bg-gray-900 rounded-lg p-5 border border-gray-700">
@@ -1025,6 +834,7 @@ Webshare Proxy Configuration
 </div>
 </div>
 </div>
+
 <div class="mt-8 bg-gradient-to-r from-purple-800 via-pink-800 to-purple-800 rounded-xl p-6 text-center border border-purple-400">
 <h3 class="text-2xl font-bold mb-2 text-white">💼 Are You an SEO Specialist or Content Marketer?</h3>
 <p class="text-xl text-gray-200 mb-4">
@@ -1038,38 +848,9 @@ We train you in Modern SEO for the AI-era.
 </div>
 </div>
 
-<!-- ✅ CRITICAL FIX #4: EXPERT QUOTES SECTION (4+ with full attribution) -->
-<div id="expert-quotes" class="expert-quotes-section mb-16">
-<div class="text-center mb-10">
-<h2 class="text-4xl font-bold mb-3 text-white">Industry Expert Endorsements</h2>
-<p class="text-xl text-gray-300">Trusted by SEO professionals worldwide</p>
-</div>
-<div class="grid-3">
-<div class="quote-card">
-<p class="quote-text">"ContentScale's GRAAF Framework is the most comprehensive approach to E-E-A-T optimization I've seen. It directly addresses Google's evolving quality guidelines and has transformed how we audit client content."</p>
-<span class="quote-attribution">Marieke van der Berg</span>
-<span class="quote-title">Head of SEO, Digital Agency Amsterdam</span>
-</div>
-<div class="quote-card">
-<p class="quote-text">"After implementing ContentScale's recommendations, we recovered 82% of our lost organic traffic within 75 days. The focus on author credentials and expert citations was the game-changer for our medical content."</p>
-<span class="quote-attribution">Dr. Thomas Schmidt</span>
-<span class="quote-title">Content Director, HealthTech Solutions</span>
-</div>
-<div class="quote-card">
-<p class="quote-text">"The scanner's ability to detect missing schema markup and content gaps saved us months of manual auditing. We now use it as our primary quality gate before any content goes live."</p>
-<span class="quote-attribution">Sarah Johnson</span>
-<span class="quote-title">Technical SEO Lead, Global E-commerce Brand</span>
-</div>
-<div class="quote-card">
-<p class="quote-text">"What sets ContentScale apart is how it bridges the gap between Google's guidelines and actionable implementation steps. The learning points in each recommendation transformed our team's understanding of modern SEO."</p>
-<span class="quote-attribution">Carlos Rodriguez</span>
-<span class="quote-title">SEO Consultant, 15+ Years Experience</span>
-</div>
-</div>
-</div>
-
-<div id="why-contentscale" class="mb-16">
+<div class="mb-16">
 <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 border border-gray-700">
+<div style="max-width: 1280px; margin: 0 auto;">
 <div class="text-center mb-12">
 <h2 class="text-4xl font-bold mb-4 text-white">Why ContentScale for SEO Recovery?</h2>
 <p class="text-xl text-gray-300 max-w-3xl mx-auto">
@@ -1122,6 +903,7 @@ Most agencies take months to start seeing results. Our clients typically see mea
 <p class="text-gray-300">
 Our Lead Scanner, Google Maps bulk scraper, and content quality analyzer are 100% free for verified specialists.
 </p>
+</div>
 </div>
 </div>
 </div>
@@ -1222,8 +1004,9 @@ Our Lead Scanner, Google Maps bulk scraper, and content quality analyzer are 100
 <div id="freelancersGrid" class="grid-3"></div>
 </div>
 
-<!-- ✅ CRITICAL FIX #5: AUTHOR BIO SECTION (200-250 words with credentials) -->
-<div id="about-author" class="author-bio-section mb-16">
+<div class="mb-16">
+<div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+<div style="max-width: 1280px; margin: 0 auto;">
 <div class="flex flex-col md:flex-row gap-8 items-center">
 <div class="md:w-1/3">
 <img src="https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca-headshot.png"
@@ -1240,27 +1023,42 @@ crossorigin="anonymous">
 </div>
 </div>
 <div class="md:w-2/3">
-<h2 class="text-3xl font-bold mb-4 text-white flex items-center gap-3">
-<i class="fas fa-user-graduate text-purple-400"></i>
-About the Author
-</h2>
-<p class="author-bio-content">
-Ottmar Francisca is the Founder and Lead SEO Recovery Specialist at ContentScale, with over 24 years of leadership experience in the Dutch Police where he developed advanced analytical and strategic methodologies. Since founding ContentScale in 2018, he has personally led 200+ successful SEO recovery projects across 47+ countries, helping businesses regain lost organic traffic from Google's algorithm updates and AI Overviews. Ottmar is Google Analytics Certified, SEMrush Certified, and recognized as a Featured Expert in multiple industry publications. He created the proprietary GRAAF Framework (Genuinely Credible, Relevance, Actionability, Accuracy, Freshness) specifically to address E-E-A-T optimization challenges in the AI era. His methodology has achieved a documented 78% recovery rate within 90 days for clients ranging from small businesses to enterprise organizations. Ottmar regularly contributes to SEO industry conferences and mentors emerging specialists through the ContentScale Platform training program.
+<h2 class="text-3xl font-bold mb-4 text-white">About the Founder</h2>
+<h3 class="text-xl text-purple-300 mb-4">Ottmar Francisca - SEO Recovery Specialist</h3>
+<p class="text-gray-200 mb-4">
+With <strong>24+ years of leadership experience</strong> in the Dutch Police, Ottmar brings a unique analytical approach to SEO optimization.
+Since founding ContentScale in 2018, he has helped <strong>200+ businesses</strong> across 47+ countries recover from Google algorithm updates.
 </p>
-<div class="author-credentials">
-<span class="credential-badge">Google Analytics Certified</span>
-<span class="credential-badge">SEMrush Certified Professional</span>
-<span class="credential-badge">24+ Years Leadership Experience</span>
-<span class="credential-badge">200+ Recovery Projects</span>
-<span class="credential-badge">GRAAF Framework Creator</span>
-<span class="credential-badge">Featured Industry Expert</span>
+<p class="text-gray-200 mb-4">
+Ottmar created the proprietary <strong>GRAAF Framework</strong> (Genuinely Credible, Relevance, Actionability, Accuracy, Freshness)
+specifically to address the challenges businesses face with Google's AI Overviews and evolving search algorithms.
+His methodology has achieved a documented <strong>78% recovery rate within 90 days</strong>.
+</p>
+<div class="flex gap-4 flex-wrap">
+<div class="bg-gray-900 bg-opacity-50 px-4 py-2 rounded-lg">
+<div class="text-2xl font-bold text-green-400">200+</div>
+<div class="text-sm text-gray-300">Businesses Helped</div>
+</div>
+<div class="bg-gray-900 bg-opacity-50 px-4 py-2 rounded-lg">
+<div class="text-2xl font-bold text-blue-400">78%</div>
+<div class="text-sm text-gray-300">Recovery Rate</div>
+</div>
+<div class="bg-gray-900 bg-opacity-50 px-4 py-2 rounded-lg">
+<div class="text-2xl font-bold text-purple-400">47+</div>
+<div class="text-sm text-gray-300">Countries</div>
+</div>
+<div class="bg-gray-900 bg-opacity-50 px-4 py-2 rounded-lg">
+<div class="text-2xl font-bold text-yellow-400">90d</div>
+<div class="text-sm text-gray-300">Avg. Recovery</div>
+</div>
+</div>
+</div>
 </div>
 </div>
 </div>
 </div>
 
-<!-- ✅ CRITICAL FIX #6: FAQ SECTION (Exactly 10 questions) -->
-<div id="faq" class="faq-container mb-16 max-w-4xl mx-auto">
+<div class="mb-16 max-w-4xl mx-auto">
 <div class="text-center mb-8">
 <h2 class="text-4xl font-bold mb-3 text-white">❓ Frequently Asked Questions</h2>
 <p class="text-xl text-gray-300">Everything you need to know about SEO content optimization</p>
@@ -1272,7 +1070,7 @@ Ottmar Francisca is the Founder and Lead SEO Recovery Specialist at ContentScale
 <i class="fas fa-chevron-down" id="faqIcon1"></i>
 </button>
 <div id="faqAnswer1" class="faq-answer hidden">
-<p>The GRAAF Framework is ContentScale's proprietary methodology for AI-era SEO optimization. It stands for: <strong>G</strong>enuinely Credible, <strong>R</strong>elevance, <strong>A</strong>ctionability, <strong>A</strong>ccuracy, and <strong>F</strong>reshness. This framework ensures your content meets Google's E-E-A-T guidelines and ranks well against AI Overviews by focusing on content quality signals that Google's algorithms prioritize.</p>
+<p>The GRAAF Framework is ContentScale's proprietary methodology for AI-era SEO optimization. It stands for: <strong>G</strong>enuinely Credible, <strong>R</strong>elevance, <strong>A</strong>ctionability, <strong>A</strong>ccuracy, and <strong>F</strong>reshness. This framework ensures your content meets Google's E-E-A-T guidelines and ranks well against AI Overviews.</p>
 </div>
 </div>
 <div class="faq-item">
@@ -1281,16 +1079,22 @@ Ottmar Francisca is the Founder and Lead SEO Recovery Specialist at ContentScale
 <i class="fas fa-chevron-down" id="faqIcon2"></i>
 </button>
 <div id="faqAnswer2" class="faq-answer hidden">
-<p>Based on our work with 200+ businesses, typical SEO recovery takes 60-90 days. However, this depends on several factors: the severity of traffic loss, your current content quality score, implementation speed, and your niche's competitiveness. We've seen businesses recover 78% of lost traffic within this timeframe using our GRAAF Framework methodology, with some clients seeing initial improvements within 30 days.</p>
+<p>Based on our work with 200+ businesses, typical SEO recovery takes 60-90 days. However, this depends on several factors: the severity of traffic loss, your current content quality score, implementation speed, and your niche's competitiveness. We've seen businesses recover 78% of lost traffic within this timeframe using our GRAAF Framework methodology.</p>
 </div>
 </div>
 <div class="faq-item">
 <button onclick="toggleFAQ(3)" class="faq-question">
-<span>Is the Lead Scanner really free for freelancers?</span>
+<span>How does bulk scanning work?</span>
 <i class="fas fa-chevron-down" id="faqIcon3"></i>
 </button>
 <div id="faqAnswer3" class="faq-answer hidden">
-<p>Yes! Our Lead Scanner is 100% free for verified SEO specialists and content marketers. You can scan unlimited websites, use Google Maps bulk scraping, and export leads to CSV at no cost. We built this tool to help freelancers find clients who genuinely need content optimization. Register as a specialist to get full access to all platform features including lead generation tools and client matching services.</p>
+<p>Bulk scanning allows you to analyze multiple websites at once. Upload a list of URLs (up to 100 per batch), and our system will scan each one using the GRAAF Framework. Based on the scores, we automatically:</p>
+<ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+<li><strong>85+ Score:</strong> Submitted to leaderboard for admin review</li>
+<li><strong>Below 85 (with website):</strong> Business receives personalized email with improvement recommendations and service pitch</li>
+<li><strong>Below 85 (no website):</strong> Owner receives personalized email offering website creation services</li>
+</ul>
+<p style="margin-top: 1rem;">All emails are sent via Sendgrid (100/day limit) and personalized in English or Dutch based on the business location.</p>
 </div>
 </div>
 <div class="faq-item">
@@ -1302,65 +1106,12 @@ Ottmar Francisca is the Founder and Lead SEO Recovery Specialist at ContentScale
 <p>At ContentScale, we believe the future of work is flexible. We help specialists who want to work just a few hours per week while earning a full-time income. This is only possible with our advanced methods and tools. We train freelancers in Modern SEO for the AI-era - focusing on the GRAAF Framework, E-E-A-T optimization, and AI Overviews. Our goal is to elevate the SEO standard globally by giving specialists access to professional tools, training, and a steady stream of high-quality leads.</p>
 </div>
 </div>
-<div class="faq-item">
-<button onclick="toggleFAQ(5)" class="faq-question">
-<span>How does the CSV bulk upload work?</span>
-<i class="fas fa-chevron-down" id="faqIcon5"></i>
-</button>
-<div id="faqAnswer5" class="faq-answer hidden">
-<p>When CSV upload becomes available, you'll be able to upload a list of URLs for bulk scanning. The system will automatically scan each URL, calculate SEO scores, and categorize leads based on performance: 85+ scores go to leaderboard review, 60-84 scores become SEO optimization leads, and below 60 scores become website building leads. You can then export results, find emails, and launch targeted email campaigns directly from the platform.</p>
-</div>
-</div>
-<div class="faq-item">
-<button onclick="toggleFAQ(6)" class="faq-question">
-<span>What makes ContentScale different from other SEO tools?</span>
-<i class="fas fa-chevron-down" id="faqIcon6"></i>
-</button>
-<div id="faqAnswer6" class="faq-answer hidden">
-<p>Unlike generic SEO tools that focus only on technical factors, ContentScale specializes in E-E-A-T optimization and AI Overview readiness. Our GRAAF Framework addresses the human quality signals Google prioritizes, with detailed recommendations that include learning points and implementation targets. We combine content analysis with lead generation capabilities, and our platform is built specifically for the post-2023 Google algorithm landscape where content quality trumps keyword density.</p>
-</div>
-</div>
-<div class="faq-item">
-<button onclick="toggleFAQ(7)" class="faq-question">
-<span>Do I need technical SEO knowledge to use this platform?</span>
-<i class="fas fa-chevron-down" id="faqIcon7"></i>
-</button>
-<div id="faqAnswer7" class="faq-answer hidden">
-<p>No technical expertise required! Our scanner provides clear, actionable recommendations with plain-language explanations and specific implementation targets. Each suggestion includes a "Learning" section that explains why it matters and a "Target" section that shows exactly what to achieve. For technical elements like schema markup or meta tags, we provide copy-paste code snippets and implementation guides. Our specialist network is also available for hire if you need hands-on help.</p>
-</div>
-</div>
-<div class="faq-item">
-<button onclick="toggleFAQ(8)" class="faq-question">
-<span>How does the leaderboard submission process work?</span>
-<i class="fas fa-chevron-down" id="faqIcon8"></i>
-</button>
-<div id="faqAnswer8" class="faq-answer hidden">
-<p>After scanning your website, if your score is 85 or higher, you'll see an option to submit to the leaderboard. Admins review all submissions within 48 hours. If approved, your website appears on our public leaderboard with your company name, score, country, and a link to your site. This provides valuable recognition and demonstrates your SEO excellence to potential clients. All submissions require a valid contact email for verification purposes.</p>
-</div>
-</div>
-<div class="faq-item">
-<button onclick="toggleFAQ(9)" class="faq-question">
-<span>Can I use this for client reporting?</span>
-<i class="fas fa-chevron-down" id="faqIcon9"></i>
-</button>
-<div id="faqAnswer9" class="faq-answer hidden">
-<p>Absolutely! The detailed scan reports with metrics, recommendations, and improvement tracking are perfect for client presentations. You can export results to PDF or CSV, show before/after comparisons, and use the GRAAF Framework scores to demonstrate content quality improvements. Many agencies use our platform as their primary content auditing tool and include scan results in monthly client reports to show SEO progress and justify optimization efforts.</p>
-</div>
-</div>
-<div class="faq-item">
-<button onclick="toggleFAQ(10)" class="faq-question">
-<span>What support is available if I need help?</span>
-<i class="fas fa-chevron-down" id="faqIcon10"></i>
-</button>
-<div id="faqAnswer10" class="faq-answer hidden">
-<p>We offer multiple support channels: WhatsApp chat for quick questions (response within 2 hours during business hours), email support for detailed inquiries (response within 24 hours), and a comprehensive knowledge base with video tutorials and implementation guides. Verified specialists also get access to our private community forum where you can connect with other SEO professionals and share best practices. For complex projects, our specialist network is available for hire through the platform.</p>
-</div>
-</div>
 </div>
 </div>
 
-<div id="ready" class="mb-16">
+<div class="mb-16">
 <div class="bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-900 rounded-2xl p-12 text-center border-2 border-purple-500">
+<div style="max-width: 1280px; margin: 0 auto;">
 <div class="text-5xl mb-4">🚀</div>
 <h2 class="text-4xl font-bold mb-4 text-white">Ready to Recover Your Traffic?</h2>
 <p class="text-xl text-gray-200 mb-8 max-w-2xl mx-auto">
@@ -1381,6 +1132,7 @@ class="btn-success btn text-lg px-8 py-4">
 </div>
 </div>
 </div>
+
 <footer>
 <div class="max-w-7xl mx-auto px-6 py-12">
 <div class="grid md:grid-cols-4 gap-8 mb-8">
@@ -1436,6 +1188,7 @@ Helping businesses recover traffic from AI Overviews since 2018.
 </div>
 </div>
 </footer>
+
 <div id="freelancerModal" class="modal">
 <div class="modal-content">
 <div class="flex justify-between items-center mb-6">
@@ -1502,10 +1255,10 @@ We'll review and approve within 24 hours. You'll receive an email with your veri
 </div>
 </div>
 </div>
+
 <script>
 // ==========================================
-// ALL EXISTING JAVASCRIPT FUNCTIONS REMAIN UNCHANGED
-// Critical scanner detection fixes implemented in HTML structure only
+// FUNCTIE DEFINISIES - MOETEN BOVENAAN STAAN
 // ==========================================
 function forceEmptyInput() {
 const input = document.getElementById('singleUrlInput');
@@ -1514,10 +1267,15 @@ input.value = '';
 console.log('✅ Input veld geleegd');
 }
 }
+
+// ==========================================
+// "OT" UIT INPUT VELD FIX
+// ==========================================
 (function() {
 window.addEventListener('DOMContentLoaded', forceEmptyInput);
 window.addEventListener('load', forceEmptyInput);
 window.addEventListener('pageshow', forceEmptyInput);
+
 setInterval(function() {
 const input = document.getElementById('singleUrlInput');
 if (input && input.value === 'ot') {
@@ -1525,6 +1283,7 @@ input.value = '';
 console.log('✅ Interval: input geleegd');
 }
 }, 100);
+
 document.addEventListener('focusin', function() {
 setTimeout(function() {
 const input = document.getElementById('singleUrlInput');
@@ -1534,6 +1293,7 @@ input.value = '';
 }, 10);
 });
 })();
+
 let scrapedLeads = [];
 let currentScanResult = null;
 let allLeaderboardEntries = [];
@@ -1541,6 +1301,7 @@ let sendgridConfigured = false;
 let webshareConfigured = false;
 let queueInterval = null;
 let userId = null;
+
 document.addEventListener('DOMContentLoaded', function() {
 console.log('📋 Publieke pagina geladen');
 forceEmptyInput();
@@ -1548,9 +1309,11 @@ loadLeaderboardData();
 loadFreelancers();
 registerUser();
 loadApiStatus();
+
 document.getElementById('singleUrlInput')?.addEventListener('keypress', function(e) {
 if (e.key === 'Enter') scanSingleURL();
 });
+
 const bioTextarea = document.getElementById('freelancerBio');
 if (bioTextarea) {
 bioTextarea.addEventListener('input', function() {
@@ -1558,15 +1321,42 @@ const count = this.value.length;
 document.getElementById('bioCharCount').textContent = count + '/200';
 });
 }
+
+// Bulk URL counter
+const bulkInput = document.getElementById('bulkUrlInput');
+if (bulkInput) {
+bulkInput.addEventListener('input', function() {
+const urls = this.value.split('\n').filter(u => u.trim().length > 0);
+const counter = document.getElementById('bulkUrlCount');
+if (counter) {
+counter.textContent = `${urls.length}/100`;
+if (urls.length > 100) {
+counter.style.color = '#f87171'; // red
+} else {
+counter.style.color = '#d1d5db'; // gray
+}
+}
 });
+}
+});
+
+// ==========================================
+// ACCORDEON FUNCTIES
+// ==========================================
 function toggleAccordion(id) {
 const content = document.getElementById(id);
 const icon = document.getElementById(id + 'Icon');
 if (content) {
 content.classList.toggle('hidden');
+if (icon) {
 icon.style.transform = content.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
 }
 }
+}
+
+// ==========================================
+// USER REGISTRATIE
+// ==========================================
 async function registerUser() {
 try {
 let storedUserId = localStorage.getItem('user_id');
@@ -1589,16 +1379,24 @@ console.log('✅ Existing user:', userId);
 console.error('❌ User registration error:', error);
 }
 }
+
+// ==========================================
+// API STATUS
+// ==========================================
 async function loadApiStatus() {
-if (!userId) return;
+if (!userId) {
+return;
+}
 try {
 const response = await fetch('/api/user/keys/status', {
 headers: { 'x-user-id': userId }
 });
 const data = await response.json();
+
 if (data.success) {
 const indicator = document.getElementById('apiStatusIndicator');
 const statusText = document.getElementById('apiStatusText');
+
 if (data.hasSendgrid || data.hasWebshare) {
 indicator.className = 'api-status-indicator api-status-active';
 statusText.textContent = 'Custom API keys configured';
@@ -1606,6 +1404,7 @@ statusText.textContent = 'Custom API keys configured';
 indicator.className = 'api-status-indicator api-status-inactive';
 statusText.textContent = 'Using default settings (limited)';
 }
+
 if (data.hasSendgrid) {
 document.getElementById('sendgridStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
 if (data.sendgrid) {
@@ -1616,6 +1415,7 @@ document.getElementById('sendgridUsageBar').style.width = percentage + '%';
 }
 sendgridConfigured = true;
 }
+
 if (data.hasWebshare) {
 document.getElementById('webshareStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
 webshareConfigured = true;
@@ -1625,16 +1425,22 @@ webshareConfigured = true;
 console.error('Error loading API status:', error);
 }
 }
+
+// ==========================================
+// SENDGRID FUNCTIES
+// ==========================================
 async function saveSendgridConfig() {
 if (!userId) {
 alert('❌ User not registered. Please refresh the page.');
 return;
 }
+
 const apiKey = document.getElementById('sendgridApiKey').value;
 if (!apiKey || apiKey.includes('••••')) {
 alert('❌ Please enter your Sendgrid API key');
 return;
 }
+
 try {
 const response = await fetch('/api/user/sendgrid/configure', {
 method: 'POST',
@@ -1649,6 +1455,7 @@ dailyLimit: 100
 })
 });
 const data = await response.json();
+
 if (data.success) {
 alert('✅ Sendgrid configuration saved successfully');
 document.getElementById('sendgridStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
@@ -1661,11 +1468,13 @@ alert('❌ ' + (data.error || 'Failed to save configuration'));
 alert('❌ Error: ' + error.message);
 }
 }
+
 async function testSendgridConfig() {
 if (!userId) {
 alert('❌ User not registered');
 return;
 }
+
 try {
 const response = await fetch('/api/email/send', {
 method: 'POST',
@@ -1681,6 +1490,7 @@ html: '<p>This is a test email from your ContentScale account.</p>'
 })
 });
 const data = await response.json();
+
 if (data.success) {
 alert('✅ Test email sent successfully!');
 } else if (data.needs_api_key) {
@@ -1694,16 +1504,22 @@ alert('❌ ' + (data.error || 'Test failed'));
 alert('❌ Error: ' + error.message);
 }
 }
+
+// ==========================================
+// WEBSHARE FUNCTIES
+// ==========================================
 async function saveWebshareConfig() {
 if (!userId) {
 alert('❌ User not registered. Please refresh the page.');
 return;
 }
+
 const apiKey = document.getElementById('webshareApiKey').value;
 if (!apiKey) {
 alert('❌ Please enter your Webshare API key');
 return;
 }
+
 try {
 const response = await fetch('/api/user/webshare/configure', {
 method: 'POST',
@@ -1717,6 +1533,7 @@ apiKey
 })
 });
 const data = await response.json();
+
 if (data.success) {
 alert(`✅ Webshare configured! Found ${data.proxy_count || 10} proxies.`);
 document.getElementById('webshareStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
@@ -1733,11 +1550,13 @@ alert('❌ ' + (data.error || 'Failed to save configuration'));
 alert('❌ Error: ' + error.message);
 }
 }
+
 async function testWebshareConfig() {
 if (!userId) {
 alert('❌ User not registered');
 return;
 }
+
 try {
 const response = await fetch('/api/google-maps/scrape', {
 method: 'POST',
@@ -1752,6 +1571,7 @@ test: true
 })
 });
 const data = await response.json();
+
 if (data.using_custom_proxy) {
 alert('✅ Proxy test successful! Your proxies are working.');
 } else if (data.proxy_error) {
@@ -1763,6 +1583,10 @@ alert('ℹ️ Using default settings (no proxy)');
 alert('❌ Error: ' + error.message);
 }
 }
+
+// ==========================================
+// SINGLE URL SCAN FUNCTIE
+// ==========================================
 async function scanSingleURL() {
 const input = document.getElementById('singleUrlInput');
 const button = document.getElementById('singleScanBtn');
@@ -1770,39 +1594,50 @@ const progress = document.getElementById('singleProgress');
 const progressBar = document.getElementById('singleProgressBar');
 const progressText = document.getElementById('singleProgressText');
 const resultDiv = document.getElementById('singleResult');
+
 let url = input.value.trim();
 if (!url) {
 alert('❌ Please enter a URL');
 return;
 }
+
 if (!url.startsWith('http')) {
 url = 'https://' + url;
 }
+
 button.disabled = true;
 button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scannen...';
 progress.classList.remove('hidden');
 progressBar.style.width = '20%';
 progressText.textContent = 'Browser starten...';
+
 try {
 const response = await fetch('/api/scan', {
 method: 'POST',
 headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({ url: url })
 });
+
 progressBar.style.width = '60%';
 progressText.textContent = 'Content analyseren...';
+
 const data = await response.json();
+
 if (!response.ok || !data.success) {
 throw new Error(data.error || 'Scan failed');
 }
+
 displayScanResult(data);
+
 progressBar.style.width = '100%';
 progressText.textContent = 'Scan compleet!';
+
 setTimeout(() => {
 progress.classList.add('hidden');
 button.disabled = false;
 button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
 }, 500);
+
 } catch (error) {
 console.error('Scan error:', error);
 alert('❌ Scan failed: ' + error.message);
@@ -1811,6 +1646,10 @@ button.disabled = false;
 button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
 }
 }
+
+// ==========================================
+// DISPLAY SCAN RESULT
+// ==========================================
 function displayScanResult(result) {
 const resultDiv = document.getElementById('singleResult');
 const url = result.url || '';
@@ -1822,17 +1661,22 @@ const technical = result.metrics?.technical || 0;
 const words = result.content_stats?.wordCount || 0;
 const contentQuality = result.metrics?.content || 0;
 const uxScore = result.metrics?.ux || 0;
+
+// ✅ NIEUWE AANBEVELINGEN MET LEERPUNTEN
 let recommendations = [];
 if (result.recommendations?.all && result.recommendations.all.length > 0) {
 recommendations = result.recommendations.all;
 }
+
 let recsHtml = '';
 if (recommendations.length > 0) {
 recommendations.forEach(rec => {
+// Bepaal priority badge class
 let priorityClass = 'priority-none';
 if (rec.priority === 'high') priorityClass = 'priority-high';
 else if (rec.priority === 'medium') priorityClass = 'priority-medium';
 else if (rec.priority === 'low') priorityClass = 'priority-low';
+
 recsHtml += `
 <div class="recommendation-card">
 <div class="flex items-start justify-between mb-2">
@@ -1870,12 +1714,14 @@ ${rec.target ? `
 } else {
 recsHtml = '<p class="text-gray-400 text-sm">No specific recommendations available for this page.</p>';
 }
+
 let qualityColor = 'bg-gray-600';
 if (quality === 'excellent') qualityColor = 'bg-green-600';
 else if (quality === 'good') qualityColor = 'bg-blue-600';
 else if (quality === 'average') qualityColor = 'bg-yellow-600';
 else if (quality === 'poor') qualityColor = 'bg-red-600';
 else if (quality === 'below-average') qualityColor = 'bg-orange-600';
+
 resultDiv.innerHTML = `
 <div class="bg-gray-800 rounded-xl border-2 border-purple-500 p-6 mt-4">
 <div class="text-center mb-4">
@@ -1885,10 +1731,12 @@ resultDiv.innerHTML = `
 Quality: ${quality.charAt(0).toUpperCase() + quality.slice(1)}
 </span>
 </div>
+
 <div class="text-center mb-6">
 <div class="text-6xl font-bold text-white">${currentScore}</div>
 <div class="text-sm text-gray-400">out of 100</div>
 </div>
+
 <div class="grid grid-cols-2 gap-4 mb-5">
 <div class="bg-gray-900 rounded-lg p-4 text-center">
 <div class="text-sm text-gray-400 mb-1">GRAAF (50)</div>
@@ -1907,6 +1755,7 @@ Quality: ${quality.charAt(0).toUpperCase() + quality.slice(1)}
 <div class="text-2xl font-bold text-white">${words.toLocaleString()}</div>
 </div>
 </div>
+
 <div class="space-y-3 mb-6">
 <div>
 <div class="flex justify-between items-center mb-1">
@@ -1927,10 +1776,12 @@ Quality: ${quality.charAt(0).toUpperCase() + quality.slice(1)}
 </div>
 </div>
 </div>
+
 <div class="border-t border-gray-700 pt-5 mb-5">
 <h3 class="text-xl font-bold text-white mb-4">📋 Priority Recommendations</h3>
 ${recsHtml}
 </div>
+
 <div class="flex gap-3">
 <button onclick="addToLeaderboard()"
 class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-semibold transition-all">
@@ -1943,9 +1794,11 @@ Close
 </div>
 </div>
 `;
+
 resultDiv.classList.remove('hidden');
 resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
+
 function addToLeaderboard() {
 const resultDiv = document.getElementById('singleResult');
 const urlElement = resultDiv.querySelector('p.text-md');
@@ -1953,29 +1806,40 @@ if (!urlElement) {
 alert('❌ No scan result found');
 return;
 }
+
 const urlText = urlElement.textContent || '';
 const companyName = prompt('Enter company name (optional):', '');
 const contactEmail = prompt('Enter your email to receive congratulations if approved (optional):', '');
+
 if (!contactEmail) {
 alert('✅ Your request has been sent to admin for approval (85+ required)');
 return;
 }
+
 if (!contactEmail.includes('@') || !contactEmail.includes('.')) {
 alert('❌ Please enter a valid email address');
 return;
 }
+
 alert(`✅ Thank you! Admin will review your submission. If approved (85+ score required), a congratulations email will be sent to ${contactEmail} with your shareable leaderboard link.`);
 }
+
+// ==========================================
+// LEADERBOARD & FREELANCERS FUNCTIES
+// ==========================================
 async function loadLeaderboardData() {
 try {
 const response = await fetch('/api/leaderboard');
 const data = await response.json();
+
 if (data.success && data.entries && data.entries.length > 0) {
 allLeaderboardEntries = data.entries;
+
 document.getElementById('totalAgencies').textContent = data.stats?.totalAgencies || 0;
 document.getElementById('avgScore').textContent = data.averageScore || 0;
 document.getElementById('countriesCount').textContent = data.stats?.countriesCount || 0;
 document.getElementById('activeHelpers').textContent = data.stats?.activeHelpers || 0;
+
 renderTop3();
 renderRankings4to15();
 renderRankings16Plus();
@@ -1988,31 +1852,38 @@ console.error('❌ Fout bij laden leaderboard:', error);
 showEmptyLeaderboard();
 }
 }
+
 function showEmptyLeaderboard() {
 document.getElementById('totalAgencies').textContent = '0';
 document.getElementById('avgScore').textContent = '0';
 document.getElementById('countriesCount').textContent = '0';
 document.getElementById('activeHelpers').textContent = '0';
+
 const container = document.getElementById('top3-container');
 if (container) {
 container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Geen leaderboard entries gevonden</div>';
 }
+
 document.getElementById('rankings4to15Container').style.display = 'none';
 document.getElementById('totalCount').textContent = '0';
 }
+
 function renderTop3() {
 const container = document.getElementById('top3-container');
 if (!container) return;
+
 const top3 = allLeaderboardEntries.slice(0, 3);
 if (top3.length === 0) {
 container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Geen entries gevonden</div>';
 return;
 }
+
 container.innerHTML = top3.map((entry, index) => {
 const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
 const medalClass = index === 0 ? 'gold' : index === 1 ? 'silver' : 'bronze';
 const rankText = index === 0 ? '1st Worldwide' : index === 1 ? '2nd Worldwide' : '3rd Worldwide';
 const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+
 return `
 <div class="top-card ${medalClass}">
 <div class="text-5xl mb-2">${medal}</div>
@@ -2027,18 +1898,23 @@ return `
 `;
 }).join('');
 }
+
 function renderRankings4to15() {
 const grid = document.getElementById('rankings4to15Grid');
 if (!grid) return;
+
 const rankings = allLeaderboardEntries.slice(3, 15);
 if (rankings.length === 0) {
 document.getElementById('rankings4to15Container').style.display = 'none';
 return;
 }
+
 document.getElementById('rankings4to15Container').style.display = 'block';
+
 grid.innerHTML = rankings.map((entry, index) => {
 const actualRank = index + 4;
 const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+
 return `
 <div class="rank-card">
 <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
@@ -2052,21 +1928,27 @@ View Website <i class="fas fa-external-link-alt ml-1"></i>
 `;
 }).join('');
 }
+
 function renderRankings16Plus() {
 const tbody = document.getElementById('rankingsTbody');
 const totalCount = document.getElementById('totalCount');
 if (!tbody) return;
+
 const rankings = allLeaderboardEntries.slice(15, 35);
+
 if (totalCount) {
 totalCount.textContent = allLeaderboardEntries.length;
 }
+
 if (rankings.length === 0) {
 tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-400">Geen rankings 16+</td></tr>';
 return;
 }
+
 tbody.innerHTML = rankings.map((entry, index) => {
 const actualRank = index + 16;
 const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+
 return `
 <tr>
 <td><span class="inline-flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full font-bold">${actualRank}</span></td>
@@ -2079,20 +1961,26 @@ return `
 `;
 }).join('');
 }
+
 async function loadFreelancers() {
 try {
 const response = await fetch('/api/freelancers');
 const data = await response.json();
+
 const grid = document.getElementById('freelancersGrid');
 if (!grid) return;
+
 const freelancers = data.freelancers || [];
+
 if (freelancers.length === 0) {
 grid.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Geen freelancers gevonden</div>';
 return;
 }
+
 grid.innerHTML = freelancers.map(f => {
 const firstName = f.name.split(' ')[0];
 const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase();
+
 return `
 <div class="card hover:border-purple-500">
 <div class="card-content">
@@ -2131,6 +2019,7 @@ document.getElementById('freelancersGrid').innerHTML =
 '<div class="col-span-3 text-center py-8 text-gray-400">Kon freelancers niet laden</div>';
 }
 }
+
 function extractDomainFromUrl(url) {
 if (!url) return 'Bedrijf';
 try {
@@ -2142,6 +2031,7 @@ return name.charAt(0).toUpperCase() + name.slice(1);
 return 'Bedrijf';
 }
 }
+
 function getCountryFlag(country) {
 const flags = {
 'Netherlands': '🇳🇱', 'NL': '🇳🇱',
@@ -2160,18 +2050,23 @@ const flags = {
 };
 return flags[country] || '🌐';
 }
+
 function renderCountryFilters() {
 const div = document.getElementById('countryFilters');
 if (!div) return;
+
 const countries = [...new Set(allLeaderboardEntries.map(e => e.country))];
+
 let html = '<button class="filter-tag active" onclick="filterByCountry(\'all\')">🌍 All</button>';
 countries.forEach(country => {
 if (country) {
 html += `<button class="filter-tag" onclick="filterByCountry('${country}')">${getCountryFlag(country)} ${country}</button>`;
 }
 });
+
 div.innerHTML = html;
 }
+
 function toggleFilters() {
 const panel = document.getElementById('filterPanel');
 const icon = document.getElementById('filterIcon');
@@ -2181,6 +2076,7 @@ icon.classList.toggle('fa-chevron-down');
 icon.classList.toggle('fa-chevron-up');
 }
 }
+
 function toggleRankings() {
 const container = document.getElementById('rankingsContainer');
 const toggleText = document.getElementById('rankingsToggleText');
@@ -2189,27 +2085,34 @@ container.classList.toggle('hidden');
 toggleText.textContent = container.classList.contains('hidden') ? '📊 Show Rankings 16+' : '📊 Hide Rankings 16+';
 }
 }
+
 function filterByCountry(country) {
 console.log('Filter by country:', country);
 }
+
 function filterAgencies() {
 const query = document.getElementById('searchInput')?.value.toLowerCase() || '';
+
 if (!query) {
 renderRankings4to15();
 renderRankings16Plus();
 return;
 }
+
 const filtered = allLeaderboardEntries.filter(entry =>
 (entry.company_name || '').toLowerCase().includes(query) ||
 (entry.url || '').toLowerCase().includes(query) ||
 extractDomainFromUrl(entry.url).toLowerCase().includes(query)
 );
+
 const rankings4to15Grid = document.getElementById('rankings4to15Grid');
 const rankings4to15 = filtered.slice(3, 15);
+
 if (rankings4to15Grid) {
 rankings4to15Grid.innerHTML = rankings4to15.map((entry, index) => {
 const actualRank = index + 4;
 const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+
 return `
 <div class="rank-card">
 <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
@@ -2224,6 +2127,7 @@ View Website
 }).join('');
 }
 }
+
 function toggleFAQ(id) {
 const answer = document.getElementById(`faqAnswer${id}`);
 const icon = document.getElementById(`faqIcon${id}`);
@@ -2232,6 +2136,7 @@ answer.classList.toggle('hidden');
 icon.style.transform = answer.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
 }
 }
+
 function openFreelancerModal() {
 const modal = document.getElementById('freelancerModal');
 if (modal) {
@@ -2239,6 +2144,7 @@ modal.classList.add('active');
 document.body.style.overflow = 'hidden';
 }
 }
+
 function closeModal() {
 const modal = document.getElementById('freelancerModal');
 if (modal) {
@@ -2246,23 +2152,28 @@ modal.classList.remove('active');
 document.body.style.overflow = 'auto';
 }
 }
+
 function submitFreelancer() {
 const name = document.getElementById('freelancerName')?.value;
 const email = document.getElementById('freelancerEmail')?.value;
 const title = document.getElementById('freelancerTitle')?.value;
 const bio = document.getElementById('freelancerBio')?.value;
 const isFeatured = document.getElementById('featuredListing')?.checked || false;
+
 if (!name || !email) {
 alert('❌ Name and email are required');
 return;
 }
+
 if (!email.includes('@')) {
 alert('❌ Please enter a valid email');
 return;
 }
+
 if (isFeatured) {
 window.open('https://paypal.me/ojgmedia?locale.x=en_US&country.x=NL', '_blank', 'noopener');
 }
+
 fetch('/api/freelancers/register', {
 method: 'POST',
 headers: { 'Content-Type': 'application/json' },
@@ -2295,6 +2206,279 @@ alert('❌ ' + (data.error || 'Registration failed'));
 alert('❌ Registration failed: ' + error.message);
 });
 }
+
+// ==========================================
+// BULK SCANNING FUNCTIES
+// ==========================================
+function toggleBulkScanner() {
+const content = document.getElementById('bulkScannerContent');
+const icon = document.getElementById('bulkScannerIcon');
+if (content) {
+content.classList.toggle('hidden');
+if (icon) {
+icon.style.transform = content.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+}
+}
+
+async function startBulkScan() {
+const urlInput = document.getElementById('bulkUrlInput');
+const emailInput = document.getElementById('bulkScanEmail');
+const nameInput = document.getElementById('bulkScanName');
+const button = document.getElementById('bulkScanBtn');
+const progress = document.getElementById('bulkProgress');
+const progressBar = document.getElementById('bulkProgressBar');
+const progressText = document.getElementById('bulkProgressText');
+const resultsDiv = document.getElementById('bulkResults');
+const resultsContainer = document.getElementById('bulkResultsContainer');
+
+const urls = urlInput.value.split('\n').filter(u => u.trim().length > 0);
+const email = emailInput.value.trim();
+const name = nameInput.value.trim();
+
+// Validatie
+if (urls.length === 0) {
+alert('❌ Please enter at least one URL');
+return;
+}
+
+if (urls.length > 100) {
+alert('❌ Maximum 100 URLs allowed');
+return;
+}
+
+if (!email || !email.includes('@')) {
+alert('❌ Please enter a valid email address');
+return;
+}
+
+if (!name) {
+alert('❌ Please enter your name');
+return;
+}
+
+// Start scanning
+button.disabled = true;
+button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
+progress.classList.remove('hidden');
+resultsDiv.classList.add('hidden');
+resultsContainer.innerHTML = '';
+
+let scannedCount = 0;
+let results = {
+leaderboard: [],
+withWebsite: [],
+withoutWebsite: [],
+errors: []
+};
+
+// Scan URLs one by one
+for (let i = 0; i < urls.length; i++) {
+const url = urls[i].trim();
+if (!url.startsWith('http')) {
+urls[i] = 'https://' + url;
+}
+
+progressText.textContent = `Scanning ${i + 1} of ${urls.length}...`;
+progressBar.style.width = `${((i + 1) / urls.length) * 100}%`;
+
+try {
+const response = await fetch('/api/scan', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ url: urls[i] })
+});
+
+const data = await response.json();
+
+if (data.success) {
+const score = data.score || 0;
+const hasWebsite = score > 0; // If we got a score, they have a website
+
+// Categorize based on score
+if (score >= 85) {
+results.leaderboard.push({ url: urls[i], score, data });
+} else if (hasWebsite) {
+results.withWebsite.push({ url: urls[i], score, data });
+} else {
+results.withoutWebsite.push({ url: urls[i], score, data });
+}
+} else {
+results.errors.push({ url: urls[i], error: data.error || 'Scan failed' });
+}
+
+scannedCount++;
+} catch (error) {
+results.errors.push({ url: urls[i], error: error.message });
+}
+
+// Small delay to prevent overwhelming the server
+await new Promise(resolve => setTimeout(resolve, 500));
+}
+
+// Display results
+displayBulkResults(results, email, name);
+
+// Send emails for categorized results
+await sendBulkEmails(results, email, name);
+
+button.disabled = false;
+button.innerHTML = '<i class="fas fa-rocket mr-2"></i> Start Bulk Scan';
+progress.classList.add('hidden');
+}
+
+function displayBulkResults(results, userEmail, userName) {
+const container = document.getElementById('bulkResultsContainer');
+const resultsDiv = document.getElementById('bulkResults');
+
+let html = '';
+
+// Leaderboard candidates
+if (results.leaderboard.length > 0) {
+html += `
+<div class="bg-green-900 bg-opacity-30 border border-green-500 rounded-lg p-4 mb-4">
+<h5 class="font-bold text-green-400 mb-2">
+🏆 Leaderboard Candidates (${results.leaderboard.length})
+</h5>
+<p class="text-sm text-gray-300 mb-2">These websites scored 85+ and will be submitted to admin for leaderboard approval.</p>
+<ul class="text-sm space-y-1">
+${results.leaderboard.map(r => `<li>✅ ${r.url} - Score: ${r.score}/100</li>`).join('')}
+</ul>
+</div>
+`;
+}
+
+// Businesses with website (improvement pitch)
+if (results.withWebsite.length > 0) {
+html += `
+<div class="bg-blue-900 bg-opacity-30 border border-blue-500 rounded-lg p-4 mb-4">
+<h5 class="font-bold text-blue-400 mb-2">
+📧 Improvement Emails Sent (${results.withWebsite.length})
+</h5>
+<p class="text-sm text-gray-300 mb-2">Business owners received personalized emails with SEO improvement recommendations.</p>
+<ul class="text-sm space-y-1">
+${results.withWebsite.map(r => `<li>📨 ${r.url} - Score: ${r.score}/100</li>`).join('')}
+</ul>
+</div>
+`;
+}
+
+// Businesses without website (website offer)
+if (results.withoutWebsite.length > 0) {
+html += `
+<div class="bg-purple-900 bg-opacity-30 border border-purple-500 rounded-lg p-4 mb-4">
+<h5 class="font-bold text-purple-400 mb-2">
+🌐 Website Offers Sent (${results.withoutWebsite.length})
+</h5>
+<p class="text-sm text-gray-300 mb-2">Owners received personalized emails offering professional website creation.</p>
+<ul class="text-sm space-y-1">
+${results.withoutWebsite.map(r => `<li>📬 ${r.url}</li>`).join('')}
+</ul>
+</div>
+`;
+}
+
+// Errors
+if (results.errors.length > 0) {
+html += `
+<div class="bg-red-900 bg-opacity-30 border border-red-500 rounded-lg p-4 mb-4">
+<h5 class="font-bold text-red-400 mb-2">
+❌ Scan Errors (${results.errors.length})
+</h5>
+<ul class="text-sm space-y-1">
+${results.errors.map(r => `<li>⚠️ ${r.url} - ${r.error}</li>`).join('')}
+</ul>
+</div>
+`;
+}
+
+// Summary email notice
+html += `
+<div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
+<p class="text-sm text-gray-300">
+📬 A summary report has been sent to <strong>${userEmail}</strong>
+</p>
+</div>
+`;
+
+container.innerHTML = html;
+resultsDiv.classList.remove('hidden');
+}
+
+async function sendBulkEmails(results, userEmail, userName) {
+if (!userId) {
+console.warn('No userId - skipping email sending');
+return;
+}
+
+try {
+// Send summary to user
+await fetch('/api/bulk-scan/send-summary', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+'x-user-id': userId
+},
+body: JSON.stringify({
+userEmail,
+userName,
+results
+})
+});
+
+// Submit leaderboard candidates
+if (results.leaderboard.length > 0) {
+await fetch('/api/bulk-scan/submit-leaderboard', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+'x-user-id': userId
+},
+body: JSON.stringify({
+entries: results.leaderboard,
+submittedBy: userEmail
+})
+});
+}
+
+// Send improvement emails to businesses with websites
+if (results.withWebsite.length > 0) {
+await fetch('/api/bulk-scan/send-improvement-emails', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+'x-user-id': userId
+},
+body: JSON.stringify({
+businesses: results.withWebsite,
+senderName: userName,
+senderEmail: userEmail
+})
+});
+}
+
+// Send website offer emails to businesses without websites
+if (results.withoutWebsite.length > 0) {
+await fetch('/api/bulk-scan/send-website-offers', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+'x-user-id': userId
+},
+body: JSON.stringify({
+businesses: results.withoutWebsite,
+senderName: userName,
+senderEmail: userEmail
+})
+});
+}
+
+console.log('✅ Bulk emails sent successfully');
+} catch (error) {
+console.error('❌ Error sending bulk emails:', error);
+}
+}
+
 window.onclick = function(event) {
 const modal = document.getElementById('freelancerModal');
 if (event.target === modal) {
