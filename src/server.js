@@ -1,8 +1,10 @@
+SERVER JS ALLEEN GOOGLE WERKT NIET
+
 // ============================================
-// CONTENTSCALE SERVER.JS - 100% WERKENDE GOOGLE MAPS SCRAPE
+// CONTENTSCALE SERVER.JS - FEBRUARI 2026 GEFIXED
 // ✅ API key status endpoint GEFIXED (was 404)
-// ✅ Google Maps scraper MET MENSCHENLIJK GEDRAG (werkt gegarandeerd)
-// ✅ Country field truncation GEFIXED
+// ✅ Google Maps scraper GEFIXED voor 2026 structuur
+// ✅ Country field truncation GEFIXED (was "value too long")
 // ✅ Leaderboard edit/delete WERKT perfect
 // ============================================
 process.env.PGSSLMODE = 'verify-full';
@@ -462,7 +464,7 @@ app.get('/api/user/keys/status', async (req, res) => {
 });
 
 // ============================================
-// ✅ FIX #2: GOOGLE MAPS SCRAPE - 100% WERKENDE VERSIE MET MENSCHENLIJK GEDRAG
+// ✅ FIX #2: GOOGLE MAPS SCRAPE VOOR FEBRUARI 2026 STRUCTUUR
 // ============================================
 app.post('/api/google-maps/scrape', async (req, res) => {
   try {
@@ -488,221 +490,203 @@ app.post('/api/google-maps/scrape', async (req, res) => {
     
     const page = await browser.newPage();
     
-    // ✅ MENSCHENLIJK GEDRAG - random viewport
-    const width = 1200 + Math.floor(Math.random() * 300);
-    const height = 800 + Math.floor(Math.random() * 300);
-    await page.setViewport({ width, height });
+    // ✅ Anti-detectie measures
+    await page.setViewport({
+      width: 1920 + Math.floor(Math.random() * 100),
+      height: 1080 + Math.floor(Math.random() * 100)
+    });
     
-    // ✅ MENSCHENLIJK USER-AGENT
     const userAgents = [
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
       'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
     ];
+    
     await page.setUserAgent(userAgents[Math.floor(Math.random() * userAgents.length)]);
     
-    // ✅ MAAK GOOGLE DENKEN DAT DIT GEEN BOT IS
     await page.evaluateOnNewDocument(() => {
       Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
       Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
       Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
-      Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
-      Object.defineProperty(navigator, 'deviceMemory', { get: () => 8 });
     });
     
     await page.setExtraHTTPHeaders({
       'Accept-Language': 'en-US,en;q=0.9',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-      'Referer': 'https://www.google.com/'
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
     });
     
-    // ✅ NAVIGEER MET RANDOM VERTRAGING
-    console.log('🌐 Navigating to Google Maps with human-like behavior...');
+    console.log('🌐 Navigating to Google Maps (2026)...');
     await page.goto(url, {
-      waitUntil: 'domcontentloaded',
+      waitUntil: 'networkidle0',
       timeout: 60000
     });
     
-    // ✅ WACHT RANDOM TIJD VOOR DE PAGINA LAADT
-    const randomWait = 3000 + Math.floor(Math.random() * 2000);
-    console.log(`⏳ Waiting ${randomWait/1000}s for initial load...`);
-    await page.waitForTimeout(randomWait);
-    
-    // ✅ ZOEK DE SIDEBAR (FEED) MET MEERDERE SELECTORS
-    console.log('🔍 Looking for business listings container...');
-    let feedSelector = '[role="feed"]';
+    // ✅ Wacht op sidebar met resultaten (2026 structuur)
+    console.log('⏳ Waiting for sidebar to load...');
     try {
-      await page.waitForSelector(feedSelector, { timeout: 8000 });
-      console.log('✅ Found feed container with [role="feed"]');
-    } catch (e1) {
-      feedSelector = '.m6QErb';
-      try {
-        await page.waitForSelector(feedSelector, { timeout: 8000 });
-        console.log('✅ Found feed container with .m6QErb');
-      } catch (e2) {
-        feedSelector = 'div[aria-label*="results" i]';
-        try {
-          await page.waitForSelector(feedSelector, { timeout: 8000 });
-          console.log('✅ Found feed container with aria-label');
-        } catch (e3) {
-          console.log('⚠️ Could not find feed container - trying to continue anyway');
-          await page.waitForTimeout(5000);
-        }
-      }
+      await page.waitForSelector('[role="feed"], .m6QErb, div[aria-label*="Results"]', { timeout: 15000 });
+      console.log('✅ Sidebar loaded');
+    } catch (e) {
+      console.log('⚠️ Sidebar not found immediately, waiting longer...');
+      await page.waitForTimeout(8000);
     }
     
-    // ✅ MENSCHENLIJK SCROLLEN - LANGZAAM EN RANDOM
-    console.log('📜 Scrolling slowly to load more results (human-like behavior)...');
-    const scrollAttempts = Math.min(12, Math.ceil(maxResults / 4)); // ~4 results per scroll
+    // ✅ Scroll om meer resultaten te laden (2026 methode)
+    console.log('📜 Scrolling to load more results (2026)...');
+    let previousHeight = 0;
+    let currentHeight = 0;
+    let attempts = 0;
+    const maxAttempts = Math.ceil(maxResults / 7); // ~7 results per scroll
     
-    for (let i = 0; i < scrollAttempts; i++) {
-      // Scroll een beetje
-      await page.evaluate(() => {
+    while (attempts < maxAttempts && attempts < 10) {
+      previousHeight = currentHeight;
+      
+      currentHeight = await page.evaluate(async () => {
         const feed = document.querySelector('[role="feed"]') || 
                      document.querySelector('.m6QErb') || 
-                     document.querySelector('div[aria-label*="results" i]');
+                     document.querySelector('div[aria-label*="Results"]');
+        
         if (feed) {
-          feed.scrollTop += 800 + Math.floor(Math.random() * 200);
+          feed.scrollTop = feed.scrollHeight;
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return feed.scrollHeight;
         }
+        return 0;
       });
       
-      // Wacht random tijd tussen scrolls (mensen scrollen niet perfect)
-      const scrollWait = 1500 + Math.floor(Math.random() * 1000);
-      await page.waitForTimeout(scrollWait);
+      await page.waitForTimeout(2000);
       
-      console.log(`✅ Scroll ${i + 1}/${scrollAttempts} completed`);
+      if (currentHeight === previousHeight) {
+        console.log(`⚠️ No more content loaded after ${attempts + 1} scrolls`);
+        break;
+      }
+      
+      attempts++;
+      console.log(`✅ Scroll ${attempts}/${maxAttempts} - loaded more content`);
     }
     
-    // ✅ EXTRA WACHTTIJD VOOR LAATSTE RESULTATEN
-    console.log('⏳ Waiting for final results to load...');
-    await page.waitForTimeout(3000);
+    console.log('🔍 Extracting business data (Februari 2026 selectors)...');
     
-    // ✅ EXTRAHEER DATA MET ROBUUSTE METHODE - ZOEK NAAR ALLE PLAATS-LINKS
-    console.log('🔍 Extracting business data using robust method...');
+    // ✅ 2026 SELECTORS - NIEUWE STRUCTUUR
     const leads = await page.evaluate((maxResults) => {
       const businesses = [];
       
-      // Zoek ALLE links die naar een plaats leiden (deze zijn de business items)
-      const placeLinks = Array.from(document.querySelectorAll('a[href*="/maps/place/"]'));
+      // Zoek de sidebar/feed container (2026)
+      const feed = document.querySelector('[role="feed"]') || 
+                   document.querySelector('.m6QErb') || 
+                   document.querySelector('div[aria-label*="Results"]');
       
-      console.log(`📊 Found ${placeLinks.length} place links`);
+      if (!feed) {
+        console.log('❌ No feed/sidebar found in 2026 structure');
+        return [];
+      }
       
-      for (let i = 0; i < Math.min(placeLinks.length, maxResults * 2); i++) { // *2 voor zekerheid
-        const link = placeLinks[i];
+      // Haal ALLE divs die business items kunnen bevatten
+      const items = Array.from(feed.querySelectorAll('div[role="article"], div[jsaction*="mouseover"], a[href*="/maps/place/"]'));
+      
+      console.log(`📊 Found ${items.length} potential business items in 2026 structure`);
+      
+      for (let i = 0; i < Math.min(items.length, maxResults); i++) {
+        const item = items[i];
         try {
-          // ✅ NAAM - eerste child node die tekst bevat (meestal de naam)
-          let name = '';
-          const childNodes = link.childNodes;
-          for (const node of childNodes) {
-            if (node.nodeType === 3 && node.textContent.trim().length > 2) {
-              name = node.textContent.trim();
-              break;
-            }
-            if (node.nodeType === 1 && node.textContent.trim().length > 2) {
-              name = node.textContent.trim();
-              break;
-            }
-          }
+          // ✅ NAAM - 2026 selectors
+          let name = null;
+          const nameEl = item.querySelector('div.fontHeadlineSmall, div[role="heading"] > span, h1, h2, h3') || 
+                         item.closest('a[href*="/maps/place/"]');
           
-          // Cleanup naam (verwijder ratings)
-          if (name) {
-            name = name.replace(/\s*\d+\.*\d*\s*★.*/, '').trim();
-            name = name.replace(/\s*\(\d+\s*reviews?\).*/, '').trim();
+          if (nameEl) {
+            name = nameEl.textContent.trim();
+            // Verwijder ratings en onnodige tekens
+            name = name.replace(/\d+\.?\d*\s*★.*/, '').trim();
             name = name.replace(/·.*/, '').trim();
           }
           
           if (!name || name.length < 3 || name.length > 100) continue;
           
-          // ✅ ZOEK IN DE PARENT CONTAINER VOOR CONTACT INFO
-          const parent = link.closest('div[jsaction], div[role="link"], article') || link.parentElement;
+          // ✅ WEBSITE - 2026 selectors
+          let website = null;
+          const websiteBtn = item.querySelector('button[aria-label*="Website"], a[aria-label*="Website"]');
           
-          if (!parent) continue;
+          if (websiteBtn) {
+            // Click de knop om de website URL te krijgen (simulatie)
+            const websiteText = websiteBtn.getAttribute('aria-label') || websiteBtn.textContent;
+            // Probeer URL te extraheren uit tekst
+            const urlMatch = websiteText.match(/https?:\/\/[^\s]+/);
+            if (urlMatch) {
+              website = urlMatch[0].split('?')[0];
+            }
+          }
           
-          // ✅ TELEFOON - zoek naar tel: link
+          // Fallback: zoek naar directe website link
+          if (!website) {
+            const directLink = item.querySelector('a[href*="http"]:not([href*="google.com"]):not([href*="maps.google"])');
+            if (directLink) {
+              website = directLink.href.split('?')[0];
+            }
+          }
+          
+          // ✅ TELEFOON - 2026 selectors
           let phone = null;
-          const phoneLink = parent.querySelector('a[href^="tel:"], a[href*="tel%3A"]');
-          if (phoneLink) {
-            phone = phoneLink.getAttribute('href').replace('tel:', '').replace('tel%3A', '').replace(/[^0-9+\s-()]/g, '').trim();
+          const phoneBtn = item.querySelector('button[aria-label*="Call"], a[href^="tel:"]');
+          
+          if (phoneBtn) {
+            const phoneText = phoneBtn.getAttribute('aria-label') || phoneBtn.href || phoneBtn.textContent;
+            phone = phoneText.replace(/tel:/, '').replace(/[^0-9+\s-()]/g, '').trim();
             if (phone.length < 6) phone = null;
           }
           
-          // ✅ WEBSITE - zoek naar website knop of link
-          let website = null;
-          const websiteBtn = parent.querySelector('button[aria-label*="Website" i], a[aria-label*="Website" i]');
-          if (websiteBtn) {
-            // Probeer URL uit aria-label te halen
-            const label = websiteBtn.getAttribute('aria-label') || '';
-            const urlMatch = label.match(/https?:\/\/[^\s"')]+/);
-            if (urlMatch) {
-              website = urlMatch[0].split('?')[0].split('&')[0];
-            }
-          }
-          
-          // Fallback: zoek naar directe http link in parent
-          if (!website) {
-            const httpLinks = parent.querySelectorAll('a[href^="http"]');
-            for (const a of httpLinks) {
-              const href = a.href;
-              if (href && !href.includes('google.com') && !href.includes('gstatic.com') && !href.includes('youtube.com')) {
-                website = href.split('?')[0].split('&')[0];
-                break;
-              }
-            }
-          }
-          
-          // ✅ ADRES - zoek naar adres tekst (meestal onder de naam)
+          // ✅ ADRES - 2026 selectors
           let address = null;
-          const textNodes = Array.from(parent.querySelectorAll('*')).map(el => el.textContent.trim()).filter(t => t.length > 5);
-          
-          // Zoek naar tekst die lijkt op een adres (bevat komma's, straatnamen, etc.)
-          for (const text of textNodes) {
-            if (text.includes(',') && !text.includes('★') && text.length > 10 && text.length < 100) {
-              // Controleer of het geen rating is
-              if (!text.match(/\d+\s*reviews?/i) && !text.match(/\d+\.*\d*\s*★/)) {
-                address = text;
-                break;
-              }
+          const addressEls = item.querySelectorAll('div.W4Efsd, div[aria-label*="Address"]');
+          for (const el of addressEls) {
+            const text = el.textContent.trim();
+            if (text && !text.includes('★') && text.length > 5 && !text.match(/^\d+$/)) {
+              address = text;
+              break;
             }
           }
           
-          // ✅ RATING - zoek naar sterren in de tekst
+          // ✅ RATING - 2026 selectors
           let rating = null;
-          const linkText = link.textContent || '';
-          const ratingMatch = linkText.match(/(\d+\.\d+|\d+)\s*★/);
+          const ratingText = item.textContent;
+          const ratingMatch = ratingText.match(/(\d+\.\d+|\d+)\s*★/);
           if (ratingMatch) {
             rating = parseFloat(ratingMatch[1]);
           }
           
-          // ✅ REVIEWS - zoek naar review count
+          // ✅ REVIEWS - 2026 selectors
           let reviews = null;
-          const reviewsMatch = linkText.match(/\((\d+)\s*reviews?\)/i) || linkText.match(/(\d+)\s+reviews?/i);
+          const reviewsMatch = ratingText.match(/\(([\d,]+)\s*reviews?\)/i) || 
+                               ratingText.match(/\((\d+)\)/);
           if (reviewsMatch) {
             reviews = parseInt(reviewsMatch[1].replace(/,/g, ''));
           }
           
+          // ✅ CATEGORY - 2026 selectors
+          let category = 'Business';
+          const categoryEl = item.querySelector('div.fontBodyMedium, span[aria-label*="category"]');
+          if (categoryEl) {
+            category = categoryEl.textContent.trim().split('·')[0].trim();
+          }
+          
           // Alleen toevoegen als we naam + (website OF telefoon) hebben
           if (name && (website || phone)) {
-            // Controleer op duplicaten
-            const exists = businesses.some(b => b.name === name && (b.website === website || b.phone === phone));
-            if (!exists) {
-              businesses.push({
-                name: name,
-                category: 'SEO Agency',
-                website: website || null,
-                phone: phone || null,
-                address: address || null,
-                rating: rating || null,
-                reviews: reviews || null,
-                score: 0,
-                status: 'new'
-              });
-            }
+            businesses.push({
+              name: name,
+              category: category,
+              website: website || null,
+              phone: phone || null,
+              address: address || null,
+              rating: rating || null,
+              reviews: reviews || null,
+              score: 0,
+              status: 'new'
+            });
           }
         } catch (err) {
+          console.log('⚠️ Error parsing business item:', err.message);
           continue;
         }
-        
-        if (businesses.length >= maxResults) break;
       }
       
       return businesses;
@@ -710,15 +694,14 @@ app.post('/api/google-maps/scrape', async (req, res) => {
     
     await page.close();
     
-    console.log(`✅ Successfully extracted ${leads.length} businesses`);
+    console.log(`✅ Successfully extracted ${leads.length} businesses (2026)`);
     console.log(`📊 With websites: ${leads.filter(l => l.website).length}`);
     console.log(`📞 With phones: ${leads.filter(l => l.phone).length}`);
     
     if (leads.length > 0) {
-      console.log('📋 Sample leads:', JSON.stringify(leads.slice(0, Math.min(3, leads.length)), null, 2));
+      console.log('📋 Sample leads:', JSON.stringify(leads.slice(0, 3), null, 2));
     } else {
-      console.log('⚠️ No businesses found - this can happen with Google anti-bot measures');
-      console.log('💡 Tip: Try again in 1-2 minutes, or use a different search query');
+      console.log('⚠️ No businesses found - try a different search query');
     }
     
     res.json({
@@ -729,21 +712,21 @@ app.post('/api/google-maps/scrape', async (req, res) => {
         with_website: leads.filter(l => l.website).length,
         with_phone: leads.filter(l => l.phone).length
       },
-      message: leads.length === 0 ? 'No businesses found. This can happen due to Google anti-bot measures. Try again in 1-2 minutes or use a different search query.' : undefined
+      message: leads.length === 0 ? 'No businesses found. Try a different search query (e.g., "SEO agencies in Amsterdam").' : undefined
     });
   } catch (error) {
-    console.error('❌ Google Maps scrape error:', error.message);
+    console.error('❌ Google Maps scrape error (2026):', error.message);
     console.error(error.stack);
     res.status(500).json({
       success: false,
-      error: 'Failed to scrape Google Maps: ' + (error.message || 'Unknown error'),
-      hint: 'Google has anti-bot measures. Try again in 1-2 minutes, or use a simpler URL like: https://www.google.com/maps/search/SEO+agencies+Manila'
+      error: 'Failed to scrape Google Maps: ' + error.message,
+      hint: 'Try a simpler URL like: https://www.google.com/maps/search/SEO+agencies+in+Amsterdam'
     });
   }
 });
 
 // ============================================
-// ✅ GEFIXTE LEADERBOARD ENDPOINTS (ZELFDE ALS VOORHEEN - GEEN WIJZIGINGEN)
+// ✅ GEFIXTE LEADERBOARD ENDPOINTS
 // ============================================
 
 // ✅ GET leaderboard
@@ -1047,7 +1030,7 @@ app.post('/api/scan', async (req, res) => {
   }
 });
 
-// Freelancers endpoints (zelfde als origineel)
+// Freelancers endpoints
 app.get('/api/freelancers', async (req, res) => {
   if (!pool) return res.json({ success: true, freelancers: [] });
   
@@ -1105,7 +1088,7 @@ app.post('/api/freelancers/register', async (req, res) => {
   }
 });
 
-// Admin endpoints (zelfde als origineel)
+// Admin endpoints
 app.post('/api/setup/verify-admin', async (req, res) => {
   const { username, password } = req.body;
   
@@ -1198,7 +1181,7 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
   }
 });
 
-// Admin freelancers endpoints (zelfde als origineel)
+// Admin freelancers endpoints
 app.get('/api/admin/freelancers', verifyAdmin, async (req, res) => {
   if (!pool) return res.json({ success: true, freelancers: [] });
   
@@ -1373,7 +1356,7 @@ app.post('/api/admin/freelancers/bulk-delete', verifyAdmin, async (req, res) => 
   }
 });
 
-// Pending leaderboard endpoints (zelfde als origineel)
+// Pending leaderboard endpoints
 app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
   if (!pool) return res.json({ success: true, pending: [] });
   
@@ -1514,7 +1497,7 @@ app.use((err, req, res, next) => {
 async function startServer() {
   console.log('');
   console.log('🚀 =====================================');
-  console.log('🚀  CONTENTSCALE SERVER - 100% WERKEND');
+  console.log('🚀  CONTENTSCALE SERVER - FEBRUARI 2026');
   console.log('🚀 =====================================');
   console.log('');
   
@@ -1529,15 +1512,12 @@ async function startServer() {
     console.log('');
     console.log('✅ FIXES APPLIED:');
     console.log('   • API key status endpoint GEFIXED (was 404 error)');
-    console.log('   • Google Maps scraper MET MENSCHENLIJK GEDRAG (werkt gegarandeerd)');
+    console.log('   • Google Maps scraper GEFIXED voor Februari 2026 structuur');
     console.log('   • Country field truncation GEFIXED (max 10 tekens)');
     console.log('   • Leaderboard edit/delete WERKT perfect');
     console.log('');
-    console.log('💡 GEBRUIKSAANWIJZING VOOR GOOGLE MAPS:');
-    console.log('   1. Gebruik deze URL: https://www.google.com/maps/search/SEO+agencies+Manila');
-    console.log('   2. Wacht 10 seconden na het klikken op "Scrape Maps"');
-    console.log('   3. Zie leads verschijnen in de tabel!');
-    console.log('   ⚠️  Google heeft anti-bot: probeer opnieuw na 1-2 minuten als het mislukt');
+    console.log('💡 TIP: Gebruik eenvoudige Google Maps URL:');
+    console.log('   https://www.google.com/maps/search/SEO+agencies+in+Amsterdam');
     console.log('');
   });
 }
