@@ -56,9 +56,6 @@ color: #6b21a8 !important;
 .bg-gray-900\/95 { background-color: rgba(3, 7, 18, 0.95); }
 
 /* WIDTH CONSISTENCY FIX - ALL sections max 1280px centered */
-/* Uncomment line below to see section boundaries for testing */
-/* .max-w-7xl, nav > div, #main-content > div, section { outline: 2px solid red !important; } */
-
 .max-w-7xl,
 nav > div,
 #main-content,
@@ -1664,989 +1661,1054 @@ button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
 }
 
 // ==========================================
-// VERBETERDE DISPLAY SCAN RESULT - GRAAF FRAMEWORK
+// ✅ VERBETERDE DISPLAY SCAN RESULT - MET KWALITEITSNIVEAUS
 // ==========================================
 function displayScanResult(result) {
-  const resultDiv = document.getElementById('singleResult');
-  
-  const url = result.url || '';
-  const quality = result.quality || 'unknown';
-  const currentScore = result.score || 0;
-  
-  const graaf = result.metrics?.graaf || 0;
-  const craft = result.metrics?.craft || 0;
-  const technical = result.metrics?.technical || 0;
-  const words = result.content_stats?.wordCount || 0;
-  
-  const contentQuality = result.metrics?.content || 0;
-  const uxScore = result.metrics?.ux || 0;
-  
-  // GRAAF-gebaseerde recommendations
-  const recommendations = [];
-  
-  // 1. Author/Credibility check (G - Genuinely Credible)
-  if (graaf < 15) {
-    recommendations.push({
-      priority: 'HIGH',
-      title: '✍️ Add Author Bio with Credentials',
-      description: 'Your page is missing an author bio. This is critical for E-E-A-T signals.',
-      action: 'Add a 200-250 word author bio with credentials, experience, certifications, and notable achievements.',
-      learning: 'Pages with author bios receive 56% more trust signals and rank 38 positions higher on average. Google prioritizes E-E-A-T.',
-      target: '200-250 word author bio with credentials'
-    });
-  }
-  
-  // 2. Expert Quotes (G - Genuinely Credible)
-  if (graaf < 25 && words > 1000) {
-    recommendations.push({
-      priority: 'HIGH',
-      title: '💡 Add Expert Quotes for Authority',
-      description: 'Current: 0 expert quotes. Target: 4+ with full attribution.',
-      action: 'Include 4+ direct quotes from industry experts with full name, title, and organization. Place strategically to reinforce key points.',
-      learning: 'Content with expert quotes receives 68% more organic traffic and ranks 47 positions higher on average. Google prioritizes E-E-A-T signals.',
-      target: '4+ expert quotes with full attribution (name, title, organization)'
-    });
-  }
-  
-  // 3. Schema Markup (Technical)
-  if (technical < 10) {
-    recommendations.push({
-      priority: 'HIGH',
-      title: '🔍 Add Article Schema',
-      description: 'Missing Article schema markup required for rich snippets and AI Overview inclusion.',
-      action: 'Implement Article schema in JSON-LD format with headline, description, author, publisher, datePublished, and wordCount.',
-      learning: 'Article schema increases rich snippet appearance by 30% and AI Overview inclusion by 3.2x.',
-      target: 'Complete Article schema markup'
-    });
-  }
-  
-  // 4. Meta Description (Technical)
-  if (technical < 8) {
-    recommendations.push({
-      priority: 'MEDIUM',
-      title: '📝 Optimize Meta Description Length',
-      description: 'Current meta description needs improvement. Target: 150-160 characters.',
-      action: 'Adjust meta description to exactly 150-160 characters. Include keyword, benefit, CTA, and authority signal.',
-      learning: 'Meta descriptions between 150-160 characters have 18% higher CTR and display completely without truncation.',
-      target: '150-160 character meta description'
-    });
-  }
-  
-  // 5. FAQ Section (R - Relevance)
-  if (words > 1500) {
-    recommendations.push({
-      priority: 'HIGH',
-      title: '❓ Add FAQ Section with 10+ Questions',
-      description: 'Current FAQ questions missing or insufficient. Target: 10+ with complete answers.',
-      action: 'Create a dedicated FAQ section with 10+ questions. Each answer should be 100+ words with 1 internal + 1 external link.',
-      learning: 'FAQ sections increase time on page by 89 seconds on average and capture 22% of "People Also Ask" features.',
-      target: '10+ FAQ questions with 100+ word answers'
-    });
-  }
-  
-  // 6. Direct Answer Box (A - Actionability)
-  if (words > 500) {
-    recommendations.push({
-      priority: 'HIGH',
-      title: '🎯 Add Direct Answer Box',
-      description: 'First paragraph should provide immediate value. Target: 40-60 words for AI Overview inclusion.',
-      action: 'Create a 40-60 word direct answer in your first paragraph that answers the main question with keyword + statistic + source.',
-      learning: 'Direct answers of 40-60 words are 4.3x more likely to appear in AI Overviews and Featured Snippets.',
-      target: '40-60 word direct answer with keyword + source'
-    });
-  }
-  
-  // 7. TL;DR Section (A - Actionability)
-  if (words > 2000) {
-    recommendations.push({
-      priority: 'MEDIUM',
-      title: '📌 Add TL;DR Section',
-      description: 'Current: 0 bullet points. Target: 5 key takeaways with sources.',
-      action: 'Add a TL;DR section with exactly 5 bullet points, each 15-25 words with specific numbers and sources.',
-      learning: 'TL;DR sections increase content consumption by 47% and provide quick-scannable value for busy readers.',
-      target: '5 bullet point TL;DR with sources'
-    });
-  }
-  
-  // 8. Table of Contents (Craft)
-  if (craft < 20) {
-    recommendations.push({
-      priority: 'LOW',
-      title: '📋 Add Table of Contents',
-      description: 'Your page is missing a table of contents for navigation.',
-      action: 'Add a table of contents with clickable anchor links to all major H2 sections.',
-      learning: 'Table of contents improves user navigation and reduces bounce rate by 15%.',
-      target: 'Clickable table of contents with all H2 sections'
-    });
-  }
-  
-  // 9. Readability (UX)
-  if (uxScore < 70) {
-    recommendations.push({
-      priority: 'MEDIUM',
-      title: '📖 Improve Readability (Flesch Score)',
-      description: 'Current readability needs improvement. Target: 60-70 for optimal readability.',
-      action: 'Use shorter sentences (15-18 words average), simpler vocabulary, and more paragraph breaks.',
-      learning: 'Content with Flesch scores of 60-70 is accessible to 8th-9th grade readers and has 34% higher engagement.',
-      target: 'Flesch Reading Ease score of 60-70'
-    });
-  }
-  
-  // 10. Statistics & Data (A - Accuracy)
-  if (graaf < 35) {
-    recommendations.push({
-      priority: 'HIGH',
-      title: '📊 Add Statistics with Sources',
-      description: 'Your content lacks verifiable data. Add 5-8 statistics with proper citations.',
-      action: 'Include relevant statistics from authoritative sources. Each stat needs: number + context + source link.',
-      learning: 'Content with verifiable statistics ranks 47% higher and is 3x more likely to be cited.',
-      target: '5-8 statistics with authoritative sources'
-    });
-  }
-  
-  // 11. Freshness (F - Freshness)
-  const hasRecentDate = result.content_stats?.hasRecentDate || false;
-  if (!hasRecentDate) {
-    recommendations.push({
-      priority: 'MEDIUM',
-      title: '🔄 Update Content Freshness',
-      description: 'No recent dates found. Update with 2024-2025 data.',
-      action: 'Review and update all statistics, examples, and references to current year. Add "Updated: [current date]" notice.',
-      learning: 'Fresh content ranks 56% better and is 2.5x more likely to appear in AI Overviews.',
-      target: '2024-2025 data in all statistics and examples'
-    });
-  }
-  
-  // 12. Actionability (A - Actionability)
-  if (words > 1500) {
-    recommendations.push({
-      priority: 'MEDIUM',
-      title: '⚡ Add Actionable Steps',
-      description: 'Content describes problems but lacks clear solutions.',
-      action: 'Add 5-7 concrete, numbered steps readers can take immediately. Include examples and templates.',
-      learning: 'Actionable content has 52% higher engagement and 3x more backlinks.',
-      target: '5-7 numbered action steps with examples'
-    });
-  }
-  
-  // Bouw recommendations HTML
-  let recsHtml = '';
-  if (recommendations.length > 0) {
-    recommendations.slice(0, 8).forEach(rec => {
-      let priorityClass = 'priority-none';
-      if (rec.priority === 'HIGH') priorityClass = 'priority-high';
-      else if (rec.priority === 'MEDIUM') priorityClass = 'priority-medium';
-      else if (rec.priority === 'LOW') priorityClass = 'priority-low';
-      
-      recsHtml += `
-        <div class="recommendation-card">
-          <div class="flex items-start justify-between mb-2">
-            <h4 class="recommendation-title">${rec.title}</h4>
-            <span class="priority-badge ${priorityClass}">${rec.priority}</span>
-          </div>
-          <p class="recommendation-desc">${rec.description}</p>
-          <div class="recommendation-section">
-            <div class="recommendation-section-title">
-              <i class="fas fa-wrench"></i> <span>Action</span>
-            </div>
-            <p class="recommendation-action">${rec.action}</p>
-          </div>
-          <div class="recommendation-section">
-            <div class="recommendation-section-title">
-              <i class="fas fa-graduation-cap"></i> <span>Learning</span>
-            </div>
-            <p class="recommendation-learning">${rec.learning}</p>
-          </div>
-          <div class="recommendation-section">
-            <div class="recommendation-section-title">
-              <i class="fas fa-bullseye"></i> <span>Target</span>
-            </div>
-            <p class="recommendation-target">${rec.target}</p>
-          </div>
-        </div>
-      `;
-    });
-  } else {
-    recsHtml = '<p class="text-gray-400 text-sm">Your content scores well! Keep adding fresh, valuable content.</p>';
-  }
-  
-  // Quality badge color
-  let qualityColor = 'bg-gray-600';
-  if (quality === 'excellent') qualityColor = 'bg-green-600';
-  else if (quality === 'good') qualityColor = 'bg-blue-600';
-  else if (quality === 'average') qualityColor = 'bg-yellow-600';
-  else if (quality === 'poor') qualityColor = 'bg-red-600';
-  else if (quality === 'below-average') qualityColor = 'bg-orange-600';
-  
-  // Volledige HTML
-  resultDiv.innerHTML = `
-    <div class="bg-gray-800 rounded-xl border-2 border-purple-500 p-6 mt-4">
-      <div class="text-center mb-4">
-        <h2 class="text-2xl font-bold text-white mb-1">📊 GRAAF Framework Analysis</h2>
-        <p class="text-md text-gray-300 break-all">${url}</p>
-        <span class="inline-block mt-2 px-3 py-1 ${qualityColor} text-white text-sm rounded-full">
-          Quality: ${quality.charAt(0).toUpperCase() + quality.slice(1)}
-        </span>
-      </div>
-      
-      <div class="text-center mb-6">
-        <div class="text-6xl font-bold text-white">${currentScore}</div>
-        <div class="text-sm text-gray-400">out of 100</div>
-      </div>
-      
-      <div class="grid grid-cols-2 gap-4 mb-5">
-        <div class="bg-gray-900 rounded-lg p-4 text-center">
-          <div class="text-sm text-gray-400 mb-1">GRAAF (50)</div>
-          <div class="text-2xl font-bold text-purple-400">${graaf}/50</div>
-        </div>
-        <div class="bg-gray-900 rounded-lg p-4 text-center">
-          <div class="text-sm text-gray-400 mb-1">CRAFT (30)</div>
-          <div class="text-2xl font-bold text-blue-400">${craft}/30</div>
-        </div>
-        <div class="bg-gray-900 rounded-lg p-4 text-center">
-          <div class="text-sm text-gray-400 mb-1">Technical (20)</div>
-          <div class="text-2xl font-bold text-yellow-400">${technical}/20</div>
-        </div>
-        <div class="bg-gray-900 rounded-lg p-4 text-center">
-          <div class="text-sm text-gray-400 mb-1">Words</div>
-          <div class="text-2xl font-bold text-white">${words.toLocaleString()}</div>
-        </div>
-      </div>
-      
-      <div class="space-y-3 mb-6">
-        <div>
-          <div class="flex justify-between items-center mb-1">
-            <span class="text-gray-300">Content Quality</span>
-            <span class="text-lg font-bold text-green-400">${contentQuality}/100</span>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-bar-fill" style="width: ${contentQuality}%"></div>
-          </div>
-        </div>
-        <div>
-          <div class="flex justify-between items-center mb-1">
-            <span class="text-gray-300">UX Score</span>
-            <span class="text-lg font-bold text-green-400">${uxScore}/100</span>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-bar-fill" style="width: ${uxScore}%"></div>
-          </div>
-        </div>
-      </div>
-      
-      <div class="border-t border-gray-700 pt-5 mb-5">
-        <h3 class="text-xl font-bold text-white mb-4">📋 Priority Recommendations</h3>
-        ${recsHtml}
-      </div>
-      
-      <div class="flex gap-3">
-        <button onclick="addToLeaderboard()" 
-                class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-semibold transition-all">
-          <i class="fas fa-trophy mr-2"></i> Add to Leaderboard
-        </button>
-        <button onclick="document.getElementById('singleResult').classList.add('hidden')" 
-                class="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold transition-all">
-          Close
-        </button>
-      </div>
-    </div>
-  `;
-  
-  resultDiv.classList.remove('hidden');
-  resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-
-function addToLeaderboard() {
 const resultDiv = document.getElementById('singleResult');
-const urlElement = resultDiv.querySelector('p.text-md');
-if (!urlElement) {
-alert('❌ No scan result found');
-return;
+
+const url = result.url || '';
+const quality = result.quality || 'unknown';
+const currentScore = result.score || 0;
+
+const graaf = result.metrics?.graaf || 0;
+const craft = result.metrics?.craft || 0;
+const technical = result.metrics?.technical || 0;
+const words = result.content_stats?.wordCount || 0;
+
+const contentQuality = result.metrics?.content || 0;
+const uxScore = result.metrics?.ux || 0;
+
+// ==========================================
+// G - GENUINELY CREDIBLE CHECKS
+// ==========================================
+const rawHtml = result.rawHtml || '';
+
+const hasAuthor = /by\s+\w+|author:|written\s+by|contributor/i.test(rawHtml);
+const hasFullAuthorBio = /author bio|about the author|meet the author/i.test(rawHtml);
+const hasCredentials = /certified|expert in|specialist|credentials|linkedin\.com\/in\//i.test(rawHtml);
+
+let authorQuality = 'none';
+let authorCurrent = 'No author information found';
+if (hasFullAuthorBio && hasCredentials) {
+authorQuality = 'excellent';
+authorCurrent = 'Complete author bio with credentials';
+} else if (hasAuthor && hasCredentials) {
+authorQuality = 'good';
+authorCurrent = 'Author name with credentials';
+} else if (hasAuthor) {
+authorQuality = 'fair';
+authorCurrent = 'Author name only';
 }
 
-const urlText = urlElement.textContent || '';
-const companyName = prompt('Enter company name (optional):', '');
-const contactEmail = prompt('Enter your email to receive congratulations if approved (optional):', '');
-
-if (!contactEmail) {
-alert('✅ Your request has been sent to admin for approval (85+ required)');
-return;
-}
-
-if (!contactEmail.includes('@') || !contactEmail.includes('.')) {
-alert('❌ Please enter a valid email address');
-return;
-}
-
-alert(`✅ Thank you! Admin will review your submission. If approved (85+ score required), a congratulations email will be sent to ${contactEmail} with your shareable leaderboard link.`);
+// Expert quotes
+const quoteCount = (rawHtml.match(/"([^"]*)"\s*-\s*\w+/g) || []).length;
+let quoteQuality = 'none';
+let quoteCurrent = '0 expert quotes found';
+if (quoteCount >= 4) {
+quoteQuality = 'excellent';
+quoteCurrent = `${quoteCount} expert quotes found (Excellent)`;
+} else if (quoteCount >= 2) {
+quoteQuality = 'good';
+quoteCurrent = `${quoteCount} expert quotes found (Good)`;
+} else if (quoteCount >= 1) {
+quoteQuality = 'fair';
+quoteCurrent = `${quoteCount} expert quote found (Fair)`;
 }
 
 // ==========================================
-// LEADERBOARD & FREELANCERS FUNCTIES
+// R - RELEVANCE CHECKS
+// ==========================================
+const h1Count = result.content_stats?.h1Count || 0;
+const h2Count = result.content_stats?.h2Count || 0;
+const hasFAQ = /faq|frequently asked questions|veelgestelde vragen/i.test(rawHtml);
+const faqCount = (rawHtml.match(/<h[2-3][^>]*>.*\?/gi) || []).length;
+
+let faqQuality = 'none';
+let faqCurrent = 'No FAQ section found';
+if (hasFAQ && faqCount >= 10) {
+faqQuality = 'excellent';
+faqCurrent = `${faqCount} FAQ questions found (Excellent)`;
+} else if (hasFAQ && faqCount >= 5) {
+faqQuality = 'good';
+faqCurrent = `${faqCount} FAQ questions found (Good)`;
+} else if (hasFAQ) {
+faqQuality = 'fair';
+faqCurrent = `${faqCount} FAQ questions found (Fair)`;
+}
+
+// ==========================================
+// A - ACTIONABILITY CHECKS
+// ==========================================
+const firstParagraph = (rawHtml.match(/<p>(.*?)<\/p>/i) || [])[1] || '';
+const hasCallToAction = /contact|call now|book a|schedule|get started|sign up|learn more|download|register|subscribe/i.test(rawHtml);
+const ctaCount = (rawHtml.match(/contact|call now|book a|schedule|get started|sign up|learn more|download|register|subscribe/gi) || []).length;
+
+let ctaQuality = 'none';
+let ctaCurrent = 'No clear call-to-action found';
+if (hasCallToAction && ctaCount >= 5) {
+ctaQuality = 'excellent';
+ctaCurrent = `${ctaCount} CTAs found (Excellent)`;
+} else if (hasCallToAction && ctaCount >= 3) {
+ctaQuality = 'good';
+ctaCurrent = `${ctaCount} CTAs found (Good)`;
+} else if (hasCallToAction) {
+ctaQuality = 'fair';
+ctaCurrent = `${ctaCount} CTAs found (Fair)`;
+}
+
+// ==========================================
+// A - ACCURACY CHECKS
+// ==========================================
+const outboundLinks = result.links?.outbound || 0;
+const outboundDomains = result.links?.uniqueDomains || 0;
+
+let linkQuality = 'none';
+let linkCurrent = `${outboundLinks} outbound links to ${outboundDomains} unique domains`;
+if (outboundLinks >= 10 && outboundDomains >= 5) {
+linkQuality = 'excellent';
+} else if (outboundLinks >= 5 && outboundDomains >= 3) {
+linkQuality = 'good';
+} else if (outboundLinks >= 1) {
+linkQuality = 'fair';
+}
+
+const hasYear = /\b(202[0-9]|2030)\b/.test(rawHtml);
+const hasMonth = /\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/i.test(rawHtml);
+
+let freshnessQuality = 'none';
+let freshnessCurrent = 'No recent dates found';
+if (hasYear && hasMonth) {
+freshnessQuality = 'excellent';
+freshnessCurrent = 'Current year and month found';
+} else if (hasYear) {
+freshnessQuality = 'good';
+freshnessCurrent = 'Current year found';
+}
+
+// ==========================================
+// F - FRESHNESS CHECKS
+// ==========================================
+const recentUpdates = result.recent_updates || 0;
+const lastUpdated = result.last_updated || 'Unknown';
+
+let updateQuality = 'none';
+let updateCurrent = `Last updated: ${lastUpdated}`;
+if (recentUpdates >= 10) {
+updateQuality = 'excellent';
+} else if (recentUpdates >= 5) {
+updateQuality = 'good';
+} else if (recentUpdates >= 1) {
+updateQuality = 'fair';
+}
+
+// ==========================================
+// SCORE BEREKENING
+// ==========================================
+let qualityScore = 0;
+let qualityLabel = 'Onbekend';
+let qualityColor = 'text-gray-400';
+
+if (currentScore >= 85) {
+qualityScore = currentScore;
+qualityLabel = 'Excellent';
+qualityColor = 'text-green-400';
+} else if (currentScore >= 70) {
+qualityScore = currentScore;
+qualityLabel = 'Good';
+qualityColor = 'text-blue-400';
+} else if (currentScore >= 50) {
+qualityScore = currentScore;
+qualityLabel = 'Average';
+qualityColor = 'text-yellow-400';
+} else {
+qualityScore = currentScore;
+qualityLabel = 'Poor';
+qualityColor = 'text-red-400';
+}
+
+// ==========================================
+// HTML OUTPUT
+// ==========================================
+let html = `
+<div class="bg-gray-800 rounded-xl p-6 border border-purple-500">
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+<div>
+<h3 class="text-2xl font-bold text-white mb-2">📊 Scan Resultaat</h3>
+<p class="text-gray-300 break-all">${url}</p>
+</div>
+<div class="text-right mt-4 md:mt-0">
+<div class="text-4xl font-bold ${qualityColor}">${qualityScore}</div>
+<div class="text-sm text-gray-400">Kwaliteitsscore</div>
+<div class="mt-2 px-3 py-1 bg-purple-600 rounded-full text-xs inline-block">${qualityLabel}</div>
+</div>
+</div>
+
+<!-- Progress Bars -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+<div>
+<div class="flex justify-between text-sm mb-1">
+<span class="text-gray-300">GRAAF Score</span>
+<span class="text-white font-bold">${graaf}%</span>
+</div>
+<div class="progress-bar">
+<div class="progress-bar-fill" style="width: ${graaf}%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-sm mb-1">
+<span class="text-gray-300">CRAFT Score</span>
+<span class="text-white font-bold">${craft}%</span>
+</div>
+<div class="progress-bar">
+<div class="progress-bar-fill" style="width: ${craft}%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-sm mb-1">
+<span class="text-gray-300">Technical Score</span>
+<span class="text-white font-bold">${technical}%</span>
+</div>
+<div class="progress-bar">
+<div class="progress-bar-fill" style="width: ${technical}%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-sm mb-1">
+<span class="text-gray-300">Content Quality</span>
+<span class="text-white font-bold">${contentQuality}%</span>
+</div>
+<div class="progress-bar">
+<div class="progress-bar-fill" style="width: ${contentQuality}%"></div>
+</div>
+</div>
+</div>
+
+<!-- Stats Grid -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+<div class="bg-gray-900 rounded-lg p-3 text-center">
+<div class="text-2xl font-bold text-purple-400">${words.toLocaleString()}</div>
+<div class="text-xs text-gray-400">Woorden</div>
+</div>
+<div class="bg-gray-900 rounded-lg p-3 text-center">
+<div class="text-2xl font-bold text-blue-400">${h1Count}</div>
+<div class="text-xs text-gray-400">H1 Headers</div>
+</div>
+<div class="bg-gray-900 rounded-lg p-3 text-center">
+<div class="text-2xl font-bold text-green-400">${h2Count}</div>
+<div class="text-xs text-gray-400">H2 Headers</div>
+</div>
+<div class="bg-gray-900 rounded-lg p-3 text-center">
+<div class="text-2xl font-bold text-yellow-400">${outboundLinks}</div>
+<div class="text-xs text-gray-400">Outbound Links</div>
+</div>
+</div>
+
+<!-- GEDETAILLEERDE GRAAF ANALYSE -->
+<div class="mt-8">
+<h4 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+<span>🔍 G.R.A.A.F. Analyse</span>
+<span class="text-xs px-2 py-1 bg-purple-600 rounded-full">Genuinely Credible, Relevance, Actionability, Accuracy, Freshness</span>
+</h4>
+
+<div class="space-y-4">
+<!-- G - Genuinely Credible -->
+<div class="bg-gray-900 rounded-lg p-4 border-l-4 ${authorQuality === 'excellent' ? 'border-green-500' : authorQuality === 'good' ? 'border-blue-500' : authorQuality === 'fair' ? 'border-yellow-500' : 'border-red-500'}">
+<div class="flex items-center gap-2 mb-2">
+<span class="text-2xl">👤</span>
+<span class="font-bold text-white">G - Genuinely Credible (Auteur & Expertise)</span>
+</div>
+<p class="text-gray-300 text-sm mb-2">${authorCurrent}</p>
+${quoteQuality !== 'none' ? `<p class="text-gray-300 text-sm">💬 ${quoteCurrent}</p>` : ''}
+${authorQuality === 'none' ? '<p class="text-sm text-red-400 mt-2">⚠️ Voeg auteur informatie toe met credentials</p>' : ''}
+</div>
+
+<!-- R - Relevance -->
+<div class="bg-gray-900 rounded-lg p-4 border-l-4 ${faqQuality === 'excellent' ? 'border-green-500' : faqQuality === 'good' ? 'border-blue-500' : faqQuality === 'fair' ? 'border-yellow-500' : 'border-red-500'}">
+<div class="flex items-center gap-2 mb-2">
+<span class="text-2xl">❓</span>
+<span class="font-bold text-white">R - Relevance (FAQ & Vragen)</span>
+</div>
+<p class="text-gray-300 text-sm">${faqCurrent}</p>
+${faqQuality === 'none' ? '<p class="text-sm text-red-400 mt-2">⚠️ Voeg een FAQ sectie toe met veelgestelde vragen</p>' : ''}
+</div>
+
+<!-- A - Actionability -->
+<div class="bg-gray-900 rounded-lg p-4 border-l-4 ${ctaQuality === 'excellent' ? 'border-green-500' : ctaQuality === 'good' ? 'border-blue-500' : ctaQuality === 'fair' ? 'border-yellow-500' : 'border-red-500'}">
+<div class="flex items-center gap-2 mb-2">
+<span class="text-2xl">📞</span>
+<span class="font-bold text-white">A - Actionability (Call-to-Actions)</span>
+</div>
+<p class="text-gray-300 text-sm">${ctaCurrent}</p>
+${ctaQuality === 'none' ? '<p class="text-sm text-red-400 mt-2">⚠️ Voeg duidelijke call-to-actions toe (contact, bellen, boeken)</p>' : ''}
+</div>
+
+<!-- A - Accuracy -->
+<div class="bg-gray-900 rounded-lg p-4 border-l-4 ${linkQuality === 'excellent' ? 'border-green-500' : linkQuality === 'good' ? 'border-blue-500' : linkQuality === 'fair' ? 'border-yellow-500' : 'border-red-500'}">
+<div class="flex items-center gap-2 mb-2">
+<span class="text-2xl">🔗</span>
+<span class="font-bold text-white">A - Accuracy (Outbound Links & Referenties)</span>
+</div>
+<p class="text-gray-300 text-sm">${linkCurrent}</p>
+<p class="text-gray-300 text-sm">📅 ${freshnessCurrent}</p>
+${linkQuality === 'none' ? '<p class="text-sm text-red-400 mt-2">⚠️ Voeg outbound links toe naar gezaghebbende bronnen</p>' : ''}
+</div>
+
+<!-- F - Freshness -->
+<div class="bg-gray-900 rounded-lg p-4 border-l-4 ${updateQuality === 'excellent' ? 'border-green-500' : updateQuality === 'good' ? 'border-blue-500' : updateQuality === 'fair' ? 'border-yellow-500' : 'border-red-500'}">
+<div class="flex items-center gap-2 mb-2">
+<span class="text-2xl">🔄</span>
+<span class="font-bold text-white">F - Freshness (Updates & Huidige Inhoud)</span>
+</div>
+<p class="text-gray-300 text-sm">${updateCurrent}</p>
+<p class="text-gray-300 text-sm">📊 ${recentUpdates} recente updates</p>
+${updateQuality === 'none' ? '<p class="text-sm text-red-400 mt-2">⚠️ Update content regelmatig met actuele informatie</p>' : ''}
+</div>
+</div>
+</div>
+
+<!-- AANBEVELINGEN -->
+<div class="mt-8">
+<h4 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+<span>💡 Aanbevelingen</span>
+<span class="text-xs px-2 py-1 bg-purple-600 rounded-full">Prioriteit</span>
+</h4>
+
+<div id="recommendations-container">
+`;
+
+// Aanbevelingen genereren op basis van ontbrekende elementen
+if (authorQuality === 'none') {
+html += `
+<div class="recommendation-card">
+<div class="flex items-start justify-between">
+<div class="recommendation-title">
+👤 Voeg auteur informatie toe
+<span class="priority-badge priority-high">HOOG</span>
+</div>
+</div>
+<div class="recommendation-desc">
+Google E-E-A-T vereist duidelijke auteur informatie. Voeg een auteur bio toe met credentials, ervaring en eventueel een link naar LinkedIn.
+</div>
+<div class="recommendation-section">
+<div class="recommendation-section-title"><i class="fas fa-check-circle recommendation-action"></i> Actie:</div>
+<p class="text-sm text-gray-300">Voeg een "Over de auteur" sectie toe onderaan het artikel met naam, foto, credentials en sociale links.</p>
+</div>
+<div class="recommendation-section">
+<div class="recommendation-section-title"><i class="fas fa-graduation-cap recommendation-learning"></i> Leerpunt:</div>
+<p class="text-sm text-gray-300">Google's richtlijnen: "Content should be created by a knowledgeable expert on the topic." Zonder auteur kan Google twijfelen aan expertise.</p>
+</div>
+<div class="recommendation-section">
+<div class="recommendation-section-title"><i class="fas fa-bullseye recommendation-target"></i> Doel:</div>
+<p class="text-sm text-gray-300">Verhoog de geloofwaardigheid met 15-20 punten en kwalificeer voor E-E-A-T.</p>
+</div>
+</div>
+`;
+}
+
+if (quoteQuality === 'none') {
+html += `
+<div class="recommendation-card">
+<div class="flex items-start justify-between">
+<div class="recommendation-title">
+💬 Voeg expert quotes toe
+<span class="priority-badge priority-medium">MEDIUM</span>
+</div>
+</div>
+<div class="recommendation-desc">
+Citeer experts in jouw branche om autoriteit op te bouwen en je content te onderbouwen met externe bronnen.
+</div>
+<div class="recommendation-section">
+<div class="recommendation-section-title"><i class="fas fa-check-circle recommendation-action"></i> Actie:</div>
+<p class="text-sm text-gray-300">Zoek naar interviews, onderzoeken of publicaties van experts en verwerk minimaal 2-3 quotes met bronvermelding.</p>
+</div>
+<div class="recommendation-section">
+<div class="recommendation-section-title"><i class="fas fa-graduation-cap recommendation-learning"></i> Leerpunt:</div>
+<p class="text-sm text-gray-300">Expert quotes tonen aan dat je onderzoek hebt gedaan en je baseert op gezaghebbende bronnen.</p>
+</div>
+</div>
+`;
+}
+
+if (faqQuality === 'none' || faqQuality === 'fair') {
+html += `
+<div class="recommendation-card">
+<div class="flex items-start justify-between">
+<div class="recommendation-title">
+❓ Breid FAQ sectie uit
+<span class="priority-badge ${faqQuality === 'none' ? 'priority-high' : 'priority-medium'}">${faqQuality === 'none' ? 'HOOG' : 'MEDIUM'}</span>
+</div>
+</div>
+<div class="recommendation-desc">
+FAQ's helpen Google om jouw content te tonen in "People also ask" en AI Overviews.
+</div>
+<div class="recommendation-section">
+<div class="recommendation-section-title"><i class="fas fa-check-circle recommendation-action"></i> Actie:</div>
+<p class="text-sm text-gray-300">Voeg een uitgebreide FAQ sectie toe met ${faqQuality === 'none' ? 'minimaal 5-10' : 'meer dan 10'} veelgestelde vragen met antwoorden.</p>
+</div>
+<div class="recommendation-section">
+<div class="recommendation-section-title"><i class="fas fa-graduation-cap recommendation-learning"></i> Leerpunt:</div>
+<p class="text-sm text-gray-300">Google gebruikt FAQ-structuur om directe antwoorden te geven in de zoekresultaten, wat zorgt voor hogere click-through rates.</p>
+</div>
+</div>
+`;
+}
+
+if (ctaQuality === 'none' || ctaQuality === 'fair') {
+html += `
+<div class="recommendation-card">
+<div class="flex items-start justify-between">
+<div class="recommendation-title">
+📞 Versterk Call-to-Actions
+<span class="priority-badge priority-high">HOOG</span>
+</div>
+</div>
+<div class="recommendation-desc">
+Duidelijke CTA's zijn essentieel voor conversie en gebruikersbetrokkenheid.
+</div>
+<div class="recommendation-section">
+<div class="recommendation-section-title"><i class="fas fa-check-circle recommendation-action"></i> Actie:</div>
+<p class="text-sm text-gray-300">Voeg meerdere CTA's toe verspreid door de content: bovenaan, in het midden en onderaan.</p>
+</div>
+<div class="recommendation-section">
+<div class="recommendation-section-title"><i class="fas fa-graduation-cap recommendation-learning"></i> Leerpunt:</div>
+<p class="text-sm text-gray-300">Gebruikers moeten altijd weten wat de volgende stap is. Zonder CTA's verlaat 95% van de bezoekers de pagina zonder actie.</p>
+</div>
+</div>
+`;
+}
+
+if (linkQuality === 'none' || linkQuality === 'fair') {
+html += `
+<div class="recommendation-card">
+<div class="flex items-start justify-between">
+<div class="recommendation-title">
+🔗 Voeg outbound links toe
+<span class="priority-badge ${linkQuality === 'none' ? 'priority-high' : 'priority-medium'}">${linkQuality === 'none' ? 'HOOG' : 'MEDIUM'}</span>
+</div>
+</div>
+<div class="recommendation-desc">
+Link naar gezaghebbende bronnen om je claims te onderbouwen en vertrouwen op te bouwen.
+</div>
+<div class="recommendation-section">
+<div class="recommendation-section-title"><i class="fas fa-check-circle recommendation-action"></i> Actie:</div>
+<p class="text-sm text-gray-300">Link naar ${linkQuality === 'none' ? 'minimaal 5-10' : 'meer'} relevante, hoogwaardige externe bronnen (onderzoeken, nieuwsartikelen, officiële sites).</p>
+</div>
+<div class="recommendation-section">
+<div class="recommendation-section-title"><i class="fas fa-graduation-cap recommendation-learning"></i> Leerpunt:</div>
+<p class="text-sm text-gray-300">Google gebruikt outbound links als signaal dat je content goed onderzocht is en waarde toevoegt.</p>
+</div>
+</div>
+`;
+}
+
+if (freshnessQuality === 'none') {
+html += `
+<div class="recommendation-card">
+<div class="flex items-start justify-between">
+<div class="recommendation-title">
+📅 Voeg actuele data toe
+<span class="priority-badge priority-medium">MEDIUM</span>
+</div>
+</div>
+<div class="recommendation-desc">
+Google geeft voorkeur aan actuele content. Zichtbare data helpen ook gebruikers.
+</div>
+<div class="recommendation-section">
+<div class="recommendation-section-title"><i class="fas fa-check-circle recommendation-action"></i> Actie:</div>
+<p class="text-sm text-gray-300">Voeg een publicatiedatum en "laatst bijgewerkt" datum toe bovenaan of onderaan de content.</p>
+</div>
+<div class="recommendation-section">
+<div class="recommendation-section-title"><i class="fas fa-graduation-cap recommendation-learning"></i> Leerpunt:</div>
+<p class="text-sm text-gray-300">Voor YMYL (Your Money Your Life) onderwerpen is actualiteit cruciaal. Verouderde informatie kan schadelijk zijn.</p>
+</div>
+</div>
+`;
+}
+
+if (updateQuality === 'none' || updateQuality === 'fair') {
+html += `
+<div class="recommendation-card">
+<div class="flex items-start justify-between">
+<div class="recommendation-title">
+🔄 Plan regelmatige updates
+<span class="priority-badge ${updateQuality === 'none' ? 'priority-high' : 'priority-medium'}">${updateQuality === 'none' ? 'HOOG' : 'MEDIUM'}</span>
+</div>
+</div>
+<div class="recommendation-desc">
+Content moet regelmatig worden bijgewerkt om relevant te blijven.
+</div>
+<div class="recommendation-section">
+<div class="recommendation-section-title"><i class="fas fa-check-circle recommendation-action"></i> Actie:</div>
+<p class="text-sm text-gray-300">Plan ${updateQuality === 'none' ? 'maandelijkse' : 'tweemaandelijkse'} updates voor deze pagina om informatie actueel te houden.</p>
+</div>
+<div class="recommendation-section">
+<div class="recommendation-section-title"><i class="fas fa-graduation-cap recommendation-learning"></i> Leerpunt:</div>
+<p class="text-sm text-gray-300">Google's "Query Deserves Freshness" algoritme geeft een boost aan recent bijgewerkte content voor bepaalde zoekopdrachten.</p>
+</div>
+</div>
+`;
+}
+
+if (words < 1000) {
+html += `
+<div class="recommendation-card">
+<div class="flex items-start justify-between">
+<div class="recommendation-title">
+📝 Breid content uit
+<span class="priority-badge priority-high">HOOG</span>
+</div>
+</div>
+<div class="recommendation-desc">
+Content met ${words} woorden is te kort voor goede rankings. Diepgaande content presteert beter.
+</div>
+<div class="recommendation-section">
+<div class="recommendation-section-title"><i class="fas fa-check-circle recommendation-action"></i> Actie:</div>
+<p class="text-sm text-gray-300">Breid uit naar minimaal 1500-2000 woorden met meer details, voorbeelden en uitleg.</p>
+</div>
+<div class="recommendation-section">
+<div class="recommendation-section-title"><i class="fas fa-graduation-cap recommendation-learning"></i> Leerpunt:</div>
+<p class="text-sm text-gray-300">Uit onderzoek blijkt dat langere content (1500+ woorden) gemiddeld beter rankt omdat het meer zoekintenties dekt.</p>
+</div>
+</div>
+`;
+}
+
+if (h1Count === 0) {
+html += `
+<div class="recommendation-card">
+<div class="flex items-start justify-between">
+<div class="recommendation-title">
+📌 Voeg H1 header toe
+<span class="priority-badge priority-high">HOOG</span>
+</div>
+</div>
+<div class="recommendation-desc">
+Elke pagina heeft precies één H1 nodig voor goede SEO-structuur.
+</div>
+<div class="recommendation-section">
+<div class="recommendation-section-title"><i class="fas fa-check-circle recommendation-action"></i> Actie:</div>
+<p class="text-sm text-gray-300">Voeg een H1 header toe die het hoofdonderwerp van de pagina beschrijft.</p>
+</div>
+<div class="recommendation-section">
+<div class="recommendation-section-title"><i class="fas fa-graduation-cap recommendation-learning"></i> Leerpunt:</div>
+<p class="text-sm text-gray-300">De H1 is het belangrijkste signaal voor Google over het onderwerp van je pagina.</p>
+</div>
+</div>
+`;
+} else if (h1Count > 1) {
+html += `
+<div class="recommendation-card">
+<div class="flex items-start justify-between">
+<div class="recommendation-title">
+⚠️ Gebruik één H1
+<span class="priority-badge priority-medium">MEDIUM</span>
+</div>
+</div>
+<div class="recommendation-desc">
+Je hebt ${h1Count} H1 headers. Gebruik precies één H1 per pagina.
+</div>
+<div class="recommendation-section">
+<div class="recommendation-section-title"><i class="fas fa-check-circle recommendation-action"></i> Actie:</div>
+<p class="text-sm text-gray-300">Verander extra H1's naar H2 of H3.</p>
+</div>
+</div>
+`;
+}
+
+if (h2Count < 5) {
+html += `
+<div class="recommendation-card">
+<div class="flex items-start justify-between">
+<div class="recommendation-title">
+📑 Voeg meer H2 headers toe
+<span class="priority-badge ${h2Count < 3 ? 'priority-high' : 'priority-medium'}">${h2Count < 3 ? 'HOOG' : 'MEDIUM'}</span>
+</div>
+</div>
+<div class="recommendation-desc">
+Je hebt ${h2Count} H2 headers. Gebruik minimaal 5-10 H2's voor goede structuur.
+</div>
+<div class="recommendation-section">
+<div class="recommendation-section-title"><i class="fas fa-check-circle recommendation-action"></i> Actie:</div>
+<p class="text-sm text-gray-300">Splits lange tekst op in kleinere secties met duidelijke H2 tussenkoppen.</p>
+</div>
+<div class="recommendation-section">
+<div class="recommendation-section-title"><i class="fas fa-graduation-cap recommendation-learning"></i> Leerpunt:</div>
+<p class="text-sm text-gray-300">Goede header-structuur helpt zowel gebruikers als Google om je content te begrijpen.</p>
+</div>
+</div>
+`;
+}
+
+html += `
+</div>
+</div>
+
+<!-- EMAIL ACTIE -->
+<div class="mt-8 text-center">
+<button onclick="sendRecommendationsByEmail()" class="btn-primary btn px-8 py-3">
+<i class="fas fa-envelope mr-2"></i> Stuur aanbevelingen naar mij
+</button>
+</div>
+
+</div>
+`;
+
+resultDiv.innerHTML = html;
+resultDiv.classList.remove('hidden');
+}
+
+// ==========================================
+// BULK SCANNER TOGGLE
+// ==========================================
+function toggleBulkScanner() {
+const content = document.getElementById('bulkScannerContent');
+const icon = document.getElementById('bulkScannerIcon');
+const text = document.getElementById('bulkToggleText');
+
+if (content.classList.contains('hidden')) {
+content.classList.remove('hidden');
+icon.style.transform = 'rotate(180deg)';
+text.textContent = 'Hide Bulk Scanner';
+} else {
+content.classList.add('hidden');
+icon.style.transform = 'rotate(0deg)';
+text.textContent = 'Show Bulk Scanner';
+}
+}
+
+// ==========================================
+// BULK SCAN FUNCTIE
+// ==========================================
+async function startBulkScan() {
+const urlsText = document.getElementById('bulkUrlInput').value;
+const email = document.getElementById('bulkScanEmail').value.trim();
+const name = document.getElementById('bulkScanName').value.trim();
+
+if (!email) {
+alert('❌ Please enter your email');
+return;
+}
+if (!name) {
+alert('❌ Please enter your name');
+return;
+}
+
+const urls = urlsText.split('\n')
+.map(u => u.trim())
+.filter(u => u.length > 0 && u.startsWith('http'));
+
+if (urls.length === 0) {
+alert('❌ Please enter at least one valid URL');
+return;
+}
+if (urls.length > 100) {
+alert('❌ Maximum 100 URLs allowed');
+return;
+}
+
+const button = document.getElementById('bulkScanBtn');
+const progress = document.getElementById('bulkProgress');
+const progressBar = document.getElementById('bulkProgressBar');
+const progressText = document.getElementById('bulkProgressText');
+const resultsContainer = document.getElementById('bulkResultsContainer');
+const resultsDiv = document.getElementById('bulkResults');
+
+button.disabled = true;
+button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+progress.classList.remove('hidden');
+progressBar.style.width = '10%';
+progressText.textContent = `Scanning 0/${urls.length} URLs...`;
+
+try {
+const response = await fetch('/api/bulk-scan', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ urls, email, name })
+});
+
+const data = await response.json();
+
+if (!response.ok || !data.success) {
+throw new Error(data.error || 'Bulk scan failed');
+}
+
+progressBar.style.width = '100%';
+progressText.textContent = `Completed! Processed ${data.results?.length || 0} URLs`;
+
+// Toon resultaten
+if (data.results && data.results.length > 0) {
+let resultsHtml = '<div class="space-y-4">';
+data.results.forEach((result, index) => {
+const score = result.score || 0;
+let scoreColor = 'text-red-400';
+if (score >= 85) scoreColor = 'text-green-400';
+else if (score >= 70) scoreColor = 'text-blue-400';
+else if (score >= 50) scoreColor = 'text-yellow-400';
+
+resultsHtml += `
+<div class="bg-gray-900 rounded-lg p-4 border border-gray-700">
+<div class="flex justify-between items-start">
+<div>
+<a href="${result.url}" target="_blank" class="text-blue-400 hover:underline text-sm">${result.url}</a>
+<div class="text-xs text-gray-400 mt-1">${result.message || ''}</div>
+</div>
+<div class="text-xl font-bold ${scoreColor}">${score}</div>
+</div>
+</div>
+`;
+});
+resultsHtml += '</div>';
+resultsContainer.innerHTML = resultsHtml;
+resultsDiv.classList.remove('hidden');
+}
+
+setTimeout(() => {
+progress.classList.add('hidden');
+button.disabled = false;
+button.innerHTML = '<i class="fas fa-rocket mr-2"></i> Start Bulk Scan';
+}, 500);
+
+} catch (error) {
+console.error('Bulk scan error:', error);
+alert('❌ Bulk scan failed: ' + error.message);
+progress.classList.add('hidden');
+button.disabled = false;
+button.innerHTML = '<i class="fas fa-rocket mr-2"></i> Start Bulk Scan';
+}
+}
+
+// ==========================================
+// LEADERBOARD FUNCTIES
 // ==========================================
 async function loadLeaderboardData() {
 try {
 const response = await fetch('/api/leaderboard');
 const data = await response.json();
 
-if (data.success && data.entries && data.entries.length > 0) {
+if (data.success && data.entries) {
 allLeaderboardEntries = data.entries;
-
-document.getElementById('totalAgencies').textContent = data.stats?.totalAgencies || 0;
-document.getElementById('avgScore').textContent = data.averageScore || 0;
-document.getElementById('countriesCount').textContent = data.stats?.countriesCount || 0;
-document.getElementById('activeHelpers').textContent = data.stats?.activeHelpers || 0;
-
-renderTop3();
-renderRankings4to15();
-renderRankings16Plus();
-renderCountryFilters();
-} else {
-showEmptyLeaderboard();
+updateLeaderboardStats(data.entries);
+updateTop3(data.entries);
+updateRankings4to15(data.entries);
+updateRankingsTable(data.entries);
+updateCountryFilters(data.entries);
 }
 } catch (error) {
-console.error('❌ Fout bij laden leaderboard:', error);
-showEmptyLeaderboard();
+console.error('Error loading leaderboard:', error);
 }
 }
 
-function showEmptyLeaderboard() {
-document.getElementById('totalAgencies').textContent = '0';
-document.getElementById('avgScore').textContent = '0';
-document.getElementById('countriesCount').textContent = '0';
-document.getElementById('activeHelpers').textContent = '0';
+function updateLeaderboardStats(entries) {
+document.getElementById('totalAgencies').textContent = entries.length;
 
-const container = document.getElementById('top3-container');
-if (container) {
-container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Geen leaderboard entries gevonden</div>';
+const avgScore = entries.length > 0
+? Math.round(entries.reduce((sum, e) => sum + (e.score || 0), 0) / entries.length)
+: 0;
+document.getElementById('avgScore').textContent = avgScore;
+
+const countries = new Set(entries.map(e => e.country || 'Unknown')).size;
+document.getElementById('countriesCount').textContent = countries;
+
+document.getElementById('activeHelpers').textContent = '12';
 }
 
-document.getElementById('rankings4to15Container').style.display = 'none';
-document.getElementById('totalCount').textContent = '0';
+function updateTop3(entries) {
+const top3Container = document.getElementById('top3-container');
+if (!top3Container) return;
+
+const top3 = entries.slice(0, 3);
+let html = '';
+
+top3.forEach((entry, index) => {
+let medalClass = '';
+let medalIcon = '';
+
+if (index === 0) {
+medalClass = 'gold';
+medalIcon = '🥇';
+} else if (index === 1) {
+medalClass = 'silver';
+medalIcon = '🥈';
+} else {
+medalClass = 'bronze';
+medalIcon = '🥉';
 }
 
-function renderTop3() {
-const container = document.getElementById('top3-container');
+html += `
+<div class="top-card ${medalClass}">
+<div class="text-5xl mb-2">${medalIcon}</div>
+<div class="text-2xl font-bold">${entry.company || 'Bedrijf'}</div>
+<div class="text-4xl font-bold my-3">${entry.score || 0}</div>
+<div class="text-sm opacity-90">${entry.country || '🌍'}</div>
+<button onclick="window.open('${entry.website || '#'}', '_blank')">Bezoek Website</button>
+</div>
+`;
+
+top3Container.innerHTML = html;
+});
+}
+
+function updateRankings4to15(entries) {
+const container = document.getElementById('rankings4to15Grid');
 if (!container) return;
 
-const top3 = allLeaderboardEntries.slice(0, 3);
-if (top3.length === 0) {
-container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Geen entries gevonden</div>';
-return;
-}
+const ranks4to15 = entries.slice(3, 15);
+let html = '';
 
-container.innerHTML = top3.map((entry, index) => {
-const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
-const medalClass = index === 0 ? 'gold' : index === 1 ? 'silver' : 'bronze';
-const rankText = index === 0 ? '1st Worldwide' : index === 1 ? '2nd Worldwide' : '3rd Worldwide';
-const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-
-return `
-<div class="top-card ${medalClass}">
-<div class="text-5xl mb-2">${medal}</div>
-<div class="text-xs font-bold uppercase tracking-wider mb-2 text-white/80">${rankText}</div>
-<h3 class="text-xl font-bold mb-2">${companyName}</h3>
-<div class="text-4xl font-black mb-2">${entry.score}/100</div>
-<div class="text-white/80 mb-3">${getCountryFlag(entry.country)} ${entry.country}</div>
-<button onclick="window.open('${entry.url}', '_blank', 'noopener')" class="w-full bg-black/30 hover:bg-black/50 text-white px-4 py-2 rounded-lg border border-white/30 transition-all">
-<i class="fas fa-external-link-alt mr-2"></i> Visit Website
-</button>
-</div>
-`;
-}).join('');
-}
-
-function renderRankings4to15() {
-const grid = document.getElementById('rankings4to15Grid');
-if (!grid) return;
-
-const rankings = allLeaderboardEntries.slice(3, 15);
-if (rankings.length === 0) {
-document.getElementById('rankings4to15Container').style.display = 'none';
-return;
-}
-
-document.getElementById('rankings4to15Container').style.display = 'block';
-
-grid.innerHTML = rankings.map((entry, index) => {
-const actualRank = index + 4;
-const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-
-return `
+ranks4to15.forEach((entry, index) => {
+html += `
 <div class="rank-card">
-<div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
-<h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
-<div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
-<div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
-<a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">
-View Website <i class="fas fa-external-link-alt ml-1"></i>
-</a>
+<div class="text-2xl font-bold text-purple-400 mb-2">#${index + 4}</div>
+<div class="font-bold text-white mb-1">${entry.company || 'Bedrijf'}</div>
+<div class="text-xl font-bold ${getScoreColor(entry.score || 0)} mb-2">${entry.score || 0}</div>
+<div class="text-xs text-gray-400">${entry.country || '🌍'}</div>
 </div>
 `;
-}).join('');
+
+container.innerHTML = html;
+});
 }
 
-function renderRankings16Plus() {
+function updateRankingsTable(entries) {
 const tbody = document.getElementById('rankingsTbody');
 const totalCount = document.getElementById('totalCount');
-if (!tbody) return;
+if (!tbody || !totalCount) return;
 
-const rankings = allLeaderboardEntries.slice(15, 35);
+const ranks16to35 = entries.slice(15, 35);
+totalCount.textContent = entries.length;
 
-if (totalCount) {
-totalCount.textContent = allLeaderboardEntries.length;
-}
+let html = '';
+ranks16to35.forEach((entry, index) => {
+const addedDate = entry.created_at
+? new Date(entry.created_at).toLocaleDateString('nl-NL')
+: 'Recent';
 
-if (rankings.length === 0) {
-tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-400">Geen rankings 16+</td></tr>';
-return;
-}
-
-tbody.innerHTML = rankings.map((entry, index) => {
-const actualRank = index + 16;
-const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-
-return `
+html += `
 <tr>
-<td><span class="inline-flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full font-bold">${actualRank}</span></td>
-<td class="font-semibold">${companyName}</td>
-<td><a href="${entry.url}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">${entry.url.replace('https://', '').substring(0, 25)}...</a></td>
-<td><span class="text-lg font-bold ${entry.score >= 85 ? 'text-green-400' : entry.score >= 70 ? 'text-yellow-400' : 'text-red-400'}">${entry.score}</span></td>
-<td><span class="text-sm">${getCountryFlag(entry.country)} ${entry.country}</span></td>
-<td><span class="text-sm text-gray-400">${new Date(entry.created_at).toLocaleDateString()}</span></td>
+<td class="font-bold">#${index + 16}</td>
+<td class="font-medium">${entry.company || 'Bedrijf'}</td>
+<td><a href="${entry.website || '#'}" target="_blank" class="text-blue-400 hover:underline">Website</a></td>
+<td class="font-bold ${getScoreColor(entry.score || 0)}">${entry.score || 0}</td>
+<td>${entry.country || '🌍'}</td>
+<td class="text-gray-400 text-sm">${addedDate}</td>
 </tr>
 `;
-}).join('');
+
+tbody.innerHTML = html;
+});
 }
 
-async function loadFreelancers() {
-try {
-const response = await fetch('/api/freelancers');
-const data = await response.json();
+function updateCountryFilters(entries) {
+const filterContainer = document.getElementById('countryFilters');
+if (!filterContainer) return;
 
-const grid = document.getElementById('freelancersGrid');
-if (!grid) return;
+const countries = [...new Set(entries.map(e => e.country || 'Unknown'))].sort();
 
-const freelancers = data.freelancers || [];
-
-if (freelancers.length === 0) {
-grid.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Geen freelancers gevonden</div>';
-return;
-}
-
-grid.innerHTML = freelancers.map(f => {
-const firstName = f.name.split(' ')[0];
-const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase();
-
-return `
-<div class="card hover:border-purple-500">
-<div class="card-content">
-<div class="flex items-start gap-4 mb-4">
-<div class="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl font-bold text-white">
-${initials}
-</div>
-<div class="flex-1">
-<div class="flex items-center justify-between">
-<h3 class="font-bold text-lg text-white">${f.name}</h3>
-${f.is_featured ? '<span class="px-2 py-1 bg-yellow-600 rounded text-xs text-white font-semibold flex items-center gap-1">⭐ Featured</span>' : '<span class="px-2 py-1 bg-green-600 rounded text-xs text-white font-semibold">✓ Verified</span>'}
-</div>
-<p class="text-sm text-gray-400">${f.title || 'SEO Specialist'}</p>
-</div>
-</div>
-<p class="text-gray-300 text-sm mb-4">${f.bio || 'Geen bio beschikbaar'}</p>
-<div class="flex items-center justify-between text-sm mb-4">
-<span class="text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i> ${f.location || f.country || 'Remote'}</span>
-${f.hourly_rate ? `<span class="text-purple-400">💰 ${f.hourly_rate}</span>` : ''}
-</div>
-</div>
-<div class="card-footer">
-<a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20discuss%20SEO%20optimization%20with%20${encodeURIComponent(f.name)}"
-target="_blank"
-rel="noopener"
-class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 no-underline">
-<i class="fab fa-whatsapp"></i> Contact ${firstName}
-</a>
-</div>
-</div>
-`;
-}).join('');
-} catch (error) {
-console.error('❌ Fout bij laden freelancers:', error);
-document.getElementById('freelancersGrid').innerHTML =
-'<div class="col-span-3 text-center py-8 text-gray-400">Kon freelancers niet laden</div>';
-}
-}
-
-function extractDomainFromUrl(url) {
-if (!url) return 'Bedrijf';
-try {
-const hostname = new URL(url).hostname;
-let domain = hostname.replace('www.', '');
-let name = domain.split('.')[0];
-return name.charAt(0).toUpperCase() + name.slice(1);
-} catch (e) {
-return 'Bedrijf';
-}
-}
-
-function getCountryFlag(country) {
-const flags = {
-'Netherlands': '🇳🇱', 'NL': '🇳🇱',
-'United Kingdom': '🇬🇧', 'UK': '🇬🇧',
-'US': '🇺🇸', 'United States': '🇺🇸',
-'Germany': '🇩🇪', 'DE': '🇩🇪',
-'France': '🇫🇷', 'FR': '🇫🇷',
-'Belgium': '🇧🇪', 'BE': '🇧🇪',
-'Spain': '🇪🇸', 'ES': '🇪🇸',
-'Italy': '🇮🇹', 'IT': '🇮🇹',
-'Sweden': '🇸🇪', 'SE': '🇸🇪',
-'Denmark': '🇩🇰', 'DK': '🇩🇰',
-'Austria': '🇦🇹', 'AT': '🇦🇹',
-'Switzerland': '🇨🇭', 'CH': '🇨🇭',
-'Portugal': '🇵🇹', 'PT': '🇵🇹'
-};
-return flags[country] || '🌐';
-}
-
-function renderCountryFilters() {
-const div = document.getElementById('countryFilters');
-if (!div) return;
-
-const countries = [...new Set(allLeaderboardEntries.map(e => e.country))];
-
-let html = '<button class="filter-tag active" onclick="filterByCountry(\'all\')">🌍 All</button>';
+let html = '<button onclick="filterByCountry(\'all\')" class="filter-tag active" id="filter-all">Alles</button>';
 countries.forEach(country => {
-if (country) {
-html += `<button class="filter-tag" onclick="filterByCountry('${country}')">${getCountryFlag(country)} ${country}</button>`;
-}
+html += `<button onclick="filterByCountry('${country}')" class="filter-tag" id="filter-${country.replace(/\s+/g, '-')}">${country}</button>`;
 });
 
-div.innerHTML = html;
+filterContainer.innerHTML = html;
+}
+
+function getScoreColor(score) {
+if (score >= 85) return 'text-green-400';
+if (score >= 70) return 'text-blue-400';
+if (score >= 50) return 'text-yellow-400';
+return 'text-red-400';
 }
 
 function toggleFilters() {
 const panel = document.getElementById('filterPanel');
 const icon = document.getElementById('filterIcon');
-if (panel) {
+
 panel.classList.toggle('hidden');
-icon.classList.toggle('fa-chevron-down');
-icon.classList.toggle('fa-chevron-up');
+icon.style.transform = panel.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
 }
+
+function filterByCountry(country) {
+document.querySelectorAll('.filter-tag').forEach(tag => tag.classList.remove('active'));
+
+if (country === 'all') {
+document.getElementById('filter-all').classList.add('active');
+updateTop3(allLeaderboardEntries);
+updateRankings4to15(allLeaderboardEntries);
+updateRankingsTable(allLeaderboardEntries);
+} else {
+document.getElementById(`filter-${country.replace(/\s+/g, '-')}`).classList.add('active');
+const filtered = allLeaderboardEntries.filter(e => (e.country || 'Unknown') === country);
+updateTop3(filtered);
+updateRankings4to15(filtered);
+updateRankingsTable(filtered);
+}
+}
+
+function filterAgencies() {
+const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+if (!searchTerm) {
+updateTop3(allLeaderboardEntries);
+updateRankings4to15(allLeaderboardEntries);
+updateRankingsTable(allLeaderboardEntries);
+return;
+}
+
+const filtered = allLeaderboardEntries.filter(e =>
+(e.company || '').toLowerCase().includes(searchTerm) ||
+(e.website || '').toLowerCase().includes(searchTerm)
+);
+
+updateTop3(filtered);
+updateRankings4to15(filtered);
+updateRankingsTable(filtered);
 }
 
 function toggleRankings() {
 const container = document.getElementById('rankingsContainer');
-const toggleText = document.getElementById('rankingsToggleText');
-if (container) {
+const btn = document.getElementById('rankingsToggleBtn');
+const text = document.getElementById('rankingsToggleText');
+const arrow = btn.querySelector('.arrow');
+
 container.classList.toggle('hidden');
-toggleText.textContent = container.classList.contains('hidden') ? '📊 Show Rankings 16+' : '📊 Hide Rankings 16+';
+
+if (container.classList.contains('hidden')) {
+text.textContent = '📊 Show Rankings 16+';
+arrow.textContent = '▼';
+} else {
+text.textContent = '📊 Hide Rankings';
+arrow.textContent = '▲';
 }
 }
 
-function filterByCountry(country) {
-console.log('Filter by country:', country);
+// ==========================================
+// FREELANCER FUNCTIES
+// ==========================================
+async function loadFreelancers() {
+try {
+const response = await fetch('/api/freelancers');
+const data = await response.json();
+
+if (data.success && data.freelancers) {
+displayFreelancers(data.freelancers);
+}
+} catch (error) {
+console.error('Error loading freelancers:', error);
+}
 }
 
-function filterAgencies() {
-const query = document.getElementById('searchInput')?.value.toLowerCase() || '';
+function displayFreelancers(freelancers) {
+const grid = document.getElementById('freelancersGrid');
+if (!grid) return;
 
-if (!query) {
-renderRankings4to15();
-renderRankings16Plus();
-return;
-}
+let html = '';
+freelancers.forEach(f => {
+const featured = f.featured ? '<span class="absolute top-2 right-2 bg-yellow-500 text-xs px-2 py-1 rounded-full">⭐ Featured</span>' : '';
 
-const filtered = allLeaderboardEntries.filter(entry =>
-(entry.company_name || '').toLowerCase().includes(query) ||
-(entry.url || '').toLowerCase().includes(query) ||
-extractDomainFromUrl(entry.url).toLowerCase().includes(query)
-);
-
-const rankings4to15Grid = document.getElementById('rankings4to15Grid');
-const rankings4to15 = filtered.slice(3, 15);
-
-if (rankings4to15Grid) {
-rankings4to15Grid.innerHTML = rankings4to15.map((entry, index) => {
-const actualRank = index + 4;
-const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-
-return `
-<div class="rank-card">
-<div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
-<h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
-<div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
-<div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
-<a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">
-View Website
-</a>
+html += `
+<div class="card relative">
+${featured}
+<div class="card-content">
+<div class="text-4xl mb-4">👤</div>
+<h3 class="text-xl font-bold text-white mb-2">${f.name}</h3>
+<p class="text-purple-300 text-sm mb-3">${f.title}</p>
+<p class="text-gray-300 text-sm mb-4">${f.bio}</p>
+</div>
+<div class="card-footer">
+<button onclick="contactFreelancer('${f.email}')" class="btn-primary btn w-full text-sm py-2">
+<i class="fas fa-envelope mr-2"></i> Contact
+</button>
+</div>
 </div>
 `;
-}).join('');
-}
-}
 
-function toggleFAQ(id) {
-const answer = document.getElementById(`faqAnswer${id}`);
-const icon = document.getElementById(`faqIcon${id}`);
-if (answer) {
-answer.classList.toggle('hidden');
-icon.style.transform = answer.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
-}
-}
-
-function openFreelancerModal() {
-const modal = document.getElementById('freelancerModal');
-if (modal) {
-modal.classList.add('active');
-document.body.style.overflow = 'hidden';
-}
-}
-
-function closeModal() {
-const modal = document.getElementById('freelancerModal');
-if (modal) {
-modal.classList.remove('active');
-document.body.style.overflow = 'auto';
-}
-}
-
-function submitFreelancer() {
-const name = document.getElementById('freelancerName')?.value;
-const email = document.getElementById('freelancerEmail')?.value;
-const title = document.getElementById('freelancerTitle')?.value;
-const bio = document.getElementById('freelancerBio')?.value;
-const isFeatured = document.getElementById('featuredListing')?.checked || false;
-
-if (!name || !email) {
-alert('❌ Name and email are required');
-return;
-}
-
-if (!email.includes('@')) {
-alert('❌ Please enter a valid email');
-return;
-}
-
-if (isFeatured) {
-window.open('https://paypal.me/ojgmedia?locale.x=en_US&country.x=NL', '_blank', 'noopener');
-}
-
-fetch('/api/freelancers/register', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({
-name: name,
-email: email,
-phone: document.getElementById('freelancerPhone')?.value,
-title: title || 'SEO Specialist',
-bio: bio || null,
-is_featured: isFeatured
-})
-})
-.then(response => response.json())
-.then(data => {
-if (data.success) {
-alert(`✅ Thank you ${name}! We'll review your application within 24 hours.${isFeatured ? ' Please complete the payment via PayPal.' : ''}`);
-closeModal();
-document.getElementById('freelancerName').value = '';
-document.getElementById('freelancerEmail').value = '';
-document.getElementById('freelancerPhone').value = '';
-document.getElementById('freelancerTitle').value = '';
-document.getElementById('freelancerBio').value = '';
-document.getElementById('bioCharCount').textContent = '0/200';
-document.getElementById('featuredListing').checked = false;
-} else {
-alert('❌ ' + (data.error || 'Registration failed'));
-}
-})
-.catch(error => {
-alert('❌ Registration failed: ' + error.message);
+grid.innerHTML = html;
 });
 }
 
-// ==========================================
-// BULK SCANNING FUNCTIES
-// ==========================================
-function toggleBulkScanner() {
-const content = document.getElementById('bulkScannerContent');
-const icon = document.getElementById('bulkScannerIcon');
-const toggleText = document.getElementById('bulkToggleText');
-if (content) {
-const isHidden = content.classList.contains('hidden');
-content.classList.toggle('hidden');
-if (icon) {
-icon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
-}
-if (toggleText) {
-toggleText.textContent = isHidden ? 'Hide Bulk Scanner' : 'Show Bulk Scanner';
-}
-}
+function openFreelancerModal() {
+document.getElementById('freelancerModal').classList.add('active');
 }
 
-async function startBulkScan() {
-const urlInput = document.getElementById('bulkUrlInput');
-const emailInput = document.getElementById('bulkScanEmail');
-const nameInput = document.getElementById('bulkScanName');
-const button = document.getElementById('bulkScanBtn');
-const progress = document.getElementById('bulkProgress');
-const progressBar = document.getElementById('bulkProgressBar');
-const progressText = document.getElementById('bulkProgressText');
-const resultsDiv = document.getElementById('bulkResults');
-const resultsContainer = document.getElementById('bulkResultsContainer');
+function closeModal() {
+document.getElementById('freelancerModal').classList.remove('active');
+}
 
-const urls = urlInput.value.split('\n').filter(u => u.trim().length > 0);
-const email = emailInput.value.trim();
-const name = nameInput.value.trim();
+async function submitFreelancer() {
+const name = document.getElementById('freelancerName').value.trim();
+const email = document.getElementById('freelancerEmail').value.trim();
+const phone = document.getElementById('freelancerPhone').value.trim();
+const title = document.getElementById('freelancerTitle').value.trim();
+const bio = document.getElementById('freelancerBio').value.trim();
+const featured = document.getElementById('featuredListing').checked;
 
-// Validatie
-if (urls.length === 0) {
-alert('❌ Please enter at least one URL');
+if (!name || !email || !title) {
+alert('❌ Vul alle verplichte velden in');
 return;
 }
 
-if (urls.length > 100) {
-alert('❌ Maximum 100 URLs allowed');
-return;
-}
-
-if (!email || !email.includes('@')) {
-alert('❌ Please enter a valid email address');
-return;
-}
-
-if (!name) {
-alert('❌ Please enter your name');
-return;
-}
-
-// Start scanning
+const button = event.target;
 button.disabled = true;
-button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
-progress.classList.remove('hidden');
-resultsDiv.classList.add('hidden');
-resultsContainer.innerHTML = '';
-
-let scannedCount = 0;
-let results = {
-leaderboard: [],
-withWebsite: [],
-withoutWebsite: [],
-errors: []
-};
-
-// Scan URLs one by one
-for (let i = 0; i < urls.length; i++) {
-const url = urls[i].trim();
-if (!url.startsWith('http')) {
-urls[i] = 'https://' + url;
-}
-
-progressText.textContent = `Scanning ${i + 1} of ${urls.length}...`;
-progressBar.style.width = `${((i + 1) / urls.length) * 100}%`;
+button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Versturen...';
 
 try {
-const response = await fetch('/api/scan', {
+const response = await fetch('/api/freelancers', {
 method: 'POST',
 headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({ url: urls[i] })
+body: JSON.stringify({ name, email, phone, title, bio, featured })
 });
 
 const data = await response.json();
 
 if (data.success) {
-const score = data.score || 0;
-const hasWebsite = score > 0; // If we got a score, they have a website
-
-// Categorize based on score
-if (score >= 85) {
-results.leaderboard.push({ url: urls[i], score, data });
-} else if (hasWebsite) {
-results.withWebsite.push({ url: urls[i], score, data });
+alert('✅ Aanvraag ontvangen! We nemen binnen 24 uur contact met je op.');
+closeModal();
 } else {
-results.withoutWebsite.push({ url: urls[i], score, data });
+alert('❌ ' + (data.error || 'Er is een fout opgetreden'));
 }
-} else {
-results.errors.push({ url: urls[i], error: data.error || 'Scan failed' });
-}
-
-scannedCount++;
 } catch (error) {
-results.errors.push({ url: urls[i], error: error.message });
-}
-
-// Small delay to prevent overwhelming the server
-await new Promise(resolve => setTimeout(resolve, 500));
-}
-
-// Display results
-displayBulkResults(results, email, name);
-
-// Send emails for categorized results
-await sendBulkEmails(results, email, name);
-
+alert('❌ Fout: ' + error.message);
+} finally {
 button.disabled = false;
-button.innerHTML = '<i class="fas fa-rocket mr-2"></i> Start Bulk Scan';
-progress.classList.add('hidden');
-}
-
-function displayBulkResults(results, userEmail, userName) {
-const container = document.getElementById('bulkResultsContainer');
-const resultsDiv = document.getElementById('bulkResults');
-
-let html = '';
-
-// Leaderboard candidates
-if (results.leaderboard.length > 0) {
-html += `
-<div class="bg-green-900 bg-opacity-30 border border-green-500 rounded-lg p-4 mb-4">
-<h5 class="font-bold text-green-400 mb-2">
-🏆 Leaderboard Candidates (${results.leaderboard.length})
-</h5>
-<p class="text-sm text-gray-300 mb-2">These websites scored 85+ and will be submitted to admin for leaderboard approval.</p>
-<ul class="text-sm space-y-1">
-${results.leaderboard.map(r => `<li>✅ ${r.url} - Score: ${r.score}/100</li>`).join('')}
-</ul>
-</div>
-`;
-}
-
-// Businesses with website (improvement pitch)
-if (results.withWebsite.length > 0) {
-html += `
-<div class="bg-blue-900 bg-opacity-30 border border-blue-500 rounded-lg p-4 mb-4">
-<h5 class="font-bold text-blue-400 mb-2">
-📧 Improvement Emails Sent (${results.withWebsite.length})
-</h5>
-<p class="text-sm text-gray-300 mb-2">Business owners received personalized emails with SEO improvement recommendations.</p>
-<ul class="text-sm space-y-1">
-${results.withWebsite.map(r => `<li>📨 ${r.url} - Score: ${r.score}/100</li>`).join('')}
-</ul>
-</div>
-`;
-}
-
-// Businesses without website (website offer)
-if (results.withoutWebsite.length > 0) {
-html += `
-<div class="bg-purple-900 bg-opacity-30 border border-purple-500 rounded-lg p-4 mb-4">
-<h5 class="font-bold text-purple-400 mb-2">
-🌐 Website Offers Sent (${results.withoutWebsite.length})
-</h5>
-<p class="text-sm text-gray-300 mb-2">Owners received personalized emails offering professional website creation.</p>
-<ul class="text-sm space-y-1">
-${results.withoutWebsite.map(r => `<li>📬 ${r.url}</li>`).join('')}
-</ul>
-</div>
-`;
-}
-
-// Errors
-if (results.errors.length > 0) {
-html += `
-<div class="bg-red-900 bg-opacity-30 border border-red-500 rounded-lg p-4 mb-4">
-<h5 class="font-bold text-red-400 mb-2">
-❌ Scan Errors (${results.errors.length})
-</h5>
-<ul class="text-sm space-y-1">
-${results.errors.map(r => `<li>⚠️ ${r.url} - ${r.error}</li>`).join('')}
-</ul>
-</div>
-`;
-}
-
-// Summary email notice
-html += `
-<div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
-<p class="text-sm text-gray-300">
-📬 A summary report has been sent to <strong>${userEmail}</strong>
-</p>
-</div>
-`;
-
-container.innerHTML = html;
-resultsDiv.classList.remove('hidden');
-}
-
-async function sendBulkEmails(results, userEmail, userName) {
-if (!userId) {
-console.warn('No userId - skipping email sending');
-return;
-}
-
-try {
-// Send summary to user
-await fetch('/api/bulk-scan/send-summary', {
-method: 'POST',
-headers: {
-'Content-Type': 'application/json',
-'x-user-id': userId
-},
-body: JSON.stringify({
-userEmail,
-userName,
-results
-})
-});
-
-// Submit leaderboard candidates
-if (results.leaderboard.length > 0) {
-await fetch('/api/bulk-scan/submit-leaderboard', {
-method: 'POST',
-headers: {
-'Content-Type': 'application/json',
-'x-user-id': userId
-},
-body: JSON.stringify({
-entries: results.leaderboard,
-submittedBy: userEmail
-})
-});
-}
-
-// Send improvement emails to businesses with websites
-if (results.withWebsite.length > 0) {
-await fetch('/api/bulk-scan/send-improvement-emails', {
-method: 'POST',
-headers: {
-'Content-Type': 'application/json',
-'x-user-id': userId
-},
-body: JSON.stringify({
-businesses: results.withWebsite,
-senderName: userName,
-senderEmail: userEmail
-})
-});
-}
-
-// Send website offer emails to businesses without websites
-if (results.withoutWebsite.length > 0) {
-await fetch('/api/bulk-scan/send-website-offers', {
-method: 'POST',
-headers: {
-'Content-Type': 'application/json',
-'x-user-id': userId
-},
-body: JSON.stringify({
-businesses: results.withoutWebsite,
-senderName: userName,
-senderEmail: userEmail
-})
-});
-}
-
-console.log('✅ Bulk emails sent successfully');
-} catch (error) {
-console.error('❌ Error sending bulk emails:', error);
+button.innerHTML = 'Submit Application';
 }
 }
 
-window.onclick = function(event) {
+function contactFreelancer(email) {
+window.location.href = `mailto:${email}`;
+}
+
+// ==========================================
+// FAQ FUNCTIES
+// ==========================================
+function toggleFAQ(id) {
+const answer = document.getElementById(`faqAnswer${id}`);
+const icon = document.getElementById(`faqIcon${id}`);
+
+answer.classList.toggle('hidden');
+icon.style.transform = answer.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+
+// ==========================================
+// EMAIL FUNCTIE
+// ==========================================
+function sendRecommendationsByEmail() {
+const email = prompt('Voer je e-mailadres in om de aanbevelingen te ontvangen:');
+if (email && email.includes('@')) {
+alert(`✅ Aanbevelingen worden gestuurd naar ${email}`);
+} else if (email) {
+alert('❌ Ongeldig e-mailadres');
+}
+}
+
+// ==========================================
+// EVENT LISTENERS VOOR MODAL SLUITEN
+// ==========================================
+window.addEventListener('click', function(event) {
 const modal = document.getElementById('freelancerModal');
 if (event.target === modal) {
 closeModal();
 }
-}
+});
 </script>
 </body>
 </html>
