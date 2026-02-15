@@ -5,7 +5,14 @@ const path = require('path');
 const crypto = require('crypto');
 const { Pool } = require('pg');
 const puppeteer = require('puppeteer');
-const cheerio = require('cheerio'); // ✅ TOEGEVOEGD VOOR GEFIXTE SCANNER
+// ✅ CHEERIO - OPTIONAL (fallback als niet beschikbaar)
+let cheerio = null;
+try {
+    cheerio = require('cheerio');
+    console.log('✅ Cheerio loaded - using enhanced scanner');
+} catch (e) {
+    console.log('⚠️ Cheerio not available - using basic scanner (install cheerio for better accuracy)');
+}
 const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
 const compression = require('compression');
@@ -206,9 +213,12 @@ async function getBrowser() {
 
 // ==========================================
 // SCANNER DETECTION FUNCTIES - GEFIXED ✅
+// Alleen gebruikt als Cheerio beschikbaar is
 // ==========================================
 
 function detectAuthorBioFixed($) {
+    if (!$) return { found: false, wordCount: 0 };
+    
     const authorSections = $('section, div').filter(function() {
         const id = $(this).attr('id') || '';
         const className = $(this).attr('class') || '';
@@ -239,6 +249,8 @@ function detectAuthorBioFixed($) {
 }
 
 function detectTableOfContentsFixed($) {
+    if (!$) return { found: false, itemCount: 0 };
+    
     const tocContainers = $('[id*="toc"], [class*="toc"], [id*="table-of-contents"], [class*="table-of-contents"]');
     if (tocContainers.length > 0) {
         return { found: true, itemCount: tocContainers.find('a').length };
@@ -265,6 +277,8 @@ function detectTableOfContentsFixed($) {
 }
 
 function countFAQsFixed($) {
+    if (!$) return { count: 0, type: 'none' };
+    
     let count = $('details').length;
     if (count > 0) return { count: count, type: 'details' };
     
@@ -1036,13 +1050,22 @@ app.post('/api/scan', async (req, res) => {
         
         await page.close();
         
-        // ✅ USE CHEERIO FOR ACCURATE DETECTION
-        const $ = cheerio.load(html);
+        // ✅ USE CHEERIO FOR ACCURATE DETECTION (only if available)
+        let authorBioFixed = { found: false, wordCount: 0 };
+        let tocFixed = { found: false, itemCount: 0 };
+        let faqFixed = { count: 0, type: 'none' };
+        let fleschFixed = 50;
         
-        const authorBioFixed = detectAuthorBioFixed($);
-        const tocFixed = detectTableOfContentsFixed($);
-        const faqFixed = countFAQsFixed($);
-        const fleschFixed = calculateFleschScoreFixed(analysis.textContent);
+        if (cheerio) {
+            const $ = cheerio.load(html);
+            authorBioFixed = detectAuthorBioFixed($);
+            tocFixed = detectTableOfContentsFixed($);
+            faqFixed = countFAQsFixed($);
+            fleschFixed = calculateFleschScoreFixed(analysis.textContent);
+        } else {
+            // Fallback: berekenen zonder cheerio (minder nauwkeurig)
+            fleschFixed = calculateFleschScoreFixed(analysis.textContent);
+        }
         
         // Update analysis with fixed detections
         analysis.hasAuthorBio = authorBioFixed.found;
@@ -1359,6 +1382,7 @@ app.post('/api/scan', async (req, res) => {
         console.log(`   • GRAAF: ${graafScore}/50`);
         console.log(`   • CRAFT: ${craftScore}/30`);
         console.log(`   • Technical: ${technicalScore}/20`);
+        console.log(`   • Scanner Mode: ${cheerio ? 'Enhanced ✅' : 'Basic ⚠️'}`);
         console.log(`   • Author Bio: ${analysis.hasAuthorBio ? '✅' : '❌'}`);
         console.log(`   • TOC: ${analysis.hasTableOfContents ? '✅' : '❌'}`);
         console.log(`   • FAQ Count: ${analysis.faqQuestionCount}`);
@@ -1981,12 +2005,21 @@ async function startServer() {
         console.log('');
         console.log(`📊 Database: ${dbConnected ? '✅ Verbonden' : '❌ NIET VERBONDEN'}`);
         console.log('');
-        console.log('✅ SCANNER FIXES APPLIED:');
-        console.log('   • ✅ Author Bio Detection GEFIXED (herkent Ottmar section)');
-        console.log('   • ✅ TOC Detection GEFIXED (herkent numbered lists)');
-        console.log('   • ✅ FAQ Count GEFIXED (accurate counting, was 5 nu 4)');
-        console.log('   • ✅ Flesch Score GEFIXED (valid range 0-100, was -88)');
-        console.log('   • ✅ Cheerio integration for accurate HTML parsing');
+        if (cheerio) {
+            console.log('✅ SCANNER FIXES APPLIED (Enhanced Mode):');
+            console.log('   • ✅ Author Bio Detection GEFIXED (herkent Ottmar section)');
+            console.log('   • ✅ TOC Detection GEFIXED (herkent numbered lists)');
+            console.log('   • ✅ FAQ Count GEFIXED (accurate counting, was 5 nu 4)');
+            console.log('   • ✅ Flesch Score GEFIXED (valid range 0-100, was -88)');
+            console.log('   • ✅ Cheerio integration for accurate HTML parsing');
+        } else {
+            console.log('⚠️ SCANNER MODE: Basic (install cheerio for enhanced accuracy)');
+            console.log('   • ⚠️ Author Bio Detection: Basic (install cheerio for fixes)');
+            console.log('   • ⚠️ TOC Detection: Basic (install cheerio for fixes)');
+            console.log('   • ⚠️ FAQ Count: Basic (install cheerio for fixes)');
+            console.log('   • ✅ Flesch Score: Fixed (valid range 0-100)');
+            console.log('   • 💡 Run: npm install cheerio (for full accuracy)');
+        }
         console.log('');
         console.log('💡 SEO SCORING SYSTEM (GRAAF FRAMEWORK):');
         console.log('   • GRAAF (35%): Content depth, expert quotes, case studies');
