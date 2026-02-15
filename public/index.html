@@ -663,7 +663,12 @@ font-size: 0.75rem;
 </div>
 
 <div class="max-w-3xl mx-auto">
-<div class="card">
+<!-- SINGLE URL SCANNER -->
+<div class="card mb-6" style="border: 2px solid #7e22ce;">
+<h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+<span>🔍 Single URL Scanner</span>
+<span class="text-xs px-2 py-1 bg-purple-600 rounded text-white">Quick Scan</span>
+</h3>
 <div class="flex flex-col sm:flex-row gap-3">
 <input type="text"
 id="singleUrlInput"
@@ -686,12 +691,23 @@ spellcheck="false">
 </div>
 <div id="singleResult" class="hidden mt-4"></div>
 
-<!-- BULK SCANNING SECTION -->
-<div class="card mt-6">
+<!-- DIVIDER -->
+<div class="flex items-center gap-4 my-6">
+<div class="flex-1 border-t border-gray-700"></div>
+<span class="text-gray-500 text-sm">OR</span>
+<div class="flex-1 border-t border-gray-700"></div>
+</div>
+
+<!-- BULK URL SCANNER -->
+<div class="card" style="border: 2px solid #3b82f6;">
 <div class="flex items-center justify-between mb-4">
-<h3 class="text-xl font-bold text-white">📋 Bulk Scanning</h3>
-<button onclick="toggleBulkScanner()" class="text-purple-400 hover:text-purple-300 text-sm">
-<i class="fas fa-chevron-down" id="bulkScannerIcon"></i>
+<h3 class="text-xl font-bold text-white flex items-center gap-2">
+<span>📋 Bulk URL Scanner</span>
+<span class="text-xs px-2 py-1 bg-blue-600 rounded text-white">Batch Scan</span>
+</h3>
+<button onclick="toggleBulkScanner()" class="text-sm text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-2">
+<span id="bulkToggleText">Show Bulk Scanner</span>
+<i class="fas fa-chevron-down" id="bulkScannerIcon" style="transition: transform 0.3s;"></i>
 </button>
 </div>
 <div id="bulkScannerContent" class="hidden">
@@ -699,7 +715,7 @@ spellcheck="false">
 Scan up to 100 websites at once. Based on scores, we automatically:
 </p>
 <ul class="text-sm text-gray-300 mb-4" style="margin-left: 1.5rem;">
-<li>✅ <strong>85+ Score:</strong> Submit to leaderboard (admin approval)</li>
+<li>🏆 <strong>85+ Score:</strong> Submit to leaderboard + send congratulations email with score & link to view their ranking</li>
 <li>📧 <strong>&lt;85 with website:</strong> Email business owner with improvement pitch</li>
 <li>🌐 <strong>&lt;85 without website:</strong> Email owner offering website creation</li>
 </ul>
@@ -1090,7 +1106,7 @@ His methodology has achieved a documented <strong>78% recovery rate within 90 da
 <div id="faqAnswer3" class="faq-answer hidden">
 <p>Bulk scanning allows you to analyze multiple websites at once. Upload a list of URLs (up to 100 per batch), and our system will scan each one using the GRAAF Framework. Based on the scores, we automatically:</p>
 <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
-<li><strong>85+ Score:</strong> Submitted to leaderboard for admin review</li>
+<li><strong>85+ Score:</strong> Submitted to leaderboard for admin review + business receives congratulations email with their score and link to view their ranking at app.contentscale.site</li>
 <li><strong>Below 85 (with website):</strong> Business receives personalized email with improvement recommendations and service pitch</li>
 <li><strong>Below 85 (no website):</strong> Owner receives personalized email offering website creation services</li>
 </ul>
@@ -2213,10 +2229,15 @@ alert('❌ Registration failed: ' + error.message);
 function toggleBulkScanner() {
 const content = document.getElementById('bulkScannerContent');
 const icon = document.getElementById('bulkScannerIcon');
+const toggleText = document.getElementById('bulkToggleText');
 if (content) {
+const isHidden = content.classList.contains('hidden');
 content.classList.toggle('hidden');
 if (icon) {
-icon.style.transform = content.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+icon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+if (toggleText) {
+toggleText.textContent = isHidden ? 'Hide Bulk Scanner' : 'Show Bulk Scanner';
 }
 }
 }
