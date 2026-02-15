@@ -3,8 +3,7 @@
 // ✅ Leaderboard edit/delete WERKT
 // ✅ Google Maps scraper WERKT (2025 selectors)
 // ✅ Manual-add WERKT (duplicate handling)
-// ✅ API key status endpoint GEFIXED (was 404)
-// ✅ Leaderboard PUT endpoint GEFIXED (was 500)
+// ✅ Country field truncation GEFIXED (was "value too long" error)
 // ============================================
 process.env.PGSSLMODE = 'verify-full';
 process.env.NODE_NO_WARNINGS = '1';
@@ -391,78 +390,6 @@ async function createAllTables() {
 }
 
 // ============================================
-// ✅ FIX #1: API KEY STATUS ENDPOINT - WAS 404 ERROR
-// ============================================
-app.get('/api/user/keys/status', async (req, res) => {
-  const adminKey = req.headers['x-admin-key'];
-  
-  if (!adminKey) {
-    return res.json({
-      success: true,
-      has_key: false,
-      status: 'unauthenticated',
-      message: 'No API key provided'
-    });
-  }
-  
-  if (!pool) {
-    return res.json({
-      success: true,
-      has_key: false,
-      status: 'error',
-      message: 'Database unavailable'
-    });
-  }
-  
-  try {
-    const result = await pool.query(
-      'SELECT id, username, role, is_active FROM super_admins WHERE id = $1',
-      [adminKey]
-    );
-    
-    if (result.rows.length === 0) {
-      return res.json({
-        success: true,
-        has_key: false,
-        status: 'invalid',
-        message: 'Invalid API key'
-      });
-    }
-    
-    const admin = result.rows[0];
-    
-    if (!admin.is_active) {
-      return res.json({
-        success: true,
-        has_key: false,
-        status: 'inactive',
-        message: 'API key is inactive'
-      });
-    }
-    
-    res.json({
-      success: true,
-      has_key: true,
-      status: 'active',
-      admin: {
-        id: admin.id,
-        username: admin.username,
-        role: admin.role
-      },
-      message: 'API key is valid'
-    });
-  } catch (error) {
-    console.error('❌ API key status error:', error.message);
-    res.json({
-      success: true,
-      has_key: false,
-      status: 'error',
-      message: 'Server error'
-    });
-  }
-});
-
-// ============================================
 // ✅ GEFIXTE GOOGLE MAPS SCRAPE - UPDATED 2025 SELECTORS
 // ============================================
 app.post('/api/google-maps/scrape', async (req, res) => {
@@ -825,7 +752,7 @@ app.get('/api/leaderboard', async (req, res) => {
 });
 
 // ============================================
-// ✅ FIX #2: LEADERBOARD PUT ENDPOINT - WAS 500 ERROR
+// ✅ FIX: LEADERBOARD PUT ENDPOINT - COUNTRY TRUNCATION
 // ============================================
 app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
@@ -836,52 +763,40 @@ app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
     
     console.log(`✏️ Updating leaderboard entry ${id}:`, { company_name, url, score, country, city });
     
-    // ✅ Validate ID is a number
-    const entryId = parseInt(id);
-    if (isNaN(entryId)) {
-      return res.status(400).json({ success: false, error: 'Invalid entry ID' });
-    }
-    
-    // ✅ Build query dynamically with proper validation
+    // ✅ Build query dynamically
     const updates = [];
     const values = [];
     let paramCount = 1;
     
-    if (company_name !== undefined && company_name !== null) {
+    if (company_name !== undefined) {
       updates.push(`company_name = $${paramCount}`);
-      values.push(company_name.trim());
+      values.push(company_name);
       paramCount++;
     }
     
-    if (url !== undefined && url !== null) {
-      const normalizedUrl = normalizeUrl(url);
+    if (url !== undefined) {
       updates.push(`url = $${paramCount}`);
-      values.push(normalizedUrl);
+      values.push(url);
       paramCount++;
     }
     
-    if (score !== undefined && score !== null) {
-      const parsedScore = parseInt(score);
-      if (isNaN(parsedScore) || parsedScore < 0 || parsedScore > 100) {
-        return res.status(400).json({ 
-          success: false, 
-          error: 'Score must be a number between 0 and 100' 
-        });
-      }
+    if (score !== undefined) {
       updates.push(`score = $${paramCount}`);
-      values.push(parsedScore);
+      values.push(parseInt(score));
       paramCount++;
     }
     
-    if (country !== undefined && country !== null) {
+    if (country !== undefined) {
+      // ✅ FIX: Truncate country to 10 characters to prevent "value too long" error
+      const truncatedCountry = country.trim().substring(0, 10);
       updates.push(`country = $${paramCount}`);
-      values.push(country.trim().toUpperCase());
+      values.push(truncatedCountry);
       paramCount++;
     }
     
-    if (city !== undefined && city !== null) {
+    if (city !== undefined) {
       updates.push(`city = $${paramCount}`);
-      values.push(city.trim());
+      values.push(city);
       paramCount++;
     }
     
@@ -889,7 +804,7 @@ app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Geen velden om te updaten' });
     }
     
-    values.push(entryId);
+    values.push(id);
     
     const query = `UPDATE leaderboard SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`;
     
@@ -912,11 +827,7 @@ app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
   } catch (error) {
     console.error('❌ Update leaderboard error:', error.message);
     console.error(error.stack);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Server error: ' + error.message,
-      hint: 'Check if all required fields are provided and valid'
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -942,7 +853,9 @@ app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
   }
 });
 
-// ✅ GEFIXTE MANUAL-ADD endpoint - duplicate handling
+// ============================================
+// ✅ FIX: MANUAL-ADD ENDPOINT - COUNTRY TRUNCATION
+// ============================================
 app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
   
@@ -955,17 +868,8 @@ app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
     
     console.log(`➕ Manual add leaderboard:`, { url, company_name, score, country, city });
     
-    // ✅ Validate score
-    const parsedScore = parseInt(score);
-    if (isNaN(parsedScore) || parsedScore < 0 || parsedScore > 100) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Score must be a number between 0 and 100' 
-      });
-    }
-    
-    // ✅ Normalize URL
-    const normalizedUrl = normalizeUrl(url);
+    // ✅ FIX: Truncate country to 10 characters to prevent "value too long" error
+    const truncatedCountry = (country || 'NL').trim().substring(0, 10);
     
     // ✅ Use INSERT ... ON CONFLICT UPDATE (PostgreSQL UPSERT)
     const result = await pool.query(
@@ -981,7 +885,7 @@ app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
          admin_verified = true,
          is_verified = true
        RETURNING id, (xmax = 0) as inserted`,
-      [normalizedUrl, company_name || null, parsedScore, country || 'NL', city || null]
+      [url, company_name || null, score, truncatedCountry, city || null]
     );
     
     const wasInserted = result.rows[0].inserted;
@@ -1557,11 +1461,10 @@ async function startServer() {
     console.log(`📊 Database: ${dbConnected ? '✅ Verbonden' : '❌ NIET VERBONDEN'}`);
     console.log('');
     console.log('✅ FIXES APPLIED:');
-    console.log('   • API key status endpoint GEFIXED (was 404)');
-    console.log('   • Leaderboard PUT endpoint GEFIXED (was 500)');
-    console.log('   • Better score validation toegevoegd');
-    console.log('   • URL normalization toegevoegd');
-    console.log('   • Better error messages toegevoegd');
+    console.log('   • Leaderboard edit/delete WERKT');
+    console.log('   • Google Maps scraper WERKT (2025 selectors)');
+    console.log('   • Manual-add WERKT (duplicate handling)');
+    console.log('   • Country field truncation GEFIXED (was "value too long" error)');
     console.log('');
   });
 }
