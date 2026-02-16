@@ -616,6 +616,7 @@ async function login() {
   const password = document.getElementById('login-password').value;
   const errorDiv = document.getElementById('login-error');
   errorDiv.classList.add('hidden');
+  
   try {
     const response = await fetch('/api/setup/verify-admin', {
       method: 'POST',
@@ -623,6 +624,7 @@ async function login() {
       body: JSON.stringify({ username, password })
     });
     const data = await response.json();
+    
     if (data.success) {
       localStorage.setItem('admin_id', data.admin_id);
       localStorage.setItem('admin_username', username);
@@ -662,6 +664,7 @@ async function apiCall(endpoint, method = 'GET', body = null) {
   }
   const options = { method, headers, credentials: 'include' };
   if (body) options.body = JSON.stringify(body);
+  
   const response = await fetch(endpoint, options);
   if (response.status === 401) {
     throw new Error('Invalid admin credentials - login opnieuw');
@@ -678,25 +681,32 @@ function switchTab(tabName) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
   document.querySelectorAll('.mode-toggle').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + tabName).classList.remove('hidden');
+  
   if (tabName === 'leaderboard') document.getElementById('tabLeaderboardBtn').classList.add('active');
   if (tabName === 'freelancers') document.getElementById('tabFreelancersBtn').classList.add('active');
   if (tabName === 'pending') document.getElementById('tabPendingBtn').classList.add('active');
+  
   if (tabName === 'leaderboard') loadLeaderboard();
   if (tabName === 'freelancers') loadFreelancers();
   if (tabName === 'pending') loadPendingData();
 }
 
 // ==========================================
-// LEADERBOARD FUNCTIONS
+// LEADERBOARD FUNCTIONS - FIXED!
 // ==========================================
 async function loadLeaderboard() {
   try {
     const data = await apiCall('/api/leaderboard');
     allLeaderboard = data.entries || [];
-    document.getElementById('stat-total-agencies').textContent = data.stats?.totalAgencies || 0;
+    
+    document.getElementById('stat-total-agencies').textContent = data.stats?.totalAgencies || allLeaderboard.length;
     document.getElementById('stat-avg-score').textContent = data.averageScore || 0;
     document.getElementById('stat-countries').textContent = data.stats?.countriesCount || 0;
-    document.getElementById('stat-verified').textContent = allLeaderboard.filter(e => e.admin_verified).length;
+    
+    // ✅ FIX: Use stats.verifiedCount from API if available, otherwise calculate from entries
+    const verifiedCount = data.stats?.verifiedCount || allLeaderboard.filter(e => e.admin_verified !== false).length;
+    document.getElementById('stat-verified').textContent = verifiedCount;
+    
     renderTop3();
     renderRankings4to15();
     renderRankings16Plus();
@@ -708,16 +718,19 @@ async function loadLeaderboard() {
 function renderTop3() {
   const container = document.getElementById('top3-container');
   if (!container) return;
+  
   const top3 = allLeaderboard.slice(0, 3);
   if (top3.length === 0) {
     container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Geen entries gevonden</div>';
     return;
   }
+  
   container.innerHTML = top3.map((entry, index) => {
     const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
     const medalClass = index === 0 ? 'gold' : index === 1 ? 'silver' : 'bronze';
     const rankText = index === 0 ? '1st Worldwide' : index === 1 ? '2nd Worldwide' : '3rd Worldwide';
     const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+    
     return `
       <div class="top-card ${medalClass}">
         <div class="text-5xl mb-2">${medal}</div>
@@ -739,15 +752,18 @@ function renderTop3() {
 function renderRankings4to15() {
   const grid = document.getElementById('rankings4to15Grid');
   if (!grid) return;
+  
   const rankings = allLeaderboard.slice(3, 15);
   if (rankings.length === 0) {
     document.getElementById('rankings4to15Container').style.display = 'none';
     return;
   }
+  
   document.getElementById('rankings4to15Container').style.display = 'block';
   grid.innerHTML = rankings.map((entry, index) => {
     const actualRank = index + 4;
     const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+    
     return `
       <div class="rank-card">
         <div class="text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
@@ -770,11 +786,13 @@ function renderRankings4to15() {
 function renderRankings16Plus() {
   const tbody = document.getElementById('rankingsTbody');
   if (!tbody) return;
+  
   const rankings = allLeaderboard.slice(15, 35);
   tbody.innerHTML = rankings.map((entry, index) => {
     const actualRank = index + 16;
     const companyName = entry.company_name || extractDomainFromUrl(entry.url);
     const isSelected = selectedLeaderboardIds.has(entry.id);
+    
     return `
       <tr>
         <td class="w-10">
@@ -798,6 +816,7 @@ function renderRankings16Plus() {
       </tr>
     `;
   }).join('');
+  
   document.getElementById('totalCount').textContent = allLeaderboard.length;
 }
 
@@ -819,14 +838,17 @@ async function addLeaderboardEntry() {
   const url = document.getElementById('add-website-url').value;
   const score = parseInt(document.getElementById('add-score').value);
   const country = document.getElementById('add-country').value;
+  
   if (!companyName || !url || !score) {
     alert('❌ Company name, URL and score are required');
     return;
   }
+  
   let formattedUrl = url;
   if (!formattedUrl.startsWith('http')) {
     formattedUrl = 'https://' + formattedUrl;
   }
+  
   try {
     await apiCall('/api/admin/leaderboard/manual-add', 'POST', {
       url: formattedUrl,
@@ -848,11 +870,13 @@ async function addLeaderboardEntry() {
 function editLeaderboardEntry(id) {
   const entry = allLeaderboard.find(e => e.id === id);
   if (!entry) return;
+  
   document.getElementById('edit-entry-id').value = entry.id;
   document.getElementById('edit-company-name').value = entry.company_name || extractDomainFromUrl(entry.url);
   document.getElementById('edit-website-url').value = entry.url;
   document.getElementById('edit-score').value = entry.score;
   document.getElementById('edit-country').value = entry.country || 'Netherlands';
+  
   document.getElementById('editLeaderboardModal').classList.add('active');
   document.body.style.overflow = 'hidden';
 }
@@ -868,10 +892,12 @@ async function updateLeaderboardEntry() {
   const url = document.getElementById('edit-website-url').value;
   const score = parseInt(document.getElementById('edit-score').value);
   const country = document.getElementById('edit-country').value;
+  
   if (!companyName || !url || !score) {
     alert('❌ Company name, URL and score are required');
     return;
   }
+  
   try {
     await apiCall('/api/admin/leaderboard/' + id, 'PUT', {
       company_name: companyName,
@@ -934,6 +960,7 @@ async function bulkDeleteLeaderboard() {
     return;
   }
   if (!confirm('❌ Verwijder ' + selectedLeaderboardIds.size + ' entries permanent?')) return;
+  
   let success = 0;
   let failed = 0;
   for (const id of selectedLeaderboardIds) {
@@ -944,6 +971,7 @@ async function bulkDeleteLeaderboard() {
       failed++;
     }
   }
+  
   alert('✅ ' + success + ' verwijderd, ' + failed + ' mislukt');
   selectedLeaderboardIds.clear();
   loadLeaderboard();
@@ -958,14 +986,17 @@ async function loadFreelancers() {
     allFreelancers = data.freelancers || [];
     const grid = document.getElementById('freelancersGrid');
     if (!grid) return;
+    
     if (allFreelancers.length === 0) {
       grid.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Geen freelancers gevonden</div>';
       return;
     }
+    
     grid.innerHTML = allFreelancers.map(f => {
       const firstName = f.name.split(' ')[0];
       const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase();
       const isSelected = selectedFreelancerIds.has(f.id);
+      
       return `
         <div class="card hover:border-purple-500">
           <div class="card-content">
@@ -1028,6 +1059,7 @@ async function loadFreelancers() {
 function editFreelancer(id) {
   const freelancer = allFreelancers.find(f => f.id === id);
   if (!freelancer) return;
+  
   document.getElementById('edit-freelancer-id').value = freelancer.id;
   document.getElementById('edit-freelancer-name').value = freelancer.name;
   document.getElementById('edit-freelancer-email').value = freelancer.email;
@@ -1037,6 +1069,7 @@ function editFreelancer(id) {
   document.getElementById('edit-freelancer-rate').value = freelancer.hourly_rate || '';
   document.getElementById('edit-freelancer-featured').checked = freelancer.is_featured || false;
   document.getElementById('edit-bio-char-count').textContent = (freelancer.bio || '').length + '/200';
+  
   document.getElementById('editFreelancerModal').classList.add('active');
   document.body.style.overflow = 'hidden';
 }
@@ -1055,10 +1088,12 @@ async function updateFreelancer() {
   const bio = document.getElementById('edit-freelancer-bio').value;
   const hourlyRate = document.getElementById('edit-freelancer-rate').value;
   const isFeatured = document.getElementById('edit-freelancer-featured').checked;
+  
   if (!name || !email) {
     alert('❌ Name and email are required');
     return;
   }
+  
   try {
     await apiCall('/api/admin/freelancers/' + id, 'PUT', {
       name,
@@ -1139,6 +1174,7 @@ async function bulkDeleteFreelancers() {
     return;
   }
   if (!confirm('❌ Verwijder ' + selectedFreelancerIds.size + ' freelancers permanent?')) return;
+  
   let success = 0;
   let failed = 0;
   for (const id of selectedFreelancerIds) {
@@ -1149,6 +1185,7 @@ async function bulkDeleteFreelancers() {
       failed++;
     }
   }
+  
   alert('✅ ' + success + ' verwijderd, ' + failed + ' mislukt');
   selectedFreelancerIds.clear();
   loadFreelancers();
@@ -1172,10 +1209,12 @@ async function loadPendingLeaderboard() {
   try {
     const data = await apiCall('/api/admin/leaderboard/pending');
     const container = document.getElementById('pending-leaderboard-container');
+    
     if (data.pending.length === 0) {
       container.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-check-circle text-6xl mb-4 text-green-400"></i><p class="text-lg">Geen pending submissions</p></div>';
       return;
     }
+    
     let html = '';
     html += data.pending.map(entry => {
       const suggestedName = entry.company_name || extractDomainFromUrl(entry.url);
@@ -1241,6 +1280,7 @@ async function bulkDeletePending() {
     return;
   }
   if (!confirm('❌ Verwijder ' + selectedPendingIds.size + ' pending entries permanent?')) return;
+  
   try {
     const ids = Array.from(selectedPendingIds);
     await apiCall('/api/admin/leaderboard/bulk-delete', 'POST', { ids });
@@ -1278,10 +1318,12 @@ async function loadPendingFreelancers() {
   try {
     const data = await apiCall('/api/admin/freelancers/pending');
     const container = document.getElementById('pending-freelancers-container');
+    
     if (data.pending.length === 0) {
       container.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-check-circle text-6xl mb-4 text-green-400"></i><p class="text-lg">Geen pending aanmeldingen</p></div>';
       return;
     }
+    
     container.innerHTML = data.pending.map(f => `
       <div class="pending-card">
         <div class="grid md:grid-cols-2 gap-6">
