@@ -1,4 +1,3 @@
-```javascript
 // ============================================
 // CONTENTSCALE SERVER.JS - COMPLETE PRODUCTION
 // ✅ Alle API endpoints werken echt
@@ -64,10 +63,10 @@ function initDatabaseConfig() {
         };
     }
     console.log('📊 Database configuratie:');
-    console.log(`   • Host: ${dbConfig.host}`);
-    console.log(`   • Port: ${dbConfig.port}`);
-    console.log(`   • Database: ${dbConfig.database}`);
-    console.log(`   • User: ${dbConfig.user}`);
+    console.log(`   - Host: ${dbConfig.host}`);
+    console.log(`   - Port: ${dbConfig.port}`);
+    console.log(`   - Database: ${dbConfig.database}`);
+    console.log(`   - User: ${dbConfig.user}`);
     return new Pool(dbConfig);
 }
 
@@ -164,39 +163,6 @@ app.use(express.static('public', {
 }));
 
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
-
-// ============================================
-// ANALYTICS SCRIPT INJECTION
-// ============================================
-app.use((req, res, next) => {
-  // Only inject on HTML pages
-  if (req.path.endsWith('.html') || req.path === '/') {
-    const originalSend = res.send;
-    res.send = function(body) {
-      if (typeof body === 'string' && body.includes('</body>')) {
-        const analyticsScript = `
-<!-- Analytics Tracking Script -->
-<script>
-!function(){
-  function e(){
-    var e=document.createElement("script");
-    e.type="text/javascript",
-    e.async=!0,
-    e.setAttribute("embed-id","d2680fb9-8e14-4fd2-8c8e-c7d67cae8541"),
-    e.src="https://embed.adabundle.com/embed-scripts/d2680fb9-8e14-4fd2-8c8e-c7d67cae8541",
-    window.top.document.getElementsByTagName("body")[0].appendChild(e)
-  }
-  "complete"===document.readyState||"interactive"===document.readyState?e():document.addEventListener("DOMContentLoaded",e)
-}();
-</script>
-`;
-        body = body.replace('</body>', analyticsScript + '</body>');
-      }
-      return originalSend.call(this, body);
-    };
-  }
-  next();
-});
 
 const verifyAdmin = async (req, res, next) => {
     const adminKey = req.headers['x-admin-key'];
@@ -477,20 +443,24 @@ app.post('/api/user/register', async (req, res) => {
 // ============================================
 app.get('/api/user/activation-status', async (req, res) => {
     const userId = req.headers['x-user-id'];
+    
     if (!userId) {
         return res.json({ success: false, activated: false, error: 'No user ID' });
     }
+    
     try {
         const result = await pool.query(
             'SELECT is_activated FROM users WHERE id = $1',
             [userId]
         );
+        
         if (result.rows.length === 0) {
             return res.json({ success: true, activated: false });
         }
-        res.json({
-            success: true,
-            activated: result.rows[0].is_activated || false
+        
+        res.json({ 
+            success: true, 
+            activated: result.rows[0].is_activated || false 
         });
     } catch (error) {
         console.error('❌ Activation status error:', error.message);
@@ -503,6 +473,7 @@ app.get('/api/user/activation-status', async (req, res) => {
 // ============================================
 app.get('/api/user/keys/status', async (req, res) => {
     const userId = req.headers['x-user-id'];
+    
     if (!userId) {
         return res.json({
             success: true,
@@ -512,6 +483,7 @@ app.get('/api/user/keys/status', async (req, res) => {
             message: 'No user ID provided'
         });
     }
+    
     if (!pool) {
         return res.json({
             success: true,
@@ -521,6 +493,7 @@ app.get('/api/user/keys/status', async (req, res) => {
             message: 'Database unavailable'
         });
     }
+    
     try {
         const apiKeysResult = await pool.query(
             'SELECT service_name, api_key, daily_limit, used_today FROM user_api_keys WHERE user_id = $1',
@@ -529,6 +502,7 @@ app.get('/api/user/keys/status', async (req, res) => {
         
         const hasSendgrid = apiKeysResult.rows.some(row => row.service_name === 'sendgrid');
         const hasWebshare = apiKeysResult.rows.some(row => row.service_name === 'webshare');
+        
         const sendgridKey = apiKeysResult.rows.find(row => row.service_name === 'sendgrid');
         
         res.json({
@@ -572,6 +546,7 @@ app.post('/api/user/sendgrid/configure', async (req, res) => {
             DO UPDATE SET api_key = $2, daily_limit = $3`,
             [userId, apiKey, dailyLimit || 100]
         );
+        
         res.json({ success: true });
     } catch (error) {
         console.error('❌ Sendgrid config error:', error.message);
@@ -598,6 +573,7 @@ app.post('/api/user/webshare/configure', async (req, res) => {
             DO UPDATE SET api_key = $2`,
             [userId, apiKey]
         );
+        
         res.json({ success: true, proxy_count: 10 });
     } catch (error) {
         console.error('❌ Webshare config error:', error.message);
@@ -610,9 +586,11 @@ app.post('/api/user/webshare/configure', async (req, res) => {
 // ============================================
 app.get('/api/user/templates', async (req, res) => {
     const userId = req.headers['x-user-id'];
+    
     if (!userId) {
         return res.json({ success: false, error: 'No user ID' });
     }
+    
     try {
         const result = await pool.query(
             'SELECT template_type, subject, body FROM user_email_templates WHERE user_id = $1',
@@ -660,6 +638,7 @@ app.post('/api/user/templates', async (req, res) => {
             DO UPDATE SET subject = $3, body = $4, updated_at = NOW()`,
             [userId, type, subject, body]
         );
+        
         res.json({ success: true });
     } catch (error) {
         console.error('❌ Save template error:', error.message);
@@ -847,6 +826,16 @@ app.post('/api/scan', async (req, res) => {
     
     let scanUrl = url;
     if (!scanUrl.startsWith('http')) scanUrl = 'https://' + scanUrl;
+    
+    function isValidUrl(string) {
+        try {
+            new URL(string);
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+    
     if (!isValidUrl(scanUrl)) return res.status(400).json({ success: false, error: 'Invalid URL format' });
     
     try {
@@ -1172,15 +1161,6 @@ app.post('/api/scan', async (req, res) => {
     }
 });
 
-function isValidUrl(string) {
-    try {
-        new URL(string);
-        return true;
-    } catch (_) {
-        return false;
-    }
-}
-
 // ============================================
 // ✅ LEADERBOARD ENDPOINTS
 // ============================================
@@ -1425,11 +1405,14 @@ app.post('/api/admin/leaderboard/bulk-delete', verifyAdmin, async (req, res) => 
     
     try {
         const { ids } = req.body;
+        
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
             return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
         }
+        
         const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
         await pool.query(`DELETE FROM leaderboard WHERE id IN (${placeholders})`, ids);
+        
         res.json({ success: true, message: `${ids.length} entries verwijderd` });
     } catch (error) {
         console.error('Bulk delete leaderboard error:', error.message);
@@ -1523,6 +1506,7 @@ app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
         
         values.push(id);
         const query = `UPDATE leaderboard SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`;
+        
         const result = await pool.query(query, values);
         
         if (result.rows.length === 0) {
@@ -1656,8 +1640,8 @@ app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
         
         values.push(id);
         const query = `UPDATE freelancers SET ${updates.join(', ')} WHERE id = $${paramCount}`;
-        await pool.query(query, values);
         
+        await pool.query(query, values);
         res.json({ success: true, message: 'Freelancer bijgewerkt' });
     } catch (error) {
         console.error('Update freelancer error:', error.message);
@@ -1670,6 +1654,7 @@ app.post('/api/admin/freelancers/:id/toggle-featured', verifyAdmin, async (req, 
     
     try {
         const { id } = req.params;
+        
         const freelancer = await pool.query('SELECT is_featured FROM freelancers WHERE id = $1', [id]);
         
         if (freelancer.rows.length === 0) {
@@ -1677,6 +1662,7 @@ app.post('/api/admin/freelancers/:id/toggle-featured', verifyAdmin, async (req, 
         }
         
         const newFeatured = !freelancer.rows[0].is_featured;
+        
         await pool.query('UPDATE freelancers SET is_featured = $1 WHERE id = $2', [newFeatured, id]);
         
         res.json({
@@ -1695,11 +1681,14 @@ app.post('/api/admin/freelancers/bulk-delete', verifyAdmin, async (req, res) => 
     
     try {
         const { ids } = req.body;
+        
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
             return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
         }
+        
         const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
         await pool.query(`DELETE FROM freelancers WHERE id IN (${placeholders})`, ids);
+        
         res.json({ success: true, message: `${ids.length} freelancers verwijderd` });
     } catch (error) {
         console.error('Bulk delete freelancers error:', error.message);
@@ -1800,4 +1789,3 @@ async function startServer() {
 }
 
 startServer();
-```
