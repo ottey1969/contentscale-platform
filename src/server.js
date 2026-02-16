@@ -1,9 +1,9 @@
 // ============================================
 // CONTENTSCALE SERVER.JS - COMPLETE PRODUCTION
-// ✅ Alle API endpoints voor index.html
-// ✅ Echt SendGrid email verzending
+// ✅ Alle API endpoints werken echt
+// ✅ SendGrid email verzending
 // ✅ User templates opslaan in database
-// ✅ Bulk scanner werkt met echte data
+// ✅ Bulk scanner met echte data
 // ✅ Elke user eigen SendGrid keys
 // ============================================
 process.env.PGSSLMODE = 'verify-full';
@@ -17,8 +17,6 @@ const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 const multer = require('multer');
-const axios = require('axios');
-const fs = require('fs');
 const sgMail = require('@sendgrid/mail');
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -225,34 +223,6 @@ process.on('SIGTERM', async () => {
     }
     process.exit(0);
 });
-
-const scanCache = new Map();
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
-
-function hashContent(html) {
-    return crypto.createHash('sha256').update(html).digest('hex');
-}
-
-setInterval(() => {
-    const now = Date.now();
-    let cleared = 0;
-    for (const [key, value] of scanCache.entries()) {
-        if (now - value.timestamp > CACHE_TTL_MS) {
-            scanCache.delete(key);
-            cleared++;
-        }
-    }
-    if (cleared > 0) console.log(`🧹 Cleared ${cleared} expired cache entries`);
-}, 60000);
-
-function isValidUrl(string) {
-    try {
-        new URL(string);
-        return true;
-    } catch (_) {
-        return false;
-    }
-}
 
 async function createAllTables() {
     if (!pool) {
@@ -847,17 +817,6 @@ app.post('/api/bulk-scan/send-website-offers', async (req, res) => {
 });
 
 // ============================================
-// GOOGLE MAPS SCRAPE - UITGESCHAKELD
-// ============================================
-app.post('/api/google-maps/scrape', async (req, res) => {
-    res.status(403).json({
-        success: false,
-        error: 'Google Maps scraping is temporarily disabled. Use CSV upload instead.',
-        hint: 'CSV bulk upload functionality will be available soon.'
-    });
-});
-
-// ============================================
 // SEO SCAN
 // ============================================
 app.post('/api/scan', async (req, res) => {
@@ -1184,6 +1143,15 @@ app.post('/api/scan', async (req, res) => {
     }
 });
 
+function isValidUrl(string) {
+    try {
+        new URL(string);
+        return true;
+    } catch (_) {
+        return false;
+    }
+}
+
 // ============================================
 // ✅ LEADERBOARD ENDPOINTS
 // ============================================
@@ -1366,6 +1334,308 @@ app.post('/api/setup/verify-admin', async (req, res) => {
 });
 
 // ============================================
+// ✅ ADMIN LEADERBOARD ENDPOINTS
+// ============================================
+app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
+    if (!pool) return res.json({ success: true, pending: [] });
+    try {
+        const result = await pool.query(
+            `SELECT * FROM leaderboard
+            WHERE admin_verified = FALSE
+            ORDER BY created_at DESC
+            LIMIT 50`
+        );
+        res.json({ success: true, pending: result.rows });
+    } catch (error) {
+        console.error('Pending leaderboard error:', error);
+        res.json({ success: true, pending: [] });
+    }
+});
+
+app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => {
+    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    try {
+        const { id } = req.params;
+        const { final_country } = req.body;
+        await pool.query(
+            `UPDATE leaderboard
+            SET admin_verified = TRUE,
+            country = COALESCE($2, country),
+            is_verified = TRUE
+            WHERE id = $1`,
+            [id, final_country]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Approve leaderboard error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/admin/leaderboard/:id/reject', verifyAdmin, async (req, res) => {
+    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    try {
+        await pool.query('DELETE FROM leaderboard WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Reject leaderboard error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/admin/leaderboard/bulk-delete', verifyAdmin, async (req, res) => {
+    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
+        }
+        const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
+        await pool.query(`DELETE FROM leaderboard WHERE id IN (${placeholders})`, ids);
+        res.json({ success: true, message: `${ids.length} entries verwijderd` });
+    } catch (error) {
+        console.error('Bulk delete leaderboard error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
+    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    try {
+        const { url, company_name, score, country, city } = req.body;
+        if (!url || score === undefined) {
+            return res.status(400).json({ success: false, error: 'URL and score are required' });
+        }
+        const truncatedCountry = (country || 'NL').trim().substring(0, 10);
+        const result = await pool.query(
+            `INSERT INTO leaderboard
+            (url, company_name, score, country, city, admin_verified, is_verified)
+            VALUES ($1, $2, $3, $4, $5, true, true)
+            ON CONFLICT (url)
+            DO UPDATE SET
+            score = EXCLUDED.score,
+            company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
+            country = COALESCE(EXCLUDED.country, leaderboard.country),
+            city = COALESCE(EXCLUDED.city, leaderboard.city),
+            admin_verified = true,
+            is_verified = true
+            RETURNING id, (xmax = 0) as inserted`,
+            [url, company_name || null, score, truncatedCountry, city || null]
+        );
+        const wasInserted = result.rows[0].inserted;
+        res.json({
+            success: true,
+            action: wasInserted ? 'added' : 'updated',
+            id: result.rows[0].id,
+            message: wasInserted ? 'Entry added to leaderboard' : 'Leaderboard entry updated'
+        });
+    } catch (error) {
+        console.error('Manual leaderboard add error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
+    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    try {
+        const { id } = req.params;
+        const { company_name, url, score, country, city } = req.body;
+        const updates = [];
+        const values = [];
+        let paramCount = 1;
+        if (company_name !== undefined) {
+            updates.push(`company_name = $${paramCount}`);
+            values.push(company_name);
+            paramCount++;
+        }
+        if (url !== undefined) {
+            updates.push(`url = $${paramCount}`);
+            values.push(url);
+            paramCount++;
+        }
+        if (score !== undefined) {
+            updates.push(`score = $${paramCount}`);
+            values.push(parseInt(score));
+            paramCount++;
+        }
+        if (country !== undefined) {
+            const truncatedCountry = country.trim().substring(0, 10);
+            updates.push(`country = $${paramCount}`);
+            values.push(truncatedCountry);
+            paramCount++;
+        }
+        if (city !== undefined) {
+            updates.push(`city = $${paramCount}`);
+            values.push(city);
+            paramCount++;
+        }
+        if (updates.length === 0) {
+            return res.status(400).json({ success: false, error: 'Geen velden om te updaten' });
+        }
+        values.push(id);
+        const query = `UPDATE leaderboard SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`;
+        const result = await pool.query(query, values);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Entry niet gevonden' });
+        }
+        res.json({ success: true, message: 'Leaderboard entry bijgewerkt', entry: result.rows[0] });
+    } catch (error) {
+        console.error('Update leaderboard error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
+    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    try {
+        const { id } = req.params;
+        const result = await pool.query('DELETE FROM leaderboard WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Entry niet gevonden' });
+        }
+        res.json({ success: true, message: 'Entry verwijderd' });
+    } catch (error) {
+        console.error('Delete leaderboard error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ============================================
+// ✅ ADMIN FREELANCERS ENDPOINTS
+// ============================================
+app.get('/api/admin/freelancers/pending', verifyAdmin, async (req, res) => {
+    if (!pool) return res.json({ success: true, pending: [] });
+    try {
+        const result = await pool.query(
+            `SELECT * FROM freelancers WHERE is_approved = FALSE ORDER BY created_at DESC LIMIT 50`
+        );
+        res.json({ success: true, pending: result.rows });
+    } catch (error) {
+        console.error('Pending freelancers error:', error);
+        res.json({ success: true, pending: [] });
+    }
+});
+
+app.post('/api/admin/freelancers/:id/approve', verifyAdmin, async (req, res) => {
+    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    try {
+        await pool.query(
+            'UPDATE freelancers SET is_approved = TRUE, is_verified = TRUE WHERE id = $1',
+            [req.params.id]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Approve freelancer error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
+    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    try {
+        await pool.query('DELETE FROM freelancers WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Delete freelancer error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
+    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    try {
+        const { id } = req.params;
+        const { name, email, title, location, country, bio, hourly_rate, is_featured } = req.body;
+        const updates = [];
+        const values = [];
+        let paramCount = 1;
+        if (name !== undefined) {
+            updates.push(`name = $${paramCount}`);
+            values.push(name);
+            paramCount++;
+        }
+        if (email !== undefined) {
+            updates.push(`email = $${paramCount}`);
+            values.push(email);
+            paramCount++;
+        }
+        if (title !== undefined) {
+            updates.push(`title = $${paramCount}`);
+            values.push(title);
+            paramCount++;
+        }
+        if (location !== undefined) {
+            updates.push(`location = $${paramCount}`);
+            values.push(location);
+            paramCount++;
+        }
+        if (country !== undefined) {
+            updates.push(`country = $${paramCount}`);
+            values.push(country);
+            paramCount++;
+        }
+        if (bio !== undefined) {
+            updates.push(`bio = $${paramCount}`);
+            values.push(bio);
+            paramCount++;
+        }
+        if (hourly_rate !== undefined) {
+            updates.push(`hourly_rate = $${paramCount}`);
+            values.push(hourly_rate);
+            paramCount++;
+        }
+        if (is_featured !== undefined) {
+            updates.push(`is_featured = $${paramCount}`);
+            values.push(is_featured);
+            paramCount++;
+        }
+        if (updates.length === 0) {
+            return res.status(400).json({ success: false, error: 'Geen velden om te updaten' });
+        }
+        values.push(id);
+        const query = `UPDATE freelancers SET ${updates.join(', ')} WHERE id = $${paramCount}`;
+        await pool.query(query, values);
+        res.json({ success: true, message: 'Freelancer bijgewerkt' });
+    } catch (error) {
+        console.error('Update freelancer error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/admin/freelancers/:id/toggle-featured', verifyAdmin, async (req, res) => {
+    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    try {
+        const { id } = req.params;
+        const freelancer = await pool.query('SELECT is_featured FROM freelancers WHERE id = $1', [id]);
+        if (freelancer.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Freelancer not found' });
+        }
+        const newFeatured = !freelancer.rows[0].is_featured;
+        await pool.query('UPDATE freelancers SET is_featured = $1 WHERE id = $2', [newFeatured, id]);
+        res.json({ success: true, is_featured: newFeatured, message: `Featured ${newFeatured ? 'aangezet' : 'uitgezet'}` });
+    } catch (error) {
+        console.error('Toggle featured error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/admin/freelancers/bulk-delete', verifyAdmin, async (req, res) => {
+    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
+        }
+        const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
+        await pool.query(`DELETE FROM freelancers WHERE id IN (${placeholders})`, ids);
+        res.json({ success: true, message: `${ids.length} freelancers verwijderd` });
+    } catch (error) {
+        console.error('Bulk delete freelancers error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ============================================
 // HTML ROUTES
 // ============================================
 app.get('/admin', (req, res) => {
@@ -1451,6 +1721,8 @@ async function startServer() {
         console.log('   • Leaderboard: ✅ ACTIEF');
         console.log('   • Freelancers: ✅ ACTIEF');
         console.log('   • Admin Login: ✅ WERKT (ot / admin123)');
+        console.log('   • Admin Edit/Delete: ✅ WERKT');
+        console.log('   • Bulk Delete: ✅ WERKT');
         console.log('');
     });
 }
