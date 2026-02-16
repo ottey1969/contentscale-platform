@@ -1,1595 +1,2407 @@
-// ============================================
-// CONTENTSCALE SERVER.JS - COMPLETE WITH ALL ADMIN ENDPOINTS
-// ✅ Alle admin endpoints toegevoegd
-// ✅ Leaderboard Verified count gefixt
-// ✅ Freelancer toggle featured werkt
-// ✅ Pending approvals werkt
-// ============================================
-process.env.PGSSLMODE = 'verify-full';
-process.env.NODE_NO_WARNINGS = '1';
-const express = require('express');
-const path = require('path');
-const crypto = require('crypto');
-const { Pool } = require('pg');
-const puppeteer = require('puppeteer');
-const bcrypt = require('bcryptjs');
-const rateLimit = require('express-rate-limit');
-const compression = require('compression');
-const multer = require('multer');
-const axios = require('axios');
-const fs = require('fs');
-const app = express();
-const PORT = process.env.PORT || 3000;
-console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
-console.log('📊 Database URL:', process.env.DATABASE_URL ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
-
-// ============================================
-// DATABASE CONFIGURATIE
-// ============================================
-let dbConfig;
-let pool;
-
-function initDatabaseConfig() {
-    if (process.env.DATABASE_URL) {
-        console.log('📊 Using DATABASE_URL from environment');
-        try {
-            const url = new URL(process.env.DATABASE_URL);
-            dbConfig = {
-                user: url.username,
-                password: url.password,
-                host: url.hostname,
-                port: url.port || 5432,
-                database: url.pathname.slice(1),
-                ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-                connectionTimeoutMillis: 10000,
-                idleTimeoutMillis: 30000,
-                max: 20
-            };
-        } catch (e) {
-            console.error('❌ Ongeldige DATABASE_URL:', e.message);
-            return null;
-        }
-    } else {
-        dbConfig = {
-            host: process.env.DB_HOST || 'localhost',
-            port: parseInt(process.env.DB_PORT || '5432'),
-            database: process.env.DB_NAME || 'contentscale',
-            user: process.env.DB_USER || 'postgres',
-            password: process.env.DB_PASSWORD || 'postgres',
-            ssl: false,
-            connectionTimeoutMillis: 5000,
-            idleTimeoutMillis: 30000,
-            max: 10
-        };
-    }
-    console.log('📊 Database configuratie:');
-    console.log(`   • Host: ${dbConfig.host}`);
-    console.log(`   • Port: ${dbConfig.port}`);
-    console.log(`   • Database: ${dbConfig.database}`);
-    console.log(`   • User: ${dbConfig.user}`);
-    return new Pool(dbConfig);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ContentScale - Elite SEO Content Scanner 100/100</title>
+<meta name="description" content="Scan je content op 100/100 met ons Elite GRAAF Framework. Detecteert AI Overview ready content, E-E-A-T signals, en meer.">
+<link rel="preconnect" href="https://cdn.tailwindcss.com">
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
+<link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
+<link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+<script src="https://cdn.tailwindcss.com" defer></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'; this.onload=null;">
+<noscript>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</noscript>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: #030712;
+  color: white;
+  line-height: 1.6;
 }
-
-try {
-    pool = initDatabaseConfig();
-} catch (e) {
-    console.error('❌ Fout bij initialiseren database pool:', e.message);
-    pool = null;
+h1, h2, h3, h4, h5, h6, p, a, span, div, button, input, textarea, select, label, li {
+  color: white !important;
 }
-
-async function waitForDatabase(retries = 5, delay = 3000) {
-    if (!pool) {
-        console.log('❌ Geen database pool - overslaan');
-        return false;
-    }
-    console.log('🔄 Verbinden met database...');
-    for (let i = 0; i < retries; i++) {
-        try {
-            const client = await pool.connect();
-            console.log(`✅ Database verbonden! (poging ${i + 1}/${retries})`);
-            await client.query('SELECT NOW()');
-            console.log('✅ Database query werkt');
-            client.release();
-            setTimeout(() => createAllTables().catch(err => {
-                console.error('❌ Fout bij aanmaken tabellen:', err.message);
-            }), 1000);
-            return true;
-        } catch (err) {
-            console.error(`❌ Database connectie poging ${i + 1}/${retries} mislukt:`, err.message);
-            if (i === retries - 1) {
-                console.error('❌❌❌ KON GEEN VERBINDING MAKEN MET DATABASE ❌❌❌');
-                return false;
-            }
-            console.log(`⏳ Opnieuw proberen over ${delay/1000} seconden...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-        }
-    }
-    return false;
+input, textarea, select {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+  border: 1px solid #d1d5db !important;
 }
+input::placeholder, textarea::placeholder {
+  color: #6b7280 !important;
+  opacity: 1 !important;
+}
+.text-gray-300, .text-gray-400, .text-gray-500 {
+  color: #d1d5db !important;
+}
+.btn-white-black {
+  background: white !important;
+  color: #581c87 !important;
+  font-weight: 700;
+  border: 2px solid white;
+}
+.btn-white-black:hover {
+  background: #f3f4f6 !important;
+  color: #6b21a8 !important;
+}
+.bg-gray-900 { background-color: #030712; }
+.bg-gray-800 { background-color: #111827; }
+.bg-gray-700 { background-color: #1f2937; }
+.bg-gray-900\/95 { background-color: rgba(3, 7, 18, 0.95); }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+}
+.btn-primary {
+  background: linear-gradient(135deg, #7e22ce, #be185d);
+  color: white;
+}
+.btn-primary:hover {
+  background: linear-gradient(135deg, #6b21a8, #9d174d);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -5px rgba(126, 34, 206, 0.5);
+}
+.btn-secondary {
+  background: linear-gradient(135deg, #1e40af, #0891b2);
+  color: white;
+}
+.btn-success {
+  background: #0f7b3a !important;
+  color: white !important;
+}
+.btn-disabled {
+  background: #6b7280 !important;
+  color: white !important;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.mode-toggle {
+  position: relative;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  background: #374151;
+  color: white;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.mode-toggle.active {
+  background: linear-gradient(135deg, #7e22ce, #be185d);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+.mode-toggle.active::after {
+  content: '✓';
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 24px;
+  height: 24px;
+  background: #0f7b3a;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  border: 2px solid white;
+}
+.card {
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.card:hover {
+  border-color: #a855f7;
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+}
+.card-content {
+  flex: 1;
+}
+.card-footer {
+  margin-top: auto;
+  padding-top: 1rem;
+}
+.stat-card {
+  position: relative;
+  border-radius: 1rem;
+  padding: 1.25rem;
+  overflow: hidden;
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #7e22ce, #6b21a8);
+  opacity: 0.9;
+}
+.stat-card > div {
+  position: relative;
+  z-index: 10;
+}
+.top-card {
+  border-radius: 1rem;
+  padding: 1.5rem;
+  text-align: center;
+  color: white;
+}
+.top-card.gold {
+  background: linear-gradient(135deg, #fbbf24, #d97706);
+}
+.top-card.silver {
+  background: linear-gradient(135deg, #e5e7eb, #6b7280);
+}
+.top-card.bronze {
+  background: linear-gradient(135deg, #f97316, #c2410c);
+}
+.top-card button {
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  width: 100%;
+  margin-top: 1rem;
+}
+.top-card button:hover {
+  background: rgba(0, 0, 0, 0.5);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+.score-high { color: #4ade80; }
+.score-medium { color: #facc15; }
+.score-low { color: #f87171; }
+.progress-bar {
+  height: 0.75rem;
+  background: #374151;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #a855f7, #ec4899);
+  transition: width 0.3s;
+}
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+}
+@media (max-width: 1024px) {
+  .grid-4 { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 768px) {
+  .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .grid-3, .grid-4 { grid-template-columns: 1fr; }
+}
+.rankings-4-15-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+@media (max-width: 1024px) {
+  .rankings-4-15-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 768px) {
+  .rankings-4-15-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .rankings-4-15-grid { grid-template-columns: 1fr; }
+}
+.rank-card {
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  text-align: center;
+  transition: all 0.2s;
+}
+.rank-card:hover {
+  border-color: #a855f7;
+  transform: translateY(-4px);
+}
+.filter-tag {
+  background: #374151;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid #4b5563;
+}
+.filter-tag:hover {
+  background: #4b5563;
+}
+.filter-tag.active {
+  background: #7e22ce;
+  border-color: #a855f7;
+}
+.rankings-table {
+  width: 100%;
+  background: #111827;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+.rankings-table th {
+  background: #1f2937;
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: white;
+}
+.rankings-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #374151;
+  color: white;
+}
+.hidden { display: none; }
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.modal.active {
+  display: flex;
+}
+.modal-content {
+  background: #111827;
+  border: 2px solid #a855f7;
+  border-radius: 1rem;
+  padding: 2rem;
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.reverse-email {
+  unicode-bidi: bidi-override;
+  direction: rtl;
+}
+.faq-item {
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+.faq-item:hover {
+  border-color: #a855f7;
+}
+.faq-question {
+  width: 100%;
+  padding: 1.25rem 1.5rem;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: transparent;
+  border: none;
+  color: white;
+  font-weight: 600;
+  font-size: 1.125rem;
+  cursor: pointer;
+}
+.faq-question:hover {
+  background: #1f2937;
+}
+.faq-answer {
+  padding: 0 1.5rem 1.25rem 1.5rem;
+  color: #d1d5db;
+}
+.accordion-item {
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  transition: all 0.2s;
+  margin-top: 1.5rem;
+}
+.accordion-item:hover {
+  border-color: #a855f7;
+}
+.accordion-header {
+  width: 100%;
+  padding: 1.25rem 1.5rem;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  border: 1px solid #a855f7;
+  border-radius: 0.75rem;
+  color: white;
+  font-weight: 600;
+  font-size: 1.125rem;
+  cursor: pointer;
+}
+.accordion-header:hover {
+  background: linear-gradient(135deg, #2d3748, #1a202c);
+}
+.accordion-content {
+  padding: 1.5rem;
+  background: #111827;
+  border: 1px solid #374151;
+  border-top: none;
+  border-bottom-left-radius: 0.75rem;
+  border-bottom-right-radius: 0.75rem;
+}
+footer {
+  background: #111827;
+  border-top: 2px solid #374151;
+  margin-top: 4rem;
+}
+.text-blue-400, a.text-blue-400 {
+  color: #7dd3fc !important;
+  text-decoration: underline;
+  text-decoration-color: rgba(125, 211, 252, 0.4);
+  text-underline-offset: 2px;
+}
+.text-blue-400:hover, a.text-blue-400:hover {
+  color: #bae6fd !important;
+  text-decoration-color: #bae6fd;
+}
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #7e22ce;
+  color: white;
+  padding: 0.5rem 1rem;
+  z-index: 100;
+  transition: top 0.2s;
+}
+.skip-link:focus {
+  top: 0;
+}
+img[width][height] {
+  aspect-ratio: attr(width) / attr(height);
+}
+.w-48.h-48 {
+  width: 192px;
+  height: 192px;
+}
+#main-content > div:first-child {
+  min-height: 400px;
+}
+.modal input, .modal textarea {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+}
+.modal input::placeholder, .modal textarea::placeholder {
+  color: #6b7280 !important;
+  opacity: 1 !important;
+}
+.modal label {
+  color: #374151 !important;
+  font-weight: 500;
+}
+.modal .modal-content {
+  background: white !important;
+}
+.modal .modal-content h2 {
+  color: #111827 !important;
+}
+.modal .modal-content button {
+  color: white !important;
+}
+.modal .modal-content p {
+  color: #6b7280 !important;
+}
+.modal .modal-content .text-gray-400 {
+  color: #6b7280 !important;
+}
+.api-status-indicator {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-left: 8px;
+}
+.api-status-active {
+  background-color: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+.api-status-inactive {
+  background-color: #6b7280;
+}
+.scanner-container {
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  border: 1px solid #a855f7;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.api-section {
+  margin-top: 1rem;
+  border-top: 1px solid #374151;
+  padding-top: 1rem;
+}
+.recommendation-card {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-left: 4px solid #7e22ce;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  transition: all 0.2s;
+}
+.recommendation-card:hover {
+  border-left-color: #a855f7;
+  transform: translateX(4px);
+}
+.priority-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+.priority-high { background: #ef4444; color: white; }
+.priority-medium { background: #f59e0b; color: white; }
+.priority-low { background: #8b5cf6; color: white; }
+.priority-none { background: #10b981; color: white; }
+.recommendation-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: #f3f4f6;
+}
+.recommendation-desc {
+  color: #d1d5db;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+.recommendation-section {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #374151;
+}
+.recommendation-section-title {
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.recommendation-section-title i {
+  font-size: 0.75rem;
+}
+.recommendation-action { color: #f3f4f6; }
+.recommendation-learning { color: #60a5fa; }
+.recommendation-target { color: #34d399; }
+.template-editor {
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+.template-editor textarea {
+  width: 100%;
+  min-height: 200px;
+  font-family: monospace;
+  font-size: 0.875rem;
+}
+</style>
+</head>
+<body class="bg-gray-900">
+<a href="#main-content" class="skip-link">Skip to main content</a>
+<nav class="sticky top-0 z-50 bg-gray-900/95 border-b-2 border-purple-600 backdrop-blur-sm">
+  <div class="max-w-7xl mx-auto px-6 py-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">ContentScale</span>
+        <span class="hidden sm:inline-block text-xs px-2 py-1 bg-purple-600 rounded text-white font-semibold">Pro</span>
+      </div>
+      <div class="hidden md:flex gap-6">
+        <a href="#lead-scanner" class="text-gray-300 hover:text-white transition-colors">Scanner</a>
+        <a href="#leaderboard" class="text-gray-300 hover:text-white transition-colors">Leaderboard</a>
+        <a href="#freelancers" class="text-gray-300 hover:text-white transition-colors">Experts</a>
+        <a href="#templates" class="text-gray-300 hover:text-white transition-colors">Templates</a>
+      </div>
+      <div class="flex gap-3">
+        <a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="btn-success btn">
+          <i class="fab fa-whatsapp"></i> Chat
+        </a>
+      </div>
+    </div>
+  </div>
+</nav>
 
-const storage = multer.memoryStorage();
-const upload = multer({
-    storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 }
-});
+<div id="main-content" class="max-w-7xl mx-auto px-6 py-8">
 
-app.set('trust proxy', 1);
-app.use(compression({ level: 9, threshold: 0 }));
+  <!-- ============================================
+       SCANNER SECTION
+       ============================================ -->
+  <div id="lead-scanner" class="mb-16">
+    <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+      <div class="text-center mb-8">
+        <h2 class="text-4xl font-bold mb-3 text-white">🎯 SEO Content Quality Scanner</h2>
+        <p class="text-xl text-gray-200 mb-2">Check Your SEO Content Quality in Seconds</p>
+        <div class="flex flex-wrap gap-3 justify-center text-sm text-gray-300">
+          <span>✨ Free for freelancers</span>
+          <span>•</span>
+          <span>🔍 Single & Bulk scanning</span>
+          <span>•</span>
+          <span>📊 Detailed analysis</span>
+          <span>•</span>
+          <span>📧 Your SendGrid emails</span>
+          <span>•</span>
+          <span>✏️ Editable templates</span>
+        </div>
+      </div>
 
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
-    message: { success: false, error: 'Too many requests' },
-    standardHeaders: true,
-    legacyHeaders: false
-});
+      <div class="flex justify-center gap-4 mb-8">
+        <button id="modeSingleBtn" onclick="switchMode('single')" class="mode-toggle active">
+          <i class="fas fa-link mr-2"></i> Single URL
+        </button>
+        <button id="modeBulkBtn" onclick="switchMode('bulk')" class="mode-toggle">
+          <i class="fas fa-layer-group mr-2"></i> Bulk URLs
+        </button>
+      </div>
 
-const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 5,
-    message: { success: false, error: 'Too many login attempts' },
-    standardHeaders: true,
-    legacyHeaders: false
-});
+      <!-- SINGLE URL SCANNER -->
+      <div id="singleMode" class="max-w-3xl mx-auto">
+        <div class="card">
+          <div class="flex flex-col sm:flex-row gap-3">
+            <input type="text"
+              id="singleUrlInput"
+              name="url"
+              placeholder="https://business-website.com"
+              class="flex-1"
+              autocomplete="off"
+              aria-autocomplete="none"
+              spellcheck="false">
+            <button onclick="scanSingleURL()" id="singleScanBtn" class="btn-primary btn whitespace-nowrap">
+              <i class="fas fa-search"></i> Start Scan
+            </button>
+          </div>
+          <div id="singleProgress" class="hidden mt-4">
+            <div class="progress-bar">
+              <div id="singleProgressBar" class="progress-bar-fill" style="width: 0%"></div>
+            </div>
+            <p id="singleProgressText" class="text-sm text-gray-300 text-center mt-2"></p>
+          </div>
+        </div>
+        <div id="singleResult" class="hidden mt-4"></div>
+      </div>
 
-app.use('/api/', limiter);
-app.use('/api/setup/verify-admin', authLimiter);
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+      <!-- DIVIDER -->
+      <div class="flex items-center gap-4 my-6">
+        <div class="flex-1 border-t border-gray-700"></div>
+        <span class="text-gray-500 text-sm">OR</span>
+        <div class="flex-1 border-t border-gray-700"></div>
+      </div>
 
-app.use((req, res, next) => {
-    const allowedOrigins = [
-        'https://app.contentscale.site',
-        'https://contentscale.site',
-        'http://localhost:3000',
-        'http://localhost:3001'
-    ];
-    const origin = req.headers.origin;
-    if (allowedOrigins.includes(origin)) {
-        res.header('Access-Control-Allow-Origin', origin);
-    }
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-admin-key, x-user-id');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    if (req.method === 'OPTIONS') return res.sendStatus(200);
-    next();
-});
+      <!-- BULK URL SCANNER -->
+      <div id="bulkMode" class="hidden max-w-4xl mx-auto">
+        <div class="card" style="border: 2px solid #3b82f6;">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold text-white flex items-center gap-2">
+              <span>📋 Bulk URL Scanner</span>
+              <span class="text-xs px-2 py-1 bg-blue-600 rounded text-white">Batch Scan</span>
+              <span id="activationBadge" class="text-xs px-2 py-1 bg-red-600 rounded text-white hidden">
+                🔒 Activation Required
+              </span>
+            </h3>
+            <button onclick="toggleBulkScanner()" class="text-sm text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-2">
+              <span id="bulkToggleText">Show Bulk Scanner</span>
+              <i class="fas fa-chevron-down" id="bulkScannerIcon" style="transition: transform 0.3s;"></i>
+            </button>
+          </div>
 
-app.use(express.static('public', {
-    maxAge: '1y',
-    etag: true,
-    lastModified: true,
-    immutable: true
-}));
+          <div id="bulkScannerContent" class="hidden">
+            <!-- ACTIVATION NOTICE -->
+            <div id="activationNotice" class="hidden bg-gradient-to-r from-purple-900 to-blue-900 border-2 border-purple-500 rounded-lg p-6 mb-6">
+              <div class="flex items-start gap-4">
+                <div class="text-4xl">🔒</div>
+                <div class="flex-1">
+                  <h4 class="text-xl font-bold text-white mb-2">Activation Required for Bulk Scanning</h4>
+                  <p class="text-gray-200 mb-4">
+                    The bulk scanner with automated email outreach is a premium feature.
+                    Contact us via WhatsApp to activate your account!
+                  </p>
+                  <div class="bg-gray-900 bg-opacity-50 rounded-lg p-4 mb-4">
+                    <h5 class="font-bold text-white mb-2">What you get with activation:</h5>
+                    <ul class="text-sm text-gray-200 space-y-1" style="list-style: none; padding-left: 0;">
+                      <li>✅ Scan up to 100 URLs at once</li>
+                      <li>✅ Automated email outreach to business owners</li>
+                      <li>✅ Your own SendGrid integration (100 emails/day free)</li>
+                      <li>✅ Editable email templates</li>
+                      <li>✅ Automatic leaderboard submissions (85+ score)</li>
+                    </ul>
+                  </div>
+                  <div class="flex gap-3 flex-wrap">
+                    <a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20activate%20bulk%20scanner."
+                      id="whatsappActivationBtn"
+                      target="_blank"
+                      rel="noopener"
+                      class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold inline-flex items-center gap-2 transition-all transform hover:scale-105">
+                      <i class="fab fa-whatsapp text-xl"></i>
+                      Contact for Activation
+                    </a>
+                    <button onclick="checkActivationStatus()"
+                      class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold inline-flex items-center gap-2 transition-all">
+                      <i class="fas fa-sync mr-2"></i>
+                      Refresh Status
+                    </button>
+                  </div>
+                  <p class="text-xs text-gray-400 mt-4">
+                    💡 Activation is free! We just need to verify your account.
+                  </p>
+                </div>
+              </div>
+            </div>
 
-app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+            <!-- BULK SCANNER FORM -->
+            <div id="bulkScannerForm">
+              <p class="text-gray-300 text-sm mb-4">
+                Scan up to 100 websites at once. Based on scores, we automatically:
+              </p>
+              <ul class="text-sm text-gray-300 mb-4" style="margin-left: 1.5rem;">
+                <li>🏆 <strong>85+ Score:</strong> Submit to leaderboard + send congratulations email</li>
+                <li>📧 <strong>&lt;85 with website:</strong> Email business owner with improvement pitch</li>
+                <li>🌐 <strong>&lt;85 without website:</strong> Email owner offering website creation</li>
+              </ul>
 
-const verifyAdmin = async (req, res, next) => {
-    const adminKey = req.headers['x-admin-key'];
-    if (!adminKey) {
-        return res.status(401).json({ success: false, error: 'Admin authentication required' });
-    }
-    if (!pool) {
-        return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-    }
-    try {
-        const result = await pool.query(
-            'SELECT * FROM super_admins WHERE id = $1 AND is_active = TRUE',
-            [adminKey]
-        );
-        if (result.rows.length === 0) {
-            return res.status(401).json({ success: false, error: 'Invalid admin credentials' });
-        }
-        req.admin = result.rows[0];
-        next();
-    } catch (error) {
-        console.error('❌ Admin verificatie error:', error.message);
-        res.status(500).json({ success: false, error: 'Authentication error' });
-    }
+              <div class="mb-4">
+                <label class="block text-sm text-gray-300 mb-2">Enter URLs (one per line, max 100)</label>
+                <textarea
+                  id="bulkUrlInput"
+                  rows="8"
+                  placeholder="https://example1.com
+https://example2.com
+https://example3.com"
+                  class="w-full p-3 rounded border border-gray-600 focus:border-purple-500 resize-none"
+                  style="color: #000000 !important; background-color: #ffffff !important;"></textarea>
+                <div class="flex justify-between mt-1">
+                  <span class="text-xs text-gray-400">Up to 100 URLs</span>
+                  <span id="bulkUrlCount" class="text-xs text-gray-400">0/100</span>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                  <label class="block text-sm text-gray-300 mb-2">Your Email *</label>
+                  <input type="email" id="bulkScanEmail" placeholder="your@email.com" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500">
+                </div>
+                <div>
+                  <label class="block text-sm text-gray-300 mb-2">Your Name *</label>
+                  <input type="text" id="bulkScanName" placeholder="Your name" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500">
+                </div>
+              </div>
+
+              <button onclick="startBulkScan()" id="bulkScanBtn" class="btn-primary btn w-full">
+                <i class="fas fa-rocket mr-2"></i> Start Bulk Scan
+              </button>
+
+              <div id="bulkProgress" class="hidden mt-4">
+                <div class="progress-bar">
+                  <div id="bulkProgressBar" class="progress-bar-fill" style="width: 0%"></div>
+                </div>
+                <p id="bulkProgressText" class="text-sm text-gray-300 text-center mt-2"></p>
+              </div>
+
+              <div id="bulkResults" class="hidden mt-4">
+                <h4 class="text-lg font-bold text-white mb-3">Scan Results</h4>
+                <div id="bulkResultsContainer"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- API Configuration Accordion -->
+      <div class="accordion-item">
+        <button onclick="toggleAccordion('apiConfig')" class="accordion-header">
+          <span class="flex items-center gap-2">
+            <i class="fas fa-key text-purple-400"></i>
+            <span class="font-bold">Configure Your API Keys (SendGrid + WebShare)</span>
+            <span id="apiStatusIndicator" class="api-status-indicator api-status-inactive"></span>
+          </span>
+          <i class="fas fa-chevron-down" id="apiConfigIcon"></i>
+        </button>
+        <div id="apiConfig" class="accordion-content hidden">
+          <div class="bg-gray-900 rounded-lg p-5 border border-gray-700">
+            <div class="flex items-center gap-3 mb-4">
+              <span id="apiStatusText" class="text-sm text-gray-300">Configure your own API keys for unlimited usage</span>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6">
+              <!-- SendGrid Config -->
+              <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                <h4 class="text-lg font-bold mb-3 flex items-center gap-2">
+                  <i class="fas fa-envelope text-blue-400"></i>
+                  SendGrid Configuration
+                </h4>
+                <p class="text-xs text-gray-400 mb-3">Free plan: 100 emails/day</p>
+                <div class="space-y-3">
+                  <div>
+                    <label class="block text-sm text-gray-300 mb-1">SendGrid API Key</label>
+                    <input type="password" id="sendgridApiKey" placeholder="SG.xxxxxxxxxx" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500" autocomplete="off">
+                  </div>
+                  <div class="flex gap-2">
+                    <button onclick="saveSendgridConfig()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm font-semibold">
+                      <i class="fas fa-save mr-1"></i> Save
+                    </button>
+                    <button onclick="testSendgridConfig()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-semibold">
+                      <i class="fas fa-vial mr-1"></i> Test
+                    </button>
+                  </div>
+                  <div id="sendgridStatus" class="text-xs text-gray-400 mt-2">
+                    <span class="text-yellow-400">⚪ Not configured</span>
+                  </div>
+                  <div class="border-t border-gray-700 pt-3 mt-2">
+                    <h5 class="text-sm font-semibold mb-2 text-gray-300">Daily Usage</h5>
+                    <div class="progress-bar h-2 mb-1">
+                      <div id="sendgridUsageBar" class="progress-bar-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="flex justify-between text-xs">
+                      <span id="sendgridUsed">0</span>
+                      <span>/</span>
+                      <span id="sendgridLimit">100</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- WebShare Config -->
+              <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                <h4 class="text-lg font-bold mb-3 flex items-center gap-2">
+                  <i class="fas fa-globe text-green-400"></i>
+                  WebShare Proxy Configuration
+                </h4>
+                <p class="text-xs text-gray-400 mb-3">10 free proxies for enhanced scanning</p>
+                <div class="space-y-3">
+                  <div>
+                    <label class="block text-sm text-gray-300 mb-1">WebShare API Key</label>
+                    <input type="password" id="webshareApiKey" placeholder="your-webshare-api-key" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500" autocomplete="off">
+                  </div>
+                  <div class="flex gap-2">
+                    <button onclick="saveWebshareConfig()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm font-semibold">
+                      <i class="fas fa-save mr-1"></i> Save
+                    </button>
+                    <button onclick="testWebshareConfig()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-semibold">
+                      <i class="fas fa-vial mr-1"></i> Test
+                    </button>
+                  </div>
+                  <div id="webshareStatus" class="text-xs text-gray-400 mt-2">
+                    <span class="text-yellow-400">⚪ Not configured</span>
+                  </div>
+                  <div id="proxyList" class="hidden mt-3 border-t border-gray-700 pt-3">
+                    <h5 class="text-sm font-semibold mb-2 text-gray-300">Active Proxies</h5>
+                    <div id="proxyListContainer" class="space-y-1 max-h-32 overflow-y-auto text-xs"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 text-xs text-gray-500 border-t border-gray-700 pt-3">
+              <p>💡 Your API keys are stored securely and only used for your account. Free tier limits apply.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-8 bg-gradient-to-r from-purple-800 via-pink-800 to-purple-800 rounded-xl p-6 text-center border border-purple-400">
+        <h3 class="text-2xl font-bold mb-2 text-white">💼 Are You an SEO Specialist or Content Marketer?</h3>
+        <p class="text-xl text-gray-200 mb-4">
+          Work just a few hours per week while earning a full-time income.
+          We train you in Modern SEO for the AI-era.
+        </p>
+        <button onclick="openFreelancerModal()" class="btn-white-black btn text-lg px-8 py-4 shadow-lg">
+          <i class="fas fa-user-plus mr-2"></i> Become a Platform Specialist
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================
+       EMAIL TEMPLATES SECTION
+       ============================================ -->
+  <div id="templates" class="mb-16">
+    <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+      <div class="text-center mb-8">
+        <h2 class="text-4xl font-bold mb-3 text-white">✏️ Email Templates</h2>
+        <p class="text-xl text-gray-200">Customize your bulk scan email templates</p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-6">
+        <!-- Congratulations Template -->
+        <div class="card">
+          <h3 class="text-xl font-bold mb-4">🏆 Leaderboard Congratulations</h3>
+          <p class="text-sm text-gray-400 mb-4">Sent to businesses with 85+ score</p>
+          <div class="template-editor">
+            <label class="block text-sm text-gray-300 mb-2">Subject</label>
+            <input type="text" id="template-congrats-subject" class="w-full p-2 rounded border border-gray-600 bg-gray-800 text-white mb-2" value="🎉 Congratulations! Your website ranked on ContentScale Leaderboard">
+            <label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
+            <textarea id="template-congrats-body" class="w-full p-2 rounded border border-gray-600 bg-gray-800 text-white" style="min-height: 150px;">&lt;h1&gt;Congratulations!&lt;/h1&gt;&lt;p&gt;Your website scored {{score}}/100 on our SEO analysis.&lt;/p&gt;&lt;p&gt;You've been added to the ContentScale Leaderboard!&lt;/p&gt;&lt;p&gt;&lt;a href="{{leaderboard_url}}"&gt;View your ranking&lt;/a&gt;&lt;/p&gt;</textarea>
+          </div>
+          <button onclick="saveTemplate('congrats')" class="btn-primary btn w-full mt-4">
+            <i class="fas fa-save mr-2"></i> Save Template
+          </button>
+        </div>
+
+        <!-- Improvement Pitch Template -->
+        <div class="card">
+          <h3 class="text-xl font-bold mb-4">📈 Improvement Pitch</h3>
+          <p class="text-sm text-gray-400 mb-4">Sent to businesses with website &lt;85 score</p>
+          <div class="template-editor">
+            <label class="block text-sm text-gray-300 mb-2">Subject</label>
+            <input type="text" id="template-improvement-subject" class="w-full p-2 rounded border border-gray-600 bg-gray-800 text-white mb-2" value="🚀 Quick SEO opportunity for {{company_name}}">
+            <label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
+            <textarea id="template-improvement-body" class="w-full p-2 rounded border border-gray-600 bg-gray-800 text-white" style="min-height: 150px;">&lt;h1&gt;SEO Opportunity&lt;/h1&gt;&lt;p&gt;Hi {{company_name}} team,&lt;/p&gt;&lt;p&gt;Your website scored {{score}}/100 on our SEO analysis.&lt;/p&gt;&lt;p&gt;I noticed some quick wins that could improve your rankings.&lt;/p&gt;&lt;p&gt;Would you be open to a quick chat?&lt;/p&gt;</textarea>
+          </div>
+          <button onclick="saveTemplate('improvement')" class="btn-primary btn w-full mt-4">
+            <i class="fas fa-save mr-2"></i> Save Template
+          </button>
+        </div>
+
+        <!-- Website Offer Template -->
+        <div class="card">
+          <h3 class="text-xl font-bold mb-4">🌐 Website Offer</h3>
+          <p class="text-sm text-gray-400 mb-4">Sent to businesses without website</p>
+          <div class="template-editor">
+            <label class="block text-sm text-gray-300 mb-2">Subject</label>
+            <input type="text" id="template-website-subject" class="w-full p-2 rounded border border-gray-600 bg-gray-800 text-white mb-2" value="💻 Professional website for {{company_name}}">
+            <label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
+            <textarea id="template-website-body" class="w-full p-2 rounded border border-gray-600 bg-gray-800 text-white" style="min-height: 150px;">&lt;h1&gt;Website Opportunity&lt;/h1&gt;&lt;p&gt;Hi {{company_name}} team,&lt;/p&gt;&lt;p&gt;I noticed you don't have a website yet.&lt;/p&gt;&lt;p&gt;I specialize in creating SEO-optimized websites that rank.&lt;/p&gt;&lt;p&gt;Interested in learning more?&lt;/p&gt;</textarea>
+          </div>
+          <button onclick="saveTemplate('website')" class="btn-primary btn w-full mt-4">
+            <i class="fas fa-save mr-2"></i> Save Template
+          </button>
+        </div>
+      </div>
+
+      <div class="mt-8 bg-gray-800 rounded-lg p-4 border border-gray-700">
+        <h4 class="font-bold mb-2">📎 Available Variables:</h4>
+        <div class="grid md:grid-cols-3 gap-4 text-sm text-gray-400">
+          <div><code class="text-purple-400">{{company_name}}</code> - Business name</div>
+          <div><code class="text-purple-400">{{score}}</code> - SEO score (0-100)</div>
+          <div><code class="text-purple-400">{{leaderboard_url}}</code> - Link to leaderboard</div>
+          <div><code class="text-purple-400">{{sender_name}}</code> - Your name</div>
+          <div><code class="text-purple-400">{{sender_email}}</code> - Your email</div>
+          <div><code class="text-purple-400">{{website_url}}</code> - Business website</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================
+       LEADERBOARD SECTION
+       ============================================ -->
+  <div id="leaderboard" class="mb-16">
+    <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+      <div class="text-center mb-8">
+        <h2 class="text-4xl font-bold mb-3 text-white">🏆 Elite Leaderboard</h2>
+        <p class="text-xl text-gray-200">Top performing websites automatically added</p>
+      </div>
+
+      <div class="grid-4 mb-8">
+        <div class="stat-card">
+          <div>
+            <div class="text-4xl mb-2">🏢</div>
+            <div class="text-3xl font-bold" id="totalAgencies">0</div>
+            <div class="text-sm text-gray-200">Agencies</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div>
+            <div class="text-4xl mb-2">📊</div>
+            <div class="text-3xl font-bold" id="avgScore">0</div>
+            <div class="text-sm text-gray-200">Avg. Score</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div>
+            <div class="text-4xl mb-2">🌍</div>
+            <div class="text-3xl font-bold" id="countriesCount">0</div>
+            <div class="text-sm text-gray-200">Countries</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div>
+            <div class="text-4xl mb-2">💼</div>
+            <div class="text-3xl font-bold" id="activeHelpers">0</div>
+            <div class="text-sm text-gray-200">Freelancers</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="top3-container" class="grid-3 mb-10"></div>
+
+      <div id="rankings4to15Container" class="mb-10">
+        <h3 class="text-2xl font-bold text-white mb-6">Rankings 4-15</h3>
+        <div class="rankings-4-15-grid" id="rankings4to15Grid"></div>
+      </div>
+
+      <div class="bg-gray-800 rounded-lg p-4 mb-6">
+        <button onclick="toggleFilters()" class="w-full flex items-center justify-between text-left text-white">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-filter text-purple-400"></i>
+            <span class="font-semibold">Filters</span>
+          </div>
+          <i class="fas fa-chevron-down" id="filterIcon"></i>
+        </button>
+        <div id="filterPanel" class="hidden mt-4">
+          <div class="mb-4">
+            <div class="text-sm text-gray-300 mb-2">Country:</div>
+            <div class="flex flex-wrap gap-2" id="countryFilters"></div>
+          </div>
+          <div>
+            <input type="text" id="searchInput" placeholder="Search agencies..." oninput="filterAgencies()" class="w-full" autocomplete="off">
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <button onclick="toggleRankings()" id="rankingsToggleBtn" class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-between transition-all">
+          <span id="rankingsToggleText">📊 Show Rankings 16+</span>
+          <span class="arrow">▼</span>
+        </button>
+        <div id="rankingsContainer" class="hidden mt-4">
+          <p class="text-sm text-gray-300 mb-2">Showing 16-35 of <span id="totalCount">0</span> agencies</p>
+          <table class="rankings-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Company</th>
+                <th>Website</th>
+                <th>Score</th>
+                <th>Country</th>
+                <th>Added</th>
+              </tr>
+            </thead>
+            <tbody id="rankingsTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================
+       FREELANCERS SECTION
+       ============================================ -->
+  <div id="freelancers" class="mb-16">
+    <div class="text-center mb-8">
+      <h2 class="text-4xl font-bold mb-3 text-white">🎯 Verified SEO Specialists</h2>
+      <p class="text-xl text-gray-300 mb-4">Expert content optimizers ready to help</p>
+      <button onclick="openFreelancerModal()" class="btn-primary btn">
+        <i class="fas fa-user-plus mr-2"></i> Become a Specialist
+      </button>
+    </div>
+    <div id="freelancersGrid" class="grid-3"></div>
+  </div>
+
+</div>
+
+<!-- ============================================
+     FOOTER
+     ============================================ -->
+<footer>
+  <div class="max-w-7xl mx-auto px-6 py-12">
+    <div class="grid md:grid-cols-4 gap-8 mb-8">
+      <div>
+        <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-4">ContentScale</div>
+        <p class="text-gray-400 text-sm">
+          Professional SEO content optimization based on Google's E-E-A-T guidelines.
+          Helping businesses recover traffic from AI Overviews since 2018.
+        </p>
+      </div>
+      <div>
+        <h3 class="font-bold mb-4 text-white">Product</h3>
+        <ul class="space-y-2 text-sm">
+          <li><a href="#lead-scanner" class="text-gray-400 hover:text-white transition-colors">Lead Scanner</a></li>
+          <li><a href="#leaderboard" class="text-gray-400 hover:text-white transition-colors">Leaderboard</a></li>
+          <li><a href="#freelancers" class="text-gray-400 hover:text-white transition-colors">Specialists</a></li>
+          <li><a href="#templates" class="text-gray-400 hover:text-white transition-colors">Templates</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="font-bold mb-4 text-white">Company</h3>
+        <ul class="space-y-2 text-sm">
+          <li><a href="https://contentscale.site/about-us" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">About Us</a></li>
+          <li><a href="https://contentscale.site/privacy-policy" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">Privacy Policy</a></li>
+          <li><a href="https://contentscale.site/terms" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">Terms of Service</a></li>
+          <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Blog</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="font-bold mb-4 text-white">Contact</h3>
+        <ul class="space-y-2 text-sm">
+          <li class="text-gray-400">
+            <i class="fas fa-envelope mr-2"></i>
+            <span class="reverse-email">moc.etlacsnestnoc@ofni</span>
+          </li>
+          <li>
+            <a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">
+              <i class="fab fa-whatsapp mr-2"></i>+31 6 2807 3996
+            </a>
+          </li>
+          <li class="text-gray-400">
+            <i class="fas fa-map-marker-alt mr-2"></i>Amsterdam, Netherlands
+          </li>
+          <li class="text-gray-400">
+            <i class="fas fa-clock mr-2"></i>Mon-Fri, 9:00-18:00 CET
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div class="border-t border-gray-700 pt-8 text-center text-sm text-gray-400">
+      <p>&copy; 2025 ContentScale. All rights reserved.</p>
+      <p class="mt-2">Built with 🚀 in Amsterdam</p>
+    </div>
+  </div>
+</footer>
+
+<!-- ============================================
+     FREELANCER MODAL
+     ============================================ -->
+<div id="freelancerModal" class="modal">
+  <div class="modal-content">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-2xl font-bold text-gray-900">Register as Specialist</h2>
+      <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm mb-2 text-gray-700">Full Name *</label>
+        <input type="text" id="freelancerName" placeholder="Your name" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+      </div>
+      <div>
+        <label class="block text-sm mb-2 text-gray-700">Email *</label>
+        <input type="email" id="freelancerEmail" placeholder="your@email.com" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+      </div>
+      <div>
+        <label class="block text-sm mb-2 text-gray-700">Phone (optional)</label>
+        <input type="tel" id="freelancerPhone" placeholder="+31 6 12345678" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+      </div>
+      <div>
+        <label class="block text-sm mb-2 text-gray-700">Professional Title *</label>
+        <input type="text" id="freelancerTitle" placeholder="e.g. SEO Content Strategist" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+      </div>
+      <div>
+        <label class="block text-sm mb-2 text-gray-700">Bio (max 200 characters)</label>
+        <textarea id="freelancerBio" rows="3" maxlength="200" placeholder="Tell us about your expertise and experience..." class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"></textarea>
+        <div class="flex justify-between mt-1">
+          <span class="text-xs text-gray-500">Maximum 200 characters</span>
+          <span id="bioCharCount" class="text-xs text-gray-500">0/200</span>
+        </div>
+      </div>
+      <div class="border-t border-gray-200 pt-4 mt-2">
+        <div class="flex items-start gap-3">
+          <div class="flex items-center h-5">
+            <input type="checkbox" id="featuredListing" class="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500">
+          </div>
+          <div class="flex flex-col">
+            <label for="featuredListing" class="text-sm font-medium text-gray-900">
+              ⭐ Featured Listing - €29/month
+            </label>
+            <p class="text-xs text-gray-500 mt-0.5">
+              Word uitgelicht bovenaan de specialist lijst, krijg een speciale badge en 3x meer zichtbaarheid.
+              <a href="https://paypal.me/ojgmedia?locale.x=en_US&country.x=NL"
+                target="_blank"
+                rel="noopener"
+                class="text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1">
+                <i class="fab fa-paypal text-sm"></i> Betaal via PayPal
+              </a>
+            </p>
+            <p class="text-xs text-gray-400 mt-1">
+              Betaal €29 per maand. Na betaling wordt je vermelding binnen 24 uur geüpgraded naar featured.
+            </p>
+          </div>
+        </div>
+      </div>
+      <button onclick="submitFreelancer()" class="btn-primary btn w-full py-3">
+        Submit Application
+      </button>
+      <p class="text-xs text-gray-500 text-center">
+        We'll review and approve within 24 hours. You'll receive an email with your verified specialist badge.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================
+     JAVASCRIPT - COMPLETE WORKING SYSTEM
+     ============================================ -->
+<script>
+// ==========================================
+// GLOBALE VARIABELEN
+// ==========================================
+let userId = null;
+let userActivated = false;
+let activationChecked = false;
+let sendgridConfigured = false;
+let webshareConfigured = false;
+let allLeaderboardEntries = [];
+let userTemplates = {
+  congrats: { subject: '', body: '' },
+  improvement: { subject: '', body: '' },
+  website: { subject: '', body: '' }
 };
 
-let browserInstance = null;
+// ==========================================
+// INIT
+// ==========================================
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('📋 ContentScale loaded');
+  registerUser();
+  loadLeaderboardData();
+  loadFreelancers();
+  loadUserTemplates();
+  
+  // Single URL enter key
+  document.getElementById('singleUrlInput')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') scanSingleURL();
+  });
+  
+  // Bulk URL counter
+  const bulkInput = document.getElementById('bulkUrlInput');
+  if (bulkInput) {
+    bulkInput.addEventListener('input', function() {
+      const urls = this.value.split('\n').filter(u => u.trim().length > 0);
+      const counter = document.getElementById('bulkUrlCount');
+      if (counter) {
+        counter.textContent = `${urls.length}/100`;
+        counter.style.color = urls.length > 100 ? '#f87171' : '#d1d5db';
+      }
+    });
+  }
+  
+  // Bio char counter
+  const bioTextarea = document.getElementById('freelancerBio');
+  if (bioTextarea) {
+    bioTextarea.addEventListener('input', function() {
+      document.getElementById('bioCharCount').textContent = this.value.length + '/200';
+    });
+  }
+});
 
-async function getBrowser() {
-    if (!browserInstance) {
-        console.log('🚀 Launching Puppeteer browser...');
-        browserInstance = await puppeteer.launch({
-            headless: 'new',
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--disable-gpu',
-                '--disable-blink-features=AutomationControlled',
-                '--disable-features=IsolateOrigins,site-per-process',
-                '--window-size=1920,1080'
-            ],
-            timeout: 30000
-        }).catch(err => {
-            console.error('❌ Puppeteer launch error:', err.message);
-            return null;
-        });
-        if (browserInstance) {
-            console.log('✅ Puppeteer browser ready');
-        }
+// ==========================================
+// USER REGISTRATION
+// ==========================================
+async function registerUser() {
+  try {
+    let storedUserId = localStorage.getItem('user_id');
+    if (!storedUserId) {
+      const response = await fetch('/api/user/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await response.json();
+      if (data.success && data.userId) {
+        userId = data.userId;
+        localStorage.setItem('user_id', userId);
+        console.log('✅ User registered:', userId);
+        loadApiStatus();
+        checkActivationStatus();
+        loadUserTemplates();
+      }
+    } else {
+      userId = storedUserId;
+      console.log('✅ Existing user:', userId);
+      loadApiStatus();
+      checkActivationStatus();
+      loadUserTemplates();
     }
-    return browserInstance;
+  } catch (error) {
+    console.error('❌ User registration error:', error);
+  }
 }
 
-process.on('SIGTERM', async () => {
-    if (browserInstance) {
-        await browserInstance.close();
+// ==========================================
+// ACTIVATION STATUS
+// ==========================================
+async function checkActivationStatus() {
+  if (!userId) return false;
+  
+  try {
+    const response = await fetch('/api/user/activation-status', {
+      headers: { 'x-user-id': userId }
+    });
+    const data = await response.json();
+    
+    if (data.success) {
+      userActivated = data.activated;
+      activationChecked = true;
+      
+      const activationNotice = document.getElementById('activationNotice');
+      const activationBadge = document.getElementById('activationBadge');
+      const bulkScannerForm = document.getElementById('bulkScannerForm');
+      
+      if (userActivated) {
+        if (activationNotice) activationNotice.classList.add('hidden');
+        if (activationBadge) activationBadge.classList.add('hidden');
+        if (bulkScannerForm) bulkScannerForm.classList.remove('hidden');
+        console.log('✅ User activated - bulk scanner enabled');
+      } else {
+        if (activationNotice) activationNotice.classList.remove('hidden');
+        if (activationBadge) activationBadge.classList.remove('hidden');
+        if (bulkScannerForm) bulkScannerForm.classList.add('hidden');
+        console.log('🔒 User not activated');
+      }
+      return userActivated;
     }
-    process.exit(0);
-});
-
-const scanCache = new Map();
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
-
-function hashContent(html) {
-    return crypto.createHash('sha256').update(html).digest('hex');
+    return false;
+  } catch (error) {
+    console.error('❌ Activation check error:', error);
+    return false;
+  }
 }
 
-setInterval(() => {
-    const now = Date.now();
-    let cleared = 0;
-    for (const [key, value] of scanCache.entries()) {
-        if (now - value.timestamp > CACHE_TTL_MS) {
-            scanCache.delete(key);
-            cleared++;
+// ==========================================
+// API STATUS
+// ==========================================
+async function loadApiStatus() {
+  if (!userId) return;
+  
+  try {
+    const response = await fetch('/api/user/keys/status', {
+      headers: { 'x-user-id': userId }
+    });
+    const data = await response.json();
+    
+    if (data.success) {
+      const indicator = document.getElementById('apiStatusIndicator');
+      const statusText = document.getElementById('apiStatusText');
+      
+      if (data.hasSendgrid || data.hasWebshare) {
+        indicator.className = 'api-status-indicator api-status-active';
+        statusText.textContent = 'Custom API keys configured';
+      } else {
+        indicator.className = 'api-status-indicator api-status-inactive';
+        statusText.textContent = 'Using default settings (limited)';
+      }
+      
+      if (data.hasSendgrid) {
+        document.getElementById('sendgridStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
+        if (data.sendgrid) {
+          document.getElementById('sendgridUsed').textContent = data.sendgrid.used;
+          document.getElementById('sendgridLimit').textContent = data.sendgrid.limit;
+          const percentage = (data.sendgrid.used / data.sendgrid.limit) * 100;
+          document.getElementById('sendgridUsageBar').style.width = percentage + '%';
         }
+        sendgridConfigured = true;
+      }
+      
+      if (data.hasWebshare) {
+        document.getElementById('webshareStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
+        webshareConfigured = true;
+      }
     }
-    if (cleared > 0) console.log(`🧹 Cleared ${cleared} expired cache entries`);
-}, 60000);
-
-function isValidUrl(string) {
-    try {
-        new URL(string);
-        return true;
-    } catch (_) {
-        return false;
-    }
+  } catch (error) {
+    console.error('Error loading API status:', error);
+  }
 }
 
-async function createAllTables() {
-    if (!pool) {
-        console.error('❌ Geen database pool - kan tabellen niet aanmaken');
-        return;
-    }
-    let client;
-    try {
-        client = await pool.connect();
-        console.log('📦 Database tabellen controleren...');
-        
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS super_admins (
-                id SERIAL PRIMARY KEY,
-                username VARCHAR(100) UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL,
-                full_name VARCHAR(255),
-                email VARCHAR(255),
-                role VARCHAR(50) DEFAULT 'admin',
-                is_active BOOLEAN DEFAULT TRUE,
-                created_at TIMESTAMP DEFAULT NOW(),
-                last_login TIMESTAMP
-            )
-        `);
-        
-        const adminCheck = await client.query(
-            'SELECT COUNT(*) FROM super_admins WHERE username = $1',
-            ['ot']
-        );
-        if (parseInt(adminCheck.rows[0].count) === 0) {
-            const hashedPassword = await bcrypt.hash('admin123', 10);
-            await client.query(
-                `INSERT INTO super_admins (username, password_hash, full_name, role)
-                VALUES ($1, $2, $3, $4)`,
-                ['ot', hashedPassword, 'Super Admin', 'super_admin']
-            );
-            console.log('✅ Default admin created (ot/admin123)');
-        }
-        
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS users (
-                id VARCHAR(255) PRIMARY KEY,
-                ip_address VARCHAR(50),
-                is_activated BOOLEAN DEFAULT FALSE,
-                created_at TIMESTAMP DEFAULT NOW()
-            )
-        `);
-        
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS user_api_keys (
-                id SERIAL PRIMARY KEY,
-                user_id VARCHAR(255) NOT NULL,
-                service_name VARCHAR(50) NOT NULL,
-                api_key TEXT NOT NULL,
-                daily_limit INTEGER DEFAULT 100,
-                used_today INTEGER DEFAULT 0,
-                last_reset DATE DEFAULT CURRENT_DATE,
-                created_at TIMESTAMP DEFAULT NOW(),
-                UNIQUE(user_id, service_name)
-            )
-        `);
-        
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS scans (
-                id SERIAL PRIMARY KEY,
-                url TEXT NOT NULL,
-                score INTEGER,
-                quality VARCHAR(50),
-                graaf_score INTEGER,
-                craft_score INTEGER,
-                technical_score INTEGER,
-                content_score INTEGER,
-                ux_score INTEGER,
-                breakdown JSONB,
-                comparison_data JSONB,
-                recommendations JSONB DEFAULT '[]',
-                scan_type VARCHAR(50) DEFAULT 'manual',
-                created_at TIMESTAMP DEFAULT NOW()
-            )
-        `);
-        
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS leaderboard (
-                id SERIAL PRIMARY KEY,
-                url TEXT NOT NULL UNIQUE,
-                company_name VARCHAR(255),
-                score INTEGER NOT NULL,
-                country VARCHAR(10) DEFAULT 'NL',
-                city VARCHAR(255),
-                type VARCHAR(100) DEFAULT 'seo_agency',
-                location VARCHAR(255),
-                is_verified BOOLEAN DEFAULT FALSE,
-                is_opted_out BOOLEAN DEFAULT FALSE,
-                submission_ip VARCHAR(50),
-                admin_verified BOOLEAN DEFAULT TRUE,
-                auto_detected_country VARCHAR(100),
-                graaf_score INTEGER,
-                craft_score INTEGER,
-                technical_score INTEGER,
-                created_at TIMESTAMP DEFAULT NOW()
-            )
-        `);
-        
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS freelancers (
-                id SERIAL PRIMARY KEY,
-                name VARCHAR(255) NOT NULL,
-                email VARCHAR(255) NOT NULL UNIQUE,
-                title VARCHAR(255),
-                location VARCHAR(255),
-                country VARCHAR(100),
-                bio TEXT,
-                linkedin_url TEXT,
-                hourly_rate VARCHAR(50),
-                availability VARCHAR(100),
-                is_approved BOOLEAN DEFAULT FALSE,
-                is_verified BOOLEAN DEFAULT FALSE,
-                is_featured BOOLEAN DEFAULT FALSE,
-                created_at TIMESTAMP DEFAULT NOW()
-            )
-        `);
-        
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS google_maps_leads (
-                id SERIAL PRIMARY KEY,
-                name VARCHAR(255) NOT NULL,
-                category VARCHAR(255),
-                website TEXT,
-                phone VARCHAR(100),
-                address TEXT,
-                rating DECIMAL(2,1),
-                reviews INTEGER,
-                score INTEGER DEFAULT 0,
-                status VARCHAR(50) DEFAULT 'new',
-                notes TEXT,
-                contacted_at TIMESTAMP,
-                converted_at TIMESTAMP,
-                user_id INTEGER,
-                created_at TIMESTAMP DEFAULT NOW()
-            )
-        `);
-        
-        console.log('✅ Alle database tabellen gereed');
-    } catch (error) {
-        console.error('❌ Database setup error:', error.message);
-    } finally {
-        if (client) client.release();
-    }
+// ==========================================
+// ACCORDION
+// ==========================================
+function toggleAccordion(id) {
+  const content = document.getElementById(id);
+  const icon = document.getElementById(id + 'Icon');
+  if (content) {
+    content.classList.toggle('hidden');
+    icon.style.transform = content.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+  }
 }
 
-// ============================================
-// USER REGISTRATION ENDPOINT
-// ============================================
-app.post('/api/user/register', async (req, res) => {
-    try {
-        const userId = crypto.randomUUID();
-        const ip = req.ip || req.connection.remoteAddress;
-        
-        await pool.query(
-            `INSERT INTO users (id, ip_address, created_at)
-            VALUES ($1, $2, NOW())
-            ON CONFLICT (id) DO NOTHING`,
-            [userId, ip]
-        );
-        
-        res.json({ success: true, userId });
-    } catch (error) {
-        console.error('❌ User registration error:', error.message);
-        res.json({ success: false, error: 'Registration failed' });
-    }
-});
-
-// ============================================
-// USER ACTIVATION STATUS ENDPOINT
-// ============================================
-app.get('/api/user/activation-status', async (req, res) => {
-    const userId = req.headers['x-user-id'];
-    
-    if (!userId) {
-        return res.json({ success: false, activated: false, error: 'No user ID' });
-    }
-    
-    try {
-        const result = await pool.query(
-            'SELECT is_activated FROM users WHERE id = $1',
-            [userId]
-        );
-        
-        if (result.rows.length === 0) {
-            return res.json({ success: true, activated: false });
-        }
-        
-        res.json({ 
-            success: true, 
-            activated: result.rows[0].is_activated || false 
-        });
-    } catch (error) {
-        console.error('❌ Activation status error:', error.message);
-        res.json({ success: false, activated: false, error: error.message });
-    }
-});
-
-// ============================================
-// USER API KEYS STATUS ENDPOINT
-// ============================================
-app.get('/api/user/keys/status', async (req, res) => {
-    const userId = req.headers['x-user-id'] || req.headers['x-admin-key'];
-    
-    if (!userId) {
-        return res.json({
-            success: true,
-            hasSendgrid: false,
-            hasWebshare: false,
-            status: 'unauthenticated',
-            message: 'No user ID provided'
-        });
-    }
-    
-    if (!pool) {
-        return res.json({
-            success: true,
-            hasSendgrid: false,
-            hasWebshare: false,
-            status: 'error',
-            message: 'Database unavailable'
-        });
-    }
-    
-    try {
-        const apiKeysResult = await pool.query(
-            'SELECT service_name, api_key, daily_limit, used_today FROM user_api_keys WHERE user_id = $1',
-            [userId]
-        );
-        
-        const hasSendgrid = apiKeysResult.rows.some(row => row.service_name === 'sendgrid');
-        const hasWebshare = apiKeysResult.rows.some(row => row.service_name === 'webshare');
-        
-        const sendgridKey = apiKeysResult.rows.find(row => row.service_name === 'sendgrid');
-        
-        res.json({
-            success: true,
-            hasSendgrid,
-            hasWebshare,
-            sendgrid: hasSendgrid ? {
-                used: sendgridKey.used_today,
-                limit: sendgridKey.daily_limit
-            } : null,
-            message: 'API keys status retrieved'
-        });
-    } catch (error) {
-        console.error('❌ API key status error:', error.message);
-        res.json({
-            success: true,
-            hasSendgrid: false,
-            hasWebshare: false,
-            status: 'error',
-            message: 'Server error'
-        });
-    }
-});
-
-// ============================================
-// SENDGRID CONFIGURATION ENDPOINT
-// ============================================
-app.post('/api/user/sendgrid/configure', async (req, res) => {
-    const userId = req.headers['x-user-id'];
-    const { apiKey, dailyLimit } = req.body;
-    
-    if (!userId || !apiKey) {
-        return res.json({ success: false, error: 'Missing required fields' });
-    }
-    
-    try {
-        await pool.query(
-            `INSERT INTO user_api_keys (user_id, service_name, api_key, daily_limit)
-            VALUES ($1, 'sendgrid', $2, $3)
-            ON CONFLICT (user_id, service_name) 
-            DO UPDATE SET api_key = $2, daily_limit = $3`,
-            [userId, apiKey, dailyLimit || 100]
-        );
-        
-        res.json({ success: true });
-    } catch (error) {
-        console.error('❌ Sendgrid config error:', error.message);
-        res.json({ success: false, error: error.message });
-    }
-});
-
-// ============================================
-// WEBSHARE CONFIGURATION ENDPOINT
-// ============================================
-app.post('/api/user/webshare/configure', async (req, res) => {
-    const userId = req.headers['x-user-id'];
-    const { apiKey } = req.body;
-    
-    if (!userId || !apiKey) {
-        return res.json({ success: false, error: 'Missing required fields' });
-    }
-    
-    try {
-        await pool.query(
-            `INSERT INTO user_api_keys (user_id, service_name, api_key)
-            VALUES ($1, 'webshare', $2)
-            ON CONFLICT (user_id, service_name) 
-            DO UPDATE SET api_key = $2`,
-            [userId, apiKey]
-        );
-        
-        res.json({ success: true, proxy_count: 10 });
-    } catch (error) {
-        console.error('❌ Webshare config error:', error.message);
-        res.json({ success: false, error: error.message });
-    }
-});
-
-// ============================================
-// EMAIL SEND ENDPOINT
-// ============================================
-app.post('/api/email/send', async (req, res) => {
-    const userId = req.headers['x-user-id'];
-    const { to_email, to_name, subject, html } = req.body;
-    
-    try {
-        const result = await pool.query(
-            'SELECT api_key, daily_limit, used_today FROM user_api_keys WHERE user_id = $1 AND service_name = \'sendgrid\'',
-            [userId]
-        );
-        
-        if (result.rows.length === 0) {
-            return res.json({ success: false, needs_api_key: true, error: 'No Sendgrid API key configured' });
-        }
-        
-        // In production, actually send email via Sendgrid
-        // For now, just return success
-        res.json({ success: true });
-    } catch (error) {
-        console.error('❌ Email send error:', error.message);
-        res.json({ success: false, error: error.message });
-    }
-});
-
-// ============================================
-// BULK SCAN ENDPOINTS
-// ============================================
-app.post('/api/bulk-scan/send-summary', async (req, res) => {
-    const userId = req.headers['x-user-id'];
-    const { userEmail, userName, results } = req.body;
-    
-    console.log(`📧 Summary email would be sent to ${userEmail}`);
-    res.json({ success: true });
-});
-
-app.post('/api/bulk-scan/submit-leaderboard', async (req, res) => {
-    const { entries, submittedBy } = req.body;
-    
-    console.log(`🏆 ${entries.length} entries submitted to leaderboard`);
-    res.json({ success: true });
-});
-
-app.post('/api/bulk-scan/send-improvement-emails', async (req, res) => {
-    const { businesses, senderName, senderEmail } = req.body;
-    
-    console.log(`📧 Improvement emails would be sent to ${businesses.length} businesses`);
-    res.json({ success: true });
-});
-
-app.post('/api/bulk-scan/send-website-offers', async (req, res) => {
-    const { businesses, senderName, senderEmail } = req.body;
-    
-    console.log(`🌐 Website offers would be sent to ${businesses.length} businesses`);
-    res.json({ success: true });
-});
-
-// ============================================
-// GOOGLE MAPS SCRAPE - UITGESCHAKELD
-// ============================================
-app.post('/api/google-maps/scrape', async (req, res) => {
-    res.status(403).json({
-        success: false,
-        error: 'Google Maps scraping is temporarily disabled. Use CSV upload instead.',
-        hint: 'CSV bulk upload functionality will be available soon.'
-    });
-});
-
-// ============================================
-// SEO SCAN
-// ============================================
-app.post('/api/scan', async (req, res) => {
-    const { url, keyword } = req.body;
-    if (!url) return res.status(400).json({ success: false, error: 'URL required' });
-    let scanUrl = url;
-    if (!scanUrl.startsWith('http')) scanUrl = 'https://' + scanUrl;
-    if (!isValidUrl(scanUrl)) return res.status(400).json({ success: false, error: 'Invalid URL format' });
-    
-    try {
-        console.log(`🔍 Scanning: ${scanUrl}`);
-        
-        const browser = await getBrowser();
-        if (!browser) {
-            return res.status(500).json({ success: false, error: 'Browser not available' });
-        }
-        
-        const page = await browser.newPage();
-        await page.setViewport({ width: 1920, height: 1080 });
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-        await page.goto(scanUrl, { waitUntil: 'networkidle2', timeout: 25000 });
-        
-        const analysis = await page.evaluate((scanUrl, targetKeyword) => {
-            const rawHtml = document.documentElement.outerHTML;
-            const textContent = rawHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
-            const wordCount = textContent.split(/\s+/).length;
-            
-            let keywordDensity = 0;
-            let keywordCount = 0;
-            let hasKeywordInH1 = false;
-            let hasKeywordInIntro = false;
-            
-            if (targetKeyword && targetKeyword.trim()) {
-                const escapedKeyword = targetKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                const keywordRegex = new RegExp(`\\b${escapedKeyword}\\b`, 'gi');
-                const keywordMatches = textContent.match(keywordRegex) || [];
-                keywordCount = keywordMatches.length;
-                keywordDensity = wordCount > 0 ? (keywordCount / (wordCount / 100)) : 0;
-                
-                const h1Elements = document.querySelectorAll('h1');
-                if (h1Elements.length > 0) {
-                    hasKeywordInH1 = h1Elements[0].textContent.toLowerCase().includes(targetKeyword.toLowerCase());
-                }
-                const paragraphs = document.querySelectorAll('p');
-                if (paragraphs.length > 0) {
-                    hasKeywordInIntro = paragraphs[0].textContent.toLowerCase().includes(targetKeyword.toLowerCase());
-                }
-            }
-            
-            const h1Count = document.querySelectorAll('h1').length;
-            const h2Count = document.querySelectorAll('h2').length;
-            const h3Count = document.querySelectorAll('h3').length;
-            const listCount = document.querySelectorAll('ul, ol').length;
-            const listItemCount = document.querySelectorAll('li').length;
-            
-            const metaTitleElement = document.querySelector('title');
-            const metaTitle = metaTitleElement ? metaTitleElement.textContent : '';
-            const metaTitleLength = metaTitle.length;
-            const metaDescriptionElement = document.querySelector('meta[name="description"]');
-            const metaDescription = metaDescriptionElement ? metaDescriptionElement.getAttribute('content') : '';
-            const metaDescriptionLength = metaDescription.length;
-            const hasMetaViewport = !!document.querySelector('meta[name="viewport"]');
-            const hasCanonical = !!document.querySelector('link[rel="canonical"]');
-            
-            const schemaScripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
-            let hasArticleSchema = false;
-            let hasFAQPageSchema = false;
-            let hasOrganizationSchema = false;
-            schemaScripts.forEach(script => {
-                try {
-                    const schemaData = JSON.parse(script.textContent);
-                    const type = schemaData['@type'];
-                    if (type === 'Article') hasArticleSchema = true;
-                    if (type === 'FAQPage') hasFAQPageSchema = true;
-                    if (type === 'Organization') hasOrganizationSchema = true;
-                } catch (e) {}
-            });
-            
-            const images = document.querySelectorAll('img');
-            const imagesWithAlt = Array.from(images).filter(img =>
-                img.hasAttribute('alt') && img.getAttribute('alt').trim().length > 0
-            ).length;
-            
-            const baseUrl = new URL(scanUrl);
-            const baseDomain = baseUrl.hostname.replace('www.', '');
-            const internalLinks = [];
-            const externalLinks = [];
-            Array.from(document.querySelectorAll('a[href]')).forEach(link => {
-                const href = link.getAttribute('href');
-                if (!href) return;
-                if (href.startsWith('mailto:') || href.startsWith('tel:')) return;
-                try {
-                    const linkUrl = new URL(href, scanUrl);
-                    const linkDomain = linkUrl.hostname.replace('www.', '');
-                    if (linkDomain === baseDomain) {
-                        internalLinks.push({ href: linkUrl.href, text: link.textContent.trim() });
-                    } else {
-                        externalLinks.push({ href: linkUrl.href, text: link.textContent.trim() });
-                    }
-                } catch (e) {}
-            });
-            
-            const expertQuotes = [];
-            document.querySelectorAll('blockquote').forEach(blockquote => {
-                const quoteText = blockquote.textContent.trim();
-                const cite = blockquote.querySelector('cite');
-                const attribution = cite ? cite.textContent.trim() : '';
-                if (quoteText.length > 20 && attribution.length > 5) {
-                    expertQuotes.push({ text: quoteText, attribution });
-                }
-            });
-            
-            const caseStudies = [];
-            const caseStudyKeywords = ['case study', 'results', 'metrics', 'roi'];
-            document.querySelectorAll('section, article, div').forEach(el => {
-                const text = el.textContent.toLowerCase();
-                if (caseStudyKeywords.some(k => text.includes(k)) && text.length > 300) {
-                    if (/\d+[%$€£]/.test(text)) {
-                        caseStudies.push({ excerpt: el.textContent.substring(0, 200) + '...' });
-                    }
-                }
-            });
-            
-            const paragraphs = document.querySelectorAll('p');
-            const avgParagraphLength = Array.from(paragraphs)
-                .map(p => p.textContent.trim().split(/\s+/).length)
-                .reduce((a, b) => a + b, 0) / (paragraphs.length || 1);
-            
-            return {
-                url: scanUrl,
-                wordCount,
-                h1Count, h2Count, h3Count,
-                listCount, listItemCount,
-                metaTitle, metaTitleLength,
-                metaDescription, metaDescriptionLength,
-                hasMetaViewport, hasCanonical,
-                hasArticleSchema, hasFAQPageSchema, hasOrganizationSchema,
-                images: images.length, imagesWithAlt,
-                internalLinks, externalLinks,
-                expertQuotes, caseStudies,
-                keywordDensity, keywordCount,
-                hasKeywordInH1, hasKeywordInIntro,
-                avgParagraphLength
-            };
-        }, scanUrl, keyword);
-        
-        await page.close();
-        
-        // Scoring
-        let graafScore = 0;
-        let craftScore = 0;
-        let technicalScore = 0;
-        let uxScore = 0;
-        
-        if (analysis.wordCount >= 2500) graafScore += 15;
-        else if (analysis.wordCount >= 1500) graafScore += 10;
-        else if (analysis.wordCount >= 1000) graafScore += 7;
-        else if (analysis.wordCount >= 500) graafScore += 4;
-        
-        if (analysis.keywordDensity >= 0.8 && analysis.keywordDensity <= 1.2) graafScore += 4;
-        if (analysis.hasKeywordInH1) graafScore += 2;
-        if (analysis.hasKeywordInIntro) graafScore += 2;
-        
-        if (analysis.listItemCount >= 15) graafScore += 8;
-        else if (analysis.listItemCount >= 10) graafScore += 6;
-        else if (analysis.listItemCount >= 5) graafScore += 4;
-        
-        if (analysis.h2Count >= 5) graafScore += 7;
-        else if (analysis.h2Count >= 3) graafScore += 5;
-        
-        if (analysis.expertQuotes.length >= 4) graafScore += 8;
-        else if (analysis.expertQuotes.length >= 2) graafScore += 5;
-        else if (analysis.expertQuotes.length >= 1) graafScore += 3;
-        
-        if (analysis.caseStudies.length >= 2) graafScore += 7;
-        else if (analysis.caseStudies.length >= 1) graafScore += 4;
-        
-        graafScore = Math.min(50, graafScore);
-        
-        if (analysis.h1Count === 1) craftScore += 12;
-        else if (analysis.h1Count === 0) craftScore += 0;
-        else craftScore += 3;
-        
-        if (analysis.h2Count >= 5) craftScore += 8;
-        else if (analysis.h2Count >= 3) craftScore += 6;
-        
-        if (analysis.avgParagraphLength <= 100) craftScore += 5;
-        
-        craftScore = Math.min(30, craftScore);
-        
-        if (analysis.metaTitleLength >= 50 && analysis.metaTitleLength <= 60) technicalScore += 3;
-        if (analysis.metaDescriptionLength >= 150 && analysis.metaDescriptionLength <= 160) technicalScore += 3;
-        if (analysis.hasArticleSchema) technicalScore += 3;
-        if (analysis.hasFAQPageSchema) technicalScore += 3;
-        if (analysis.hasMetaViewport) technicalScore += 2;
-        if (analysis.hasCanonical) technicalScore += 2;
-        if (analysis.images > 0 && analysis.imagesWithAlt >= Math.min(5, analysis.images)) technicalScore += 3;
-        
-        technicalScore = Math.min(20, technicalScore);
-        
-        if (analysis.images >= 5) uxScore += 20;
-        else if (analysis.images >= 3) uxScore += 15;
-        else if (analysis.images >= 1) uxScore += 10;
-        
-        if (analysis.wordCount >= 2000) uxScore += 25;
-        else if (analysis.wordCount >= 1500) uxScore += 20;
-        else if (analysis.wordCount >= 1000) uxScore += 15;
-        
-        if (analysis.internalLinks.length >= 10) uxScore += 15;
-        else if (analysis.internalLinks.length >= 5) uxScore += 10;
-        
-        if (analysis.externalLinks.length >= 5) uxScore += 10;
-        else if (analysis.externalLinks.length >= 3) uxScore += 5;
-        
-        uxScore = Math.min(100, uxScore);
-        
-        const totalScore = Math.round(
-            (graafScore / 50 * 35) +
-            (craftScore / 30 * 25) +
-            (technicalScore / 20 * 20) +
-            (uxScore / 100 * 20)
-        );
-        
-        const quality = totalScore >= 90 ? 'excellent' :
-            totalScore >= 80 ? 'very good' :
-            totalScore >= 70 ? 'good' :
-            totalScore >= 60 ? 'average' : 'needs improvement';
-        
-        const recommendations = [];
-        
-        if (analysis.wordCount < 500) {
-            recommendations.push({
-                title: '🚀 Urgent: Content Length',
-                description: `Your page has only ${analysis.wordCount} words. Target: 2,500+ words.`,
-                priority: 'high',
-                action: 'Expand content with detailed explanations, examples, case studies.',
-                learning: 'Pages with 2,500+ words rank 3.7x higher on average.',
-                target: '2,500+ words'
-            });
-        }
-        
-        if (!analysis.hasArticleSchema) {
-            recommendations.push({
-                title: '🔍 Add Article Schema',
-                description: 'Missing Article schema markup.',
-                priority: 'high',
-                action: 'Implement Article schema in JSON-LD format.',
-                learning: 'Article schema increases rich snippet appearance by 30%.',
-                target: 'Article schema markup'
-            });
-        }
-        
-        if (analysis.internalLinks.length < 5) {
-            recommendations.push({
-                title: '🔗 Add Internal Links',
-                description: `Current: ${analysis.internalLinks.length} internal links. Target: 8-12.`,
-                priority: 'medium',
-                action: 'Link to 5-7 related pages on your site.',
-                learning: 'Internal links reduce bounce rate by 34%.',
-                target: '8-12 internal links'
-            });
-        }
-        
-        const finalRecommendations = recommendations.length > 0 ? recommendations : [{
-            title: '🎉 Excellent Work!',
-            description: 'Your page meets all GRAAF Framework requirements.',
-            priority: 'none',
-            action: 'Continue creating high-quality content.',
-            learning: 'Maintaining high SEO standards is key to long-term success.',
-            target: 'Maintain current quality'
-        }];
-        
-        const result = {
-            success: true,
-            url: scanUrl,
-            score: totalScore,
-            quality: quality,
-            metrics: {
-                graaf: graafScore,
-                craft: craftScore,
-                technical: technicalScore,
-                content: Math.min(100, graafScore + craftScore),
-                ux: uxScore
-            },
-            content_stats: {
-                wordCount: analysis.wordCount,
-                h1Count: analysis.h1Count,
-                h2Count: analysis.h2Count,
-                h3Count: analysis.h3Count,
-                listCount: analysis.listCount,
-                listItemCount: analysis.listItemCount,
-                metaTitleLength: analysis.metaTitleLength,
-                metaDescriptionLength: analysis.metaDescriptionLength,
-                hasMetaViewport: analysis.hasMetaViewport,
-                hasCanonical: analysis.hasCanonical,
-                hasArticleSchema: analysis.hasArticleSchema,
-                hasFAQPageSchema: analysis.hasFAQPageSchema,
-                hasOrganizationSchema: analysis.hasOrganizationSchema,
-                images: analysis.images,
-                imagesWithAlt: analysis.imagesWithAlt,
-                internalLinks: analysis.internalLinks.length,
-                externalLinks: analysis.externalLinks.length,
-                expertQuotes: analysis.expertQuotes.length,
-                caseStudies: analysis.caseStudies.length,
-                keywordDensity: analysis.keywordDensity.toFixed(2),
-                keywordCount: analysis.keywordCount,
-                hasKeywordInH1: analysis.hasKeywordInH1,
-                hasKeywordInIntro: analysis.hasKeywordInIntro,
-                avgParagraphLength: Math.round(analysis.avgParagraphLength)
-            },
-            recommendations: {
-                all: finalRecommendations,
-                count: finalRecommendations.length
-            },
-            timestamp: new Date().toISOString()
-        };
-        
-        console.log(`✅ Scan complete: ${scanUrl} - ${totalScore}/100 (${quality})`);
-        
-        res.json(result);
-    } catch (error) {
-        console.error('❌ Scan error:', error.message);
-        res.status(500).json({ success: false, error: 'Scan failed', details: error.message });
-    }
-});
-
-// ============================================
-// ✅ LEADERBOARD ENDPOINTS
-// ============================================
-app.get('/api/leaderboard', async (req, res) => {
-    if (!pool) {
-        return res.json({
-            success: true,
-            entries: [],
-            total: 0,
-            averageScore: 0,
-            stats: { totalAgencies: 0, avgScore: 0, countriesCount: 0, activeHelpers: 0 }
-        });
-    }
-    try {
-        const result = await pool.query(`
-            SELECT
-                id,
-                ROW_NUMBER() OVER (ORDER BY score DESC) as rank,
-                company_name,
-                url,
-                score,
-                country,
-                city,
-                type,
-                is_verified,
-                admin_verified,
-                created_at
-            FROM leaderboard
-            WHERE score IS NOT NULL
-            AND is_opted_out = FALSE
-            AND admin_verified = TRUE
-            ORDER BY score DESC
-            LIMIT 100
-        `);
-        
-        const entries = result.rows;
-        const totalAgencies = entries.length;
-        const avgScore = totalAgencies > 0
-            ? Math.round(entries.reduce((sum, e) => sum + (e.score || 0), 0) / totalAgencies)
-            : 0;
-        const countries = [...new Set(entries.map(e => e.country))].length;
-        const verifiedCount = entries.filter(e => e.is_verified === true).length;
-        
-        const freelancersResult = await pool.query('SELECT COUNT(*) FROM freelancers WHERE is_approved = TRUE')
-            .catch(() => ({ rows: [{ count: '0' }] }));
-        const activeHelpers = parseInt(freelancersResult.rows[0].count) || 0;
-        
-        res.json({
-            success: true,
-            entries: entries,
-            total: totalAgencies,
-            averageScore: avgScore,
-            stats: {
-                totalAgencies: totalAgencies,
-                avgScore: avgScore,
-                countriesCount: countries,
-                activeHelpers: activeHelpers,
-                verifiedCount: verifiedCount
-            }
-        });
-    } catch (error) {
-        console.error('❌ Leaderboard error:', error);
-        res.json({
-            success: true,
-            entries: [],
-            total: 0,
-            averageScore: 0,
-            stats: { totalAgencies: 0, avgScore: 0, countriesCount: 0, activeHelpers: 0, verifiedCount: 0 }
-        });
-    }
-});
-
-// ✅ EDIT LEADERBOARD ENTRY (PUT)
-app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
-    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-    try {
-        const { id } = req.params;
-        const { company_name, url, score, country, city } = req.body;
-        
-        const updates = [];
-        const values = [];
-        let paramCount = 1;
-        
-        if (company_name !== undefined) {
-            updates.push(`company_name = $${paramCount}`);
-            values.push(company_name);
-            paramCount++;
-        }
-        if (url !== undefined) {
-            updates.push(`url = $${paramCount}`);
-            values.push(url);
-            paramCount++;
-        }
-        if (score !== undefined) {
-            updates.push(`score = $${paramCount}`);
-            values.push(parseInt(score));
-            paramCount++;
-        }
-        if (country !== undefined) {
-            updates.push(`country = $${paramCount}`);
-            values.push(country.trim().substring(0, 10));
-            paramCount++;
-        }
-        if (city !== undefined) {
-            updates.push(`city = $${paramCount}`);
-            values.push(city);
-            paramCount++;
-        }
-        
-        if (updates.length === 0) {
-            return res.status(400).json({ success: false, error: 'Geen velden om te updaten' });
-        }
-        
-        values.push(id);
-        const query = `UPDATE leaderboard SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`;
-        
-        const result = await pool.query(query, values);
-        
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, error: 'Entry niet gevonden' });
-        }
-        
-        console.log('✅ Entry updated successfully');
-        res.json({
-            success: true,
-            message: 'Leaderboard entry bijgewerkt',
-            entry: result.rows[0]
-        });
-    } catch (error) {
-        console.error('❌ Update leaderboard error:', error.message);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ✅ DELETE LEADERBOARD ENTRY
-app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
-    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-    try {
-        const { id } = req.params;
-        const result = await pool.query('DELETE FROM leaderboard WHERE id = $1 RETURNING *', [id]);
-        
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, error: 'Entry niet gevonden' });
-        }
-        
-        console.log('✅ Entry deleted successfully');
-        res.json({ success: true, message: 'Entry verwijderd' });
-    } catch (error) {
-        console.error('❌ Delete leaderboard error:', error.message);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ✅ MANUAL ADD LEADERBOARD
-app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
-    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-    try {
-        const { url, company_name, score, country, city } = req.body;
-        
-        if (!url || score === undefined) {
-            return res.status(400).json({ success: false, error: 'URL and score are required' });
-        }
-        
-        const truncatedCountry = (country || 'NL').trim().substring(0, 10);
-        
-        const result = await pool.query(
-            `INSERT INTO leaderboard
-            (url, company_name, score, country, city, admin_verified, is_verified)
-            VALUES ($1, $2, $3, $4, $5, true, true)
-            ON CONFLICT (url)
-            DO UPDATE SET
-            score = EXCLUDED.score,
-            company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
-            country = COALESCE(EXCLUDED.country, leaderboard.country),
-            city = COALESCE(EXCLUDED.city, leaderboard.city),
-            admin_verified = true,
-            is_verified = true
-            RETURNING id, (xmax = 0) as inserted`,
-            [url, company_name || null, score, truncatedCountry, city || null]
-        );
-        
-        const wasInserted = result.rows[0].inserted;
-        res.json({
-            success: true,
-            action: wasInserted ? 'added' : 'updated',
-            id: result.rows[0].id,
-            message: wasInserted ? 'Entry added to leaderboard' : 'Leaderboard entry updated'
-        });
-    } catch (error) {
-        console.error('❌ Manual leaderboard add error:', error.message);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ✅ PENDING LEADERBOARD SUBMISSIONS
-app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
-    if (!pool) return res.json({ success: true, pending: [] });
-    try {
-        const result = await pool.query(
-            `SELECT * FROM leaderboard
-            WHERE admin_verified = FALSE
-            ORDER BY created_at DESC
-            LIMIT 50`
-        );
-        res.json({ success: true, pending: result.rows });
-    } catch (error) {
-        console.error('Pending leaderboard error:', error);
-        res.json({ success: true, pending: [] });
-    }
-});
-
-// ✅ APPROVE LEADERBOARD ENTRY
-app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => {
-    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-    try {
-        const { id } = req.params;
-        const { final_country } = req.body;
-        
-        await pool.query(
-            `UPDATE leaderboard
-            SET admin_verified = TRUE,
-            country = COALESCE($2, country),
-            is_verified = TRUE
-            WHERE id = $1`,
-            [id, final_country]
-        );
-        
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Approve leaderboard error:', error.message);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ✅ REJECT LEADERBOARD ENTRY
-app.post('/api/admin/leaderboard/:id/reject', verifyAdmin, async (req, res) => {
-    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-    try {
-        await pool.query('DELETE FROM leaderboard WHERE id = $1', [req.params.id]);
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Reject leaderboard error:', error.message);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ✅ BULK DELETE LEADERBOARD
-app.post('/api/admin/leaderboard/bulk-delete', verifyAdmin, async (req, res) => {
-    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-    try {
-        const { ids } = req.body;
-        
-        if (!ids || !Array.isArray(ids) || ids.length === 0) {
-            return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
-        }
-        
-        const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
-        await pool.query(`DELETE FROM leaderboard WHERE id IN (${placeholders})`, ids);
-        
-        res.json({ success: true, message: `${ids.length} entries verwijderd` });
-    } catch (error) {
-        console.error('Bulk delete leaderboard error:', error.message);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ============================================
-// ✅ FREELANCERS ENDPOINTS
-// ============================================
-app.get('/api/freelancers', async (req, res) => {
-    if (!pool) return res.json({ success: true, freelancers: [] });
-    try {
-        const result = await pool.query(`
-            SELECT
-                id, name, email, title, location, country, bio,
-                hourly_rate, availability, is_verified, is_featured, is_approved
-            FROM freelancers
-            WHERE is_approved = TRUE
-            ORDER BY is_featured DESC, created_at DESC
-            LIMIT 50
-        `);
-        res.json({ success: true, freelancers: result.rows });
-    } catch (error) {
-        console.error('Freelancers error:', error);
-        res.json({ success: true, freelancers: [] });
-    }
-});
-
-app.post('/api/freelancers/register', async (req, res) => {
-    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-    try {
-        const { name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_featured } = req.body;
-        
-        if (!name || !email) {
-            return res.status(400).json({ success: false, error: 'Name and email are required' });
-        }
-        
-        const existing = await pool.query('SELECT id FROM freelancers WHERE email = $1', [email]);
-        if (existing.rows.length > 0) {
-            return res.status(400).json({ success: false, error: 'Email already registered' });
-        }
-        
-        const result = await pool.query(
-            `INSERT INTO freelancers
-            (name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_approved, is_featured)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, $10)
-            RETURNING id`,
-            [name, email, title || null, location || null, country || null, bio || null,
-                linkedin_url || null, hourly_rate || null, availability || null, is_featured || false]
-        );
-        
-        res.json({
-            success: true,
-            message: 'Application submitted! We will review and approve soon.',
-            id: result.rows[0].id
-        });
-    } catch (error) {
-        console.error('Freelancer registration error:', error);
-        res.status(500).json({ success: false, error: 'Registration failed' });
-    }
-});
-
-// ✅ ADMIN GET ALL FREELANCERS
-app.get('/api/admin/freelancers', verifyAdmin, async (req, res) => {
-    if (!pool) return res.json({ success: true, freelancers: [] });
-    try {
-        const result = await pool.query(`SELECT * FROM freelancers ORDER BY created_at DESC LIMIT 200`);
-        res.json({ success: true, freelancers: result.rows });
-    } catch (error) {
-        console.error('Admin freelancers error:', error);
-        res.json({ success: true, freelancers: [] });
-    }
-});
-
-// ✅ PENDING FREELANCER APPLICATIONS
-app.get('/api/admin/freelancers/pending', verifyAdmin, async (req, res) => {
-    if (!pool) return res.json({ success: true, pending: [] });
-    try {
-        const result = await pool.query(
-            `SELECT * FROM freelancers WHERE is_approved = FALSE ORDER BY created_at DESC LIMIT 50`
-        );
-        res.json({ success: true, pending: result.rows });
-    } catch (error) {
-        console.error('Pending freelancers error:', error);
-        res.json({ success: true, pending: [] });
-    }
-});
-
-// ✅ APPROVE FREELANCER
-app.post('/api/admin/freelancers/:id/approve', verifyAdmin, async (req, res) => {
-    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-    try {
-        await pool.query(
-            'UPDATE freelancers SET is_approved = TRUE, is_verified = TRUE WHERE id = $1',
-            [req.params.id]
-        );
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Approve freelancer error:', error.message);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ✅ DELETE FREELANCER
-app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
-    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-    try {
-        await pool.query('DELETE FROM freelancers WHERE id = $1', [req.params.id]);
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Delete freelancer error:', error.message);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ✅ EDIT FREELANCER (PUT)
-app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
-    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-    try {
-        const { id } = req.params;
-        const { name, email, title, location, country, bio, hourly_rate, is_featured } = req.body;
-        
-        const updates = [];
-        const values = [];
-        let paramCount = 1;
-        
-        if (name !== undefined) {
-            updates.push(`name = $${paramCount}`);
-            values.push(name);
-            paramCount++;
-        }
-        if (email !== undefined) {
-            updates.push(`email = $${paramCount}`);
-            values.push(email);
-            paramCount++;
-        }
-        if (title !== undefined) {
-            updates.push(`title = $${paramCount}`);
-            values.push(title);
-            paramCount++;
-        }
-        if (location !== undefined) {
-            updates.push(`location = $${paramCount}`);
-            values.push(location);
-            paramCount++;
-        }
-        if (country !== undefined) {
-            updates.push(`country = $${paramCount}`);
-            values.push(country);
-            paramCount++;
-        }
-        if (bio !== undefined) {
-            updates.push(`bio = $${paramCount}`);
-            values.push(bio);
-            paramCount++;
-        }
-        if (hourly_rate !== undefined) {
-            updates.push(`hourly_rate = $${paramCount}`);
-            values.push(hourly_rate);
-            paramCount++;
-        }
-        if (is_featured !== undefined) {
-            updates.push(`is_featured = $${paramCount}`);
-            values.push(is_featured);
-            paramCount++;
-        }
-        
-        if (updates.length === 0) {
-            return res.status(400).json({ success: false, error: 'Geen velden om te updaten' });
-        }
-        
-        values.push(id);
-        const query = `UPDATE freelancers SET ${updates.join(', ')} WHERE id = $${paramCount}`;
-        
-        await pool.query(query, values);
-        res.json({ success: true, message: 'Freelancer bijgewerkt' });
-    } catch (error) {
-        console.error('Update freelancer error:', error.message);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ✅ TOGGLE FREELANCER FEATURED
-app.post('/api/admin/freelancers/:id/toggle-featured', verifyAdmin, async (req, res) => {
-    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-    try {
-        const { id } = req.params;
-        
-        const freelancer = await pool.query('SELECT is_featured FROM freelancers WHERE id = $1', [id]);
-        if (freelancer.rows.length === 0) {
-            return res.status(404).json({ success: false, error: 'Freelancer not found' });
-        }
-        
-        const newFeatured = !freelancer.rows[0].is_featured;
-        await pool.query('UPDATE freelancers SET is_featured = $1 WHERE id = $2', [newFeatured, id]);
-        
-        res.json({
-            success: true,
-            is_featured: newFeatured,
-            message: `Featured ${newFeatured ? 'aangezet' : 'uitgezet'}`
-        });
-    } catch (error) {
-        console.error('Toggle featured error:', error.message);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ✅ BULK DELETE FREELANCERS
-app.post('/api/admin/freelancers/bulk-delete', verifyAdmin, async (req, res) => {
-    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
-    try {
-        const { ids } = req.body;
-        
-        if (!ids || !Array.isArray(ids) || ids.length === 0) {
-            return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
-        }
-        
-        const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
-        await pool.query(`DELETE FROM freelancers WHERE id IN (${placeholders})`, ids);
-        
-        res.json({ success: true, message: `${ids.length} freelancers verwijderd` });
-    } catch (error) {
-        console.error('Bulk delete freelancers error:', error.message);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ============================================
-// ADMIN AUTHENTICATION
-// ============================================
-app.post('/api/setup/verify-admin', async (req, res) => {
-    const { username, password } = req.body;
-    
-    if (!username || !password) {
-        return res.status(400).json({ success: false, error: 'Credentials required' });
-    }
-    
-    if (!pool) {
-        return res.status(503).json({
-            success: false,
-            error: 'Database niet beschikbaar',
-            db_status: 'disconnected'
-        });
-    }
-    
-    try {
-        const result = await pool.query(
-            'SELECT * FROM super_admins WHERE username = $1 AND is_active = TRUE',
-            [username]
-        );
-        
-        if (result.rows.length === 0) {
-            return res.status(401).json({ success: false, error: 'Invalid credentials' });
-        }
-        
-        const admin = result.rows[0];
-        const isValid = await bcrypt.compare(password, admin.password_hash);
-        
-        if (!isValid) {
-            return res.status(401).json({ success: false, error: 'Invalid credentials' });
-        }
-        
-        await pool.query('UPDATE super_admins SET last_login = NOW() WHERE id = $1', [admin.id]);
-        
-        res.json({
-            success: true,
-            admin_id: admin.id,
-            admin: {
-                id: admin.id,
-                username: admin.username,
-                full_name: admin.full_name,
-                role: admin.role
-            }
-        });
-    } catch (error) {
-        console.error('❌ Login error:', error.message);
-        res.status(500).json({ success: false, error: 'Server error' });
-    }
-});
-
-// ============================================
-// HTML ROUTES
-// ============================================
-app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/admin-dashboard.html'));
-});
-
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/index.html'));
-});
-
-// ============================================
-// HEALTH CHECK
-// ============================================
-app.get('/api/health', async (req, res) => {
-    let dbStatus = 'disconnected';
-    if (pool) {
-        try {
-            await pool.query('SELECT 1');
-            dbStatus = 'connected';
-        } catch (e) {
-            dbStatus = 'error';
-        }
-    }
-    res.json({
-        status: 'running',
-        database: dbStatus,
-        puppeteer: browserInstance ? 'connected' : 'disconnected',
-        timestamp: new Date().toISOString()
-    });
-});
-
-// ============================================
-// CATCH-ALL ROUTE
-// ============================================
-app.get('*', (req, res) => {
-    if (req.path.startsWith('/api/')) {
-        return res.status(404).json({ error: 'API endpoint not found' });
-    }
-    const filePath = path.join(__dirname, '../public', req.path);
-    res.sendFile(filePath, (err) => {
-        if (err) {
-            res.sendFile(path.join(__dirname, '../public/index.html'));
-        }
-    });
-});
-
-// ============================================
-// ERROR HANDLING
-// ============================================
-app.use((err, req, res, next) => {
-    console.error('Server error:', err.message);
-    res.status(500).json({
-        success: false,
-        error: 'Internal server error',
-        message: process.env.NODE_ENV === 'development' ? err.message : undefined
-    });
-});
-
-// ============================================
-// START SERVER
-// ============================================
-async function startServer() {
-    console.log('');
-    console.log('🚀 =====================================');
-    console.log('🚀  CONTENTSCALE SERVER - COMPLETE');
-    console.log('🚀 =====================================');
-    console.log('');
-    
-    const dbConnected = await waitForDatabase();
-    
-    app.listen(PORT, () => {
-        console.log('');
-        console.log(`📍 Server gestart op http://localhost:${PORT}`);
-        console.log(`📍 Admin:     http://localhost:${PORT}/admin`);
-        console.log('');
-        console.log(`📊 Database: ${dbConnected ? '✅ Verbonden' : '❌ NIET VERBONDEN'}`);
-        console.log('');
-        console.log('✅ FEATURE STATUS:');
-        console.log('   • Single URL Scanner: ✅ ACTIEF');
-        console.log('   • Leaderboard: ✅ ACTIEF');
-        console.log('   • Freelancers: ✅ ACTIEF');
-        console.log('   • Admin Login: ✅ WERKT (ot / admin123)');
-        console.log('   • Admin Edit Leaderboard: ✅ WERKT');
-        console.log('   • Admin Toggle Featured: ✅ WERKT');
-        console.log('   • Admin Pending Approvals: ✅ WERKT');
-        console.log('');
-    });
+// ==========================================
+// MODE SWITCHER
+// ==========================================
+function switchMode(mode) {
+  const singleMode = document.getElementById('singleMode');
+  const bulkMode = document.getElementById('bulkMode');
+  const singleBtn = document.getElementById('modeSingleBtn');
+  const bulkBtn = document.getElementById('modeBulkBtn');
+  
+  if (mode === 'single') {
+    singleMode.classList.remove('hidden');
+    bulkMode.classList.add('hidden');
+    singleBtn.classList.add('active');
+    bulkBtn.classList.remove('active');
+  } else {
+    singleMode.classList.add('hidden');
+    bulkMode.classList.remove('hidden');
+    singleBtn.classList.remove('active');
+    bulkBtn.classList.add('active');
+  }
 }
 
-startServer();
+function toggleBulkScanner() {
+  const content = document.getElementById('bulkScannerContent');
+  const icon = document.getElementById('bulkScannerIcon');
+  const toggleText = document.getElementById('bulkToggleText');
+  
+  if (content) {
+    const isHidden = content.classList.contains('hidden');
+    content.classList.toggle('hidden');
+    if (icon) {
+      icon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+    }
+    if (toggleText) {
+      toggleText.textContent = isHidden ? 'Hide Bulk Scanner' : 'Show Bulk Scanner';
+    }
+    if (isHidden && !activationChecked) {
+      checkActivationStatus();
+    }
+  }
+}
+
+// ==========================================
+// SENDGRID FUNCTIONS
+// ==========================================
+async function saveSendgridConfig() {
+  if (!userId) {
+    alert('❌ User not registered. Please refresh the page.');
+    return;
+  }
+  const apiKey = document.getElementById('sendgridApiKey').value;
+  if (!apiKey || apiKey.includes('••••')) {
+    alert('❌ Please enter your SendGrid API key');
+    return;
+  }
+  
+  try {
+    const response = await fetch('/api/user/sendgrid/configure', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': userId
+      },
+      body: JSON.stringify({
+        userId,
+        apiKey,
+        dailyLimit: 100
+      })
+    });
+    const data = await response.json();
+    
+    if (data.success) {
+      alert('✅ SendGrid configuration saved successfully');
+      document.getElementById('sendgridStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
+      sendgridConfigured = true;
+      loadApiStatus();
+    } else {
+      alert('❌ ' + (data.error || 'Failed to save configuration'));
+    }
+  } catch (error) {
+    alert('❌ Error: ' + error.message);
+  }
+}
+
+async function testSendgridConfig() {
+  if (!userId) {
+    alert('❌ User not registered');
+    return;
+  }
+  
+  try {
+    const response = await fetch('/api/email/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': userId
+      },
+      body: JSON.stringify({
+        to_email: 'test@example.com',
+        to_name: 'Test User',
+        subject: 'Test Email from ContentScale',
+        html: '<p>This is a test email from your ContentScale account.</p>'
+      })
+    });
+    const data = await response.json();
+    
+    if (data.success) {
+      alert('✅ Test email sent successfully!');
+    } else if (data.needs_api_key) {
+      alert('❌ No SendGrid API key configured. Please add your key first.');
+    } else if (data.limit_reached) {
+      alert('❌ Daily limit reached. Try again tomorrow.');
+    } else {
+      alert('❌ ' + (data.error || 'Test failed'));
+    }
+  } catch (error) {
+    alert('❌ Error: ' + error.message);
+  }
+}
+
+// ==========================================
+// WEBSHARE FUNCTIONS
+// ==========================================
+async function saveWebshareConfig() {
+  if (!userId) {
+    alert('❌ User not registered. Please refresh the page.');
+    return;
+  }
+  const apiKey = document.getElementById('webshareApiKey').value;
+  if (!apiKey) {
+    alert('❌ Please enter your WebShare API key');
+    return;
+  }
+  
+  try {
+    const response = await fetch('/api/user/webshare/configure', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': userId
+      },
+      body: JSON.stringify({ userId, apiKey })
+    });
+    const data = await response.json();
+    
+    if (data.success) {
+      alert(`✅ WebShare configured! Found ${data.proxy_count || 10} proxies.`);
+      document.getElementById('webshareStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
+      webshareConfigured = true;
+      if (data.proxy_count > 0) {
+        document.getElementById('proxyList').classList.remove('hidden');
+        document.getElementById('proxyListContainer').innerHTML = '<p class="text-green-400">✓ Proxies loaded successfully</p>';
+      }
+      loadApiStatus();
+    } else {
+      alert('❌ ' + (data.error || 'Failed to save configuration'));
+    }
+  } catch (error) {
+    alert('❌ Error: ' + error.message);
+  }
+}
+
+// ==========================================
+// EMAIL TEMPLATES
+// ==========================================
+async function loadUserTemplates() {
+  if (!userId) return;
+  
+  try {
+    const response = await fetch('/api/user/templates', {
+      headers: { 'x-user-id': userId }
+    });
+    const data = await response.json();
+    
+    if (data.success && data.templates) {
+      userTemplates = data.templates;
+      
+      // Populate template editors
+      if (userTemplates.congrats) {
+        document.getElementById('template-congrats-subject').value = userTemplates.congrats.subject || '';
+        document.getElementById('template-congrats-body').value = userTemplates.congrats.body || '';
+      }
+      if (userTemplates.improvement) {
+        document.getElementById('template-improvement-subject').value = userTemplates.improvement.subject || '';
+        document.getElementById('template-improvement-body').value = userTemplates.improvement.body || '';
+      }
+      if (userTemplates.website) {
+        document.getElementById('template-website-subject').value = userTemplates.website.subject || '';
+        document.getElementById('template-website-body').value = userTemplates.website.body || '';
+      }
+    }
+  } catch (error) {
+    console.error('Error loading templates:', error);
+  }
+}
+
+async function saveTemplate(type) {
+  if (!userId) {
+    alert('❌ User not registered. Please refresh the page.');
+    return;
+  }
+  
+  const subject = document.getElementById(`template-${type}-subject`).value;
+  const body = document.getElementById(`template-${type}-body`).value;
+  
+  if (!subject || !body) {
+    alert('❌ Please fill in both subject and body');
+    return;
+  }
+  
+  try {
+    const response = await fetch('/api/user/templates', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': userId
+      },
+      body: JSON.stringify({
+        type,
+        subject,
+        body
+      })
+    });
+    const data = await response.json();
+    
+    if (data.success) {
+      alert('✅ Template saved successfully!');
+      userTemplates[type] = { subject, body };
+    } else {
+      alert('❌ ' + (data.error || 'Failed to save template'));
+    }
+  } catch (error) {
+    alert('❌ Error: ' + error.message);
+  }
+}
+
+// ==========================================
+// SINGLE URL SCAN
+// ==========================================
+async function scanSingleURL() {
+  const input = document.getElementById('singleUrlInput');
+  const button = document.getElementById('singleScanBtn');
+  const progress = document.getElementById('singleProgress');
+  const progressBar = document.getElementById('singleProgressBar');
+  const progressText = document.getElementById('singleProgressText');
+  const resultDiv = document.getElementById('singleResult');
+  
+  let url = input.value.trim();
+  if (!url) {
+    alert('❌ Please enter a URL');
+    return;
+  }
+  if (!url.startsWith('http')) {
+    url = 'https://' + url;
+  }
+  
+  button.disabled = true;
+  button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
+  progress.classList.remove('hidden');
+  progressBar.style.width = '20%';
+  progressText.textContent = 'Starting browser...';
+  
+  try {
+    const response = await fetch('/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    
+    progressBar.style.width = '60%';
+    progressText.textContent = 'Analyzing content...';
+    
+    const data = await response.json();
+    
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Scan failed');
+    }
+    
+    displayScanResult(data);
+    
+    progressBar.style.width = '100%';
+    progressText.textContent = 'Scan complete!';
+    
+    setTimeout(() => {
+      progress.classList.add('hidden');
+      button.disabled = false;
+      button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
+    }, 500);
+    
+  } catch (error) {
+    console.error('Scan error:', error);
+    alert('❌ Scan failed: ' + error.message);
+    progress.classList.add('hidden');
+    button.disabled = false;
+    button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
+  }
+}
+
+function displayScanResult(data) {
+  const resultDiv = document.getElementById('singleResult');
+  const url = data.url || '';
+  const quality = data.quality || 'unknown';
+  const currentScore = data.score || 0;
+  const graaf = data.metrics?.graaf || 0;
+  const craft = data.metrics?.craft || 0;
+  const technical = data.metrics?.technical || 0;
+  const words = data.content_stats?.wordCount || 0;
+  
+  let recommendations = [];
+  if (data.recommendations?.all && data.recommendations.all.length > 0) {
+    recommendations = data.recommendations.all;
+  }
+  
+  let recsHtml = '';
+  if (recommendations.length > 0) {
+    recommendations.forEach(rec => {
+      let priorityClass = 'priority-none';
+      if (rec.priority === 'high') priorityClass = 'priority-high';
+      else if (rec.priority === 'medium') priorityClass = 'priority-medium';
+      else if (rec.priority === 'low') priorityClass = 'priority-low';
+      
+      recsHtml += `
+        <div class="recommendation-card">
+          <div class="flex items-start justify-between mb-2">
+            <h4 class="recommendation-title">${rec.title || 'Recommendation'}</h4>
+            ${rec.priority ? `<span class="priority-badge ${priorityClass}">${rec.priority.toUpperCase()}</span>` : ''}
+          </div>
+          <p class="recommendation-desc">${rec.description || ''}</p>
+          ${rec.action ? `
+            <div class="recommendation-section">
+              <div class="recommendation-section-title">
+                <i class="fas fa-wrench"></i> <span>Action</span>
+              </div>
+              <p class="recommendation-action">${rec.action}</p>
+            </div>
+          ` : ''}
+          ${rec.learning ? `
+            <div class="recommendation-section">
+              <div class="recommendation-section-title">
+                <i class="fas fa-graduation-cap"></i> <span>Learning</span>
+              </div>
+              <p class="recommendation-learning">${rec.learning}</p>
+            </div>
+          ` : ''}
+          ${rec.target ? `
+            <div class="recommendation-section">
+              <div class="recommendation-section-title">
+                <i class="fas fa-bullseye"></i> <span>Target</span>
+              </div>
+              <p class="recommendation-target">${rec.target}</p>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    });
+  } else {
+    recsHtml = '<p class="text-gray-400 text-sm">No specific recommendations - your page is excellent!</p>';
+  }
+  
+  let qualityColor = 'bg-gray-600';
+  if (quality === 'excellent') qualityColor = 'bg-green-600';
+  else if (quality === 'very good') qualityColor = 'bg-blue-600';
+  else if (quality === 'good') qualityColor = 'bg-green-600';
+  else if (quality === 'average') qualityColor = 'bg-yellow-600';
+  else if (quality === 'needs improvement') qualityColor = 'bg-red-600';
+  
+  resultDiv.innerHTML = `
+    <div class="bg-gray-800 rounded-xl border-2 border-purple-500 p-6 mt-4">
+      <div class="text-center mb-4">
+        <h2 class="text-2xl font-bold text-white mb-1">📊 SEO Content Analysis</h2>
+        <p class="text-md text-gray-300 break-all">${url}</p>
+        <span class="inline-block mt-2 px-3 py-1 ${qualityColor} text-white text-sm rounded-full">
+          Quality: ${quality.charAt(0).toUpperCase() + quality.slice(1)}
+        </span>
+      </div>
+      <div class="text-center mb-6">
+        <div class="text-6xl font-bold text-white">${currentScore}</div>
+        <div class="text-sm text-gray-400">out of 100</div>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+        <div class="bg-gray-900 rounded-lg p-4 text-center">
+          <div class="text-sm text-gray-400 mb-1">GRAAF (50)</div>
+          <div class="text-2xl font-bold text-purple-400">${graaf}/50</div>
+        </div>
+        <div class="bg-gray-900 rounded-lg p-4 text-center">
+          <div class="text-sm text-gray-400 mb-1">CRAFT (30)</div>
+          <div class="text-2xl font-bold text-blue-400">${craft}/30</div>
+        </div>
+        <div class="bg-gray-900 rounded-lg p-4 text-center">
+          <div class="text-sm text-gray-400 mb-1">Technical (20)</div>
+          <div class="text-2xl font-bold text-yellow-400">${technical}/20</div>
+        </div>
+        <div class="bg-gray-900 rounded-lg p-4 text-center">
+          <div class="text-sm text-gray-400 mb-1">Words</div>
+          <div class="text-2xl font-bold text-white">${words.toLocaleString()}</div>
+        </div>
+      </div>
+      <div class="border-t border-gray-700 pt-5 mb-5">
+        <h3 class="text-xl font-bold text-white mb-4">📋 Priority Recommendations</h3>
+        ${recsHtml}
+      </div>
+      <div class="flex gap-3">
+        <button onclick="addToLeaderboard('${url}', ${currentScore})"
+          class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-semibold transition-all">
+          <i class="fas fa-trophy mr-2"></i> Add to Leaderboard
+        </button>
+        <button onclick="document.getElementById('singleResult').classList.add('hidden')"
+          class="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold transition-all">
+          Close
+        </button>
+      </div>
+    </div>
+  `;
+  
+  resultDiv.classList.remove('hidden');
+  resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function addToLeaderboard(url, score) {
+  const companyName = prompt('Enter company name (optional):', '');
+  const contactEmail = prompt('Enter your email to receive congratulations if approved (optional):', '');
+  
+  if (!contactEmail) {
+    alert('✅ Your request has been sent to admin for approval (85+ required)');
+    return;
+  }
+  
+  if (!contactEmail.includes('@') || !contactEmail.includes('.')) {
+    alert('❌ Please enter a valid email address');
+    return;
+  }
+  
+  alert(`✅ Thank you! Admin will review your submission. If approved (85+ score required), a congratulations email will be sent to ${contactEmail}.`);
+}
+
+// ==========================================
+// BULK SCAN
+// ==========================================
+async function startBulkScan() {
+  const urlInput = document.getElementById('bulkUrlInput');
+  const emailInput = document.getElementById('bulkScanEmail');
+  const nameInput = document.getElementById('bulkScanName');
+  const button = document.getElementById('bulkScanBtn');
+  const progress = document.getElementById('bulkProgress');
+  const progressBar = document.getElementById('bulkProgressBar');
+  const progressText = document.getElementById('bulkProgressText');
+  const resultsDiv = document.getElementById('bulkResults');
+  const resultsContainer = document.getElementById('bulkResultsContainer');
+  
+  const urls = urlInput.value.split('\n').filter(u => u.trim().length > 0);
+  const email = emailInput.value.trim();
+  const name = nameInput.value.trim();
+  
+  if (urls.length === 0) {
+    alert('❌ Please enter at least one URL');
+    return;
+  }
+  if (urls.length > 100) {
+    alert('❌ Maximum 100 URLs allowed');
+    return;
+  }
+  if (!email || !email.includes('@')) {
+    alert('❌ Please enter a valid email address');
+    return;
+  }
+  if (!name) {
+    alert('❌ Please enter your name');
+    return;
+  }
+  
+  // Check activation
+  if (!userActivated && !activationChecked) {
+    const activated = await checkActivationStatus();
+    if (!activated) {
+      alert('🔒 Account activation required. Please contact us via WhatsApp to activate your bulk scanner access.');
+      return;
+    }
+  }
+  
+  // Check SendGrid
+  if (!sendgridConfigured) {
+    const confirmSendGrid = confirm('⚠️ You haven\'t configured SendGrid yet. Bulk emails will use the default system (limited to 100/day).\n\nWould you like to continue anyway?');
+    if (!confirmSendGrid) {
+      document.getElementById('apiConfig').classList.remove('hidden');
+      return;
+    }
+  }
+  
+  button.disabled = true;
+  button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
+  progress.classList.remove('hidden');
+  resultsDiv.classList.add('hidden');
+  resultsContainer.innerHTML = '';
+  
+  let results = {
+    leaderboard: [],
+    withWebsite: [],
+    withoutWebsite: [],
+    errors: []
+  };
+  
+  for (let i = 0; i < urls.length; i++) {
+    let url = urls[i].trim();
+    if (!url.startsWith('http')) {
+      url = 'https://' + url;
+    }
+    
+    progressText.textContent = `Scanning ${i + 1} of ${urls.length}...`;
+    progressBar.style.width = `${((i + 1) / urls.length) * 100}%`;
+    
+    try {
+      const response = await fetch('/api/scan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': userId || 'anonymous'
+        },
+        body: JSON.stringify({ url })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        const score = data.score || 0;
+        if (score >= 85) {
+          results.leaderboard.push({ url, score, data });
+        } else if (score > 0) {
+          results.withWebsite.push({ url, score, data });
+        } else {
+          results.withoutWebsite.push({ url, score, data });
+        }
+      } else {
+        results.errors.push({ url, error: data.error || 'Scan failed' });
+      }
+    } catch (error) {
+      results.errors.push({ url, error: error.message });
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  
+  displayBulkResults(results, email, name);
+  await sendBulkEmails(results, email, name);
+  
+  button.disabled = false;
+  button.innerHTML = '<i class="fas fa-rocket mr-2"></i> Start Bulk Scan';
+  progress.classList.add('hidden');
+}
+
+function displayBulkResults(results, userEmail, userName) {
+  const container = document.getElementById('bulkResultsContainer');
+  const resultsDiv = document.getElementById('bulkResults');
+  
+  let html = '';
+  
+  if (results.leaderboard.length > 0) {
+    html += `
+      <div class="bg-green-900 bg-opacity-30 border border-green-500 rounded-lg p-4 mb-4">
+        <h5 class="font-bold text-green-400 mb-2">
+          🏆 Leaderboard Candidates (${results.leaderboard.length})
+        </h5>
+        <p class="text-sm text-gray-300 mb-2">These websites scored 85+ and will be submitted for leaderboard approval.</p>
+        <ul class="text-sm space-y-1">
+          ${results.leaderboard.map(r => `<li>✅ ${r.url} - Score: ${r.score}/100</li>`).join('')}
+        </ul>
+      </div>
+    `;
+  }
+  
+  if (results.withWebsite.length > 0) {
+    html += `
+      <div class="bg-blue-900 bg-opacity-30 border border-blue-500 rounded-lg p-4 mb-4">
+        <h5 class="font-bold text-blue-400 mb-2">
+          📧 Improvement Emails (${results.withWebsite.length})
+        </h5>
+        <p class="text-sm text-gray-300 mb-2">Business owners will receive personalized emails with SEO improvement recommendations.</p>
+        <ul class="text-sm space-y-1">
+          ${results.withWebsite.map(r => `<li>📨 ${r.url} - Score: ${r.score}/100</li>`).join('')}
+        </ul>
+      </div>
+    `;
+  }
+  
+  if (results.withoutWebsite.length > 0) {
+    html += `
+      <div class="bg-purple-900 bg-opacity-30 border border-purple-500 rounded-lg p-4 mb-4">
+        <h5 class="font-bold text-purple-400 mb-2">
+          🌐 Website Offers (${results.withoutWebsite.length})
+        </h5>
+        <p class="text-sm text-gray-300 mb-2">Owners will receive personalized emails offering professional website creation.</p>
+        <ul class="text-sm space-y-1">
+          ${results.withoutWebsite.map(r => `<li>📬 ${r.url}</li>`).join('')}
+        </ul>
+      </div>
+    `;
+  }
+  
+  if (results.errors.length > 0) {
+    html += `
+      <div class="bg-red-900 bg-opacity-30 border border-red-500 rounded-lg p-4 mb-4">
+        <h5 class="font-bold text-red-400 mb-2">
+          ❌ Scan Errors (${results.errors.length})
+        </h5>
+        <ul class="text-sm space-y-1">
+          ${results.errors.map(r => `<li>⚠️ ${r.url} - ${r.error}</li>`).join('')}
+        </ul>
+      </div>
+    `;
+  }
+  
+  html += `
+    <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
+      <p class="text-sm text-gray-300">
+        📬 A summary report has been sent to <strong>${userEmail}</strong>
+      </p>
+    </div>
+  `;
+  
+  container.innerHTML = html;
+  resultsDiv.classList.remove('hidden');
+}
+
+async function sendBulkEmails(results, userEmail, userName) {
+  if (!userId) {
+    console.warn('No userId - skipping email sending');
+    return;
+  }
+  
+  try {
+    // Send summary to user
+    await fetch('/api/bulk-scan/send-summary', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': userId
+      },
+      body: JSON.stringify({ userEmail, userName, results })
+    });
+    
+    // Submit leaderboard candidates
+    if (results.leaderboard.length > 0) {
+      await fetch('/api/bulk-scan/submit-leaderboard', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': userId
+        },
+        body: JSON.stringify({ entries: results.leaderboard, submittedBy: userEmail })
+      });
+    }
+    
+    // Send improvement emails to businesses with websites
+    if (results.withWebsite.length > 0) {
+      await fetch('/api/bulk-scan/send-improvement-emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': userId
+        },
+        body: JSON.stringify({ businesses: results.withWebsite, senderName: userName, senderEmail: userEmail })
+      });
+    }
+    
+    // Send website offer emails to businesses without websites
+    if (results.withoutWebsite.length > 0) {
+      await fetch('/api/bulk-scan/send-website-offers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': userId
+        },
+        body: JSON.stringify({ businesses: results.withoutWebsite, senderName: userName, senderEmail: userEmail })
+      });
+    }
+    
+    console.log('✅ Bulk emails sent successfully');
+    alert('✅ Bulk scan complete! Emails are being sent via your SendGrid account.');
+  } catch (error) {
+    console.error('❌ Error sending bulk emails:', error);
+    alert('⚠️ Scan complete but some emails may have failed. Check your SendGrid dashboard.');
+  }
+}
+
+// ==========================================
+// LEADERBOARD FUNCTIONS
+// ==========================================
+async function loadLeaderboardData() {
+  try {
+    const response = await fetch('/api/leaderboard');
+    const data = await response.json();
+    
+    if (data.success && data.entries && data.entries.length > 0) {
+      allLeaderboardEntries = data.entries;
+      document.getElementById('totalAgencies').textContent = data.stats?.totalAgencies || 0;
+      document.getElementById('avgScore').textContent = data.averageScore || 0;
+      document.getElementById('countriesCount').textContent = data.stats?.countriesCount || 0;
+      document.getElementById('activeHelpers').textContent = data.stats?.activeHelpers || 0;
+      
+      renderTop3();
+      renderRankings4to15();
+      renderRankings16Plus();
+      renderCountryFilters();
+    } else {
+      showEmptyLeaderboard();
+    }
+  } catch (error) {
+    console.error('❌ Error loading leaderboard:', error);
+    showEmptyLeaderboard();
+  }
+}
+
+function showEmptyLeaderboard() {
+  document.getElementById('totalAgencies').textContent = '0';
+  document.getElementById('avgScore').textContent = '0';
+  document.getElementById('countriesCount').textContent = '0';
+  document.getElementById('activeHelpers').textContent = '0';
+  const container = document.getElementById('top3-container');
+  if (container) {
+    container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No leaderboard entries found</div>';
+  }
+  document.getElementById('rankings4to15Container').style.display = 'none';
+  document.getElementById('totalCount').textContent = '0';
+}
+
+function renderTop3() {
+  const container = document.getElementById('top3-container');
+  if (!container) return;
+  
+  const top3 = allLeaderboardEntries.slice(0, 3);
+  if (top3.length === 0) {
+    container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No entries found</div>';
+    return;
+  }
+  
+  container.innerHTML = top3.map((entry, index) => {
+    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
+    const medalClass = index === 0 ? 'gold' : index === 1 ? 'silver' : 'bronze';
+    const rankText = index === 0 ? '1st Worldwide' : index === 1 ? '2nd Worldwide' : '3rd Worldwide';
+    const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+    
+    return `
+      <div class="top-card ${medalClass}">
+        <div class="text-5xl mb-2">${medal}</div>
+        <div class="text-xs font-bold uppercase tracking-wider mb-2 text-white/80">${rankText}</div>
+        <h3 class="text-xl font-bold mb-2">${companyName}</h3>
+        <div class="text-4xl font-black mb-2">${entry.score}/100</div>
+        <div class="text-white/80 mb-3">${getCountryFlag(entry.country)} ${entry.country}</div>
+        <button onclick="window.open('${entry.url}', '_blank', 'noopener')" class="w-full bg-black/30 hover:bg-black/50 text-white px-4 py-2 rounded-lg border border-white/30 transition-all">
+          <i class="fas fa-external-link-alt mr-2"></i> Visit Website
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderRankings4to15() {
+  const grid = document.getElementById('rankings4to15Grid');
+  if (!grid) return;
+  
+  const rankings = allLeaderboardEntries.slice(3, 15);
+  if (rankings.length === 0) {
+    document.getElementById('rankings4to15Container').style.display = 'none';
+    return;
+  }
+  
+  document.getElementById('rankings4to15Container').style.display = 'block';
+  grid.innerHTML = rankings.map((entry, index) => {
+    const actualRank = index + 4;
+    const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+    
+    return `
+      <div class="rank-card">
+        <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
+        <h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
+        <div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
+        <div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
+        <a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">
+          View Website <i class="fas fa-external-link-alt ml-1"></i>
+        </a>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderRankings16Plus() {
+  const tbody = document.getElementById('rankingsTbody');
+  const totalCount = document.getElementById('totalCount');
+  if (!tbody) return;
+  
+  const rankings = allLeaderboardEntries.slice(15, 35);
+  if (totalCount) {
+    totalCount.textContent = allLeaderboardEntries.length;
+  }
+  
+  if (rankings.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-400">No more entries</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = rankings.map((entry, index) => {
+    const actualRank = index + 16;
+    const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+    
+    return `
+      <tr>
+        <td><span class="inline-flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full font-bold">${actualRank}</span></td>
+        <td class="font-semibold">${companyName}</td>
+        <td><a href="${entry.url}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">${entry.url.replace('https://', '').substring(0, 25)}...</a></td>
+        <td><span class="text-lg font-bold ${entry.score >= 85 ? 'text-green-400' : entry.score >= 70 ? 'text-yellow-400' : 'text-red-400'}">${entry.score}</span></td>
+        <td><span class="text-sm">${getCountryFlag(entry.country)} ${entry.country}</span></td>
+        <td><span class="text-sm text-gray-400">${new Date(entry.created_at).toLocaleDateString()}</span></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderCountryFilters() {
+  const div = document.getElementById('countryFilters');
+  if (!div) return;
+  
+  const countries = [...new Set(allLeaderboardEntries.map(e => e.country))];
+  let html = '<button class="filter-tag active" onclick="filterByCountry(\'all\')">🌍 All</button>';
+  countries.forEach(country => {
+    if (country) {
+      html += `<button class="filter-tag" onclick="filterByCountry('${country}')">${getCountryFlag(country)} ${country}</button>`;
+    }
+  });
+  div.innerHTML = html;
+}
+
+function filterByCountry(country) {
+  document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  console.log('Filter by country:', country);
+}
+
+function filterAgencies() {
+  const query = document.getElementById('searchInput')?.value.toLowerCase() || '';
+  if (!query) {
+    renderRankings4to15();
+    renderRankings16Plus();
+    return;
+  }
+  
+  const filtered = allLeaderboardEntries.filter(entry =>
+    (entry.company_name || '').toLowerCase().includes(query) ||
+    (entry.url || '').toLowerCase().includes(query) ||
+    extractDomainFromUrl(entry.url).toLowerCase().includes(query)
+  );
+  
+  const grid = document.getElementById('rankings4to15Grid');
+  const rankings = filtered.slice(3, 15);
+  
+  if (grid) {
+    grid.innerHTML = rankings.map((entry, index) => {
+      const actualRank = index + 4;
+      const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+      return `
+        <div class="rank-card">
+          <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
+          <h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
+          <div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
+          <div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
+          <a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">View Website</a>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+function toggleFilters() {
+  const panel = document.getElementById('filterPanel');
+  const icon = document.getElementById('filterIcon');
+  if (panel) {
+    panel.classList.toggle('hidden');
+    icon.classList.toggle('fa-chevron-down');
+    icon.classList.toggle('fa-chevron-up');
+  }
+}
+
+function toggleRankings() {
+  const container = document.getElementById('rankingsContainer');
+  const toggleText = document.getElementById('rankingsToggleText');
+  if (container) {
+    container.classList.toggle('hidden');
+    toggleText.textContent = container.classList.contains('hidden') ? '📊 Show Rankings 16+' : '📊 Hide Rankings 16+';
+  }
+}
+
+// ==========================================
+// FREELANCERS FUNCTIONS
+// ==========================================
+async function loadFreelancers() {
+  try {
+    const response = await fetch('/api/freelancers');
+    const data = await response.json();
+    const grid = document.getElementById('freelancersGrid');
+    
+    if (!grid) return;
+    
+    const freelancers = data.freelancers || [];
+    if (freelancers.length === 0) {
+      grid.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No freelancers found</div>';
+      return;
+    }
+    
+    grid.innerHTML = freelancers.map(f => {
+      const firstName = f.name.split(' ')[0];
+      const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase();
+      
+      return `
+        <div class="card hover:border-purple-500">
+          <div class="card-content">
+            <div class="flex items-start gap-4 mb-4">
+              <div class="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl font-bold text-white">
+                ${initials}
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center justify-between">
+                  <h3 class="font-bold text-lg text-white">${f.name}</h3>
+                  ${f.is_featured ? '<span class="px-2 py-1 bg-yellow-600 rounded text-xs text-white font-semibold flex items-center gap-1">⭐ Featured</span>' : '<span class="px-2 py-1 bg-green-600 rounded text-xs text-white font-semibold">✓ Verified</span>'}
+                </div>
+                <p class="text-sm text-gray-400">${f.title || 'SEO Specialist'}</p>
+              </div>
+            </div>
+            <p class="text-gray-300 text-sm mb-4">${f.bio || 'No bio available'}</p>
+            <div class="flex items-center justify-between text-sm mb-4">
+              <span class="text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i> ${f.location || f.country || 'Remote'}</span>
+              ${f.hourly_rate ? `<span class="text-purple-400">💰 ${f.hourly_rate}</span>` : ''}
+            </div>
+          </div>
+          <div class="card-footer">
+            <a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20discuss%20SEO%20optimization%20with%20${encodeURIComponent(f.name)}"
+              target="_blank"
+              rel="noopener"
+              class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 no-underline">
+              <i class="fab fa-whatsapp"></i> Contact ${firstName}
+            </a>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (error) {
+    console.error('❌ Error loading freelancers:', error);
+    document.getElementById('freelancersGrid').innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Could not load freelancers</div>';
+  }
+}
+
+function openFreelancerModal() {
+  const modal = document.getElementById('freelancerModal');
+  if (modal) {
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeModal() {
+  const modal = document.getElementById('freelancerModal');
+  if (modal) {
+    modal.classList.remove('active');
+    document.body.style.overflow = 'auto';
+  }
+}
+
+function submitFreelancer() {
+  const name = document.getElementById('freelancerName')?.value;
+  const email = document.getElementById('freelancerEmail')?.value;
+  const title = document.getElementById('freelancerTitle')?.value;
+  const bio = document.getElementById('freelancerBio')?.value;
+  const isFeatured = document.getElementById('featuredListing')?.checked || false;
+  
+  if (!name || !email) {
+    alert('❌ Name and email are required');
+    return;
+  }
+  if (!email.includes('@')) {
+    alert('❌ Please enter a valid email');
+    return;
+  }
+  
+  if (isFeatured) {
+    window.open('https://paypal.me/ojgmedia?locale.x=en_US&country.x=NL', '_blank', 'noopener');
+  }
+  
+  fetch('/api/freelancers/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name,
+      email,
+      phone: document.getElementById('freelancerPhone')?.value,
+      title: title || 'SEO Specialist',
+      bio: bio || null,
+      is_featured: isFeatured
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert(`✅ Thank you ${name}! We'll review your application within 24 hours.${isFeatured ? ' Please complete the payment via PayPal.' : ''}`);
+      closeModal();
+      document.getElementById('freelancerName').value = '';
+      document.getElementById('freelancerEmail').value = '';
+      document.getElementById('freelancerPhone').value = '';
+      document.getElementById('freelancerTitle').value = '';
+      document.getElementById('freelancerBio').value = '';
+      document.getElementById('bioCharCount').textContent = '0/200';
+      document.getElementById('featuredListing').checked = false;
+    } else {
+      alert('❌ ' + (data.error || 'Registration failed'));
+    }
+  })
+  .catch(error => {
+    alert('❌ Registration failed: ' + error.message);
+  });
+}
+
+// ==========================================
+// UTILITY FUNCTIONS
+// ==========================================
+function extractDomainFromUrl(url) {
+  if (!url) return 'Company';
+  try {
+    const hostname = new URL(url).hostname;
+    let domain = hostname.replace('www.', '');
+    let name = domain.split('.')[0];
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  } catch (e) {
+    return 'Company';
+  }
+}
+
+function getCountryFlag(country) {
+  const flags = {
+    'Netherlands': '🇳🇱', 'NL': '🇳🇱',
+    'United Kingdom': '🇬🇧', 'UK': '🇬🇧',
+    'US': '🇺🇸', 'United States': '🇺🇸',
+    'Germany': '🇩🇪', 'DE': '🇩🇪',
+    'France': '🇫🇷', 'FR': '🇫🇷',
+    'Belgium': '🇧🇪', 'BE': '🇧🇪',
+    'Spain': '🇪🇸', 'ES': '🇪🇸',
+    'Italy': '🇮🇹', 'IT': '🇮🇹'
+  };
+  return flags[country] || '🌐';
+}
+
+window.onclick = function(event) {
+  const modal = document.getElementById('freelancerModal');
+  if (event.target === modal) {
+    closeModal();
+  }
+};
+</script>
+</body>
+</html>
