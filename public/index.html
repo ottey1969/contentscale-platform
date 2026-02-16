@@ -596,13 +596,13 @@ img[width][height] {
         </div>
       </div>
 
-      <!-- ✅ IMPROVED: TWO BUTTONS SIDE BY SIDE -->
-      <div class="flex justify-center gap-4 mb-8 flex-wrap">
+      <!-- TWO BUTTONS SIDE BY SIDE -->
+      <div class="flex justify-center gap-4 mb-8">
         <button id="modeSingleBtn" onclick="switchMode('single')" class="mode-toggle active">
-          <i class="fas fa-link mr-2"></i> Single URL Scanner
+          <i class="fas fa-link mr-2"></i> Single URL
         </button>
         <button id="modeBulkBtn" onclick="switchMode('bulk')" class="mode-toggle">
-          <i class="fas fa-layer-group mr-2"></i> Bulk URL Scanner
+          <i class="fas fa-layer-group mr-2"></i> Bulk URLs
         </button>
       </div>
 
@@ -630,6 +630,13 @@ img[width][height] {
           </div>
         </div>
         <div id="singleResult" class="hidden mt-4"></div>
+      </div>
+
+      <!-- DIVIDER -->
+      <div class="flex items-center gap-4 my-6">
+        <div class="flex-1 border-t border-gray-700"></div>
+        <span class="text-gray-500 text-sm">OR</span>
+        <div class="flex-1 border-t border-gray-700"></div>
       </div>
 
       <!-- BULK URL SCANNER -->
@@ -1256,21 +1263,17 @@ async function registerUser() {
 // ==========================================
 async function checkActivationStatus() {
   if (!userId) return false;
-  
   try {
     const response = await fetch('/api/user/activation-status', {
       headers: { 'x-user-id': userId }
     });
     const data = await response.json();
-    
     if (data.success) {
       userActivated = data.activated;
       activationChecked = true;
-      
       const activationNotice = document.getElementById('activationNotice');
       const activationBadge = document.getElementById('activationBadge');
       const bulkScannerForm = document.getElementById('bulkScannerForm');
-      
       if (userActivated) {
         if (activationNotice) activationNotice.classList.add('hidden');
         if (activationBadge) activationBadge.classList.add('hidden');
@@ -1296,17 +1299,14 @@ async function checkActivationStatus() {
 // ==========================================
 async function loadApiStatus() {
   if (!userId) return;
-  
   try {
     const response = await fetch('/api/user/keys/status', {
       headers: { 'x-user-id': userId }
     });
     const data = await response.json();
-    
     if (data.success) {
       const indicator = document.getElementById('apiStatusIndicator');
       const statusText = document.getElementById('apiStatusText');
-      
       if (data.hasSendgrid || data.hasWebshare) {
         indicator.className = 'api-status-indicator api-status-active';
         statusText.textContent = 'Custom API keys configured';
@@ -1314,7 +1314,6 @@ async function loadApiStatus() {
         indicator.className = 'api-status-indicator api-status-inactive';
         statusText.textContent = 'Using default settings (limited)';
       }
-      
       if (data.hasSendgrid) {
         document.getElementById('sendgridStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
         if (data.sendgrid) {
@@ -1325,7 +1324,6 @@ async function loadApiStatus() {
         }
         sendgridConfigured = true;
       }
-      
       if (data.hasWebshare) {
         document.getElementById('webshareStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
         webshareConfigured = true;
@@ -1356,7 +1354,6 @@ function switchMode(mode) {
   const bulkMode = document.getElementById('bulkMode');
   const singleBtn = document.getElementById('modeSingleBtn');
   const bulkBtn = document.getElementById('modeBulkBtn');
-  
   if (mode === 'single') {
     singleMode.classList.remove('hidden');
     bulkMode.classList.add('hidden');
@@ -1374,7 +1371,6 @@ function toggleBulkScanner() {
   const content = document.getElementById('bulkScannerContent');
   const icon = document.getElementById('bulkScannerIcon');
   const toggleText = document.getElementById('bulkToggleText');
-  
   if (content) {
     const isHidden = content.classList.contains('hidden');
     content.classList.toggle('hidden');
@@ -1403,7 +1399,6 @@ async function saveSendgridConfig() {
     alert('❌ Please enter your SendGrid API key');
     return;
   }
-  
   try {
     const response = await fetch('/api/user/sendgrid/configure', {
       method: 'POST',
@@ -1418,7 +1413,6 @@ async function saveSendgridConfig() {
       })
     });
     const data = await response.json();
-    
     if (data.success) {
       alert('✅ SendGrid configuration saved successfully');
       document.getElementById('sendgridStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
@@ -1437,7 +1431,6 @@ async function testSendgridConfig() {
     alert('❌ User not registered');
     return;
   }
-  
   try {
     const response = await fetch('/api/email/send', {
       method: 'POST',
@@ -1453,7 +1446,6 @@ async function testSendgridConfig() {
       })
     });
     const data = await response.json();
-    
     if (data.success) {
       alert('✅ Test email sent successfully!');
     } else if (data.needs_api_key) {
@@ -1481,7 +1473,6 @@ async function saveWebshareConfig() {
     alert('❌ Please enter your WebShare API key');
     return;
   }
-  
   try {
     const response = await fetch('/api/user/webshare/configure', {
       method: 'POST',
@@ -1492,7 +1483,6 @@ async function saveWebshareConfig() {
       body: JSON.stringify({ userId, apiKey })
     });
     const data = await response.json();
-    
     if (data.success) {
       alert(`✅ WebShare configured! Found ${data.proxy_count || 10} proxies.`);
       document.getElementById('webshareStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
@@ -1515,17 +1505,13 @@ async function saveWebshareConfig() {
 // ==========================================
 async function loadUserTemplates() {
   if (!userId) return;
-  
   try {
     const response = await fetch('/api/user/templates', {
       headers: { 'x-user-id': userId }
     });
     const data = await response.json();
-    
     if (data.success && data.templates) {
       userTemplates = data.templates;
-      
-      // Populate template editors
       if (userTemplates.congrats) {
         document.getElementById('template-congrats-subject').value = userTemplates.congrats.subject || '';
         document.getElementById('template-congrats-body').value = userTemplates.congrats.body || '';
@@ -1549,15 +1535,12 @@ async function saveTemplate(type) {
     alert('❌ User not registered. Please refresh the page.');
     return;
   }
-  
   const subject = document.getElementById(`template-${type}-subject`).value;
   const body = document.getElementById(`template-${type}-body`).value;
-  
   if (!subject || !body) {
     alert('❌ Please fill in both subject and body');
     return;
   }
-  
   try {
     const response = await fetch('/api/user/templates', {
       method: 'POST',
@@ -1565,14 +1548,9 @@ async function saveTemplate(type) {
         'Content-Type': 'application/json',
         'x-user-id': userId
       },
-      body: JSON.stringify({
-        type,
-        subject,
-        body
-      })
+      body: JSON.stringify({ type, subject, body })
     });
     const data = await response.json();
-    
     if (data.success) {
       alert('✅ Template saved successfully!');
       userTemplates[type] = { subject, body };
@@ -1594,7 +1572,6 @@ async function scanSingleURL() {
   const progressBar = document.getElementById('singleProgressBar');
   const progressText = document.getElementById('singleProgressText');
   const resultDiv = document.getElementById('singleResult');
-  
   let url = input.value.trim();
   if (!url) {
     alert('❌ Please enter a URL');
@@ -1603,40 +1580,31 @@ async function scanSingleURL() {
   if (!url.startsWith('http')) {
     url = 'https://' + url;
   }
-  
   button.disabled = true;
   button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
   progress.classList.remove('hidden');
   progressBar.style.width = '20%';
   progressText.textContent = 'Starting browser...';
-  
   try {
     const response = await fetch('/api/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url })
     });
-    
     progressBar.style.width = '60%';
     progressText.textContent = 'Analyzing content...';
-    
     const data = await response.json();
-    
     if (!response.ok || !data.success) {
       throw new Error(data.error || 'Scan failed');
     }
-    
     displayScanResult(data);
-    
     progressBar.style.width = '100%';
     progressText.textContent = 'Scan complete!';
-    
     setTimeout(() => {
       progress.classList.add('hidden');
       button.disabled = false;
       button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
     }, 500);
-    
   } catch (error) {
     console.error('Scan error:', error);
     alert('❌ Scan failed: ' + error.message);
@@ -1655,12 +1623,10 @@ function displayScanResult(data) {
   const craft = data.metrics?.craft || 0;
   const technical = data.metrics?.technical || 0;
   const words = data.content_stats?.wordCount || 0;
-  
   let recommendations = [];
   if (data.recommendations?.all && data.recommendations.all.length > 0) {
     recommendations = data.recommendations.all;
   }
-  
   let recsHtml = '';
   if (recommendations.length > 0) {
     recommendations.forEach(rec => {
@@ -1668,7 +1634,6 @@ function displayScanResult(data) {
       if (rec.priority === 'high') priorityClass = 'priority-high';
       else if (rec.priority === 'medium') priorityClass = 'priority-medium';
       else if (rec.priority === 'low') priorityClass = 'priority-low';
-      
       recsHtml += `
         <div class="recommendation-card">
           <div class="flex items-start justify-between mb-2">
@@ -1706,14 +1671,12 @@ function displayScanResult(data) {
   } else {
     recsHtml = '<p class="text-gray-400 text-sm">No specific recommendations - your page is excellent!</p>';
   }
-  
   let qualityColor = 'bg-gray-600';
   if (quality === 'excellent') qualityColor = 'bg-green-600';
   else if (quality === 'very good') qualityColor = 'bg-blue-600';
   else if (quality === 'good') qualityColor = 'bg-green-600';
   else if (quality === 'average') qualityColor = 'bg-yellow-600';
   else if (quality === 'needs improvement') qualityColor = 'bg-red-600';
-  
   resultDiv.innerHTML = `
     <div class="bg-gray-800 rounded-xl border-2 border-purple-500 p-6 mt-4">
       <div class="text-center mb-4">
@@ -1761,7 +1724,6 @@ function displayScanResult(data) {
       </div>
     </div>
   `;
-  
   resultDiv.classList.remove('hidden');
   resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
@@ -1769,7 +1731,6 @@ function displayScanResult(data) {
 function addToLeaderboard(url, score) {
   const companyName = prompt('Enter company name (optional):', '');
   const contactEmail = prompt('Enter your email to receive congratulations if approved (optional):', '');
-  
   if (!contactEmail) {
     alert('✅ Your request has been sent to admin for approval (85+ required)');
     return;
@@ -1778,7 +1739,6 @@ function addToLeaderboard(url, score) {
     alert('❌ Please enter a valid email address');
     return;
   }
-  
   alert(`✅ Thank you! Admin will review your submission. If approved (85+ score required), a congratulations email will be sent to ${contactEmail}.`);
 }
 
@@ -1795,11 +1755,9 @@ async function startBulkScan() {
   const progressText = document.getElementById('bulkProgressText');
   const resultsDiv = document.getElementById('bulkResults');
   const resultsContainer = document.getElementById('bulkResultsContainer');
-  
   const urls = urlInput.value.split('\n').filter(u => u.trim().length > 0);
   const email = emailInput.value.trim();
   const name = nameInput.value.trim();
-  
   if (urls.length === 0) {
     alert('❌ Please enter at least one URL');
     return;
@@ -1816,8 +1774,6 @@ async function startBulkScan() {
     alert('❌ Please enter your name');
     return;
   }
-  
-  // Check activation
   if (!userActivated && !activationChecked) {
     const activated = await checkActivationStatus();
     if (!activated) {
@@ -1825,8 +1781,6 @@ async function startBulkScan() {
       return;
     }
   }
-  
-  // Check SendGrid
   if (!sendgridConfigured) {
     const confirmSendGrid = confirm('⚠️ You haven\'t configured SendGrid yet. Bulk emails will use the default system (limited to 100/day).\n\nWould you like to continue anyway?');
     if (!confirmSendGrid) {
@@ -1834,29 +1788,24 @@ async function startBulkScan() {
       return;
     }
   }
-  
   button.disabled = true;
   button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
   progress.classList.remove('hidden');
   resultsDiv.classList.add('hidden');
   resultsContainer.innerHTML = '';
-  
   let results = {
     leaderboard: [],
     withWebsite: [],
     withoutWebsite: [],
     errors: []
   };
-  
   for (let i = 0; i < urls.length; i++) {
     let url = urls[i].trim();
     if (!url.startsWith('http')) {
       url = 'https://' + url;
     }
-    
     progressText.textContent = `Scanning ${i + 1} of ${urls.length}...`;
     progressBar.style.width = `${((i + 1) / urls.length) * 100}%`;
-    
     try {
       const response = await fetch('/api/scan', {
         method: 'POST',
@@ -1866,9 +1815,7 @@ async function startBulkScan() {
         },
         body: JSON.stringify({ url })
       });
-      
       const data = await response.json();
-      
       if (data.success) {
         const score = data.score || 0;
         if (score >= 85) {
@@ -1884,13 +1831,10 @@ async function startBulkScan() {
     } catch (error) {
       results.errors.push({ url, error: error.message });
     }
-    
     await new Promise(resolve => setTimeout(resolve, 500));
   }
-  
   displayBulkResults(results, email, name);
   await sendBulkEmails(results, email, name);
-  
   button.disabled = false;
   button.innerHTML = '<i class="fas fa-rocket mr-2"></i> Start Bulk Scan';
   progress.classList.add('hidden');
@@ -1899,9 +1843,7 @@ async function startBulkScan() {
 function displayBulkResults(results, userEmail, userName) {
   const container = document.getElementById('bulkResultsContainer');
   const resultsDiv = document.getElementById('bulkResults');
-  
   let html = '';
-  
   if (results.leaderboard.length > 0) {
     html += `
       <div class="bg-green-900 bg-opacity-30 border border-green-500 rounded-lg p-4 mb-4">
@@ -1915,7 +1857,6 @@ function displayBulkResults(results, userEmail, userName) {
       </div>
     `;
   }
-  
   if (results.withWebsite.length > 0) {
     html += `
       <div class="bg-blue-900 bg-opacity-30 border border-blue-500 rounded-lg p-4 mb-4">
@@ -1929,7 +1870,6 @@ function displayBulkResults(results, userEmail, userName) {
       </div>
     `;
   }
-  
   if (results.withoutWebsite.length > 0) {
     html += `
       <div class="bg-purple-900 bg-opacity-30 border border-purple-500 rounded-lg p-4 mb-4">
@@ -1943,7 +1883,6 @@ function displayBulkResults(results, userEmail, userName) {
       </div>
     `;
   }
-  
   if (results.errors.length > 0) {
     html += `
       <div class="bg-red-900 bg-opacity-30 border border-red-500 rounded-lg p-4 mb-4">
@@ -1956,7 +1895,6 @@ function displayBulkResults(results, userEmail, userName) {
       </div>
     `;
   }
-  
   html += `
     <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
       <p class="text-sm text-gray-300">
@@ -1964,7 +1902,6 @@ function displayBulkResults(results, userEmail, userName) {
       </p>
     </div>
   `;
-  
   container.innerHTML = html;
   resultsDiv.classList.remove('hidden');
 }
@@ -1974,9 +1911,7 @@ async function sendBulkEmails(results, userEmail, userName) {
     console.warn('No userId - skipping email sending');
     return;
   }
-  
   try {
-    // Send summary to user
     await fetch('/api/bulk-scan/send-summary', {
       method: 'POST',
       headers: {
@@ -1985,8 +1920,6 @@ async function sendBulkEmails(results, userEmail, userName) {
       },
       body: JSON.stringify({ userEmail, userName, results })
     });
-    
-    // Submit leaderboard candidates
     if (results.leaderboard.length > 0) {
       await fetch('/api/bulk-scan/submit-leaderboard', {
         method: 'POST',
@@ -1997,8 +1930,6 @@ async function sendBulkEmails(results, userEmail, userName) {
         body: JSON.stringify({ entries: results.leaderboard, submittedBy: userEmail })
       });
     }
-    
-    // Send improvement emails to businesses with websites
     if (results.withWebsite.length > 0) {
       await fetch('/api/bulk-scan/send-improvement-emails', {
         method: 'POST',
@@ -2009,8 +1940,6 @@ async function sendBulkEmails(results, userEmail, userName) {
         body: JSON.stringify({ businesses: results.withWebsite, senderName: userName, senderEmail: userEmail })
       });
     }
-    
-    // Send website offer emails to businesses without websites
     if (results.withoutWebsite.length > 0) {
       await fetch('/api/bulk-scan/send-website-offers', {
         method: 'POST',
@@ -2021,7 +1950,6 @@ async function sendBulkEmails(results, userEmail, userName) {
         body: JSON.stringify({ businesses: results.withoutWebsite, senderName: userName, senderEmail: userEmail })
       });
     }
-    
     console.log('✅ Bulk emails sent successfully');
     alert('✅ Bulk scan complete! Emails are being sent via your SendGrid account.');
   } catch (error) {
@@ -2037,14 +1965,12 @@ async function loadLeaderboardData() {
   try {
     const response = await fetch('/api/leaderboard');
     const data = await response.json();
-    
     if (data.success && data.entries && data.entries.length > 0) {
       allLeaderboardEntries = data.entries;
       document.getElementById('totalAgencies').textContent = data.stats?.totalAgencies || 0;
       document.getElementById('avgScore').textContent = data.averageScore || 0;
       document.getElementById('countriesCount').textContent = data.stats?.countriesCount || 0;
       document.getElementById('activeHelpers').textContent = data.stats?.activeHelpers || 0;
-      
       renderTop3();
       renderRankings4to15();
       renderRankings16Plus();
@@ -2063,7 +1989,6 @@ function showEmptyLeaderboard() {
   document.getElementById('avgScore').textContent = '0';
   document.getElementById('countriesCount').textContent = '0';
   document.getElementById('activeHelpers').textContent = '0';
-  
   const container = document.getElementById('top3-container');
   if (container) {
     container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No leaderboard entries found</div>';
@@ -2075,19 +2000,16 @@ function showEmptyLeaderboard() {
 function renderTop3() {
   const container = document.getElementById('top3-container');
   if (!container) return;
-  
   const top3 = allLeaderboardEntries.slice(0, 3);
   if (top3.length === 0) {
     container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No entries found</div>';
     return;
   }
-  
   container.innerHTML = top3.map((entry, index) => {
     const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
     const medalClass = index === 0 ? 'gold' : index === 1 ? 'silver' : 'bronze';
     const rankText = index === 0 ? '1st Worldwide' : index === 1 ? '2nd Worldwide' : '3rd Worldwide';
     const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-    
     return `
       <div class="top-card ${medalClass}">
         <div class="text-5xl mb-2">${medal}</div>
@@ -2106,19 +2028,15 @@ function renderTop3() {
 function renderRankings4to15() {
   const grid = document.getElementById('rankings4to15Grid');
   if (!grid) return;
-  
   const rankings = allLeaderboardEntries.slice(3, 15);
   if (rankings.length === 0) {
     document.getElementById('rankings4to15Container').style.display = 'none';
     return;
   }
-  
   document.getElementById('rankings4to15Container').style.display = 'block';
-  
   grid.innerHTML = rankings.map((entry, index) => {
     const actualRank = index + 4;
     const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-    
     return `
       <div class="rank-card">
         <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
@@ -2137,21 +2055,17 @@ function renderRankings16Plus() {
   const tbody = document.getElementById('rankingsTbody');
   const totalCount = document.getElementById('totalCount');
   if (!tbody) return;
-  
   const rankings = allLeaderboardEntries.slice(15, 35);
   if (totalCount) {
     totalCount.textContent = allLeaderboardEntries.length;
   }
-  
   if (rankings.length === 0) {
     tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-400">No more entries</td></tr>';
     return;
   }
-  
   tbody.innerHTML = rankings.map((entry, index) => {
     const actualRank = index + 16;
     const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-    
     return `
       <tr>
         <td><span class="inline-flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full font-bold">${actualRank}</span></td>
@@ -2168,16 +2082,13 @@ function renderRankings16Plus() {
 function renderCountryFilters() {
   const div = document.getElementById('countryFilters');
   if (!div) return;
-  
   const countries = [...new Set(allLeaderboardEntries.map(e => e.country))];
   let html = '<button class="filter-tag active" onclick="filterByCountry(\'all\')">🌍 All</button>';
-  
   countries.forEach(country => {
     if (country) {
       html += `<button class="filter-tag" onclick="filterByCountry('${country}')">${getCountryFlag(country)} ${country}</button>`;
     }
   });
-  
   div.innerHTML = html;
 }
 
@@ -2194,21 +2105,17 @@ function filterAgencies() {
     renderRankings16Plus();
     return;
   }
-  
   const filtered = allLeaderboardEntries.filter(entry =>
     (entry.company_name || '').toLowerCase().includes(query) ||
     (entry.url || '').toLowerCase().includes(query) ||
     extractDomainFromUrl(entry.url).toLowerCase().includes(query)
   );
-  
   const grid = document.getElementById('rankings4to15Grid');
   const rankings = filtered.slice(3, 15);
-  
   if (grid) {
     grid.innerHTML = rankings.map((entry, index) => {
       const actualRank = index + 4;
       const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-      
       return `
         <div class="rank-card">
           <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
@@ -2249,19 +2156,15 @@ async function loadFreelancers() {
     const response = await fetch('/api/freelancers');
     const data = await response.json();
     const grid = document.getElementById('freelancersGrid');
-    
     if (!grid) return;
-    
     const freelancers = data.freelancers || [];
     if (freelancers.length === 0) {
       grid.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No freelancers found</div>';
       return;
     }
-    
     grid.innerHTML = freelancers.map(f => {
       const firstName = f.name.split(' ')[0];
       const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase();
-      
       return `
         <div class="card hover:border-purple-500">
           <div class="card-content">
@@ -2322,7 +2225,6 @@ function submitFreelancer() {
   const title = document.getElementById('freelancerTitle')?.value;
   const bio = document.getElementById('freelancerBio')?.value;
   const isFeatured = document.getElementById('featuredListing')?.checked || false;
-  
   if (!name || !email) {
     alert('❌ Name and email are required');
     return;
@@ -2331,11 +2233,9 @@ function submitFreelancer() {
     alert('❌ Please enter a valid email');
     return;
   }
-  
   if (isFeatured) {
     window.open('https://paypal.me/ojgmedia?locale.x=en_US&country.x=NL', '_blank', 'noopener');
   }
-  
   fetch('/api/freelancers/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
