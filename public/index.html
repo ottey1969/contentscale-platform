@@ -1008,7 +1008,6 @@ Our Lead Scanner, Google Maps bulk scraper, and content quality analyzer are 100
 
 <!-- ========================================== -->
 <!-- 🎯 VERIFIED SEO SPECIALISTS SECTION        -->
-/* De 6 actieve freelancers worden hier getoond */
 <!-- ========================================== -->
 <div id="freelancers" class="mb-16">
 <div class="text-center mb-8">
@@ -1323,7 +1322,7 @@ document.addEventListener('DOMContentLoaded', function() {
 console.log('📋 Publieke pagina geladen');
 forceEmptyInput();
 loadLeaderboardData();
-loadFreelancers(); // HAALT ALLEEN ACTIEVE FREELANCERS OP VIA /api/freelancers?active=true
+loadFreelancers(); // 🔥 HAALT ALLEEN ACTIEVE FREELANCERS OP
 registerUser();
 loadApiStatus();
 
@@ -1348,9 +1347,9 @@ const counter = document.getElementById('bulkUrlCount');
 if (counter) {
 counter.textContent = `${urls.length}/100`;
 if (urls.length > 100) {
-counter.style.color = '#f87171'; // red
+counter.style.color = '#f87171';
 } else {
-counter.style.color = '#d1d5db'; // gray
+counter.style.color = '#d1d5db';
 }
 }
 });
@@ -2413,8 +2412,7 @@ document.getElementById('avgScore').textContent = avgScore;
 const countries = new Set(entries.map(e => e.country || 'Unknown')).size;
 document.getElementById('countriesCount').textContent = countries;
 
-// Deze wordt later overschreven door loadFreelancers()
-// document.getElementById('activeHelpers').textContent = '12';
+// activeHelpers wordt geüpdatet door loadFreelancers()
 }
 
 function updateTop3(entries) {
@@ -2586,22 +2584,22 @@ arrow.textContent = '▲';
 }
 
 // ==========================================
-// FREELANCER FUNCTIES - AANGEPAST OM ALLEEN ACTIEVE TE LATEN ZIEN
+// FREELANCER FUNCTIES - ALLEEN ACTIEVE FREELANCERS
 // ==========================================
 async function loadFreelancers() {
 try {
-// 🔥 CRUCIALE FIX: Haal alleen actieve freelancers op
+// 🔥 CRITICAL FIX: Haal ALLEEN actieve freelancers op
 const response = await fetch('/api/freelancers?active=true');
 const data = await response.json();
 
 if (data.success && data.freelancers) {
 console.log(`✅ ${data.freelancers.length} actieve freelancers geladen`);
 displayFreelancers(data.freelancers);
-// Update de teller in de leaderboard stats met het exacte aantal
+// Update de teller in de leaderboard stats
 document.getElementById('activeHelpers').textContent = data.freelancers.length;
 } else {
 // Toon lege staat
-document.getElementById('freelancersGrid').innerHTML = '<p class="text-gray-400 text-center col-span-3">Momenteel zijn er geen actieve specialisten</p>';
+document.getElementById('freelancersGrid').innerHTML = '<p class="text-gray-400 text-center col-span-3">Geen specialisten gevonden</p>';
 document.getElementById('activeHelpers').textContent = '0';
 }
 } catch (error) {
@@ -2680,7 +2678,7 @@ phone,
 title, 
 bio, 
 featured, 
-active: false // 🔥 CRUCIAL: Nieuwe aanmeldingen standaard op inactief
+active: false // 🔥 CRITICAL: Nieuwe aanmeldingen standaard op inactief
 })
 });
 
