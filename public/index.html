@@ -1319,7 +1319,7 @@ document.addEventListener('DOMContentLoaded', function() {
 console.log('📋 Publieke pagina geladen');
 forceEmptyInput();
 loadLeaderboardData();
-loadFreelancers();
+loadFreelancers(); // HAALT ALLEEN ACTIEVE FREELANCERS OP
 registerUser();
 loadApiStatus();
 
@@ -2581,24 +2581,36 @@ arrow.textContent = '▲';
 }
 
 // ==========================================
-// FREELANCER FUNCTIES
+// FREELANCER FUNCTIES - AANGEPAST OM ALLEEN ACTIEVE TE LATEN ZIEN
 // ==========================================
 async function loadFreelancers() {
 try {
-const response = await fetch('/api/freelancers');
+const response = await fetch('/api/freelancers?active=true'); // ALLEEN ACTIEVE FREELANCERS OPHALEN
 const data = await response.json();
 
 if (data.success && data.freelancers) {
 displayFreelancers(data.freelancers);
+// Update de teller in de leaderboard stats
+document.getElementById('activeHelpers').textContent = data.freelancers.length;
+} else {
+// Toon lege staat
+document.getElementById('freelancersGrid').innerHTML = '<p class="text-gray-400 text-center col-span-3">Geen specialisten gevonden</p>';
+document.getElementById('activeHelpers').textContent = '0';
 }
 } catch (error) {
 console.error('Error loading freelancers:', error);
+document.getElementById('freelancersGrid').innerHTML = '<p class="text-gray-400 text-center col-span-3">Fout bij laden specialisten</p>';
 }
 }
 
 function displayFreelancers(freelancers) {
 const grid = document.getElementById('freelancersGrid');
 if (!grid) return;
+
+if (freelancers.length === 0) {
+grid.innerHTML = '<p class="text-gray-400 text-center col-span-3">Momenteel zijn er geen actieve specialisten</p>';
+return;
+}
 
 let html = '';
 freelancers.forEach(f => {
@@ -2611,7 +2623,7 @@ ${featured}
 <div class="text-4xl mb-4">👤</div>
 <h3 class="text-xl font-bold text-white mb-2">${f.name}</h3>
 <p class="text-purple-300 text-sm mb-3">${f.title}</p>
-<p class="text-gray-300 text-sm mb-4">${f.bio}</p>
+<p class="text-gray-300 text-sm mb-4">${f.bio || 'Ervaren SEO specialist'}</p>
 </div>
 <div class="card-footer">
 <button onclick="contactFreelancer('${f.email}')" class="btn-primary btn w-full text-sm py-2">
@@ -2620,9 +2632,9 @@ ${featured}
 </div>
 </div>
 `;
+});
 
 grid.innerHTML = html;
-});
 }
 
 function openFreelancerModal() {
@@ -2654,7 +2666,7 @@ try {
 const response = await fetch('/api/freelancers', {
 method: 'POST',
 headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({ name, email, phone, title, bio, featured })
+body: JSON.stringify({ name, email, phone, title, bio, featured, active: false }) // Standaard op inactief
 });
 
 const data = await response.json();
