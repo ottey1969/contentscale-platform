@@ -1,6 +1,7 @@
-{
+ {
   "name": "contentscale-platform",
   "version": "1.0.0",
+  "description": "ContentScale SEO Platform",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
@@ -14,10 +15,9 @@
     "express-rate-limit": "^7.1.5",
     "compression": "^1.7.4",
     "multer": "^1.4.5-lts.1",
-    "axios": "^1.6.5",
     "@sendgrid/mail": "^8.1.0"
   },
   "engines": {
     "node": "20.x"
   }
-}
+}      
