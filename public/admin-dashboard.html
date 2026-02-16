@@ -216,8 +216,12 @@
       
       <div class="space-y-6">
         <div>
-          <label class="block text-sm font-medium text-gray-300 mb-2">Admin ID</label>
-          <input type="text" id="login-admin-id" placeholder="ot-admin" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white">
+          <label class="block text-sm font-medium text-gray-300 mb-2">Username</label>
+          <input type="text" id="login-username" value="ot" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+          <input type="password" id="login-password" value="admin123" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white">
         </div>
         <button onclick="login()" id="login-btn" class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-lg font-bold text-lg transition-all transform hover:scale-105">
           <i class="fas fa-lock mr-2"></i> Login
@@ -448,43 +452,91 @@
     window.onload = function() {
       console.log('📋 Admin Dashboard loaded');
       
-      if (localStorage.getItem('admin_id')) {
-        currentAdminId = localStorage.getItem('admin_id');
+      const storedAdminId = localStorage.getItem('admin_id');
+      const storedUsername = localStorage.getItem('admin_username');
+      
+      if (storedAdminId && storedUsername) {
+        currentAdminId = storedAdminId;
+        
+        console.log('✅ Found stored session:', storedUsername);
         
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('main-dashboard').classList.remove('hidden');
-        document.getElementById('admin-username').textContent = currentAdminId;
+        document.getElementById('admin-username').textContent = storedUsername;
         
         loadAllData();
         switchTab('leaderboard');
+      } else {
+        console.log('ℹ️ No stored session, showing login');
       }
     };
 
     async function login() {
-      const adminId = document.getElementById('login-admin-id').value.trim();
+      const username = document.getElementById('login-username').value.trim();
+      const password = document.getElementById('login-password').value.trim();
       const errorDiv = document.getElementById('login-error');
+      const loginBtn = document.getElementById('login-btn');
       
+      // Hide previous errors
       errorDiv.classList.add('hidden');
       
-      if (!adminId) {
-        errorDiv.textContent = 'Please enter admin ID';
+      if (!username || !password) {
+        errorDiv.textContent = 'Please enter both username and password';
         errorDiv.classList.remove('hidden');
         return;
       }
       
-      localStorage.setItem('admin_id', adminId);
-      currentAdminId = adminId;
+      // Disable button during login
+      loginBtn.disabled = true;
+      loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Logging in...';
       
-      document.getElementById('login-screen').classList.add('hidden');
-      document.getElementById('main-dashboard').classList.remove('hidden');
-      document.getElementById('admin-username').textContent = adminId;
-      
-      loadAllData();
-      switchTab('leaderboard');
+      try {
+        console.log('🔐 Attempting login for:', username);
+        
+        const response = await fetch('/api/setup/verify-admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        
+        const data = await response.json();
+        console.log('📦 Login response:', data);
+        
+        if (data.success && data.admin_id) {
+          // Store admin credentials
+          localStorage.setItem('admin_id', data.admin_id);
+          localStorage.setItem('admin_username', username);
+          
+          currentAdminId = data.admin_id;
+          
+          console.log('✅ Login successful! Admin ID:', data.admin_id);
+          
+          // Hide login screen, show dashboard
+          document.getElementById('login-screen').classList.add('hidden');
+          document.getElementById('main-dashboard').classList.remove('hidden');
+          document.getElementById('admin-username').textContent = username;
+          
+          // Load all data
+          loadAllData();
+          switchTab('leaderboard');
+        } else {
+          errorDiv.textContent = data.error || 'Invalid username or password';
+          errorDiv.classList.remove('hidden');
+          loginBtn.disabled = false;
+          loginBtn.innerHTML = '<i class="fas fa-lock mr-2"></i> Login';
+        }
+      } catch (error) {
+        console.error('❌ Login error:', error);
+        errorDiv.textContent = 'Connection error. Please try again.';
+        errorDiv.classList.remove('hidden');
+        loginBtn.disabled = false;
+        loginBtn.innerHTML = '<i class="fas fa-lock mr-2"></i> Login';
+      }
     }
 
     function logout() {
       localStorage.removeItem('admin_id');
+      localStorage.removeItem('admin_username');
       location.reload();
     }
 
@@ -493,9 +545,13 @@
     // ==========================================
     async function apiCall(endpoint, method = 'GET', body = null) {
       const headers = {
-        'Content-Type': 'application/json',
-        'x-admin-id': currentAdminId
+        'Content-Type': 'application/json'
       };
+      
+      // Add admin authentication header for admin endpoints
+      if (currentAdminId) {
+        headers['x-admin-key'] = currentAdminId;
+      }
       
       const options = {
         method,
