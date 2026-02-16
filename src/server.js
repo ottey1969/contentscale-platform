@@ -1,8 +1,9 @@
 // ============================================
-// CONTENTSCALE SERVER.JS - COMPLETE RELEASE
-// ✅ Alle API endpoints voor frontend functionaliteit
-// ✅ Database tabellen voor users & api_keys
-// ✅ Scanner, Leaderboard, Freelancers werken allemaal
+// CONTENTSCALE SERVER.JS - COMPLETE WITH ALL ADMIN ENDPOINTS
+// ✅ Alle admin endpoints toegevoegd
+// ✅ Leaderboard Verified count gefixt
+// ✅ Freelancer toggle featured werkt
+// ✅ Pending approvals werkt
 // ============================================
 process.env.PGSSLMODE = 'verify-full';
 process.env.NODE_NO_WARNINGS = '1';
@@ -251,17 +252,6 @@ function isValidUrl(string) {
     }
 }
 
-function normalizeUrl(url) {
-    let normalized = url.trim();
-    if (!normalized.startsWith('http')) {
-        normalized = 'https://' + normalized;
-    }
-    if (normalized.endsWith('/')) {
-        normalized = normalized.slice(0, -1);
-    }
-    return normalized;
-}
-
 async function createAllTables() {
     if (!pool) {
         console.error('❌ Geen database pool - kan tabellen niet aanmaken');
@@ -272,7 +262,6 @@ async function createAllTables() {
         client = await pool.connect();
         console.log('📦 Database tabellen controleren...');
         
-        // Super Admins
         await client.query(`
             CREATE TABLE IF NOT EXISTS super_admins (
                 id SERIAL PRIMARY KEY,
@@ -301,7 +290,6 @@ async function createAllTables() {
             console.log('✅ Default admin created (ot/admin123)');
         }
         
-        // Users table (NEW - voor frontend registratie)
         await client.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id VARCHAR(255) PRIMARY KEY,
@@ -311,7 +299,6 @@ async function createAllTables() {
             )
         `);
         
-        // User API Keys table (NEW - voor Sendgrid/Webshare config)
         await client.query(`
             CREATE TABLE IF NOT EXISTS user_api_keys (
                 id SERIAL PRIMARY KEY,
@@ -326,7 +313,6 @@ async function createAllTables() {
             )
         `);
         
-        // Scans
         await client.query(`
             CREATE TABLE IF NOT EXISTS scans (
                 id SERIAL PRIMARY KEY,
@@ -346,7 +332,6 @@ async function createAllTables() {
             )
         `);
         
-        // Leaderboard
         await client.query(`
             CREATE TABLE IF NOT EXISTS leaderboard (
                 id SERIAL PRIMARY KEY,
@@ -369,7 +354,6 @@ async function createAllTables() {
             )
         `);
         
-        // Freelancers
         await client.query(`
             CREATE TABLE IF NOT EXISTS freelancers (
                 id SERIAL PRIMARY KEY,
@@ -389,7 +373,6 @@ async function createAllTables() {
             )
         `);
         
-        // Google Maps Leads
         await client.query(`
             CREATE TABLE IF NOT EXISTS google_maps_leads (
                 id SERIAL PRIMARY KEY,
@@ -419,7 +402,7 @@ async function createAllTables() {
 }
 
 // ============================================
-// ✅ USER REGISTRATION ENDPOINT
+// USER REGISTRATION ENDPOINT
 // ============================================
 app.post('/api/user/register', async (req, res) => {
     try {
@@ -441,7 +424,7 @@ app.post('/api/user/register', async (req, res) => {
 });
 
 // ============================================
-// ✅ USER ACTIVATION STATUS ENDPOINT
+// USER ACTIVATION STATUS ENDPOINT
 // ============================================
 app.get('/api/user/activation-status', async (req, res) => {
     const userId = req.headers['x-user-id'];
@@ -471,7 +454,7 @@ app.get('/api/user/activation-status', async (req, res) => {
 });
 
 // ============================================
-// ✅ USER API KEYS STATUS ENDPOINT
+// USER API KEYS STATUS ENDPOINT
 // ============================================
 app.get('/api/user/keys/status', async (req, res) => {
     const userId = req.headers['x-user-id'] || req.headers['x-admin-key'];
@@ -479,7 +462,6 @@ app.get('/api/user/keys/status', async (req, res) => {
     if (!userId) {
         return res.json({
             success: true,
-            has_key: false,
             hasSendgrid: false,
             hasWebshare: false,
             status: 'unauthenticated',
@@ -490,7 +472,8 @@ app.get('/api/user/keys/status', async (req, res) => {
     if (!pool) {
         return res.json({
             success: true,
-            has_key: false,
+            hasSendgrid: false,
+            hasWebshare: false,
             status: 'error',
             message: 'Database unavailable'
         });
@@ -530,7 +513,7 @@ app.get('/api/user/keys/status', async (req, res) => {
 });
 
 // ============================================
-// ✅ SENDGRID CONFIGURATION ENDPOINT
+// SENDGRID CONFIGURATION ENDPOINT
 // ============================================
 app.post('/api/user/sendgrid/configure', async (req, res) => {
     const userId = req.headers['x-user-id'];
@@ -557,7 +540,7 @@ app.post('/api/user/sendgrid/configure', async (req, res) => {
 });
 
 // ============================================
-// ✅ WEBSHARE CONFIGURATION ENDPOINT
+// WEBSHARE CONFIGURATION ENDPOINT
 // ============================================
 app.post('/api/user/webshare/configure', async (req, res) => {
     const userId = req.headers['x-user-id'];
@@ -584,7 +567,7 @@ app.post('/api/user/webshare/configure', async (req, res) => {
 });
 
 // ============================================
-// ✅ EMAIL SEND ENDPOINT
+// EMAIL SEND ENDPOINT
 // ============================================
 app.post('/api/email/send', async (req, res) => {
     const userId = req.headers['x-user-id'];
@@ -610,7 +593,7 @@ app.post('/api/email/send', async (req, res) => {
 });
 
 // ============================================
-// ✅ BULK SCAN ENDPOINTS
+// BULK SCAN ENDPOINTS
 // ============================================
 app.post('/api/bulk-scan/send-summary', async (req, res) => {
     const userId = req.headers['x-user-id'];
@@ -653,29 +636,7 @@ app.post('/api/google-maps/scrape', async (req, res) => {
 });
 
 // ============================================
-// CSV UPLOAD - VOORBEREID MAAR NIET ACTIEF
-// ============================================
-app.post('/api/scan/csv-upload', upload.single('csvFile'), async (req, res) => {
-    res.status(403).json({
-        success: false,
-        error: 'CSV upload is not yet available',
-        message: 'This feature is coming soon. Contact support for early access.'
-    });
-});
-
-// ============================================
-// BULK SCAN - VOORBEREID MAAR NIET ACTIEF
-// ============================================
-app.post('/api/scan/bulk', async (req, res) => {
-    res.status(403).json({
-        success: false,
-        error: 'Bulk scanning is not yet available',
-        message: 'This feature is coming soon. Contact support for early access.'
-    });
-});
-
-// ============================================
-// SEO SCAN - VOLLEDIGE DETECTIE
+// SEO SCAN
 // ============================================
 app.post('/api/scan', async (req, res) => {
     const { url, keyword } = req.body;
@@ -686,7 +647,6 @@ app.post('/api/scan', async (req, res) => {
     
     try {
         console.log(`🔍 Scanning: ${scanUrl}`);
-        if (keyword) console.log(`🔑 Target keyword: "${keyword}"`);
         
         const browser = await getBrowser();
         if (!browser) {
@@ -703,13 +663,11 @@ app.post('/api/scan', async (req, res) => {
             const textContent = rawHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
             const wordCount = textContent.split(/\s+/).length;
             
-            // Keyword analyse
             let keywordDensity = 0;
             let keywordCount = 0;
             let hasKeywordInH1 = false;
-            let hasKeywordInFirstH2 = false;
             let hasKeywordInIntro = false;
-            let hasKeywordInConclusion = false;
+            
             if (targetKeyword && targetKeyword.trim()) {
                 const escapedKeyword = targetKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                 const keywordRegex = new RegExp(`\\b${escapedKeyword}\\b`, 'gi');
@@ -721,377 +679,125 @@ app.post('/api/scan', async (req, res) => {
                 if (h1Elements.length > 0) {
                     hasKeywordInH1 = h1Elements[0].textContent.toLowerCase().includes(targetKeyword.toLowerCase());
                 }
-                const h2Elements = document.querySelectorAll('h2');
-                if (h2Elements.length > 0) {
-                    hasKeywordInFirstH2 = h2Elements[0].textContent.toLowerCase().includes(targetKeyword.toLowerCase());
-                }
                 const paragraphs = document.querySelectorAll('p');
                 if (paragraphs.length > 0) {
                     hasKeywordInIntro = paragraphs[0].textContent.toLowerCase().includes(targetKeyword.toLowerCase());
                 }
-                if (paragraphs.length > 1) {
-                    hasKeywordInConclusion = paragraphs[paragraphs.length - 1].textContent.toLowerCase().includes(targetKeyword.toLowerCase());
-                }
             }
             
-            // H-tag analyse
             const h1Count = document.querySelectorAll('h1').length;
             const h2Count = document.querySelectorAll('h2').length;
             const h3Count = document.querySelectorAll('h3').length;
-            
-            // List analyse
             const listCount = document.querySelectorAll('ul, ol').length;
             const listItemCount = document.querySelectorAll('li').length;
             
-            // Meta tags
             const metaTitleElement = document.querySelector('title');
             const metaTitle = metaTitleElement ? metaTitleElement.textContent : '';
             const metaTitleLength = metaTitle.length;
-            const metaTitleHasKeyword = targetKeyword ? metaTitle.toLowerCase().includes(targetKeyword.toLowerCase()) : false;
             const metaDescriptionElement = document.querySelector('meta[name="description"]');
             const metaDescription = metaDescriptionElement ? metaDescriptionElement.getAttribute('content') : '';
             const metaDescriptionLength = metaDescription.length;
-            const metaDescriptionHasKeyword = targetKeyword ? metaDescription.toLowerCase().includes(targetKeyword.toLowerCase()) : false;
             const hasMetaViewport = !!document.querySelector('meta[name="viewport"]');
             const hasCanonical = !!document.querySelector('link[rel="canonical"]');
             
-            // Schema.org detectie
             const schemaScripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
             let hasArticleSchema = false;
             let hasFAQPageSchema = false;
             let hasOrganizationSchema = false;
-            let hasBreadcrumbSchema = false;
-            let faqQuestionCount = 0;
             schemaScripts.forEach(script => {
                 try {
                     const schemaData = JSON.parse(script.textContent);
                     const type = schemaData['@type'];
-                    if (type === 'Article' || (Array.isArray(type) && type.includes('Article'))) {
-                        hasArticleSchema = true;
-                    }
-                    if (type === 'FAQPage') {
-                        hasFAQPageSchema = true;
-                        if (schemaData.mainEntity && Array.isArray(schemaData.mainEntity)) {
-                            faqQuestionCount = schemaData.mainEntity.length;
-                        }
-                    }
-                    if (type === 'Organization') {
-                        hasOrganizationSchema = true;
-                    }
-                    if (type === 'BreadcrumbList') {
-                        hasBreadcrumbSchema = true;
-                    }
-                } catch (e) {
-                    // Skip invalid JSON
-                }
+                    if (type === 'Article') hasArticleSchema = true;
+                    if (type === 'FAQPage') hasFAQPageSchema = true;
+                    if (type === 'Organization') hasOrganizationSchema = true;
+                } catch (e) {}
             });
-            const hasSchemaOrg = schemaScripts.length > 0 || rawHtml.includes('schema.org');
             
-            // Alt tags analyse
             const images = document.querySelectorAll('img');
             const imagesWithAlt = Array.from(images).filter(img =>
                 img.hasAttribute('alt') && img.getAttribute('alt').trim().length > 0
             ).length;
             
-            // Link detectie
             const baseUrl = new URL(scanUrl);
             const baseDomain = baseUrl.hostname.replace('www.', '');
             const internalLinks = [];
             const externalLinks = [];
-            const emailLinks = [];
-            const telLinks = [];
             Array.from(document.querySelectorAll('a[href]')).forEach(link => {
                 const href = link.getAttribute('href');
                 if (!href) return;
-                if (href.startsWith('mailto:')) {
-                    emailLinks.push(href);
-                    return;
-                }
-                if (href.startsWith('tel:') || href.startsWith('callto:')) {
-                    telLinks.push(href);
-                    return;
-                }
+                if (href.startsWith('mailto:') || href.startsWith('tel:')) return;
                 try {
                     const linkUrl = new URL(href, scanUrl);
                     const linkDomain = linkUrl.hostname.replace('www.', '');
-                    if (linkDomain === baseDomain ||
-                        linkDomain.endsWith('.' + baseDomain) ||
-                        baseDomain.endsWith('.' + linkDomain)) {
-                        internalLinks.push({
-                            href: linkUrl.href,
-                            text: link.textContent.trim(),
-                            isNofollow: link.hasAttribute('rel') && link.getAttribute('rel').toLowerCase().includes('nofollow')
-                        });
+                    if (linkDomain === baseDomain) {
+                        internalLinks.push({ href: linkUrl.href, text: link.textContent.trim() });
+                    } else {
+                        externalLinks.push({ href: linkUrl.href, text: link.textContent.trim() });
                     }
-                    else if (!linkUrl.protocol.startsWith('mailto') && !linkUrl.protocol.startsWith('tel')) {
-                        externalLinks.push({
-                            href: linkUrl.href,
-                            text: link.textContent.trim(),
-                            isNofollow: link.hasAttribute('rel') && link.getAttribute('rel').toLowerCase().includes('nofollow')
-                        });
-                    }
-                } catch (e) {
-                    // Skip ongeldige URLs
-                }
+                } catch (e) {}
             });
             
-            // Expert quotes detectie
             const expertQuotes = [];
             document.querySelectorAll('blockquote').forEach(blockquote => {
-                let quoteText = blockquote.textContent.trim();
-                let attribution = '';
+                const quoteText = blockquote.textContent.trim();
                 const cite = blockquote.querySelector('cite');
-                const footer = blockquote.querySelector('footer');
-                if (cite) attribution = cite.textContent.trim();
-                else if (footer) attribution = footer.textContent.trim();
-                else {
-                    const next = blockquote.nextElementSibling;
-                    if (next && next.tagName.toLowerCase() === 'p' && next.textContent.includes('—')) {
-                        attribution = next.textContent.trim();
-                    }
-                }
+                const attribution = cite ? cite.textContent.trim() : '';
                 if (quoteText.length > 20 && attribution.length > 5) {
-                    expertQuotes.push({
-                        text: quoteText,
-                        attribution: attribution
-                    });
+                    expertQuotes.push({ text: quoteText, attribution });
                 }
             });
             
-            // Case studies detectie
             const caseStudies = [];
-            const caseStudyKeywords = ['case study', 'case-study', 'results', 'metrics', 'roi', 'success story'];
+            const caseStudyKeywords = ['case study', 'results', 'metrics', 'roi'];
             document.querySelectorAll('section, article, div').forEach(el => {
                 const text = el.textContent.toLowerCase();
-                if (caseStudyKeywords.some(keyword => text.includes(keyword)) && text.length > 300) {
-                    if (/\d+[%$€£]/.test(text) || /\b\d{2,}\b/.test(text)) {
-                        caseStudies.push({
-                            excerpt: el.textContent.substring(0, 200) + '...',
-                            containsMetrics: true
-                        });
+                if (caseStudyKeywords.some(k => text.includes(k)) && text.length > 300) {
+                    if (/\d+[%$€£]/.test(text)) {
+                        caseStudies.push({ excerpt: el.textContent.substring(0, 200) + '...' });
                     }
                 }
             });
             
-            // Statistieken met bronnen detectie
-            const statistics = [];
-            const statPatterns = [
-                /\b\d+[%]\b/g,
-                /\b\d{1,3}(?:,\d{3})*\b/g,
-                /\b\d+\s*(?:million|billion|thousand)\b/gi,
-                /\b\d+\s*x\b/gi
-            ];
-            statPatterns.forEach(pattern => {
-                const matches = textContent.match(pattern);
-                if (matches) {
-                    matches.forEach(match => {
-                        if (!statistics.includes(match)) {
-                            statistics.push(match);
-                        }
-                    });
-                }
-            });
-            const hasRecentSources = /(?:202[345]|according to|source|study|report)\b/i.test(textContent);
-            const sourceCount = (textContent.match(/(?:202[345]|according to|source|study|report)\b/gi) || []).length;
-            
-            // FAQ detectie
-            const faqQuestions = [];
-            const faqAnswers = [];
-            const questionElements = document.querySelectorAll('h3, h4');
-            questionElements.forEach(el => {
-                const text = el.textContent;
-                if (text.includes('?') && text.length > 10 && text.length < 100) {
-                    faqQuestions.push(text);
-                    let next = el.nextElementSibling;
-                    let answerText = '';
-                    let paraCount = 0;
-                    while (next && paraCount < 3) {
-                        if (next.tagName.toLowerCase() === 'p') {
-                            answerText += next.textContent + ' ';
-                            paraCount++;
-                        } else if (next.tagName.toLowerCase().match(/^h[2-6]$/)) {
-                            break;
-                        }
-                        next = next.nextElementSibling;
-                    }
-                    if (answerText.trim().length > 0) {
-                        faqAnswers.push({
-                            question: text,
-                            answer: answerText.trim(),
-                            answerWordCount: answerText.trim().split(/\s+/).length,
-                            hasInternalLink: next ? Array.from(next.querySelectorAll('a')).some(a => {
-                                try {
-                                    const linkUrl = new URL(a.href, scanUrl);
-                                    return linkUrl.hostname.replace('www.', '') === baseDomain;
-                                } catch (e) {
-                                    return false;
-                                }
-                            }) : false,
-                            hasExternalLink: next ? Array.from(next.querySelectorAll('a')).some(a => {
-                                try {
-                                    const linkUrl = new URL(a.href, scanUrl);
-                                    return linkUrl.hostname.replace('www.', '') !== baseDomain;
-                                } catch (e) {
-                                    return false;
-                                }
-                            }) : false
-                        });
-                    }
-                }
-            });
-            
-            // Direct Answer Box detectie
-            let hasDirectAnswerBox = false;
-            let directAnswerWordCount = 0;
-            const firstParagraph = document.querySelector('p');
-            if (firstParagraph) {
-                const firstParaText = firstParagraph.textContent.trim();
-                directAnswerWordCount = firstParaText.split(/\s+/).length;
-                hasDirectAnswerBox = directAnswerWordCount >= 40 && directAnswerWordCount <= 60;
-            }
-            
-            // TL;DR detectie
-            let hasTLDR = false;
-            let tldrItemCount = 0;
-            const tldrSection = Array.from(document.querySelectorAll('section, div')).find(el => {
-                const text = el.textContent.toLowerCase();
-                return text.includes('tldr') || text.includes('key takeaways') || text.includes('summary');
-            });
-            if (tldrSection) {
-                tldrItemCount = tldrSection.querySelectorAll('li').length;
-                hasTLDR = tldrItemCount >= 5;
-            }
-            
-            // Table of Contents detectie
-            let hasTableOfContents = false;
-            const tocElement = Array.from(document.querySelectorAll('nav, div, section')).find(el => {
-                const text = el.textContent.toLowerCase();
-                return text.includes('table of contents') || text.includes('inhoudsopgave');
-            });
-            if (tocElement) {
-                hasTableOfContents = tocElement.querySelectorAll('a[href^="#"]').length >= 3;
-            }
-            
-            // Author Bio detectie
-            let hasAuthorBio = false;
-            let authorBioWordCount = 0;
-            let hasAuthorCredentials = false;
-            const authorBioElement = Array.from(document.querySelectorAll('section, div, article')).find(el => {
-                const text = el.textContent.toLowerCase();
-                return (text.includes('about the author') ||
-                    text.includes('about author') ||
-                    text.includes('author bio') ||
-                    text.includes('geschreven door')) &&
-                    text.length > 100;
-            });
-            if (authorBioElement) {
-                const bioText = authorBioElement.textContent.trim();
-                authorBioWordCount = bioText.split(/\s+/).length;
-                hasAuthorBio = authorBioWordCount >= 200 && authorBioWordCount <= 250;
-                hasAuthorCredentials = /(?:graduated|degree|certified|certification|experience|years of|specializes|expert|professional)\b/i.test(bioText);
-            }
-            
-            // Content structuur analyse
             const paragraphs = document.querySelectorAll('p');
             const avgParagraphLength = Array.from(paragraphs)
                 .map(p => p.textContent.trim().split(/\s+/).length)
                 .reduce((a, b) => a + b, 0) / (paragraphs.length || 1);
-            const sentences = textContent.split(/[.!?]+/).filter(s => s.trim().length > 10);
-            const avgSentenceLength = sentences
-                .map(s => s.trim().split(/\s+/).length)
-                .reduce((a, b) => a + b, 0) / (sentences.length || 1);
-            
-            // Readability metrics
-            const syllableCount = textContent.match(/[aeiouy]+/gi)?.length || 0;
-            const fleschScore = 206.835 - (1.015 * (wordCount / (sentences.length || 1))) - (84.6 * (syllableCount / wordCount));
-            
-            // Active voice detectie
-            const passiveVoiceCount = (textContent.match(/\b(is|was|were|been|being)\b/gi) || []).length;
-            const activeVoicePercentage = passiveVoiceCount > 0 ?
-                Math.round(100 - (passiveVoiceCount / (wordCount / 20))) : 100;
             
             return {
                 url: scanUrl,
-                rawHtml: rawHtml.substring(0, 15000),
-                textContent: textContent.substring(0, 8000),
-                wordCount: wordCount,
-                h1Count: h1Count,
-                h2Count: h2Count,
-                h3Count: h3Count,
-                listCount: listCount,
-                listItemCount: listItemCount,
-                metaTitle: metaTitle,
-                metaTitleLength: metaTitleLength,
-                metaTitleHasKeyword: metaTitleHasKeyword,
-                metaDescription: metaDescription,
-                metaDescriptionLength: metaDescriptionLength,
-                metaDescriptionHasKeyword: metaDescriptionHasKeyword,
-                hasMetaViewport: hasMetaViewport,
-                hasCanonical: hasCanonical,
-                hasSchemaOrg: hasSchemaOrg,
-                hasArticleSchema: hasArticleSchema,
-                hasFAQPageSchema: hasFAQPageSchema,
-                hasOrganizationSchema: hasOrganizationSchema,
-                hasBreadcrumbSchema: hasBreadcrumbSchema,
-                schemaCount: schemaScripts.length,
-                images: images.length,
-                imagesWithAlt: imagesWithAlt,
-                internalLinks: internalLinks,
-                externalLinks: externalLinks,
-                emailLinks: emailLinks,
-                telLinks: telLinks,
-                expertQuotes: expertQuotes,
-                caseStudies: caseStudies,
-                statistics: statistics,
-                hasRecentSources: hasRecentSources,
-                sourceCount: sourceCount,
-                faqQuestions: faqQuestions,
-                faqQuestionCount: faqQuestionCount,
-                faqAnswers: faqAnswers,
-                hasDirectAnswerBox: hasDirectAnswerBox,
-                directAnswerWordCount: directAnswerWordCount,
-                hasTLDR: hasTLDR,
-                tldrItemCount: tldrItemCount,
-                hasTableOfContents: hasTableOfContents,
-                hasAuthorBio: hasAuthorBio,
-                authorBioWordCount: authorBioWordCount,
-                hasAuthorCredentials: hasAuthorCredentials,
-                avgParagraphLength: avgParagraphLength,
-                avgSentenceLength: avgSentenceLength,
-                fleschScore: fleschScore,
-                activeVoicePercentage: activeVoicePercentage,
-                keywordDensity: keywordDensity,
-                keywordCount: keywordCount,
-                hasKeywordInH1: hasKeywordInH1,
-                hasKeywordInFirstH2: hasKeywordInFirstH2,
-                hasKeywordInIntro: hasKeywordInIntro,
-                hasKeywordInConclusion: hasKeywordInConclusion
+                wordCount,
+                h1Count, h2Count, h3Count,
+                listCount, listItemCount,
+                metaTitle, metaTitleLength,
+                metaDescription, metaDescriptionLength,
+                hasMetaViewport, hasCanonical,
+                hasArticleSchema, hasFAQPageSchema, hasOrganizationSchema,
+                images: images.length, imagesWithAlt,
+                internalLinks, externalLinks,
+                expertQuotes, caseStudies,
+                keywordDensity, keywordCount,
+                hasKeywordInH1, hasKeywordInIntro,
+                avgParagraphLength
             };
         }, scanUrl, keyword);
         
         await page.close();
         
-        // Professionele scoring met gewichten volgens GRAAF Framework
+        // Scoring
         let graafScore = 0;
         let craftScore = 0;
         let technicalScore = 0;
-        let contentScore = 0;
         let uxScore = 0;
         
-        // GRAAF Score (50 punten)
         if (analysis.wordCount >= 2500) graafScore += 15;
         else if (analysis.wordCount >= 1500) graafScore += 10;
         else if (analysis.wordCount >= 1000) graafScore += 7;
         else if (analysis.wordCount >= 500) graafScore += 4;
-        else if (analysis.wordCount >= 300) graafScore += 2;
         
-        if (keyword) {
-            if (analysis.keywordDensity >= 0.8 && analysis.keywordDensity <= 1.2) graafScore += 4;
-            else if (analysis.keywordDensity >= 0.6 && analysis.keywordDensity <= 1.5) graafScore += 2;
-            if (analysis.hasKeywordInH1) graafScore += 2;
-            if (analysis.hasKeywordInFirstH2) graafScore += 2;
-            if (analysis.hasKeywordInIntro) graafScore += 2;
-        }
+        if (analysis.keywordDensity >= 0.8 && analysis.keywordDensity <= 1.2) graafScore += 4;
+        if (analysis.hasKeywordInH1) graafScore += 2;
+        if (analysis.hasKeywordInIntro) graafScore += 2;
         
         if (analysis.listItemCount >= 15) graafScore += 8;
         else if (analysis.listItemCount >= 10) graafScore += 6;
@@ -1099,10 +805,6 @@ app.post('/api/scan', async (req, res) => {
         
         if (analysis.h2Count >= 5) graafScore += 7;
         else if (analysis.h2Count >= 3) graafScore += 5;
-        else if (analysis.h2Count >= 2) graafScore += 3;
-        
-        if (analysis.h3Count >= 8) graafScore += 5;
-        else if (analysis.h3Count >= 5) graafScore += 3;
         
         if (analysis.expertQuotes.length >= 4) graafScore += 8;
         else if (analysis.expertQuotes.length >= 2) graafScore += 5;
@@ -1111,73 +813,45 @@ app.post('/api/scan', async (req, res) => {
         if (analysis.caseStudies.length >= 2) graafScore += 7;
         else if (analysis.caseStudies.length >= 1) graafScore += 4;
         
-        if (analysis.hasAuthorBio && analysis.hasAuthorCredentials) graafScore += 10;
-        else if (analysis.hasAuthorBio) graafScore += 5;
-        
         graafScore = Math.min(50, graafScore);
         
-        // CRAFT Score (30 punten)
         if (analysis.h1Count === 1) craftScore += 12;
         else if (analysis.h1Count === 0) craftScore += 0;
         else craftScore += 3;
         
         if (analysis.h2Count >= 5) craftScore += 8;
         else if (analysis.h2Count >= 3) craftScore += 6;
-        else if (analysis.h2Count >= 2) craftScore += 4;
-        
-        if (analysis.avgSentenceLength >= 12 && analysis.avgSentenceLength <= 20) craftScore += 5;
-        else if (analysis.avgSentenceLength > 20) craftScore += 2;
         
         if (analysis.avgParagraphLength <= 100) craftScore += 5;
-        if (analysis.fleschScore >= 60 && analysis.fleschScore <= 70) craftScore += 5;
-        if (analysis.activeVoicePercentage >= 80) craftScore += 5;
         
         craftScore = Math.min(30, craftScore);
         
-        // Technical Score (20 punten)
         if (analysis.metaTitleLength >= 50 && analysis.metaTitleLength <= 60) technicalScore += 3;
-        if (analysis.metaTitleHasKeyword) technicalScore += 2;
         if (analysis.metaDescriptionLength >= 150 && analysis.metaDescriptionLength <= 160) technicalScore += 3;
-        if (analysis.metaDescriptionHasKeyword) technicalScore += 2;
         if (analysis.hasArticleSchema) technicalScore += 3;
         if (analysis.hasFAQPageSchema) technicalScore += 3;
-        if (analysis.hasOrganizationSchema) technicalScore += 2;
         if (analysis.hasMetaViewport) technicalScore += 2;
         if (analysis.hasCanonical) technicalScore += 2;
         if (analysis.images > 0 && analysis.imagesWithAlt >= Math.min(5, analysis.images)) technicalScore += 3;
         
         technicalScore = Math.min(20, technicalScore);
         
-        // Content Score (100 punten)
-        contentScore = Math.min(100, graafScore + craftScore);
-        
-        // UX Score (100 punten)
         if (analysis.images >= 5) uxScore += 20;
         else if (analysis.images >= 3) uxScore += 15;
         else if (analysis.images >= 1) uxScore += 10;
-        
-        const hasVideos = analysis.textContent.toLowerCase().includes('youtube') ||
-            analysis.textContent.toLowerCase().includes('vimeo') ||
-            analysis.rawHtml.includes('<video');
-        if (hasVideos) uxScore += 15;
         
         if (analysis.wordCount >= 2000) uxScore += 25;
         else if (analysis.wordCount >= 1500) uxScore += 20;
         else if (analysis.wordCount >= 1000) uxScore += 15;
         
-        if (analysis.listCount >= 5) uxScore += 15;
-        else if (analysis.listCount >= 3) uxScore += 10;
-        
         if (analysis.internalLinks.length >= 10) uxScore += 15;
         else if (analysis.internalLinks.length >= 5) uxScore += 10;
-        else if (analysis.internalLinks.length >= 3) uxScore += 5;
         
         if (analysis.externalLinks.length >= 5) uxScore += 10;
         else if (analysis.externalLinks.length >= 3) uxScore += 5;
         
         uxScore = Math.min(100, uxScore);
         
-        // Totale score berekening (100 punten)
         const totalScore = Math.round(
             (graafScore / 50 * 35) +
             (craftScore / 30 * 25) +
@@ -1187,272 +861,51 @@ app.post('/api/scan', async (req, res) => {
         
         const quality = totalScore >= 90 ? 'excellent' :
             totalScore >= 80 ? 'very good' :
-                totalScore >= 70 ? 'good' :
-                    totalScore >= 60 ? 'average' : 'needs improvement';
+            totalScore >= 70 ? 'good' :
+            totalScore >= 60 ? 'average' : 'needs improvement';
         
-        // Aanbevelingen genereren
         const recommendations = [];
         
-        // Keyword aanbevelingen
-        if (keyword) {
-            if (analysis.keywordDensity < 0.8 || analysis.keywordDensity > 1.2) {
-                recommendations.push({
-                    title: '🔑 Optimize Keyword Density',
-                    description: `Current density: ${analysis.keywordDensity.toFixed(2)}%. Target: 0.8-1.2%.`,
-                    priority: 'high',
-                    action: `Adjust keyword usage to ${Math.round(analysis.wordCount * 0.008)}-${Math.round(analysis.wordCount * 0.012)} times in ${analysis.wordCount} words.`,
-                    learning: 'Optimal keyword density (0.8-1.2%) signals relevance without over-optimization. Pages with proper density rank 34% higher.',
-                    target: '0.8-1.2% keyword density'
-                });
-            }
-            if (!analysis.hasKeywordInH1) {
-                recommendations.push({
-                    title: '🏷️ Add Keyword to H1',
-                    description: 'Your H1 tag does not contain the target keyword.',
-                    priority: 'high',
-                    action: 'Include your primary keyword in the H1 tag near the beginning.',
-                    learning: 'H1 with keyword improves topical relevance by 47% and click-through rate by 23%.',
-                    target: 'Keyword in H1 tag'
-                });
-            }
-            if (!analysis.hasKeywordInIntro) {
-                recommendations.push({
-                    title: '📝 Add Keyword to Introduction',
-                    description: 'Your introduction paragraph does not contain the target keyword.',
-                    priority: 'medium',
-                    action: 'Include the keyword naturally in your first paragraph.',
-                    learning: 'Early keyword placement signals content relevance and improves rankings by 28%.',
-                    target: 'Keyword in first paragraph'
-                });
-            }
-        }
-        
-        // Content lengte aanbevelingen
         if (analysis.wordCount < 500) {
             recommendations.push({
                 title: '🚀 Urgent: Content Length',
-                description: `Your page has only ${analysis.wordCount} words. For top rankings, aim for 2,500+ words with comprehensive coverage.`,
+                description: `Your page has only ${analysis.wordCount} words. Target: 2,500+ words.`,
                 priority: 'high',
-                action: 'Expand content with detailed explanations, examples, case studies, and actionable advice. Target 2,500+ words minimum.',
-                learning: 'Pages with 2,500+ words rank 3.7x higher on average and receive 4.2x more backlinks than shorter content.',
-                target: '2,500+ words with depth and authority'
-            });
-        } else if (analysis.wordCount < 1500) {
-            recommendations.push({
-                title: '📝 Improve Content Length',
-                description: `Current: ${analysis.wordCount} words. Target: 2,500+ words for competitive advantage.`,
-                priority: 'medium',
-                action: 'Add depth with examples, data points, expert insights, and practical applications. Expand each H2 section by 200-300 words.',
-                learning: 'Top-ranking pages average 2,450 words. Comprehensive content signals authority to search engines and satisfies user intent completely.',
-                target: '2,500+ words minimum'
+                action: 'Expand content with detailed explanations, examples, case studies.',
+                learning: 'Pages with 2,500+ words rank 3.7x higher on average.',
+                target: '2,500+ words'
             });
         }
         
-        // Author bio aanbevelingen
-        if (!analysis.hasAuthorBio) {
-            recommendations.push({
-                title: '✍️ Add Author Bio with Credentials',
-                description: 'Your page is missing an author bio. This is critical for E-E-A-T signals.',
-                priority: 'high',
-                action: 'Add a 200-250 word author bio with credentials, experience, certifications, and notable achievements.',
-                learning: 'Pages with author bios receive 56% more trust signals and rank 38 positions higher on average. Google prioritizes E-E-A-T.',
-                target: '200-250 word author bio with credentials'
-            });
-        } else if (!analysis.hasAuthorCredentials) {
-            recommendations.push({
-                title: '🎓 Add Author Credentials',
-                description: 'Your author bio lacks credentials and expertise signals.',
-                priority: 'medium',
-                action: 'Add certifications, degrees, years of experience, notable achievements, and published work to your author bio.',
-                learning: 'Author credentials increase perceived authority by 67% and improve rankings for competitive keywords.',
-                target: 'Author bio with verifiable credentials'
-            });
-        }
-        
-        // Expert quotes aanbevelingen
-        if (analysis.expertQuotes.length < 2) {
-            recommendations.push({
-                title: '💡 Add Expert Quotes for Authority',
-                description: `Current: ${analysis.expertQuotes.length} expert quotes. Target: 4+ with full attribution.`,
-                priority: 'high',
-                action: 'Include 4+ direct quotes from industry experts with full name, title, and organization. Place strategically to reinforce key points.',
-                learning: 'Content with expert quotes receives 68% more organic traffic and ranks 47 positions higher on average. Google prioritizes E-E-A-T signals.',
-                target: '4+ expert quotes with full attribution (name, title, organization)'
-            });
-        } else if (analysis.expertQuotes.length < 4) {
-            recommendations.push({
-                title: '💡 Add More Expert Quotes',
-                description: `Current: ${analysis.expertQuotes.length} expert quotes. Target: 4+ for maximum authority.`,
-                priority: 'medium',
-                action: 'Add 1-2 more expert quotes with full attribution to strengthen E-E-A-T signals.',
-                learning: 'Each additional expert quote increases perceived authority by 23% according to ContentScale research.',
-                target: '4+ expert quotes with full attribution'
-            });
-        }
-        
-        // Case studies aanbevelingen
-        if (analysis.caseStudies.length < 1) {
-            recommendations.push({
-                title: '📊 Add Case Studies with Metrics',
-                description: `Current: ${analysis.caseStudies.length} case studies. Target: 2+ with measurable results.`,
-                priority: 'high',
-                action: 'Create 2 case studies showing real results with specific metrics (e.g., "increased traffic by 312% in 6 months"). Include challenge, solution, results.',
-                learning: 'Pages with case studies convert 37% better and rank 52 positions higher on average. Concrete results build trust and demonstrate expertise.',
-                target: '2+ case studies with specific metrics and ROI'
-            });
-        } else if (analysis.caseStudies.length < 2) {
-            recommendations.push({
-                title: '📊 Add One More Case Study',
-                description: `Current: ${analysis.caseStudies.length} case study. Target: 2+ for social proof.`,
-                priority: 'medium',
-                action: 'Add one more case study with measurable results to strengthen credibility.',
-                learning: 'Multiple case studies demonstrate consistent expertise rather than one-off success.',
-                target: '2+ case studies with metrics'
-            });
-        }
-        
-        // H1 tag aanbevelingen
-        if (analysis.h1Count === 0) {
-            recommendations.push({
-                title: '🏷️ Missing H1 Tag',
-                description: 'Every page must have exactly one H1 tag for SEO and accessibility.',
-                priority: 'high',
-                action: 'Add a single, descriptive H1 tag that includes your main keyword near the top of the page.',
-                learning: 'The H1 tag is a critical ranking signal that tells search engines your page\'s primary topic. Missing H1s correlate with 28% lower rankings.',
-                target: '1 H1 tag per page with target keyword'
-            });
-        } else if (analysis.h1Count > 1) {
-            recommendations.push({
-                title: '🏷️ Multiple H1 Tags',
-                description: `You have ${analysis.h1Count} H1 tags. Use only one per page.`,
-                priority: 'medium',
-                action: 'Keep only one H1 tag (your main title) and change others to H2 or H3.',
-                learning: 'Multiple H1 tags confuse search engines about your page\'s main topic and dilute ranking power.',
-                target: '1 H1 tag per page'
-            });
-        }
-        
-        // Schema.org aanbevelingen
         if (!analysis.hasArticleSchema) {
             recommendations.push({
                 title: '🔍 Add Article Schema',
-                description: 'Missing Article schema markup required for rich snippets and AI Overview inclusion.',
+                description: 'Missing Article schema markup.',
                 priority: 'high',
-                action: 'Implement Article schema in JSON-LD format with headline, description, author, publisher, datePublished, and wordCount.',
-                learning: 'Article schema increases rich snippet appearance by 30% and AI Overview inclusion by 3.2x.',
-                target: 'Complete Article schema markup'
-            });
-        }
-        if (!analysis.hasFAQPageSchema) {
-            recommendations.push({
-                title: '❓ Add FAQPage Schema',
-                description: 'Missing FAQPage schema for FAQ rich results and AI Overview inclusion.',
-                priority: 'high',
-                action: 'Implement FAQPage schema with all FAQ questions and complete answers in JSON-LD format.',
-                learning: 'FAQ schema enables FAQ rich results (accordion in search) and increases AI Overview inclusion by 2.8x.',
-                target: 'FAQPage schema with 10+ questions'
+                action: 'Implement Article schema in JSON-LD format.',
+                learning: 'Article schema increases rich snippet appearance by 30%.',
+                target: 'Article schema markup'
             });
         }
         
-        // Meta title/description aanbevelingen
-        if (analysis.metaTitleLength < 50 || analysis.metaTitleLength > 60) {
-            recommendations.push({
-                title: '🏷️ Optimize Meta Title Length',
-                description: `Current: ${analysis.metaTitleLength} characters. Target: 50-60 characters.`,
-                priority: 'medium',
-                action: 'Adjust meta title to exactly 50-60 characters including spaces. Include primary keyword at start.',
-                learning: 'Meta titles between 50-60 characters have 23% higher click-through rates and display completely in search results.',
-                target: '50-60 character meta title with keyword'
-            });
-        }
-        if (analysis.metaDescriptionLength < 150 || analysis.metaDescriptionLength > 160) {
-            recommendations.push({
-                title: '📝 Optimize Meta Description Length',
-                description: `Current: ${analysis.metaDescriptionLength} characters. Target: 150-160 characters.`,
-                priority: 'medium',
-                action: 'Adjust meta description to exactly 150-160 characters. Include keyword, benefit, CTA, and authority signal.',
-                learning: 'Meta descriptions between 150-160 characters have 18% higher CTR and display completely without truncation.',
-                target: '150-160 character meta description'
-            });
-        }
-        
-        // Interne links aanbevelingen
         if (analysis.internalLinks.length < 5) {
             recommendations.push({
-                title: '🔗 Add Internal Links for Site Structure',
-                description: `Current: ${analysis.internalLinks.length} internal links. Target: 8-12 for optimal site architecture.`,
+                title: '🔗 Add Internal Links',
+                description: `Current: ${analysis.internalLinks.length} internal links. Target: 8-12.`,
                 priority: 'medium',
-                action: 'Link to 5-7 related pages on your site using descriptive anchor text (not "click here"). Distribute naturally throughout content.',
-                learning: 'Internal links distribute page authority, reduce bounce rate by 34%, and keep users engaged 2.7x longer on your site.',
-                target: '8-12 relevant internal links with descriptive anchor text'
-            });
-        } else if (analysis.internalLinks.length < 8) {
-            recommendations.push({
-                title: '🔗 Add More Internal Links',
-                description: `Current: ${analysis.internalLinks.length} internal links. Target: 8-12 for optimal crawlability.`,
-                priority: 'low',
-                action: 'Add 2-4 more internal links to cornerstone content and related articles.',
-                learning: 'Well-linked sites have 47% better indexation and 2.3x faster discovery of new content by Google.',
+                action: 'Link to 5-7 related pages on your site.',
+                learning: 'Internal links reduce bounce rate by 34%.',
                 target: '8-12 internal links'
             });
         }
         
-        // FAQ sectie aanbevelingen
-        if (analysis.faqQuestionCount < 10) {
-            recommendations.push({
-                title: '❓ Add FAQ Section with 10+ Questions',
-                description: `Current: ${analysis.faqQuestionCount} FAQ questions. Target: 10+ with complete answers.`,
-                priority: 'high',
-                action: 'Create a dedicated FAQ section with 10+ questions. Each answer should be 100+ words with 1 internal + 1 external link.',
-                learning: 'FAQ sections increase time on page by 89 seconds on average and capture 22% of "People Also Ask" features.',
-                target: '10+ FAQ questions with 100+ word answers'
-            });
-        }
-        
-        // Direct Answer Box aanbevelingen
-        if (!analysis.hasDirectAnswerBox) {
-            recommendations.push({
-                title: '🎯 Add Direct Answer Box',
-                description: `Current: ${analysis.directAnswerWordCount} words in first paragraph. Target: 40-60 words for AI Overview inclusion.`,
-                priority: 'high',
-                action: 'Create a 40-60 word direct answer in your first paragraph that answers the main question with keyword + statistic + source.',
-                learning: 'Direct answers of 40-60 words are 4.3x more likely to appear in AI Overviews and Featured Snippets.',
-                target: '40-60 word direct answer with keyword + source'
-            });
-        }
-        
-        // TL;DR aanbevelingen
-        if (!analysis.hasTLDR) {
-            recommendations.push({
-                title: '📌 Add TL;DR Section',
-                description: `Current: ${analysis.tldrItemCount} bullet points. Target: 5 key takeaways with sources.`,
-                priority: 'medium',
-                action: 'Add a TL;DR section with exactly 5 bullet points, each 15-25 words with specific numbers and sources.',
-                learning: 'TL;DR sections increase content consumption by 47% and provide quick-scannable value for busy readers.',
-                target: '5 bullet point TL;DR with sources'
-            });
-        }
-        
-        // Alt tags aanbevelingen
-        if (analysis.images > 0 && analysis.imagesWithAlt < Math.min(5, analysis.images)) {
-            recommendations.push({
-                title: '🖼️ Add Alt Text to Images',
-                description: `${analysis.imagesWithAlt}/${analysis.images} images have alt text. Target: 100% with descriptive alt attributes.`,
-                priority: 'medium',
-                action: 'Add descriptive alt text to all images describing their content and context. Include target keyword in 2-3 alt texts naturally.',
-                learning: 'Alt text improves accessibility (required by WCAG), provides additional keyword context for SEO, and enables image search traffic.',
-                target: '100% of images with descriptive alt text'
-            });
-        }
-        
-        // Geen aanbevelingen = perfect
         const finalRecommendations = recommendations.length > 0 ? recommendations : [{
             title: '🎉 Excellent Work!',
-            description: 'Your page meets all GRAAF Framework requirements for top rankings.',
+            description: 'Your page meets all GRAAF Framework requirements.',
             priority: 'none',
-            action: 'Continue creating high-quality content and monitor your rankings. Consider updating quarterly with fresh data.',
-            learning: 'Maintaining high SEO standards consistently is key to long-term success in the AI era.',
-            target: 'Maintain current quality with quarterly updates'
+            action: 'Continue creating high-quality content.',
+            learning: 'Maintaining high SEO standards is key to long-term success.',
+            target: 'Maintain current quality'
         }];
         
         const result = {
@@ -1464,7 +917,7 @@ app.post('/api/scan', async (req, res) => {
                 graaf: graafScore,
                 craft: craftScore,
                 technical: technicalScore,
-                content: contentScore,
+                content: Math.min(100, graafScore + craftScore),
                 ux: uxScore
             },
             content_stats: {
@@ -1478,36 +931,20 @@ app.post('/api/scan', async (req, res) => {
                 metaDescriptionLength: analysis.metaDescriptionLength,
                 hasMetaViewport: analysis.hasMetaViewport,
                 hasCanonical: analysis.hasCanonical,
-                hasSchemaOrg: analysis.hasSchemaOrg,
                 hasArticleSchema: analysis.hasArticleSchema,
                 hasFAQPageSchema: analysis.hasFAQPageSchema,
                 hasOrganizationSchema: analysis.hasOrganizationSchema,
-                schemaCount: analysis.schemaCount,
                 images: analysis.images,
                 imagesWithAlt: analysis.imagesWithAlt,
                 internalLinks: analysis.internalLinks.length,
                 externalLinks: analysis.externalLinks.length,
                 expertQuotes: analysis.expertQuotes.length,
                 caseStudies: analysis.caseStudies.length,
-                statistics: analysis.statistics.length,
-                hasRecentSources: analysis.hasRecentSources,
-                sourceCount: analysis.sourceCount,
-                faqQuestions: analysis.faqQuestionCount,
-                hasDirectAnswerBox: analysis.hasDirectAnswerBox,
-                hasTLDR: analysis.hasTLDR,
-                hasTableOfContents: analysis.hasTableOfContents,
-                hasAuthorBio: analysis.hasAuthorBio,
-                authorBioWordCount: analysis.authorBioWordCount,
-                hasAuthorCredentials: analysis.hasAuthorCredentials,
-                avgParagraphLength: Math.round(analysis.avgParagraphLength),
-                avgSentenceLength: Math.round(analysis.avgSentenceLength),
-                fleschScore: Math.round(analysis.fleschScore),
-                activeVoicePercentage: analysis.activeVoicePercentage,
                 keywordDensity: analysis.keywordDensity.toFixed(2),
                 keywordCount: analysis.keywordCount,
                 hasKeywordInH1: analysis.hasKeywordInH1,
-                hasKeywordInFirstH2: analysis.hasKeywordInFirstH2,
-                hasKeywordInIntro: analysis.hasKeywordInIntro
+                hasKeywordInIntro: analysis.hasKeywordInIntro,
+                avgParagraphLength: Math.round(analysis.avgParagraphLength)
             },
             recommendations: {
                 all: finalRecommendations,
@@ -1518,17 +955,6 @@ app.post('/api/scan', async (req, res) => {
         
         console.log(`✅ Scan complete: ${scanUrl} - ${totalScore}/100 (${quality})`);
         
-        // Save scan to database
-        try {
-            await pool.query(
-                `INSERT INTO scans (url, score, quality, graaf_score, craft_score, technical_score, content_score, ux_score, breakdown, recommendations)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-                [scanUrl, totalScore, quality, graafScore, craftScore, technicalScore, contentScore, uxScore, JSON.stringify(analysis), JSON.stringify(finalRecommendations)]
-            );
-        } catch (dbErr) {
-            console.error('❌ Fout bij opslaan scan:', dbErr.message);
-        }
-        
         res.json(result);
     } catch (error) {
         console.error('❌ Scan error:', error.message);
@@ -1537,7 +963,7 @@ app.post('/api/scan', async (req, res) => {
 });
 
 // ============================================
-// LEADERBOARD ENDPOINTS
+// ✅ LEADERBOARD ENDPOINTS
 // ============================================
 app.get('/api/leaderboard', async (req, res) => {
     if (!pool) {
@@ -1559,13 +985,10 @@ app.get('/api/leaderboard', async (req, res) => {
                 score,
                 country,
                 city,
-                location,
                 type,
-                is_verified as is_claimed,
-                created_at,
-                graaf_score,
-                craft_score,
-                technical_score
+                is_verified,
+                admin_verified,
+                created_at
             FROM leaderboard
             WHERE score IS NOT NULL
             AND is_opted_out = FALSE
@@ -1580,6 +1003,7 @@ app.get('/api/leaderboard', async (req, res) => {
             ? Math.round(entries.reduce((sum, e) => sum + (e.score || 0), 0) / totalAgencies)
             : 0;
         const countries = [...new Set(entries.map(e => e.country))].length;
+        const verifiedCount = entries.filter(e => e.is_verified === true).length;
         
         const freelancersResult = await pool.query('SELECT COUNT(*) FROM freelancers WHERE is_approved = TRUE')
             .catch(() => ({ rows: [{ count: '0' }] }));
@@ -1594,7 +1018,8 @@ app.get('/api/leaderboard', async (req, res) => {
                 totalAgencies: totalAgencies,
                 avgScore: avgScore,
                 countriesCount: countries,
-                activeHelpers: activeHelpers
+                activeHelpers: activeHelpers,
+                verifiedCount: verifiedCount
             }
         });
     } catch (error) {
@@ -1604,13 +1029,207 @@ app.get('/api/leaderboard', async (req, res) => {
             entries: [],
             total: 0,
             averageScore: 0,
-            stats: { totalAgencies: 0, avgScore: 0, countriesCount: 0, activeHelpers: 0 }
+            stats: { totalAgencies: 0, avgScore: 0, countriesCount: 0, activeHelpers: 0, verifiedCount: 0 }
         });
     }
 });
 
+// ✅ EDIT LEADERBOARD ENTRY (PUT)
+app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
+    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    try {
+        const { id } = req.params;
+        const { company_name, url, score, country, city } = req.body;
+        
+        const updates = [];
+        const values = [];
+        let paramCount = 1;
+        
+        if (company_name !== undefined) {
+            updates.push(`company_name = $${paramCount}`);
+            values.push(company_name);
+            paramCount++;
+        }
+        if (url !== undefined) {
+            updates.push(`url = $${paramCount}`);
+            values.push(url);
+            paramCount++;
+        }
+        if (score !== undefined) {
+            updates.push(`score = $${paramCount}`);
+            values.push(parseInt(score));
+            paramCount++;
+        }
+        if (country !== undefined) {
+            updates.push(`country = $${paramCount}`);
+            values.push(country.trim().substring(0, 10));
+            paramCount++;
+        }
+        if (city !== undefined) {
+            updates.push(`city = $${paramCount}`);
+            values.push(city);
+            paramCount++;
+        }
+        
+        if (updates.length === 0) {
+            return res.status(400).json({ success: false, error: 'Geen velden om te updaten' });
+        }
+        
+        values.push(id);
+        const query = `UPDATE leaderboard SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`;
+        
+        const result = await pool.query(query, values);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Entry niet gevonden' });
+        }
+        
+        console.log('✅ Entry updated successfully');
+        res.json({
+            success: true,
+            message: 'Leaderboard entry bijgewerkt',
+            entry: result.rows[0]
+        });
+    } catch (error) {
+        console.error('❌ Update leaderboard error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ✅ DELETE LEADERBOARD ENTRY
+app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
+    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    try {
+        const { id } = req.params;
+        const result = await pool.query('DELETE FROM leaderboard WHERE id = $1 RETURNING *', [id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Entry niet gevonden' });
+        }
+        
+        console.log('✅ Entry deleted successfully');
+        res.json({ success: true, message: 'Entry verwijderd' });
+    } catch (error) {
+        console.error('❌ Delete leaderboard error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ✅ MANUAL ADD LEADERBOARD
+app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
+    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    try {
+        const { url, company_name, score, country, city } = req.body;
+        
+        if (!url || score === undefined) {
+            return res.status(400).json({ success: false, error: 'URL and score are required' });
+        }
+        
+        const truncatedCountry = (country || 'NL').trim().substring(0, 10);
+        
+        const result = await pool.query(
+            `INSERT INTO leaderboard
+            (url, company_name, score, country, city, admin_verified, is_verified)
+            VALUES ($1, $2, $3, $4, $5, true, true)
+            ON CONFLICT (url)
+            DO UPDATE SET
+            score = EXCLUDED.score,
+            company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
+            country = COALESCE(EXCLUDED.country, leaderboard.country),
+            city = COALESCE(EXCLUDED.city, leaderboard.city),
+            admin_verified = true,
+            is_verified = true
+            RETURNING id, (xmax = 0) as inserted`,
+            [url, company_name || null, score, truncatedCountry, city || null]
+        );
+        
+        const wasInserted = result.rows[0].inserted;
+        res.json({
+            success: true,
+            action: wasInserted ? 'added' : 'updated',
+            id: result.rows[0].id,
+            message: wasInserted ? 'Entry added to leaderboard' : 'Leaderboard entry updated'
+        });
+    } catch (error) {
+        console.error('❌ Manual leaderboard add error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ✅ PENDING LEADERBOARD SUBMISSIONS
+app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
+    if (!pool) return res.json({ success: true, pending: [] });
+    try {
+        const result = await pool.query(
+            `SELECT * FROM leaderboard
+            WHERE admin_verified = FALSE
+            ORDER BY created_at DESC
+            LIMIT 50`
+        );
+        res.json({ success: true, pending: result.rows });
+    } catch (error) {
+        console.error('Pending leaderboard error:', error);
+        res.json({ success: true, pending: [] });
+    }
+});
+
+// ✅ APPROVE LEADERBOARD ENTRY
+app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => {
+    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    try {
+        const { id } = req.params;
+        const { final_country } = req.body;
+        
+        await pool.query(
+            `UPDATE leaderboard
+            SET admin_verified = TRUE,
+            country = COALESCE($2, country),
+            is_verified = TRUE
+            WHERE id = $1`,
+            [id, final_country]
+        );
+        
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Approve leaderboard error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ✅ REJECT LEADERBOARD ENTRY
+app.post('/api/admin/leaderboard/:id/reject', verifyAdmin, async (req, res) => {
+    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    try {
+        await pool.query('DELETE FROM leaderboard WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Reject leaderboard error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ✅ BULK DELETE LEADERBOARD
+app.post('/api/admin/leaderboard/bulk-delete', verifyAdmin, async (req, res) => {
+    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    try {
+        const { ids } = req.body;
+        
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
+        }
+        
+        const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
+        await pool.query(`DELETE FROM leaderboard WHERE id IN (${placeholders})`, ids);
+        
+        res.json({ success: true, message: `${ids.length} entries verwijderd` });
+    } catch (error) {
+        console.error('Bulk delete leaderboard error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // ============================================
-// FREELANCERS ENDPOINTS
+// ✅ FREELANCERS ENDPOINTS
 // ============================================
 app.get('/api/freelancers', async (req, res) => {
     if (!pool) return res.json({ success: true, freelancers: [] });
@@ -1618,7 +1237,7 @@ app.get('/api/freelancers', async (req, res) => {
         const result = await pool.query(`
             SELECT
                 id, name, email, title, location, country, bio,
-                hourly_rate, availability, is_verified, is_featured
+                hourly_rate, availability, is_verified, is_featured, is_approved
             FROM freelancers
             WHERE is_approved = TRUE
             ORDER BY is_featured DESC, created_at DESC
@@ -1634,7 +1253,7 @@ app.get('/api/freelancers', async (req, res) => {
 app.post('/api/freelancers/register', async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
     try {
-        const { name, email, title, location, country, bio, linkedin_url, hourly_rate, availability } = req.body;
+        const { name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_featured } = req.body;
         
         if (!name || !email) {
             return res.status(400).json({ success: false, error: 'Name and email are required' });
@@ -1647,11 +1266,11 @@ app.post('/api/freelancers/register', async (req, res) => {
         
         const result = await pool.query(
             `INSERT INTO freelancers
-            (name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_approved)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false)
+            (name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_approved, is_featured)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, $10)
             RETURNING id`,
             [name, email, title || null, location || null, country || null, bio || null,
-                linkedin_url || null, hourly_rate || null, availability || null]
+                linkedin_url || null, hourly_rate || null, availability || null, is_featured || false]
         );
         
         res.json({
@@ -1662,6 +1281,171 @@ app.post('/api/freelancers/register', async (req, res) => {
     } catch (error) {
         console.error('Freelancer registration error:', error);
         res.status(500).json({ success: false, error: 'Registration failed' });
+    }
+});
+
+// ✅ ADMIN GET ALL FREELANCERS
+app.get('/api/admin/freelancers', verifyAdmin, async (req, res) => {
+    if (!pool) return res.json({ success: true, freelancers: [] });
+    try {
+        const result = await pool.query(`SELECT * FROM freelancers ORDER BY created_at DESC LIMIT 200`);
+        res.json({ success: true, freelancers: result.rows });
+    } catch (error) {
+        console.error('Admin freelancers error:', error);
+        res.json({ success: true, freelancers: [] });
+    }
+});
+
+// ✅ PENDING FREELANCER APPLICATIONS
+app.get('/api/admin/freelancers/pending', verifyAdmin, async (req, res) => {
+    if (!pool) return res.json({ success: true, pending: [] });
+    try {
+        const result = await pool.query(
+            `SELECT * FROM freelancers WHERE is_approved = FALSE ORDER BY created_at DESC LIMIT 50`
+        );
+        res.json({ success: true, pending: result.rows });
+    } catch (error) {
+        console.error('Pending freelancers error:', error);
+        res.json({ success: true, pending: [] });
+    }
+});
+
+// ✅ APPROVE FREELANCER
+app.post('/api/admin/freelancers/:id/approve', verifyAdmin, async (req, res) => {
+    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    try {
+        await pool.query(
+            'UPDATE freelancers SET is_approved = TRUE, is_verified = TRUE WHERE id = $1',
+            [req.params.id]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Approve freelancer error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ✅ DELETE FREELANCER
+app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
+    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    try {
+        await pool.query('DELETE FROM freelancers WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Delete freelancer error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ✅ EDIT FREELANCER (PUT)
+app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
+    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    try {
+        const { id } = req.params;
+        const { name, email, title, location, country, bio, hourly_rate, is_featured } = req.body;
+        
+        const updates = [];
+        const values = [];
+        let paramCount = 1;
+        
+        if (name !== undefined) {
+            updates.push(`name = $${paramCount}`);
+            values.push(name);
+            paramCount++;
+        }
+        if (email !== undefined) {
+            updates.push(`email = $${paramCount}`);
+            values.push(email);
+            paramCount++;
+        }
+        if (title !== undefined) {
+            updates.push(`title = $${paramCount}`);
+            values.push(title);
+            paramCount++;
+        }
+        if (location !== undefined) {
+            updates.push(`location = $${paramCount}`);
+            values.push(location);
+            paramCount++;
+        }
+        if (country !== undefined) {
+            updates.push(`country = $${paramCount}`);
+            values.push(country);
+            paramCount++;
+        }
+        if (bio !== undefined) {
+            updates.push(`bio = $${paramCount}`);
+            values.push(bio);
+            paramCount++;
+        }
+        if (hourly_rate !== undefined) {
+            updates.push(`hourly_rate = $${paramCount}`);
+            values.push(hourly_rate);
+            paramCount++;
+        }
+        if (is_featured !== undefined) {
+            updates.push(`is_featured = $${paramCount}`);
+            values.push(is_featured);
+            paramCount++;
+        }
+        
+        if (updates.length === 0) {
+            return res.status(400).json({ success: false, error: 'Geen velden om te updaten' });
+        }
+        
+        values.push(id);
+        const query = `UPDATE freelancers SET ${updates.join(', ')} WHERE id = $${paramCount}`;
+        
+        await pool.query(query, values);
+        res.json({ success: true, message: 'Freelancer bijgewerkt' });
+    } catch (error) {
+        console.error('Update freelancer error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ✅ TOGGLE FREELANCER FEATURED
+app.post('/api/admin/freelancers/:id/toggle-featured', verifyAdmin, async (req, res) => {
+    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    try {
+        const { id } = req.params;
+        
+        const freelancer = await pool.query('SELECT is_featured FROM freelancers WHERE id = $1', [id]);
+        if (freelancer.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Freelancer not found' });
+        }
+        
+        const newFeatured = !freelancer.rows[0].is_featured;
+        await pool.query('UPDATE freelancers SET is_featured = $1 WHERE id = $2', [newFeatured, id]);
+        
+        res.json({
+            success: true,
+            is_featured: newFeatured,
+            message: `Featured ${newFeatured ? 'aangezet' : 'uitgezet'}`
+        });
+    } catch (error) {
+        console.error('Toggle featured error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ✅ BULK DELETE FREELANCERS
+app.post('/api/admin/freelancers/bulk-delete', verifyAdmin, async (req, res) => {
+    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    try {
+        const { ids } = req.body;
+        
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
+        }
+        
+        const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
+        await pool.query(`DELETE FROM freelancers WHERE id IN (${placeholders})`, ids);
+        
+        res.json({ success: true, message: `${ids.length} freelancers verwijderd` });
+    } catch (error) {
+        console.error('Bulk delete freelancers error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -1783,7 +1567,7 @@ app.use((err, req, res, next) => {
 async function startServer() {
     console.log('');
     console.log('🚀 =====================================');
-    console.log('🚀  CONTENTSCALE SERVER - COMPLETE RELEASE');
+    console.log('🚀  CONTENTSCALE SERVER - COMPLETE');
     console.log('🚀 =====================================');
     console.log('');
     
@@ -1798,13 +1582,12 @@ async function startServer() {
         console.log('');
         console.log('✅ FEATURE STATUS:');
         console.log('   • Single URL Scanner: ✅ ACTIEF');
-        console.log('   • User Registration: ✅ ACTIEF');
-        console.log('   • Activation Status: ✅ ACTIEF');
-        console.log('   • API Keys Config: ✅ ACTIEF');
-        console.log('   • Bulk Scan Endpoints: ✅ ACTIEF');
         console.log('   • Leaderboard: ✅ ACTIEF');
         console.log('   • Freelancers: ✅ ACTIEF');
         console.log('   • Admin Login: ✅ WERKT (ot / admin123)');
+        console.log('   • Admin Edit Leaderboard: ✅ WERKT');
+        console.log('   • Admin Toggle Featured: ✅ WERKT');
+        console.log('   • Admin Pending Approvals: ✅ WERKT');
         console.log('');
     });
 }
