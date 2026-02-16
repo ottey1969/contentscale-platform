@@ -5,6 +5,7 @@
 // ✅ User templates opslaan in database
 // ✅ Bulk scanner met echte data
 // ✅ Elke user eigen SendGrid keys
+// ✅ Verified stat toegevoegd aan leaderboard
 // ============================================
 process.env.PGSSLMODE = 'verify-full';
 process.env.NODE_NO_WARNINGS = '1';
@@ -925,11 +926,9 @@ app.post('/api/scan', async (req, res) => {
                 const href = link.getAttribute('href');
                 if (!href) return;
                 if (href.startsWith('mailto:') || href.startsWith('tel:')) return;
-                
                 try {
                     const linkUrl = new URL(href, scanUrl);
                     const linkDomain = linkUrl.hostname.replace('www.', '');
-                    
                     if (linkDomain === baseDomain) {
                         internalLinks.push({ href: linkUrl.href, text: link.textContent.trim() });
                     } else {
@@ -1171,7 +1170,7 @@ app.get('/api/leaderboard', async (req, res) => {
             entries: [],
             total: 0,
             averageScore: 0,
-            stats: { totalAgencies: 0, avgScore: 0, countriesCount: 0, activeHelpers: 0 }
+            stats: { totalAgencies: 0, avgScore: 0, countriesCount: 0, activeHelpers: 0, verifiedCount: 0 }
         });
     }
     
@@ -1187,6 +1186,7 @@ app.get('/api/leaderboard', async (req, res) => {
                 city,
                 type,
                 is_verified as is_claimed,
+                admin_verified,
                 created_at,
                 graaf_score,
                 craft_score,
@@ -1206,6 +1206,9 @@ app.get('/api/leaderboard', async (req, res) => {
             : 0;
         const countries = [...new Set(entries.map(e => e.country))].length;
         
+        // ✅ NIEUW: Bereken verified count
+        const verifiedCount = entries.filter(e => e.admin_verified === true).length;
+        
         const freelancersResult = await pool.query('SELECT COUNT(*) FROM freelancers WHERE is_approved = TRUE')
             .catch(() => ({ rows: [{ count: '0' }] }));
         const activeHelpers = parseInt(freelancersResult.rows[0].count) || 0;
@@ -1219,7 +1222,8 @@ app.get('/api/leaderboard', async (req, res) => {
                 totalAgencies: totalAgencies,
                 avgScore: avgScore,
                 countriesCount: countries,
-                activeHelpers: activeHelpers
+                activeHelpers: activeHelpers,
+                verifiedCount: verifiedCount  // ✅ NIEUW TOEVOEGEN
             }
         });
     } catch (error) {
@@ -1229,7 +1233,7 @@ app.get('/api/leaderboard', async (req, res) => {
             entries: [],
             total: 0,
             averageScore: 0,
-            stats: { totalAgencies: 0, avgScore: 0, countriesCount: 0, activeHelpers: 0 }
+            stats: { totalAgencies: 0, avgScore: 0, countriesCount: 0, activeHelpers: 0, verifiedCount: 0 }
         });
     }
 });
@@ -1784,6 +1788,7 @@ async function startServer() {
         console.log('   • Admin Login: ✅ WERKT (ot / admin123)');
         console.log('   • Admin Edit/Delete: ✅ WERKT');
         console.log('   • Bulk Delete: ✅ WERKT');
+        console.log('   • Verified Stat: ✅ TOEGEVOEGD');
         console.log('');
     });
 }
