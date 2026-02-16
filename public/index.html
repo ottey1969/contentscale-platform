@@ -1006,6 +1006,10 @@ Our Lead Scanner, Google Maps bulk scraper, and content quality analyzer are 100
 </div>
 </div>
 
+<!-- ========================================== -->
+<!-- 🎯 VERIFIED SEO SPECIALISTS SECTION        -->
+/* De 6 actieve freelancers worden hier getoond */
+<!-- ========================================== -->
 <div id="freelancers" class="mb-16">
 <div class="text-center mb-8">
 <h2 class="text-4xl font-bold mb-3 text-white">🎯 Verified SEO Specialists</h2>
@@ -1319,7 +1323,7 @@ document.addEventListener('DOMContentLoaded', function() {
 console.log('📋 Publieke pagina geladen');
 forceEmptyInput();
 loadLeaderboardData();
-loadFreelancers(); // HAALT ALLEEN ACTIEVE FREELANCERS OP
+loadFreelancers(); // HAALT ALLEEN ACTIEVE FREELANCERS OP VIA /api/freelancers?active=true
 registerUser();
 loadApiStatus();
 
@@ -2409,7 +2413,8 @@ document.getElementById('avgScore').textContent = avgScore;
 const countries = new Set(entries.map(e => e.country || 'Unknown')).size;
 document.getElementById('countriesCount').textContent = countries;
 
-document.getElementById('activeHelpers').textContent = '12';
+// Deze wordt later overschreven door loadFreelancers()
+// document.getElementById('activeHelpers').textContent = '12';
 }
 
 function updateTop3(entries) {
@@ -2443,9 +2448,9 @@ html += `
 <button onclick="window.open('${entry.website || '#'}', '_blank')">Bezoek Website</button>
 </div>
 `;
+});
 
 top3Container.innerHTML = html;
-});
 }
 
 function updateRankings4to15(entries) {
@@ -2464,9 +2469,9 @@ html += `
 <div class="text-xs text-gray-400">${entry.country || '🌍'}</div>
 </div>
 `;
+});
 
 container.innerHTML = html;
-});
 }
 
 function updateRankingsTable(entries) {
@@ -2493,9 +2498,9 @@ html += `
 <td class="text-gray-400 text-sm">${addedDate}</td>
 </tr>
 `;
+});
 
 tbody.innerHTML = html;
-});
 }
 
 function updateCountryFilters(entries) {
@@ -2585,16 +2590,18 @@ arrow.textContent = '▲';
 // ==========================================
 async function loadFreelancers() {
 try {
-const response = await fetch('/api/freelancers?active=true'); // ALLEEN ACTIEVE FREELANCERS OPHALEN
+// 🔥 CRUCIALE FIX: Haal alleen actieve freelancers op
+const response = await fetch('/api/freelancers?active=true');
 const data = await response.json();
 
 if (data.success && data.freelancers) {
+console.log(`✅ ${data.freelancers.length} actieve freelancers geladen`);
 displayFreelancers(data.freelancers);
-// Update de teller in de leaderboard stats
+// Update de teller in de leaderboard stats met het exacte aantal
 document.getElementById('activeHelpers').textContent = data.freelancers.length;
 } else {
 // Toon lege staat
-document.getElementById('freelancersGrid').innerHTML = '<p class="text-gray-400 text-center col-span-3">Geen specialisten gevonden</p>';
+document.getElementById('freelancersGrid').innerHTML = '<p class="text-gray-400 text-center col-span-3">Momenteel zijn er geen actieve specialisten</p>';
 document.getElementById('activeHelpers').textContent = '0';
 }
 } catch (error) {
@@ -2666,7 +2673,15 @@ try {
 const response = await fetch('/api/freelancers', {
 method: 'POST',
 headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({ name, email, phone, title, bio, featured, active: false }) // Standaard op inactief
+body: JSON.stringify({ 
+name, 
+email, 
+phone, 
+title, 
+bio, 
+featured, 
+active: false // 🔥 CRUCIAL: Nieuwe aanmeldingen standaard op inactief
+})
 });
 
 const data = await response.json();
@@ -2674,6 +2689,13 @@ const data = await response.json();
 if (data.success) {
 alert('✅ Aanvraag ontvangen! We nemen binnen 24 uur contact met je op.');
 closeModal();
+// Reset form
+document.getElementById('freelancerName').value = '';
+document.getElementById('freelancerEmail').value = '';
+document.getElementById('freelancerPhone').value = '';
+document.getElementById('freelancerTitle').value = '';
+document.getElementById('freelancerBio').value = '';
+document.getElementById('featuredListing').checked = false;
 } else {
 alert('❌ ' + (data.error || 'Er is een fout opgetreden'));
 }
