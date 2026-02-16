@@ -1,3 +1,4 @@
+```javascript
 // ============================================
 // CONTENTSCALE SERVER.JS - COMPLETE PRODUCTION
 // ✅ Alle API endpoints werken echt
@@ -163,6 +164,39 @@ app.use(express.static('public', {
 }));
 
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+
+// ============================================
+// ANALYTICS SCRIPT INJECTION
+// ============================================
+app.use((req, res, next) => {
+  // Only inject on HTML pages
+  if (req.path.endsWith('.html') || req.path === '/') {
+    const originalSend = res.send;
+    res.send = function(body) {
+      if (typeof body === 'string' && body.includes('</body>')) {
+        const analyticsScript = `
+<!-- Analytics Tracking Script -->
+<script>
+!function(){
+  function e(){
+    var e=document.createElement("script");
+    e.type="text/javascript",
+    e.async=!0,
+    e.setAttribute("embed-id","d2680fb9-8e14-4fd2-8c8e-c7d67cae8541"),
+    e.src="https://embed.adabundle.com/embed-scripts/d2680fb9-8e14-4fd2-8c8e-c7d67cae8541",
+    window.top.document.getElementsByTagName("body")[0].appendChild(e)
+  }
+  "complete"===document.readyState||"interactive"===document.readyState?e():document.addEventListener("DOMContentLoaded",e)
+}();
+</script>
+`;
+        body = body.replace('</body>', analyticsScript + '</body>');
+      }
+      return originalSend.call(this, body);
+    };
+  }
+  next();
+});
 
 const verifyAdmin = async (req, res, next) => {
     const adminKey = req.headers['x-admin-key'];
@@ -443,24 +477,20 @@ app.post('/api/user/register', async (req, res) => {
 // ============================================
 app.get('/api/user/activation-status', async (req, res) => {
     const userId = req.headers['x-user-id'];
-    
     if (!userId) {
         return res.json({ success: false, activated: false, error: 'No user ID' });
     }
-    
     try {
         const result = await pool.query(
             'SELECT is_activated FROM users WHERE id = $1',
             [userId]
         );
-        
         if (result.rows.length === 0) {
             return res.json({ success: true, activated: false });
         }
-        
-        res.json({ 
-            success: true, 
-            activated: result.rows[0].is_activated || false 
+        res.json({
+            success: true,
+            activated: result.rows[0].is_activated || false
         });
     } catch (error) {
         console.error('❌ Activation status error:', error.message);
@@ -473,7 +503,6 @@ app.get('/api/user/activation-status', async (req, res) => {
 // ============================================
 app.get('/api/user/keys/status', async (req, res) => {
     const userId = req.headers['x-user-id'];
-    
     if (!userId) {
         return res.json({
             success: true,
@@ -483,7 +512,6 @@ app.get('/api/user/keys/status', async (req, res) => {
             message: 'No user ID provided'
         });
     }
-    
     if (!pool) {
         return res.json({
             success: true,
@@ -493,7 +521,6 @@ app.get('/api/user/keys/status', async (req, res) => {
             message: 'Database unavailable'
         });
     }
-    
     try {
         const apiKeysResult = await pool.query(
             'SELECT service_name, api_key, daily_limit, used_today FROM user_api_keys WHERE user_id = $1',
@@ -502,7 +529,6 @@ app.get('/api/user/keys/status', async (req, res) => {
         
         const hasSendgrid = apiKeysResult.rows.some(row => row.service_name === 'sendgrid');
         const hasWebshare = apiKeysResult.rows.some(row => row.service_name === 'webshare');
-        
         const sendgridKey = apiKeysResult.rows.find(row => row.service_name === 'sendgrid');
         
         res.json({
@@ -542,11 +568,10 @@ app.post('/api/user/sendgrid/configure', async (req, res) => {
         await pool.query(
             `INSERT INTO user_api_keys (user_id, service_name, api_key, daily_limit)
             VALUES ($1, 'sendgrid', $2, $3)
-            ON CONFLICT (user_id, service_name) 
+            ON CONFLICT (user_id, service_name)
             DO UPDATE SET api_key = $2, daily_limit = $3`,
             [userId, apiKey, dailyLimit || 100]
         );
-        
         res.json({ success: true });
     } catch (error) {
         console.error('❌ Sendgrid config error:', error.message);
@@ -569,11 +594,10 @@ app.post('/api/user/webshare/configure', async (req, res) => {
         await pool.query(
             `INSERT INTO user_api_keys (user_id, service_name, api_key)
             VALUES ($1, 'webshare', $2)
-            ON CONFLICT (user_id, service_name) 
+            ON CONFLICT (user_id, service_name)
             DO UPDATE SET api_key = $2`,
             [userId, apiKey]
         );
-        
         res.json({ success: true, proxy_count: 10 });
     } catch (error) {
         console.error('❌ Webshare config error:', error.message);
@@ -586,11 +610,9 @@ app.post('/api/user/webshare/configure', async (req, res) => {
 // ============================================
 app.get('/api/user/templates', async (req, res) => {
     const userId = req.headers['x-user-id'];
-    
     if (!userId) {
         return res.json({ success: false, error: 'No user ID' });
     }
-    
     try {
         const result = await pool.query(
             'SELECT template_type, subject, body FROM user_email_templates WHERE user_id = $1',
@@ -634,11 +656,10 @@ app.post('/api/user/templates', async (req, res) => {
         await pool.query(
             `INSERT INTO user_email_templates (user_id, template_type, subject, body, updated_at)
             VALUES ($1, $2, $3, $4, NOW())
-            ON CONFLICT (user_id, template_type) 
+            ON CONFLICT (user_id, template_type)
             DO UPDATE SET subject = $3, body = $4, updated_at = NOW()`,
             [userId, type, subject, body]
         );
-        
         res.json({ success: true });
     } catch (error) {
         console.error('❌ Save template error:', error.message);
@@ -711,9 +732,9 @@ app.post('/api/bulk-scan/send-summary', async (req, res) => {
         await pool.query(
             `INSERT INTO email_queue (user_id, to_email, to_name, subject, body, status)
             VALUES ($1, $2, $3, $4, $5, 'pending')`,
-            [userId, userEmail, userName, `Bulk Scan Summary - ${new Date().toLocaleDateString()}`, 
-             `Summary: ${results.leaderboard.length} leaderboard, ${results.withWebsite.length} improvement, ${results.withoutWebsite.length} website offers`,
-             'pending']
+            [userId, userEmail, userName, `Bulk Scan Summary - ${new Date().toLocaleDateString()}`,
+            `Summary: ${results.leaderboard.length} leaderboard, ${results.withWebsite.length} improvement, ${results.withoutWebsite.length} website offers`,
+            'pending']
         );
     } catch (e) {
         console.error('Queue summary error:', e);
@@ -821,7 +842,9 @@ app.post('/api/bulk-scan/send-website-offers', async (req, res) => {
 // ============================================
 app.post('/api/scan', async (req, res) => {
     const { url, keyword } = req.body;
+    
     if (!url) return res.status(400).json({ success: false, error: 'URL required' });
+    
     let scanUrl = url;
     if (!scanUrl.startsWith('http')) scanUrl = 'https://' + scanUrl;
     if (!isValidUrl(scanUrl)) return res.status(400).json({ success: false, error: 'Invalid URL format' });
@@ -860,6 +883,7 @@ app.post('/api/scan', async (req, res) => {
                 if (h1Elements.length > 0) {
                     hasKeywordInH1 = h1Elements[0].textContent.toLowerCase().includes(targetKeyword.toLowerCase());
                 }
+                
                 const paragraphs = document.querySelectorAll('p');
                 if (paragraphs.length > 0) {
                     hasKeywordInIntro = paragraphs[0].textContent.toLowerCase().includes(targetKeyword.toLowerCase());
@@ -875,9 +899,11 @@ app.post('/api/scan', async (req, res) => {
             const metaTitleElement = document.querySelector('title');
             const metaTitle = metaTitleElement ? metaTitleElement.textContent : '';
             const metaTitleLength = metaTitle.length;
+            
             const metaDescriptionElement = document.querySelector('meta[name="description"]');
             const metaDescription = metaDescriptionElement ? metaDescriptionElement.getAttribute('content') : '';
             const metaDescriptionLength = metaDescription.length;
+            
             const hasMetaViewport = !!document.querySelector('meta[name="viewport"]');
             const hasCanonical = !!document.querySelector('link[rel="canonical"]');
             
@@ -885,6 +911,7 @@ app.post('/api/scan', async (req, res) => {
             let hasArticleSchema = false;
             let hasFAQPageSchema = false;
             let hasOrganizationSchema = false;
+            
             schemaScripts.forEach(script => {
                 try {
                     const schemaData = JSON.parse(script.textContent);
@@ -904,13 +931,16 @@ app.post('/api/scan', async (req, res) => {
             const baseDomain = baseUrl.hostname.replace('www.', '');
             const internalLinks = [];
             const externalLinks = [];
+            
             Array.from(document.querySelectorAll('a[href]')).forEach(link => {
                 const href = link.getAttribute('href');
                 if (!href) return;
                 if (href.startsWith('mailto:') || href.startsWith('tel:')) return;
+                
                 try {
                     const linkUrl = new URL(href, scanUrl);
                     const linkDomain = linkUrl.hostname.replace('www.', '');
+                    
                     if (linkDomain === baseDomain) {
                         internalLinks.push({ href: linkUrl.href, text: link.textContent.trim() });
                     } else {
@@ -1041,9 +1071,9 @@ app.post('/api/scan', async (req, res) => {
         );
         
         const quality = totalScore >= 90 ? 'excellent' :
-            totalScore >= 80 ? 'very good' :
-            totalScore >= 70 ? 'good' :
-            totalScore >= 60 ? 'average' : 'needs improvement';
+                       totalScore >= 80 ? 'very good' :
+                       totalScore >= 70 ? 'good' :
+                       totalScore >= 60 ? 'average' : 'needs improvement';
         
         const recommendations = [];
         
@@ -1135,7 +1165,6 @@ app.post('/api/scan', async (req, res) => {
         };
         
         console.log(`✅ Scan complete: ${scanUrl} - ${totalScore}/100 (${quality})`);
-        
         res.json(result);
     } catch (error) {
         console.error('❌ Scan error:', error.message);
@@ -1165,6 +1194,7 @@ app.get('/api/leaderboard', async (req, res) => {
             stats: { totalAgencies: 0, avgScore: 0, countriesCount: 0, activeHelpers: 0 }
         });
     }
+    
     try {
         const result = await pool.query(`
             SELECT
@@ -1229,6 +1259,7 @@ app.get('/api/leaderboard', async (req, res) => {
 // ============================================
 app.get('/api/freelancers', async (req, res) => {
     if (!pool) return res.json({ success: true, freelancers: [] });
+    
     try {
         const result = await pool.query(`
             SELECT
@@ -1248,6 +1279,7 @@ app.get('/api/freelancers', async (req, res) => {
 
 app.post('/api/freelancers/register', async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    
     try {
         const { name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_featured } = req.body;
         
@@ -1266,7 +1298,7 @@ app.post('/api/freelancers/register', async (req, res) => {
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, $10)
             RETURNING id`,
             [name, email, title || null, location || null, country || null, bio || null,
-                linkedin_url || null, hourly_rate || null, availability || null, is_featured || false]
+            linkedin_url || null, hourly_rate || null, availability || null, is_featured || false]
         );
         
         res.json({
@@ -1338,6 +1370,7 @@ app.post('/api/setup/verify-admin', async (req, res) => {
 // ============================================
 app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
     if (!pool) return res.json({ success: true, pending: [] });
+    
     try {
         const result = await pool.query(
             `SELECT * FROM leaderboard
@@ -1354,17 +1387,20 @@ app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
 
 app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    
     try {
         const { id } = req.params;
         const { final_country } = req.body;
+        
         await pool.query(
             `UPDATE leaderboard
             SET admin_verified = TRUE,
-            country = COALESCE($2, country),
-            is_verified = TRUE
+                country = COALESCE($2, country),
+                is_verified = TRUE
             WHERE id = $1`,
             [id, final_country]
         );
+        
         res.json({ success: true });
     } catch (error) {
         console.error('Approve leaderboard error:', error.message);
@@ -1374,6 +1410,7 @@ app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => 
 
 app.post('/api/admin/leaderboard/:id/reject', verifyAdmin, async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    
     try {
         await pool.query('DELETE FROM leaderboard WHERE id = $1', [req.params.id]);
         res.json({ success: true });
@@ -1385,6 +1422,7 @@ app.post('/api/admin/leaderboard/:id/reject', verifyAdmin, async (req, res) => {
 
 app.post('/api/admin/leaderboard/bulk-delete', verifyAdmin, async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    
     try {
         const { ids } = req.body;
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
@@ -1401,28 +1439,34 @@ app.post('/api/admin/leaderboard/bulk-delete', verifyAdmin, async (req, res) => 
 
 app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    
     try {
         const { url, company_name, score, country, city } = req.body;
+        
         if (!url || score === undefined) {
             return res.status(400).json({ success: false, error: 'URL and score are required' });
         }
+        
         const truncatedCountry = (country || 'NL').trim().substring(0, 10);
+        
         const result = await pool.query(
             `INSERT INTO leaderboard
             (url, company_name, score, country, city, admin_verified, is_verified)
             VALUES ($1, $2, $3, $4, $5, true, true)
             ON CONFLICT (url)
             DO UPDATE SET
-            score = EXCLUDED.score,
-            company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
-            country = COALESCE(EXCLUDED.country, leaderboard.country),
-            city = COALESCE(EXCLUDED.city, leaderboard.city),
-            admin_verified = true,
-            is_verified = true
+                score = EXCLUDED.score,
+                company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
+                country = COALESCE(EXCLUDED.country, leaderboard.country),
+                city = COALESCE(EXCLUDED.city, leaderboard.city),
+                admin_verified = true,
+                is_verified = true
             RETURNING id, (xmax = 0) as inserted`,
             [url, company_name || null, score, truncatedCountry, city || null]
         );
+        
         const wasInserted = result.rows[0].inserted;
+        
         res.json({
             success: true,
             action: wasInserted ? 'added' : 'updated',
@@ -1437,12 +1481,15 @@ app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
 
 app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    
     try {
         const { id } = req.params;
         const { company_name, url, score, country, city } = req.body;
+        
         const updates = [];
         const values = [];
         let paramCount = 1;
+        
         if (company_name !== undefined) {
             updates.push(`company_name = $${paramCount}`);
             values.push(company_name);
@@ -1469,15 +1516,19 @@ app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
             values.push(city);
             paramCount++;
         }
+        
         if (updates.length === 0) {
             return res.status(400).json({ success: false, error: 'Geen velden om te updaten' });
         }
+        
         values.push(id);
         const query = `UPDATE leaderboard SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`;
         const result = await pool.query(query, values);
+        
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, error: 'Entry niet gevonden' });
         }
+        
         res.json({ success: true, message: 'Leaderboard entry bijgewerkt', entry: result.rows[0] });
     } catch (error) {
         console.error('Update leaderboard error:', error.message);
@@ -1487,12 +1538,15 @@ app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
 
 app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    
     try {
         const { id } = req.params;
         const result = await pool.query('DELETE FROM leaderboard WHERE id = $1 RETURNING *', [id]);
+        
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, error: 'Entry niet gevonden' });
         }
+        
         res.json({ success: true, message: 'Entry verwijderd' });
     } catch (error) {
         console.error('Delete leaderboard error:', error.message);
@@ -1505,6 +1559,7 @@ app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
 // ============================================
 app.get('/api/admin/freelancers/pending', verifyAdmin, async (req, res) => {
     if (!pool) return res.json({ success: true, pending: [] });
+    
     try {
         const result = await pool.query(
             `SELECT * FROM freelancers WHERE is_approved = FALSE ORDER BY created_at DESC LIMIT 50`
@@ -1518,6 +1573,7 @@ app.get('/api/admin/freelancers/pending', verifyAdmin, async (req, res) => {
 
 app.post('/api/admin/freelancers/:id/approve', verifyAdmin, async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    
     try {
         await pool.query(
             'UPDATE freelancers SET is_approved = TRUE, is_verified = TRUE WHERE id = $1',
@@ -1532,6 +1588,7 @@ app.post('/api/admin/freelancers/:id/approve', verifyAdmin, async (req, res) => 
 
 app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    
     try {
         await pool.query('DELETE FROM freelancers WHERE id = $1', [req.params.id]);
         res.json({ success: true });
@@ -1543,12 +1600,15 @@ app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
 
 app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    
     try {
         const { id } = req.params;
         const { name, email, title, location, country, bio, hourly_rate, is_featured } = req.body;
+        
         const updates = [];
         const values = [];
         let paramCount = 1;
+        
         if (name !== undefined) {
             updates.push(`name = $${paramCount}`);
             values.push(name);
@@ -1589,12 +1649,15 @@ app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
             values.push(is_featured);
             paramCount++;
         }
+        
         if (updates.length === 0) {
             return res.status(400).json({ success: false, error: 'Geen velden om te updaten' });
         }
+        
         values.push(id);
         const query = `UPDATE freelancers SET ${updates.join(', ')} WHERE id = $${paramCount}`;
         await pool.query(query, values);
+        
         res.json({ success: true, message: 'Freelancer bijgewerkt' });
     } catch (error) {
         console.error('Update freelancer error:', error.message);
@@ -1604,15 +1667,23 @@ app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
 
 app.post('/api/admin/freelancers/:id/toggle-featured', verifyAdmin, async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    
     try {
         const { id } = req.params;
         const freelancer = await pool.query('SELECT is_featured FROM freelancers WHERE id = $1', [id]);
+        
         if (freelancer.rows.length === 0) {
             return res.status(404).json({ success: false, error: 'Freelancer not found' });
         }
+        
         const newFeatured = !freelancer.rows[0].is_featured;
         await pool.query('UPDATE freelancers SET is_featured = $1 WHERE id = $2', [newFeatured, id]);
-        res.json({ success: true, is_featured: newFeatured, message: `Featured ${newFeatured ? 'aangezet' : 'uitgezet'}` });
+        
+        res.json({
+            success: true,
+            is_featured: newFeatured,
+            message: `Featured ${newFeatured ? 'aangezet' : 'uitgezet'}`
+        });
     } catch (error) {
         console.error('Toggle featured error:', error.message);
         res.status(500).json({ success: false, error: error.message });
@@ -1621,6 +1692,7 @@ app.post('/api/admin/freelancers/:id/toggle-featured', verifyAdmin, async (req, 
 
 app.post('/api/admin/freelancers/bulk-delete', verifyAdmin, async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    
     try {
         const { ids } = req.body;
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
@@ -1728,3 +1800,4 @@ async function startServer() {
 }
 
 startServer();
+```
