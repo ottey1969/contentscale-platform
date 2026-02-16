@@ -76,6 +76,24 @@
       border: 2px solid rgba(255, 255, 255, 0.3);
     }
     
+    .mode-toggle.active::after {
+      content: '✓';
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      width: 24px;
+      height: 24px;
+      background: #0f7b3a;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: bold;
+      border: 2px solid white;
+    }
+    
     .card {
       background: #111827;
       border: 1px solid #374151;
@@ -258,9 +276,6 @@
         <button onclick="switchTab('freelancers')" id="tabFreelancersBtn" class="mode-toggle">
           <i class="fas fa-users mr-2"></i> Freelancers
         </button>
-        <button onclick="switchTab('activations')" id="tabActivationsBtn" class="mode-toggle">
-          <i class="fas fa-user-check mr-2"></i> User Activations
-        </button>
         <button onclick="switchTab('pending')" id="tabPendingBtn" class="mode-toggle">
           <i class="fas fa-clock mr-2"></i> Pending Approvals
         </button>
@@ -305,9 +320,9 @@
             </div>
             <div class="stat-card">
               <div>
-                <div class="text-4xl mb-2">⏳</div>
-                <div class="text-3xl font-bold" id="stat-pending">0</div>
-                <div class="text-sm text-gray-200">Pending</div>
+                <div class="text-4xl mb-2">✅</div>
+                <div class="text-3xl font-bold" id="stat-verified">0</div>
+                <div class="text-sm text-gray-200">Verified</div>
               </div>
             </div>
           </div>
@@ -329,52 +344,7 @@
         </div>
       </div>
 
-      <!-- TAB 3: USER ACTIVATIONS -->
-      <div id="tab-activations" class="tab-content hidden">
-        <div class="bg-gradient-to-br from-green-900 via-emerald-900 to-green-800 rounded-2xl p-8 border-2 border-green-500">
-          <div class="flex justify-between items-center mb-6">
-            <h2 class="text-3xl font-bold text-white">✅ User Activation Requests</h2>
-            <button onclick="loadPendingActivations()" class="btn bg-green-600 hover:bg-green-700">
-              <i class="fas fa-sync-alt mr-2"></i> Refresh
-            </button>
-          </div>
-
-          <div class="grid-4 mb-8">
-            <div class="stat-card">
-              <div>
-                <div class="text-4xl mb-2">⏳</div>
-                <div class="text-3xl font-bold" id="stat-pending-activations">0</div>
-                <div class="text-sm text-gray-200">Pending</div>
-              </div>
-            </div>
-            <div class="stat-card">
-              <div>
-                <div class="text-4xl mb-2">✅</div>
-                <div class="text-3xl font-bold" id="stat-activated-users">0</div>
-                <div class="text-sm text-gray-200">Activated</div>
-              </div>
-            </div>
-            <div class="stat-card">
-              <div>
-                <div class="text-4xl mb-2">📧</div>
-                <div class="text-3xl font-bold" id="stat-total-requests">0</div>
-                <div class="text-sm text-gray-200">Total Requests</div>
-              </div>
-            </div>
-            <div class="stat-card">
-              <div>
-                <div class="text-4xl mb-2">📅</div>
-                <div class="text-3xl font-bold" id="stat-today-requests">0</div>
-                <div class="text-sm text-gray-200">Today</div>
-              </div>
-            </div>
-          </div>
-
-          <div id="activationsContainer"></div>
-        </div>
-      </div>
-
-      <!-- TAB 4: PENDING APPROVALS -->
+      <!-- TAB 3: PENDING APPROVALS -->
       <div id="tab-pending" class="tab-content hidden">
         <div class="bg-gradient-to-br from-yellow-900 via-orange-900 to-yellow-800 rounded-2xl p-8 border-2 border-yellow-500">
           <div class="flex justify-between items-center mb-6">
@@ -444,7 +414,6 @@
     let currentAdminId = localStorage.getItem('admin_id');
     let allLeaderboard = [];
     let allFreelancers = [];
-    let allActivations = [];
 
     // ==========================================
     // AUTHENTICATIE
@@ -477,7 +446,6 @@
       const errorDiv = document.getElementById('login-error');
       const loginBtn = document.getElementById('login-btn');
       
-      // Hide previous errors
       errorDiv.classList.add('hidden');
       
       if (!username || !password) {
@@ -486,7 +454,6 @@
         return;
       }
       
-      // Disable button during login
       loginBtn.disabled = true;
       loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Logging in...';
       
@@ -503,7 +470,6 @@
         console.log('📦 Login response:', data);
         
         if (data.success && data.admin_id) {
-          // Store admin credentials
           localStorage.setItem('admin_id', data.admin_id);
           localStorage.setItem('admin_username', username);
           
@@ -511,12 +477,10 @@
           
           console.log('✅ Login successful! Admin ID:', data.admin_id);
           
-          // Hide login screen, show dashboard
           document.getElementById('login-screen').classList.add('hidden');
           document.getElementById('main-dashboard').classList.remove('hidden');
           document.getElementById('admin-username').textContent = username;
           
-          // Load all data
           loadAllData();
           switchTab('leaderboard');
         } else {
@@ -548,7 +512,6 @@
         'Content-Type': 'application/json'
       };
       
-      // Add admin authentication header for admin endpoints
       if (currentAdminId) {
         headers['x-admin-key'] = currentAdminId;
       }
@@ -587,7 +550,6 @@
       
       if (tabName === 'leaderboard') loadLeaderboard();
       if (tabName === 'freelancers') loadFreelancers();
-      if (tabName === 'activations') loadPendingActivations();
       if (tabName === 'pending') loadPendingData();
     }
 
@@ -609,8 +571,8 @@
         const countries = new Set(allLeaderboard.map(e => e.country)).size;
         document.getElementById('stat-countries').textContent = countries;
         
-        const pending = allLeaderboard.filter(e => e.approved === false || e.approved === 0).length;
-        document.getElementById('stat-pending').textContent = pending;
+        const verified = allLeaderboard.filter(e => e.admin_verified === true).length;
+        document.getElementById('stat-verified').textContent = verified;
         
         renderLeaderboardTable();
       } catch (error) {
@@ -634,15 +596,11 @@
       html += '<th class="px-4 py-3 text-left">URL</th>';
       html += '<th class="px-4 py-3 text-left">Score</th>';
       html += '<th class="px-4 py-3 text-left">Country</th>';
-      html += '<th class="px-4 py-3 text-left">Status</th>';
       html += '<th class="px-4 py-3 text-left">Actions</th>';
       html += '</tr></thead><tbody>';
       
       allLeaderboard.forEach((entry, index) => {
         const company = entry.company_name || extractDomain(entry.url);
-        const status = entry.approved ? 
-          '<span class="badge-approved">Approved</span>' : 
-          '<span class="badge-pending">Pending</span>';
         
         html += `<tr class="border-t border-gray-700">`;
         html += `<td class="px-4 py-3">#${index + 1}</td>`;
@@ -650,7 +608,6 @@
         html += `<td class="px-4 py-3"><a href="${entry.url}" target="_blank" class="text-blue-400 hover:underline">${entry.url.substring(0, 40)}...</a></td>`;
         html += `<td class="px-4 py-3"><span class="font-bold ${entry.score >= 85 ? 'text-green-400' : entry.score >= 70 ? 'text-yellow-400' : 'text-red-400'}">${entry.score}</span></td>`;
         html += `<td class="px-4 py-3">${entry.country || 'N/A'}</td>`;
-        html += `<td class="px-4 py-3">${status}</td>`;
         html += `<td class="px-4 py-3">`;
         html += `<button onclick="deleteLeaderboardEntry(${entry.id})" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"><i class="fas fa-trash"></i></button>`;
         html += `</td></tr>`;
@@ -728,7 +685,7 @@
         
         grid.innerHTML = allFreelancers.map(f => {
           const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase();
-          const status = f.approved ? 
+          const status = f.is_approved ? 
             '<span class="badge-approved">Approved</span>' : 
             '<span class="badge-pending">Pending</span>';
           
@@ -745,9 +702,13 @@
                 </div>
               </div>
               <p class="text-sm text-gray-300 mb-4">${f.bio || 'No bio'}</p>
+              <div class="flex items-center justify-between text-sm mb-4">
+                <span class="text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i> ${f.location || f.country || 'Remote'}</span>
+                ${f.hourly_rate ? `<span class="text-purple-400">💰 ${f.hourly_rate}</span>` : ''}
+              </div>
               <div class="flex gap-2">
                 <button onclick="toggleFeatured(${f.id})" class="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded">
-                  <i class="fas fa-star mr-2"></i>${f.featured ? 'Unfeatured' : 'Feature'}
+                  <i class="fas fa-star mr-2"></i>${f.is_featured ? 'Unfeature' : 'Feature'}
                 </button>
                 <button onclick="deleteFreelancer(${f.id})" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">
                   <i class="fas fa-trash"></i>
@@ -765,6 +726,7 @@
     async function toggleFeatured(id) {
       try {
         await apiCall(`/api/admin/freelancers/${id}/toggle-featured`, 'POST');
+        alert('✅ Featured status updated');
         loadFreelancers();
       } catch (error) {
         alert('❌ Error: ' + error.message);
@@ -778,88 +740,6 @@
         await apiCall(`/api/admin/freelancers/${id}`, 'DELETE');
         alert('✅ Freelancer deleted');
         loadFreelancers();
-      } catch (error) {
-        alert('❌ Error: ' + error.message);
-      }
-    }
-
-    // ==========================================
-    // USER ACTIVATIONS FUNCTIES
-    // ==========================================
-    async function loadPendingActivations() {
-      try {
-        const data = await apiCall('/api/admin/pending-activations');
-        allActivations = data.users || [];
-        
-        const pending = allActivations.filter(u => !u.is_activated).length;
-        const activated = allActivations.filter(u => u.is_activated).length;
-        const today = allActivations.filter(u => {
-          const reqDate = new Date(u.requested_at);
-          const now = new Date();
-          return reqDate.toDateString() === now.toDateString();
-        }).length;
-        
-        document.getElementById('stat-pending-activations').textContent = pending;
-        document.getElementById('stat-activated-users').textContent = activated;
-        document.getElementById('stat-total-requests').textContent = allActivations.length;
-        document.getElementById('stat-today-requests').textContent = today;
-        
-        renderActivations();
-      } catch (error) {
-        console.error('Activations error:', error);
-        alert('❌ Error loading activations: ' + error.message);
-      }
-    }
-
-    function renderActivations() {
-      const container = document.getElementById('activationsContainer');
-      const pendingUsers = allActivations.filter(u => !u.is_activated);
-      
-      if (pendingUsers.length === 0) {
-        container.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-check-circle text-6xl mb-4 text-green-400"></i><p>No pending activation requests</p></div>';
-        return;
-      }
-      
-      container.innerHTML = pendingUsers.map(user => `
-        <div class="pending-card">
-          <div class="flex justify-between items-start mb-4">
-            <div>
-              <h4 class="text-xl font-bold mb-2">${user.name || 'Unknown'}</h4>
-              <p class="text-sm text-gray-400 mb-1"><i class="fas fa-envelope mr-2"></i>${user.email}</p>
-              <p class="text-sm text-gray-400 mb-1"><i class="fas fa-phone mr-2"></i>${user.phone || 'N/A'}</p>
-              <p class="text-sm text-gray-400"><i class="fas fa-building mr-2"></i>${user.company || 'N/A'}</p>
-              <p class="text-xs text-gray-500 mt-2">Requested: ${new Date(user.requested_at).toLocaleString()}</p>
-            </div>
-            <div class="flex flex-col gap-2">
-              <button onclick="activateUser('${user.email}')" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold">
-                <i class="fas fa-check mr-2"></i> Activate
-              </button>
-              <button onclick="rejectActivation('${user.email}')" class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-bold">
-                <i class="fas fa-times mr-2"></i> Reject
-              </button>
-            </div>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    async function activateUser(email) {
-      try {
-        await apiCall('/api/admin/activate-user', 'POST', { email });
-        alert('✅ User activated!');
-        loadPendingActivations();
-      } catch (error) {
-        alert('❌ Error: ' + error.message);
-      }
-    }
-
-    async function rejectActivation(email) {
-      if (!confirm('Reject this activation request?')) return;
-      
-      try {
-        await apiCall('/api/admin/reject-activation', 'POST', { email });
-        alert('✅ Request rejected');
-        loadPendingActivations();
       } catch (error) {
         alert('❌ Error: ' + error.message);
       }
@@ -897,6 +777,7 @@
                 <h4 class="text-xl font-bold mb-2">${entry.company_name || extractDomain(entry.url)}</h4>
                 <p class="text-blue-400 mb-2">${entry.url}</p>
                 <p class="text-2xl font-bold text-green-400">Score: ${entry.score}</p>
+                <p class="text-sm text-gray-400 mt-2">Country: ${entry.country || 'N/A'}</p>
               </div>
               <div class="flex flex-col gap-2">
                 <button onclick="approveLeaderboardEntry(${entry.id})" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold">
@@ -954,8 +835,9 @@
               <div>
                 <h4 class="text-xl font-bold mb-2">${f.name}</h4>
                 <p class="text-purple-400 mb-2">${f.title || 'SEO Specialist'}</p>
-                <p class="text-sm text-gray-400 mb-2">${f.email}</p>
+                <p class="text-sm text-gray-400 mb-2"><i class="fas fa-envelope mr-1"></i> ${f.email}</p>
                 <p class="text-sm">${f.bio || 'No bio'}</p>
+                ${f.location ? `<p class="text-sm text-gray-400 mt-2"><i class="fas fa-map-marker-alt mr-1"></i> ${f.location}</p>` : ''}
               </div>
               <div class="flex flex-col gap-2">
                 <button onclick="approveFreelancer(${f.id})" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold">
@@ -1011,7 +893,6 @@
     function loadAllData() {
       loadLeaderboard();
       loadFreelancers();
-      loadPendingActivations();
       loadPendingData();
     }
   </script>
