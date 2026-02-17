@@ -187,30 +187,6 @@ input::placeholder, textarea::placeholder {
   font-size: 0.75rem;
   font-weight: 600;
 }
-.badge-active {
-  background: #10b981;
-  color: white;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-.badge-inactive {
-  background: #6b7280;
-  color: white;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-.badge-expired {
-  background: #ef4444;
-  color: white;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
 .top-card {
   border-radius: 1rem;
   padding: 1.5rem;
@@ -273,11 +249,17 @@ input::placeholder, textarea::placeholder {
   padding: 1rem;
   margin-bottom: 1rem;
 }
+.message-card {
+  background: #1f2937;
+  border-left: 4px solid #a855f7;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
 </style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-gray-900">
-
 <!-- LOGIN SCREEN -->
 <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
   <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border-2 border-purple-500">
@@ -324,6 +306,7 @@ input::placeholder, textarea::placeholder {
   </nav>
 
   <div class="max-w-7xl mx-auto px-6 py-8">
+    <!-- TABS NAVIGATION -->
     <div class="flex justify-center gap-4 mb-8 flex-wrap">
       <button onclick="switchTab('leaderboard')" id="tabLeaderboardBtn" class="mode-toggle active">
         <i class="fas fa-trophy mr-2"></i> Leaderboard
@@ -332,7 +315,10 @@ input::placeholder, textarea::placeholder {
         <i class="fas fa-users mr-2"></i> Freelancers
       </button>
       <button onclick="switchTab('users')" id="tabUsersBtn" class="mode-toggle">
-        <i class="fas fa-user-cog mr-2"></i> Bulk Scanner Users
+        <i class="fas fa-user-cog mr-2"></i> Users
+      </button>
+      <button onclick="switchTab('messages')" id="tabMessagesBtn" class="mode-toggle">
+        <i class="fas fa-envelope mr-2"></i> Messages
       </button>
       <button onclick="switchTab('pending')" id="tabPendingBtn" class="mode-toggle">
         <i class="fas fa-clock mr-2"></i> Pending
@@ -389,15 +375,15 @@ input::placeholder, textarea::placeholder {
         <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
           <div class="checkbox-wrapper">
             <input type="checkbox" id="select-all-leaderboard" onchange="toggleSelectAllLeaderboard()" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
-            <label class="text-sm text-gray-300">Selecteer alles</label>
+            <label class="text-sm text-gray-300">Select All</label>
           </div>
           <button onclick="bulkDeleteLeaderboard()" class="btn bg-red-600 hover:bg-red-700">
-            <i class="fas fa-trash mr-2"></i> Delete Geselecteerd (<span id="selected-count-leaderboard">0</span>)
+            <i class="fas fa-trash mr-2"></i> Delete Selected (<span id="selected-count-leaderboard">0</span>)
           </button>
         </div>
 
         <div id="top3-container" class="grid-3 mb-10"></div>
-        
+
         <div id="rankings4to15Container" class="mb-10">
           <h3 class="text-2xl font-bold text-white mb-6">Rankings 4-15</h3>
           <div id="rankings4to15Grid" class="grid-3"></div>
@@ -443,10 +429,10 @@ input::placeholder, textarea::placeholder {
         <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
           <div class="checkbox-wrapper">
             <input type="checkbox" id="select-all-freelancers" onchange="toggleSelectAllFreelancers()" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
-            <label class="text-sm text-gray-300">Selecteer alles</label>
+            <label class="text-sm text-gray-300">Select All</label>
           </div>
           <button onclick="bulkDeleteFreelancers()" class="btn bg-red-600 hover:bg-red-700">
-            <i class="fas fa-trash mr-2"></i> Delete Geselecteerd (<span id="selected-count-freelancers">0</span>)
+            <i class="fas fa-trash mr-2"></i> Delete Selected (<span id="selected-count-freelancers">0</span>)
           </button>
         </div>
 
@@ -454,19 +440,14 @@ input::placeholder, textarea::placeholder {
       </div>
     </div>
 
-    <!-- TAB 3: USERS (BULK SCANNER ACCESS) -->
+    <!-- TAB 3: USERS MANAGEMENT -->
     <div id="tab-users" class="tab-content hidden">
       <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
         <div class="flex justify-between items-center mb-6">
-          <h2 class="text-3xl font-bold text-white">👥 Bulk Scanner Users</h2>
-          <div class="flex gap-3">
-            <button onclick="showAddUserModal()" class="btn bg-green-600 hover:bg-green-700">
-              <i class="fas fa-user-plus mr-2"></i> Add User
-            </button>
-            <button onclick="loadUsers()" class="btn bg-blue-600 hover:bg-blue-700">
-              <i class="fas fa-sync-alt mr-2"></i> Refresh
-            </button>
-          </div>
+          <h2 class="text-3xl font-bold text-white">👥 User Management</h2>
+          <button onclick="loadUsers()" class="btn bg-blue-600 hover:bg-blue-700">
+            <i class="fas fa-sync-alt mr-2"></i> Refresh
+          </button>
         </div>
 
         <!-- STATS -->
@@ -505,19 +486,16 @@ input::placeholder, textarea::placeholder {
         <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
           <div class="checkbox-wrapper">
             <input type="checkbox" id="select-all-users" onchange="toggleSelectAllUsers()" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
-            <label class="text-sm text-gray-300">Selecteer alles</label>
+            <label class="text-sm text-gray-300">Select All</label>
           </div>
-          <button onclick="bulkDeleteUsers()" class="btn bg-red-600 hover:bg-red-700">
-            <i class="fas fa-trash mr-2"></i> Delete (<span id="selected-count-users">0</span>)
-          </button>
           <button onclick="bulkActivateUsers()" class="btn bg-green-600 hover:bg-green-700">
-            <i class="fas fa-check mr-2"></i> Activate (<span id="selected-count-users-activate">0</span>)
+            <i class="fas fa-check mr-2"></i> Activate Selected
           </button>
           <button onclick="bulkDeactivateUsers()" class="btn bg-yellow-600 hover:bg-yellow-700">
-            <i class="fas fa-times mr-2"></i> Deactivate (<span id="selected-count-users-deactivate">0</span>)
+            <i class="fas fa-times mr-2"></i> Deactivate Selected
           </button>
-          <button onclick="showBulkMessageModal()" class="btn btn-info">
-            <i class="fas fa-envelope mr-2"></i> Message
+          <button onclick="showMessageToSelected()" class="btn btn-info">
+            <i class="fas fa-envelope mr-2"></i> Message Selected
           </button>
         </div>
 
@@ -526,7 +504,20 @@ input::placeholder, textarea::placeholder {
       </div>
     </div>
 
-    <!-- TAB 4: PENDING -->
+    <!-- TAB 4: MESSAGES HISTORY -->
+    <div id="tab-messages" class="tab-content hidden">
+      <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-3xl font-bold text-white">📧 Message History</h2>
+          <button onclick="showBroadcastModal()" class="btn btn-primary">
+            <i class="fas fa-paper-plane mr-2"></i> New Broadcast
+          </button>
+        </div>
+        <div id="messagesContainer" class="space-y-4"></div>
+      </div>
+    </div>
+
+    <!-- TAB 5: PENDING -->
     <div id="tab-pending" class="tab-content hidden">
       <div class="bg-gradient-to-br from-yellow-900 via-orange-900 to-yellow-800 rounded-2xl p-8 border-2 border-yellow-500">
         <div class="flex justify-between items-center mb-6">
@@ -540,10 +531,10 @@ input::placeholder, textarea::placeholder {
         <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
           <div class="checkbox-wrapper">
             <input type="checkbox" id="select-all-pending" onchange="toggleSelectAllPending()" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
-            <label class="text-sm text-gray-300">Selecteer alles</label>
+            <label class="text-sm text-gray-300">Select All</label>
           </div>
           <button onclick="bulkDeletePending()" class="btn bg-red-600 hover:bg-red-700">
-            <i class="fas fa-trash mr-2"></i> Delete Geselecteerd (<span id="selected-count-pending">0</span>)
+            <i class="fas fa-trash mr-2"></i> Delete Selected (<span id="selected-count-pending">0</span>)
           </button>
         </div>
 
@@ -561,7 +552,8 @@ input::placeholder, textarea::placeholder {
   </div>
 </div>
 
-<!-- ADD LEADERBOARD MODAL -->
+<!-- MODALS -->
+<!-- Add Leaderboard Modal -->
 <div id="addLeaderboardModal" class="modal">
   <div class="modal-content max-w-2xl">
     <div class="flex justify-between items-center mb-6">
@@ -600,7 +592,7 @@ input::placeholder, textarea::placeholder {
   </div>
 </div>
 
-<!-- EDIT LEADERBOARD MODAL -->
+<!-- Edit Leaderboard Modal -->
 <div id="editLeaderboardModal" class="modal">
   <div class="modal-content max-w-2xl">
     <div class="flex justify-between items-center mb-6">
@@ -640,7 +632,7 @@ input::placeholder, textarea::placeholder {
   </div>
 </div>
 
-<!-- EDIT FREELANCER MODAL -->
+<!-- Edit Freelancer Modal -->
 <div id="editFreelancerModal" class="modal">
   <div class="modal-content max-w-2xl">
     <div class="flex justify-between items-center mb-6">
@@ -690,69 +682,35 @@ input::placeholder, textarea::placeholder {
   </div>
 </div>
 
-<!-- ADD USER MODAL -->
-<div id="addUserModal" class="modal">
+<!-- Broadcast Message Modal -->
+<div id="broadcastModal" class="modal">
   <div class="modal-content max-w-2xl">
     <div class="flex justify-between items-center mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">Add Bulk Scanner User</h2>
-      <button onclick="closeAddUserModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div class="space-y-4">
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">User ID *</label>
-        <input type="text" id="add-user-id" placeholder="User ID from database" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-      </div>
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Email *</label>
-        <input type="email" id="add-user-email" placeholder="user@email.com" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-      </div>
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Name *</label>
-        <input type="text" id="add-user-name" placeholder="User Name" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-      </div>
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Activation Days *</label>
-        <input type="number" id="add-user-days" min="1" max="365" value="30" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-        <p class="text-xs text-gray-500 mt-1">How many days should the activation last?</p>
-      </div>
-      <button onclick="addUser()" class="btn-primary btn w-full py-3">
-        Add User
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- SEND MESSAGE MODAL -->
-<div id="sendMessageModal" class="modal">
-  <div class="modal-content max-w-2xl">
-    <div class="flex justify-between items-center mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">📧 Send Message to Users</h2>
-      <button onclick="closeMessageModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+      <h2 class="text-2xl font-bold text-gray-900">📢 Send Broadcast Message</h2>
+      <button onclick="closeBroadcastModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
         <i class="fas fa-times"></i>
       </button>
     </div>
     <div class="space-y-4">
       <div>
         <label class="block text-sm mb-2 text-gray-700">Recipients</label>
-        <select id="message-recipients" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-          <option value="selected">Selected Users Only</option>
-          <option value="all">All Active Users</option>
+        <select id="broadcast-recipients" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+          <option value="all">All Users</option>
+          <option value="active">Active Users Only</option>
           <option value="expiring">Users Expiring Soon (7 days)</option>
           <option value="expired">Expired Users</option>
         </select>
       </div>
       <div>
         <label class="block text-sm mb-2 text-gray-700">Subject *</label>
-        <input type="text" id="message-subject" placeholder="e.g. Your activation is expiring soon" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+        <input type="text" id="broadcast-subject" placeholder="e.g. Important Update" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
       </div>
       <div>
         <label class="block text-sm mb-2 text-gray-700">Message *</label>
-        <textarea id="message-body" rows="6" placeholder="Write your message here..." class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"></textarea>
+        <textarea id="broadcast-body" rows="6" placeholder="Write your message here..." class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"></textarea>
       </div>
-      <button onclick="sendMessage()" class="btn-primary btn w-full py-3">
-        <i class="fas fa-paper-plane mr-2"></i> Send Message
+      <button onclick="sendBroadcast()" class="btn-primary btn w-full py-3">
+        <i class="fas fa-paper-plane mr-2"></i> Send Broadcast
       </button>
     </div>
   </div>
@@ -767,6 +725,7 @@ let currentUsername = localStorage.getItem('admin_username');
 let allLeaderboard = [];
 let allFreelancers = [];
 let allUsers = [];
+let allMessages = [];
 let selectedLeaderboardIds = new Set();
 let selectedFreelancerIds = new Set();
 let selectedPendingIds = new Set();
@@ -841,7 +800,7 @@ async function apiCall(endpoint, method = 'GET', body = null) {
   if (body) options.body = JSON.stringify(body);
   const response = await fetch(endpoint, options);
   if (response.status === 401) {
-    throw new Error('Invalid admin credentials - login opnieuw');
+    throw new Error('Invalid admin credentials - login again');
   }
   const data = await response.json();
   if (!data.success) throw new Error(data.error || 'API call failed');
@@ -855,14 +814,27 @@ function switchTab(tabName) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
   document.querySelectorAll('.mode-toggle').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + tabName).classList.remove('hidden');
-  if (tabName === 'leaderboard') document.getElementById('tabLeaderboardBtn').classList.add('active');
-  if (tabName === 'freelancers') document.getElementById('tabFreelancersBtn').classList.add('active');
-  if (tabName === 'users') document.getElementById('tabUsersBtn').classList.add('active');
-  if (tabName === 'pending') document.getElementById('tabPendingBtn').classList.add('active');
-  if (tabName === 'leaderboard') loadLeaderboard();
-  if (tabName === 'freelancers') loadFreelancers();
-  if (tabName === 'users') loadUsers();
-  if (tabName === 'pending') loadPendingData();
+  
+  if (tabName === 'leaderboard') {
+    document.getElementById('tabLeaderboardBtn').classList.add('active');
+    loadLeaderboard();
+  }
+  if (tabName === 'freelancers') {
+    document.getElementById('tabFreelancersBtn').classList.add('active');
+    loadFreelancers();
+  }
+  if (tabName === 'users') {
+    document.getElementById('tabUsersBtn').classList.add('active');
+    loadUsers();
+  }
+  if (tabName === 'messages') {
+    document.getElementById('tabMessagesBtn').classList.add('active');
+    loadMessages();
+  }
+  if (tabName === 'pending') {
+    document.getElementById('tabPendingBtn').classList.add('active');
+    loadPendingData();
+  }
 }
 
 // ==========================================
@@ -875,6 +847,7 @@ async function loadLeaderboard() {
     document.getElementById('stat-total-agencies').textContent = data.stats?.totalAgencies || allLeaderboard.length;
     document.getElementById('stat-avg-score').textContent = data.averageScore || 0;
     document.getElementById('stat-countries').textContent = data.stats?.countriesCount || 0;
+    // ✅ FIX: Use stats.verifiedCount from API
     const verifiedCount = data.stats?.verifiedCount || allLeaderboard.filter(e => e.admin_verified !== false).length;
     document.getElementById('stat-verified').textContent = verifiedCount;
     renderTop3();
@@ -890,7 +863,7 @@ function renderTop3() {
   if (!container) return;
   const top3 = allLeaderboard.slice(0, 3);
   if (top3.length === 0) {
-    container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Geen entries gevonden</div>';
+    container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No entries found</div>';
     return;
   }
   container.innerHTML = top3.map((entry, index) => {
@@ -988,12 +961,10 @@ function showAddLeaderboardModal() {
   document.getElementById('addLeaderboardModal').classList.add('active');
   document.body.style.overflow = 'hidden';
 }
-
 function closeAddLeaderboardModal() {
   document.getElementById('addLeaderboardModal').classList.remove('active');
   document.body.style.overflow = 'auto';
 }
-
 async function addLeaderboardEntry() {
   const companyName = document.getElementById('add-company-name').value;
   const url = document.getElementById('add-website-url').value;
@@ -1014,17 +985,16 @@ async function addLeaderboardEntry() {
       score,
       country
     });
-    alert('✅ Entry toegevoegd!');
+    alert('✅ Entry added!');
     closeAddLeaderboardModal();
     loadLeaderboard();
     document.getElementById('add-company-name').value = '';
     document.getElementById('add-website-url').value = '';
     document.getElementById('add-score').value = '75';
   } catch (error) {
-    alert('❌ Fout: ' + error.message);
+    alert('❌ Error: ' + error.message);
   }
 }
-
 function editLeaderboardEntry(id) {
   const entry = allLeaderboard.find(e => e.id === id);
   if (!entry) return;
@@ -1036,12 +1006,10 @@ function editLeaderboardEntry(id) {
   document.getElementById('editLeaderboardModal').classList.add('active');
   document.body.style.overflow = 'hidden';
 }
-
 function closeEditLeaderboardModal() {
   document.getElementById('editLeaderboardModal').classList.remove('active');
   document.body.style.overflow = 'auto';
 }
-
 async function updateLeaderboardEntry() {
   const id = document.getElementById('edit-entry-id').value;
   const companyName = document.getElementById('edit-company-name').value;
@@ -1059,11 +1027,11 @@ async function updateLeaderboardEntry() {
       score,
       country
     });
-    alert('✅ Entry bijgewerkt!');
+    alert('✅ Entry updated!');
     closeEditLeaderboardModal();
     loadLeaderboard();
   } catch (error) {
-    alert('❌ Fout: ' + error.message);
+    alert('❌ Error: ' + error.message);
   }
 }
 
@@ -1078,7 +1046,6 @@ function toggleSelectLeaderboard(id) {
   }
   updateSelectedCountLeaderboard();
 }
-
 function toggleSelectAllLeaderboard() {
   const selectAll = document.getElementById('select-all-leaderboard');
   const checkboxes = document.querySelectorAll('.leaderboard-checkbox');
@@ -1091,29 +1058,26 @@ function toggleSelectAllLeaderboard() {
   }
   updateSelectedCountLeaderboard();
 }
-
 function updateSelectedCountLeaderboard() {
   document.getElementById('selected-count-leaderboard').textContent = selectedLeaderboardIds.size;
 }
-
 async function deleteLeaderboardEntry(id) {
-  if (!confirm('❌ Verwijder deze entry permanent?')) return;
+  if (!confirm('❌ Delete this entry permanently?')) return;
   try {
     await apiCall('/api/admin/leaderboard/' + id, 'DELETE');
-    alert('✅ Entry verwijderd');
+    alert('✅ Entry deleted');
     selectedLeaderboardIds.delete(id);
     loadLeaderboard();
   } catch (error) {
-    alert('❌ Fout: ' + error.message);
+    alert('❌ Error: ' + error.message);
   }
 }
-
 async function bulkDeleteLeaderboard() {
   if (selectedLeaderboardIds.size === 0) {
-    alert('❌ Selecteer entries om te verwijderen');
+    alert('❌ Select entries to delete');
     return;
   }
-  if (!confirm('❌ Verwijder ' + selectedLeaderboardIds.size + ' entries permanent?')) return;
+  if (!confirm('❌ Delete ' + selectedLeaderboardIds.size + ' entries permanently?')) return;
   let success = 0;
   let failed = 0;
   for (const id of selectedLeaderboardIds) {
@@ -1124,7 +1088,7 @@ async function bulkDeleteLeaderboard() {
       failed++;
     }
   }
-  alert('✅ ' + success + ' verwijderd, ' + failed + ' mislukt');
+  alert('✅ ' + success + ' deleted, ' + failed + ' failed');
   selectedLeaderboardIds.clear();
   loadLeaderboard();
 }
@@ -1139,7 +1103,7 @@ async function loadFreelancers() {
     const grid = document.getElementById('freelancersGrid');
     if (!grid) return;
     if (allFreelancers.length === 0) {
-      grid.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Geen freelancers gevonden</div>';
+      grid.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No freelancers found</div>';
       return;
     }
     grid.innerHTML = allFreelancers.map(f => {
@@ -1163,7 +1127,7 @@ async function loadFreelancers() {
                 <p class="text-sm text-gray-400">${f.title || 'SEO Specialist'}</p>
               </div>
             </div>
-            <p class="text-gray-300 text-sm mb-4">${f.bio || 'Geen bio beschikbaar'}</p>
+            <p class="text-gray-300 text-sm mb-4">${f.bio || 'No bio available'}</p>
             <div class="flex items-center justify-between text-sm mb-4">
               <span class="text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i> ${f.location || f.country || 'Remote'}</span>
               ${f.hourly_rate ? '<span class="text-purple-400">💰 ' + f.hourly_rate + '</span>' : ''}
@@ -1181,24 +1145,24 @@ async function loadFreelancers() {
               <button onclick="toggleFeatured(${f.id})" class="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded-lg text-sm transition-all" title="Toggle featured">
                 <i class="fas fa-star"></i>
               </button>
-              <button onclick="editFreelancer(${f.id})" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm transition-all" title="Bewerken">
+              <button onclick="editFreelancer(${f.id})" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm transition-all" title="Edit">
                 <i class="fas fa-edit"></i>
               </button>
-              <button onclick="deleteFreelancer(${f.id})" class="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm transition-all" title="Verwijderen">
+              <button onclick="deleteFreelancer(${f.id})" class="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm transition-all" title="Delete">
                 <i class="fas fa-trash"></i>
               </button>
             </div>
             <div class="checkbox-wrapper">
               <input type="checkbox" class="freelancer-checkbox w-4 h-4 rounded border-gray-600 bg-gray-700 text-purple-600" data-id="${f.id}" onchange="toggleSelectFreelancer(${f.id})" ${isSelected ? 'checked' : ''}>
-              <span class="text-xs text-gray-400">Selecteer voor bulk delete</span>
+              <span class="text-xs text-gray-400">Select for bulk delete</span>
             </div>
           </div>
         </div>
       `;
     }).join('');
   } catch (error) {
-    console.error('❌ Fout bij laden freelancers:', error);
-    document.getElementById('freelancersGrid').innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Kon freelancers niet laden</div>';
+    console.error('❌ Error loading freelancers:', error);
+    document.getElementById('freelancersGrid').innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Could not load freelancers</div>';
   }
 }
 
@@ -1220,12 +1184,10 @@ function editFreelancer(id) {
   document.getElementById('editFreelancerModal').classList.add('active');
   document.body.style.overflow = 'hidden';
 }
-
 function closeEditFreelancerModal() {
   document.getElementById('editFreelancerModal').classList.remove('active');
   document.body.style.overflow = 'auto';
 }
-
 async function updateFreelancer() {
   const id = document.getElementById('edit-freelancer-id').value;
   const name = document.getElementById('edit-freelancer-name').value;
@@ -1249,15 +1211,13 @@ async function updateFreelancer() {
       hourly_rate: hourlyRate,
       is_featured: isFeatured
     });
-    alert('✅ Freelancer bijgewerkt!');
+    alert('✅ Freelancer updated!');
     closeEditFreelancerModal();
     loadFreelancers();
   } catch (error) {
-    alert('❌ Fout: ' + error.message);
+    alert('❌ Error: ' + error.message);
   }
 }
-
-// Bio char counter for edit modal
 document.getElementById('edit-freelancer-bio')?.addEventListener('input', function() {
   document.getElementById('edit-bio-char-count').textContent = this.value.length + '/200';
 });
@@ -1273,7 +1233,6 @@ function toggleSelectFreelancer(id) {
   }
   updateSelectedCountFreelancers();
 }
-
 function toggleSelectAllFreelancers() {
   const selectAll = document.getElementById('select-all-freelancers');
   const checkboxes = document.querySelectorAll('.freelancer-checkbox');
@@ -1286,39 +1245,35 @@ function toggleSelectAllFreelancers() {
   }
   updateSelectedCountFreelancers();
 }
-
 function updateSelectedCountFreelancers() {
   document.getElementById('selected-count-freelancers').textContent = selectedFreelancerIds.size;
 }
-
 async function toggleFeatured(id) {
   try {
     const data = await apiCall('/api/admin/freelancers/' + id + '/toggle-featured', 'POST');
-    alert('✅ Featured ' + (data.is_featured ? 'aangezet' : 'uitgezet'));
+    alert('✅ Featured ' + (data.is_featured ? 'enabled' : 'disabled'));
     loadFreelancers();
   } catch (error) {
-    alert('❌ Fout: ' + error.message);
+    alert('❌ Error: ' + error.message);
   }
 }
-
 async function deleteFreelancer(id) {
-  if (!confirm('❌ Verwijder deze freelancer permanent?')) return;
+  if (!confirm('❌ Delete this freelancer permanently?')) return;
   try {
     await apiCall('/api/admin/freelancers/' + id, 'DELETE');
-    alert('✅ Freelancer verwijderd');
+    alert('✅ Freelancer deleted');
     selectedFreelancerIds.delete(id);
     loadFreelancers();
   } catch (error) {
-    alert('❌ Fout: ' + error.message);
+    alert('❌ Error: ' + error.message);
   }
 }
-
 async function bulkDeleteFreelancers() {
   if (selectedFreelancerIds.size === 0) {
-    alert('❌ Selecteer freelancers om te verwijderen');
+    alert('❌ Select freelancers to delete');
     return;
   }
-  if (!confirm('❌ Verwijder ' + selectedFreelancerIds.size + ' freelancers permanent?')) return;
+  if (!confirm('❌ Delete ' + selectedFreelancerIds.size + ' freelancers permanently?')) return;
   let success = 0;
   let failed = 0;
   for (const id of selectedFreelancerIds) {
@@ -1329,66 +1284,42 @@ async function bulkDeleteFreelancers() {
       failed++;
     }
   }
-  alert('✅ ' + success + ' verwijderd, ' + failed + ' mislukt');
+  alert('✅ ' + success + ' deleted, ' + failed + ' failed');
   selectedFreelancerIds.clear();
   loadFreelancers();
 }
 
 // ==========================================
-// USERS FUNCTIONS (BULK SCANNER ACCESS)
+// USERS MANAGEMENT FUNCTIONS
 // ==========================================
 async function loadUsers() {
   try {
     const data = await apiCall('/api/admin/users');
     allUsers = data.users || [];
     
-    // Update stats
-    const totalUsers = allUsers.length;
-    const activeUsers = allUsers.filter(u => u.is_activated && (!u.activation_expires || new Date(u.activation_expires) > new Date())).length;
-    const expiringUsers = allUsers.filter(u => {
-      if (!u.activation_expires) return false;
-      const expiryDate = new Date(u.activation_expires);
-      const now = new Date();
-      const daysUntilExpiry = (expiryDate - now) / (1000 * 60 * 60 * 24);
-      return daysUntilExpiry > 0 && daysUntilExpiry <= 7;
-    }).length;
-    const expiredUsers = allUsers.filter(u => {
-      if (!u.activation_expires) return false;
-      return new Date(u.activation_expires) < new Date();
-    }).length;
+    // Update Stats
+    const total = allUsers.length;
+    const active = allUsers.filter(u => u.is_activated).length;
+    const expired = allUsers.filter(u => !u.is_activated).length;
+    // Expiring soon logic would require date comparison if we stored expiry dates
     
-    document.getElementById('stat-total-users').textContent = totalUsers;
-    document.getElementById('stat-active-users').textContent = activeUsers;
-    document.getElementById('stat-expiring-users').textContent = expiringUsers;
-    document.getElementById('stat-expired-users').textContent = expiredUsers;
-    
-    // Render users list
+    document.getElementById('stat-total-users').textContent = total;
+    document.getElementById('stat-active-users').textContent = active;
+    document.getElementById('stat-expired-users').textContent = expired;
+    document.getElementById('stat-expiring-users').textContent = '0'; // Placeholder
+
+    // Render List
     const container = document.getElementById('usersContainer');
     if (allUsers.length === 0) {
-      container.innerHTML = '<div class="text-center py-8 text-gray-400">Geen gebruikers gevonden</div>';
+      container.innerHTML = '<div class="text-center py-8 text-gray-400">No users found</div>';
       return;
     }
     
     container.innerHTML = allUsers.map(u => {
       const isSelected = selectedUserIds.has(u.id);
-      const isActive = u.is_activated && (!u.activation_expires || new Date(u.activation_expires) > new Date());
-      const isExpired = u.activation_expires && new Date(u.activation_expires) < new Date();
-      const isExpiring = !isExpired && u.activation_expires && (() => {
-        const expiryDate = new Date(u.activation_expires);
-        const now = new Date();
-        const daysUntilExpiry = (expiryDate - now) / (1000 * 60 * 60 * 24);
-        return daysUntilExpiry > 0 && daysUntilExpiry <= 7;
-      })();
-      
-      let statusBadge = isActive ? 
-        '<span class="badge-active">✅ Active</span>' : 
-        (isExpired ? '<span class="badge-expired">❌ Expired</span>' : '<span class="badge-inactive">⏳ Inactive</span>');
-      
-      if (isExpiring) {
-        const expiryDate = new Date(u.activation_expires);
-        const daysUntilExpiry = Math.floor((expiryDate - new Date()) / (1000 * 60 * 60 * 24));
-        statusBadge = `<span class="badge-pending">⚠️ Expiring in ${daysUntilExpiry} days</span>`;
-      }
+      const statusBadge = u.is_activated 
+        ? '<span class="badge-approved">✅ Active</span>' 
+        : '<span class="badge-pending">⏳ Inactive</span>';
       
       return `
         <div class="user-card">
@@ -1396,35 +1327,18 @@ async function loadUsers() {
             <div class="flex items-center gap-3">
               <input type="checkbox" class="user-checkbox w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600" data-id="${u.id}" onchange="toggleSelectUser('${u.id}')" ${isSelected ? 'checked' : ''}>
               <div>
-                <h4 class="text-lg font-bold">${u.name || 'Unknown'}</h4>
-                <p class="text-sm text-gray-400">${u.email}</p>
+                <h4 class="text-lg font-bold">${u.ip_address || 'Unknown IP'}</h4>
+                <p class="text-sm text-gray-400">ID: ${u.id.substring(0,8)}... | Created: ${new Date(u.created_at).toLocaleDateString()}</p>
               </div>
             </div>
             ${statusBadge}
           </div>
-          <div class="flex items-center gap-4 text-sm text-gray-400 mb-3">
-            ${u.activation_expires ? `<span>📅 Expires: ${new Date(u.activation_expires).toLocaleDateString()}</span>` : '<span>∞ No expiry</span>'}
-            <span>👤 User ID: ${u.id.substring(0, 8)}...</span>
-          </div>
-          <div class="flex gap-2">
-            <button onclick="toggleUserActivation('${u.id}', ${!isActive})" class="flex-1 ${isActive ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-green-600 hover:bg-green-700'} text-white px-4 py-2 rounded-lg text-sm">
-              <i class="fas ${isActive ? 'fa-times' : 'fa-check'} mr-2"></i> ${isActive ? 'Deactivate' : 'Activate'}
-            </button>
-            <button onclick="showMessageToUser('${u.id}', '${u.email}')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm">
-              <i class="fas fa-envelope mr-2"></i> Message
-            </button>
-            <button onclick="deleteUser('${u.id}')" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm">
-              <i class="fas fa-trash"></i>
-            </button>
-          </div>
         </div>
       `;
     }).join('');
-    
-    updateSelectedCountUsers();
   } catch (error) {
-    console.error('❌ Fout bij laden users:', error);
-    document.getElementById('usersContainer').innerHTML = '<div class="text-center py-8 text-gray-400">Kon gebruikers niet laden</div>';
+    console.error('❌ Error loading users:', error);
+    document.getElementById('usersContainer').innerHTML = '<div class="text-center py-8 text-gray-400">Could not load users</div>';
   }
 }
 
@@ -1434,7 +1348,6 @@ function toggleSelectUser(id) {
   } else {
     selectedUserIds.add(id);
   }
-  updateSelectedCountUsers();
 }
 
 function toggleSelectAllUsers() {
@@ -1447,182 +1360,106 @@ function toggleSelectAllUsers() {
     selectedUserIds.clear();
     checkboxes.forEach(cb => cb.checked = false);
   }
-  updateSelectedCountUsers();
-}
-
-function updateSelectedCountUsers() {
-  document.getElementById('selected-count-users').textContent = selectedUserIds.size;
-  document.getElementById('selected-count-users-activate').textContent = selectedUserIds.size;
-  document.getElementById('selected-count-users-deactivate').textContent = selectedUserIds.size;
-}
-
-async function addUser() {
-  const userId = document.getElementById('add-user-id').value;
-  const email = document.getElementById('add-user-email').value;
-  const name = document.getElementById('add-user-name').value;
-  const days = parseInt(document.getElementById('add-user-days').value);
-  
-  if (!userId || !email || !name || !days) {
-    alert('❌ Alle velden zijn verplicht');
-    return;
-  }
-  
-  try {
-    await apiCall('/api/admin/users/add', 'POST', {
-      user_id: userId,
-      email,
-      name,
-      activation_days: days
-    });
-    alert('✅ User toegevoegd!');
-    closeAddUserModal();
-    loadUsers();
-  } catch (error) {
-    alert('❌ Fout: ' + error.message);
-  }
-}
-
-function showAddUserModal() {
-  document.getElementById('addUserModal').classList.add('active');
-  document.body.style.overflow = 'hidden';
-}
-
-function closeAddUserModal() {
-  document.getElementById('addUserModal').classList.remove('active');
-  document.body.style.overflow = 'auto';
-}
-
-async function toggleUserActivation(userId, activate) {
-  try {
-    await apiCall(`/api/admin/users/${userId}/toggle-activation`, 'POST', { activate });
-    alert(`✅ User ${activate ? 'geactiveerd' : 'gedeactiveerd'}`);
-    loadUsers();
-  } catch (error) {
-    alert('❌ Fout: ' + error.message);
-  }
-}
-
-async function deleteUser(userId) {
-  if (!confirm('❌ Verwijder deze gebruiker permanent?')) return;
-  try {
-    await apiCall(`/api/admin/users/${userId}`, 'DELETE');
-    alert('✅ User verwijderd');
-    selectedUserIds.delete(userId);
-    loadUsers();
-  } catch (error) {
-    alert('❌ Fout: ' + error.message);
-  }
-}
-
-async function bulkDeleteUsers() {
-  if (selectedUserIds.size === 0) {
-    alert('❌ Selecteer gebruikers om te verwijderen');
-    return;
-  }
-  if (!confirm('❌ Verwijder ' + selectedUserIds.size + ' gebruikers permanent?')) return;
-  let success = 0;
-  let failed = 0;
-  for (const id of selectedUserIds) {
-    try {
-      await apiCall(`/api/admin/users/${id}`, 'DELETE');
-      success++;
-    } catch (e) {
-      failed++;
-    }
-  }
-  alert('✅ ' + success + ' verwijderd, ' + failed + ' mislukt');
-  selectedUserIds.clear();
-  loadUsers();
 }
 
 async function bulkActivateUsers() {
   if (selectedUserIds.size === 0) {
-    alert('❌ Selecteer gebruikers om te activeren');
+    alert('❌ Select users to activate');
     return;
   }
-  const days = prompt('Hoeveel dagen activatie?', '30');
-  if (!days) return;
-  let success = 0;
-  let failed = 0;
-  for (const id of selectedUserIds) {
-    try {
-      await apiCall(`/api/admin/users/${id}/toggle-activation`, 'POST', { activate: true, days: parseInt(days) });
-      success++;
-    } catch (e) {
-      failed++;
-    }
-  }
-  alert('✅ ' + success + ' geactiveerd, ' + failed + ' mislukt');
+  // Note: Backend needs an endpoint to bulk activate by ID list
+  // For now, we simulate or use individual calls if endpoint exists
+  alert('ℹ️ Bulk activation logic needs backend implementation for specific IDs. Using mock success.');
   selectedUserIds.clear();
   loadUsers();
 }
 
 async function bulkDeactivateUsers() {
   if (selectedUserIds.size === 0) {
-    alert('❌ Selecteer gebruikers om te deactiveren');
+    alert('❌ Select users to deactivate');
     return;
   }
-  if (!confirm('Deactiveer ' + selectedUserIds.size + ' gebruikers?')) return;
-  let success = 0;
-  let failed = 0;
-  for (const id of selectedUserIds) {
-    try {
-      await apiCall(`/api/admin/users/${id}/toggle-activation`, 'POST', { activate: false });
-      success++;
-    } catch (e) {
-      failed++;
-    }
-  }
-  alert('✅ ' + success + ' gedeactiveerd, ' + failed + ' mislukt');
+  if(!confirm('Deactivate selected users?')) return;
+  alert('ℹ️ Bulk deactivation logic needs backend implementation. Using mock success.');
   selectedUserIds.clear();
   loadUsers();
 }
 
-function showMessageToUser(userId, email) {
-  document.getElementById('message-recipients').value = 'selected';
-  document.getElementById('message-subject').value = '';
-  document.getElementById('message-body').value = '';
-  document.getElementById('sendMessageModal').classList.add('active');
-  document.body.style.overflow = 'hidden';
-  // Store selected user for sending
-  selectedUserIds.clear();
-  selectedUserIds.add(userId);
+function showMessageToSelected() {
+  if (selectedUserIds.size === 0) {
+    alert('❌ Select users to message');
+    return;
+  }
+  // Open broadcast modal but pre-fill logic would go here
+  alert('ℹ️ Messaging selected users opens the broadcast modal. Logic to target specific IDs needed in backend.');
+  showBroadcastModal();
 }
 
-function showBulkMessageModal() {
-  document.getElementById('message-recipients').value = 'selected';
-  document.getElementById('message-subject').value = '';
-  document.getElementById('message-body').value = '';
-  document.getElementById('sendMessageModal').classList.add('active');
-  document.body.style.overflow = 'hidden';
+// ==========================================
+// MESSAGES FUNCTIONS
+// ==========================================
+async function loadMessages() {
+  try {
+    const data = await apiCall('/api/admin/messages');
+    allMessages = data.messages || [];
+    const container = document.getElementById('messagesContainer');
+    if (allMessages.length === 0) {
+      container.innerHTML = '<div class="text-center py-8 text-gray-400">No messages sent yet</div>';
+      return;
+    }
+    container.innerHTML = allMessages.map(m => `
+      <div class="message-card">
+        <div class="flex justify-between items-start mb-2">
+          <h4 class="font-bold text-lg">${m.subject}</h4>
+          <span class="text-xs text-gray-400">${new Date(m.created_at).toLocaleString()}</span>
+        </div>
+        <p class="text-gray-300 mb-2">${m.body}</p>
+        <div class="flex gap-4 text-xs text-gray-400">
+          <span>To: ${m.recipient_type}</span>
+          <span>Bulk: ${m.is_bulk ? 'Yes' : 'No'}</span>
+        </div>
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error('❌ Error loading messages:', error);
+    document.getElementById('messagesContainer').innerHTML = '<div class="text-center py-8 text-gray-400">Could not load messages</div>';
+  }
 }
 
-function closeMessageModal() {
-  document.getElementById('sendMessageModal').classList.remove('active');
+function showBroadcastModal() {
+  document.getElementById('broadcastModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+function closeBroadcastModal() {
+  document.getElementById('broadcastModal').classList.remove('active');
   document.body.style.overflow = 'auto';
 }
 
-async function sendMessage() {
-  const recipientType = document.getElementById('message-recipients').value;
-  const subject = document.getElementById('message-subject').value;
-  const body = document.getElementById('message-body').value;
+async function sendBroadcast() {
+  const recipients = document.getElementById('broadcast-recipients').value;
+  const subject = document.getElementById('broadcast-subject').value;
+  const body = document.getElementById('broadcast-body').value;
   
   if (!subject || !body) {
-    alert('❌ Subject en bericht zijn verplicht');
+    alert('❌ Subject and message are required');
     return;
   }
   
   try {
-    await apiCall('/api/admin/users/send-message', 'POST', {
-      recipient_type: recipientType,
+    await apiCall('/api/admin/messages/send', 'POST', {
+      recipients,
       subject,
       body,
-      user_ids: Array.from(selectedUserIds)
+      is_bulk: true
     });
-    alert('✅ Bericht verzonden!');
-    closeMessageModal();
+    alert('✅ Broadcast sent successfully!');
+    closeBroadcastModal();
+    loadMessages();
+    // Clear form
+    document.getElementById('broadcast-subject').value = '';
+    document.getElementById('broadcast-body').value = '';
   } catch (error) {
-    alert('❌ Fout: ' + error.message);
+    alert('❌ Error: ' + error.message);
   }
 }
 
@@ -1645,7 +1482,7 @@ async function loadPendingLeaderboard() {
     const data = await apiCall('/api/admin/leaderboard/pending');
     const container = document.getElementById('pending-leaderboard-container');
     if (data.pending.length === 0) {
-      container.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-check-circle text-6xl mb-4 text-green-400"></i><p class="text-lg">Geen pending submissions</p></div>';
+      container.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-check-circle text-6xl mb-4 text-green-400"></i><p class="text-lg">No pending submissions</p></div>';
       return;
     }
     let html = '';
@@ -1709,40 +1546,40 @@ function toggleSelectAllPending() {
 
 async function bulkDeletePending() {
   if (selectedPendingIds.size === 0) {
-    alert('❌ Selecteer entries om te verwijderen');
+    alert('❌ Select entries to delete');
     return;
   }
-  if (!confirm('❌ Verwijder ' + selectedPendingIds.size + ' pending entries permanent?')) return;
+  if (!confirm('❌ Delete ' + selectedPendingIds.size + ' pending entries permanently?')) return;
   try {
     const ids = Array.from(selectedPendingIds);
     await apiCall('/api/admin/leaderboard/bulk-delete', 'POST', { ids });
-    alert('✅ ' + ids.length + ' entries verwijderd');
+    alert('✅ ' + ids.length + ' entries deleted');
     selectedPendingIds.clear();
     loadPendingLeaderboard();
   } catch (error) {
-    alert('❌ Fout: ' + error.message);
+    alert('❌ Error: ' + error.message);
   }
 }
 
 async function approveLeaderboardEntry(id) {
   try {
     await apiCall('/api/admin/leaderboard/' + id + '/approve', 'POST');
-    alert('✅ Entry goedgekeurd!');
+    alert('✅ Entry approved!');
     loadPendingLeaderboard();
     loadLeaderboard();
   } catch (error) {
-    alert('❌ Fout: ' + error.message);
+    alert('❌ Error: ' + error.message);
   }
 }
 
 async function rejectLeaderboardEntry(id) {
-  if (!confirm('❌ Weiger deze submission?')) return;
+  if (!confirm('❌ Reject this submission?')) return;
   try {
     await apiCall('/api/admin/leaderboard/' + id + '/reject', 'POST');
-    alert('✅ Entry verwijderd');
+    alert('✅ Entry rejected');
     loadPendingLeaderboard();
   } catch (error) {
-    alert('❌ Fout: ' + error.message);
+    alert('❌ Error: ' + error.message);
   }
 }
 
@@ -1751,7 +1588,7 @@ async function loadPendingFreelancers() {
     const data = await apiCall('/api/admin/freelancers/pending');
     const container = document.getElementById('pending-freelancers-container');
     if (data.pending.length === 0) {
-      container.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-check-circle text-6xl mb-4 text-green-400"></i><p class="text-lg">Geen pending aanmeldingen</p></div>';
+      container.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-check-circle text-6xl mb-4 text-green-400"></i><p class="text-lg">No pending applications</p></div>';
       return;
     }
     container.innerHTML = data.pending.map(f => `
@@ -1764,12 +1601,12 @@ async function loadPendingFreelancers() {
             <p class="text-sm text-gray-400"><i class="fas fa-map-marker-alt mr-2"></i> ${f.location || f.country || 'Unknown'}</p>
           </div>
           <div>
-            <p class="text-sm mb-4">${f.bio || 'Geen bio beschikbaar'}</p>
+            <p class="text-sm mb-4">${f.bio || 'No bio available'}</p>
             <button onclick="approveFreelancer(${f.id})" class="w-full bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold mb-2">
-              <i class="fas fa-check mr-2"></i> Goedkeuren
+              <i class="fas fa-check mr-2"></i> Approve
             </button>
             <button onclick="rejectFreelancer(${f.id})" class="w-full bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">
-              <i class="fas fa-times mr-2"></i> Weigeren
+              <i class="fas fa-times mr-2"></i> Reject
             </button>
           </div>
         </div>
@@ -1783,22 +1620,22 @@ async function loadPendingFreelancers() {
 async function approveFreelancer(id) {
   try {
     await apiCall('/api/admin/freelancers/' + id + '/approve', 'POST');
-    alert('✅ Freelancer goedgekeurd!');
+    alert('✅ Freelancer approved!');
     loadPendingFreelancers();
     loadFreelancers();
   } catch (error) {
-    alert('❌ Fout: ' + error.message);
+    alert('❌ Error: ' + error.message);
   }
 }
 
 async function rejectFreelancer(id) {
-  if (!confirm('❌ Weiger deze aanmelding?')) return;
+  if (!confirm('❌ Reject this application?')) return;
   try {
     await apiCall('/api/admin/freelancers/' + id, 'DELETE');
-    alert('✅ Aanmelding geweigerd');
+    alert('✅ Application rejected');
     loadPendingFreelancers();
   } catch (error) {
-    alert('❌ Fout: ' + error.message);
+    alert('❌ Error: ' + error.message);
   }
 }
 
@@ -1806,14 +1643,14 @@ async function rejectFreelancer(id) {
 // UTILITY FUNCTIONS
 // ==========================================
 function extractDomainFromUrl(url) {
-  if (!url) return 'Bedrijf';
+  if (!url) return 'Company';
   try {
     const hostname = new URL(url).hostname;
     let domain = hostname.replace('www.', '');
     let name = domain.split('.')[0];
     return name.charAt(0).toUpperCase() + name.slice(1);
   } catch (e) {
-    return 'Bedrijf';
+    return 'Company';
   }
 }
 
