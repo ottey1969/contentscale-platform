@@ -1,15 +1,12 @@
 // ============================================
-// CONTENTSCALE SERVER.JS - COMPLETE MET BEVEILIGING
+// CONTENTSCALE SERVER.JS - COMPLETE PRODUCTION
 // ✅ Alle API endpoints werken echt
 // ✅ SendGrid email verzending
 // ✅ User templates opslaan in database
 // ✅ Bulk scanner met echte data
 // ✅ Elke user eigen SendGrid keys
-// ✅ Admin messaging systeem
+// ✅ Admin messaging systeem (NIEUW)
 // ✅ Verified stat fix toegevoegd
-// ✅ IP beveiliging tegen misbruik
-// ✅ Request caching voor performance
-// ✅ Rate limiting per IP
 // ============================================
 process.env.PGSSLMODE = 'verify-full';
 process.env.NODE_NO_WARNINGS = '1';
@@ -27,100 +24,6 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
 console.log('📊 Database URL:', process.env.DATABASE_URL ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
-
-// ============================================
-// IP BEVEILIGING & RATE LIMITING
-// ============================================
-const ipRateLimitStore = new Map();
-const ipBlockList = new Set();
-const IP_RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minuten
-const IP_RATE_LIMIT_MAX = 100; // Max requests per window
-const IP_BLOCK_DURATION = 60 * 60 * 1000; // 1 uur block bij misbruik
-
-// IP Rate Limiting Middleware
-const ipRateLimiter = (req, res, next) => {
-    const ip = req.ip || req.connection.remoteAddress;
-    
-    // Check if IP is blocked
-    if (ipBlockList.has(ip)) {
-        console.log(`🚫 Blocked IP attempt: ${ip}`);
-        return res.status(429).json({ 
-            success: false, 
-            error: 'IP address temporarily blocked due to suspicious activity' 
-        });
-    }
-    
-    const now = Date.now();
-    const userRequests = ipRateLimitStore.get(ip) || { count: 0, resetTime: now + IP_RATE_LIMIT_WINDOW };
-    
-    // Reset if window expired
-    if (now > userRequests.resetTime) {
-        userRequests.count = 0;
-        userRequests.resetTime = now + IP_RATE_LIMIT_WINDOW;
-    }
-    
-    userRequests.count++;
-    ipRateLimitStore.set(ip, userRequests);
-    
-    // Block IP if too many requests
-    if (userRequests.count > IP_RATE_LIMIT_MAX * 2) {
-        ipBlockList.add(ip);
-        ipRateLimitStore.delete(ip);
-        console.log(`🚫 IP blocked: ${ip} (too many requests)`);
-        setTimeout(() => ipBlockList.delete(ip), IP_BLOCK_DURATION);
-        return res.status(429).json({ 
-            success: false, 
-            error: 'Too many requests. IP temporarily blocked.' 
-        });
-    }
-    
-    // Set rate limit headers
-    res.setHeader('X-RateLimit-Limit', IP_RATE_LIMIT_MAX);
-    res.setHeader('X-RateLimit-Remaining', Math.max(0, IP_RATE_LIMIT_MAX - userRequests.count));
-    res.setHeader('X-RateLimit-Reset', userRequests.resetTime);
-    
-    if (userRequests.count > IP_RATE_LIMIT_MAX) {
-        return res.status(429).json({ 
-            success: false, 
-            error: 'Too many requests. Please slow down.' 
-        });
-    }
-    
-    next();
-};
-
-// Cleanup old IP records every 30 minutes
-setInterval(() => {
-    const now = Date.now();
-    for (const [ip, data] of ipRateLimitStore.entries()) {
-        if (now > data.resetTime) {
-            ipRateLimitStore.delete(ip);
-        }
-    }
-}, 30 * 60 * 1000);
-
-// ============================================
-// REQUEST CACHING
-// ============================================
-const scanCache = new Map();
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 uur cache
-
-// Cleanup expired cache every hour
-setInterval(() => {
-    const now = Date.now();
-    let cleared = 0;
-    for (const [key, value] of scanCache.entries()) {
-        if (now - value.timestamp > CACHE_TTL_MS) {
-            scanCache.delete(key);
-            cleared++;
-        }
-    }
-    if (cleared > 0) console.log(`🧹 Cleared ${cleared} expired cache entries`);
-}, 60 * 60 * 1000);
-
-function hashContent(html) {
-    return crypto.createHash('sha256').update(html).digest('hex');
-}
 
 // ============================================
 // DATABASE CONFIGURATIE
@@ -233,7 +136,6 @@ const authLimiter = rateLimit({
 
 app.use('/api/', limiter);
 app.use('/api/setup/verify-admin', authLimiter);
-app.use(ipRateLimiter); // ✅ IP RATE LIMITING
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
@@ -373,20 +275,6 @@ async function createAllTables() {
             )
         `);
         
-        // ✅ IP Audit Log table - NIEUW!
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS ip_audit_log (
-                id SERIAL PRIMARY KEY,
-                ip_address VARCHAR(50) NOT NULL,
-                user_id VARCHAR(255),
-                endpoint VARCHAR(255),
-                request_method VARCHAR(10),
-                status_code INTEGER,
-                created_at TIMESTAMP DEFAULT NOW()
-            )
-        `);
-        console.log('✅ ip_audit_log table created');
-        
         // User API Keys table
         await client.query(`
             CREATE TABLE IF NOT EXISTS user_api_keys (
@@ -415,7 +303,7 @@ async function createAllTables() {
             )
         `);
         
-        // Admin Messages table
+        // ✅ NIEUW: Admin Messages table voor messaging systeem
         await client.query(`
             CREATE TABLE IF NOT EXISTS admin_messages (
                 id SERIAL PRIMARY KEY,
@@ -558,13 +446,6 @@ app.post('/api/user/register', async (req, res) => {
                 [userId, template.type, template.subject, template.body]
             );
         }
-        
-        // Log IP
-        await pool.query(
-            `INSERT INTO ip_audit_log (ip_address, user_id, endpoint, request_method, status_code)
-            VALUES ($1, $2, $3, $4, $5)`,
-            [ip, userId, '/api/user/register', 'POST', 200]
-        );
         
         res.json({ success: true, userId });
     } catch (error) {
@@ -952,8 +833,10 @@ app.post('/api/bulk-scan/send-website-offers', async (req, res) => {
 });
 
 // ============================================
-// ✅ ADMIN MESSAGING ENDPOINTS
+// ✅ ADMIN MESSAGING ENDPOINTS - NIEUW!
 // ============================================
+
+// Get all users (voor admin panel lijst)
 app.get('/api/admin/users', verifyAdmin, async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM users ORDER BY created_at DESC');
@@ -964,6 +847,7 @@ app.get('/api/admin/users', verifyAdmin, async (req, res) => {
     }
 });
 
+// Send message to users (slaat bericht op in DB)
 app.post('/api/admin/messages/send', verifyAdmin, async (req, res) => {
     const { recipients, subject, body, is_bulk } = req.body;
     try {
@@ -980,6 +864,7 @@ app.post('/api/admin/messages/send', verifyAdmin, async (req, res) => {
     }
 });
 
+// Get message history (voor admin panel historie)
 app.get('/api/admin/messages', verifyAdmin, async (req, res) => {
     try {
         const result = await pool.query(
@@ -993,11 +878,10 @@ app.get('/api/admin/messages', verifyAdmin, async (req, res) => {
 });
 
 // ============================================
-// ✅ SEO SCAN MET CACHING
+// SEO SCAN
 // ============================================
 app.post('/api/scan', async (req, res) => {
     const { url, keyword } = req.body;
-    const ip = req.ip || req.connection.remoteAddress;
     
     if (!url) return res.status(400).json({ success: false, error: 'URL required' });
     
@@ -1014,23 +898,6 @@ app.post('/api/scan', async (req, res) => {
     }
     
     if (!isValidUrl(scanUrl)) return res.status(400).json({ success: false, error: 'Invalid URL format' });
-    
-    // ✅ CHECK CACHE EERST
-    const cacheKey = `scan:${scanUrl}`;
-    const cachedResult = scanCache.get(cacheKey);
-    
-    if (cachedResult && (Date.now() - cachedResult.timestamp) < CACHE_TTL_MS) {
-        console.log(`✅ Cache hit for: ${scanUrl}`);
-        
-        // Log IP for cache hit
-        await pool.query(
-            `INSERT INTO ip_audit_log (ip_address, endpoint, request_method, status_code)
-            VALUES ($1, $2, $3, $4)`,
-            [ip, '/api/scan', 'POST', 200]
-        ).catch(() => {});
-        
-        return res.json({ ...cachedResult.data, cached: true });
-    }
     
     try {
         console.log(`🔍 Scanning: ${scanUrl}`);
@@ -1175,7 +1042,7 @@ app.post('/api/scan', async (req, res) => {
         
         await page.close();
         
-        // Scoring (zelfde als eerder)
+        // Scoring
         let graafScore = 0;
         let craftScore = 0;
         let technicalScore = 0;
@@ -1251,9 +1118,9 @@ app.post('/api/scan', async (req, res) => {
         );
         
         const quality = totalScore >= 90 ? 'excellent' :
-            totalScore >= 80 ? 'very good' :
-            totalScore >= 70 ? 'good' :
-            totalScore >= 60 ? 'average' : 'needs improvement';
+                       totalScore >= 80 ? 'very good' :
+                       totalScore >= 70 ? 'good' :
+                       totalScore >= 60 ? 'average' : 'needs improvement';
         
         const recommendations = [];
         
@@ -1344,32 +1211,10 @@ app.post('/api/scan', async (req, res) => {
             timestamp: new Date().toISOString()
         };
         
-        // ✅ SAVE TO CACHE
-        scanCache.set(cacheKey, {
-            data: result,
-            timestamp: Date.now()
-        });
-        
         console.log(`✅ Scan complete: ${scanUrl} - ${totalScore}/100 (${quality})`);
-        
-        // Log IP
-        await pool.query(
-            `INSERT INTO ip_audit_log (ip_address, endpoint, request_method, status_code)
-            VALUES ($1, $2, $3, $4)`,
-            [ip, '/api/scan', 'POST', 200]
-        ).catch(() => {});
-        
         res.json(result);
     } catch (error) {
         console.error('❌ Scan error:', error.message);
-        
-        // Log IP for error
-        await pool.query(
-            `INSERT INTO ip_audit_log (ip_address, endpoint, request_method, status_code)
-            VALUES ($1, $2, $3, $4)`,
-            [ip, '/api/scan', 'POST', 500]
-        ).catch(() => {});
-        
         res.status(500).json({ success: false, error: 'Scan failed', details: error.message });
     }
 });
@@ -1428,6 +1273,7 @@ app.get('/api/leaderboard', async (req, res) => {
             : 0;
         const countries = [...new Set(entries.map(e => e.country))].length;
         
+        // ✅ NIEUW: Bereken verified count
         const verifiedCount = entries.filter(e => e.admin_verified === true).length;
         
         const freelancersResult = await pool.query('SELECT COUNT(*) FROM freelancers WHERE is_approved = TRUE')
@@ -1444,7 +1290,7 @@ app.get('/api/leaderboard', async (req, res) => {
                 avgScore: avgScore,
                 countriesCount: countries,
                 activeHelpers: activeHelpers,
-                verifiedCount: verifiedCount
+                verifiedCount: verifiedCount  // ✅ NIEUW TOEGEVOEGD
             }
         });
     } catch (error) {
@@ -1520,7 +1366,6 @@ app.post('/api/freelancers/register', async (req, res) => {
 // ============================================
 app.post('/api/setup/verify-admin', async (req, res) => {
     const { username, password } = req.body;
-    const ip = req.ip || req.connection.remoteAddress;
     
     if (!username || !password) {
         return res.status(400).json({ success: false, error: 'Credentials required' });
@@ -1541,13 +1386,6 @@ app.post('/api/setup/verify-admin', async (req, res) => {
         );
         
         if (result.rows.length === 0) {
-            // Log failed login attempt
-            await pool.query(
-                `INSERT INTO ip_audit_log (ip_address, endpoint, request_method, status_code)
-                VALUES ($1, $2, $3, $4)`,
-                [ip, '/api/setup/verify-admin', 'POST', 401]
-            ).catch(() => {});
-            
             return res.status(401).json({ success: false, error: 'Invalid credentials' });
         }
         
@@ -1555,24 +1393,10 @@ app.post('/api/setup/verify-admin', async (req, res) => {
         const isValid = await bcrypt.compare(password, admin.password_hash);
         
         if (!isValid) {
-            // Log failed login attempt
-            await pool.query(
-                `INSERT INTO ip_audit_log (ip_address, endpoint, request_method, status_code)
-                VALUES ($1, $2, $3, $4)`,
-                [ip, '/api/setup/verify-admin', 'POST', 401]
-            ).catch(() => {});
-            
             return res.status(401).json({ success: false, error: 'Invalid credentials' });
         }
         
         await pool.query('UPDATE super_admins SET last_login = NOW() WHERE id = $1', [admin.id]);
-        
-        // Log successful login
-        await pool.query(
-            `INSERT INTO ip_audit_log (ip_address, user_id, endpoint, request_method, status_code)
-            VALUES ($1, $2, $3, $4, $5)`,
-            [ip, admin.id.toString(), '/api/setup/verify-admin', 'POST', 200]
-        ).catch(() => {});
         
         res.json({
             success: true,
@@ -1956,8 +1780,6 @@ app.get('/api/health', async (req, res) => {
         status: 'running',
         database: dbStatus,
         puppeteer: browserInstance ? 'connected' : 'disconnected',
-        cache_size: scanCache.size,
-        blocked_ips: ipBlockList.size,
         timestamp: new Date().toISOString()
     });
 });
@@ -1995,7 +1817,7 @@ app.use((err, req, res, next) => {
 async function startServer() {
     console.log('');
     console.log('🚀 =====================================');
-    console.log('🚀  CONTENTSCALE SERVER - COMPLETE MET BEVEILIGING');
+    console.log('🚀  CONTENTSCALE SERVER - COMPLETE');
     console.log('🚀 =====================================');
     console.log('');
     
@@ -2018,11 +1840,8 @@ async function startServer() {
         console.log('   • Admin Login: ✅ WERKT (ot / admin123)');
         console.log('   • Admin Edit/Delete: ✅ WERKT');
         console.log('   • Bulk Delete: ✅ WERKT');
-        console.log('   • Admin Messaging: ✅ TOEGEVOEGD');
+        console.log('   • Admin Messaging: ✅ NIEUW TOEGEVOEGD');
         console.log('   • Verified Stat: ✅ TOEGEVOEGD');
-        console.log('   • IP Rate Limiting: ✅ BEVEILIGD');
-        console.log('   • Request Caching: ✅ ACTIEF (24u)');
-        console.log('   • IP Audit Log: ✅ ACTIEF');
         console.log('');
     });
 }
