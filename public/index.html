@@ -1198,12 +1198,12 @@ document.addEventListener('DOMContentLoaded', function() {
   loadLeaderboardData();
   loadFreelancers();
   loadUserTemplates();
-  
+
   // Single URL enter key
   document.getElementById('singleUrlInput')?.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') scanSingleURL();
   });
-  
+
   // Bulk URL counter
   const bulkInput = document.getElementById('bulkUrlInput');
   if (bulkInput) {
@@ -1216,7 +1216,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
-  
+
   // Bio char counter
   const bioTextarea = document.getElementById('freelancerBio');
   if (bioTextarea) {
