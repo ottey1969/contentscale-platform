@@ -1,13 +1,13 @@
 // ============================================
-// CONTENTSCALE SERVER.JS - COMPLETE MET EDUCATIVE GRAAF RECOMMENDATIONS
-// ✅ Alle API endpoints werken echt
-// ✅ SendGrid email verzending
-// ✅ User templates opslaan in database
-// ✅ Bulk scanner met echte data
-// ✅ Elke user eigen SendGrid keys
-// ✅ Admin messaging systeem
-// ✅ Verified stat fix toegevoegd
-// ✅ NIEUW: Educatieve Recommendations (GRAAF Framework geïntegreerd)
+// CONTENTSCALE SERVER.JS - COMPLETE WITH ENGLISH EDUCATIONAL RECOMMENDATIONS
+// ✅ All API endpoints working
+// ✅ SendGrid email sending
+// ✅ User templates saved to database
+// ✅ Bulk scanner with real data
+// ✅ Each user has own SendGrid keys
+// ✅ Admin messaging system
+// ✅ Verified stat fix included
+// ✅ UPDATED: Recommendations now in English (GRAAF Framework integrated)
 // ============================================
 process.env.PGSSLMODE = 'verify-full';
 process.env.NODE_NO_WARNINGS = '1';
@@ -25,10 +25,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
-console.log('📊 Database URL:', process.env.DATABASE_URL ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
+console.log('📊 Database URL:', process.env.DATABASE_URL ? '✅ FOUND' : '❌ NOT FOUND');
 
 // ============================================
-// DATABASE CONFIGURATIE
+// DATABASE CONFIGURATION
 // ============================================
 let dbConfig;
 let pool;
@@ -50,7 +50,7 @@ function initDatabaseConfig() {
                 max: 20
             };
         } catch (e) {
-            console.error('❌ Ongeldige DATABASE_URL:', e.message);
+            console.error('❌ Invalid DATABASE_URL:', e.message);
             return null;
         }
     } else {
@@ -66,7 +66,7 @@ function initDatabaseConfig() {
             max: 10
         };
     }
-    console.log('📊 Database configuratie:');
+    console.log('📊 Database configuration:');
     console.log(`   - Host: ${dbConfig.host}`);
     console.log(`   - Port: ${dbConfig.port}`);
     console.log(`   - Database: ${dbConfig.database}`);
@@ -77,34 +77,34 @@ function initDatabaseConfig() {
 try {
     pool = initDatabaseConfig();
 } catch (e) {
-    console.error('❌ Fout bij initialiseren database pool:', e.message);
+    console.error('❌ Error initializing database pool:', e.message);
     pool = null;
 }
 
 async function waitForDatabase(retries = 5, delay = 3000) {
     if (!pool) {
-        console.log('❌ Geen database pool - overslaan');
+        console.log('❌ No database pool - skipping');
         return false;
     }
-    console.log('🔄 Verbinden met database...');
+    console.log('🔄 Connecting to database...');
     for (let i = 0; i < retries; i++) {
         try {
             const client = await pool.connect();
-            console.log(`✅ Database verbonden! (poging ${i + 1}/${retries})`);
+            console.log(`✅ Database connected! (attempt ${i + 1}/${retries})`);
             await client.query('SELECT NOW()');
-            console.log('✅ Database query werkt');
+            console.log('✅ Database query works');
             client.release();
             setTimeout(() => createAllTables().catch(err => {
-                console.error('❌ Fout bij aanmaken tabellen:', err.message);
+                console.error('❌ Error creating tables:', err.message);
             }), 1000);
             return true;
         } catch (err) {
-            console.error(`❌ Database connectie poging ${i + 1}/${retries} mislukt:`, err.message);
+            console.error(`❌ Database connection attempt ${i + 1}/${retries} failed:`, err.message);
             if (i === retries - 1) {
-                console.error('❌❌❌ KON GEEN VERBINDING MAKEN MET DATABASE ❌❌❌');
+                console.error('❌❌❌ COULD NOT CONNECT TO DATABASE ❌❌❌');
                 return false;
             }
-            console.log(`⏳ Opnieuw proberen over ${delay/1000} seconden...`);
+            console.log(`⏳ Retrying in ${delay/1000} seconds...`);
             await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
@@ -174,7 +174,7 @@ const verifyAdmin = async (req, res, next) => {
         return res.status(401).json({ success: false, error: 'Admin authentication required' });
     }
     if (!pool) {
-        return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+        return res.status(503).json({ success: false, error: 'Database unavailable' });
     }
     try {
         const result = await pool.query(
@@ -187,7 +187,7 @@ const verifyAdmin = async (req, res, next) => {
         req.admin = result.rows[0];
         next();
     } catch (error) {
-        console.error('❌ Admin verificatie error:', error.message);
+        console.error('❌ Admin verification error:', error.message);
         res.status(500).json({ success: false, error: 'Authentication error' });
     }
 };
@@ -230,13 +230,13 @@ process.on('SIGTERM', async () => {
 
 async function createAllTables() {
     if (!pool) {
-        console.error('❌ Geen database pool - kan tabellen niet aanmaken');
+        console.error('❌ No database pool - cannot create tables');
         return;
     }
     let client;
     try {
         client = await pool.connect();
-        console.log('📦 Database tabellen controleren...');
+        console.log('📦 Checking database tables...');
 
         // Super Admins
         await client.query(`
@@ -398,7 +398,7 @@ async function createAllTables() {
             )
         `);
 
-        console.log('✅ Alle database tabellen gereed');
+        console.log('✅ All database tables ready');
     } catch (error) {
         console.error('❌ Database setup error:', error.message);
     } finally {
@@ -1072,110 +1072,110 @@ app.post('/api/scan', async (req, res) => {
                     totalScore >= 60 ? 'average' : 'needs improvement';
 
         // ==========================================
-        // 🎓 INTELLIGENTE RECOMMENDATIONS (EDUCATIONAL)
+        // 🎓 INTELLIGENTE RECOMMENDATIONS (EDUCATIONAL - ENGLISH)
         // ==========================================
         const recommendations = [];
 
         // 1. CONTENT LENGTH (GRAAF - Relevance & Depth)
         if (analysis.wordCount < 500) {
             recommendations.push({
-                title: '📉 Content Diepte Ontbreekt',
-                description: `Je pagina heeft slechts ${analysis.wordCount} woorden. Google beschouwt dit als "thin content".`,
+                title: '📉 Content Depth Missing',
+                description: `Your page has only ${analysis.wordCount} words. Google considers this "thin content".`,
                 priority: 'high',
-                action: 'Breid je content uit naar minimaal 1.500 woorden. Voeg diepgang toe door vragen van gebruikers uitgebreid te beantwoorden.',
-                learning: 'Google\'s algoritme (Helpful Content Update) beloont pagina\'s die een onderwerp exhaustief behandelen. Korte pagina\'s worden vaak genegeerd ten gunste van diepgaande gidsen.',
-                target: 'Minimaal 1.500 woorden'
+                action: 'Expand your content to at least 1,500 words. Add depth by thoroughly answering user questions.',
+                learning: 'Google\'s algorithm (Helpful Content Update) rewards pages that cover a topic exhaustively. Short pages are often ignored in favor of in-depth guides.',
+                target: 'Minimum 1,500 words'
             });
         } else if (analysis.wordCount < 1500) {
             recommendations.push({
-                title: '⚠️ Content Kan Dieper',
-                description: `Met ${analysis.wordCount} woorden bedien je het onderwerp, maar je mist diepgang vergeleken met top-rankings.`,
+                title: '⚠️ Content Could Be Deeper',
+                description: `With ${analysis.wordCount} words you cover the topic, but lack depth compared to top rankings.`,
                 priority: 'medium',
-                action: 'Voeg secties toe over "Veelgestelde Vragen", "Case Studies" of "Stappenplannen" om de woordcount naar 1.500+ te brengen.',
-                learning: 'Lange vorm content (Long-form) scoort gemiddeld 3x beter in AI Overviews omdat het meer context biedt aan het AI-model.',
-                target: '1.500+ woorden'
+                action: 'Add sections on "Frequently Asked Questions", "Case Studies", or "Step-by-Step Guides" to bring the word count to 1,500+.',
+                learning: 'Long-form content ranks on average 3x better in AI Overviews because it provides more context to the AI model.',
+                target: '1,500+ words'
             });
         }
 
         // 2. SCHEMA MARKUP (Technical - Visibility)
         if (!analysis.hasArticleSchema) {
             recommendations.push({
-                title: '🔍 Ontbrekende Structuurdata (Schema)',
-                description: 'Je pagina mist Article schema markup. Hierdoor begrijpt Google de context van je content niet volledig.',
+                title: '🔍 Missing Structured Data (Schema)',
+                description: 'Your page is missing Article schema markup. This prevents Google from fully understanding the context of your content.',
                 priority: 'high',
-                action: 'Implementeer JSON-LD Article schema. Dit vertelt zoekmachines expliciet wat de kop, auteur en publicatiedatum zijn.',
-                learning: 'Schema markup verhoogt de kans op rich snippets (rich results) met 30% en helpt Google\'s AI om je content correct te citeren in AI Overviews.',
-                target: 'JSON-LD Article Schema toevoegen'
+                action: 'Implement JSON-LD Article schema. This explicitly tells search engines what the headline, author, and publication date are.',
+                learning: 'Schema markup increases the chance of rich snippets (rich results) by 30% and helps Google\'s AI cite your content correctly in AI Overviews.',
+                target: 'Add JSON-LD Article Schema'
             });
         }
 
         // 3. INTERNAL LINKING (GRAAF - Authority Flow)
         if (analysis.internalLinks.length < 5) {
             recommendations.push({
-                title: '🕸️ Zwakke Interne Linkstructuur',
-                description: `Je hebt slechts ${analysis.internalLinks.length} interne links. Dit maakt het moeilijk voor Google om je site-structuur te crawlen.`,
+                title: '🕸️ Weak Internal Link Structure',
+                description: `You have only ${analysis.internalLinks.length} internal links. This makes it difficult for Google to crawl your site structure.`,
                 priority: 'medium',
-                action: 'Link vanuit deze pagina naar 5 tot 10 gerelateerde artikelen op je eigen site. Gebruik beschrijvende ankerteksten.',
-                learning: 'Interne links verdelen "Page Authority" door je site heen. Zonder interne links blijft je content geïsoleerd ("Orphan Page") en rankt slechter.',
-                target: '8-12 relevante interne links'
+                action: 'Link from this page to 5 to 10 related articles on your own site. Use descriptive anchor texts.',
+                learning: 'Internal links distribute "Page Authority" throughout your site. Without internal links, your content remains isolated ("Orphan Page") and ranks poorly.',
+                target: '8-12 relevant internal links'
             });
         }
 
         // 4. KEYWORD USAGE (GRAAF - Relevance)
         if (analysis.keywordCount === 0 && analysis.wordCount > 100) {
              recommendations.push({
-                title: '❌ Focus Keyword Ontbreekt',
-                description: 'Je hoofdkwam lijkt niet voor te komen in de tekst. Google weet hierdoor niet waar deze pagina over gaat.',
+                title: '❌ Focus Keyword Missing',
+                description: 'Your main keyword does not appear in the text. Google therefore does not know what this page is about.',
                 priority: 'high',
-                action: 'Verwerk je focus keyword natuurlijk in de introductie, ten minste één H2 kop, en de conclusie.',
-                learning: 'Hoewel semantisch zoeken belangrijk is, helpt een duidelijk focus keyword Google om de primaire intentie van de pagina direct te begrijpen.',
-                target: 'Keyword densiteit van 0.5% - 1.5%'
+                action: 'Naturally incorporate your focus keyword in the introduction, at least one H2 heading, and the conclusion.',
+                learning: 'While semantic search is important, a clear focus keyword helps Google immediately understand the primary intent of the page.',
+                target: 'Keyword density of 0.5% - 1.5%'
             });
         }
 
         // 5. HEADINGS STRUCTURE (CRAFT - Readability)
         if (analysis.h2Count < 3) {
             recommendations.push({
-                title: '📑 Slechte Koppenstructuur',
-                description: `Je hebt slechts ${analysis.h2Count} subkoppen (H2). Dit maakt de tekst onleesbaar voor zowel mens als machine.`,
+                title: '📑 Poor Heading Structure',
+                description: `You have only ${analysis.h2Count} subheadings (H2). This makes the text unreadable for both humans and machines.`,
                 priority: 'medium',
-                action: 'Breek lange tekstblokken op met duidelijke H2 en H3 tussenkoppen die de structuur van je betoog volgen.',
-                learning: 'Goede koppen helpen scanners (mensen) en crawlers (Google) om de hiërarchie van informatie te begrijpen. Dit is cruciaal voor E-E-A-T.',
-                target: 'Minimaal 5 H2 koppen'
+                action: 'Break up long blocks of text with clear H2 and H3 subheadings that follow the structure of your argument.',
+                learning: 'Good headings help scanners (people) and crawlers (Google) understand the hierarchy of information. This is crucial for E-E-A-T.',
+                target: 'Minimum 5 H2 headings'
             });
         }
 
         // 6. MEDIA & ENGAGEMENT (UX)
         if (analysis.images.length < 3) {
              recommendations.push({
-                title: '🖼️ Te Weinig Visuele Elementen',
-                description: `Tekstwallen schrikken af. Je hebt slechts ${analysis.images.length} afbeeldingen.`,
+                title: '🖼️ Too Few Visual Elements',
+                description: `Walls of text are off-putting. You have only ${analysis.images.length} images.`,
                 priority: 'low',
-                action: 'Voeg minimaal 3 relevante afbeeldingen, infographics of video\'s toe om de leesbaarheid te verhogen.',
-                learning: 'Visuele elementen verhogen de "Time on Page". Google ziet langer verblijf als een signaal van kwaliteit en relevantie.',
-                target: 'Minimaal 1 afbeelding per 300 woorden'
+                action: 'Add at least 3 relevant images, infographics, or videos to increase readability.',
+                learning: 'Visual elements increase "Time on Page". Google sees longer dwell time as a signal of quality and relevance.',
+                target: 'Minimum 1 image per 300 words'
             });
         }
         
         // 7. E-E-A-T SIGNALS (GRAAF - Experience & Expertise)
         if (analysis.expertQuotes.length === 0) {
              recommendations.push({
-                title: '🎓 Ontbrekende Expertise Signalen (E-E-A-T)',
-                description: 'Je content bevat geen citaten van experts of bronvermeldingen.',
+                title: '🎓 Missing Expertise Signals (E-E-A-T)',
+                description: 'Your content contains no expert quotes or source citations.',
                 priority: 'medium',
-                action: 'Onderbouw je beweringen met citaten van erkende experts, studies of data. Link naar autoritaire bronnen.',
-                learning: 'Google\'s E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness) vereist dat claims onderbouwd worden. Zonder bronnen wordt content gezien als mening, niet als feit.',
-                target: 'Minimaal 2 expert citaten of bronvermeldingen'
+                action: 'Support your claims with quotes from recognized experts, studies, or data. Link to authoritative sources.',
+                learning: 'Google\'s E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness) requires claims to be substantiated. Without sources, content is seen as opinion, not fact.',
+                target: 'Minimum 2 expert quotes or source citations'
             });
         }
 
         const finalRecommendations = recommendations.length > 0 ? recommendations : [{
             title: '🎉 Excellent Work!',
-            description: 'Je pagina voldoet aan de kernprincipes van het GRAAF Framework.',
+            description: 'Your page meets the core principles of the GRAAF Framework.',
             priority: 'none',
-            action: 'Blijf consistent hoogwaardige content produceren en monitor je posities.',
-            learning: 'SEO is een continu proces. Onderhoud je content regelmatig om je positie te behouden in een veranderend landschap.',
-            target: 'Huidige kwaliteit behouden'
+            action: 'Continue producing high-quality content consistently and monitor your positions.',
+            learning: 'SEO is an ongoing process. Maintain your content regularly to preserve your position in a changing landscape.',
+            target: 'Maintain current quality'
         }];
 
         const result = {
@@ -1336,7 +1336,7 @@ app.get('/api/freelancers', async (req, res) => {
 });
 
 app.post('/api/freelancers/register', async (req, res) => {
-    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable' });
     try {
         const { name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_featured } = req.body;
         if (!name || !email) {
@@ -1376,7 +1376,7 @@ app.post('/api/setup/verify-admin', async (req, res) => {
     if (!pool) {
         return res.status(503).json({
             success: false,
-            error: 'Database niet beschikbaar',
+            error: 'Database unavailable',
             db_status: 'disconnected'
         });
     }
@@ -1430,7 +1430,7 @@ app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
 });
 
 app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => {
-    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable' });
     try {
         const { id } = req.params;
         const { final_country } = req.body;
@@ -1450,7 +1450,7 @@ app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => 
 });
 
 app.post('/api/admin/leaderboard/:id/reject', verifyAdmin, async (req, res) => {
-    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable' });
     try {
         await pool.query('DELETE FROM leaderboard WHERE id = $1', [req.params.id]);
         res.json({ success: true });
@@ -1461,15 +1461,15 @@ app.post('/api/admin/leaderboard/:id/reject', verifyAdmin, async (req, res) => {
 });
 
 app.post('/api/admin/leaderboard/bulk-delete', verifyAdmin, async (req, res) => {
-    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable' });
     try {
         const { ids } = req.body;
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
-            return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
+            return res.status(400).json({ success: false, error: 'No IDs received' });
         }
         const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
         await pool.query(`DELETE FROM leaderboard WHERE id IN (${placeholders})`, ids);
-        res.json({ success: true, message: `${ids.length} entries verwijderd` });
+        res.json({ success: true, message: `${ids.length} entries deleted` });
     } catch (error) {
         console.error('Bulk delete leaderboard error:', error.message);
         res.status(500).json({ success: false, error: error.message });
@@ -1477,7 +1477,7 @@ app.post('/api/admin/leaderboard/bulk-delete', verifyAdmin, async (req, res) => 
 });
 
 app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
-    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable' });
     try {
         const { url, company_name, score, country, city } = req.body;
         if (!url || score === undefined) {
@@ -1513,7 +1513,7 @@ app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
 });
 
 app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
-    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable' });
     try {
         const { id } = req.params;
         const { company_name, url, score, country, city } = req.body;
@@ -1547,15 +1547,15 @@ app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
             paramCount++;
         }
         if (updates.length === 0) {
-            return res.status(400).json({ success: false, error: 'Geen velden om te updaten' });
+            return res.status(400).json({ success: false, error: 'No fields to update' });
         }
         values.push(id);
         const query = `UPDATE leaderboard SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`;
         const result = await pool.query(query, values);
         if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, error: 'Entry niet gevonden' });
+            return res.status(404).json({ success: false, error: 'Entry not found' });
         }
-        res.json({ success: true, message: 'Leaderboard entry bijgewerkt', entry: result.rows[0] });
+        res.json({ success: true, message: 'Leaderboard entry updated', entry: result.rows[0] });
     } catch (error) {
         console.error('Update leaderboard error:', error.message);
         res.status(500).json({ success: false, error: error.message });
@@ -1563,14 +1563,14 @@ app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
 });
 
 app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
-    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable' });
     try {
         const { id } = req.params;
         const result = await pool.query('DELETE FROM leaderboard WHERE id = $1 RETURNING *', [id]);
         if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, error: 'Entry niet gevonden' });
+            return res.status(404).json({ success: false, error: 'Entry not found' });
         }
-        res.json({ success: true, message: 'Entry verwijderd' });
+        res.json({ success: true, message: 'Entry deleted' });
     } catch (error) {
         console.error('Delete leaderboard error:', error.message);
         res.status(500).json({ success: false, error: error.message });
@@ -1594,7 +1594,7 @@ app.get('/api/admin/freelancers/pending', verifyAdmin, async (req, res) => {
 });
 
 app.post('/api/admin/freelancers/:id/approve', verifyAdmin, async (req, res) => {
-    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable' });
     try {
         await pool.query(
             'UPDATE freelancers SET is_approved = TRUE, is_verified = TRUE WHERE id = $1',
@@ -1608,7 +1608,7 @@ app.post('/api/admin/freelancers/:id/approve', verifyAdmin, async (req, res) => 
 });
 
 app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
-    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable' });
     try {
         await pool.query('DELETE FROM freelancers WHERE id = $1', [req.params.id]);
         res.json({ success: true });
@@ -1619,7 +1619,7 @@ app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
 });
 
 app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
-    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable' });
     try {
         const { id } = req.params;
         const { name, email, title, location, country, bio, hourly_rate, is_featured } = req.body;
@@ -1667,12 +1667,12 @@ app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
             paramCount++;
         }
         if (updates.length === 0) {
-            return res.status(400).json({ success: false, error: 'Geen velden om te updaten' });
+            return res.status(400).json({ success: false, error: 'No fields to update' });
         }
         values.push(id);
         const query = `UPDATE freelancers SET ${updates.join(', ')} WHERE id = $${paramCount}`;
         await pool.query(query, values);
-        res.json({ success: true, message: 'Freelancer bijgewerkt' });
+        res.json({ success: true, message: 'Freelancer updated' });
     } catch (error) {
         console.error('Update freelancer error:', error.message);
         res.status(500).json({ success: false, error: error.message });
@@ -1680,7 +1680,7 @@ app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
 });
 
 app.post('/api/admin/freelancers/:id/toggle-featured', verifyAdmin, async (req, res) => {
-    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable' });
     try {
         const { id } = req.params;
         const freelancer = await pool.query('SELECT is_featured FROM freelancers WHERE id = $1', [id]);
@@ -1692,7 +1692,7 @@ app.post('/api/admin/freelancers/:id/toggle-featured', verifyAdmin, async (req, 
         res.json({
             success: true,
             is_featured: newFeatured,
-            message: `Featured ${newFeatured ? 'aangezet' : 'uitgezet'}`
+            message: `Featured ${newFeatured ? 'enabled' : 'disabled'}`
         });
     } catch (error) {
         console.error('Toggle featured error:', error.message);
@@ -1701,15 +1701,15 @@ app.post('/api/admin/freelancers/:id/toggle-featured', verifyAdmin, async (req, 
 });
 
 app.post('/api/admin/freelancers/bulk-delete', verifyAdmin, async (req, res) => {
-    if (!pool) return res.status(503).json({ success: false, error: 'Database niet beschikbaar' });
+    if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable' });
     try {
         const { ids } = req.body;
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
-            return res.status(400).json({ success: false, error: 'Geen IDs ontvangen' });
+            return res.status(400).json({ success: false, error: 'No IDs received' });
         }
         const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
         await pool.query(`DELETE FROM freelancers WHERE id IN (${placeholders})`, ids);
-        res.json({ success: true, message: `${ids.length} freelancers verwijderd` });
+        res.json({ success: true, message: `${ids.length} freelancers deleted` });
     } catch (error) {
         console.error('Bulk delete freelancers error:', error.message);
         res.status(500).json({ success: false, error: error.message });
@@ -1787,25 +1787,25 @@ async function startServer() {
     const dbConnected = await waitForDatabase();
     app.listen(PORT, () => {
         console.log('');
-        console.log(`📍 Server gestart op http://localhost:${PORT}`);
+        console.log(`📍 Server started on http://localhost:${PORT}`);
         console.log(`📍 Admin:     http://localhost:${PORT}/admin`);
         console.log('');
-        console.log(`📊 Database: ${dbConnected ? '✅ Verbonden' : '❌ NIET VERBONDEN'}`);
+        console.log(`📊 Database: ${dbConnected ? '✅ Connected' : '❌ NOT CONNECTED'}`);
         console.log('');
         console.log('✅ FEATURE STATUS:');
-        console.log('   • Single URL Scanner: ✅ ACTIEF');
-        console.log('   • Bulk URL Scanner: ✅ ACTIEF');
-        console.log('   • SendGrid Integration: ✅ ECHTE EMAILS');
-        console.log('   • Email Templates: ✅ OPSLAAN IN DB');
-        console.log('   • Leaderboard: ✅ ACTIEF');
-        console.log('   • Freelancers: ✅ ACTIEF');
-        console.log('   • Admin Login: ✅ WERKT (ot / admin123)');
-        console.log('   • Admin Edit/Delete: ✅ WERKT');
-        console.log('   • Bulk Delete: ✅ WERKT');
-        console.log('   • Admin Messaging: ✅ NIEUW TOEGEVOEGD');
-        console.log('   • User Management: ✅ NIEUW TOEGEVOEGD');
-        console.log('   • Verified Stat: ✅ TOEGEVOEGD');
-        console.log('   • Educative Recommendations: ✅ GRAAF FRAMEWORK INTEGRATED');
+        console.log('   • Single URL Scanner: ✅ ACTIVE');
+        console.log('   • Bulk URL Scanner: ✅ ACTIVE');
+        console.log('   • SendGrid Integration: ✅ REAL EMAILS');
+        console.log('   • Email Templates: ✅ SAVED IN DB');
+        console.log('   • Leaderboard: ✅ ACTIVE');
+        console.log('   • Freelancers: ✅ ACTIVE');
+        console.log('   • Admin Login: ✅ WORKS (ot / admin123)');
+        console.log('   • Admin Edit/Delete: ✅ WORKS');
+        console.log('   • Bulk Delete: ✅ WORKS');
+        console.log('   • Admin Messaging: ✅ ADDED');
+        console.log('   • User Management: ✅ ADDED');
+        console.log('   • Verified Stat: ✅ ADDED');
+        console.log('   • Educative Recommendations: ✅ ENGLISH (GRAAF FRAMEWORK)');
         console.log('');
     });
 }
