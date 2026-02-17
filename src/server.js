@@ -5,7 +5,7 @@
 // ✅ User templates opslaan in database
 // ✅ Bulk scanner met echte data
 // ✅ Elke user eigen SendGrid keys
-// ✅ Verified stat toegevoegd aan leaderboard
+// ✅ Verified stat fix toegevoegd
 // ============================================
 process.env.PGSSLMODE = 'verify-full';
 process.env.NODE_NO_WARNINGS = '1';
@@ -1223,7 +1223,7 @@ app.get('/api/leaderboard', async (req, res) => {
                 avgScore: avgScore,
                 countriesCount: countries,
                 activeHelpers: activeHelpers,
-                verifiedCount: verifiedCount  // ✅ NIEUW TOEVOEGEN
+                verifiedCount: verifiedCount  // ✅ NIEUW TOEGEVOEGEN
             }
         });
     } catch (error) {
