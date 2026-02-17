@@ -5,552 +5,576 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ContentScale - Elite SEO Content Scanner 100/100</title>
 <meta name="description" content="Scan je content op 100/100 met ons Elite GRAAF Framework. Detecteert AI Overview ready content, E-E-A-T signals, en meer.">
-
-<!-- ✅ PRELOAD CRITICAL RESOURCES -->
-<link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
-<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<link rel="preconnect" href="https://cdn.tailwindcss.com">
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
 <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
-
-<!-- ✅ DEFER NON-CRITICAL CSS -->
+<script src="https://cdn.tailwindcss.com" defer></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'; this.onload=null;">
 <noscript>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </noscript>
-
-<!-- ✅ DEFER TAILWIND -->
-<script src="https://cdn.tailwindcss.com" defer></script>
-
-<!-- ✅ CRITICAL CSS INLINED FOR ABOVE-THE-FOLD -->
 <style>
-/* CRITICAL CSS - ABOVE THE FOLD */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  background: #030712;
-  color: white;
-  line-height: 1.6;
+font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+background: #030712;
+color: white;
+line-height: 1.6;
 }
 h1, h2, h3, h4, h5, h6, p, a, span, div, button, input, textarea, select, label, li {
-  color: white !important;
+color: white !important;
 }
 input, textarea, select {
-  color: #000000 !important;
-  background-color: #ffffff !important;
-  border: 1px solid #d1d5db !important;
+color: #000000 !important;
+background-color: #ffffff !important;
+border: 1px solid #d1d5db !important;
 }
 input::placeholder, textarea::placeholder {
-  color: #6b7280 !important;
-  opacity: 1 !important;
+color: #6b7280 !important;
+opacity: 1 !important;
 }
 .text-gray-300, .text-gray-400, .text-gray-500 {
-  color: #d1d5db !important;
+color: #d1d5db !important;
 }
 .btn-white-black {
-  background: white !important;
-  color: #581c87 !important;
-  font-weight: 700;
-  border: 2px solid white;
+background: white !important;
+color: #581c87 !important;
+font-weight: 700;
+border: 2px solid white;
 }
 .btn-white-black:hover {
-  background: #f3f4f6 !important;
-  color: #6b21a8 !important;
+background: #f3f4f6 !important;
+color: #6b21a8 !important;
 }
 .bg-gray-900 { background-color: #030712; }
 .bg-gray-800 { background-color: #111827; }
 .bg-gray-700 { background-color: #1f2937; }
 .bg-gray-900\/95 { background-color: rgba(3, 7, 18, 0.95); }
 .btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.5rem;
-  font-weight: 600;
-  transition: all 0.2s;
-  border: none;
-  cursor: pointer;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+gap: 0.5rem;
+padding: 0.75rem 1.5rem;
+border-radius: 0.5rem;
+font-weight: 600;
+transition: all 0.2s;
+border: none;
+cursor: pointer;
 }
 .btn-primary {
-  background: linear-gradient(135deg, #7e22ce, #be185d);
-  color: white;
+background: linear-gradient(135deg, #7e22ce, #be185d);
+color: white;
 }
 .btn-primary:hover {
-  background: linear-gradient(135deg, #6b21a8, #9d174d);
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px -5px rgba(126, 34, 206, 0.5);
+background: linear-gradient(135deg, #6b21a8, #9d174d);
+transform: translateY(-2px);
+box-shadow: 0 10px 20px -5px rgba(126, 34, 206, 0.5);
+}
+.btn-secondary {
+background: linear-gradient(135deg, #1e40af, #0891b2);
+color: white;
+}
+.btn-success {
+background: #0f7b3a !important;
+color: white !important;
+}
+.btn-disabled {
+background: #6b7280 !important;
+color: white !important;
+cursor: not-allowed;
+opacity: 0.6;
 }
 .mode-toggle {
-  position: relative;
-  padding: 1rem 2rem;
-  border-radius: 0.75rem;
-  font-weight: 600;
-  font-size: 1.1rem;
-  background: #374151;
-  color: white;
-  border: 2px solid transparent;
-  transition: all 0.2s;
-  cursor: pointer;
-  flex: 1;
-  max-width: 280px;
+position: relative;
+padding: 1rem 2rem;
+border-radius: 0.75rem;
+font-weight: 600;
+font-size: 1.1rem;
+background: #374151;
+color: white;
+border: 2px solid transparent;
+transition: all 0.2s;
+cursor: pointer;
+flex: 1;
+max-width: 280px;
 }
 .mode-toggle.active {
-  background: linear-gradient(135deg, #7e22ce, #be185d);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 4px 12px rgba(126, 34, 206, 0.4);
+background: linear-gradient(135deg, #7e22ce, #be185d);
+border: 2px solid rgba(255, 255, 255, 0.3);
+box-shadow: 0 4px 12px rgba(126, 34, 206, 0.4);
 }
 .mode-toggle.active::after {
-  content: '✓';
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 28px;
-  height: 28px;
-  background: #0f7b3a;
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  font-weight: bold;
-  border: 2px solid white;
+content: '✓';
+position: absolute;
+top: -8px;
+right: -8px;
+width: 28px;
+height: 28px;
+background: #0f7b3a;
+color: white;
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 16px;
+font-weight: bold;
+border: 2px solid white;
 }
 .card {
-  background: #111827;
-  border: 1px solid #374151;
-  border-radius: 1rem;
-  padding: 1.5rem;
-  transition: all 0.2s;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+background: #111827;
+border: 1px solid #374151;
+border-radius: 1rem;
+padding: 1.5rem;
+transition: all 0.2s;
+display: flex;
+flex-direction: column;
+height: 100%;
 }
 .card:hover {
-  border-color: #a855f7;
-  transform: translateY(-4px);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+border-color: #a855f7;
+transform: translateY(-4px);
+box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
 }
-.progress-bar {
-  height: 0.75rem;
-  background: #374151;
-  border-radius: 9999px;
-  overflow: hidden;
+.card-content {
+flex: 1;
 }
-.progress-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #a855f7, #ec4899);
-  transition: width 0.3s;
+.card-footer {
+margin-top: auto;
+padding-top: 1rem;
 }
-.hidden { display: none; }
-.skip-link {
-  position: absolute;
-  top: -40px;
-  left: 0;
-  background: #7e22ce;
-  color: white;
-  padding: 0.5rem 1rem;
-  z-index: 100;
-  transition: top 0.2s;
-}
-.skip-link:focus {
-  top: 0;
-}
-#main-content > div:first-child {
-  min-height: 400px;
-}
-</style>
-
-<!-- ✅ NON-CRITICAL CSS - LOADED ASYNC -->
-<style media="print" onload="this.media='all'">
 .stat-card {
-  position: relative;
-  border-radius: 1rem;
-  padding: 1.25rem;
-  overflow: hidden;
+position: relative;
+border-radius: 1rem;
+padding: 1.25rem;
+overflow: hidden;
 }
 .stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, #7e22ce, #6b21a8);
-  opacity: 0.9;
+content: '';
+position: absolute;
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+background: linear-gradient(135deg, #7e22ce, #6b21a8);
+opacity: 0.9;
 }
 .stat-card > div {
-  position: relative;
-  z-index: 10;
+position: relative;
+z-index: 10;
 }
 .top-card {
-  border-radius: 1rem;
-  padding: 1.5rem;
-  text-align: center;
-  color: white;
+border-radius: 1rem;
+padding: 1.5rem;
+text-align: center;
+color: white;
 }
 .top-card.gold {
-  background: linear-gradient(135deg, #fbbf24, #d97706);
+background: linear-gradient(135deg, #fbbf24, #d97706);
 }
 .top-card.silver {
-  background: linear-gradient(135deg, #e5e7eb, #6b7280);
+background: linear-gradient(135deg, #e5e7eb, #6b7280);
 }
 .top-card.bronze {
-  background: linear-gradient(135deg, #f97316, #c2410c);
+background: linear-gradient(135deg, #f97316, #c2410c);
+}
+.top-card button {
+background: rgba(0, 0, 0, 0.3);
+border: 2px solid rgba(255, 255, 255, 0.3);
+color: white;
+padding: 0.5rem 1rem;
+border-radius: 0.5rem;
+font-weight: 600;
+transition: all 0.2s;
+width: 100%;
+margin-top: 1rem;
+}
+.top-card button:hover {
+background: rgba(0, 0, 0, 0.5);
+border-color: rgba(255, 255, 255, 0.6);
 }
 .score-high { color: #4ade80; }
 .score-medium { color: #facc15; }
 .score-low { color: #f87171; }
+.progress-bar {
+height: 0.75rem;
+background: #374151;
+border-radius: 9999px;
+overflow: hidden;
+}
+.progress-bar-fill {
+height: 100%;
+background: linear-gradient(90deg, #a855f7, #ec4899);
+transition: width 0.3s;
+}
 .grid-3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
+display: grid;
+grid-template-columns: repeat(3, 1fr);
+gap: 1.5rem;
 }
 .grid-4 {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.5rem;
+display: grid;
+grid-template-columns: repeat(4, 1fr);
+gap: 1.5rem;
 }
 @media (max-width: 1024px) {
-  .grid-4 { grid-template-columns: repeat(3, 1fr); }
+.grid-4 { grid-template-columns: repeat(3, 1fr); }
 }
 @media (max-width: 768px) {
-  .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
+.grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 640px) {
-  .grid-3, .grid-4 { grid-template-columns: 1fr; }
+.grid-3, .grid-4 { grid-template-columns: 1fr; }
 }
 .rankings-4-15-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
+display: grid;
+grid-template-columns: repeat(4, 1fr);
+gap: 1rem;
 }
 @media (max-width: 1024px) {
-  .rankings-4-15-grid { grid-template-columns: repeat(3, 1fr); }
+.rankings-4-15-grid { grid-template-columns: repeat(3, 1fr); }
 }
 @media (max-width: 768px) {
-  .rankings-4-15-grid { grid-template-columns: repeat(2, 1fr); }
+.rankings-4-15-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 480px) {
-  .rankings-4-15-grid { grid-template-columns: 1fr; }
+.rankings-4-15-grid { grid-template-columns: 1fr; }
 }
 .rank-card {
-  background: #1f2937;
-  border: 1px solid #374151;
-  border-radius: 0.75rem;
-  padding: 1rem;
-  text-align: center;
-  transition: all 0.2s;
+background: #1f2937;
+border: 1px solid #374151;
+border-radius: 0.75rem;
+padding: 1rem;
+text-align: center;
+transition: all 0.2s;
 }
 .rank-card:hover {
-  border-color: #a855f7;
-  transform: translateY(-4px);
+border-color: #a855f7;
+transform: translateY(-4px);
 }
 .filter-tag {
-  background: #374151;
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 9999px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: 1px solid #4b5563;
+background: #374151;
+color: white;
+padding: 0.5rem 1rem;
+border-radius: 9999px;
+font-size: 0.875rem;
+font-weight: 500;
+cursor: pointer;
+transition: all 0.2s;
+border: 1px solid #4b5563;
 }
 .filter-tag:hover {
-  background: #4b5563;
+background: #4b5563;
 }
 .filter-tag.active {
-  background: #7e22ce;
-  border-color: #a855f7;
+background: #7e22ce;
+border-color: #a855f7;
 }
 .rankings-table {
-  width: 100%;
-  background: #111827;
-  border-radius: 0.75rem;
-  overflow: hidden;
+width: 100%;
+background: #111827;
+border-radius: 0.75rem;
+overflow: hidden;
 }
 .rankings-table th {
-  background: #1f2937;
-  padding: 1rem;
-  text-align: left;
-  font-weight: 600;
-  color: white;
+background: #1f2937;
+padding: 1rem;
+text-align: left;
+font-weight: 600;
+color: white;
 }
 .rankings-table td {
-  padding: 1rem;
-  border-bottom: 1px solid #374151;
-  color: white;
+padding: 1rem;
+border-bottom: 1px solid #374151;
+color: white;
 }
+.hidden { display: none; }
 .modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(4px);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
+position: fixed;
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+background: rgba(0, 0, 0, 0.8);
+backdrop-filter: blur(4px);
+display: none;
+align-items: center;
+justify-content: center;
+z-index: 9999;
 }
 .modal.active {
-  display: flex;
+display: flex;
 }
 .modal-content {
-  background: #111827;
-  border: 2px solid #a855f7;
-  border-radius: 1rem;
-  padding: 2rem;
-  max-width: 600px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
+background: #111827;
+border: 2px solid #a855f7;
+border-radius: 1rem;
+padding: 2rem;
+max-width: 600px;
+width: 90%;
+max-height: 90vh;
+overflow-y: auto;
 }
 .reverse-email {
-  unicode-bidi: bidi-override;
-  direction: rtl;
+unicode-bidi: bidi-override;
+direction: rtl;
 }
 .faq-item {
-  background: #111827;
-  border: 1px solid #374151;
-  border-radius: 0.75rem;
-  overflow: hidden;
-  transition: all 0.2s;
+background: #111827;
+border: 1px solid #374151;
+border-radius: 0.75rem;
+overflow: hidden;
+transition: all 0.2s;
 }
 .faq-item:hover {
-  border-color: #a855f7;
+border-color: #a855f7;
 }
 .faq-question {
-  width: 100%;
-  padding: 1.25rem 1.5rem;
-  text-align: left;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: transparent;
-  border: none;
-  color: white;
-  font-weight: 600;
-  font-size: 1.125rem;
-  cursor: pointer;
+width: 100%;
+padding: 1.25rem 1.5rem;
+text-align: left;
+display: flex;
+justify-content: space-between;
+align-items: center;
+background: transparent;
+border: none;
+color: white;
+font-weight: 600;
+font-size: 1.125rem;
+cursor: pointer;
 }
 .faq-question:hover {
-  background: #1f2937;
+background: #1f2937;
 }
 .faq-answer {
-  padding: 0 1.5rem 1.25rem 1.5rem;
-  color: #d1d5db;
+padding: 0 1.5rem 1.25rem 1.5rem;
+color: #d1d5db;
 }
 .accordion-item {
-  background: #111827;
-  border: 1px solid #374151;
-  border-radius: 0.75rem;
-  overflow: hidden;
-  transition: all 0.2s;
-  margin-top: 1.5rem;
+background: #111827;
+border: 1px solid #374151;
+border-radius: 0.75rem;
+overflow: hidden;
+transition: all 0.2s;
+margin-top: 1.5rem;
 }
 .accordion-item:hover {
-  border-color: #a855f7;
+border-color: #a855f7;
 }
 .accordion-header {
-  width: 100%;
-  padding: 1.25rem 1.5rem;
-  text-align: left;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: linear-gradient(135deg, #1e293b, #0f172a);
-  border: 1px solid #a855f7;
-  border-radius: 0.75rem;
-  color: white;
-  font-weight: 600;
-  font-size: 1.125rem;
-  cursor: pointer;
+width: 100%;
+padding: 1.25rem 1.5rem;
+text-align: left;
+display: flex;
+justify-content: space-between;
+align-items: center;
+background: linear-gradient(135deg, #1e293b, #0f172a);
+border: 1px solid #a855f7;
+border-radius: 0.75rem;
+color: white;
+font-weight: 600;
+font-size: 1.125rem;
+cursor: pointer;
 }
 .accordion-header:hover {
-  background: linear-gradient(135deg, #2d3748, #1a202c);
+background: linear-gradient(135deg, #2d3748, #1a202c);
 }
 .accordion-content {
-  padding: 1.5rem;
-  background: #111827;
-  border: 1px solid #374151;
-  border-top: none;
-  border-bottom-left-radius: 0.75rem;
-  border-bottom-right-radius: 0.75rem;
+padding: 1.5rem;
+background: #111827;
+border: 1px solid #374151;
+border-top: none;
+border-bottom-left-radius: 0.75rem;
+border-bottom-right-radius: 0.75rem;
 }
 footer {
-  background: #111827;
-  border-top: 2px solid #374151;
-  margin-top: 4rem;
+background: #111827;
+border-top: 2px solid #374151;
+margin-top: 4rem;
 }
 .text-blue-400, a.text-blue-400 {
-  color: #7dd3fc !important;
-  text-decoration: underline;
-  text-decoration-color: rgba(125, 211, 252, 0.4);
-  text-underline-offset: 2px;
+color: #7dd3fc !important;
+text-decoration: underline;
+text-decoration-color: rgba(125, 211, 252, 0.4);
+text-underline-offset: 2px;
 }
 .text-blue-400:hover, a.text-blue-400:hover {
-  color: #bae6fd !important;
-  text-decoration-color: #bae6fd;
+color: #bae6fd !important;
+text-decoration-color: #bae6fd;
+}
+.skip-link {
+position: absolute;
+top: -40px;
+left: 0;
+background: #7e22ce;
+color: white;
+padding: 0.5rem 1rem;
+z-index: 100;
+transition: top 0.2s;
+}
+.skip-link:focus {
+top: 0;
 }
 img[width][height] {
-  aspect-ratio: attr(width) / attr(height);
+aspect-ratio: attr(width) / attr(height);
 }
 .w-48.h-48 {
-  width: 192px;
-  height: 192px;
+width: 192px;
+height: 192px;
+}
+#main-content > div:first-child {
+min-height: 400px;
 }
 .modal input, .modal textarea {
-  color: #000000 !important;
-  background-color: #ffffff !important;
-  border: 1px solid #d1d5db !important;
+color: #000000 !important;
+background-color: #ffffff !important;
+border: 1px solid #d1d5db !important;
 }
 .modal input::placeholder, .modal textarea::placeholder {
-  color: #6b7280 !important;
-  opacity: 1 !important;
+color: #6b7280 !important;
+opacity: 1 !important;
 }
 .modal label {
-  color: #374151 !important;
-  font-weight: 500;
+color: #374151 !important;
+font-weight: 500;
 }
 .modal .modal-content {
-  background: white !important;
+background: white !important;
 }
 .modal .modal-content h2 {
-  color: #111827 !important;
+color: #111827 !important;
 }
 .modal .modal-content button {
-  color: white !important;
+color: white !important;
 }
 .modal .modal-content p {
-  color: #6b7280 !important;
+color: #6b7280 !important;
 }
 .modal .modal-content .text-gray-400 {
-  color: #6b7280 !important;
+color: #6b7280 !important;
 }
 .api-status-indicator {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-left: 8px;
+display: inline-block;
+width: 10px;
+height: 10px;
+border-radius: 50%;
+margin-left: 8px;
 }
 .api-status-active {
-  background-color: #10b981;
-  box-shadow: 0 0 8px #10b981;
+background-color: #10b981;
+box-shadow: 0 0 8px #10b981;
 }
 .api-status-inactive {
-  background-color: #6b7280;
+background-color: #6b7280;
 }
 .scanner-container {
-  background: linear-gradient(135deg, #1e293b, #0f172a);
-  border: 1px solid #a855f7;
-  border-radius: 1rem;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
+background: linear-gradient(135deg, #1e293b, #0f172a);
+border: 1px solid #a855f7;
+border-radius: 1rem;
+padding: 1.5rem;
+margin-bottom: 1.5rem;
 }
 .api-section {
-  margin-top: 1rem;
-  border-top: 1px solid #374151;
-  padding-top: 1rem;
+margin-top: 1rem;
+border-top: 1px solid #374151;
+padding-top: 1rem;
 }
 .recommendation-card {
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-  border-left: 4px solid #7e22ce;
-  border-radius: 0.75rem;
-  padding: 1.25rem;
-  margin-bottom: 1rem;
-  transition: all 0.2s;
+background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+border-left: 4px solid #7e22ce;
+border-radius: 0.75rem;
+padding: 1.25rem;
+margin-bottom: 1rem;
+transition: all 0.2s;
 }
 .recommendation-card:hover {
-  border-left-color: #a855f7;
-  transform: translateX(4px);
+border-left-color: #a855f7;
+transform: translateX(4px);
 }
 .priority-badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  margin-left: 0.5rem;
+display: inline-block;
+padding: 0.25rem 0.75rem;
+border-radius: 9999px;
+font-size: 0.75rem;
+font-weight: 600;
+margin-left: 0.5rem;
 }
 .priority-high { background: #ef4444; color: white; }
 .priority-medium { background: #f59e0b; color: white; }
 .priority-low { background: #8b5cf6; color: white; }
 .priority-none { background: #10b981; color: white; }
 .recommendation-title {
-  font-size: 1.125rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-  color: #f3f4f6;
+font-size: 1.125rem;
+font-weight: 700;
+margin-bottom: 0.5rem;
+color: #f3f4f6;
 }
 .recommendation-desc {
-  color: #d1d5db;
-  margin-bottom: 1rem;
-  line-height: 1.5;
+color: #d1d5db;
+margin-bottom: 1rem;
+line-height: 1.5;
 }
 .recommendation-section {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid #374151;
+margin-top: 0.75rem;
+padding-top: 0.75rem;
+border-top: 1px solid #374151;
 }
 .recommendation-section-title {
-  font-weight: 600;
-  font-size: 0.875rem;
-  margin-bottom: 0.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+font-weight: 600;
+font-size: 0.875rem;
+margin-bottom: 0.5rem;
+display: flex;
+align-items: center;
+gap: 0.5rem;
 }
 .recommendation-section-title i {
-  font-size: 0.75rem;
+font-size: 0.75rem;
 }
 .recommendation-action { color: #f3f4f6; }
 .recommendation-learning { color: #60a5fa; }
 .recommendation-target { color: #34d399; }
 .template-editor {
-  background: #1f2937;
-  border: 1px solid #374151;
-  border-radius: 0.5rem;
-  padding: 1rem;
-  margin-top: 1rem;
+background: #1f2937;
+border: 1px solid #374151;
+border-radius: 0.5rem;
+padding: 1rem;
+margin-top: 1rem;
 }
 .template-editor textarea {
-  width: 100%;
-  min-height: 200px;
-  font-family: monospace;
-  font-size: 0.875rem;
+width: 100%;
+min-height: 200px;
+font-family: monospace;
+font-size: 0.875rem;
 }
 </style>
 </head>
 <body class="bg-gray-900">
 <a href="#main-content" class="skip-link">Skip to main content</a>
 <nav class="sticky top-0 z-50 bg-gray-900/95 border-b-2 border-purple-600 backdrop-blur-sm">
-  <div class="max-w-7xl mx-auto px-6 py-4">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <span class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">ContentScale</span>
-        <span class="hidden sm:inline-block text-xs px-2 py-1 bg-purple-600 rounded text-white font-semibold">Pro</span>
-      </div>
-      <div class="hidden md:flex gap-6">
-        <a href="#lead-scanner" class="text-gray-300 hover:text-white transition-colors">Scanner</a>
-        <a href="#leaderboard" class="text-gray-300 hover:text-white transition-colors">Leaderboard</a>
-        <a href="#freelancers" class="text-gray-300 hover:text-white transition-colors">Experts</a>
-        <a href="#templates" class="text-gray-300 hover:text-white transition-colors">Templates</a>
-      </div>
-      <div class="flex gap-3">
-        <a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="btn-success btn">
-          <i class="fab fa-whatsapp"></i> Chat
-        </a>
-      </div>
-    </div>
-  </div>
+<div class="max-w-7xl mx-auto px-6 py-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">ContentScale</span>
+<span class="hidden sm:inline-block text-xs px-2 py-1 bg-purple-600 rounded text-white font-semibold">Pro</span>
+</div>
+<div class="hidden md:flex gap-6">
+<a href="#lead-scanner" class="text-gray-300 hover:text-white transition-colors">Scanner</a>
+<a href="#leaderboard" class="text-gray-300 hover:text-white transition-colors">Leaderboard</a>
+<a href="#freelancers" class="text-gray-300 hover:text-white transition-colors">Experts</a>
+<a href="#templates" class="text-gray-300 hover:text-white transition-colors">Templates</a>
+</div>
+<div class="flex gap-3">
+<a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="btn-success btn">
+<i class="fab fa-whatsapp"></i> Chat
+</a>
+</div>
+</div>
+</div>
 </nav>
 
 <div id="main-content" class="max-w-7xl mx-auto px-6 py-8">
+
 <!-- ============================================
 SCANNER SECTION
 ============================================ -->
@@ -587,13 +611,13 @@ SCANNER SECTION
 <div class="card">
 <div class="flex flex-col sm:flex-row gap-3">
 <input type="text"
-  id="singleUrlInput"
-  name="url"
-  placeholder="https://business-website.com"
-  class="flex-1"
-  autocomplete="off"
-  aria-autocomplete="none"
-  spellcheck="false">
+id="singleUrlInput"
+name="url"
+placeholder="https://business-website.com"
+class="flex-1"
+autocomplete="off"
+aria-autocomplete="none"
+spellcheck="false">
 <button onclick="scanSingleURL()" id="singleScanBtn" class="btn-primary btn whitespace-nowrap">
 <i class="fas fa-search"></i> Start Scan
 </button>
@@ -655,15 +679,15 @@ Contact us via WhatsApp to activate your account!
 </div>
 <div class="flex gap-3 flex-wrap">
 <a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20activate%20bulk%20scanner."
-  id="whatsappActivationBtn"
-  target="_blank"
-  rel="noopener"
-  class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold inline-flex items-center gap-2 transition-all transform hover:scale-105">
+id="whatsappActivationBtn"
+target="_blank"
+rel="noopener"
+class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold inline-flex items-center gap-2 transition-all transform hover:scale-105">
 <i class="fab fa-whatsapp text-xl"></i>
 Contact for Activation
 </a>
 <button onclick="checkActivationStatus()"
-  class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold inline-flex items-center gap-2 transition-all">
+class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold inline-flex items-center gap-2 transition-all">
 <i class="fas fa-sync mr-2"></i>
 Refresh Status
 </button>
@@ -689,13 +713,13 @@ Scan up to 100 websites at once. Based on scores, we automatically:
 <div class="mb-4">
 <label class="block text-sm text-gray-300 mb-2">Enter URLs (one per line, max 100)</label>
 <textarea
-  id="bulkUrlInput"
-  rows="8"
-  placeholder="https://example1.com
+id="bulkUrlInput"
+rows="8"
+placeholder="https://example1.com
 https://example2.com
 https://example3.com"
-  class="w-full p-3 rounded border border-gray-600 focus:border-purple-500 resize-none"
-  style="color: #000000 !important; background-color: #ffffff !important;"></textarea>
+class="w-full p-3 rounded border border-gray-600 focus:border-purple-500 resize-none"
+style="color: #000000 !important; background-color: #ffffff !important;"></textarea>
 <div class="flex justify-between mt-1">
 <span class="text-xs text-gray-400">Up to 100 URLs</span>
 <span id="bulkUrlCount" class="text-xs text-gray-400">0/100</span>
@@ -1014,6 +1038,7 @@ FREELANCERS SECTION
 </div>
 <div id="freelancersGrid" class="grid-3"></div>
 </div>
+
 </div>
 
 <!-- ============================================
@@ -1123,9 +1148,9 @@ FREELANCER MODAL
 <p class="text-xs text-gray-500 mt-0.5">
 Word uitgelicht bovenaan de specialist lijst, krijg een speciale badge en 3x meer zichtbaarheid.
 <a href="https://paypal.me/ojgmedia?locale.x=en_US&country.x=NL"
-  target="_blank"
-  rel="noopener"
-  class="text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1">
+target="_blank"
+rel="noopener"
+class="text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1">
 <i class="fab fa-paypal text-sm"></i> Betaal via PayPal
 </a>
 </p>
@@ -1159,1125 +1184,1125 @@ let sendgridConfigured = false;
 let webshareConfigured = false;
 let allLeaderboardEntries = [];
 let userTemplates = {
-  congrats: { subject: '', body: '' },
-  improvement: { subject: '', body: '' },
-  website: { subject: '', body: '' }
+congrats: { subject: '', body: '' },
+improvement: { subject: '', body: '' },
+website: { subject: '', body: '' }
 };
 
 // ==========================================
 // INIT
 // ==========================================
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('📋 ContentScale loaded');
-  registerUser();
-  loadLeaderboardData();
-  loadFreelancers();
-  loadUserTemplates();
-  
-  // Single URL enter key
-  document.getElementById('singleUrlInput')?.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') scanSingleURL();
-  });
-  
-  // Bulk URL counter
-  const bulkInput = document.getElementById('bulkUrlInput');
-  if (bulkInput) {
-    bulkInput.addEventListener('input', function() {
-      const urls = this.value.split('\n').filter(u => u.trim().length > 0);
-      const counter = document.getElementById('bulkUrlCount');
-      if (counter) {
-        counter.textContent = `${urls.length}/100`;
-        counter.style.color = urls.length > 100 ? '#f87171' : '#d1d5db';
-      }
-    });
-  }
-  
-  // Bio char counter
-  const bioTextarea = document.getElementById('freelancerBio');
-  if (bioTextarea) {
-    bioTextarea.addEventListener('input', function() {
-      document.getElementById('bioCharCount').textContent = this.value.length + '/200';
-    });
-  }
+console.log('📋 ContentScale loaded');
+registerUser();
+loadLeaderboardData();
+loadFreelancers();
+loadUserTemplates();
+
+// Single URL enter key
+document.getElementById('singleUrlInput')?.addEventListener('keypress', function(e) {
+if (e.key === 'Enter') scanSingleURL();
+});
+
+// Bulk URL counter
+const bulkInput = document.getElementById('bulkUrlInput');
+if (bulkInput) {
+bulkInput.addEventListener('input', function() {
+const urls = this.value.split('\n').filter(u => u.trim().length > 0);
+const counter = document.getElementById('bulkUrlCount');
+if (counter) {
+counter.textContent = `${urls.length}/100`;
+counter.style.color = urls.length > 100 ? '#f87171' : '#d1d5db';
+}
+});
+}
+
+// Bio char counter
+const bioTextarea = document.getElementById('freelancerBio');
+if (bioTextarea) {
+bioTextarea.addEventListener('input', function() {
+document.getElementById('bioCharCount').textContent = this.value.length + '/200';
+});
+}
 });
 
 // ==========================================
 // USER REGISTRATION
 // ==========================================
 async function registerUser() {
-  try {
-    let storedUserId = localStorage.getItem('user_id');
-    if (!storedUserId) {
-      const response = await fetch('/api/user/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      const data = await response.json();
-      if (data.success && data.userId) {
-        userId = data.userId;
-        localStorage.setItem('user_id', userId);
-        console.log('✅ User registered:', userId);
-        loadApiStatus();
-        checkActivationStatus();
-        loadUserTemplates();
-      }
-    } else {
-      userId = storedUserId;
-      console.log('✅ Existing user:', userId);
-      loadApiStatus();
-      checkActivationStatus();
-      loadUserTemplates();
-    }
-  } catch (error) {
-    console.error('❌ User registration error:', error);
-  }
+try {
+let storedUserId = localStorage.getItem('user_id');
+if (!storedUserId) {
+const response = await fetch('/api/user/register', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' }
+});
+const data = await response.json();
+if (data.success && data.userId) {
+userId = data.userId;
+localStorage.setItem('user_id', userId);
+console.log('✅ User registered:', userId);
+loadApiStatus();
+checkActivationStatus();
+loadUserTemplates();
+}
+} else {
+userId = storedUserId;
+console.log('✅ Existing user:', userId);
+loadApiStatus();
+checkActivationStatus();
+loadUserTemplates();
+}
+} catch (error) {
+console.error('❌ User registration error:', error);
+}
 }
 
 // ==========================================
 // ACTIVATION STATUS
 // ==========================================
 async function checkActivationStatus() {
-  if (!userId) return false;
-  try {
-    const response = await fetch('/api/user/activation-status', {
-      headers: { 'x-user-id': userId }
-    });
-    const data = await response.json();
-    if (data.success) {
-      userActivated = data.activated;
-      activationChecked = true;
-      const activationNotice = document.getElementById('activationNotice');
-      const activationBadge = document.getElementById('activationBadge');
-      const bulkScannerForm = document.getElementById('bulkScannerForm');
-      if (userActivated) {
-        if (activationNotice) activationNotice.classList.add('hidden');
-        if (activationBadge) activationBadge.classList.add('hidden');
-        if (bulkScannerForm) bulkScannerForm.classList.remove('hidden');
-        console.log('✅ User activated - bulk scanner enabled');
-      } else {
-        if (activationNotice) activationNotice.classList.remove('hidden');
-        if (activationBadge) activationBadge.classList.remove('hidden');
-        if (bulkScannerForm) bulkScannerForm.classList.add('hidden');
-        console.log('🔒 User not activated');
-      }
-      return userActivated;
-    }
-    return false;
-  } catch (error) {
-    console.error('❌ Activation check error:', error);
-    return false;
-  }
+if (!userId) return false;
+try {
+const response = await fetch('/api/user/activation-status', {
+headers: { 'x-user-id': userId }
+});
+const data = await response.json();
+if (data.success) {
+userActivated = data.activated;
+activationChecked = true;
+const activationNotice = document.getElementById('activationNotice');
+const activationBadge = document.getElementById('activationBadge');
+const bulkScannerForm = document.getElementById('bulkScannerForm');
+if (userActivated) {
+if (activationNotice) activationNotice.classList.add('hidden');
+if (activationBadge) activationBadge.classList.add('hidden');
+if (bulkScannerForm) bulkScannerForm.classList.remove('hidden');
+console.log('✅ User activated - bulk scanner enabled');
+} else {
+if (activationNotice) activationNotice.classList.remove('hidden');
+if (activationBadge) activationBadge.classList.remove('hidden');
+if (bulkScannerForm) bulkScannerForm.classList.add('hidden');
+console.log('🔒 User not activated');
+}
+return userActivated;
+}
+return false;
+} catch (error) {
+console.error('❌ Activation check error:', error);
+return false;
+}
 }
 
 // ==========================================
 // API STATUS
 // ==========================================
 async function loadApiStatus() {
-  if (!userId) return;
-  try {
-    const response = await fetch('/api/user/keys/status', {
-      headers: { 'x-user-id': userId }
-    });
-    const data = await response.json();
-    if (data.success) {
-      const indicator = document.getElementById('apiStatusIndicator');
-      const statusText = document.getElementById('apiStatusText');
-      if (data.hasSendgrid || data.hasWebshare) {
-        indicator.className = 'api-status-indicator api-status-active';
-        statusText.textContent = 'Custom API keys configured';
-      } else {
-        indicator.className = 'api-status-indicator api-status-inactive';
-        statusText.textContent = 'Using default settings (limited)';
-      }
-      if (data.hasSendgrid) {
-        document.getElementById('sendgridStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
-        if (data.sendgrid) {
-          document.getElementById('sendgridUsed').textContent = data.sendgrid.used;
-          document.getElementById('sendgridLimit').textContent = data.sendgrid.limit;
-          const percentage = (data.sendgrid.used / data.sendgrid.limit) * 100;
-          document.getElementById('sendgridUsageBar').style.width = percentage + '%';
-        }
-        sendgridConfigured = true;
-      }
-      if (data.hasWebshare) {
-        document.getElementById('webshareStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
-        webshareConfigured = true;
-      }
-    }
-  } catch (error) {
-    console.error('Error loading API status:', error);
-  }
+if (!userId) return;
+try {
+const response = await fetch('/api/user/keys/status', {
+headers: { 'x-user-id': userId }
+});
+const data = await response.json();
+if (data.success) {
+const indicator = document.getElementById('apiStatusIndicator');
+const statusText = document.getElementById('apiStatusText');
+if (data.hasSendgrid || data.hasWebshare) {
+indicator.className = 'api-status-indicator api-status-active';
+statusText.textContent = 'Custom API keys configured';
+} else {
+indicator.className = 'api-status-indicator api-status-inactive';
+statusText.textContent = 'Using default settings (limited)';
+}
+if (data.hasSendgrid) {
+document.getElementById('sendgridStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
+if (data.sendgrid) {
+document.getElementById('sendgridUsed').textContent = data.sendgrid.used;
+document.getElementById('sendgridLimit').textContent = data.sendgrid.limit;
+const percentage = (data.sendgrid.used / data.sendgrid.limit) * 100;
+document.getElementById('sendgridUsageBar').style.width = percentage + '%';
+}
+sendgridConfigured = true;
+}
+if (data.hasWebshare) {
+document.getElementById('webshareStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
+webshareConfigured = true;
+}
+}
+} catch (error) {
+console.error('Error loading API status:', error);
+}
 }
 
 // ==========================================
 // ACCORDION
 // ==========================================
 function toggleAccordion(id) {
-  const content = document.getElementById(id);
-  const icon = document.getElementById(id + 'Icon');
-  if (content) {
-    content.classList.toggle('hidden');
-    icon.style.transform = content.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
-  }
+const content = document.getElementById(id);
+const icon = document.getElementById(id + 'Icon');
+if (content) {
+content.classList.toggle('hidden');
+icon.style.transform = content.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+}
 }
 
 // ==========================================
 // MODE SWITCHER
 // ==========================================
 function switchMode(mode) {
-  const singleMode = document.getElementById('singleMode');
-  const bulkMode = document.getElementById('bulkMode');
-  const singleBtn = document.getElementById('modeSingleBtn');
-  const bulkBtn = document.getElementById('modeBulkBtn');
-  if (mode === 'single') {
-    singleMode.classList.remove('hidden');
-    bulkMode.classList.add('hidden');
-    singleBtn.classList.add('active');
-    bulkBtn.classList.remove('active');
-  } else {
-    singleMode.classList.add('hidden');
-    bulkMode.classList.remove('hidden');
-    singleBtn.classList.remove('active');
-    bulkBtn.classList.add('active');
-  }
+const singleMode = document.getElementById('singleMode');
+const bulkMode = document.getElementById('bulkMode');
+const singleBtn = document.getElementById('modeSingleBtn');
+const bulkBtn = document.getElementById('modeBulkBtn');
+if (mode === 'single') {
+singleMode.classList.remove('hidden');
+bulkMode.classList.add('hidden');
+singleBtn.classList.add('active');
+bulkBtn.classList.remove('active');
+} else {
+singleMode.classList.add('hidden');
+bulkMode.classList.remove('hidden');
+singleBtn.classList.remove('active');
+bulkBtn.classList.add('active');
+}
 }
 
 function toggleBulkScanner() {
-  const content = document.getElementById('bulkScannerContent');
-  const icon = document.getElementById('bulkScannerIcon');
-  const toggleText = document.getElementById('bulkToggleText');
-  if (content) {
-    const isHidden = content.classList.contains('hidden');
-    content.classList.toggle('hidden');
-    if (icon) {
-      icon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
-    }
-    if (toggleText) {
-      toggleText.textContent = isHidden ? 'Hide Bulk Scanner' : 'Show Bulk Scanner';
-    }
-    if (isHidden && !activationChecked) {
-      checkActivationStatus();
-    }
-  }
+const content = document.getElementById('bulkScannerContent');
+const icon = document.getElementById('bulkScannerIcon');
+const toggleText = document.getElementById('bulkToggleText');
+if (content) {
+const isHidden = content.classList.contains('hidden');
+content.classList.toggle('hidden');
+if (icon) {
+icon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+if (toggleText) {
+toggleText.textContent = isHidden ? 'Hide Bulk Scanner' : 'Show Bulk Scanner';
+}
+if (isHidden && !activationChecked) {
+checkActivationStatus();
+}
+}
 }
 
 // ==========================================
 // SENDGRID FUNCTIONS
 // ==========================================
 async function saveSendgridConfig() {
-  if (!userId) {
-    alert('❌ User not registered. Please refresh the page.');
-    return;
-  }
-  const apiKey = document.getElementById('sendgridApiKey').value;
-  if (!apiKey || apiKey.includes('••••')) {
-    alert('❌ Please enter your SendGrid API key');
-    return;
-  }
-  try {
-    const response = await fetch('/api/user/sendgrid/configure', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-user-id': userId
-      },
-      body: JSON.stringify({
-        userId,
-        apiKey,
-        dailyLimit: 100
-      })
-    });
-    const data = await response.json();
-    if (data.success) {
-      alert('✅ SendGrid configuration saved successfully');
-      document.getElementById('sendgridStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
-      sendgridConfigured = true;
-      loadApiStatus();
-    } else {
-      alert('❌ ' + (data.error || 'Failed to save configuration'));
-    }
-  } catch (error) {
-    alert('❌ Error: ' + error.message);
-  }
+if (!userId) {
+alert('❌ User not registered. Please refresh the page.');
+return;
+}
+const apiKey = document.getElementById('sendgridApiKey').value;
+if (!apiKey || apiKey.includes('••••')) {
+alert('❌ Please enter your SendGrid API key');
+return;
+}
+try {
+const response = await fetch('/api/user/sendgrid/configure', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+'x-user-id': userId
+},
+body: JSON.stringify({
+userId,
+apiKey,
+dailyLimit: 100
+})
+});
+const data = await response.json();
+if (data.success) {
+alert('✅ SendGrid configuration saved successfully');
+document.getElementById('sendgridStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
+sendgridConfigured = true;
+loadApiStatus();
+} else {
+alert('❌ ' + (data.error || 'Failed to save configuration'));
+}
+} catch (error) {
+alert('❌ Error: ' + error.message);
+}
 }
 
 async function testSendgridConfig() {
-  if (!userId) {
-    alert('❌ User not registered');
-    return;
-  }
-  try {
-    const response = await fetch('/api/email/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-user-id': userId
-      },
-      body: JSON.stringify({
-        to_email: 'test@example.com',
-        to_name: 'Test User',
-        subject: 'Test Email from ContentScale',
-        html: '<p>This is a test email from your ContentScale account.</p>'
-      })
-    });
-    const data = await response.json();
-    if (data.success) {
-      alert('✅ Test email sent successfully!');
-    } else if (data.needs_api_key) {
-      alert('❌ No SendGrid API key configured. Please add your key first.');
-    } else if (data.limit_reached) {
-      alert('❌ Daily limit reached. Try again tomorrow.');
-    } else {
-      alert('❌ ' + (data.error || 'Test failed'));
-    }
-  } catch (error) {
-    alert('❌ Error: ' + error.message);
-  }
+if (!userId) {
+alert('❌ User not registered');
+return;
+}
+try {
+const response = await fetch('/api/email/send', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+'x-user-id': userId
+},
+body: JSON.stringify({
+to_email: 'test@example.com',
+to_name: 'Test User',
+subject: 'Test Email from ContentScale',
+html: '<p>This is a test email from your ContentScale account.</p>'
+})
+});
+const data = await response.json();
+if (data.success) {
+alert('✅ Test email sent successfully!');
+} else if (data.needs_api_key) {
+alert('❌ No SendGrid API key configured. Please add your key first.');
+} else if (data.limit_reached) {
+alert('❌ Daily limit reached. Try again tomorrow.');
+} else {
+alert('❌ ' + (data.error || 'Test failed'));
+}
+} catch (error) {
+alert('❌ Error: ' + error.message);
+}
 }
 
 // ==========================================
 // WEBSHARE FUNCTIONS
 // ==========================================
 async function saveWebshareConfig() {
-  if (!userId) {
-    alert('❌ User not registered. Please refresh the page.');
-    return;
-  }
-  const apiKey = document.getElementById('webshareApiKey').value;
-  if (!apiKey) {
-    alert('❌ Please enter your WebShare API key');
-    return;
-  }
-  try {
-    const response = await fetch('/api/user/webshare/configure', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-user-id': userId
-      },
-      body: JSON.stringify({ userId, apiKey })
-    });
-    const data = await response.json();
-    if (data.success) {
-      alert(`✅ WebShare configured! Found ${data.proxy_count || 10} proxies.`);
-      document.getElementById('webshareStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
-      webshareConfigured = true;
-      if (data.proxy_count > 0) {
-        document.getElementById('proxyList').classList.remove('hidden');
-        document.getElementById('proxyListContainer').innerHTML = '<p class="text-green-400">✓ Proxies loaded successfully</p>';
-      }
-      loadApiStatus();
-    } else {
-      alert('❌ ' + (data.error || 'Failed to save configuration'));
-    }
-  } catch (error) {
-    alert('❌ Error: ' + error.message);
-  }
+if (!userId) {
+alert('❌ User not registered. Please refresh the page.');
+return;
+}
+const apiKey = document.getElementById('webshareApiKey').value;
+if (!apiKey) {
+alert('❌ Please enter your WebShare API key');
+return;
+}
+try {
+const response = await fetch('/api/user/webshare/configure', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+'x-user-id': userId
+},
+body: JSON.stringify({ userId, apiKey })
+});
+const data = await response.json();
+if (data.success) {
+alert(`✅ WebShare configured! Found ${data.proxy_count || 10} proxies.`);
+document.getElementById('webshareStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
+webshareConfigured = true;
+if (data.proxy_count > 0) {
+document.getElementById('proxyList').classList.remove('hidden');
+document.getElementById('proxyListContainer').innerHTML = '<p class="text-green-400">✓ Proxies loaded successfully</p>';
+}
+loadApiStatus();
+} else {
+alert('❌ ' + (data.error || 'Failed to save configuration'));
+}
+} catch (error) {
+alert('❌ Error: ' + error.message);
+}
 }
 
 // ==========================================
 // EMAIL TEMPLATES
 // ==========================================
 async function loadUserTemplates() {
-  if (!userId) return;
-  try {
-    const response = await fetch('/api/user/templates', {
-      headers: { 'x-user-id': userId }
-    });
-    const data = await response.json();
-    if (data.success && data.templates) {
-      userTemplates = data.templates;
-      if (userTemplates.congrats) {
-        document.getElementById('template-congrats-subject').value = userTemplates.congrats.subject || '';
-        document.getElementById('template-congrats-body').value = userTemplates.congrats.body || '';
-      }
-      if (userTemplates.improvement) {
-        document.getElementById('template-improvement-subject').value = userTemplates.improvement.subject || '';
-        document.getElementById('template-improvement-body').value = userTemplates.improvement.body || '';
-      }
-      if (userTemplates.website) {
-        document.getElementById('template-website-subject').value = userTemplates.website.subject || '';
-        document.getElementById('template-website-body').value = userTemplates.website.body || '';
-      }
-    }
-  } catch (error) {
-    console.error('Error loading templates:', error);
-  }
+if (!userId) return;
+try {
+const response = await fetch('/api/user/templates', {
+headers: { 'x-user-id': userId }
+});
+const data = await response.json();
+if (data.success && data.templates) {
+userTemplates = data.templates;
+if (userTemplates.congrats) {
+document.getElementById('template-congrats-subject').value = userTemplates.congrats.subject || '';
+document.getElementById('template-congrats-body').value = userTemplates.congrats.body || '';
+}
+if (userTemplates.improvement) {
+document.getElementById('template-improvement-subject').value = userTemplates.improvement.subject || '';
+document.getElementById('template-improvement-body').value = userTemplates.improvement.body || '';
+}
+if (userTemplates.website) {
+document.getElementById('template-website-subject').value = userTemplates.website.subject || '';
+document.getElementById('template-website-body').value = userTemplates.website.body || '';
+}
+}
+} catch (error) {
+console.error('Error loading templates:', error);
+}
 }
 
 async function saveTemplate(type) {
-  if (!userId) {
-    alert('❌ User not registered. Please refresh the page.');
-    return;
-  }
-  const subject = document.getElementById(`template-${type}-subject`).value;
-  const body = document.getElementById(`template-${type}-body`).value;
-  if (!subject || !body) {
-    alert('❌ Please fill in both subject and body');
-    return;
-  }
-  try {
-    const response = await fetch('/api/user/templates', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-user-id': userId
-      },
-      body: JSON.stringify({ type, subject, body })
-    });
-    const data = await response.json();
-    if (data.success) {
-      alert('✅ Template saved successfully!');
-      userTemplates[type] = { subject, body };
-    } else {
-      alert('❌ ' + (data.error || 'Failed to save template'));
-    }
-  } catch (error) {
-    alert('❌ Error: ' + error.message);
-  }
+if (!userId) {
+alert('❌ User not registered. Please refresh the page.');
+return;
+}
+const subject = document.getElementById(`template-${type}-subject`).value;
+const body = document.getElementById(`template-${type}-body`).value;
+if (!subject || !body) {
+alert('❌ Please fill in both subject and body');
+return;
+}
+try {
+const response = await fetch('/api/user/templates', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+'x-user-id': userId
+},
+body: JSON.stringify({ type, subject, body })
+});
+const data = await response.json();
+if (data.success) {
+alert('✅ Template saved successfully!');
+userTemplates[type] = { subject, body };
+} else {
+alert('❌ ' + (data.error || 'Failed to save template'));
+}
+} catch (error) {
+alert('❌ Error: ' + error.message);
+}
 }
 
 // ==========================================
 // SINGLE URL SCAN
 // ==========================================
 async function scanSingleURL() {
-  const input = document.getElementById('singleUrlInput');
-  const button = document.getElementById('singleScanBtn');
-  const progress = document.getElementById('singleProgress');
-  const progressBar = document.getElementById('singleProgressBar');
-  const progressText = document.getElementById('singleProgressText');
-  const resultDiv = document.getElementById('singleResult');
-  let url = input.value.trim();
-  if (!url) {
-    alert('❌ Please enter a URL');
-    return;
-  }
-  if (!url.startsWith('http')) {
-    url = 'https://' + url;
-  }
-  button.disabled = true;
-  button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
-  progress.classList.remove('hidden');
-  progressBar.style.width = '20%';
-  progressText.textContent = 'Starting browser...';
-  try {
-    const response = await fetch('/api/scan', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url })
-    });
-    progressBar.style.width = '60%';
-    progressText.textContent = 'Analyzing content...';
-    const data = await response.json();
-    if (!response.ok || !data.success) {
-      throw new Error(data.error || 'Scan failed');
-    }
-    displayScanResult(data);
-    progressBar.style.width = '100%';
-    progressText.textContent = 'Scan complete!';
-    setTimeout(() => {
-      progress.classList.add('hidden');
-      button.disabled = false;
-      button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
-    }, 500);
-  } catch (error) {
-    console.error('Scan error:', error);
-    alert('❌ Scan failed: ' + error.message);
-    progress.classList.add('hidden');
-    button.disabled = false;
-    button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
-  }
+const input = document.getElementById('singleUrlInput');
+const button = document.getElementById('singleScanBtn');
+const progress = document.getElementById('singleProgress');
+const progressBar = document.getElementById('singleProgressBar');
+const progressText = document.getElementById('singleProgressText');
+const resultDiv = document.getElementById('singleResult');
+let url = input.value.trim();
+if (!url) {
+alert('❌ Please enter a URL');
+return;
+}
+if (!url.startsWith('http')) {
+url = 'https://' + url;
+}
+button.disabled = true;
+button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
+progress.classList.remove('hidden');
+progressBar.style.width = '20%';
+progressText.textContent = 'Starting browser...';
+try {
+const response = await fetch('/api/scan', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ url })
+});
+progressBar.style.width = '60%';
+progressText.textContent = 'Analyzing content...';
+const data = await response.json();
+if (!response.ok || !data.success) {
+throw new Error(data.error || 'Scan failed');
+}
+displayScanResult(data);
+progressBar.style.width = '100%';
+progressText.textContent = 'Scan complete!';
+setTimeout(() => {
+progress.classList.add('hidden');
+button.disabled = false;
+button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
+}, 500);
+} catch (error) {
+console.error('Scan error:', error);
+alert('❌ Scan failed: ' + error.message);
+progress.classList.add('hidden');
+button.disabled = false;
+button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
+}
 }
 
 function displayScanResult(data) {
-  const resultDiv = document.getElementById('singleResult');
-  const url = data.url || '';
-  const quality = data.quality || 'unknown';
-  const currentScore = data.score || 0;
-  const graaf = data.metrics?.graaf || 0;
-  const craft = data.metrics?.craft || 0;
-  const technical = data.metrics?.technical || 0;
-  const words = data.content_stats?.wordCount || 0;
-  let recommendations = [];
-  if (data.recommendations?.all && data.recommendations.all.length > 0) {
-    recommendations = data.recommendations.all;
-  }
-  let recsHtml = '';
-  if (recommendations.length > 0) {
-    recommendations.forEach(rec => {
-      let priorityClass = 'priority-none';
-      if (rec.priority === 'high') priorityClass = 'priority-high';
-      else if (rec.priority === 'medium') priorityClass = 'priority-medium';
-      else if (rec.priority === 'low') priorityClass = 'priority-low';
-      recsHtml += `
+const resultDiv = document.getElementById('singleResult');
+const url = data.url || '';
+const quality = data.quality || 'unknown';
+const currentScore = data.score || 0;
+const graaf = data.metrics?.graaf || 0;
+const craft = data.metrics?.craft || 0;
+const technical = data.metrics?.technical || 0;
+const words = data.content_stats?.wordCount || 0;
+let recommendations = [];
+if (data.recommendations?.all && data.recommendations.all.length > 0) {
+recommendations = data.recommendations.all;
+}
+let recsHtml = '';
+if (recommendations.length > 0) {
+recommendations.forEach(rec => {
+let priorityClass = 'priority-none';
+if (rec.priority === 'high') priorityClass = 'priority-high';
+else if (rec.priority === 'medium') priorityClass = 'priority-medium';
+else if (rec.priority === 'low') priorityClass = 'priority-low';
+recsHtml += `
 <div class="recommendation-card">
-  <div class="flex items-start justify-between mb-2">
-    <h4 class="recommendation-title">${rec.title || 'Recommendation'}</h4>
-    ${rec.priority ? `<span class="priority-badge ${priorityClass}">${rec.priority.toUpperCase()}</span>` : ''}
-  </div>
-  <p class="recommendation-desc">${rec.description || ''}</p>
-  ${rec.action ? `
-  <div class="recommendation-section">
-    <div class="recommendation-section-title">
-      <i class="fas fa-wrench"></i> <span>Action</span>
-    </div>
-    <p class="recommendation-action">${rec.action}</p>
-  </div>
-  ` : ''}
-  ${rec.learning ? `
-  <div class="recommendation-section">
-    <div class="recommendation-section-title">
-      <i class="fas fa-graduation-cap"></i> <span>Learning</span>
-    </div>
-    <p class="recommendation-learning">${rec.learning}</p>
-  </div>
-  ` : ''}
-  ${rec.target ? `
-  <div class="recommendation-section">
-    <div class="recommendation-section-title">
-      <i class="fas fa-bullseye"></i> <span>Target</span>
-    </div>
-    <p class="recommendation-target">${rec.target}</p>
-  </div>
-  ` : ''}
+<div class="flex items-start justify-between mb-2">
+<h4 class="recommendation-title">${rec.title || 'Recommendation'}</h4>
+${rec.priority ? `<span class="priority-badge ${priorityClass}">${rec.priority.toUpperCase()}</span>` : ''}
+</div>
+<p class="recommendation-desc">${rec.description || ''}</p>
+${rec.action ? `
+<div class="recommendation-section">
+<div class="recommendation-section-title">
+<i class="fas fa-wrench"></i> <span>Action</span>
+</div>
+<p class="recommendation-action">${rec.action}</p>
+</div>
+` : ''}
+${rec.learning ? `
+<div class="recommendation-section">
+<div class="recommendation-section-title">
+<i class="fas fa-graduation-cap"></i> <span>Learning</span>
+</div>
+<p class="recommendation-learning">${rec.learning}</p>
+</div>
+` : ''}
+${rec.target ? `
+<div class="recommendation-section">
+<div class="recommendation-section-title">
+<i class="fas fa-bullseye"></i> <span>Target</span>
+</div>
+<p class="recommendation-target">${rec.target}</p>
+</div>
+` : ''}
 </div>
 `;
-    });
-  } else {
-    recsHtml = '<p class="text-gray-400 text-sm">No specific recommendations - your page is excellent!</p>';
-  }
-  let qualityColor = 'bg-gray-600';
-  if (quality === 'excellent') qualityColor = 'bg-green-600';
-  else if (quality === 'very good') qualityColor = 'bg-blue-600';
-  else if (quality === 'good') qualityColor = 'bg-green-600';
-  else if (quality === 'average') qualityColor = 'bg-yellow-600';
-  else if (quality === 'needs improvement') qualityColor = 'bg-red-600';
-  resultDiv.innerHTML = `
+});
+} else {
+recsHtml = '<p class="text-gray-400 text-sm">No specific recommendations - your page is excellent!</p>';
+}
+let qualityColor = 'bg-gray-600';
+if (quality === 'excellent') qualityColor = 'bg-green-600';
+else if (quality === 'very good') qualityColor = 'bg-blue-600';
+else if (quality === 'good') qualityColor = 'bg-green-600';
+else if (quality === 'average') qualityColor = 'bg-yellow-600';
+else if (quality === 'needs improvement') qualityColor = 'bg-red-600';
+resultDiv.innerHTML = `
 <div class="bg-gray-800 rounded-xl border-2 border-purple-500 p-6 mt-4">
-  <div class="text-center mb-4">
-    <h2 class="text-2xl font-bold text-white mb-1">📊 SEO Content Analysis</h2>
-    <p class="text-md text-gray-300 break-all">${url}</p>
-    <span class="inline-block mt-2 px-3 py-1 ${qualityColor} text-white text-sm rounded-full">
-      Quality: ${quality.charAt(0).toUpperCase() + quality.slice(1)}
-    </span>
-  </div>
-  <div class="text-center mb-6">
-    <div class="text-6xl font-bold text-white">${currentScore}</div>
-    <div class="text-sm text-gray-400">out of 100</div>
-  </div>
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
-    <div class="bg-gray-900 rounded-lg p-4 text-center">
-      <div class="text-sm text-gray-400 mb-1">GRAAF (50)</div>
-      <div class="text-2xl font-bold text-purple-400">${graaf}/50</div>
-    </div>
-    <div class="bg-gray-900 rounded-lg p-4 text-center">
-      <div class="text-sm text-gray-400 mb-1">CRAFT (30)</div>
-      <div class="text-2xl font-bold text-blue-400">${craft}/30</div>
-    </div>
-    <div class="bg-gray-900 rounded-lg p-4 text-center">
-      <div class="text-sm text-gray-400 mb-1">Technical (20)</div>
-      <div class="text-2xl font-bold text-yellow-400">${technical}/20</div>
-    </div>
-    <div class="bg-gray-900 rounded-lg p-4 text-center">
-      <div class="text-sm text-gray-400 mb-1">Words</div>
-      <div class="text-2xl font-bold text-white">${words.toLocaleString()}</div>
-    </div>
-  </div>
-  <div class="border-t border-gray-700 pt-5 mb-5">
-    <h3 class="text-xl font-bold text-white mb-4">📋 Priority Recommendations</h3>
-    ${recsHtml}
-  </div>
-  <div class="flex gap-3">
-    <button onclick="addToLeaderboard('${url}', ${currentScore})"
-      class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-semibold transition-all">
-      <i class="fas fa-trophy mr-2"></i> Add to Leaderboard
-    </button>
-    <button onclick="document.getElementById('singleResult').classList.add('hidden')"
-      class="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold transition-all">
-      Close
-    </button>
-  </div>
+<div class="text-center mb-4">
+<h2 class="text-2xl font-bold text-white mb-1">📊 SEO Content Analysis</h2>
+<p class="text-md text-gray-300 break-all">${url}</p>
+<span class="inline-block mt-2 px-3 py-1 ${qualityColor} text-white text-sm rounded-full">
+Quality: ${quality.charAt(0).toUpperCase() + quality.slice(1)}
+</span>
+</div>
+<div class="text-center mb-6">
+<div class="text-6xl font-bold text-white">${currentScore}</div>
+<div class="text-sm text-gray-400">out of 100</div>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+<div class="bg-gray-900 rounded-lg p-4 text-center">
+<div class="text-sm text-gray-400 mb-1">GRAAF (50)</div>
+<div class="text-2xl font-bold text-purple-400">${graaf}/50</div>
+</div>
+<div class="bg-gray-900 rounded-lg p-4 text-center">
+<div class="text-sm text-gray-400 mb-1">CRAFT (30)</div>
+<div class="text-2xl font-bold text-blue-400">${craft}/30</div>
+</div>
+<div class="bg-gray-900 rounded-lg p-4 text-center">
+<div class="text-sm text-gray-400 mb-1">Technical (20)</div>
+<div class="text-2xl font-bold text-yellow-400">${technical}/20</div>
+</div>
+<div class="bg-gray-900 rounded-lg p-4 text-center">
+<div class="text-sm text-gray-400 mb-1">Words</div>
+<div class="text-2xl font-bold text-white">${words.toLocaleString()}</div>
+</div>
+</div>
+<div class="border-t border-gray-700 pt-5 mb-5">
+<h3 class="text-xl font-bold text-white mb-4">📋 Priority Recommendations</h3>
+${recsHtml}
+</div>
+<div class="flex gap-3">
+<button onclick="addToLeaderboard('${url}', ${currentScore})"
+class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-semibold transition-all">
+<i class="fas fa-trophy mr-2"></i> Add to Leaderboard
+</button>
+<button onclick="document.getElementById('singleResult').classList.add('hidden')"
+class="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold transition-all">
+Close
+</button>
+</div>
 </div>
 `;
-  resultDiv.classList.remove('hidden');
-  resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+resultDiv.classList.remove('hidden');
+resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function addToLeaderboard(url, score) {
-  const companyName = prompt('Enter company name (optional):', '');
-  const contactEmail = prompt('Enter your email to receive congratulations if approved (optional):', '');
-  if (!contactEmail) {
-    alert('✅ Your request has been sent to admin for approval (85+ required)');
-    return;
-  }
-  if (!contactEmail.includes('@') || !contactEmail.includes('.')) {
-    alert('❌ Please enter a valid email address');
-    return;
-  }
-  alert(`✅ Thank you! Admin will review your submission. If approved (85+ score required), a congratulations email will be sent to ${contactEmail}.`);
+const companyName = prompt('Enter company name (optional):', '');
+const contactEmail = prompt('Enter your email to receive congratulations if approved (optional):', '');
+if (!contactEmail) {
+alert('✅ Your request has been sent to admin for approval (85+ required)');
+return;
+}
+if (!contactEmail.includes('@') || !contactEmail.includes('.')) {
+alert('❌ Please enter a valid email address');
+return;
+}
+alert(`✅ Thank you! Admin will review your submission. If approved (85+ score required), a congratulations email will be sent to ${contactEmail}.`);
 }
 
 // ==========================================
 // BULK SCAN
 // ==========================================
 async function startBulkScan() {
-  const urlInput = document.getElementById('bulkUrlInput');
-  const emailInput = document.getElementById('bulkScanEmail');
-  const nameInput = document.getElementById('bulkScanName');
-  const button = document.getElementById('bulkScanBtn');
-  const progress = document.getElementById('bulkProgress');
-  const progressBar = document.getElementById('bulkProgressBar');
-  const progressText = document.getElementById('bulkProgressText');
-  const resultsDiv = document.getElementById('bulkResults');
-  const resultsContainer = document.getElementById('bulkResultsContainer');
-  const urls = urlInput.value.split('\n').filter(u => u.trim().length > 0);
-  const email = emailInput.value.trim();
-  const name = nameInput.value.trim();
-  if (urls.length === 0) {
-    alert('❌ Please enter at least one URL');
-    return;
-  }
-  if (urls.length > 100) {
-    alert('❌ Maximum 100 URLs allowed');
-    return;
-  }
-  if (!email || !email.includes('@')) {
-    alert('❌ Please enter a valid email address');
-    return;
-  }
-  if (!name) {
-    alert('❌ Please enter your name');
-    return;
-  }
-  if (!userActivated && !activationChecked) {
-    const activated = await checkActivationStatus();
-    if (!activated) {
-      alert('🔒 Account activation required. Please contact us via WhatsApp to activate your bulk scanner access.');
-      return;
-    }
-  }
-  if (!sendgridConfigured) {
-    const confirmSendGrid = confirm('⚠️ You haven\'t configured SendGrid yet. Bulk emails will use the default system (limited to 100/day).\nWould you like to continue anyway?');
-    if (!confirmSendGrid) {
-      document.getElementById('apiConfig').classList.remove('hidden');
-      return;
-    }
-  }
-  button.disabled = true;
-  button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
-  progress.classList.remove('hidden');
-  resultsDiv.classList.add('hidden');
-  resultsContainer.innerHTML = '';
-  let results = {
-    leaderboard: [],
-    withWebsite: [],
-    withoutWebsite: [],
-    errors: []
-  };
-  for (let i = 0; i < urls.length; i++) {
-    let url = urls[i].trim();
-    if (!url.startsWith('http')) {
-      url = 'https://' + url;
-    }
-    progressText.textContent = `Scanning ${i + 1} of ${urls.length}...`;
-    progressBar.style.width = `${((i + 1) / urls.length) * 100}%`;
-    try {
-      const response = await fetch('/api/scan', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': userId || 'anonymous'
-        },
-        body: JSON.stringify({ url })
-      });
-      const data = await response.json();
-      if (data.success) {
-        const score = data.score || 0;
-        if (score >= 85) {
-          results.leaderboard.push({ url, score, data });
-        } else if (score > 0) {
-          results.withWebsite.push({ url, score, data });
-        } else {
-          results.withoutWebsite.push({ url, score, data });
-        }
-      } else {
-        results.errors.push({ url, error: data.error || 'Scan failed' });
-      }
-    } catch (error) {
-      results.errors.push({ url, error: error.message });
-    }
-    await new Promise(resolve => setTimeout(resolve, 500));
-  }
-  displayBulkResults(results, email, name);
-  await sendBulkEmails(results, email, name);
-  button.disabled = false;
-  button.innerHTML = '<i class="fas fa-rocket mr-2"></i> Start Bulk Scan';
-  progress.classList.add('hidden');
+const urlInput = document.getElementById('bulkUrlInput');
+const emailInput = document.getElementById('bulkScanEmail');
+const nameInput = document.getElementById('bulkScanName');
+const button = document.getElementById('bulkScanBtn');
+const progress = document.getElementById('bulkProgress');
+const progressBar = document.getElementById('bulkProgressBar');
+const progressText = document.getElementById('bulkProgressText');
+const resultsDiv = document.getElementById('bulkResults');
+const resultsContainer = document.getElementById('bulkResultsContainer');
+const urls = urlInput.value.split('\n').filter(u => u.trim().length > 0);
+const email = emailInput.value.trim();
+const name = nameInput.value.trim();
+if (urls.length === 0) {
+alert('❌ Please enter at least one URL');
+return;
+}
+if (urls.length > 100) {
+alert('❌ Maximum 100 URLs allowed');
+return;
+}
+if (!email || !email.includes('@')) {
+alert('❌ Please enter a valid email address');
+return;
+}
+if (!name) {
+alert('❌ Please enter your name');
+return;
+}
+if (!userActivated && !activationChecked) {
+const activated = await checkActivationStatus();
+if (!activated) {
+alert('🔒 Account activation required. Please contact us via WhatsApp to activate your bulk scanner access.');
+return;
+}
+}
+if (!sendgridConfigured) {
+const confirmSendGrid = confirm('⚠️ You haven\'t configured SendGrid yet. Bulk emails will use the default system (limited to 100/day).\n\nWould you like to continue anyway?');
+if (!confirmSendGrid) {
+document.getElementById('apiConfig').classList.remove('hidden');
+return;
+}
+}
+button.disabled = true;
+button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
+progress.classList.remove('hidden');
+resultsDiv.classList.add('hidden');
+resultsContainer.innerHTML = '';
+let results = {
+leaderboard: [],
+withWebsite: [],
+withoutWebsite: [],
+errors: []
+};
+for (let i = 0; i < urls.length; i++) {
+let url = urls[i].trim();
+if (!url.startsWith('http')) {
+url = 'https://' + url;
+}
+progressText.textContent = `Scanning ${i + 1} of ${urls.length}...`;
+progressBar.style.width = `${((i + 1) / urls.length) * 100}%`;
+try {
+const response = await fetch('/api/scan', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+'x-user-id': userId || 'anonymous'
+},
+body: JSON.stringify({ url })
+});
+const data = await response.json();
+if (data.success) {
+const score = data.score || 0;
+if (score >= 85) {
+results.leaderboard.push({ url, score, data });
+} else if (score > 0) {
+results.withWebsite.push({ url, score, data });
+} else {
+results.withoutWebsite.push({ url, score, data });
+}
+} else {
+results.errors.push({ url, error: data.error || 'Scan failed' });
+}
+} catch (error) {
+results.errors.push({ url, error: error.message });
+}
+await new Promise(resolve => setTimeout(resolve, 500));
+}
+displayBulkResults(results, email, name);
+await sendBulkEmails(results, email, name);
+button.disabled = false;
+button.innerHTML = '<i class="fas fa-rocket mr-2"></i> Start Bulk Scan';
+progress.classList.add('hidden');
 }
 
 function displayBulkResults(results, userEmail, userName) {
-  const container = document.getElementById('bulkResultsContainer');
-  const resultsDiv = document.getElementById('bulkResults');
-  let html = '';
-  if (results.leaderboard.length > 0) {
-    html += `
+const container = document.getElementById('bulkResultsContainer');
+const resultsDiv = document.getElementById('bulkResults');
+let html = '';
+if (results.leaderboard.length > 0) {
+html += `
 <div class="bg-green-900 bg-opacity-30 border border-green-500 rounded-lg p-4 mb-4">
-  <h5 class="font-bold text-green-400 mb-2">
-    🏆 Leaderboard Candidates (${results.leaderboard.length})
-  </h5>
-  <p class="text-sm text-gray-300 mb-2">These websites scored 85+ and will be submitted for leaderboard approval.</p>
-  <ul class="text-sm space-y-1">
-    ${results.leaderboard.map(r => `<li>✅ ${r.url} - Score: ${r.score}/100</li>`).join('')}
-  </ul>
+<h5 class="font-bold text-green-400 mb-2">
+🏆 Leaderboard Candidates (${results.leaderboard.length})
+</h5>
+<p class="text-sm text-gray-300 mb-2">These websites scored 85+ and will be submitted for leaderboard approval.</p>
+<ul class="text-sm space-y-1">
+${results.leaderboard.map(r => `<li>✅ ${r.url} - Score: ${r.score}/100</li>`).join('')}
+</ul>
 </div>
 `;
-  }
-  if (results.withWebsite.length > 0) {
-    html += `
+}
+if (results.withWebsite.length > 0) {
+html += `
 <div class="bg-blue-900 bg-opacity-30 border border-blue-500 rounded-lg p-4 mb-4">
-  <h5 class="font-bold text-blue-400 mb-2">
-    📧 Improvement Emails (${results.withWebsite.length})
-  </h5>
-  <p class="text-sm text-gray-300 mb-2">Business owners will receive personalized emails with SEO improvement recommendations.</p>
-  <ul class="text-sm space-y-1">
-    ${results.withWebsite.map(r => `<li>📨 ${r.url} - Score: ${r.score}/100</li>`).join('')}
-  </ul>
+<h5 class="font-bold text-blue-400 mb-2">
+📧 Improvement Emails (${results.withWebsite.length})
+</h5>
+<p class="text-sm text-gray-300 mb-2">Business owners will receive personalized emails with SEO improvement recommendations.</p>
+<ul class="text-sm space-y-1">
+${results.withWebsite.map(r => `<li>📨 ${r.url} - Score: ${r.score}/100</li>`).join('')}
+</ul>
 </div>
 `;
-  }
-  if (results.withoutWebsite.length > 0) {
-    html += `
+}
+if (results.withoutWebsite.length > 0) {
+html += `
 <div class="bg-purple-900 bg-opacity-30 border border-purple-500 rounded-lg p-4 mb-4">
-  <h5 class="font-bold text-purple-400 mb-2">
-    🌐 Website Offers (${results.withoutWebsite.length})
-  </h5>
-  <p class="text-sm text-gray-300 mb-2">Owners will receive personalized emails offering professional website creation.</p>
-  <ul class="text-sm space-y-1">
-    ${results.withoutWebsite.map(r => `<li>📬 ${r.url}</li>`).join('')}
-  </ul>
+<h5 class="font-bold text-purple-400 mb-2">
+🌐 Website Offers (${results.withoutWebsite.length})
+</h5>
+<p class="text-sm text-gray-300 mb-2">Owners will receive personalized emails offering professional website creation.</p>
+<ul class="text-sm space-y-1">
+${results.withoutWebsite.map(r => `<li>📬 ${r.url}</li>`).join('')}
+</ul>
 </div>
 `;
-  }
-  if (results.errors.length > 0) {
-    html += `
+}
+if (results.errors.length > 0) {
+html += `
 <div class="bg-red-900 bg-opacity-30 border border-red-500 rounded-lg p-4 mb-4">
-  <h5 class="font-bold text-red-400 mb-2">
-    ❌ Scan Errors (${results.errors.length})
-  </h5>
-  <ul class="text-sm space-y-1">
-    ${results.errors.map(r => `<li>⚠️ ${r.url} - ${r.error}</li>`).join('')}
-  </ul>
+<h5 class="font-bold text-red-400 mb-2">
+❌ Scan Errors (${results.errors.length})
+</h5>
+<ul class="text-sm space-y-1">
+${results.errors.map(r => `<li>⚠️ ${r.url} - ${r.error}</li>`).join('')}
+</ul>
 </div>
 `;
-  }
-  html += `
+}
+html += `
 <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
-  <p class="text-sm text-gray-300">
-    📬 A summary report has been sent to <strong>${userEmail}</strong>
-  </p>
+<p class="text-sm text-gray-300">
+📬 A summary report has been sent to <strong>${userEmail}</strong>
+</p>
 </div>
 `;
-  container.innerHTML = html;
-  resultsDiv.classList.remove('hidden');
+container.innerHTML = html;
+resultsDiv.classList.remove('hidden');
 }
 
 async function sendBulkEmails(results, userEmail, userName) {
-  if (!userId) {
-    console.warn('No userId - skipping email sending');
-    return;
-  }
-  try {
-    await fetch('/api/bulk-scan/send-summary', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-user-id': userId
-      },
-      body: JSON.stringify({ userEmail, userName, results })
-    });
-    if (results.leaderboard.length > 0) {
-      await fetch('/api/bulk-scan/submit-leaderboard', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': userId
-        },
-        body: JSON.stringify({ entries: results.leaderboard, submittedBy: userEmail })
-      });
-    }
-    if (results.withWebsite.length > 0) {
-      await fetch('/api/bulk-scan/send-improvement-emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': userId
-        },
-        body: JSON.stringify({ businesses: results.withWebsite, senderName: userName, senderEmail: userEmail })
-      });
-    }
-    if (results.withoutWebsite.length > 0) {
-      await fetch('/api/bulk-scan/send-website-offers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': userId
-        },
-        body: JSON.stringify({ businesses: results.withoutWebsite, senderName: userName, senderEmail: userEmail })
-      });
-    }
-    console.log('✅ Bulk emails sent successfully');
-    alert('✅ Bulk scan complete! Emails are being sent via your SendGrid account.');
-  } catch (error) {
-    console.error('❌ Error sending bulk emails:', error);
-    alert('⚠️ Scan complete but some emails may have failed. Check your SendGrid dashboard.');
-  }
+if (!userId) {
+console.warn('No userId - skipping email sending');
+return;
+}
+try {
+await fetch('/api/bulk-scan/send-summary', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+'x-user-id': userId
+},
+body: JSON.stringify({ userEmail, userName, results })
+});
+if (results.leaderboard.length > 0) {
+await fetch('/api/bulk-scan/submit-leaderboard', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+'x-user-id': userId
+},
+body: JSON.stringify({ entries: results.leaderboard, submittedBy: userEmail })
+});
+}
+if (results.withWebsite.length > 0) {
+await fetch('/api/bulk-scan/send-improvement-emails', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+'x-user-id': userId
+},
+body: JSON.stringify({ businesses: results.withWebsite, senderName: userName, senderEmail: userEmail })
+});
+}
+if (results.withoutWebsite.length > 0) {
+await fetch('/api/bulk-scan/send-website-offers', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+'x-user-id': userId
+},
+body: JSON.stringify({ businesses: results.withoutWebsite, senderName: userName, senderEmail: userEmail })
+});
+}
+console.log('✅ Bulk emails sent successfully');
+alert('✅ Bulk scan complete! Emails are being sent via your SendGrid account.');
+} catch (error) {
+console.error('❌ Error sending bulk emails:', error);
+alert('⚠️ Scan complete but some emails may have failed. Check your SendGrid dashboard.');
+}
 }
 
 // ==========================================
 // LEADERBOARD FUNCTIONS
 // ==========================================
 async function loadLeaderboardData() {
-  try {
-    const response = await fetch('/api/leaderboard');
-    const data = await response.json();
-    if (data.success && data.entries && data.entries.length > 0) {
-      allLeaderboardEntries = data.entries;
-      document.getElementById('totalAgencies').textContent = data.stats?.totalAgencies || 0;
-      document.getElementById('avgScore').textContent = data.averageScore || 0;
-      document.getElementById('countriesCount').textContent = data.stats?.countriesCount || 0;
-      document.getElementById('activeHelpers').textContent = data.stats?.activeHelpers || 0;
-      renderTop3();
-      renderRankings4to15();
-      renderRankings16Plus();
-      renderCountryFilters();
-    } else {
-      showEmptyLeaderboard();
-    }
-  } catch (error) {
-    console.error('❌ Error loading leaderboard:', error);
-    showEmptyLeaderboard();
-  }
+try {
+const response = await fetch('/api/leaderboard');
+const data = await response.json();
+if (data.success && data.entries && data.entries.length > 0) {
+allLeaderboardEntries = data.entries;
+document.getElementById('totalAgencies').textContent = data.stats?.totalAgencies || 0;
+document.getElementById('avgScore').textContent = data.averageScore || 0;
+document.getElementById('countriesCount').textContent = data.stats?.countriesCount || 0;
+document.getElementById('activeHelpers').textContent = data.stats?.activeHelpers || 0;
+renderTop3();
+renderRankings4to15();
+renderRankings16Plus();
+renderCountryFilters();
+} else {
+showEmptyLeaderboard();
+}
+} catch (error) {
+console.error('❌ Error loading leaderboard:', error);
+showEmptyLeaderboard();
+}
 }
 
 function showEmptyLeaderboard() {
-  document.getElementById('totalAgencies').textContent = '0';
-  document.getElementById('avgScore').textContent = '0';
-  document.getElementById('countriesCount').textContent = '0';
-  document.getElementById('activeHelpers').textContent = '0';
-  const container = document.getElementById('top3-container');
-  if (container) {
-    container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No leaderboard entries found</div>';
-  }
-  document.getElementById('rankings4to15Container').style.display = 'none';
-  document.getElementById('totalCount').textContent = '0';
+document.getElementById('totalAgencies').textContent = '0';
+document.getElementById('avgScore').textContent = '0';
+document.getElementById('countriesCount').textContent = '0';
+document.getElementById('activeHelpers').textContent = '0';
+const container = document.getElementById('top3-container');
+if (container) {
+container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No leaderboard entries found</div>';
+}
+document.getElementById('rankings4to15Container').style.display = 'none';
+document.getElementById('totalCount').textContent = '0';
 }
 
 function renderTop3() {
-  const container = document.getElementById('top3-container');
-  if (!container) return;
-  const top3 = allLeaderboardEntries.slice(0, 3);
-  if (top3.length === 0) {
-    container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No entries found</div>';
-    return;
-  }
-  container.innerHTML = top3.map((entry, index) => {
-    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
-    const medalClass = index === 0 ? 'gold' : index === 1 ? 'silver' : 'bronze';
-    const rankText = index === 0 ? '1st Worldwide' : index === 1 ? '2nd Worldwide' : '3rd Worldwide';
-    const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-    return `
+const container = document.getElementById('top3-container');
+if (!container) return;
+const top3 = allLeaderboardEntries.slice(0, 3);
+if (top3.length === 0) {
+container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No entries found</div>';
+return;
+}
+container.innerHTML = top3.map((entry, index) => {
+const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
+const medalClass = index === 0 ? 'gold' : index === 1 ? 'silver' : 'bronze';
+const rankText = index === 0 ? '1st Worldwide' : index === 1 ? '2nd Worldwide' : '3rd Worldwide';
+const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+return `
 <div class="top-card ${medalClass}">
-  <div class="text-5xl mb-2">${medal}</div>
-  <div class="text-xs font-bold uppercase tracking-wider mb-2 text-white/80">${rankText}</div>
-  <h3 class="text-xl font-bold mb-2">${companyName}</h3>
-  <div class="text-4xl font-black mb-2">${entry.score}/100</div>
-  <div class="text-white/80 mb-3">${getCountryFlag(entry.country)} ${entry.country}</div>
-  <button onclick="window.open('${entry.url}', '_blank', 'noopener')" class="w-full bg-black/30 hover:bg-black/50 text-white px-4 py-2 rounded-lg border border-white/30 transition-all">
-    <i class="fas fa-external-link-alt mr-2"></i> Visit Website
-  </button>
+<div class="text-5xl mb-2">${medal}</div>
+<div class="text-xs font-bold uppercase tracking-wider mb-2 text-white/80">${rankText}</div>
+<h3 class="text-xl font-bold mb-2">${companyName}</h3>
+<div class="text-4xl font-black mb-2">${entry.score}/100</div>
+<div class="text-white/80 mb-3">${getCountryFlag(entry.country)} ${entry.country}</div>
+<button onclick="window.open('${entry.url}', '_blank', 'noopener')" class="w-full bg-black/30 hover:bg-black/50 text-white px-4 py-2 rounded-lg border border-white/30 transition-all">
+<i class="fas fa-external-link-alt mr-2"></i> Visit Website
+</button>
 </div>
 `;
-  }).join('');
+}).join('');
 }
 
 function renderRankings4to15() {
-  const grid = document.getElementById('rankings4to15Grid');
-  if (!grid) return;
-  const rankings = allLeaderboardEntries.slice(3, 15);
-  if (rankings.length === 0) {
-    document.getElementById('rankings4to15Container').style.display = 'none';
-    return;
-  }
-  document.getElementById('rankings4to15Container').style.display = 'block';
-  grid.innerHTML = rankings.map((entry, index) => {
-    const actualRank = index + 4;
-    const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-    return `
+const grid = document.getElementById('rankings4to15Grid');
+if (!grid) return;
+const rankings = allLeaderboardEntries.slice(3, 15);
+if (rankings.length === 0) {
+document.getElementById('rankings4to15Container').style.display = 'none';
+return;
+}
+document.getElementById('rankings4to15Container').style.display = 'block';
+grid.innerHTML = rankings.map((entry, index) => {
+const actualRank = index + 4;
+const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+return `
 <div class="rank-card">
-  <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
-  <h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
-  <div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
-  <div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
-  <a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">
-    View Website <i class="fas fa-external-link-alt ml-1"></i>
-  </a>
+<div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
+<h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
+<div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
+<div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
+<a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">
+View Website <i class="fas fa-external-link-alt ml-1"></i>
+</a>
 </div>
 `;
-  }).join('');
+}).join('');
 }
 
 function renderRankings16Plus() {
-  const tbody = document.getElementById('rankingsTbody');
-  const totalCount = document.getElementById('totalCount');
-  if (!tbody) return;
-  const rankings = allLeaderboardEntries.slice(15, 35);
-  if (totalCount) {
-    totalCount.textContent = allLeaderboardEntries.length;
-  }
-  if (rankings.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-400">No more entries</td></tr>';
-    return;
-  }
-  tbody.innerHTML = rankings.map((entry, index) => {
-    const actualRank = index + 16;
-    const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-    return `
+const tbody = document.getElementById('rankingsTbody');
+const totalCount = document.getElementById('totalCount');
+if (!tbody) return;
+const rankings = allLeaderboardEntries.slice(15, 35);
+if (totalCount) {
+totalCount.textContent = allLeaderboardEntries.length;
+}
+if (rankings.length === 0) {
+tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-400">No more entries</td></tr>';
+return;
+}
+tbody.innerHTML = rankings.map((entry, index) => {
+const actualRank = index + 16;
+const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+return `
 <tr>
-  <td><span class="inline-flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full font-bold">${actualRank}</span></td>
-  <td class="font-semibold">${companyName}</td>
-  <td><a href="${entry.url}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">${entry.url.replace('https://', '').substring(0, 25)}...</a></td>
-  <td><span class="text-lg font-bold ${entry.score >= 85 ? 'text-green-400' : entry.score >= 70 ? 'text-yellow-400' : 'text-red-400'}">${entry.score}</span></td>
-  <td><span class="text-sm">${getCountryFlag(entry.country)} ${entry.country}</span></td>
-  <td><span class="text-sm text-gray-400">${new Date(entry.created_at).toLocaleDateString()}</span></td>
+<td><span class="inline-flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full font-bold">${actualRank}</span></td>
+<td class="font-semibold">${companyName}</td>
+<td><a href="${entry.url}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">${entry.url.replace('https://', '').substring(0, 25)}...</a></td>
+<td><span class="text-lg font-bold ${entry.score >= 85 ? 'text-green-400' : entry.score >= 70 ? 'text-yellow-400' : 'text-red-400'}">${entry.score}</span></td>
+<td><span class="text-sm">${getCountryFlag(entry.country)} ${entry.country}</span></td>
+<td><span class="text-sm text-gray-400">${new Date(entry.created_at).toLocaleDateString()}</span></td>
 </tr>
 `;
-  }).join('');
+}).join('');
 }
 
 function renderCountryFilters() {
-  const div = document.getElementById('countryFilters');
-  if (!div) return;
-  const countries = [...new Set(allLeaderboardEntries.map(e => e.country))];
-  let html = '<button class="filter-tag active" onclick="filterByCountry(\'all\')">🌍 All</button>';
-  countries.forEach(country => {
-    if (country) {
-      html += `<button class="filter-tag" onclick="filterByCountry('${country}')">${getCountryFlag(country)} ${country}</button>`;
-    }
-  });
-  div.innerHTML = html;
+const div = document.getElementById('countryFilters');
+if (!div) return;
+const countries = [...new Set(allLeaderboardEntries.map(e => e.country))];
+let html = '<button class="filter-tag active" onclick="filterByCountry(\'all\')">🌍 All</button>';
+countries.forEach(country => {
+if (country) {
+html += `<button class="filter-tag" onclick="filterByCountry('${country}')">${getCountryFlag(country)} ${country}</button>`;
+}
+});
+div.innerHTML = html;
 }
 
 function filterByCountry(country) {
-  document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
-  event.target.classList.add('active');
-  console.log('Filter by country:', country);
+document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
+event.target.classList.add('active');
+console.log('Filter by country:', country);
 }
 
 function filterAgencies() {
-  const query = document.getElementById('searchInput')?.value.toLowerCase() || '';
-  if (!query) {
-    renderRankings4to15();
-    renderRankings16Plus();
-    return;
-  }
-  const filtered = allLeaderboardEntries.filter(entry =>
-    (entry.company_name || '').toLowerCase().includes(query) ||
-    (entry.url || '').toLowerCase().includes(query) ||
-    extractDomainFromUrl(entry.url).toLowerCase().includes(query)
-  );
-  const grid = document.getElementById('rankings4to15Grid');
-  const rankings = filtered.slice(3, 15);
-  if (grid) {
-    grid.innerHTML = rankings.map((entry, index) => {
-      const actualRank = index + 4;
-      const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-      return `
+const query = document.getElementById('searchInput')?.value.toLowerCase() || '';
+if (!query) {
+renderRankings4to15();
+renderRankings16Plus();
+return;
+}
+const filtered = allLeaderboardEntries.filter(entry =>
+(entry.company_name || '').toLowerCase().includes(query) ||
+(entry.url || '').toLowerCase().includes(query) ||
+extractDomainFromUrl(entry.url).toLowerCase().includes(query)
+);
+const grid = document.getElementById('rankings4to15Grid');
+const rankings = filtered.slice(3, 15);
+if (grid) {
+grid.innerHTML = rankings.map((entry, index) => {
+const actualRank = index + 4;
+const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+return `
 <div class="rank-card">
-  <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
-  <h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
-  <div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
-  <div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
-  <a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">View Website</a>
+<div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
+<h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
+<div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
+<div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
+<a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">View Website</a>
 </div>
 `;
-    }).join('');
-  }
+}).join('');
+}
 }
 
 function toggleFilters() {
-  const panel = document.getElementById('filterPanel');
-  const icon = document.getElementById('filterIcon');
-  if (panel) {
-    panel.classList.toggle('hidden');
-    icon.classList.toggle('fa-chevron-down');
-    icon.classList.toggle('fa-chevron-up');
-  }
+const panel = document.getElementById('filterPanel');
+const icon = document.getElementById('filterIcon');
+if (panel) {
+panel.classList.toggle('hidden');
+icon.classList.toggle('fa-chevron-down');
+icon.classList.toggle('fa-chevron-up');
+}
 }
 
 function toggleRankings() {
-  const container = document.getElementById('rankingsContainer');
-  const toggleText = document.getElementById('rankingsToggleText');
-  if (container) {
-    container.classList.toggle('hidden');
-    toggleText.textContent = container.classList.contains('hidden') ? '📊 Show Rankings 16+' : '📊 Hide Rankings 16+';
-  }
+const container = document.getElementById('rankingsContainer');
+const toggleText = document.getElementById('rankingsToggleText');
+if (container) {
+container.classList.toggle('hidden');
+toggleText.textContent = container.classList.contains('hidden') ? '📊 Show Rankings 16+' : '📊 Hide Rankings 16+';
+}
 }
 
 // ==========================================
 // FREELANCERS FUNCTIONS
 // ==========================================
 async function loadFreelancers() {
-  try {
-    const response = await fetch('/api/freelancers');
-    const data = await response.json();
-    const grid = document.getElementById('freelancersGrid');
-    if (!grid) return;
-    const freelancers = data.freelancers || [];
-    if (freelancers.length === 0) {
-      grid.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No freelancers found</div>';
-      return;
-    }
-    grid.innerHTML = freelancers.map(f => {
-      const firstName = f.name.split(' ')[0];
-      const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase();
-      return `
+try {
+const response = await fetch('/api/freelancers');
+const data = await response.json();
+const grid = document.getElementById('freelancersGrid');
+if (!grid) return;
+const freelancers = data.freelancers || [];
+if (freelancers.length === 0) {
+grid.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No freelancers found</div>';
+return;
+}
+grid.innerHTML = freelancers.map(f => {
+const firstName = f.name.split(' ')[0];
+const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase();
+return `
 <div class="card hover:border-purple-500">
-  <div class="card-content">
-    <div class="flex items-start gap-4 mb-4">
-      <div class="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl font-bold text-white">
-        ${initials}
-      </div>
-      <div class="flex-1">
-        <div class="flex items-center justify-between">
-          <h3 class="font-bold text-lg text-white">${f.name}</h3>
-          ${f.is_featured ? '<span class="px-2 py-1 bg-yellow-600 rounded text-xs text-white font-semibold flex items-center gap-1">⭐ Featured</span>' : '<span class="px-2 py-1 bg-green-600 rounded text-xs text-white font-semibold">✓ Verified</span>'}
-        </div>
-        <p class="text-sm text-gray-400">${f.title || 'SEO Specialist'}</p>
-      </div>
-    </div>
-    <p class="text-gray-300 text-sm mb-4">${f.bio || 'No bio available'}</p>
-    <div class="flex items-center justify-between text-sm mb-4">
-      <span class="text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i> ${f.location || f.country || 'Remote'}</span>
-      ${f.hourly_rate ? `<span class="text-purple-400">💰 ${f.hourly_rate}</span>` : ''}
-    </div>
-  </div>
-  <div class="card-footer">
-    <a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20discuss%20SEO%20optimization%20with%20${encodeURIComponent(f.name)}"
-      target="_blank"
-      rel="noopener"
-      class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 no-underline">
-      <i class="fab fa-whatsapp"></i> Contact ${firstName}
-    </a>
-  </div>
+<div class="card-content">
+<div class="flex items-start gap-4 mb-4">
+<div class="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl font-bold text-white">
+${initials}
+</div>
+<div class="flex-1">
+<div class="flex items-center justify-between">
+<h3 class="font-bold text-lg text-white">${f.name}</h3>
+${f.is_featured ? '<span class="px-2 py-1 bg-yellow-600 rounded text-xs text-white font-semibold flex items-center gap-1">⭐ Featured</span>' : '<span class="px-2 py-1 bg-green-600 rounded text-xs text-white font-semibold">✓ Verified</span>'}
+</div>
+<p class="text-sm text-gray-400">${f.title || 'SEO Specialist'}</p>
+</div>
+</div>
+<p class="text-gray-300 text-sm mb-4">${f.bio || 'No bio available'}</p>
+<div class="flex items-center justify-between text-sm mb-4">
+<span class="text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i> ${f.location || f.country || 'Remote'}</span>
+${f.hourly_rate ? `<span class="text-purple-400">💰 ${f.hourly_rate}</span>` : ''}
+</div>
+</div>
+<div class="card-footer">
+<a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20discuss%20SEO%20optimization%20with%20${encodeURIComponent(f.name)}"
+target="_blank"
+rel="noopener"
+class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 no-underline">
+<i class="fab fa-whatsapp"></i> Contact ${firstName}
+</a>
+</div>
 </div>
 `;
-    }).join('');
-  } catch (error) {
-    console.error('❌ Error loading freelancers:', error);
-    document.getElementById('freelancersGrid').innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Could not load freelancers</div>';
-  }
+}).join('');
+} catch (error) {
+console.error('❌ Error loading freelancers:', error);
+document.getElementById('freelancersGrid').innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Could not load freelancers</div>';
+}
 }
 
 function openFreelancerModal() {
-  const modal = document.getElementById('freelancerModal');
-  if (modal) {
-    modal.classList.add('active');
-    document.body.style.overflow = 'hidden';
-  }
+const modal = document.getElementById('freelancerModal');
+if (modal) {
+modal.classList.add('active');
+document.body.style.overflow = 'hidden';
+}
 }
 
 function closeModal() {
-  const modal = document.getElementById('freelancerModal');
-  if (modal) {
-    modal.classList.remove('active');
-    document.body.style.overflow = 'auto';
-  }
+const modal = document.getElementById('freelancerModal');
+if (modal) {
+modal.classList.remove('active');
+document.body.style.overflow = 'auto';
+}
 }
 
 function submitFreelancer() {
-  const name = document.getElementById('freelancerName')?.value;
-  const email = document.getElementById('freelancerEmail')?.value;
-  const title = document.getElementById('freelancerTitle')?.value;
-  const bio = document.getElementById('freelancerBio')?.value;
-  const isFeatured = document.getElementById('featuredListing')?.checked || false;
-  if (!name || !email) {
-    alert('❌ Name and email are required');
-    return;
-  }
-  if (!email.includes('@')) {
-    alert('❌ Please enter a valid email');
-    return;
-  }
-  if (isFeatured) {
-    window.open('https://paypal.me/ojgmedia?locale.x=en_US&country.x=NL', '_blank', 'noopener');
-  }
-  fetch('/api/freelancers/register', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      name,
-      email,
-      phone: document.getElementById('freelancerPhone')?.value,
-      title: title || 'SEO Specialist',
-      bio: bio || null,
-      is_featured: isFeatured
-    })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      alert(`✅ Thank you ${name}! We'll review your application within 24 hours.${isFeatured ? ' Please complete the payment via PayPal.' : ''}`);
-      closeModal();
-      document.getElementById('freelancerName').value = '';
-      document.getElementById('freelancerEmail').value = '';
-      document.getElementById('freelancerPhone').value = '';
-      document.getElementById('freelancerTitle').value = '';
-      document.getElementById('freelancerBio').value = '';
-      document.getElementById('bioCharCount').textContent = '0/200';
-      document.getElementById('featuredListing').checked = false;
-    } else {
-      alert('❌ ' + (data.error || 'Registration failed'));
-    }
-  })
-  .catch(error => {
-    alert('❌ Registration failed: ' + error.message);
-  });
+const name = document.getElementById('freelancerName')?.value;
+const email = document.getElementById('freelancerEmail')?.value;
+const title = document.getElementById('freelancerTitle')?.value;
+const bio = document.getElementById('freelancerBio')?.value;
+const isFeatured = document.getElementById('featuredListing')?.checked || false;
+if (!name || !email) {
+alert('❌ Name and email are required');
+return;
+}
+if (!email.includes('@')) {
+alert('❌ Please enter a valid email');
+return;
+}
+if (isFeatured) {
+window.open('https://paypal.me/ojgmedia?locale.x=en_US&country.x=NL', '_blank', 'noopener');
+}
+fetch('/api/freelancers/register', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({
+name,
+email,
+phone: document.getElementById('freelancerPhone')?.value,
+title: title || 'SEO Specialist',
+bio: bio || null,
+is_featured: isFeatured
+})
+})
+.then(response => response.json())
+.then(data => {
+if (data.success) {
+alert(`✅ Thank you ${name}! We'll review your application within 24 hours.${isFeatured ? ' Please complete the payment via PayPal.' : ''}`);
+closeModal();
+document.getElementById('freelancerName').value = '';
+document.getElementById('freelancerEmail').value = '';
+document.getElementById('freelancerPhone').value = '';
+document.getElementById('freelancerTitle').value = '';
+document.getElementById('freelancerBio').value = '';
+document.getElementById('bioCharCount').textContent = '0/200';
+document.getElementById('featuredListing').checked = false;
+} else {
+alert('❌ ' + (data.error || 'Registration failed'));
+}
+})
+.catch(error => {
+alert('❌ Registration failed: ' + error.message);
+});
 }
 
 // ==========================================
 // UTILITY FUNCTIONS
 // ==========================================
 function extractDomainFromUrl(url) {
-  if (!url) return 'Company';
-  try {
-    const hostname = new URL(url).hostname;
-    let domain = hostname.replace('www.', '');
-    let name = domain.split('.')[0];
-    return name.charAt(0).toUpperCase() + name.slice(1);
-  } catch (e) {
-    return 'Company';
-  }
+if (!url) return 'Company';
+try {
+const hostname = new URL(url).hostname;
+let domain = hostname.replace('www.', '');
+let name = domain.split('.')[0];
+return name.charAt(0).toUpperCase() + name.slice(1);
+} catch (e) {
+return 'Company';
+}
 }
 
 function getCountryFlag(country) {
-  const flags = {
-    'Netherlands': '🇳🇱', 'NL': '🇳🇱',
-    'United Kingdom': '🇬🇧', 'UK': '🇬🇧',
-    'US': '🇺🇸', 'United States': '🇺🇸',
-    'Germany': '🇩🇪', 'DE': '🇩🇪',
-    'France': '🇫🇷', 'FR': '🇫🇷',
-    'Belgium': '🇧🇪', 'BE': '🇧🇪',
-    'Spain': '🇪🇸', 'ES': '🇪🇸',
-    'Italy': '🇮🇹', 'IT': '🇮🇹'
-  };
-  return flags[country] || '🌐';
+const flags = {
+'Netherlands': '🇳🇱', 'NL': '🇳🇱',
+'United Kingdom': '🇬🇧', 'UK': '🇬🇧',
+'US': '🇺🇸', 'United States': '🇺🇸',
+'Germany': '🇩🇪', 'DE': '🇩🇪',
+'France': '🇫🇷', 'FR': '🇫🇷',
+'Belgium': '🇧🇪', 'BE': '🇧🇪',
+'Spain': '🇪🇸', 'ES': '🇪🇸',
+'Italy': '🇮🇹', 'IT': '🇮🇹'
+};
+return flags[country] || '🌐';
 }
 
 window.onclick = function(event) {
-  const modal = document.getElementById('freelancerModal');
-  if (event.target === modal) {
-    closeModal();
-  }
+const modal = document.getElementById('freelancerModal');
+if (event.target === modal) {
+closeModal();
+}
 };
 </script>
 </body>
