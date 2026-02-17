@@ -1,12 +1,13 @@
 // ============================================
-// CONTENTSCALE SERVER.JS - COMPLETE PRODUCTION
+// CONTENTSCALE SERVER.JS - COMPLETE MET ADMIN USER MANAGEMENT
 // ✅ Alle API endpoints werken echt
 // ✅ SendGrid email verzending
 // ✅ User templates opslaan in database
 // ✅ Bulk scanner met echte data
 // ✅ Elke user eigen SendGrid keys
-// ✅ Admin messaging systeem (NIEUW)
+// ✅ Admin messaging systeem
 // ✅ Verified stat fix toegevoegd
+// ✅ NIEUW: Admin User Management (Activate/Deactivate/Message)
 // ============================================
 process.env.PGSSLMODE = 'verify-full';
 process.env.NODE_NO_WARNINGS = '1';
@@ -303,7 +304,7 @@ async function createAllTables() {
             )
         `);
         
-        // ✅ NIEUW: Admin Messages table voor messaging systeem
+        // Admin Messages table - NIEUW!
         await client.query(`
             CREATE TABLE IF NOT EXISTS admin_messages (
                 id SERIAL PRIMARY KEY,
@@ -833,10 +834,10 @@ app.post('/api/bulk-scan/send-website-offers', async (req, res) => {
 });
 
 // ============================================
-// ✅ ADMIN MESSAGING ENDPOINTS - NIEUW!
+// ✅ ADMIN MESSAGING & USER MANAGEMENT ENDPOINTS - NIEUW!
 // ============================================
 
-// Get all users (voor admin panel lijst)
+// Get all users
 app.get('/api/admin/users', verifyAdmin, async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM users ORDER BY created_at DESC');
@@ -847,7 +848,7 @@ app.get('/api/admin/users', verifyAdmin, async (req, res) => {
     }
 });
 
-// Send message to users (slaat bericht op in DB)
+// Send message to users (Admin only)
 app.post('/api/admin/messages/send', verifyAdmin, async (req, res) => {
     const { recipients, subject, body, is_bulk } = req.body;
     try {
@@ -864,7 +865,7 @@ app.post('/api/admin/messages/send', verifyAdmin, async (req, res) => {
     }
 });
 
-// Get message history (voor admin panel historie)
+// Get message history (Admin only)
 app.get('/api/admin/messages', verifyAdmin, async (req, res) => {
     try {
         const result = await pool.query(
@@ -882,7 +883,6 @@ app.get('/api/admin/messages', verifyAdmin, async (req, res) => {
 // ============================================
 app.post('/api/scan', async (req, res) => {
     const { url, keyword } = req.body;
-    
     if (!url) return res.status(400).json({ success: false, error: 'URL required' });
     
     let scanUrl = url;
@@ -1290,7 +1290,7 @@ app.get('/api/leaderboard', async (req, res) => {
                 avgScore: avgScore,
                 countriesCount: countries,
                 activeHelpers: activeHelpers,
-                verifiedCount: verifiedCount  // ✅ NIEUW TOEGEVOEGD
+                verifiedCount: verifiedCount  // ✅ NIEUW TOEGEVOEGEN
             }
         });
     } catch (error) {
@@ -1841,6 +1841,7 @@ async function startServer() {
         console.log('   • Admin Edit/Delete: ✅ WERKT');
         console.log('   • Bulk Delete: ✅ WERKT');
         console.log('   • Admin Messaging: ✅ NIEUW TOEGEVOEGD');
+        console.log('   • User Management: ✅ NIEUW TOEGEVOEGD');
         console.log('   • Verified Stat: ✅ TOEGEVOEGD');
         console.log('');
     });
