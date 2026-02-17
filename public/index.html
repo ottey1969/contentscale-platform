@@ -5,16 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ContentScale - Elite SEO Content Scanner 100/100</title>
 <meta name="description" content="Scan je content op 100/100 met ons Elite GRAAF Framework. Detecteert AI Overview ready content, E-E-A-T signals, en meer.">
-<link rel="preconnect" href="https://cdn.tailwindcss.com">
-<link rel="preconnect" href="https://cdnjs.cloudflare.com">
+
+<!-- ✅ PRELOAD CRITICAL RESOURCES -->
+<link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
 <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
-<script src="https://cdn.tailwindcss.com" defer></script>
+
+<!-- ✅ DEFER NON-CRITICAL CSS -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'; this.onload=null;">
 <noscript>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </noscript>
+
+<!-- ✅ DEFER TAILWIND -->
+<script src="https://cdn.tailwindcss.com" defer></script>
+
+<!-- ✅ CRITICAL CSS INLINED FOR ABOVE-THE-FOLD -->
 <style>
+/* CRITICAL CSS - ABOVE THE FOLD */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -72,20 +81,6 @@ input::placeholder, textarea::placeholder {
   transform: translateY(-2px);
   box-shadow: 0 10px 20px -5px rgba(126, 34, 206, 0.5);
 }
-.btn-secondary {
-  background: linear-gradient(135deg, #1e40af, #0891b2);
-  color: white;
-}
-.btn-success {
-  background: #0f7b3a !important;
-  color: white !important;
-}
-.btn-disabled {
-  background: #6b7280 !important;
-  color: white !important;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
 .mode-toggle {
   position: relative;
   padding: 1rem 2rem;
@@ -137,13 +132,38 @@ input::placeholder, textarea::placeholder {
   transform: translateY(-4px);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
 }
-.card-content {
-  flex: 1;
+.progress-bar {
+  height: 0.75rem;
+  background: #374151;
+  border-radius: 9999px;
+  overflow: hidden;
 }
-.card-footer {
-  margin-top: auto;
-  padding-top: 1rem;
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #a855f7, #ec4899);
+  transition: width 0.3s;
 }
+.hidden { display: none; }
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #7e22ce;
+  color: white;
+  padding: 0.5rem 1rem;
+  z-index: 100;
+  transition: top 0.2s;
+}
+.skip-link:focus {
+  top: 0;
+}
+#main-content > div:first-child {
+  min-height: 400px;
+}
+</style>
+
+<!-- ✅ NON-CRITICAL CSS - LOADED ASYNC -->
+<style media="print" onload="this.media='all'">
 .stat-card {
   position: relative;
   border-radius: 1rem;
@@ -179,35 +199,9 @@ input::placeholder, textarea::placeholder {
 .top-card.bronze {
   background: linear-gradient(135deg, #f97316, #c2410c);
 }
-.top-card button {
-  background: rgba(0, 0, 0, 0.3);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  font-weight: 600;
-  transition: all 0.2s;
-  width: 100%;
-  margin-top: 1rem;
-}
-.top-card button:hover {
-  background: rgba(0, 0, 0, 0.5);
-  border-color: rgba(255, 255, 255, 0.6);
-}
 .score-high { color: #4ade80; }
 .score-medium { color: #facc15; }
 .score-low { color: #f87171; }
-.progress-bar {
-  height: 0.75rem;
-  background: #374151;
-  border-radius: 9999px;
-  overflow: hidden;
-}
-.progress-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #a855f7, #ec4899);
-  transition: width 0.3s;
-}
 .grid-3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -289,7 +283,6 @@ input::placeholder, textarea::placeholder {
   border-bottom: 1px solid #374151;
   color: white;
 }
-.hidden { display: none; }
 .modal {
   position: fixed;
   top: 0;
@@ -403,28 +396,12 @@ footer {
   color: #bae6fd !important;
   text-decoration-color: #bae6fd;
 }
-.skip-link {
-  position: absolute;
-  top: -40px;
-  left: 0;
-  background: #7e22ce;
-  color: white;
-  padding: 0.5rem 1rem;
-  z-index: 100;
-  transition: top 0.2s;
-}
-.skip-link:focus {
-  top: 0;
-}
 img[width][height] {
   aspect-ratio: attr(width) / attr(height);
 }
 .w-48.h-48 {
   width: 192px;
   height: 192px;
-}
-#main-content > div:first-child {
-  min-height: 400px;
 }
 .modal input, .modal textarea {
   color: #000000 !important;
@@ -574,725 +551,598 @@ img[width][height] {
 </nav>
 
 <div id="main-content" class="max-w-7xl mx-auto px-6 py-8">
-
 <!-- ============================================
 SCANNER SECTION
 ============================================ -->
 <div id="lead-scanner" class="mb-16">
-  <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-    <div class="text-center mb-8">
-      <h2 class="text-4xl font-bold mb-3 text-white">🎯 SEO Content Quality Scanner</h2>
-      <p class="text-xl text-gray-200 mb-2">Check Your SEO Content Quality in Seconds</p>
-      <div class="flex flex-wrap gap-3 justify-center text-sm text-gray-300">
-        <span>✨ Free for freelancers</span>
-        <span>•</span>
-        <span>🔍 Single & Bulk scanning</span>
-        <span>•</span>
-        <span>📊 Detailed analysis</span>
-        <span>•</span>
-        <span>📧 Your SendGrid emails</span>
-        <span>•</span>
-        <span>✏️ Editable templates</span>
-      </div>
-    </div>
+<div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+<div class="text-center mb-8">
+<h2 class="text-4xl font-bold mb-3 text-white">🎯 SEO Content Quality Scanner</h2>
+<p class="text-xl text-gray-200 mb-2">Check Your SEO Content Quality in Seconds</p>
+<div class="flex flex-wrap gap-3 justify-center text-sm text-gray-300">
+<span>✨ Free for freelancers</span>
+<span>•</span>
+<span>🔍 Single & Bulk scanning</span>
+<span>•</span>
+<span>📊 Detailed analysis</span>
+<span>•</span>
+<span>📧 Your SendGrid emails</span>
+<span>•</span>
+<span>✏️ Editable templates</span>
+</div>
+</div>
 
-    <!-- TWO BUTTONS SIDE BY SIDE -->
-    <div class="flex justify-center gap-4 mb-8">
-      <button id="modeSingleBtn" onclick="switchMode('single')" class="mode-toggle active">
-        <i class="fas fa-link mr-2"></i> Single URL
-      </button>
-      <button id="modeBulkBtn" onclick="switchMode('bulk')" class="mode-toggle">
-        <i class="fas fa-layer-group mr-2"></i> Bulk URLs
-      </button>
-    </div>
+<!-- TWO BUTTONS SIDE BY SIDE -->
+<div class="flex justify-center gap-4 mb-8">
+<button id="modeSingleBtn" onclick="switchMode('single')" class="mode-toggle active">
+<i class="fas fa-link mr-2"></i> Single URL
+</button>
+<button id="modeBulkBtn" onclick="switchMode('bulk')" class="mode-toggle">
+<i class="fas fa-layer-group mr-2"></i> Bulk URLs
+</button>
+</div>
 
-    <!-- SINGLE URL SCANNER -->
-    <div id="singleMode" class="max-w-3xl mx-auto">
-      <div class="card">
-        <div class="flex flex-col sm:flex-row gap-3">
-          <input type="text"
-            id="singleUrlInput"
-            name="url"
-            placeholder="https://business-website.com"
-            class="flex-1"
-            autocomplete="off"
-            aria-autocomplete="none"
-            spellcheck="false">
-          <button onclick="scanSingleURL()" id="singleScanBtn" class="btn-primary btn whitespace-nowrap">
-            <i class="fas fa-search"></i> Start Scan
-          </button>
-        </div>
-        <div id="singleProgress" class="hidden mt-4">
-          <div class="progress-bar">
-            <div id="singleProgressBar" class="progress-bar-fill" style="width: 0%"></div>
-          </div>
-          <p id="singleProgressText" class="text-sm text-gray-300 text-center mt-2"></p>
-        </div>
-      </div>
-      <div id="singleResult" class="hidden mt-4"></div>
-    </div>
+<!-- SINGLE URL SCANNER -->
+<div id="singleMode" class="max-w-3xl mx-auto">
+<div class="card">
+<div class="flex flex-col sm:flex-row gap-3">
+<input type="text"
+  id="singleUrlInput"
+  name="url"
+  placeholder="https://business-website.com"
+  class="flex-1"
+  autocomplete="off"
+  aria-autocomplete="none"
+  spellcheck="false">
+<button onclick="scanSingleURL()" id="singleScanBtn" class="btn-primary btn whitespace-nowrap">
+<i class="fas fa-search"></i> Start Scan
+</button>
+</div>
+<div id="singleProgress" class="hidden mt-4">
+<div class="progress-bar">
+<div id="singleProgressBar" class="progress-bar-fill" style="width: 0%"></div>
+</div>
+<p id="singleProgressText" class="text-sm text-gray-300 text-center mt-2"></p>
+</div>
+</div>
+<div id="singleResult" class="hidden mt-4"></div>
+</div>
 
-    <!-- DIVIDER -->
-    <div class="flex items-center gap-4 my-6">
-      <div class="flex-1 border-t border-gray-700"></div>
-      <span class="text-gray-500 text-sm">OR</span>
-      <div class="flex-1 border-t border-gray-700"></div>
-    </div>
+<!-- DIVIDER -->
+<div class="flex items-center gap-4 my-6">
+<div class="flex-1 border-t border-gray-700"></div>
+<span class="text-gray-500 text-sm">OR</span>
+<div class="flex-1 border-t border-gray-700"></div>
+</div>
 
-    <!-- BULK URL SCANNER -->
-    <div id="bulkMode" class="hidden max-w-4xl mx-auto">
-      <div class="card" style="border: 2px solid #3b82f6;">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-xl font-bold text-white flex items-center gap-2">
-            <span>📋 Bulk URL Scanner</span>
-            <span class="text-xs px-2 py-1 bg-blue-600 rounded text-white">Batch Scan</span>
-            <span id="activationBadge" class="text-xs px-2 py-1 bg-red-600 rounded text-white hidden">
-              🔒 Activation Required
-            </span>
-          </h3>
-          <button onclick="toggleBulkScanner()" class="text-sm text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-2">
-            <span id="bulkToggleText">Show Bulk Scanner</span>
-            <i class="fas fa-chevron-down" id="bulkScannerIcon" style="transition: transform 0.3s;"></i>
-          </button>
-        </div>
+<!-- BULK URL SCANNER -->
+<div id="bulkMode" class="hidden max-w-4xl mx-auto">
+<div class="card" style="border: 2px solid #3b82f6;">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-xl font-bold text-white flex items-center gap-2">
+<span>📋 Bulk URL Scanner</span>
+<span class="text-xs px-2 py-1 bg-blue-600 rounded text-white">Batch Scan</span>
+<span id="activationBadge" class="text-xs px-2 py-1 bg-red-600 rounded text-white hidden">
+🔒 Activation Required
+</span>
+</h3>
+<button onclick="toggleBulkScanner()" class="text-sm text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-2">
+<span id="bulkToggleText">Show Bulk Scanner</span>
+<i class="fas fa-chevron-down" id="bulkScannerIcon" style="transition: transform 0.3s;"></i>
+</button>
+</div>
 
-        <div id="bulkScannerContent" class="hidden">
-          <!-- ACTIVATION NOTICE -->
-          <div id="activationNotice" class="hidden bg-gradient-to-r from-purple-900 to-blue-900 border-2 border-purple-500 rounded-lg p-6 mb-6">
-            <div class="flex items-start gap-4">
-              <div class="text-4xl">🔒</div>
-              <div class="flex-1">
-                <h4 class="text-xl font-bold text-white mb-2">Activation Required for Bulk Scanning</h4>
-                <p class="text-gray-200 mb-4">
-                  The bulk scanner with automated email outreach is a premium feature.
-                  Contact us via WhatsApp to activate your account!
-                </p>
-                <div class="bg-gray-900 bg-opacity-50 rounded-lg p-4 mb-4">
-                  <h5 class="font-bold text-white mb-2">What you get with activation:</h5>
-                  <ul class="text-sm text-gray-200 space-y-1" style="list-style: none; padding-left: 0;">
-                    <li>✅ Scan up to 100 URLs at once</li>
-                    <li>✅ Automated email outreach to business owners</li>
-                    <li>✅ Your own SendGrid integration (100 emails/day free)</li>
-                    <li>✅ Editable email templates</li>
-                    <li>✅ Automatic leaderboard submissions (85+ score)</li>
-                  </ul>
-                </div>
-                <div class="flex gap-3 flex-wrap">
-                  <a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20activate%20bulk%20scanner."
-                    id="whatsappActivationBtn"
-                    target="_blank"
-                    rel="noopener"
-                    class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold inline-flex items-center gap-2 transition-all transform hover:scale-105">
-                    <i class="fab fa-whatsapp text-xl"></i>
-                    Contact for Activation
-                  </a>
-                  <button onclick="checkActivationStatus()"
-                    class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold inline-flex items-center gap-2 transition-all">
-                    <i class="fas fa-sync mr-2"></i>
-                    Refresh Status
-                  </button>
-                </div>
-                <p class="text-xs text-gray-400 mt-4">
-                  💡 Activation is free! We just need to verify your account.
-                </p>
-              </div>
-            </div>
-          </div>
+<div id="bulkScannerContent" class="hidden">
+<!-- ACTIVATION NOTICE -->
+<div id="activationNotice" class="hidden bg-gradient-to-r from-purple-900 to-blue-900 border-2 border-purple-500 rounded-lg p-6 mb-6">
+<div class="flex items-start gap-4">
+<div class="text-4xl">🔒</div>
+<div class="flex-1">
+<h4 class="text-xl font-bold text-white mb-2">Activation Required for Bulk Scanning</h4>
+<p class="text-gray-200 mb-4">
+The bulk scanner with automated email outreach is a premium feature.
+Contact us via WhatsApp to activate your account!
+</p>
+<div class="bg-gray-900 bg-opacity-50 rounded-lg p-4 mb-4">
+<h5 class="font-bold text-white mb-2">What you get with activation:</h5>
+<ul class="text-sm text-gray-200 space-y-1" style="list-style: none; padding-left: 0;">
+<li>✅ Scan up to 100 URLs at once</li>
+<li>✅ Automated email outreach to business owners</li>
+<li>✅ Your own SendGrid integration (100 emails/day free)</li>
+<li>✅ Editable email templates</li>
+<li>✅ Automatic leaderboard submissions (85+ score)</li>
+</ul>
+</div>
+<div class="flex gap-3 flex-wrap">
+<a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20activate%20bulk%20scanner."
+  id="whatsappActivationBtn"
+  target="_blank"
+  rel="noopener"
+  class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold inline-flex items-center gap-2 transition-all transform hover:scale-105">
+<i class="fab fa-whatsapp text-xl"></i>
+Contact for Activation
+</a>
+<button onclick="checkActivationStatus()"
+  class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold inline-flex items-center gap-2 transition-all">
+<i class="fas fa-sync mr-2"></i>
+Refresh Status
+</button>
+</div>
+<p class="text-xs text-gray-400 mt-4">
+💡 Activation is free! We just need to verify your account.
+</p>
+</div>
+</div>
+</div>
 
-          <!-- BULK SCANNER FORM -->
-          <div id="bulkScannerForm">
-            <p class="text-gray-300 text-sm mb-4">
-              Scan up to 100 websites at once. Based on scores, we automatically:
-            </p>
-            <ul class="text-sm text-gray-300 mb-4" style="margin-left: 1.5rem;">
-              <li>🏆 <strong>85+ Score:</strong> Submit to leaderboard + send congratulations email</li>
-              <li>📧 <strong>&lt;85 with website:</strong> Email business owner with improvement pitch</li>
-              <li>🌐 <strong>&lt;85 without website:</strong> Email owner offering website creation</li>
-            </ul>
+<!-- BULK SCANNER FORM -->
+<div id="bulkScannerForm">
+<p class="text-gray-300 text-sm mb-4">
+Scan up to 100 websites at once. Based on scores, we automatically:
+</p>
+<ul class="text-sm text-gray-300 mb-4" style="margin-left: 1.5rem;">
+<li>🏆 <strong>85+ Score:</strong> Submit to leaderboard + send congratulations email</li>
+<li>📧 <strong>&lt;85 with website:</strong> Email business owner with improvement pitch</li>
+<li>🌐 <strong>&lt;85 without website:</strong> Email owner offering website creation</li>
+</ul>
 
-            <div class="mb-4">
-              <label class="block text-sm text-gray-300 mb-2">Enter URLs (one per line, max 100)</label>
-              <textarea
-                id="bulkUrlInput"
-                rows="8"
-                placeholder="https://example1.com
+<div class="mb-4">
+<label class="block text-sm text-gray-300 mb-2">Enter URLs (one per line, max 100)</label>
+<textarea
+  id="bulkUrlInput"
+  rows="8"
+  placeholder="https://example1.com
 https://example2.com
 https://example3.com"
-                class="w-full p-3 rounded border border-gray-600 focus:border-purple-500 resize-none"
-                style="color: #000000 !important; background-color: #ffffff !important;"></textarea>
-              <div class="flex justify-between mt-1">
-                <span class="text-xs text-gray-400">Up to 100 URLs</span>
-                <span id="bulkUrlCount" class="text-xs text-gray-400">0/100</span>
-              </div>
-            </div>
+  class="w-full p-3 rounded border border-gray-600 focus:border-purple-500 resize-none"
+  style="color: #000000 !important; background-color: #ffffff !important;"></textarea>
+<div class="flex justify-between mt-1">
+<span class="text-xs text-gray-400">Up to 100 URLs</span>
+<span id="bulkUrlCount" class="text-xs text-gray-400">0/100</span>
+</div>
+</div>
 
-            <div class="grid grid-cols-2 gap-3 mb-4">
-              <div>
-                <label class="block text-sm text-gray-300 mb-2">Your Email *</label>
-                <input type="email" id="bulkScanEmail" placeholder="your@email.com" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500">
-              </div>
-              <div>
-                <label class="block text-sm text-gray-300 mb-2">Your Name *</label>
-                <input type="text" id="bulkScanName" placeholder="Your name" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500">
-              </div>
-            </div>
+<div class="grid grid-cols-2 gap-3 mb-4">
+<div>
+<label class="block text-sm text-gray-300 mb-2">Your Email *</label>
+<input type="email" id="bulkScanEmail" placeholder="your@email.com" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500">
+</div>
+<div>
+<label class="block text-sm text-gray-300 mb-2">Your Name *</label>
+<input type="text" id="bulkScanName" placeholder="Your name" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500">
+</div>
+</div>
 
-            <button onclick="startBulkScan()" id="bulkScanBtn" class="btn-primary btn w-full">
-              <i class="fas fa-rocket mr-2"></i> Start Bulk Scan
-            </button>
+<button onclick="startBulkScan()" id="bulkScanBtn" class="btn-primary btn w-full">
+<i class="fas fa-rocket mr-2"></i> Start Bulk Scan
+</button>
 
-            <div id="bulkProgress" class="hidden mt-4">
-              <div class="progress-bar">
-                <div id="bulkProgressBar" class="progress-bar-fill" style="width: 0%"></div>
-              </div>
-              <p id="bulkProgressText" class="text-sm text-gray-300 text-center mt-2"></p>
-            </div>
+<div id="bulkProgress" class="hidden mt-4">
+<div class="progress-bar">
+<div id="bulkProgressBar" class="progress-bar-fill" style="width: 0%"></div>
+</div>
+<p id="bulkProgressText" class="text-sm text-gray-300 text-center mt-2"></p>
+</div>
 
-            <div id="bulkResults" class="hidden mt-4">
-              <h4 class="text-lg font-bold text-white mb-3">Scan Results</h4>
-              <div id="bulkResultsContainer"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+<div id="bulkResults" class="hidden mt-4">
+<h4 class="text-lg font-bold text-white mb-3">Scan Results</h4>
+<div id="bulkResultsContainer"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
 
-    <!-- API Configuration Accordion -->
-    <div class="accordion-item">
-      <button onclick="toggleAccordion('apiConfig')" class="accordion-header">
-        <span class="flex items-center gap-2">
-          <i class="fas fa-key text-purple-400"></i>
-          <span class="font-bold">Configure Your API Keys (SendGrid + WebShare)</span>
-          <span id="apiStatusIndicator" class="api-status-indicator api-status-inactive"></span>
-        </span>
-        <i class="fas fa-chevron-down" id="apiConfigIcon"></i>
-      </button>
-      <div id="apiConfig" class="accordion-content hidden">
-        <div class="bg-gray-900 rounded-lg p-5 border border-gray-700">
-          <div class="flex items-center gap-3 mb-4">
-            <span id="apiStatusText" class="text-sm text-gray-300">Configure your own API keys for unlimited usage</span>
-          </div>
+<!-- API Configuration Accordion -->
+<div class="accordion-item">
+<button onclick="toggleAccordion('apiConfig')" class="accordion-header">
+<span class="flex items-center gap-2">
+<i class="fas fa-key text-purple-400"></i>
+<span class="font-bold">Configure Your API Keys (SendGrid + WebShare)</span>
+<span id="apiStatusIndicator" class="api-status-indicator api-status-inactive"></span>
+</span>
+<i class="fas fa-chevron-down" id="apiConfigIcon"></i>
+</button>
+<div id="apiConfig" class="accordion-content hidden">
+<div class="bg-gray-900 rounded-lg p-5 border border-gray-700">
+<div class="flex items-center gap-3 mb-4">
+<span id="apiStatusText" class="text-sm text-gray-300">Configure your own API keys for unlimited usage</span>
+</div>
 
-          <div class="grid md:grid-cols-2 gap-6">
-            <!-- SendGrid Config -->
-            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
-              <h4 class="text-lg font-bold mb-3 flex items-center gap-2">
-                <i class="fas fa-envelope text-blue-400"></i>
-                SendGrid Configuration
-              </h4>
-              <p class="text-xs text-gray-400 mb-3">Free plan: 100 emails/day</p>
-              <div class="space-y-3">
-                <div>
-                  <label class="block text-sm text-gray-300 mb-1">SendGrid API Key</label>
-                  <input type="password" id="sendgridApiKey" placeholder="SG.xxxxxxxxxx" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500" autocomplete="off">
-                </div>
-                <div class="flex gap-2">
-                  <button onclick="saveSendgridConfig()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm font-semibold">
-                    <i class="fas fa-save mr-1"></i> Save
-                  </button>
-                  <button onclick="testSendgridConfig()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-semibold">
-                    <i class="fas fa-vial mr-1"></i> Test
-                  </button>
-                </div>
-                <div id="sendgridStatus" class="text-xs text-gray-400 mt-2">
-                  <span class="text-yellow-400">⚪ Not configured</span>
-                </div>
-                <div class="border-t border-gray-700 pt-3 mt-2">
-                  <h5 class="text-sm font-semibold mb-2 text-gray-300">Daily Usage</h5>
-                  <div class="progress-bar h-2 mb-1">
-                    <div id="sendgridUsageBar" class="progress-bar-fill" style="width: 0%"></div>
-                  </div>
-                  <div class="flex justify-between text-xs">
-                    <span id="sendgridUsed">0</span>
-                    <span>/</span>
-                    <span id="sendgridLimit">100</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+<div class="grid md:grid-cols-2 gap-6">
+<!-- SendGrid Config -->
+<div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+<h4 class="text-lg font-bold mb-3 flex items-center gap-2">
+<i class="fas fa-envelope text-blue-400"></i>
+SendGrid Configuration
+</h4>
+<p class="text-xs text-gray-400 mb-3">Free plan: 100 emails/day</p>
+<div class="space-y-3">
+<div>
+<label class="block text-sm text-gray-300 mb-1">SendGrid API Key</label>
+<input type="password" id="sendgridApiKey" placeholder="SG.xxxxxxxxxx" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500" autocomplete="off">
+</div>
+<div class="flex gap-2">
+<button onclick="saveSendgridConfig()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm font-semibold">
+<i class="fas fa-save mr-1"></i> Save
+</button>
+<button onclick="testSendgridConfig()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-semibold">
+<i class="fas fa-vial mr-1"></i> Test
+</button>
+</div>
+<div id="sendgridStatus" class="text-xs text-gray-400 mt-2">
+<span class="text-yellow-400">⚪ Not configured</span>
+</div>
+<div class="border-t border-gray-700 pt-3 mt-2">
+<h5 class="text-sm font-semibold mb-2 text-gray-300">Daily Usage</h5>
+<div class="progress-bar h-2 mb-1">
+<div id="sendgridUsageBar" class="progress-bar-fill" style="width: 0%"></div>
+</div>
+<div class="flex justify-between text-xs">
+<span id="sendgridUsed">0</span>
+<span>/</span>
+<span id="sendgridLimit">100</span>
+</div>
+</div>
+</div>
+</div>
 
-            <!-- WebShare Config -->
-            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
-              <h4 class="text-lg font-bold mb-3 flex items-center gap-2">
-                <i class="fas fa-globe text-green-400"></i>
-                WebShare Proxy Configuration
-              </h4>
-              <p class="text-xs text-gray-400 mb-3">10 free proxies for enhanced scanning</p>
-              <div class="space-y-3">
-                <div>
-                  <label class="block text-sm text-gray-300 mb-1">WebShare API Key</label>
-                  <input type="password" id="webshareApiKey" placeholder="your-webshare-api-key" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500" autocomplete="off">
-                </div>
-                <div class="flex gap-2">
-                  <button onclick="saveWebshareConfig()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm font-semibold">
-                    <i class="fas fa-save mr-1"></i> Save
-                  </button>
-                  <button onclick="testWebshareConfig()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-semibold">
-                    <i class="fas fa-vial mr-1"></i> Test
-                  </button>
-                </div>
-                <div id="webshareStatus" class="text-xs text-gray-400 mt-2">
-                  <span class="text-yellow-400">⚪ Not configured</span>
-                </div>
-                <div id="proxyList" class="hidden mt-3 border-t border-gray-700 pt-3">
-                  <h5 class="text-sm font-semibold mb-2 text-gray-300">Active Proxies</h5>
-                  <div id="proxyListContainer" class="space-y-1 max-h-32 overflow-y-auto text-xs"></div>
-                </div>
-              </div>
-            </div>
-          </div>
+<!-- WebShare Config -->
+<div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+<h4 class="text-lg font-bold mb-3 flex items-center gap-2">
+<i class="fas fa-globe text-green-400"></i>
+WebShare Proxy Configuration
+</h4>
+<p class="text-xs text-gray-400 mb-3">10 free proxies for enhanced scanning</p>
+<div class="space-y-3">
+<div>
+<label class="block text-sm text-gray-300 mb-1">WebShare API Key</label>
+<input type="password" id="webshareApiKey" placeholder="your-webshare-api-key" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500" autocomplete="off">
+</div>
+<div class="flex gap-2">
+<button onclick="saveWebshareConfig()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm font-semibold">
+<i class="fas fa-save mr-1"></i> Save
+</button>
+<button onclick="testWebshareConfig()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-semibold">
+<i class="fas fa-vial mr-1"></i> Test
+</button>
+</div>
+<div id="webshareStatus" class="text-xs text-gray-400 mt-2">
+<span class="text-yellow-400">⚪ Not configured</span>
+</div>
+<div id="proxyList" class="hidden mt-3 border-t border-gray-700 pt-3">
+<h5 class="text-sm font-semibold mb-2 text-gray-300">Active Proxies</h5>
+<div id="proxyListContainer" class="space-y-1 max-h-32 overflow-y-auto text-xs"></div>
+</div>
+</div>
+</div>
+</div>
 
-          <div class="mt-4 text-xs text-gray-500 border-t border-gray-700 pt-3">
-            <p>💡 Your API keys are stored securely and only used for your account. Free tier limits apply.</p>
-          </div>
-        </div>
-      </div>
-    </div>
+<div class="mt-4 text-xs text-gray-500 border-t border-gray-700 pt-3">
+<p>💡 Your API keys are stored securely and only used for your account. Free tier limits apply.</p>
+</div>
+</div>
+</div>
+</div>
 
-    <div class="mt-8 bg-gradient-to-r from-purple-800 via-pink-800 to-purple-800 rounded-xl p-6 text-center border border-purple-400">
-      <h3 class="text-2xl font-bold mb-2 text-white">💼 Are You an SEO Specialist or Content Marketer?</h3>
-      <p class="text-xl text-gray-200 mb-4">
-        Work just a few hours per week while earning a full-time income.
-        We train you in Modern SEO for the AI-era.
-      </p>
-      <button onclick="openFreelancerModal()" class="btn-white-black btn text-lg px-8 py-4 shadow-lg">
-        <i class="fas fa-user-plus mr-2"></i> Become a Platform Specialist
-      </button>
-    </div>
-  </div>
+<div class="mt-8 bg-gradient-to-r from-purple-800 via-pink-800 to-purple-800 rounded-xl p-6 text-center border border-purple-400">
+<h3 class="text-2xl font-bold mb-2 text-white">💼 Are You an SEO Specialist or Content Marketer?</h3>
+<p class="text-xl text-gray-200 mb-4">
+Work just a few hours per week while earning a full-time income.
+We train you in Modern SEO for the AI-era.
+</p>
+<button onclick="openFreelancerModal()" class="btn-white-black btn text-lg px-8 py-4 shadow-lg">
+<i class="fas fa-user-plus mr-2"></i> Become a Platform Specialist
+</button>
+</div>
+</div>
 </div>
 
 <!-- ============================================
 EMAIL TEMPLATES SECTION
 ============================================ -->
 <div id="templates" class="mb-16">
-  <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-    <div class="text-center mb-8">
-      <h2 class="text-4xl font-bold mb-3 text-white">✏️ Email Templates</h2>
-      <p class="text-xl text-gray-200">Customize your bulk scan email templates</p>
-    </div>
+<div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+<div class="text-center mb-8">
+<h2 class="text-4xl font-bold mb-3 text-white">✏️ Email Templates</h2>
+<p class="text-xl text-gray-200">Customize your bulk scan email templates</p>
+</div>
 
-    <div class="grid md:grid-cols-3 gap-6">
-      <!-- Congratulations Template -->
-      <div class="card">
-        <h3 class="text-xl font-bold mb-4">🏆 Leaderboard Congratulations</h3>
-        <p class="text-sm text-gray-400 mb-4">Sent to businesses with 85+ score</p>
-        <div class="template-editor">
-          <label class="block text-sm text-gray-300 mb-2">Subject</label>
-          <input type="text" id="template-congrats-subject" class="w-full p-2 rounded border border-gray-600 bg-gray-800 text-white mb-2" value="🎉 Congratulations! Your website ranked on ContentScale Leaderboard">
-          <label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
-          <textarea id="template-congrats-body" class="w-full p-2 rounded border border-gray-600 bg-gray-800 text-white" style="min-height: 150px;">&lt;h1&gt;Congratulations!&lt;/h1&gt;&lt;p&gt;Your website scored {{score}}/100 on our SEO analysis.&lt;/p&gt;&lt;p&gt;You've been added to the ContentScale Leaderboard!&lt;/p&gt;&lt;p&gt;&lt;a href="{{leaderboard_url}}"&gt;View your ranking&lt;/a&gt;&lt;/p&gt;</textarea>
-        </div>
-        <button onclick="saveTemplate('congrats')" class="btn-primary btn w-full mt-4">
-          <i class="fas fa-save mr-2"></i> Save Template
-        </button>
-      </div>
+<div class="grid md:grid-cols-3 gap-6">
+<!-- Congratulations Template -->
+<div class="card">
+<h3 class="text-xl font-bold mb-4">🏆 Leaderboard Congratulations</h3>
+<p class="text-sm text-gray-400 mb-4">Sent to businesses with 85+ score</p>
+<div class="template-editor">
+<label class="block text-sm text-gray-300 mb-2">Subject</label>
+<input type="text" id="template-congrats-subject" class="w-full p-2 rounded border border-gray-600 bg-gray-800 text-white mb-2" value="🎉 Congratulations! Your website ranked on ContentScale Leaderboard">
+<label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
+<textarea id="template-congrats-body" class="w-full p-2 rounded border border-gray-600 bg-gray-800 text-white" style="min-height: 150px;">&lt;h1&gt;Congratulations!&lt;/h1&gt;&lt;p&gt;Your website scored {{score}}/100 on our SEO analysis.&lt;/p&gt;&lt;p&gt;You've been added to the ContentScale Leaderboard!&lt;/p&gt;&lt;p&gt;&lt;a href="{{leaderboard_url}}"&gt;View your ranking&lt;/a&gt;&lt;/p&gt;</textarea>
+</div>
+<button onclick="saveTemplate('congrats')" class="btn-primary btn w-full mt-4">
+<i class="fas fa-save mr-2"></i> Save Template
+</button>
+</div>
 
-      <!-- Improvement Pitch Template -->
-      <div class="card">
-        <h3 class="text-xl font-bold mb-4">📈 Improvement Pitch</h3>
-        <p class="text-sm text-gray-400 mb-4">Sent to businesses with website &lt;85 score</p>
-        <div class="template-editor">
-          <label class="block text-sm text-gray-300 mb-2">Subject</label>
-          <input type="text" id="template-improvement-subject" class="w-full p-2 rounded border border-gray-600 bg-gray-800 text-white mb-2" value="🚀 Quick SEO opportunity for {{company_name}}">
-          <label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
-          <textarea id="template-improvement-body" class="w-full p-2 rounded border border-gray-600 bg-gray-800 text-white" style="min-height: 150px;">&lt;h1&gt;SEO Opportunity&lt;/h1&gt;&lt;p&gt;Hi {{company_name}} team,&lt;/p&gt;&lt;p&gt;Your website scored {{score}}/100 on our SEO analysis.&lt;/p&gt;&lt;p&gt;I noticed some quick wins that could improve your rankings.&lt;/p&gt;&lt;p&gt;Would you be open to a quick chat?&lt;/p&gt;</textarea>
-        </div>
-        <button onclick="saveTemplate('improvement')" class="btn-primary btn w-full mt-4">
-          <i class="fas fa-save mr-2"></i> Save Template
-        </button>
-      </div>
+<!-- Improvement Pitch Template -->
+<div class="card">
+<h3 class="text-xl font-bold mb-4">📈 Improvement Pitch</h3>
+<p class="text-sm text-gray-400 mb-4">Sent to businesses with website &lt;85 score</p>
+<div class="template-editor">
+<label class="block text-sm text-gray-300 mb-2">Subject</label>
+<input type="text" id="template-improvement-subject" class="w-full p-2 rounded border border-gray-600 bg-gray-800 text-white mb-2" value="🚀 Quick SEO opportunity for {{company_name}}">
+<label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
+<textarea id="template-improvement-body" class="w-full p-2 rounded border border-gray-600 bg-gray-800 text-white" style="min-height: 150px;">&lt;h1&gt;SEO Opportunity&lt;/h1&gt;&lt;p&gt;Hi {{company_name}} team,&lt;/p&gt;&lt;p&gt;Your website scored {{score}}/100 on our SEO analysis.&lt;/p&gt;&lt;p&gt;I noticed some quick wins that could improve your rankings.&lt;/p&gt;&lt;p&gt;Would you be open to a quick chat?&lt;/p&gt;</textarea>
+</div>
+<button onclick="saveTemplate('improvement')" class="btn-primary btn w-full mt-4">
+<i class="fas fa-save mr-2"></i> Save Template
+</button>
+</div>
 
-      <!-- Website Offer Template -->
-      <div class="card">
-        <h3 class="text-xl font-bold mb-4">🌐 Website Offer</h3>
-        <p class="text-sm text-gray-400 mb-4">Sent to businesses without website</p>
-        <div class="template-editor">
-          <label class="block text-sm text-gray-300 mb-2">Subject</label>
-          <input type="text" id="template-website-subject" class="w-full p-2 rounded border border-gray-600 bg-gray-800 text-white mb-2" value="💻 Professional website for {{company_name}}">
-          <label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
-          <textarea id="template-website-body" class="w-full p-2 rounded border border-gray-600 bg-gray-800 text-white" style="min-height: 150px;">&lt;h1&gt;Website Opportunity&lt;/h1&gt;&lt;p&gt;Hi {{company_name}} team,&lt;/p&gt;&lt;p&gt;I noticed you don't have a website yet.&lt;/p&gt;&lt;p&gt;I specialize in creating SEO-optimized websites that rank.&lt;/p&gt;&lt;p&gt;Interested in learning more?&lt;/p&gt;</textarea>
-        </div>
-        <button onclick="saveTemplate('website')" class="btn-primary btn w-full mt-4">
-          <i class="fas fa-save mr-2"></i> Save Template
-        </button>
-      </div>
-    </div>
+<!-- Website Offer Template -->
+<div class="card">
+<h3 class="text-xl font-bold mb-4">🌐 Website Offer</h3>
+<p class="text-sm text-gray-400 mb-4">Sent to businesses without website</p>
+<div class="template-editor">
+<label class="block text-sm text-gray-300 mb-2">Subject</label>
+<input type="text" id="template-website-subject" class="w-full p-2 rounded border border-gray-600 bg-gray-800 text-white mb-2" value="💻 Professional website for {{company_name}}">
+<label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
+<textarea id="template-website-body" class="w-full p-2 rounded border border-gray-600 bg-gray-800 text-white" style="min-height: 150px;">&lt;h1&gt;Website Opportunity&lt;/h1&gt;&lt;p&gt;Hi {{company_name}} team,&lt;/p&gt;&lt;p&gt;I noticed you don't have a website yet.&lt;/p&gt;&lt;p&gt;I specialize in creating SEO-optimized websites that rank.&lt;/p&gt;&lt;p&gt;Interested in learning more?&lt;/p&gt;</textarea>
+</div>
+<button onclick="saveTemplate('website')" class="btn-primary btn w-full mt-4">
+<i class="fas fa-save mr-2"></i> Save Template
+</button>
+</div>
+</div>
 
-    <div class="mt-8 bg-gray-800 rounded-lg p-4 border border-gray-700">
-      <h4 class="font-bold mb-2">📎 Available Variables:</h4>
-      <div class="grid md:grid-cols-3 gap-4 text-sm text-gray-400">
-        <div><code class="text-purple-400">{{company_name}}</code> - Business name</div>
-        <div><code class="text-purple-400">{{score}}</code> - SEO score (0-100)</div>
-        <div><code class="text-purple-400">{{leaderboard_url}}</code> - Link to leaderboard</div>
-        <div><code class="text-purple-400">{{sender_name}}</code> - Your name</div>
-        <div><code class="text-purple-400">{{sender_email}}</code> - Your email</div>
-        <div><code class="text-purple-400">{{website_url}}</code> - Business website</div>
-      </div>
-    </div>
-  </div>
+<div class="mt-8 bg-gray-800 rounded-lg p-4 border border-gray-700">
+<h4 class="font-bold mb-2">📎 Available Variables:</h4>
+<div class="grid md:grid-cols-3 gap-4 text-sm text-gray-400">
+<div><code class="text-purple-400">{{company_name}}</code> - Business name</div>
+<div><code class="text-purple-400">{{score}}</code> - SEO score (0-100)</div>
+<div><code class="text-purple-400">{{leaderboard_url}}</code> - Link to leaderboard</div>
+<div><code class="text-purple-400">{{sender_name}}</code> - Your name</div>
+<div><code class="text-purple-400">{{sender_email}}</code> - Your email</div>
+<div><code class="text-purple-400">{{website_url}}</code> - Business website</div>
+</div>
+</div>
+</div>
 </div>
 
 <!-- ============================================
 LEADERBOARD SECTION
 ============================================ -->
 <div id="leaderboard" class="mb-16">
-  <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-    <div class="text-center mb-8">
-      <h2 class="text-4xl font-bold mb-3 text-white">🏆 Elite Leaderboard</h2>
-      <p class="text-xl text-gray-200">Top performing websites automatically added</p>
-    </div>
+<div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+<div class="text-center mb-8">
+<h2 class="text-4xl font-bold mb-3 text-white">🏆 Elite Leaderboard</h2>
+<p class="text-xl text-gray-200">Top performing websites automatically added</p>
+</div>
 
-    <div class="grid-4 mb-8">
-      <div class="stat-card">
-        <div>
-          <div class="text-4xl mb-2">🏢</div>
-          <div class="text-3xl font-bold" id="totalAgencies">0</div>
-          <div class="text-sm text-gray-200">Agencies</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div>
-          <div class="text-4xl mb-2">📊</div>
-          <div class="text-3xl font-bold" id="avgScore">0</div>
-          <div class="text-sm text-gray-200">Avg. Score</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div>
-          <div class="text-4xl mb-2">🌍</div>
-          <div class="text-3xl font-bold" id="countriesCount">0</div>
-          <div class="text-sm text-gray-200">Countries</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div>
-          <div class="text-4xl mb-2">💼</div>
-          <div class="text-3xl font-bold" id="activeHelpers">0</div>
-          <div class="text-sm text-gray-200">Freelancers</div>
-        </div>
-      </div>
-    </div>
+<div class="grid-4 mb-8">
+<div class="stat-card">
+<div>
+<div class="text-4xl mb-2">🏢</div>
+<div class="text-3xl font-bold" id="totalAgencies">0</div>
+<div class="text-sm text-gray-200">Agencies</div>
+</div>
+</div>
+<div class="stat-card">
+<div>
+<div class="text-4xl mb-2">📊</div>
+<div class="text-3xl font-bold" id="avgScore">0</div>
+<div class="text-sm text-gray-200">Avg. Score</div>
+</div>
+</div>
+<div class="stat-card">
+<div>
+<div class="text-4xl mb-2">🌍</div>
+<div class="text-3xl font-bold" id="countriesCount">0</div>
+<div class="text-sm text-gray-200">Countries</div>
+</div>
+</div>
+<div class="stat-card">
+<div>
+<div class="text-4xl mb-2">💼</div>
+<div class="text-3xl font-bold" id="activeHelpers">0</div>
+<div class="text-sm text-gray-200">Freelancers</div>
+</div>
+</div>
+</div>
 
-    <div id="top3-container" class="grid-3 mb-10"></div>
+<div id="top3-container" class="grid-3 mb-10"></div>
 
-    <div id="rankings4to15Container" class="mb-10">
-      <h3 class="text-2xl font-bold text-white mb-6">Rankings 4-15</h3>
-      <div class="rankings-4-15-grid" id="rankings4to15Grid"></div>
-    </div>
+<div id="rankings4to15Container" class="mb-10">
+<h3 class="text-2xl font-bold text-white mb-6">Rankings 4-15</h3>
+<div class="rankings-4-15-grid" id="rankings4to15Grid"></div>
+</div>
 
-    <div class="bg-gray-800 rounded-lg p-4 mb-6">
-      <button onclick="toggleFilters()" class="w-full flex items-center justify-between text-left text-white">
-        <div class="flex items-center gap-2">
-          <i class="fas fa-filter text-purple-400"></i>
-          <span class="font-semibold">Filters</span>
-        </div>
-        <i class="fas fa-chevron-down" id="filterIcon"></i>
-      </button>
-      <div id="filterPanel" class="hidden mt-4">
-        <div class="mb-4">
-          <div class="text-sm text-gray-300 mb-2">Country:</div>
-          <div class="flex flex-wrap gap-2" id="countryFilters"></div>
-        </div>
-        <div>
-          <input type="text" id="searchInput" placeholder="Search agencies..." oninput="filterAgencies()" class="w-full" autocomplete="off">
-        </div>
-      </div>
-    </div>
+<div class="bg-gray-800 rounded-lg p-4 mb-6">
+<button onclick="toggleFilters()" class="w-full flex items-center justify-between text-left text-white">
+<div class="flex items-center gap-2">
+<i class="fas fa-filter text-purple-400"></i>
+<span class="font-semibold">Filters</span>
+</div>
+<i class="fas fa-chevron-down" id="filterIcon"></i>
+</button>
+<div id="filterPanel" class="hidden mt-4">
+<div class="mb-4">
+<div class="text-sm text-gray-300 mb-2">Country:</div>
+<div class="flex flex-wrap gap-2" id="countryFilters"></div>
+</div>
+<div>
+<input type="text" id="searchInput" placeholder="Search agencies..." oninput="filterAgencies()" class="w-full" autocomplete="off">
+</div>
+</div>
+</div>
 
-    <div>
-      <button onclick="toggleRankings()" id="rankingsToggleBtn" class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-between transition-all">
-        <span id="rankingsToggleText">📊 Show Rankings 16+</span>
-        <span class="arrow">▼</span>
-      </button>
-      <div id="rankingsContainer" class="hidden mt-4">
-        <p class="text-sm text-gray-300 mb-2">Showing 16-35 of <span id="totalCount">0</span> agencies</p>
-        <table class="rankings-table">
-          <thead>
-            <tr>
-              <th>Rank</th>
-              <th>Company</th>
-              <th>Website</th>
-              <th>Score</th>
-              <th>Country</th>
-              <th>Added</th>
-            </tr>
-          </thead>
-          <tbody id="rankingsTbody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+<div>
+<button onclick="toggleRankings()" id="rankingsToggleBtn" class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-between transition-all">
+<span id="rankingsToggleText">📊 Show Rankings 16+</span>
+<span class="arrow">▼</span>
+</button>
+<div id="rankingsContainer" class="hidden mt-4">
+<p class="text-sm text-gray-300 mb-2">Showing 16-35 of <span id="totalCount">0</span> agencies</p>
+<table class="rankings-table">
+<thead>
+<tr>
+<th>Rank</th>
+<th>Company</th>
+<th>Website</th>
+<th>Score</th>
+<th>Country</th>
+<th>Added</th>
+</tr>
+</thead>
+<tbody id="rankingsTbody"></tbody>
+</table>
+</div>
+</div>
+</div>
 </div>
 
 <!-- ============================================
 FREELANCERS SECTION
 ============================================ -->
 <div id="freelancers" class="mb-16">
-  <div class="text-center mb-8">
-    <h2 class="text-4xl font-bold mb-3 text-white">🎯 Verified SEO Specialists</h2>
-    <p class="text-xl text-gray-300 mb-4">Expert content optimizers ready to help</p>
-    <button onclick="openFreelancerModal()" class="btn-primary btn">
-      <i class="fas fa-user-plus mr-2"></i> Become a Specialist
-    </button>
-  </div>
-  <div id="freelancersGrid" class="grid-3"></div>
+<div class="text-center mb-8">
+<h2 class="text-4xl font-bold mb-3 text-white">🎯 Verified SEO Specialists</h2>
+<p class="text-xl text-gray-300 mb-4">Expert content optimizers ready to help</p>
+<button onclick="openFreelancerModal()" class="btn-primary btn">
+<i class="fas fa-user-plus mr-2"></i> Become a Specialist
+</button>
 </div>
-
-<!-- ============================================
-ABOUT SECTION
-============================================ -->
-<div class="mb-16">
-  <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-    <div class="flex flex-col md:flex-row gap-8 items-center">
-      <div class="md:w-1/3">
-        <img src="https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca-headshot.png"
-          alt="Ottmar Francisca - Founder & SEO Recovery Specialist"
-          class="w-48 h-48 rounded-full mx-auto object-cover border-4 border-purple-500 shadow-2xl"
-          onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';"
-          loading="eager"
-          width="192"
-          height="192"
-          fetchpriority="high"
-          crossorigin="anonymous">
-        <div class="w-48 h-48 rounded-full mx-auto bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-600 hidden items-center justify-center border-4 border-purple-500 shadow-2xl">
-          <span class="text-6xl font-bold text-white">OF</span>
-        </div>
-      </div>
-      <div class="md:w-2/3">
-        <h2 class="text-3xl font-bold mb-4 text-white">About the Founder</h2>
-        <h3 class="text-xl text-purple-300 mb-4">Ottmar Francisca - SEO Recovery Specialist</h3>
-        <p class="text-gray-200 mb-4">
-          With <strong>24+ years of leadership experience</strong> in the Dutch Police, Ottmar brings a unique analytical approach to SEO optimization.
-          Since founding ContentScale in 2018, he has helped <strong>200+ businesses</strong> across 47+ countries recover from Google algorithm updates.
-        </p>
-        <p class="text-gray-200 mb-4">
-          Ottmar created the proprietary <strong>GRAAF Framework</strong> (Genuinely Credible, Relevance, Actionability, Accuracy, Freshness)
-          specifically to address the challenges businesses face with Google's AI Overviews and evolving search algorithms.
-          His methodology has achieved a documented <strong>78% recovery rate within 90 days</strong>.
-        </p>
-        <div class="flex gap-4 flex-wrap">
-          <div class="bg-gray-900 bg-opacity-50 px-4 py-2 rounded-lg">
-            <div class="text-2xl font-bold text-green-400">200+</div>
-            <div class="text-sm text-gray-300">Businesses Helped</div>
-          </div>
-          <div class="bg-gray-900 bg-opacity-50 px-4 py-2 rounded-lg">
-            <div class="text-2xl font-bold text-blue-400">78%</div>
-            <div class="text-sm text-gray-300">Recovery Rate</div>
-          </div>
-          <div class="bg-gray-900 bg-opacity-50 px-4 py-2 rounded-lg">
-            <div class="text-2xl font-bold text-purple-400">47+</div>
-            <div class="text-sm text-gray-300">Countries</div>
-          </div>
-          <div class="bg-gray-900 bg-opacity-50 px-4 py-2 rounded-lg">
-            <div class="text-2xl font-bold text-yellow-400">90d</div>
-            <div class="text-sm text-gray-300">Avg. Recovery</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+<div id="freelancersGrid" class="grid-3"></div>
 </div>
-
-<!-- ============================================
-FAQ SECTION
-============================================ -->
-<div class="mb-16 max-w-4xl mx-auto">
-  <div class="text-center mb-8">
-    <h2 class="text-4xl font-bold mb-3 text-white">❓ Frequently Asked Questions</h2>
-    <p class="text-xl text-gray-300">Everything you need to know about SEO content optimization</p>
-  </div>
-  <div class="space-y-4">
-    <div class="faq-item">
-      <button onclick="toggleFAQ(1)" class="faq-question">
-        <span>What is the GRAAF Framework?</span>
-        <i class="fas fa-chevron-down" id="faqIcon1"></i>
-      </button>
-      <div id="faqAnswer1" class="faq-answer hidden">
-        <p>The GRAAF Framework is ContentScale's proprietary methodology for AI-era SEO optimization. It stands for: <strong>G</strong>enuinely Credible, <strong>R</strong>elevance, <strong>A</strong>ctionability, <strong>A</strong>ccuracy, and <strong>F</strong>reshness. This framework ensures your content meets Google's E-E-A-T guidelines and ranks well against AI Overviews.</p>
-      </div>
-    </div>
-    <div class="faq-item">
-      <button onclick="toggleFAQ(2)" class="faq-question">
-        <span>How does bulk scanning work?</span>
-        <i class="fas fa-chevron-down" id="faqIcon2"></i>
-      </button>
-      <div id="faqAnswer2" class="faq-answer hidden">
-        <p>Bulk scanning allows you to analyze multiple websites at once. Upload a list of URLs (up to 100 per batch), and our system will scan each one using the GRAAF Framework. Based on the scores, we automatically:</p>
-        <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
-          <li><strong>85+ Score:</strong> Submitted to leaderboard for admin review + business receives congratulations email with their score and link to view their ranking at app.contentscale.site</li>
-          <li><strong>Below 85 (with website):</strong> Business receives personalized email with improvement recommendations and service pitch</li>
-          <li><strong>Below 85 (no website):</strong> Owner receives personalized email offering website creation services</li>
-        </ul>
-        <p style="margin-top: 1rem;">All emails are sent via Sendgrid (100/day limit) and personalized in English or Dutch based on the business location.</p>
-      </div>
-    </div>
-    <div class="faq-item">
-      <button onclick="toggleFAQ(3)" class="faq-question">
-        <span>Why are Freelancers welcome to use this platform?</span>
-        <i class="fas fa-chevron-down" id="faqIcon3"></i>
-      </button>
-      <div id="faqAnswer3" class="faq-answer hidden">
-        <p>At ContentScale, we believe the future of work is flexible. We help specialists who want to work just a few hours per week while earning a full-time income. This is only possible with our advanced methods and tools. We train freelancers in Modern SEO for the AI-era - focusing on the GRAAF Framework, E-E-A-T optimization, and AI Overviews. Our goal is to elevate the SEO standard globally by giving specialists access to professional tools, training, and a steady stream of high-quality leads.</p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ============================================
-CTA SECTION
-============================================ -->
-<div class="mb-16">
-  <div class="bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-900 rounded-2xl p-12 text-center border-2 border-purple-500">
-    <div class="text-5xl mb-4">🚀</div>
-    <h2 class="text-4xl font-bold mb-4 text-white">Ready to Recover Your Traffic?</h2>
-    <p class="text-xl text-gray-200 mb-8 max-w-2xl mx-auto">
-      Stop losing traffic to AI Overviews. Get your personalized roadmap today.
-    </p>
-    <div class="flex gap-4 justify-center flex-wrap">
-      <button onclick="switchMode('single'); document.getElementById('singleUrlInput').scrollIntoView({behavior:'smooth'})"
-        class="btn-primary btn text-lg px-8 py-4">
-        <i class="fas fa-search mr-2"></i> Scan Free
-      </button>
-      <a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20discuss%20SEO%20optimization"
-        target="_blank"
-        rel="noopener"
-        class="btn-success btn text-lg px-8 py-4">
-        <i class="fab fa-whatsapp mr-2"></i> Free Consultation
-      </a>
-    </div>
-  </div>
-</div>
-
 </div>
 
 <!-- ============================================
 FOOTER
 ============================================ -->
 <footer>
-  <div class="max-w-7xl mx-auto px-6 py-12">
-    <div class="grid md:grid-cols-4 gap-8 mb-8">
-      <div>
-        <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-4">ContentScale</div>
-        <p class="text-gray-400 text-sm">
-          Professional SEO content optimization based on Google's E-E-A-T guidelines.
-          Helping businesses recover traffic from AI Overviews since 2018.
-        </p>
-      </div>
-      <div>
-        <h3 class="font-bold mb-4 text-white">Product</h3>
-        <ul class="space-y-2 text-sm">
-          <li><a href="#lead-scanner" class="text-gray-400 hover:text-white transition-colors">Lead Scanner</a></li>
-          <li><a href="#leaderboard" class="text-gray-400 hover:text-white transition-colors">Leaderboard</a></li>
-          <li><a href="#freelancers" class="text-gray-400 hover:text-white transition-colors">Specialists</a></li>
-          <li><a href="#templates" class="text-gray-400 hover:text-white transition-colors">Templates</a></li>
-        </ul>
-      </div>
-      <div>
-        <h3 class="font-bold mb-4 text-white">Company</h3>
-        <ul class="space-y-2 text-sm">
-          <li><a href="https://contentscale.site/about-us" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">About Us</a></li>
-          <li><a href="https://contentscale.site/privacy-policy" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">Privacy Policy</a></li>
-          <li><a href="https://contentscale.site/terms" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">Terms of Service</a></li>
-          <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Blog</a></li>
-        </ul>
-      </div>
-      <div>
-        <h3 class="font-bold mb-4 text-white">Contact</h3>
-        <ul class="space-y-2 text-sm">
-          <li class="text-gray-400">
-            <i class="fas fa-envelope mr-2"></i>
-            <span class="reverse-email">moc.etlacsnestnoc@ofni</span>
-          </li>
-          <li>
-            <a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">
-              <i class="fab fa-whatsapp mr-2"></i>+31 6 2807 3996
-            </a>
-          </li>
-          <li class="text-gray-400">
-            <i class="fas fa-map-marker-alt mr-2"></i>Amsterdam, Netherlands
-          </li>
-          <li class="text-gray-400">
-            <i class="fas fa-clock mr-2"></i>Mon-Fri, 9:00-18:00 CET
-          </li>
-        </ul>
-      </div>
-    </div>
-    <div class="border-t border-gray-700 pt-8 text-center text-sm text-gray-400">
-      <p>&copy; 2025 ContentScale. All rights reserved.</p>
-      <p class="mt-2">Built with 🚀 in Amsterdam</p>
-    </div>
-  </div>
+<div class="max-w-7xl mx-auto px-6 py-12">
+<div class="grid md:grid-cols-4 gap-8 mb-8">
+<div>
+<div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-4">ContentScale</div>
+<p class="text-gray-400 text-sm">
+Professional SEO content optimization based on Google's E-E-A-T guidelines.
+Helping businesses recover traffic from AI Overviews since 2018.
+</p>
+</div>
+<div>
+<h3 class="font-bold mb-4 text-white">Product</h3>
+<ul class="space-y-2 text-sm">
+<li><a href="#lead-scanner" class="text-gray-400 hover:text-white transition-colors">Lead Scanner</a></li>
+<li><a href="#leaderboard" class="text-gray-400 hover:text-white transition-colors">Leaderboard</a></li>
+<li><a href="#freelancers" class="text-gray-400 hover:text-white transition-colors">Specialists</a></li>
+<li><a href="#templates" class="text-gray-400 hover:text-white transition-colors">Templates</a></li>
+</ul>
+</div>
+<div>
+<h3 class="font-bold mb-4 text-white">Company</h3>
+<ul class="space-y-2 text-sm">
+<li><a href="https://contentscale.site/about-us" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">About Us</a></li>
+<li><a href="https://contentscale.site/privacy-policy" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">Privacy Policy</a></li>
+<li><a href="https://contentscale.site/terms" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">Terms of Service</a></li>
+<li><a href="#" class="text-gray-400 hover:text-white transition-colors">Blog</a></li>
+</ul>
+</div>
+<div>
+<h3 class="font-bold mb-4 text-white">Contact</h3>
+<ul class="space-y-2 text-sm">
+<li class="text-gray-400">
+<i class="fas fa-envelope mr-2"></i>
+<span class="reverse-email">moc.etlacsnestnoc@ofni</span>
+</li>
+<li>
+<a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">
+<i class="fab fa-whatsapp mr-2"></i>+31 6 2807 3996
+</a>
+</li>
+<li class="text-gray-400">
+<i class="fas fa-map-marker-alt mr-2"></i>Amsterdam, Netherlands
+</li>
+<li class="text-gray-400">
+<i class="fas fa-clock mr-2"></i>Mon-Fri, 9:00-18:00 CET
+</li>
+</ul>
+</div>
+</div>
+<div class="border-t border-gray-700 pt-8 text-center text-sm text-gray-400">
+<p>&copy; 2025 ContentScale. All rights reserved.</p>
+<p class="mt-2">Built with 🚀 in Amsterdam</p>
+</div>
+</div>
 </footer>
 
 <!-- ============================================
 FREELANCER MODAL
 ============================================ -->
 <div id="freelancerModal" class="modal">
-  <div class="modal-content">
-    <div class="flex justify-between items-center mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">Register as Specialist</h2>
-      <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div class="space-y-4">
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Full Name *</label>
-        <input type="text" id="freelancerName" placeholder="Your name" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-      </div>
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Email *</label>
-        <input type="email" id="freelancerEmail" placeholder="your@email.com" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-      </div>
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Phone (optional)</label>
-        <input type="tel" id="freelancerPhone" placeholder="+31 6 12345678" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-      </div>
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Professional Title *</label>
-        <input type="text" id="freelancerTitle" placeholder="e.g. SEO Content Strategist" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-      </div>
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Bio (max 200 characters)</label>
-        <textarea id="freelancerBio" rows="3" maxlength="200" placeholder="Tell us about your expertise and experience..." class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"></textarea>
-        <div class="flex justify-between mt-1">
-          <span class="text-xs text-gray-500">Maximum 200 characters</span>
-          <span id="bioCharCount" class="text-xs text-gray-500">0/200</span>
-        </div>
-      </div>
-      <div class="border-t border-gray-200 pt-4 mt-2">
-        <div class="flex items-start gap-3">
-          <div class="flex items-center h-5">
-            <input type="checkbox" id="featuredListing" class="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500">
-          </div>
-          <div class="flex flex-col">
-            <label for="featuredListing" class="text-sm font-medium text-gray-900">
-              ⭐ Featured Listing - €29/month
-            </label>
-            <p class="text-xs text-gray-500 mt-0.5">
-              Word uitgelicht bovenaan de specialist lijst, krijg een speciale badge en 3x meer zichtbaarheid.
-              <a href="https://paypal.me/ojgmedia?locale.x=en_US&country.x=NL"
-                target="_blank"
-                rel="noopener"
-                class="text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1">
-                <i class="fab fa-paypal text-sm"></i> Betaal via PayPal
-              </a>
-            </p>
-            <p class="text-xs text-gray-400 mt-1">
-              Betaal €29 per maand. Na betaling wordt je vermelding binnen 24 uur geüpgraded naar featured.
-            </p>
-          </div>
-        </div>
-      </div>
-      <button onclick="submitFreelancer()" class="btn-primary btn w-full py-3">
-        Submit Application
-      </button>
-      <p class="text-xs text-gray-500 text-center">
-        We'll review and approve within 24 hours. You'll receive an email with your verified specialist badge.
-      </p>
-    </div>
-  </div>
+<div class="modal-content">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-2xl font-bold text-gray-900">Register as Specialist</h2>
+<button onclick="closeModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+<i class="fas fa-times"></i>
+</button>
+</div>
+<div class="space-y-4">
+<div>
+<label class="block text-sm mb-2 text-gray-700">Full Name *</label>
+<input type="text" id="freelancerName" placeholder="Your name" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+</div>
+<div>
+<label class="block text-sm mb-2 text-gray-700">Email *</label>
+<input type="email" id="freelancerEmail" placeholder="your@email.com" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+</div>
+<div>
+<label class="block text-sm mb-2 text-gray-700">Phone (optional)</label>
+<input type="tel" id="freelancerPhone" placeholder="+31 6 12345678" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+</div>
+<div>
+<label class="block text-sm mb-2 text-gray-700">Professional Title *</label>
+<input type="text" id="freelancerTitle" placeholder="e.g. SEO Content Strategist" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+</div>
+<div>
+<label class="block text-sm mb-2 text-gray-700">Bio (max 200 characters)</label>
+<textarea id="freelancerBio" rows="3" maxlength="200" placeholder="Tell us about your expertise and experience..." class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"></textarea>
+<div class="flex justify-between mt-1">
+<span class="text-xs text-gray-500">Maximum 200 characters</span>
+<span id="bioCharCount" class="text-xs text-gray-500">0/200</span>
+</div>
+</div>
+<div class="border-t border-gray-200 pt-4 mt-2">
+<div class="flex items-start gap-3">
+<div class="flex items-center h-5">
+<input type="checkbox" id="featuredListing" class="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500">
+</div>
+<div class="flex flex-col">
+<label for="featuredListing" class="text-sm font-medium text-gray-900">
+⭐ Featured Listing - €29/month
+</label>
+<p class="text-xs text-gray-500 mt-0.5">
+Word uitgelicht bovenaan de specialist lijst, krijg een speciale badge en 3x meer zichtbaarheid.
+<a href="https://paypal.me/ojgmedia?locale.x=en_US&country.x=NL"
+  target="_blank"
+  rel="noopener"
+  class="text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1">
+<i class="fab fa-paypal text-sm"></i> Betaal via PayPal
+</a>
+</p>
+<p class="text-xs text-gray-400 mt-1">
+Betaal €29 per maand. Na betaling wordt je vermelding binnen 24 uur geüpgraded naar featured.
+</p>
+</div>
+</div>
+</div>
+<button onclick="submitFreelancer()" class="btn-primary btn w-full py-3">
+Submit Application
+</button>
+<p class="text-xs text-gray-500 text-center">
+We'll review and approve within 24 hours. You'll receive an email with your verified specialist badge.
+</p>
+</div>
+</div>
 </div>
 
 <!-- ============================================
@@ -1323,12 +1173,12 @@ document.addEventListener('DOMContentLoaded', function() {
   loadLeaderboardData();
   loadFreelancers();
   loadUserTemplates();
-
+  
   // Single URL enter key
   document.getElementById('singleUrlInput')?.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') scanSingleURL();
   });
-
+  
   // Bulk URL counter
   const bulkInput = document.getElementById('bulkUrlInput');
   if (bulkInput) {
@@ -1341,7 +1191,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
-
+  
   // Bio char counter
   const bioTextarea = document.getElementById('freelancerBio');
   if (bioTextarea) {
@@ -1760,38 +1610,38 @@ function displayScanResult(data) {
       else if (rec.priority === 'medium') priorityClass = 'priority-medium';
       else if (rec.priority === 'low') priorityClass = 'priority-low';
       recsHtml += `
-        <div class="recommendation-card">
-          <div class="flex items-start justify-between mb-2">
-            <h4 class="recommendation-title">${rec.title || 'Recommendation'}</h4>
-            ${rec.priority ? `<span class="priority-badge ${priorityClass}">${rec.priority.toUpperCase()}</span>` : ''}
-          </div>
-          <p class="recommendation-desc">${rec.description || ''}</p>
-          ${rec.action ? `
-            <div class="recommendation-section">
-              <div class="recommendation-section-title">
-                <i class="fas fa-wrench"></i> <span>Action</span>
-              </div>
-              <p class="recommendation-action">${rec.action}</p>
-            </div>
-          ` : ''}
-          ${rec.learning ? `
-            <div class="recommendation-section">
-              <div class="recommendation-section-title">
-                <i class="fas fa-graduation-cap"></i> <span>Learning</span>
-              </div>
-              <p class="recommendation-learning">${rec.learning}</p>
-            </div>
-          ` : ''}
-          ${rec.target ? `
-            <div class="recommendation-section">
-              <div class="recommendation-section-title">
-                <i class="fas fa-bullseye"></i> <span>Target</span>
-              </div>
-              <p class="recommendation-target">${rec.target}</p>
-            </div>
-          ` : ''}
-        </div>
-      `;
+<div class="recommendation-card">
+  <div class="flex items-start justify-between mb-2">
+    <h4 class="recommendation-title">${rec.title || 'Recommendation'}</h4>
+    ${rec.priority ? `<span class="priority-badge ${priorityClass}">${rec.priority.toUpperCase()}</span>` : ''}
+  </div>
+  <p class="recommendation-desc">${rec.description || ''}</p>
+  ${rec.action ? `
+  <div class="recommendation-section">
+    <div class="recommendation-section-title">
+      <i class="fas fa-wrench"></i> <span>Action</span>
+    </div>
+    <p class="recommendation-action">${rec.action}</p>
+  </div>
+  ` : ''}
+  ${rec.learning ? `
+  <div class="recommendation-section">
+    <div class="recommendation-section-title">
+      <i class="fas fa-graduation-cap"></i> <span>Learning</span>
+    </div>
+    <p class="recommendation-learning">${rec.learning}</p>
+  </div>
+  ` : ''}
+  ${rec.target ? `
+  <div class="recommendation-section">
+    <div class="recommendation-section-title">
+      <i class="fas fa-bullseye"></i> <span>Target</span>
+    </div>
+    <p class="recommendation-target">${rec.target}</p>
+  </div>
+  ` : ''}
+</div>
+`;
     });
   } else {
     recsHtml = '<p class="text-gray-400 text-sm">No specific recommendations - your page is excellent!</p>';
@@ -1803,52 +1653,52 @@ function displayScanResult(data) {
   else if (quality === 'average') qualityColor = 'bg-yellow-600';
   else if (quality === 'needs improvement') qualityColor = 'bg-red-600';
   resultDiv.innerHTML = `
-    <div class="bg-gray-800 rounded-xl border-2 border-purple-500 p-6 mt-4">
-      <div class="text-center mb-4">
-        <h2 class="text-2xl font-bold text-white mb-1">📊 SEO Content Analysis</h2>
-        <p class="text-md text-gray-300 break-all">${url}</p>
-        <span class="inline-block mt-2 px-3 py-1 ${qualityColor} text-white text-sm rounded-full">
-          Quality: ${quality.charAt(0).toUpperCase() + quality.slice(1)}
-        </span>
-      </div>
-      <div class="text-center mb-6">
-        <div class="text-6xl font-bold text-white">${currentScore}</div>
-        <div class="text-sm text-gray-400">out of 100</div>
-      </div>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
-        <div class="bg-gray-900 rounded-lg p-4 text-center">
-          <div class="text-sm text-gray-400 mb-1">GRAAF (50)</div>
-          <div class="text-2xl font-bold text-purple-400">${graaf}/50</div>
-        </div>
-        <div class="bg-gray-900 rounded-lg p-4 text-center">
-          <div class="text-sm text-gray-400 mb-1">CRAFT (30)</div>
-          <div class="text-2xl font-bold text-blue-400">${craft}/30</div>
-        </div>
-        <div class="bg-gray-900 rounded-lg p-4 text-center">
-          <div class="text-sm text-gray-400 mb-1">Technical (20)</div>
-          <div class="text-2xl font-bold text-yellow-400">${technical}/20</div>
-        </div>
-        <div class="bg-gray-900 rounded-lg p-4 text-center">
-          <div class="text-sm text-gray-400 mb-1">Words</div>
-          <div class="text-2xl font-bold text-white">${words.toLocaleString()}</div>
-        </div>
-      </div>
-      <div class="border-t border-gray-700 pt-5 mb-5">
-        <h3 class="text-xl font-bold text-white mb-4">📋 Priority Recommendations</h3>
-        ${recsHtml}
-      </div>
-      <div class="flex gap-3">
-        <button onclick="addToLeaderboard('${url}', ${currentScore})"
-          class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-semibold transition-all">
-          <i class="fas fa-trophy mr-2"></i> Add to Leaderboard
-        </button>
-        <button onclick="document.getElementById('singleResult').classList.add('hidden')"
-          class="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold transition-all">
-          Close
-        </button>
-      </div>
+<div class="bg-gray-800 rounded-xl border-2 border-purple-500 p-6 mt-4">
+  <div class="text-center mb-4">
+    <h2 class="text-2xl font-bold text-white mb-1">📊 SEO Content Analysis</h2>
+    <p class="text-md text-gray-300 break-all">${url}</p>
+    <span class="inline-block mt-2 px-3 py-1 ${qualityColor} text-white text-sm rounded-full">
+      Quality: ${quality.charAt(0).toUpperCase() + quality.slice(1)}
+    </span>
+  </div>
+  <div class="text-center mb-6">
+    <div class="text-6xl font-bold text-white">${currentScore}</div>
+    <div class="text-sm text-gray-400">out of 100</div>
+  </div>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+    <div class="bg-gray-900 rounded-lg p-4 text-center">
+      <div class="text-sm text-gray-400 mb-1">GRAAF (50)</div>
+      <div class="text-2xl font-bold text-purple-400">${graaf}/50</div>
     </div>
-  `;
+    <div class="bg-gray-900 rounded-lg p-4 text-center">
+      <div class="text-sm text-gray-400 mb-1">CRAFT (30)</div>
+      <div class="text-2xl font-bold text-blue-400">${craft}/30</div>
+    </div>
+    <div class="bg-gray-900 rounded-lg p-4 text-center">
+      <div class="text-sm text-gray-400 mb-1">Technical (20)</div>
+      <div class="text-2xl font-bold text-yellow-400">${technical}/20</div>
+    </div>
+    <div class="bg-gray-900 rounded-lg p-4 text-center">
+      <div class="text-sm text-gray-400 mb-1">Words</div>
+      <div class="text-2xl font-bold text-white">${words.toLocaleString()}</div>
+    </div>
+  </div>
+  <div class="border-t border-gray-700 pt-5 mb-5">
+    <h3 class="text-xl font-bold text-white mb-4">📋 Priority Recommendations</h3>
+    ${recsHtml}
+  </div>
+  <div class="flex gap-3">
+    <button onclick="addToLeaderboard('${url}', ${currentScore})"
+      class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-semibold transition-all">
+      <i class="fas fa-trophy mr-2"></i> Add to Leaderboard
+    </button>
+    <button onclick="document.getElementById('singleResult').classList.add('hidden')"
+      class="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold transition-all">
+      Close
+    </button>
+  </div>
+</div>
+`;
   resultDiv.classList.remove('hidden');
   resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
@@ -1907,7 +1757,7 @@ async function startBulkScan() {
     }
   }
   if (!sendgridConfigured) {
-    const confirmSendGrid = confirm('⚠️ You haven\'t configured SendGrid yet. Bulk emails will use the default system (limited to 100/day).\n\nWould you like to continue anyway?');
+    const confirmSendGrid = confirm('⚠️ You haven\'t configured SendGrid yet. Bulk emails will use the default system (limited to 100/day).\nWould you like to continue anyway?');
     if (!confirmSendGrid) {
       document.getElementById('apiConfig').classList.remove('hidden');
       return;
@@ -1971,62 +1821,62 @@ function displayBulkResults(results, userEmail, userName) {
   let html = '';
   if (results.leaderboard.length > 0) {
     html += `
-      <div class="bg-green-900 bg-opacity-30 border border-green-500 rounded-lg p-4 mb-4">
-        <h5 class="font-bold text-green-400 mb-2">
-          🏆 Leaderboard Candidates (${results.leaderboard.length})
-        </h5>
-        <p class="text-sm text-gray-300 mb-2">These websites scored 85+ and will be submitted for leaderboard approval.</p>
-        <ul class="text-sm space-y-1">
-          ${results.leaderboard.map(r => `<li>✅ ${r.url} - Score: ${r.score}/100</li>`).join('')}
-        </ul>
-      </div>
-    `;
+<div class="bg-green-900 bg-opacity-30 border border-green-500 rounded-lg p-4 mb-4">
+  <h5 class="font-bold text-green-400 mb-2">
+    🏆 Leaderboard Candidates (${results.leaderboard.length})
+  </h5>
+  <p class="text-sm text-gray-300 mb-2">These websites scored 85+ and will be submitted for leaderboard approval.</p>
+  <ul class="text-sm space-y-1">
+    ${results.leaderboard.map(r => `<li>✅ ${r.url} - Score: ${r.score}/100</li>`).join('')}
+  </ul>
+</div>
+`;
   }
   if (results.withWebsite.length > 0) {
     html += `
-      <div class="bg-blue-900 bg-opacity-30 border border-blue-500 rounded-lg p-4 mb-4">
-        <h5 class="font-bold text-blue-400 mb-2">
-          📧 Improvement Emails (${results.withWebsite.length})
-        </h5>
-        <p class="text-sm text-gray-300 mb-2">Business owners will receive personalized emails with SEO improvement recommendations.</p>
-        <ul class="text-sm space-y-1">
-          ${results.withWebsite.map(r => `<li>📨 ${r.url} - Score: ${r.score}/100</li>`).join('')}
-        </ul>
-      </div>
-    `;
+<div class="bg-blue-900 bg-opacity-30 border border-blue-500 rounded-lg p-4 mb-4">
+  <h5 class="font-bold text-blue-400 mb-2">
+    📧 Improvement Emails (${results.withWebsite.length})
+  </h5>
+  <p class="text-sm text-gray-300 mb-2">Business owners will receive personalized emails with SEO improvement recommendations.</p>
+  <ul class="text-sm space-y-1">
+    ${results.withWebsite.map(r => `<li>📨 ${r.url} - Score: ${r.score}/100</li>`).join('')}
+  </ul>
+</div>
+`;
   }
   if (results.withoutWebsite.length > 0) {
     html += `
-      <div class="bg-purple-900 bg-opacity-30 border border-purple-500 rounded-lg p-4 mb-4">
-        <h5 class="font-bold text-purple-400 mb-2">
-          🌐 Website Offers (${results.withoutWebsite.length})
-        </h5>
-        <p class="text-sm text-gray-300 mb-2">Owners will receive personalized emails offering professional website creation.</p>
-        <ul class="text-sm space-y-1">
-          ${results.withoutWebsite.map(r => `<li>📬 ${r.url}</li>`).join('')}
-        </ul>
-      </div>
-    `;
+<div class="bg-purple-900 bg-opacity-30 border border-purple-500 rounded-lg p-4 mb-4">
+  <h5 class="font-bold text-purple-400 mb-2">
+    🌐 Website Offers (${results.withoutWebsite.length})
+  </h5>
+  <p class="text-sm text-gray-300 mb-2">Owners will receive personalized emails offering professional website creation.</p>
+  <ul class="text-sm space-y-1">
+    ${results.withoutWebsite.map(r => `<li>📬 ${r.url}</li>`).join('')}
+  </ul>
+</div>
+`;
   }
   if (results.errors.length > 0) {
     html += `
-      <div class="bg-red-900 bg-opacity-30 border border-red-500 rounded-lg p-4 mb-4">
-        <h5 class="font-bold text-red-400 mb-2">
-          ❌ Scan Errors (${results.errors.length})
-        </h5>
-        <ul class="text-sm space-y-1">
-          ${results.errors.map(r => `<li>⚠️ ${r.url} - ${r.error}</li>`).join('')}
-        </ul>
-      </div>
-    `;
+<div class="bg-red-900 bg-opacity-30 border border-red-500 rounded-lg p-4 mb-4">
+  <h5 class="font-bold text-red-400 mb-2">
+    ❌ Scan Errors (${results.errors.length})
+  </h5>
+  <ul class="text-sm space-y-1">
+    ${results.errors.map(r => `<li>⚠️ ${r.url} - ${r.error}</li>`).join('')}
+  </ul>
+</div>
+`;
   }
   html += `
-    <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
-      <p class="text-sm text-gray-300">
-        📬 A summary report has been sent to <strong>${userEmail}</strong>
-      </p>
-    </div>
-  `;
+<div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
+  <p class="text-sm text-gray-300">
+    📬 A summary report has been sent to <strong>${userEmail}</strong>
+  </p>
+</div>
+`;
   container.innerHTML = html;
   resultsDiv.classList.remove('hidden');
 }
@@ -2136,17 +1986,17 @@ function renderTop3() {
     const rankText = index === 0 ? '1st Worldwide' : index === 1 ? '2nd Worldwide' : '3rd Worldwide';
     const companyName = entry.company_name || extractDomainFromUrl(entry.url);
     return `
-      <div class="top-card ${medalClass}">
-        <div class="text-5xl mb-2">${medal}</div>
-        <div class="text-xs font-bold uppercase tracking-wider mb-2 text-white/80">${rankText}</div>
-        <h3 class="text-xl font-bold mb-2">${companyName}</h3>
-        <div class="text-4xl font-black mb-2">${entry.score}/100</div>
-        <div class="text-white/80 mb-3">${getCountryFlag(entry.country)} ${entry.country}</div>
-        <button onclick="window.open('${entry.url}', '_blank', 'noopener')" class="w-full bg-black/30 hover:bg-black/50 text-white px-4 py-2 rounded-lg border border-white/30 transition-all">
-          <i class="fas fa-external-link-alt mr-2"></i> Visit Website
-        </button>
-      </div>
-    `;
+<div class="top-card ${medalClass}">
+  <div class="text-5xl mb-2">${medal}</div>
+  <div class="text-xs font-bold uppercase tracking-wider mb-2 text-white/80">${rankText}</div>
+  <h3 class="text-xl font-bold mb-2">${companyName}</h3>
+  <div class="text-4xl font-black mb-2">${entry.score}/100</div>
+  <div class="text-white/80 mb-3">${getCountryFlag(entry.country)} ${entry.country}</div>
+  <button onclick="window.open('${entry.url}', '_blank', 'noopener')" class="w-full bg-black/30 hover:bg-black/50 text-white px-4 py-2 rounded-lg border border-white/30 transition-all">
+    <i class="fas fa-external-link-alt mr-2"></i> Visit Website
+  </button>
+</div>
+`;
   }).join('');
 }
 
@@ -2163,16 +2013,16 @@ function renderRankings4to15() {
     const actualRank = index + 4;
     const companyName = entry.company_name || extractDomainFromUrl(entry.url);
     return `
-      <div class="rank-card">
-        <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
-        <h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
-        <div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
-        <div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
-        <a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">
-          View Website <i class="fas fa-external-link-alt ml-1"></i>
-        </a>
-      </div>
-    `;
+<div class="rank-card">
+  <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
+  <h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
+  <div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
+  <div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
+  <a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">
+    View Website <i class="fas fa-external-link-alt ml-1"></i>
+  </a>
+</div>
+`;
   }).join('');
 }
 
@@ -2192,15 +2042,15 @@ function renderRankings16Plus() {
     const actualRank = index + 16;
     const companyName = entry.company_name || extractDomainFromUrl(entry.url);
     return `
-      <tr>
-        <td><span class="inline-flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full font-bold">${actualRank}</span></td>
-        <td class="font-semibold">${companyName}</td>
-        <td><a href="${entry.url}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">${entry.url.replace('https://', '').substring(0, 25)}...</a></td>
-        <td><span class="text-lg font-bold ${entry.score >= 85 ? 'text-green-400' : entry.score >= 70 ? 'text-yellow-400' : 'text-red-400'}">${entry.score}</span></td>
-        <td><span class="text-sm">${getCountryFlag(entry.country)} ${entry.country}</span></td>
-        <td><span class="text-sm text-gray-400">${new Date(entry.created_at).toLocaleDateString()}</span></td>
-      </tr>
-    `;
+<tr>
+  <td><span class="inline-flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full font-bold">${actualRank}</span></td>
+  <td class="font-semibold">${companyName}</td>
+  <td><a href="${entry.url}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">${entry.url.replace('https://', '').substring(0, 25)}...</a></td>
+  <td><span class="text-lg font-bold ${entry.score >= 85 ? 'text-green-400' : entry.score >= 70 ? 'text-yellow-400' : 'text-red-400'}">${entry.score}</span></td>
+  <td><span class="text-sm">${getCountryFlag(entry.country)} ${entry.country}</span></td>
+  <td><span class="text-sm text-gray-400">${new Date(entry.created_at).toLocaleDateString()}</span></td>
+</tr>
+`;
   }).join('');
 }
 
@@ -2242,14 +2092,14 @@ function filterAgencies() {
       const actualRank = index + 4;
       const companyName = entry.company_name || extractDomainFromUrl(entry.url);
       return `
-        <div class="rank-card">
-          <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
-          <h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
-          <div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
-          <div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
-          <a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">View Website</a>
-        </div>
-      `;
+<div class="rank-card">
+  <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
+  <h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
+  <div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
+  <div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
+  <a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">View Website</a>
+</div>
+`;
     }).join('');
   }
 }
@@ -2291,36 +2141,36 @@ async function loadFreelancers() {
       const firstName = f.name.split(' ')[0];
       const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase();
       return `
-        <div class="card hover:border-purple-500">
-          <div class="card-content">
-            <div class="flex items-start gap-4 mb-4">
-              <div class="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl font-bold text-white">
-                ${initials}
-              </div>
-              <div class="flex-1">
-                <div class="flex items-center justify-between">
-                  <h3 class="font-bold text-lg text-white">${f.name}</h3>
-                  ${f.is_featured ? '<span class="px-2 py-1 bg-yellow-600 rounded text-xs text-white font-semibold flex items-center gap-1">⭐ Featured</span>' : '<span class="px-2 py-1 bg-green-600 rounded text-xs text-white font-semibold">✓ Verified</span>'}
-                </div>
-                <p class="text-sm text-gray-400">${f.title || 'SEO Specialist'}</p>
-              </div>
-            </div>
-            <p class="text-gray-300 text-sm mb-4">${f.bio || 'No bio available'}</p>
-            <div class="flex items-center justify-between text-sm mb-4">
-              <span class="text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i> ${f.location || f.country || 'Remote'}</span>
-              ${f.hourly_rate ? `<span class="text-purple-400">💰 ${f.hourly_rate}</span>` : ''}
-            </div>
-          </div>
-          <div class="card-footer">
-            <a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20discuss%20SEO%20optimization%20with%20${encodeURIComponent(f.name)}"
-              target="_blank"
-              rel="noopener"
-              class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 no-underline">
-              <i class="fab fa-whatsapp"></i> Contact ${firstName}
-            </a>
-          </div>
+<div class="card hover:border-purple-500">
+  <div class="card-content">
+    <div class="flex items-start gap-4 mb-4">
+      <div class="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl font-bold text-white">
+        ${initials}
+      </div>
+      <div class="flex-1">
+        <div class="flex items-center justify-between">
+          <h3 class="font-bold text-lg text-white">${f.name}</h3>
+          ${f.is_featured ? '<span class="px-2 py-1 bg-yellow-600 rounded text-xs text-white font-semibold flex items-center gap-1">⭐ Featured</span>' : '<span class="px-2 py-1 bg-green-600 rounded text-xs text-white font-semibold">✓ Verified</span>'}
         </div>
-      `;
+        <p class="text-sm text-gray-400">${f.title || 'SEO Specialist'}</p>
+      </div>
+    </div>
+    <p class="text-gray-300 text-sm mb-4">${f.bio || 'No bio available'}</p>
+    <div class="flex items-center justify-between text-sm mb-4">
+      <span class="text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i> ${f.location || f.country || 'Remote'}</span>
+      ${f.hourly_rate ? `<span class="text-purple-400">💰 ${f.hourly_rate}</span>` : ''}
+    </div>
+  </div>
+  <div class="card-footer">
+    <a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20discuss%20SEO%20optimization%20with%20${encodeURIComponent(f.name)}"
+      target="_blank"
+      rel="noopener"
+      class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 no-underline">
+      <i class="fab fa-whatsapp"></i> Contact ${firstName}
+    </a>
+  </div>
+</div>
+`;
     }).join('');
   } catch (error) {
     console.error('❌ Error loading freelancers:', error);
@@ -2392,18 +2242,6 @@ function submitFreelancer() {
   .catch(error => {
     alert('❌ Registration failed: ' + error.message);
   });
-}
-
-// ==========================================
-// FAQ FUNCTIONS
-// ==========================================
-function toggleFAQ(id) {
-  const answer = document.getElementById(`faqAnswer${id}`);
-  const icon = document.getElementById(`faqIcon${id}`);
-  if (answer) {
-    answer.classList.toggle('hidden');
-    icon.style.transform = answer.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
-  }
 }
 
 // ==========================================
