@@ -3,13 +3,33 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ContentScale - Elite SEO Content Scanner 100/100</title>
+<title>ContentScale - Elite SEO Content Quality Scanner 100/100</title>
 <meta name="description" content="Scan je content op 100/100 met ons Elite GRAAF Framework. Detecteert AI Overview ready content, E-E-A-T signals, en meer.">
 <link rel="preconnect" href="https://cdn.tailwindcss.com">
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
 <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
-<script src="https://cdn.tailwindcss.com" defer></script>
+
+<!-- ✅ FIX: Hide body initially to prevent flashing -->
+<style>
+    body { visibility: hidden; opacity: 0; transition: opacity 0.3s ease-in; }
+    body.loaded { visibility: visible; opacity: 1; }
+    
+    /* Loading Spinner Styles */
+    #loading-screen {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: #030712; z-index: 99999;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .spinner {
+        width: 50px; height: 50px; border: 5px solid #374151;
+        border-top: 5px solid #a855f7; border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>
+
+<script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'; this.onload=null;">
 <noscript>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -127,6 +147,13 @@ img[width][height] { aspect-ratio: attr(width) / attr(height); }
 </style>
 </head>
 <body class="bg-gray-900">
+
+<!-- ✅ FIX: Loading Screen -->
+<div id="loading-screen">
+    <div class="spinner mb-4"></div>
+    <p class="text-purple-400 font-bold animate-pulse">Loading ContentScale...</p>
+</div>
+
 <a href="#main-content" class="skip-link">Skip to main content</a>
 <nav class="sticky top-0 z-50 bg-gray-900/95 border-b-2 border-purple-600 backdrop-blur-sm">
 <div class="max-w-7xl mx-auto px-6 py-4">
@@ -486,6 +513,7 @@ EMAIL TEMPLATES SECTION
 </div>
 </div>
 </div>
+</div>
 <!-- ============================================
 LEADERBOARD SECTION
 ============================================ -->
@@ -741,16 +769,14 @@ loadLeaderboardData();
 loadFreelancers();
 loadUserTemplates();
 
-// Check for auto-scan URL parameter (?scan=...)
-const urlParams = new URLSearchParams(window.location.search);
-const scanUrl = urlParams.get('scan');
-if (scanUrl) {
-    document.getElementById('singleUrlInput').value = decodeURIComponent(scanUrl);
-    // Small delay to ensure UI is ready
-    setTimeout(() => scanSingleURL(), 500);
-    // Scroll to scanner
-    document.getElementById('lead-scanner').scrollIntoView({ behavior: 'smooth' });
-}
+// ✅ FIX: Reveal page after load
+window.addEventListener('load', function() {
+    document.body.classList.add('loaded');
+    setTimeout(function() {
+        const loader = document.getElementById('loading-screen');
+        if(loader) loader.style.display = 'none';
+    }, 500); // Small delay to ensure smooth fade
+});
 
 // Single URL enter key
 document.getElementById('singleUrlInput')?.addEventListener('keypress', function(e) {
@@ -1251,9 +1277,9 @@ Quality: ${quality.charAt(0).toUpperCase() + quality.slice(1)}
 ${recsHtml}
 </div>
 <div class="flex gap-3">
-<button onclick="generateShareLink('${url}')"
+<button onclick="addToLeaderboard('${url}', ${currentScore})"
 class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-semibold transition-all">
-<i class="fas fa-share-alt mr-2"></i> Generate Share Link
+<i class="fas fa-trophy mr-2"></i> Add to Leaderboard
 </button>
 <button onclick="document.getElementById('singleResult').classList.add('hidden')"
 class="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold transition-all">
@@ -1265,19 +1291,19 @@ Close
 resultDiv.classList.remove('hidden');
 resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
-
-// ✅ NEW: Generate Shareable Link Function
-function generateShareLink(url) {
-    const baseUrl = window.location.origin + window.location.pathname;
-    const shareUrl = `${baseUrl}?scan=${encodeURIComponent(url)}`;
-    
-    navigator.clipboard.writeText(shareUrl).then(() => {
-        alert(`✅ Link copied to clipboard!\n\n${shareUrl}\n\nSend this URL to your client. When they open it, the scan will run automatically.`);
-    }).catch(err => {
-        prompt("Copy this link manually:", shareUrl);
-    });
+function addToLeaderboard(url, score) {
+const companyName = prompt('Enter company name (optional):', '');
+const contactEmail = prompt('Enter your email to receive congratulations if approved (optional):', '');
+if (!contactEmail) {
+alert('✅ Your request has been sent to admin for approval (85+ required)');
+return;
 }
-
+if (!contactEmail.includes('@') || !contactEmail.includes('.')) {
+alert('❌ Please enter a valid email address');
+return;
+}
+alert(`✅ Thank you! Admin will review your submission. If approved (85+ score required), a congratulations email will be sent to ${contactEmail}.`);
+}
 // ==========================================
 // BULK SCAN
 // ==========================================
