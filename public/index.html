@@ -9,26 +9,23 @@
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
 <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
-
 <!-- ✅ FIX: Hide body initially to prevent flashing -->
 <style>
-    body { visibility: hidden; opacity: 0; transition: opacity 0.3s ease-in; }
-    body.loaded { visibility: visible; opacity: 1; }
-    
-    /* Loading Spinner Styles */
-    #loading-screen {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: #030712; z-index: 99999;
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-    }
-    .spinner {
-        width: 50px; height: 50px; border: 5px solid #374151;
-        border-top: 5px solid #a855f7; border-radius: 50%;
-        animation: spin 1s linear infinite;
-    }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+body { visibility: hidden; opacity: 0; transition: opacity 0.3s ease-in; }
+body.loaded { visibility: visible; opacity: 1; }
+/* Loading Spinner Styles */
+#loading-screen {
+position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+background: #030712; z-index: 99999;
+display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.spinner {
+width: 50px; height: 50px; border: 5px solid #374151;
+border-top: 5px solid #a855f7; border-radius: 50%;
+animation: spin 1s linear infinite;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 </style>
-
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'; this.onload=null;">
 <noscript>
@@ -249,11 +246,12 @@ spellcheck="false">
 </span>
 </h3>
 <button onclick="toggleBulkScanner()" class="text-sm text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-2">
-<span id="bulkToggleText">Show Bulk Scanner</span>
-<i class="fas fa-chevron-down" id="bulkScannerIcon" style="transition: transform 0.3s;"></i>
+<span id="bulkToggleText">Hide Bulk Scanner</span>
+<i class="fas fa-chevron-up" id="bulkScannerIcon" style="transition: transform 0.3s;"></i>
 </button>
 </div>
-<div id="bulkScannerContent" class="hidden">
+<!-- ✅ FIX: Removed 'hidden' class so it shows immediately -->
+<div id="bulkScannerContent">
 <!-- ACTIVATION NOTICE -->
 <div id="activationNotice" class="hidden bg-gradient-to-r from-purple-900 to-blue-900 border-2 border-purple-500 rounded-lg p-6 mb-6">
 <div class="flex items-start gap-4">
@@ -342,6 +340,7 @@ style="color: #000000 !important; background-color: #ffffff !important;"></texta
 <div id="bulkResults" class="hidden mt-4">
 <h4 class="text-lg font-bold text-white mb-3">Scan Results</h4>
 <div id="bulkResultsContainer"></div>
+</div>
 </div>
 </div>
 </div>
@@ -523,7 +522,8 @@ LEADERBOARD SECTION
 <h2 class="text-4xl font-bold mb-3 text-white">🏆 Elite Leaderboard</h2>
 <p class="text-xl text-gray-200">Top performing websites automatically added</p>
 </div>
-<div class="grid-4 mb-8">
+<!-- ✅ FIX: Wrapped stats in max-w-4xl to prevent stretching -->
+<div class="max-w-4xl mx-auto grid-4 mb-8">
 <div class="stat-card">
 <div>
 <div class="text-4xl mb-2">🏢</div>
@@ -611,7 +611,8 @@ FREELANCERS SECTION
 <i class="fas fa-user-plus mr-2"></i> Become a Specialist
 </button>
 </div>
-<div id="freelancersGrid" class="grid-3"></div>
+<!-- ✅ FIX: Wrapped grid in max-w-5xl to prevent stretching -->
+<div class="max-w-5xl mx-auto" id="freelancersGrid" class="grid-3"></div>
 </div>
 </div>
 <!-- ============================================
@@ -936,6 +937,10 @@ singleMode.classList.add('hidden');
 bulkMode.classList.remove('hidden');
 singleBtn.classList.remove('active');
 bulkBtn.classList.add('active');
+// ✅ FIX: Ensure bulk content is visible when switching
+document.getElementById('bulkScannerContent').classList.remove('hidden');
+document.getElementById('bulkToggleText').textContent = 'Hide Bulk Scanner';
+document.getElementById('bulkScannerIcon').className = 'fas fa-chevron-up';
 }
 }
 function toggleBulkScanner() {
@@ -947,9 +952,10 @@ const isHidden = content.classList.contains('hidden');
 content.classList.toggle('hidden');
 if (icon) {
 icon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+icon.className = isHidden ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
 }
 if (toggleText) {
-toggleText.textContent = isHidden ? 'Hide Bulk Scanner' : 'Show Bulk Scanner';
+toggleText.textContent = isHidden ? 'Show Bulk Scanner' : 'Hide Bulk Scanner';
 }
 if (isHidden && !activationChecked) {
 checkActivationStatus();
