@@ -8,253 +8,253 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  background: #030712;
-  color: white;
-  line-height: 1.6;
+font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+background: #030712;
+color: white;
+line-height: 1.6;
 }
 h1, h2, h3, h4, h5, h6, p, a, span, div, button, input, textarea, select, label, li {
-  color: white !important;
+color: white !important;
 }
 input, textarea, select {
-  color: #000000 !important;
-  background-color: #ffffff !important;
-  border: 1px solid #d1d5db !important;
+color: #000000 !important;
+background-color: #ffffff !important;
+border: 1px solid #d1d5db !important;
 }
 input::placeholder, textarea::placeholder {
-  color: #6b7280 !important;
-  opacity: 1 !important;
+color: #6b7280 !important;
+opacity: 1 !important;
 }
 .text-gray-300, .text-gray-400, .text-gray-500 {
-  color: #d1d5db !important;
+color: #d1d5db !important;
 }
 .btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.5rem;
-  font-weight: 600;
-  transition: all 0.2s;
-  border: none;
-  cursor: pointer;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+gap: 0.5rem;
+padding: 0.75rem 1.5rem;
+border-radius: 0.5rem;
+font-weight: 600;
+transition: all 0.2s;
+border: none;
+cursor: pointer;
 }
 .btn-primary {
-  background: linear-gradient(135deg, #7e22ce, #be185d);
-  color: white;
+background: linear-gradient(135deg, #7e22ce, #be185d);
+color: white;
 }
 .btn-primary:hover {
-  background: linear-gradient(135deg, #6b21a8, #9d174d);
-  transform: translateY(-2px);
+background: linear-gradient(135deg, #6b21a8, #9d174d);
+transform: translateY(-2px);
 }
 .btn-success { background: #0f7b3a !important; color: white !important; }
 .btn-info { background: linear-gradient(135deg, #1e40af, #0891b2); color: white; }
 .mode-toggle {
-  position: relative;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.5rem;
-  font-weight: 600;
-  background: #374151;
-  color: white;
-  border: 2px solid transparent;
-  transition: all 0.2s;
-  cursor: pointer;
+position: relative;
+padding: 0.75rem 1.5rem;
+border-radius: 0.5rem;
+font-weight: 600;
+background: #374151;
+color: white;
+border: 2px solid transparent;
+transition: all 0.2s;
+cursor: pointer;
 }
 .mode-toggle.active {
-  background: linear-gradient(135deg, #7e22ce, #be185d);
-  border: 2px solid rgba(255, 255, 255, 0.3);
+background: linear-gradient(135deg, #7e22ce, #be185d);
+border: 2px solid rgba(255, 255, 255, 0.3);
 }
 .mode-toggle.active::after {
-  content: '✓';
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 24px;
-  height: 24px;
-  background: #0f7b3a;
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: bold;
-  border: 2px solid white;
+content: '✓';
+position: absolute;
+top: -8px;
+right: -8px;
+width: 24px;
+height: 24px;
+background: #0f7b3a;
+color: white;
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 14px;
+font-weight: bold;
+border: 2px solid white;
 }
 .card {
-  background: #111827;
-  border: 1px solid #374151;
-  border-radius: 1rem;
-  padding: 1.5rem;
-  transition: all 0.2s;
+background: #111827;
+border: 1px solid #374151;
+border-radius: 1rem;
+padding: 1.5rem;
+transition: all 0.2s;
 }
 .card:hover {
-  border-color: #a855f7;
-  transform: translateY(-4px);
+border-color: #a855f7;
+transform: translateY(-4px);
 }
 .stat-card {
-  position: relative;
-  border-radius: 1rem;
-  padding: 1.25rem;
-  overflow: hidden;
+position: relative;
+border-radius: 1rem;
+padding: 1.25rem;
+overflow: hidden;
 }
 .stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, #7e22ce, #6b21a8);
-  opacity: 0.9;
+content: '';
+position: absolute;
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+background: linear-gradient(135deg, #7e22ce, #6b21a8);
+opacity: 0.9;
 }
 .stat-card > div {
-  position: relative;
-  z-index: 10;
+position: relative;
+z-index: 10;
 }
 .grid-3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
+display: grid;
+grid-template-columns: repeat(3, 1fr);
+gap: 1.5rem;
 }
 .grid-4 {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.5rem;
+display: grid;
+grid-template-columns: repeat(4, 1fr);
+gap: 1.5rem;
 }
 @media (max-width: 1024px) {
-  .grid-4 { grid-template-columns: repeat(3, 1fr); }
+.grid-4 { grid-template-columns: repeat(3, 1fr); }
 }
 @media (max-width: 768px) {
-  .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
+.grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 640px) {
-  .grid-3, .grid-4 { grid-template-columns: 1fr; }
+.grid-3, .grid-4 { grid-template-columns: 1fr; }
 }
 .hidden { display: none; }
 .modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(4px);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
+position: fixed;
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+background: rgba(0, 0, 0, 0.8);
+backdrop-filter: blur(4px);
+display: none;
+align-items: center;
+justify-content: center;
+z-index: 9999;
 }
 .modal.active {
-  display: flex;
+display: flex;
 }
 .modal-content {
-  background: white;
-  border: 2px solid #a855f7;
-  border-radius: 1rem;
-  padding: 2rem;
-  max-width: 600px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
+background: white;
+border: 2px solid #a855f7;
+border-radius: 1rem;
+padding: 2rem;
+max-width: 600px;
+width: 90%;
+max-height: 90vh;
+overflow-y: auto;
 }
 .modal-content h2,
 .modal-content label,
 .modal-content p {
-  color: #111827 !important;
+color: #111827 !important;
 }
 .pending-card {
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-  border: 1px solid #f59e0b;
-  border-radius: 1rem;
-  padding: 1.5rem;
-  margin-bottom: 1rem;
+background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+border: 1px solid #f59e0b;
+border-radius: 1rem;
+padding: 1.5rem;
+margin-bottom: 1rem;
 }
 .badge-pending {
-  background: #f59e0b;
-  color: white;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
+background: #f59e0b;
+color: white;
+padding: 0.25rem 0.75rem;
+border-radius: 9999px;
+font-size: 0.75rem;
+font-weight: 600;
 }
 .badge-approved {
-  background: #10b981;
-  color: white;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
+background: #10b981;
+color: white;
+padding: 0.25rem 0.75rem;
+border-radius: 9999px;
+font-size: 0.75rem;
+font-weight: 600;
 }
 .top-card {
-  border-radius: 1rem;
-  padding: 1.5rem;
-  text-align: center;
-  color: white;
+border-radius: 1rem;
+padding: 1.5rem;
+text-align: center;
+color: white;
 }
 .top-card.gold {
-  background: linear-gradient(135deg, #fbbf24, #d97706);
+background: linear-gradient(135deg, #fbbf24, #d97706);
 }
 .top-card.silver {
-  background: linear-gradient(135deg, #e5e7eb, #6b7280);
+background: linear-gradient(135deg, #e5e7eb, #6b7280);
 }
 .top-card.bronze {
-  background: linear-gradient(135deg, #f97316, #c2410c);
+background: linear-gradient(135deg, #f97316, #c2410c);
 }
 .rank-card {
-  background: #1f2937;
-  border: 1px solid #374151;
-  border-radius: 0.75rem;
-  padding: 1rem;
-  text-align: center;
-  transition: all 0.2s;
+background: #1f2937;
+border: 1px solid #374151;
+border-radius: 0.75rem;
+padding: 1rem;
+text-align: center;
+transition: all 0.2s;
 }
 .rank-card:hover {
-  border-color: #a855f7;
-  transform: translateY(-4px);
+border-color: #a855f7;
+transform: translateY(-4px);
 }
 .rankings-table {
-  width: 100%;
-  background: #111827;
-  border-radius: 0.75rem;
-  overflow: hidden;
+width: 100%;
+background: #111827;
+border-radius: 0.75rem;
+overflow: hidden;
 }
 .rankings-table th {
-  background: #1f2937;
-  padding: 1rem;
-  text-align: left;
-  font-weight: 600;
-  color: white;
+background: #1f2937;
+padding: 1rem;
+text-align: left;
+font-weight: 600;
+color: white;
 }
 .rankings-table td {
-  padding: 1rem;
-  border-bottom: 1px solid #374151;
-  color: white;
+padding: 1rem;
+border-bottom: 1px solid #374151;
+color: white;
 }
 .checkbox-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+display: flex;
+align-items: center;
+gap: 0.5rem;
 }
 .checkbox-wrapper input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
+width: 18px;
+height: 18px;
+cursor: pointer;
 }
 .user-card {
-  background: #1f2937;
-  border: 1px solid #374151;
-  border-radius: 0.75rem;
-  padding: 1rem;
-  margin-bottom: 1rem;
+background: #1f2937;
+border: 1px solid #374151;
+border-radius: 0.75rem;
+padding: 1rem;
+margin-bottom: 1rem;
 }
 .message-card {
-  background: #1f2937;
-  border-left: 4px solid #a855f7;
-  border-radius: 0.5rem;
-  padding: 1rem;
-  margin-bottom: 1rem;
+background: #1f2937;
+border-left: 4px solid #a855f7;
+border-radius: 0.5rem;
+padding: 1rem;
+margin-bottom: 1rem;
 }
 </style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -262,458 +262,445 @@ input::placeholder, textarea::placeholder {
 <body class="bg-gray-900">
 <!-- LOGIN SCREEN -->
 <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
-  <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border-2 border-purple-500">
-    <div class="flex items-center justify-center mb-6">
-      <span class="text-5xl">👑</span>
-      <h1 class="text-3xl font-bold ml-3 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Admin</h1>
-    </div>
-    <p class="text-gray-400 text-center mb-8">ContentScale Platform Control</p>
-    <div id="login-error" class="hidden mb-6 p-4 bg-red-900/50 border border-red-700 rounded-lg text-red-200 text-sm"></div>
-    <div class="space-y-6">
-      <div>
-        <label class="block text-sm font-medium text-gray-300 mb-2">Username</label>
-        <input type="text" id="login-username" value="ot" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white">
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-300 mb-2">Password</label>
-        <input type="password" id="login-password" value="admin123" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white">
-      </div>
-      <button onclick="login()" id="login-btn" class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-lg font-bold text-lg transition-all transform hover:scale-105">
-        <i class="fas fa-lock mr-2"></i> Login
-      </button>
-    </div>
-  </div>
+<div class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border-2 border-purple-500">
+<div class="flex items-center justify-center mb-6">
+<span class="text-5xl">👑</span>
+<h1 class="text-3xl font-bold ml-3 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Admin</h1>
+</div>
+<p class="text-gray-400 text-center mb-8">ContentScale Platform Control</p>
+<div id="login-error" class="hidden mb-6 p-4 bg-red-900/50 border border-red-700 rounded-lg text-red-200 text-sm"></div>
+<div class="space-y-6">
+<div>
+<label class="block text-sm font-medium text-gray-300 mb-2">Username</label>
+<input type="text" id="login-username" value="ot" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white">
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+<input type="password" id="login-password" value="admin123" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white">
+</div>
+<button onclick="login()" id="login-btn" class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-lg font-bold text-lg transition-all transform hover:scale-105">
+<i class="fas fa-lock mr-2"></i> Login
+</button>
+</div>
+</div>
 </div>
 
 <!-- MAIN DASHBOARD -->
 <div id="main-dashboard" class="hidden">
-  <nav class="sticky top-0 z-50 bg-gray-900/95 border-b-2 border-purple-600 backdrop-blur-sm">
-    <div class="max-w-7xl mx-auto px-6 py-4">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <span class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Admin Dashboard</span>
-          <span class="text-xs px-2 py-1 bg-purple-600 rounded text-white font-semibold">
-            <span id="admin-username">Admin</span>
-          </span>
-        </div>
-        <div class="flex gap-3">
-          <button onclick="logout()" class="btn bg-red-600 hover:bg-red-700">
-            <i class="fas fa-sign-out-alt mr-2"></i> Logout
-          </button>
-        </div>
-      </div>
-    </div>
-  </nav>
+<nav class="sticky top-0 z-50 bg-gray-900/95 border-b-2 border-purple-600 backdrop-blur-sm">
+<div class="max-w-7xl mx-auto px-6 py-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Admin Dashboard</span>
+<span class="text-xs px-2 py-1 bg-purple-600 rounded text-white font-semibold">
+<span id="admin-username">Admin</span>
+</span>
+</div>
+<div class="flex gap-3">
+<button onclick="logout()" class="btn bg-red-600 hover:bg-red-700">
+<i class="fas fa-sign-out-alt mr-2"></i> Logout
+</button>
+</div>
+</div>
+</div>
+</nav>
 
-  <div class="max-w-7xl mx-auto px-6 py-8">
-    <!-- TABS NAVIGATION -->
-    <div class="flex justify-center gap-4 mb-8 flex-wrap">
-      <button onclick="switchTab('leaderboard')" id="tabLeaderboardBtn" class="mode-toggle active">
-        <i class="fas fa-trophy mr-2"></i> Leaderboard
-      </button>
-      <button onclick="switchTab('freelancers')" id="tabFreelancersBtn" class="mode-toggle">
-        <i class="fas fa-users mr-2"></i> Freelancers
-      </button>
-      <button onclick="switchTab('users')" id="tabUsersBtn" class="mode-toggle">
-        <i class="fas fa-user-cog mr-2"></i> Users
-      </button>
-      <button onclick="switchTab('messages')" id="tabMessagesBtn" class="mode-toggle">
-        <i class="fas fa-envelope mr-2"></i> Messages
-      </button>
-      <button onclick="switchTab('pending')" id="tabPendingBtn" class="mode-toggle">
-        <i class="fas fa-clock mr-2"></i> Pending
-      </button>
-    </div>
+<div class="max-w-7xl mx-auto px-6 py-8">
+<!-- TABS NAVIGATION -->
+<div class="flex justify-center gap-4 mb-8 flex-wrap">
+<button onclick="switchTab('leaderboard')" id="tabLeaderboardBtn" class="mode-toggle active">
+<i class="fas fa-trophy mr-2"></i> Leaderboard
+</button>
+<button onclick="switchTab('freelancers')" id="tabFreelancersBtn" class="mode-toggle">
+<i class="fas fa-users mr-2"></i> Freelancers
+</button>
+<button onclick="switchTab('users')" id="tabUsersBtn" class="mode-toggle">
+<i class="fas fa-user-cog mr-2"></i> Users
+</button>
+<button onclick="switchTab('messages')" id="tabMessagesBtn" class="mode-toggle">
+<i class="fas fa-envelope mr-2"></i> Messages
+</button>
+<button onclick="switchTab('pending')" id="tabPendingBtn" class="mode-toggle">
+<i class="fas fa-clock mr-2"></i> Pending
+</button>
+</div>
 
-    <!-- TAB 1: LEADERBOARD -->
-    <div id="tab-leaderboard" class="tab-content">
-      <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-3xl font-bold text-white">🏆 Leaderboard</h2>
-          <div class="flex gap-3">
-            <button onclick="showAddLeaderboardModal()" class="btn bg-green-600 hover:bg-green-700">
-              <i class="fas fa-plus-circle mr-2"></i> Add New
-            </button>
-            <button onclick="loadLeaderboard()" class="btn bg-blue-600 hover:bg-blue-700">
-              <i class="fas fa-sync-alt mr-2"></i> Refresh
-            </button>
-          </div>
-        </div>
+<!-- TAB 1: LEADERBOARD -->
+<div id="tab-leaderboard" class="tab-content">
+<div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-3xl font-bold text-white">🏆 Leaderboard</h2>
+<div class="flex gap-3">
+<button onclick="showAddLeaderboardModal()" class="btn bg-green-600 hover:bg-green-700">
+<i class="fas fa-plus-circle mr-2"></i> Add New
+</button>
+<button onclick="loadLeaderboard()" class="btn bg-blue-600 hover:bg-blue-700">
+<i class="fas fa-sync-alt mr-2"></i> Refresh
+</button>
+</div>
+</div>
+<div class="grid-4 mb-8">
+<div class="stat-card">
+<div>
+<div class="text-4xl mb-2">🏢</div>
+<div class="text-3xl font-bold" id="stat-total-agencies">0</div>
+<div class="text-sm text-gray-200">Agencies</div>
+</div>
+</div>
+<div class="stat-card">
+<div>
+<div class="text-4xl mb-2">📊</div>
+<div class="text-3xl font-bold" id="stat-avg-score">0</div>
+<div class="text-sm text-gray-200">Avg. Score</div>
+</div>
+</div>
+<div class="stat-card">
+<div>
+<div class="text-4xl mb-2">🌍</div>
+<div class="text-3xl font-bold" id="stat-countries">0</div>
+<div class="text-sm text-gray-200">Countries</div>
+</div>
+</div>
+<div class="stat-card">
+<div>
+<div class="text-4xl mb-2">✅</div>
+<div class="text-3xl font-bold" id="stat-verified">0</div>
+<div class="text-sm text-gray-200">Verified</div>
+</div>
+</div>
+</div>
+<!-- BULK ACTIONS BAR -->
+<div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
+<div class="checkbox-wrapper">
+<input type="checkbox" id="select-all-leaderboard" onchange="toggleSelectAllLeaderboard()" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
+<label class="text-sm text-gray-300">Select All</label>
+</div>
+<button onclick="bulkDeleteLeaderboard()" class="btn bg-red-600 hover:bg-red-700">
+<i class="fas fa-trash mr-2"></i> Delete Selected (<span id="selected-count-leaderboard">0</span>)
+</button>
+</div>
+<div id="top3-container" class="grid-3 mb-10"></div>
+<div id="rankings4to15Container" class="mb-10">
+<h3 class="text-2xl font-bold text-white mb-6">Rankings 4-15</h3>
+<div id="rankings4to15Grid" class="grid-3"></div>
+</div>
+<div class="bg-gray-800 rounded-lg p-4 mb-6 border border-gray-700">
+<button onclick="toggleRankings()" id="rankingsToggleBtn" class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-between transition-all">
+<span id="rankingsToggleText">📊 Show Rankings 16+</span>
+<span class="arrow">▼</span>
+</button>
+<div id="rankingsContainer" class="hidden mt-4">
+<p class="text-sm text-gray-300 mb-2">Showing 16-35 of <span id="totalCount">0</span> agencies</p>
+<table class="rankings-table">
+<thead>
+<tr>
+<th class="w-10"></th>
+<th>Rank</th>
+<th>Company</th>
+<th>Website</th>
+<th>Score</th>
+<th>Country</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody id="rankingsTbody"></tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
 
-        <div class="grid-4 mb-8">
-          <div class="stat-card">
-            <div>
-              <div class="text-4xl mb-2">🏢</div>
-              <div class="text-3xl font-bold" id="stat-total-agencies">0</div>
-              <div class="text-sm text-gray-200">Agencies</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div>
-              <div class="text-4xl mb-2">📊</div>
-              <div class="text-3xl font-bold" id="stat-avg-score">0</div>
-              <div class="text-sm text-gray-200">Avg. Score</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div>
-              <div class="text-4xl mb-2">🌍</div>
-              <div class="text-3xl font-bold" id="stat-countries">0</div>
-              <div class="text-sm text-gray-200">Countries</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div>
-              <div class="text-4xl mb-2">✅</div>
-              <div class="text-3xl font-bold" id="stat-verified">0</div>
-              <div class="text-sm text-gray-200">Verified</div>
-            </div>
-          </div>
-        </div>
+<!-- TAB 2: FREELANCERS -->
+<div id="tab-freelancers" class="tab-content hidden">
+<div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-3xl font-bold text-white">🎯 Freelancers</h2>
+<button onclick="loadFreelancers()" class="btn bg-blue-600 hover:bg-blue-700">
+<i class="fas fa-sync-alt mr-2"></i> Refresh
+</button>
+</div>
+<!-- BULK ACTIONS BAR -->
+<div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
+<div class="checkbox-wrapper">
+<input type="checkbox" id="select-all-freelancers" onchange="toggleSelectAllFreelancers()" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
+<label class="text-sm text-gray-300">Select All</label>
+</div>
+<button onclick="bulkDeleteFreelancers()" class="btn bg-red-600 hover:bg-red-700">
+<i class="fas fa-trash mr-2"></i> Delete Selected (<span id="selected-count-freelancers">0</span>)
+</button>
+</div>
+<div id="freelancersGrid" class="grid-3"></div>
+</div>
+</div>
 
-        <!-- BULK ACTIONS BAR -->
-        <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
-          <div class="checkbox-wrapper">
-            <input type="checkbox" id="select-all-leaderboard" onchange="toggleSelectAllLeaderboard()" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
-            <label class="text-sm text-gray-300">Select All</label>
-          </div>
-          <button onclick="bulkDeleteLeaderboard()" class="btn bg-red-600 hover:bg-red-700">
-            <i class="fas fa-trash mr-2"></i> Delete Selected (<span id="selected-count-leaderboard">0</span>)
-          </button>
-        </div>
+<!-- TAB 3: USERS MANAGEMENT -->
+<div id="tab-users" class="tab-content hidden">
+<div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-3xl font-bold text-white">👥 User Management</h2>
+<button onclick="loadUsers()" class="btn bg-blue-600 hover:bg-blue-700">
+<i class="fas fa-sync-alt mr-2"></i> Refresh
+</button>
+</div>
+<!-- STATS -->
+<div class="grid-4 mb-8">
+<div class="stat-card">
+<div>
+<div class="text-4xl mb-2">👥</div>
+<div class="text-3xl font-bold" id="stat-total-users">0</div>
+<div class="text-sm text-gray-200">Total Users</div>
+</div>
+</div>
+<div class="stat-card">
+<div>
+<div class="text-4xl mb-2">✅</div>
+<div class="text-3xl font-bold" id="stat-active-users">0</div>
+<div class="text-sm text-gray-200">Active</div>
+</div>
+</div>
+<div class="stat-card">
+<div>
+<div class="text-4xl mb-2">⏳</div>
+<div class="text-3xl font-bold" id="stat-expiring-users">0</div>
+<div class="text-sm text-gray-200">Expiring Soon</div>
+</div>
+</div>
+<div class="stat-card">
+<div>
+<div class="text-4xl mb-2">❌</div>
+<div class="text-3xl font-bold" id="stat-expired-users">0</div>
+<div class="text-sm text-gray-200">Expired</div>
+</div>
+</div>
+</div>
+<!-- BULK ACTIONS BAR -->
+<div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
+<div class="checkbox-wrapper">
+<input type="checkbox" id="select-all-users" onchange="toggleSelectAllUsers()" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
+<label class="text-sm text-gray-300">Select All</label>
+</div>
+<button onclick="bulkActivateUsers()" class="btn bg-green-600 hover:bg-green-700">
+<i class="fas fa-check mr-2"></i> Activate Selected
+</button>
+<button onclick="bulkDeactivateUsers()" class="btn bg-yellow-600 hover:bg-yellow-700">
+<i class="fas fa-times mr-2"></i> Deactivate Selected
+</button>
+<button onclick="showMessageToSelected()" class="btn btn-info">
+<i class="fas fa-envelope mr-2"></i> Message Selected
+</button>
+</div>
+<!-- USERS LIST -->
+<div id="usersContainer" class="space-y-4"></div>
+</div>
+</div>
 
-        <div id="top3-container" class="grid-3 mb-10"></div>
+<!-- TAB 4: MESSAGES HISTORY -->
+<div id="tab-messages" class="tab-content hidden">
+<div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-3xl font-bold text-white">📧 Message History</h2>
+<button onclick="showBroadcastModal()" class="btn btn-primary">
+<i class="fas fa-paper-plane mr-2"></i> New Broadcast
+</button>
+</div>
+<div id="messagesContainer" class="space-y-4"></div>
+</div>
+</div>
 
-        <div id="rankings4to15Container" class="mb-10">
-          <h3 class="text-2xl font-bold text-white mb-6">Rankings 4-15</h3>
-          <div id="rankings4to15Grid" class="grid-3"></div>
-        </div>
-
-        <div class="bg-gray-800 rounded-lg p-4 mb-6 border border-gray-700">
-          <button onclick="toggleRankings()" id="rankingsToggleBtn" class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-between transition-all">
-            <span id="rankingsToggleText">📊 Show Rankings 16+</span>
-            <span class="arrow">▼</span>
-          </button>
-          <div id="rankingsContainer" class="hidden mt-4">
-            <p class="text-sm text-gray-300 mb-2">Showing 16-35 of <span id="totalCount">0</span> agencies</p>
-            <table class="rankings-table">
-              <thead>
-                <tr>
-                  <th class="w-10"></th>
-                  <th>Rank</th>
-                  <th>Company</th>
-                  <th>Website</th>
-                  <th>Score</th>
-                  <th>Country</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="rankingsTbody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB 2: FREELANCERS -->
-    <div id="tab-freelancers" class="tab-content hidden">
-      <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-3xl font-bold text-white">🎯 Freelancers</h2>
-          <button onclick="loadFreelancers()" class="btn bg-blue-600 hover:bg-blue-700">
-            <i class="fas fa-sync-alt mr-2"></i> Refresh
-          </button>
-        </div>
-
-        <!-- BULK ACTIONS BAR -->
-        <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
-          <div class="checkbox-wrapper">
-            <input type="checkbox" id="select-all-freelancers" onchange="toggleSelectAllFreelancers()" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
-            <label class="text-sm text-gray-300">Select All</label>
-          </div>
-          <button onclick="bulkDeleteFreelancers()" class="btn bg-red-600 hover:bg-red-700">
-            <i class="fas fa-trash mr-2"></i> Delete Selected (<span id="selected-count-freelancers">0</span>)
-          </button>
-        </div>
-
-        <div id="freelancersGrid" class="grid-3"></div>
-      </div>
-    </div>
-
-    <!-- TAB 3: USERS MANAGEMENT -->
-    <div id="tab-users" class="tab-content hidden">
-      <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-3xl font-bold text-white">👥 User Management</h2>
-          <button onclick="loadUsers()" class="btn bg-blue-600 hover:bg-blue-700">
-            <i class="fas fa-sync-alt mr-2"></i> Refresh
-          </button>
-        </div>
-
-        <!-- STATS -->
-        <div class="grid-4 mb-8">
-          <div class="stat-card">
-            <div>
-              <div class="text-4xl mb-2">👥</div>
-              <div class="text-3xl font-bold" id="stat-total-users">0</div>
-              <div class="text-sm text-gray-200">Total Users</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div>
-              <div class="text-4xl mb-2">✅</div>
-              <div class="text-3xl font-bold" id="stat-active-users">0</div>
-              <div class="text-sm text-gray-200">Active</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div>
-              <div class="text-4xl mb-2">⏳</div>
-              <div class="text-3xl font-bold" id="stat-expiring-users">0</div>
-              <div class="text-sm text-gray-200">Expiring Soon</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div>
-              <div class="text-4xl mb-2">❌</div>
-              <div class="text-3xl font-bold" id="stat-expired-users">0</div>
-              <div class="text-sm text-gray-200">Expired</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- BULK ACTIONS BAR -->
-        <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
-          <div class="checkbox-wrapper">
-            <input type="checkbox" id="select-all-users" onchange="toggleSelectAllUsers()" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
-            <label class="text-sm text-gray-300">Select All</label>
-          </div>
-          <button onclick="bulkActivateUsers()" class="btn bg-green-600 hover:bg-green-700">
-            <i class="fas fa-check mr-2"></i> Activate Selected
-          </button>
-          <button onclick="bulkDeactivateUsers()" class="btn bg-yellow-600 hover:bg-yellow-700">
-            <i class="fas fa-times mr-2"></i> Deactivate Selected
-          </button>
-          <button onclick="showMessageToSelected()" class="btn btn-info">
-            <i class="fas fa-envelope mr-2"></i> Message Selected
-          </button>
-        </div>
-
-        <!-- USERS LIST -->
-        <div id="usersContainer" class="space-y-4"></div>
-      </div>
-    </div>
-
-    <!-- TAB 4: MESSAGES HISTORY -->
-    <div id="tab-messages" class="tab-content hidden">
-      <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-3xl font-bold text-white">📧 Message History</h2>
-          <button onclick="showBroadcastModal()" class="btn btn-primary">
-            <i class="fas fa-paper-plane mr-2"></i> New Broadcast
-          </button>
-        </div>
-        <div id="messagesContainer" class="space-y-4"></div>
-      </div>
-    </div>
-
-    <!-- TAB 5: PENDING -->
-    <div id="tab-pending" class="tab-content hidden">
-      <div class="bg-gradient-to-br from-yellow-900 via-orange-900 to-yellow-800 rounded-2xl p-8 border-2 border-yellow-500">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-3xl font-bold text-white">⏳ Pending Approvals</h2>
-          <button onclick="loadPendingData()" class="btn bg-yellow-600 hover:bg-yellow-700">
-            <i class="fas fa-sync-alt mr-2"></i> Refresh
-          </button>
-        </div>
-
-        <!-- BULK ACTIONS BAR FOR PENDING -->
-        <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
-          <div class="checkbox-wrapper">
-            <input type="checkbox" id="select-all-pending" onchange="toggleSelectAllPending()" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
-            <label class="text-sm text-gray-300">Select All</label>
-          </div>
-          <button onclick="bulkDeletePending()" class="btn bg-red-600 hover:bg-red-700">
-            <i class="fas fa-trash mr-2"></i> Delete Selected (<span id="selected-count-pending">0</span>)
-          </button>
-        </div>
-
-        <div class="mb-8">
-          <h3 class="text-xl font-bold mb-4 text-yellow-400">🏆 Pending Leaderboard Submissions</h3>
-          <div id="pending-leaderboard-container" class="space-y-4"></div>
-        </div>
-
-        <div class="mb-8">
-          <h3 class="text-xl font-bold mb-4 text-yellow-400">🎯 Pending Freelancer Applications</h3>
-          <div id="pending-freelancers-container" class="space-y-4"></div>
-        </div>
-      </div>
-    </div>
-  </div>
+<!-- TAB 5: PENDING -->
+<div id="tab-pending" class="tab-content hidden">
+<div class="bg-gradient-to-br from-yellow-900 via-orange-900 to-yellow-800 rounded-2xl p-8 border-2 border-yellow-500">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-3xl font-bold text-white">⏳ Pending Approvals</h2>
+<button onclick="loadPendingData()" class="btn bg-yellow-600 hover:bg-yellow-700">
+<i class="fas fa-sync-alt mr-2"></i> Refresh
+</button>
+</div>
+<!-- BULK ACTIONS BAR FOR PENDING -->
+<div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
+<div class="checkbox-wrapper">
+<input type="checkbox" id="select-all-pending" onchange="toggleSelectAllPending()" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500">
+<label class="text-sm text-gray-300">Select All</label>
+</div>
+<button onclick="bulkDeletePending()" class="btn bg-red-600 hover:bg-red-700">
+<i class="fas fa-trash mr-2"></i> Delete Selected (<span id="selected-count-pending">0</span>)
+</button>
+</div>
+<div class="mb-8">
+<h3 class="text-xl font-bold mb-4 text-yellow-400">🏆 Pending Leaderboard Submissions</h3>
+<div id="pending-leaderboard-container" class="space-y-4"></div>
+</div>
+<div class="mb-8">
+<h3 class="text-xl font-bold mb-4 text-yellow-400">🎯 Pending Freelancer Applications</h3>
+<div id="pending-freelancers-container" class="space-y-4"></div>
+</div>
+</div>
+</div>
+</div>
 </div>
 
 <!-- MODALS -->
 <!-- Add Leaderboard Modal -->
 <div id="addLeaderboardModal" class="modal">
-  <div class="modal-content max-w-2xl">
-    <div class="flex justify-between items-center mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">Add New Leaderboard Entry</h2>
-      <button onclick="closeAddLeaderboardModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div class="space-y-4">
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Company Name *</label>
-        <input type="text" id="add-company-name" placeholder="e.g. SEO Agency Amsterdam" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-      </div>
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Website URL *</label>
-        <input type="text" id="add-website-url" placeholder="https://example.com" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-      </div>
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Score * (0-100)</label>
-        <input type="number" id="add-score" min="0" max="100" value="75" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-      </div>
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Country</label>
-        <select id="add-country" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-          <option value="Netherlands">🇳🇱 Netherlands</option>
-          <option value="Belgium">🇧🇪 Belgium</option>
-          <option value="Germany">🇩🇪 Germany</option>
-          <option value="United Kingdom">🇬🇧 United Kingdom</option>
-          <option value="United States">🇺🇸 United States</option>
-        </select>
-      </div>
-      <button onclick="addLeaderboardEntry()" class="btn-primary btn w-full py-3">
-        Add to Leaderboard
-      </button>
-    </div>
-  </div>
+<div class="modal-content max-w-2xl">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-2xl font-bold text-gray-900">Add New Leaderboard Entry</h2>
+<button onclick="closeAddLeaderboardModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+<i class="fas fa-times"></i>
+</button>
+</div>
+<div class="space-y-4">
+<div>
+<label class="block text-sm mb-2 text-gray-700">Company Name *</label>
+<input type="text" id="add-company-name" placeholder="e.g. SEO Agency Amsterdam" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+</div>
+<div>
+<label class="block text-sm mb-2 text-gray-700">Website URL *</label>
+<input type="text" id="add-website-url" placeholder="https://example.com" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+</div>
+<div>
+<label class="block text-sm mb-2 text-gray-700">Score * (0-100)</label>
+<input type="number" id="add-score" min="0" max="100" value="75" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+</div>
+<div>
+<label class="block text-sm mb-2 text-gray-700">Country</label>
+<select id="add-country" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+<option value="Netherlands">🇳🇱 Netherlands</option>
+<option value="Belgium">🇧🇪 Belgium</option>
+<option value="Germany">🇩🇪 Germany</option>
+<option value="United Kingdom">🇬🇧 United Kingdom</option>
+<option value="United States">🇺🇸 United States</option>
+</select>
+</div>
+<button onclick="addLeaderboardEntry()" class="btn-primary btn w-full py-3">
+Add to Leaderboard
+</button>
+</div>
+</div>
 </div>
 
 <!-- Edit Leaderboard Modal -->
 <div id="editLeaderboardModal" class="modal">
-  <div class="modal-content max-w-2xl">
-    <div class="flex justify-between items-center mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">Edit Leaderboard Entry</h2>
-      <button onclick="closeEditLeaderboardModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div class="space-y-4">
-      <input type="hidden" id="edit-entry-id">
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Company Name</label>
-        <input type="text" id="edit-company-name" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-      </div>
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Website URL</label>
-        <input type="text" id="edit-website-url" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-      </div>
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Score</label>
-        <input type="number" id="edit-score" min="0" max="100" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-      </div>
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Country</label>
-        <select id="edit-country" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-          <option value="Netherlands">🇳🇱 Netherlands</option>
-          <option value="Belgium">🇧🇪 Belgium</option>
-          <option value="Germany">🇩🇪 Germany</option>
-          <option value="United Kingdom">🇬🇧 United Kingdom</option>
-          <option value="United States">🇺🇸 United States</option>
-        </select>
-      </div>
-      <button onclick="updateLeaderboardEntry()" class="btn-primary btn w-full py-3">
-        Update Entry
-      </button>
-    </div>
-  </div>
+<div class="modal-content max-w-2xl">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-2xl font-bold text-gray-900">Edit Leaderboard Entry</h2>
+<button onclick="closeEditLeaderboardModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+<i class="fas fa-times"></i>
+</button>
+</div>
+<div class="space-y-4">
+<input type="hidden" id="edit-entry-id">
+<div>
+<label class="block text-sm mb-2 text-gray-700">Company Name</label>
+<input type="text" id="edit-company-name" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+</div>
+<div>
+<label class="block text-sm mb-2 text-gray-700">Website URL</label>
+<input type="text" id="edit-website-url" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+</div>
+<div>
+<label class="block text-sm mb-2 text-gray-700">Score</label>
+<input type="number" id="edit-score" min="0" max="100" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+</div>
+<div>
+<label class="block text-sm mb-2 text-gray-700">Country</label>
+<select id="edit-country" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+<option value="Netherlands">🇳🇱 Netherlands</option>
+<option value="Belgium">🇧🇪 Belgium</option>
+<option value="Germany">🇩🇪 Germany</option>
+<option value="United Kingdom">🇬🇧 United Kingdom</option>
+<option value="United States">🇺🇸 United States</option>
+</select>
+</div>
+<button onclick="updateLeaderboardEntry()" class="btn-primary btn w-full py-3">
+Update Entry
+</button>
+</div>
+</div>
 </div>
 
 <!-- Edit Freelancer Modal -->
 <div id="editFreelancerModal" class="modal">
-  <div class="modal-content max-w-2xl">
-    <div class="flex justify-between items-center mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">Edit Freelancer</h2>
-      <button onclick="closeEditFreelancerModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div class="space-y-4">
-      <input type="hidden" id="edit-freelancer-id">
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Full Name *</label>
-        <input type="text" id="edit-freelancer-name" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-      </div>
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Email *</label>
-        <input type="email" id="edit-freelancer-email" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-      </div>
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Professional Title</label>
-        <input type="text" id="edit-freelancer-title" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-      </div>
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Location</label>
-        <input type="text" id="edit-freelancer-location" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-      </div>
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Bio (max 200 characters)</label>
-        <textarea id="edit-freelancer-bio" rows="3" maxlength="200" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"></textarea>
-        <div class="flex justify-between mt-1">
-          <span class="text-xs text-gray-500">Maximum 200 characters</span>
-          <span id="edit-bio-char-count" class="text-xs text-gray-500">0/200</span>
-        </div>
-      </div>
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Hourly Rate</label>
-        <input type="text" id="edit-freelancer-rate" placeholder="e.g. €75-€100" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-      </div>
-      <div class="flex items-center gap-2">
-        <input type="checkbox" id="edit-freelancer-featured" class="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500">
-        <label for="edit-freelancer-featured" class="text-sm text-gray-700">⭐ Featured Listing</label>
-      </div>
-      <button onclick="updateFreelancer()" class="btn-primary btn w-full py-3">
-        Update Freelancer
-      </button>
-    </div>
-  </div>
+<div class="modal-content max-w-2xl">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-2xl font-bold text-gray-900">Edit Freelancer</h2>
+<button onclick="closeEditFreelancerModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+<i class="fas fa-times"></i>
+</button>
+</div>
+<div class="space-y-4">
+<input type="hidden" id="edit-freelancer-id">
+<div>
+<label class="block text-sm mb-2 text-gray-700">Full Name *</label>
+<input type="text" id="edit-freelancer-name" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+</div>
+<div>
+<label class="block text-sm mb-2 text-gray-700">Email *</label>
+<input type="email" id="edit-freelancer-email" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+</div>
+<div>
+<label class="block text-sm mb-2 text-gray-700">Professional Title</label>
+<input type="text" id="edit-freelancer-title" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+</div>
+<div>
+<label class="block text-sm mb-2 text-gray-700">Location</label>
+<input type="text" id="edit-freelancer-location" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+</div>
+<div>
+<label class="block text-sm mb-2 text-gray-700">Bio (max 200 characters)</label>
+<textarea id="edit-freelancer-bio" rows="3" maxlength="200" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"></textarea>
+<div class="flex justify-between mt-1">
+<span class="text-xs text-gray-500">Maximum 200 characters</span>
+<span id="edit-bio-char-count" class="text-xs text-gray-500">0/200</span>
+</div>
+</div>
+<div>
+<label class="block text-sm mb-2 text-gray-700">Hourly Rate</label>
+<input type="text" id="edit-freelancer-rate" placeholder="e.g. €75-€100" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+</div>
+<div class="flex items-center gap-2">
+<input type="checkbox" id="edit-freelancer-featured" class="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500">
+<label for="edit-freelancer-featured" class="text-sm text-gray-700">⭐ Featured Listing</label>
+</div>
+<button onclick="updateFreelancer()" class="btn-primary btn w-full py-3">
+Update Freelancer
+</button>
+</div>
+</div>
 </div>
 
 <!-- Broadcast Message Modal -->
 <div id="broadcastModal" class="modal">
-  <div class="modal-content max-w-2xl">
-    <div class="flex justify-between items-center mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">📢 Send Broadcast Message</h2>
-      <button onclick="closeBroadcastModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div class="space-y-4">
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Recipients</label>
-        <select id="broadcast-recipients" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-          <option value="all">All Users</option>
-          <option value="active">Active Users Only</option>
-          <option value="expiring">Users Expiring Soon (7 days)</option>
-          <option value="expired">Expired Users</option>
-        </select>
-      </div>
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Subject *</label>
-        <input type="text" id="broadcast-subject" placeholder="e.g. Important Update" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-      </div>
-      <div>
-        <label class="block text-sm mb-2 text-gray-700">Message *</label>
-        <textarea id="broadcast-body" rows="6" placeholder="Write your message here..." class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"></textarea>
-      </div>
-      <button onclick="sendBroadcast()" class="btn-primary btn w-full py-3">
-        <i class="fas fa-paper-plane mr-2"></i> Send Broadcast
-      </button>
-    </div>
-  </div>
+<div class="modal-content max-w-2xl">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-2xl font-bold text-gray-900">📢 Send Broadcast Message</h2>
+<button onclick="closeBroadcastModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+<i class="fas fa-times"></i>
+</button>
+</div>
+<div class="space-y-4">
+<div>
+<label class="block text-sm mb-2 text-gray-700">Recipients</label>
+<select id="broadcast-recipients" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+<option value="all">All Users</option>
+<option value="active">Active Users Only</option>
+<option value="expiring">Users Expiring Soon (7 days)</option>
+<option value="expired">Expired Users</option>
+</select>
+</div>
+<div>
+<label class="block text-sm mb-2 text-gray-700">Subject *</label>
+<input type="text" id="broadcast-subject" placeholder="e.g. Important Update" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+</div>
+<div>
+<label class="block text-sm mb-2 text-gray-700">Message *</label>
+<textarea id="broadcast-body" rows="6" placeholder="Write your message here..." class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"></textarea>
+</div>
+<button onclick="sendBroadcast()" class="btn-primary btn w-full py-3">
+<i class="fas fa-paper-plane mr-2"></i> Send Broadcast
+</button>
+</div>
+</div>
 </div>
 
 <script>
@@ -735,951 +722,976 @@ let selectedUserIds = new Set();
 // AUTHENTICATIE
 // ==========================================
 window.onload = function() {
-  console.log('📋 Admin Dashboard loaded');
-  if (localStorage.getItem('admin_id') && localStorage.getItem('admin_username')) {
-    currentAdminId = localStorage.getItem('admin_id');
-    currentUsername = localStorage.getItem('admin_username');
-    document.getElementById('login-screen').classList.add('hidden');
-    document.getElementById('main-dashboard').classList.remove('hidden');
-    document.getElementById('admin-username').textContent = currentUsername;
-    loadAllData();
-    switchTab('leaderboard');
-  }
+console.log('📋 Admin Dashboard loaded');
+if (localStorage.getItem('admin_id') && localStorage.getItem('admin_username')) {
+currentAdminId = localStorage.getItem('admin_id');
+currentUsername = localStorage.getItem('admin_username');
+document.getElementById('login-screen').classList.add('hidden');
+document.getElementById('main-dashboard').classList.remove('hidden');
+document.getElementById('admin-username').textContent = currentUsername;
+loadAllData();
+switchTab('leaderboard');
+}
 };
 
 async function login() {
-  const username = document.getElementById('login-username').value;
-  const password = document.getElementById('login-password').value;
-  const errorDiv = document.getElementById('login-error');
-  errorDiv.classList.add('hidden');
-  try {
-    const response = await fetch('/api/setup/verify-admin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
-    });
-    const data = await response.json();
-    if (data.success) {
-      localStorage.setItem('admin_id', data.admin_id);
-      localStorage.setItem('admin_username', username);
-      currentAdminId = data.admin_id;
-      currentUsername = username;
-      document.getElementById('login-screen').classList.add('hidden');
-      document.getElementById('main-dashboard').classList.remove('hidden');
-      document.getElementById('admin-username').textContent = username;
-      loadAllData();
-      switchTab('leaderboard');
-    } else {
-      errorDiv.textContent = data.error || 'Login failed';
-      errorDiv.classList.remove('hidden');
-    }
-  } catch (error) {
-    console.error('❌ Login error:', error);
-    errorDiv.textContent = 'Connection error';
-    errorDiv.classList.remove('hidden');
-  }
+const username = document.getElementById('login-username').value;
+const password = document.getElementById('login-password').value;
+const errorDiv = document.getElementById('login-error');
+errorDiv.classList.add('hidden');
+try {
+const response = await fetch('/api/setup/verify-admin', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ username, password })
+});
+const data = await response.json();
+if (data.success) {
+localStorage.setItem('admin_id', data.admin_id);
+localStorage.setItem('admin_username', username);
+currentAdminId = data.admin_id;
+currentUsername = username;
+document.getElementById('login-screen').classList.add('hidden');
+document.getElementById('main-dashboard').classList.remove('hidden');
+document.getElementById('admin-username').textContent = username;
+loadAllData();
+switchTab('leaderboard');
+} else {
+errorDiv.textContent = data.error || 'Login failed';
+errorDiv.classList.remove('hidden');
+}
+} catch (error) {
+console.error('❌ Login error:', error);
+errorDiv.textContent = 'Connection error';
+errorDiv.classList.remove('hidden');
+}
 }
 
 function logout() {
-  localStorage.removeItem('admin_id');
-  localStorage.removeItem('admin_username');
-  location.reload();
+localStorage.removeItem('admin_id');
+localStorage.removeItem('admin_username');
+location.reload();
 }
 
 // ==========================================
 // API CALLS
 // ==========================================
 async function apiCall(endpoint, method = 'GET', body = null) {
-  const headers = { 'Content-Type': 'application/json' };
-  if (endpoint.includes('/admin/')) {
-    const adminId = localStorage.getItem('admin_id');
-    if (!adminId) throw new Error('Admin authentication required');
-    headers['x-admin-key'] = adminId;
-  }
-  const options = { method, headers, credentials: 'include' };
-  if (body) options.body = JSON.stringify(body);
-  const response = await fetch(endpoint, options);
-  if (response.status === 401) {
-    throw new Error('Invalid admin credentials - login again');
-  }
-  const data = await response.json();
-  if (!data.success) throw new Error(data.error || 'API call failed');
-  return data;
+const headers = { 'Content-Type': 'application/json' };
+if (endpoint.includes('/admin/')) {
+const adminId = localStorage.getItem('admin_id');
+if (!adminId) throw new Error('Admin authentication required');
+headers['x-admin-key'] = adminId;
+}
+const options = { method, headers, credentials: 'include' };
+if (body) options.body = JSON.stringify(body);
+const response = await fetch(endpoint, options);
+if (response.status === 401) {
+throw new Error('Invalid admin credentials - login again');
+}
+const data = await response.json();
+if (!data.success) throw new Error(data.error || 'API call failed');
+return data;
 }
 
 // ==========================================
 // TAB MANAGEMENT
 // ==========================================
 function switchTab(tabName) {
-  document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
-  document.querySelectorAll('.mode-toggle').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + tabName).classList.remove('hidden');
-  
-  if (tabName === 'leaderboard') {
-    document.getElementById('tabLeaderboardBtn').classList.add('active');
-    loadLeaderboard();
-  }
-  if (tabName === 'freelancers') {
-    document.getElementById('tabFreelancersBtn').classList.add('active');
-    loadFreelancers();
-  }
-  if (tabName === 'users') {
-    document.getElementById('tabUsersBtn').classList.add('active');
-    loadUsers();
-  }
-  if (tabName === 'messages') {
-    document.getElementById('tabMessagesBtn').classList.add('active');
-    loadMessages();
-  }
-  if (tabName === 'pending') {
-    document.getElementById('tabPendingBtn').classList.add('active');
-    loadPendingData();
-  }
+document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+document.querySelectorAll('.mode-toggle').forEach(b => b.classList.remove('active'));
+document.getElementById('tab-' + tabName).classList.remove('hidden');
+if (tabName === 'leaderboard') {
+document.getElementById('tabLeaderboardBtn').classList.add('active');
+loadLeaderboard();
+}
+if (tabName === 'freelancers') {
+document.getElementById('tabFreelancersBtn').classList.add('active');
+loadFreelancers();
+}
+if (tabName === 'users') {
+document.getElementById('tabUsersBtn').classList.add('active');
+loadUsers();
+}
+if (tabName === 'messages') {
+document.getElementById('tabMessagesBtn').classList.add('active');
+loadMessages();
+}
+if (tabName === 'pending') {
+document.getElementById('tabPendingBtn').classList.add('active');
+loadPendingData();
+}
 }
 
 // ==========================================
 // LEADERBOARD FUNCTIONS
 // ==========================================
 async function loadLeaderboard() {
-  try {
-    const data = await apiCall('/api/leaderboard');
-    allLeaderboard = data.entries || [];
-    document.getElementById('stat-total-agencies').textContent = data.stats?.totalAgencies || allLeaderboard.length;
-    document.getElementById('stat-avg-score').textContent = data.averageScore || 0;
-    document.getElementById('stat-countries').textContent = data.stats?.countriesCount || 0;
-    // ✅ FIX: Use stats.verifiedCount from API
-    const verifiedCount = data.stats?.verifiedCount || allLeaderboard.filter(e => e.admin_verified !== false).length;
-    document.getElementById('stat-verified').textContent = verifiedCount;
-    renderTop3();
-    renderRankings4to15();
-    renderRankings16Plus();
-  } catch (error) {
-    console.error('Leaderboard error:', error);
-  }
+try {
+const data = await apiCall('/api/leaderboard');
+allLeaderboard = data.entries || [];
+document.getElementById('stat-total-agencies').textContent = data.stats?.totalAgencies || allLeaderboard.length;
+document.getElementById('stat-avg-score').textContent = data.averageScore || 0;
+document.getElementById('stat-countries').textContent = data.stats?.countriesCount || 0;
+// ✅ FIX: Use stats.verifiedCount from API
+const verifiedCount = data.stats?.verifiedCount || allLeaderboard.filter(e => e.admin_verified !== false).length;
+document.getElementById('stat-verified').textContent = verifiedCount;
+renderTop3();
+renderRankings4to15();
+renderRankings16Plus();
+} catch (error) {
+console.error('Leaderboard error:', error);
+}
 }
 
 function renderTop3() {
-  const container = document.getElementById('top3-container');
-  if (!container) return;
-  const top3 = allLeaderboard.slice(0, 3);
-  if (top3.length === 0) {
-    container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No entries found</div>';
-    return;
-  }
-  container.innerHTML = top3.map((entry, index) => {
-    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
-    const medalClass = index === 0 ? 'gold' : index === 1 ? 'silver' : 'bronze';
-    const rankText = index === 0 ? '1st Worldwide' : index === 1 ? '2nd Worldwide' : '3rd Worldwide';
-    const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-    return `
-      <div class="top-card ${medalClass}">
-        <div class="text-5xl mb-2">${medal}</div>
-        <div class="text-xs font-bold uppercase tracking-wider mb-2 text-white/80">${rankText}</div>
-        <h3 class="text-xl font-bold mb-2">${companyName}</h3>
-        <div class="text-4xl font-black mb-2">${entry.score}/100</div>
-        <div class="text-white/80 mb-3">${getCountryFlag(entry.country)} ${entry.country}</div>
-        <button onclick="editLeaderboardEntry(${entry.id})" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg mb-2">
-          <i class="fas fa-edit mr-2"></i> Edit
-        </button>
-        <button onclick="deleteLeaderboardEntry(${entry.id})" class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">
-          <i class="fas fa-trash mr-2"></i> Delete
-        </button>
-      </div>
-    `;
-  }).join('');
+const container = document.getElementById('top3-container');
+if (!container) return;
+const top3 = allLeaderboard.slice(0, 3);
+if (top3.length === 0) {
+container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No entries found</div>';
+return;
+}
+container.innerHTML = top3.map((entry, index) => {
+const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
+const medalClass = index === 0 ? 'gold' : index === 1 ? 'silver' : 'bronze';
+const rankText = index === 0 ? '1st Worldwide' : index === 1 ? '2nd Worldwide' : '3rd Worldwide';
+const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+return `
+<div class="top-card ${medalClass}">
+<div class="text-5xl mb-2">${medal}</div>
+<div class="text-xs font-bold uppercase tracking-wider mb-2 text-white/80">${rankText}</div>
+<h3 class="text-xl font-bold mb-2">${companyName}</h3>
+<div class="text-4xl font-black mb-2">${entry.score}/100</div>
+<div class="text-white/80 mb-3">${getCountryFlag(entry.country)} ${entry.country}</div>
+<button onclick="editLeaderboardEntry(${entry.id})" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg mb-2">
+<i class="fas fa-edit mr-2"></i> Edit
+</button>
+<button onclick="deleteLeaderboardEntry(${entry.id})" class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">
+<i class="fas fa-trash mr-2"></i> Delete
+</button>
+</div>
+`;
+}).join('');
 }
 
 function renderRankings4to15() {
-  const grid = document.getElementById('rankings4to15Grid');
-  if (!grid) return;
-  const rankings = allLeaderboard.slice(3, 15);
-  if (rankings.length === 0) {
-    document.getElementById('rankings4to15Container').style.display = 'none';
-    return;
-  }
-  document.getElementById('rankings4to15Container').style.display = 'block';
-  grid.innerHTML = rankings.map((entry, index) => {
-    const actualRank = index + 4;
-    const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-    return `
-      <div class="rank-card">
-        <div class="text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
-        <h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
-        <div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
-        <div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
-        <div class="flex gap-2 justify-center">
-          <button onclick="editLeaderboardEntry(${entry.id})" class="text-blue-400 hover:text-blue-300 text-xs">
-            <i class="fas fa-edit"></i> Edit
-          </button>
-          <button onclick="deleteLeaderboardEntry(${entry.id})" class="text-red-400 hover:text-red-300 text-xs">
-            <i class="fas fa-trash"></i> Del
-          </button>
-        </div>
-      </div>
-    `;
-  }).join('');
+const grid = document.getElementById('rankings4to15Grid');
+if (!grid) return;
+const rankings = allLeaderboard.slice(3, 15);
+if (rankings.length === 0) {
+document.getElementById('rankings4to15Container').style.display = 'none';
+return;
+}
+document.getElementById('rankings4to15Container').style.display = 'block';
+grid.innerHTML = rankings.map((entry, index) => {
+const actualRank = index + 4;
+const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+return `
+<div class="rank-card">
+<div class="text-2xl font-bold text-gray-400 mb-2">#${actualRank}</div>
+<h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
+<div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
+<div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
+<div class="flex gap-2 justify-center">
+<button onclick="editLeaderboardEntry(${entry.id})" class="text-blue-400 hover:text-blue-300 text-xs">
+<i class="fas fa-edit"></i> Edit
+</button>
+<button onclick="deleteLeaderboardEntry(${entry.id})" class="text-red-400 hover:text-red-300 text-xs">
+<i class="fas fa-trash"></i> Del
+</button>
+</div>
+</div>
+`;
+}).join('');
 }
 
 function renderRankings16Plus() {
-  const tbody = document.getElementById('rankingsTbody');
-  if (!tbody) return;
-  const rankings = allLeaderboard.slice(15, 35);
-  tbody.innerHTML = rankings.map((entry, index) => {
-    const actualRank = index + 16;
-    const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-    const isSelected = selectedLeaderboardIds.has(entry.id);
-    return `
-      <tr>
-        <td class="w-10">
-          <input type="checkbox" class="leaderboard-checkbox" data-id="${entry.id}" onchange="toggleSelectLeaderboard(${entry.id})" ${isSelected ? 'checked' : ''}>
-        </td>
-        <td><span class="inline-flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full font-bold">${actualRank}</span></td>
-        <td class="font-semibold">${companyName}</td>
-        <td><a href="${entry.url}" target="_blank" class="text-blue-400 hover:underline text-sm">${entry.url.replace('https://', '').substring(0, 25)}...</a></td>
-        <td><span class="text-lg font-bold ${entry.score >= 85 ? 'text-green-400' : entry.score >= 70 ? 'text-yellow-400' : 'text-red-400'}">${entry.score}</span></td>
-        <td><span class="text-sm">${getCountryFlag(entry.country)} ${entry.country}</span></td>
-        <td>
-          <div class="flex gap-2">
-            <button onclick="editLeaderboardEntry(${entry.id})" class="text-blue-400 hover:text-blue-300" title="Edit">
-              <i class="fas fa-edit"></i>
-            </button>
-            <button onclick="deleteLeaderboardEntry(${entry.id})" class="text-red-400 hover:text-red-300" title="Delete">
-              <i class="fas fa-trash"></i>
-            </button>
-          </div>
-        </td>
-      </tr>
-    `;
-  }).join('');
-  document.getElementById('totalCount').textContent = allLeaderboard.length;
+const tbody = document.getElementById('rankingsTbody');
+if (!tbody) return;
+const rankings = allLeaderboard.slice(15, 35);
+tbody.innerHTML = rankings.map((entry, index) => {
+const actualRank = index + 16;
+const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+const isSelected = selectedLeaderboardIds.has(entry.id);
+return `
+<tr>
+<td class="w-10">
+<input type="checkbox" class="leaderboard-checkbox" data-id="${entry.id}" onchange="toggleSelectLeaderboard(${entry.id})" ${isSelected ? 'checked' : ''}>
+</td>
+<td><span class="inline-flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full font-bold">${actualRank}</span></td>
+<td class="font-semibold">${companyName}</td>
+<td><a href="${entry.url}" target="_blank" class="text-blue-400 hover:underline text-sm">${entry.url.replace('https://', '').substring(0, 25)}...</a></td>
+<td><span class="text-lg font-bold ${entry.score >= 85 ? 'text-green-400' : entry.score >= 70 ? 'text-yellow-400' : 'text-red-400'}">${entry.score}</span></td>
+<td><span class="text-sm">${getCountryFlag(entry.country)} ${entry.country}</span></td>
+<td>
+<div class="flex gap-2">
+<button onclick="editLeaderboardEntry(${entry.id})" class="text-blue-400 hover:text-blue-300" title="Edit">
+<i class="fas fa-edit"></i>
+</button>
+<button onclick="deleteLeaderboardEntry(${entry.id})" class="text-red-400 hover:text-red-300" title="Delete">
+<i class="fas fa-trash"></i>
+</button>
+</div>
+</td>
+</tr>
+`;
+}).join('');
+document.getElementById('totalCount').textContent = allLeaderboard.length;
 }
 
 // ==========================================
 // LEADERBOARD MODAL FUNCTIONS
 // ==========================================
 function showAddLeaderboardModal() {
-  document.getElementById('addLeaderboardModal').classList.add('active');
-  document.body.style.overflow = 'hidden';
+document.getElementById('addLeaderboardModal').classList.add('active');
+document.body.style.overflow = 'hidden';
 }
 function closeAddLeaderboardModal() {
-  document.getElementById('addLeaderboardModal').classList.remove('active');
-  document.body.style.overflow = 'auto';
+document.getElementById('addLeaderboardModal').classList.remove('active');
+document.body.style.overflow = 'auto';
 }
 async function addLeaderboardEntry() {
-  const companyName = document.getElementById('add-company-name').value;
-  const url = document.getElementById('add-website-url').value;
-  const score = parseInt(document.getElementById('add-score').value);
-  const country = document.getElementById('add-country').value;
-  if (!companyName || !url || !score) {
-    alert('❌ Company name, URL and score are required');
-    return;
-  }
-  let formattedUrl = url;
-  if (!formattedUrl.startsWith('http')) {
-    formattedUrl = 'https://' + formattedUrl;
-  }
-  try {
-    await apiCall('/api/admin/leaderboard/manual-add', 'POST', {
-      url: formattedUrl,
-      company_name: companyName,
-      score,
-      country
-    });
-    alert('✅ Entry added!');
-    closeAddLeaderboardModal();
-    loadLeaderboard();
-    document.getElementById('add-company-name').value = '';
-    document.getElementById('add-website-url').value = '';
-    document.getElementById('add-score').value = '75';
-  } catch (error) {
-    alert('❌ Error: ' + error.message);
-  }
+const companyName = document.getElementById('add-company-name').value;
+const url = document.getElementById('add-website-url').value;
+const score = parseInt(document.getElementById('add-score').value);
+const country = document.getElementById('add-country').value;
+if (!companyName || !url || !score) {
+alert('❌ Company name, URL and score are required');
+return;
 }
+let formattedUrl = url;
+if (!formattedUrl.startsWith('http')) {
+formattedUrl = 'https://' + formattedUrl;
+}
+try {
+await apiCall('/api/admin/leaderboard/manual-add', 'POST', {
+url: formattedUrl,
+company_name: companyName,
+score,
+country
+});
+alert('✅ Entry added!');
+closeAddLeaderboardModal();
+loadLeaderboard();
+document.getElementById('add-company-name').value = '';
+document.getElementById('add-website-url').value = '';
+document.getElementById('add-score').value = '75';
+} catch (error) {
+alert('❌ Error: ' + error.message);
+}
+}
+
 function editLeaderboardEntry(id) {
-  const entry = allLeaderboard.find(e => e.id === id);
-  if (!entry) return;
-  document.getElementById('edit-entry-id').value = entry.id;
-  document.getElementById('edit-company-name').value = entry.company_name || extractDomainFromUrl(entry.url);
-  document.getElementById('edit-website-url').value = entry.url;
-  document.getElementById('edit-score').value = entry.score;
-  document.getElementById('edit-country').value = entry.country || 'Netherlands';
-  document.getElementById('editLeaderboardModal').classList.add('active');
-  document.body.style.overflow = 'hidden';
+const entry = allLeaderboard.find(e => e.id === id);
+if (!entry) return;
+document.getElementById('edit-entry-id').value = entry.id;
+document.getElementById('edit-company-name').value = entry.company_name || extractDomainFromUrl(entry.url);
+document.getElementById('edit-website-url').value = entry.url;
+document.getElementById('edit-score').value = entry.score;
+document.getElementById('edit-country').value = entry.country || 'Netherlands';
+document.getElementById('editLeaderboardModal').classList.add('active');
+document.body.style.overflow = 'hidden';
 }
 function closeEditLeaderboardModal() {
-  document.getElementById('editLeaderboardModal').classList.remove('active');
-  document.body.style.overflow = 'auto';
+document.getElementById('editLeaderboardModal').classList.remove('active');
+document.body.style.overflow = 'auto';
 }
 async function updateLeaderboardEntry() {
-  const id = document.getElementById('edit-entry-id').value;
-  const companyName = document.getElementById('edit-company-name').value;
-  const url = document.getElementById('edit-website-url').value;
-  const score = parseInt(document.getElementById('edit-score').value);
-  const country = document.getElementById('edit-country').value;
-  if (!companyName || !url || !score) {
-    alert('❌ Company name, URL and score are required');
-    return;
-  }
-  try {
-    await apiCall('/api/admin/leaderboard/' + id, 'PUT', {
-      company_name: companyName,
-      url,
-      score,
-      country
-    });
-    alert('✅ Entry updated!');
-    closeEditLeaderboardModal();
-    loadLeaderboard();
-  } catch (error) {
-    alert('❌ Error: ' + error.message);
-  }
+const id = document.getElementById('edit-entry-id').value;
+const companyName = document.getElementById('edit-company-name').value;
+const url = document.getElementById('edit-website-url').value;
+const score = parseInt(document.getElementById('edit-score').value);
+const country = document.getElementById('edit-country').value;
+if (!companyName || !url || !score) {
+alert('❌ Company name, URL and score are required');
+return;
+}
+try {
+await apiCall('/api/admin/leaderboard/' + id, 'PUT', {
+company_name: companyName,
+url,
+score,
+country
+});
+alert('✅ Entry updated!');
+closeEditLeaderboardModal();
+loadLeaderboard();
+} catch (error) {
+alert('❌ Error: ' + error.message);
+}
 }
 
 // ==========================================
 // LEADERBOARD DELETE FUNCTIONS
 // ==========================================
 function toggleSelectLeaderboard(id) {
-  if (selectedLeaderboardIds.has(id)) {
-    selectedLeaderboardIds.delete(id);
-  } else {
-    selectedLeaderboardIds.add(id);
-  }
-  updateSelectedCountLeaderboard();
+if (selectedLeaderboardIds.has(id)) {
+selectedLeaderboardIds.delete(id);
+} else {
+selectedLeaderboardIds.add(id);
+}
+updateSelectedCountLeaderboard();
 }
 function toggleSelectAllLeaderboard() {
-  const selectAll = document.getElementById('select-all-leaderboard');
-  const checkboxes = document.querySelectorAll('.leaderboard-checkbox');
-  if (selectAll.checked) {
-    allLeaderboard.forEach(entry => selectedLeaderboardIds.add(entry.id));
-    checkboxes.forEach(cb => cb.checked = true);
-  } else {
-    selectedLeaderboardIds.clear();
-    checkboxes.forEach(cb => cb.checked = false);
-  }
-  updateSelectedCountLeaderboard();
+const selectAll = document.getElementById('select-all-leaderboard');
+const checkboxes = document.querySelectorAll('.leaderboard-checkbox');
+if (selectAll.checked) {
+allLeaderboard.forEach(entry => selectedLeaderboardIds.add(entry.id));
+checkboxes.forEach(cb => cb.checked = true);
+} else {
+selectedLeaderboardIds.clear();
+checkboxes.forEach(cb => cb.checked = false);
+}
+updateSelectedCountLeaderboard();
 }
 function updateSelectedCountLeaderboard() {
-  document.getElementById('selected-count-leaderboard').textContent = selectedLeaderboardIds.size;
+document.getElementById('selected-count-leaderboard').textContent = selectedLeaderboardIds.size;
 }
 async function deleteLeaderboardEntry(id) {
-  if (!confirm('❌ Delete this entry permanently?')) return;
-  try {
-    await apiCall('/api/admin/leaderboard/' + id, 'DELETE');
-    alert('✅ Entry deleted');
-    selectedLeaderboardIds.delete(id);
-    loadLeaderboard();
-  } catch (error) {
-    alert('❌ Error: ' + error.message);
-  }
+if (!confirm('❌ Delete this entry permanently?')) return;
+try {
+await apiCall('/api/admin/leaderboard/' + id, 'DELETE');
+alert('✅ Entry deleted');
+selectedLeaderboardIds.delete(id);
+loadLeaderboard();
+} catch (error) {
+alert('❌ Error: ' + error.message);
+}
 }
 async function bulkDeleteLeaderboard() {
-  if (selectedLeaderboardIds.size === 0) {
-    alert('❌ Select entries to delete');
-    return;
-  }
-  if (!confirm('❌ Delete ' + selectedLeaderboardIds.size + ' entries permanently?')) return;
-  let success = 0;
-  let failed = 0;
-  for (const id of selectedLeaderboardIds) {
-    try {
-      await apiCall('/api/admin/leaderboard/' + id, 'DELETE');
-      success++;
-    } catch (e) {
-      failed++;
-    }
-  }
-  alert('✅ ' + success + ' deleted, ' + failed + ' failed');
-  selectedLeaderboardIds.clear();
-  loadLeaderboard();
+if (selectedLeaderboardIds.size === 0) {
+alert('❌ Select entries to delete');
+return;
+}
+if (!confirm('❌ Delete ' + selectedLeaderboardIds.size + ' entries permanently?')) return;
+let success = 0;
+let failed = 0;
+for (const id of selectedLeaderboardIds) {
+try {
+await apiCall('/api/admin/leaderboard/' + id, 'DELETE');
+success++;
+} catch (e) {
+failed++;
+}
+}
+alert('✅ ' + success + ' deleted, ' + failed + ' failed');
+selectedLeaderboardIds.clear();
+loadLeaderboard();
 }
 
 // ==========================================
 // FREELANCERS FUNCTIONS
 // ==========================================
 async function loadFreelancers() {
-  try {
-    const data = await apiCall('/api/freelancers');
-    allFreelancers = data.freelancers || [];
-    const grid = document.getElementById('freelancersGrid');
-    if (!grid) return;
-    if (allFreelancers.length === 0) {
-      grid.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No freelancers found</div>';
-      return;
-    }
-    grid.innerHTML = allFreelancers.map(f => {
-      const firstName = f.name.split(' ')[0];
-      const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase();
-      const isSelected = selectedFreelancerIds.has(f.id);
-      return `
-        <div class="card hover:border-purple-500">
-          <div class="card-content">
-            <div class="flex items-start gap-4 mb-4">
-              <div class="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl font-bold text-white">
-                ${initials}
-              </div>
-              <div class="flex-1">
-                <div class="flex items-center justify-between">
-                  <h3 class="font-bold text-lg text-white">${f.name}</h3>
-                  ${f.is_featured
-                    ? '<span class="px-2 py-1 bg-yellow-600 rounded text-xs text-white font-semibold">⭐ Featured</span>'
-                    : '<span class="px-2 py-1 bg-green-600 rounded text-xs text-white font-semibold">✓ Verified</span>'}
-                </div>
-                <p class="text-sm text-gray-400">${f.title || 'SEO Specialist'}</p>
-              </div>
-            </div>
-            <p class="text-gray-300 text-sm mb-4">${f.bio || 'No bio available'}</p>
-            <div class="flex items-center justify-between text-sm mb-4">
-              <span class="text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i> ${f.location || f.country || 'Remote'}</span>
-              ${f.hourly_rate ? '<span class="text-purple-400">💰 ' + f.hourly_rate + '</span>' : ''}
-            </div>
-          </div>
-          <div class="card-footer">
-            <div class="flex gap-2 mb-2">
-              <a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20discuss%20SEO%20optimization%20with%20${encodeURIComponent(f.name)}"
-                target="_blank" rel="noopener"
-                class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 no-underline">
-                <i class="fab fa-whatsapp"></i> Contact ${firstName}
-              </a>
-            </div>
-            <div class="flex gap-1 mb-2">
-              <button onclick="toggleFeatured(${f.id})" class="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded-lg text-sm transition-all" title="Toggle featured">
-                <i class="fas fa-star"></i>
-              </button>
-              <button onclick="editFreelancer(${f.id})" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm transition-all" title="Edit">
-                <i class="fas fa-edit"></i>
-              </button>
-              <button onclick="deleteFreelancer(${f.id})" class="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm transition-all" title="Delete">
-                <i class="fas fa-trash"></i>
-              </button>
-            </div>
-            <div class="checkbox-wrapper">
-              <input type="checkbox" class="freelancer-checkbox w-4 h-4 rounded border-gray-600 bg-gray-700 text-purple-600" data-id="${f.id}" onchange="toggleSelectFreelancer(${f.id})" ${isSelected ? 'checked' : ''}>
-              <span class="text-xs text-gray-400">Select for bulk delete</span>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
-  } catch (error) {
-    console.error('❌ Error loading freelancers:', error);
-    document.getElementById('freelancersGrid').innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Could not load freelancers</div>';
-  }
+try {
+const data = await apiCall('/api/freelancers');
+allFreelancers = data.freelancers || [];
+const grid = document.getElementById('freelancersGrid');
+if (!grid) return;
+if (allFreelancers.length === 0) {
+grid.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No freelancers found</div>';
+return;
+}
+grid.innerHTML = allFreelancers.map(f => {
+const firstName = f.name.split(' ')[0];
+const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase();
+const isSelected = selectedFreelancerIds.has(f.id);
+return `
+<div class="card hover:border-purple-500">
+<div class="card-content">
+<div class="flex items-start gap-4 mb-4">
+<div class="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl font-bold text-white">
+${initials}
+</div>
+<div class="flex-1">
+<div class="flex items-center justify-between">
+<h3 class="font-bold text-lg text-white">${f.name}</h3>
+${f.is_featured
+? '<span class="px-2 py-1 bg-yellow-600 rounded text-xs text-white font-semibold">⭐ Featured</span>'
+: '<span class="px-2 py-1 bg-green-600 rounded text-xs text-white font-semibold">✓ Verified</span>'}
+</div>
+<p class="text-sm text-gray-400">${f.title || 'SEO Specialist'}</p>
+</div>
+</div>
+<p class="text-gray-300 text-sm mb-4">${f.bio || 'No bio available'}</p>
+<div class="flex items-center justify-between text-sm mb-4">
+<span class="text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i> ${f.location || f.country || 'Remote'}</span>
+${f.hourly_rate ? '<span class="text-purple-400">💰 ' + f.hourly_rate + '</span>' : ''}
+</div>
+</div>
+<div class="card-footer">
+<div class="flex gap-2 mb-2">
+<a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20discuss%20SEO%20optimization%20with%20${encodeURIComponent(f.name)}"
+target="_blank" rel="noopener"
+class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 no-underline">
+<i class="fab fa-whatsapp"></i> Contact ${firstName}
+</a>
+</div>
+<div class="flex gap-1 mb-2">
+<button onclick="toggleFeatured(${f.id})" class="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded-lg text-sm transition-all" title="Toggle featured">
+<i class="fas fa-star"></i>
+</button>
+<button onclick="editFreelancer(${f.id})" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm transition-all" title="Edit">
+<i class="fas fa-edit"></i>
+</button>
+<button onclick="deleteFreelancer(${f.id})" class="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm transition-all" title="Delete">
+<i class="fas fa-trash"></i>
+</button>
+</div>
+<div class="checkbox-wrapper">
+<input type="checkbox" class="freelancer-checkbox w-4 h-4 rounded border-gray-600 bg-gray-700 text-purple-600" data-id="${f.id}" onchange="toggleSelectFreelancer(${f.id})" ${isSelected ? 'checked' : ''}>
+<span class="text-xs text-gray-400">Select for bulk delete</span>
+</div>
+</div>
+</div>
+`;
+}).join('');
+} catch (error) {
+console.error('❌ Error loading freelancers:', error);
+document.getElementById('freelancersGrid').innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Could not load freelancers</div>';
+}
 }
 
 // ==========================================
 // FREELANCER EDIT MODAL FUNCTIONS
 // ==========================================
 function editFreelancer(id) {
-  const freelancer = allFreelancers.find(f => f.id === id);
-  if (!freelancer) return;
-  document.getElementById('edit-freelancer-id').value = freelancer.id;
-  document.getElementById('edit-freelancer-name').value = freelancer.name;
-  document.getElementById('edit-freelancer-email').value = freelancer.email;
-  document.getElementById('edit-freelancer-title').value = freelancer.title || '';
-  document.getElementById('edit-freelancer-location').value = freelancer.location || freelancer.country || '';
-  document.getElementById('edit-freelancer-bio').value = freelancer.bio || '';
-  document.getElementById('edit-freelancer-rate').value = freelancer.hourly_rate || '';
-  document.getElementById('edit-freelancer-featured').checked = freelancer.is_featured || false;
-  document.getElementById('edit-bio-char-count').textContent = (freelancer.bio || '').length + '/200';
-  document.getElementById('editFreelancerModal').classList.add('active');
-  document.body.style.overflow = 'hidden';
+const freelancer = allFreelancers.find(f => f.id === id);
+if (!freelancer) return;
+document.getElementById('edit-freelancer-id').value = freelancer.id;
+document.getElementById('edit-freelancer-name').value = freelancer.name;
+document.getElementById('edit-freelancer-email').value = freelancer.email;
+document.getElementById('edit-freelancer-title').value = freelancer.title || '';
+document.getElementById('edit-freelancer-location').value = freelancer.location || freelancer.country || '';
+document.getElementById('edit-freelancer-bio').value = freelancer.bio || '';
+document.getElementById('edit-freelancer-rate').value = freelancer.hourly_rate || '';
+document.getElementById('edit-freelancer-featured').checked = freelancer.is_featured || false;
+document.getElementById('edit-bio-char-count').textContent = (freelancer.bio || '').length + '/200';
+document.getElementById('editFreelancerModal').classList.add('active');
+document.body.style.overflow = 'hidden';
 }
 function closeEditFreelancerModal() {
-  document.getElementById('editFreelancerModal').classList.remove('active');
-  document.body.style.overflow = 'auto';
+document.getElementById('editFreelancerModal').classList.remove('active');
+document.body.style.overflow = 'auto';
 }
 async function updateFreelancer() {
-  const id = document.getElementById('edit-freelancer-id').value;
-  const name = document.getElementById('edit-freelancer-name').value;
-  const email = document.getElementById('edit-freelancer-email').value;
-  const title = document.getElementById('edit-freelancer-title').value;
-  const location = document.getElementById('edit-freelancer-location').value;
-  const bio = document.getElementById('edit-freelancer-bio').value;
-  const hourlyRate = document.getElementById('edit-freelancer-rate').value;
-  const isFeatured = document.getElementById('edit-freelancer-featured').checked;
-  if (!name || !email) {
-    alert('❌ Name and email are required');
-    return;
-  }
-  try {
-    await apiCall('/api/admin/freelancers/' + id, 'PUT', {
-      name,
-      email,
-      title,
-      location,
-      bio,
-      hourly_rate: hourlyRate,
-      is_featured: isFeatured
-    });
-    alert('✅ Freelancer updated!');
-    closeEditFreelancerModal();
-    loadFreelancers();
-  } catch (error) {
-    alert('❌ Error: ' + error.message);
-  }
+const id = document.getElementById('edit-freelancer-id').value;
+const name = document.getElementById('edit-freelancer-name').value;
+const email = document.getElementById('edit-freelancer-email').value;
+const title = document.getElementById('edit-freelancer-title').value;
+const location = document.getElementById('edit-freelancer-location').value;
+const bio = document.getElementById('edit-freelancer-bio').value;
+const hourlyRate = document.getElementById('edit-freelancer-rate').value;
+const isFeatured = document.getElementById('edit-freelancer-featured').checked;
+if (!name || !email) {
+alert('❌ Name and email are required');
+return;
+}
+try {
+await apiCall('/api/admin/freelancers/' + id, 'PUT', {
+name,
+email,
+title,
+location,
+bio,
+hourly_rate: hourlyRate,
+is_featured: isFeatured
+});
+alert('✅ Freelancer updated!');
+closeEditFreelancerModal();
+loadFreelancers();
+} catch (error) {
+alert('❌ Error: ' + error.message);
+}
 }
 document.getElementById('edit-freelancer-bio')?.addEventListener('input', function() {
-  document.getElementById('edit-bio-char-count').textContent = this.value.length + '/200';
+document.getElementById('edit-bio-char-count').textContent = this.value.length + '/200';
 });
 
 // ==========================================
 // FREELANCER DELETE FUNCTIONS
 // ==========================================
 function toggleSelectFreelancer(id) {
-  if (selectedFreelancerIds.has(id)) {
-    selectedFreelancerIds.delete(id);
-  } else {
-    selectedFreelancerIds.add(id);
-  }
-  updateSelectedCountFreelancers();
+if (selectedFreelancerIds.has(id)) {
+selectedFreelancerIds.delete(id);
+} else {
+selectedFreelancerIds.add(id);
+}
+updateSelectedCountFreelancers();
 }
 function toggleSelectAllFreelancers() {
-  const selectAll = document.getElementById('select-all-freelancers');
-  const checkboxes = document.querySelectorAll('.freelancer-checkbox');
-  if (selectAll.checked) {
-    allFreelancers.forEach(f => selectedFreelancerIds.add(f.id));
-    checkboxes.forEach(cb => cb.checked = true);
-  } else {
-    selectedFreelancerIds.clear();
-    checkboxes.forEach(cb => cb.checked = false);
-  }
-  updateSelectedCountFreelancers();
+const selectAll = document.getElementById('select-all-freelancers');
+const checkboxes = document.querySelectorAll('.freelancer-checkbox');
+if (selectAll.checked) {
+allFreelancers.forEach(f => selectedFreelancerIds.add(f.id));
+checkboxes.forEach(cb => cb.checked = true);
+} else {
+selectedFreelancerIds.clear();
+checkboxes.forEach(cb => cb.checked = false);
+}
+updateSelectedCountFreelancers();
 }
 function updateSelectedCountFreelancers() {
-  document.getElementById('selected-count-freelancers').textContent = selectedFreelancerIds.size;
+document.getElementById('selected-count-freelancers').textContent = selectedFreelancerIds.size;
 }
 async function toggleFeatured(id) {
-  try {
-    const data = await apiCall('/api/admin/freelancers/' + id + '/toggle-featured', 'POST');
-    alert('✅ Featured ' + (data.is_featured ? 'enabled' : 'disabled'));
-    loadFreelancers();
-  } catch (error) {
-    alert('❌ Error: ' + error.message);
-  }
+try {
+const data = await apiCall('/api/admin/freelancers/' + id + '/toggle-featured', 'POST');
+alert('✅ Featured ' + (data.is_featured ? 'enabled' : 'disabled'));
+loadFreelancers();
+} catch (error) {
+alert('❌ Error: ' + error.message);
+}
 }
 async function deleteFreelancer(id) {
-  if (!confirm('❌ Delete this freelancer permanently?')) return;
-  try {
-    await apiCall('/api/admin/freelancers/' + id, 'DELETE');
-    alert('✅ Freelancer deleted');
-    selectedFreelancerIds.delete(id);
-    loadFreelancers();
-  } catch (error) {
-    alert('❌ Error: ' + error.message);
-  }
+if (!confirm('❌ Delete this freelancer permanently?')) return;
+try {
+await apiCall('/api/admin/freelancers/' + id, 'DELETE');
+alert('✅ Freelancer deleted');
+selectedFreelancerIds.delete(id);
+loadFreelancers();
+} catch (error) {
+alert('❌ Error: ' + error.message);
+}
 }
 async function bulkDeleteFreelancers() {
-  if (selectedFreelancerIds.size === 0) {
-    alert('❌ Select freelancers to delete');
-    return;
-  }
-  if (!confirm('❌ Delete ' + selectedFreelancerIds.size + ' freelancers permanently?')) return;
-  let success = 0;
-  let failed = 0;
-  for (const id of selectedFreelancerIds) {
-    try {
-      await apiCall('/api/admin/freelancers/' + id, 'DELETE');
-      success++;
-    } catch (e) {
-      failed++;
-    }
-  }
-  alert('✅ ' + success + ' deleted, ' + failed + ' failed');
-  selectedFreelancerIds.clear();
-  loadFreelancers();
+if (selectedFreelancerIds.size === 0) {
+alert('❌ Select freelancers to delete');
+return;
+}
+if (!confirm('❌ Delete ' + selectedFreelancerIds.size + ' freelancers permanently?')) return;
+let success = 0;
+let failed = 0;
+for (const id of selectedFreelancerIds) {
+try {
+await apiCall('/api/admin/freelancers/' + id, 'DELETE');
+success++;
+} catch (e) {
+failed++;
+}
+}
+alert('✅ ' + success + ' deleted, ' + failed + ' failed');
+selectedFreelancerIds.clear();
+loadFreelancers();
 }
 
 // ==========================================
-// USERS MANAGEMENT FUNCTIONS
+// USERS MANAGEMENT FUNCTIONS (REAL API)
 // ==========================================
 async function loadUsers() {
-  try {
-    const data = await apiCall('/api/admin/users');
-    allUsers = data.users || [];
-    
-    // Update Stats
-    const total = allUsers.length;
-    const active = allUsers.filter(u => u.is_activated).length;
-    const expired = allUsers.filter(u => !u.is_activated).length;
-    // Expiring soon logic would require date comparison if we stored expiry dates
-    
-    document.getElementById('stat-total-users').textContent = total;
-    document.getElementById('stat-active-users').textContent = active;
-    document.getElementById('stat-expired-users').textContent = expired;
-    document.getElementById('stat-expiring-users').textContent = '0'; // Placeholder
+try {
+const data = await apiCall('/api/admin/users');
+allUsers = data.users || [];
+// Update Stats
+const total = allUsers.length;
+const active = allUsers.filter(u => u.is_activated).length;
+const expired = allUsers.filter(u => !u.is_activated).length;
+// Expiring soon logic would require date comparison if we stored expiry dates
+document.getElementById('stat-total-users').textContent = total;
+document.getElementById('stat-active-users').textContent = active;
+document.getElementById('stat-expired-users').textContent = expired;
+document.getElementById('stat-expiring-users').textContent = '0'; // Placeholder
 
-    // Render List
-    const container = document.getElementById('usersContainer');
-    if (allUsers.length === 0) {
-      container.innerHTML = '<div class="text-center py-8 text-gray-400">No users found</div>';
-      return;
-    }
-    
-    container.innerHTML = allUsers.map(u => {
-      const isSelected = selectedUserIds.has(u.id);
-      const statusBadge = u.is_activated 
-        ? '<span class="badge-approved">✅ Active</span>' 
-        : '<span class="badge-pending">⏳ Inactive</span>';
-      
-      return `
-        <div class="user-card">
-          <div class="flex items-start justify-between mb-3">
-            <div class="flex items-center gap-3">
-              <input type="checkbox" class="user-checkbox w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600" data-id="${u.id}" onchange="toggleSelectUser('${u.id}')" ${isSelected ? 'checked' : ''}>
-              <div>
-                <h4 class="text-lg font-bold">${u.ip_address || 'Unknown IP'}</h4>
-                <p class="text-sm text-gray-400">ID: ${u.id.substring(0,8)}... | Created: ${new Date(u.created_at).toLocaleDateString()}</p>
-              </div>
-            </div>
-            ${statusBadge}
-          </div>
-        </div>
-      `;
-    }).join('');
-  } catch (error) {
-    console.error('❌ Error loading users:', error);
-    document.getElementById('usersContainer').innerHTML = '<div class="text-center py-8 text-gray-400">Could not load users</div>';
-  }
+// Render List
+const container = document.getElementById('usersContainer');
+if (allUsers.length === 0) {
+container.innerHTML = '<div class="text-center py-8 text-gray-400">No users found</div>';
+return;
+}
+container.innerHTML = allUsers.map(u => {
+const isSelected = selectedUserIds.has(u.id);
+const statusBadge = u.is_activated
+? '<span class="badge-approved">✅ Active</span>'
+: '<span class="badge-pending">⏳ Inactive</span>';
+return `
+<div class="user-card">
+<div class="flex items-start justify-between mb-3">
+<div class="flex items-center gap-3">
+<input type="checkbox" class="user-checkbox w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600" data-id="${u.id}" onchange="toggleSelectUser('${u.id}')" ${isSelected ? 'checked' : ''}>
+<div>
+<h4 class="text-lg font-bold">${u.ip_address || 'Unknown IP'}</h4>
+<p class="text-sm text-gray-400">ID: ${u.id.substring(0,8)}... | Created: ${new Date(u.created_at).toLocaleDateString()}</p>
+</div>
+</div>
+${statusBadge}
+</div>
+</div>
+`;
+}).join('');
+} catch (error) {
+console.error('❌ Error loading users:', error);
+document.getElementById('usersContainer').innerHTML = '<div class="text-center py-8 text-gray-400">Could not load users</div>';
+}
 }
 
 function toggleSelectUser(id) {
-  if (selectedUserIds.has(id)) {
-    selectedUserIds.delete(id);
-  } else {
-    selectedUserIds.add(id);
-  }
+if (selectedUserIds.has(id)) {
+selectedUserIds.delete(id);
+} else {
+selectedUserIds.add(id);
+}
 }
 
 function toggleSelectAllUsers() {
-  const selectAll = document.getElementById('select-all-users');
-  const checkboxes = document.querySelectorAll('.user-checkbox');
-  if (selectAll.checked) {
-    allUsers.forEach(u => selectedUserIds.add(u.id));
-    checkboxes.forEach(cb => cb.checked = true);
-  } else {
-    selectedUserIds.clear();
-    checkboxes.forEach(cb => cb.checked = false);
-  }
+const selectAll = document.getElementById('select-all-users');
+const checkboxes = document.querySelectorAll('.user-checkbox');
+if (selectAll.checked) {
+allUsers.forEach(u => selectedUserIds.add(u.id));
+checkboxes.forEach(cb => cb.checked = true);
+} else {
+selectedUserIds.clear();
+checkboxes.forEach(cb => cb.checked = false);
+}
 }
 
+// ✅ REAL API CALL FOR BULK ACTIVATE
 async function bulkActivateUsers() {
-  if (selectedUserIds.size === 0) {
-    alert('❌ Select users to activate');
-    return;
-  }
-  // Note: Backend needs an endpoint to bulk activate by ID list
-  // For now, we simulate or use individual calls if endpoint exists
-  alert('ℹ️ Bulk activation logic needs backend implementation for specific IDs. Using mock success.');
-  selectedUserIds.clear();
-  loadUsers();
+if (selectedUserIds.size === 0) {
+alert('❌ Select users to activate');
+return;
+}
+if (!confirm(`Activate ${selectedUserIds.size} selected users?`)) return;
+
+try {
+// Call the real backend endpoint
+await apiCall('/api/admin/users/activate', 'POST', {
+ids: Array.from(selectedUserIds)
+});
+alert('✅ Users activated successfully!');
+selectedUserIds.clear();
+loadUsers(); // Refresh list
+} catch (error) {
+alert('❌ Error activating users: ' + error.message);
+}
 }
 
+// ✅ REAL API CALL FOR BULK DEACTIVATE
 async function bulkDeactivateUsers() {
-  if (selectedUserIds.size === 0) {
-    alert('❌ Select users to deactivate');
-    return;
-  }
-  if(!confirm('Deactivate selected users?')) return;
-  alert('ℹ️ Bulk deactivation logic needs backend implementation. Using mock success.');
-  selectedUserIds.clear();
-  loadUsers();
+if (selectedUserIds.size === 0) {
+alert('❌ Select users to deactivate');
+return;
+}
+if(!confirm(`Deactivate ${selectedUserIds.size} selected users?`)) return;
+
+try {
+// Call the real backend endpoint
+await apiCall('/api/admin/users/deactivate', 'POST', {
+ids: Array.from(selectedUserIds)
+});
+alert('✅ Users deactivated successfully!');
+selectedUserIds.clear();
+loadUsers(); // Refresh list
+} catch (error) {
+alert('❌ Error deactivating users: ' + error.message);
+}
 }
 
+// ✅ REAL API CALL FOR MESSAGING SELECTED
 function showMessageToSelected() {
-  if (selectedUserIds.size === 0) {
-    alert('❌ Select users to message');
-    return;
-  }
-  // Open broadcast modal but pre-fill logic would go here
-  alert('ℹ️ Messaging selected users opens the broadcast modal. Logic to target specific IDs needed in backend.');
-  showBroadcastModal();
+if (selectedUserIds.size === 0) {
+alert('❌ Select users to message');
+return;
+}
+// Open broadcast modal
+showBroadcastModal();
+// Note: The backend endpoint /api/admin/messages/send already handles 'selected' logic 
+// if we pass the IDs, but for now the frontend opens the modal. 
+// To fully automate, we could pre-fill the modal or send directly.
+// For now, let's send directly if we have IDs, otherwise open modal.
+if (selectedUserIds.size > 0) {
+if(confirm(`Send message to ${selectedUserIds.size} selected users? You will be prompted for subject/message.`)) {
+const subject = prompt("Enter subject:");
+if (!subject) return;
+const body = prompt("Enter message:");
+if (!body) return;
+
+apiCall('/api/admin/messages/send', 'POST', {
+recipients: 'selected',
+subject: subject,
+body: body,
+is_bulk: true,
+user_ids: Array.from(selectedUserIds) // Pass IDs to backend
+})
+.then(() => {
+alert('✅ Message sent to selected users!');
+selectedUserIds.clear();
+})
+.catch(err => alert('❌ Error: ' + err.message));
+}
+}
 }
 
 // ==========================================
 // MESSAGES FUNCTIONS
 // ==========================================
 async function loadMessages() {
-  try {
-    const data = await apiCall('/api/admin/messages');
-    allMessages = data.messages || [];
-    const container = document.getElementById('messagesContainer');
-    if (allMessages.length === 0) {
-      container.innerHTML = '<div class="text-center py-8 text-gray-400">No messages sent yet</div>';
-      return;
-    }
-    container.innerHTML = allMessages.map(m => `
-      <div class="message-card">
-        <div class="flex justify-between items-start mb-2">
-          <h4 class="font-bold text-lg">${m.subject}</h4>
-          <span class="text-xs text-gray-400">${new Date(m.created_at).toLocaleString()}</span>
-        </div>
-        <p class="text-gray-300 mb-2">${m.body}</p>
-        <div class="flex gap-4 text-xs text-gray-400">
-          <span>To: ${m.recipient_type}</span>
-          <span>Bulk: ${m.is_bulk ? 'Yes' : 'No'}</span>
-        </div>
-      </div>
-    `).join('');
-  } catch (error) {
-    console.error('❌ Error loading messages:', error);
-    document.getElementById('messagesContainer').innerHTML = '<div class="text-center py-8 text-gray-400">Could not load messages</div>';
-  }
+try {
+const data = await apiCall('/api/admin/messages');
+allMessages = data.messages || [];
+const container = document.getElementById('messagesContainer');
+if (allMessages.length === 0) {
+container.innerHTML = '<div class="text-center py-8 text-gray-400">No messages sent yet</div>';
+return;
+}
+container.innerHTML = allMessages.map(m => `
+<div class="message-card">
+<div class="flex justify-between items-start mb-2">
+<h4 class="font-bold text-lg">${m.subject}</h4>
+<span class="text-xs text-gray-400">${new Date(m.created_at).toLocaleString()}</span>
+</div>
+<p class="text-gray-300 mb-2">${m.body}</p>
+<div class="flex gap-4 text-xs text-gray-400">
+<span>To: ${m.recipient_type}</span>
+<span>Bulk: ${m.is_bulk ? 'Yes' : 'No'}</span>
+</div>
+</div>
+`).join('');
+} catch (error) {
+console.error('❌ Error loading messages:', error);
+document.getElementById('messagesContainer').innerHTML = '<div class="text-center py-8 text-gray-400">Could not load messages</div>';
+}
 }
 
 function showBroadcastModal() {
-  document.getElementById('broadcastModal').classList.add('active');
-  document.body.style.overflow = 'hidden';
+document.getElementById('broadcastModal').classList.add('active');
+document.body.style.overflow = 'hidden';
 }
 function closeBroadcastModal() {
-  document.getElementById('broadcastModal').classList.remove('active');
-  document.body.style.overflow = 'auto';
+document.getElementById('broadcastModal').classList.remove('active');
+document.body.style.overflow = 'auto';
 }
-
 async function sendBroadcast() {
-  const recipients = document.getElementById('broadcast-recipients').value;
-  const subject = document.getElementById('broadcast-subject').value;
-  const body = document.getElementById('broadcast-body').value;
-  
-  if (!subject || !body) {
-    alert('❌ Subject and message are required');
-    return;
-  }
-  
-  try {
-    await apiCall('/api/admin/messages/send', 'POST', {
-      recipients,
-      subject,
-      body,
-      is_bulk: true
-    });
-    alert('✅ Broadcast sent successfully!');
-    closeBroadcastModal();
-    loadMessages();
-    // Clear form
-    document.getElementById('broadcast-subject').value = '';
-    document.getElementById('broadcast-body').value = '';
-  } catch (error) {
-    alert('❌ Error: ' + error.message);
-  }
+const recipients = document.getElementById('broadcast-recipients').value;
+const subject = document.getElementById('broadcast-subject').value;
+const body = document.getElementById('broadcast-body').value;
+if (!subject || !body) {
+alert('❌ Subject and message are required');
+return;
+}
+try {
+await apiCall('/api/admin/messages/send', 'POST', {
+recipients,
+subject,
+body,
+is_bulk: true
+});
+alert('✅ Broadcast sent successfully!');
+closeBroadcastModal();
+loadMessages();
+// Clear form
+document.getElementById('broadcast-subject').value = '';
+document.getElementById('broadcast-body').value = '';
+} catch (error) {
+alert('❌ Error: ' + error.message);
+}
 }
 
 // ==========================================
 // PENDING DATA FUNCTIONS
 // ==========================================
 async function loadPendingData() {
-  try {
-    await Promise.all([
-      loadPendingLeaderboard(),
-      loadPendingFreelancers()
-    ]);
-  } catch (error) {
-    console.error('❌ Pending data error:', error);
-  }
+try {
+await Promise.all([
+loadPendingLeaderboard(),
+loadPendingFreelancers()
+]);
+} catch (error) {
+console.error('❌ Pending data error:', error);
 }
-
+}
 async function loadPendingLeaderboard() {
-  try {
-    const data = await apiCall('/api/admin/leaderboard/pending');
-    const container = document.getElementById('pending-leaderboard-container');
-    if (data.pending.length === 0) {
-      container.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-check-circle text-6xl mb-4 text-green-400"></i><p class="text-lg">No pending submissions</p></div>';
-      return;
-    }
-    let html = '';
-    html += data.pending.map(entry => {
-      const suggestedName = entry.company_name || extractDomainFromUrl(entry.url);
-      return `
-        <div class="pending-card" data-id="${entry.id}">
-          <div class="flex items-start gap-4 mb-3">
-            <input type="checkbox" class="pending-checkbox" data-id="${entry.id}" onchange="toggleSelectPending(${entry.id})">
-            <div class="flex-1">
-              <h4 class="text-xl font-bold mb-2">${suggestedName}</h4>
-              <p class="text-blue-400 mb-2 text-sm">${entry.url}</p>
-              <div class="bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 rounded-lg inline-block">
-                <div class="text-xs text-purple-200">Score</div>
-                <div class="text-2xl font-bold">${entry.score}/100</div>
-              </div>
-              <div class="flex gap-3 mt-6">
-                <button onclick="approveLeaderboardEntry(${entry.id})" class="flex-1 bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold">
-                  <i class="fas fa-check mr-2"></i> Approve
-                </button>
-                <button onclick="rejectLeaderboardEntry(${entry.id})" class="flex-1 bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">
-                  <i class="fas fa-times mr-2"></i> Reject
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
-    container.innerHTML = html;
-  } catch (error) {
-    console.error('Pending leaderboard error:', error);
-  }
+try {
+const data = await apiCall('/api/admin/leaderboard/pending');
+const container = document.getElementById('pending-leaderboard-container');
+if (data.pending.length === 0) {
+container.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-check-circle text-6xl mb-4 text-green-400"></i><p class="text-lg">No pending submissions</p></div>';
+return;
 }
-
+let html = '';
+html += data.pending.map(entry => {
+const suggestedName = entry.company_name || extractDomainFromUrl(entry.url);
+return `
+<div class="pending-card" data-id="${entry.id}">
+<div class="flex items-start gap-4 mb-3">
+<input type="checkbox" class="pending-checkbox" data-id="${entry.id}" onchange="toggleSelectPending(${entry.id})">
+<div class="flex-1">
+<h4 class="text-xl font-bold mb-2">${suggestedName}</h4>
+<p class="text-blue-400 mb-2 text-sm">${entry.url}</p>
+<div class="bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 rounded-lg inline-block">
+<div class="text-xs text-purple-200">Score</div>
+<div class="text-2xl font-bold">${entry.score}/100</div>
+</div>
+<div class="flex gap-3 mt-6">
+<button onclick="approveLeaderboardEntry(${entry.id})" class="flex-1 bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold">
+<i class="fas fa-check mr-2"></i> Approve
+</button>
+<button onclick="rejectLeaderboardEntry(${entry.id})" class="flex-1 bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">
+<i class="fas fa-times mr-2"></i> Reject
+</button>
+</div>
+</div>
+</div>
+</div>
+`;
+}).join('');
+container.innerHTML = html;
+} catch (error) {
+console.error('Pending leaderboard error:', error);
+}
+}
 function toggleSelectPending(id) {
-  if (selectedPendingIds.has(id)) {
-    selectedPendingIds.delete(id);
-  } else {
-    selectedPendingIds.add(id);
-  }
-  document.getElementById('selected-count-pending').textContent = selectedPendingIds.size;
+if (selectedPendingIds.has(id)) {
+selectedPendingIds.delete(id);
+} else {
+selectedPendingIds.add(id);
 }
-
+document.getElementById('selected-count-pending').textContent = selectedPendingIds.size;
+}
 function toggleSelectAllPending() {
-  const selectAll = document.getElementById('select-all-pending');
-  const checkboxes = document.querySelectorAll('.pending-checkbox');
-  if (selectAll.checked) {
-    checkboxes.forEach(cb => {
-      cb.checked = true;
-      selectedPendingIds.add(parseInt(cb.dataset.id));
-    });
-  } else {
-    checkboxes.forEach(cb => {
-      cb.checked = false;
-      selectedPendingIds.delete(parseInt(cb.dataset.id));
-    });
-  }
-  document.getElementById('selected-count-pending').textContent = selectedPendingIds.size;
+const selectAll = document.getElementById('select-all-pending');
+const checkboxes = document.querySelectorAll('.pending-checkbox');
+if (selectAll.checked) {
+checkboxes.forEach(cb => {
+cb.checked = true;
+selectedPendingIds.add(parseInt(cb.dataset.id));
+});
+} else {
+checkboxes.forEach(cb => {
+cb.checked = false;
+selectedPendingIds.delete(parseInt(cb.dataset.id));
+});
 }
-
+document.getElementById('selected-count-pending').textContent = selectedPendingIds.size;
+}
 async function bulkDeletePending() {
-  if (selectedPendingIds.size === 0) {
-    alert('❌ Select entries to delete');
-    return;
-  }
-  if (!confirm('❌ Delete ' + selectedPendingIds.size + ' pending entries permanently?')) return;
-  try {
-    const ids = Array.from(selectedPendingIds);
-    await apiCall('/api/admin/leaderboard/bulk-delete', 'POST', { ids });
-    alert('✅ ' + ids.length + ' entries deleted');
-    selectedPendingIds.clear();
-    loadPendingLeaderboard();
-  } catch (error) {
-    alert('❌ Error: ' + error.message);
-  }
+if (selectedPendingIds.size === 0) {
+alert('❌ Select entries to delete');
+return;
 }
-
+if (!confirm('❌ Delete ' + selectedPendingIds.size + ' pending entries permanently?')) return;
+try {
+const ids = Array.from(selectedPendingIds);
+await apiCall('/api/admin/leaderboard/bulk-delete', 'POST', { ids });
+alert('✅ ' + ids.length + ' entries deleted');
+selectedPendingIds.clear();
+loadPendingLeaderboard();
+} catch (error) {
+alert('❌ Error: ' + error.message);
+}
+}
 async function approveLeaderboardEntry(id) {
-  try {
-    await apiCall('/api/admin/leaderboard/' + id + '/approve', 'POST');
-    alert('✅ Entry approved!');
-    loadPendingLeaderboard();
-    loadLeaderboard();
-  } catch (error) {
-    alert('❌ Error: ' + error.message);
-  }
+try {
+await apiCall('/api/admin/leaderboard/' + id + '/approve', 'POST');
+alert('✅ Entry approved!');
+loadPendingLeaderboard();
+loadLeaderboard();
+} catch (error) {
+alert('❌ Error: ' + error.message);
 }
-
+}
 async function rejectLeaderboardEntry(id) {
-  if (!confirm('❌ Reject this submission?')) return;
-  try {
-    await apiCall('/api/admin/leaderboard/' + id + '/reject', 'POST');
-    alert('✅ Entry rejected');
-    loadPendingLeaderboard();
-  } catch (error) {
-    alert('❌ Error: ' + error.message);
-  }
+if (!confirm('❌ Reject this submission?')) return;
+try {
+await apiCall('/api/admin/leaderboard/' + id + '/reject', 'POST');
+alert('✅ Entry rejected');
+loadPendingLeaderboard();
+} catch (error) {
+alert('❌ Error: ' + error.message);
 }
-
+}
 async function loadPendingFreelancers() {
-  try {
-    const data = await apiCall('/api/admin/freelancers/pending');
-    const container = document.getElementById('pending-freelancers-container');
-    if (data.pending.length === 0) {
-      container.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-check-circle text-6xl mb-4 text-green-400"></i><p class="text-lg">No pending applications</p></div>';
-      return;
-    }
-    container.innerHTML = data.pending.map(f => `
-      <div class="pending-card">
-        <div class="grid md:grid-cols-2 gap-6">
-          <div>
-            <h4 class="text-xl font-bold mb-2">${f.name}</h4>
-            <p class="text-purple-400 mb-2">${f.title || 'SEO Specialist'}</p>
-            <p class="text-sm text-gray-400 mb-2"><i class="fas fa-envelope mr-2"></i> ${f.email}</p>
-            <p class="text-sm text-gray-400"><i class="fas fa-map-marker-alt mr-2"></i> ${f.location || f.country || 'Unknown'}</p>
-          </div>
-          <div>
-            <p class="text-sm mb-4">${f.bio || 'No bio available'}</p>
-            <button onclick="approveFreelancer(${f.id})" class="w-full bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold mb-2">
-              <i class="fas fa-check mr-2"></i> Approve
-            </button>
-            <button onclick="rejectFreelancer(${f.id})" class="w-full bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">
-              <i class="fas fa-times mr-2"></i> Reject
-            </button>
-          </div>
-        </div>
-      </div>
-    `).join('');
-  } catch (error) {
-    console.error('Pending freelancers error:', error);
-  }
+try {
+const data = await apiCall('/api/admin/freelancers/pending');
+const container = document.getElementById('pending-freelancers-container');
+if (data.pending.length === 0) {
+container.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-check-circle text-6xl mb-4 text-green-400"></i><p class="text-lg">No pending applications</p></div>';
+return;
 }
-
+container.innerHTML = data.pending.map(f => `
+<div class="pending-card">
+<div class="grid md:grid-cols-2 gap-6">
+<div>
+<h4 class="text-xl font-bold mb-2">${f.name}</h4>
+<p class="text-purple-400 mb-2">${f.title || 'SEO Specialist'}</p>
+<p class="text-sm text-gray-400 mb-2"><i class="fas fa-envelope mr-2"></i> ${f.email}</p>
+<p class="text-sm text-gray-400"><i class="fas fa-map-marker-alt mr-2"></i> ${f.location || f.country || 'Unknown'}</p>
+</div>
+<div>
+<p class="text-sm mb-4">${f.bio || 'No bio available'}</p>
+<button onclick="approveFreelancer(${f.id})" class="w-full bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold mb-2">
+<i class="fas fa-check mr-2"></i> Approve
+</button>
+<button onclick="rejectFreelancer(${f.id})" class="w-full bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">
+<i class="fas fa-times mr-2"></i> Reject
+</button>
+</div>
+</div>
+</div>
+`).join('');
+} catch (error) {
+console.error('Pending freelancers error:', error);
+}
+}
 async function approveFreelancer(id) {
-  try {
-    await apiCall('/api/admin/freelancers/' + id + '/approve', 'POST');
-    alert('✅ Freelancer approved!');
-    loadPendingFreelancers();
-    loadFreelancers();
-  } catch (error) {
-    alert('❌ Error: ' + error.message);
-  }
+try {
+await apiCall('/api/admin/freelancers/' + id + '/approve', 'POST');
+alert('✅ Freelancer approved!');
+loadPendingFreelancers();
+loadFreelancers();
+} catch (error) {
+alert('❌ Error: ' + error.message);
 }
-
+}
 async function rejectFreelancer(id) {
-  if (!confirm('❌ Reject this application?')) return;
-  try {
-    await apiCall('/api/admin/freelancers/' + id, 'DELETE');
-    alert('✅ Application rejected');
-    loadPendingFreelancers();
-  } catch (error) {
-    alert('❌ Error: ' + error.message);
-  }
+if (!confirm('❌ Reject this application?')) return;
+try {
+await apiCall('/api/admin/freelancers/' + id, 'DELETE');
+alert('✅ Application rejected');
+loadPendingFreelancers();
+} catch (error) {
+alert('❌ Error: ' + error.message);
+}
 }
 
 // ==========================================
 // UTILITY FUNCTIONS
 // ==========================================
 function extractDomainFromUrl(url) {
-  if (!url) return 'Company';
-  try {
-    const hostname = new URL(url).hostname;
-    let domain = hostname.replace('www.', '');
-    let name = domain.split('.')[0];
-    return name.charAt(0).toUpperCase() + name.slice(1);
-  } catch (e) {
-    return 'Company';
-  }
+if (!url) return 'Company';
+try {
+const hostname = new URL(url).hostname;
+let domain = hostname.replace('www.', '');
+let name = domain.split('.')[0];
+return name.charAt(0).toUpperCase() + name.slice(1);
+} catch (e) {
+return 'Company';
 }
-
+}
 function getCountryFlag(country) {
-  const flags = {
-    'Netherlands': '🇳🇱', 'NL': '🇳🇱',
-    'United Kingdom': '🇬🇧', 'UK': '🇬🇧',
-    'US': '🇺🇸', 'United States': '🇺🇸',
-    'Germany': '🇩🇪', 'DE': '🇩🇪',
-    'France': '🇫🇷', 'FR': '🇫🇷',
-    'Belgium': '🇧🇪', 'BE': '🇧🇪',
-    'Spain': '🇪🇸', 'ES': '🇪🇸',
-    'Italy': '🇮🇹', 'IT': '🇮🇹'
-  };
-  return flags[country] || '🌐';
+const flags = {
+'Netherlands': '🇳🇱', 'NL': '🇳🇱',
+'United Kingdom': '🇬🇧', 'UK': '🇬🇧',
+'US': '🇺🇸', 'United States': '🇺🇸',
+'Germany': '🇩🇪', 'DE': '🇩🇪',
+'France': '🇫🇷', 'FR': '🇫🇷',
+'Belgium': '🇧🇪', 'BE': '🇧🇪',
+'Spain': '🇪🇸', 'ES': '🇪🇸',
+'Italy': '🇮🇹', 'IT': '🇮🇹'
+};
+return flags[country] || '🌐';
 }
-
 function toggleRankings() {
-  const container = document.getElementById('rankingsContainer');
-  const toggleText = document.getElementById('rankingsToggleText');
-  if (container) {
-    container.classList.toggle('hidden');
-    toggleText.textContent = container.classList.contains('hidden') ? '📊 Show Rankings 16+' : '📊 Hide Rankings 16+';
-  }
+const container = document.getElementById('rankingsContainer');
+const toggleText = document.getElementById('rankingsToggleText');
+if (container) {
+container.classList.toggle('hidden');
+toggleText.textContent = container.classList.contains('hidden') ? '📊 Show Rankings 16+' : '📊 Hide Rankings 16+';
 }
-
+}
 function loadAllData() {
-  loadLeaderboard();
-  loadFreelancers();
+loadLeaderboard();
+loadFreelancers();
 }
 </script>
 </body>
