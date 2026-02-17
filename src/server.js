@@ -1,5 +1,13 @@
 // ============================================
-// CONTENTSCALE SERVER.JS - COMPLETE MET ADMIN USER MANAGEMENT
+// CONTENTSCALE SERVER.JS - COMPLETE MET EDUCATIVE GRAAF RECOMMENDATIONS
+// ✅ Alle API endpoints werken echt
+// ✅ SendGrid email verzending
+// ✅ User templates opslaan in database
+// ✅ Bulk scanner met echte data
+// ✅ Elke user eigen SendGrid keys
+// ✅ Admin messaging systeem
+// ✅ Verified stat fix toegevoegd
+// ✅ NIEUW: Educatieve Recommendations (GRAAF Framework geïntegreerd)
 // ============================================
 process.env.PGSSLMODE = 'verify-full';
 process.env.NODE_NO_WARNINGS = '1';
@@ -808,7 +816,6 @@ app.post('/api/admin/users/:id/deactivate', verifyAdmin, async (req, res) => {
 app.delete('/api/admin/users/:id', verifyAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        // Cascade delete related keys and templates if necessary, or just delete user
         await pool.query('DELETE FROM user_api_keys WHERE user_id = $1', [id]);
         await pool.query('DELETE FROM user_email_templates WHERE user_id = $1', [id]);
         await pool.query('DELETE FROM users WHERE id = $1', [id]);
@@ -1064,45 +1071,111 @@ app.post('/api/scan', async (req, res) => {
                 totalScore >= 70 ? 'good' :
                     totalScore >= 60 ? 'average' : 'needs improvement';
 
+        // ==========================================
+        // 🎓 INTELLIGENTE RECOMMENDATIONS (EDUCATIONAL)
+        // ==========================================
         const recommendations = [];
+
+        // 1. CONTENT LENGTH (GRAAF - Relevance & Depth)
         if (analysis.wordCount < 500) {
             recommendations.push({
-                title: '🚀 Urgent: Content Length',
-                description: `Your page has only ${analysis.wordCount} words. Target: 2,500+ words.`,
+                title: '📉 Content Diepte Ontbreekt',
+                description: `Je pagina heeft slechts ${analysis.wordCount} woorden. Google beschouwt dit als "thin content".`,
                 priority: 'high',
-                action: 'Expand content with detailed explanations, examples, case studies.',
-                learning: 'Pages with 2,500+ words rank 3.7x higher on average.',
-                target: '2,500+ words'
+                action: 'Breid je content uit naar minimaal 1.500 woorden. Voeg diepgang toe door vragen van gebruikers uitgebreid te beantwoorden.',
+                learning: 'Google\'s algoritme (Helpful Content Update) beloont pagina\'s die een onderwerp exhaustief behandelen. Korte pagina\'s worden vaak genegeerd ten gunste van diepgaande gidsen.',
+                target: 'Minimaal 1.500 woorden'
+            });
+        } else if (analysis.wordCount < 1500) {
+            recommendations.push({
+                title: '⚠️ Content Kan Dieper',
+                description: `Met ${analysis.wordCount} woorden bedien je het onderwerp, maar je mist diepgang vergeleken met top-rankings.`,
+                priority: 'medium',
+                action: 'Voeg secties toe over "Veelgestelde Vragen", "Case Studies" of "Stappenplannen" om de woordcount naar 1.500+ te brengen.',
+                learning: 'Lange vorm content (Long-form) scoort gemiddeld 3x beter in AI Overviews omdat het meer context biedt aan het AI-model.',
+                target: '1.500+ woorden'
             });
         }
+
+        // 2. SCHEMA MARKUP (Technical - Visibility)
         if (!analysis.hasArticleSchema) {
             recommendations.push({
-                title: '🔍 Add Article Schema',
-                description: 'Missing Article schema markup.',
+                title: '🔍 Ontbrekende Structuurdata (Schema)',
+                description: 'Je pagina mist Article schema markup. Hierdoor begrijpt Google de context van je content niet volledig.',
                 priority: 'high',
-                action: 'Implement Article schema in JSON-LD format.',
-                learning: 'Article schema increases rich snippet appearance by 30%.',
-                target: 'Article schema markup'
+                action: 'Implementeer JSON-LD Article schema. Dit vertelt zoekmachines expliciet wat de kop, auteur en publicatiedatum zijn.',
+                learning: 'Schema markup verhoogt de kans op rich snippets (rich results) met 30% en helpt Google\'s AI om je content correct te citeren in AI Overviews.',
+                target: 'JSON-LD Article Schema toevoegen'
             });
         }
+
+        // 3. INTERNAL LINKING (GRAAF - Authority Flow)
         if (analysis.internalLinks.length < 5) {
             recommendations.push({
-                title: '🔗 Add Internal Links',
-                description: `Current: ${analysis.internalLinks.length} internal links. Target: 8-12.`,
+                title: '🕸️ Zwakke Interne Linkstructuur',
+                description: `Je hebt slechts ${analysis.internalLinks.length} interne links. Dit maakt het moeilijk voor Google om je site-structuur te crawlen.`,
                 priority: 'medium',
-                action: 'Link to 5-7 related pages on your site.',
-                learning: 'Internal links reduce bounce rate by 34%.',
-                target: '8-12 internal links'
+                action: 'Link vanuit deze pagina naar 5 tot 10 gerelateerde artikelen op je eigen site. Gebruik beschrijvende ankerteksten.',
+                learning: 'Interne links verdelen "Page Authority" door je site heen. Zonder interne links blijft je content geïsoleerd ("Orphan Page") en rankt slechter.',
+                target: '8-12 relevante interne links'
+            });
+        }
+
+        // 4. KEYWORD USAGE (GRAAF - Relevance)
+        if (analysis.keywordCount === 0 && analysis.wordCount > 100) {
+             recommendations.push({
+                title: '❌ Focus Keyword Ontbreekt',
+                description: 'Je hoofdkwam lijkt niet voor te komen in de tekst. Google weet hierdoor niet waar deze pagina over gaat.',
+                priority: 'high',
+                action: 'Verwerk je focus keyword natuurlijk in de introductie, ten minste één H2 kop, en de conclusie.',
+                learning: 'Hoewel semantisch zoeken belangrijk is, helpt een duidelijk focus keyword Google om de primaire intentie van de pagina direct te begrijpen.',
+                target: 'Keyword densiteit van 0.5% - 1.5%'
+            });
+        }
+
+        // 5. HEADINGS STRUCTURE (CRAFT - Readability)
+        if (analysis.h2Count < 3) {
+            recommendations.push({
+                title: '📑 Slechte Koppenstructuur',
+                description: `Je hebt slechts ${analysis.h2Count} subkoppen (H2). Dit maakt de tekst onleesbaar voor zowel mens als machine.`,
+                priority: 'medium',
+                action: 'Breek lange tekstblokken op met duidelijke H2 en H3 tussenkoppen die de structuur van je betoog volgen.',
+                learning: 'Goede koppen helpen scanners (mensen) en crawlers (Google) om de hiërarchie van informatie te begrijpen. Dit is cruciaal voor E-E-A-T.',
+                target: 'Minimaal 5 H2 koppen'
+            });
+        }
+
+        // 6. MEDIA & ENGAGEMENT (UX)
+        if (analysis.images.length < 3) {
+             recommendations.push({
+                title: '🖼️ Te Weinig Visuele Elementen',
+                description: `Tekstwallen schrikken af. Je hebt slechts ${analysis.images.length} afbeeldingen.`,
+                priority: 'low',
+                action: 'Voeg minimaal 3 relevante afbeeldingen, infographics of video\'s toe om de leesbaarheid te verhogen.',
+                learning: 'Visuele elementen verhogen de "Time on Page". Google ziet langer verblijf als een signaal van kwaliteit en relevantie.',
+                target: 'Minimaal 1 afbeelding per 300 woorden'
+            });
+        }
+        
+        // 7. E-E-A-T SIGNALS (GRAAF - Experience & Expertise)
+        if (analysis.expertQuotes.length === 0) {
+             recommendations.push({
+                title: '🎓 Ontbrekende Expertise Signalen (E-E-A-T)',
+                description: 'Je content bevat geen citaten van experts of bronvermeldingen.',
+                priority: 'medium',
+                action: 'Onderbouw je beweringen met citaten van erkende experts, studies of data. Link naar autoritaire bronnen.',
+                learning: 'Google\'s E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness) vereist dat claims onderbouwd worden. Zonder bronnen wordt content gezien als mening, niet als feit.',
+                target: 'Minimaal 2 expert citaten of bronvermeldingen'
             });
         }
 
         const finalRecommendations = recommendations.length > 0 ? recommendations : [{
             title: '🎉 Excellent Work!',
-            description: 'Your page meets all GRAAF Framework requirements.',
+            description: 'Je pagina voldoet aan de kernprincipes van het GRAAF Framework.',
             priority: 'none',
-            action: 'Continue creating high-quality content.',
-            learning: 'Maintaining high SEO standards is key to long-term success.',
-            target: 'Maintain current quality'
+            action: 'Blijf consistent hoogwaardige content produceren en monitor je posities.',
+            learning: 'SEO is een continu proces. Onderhoud je content regelmatig om je positie te behouden in een veranderend landschap.',
+            target: 'Huidige kwaliteit behouden'
         }];
 
         const result = {
@@ -1730,8 +1803,9 @@ async function startServer() {
         console.log('   • Admin Edit/Delete: ✅ WERKT');
         console.log('   • Bulk Delete: ✅ WERKT');
         console.log('   • Admin Messaging: ✅ NIEUW TOEGEVOEGD');
-        console.log('   • User Management: ✅ NIEUW TOEGEVOEGD (Activate/Deactivate/Delete)');
+        console.log('   • User Management: ✅ NIEUW TOEGEVOEGD');
         console.log('   • Verified Stat: ✅ TOEGEVOEGD');
+        console.log('   • Educative Recommendations: ✅ GRAAF FRAMEWORK INTEGRATED');
         console.log('');
     });
 }
