@@ -24,17 +24,8 @@ body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; ba
 h1, h2, h3, h4, h5, h6, p, a, span, div, button, input, textarea, select, label, li { color: white !important; }
 input, textarea, select { color: #000000 !important; background-color: #ffffff !important; border: 1px solid #d1d5db !important; }
 input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 1 !important; }
-
-/* FIX: TEMPLATE EDITOR TEXTAREA LEESBAARHEID */
-.template-editor textarea { 
-    color: #f3f4f6 !important; /* Witte tekst */
-    background-color: #1f2937 !important; /* Donkere achtergrond */
-    border: 1px solid #4b5563 !important;
-}
-.template-editor label {
-    color: #d1d5db !important;
-}
-
+/* FIX: Template editor textareas need white text on dark background */
+.template-editor textarea { color: #f3f4f6 !important; background-color: #1f2937 !important; border: 1px solid #4b5563 !important; }
 .text-gray-300, .text-gray-400, .text-gray-500 { color: #d1d5db !important; }
 .btn-white-black { background: white !important; color: #581c87 !important; font-weight: 700; border: 2px solid white; }
 .btn-white-black:hover { background: #f3f4f6 !important; color: #6b21a8 !important; }
@@ -220,11 +211,12 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 <div class="flex items-start gap-4">
 <div class="text-4xl">🔒</div>
 <div class="flex-1">
-<h4 class="text-xl font-bold text-white mb-2">Get This Platform For Free: Help Us Grow and Get Exposure</h4>
-<p class="text-gray-200 mb-4">No tricks. No trials. Just value. Share this on 5 social media platforms and use Bulk Scan for free!</p>
+<h4 class="text-xl font-bold text-white mb-2">Unlock Bulk Scanning Access</h4>
+<p class="text-gray-200 mb-4">To keep this tool free and sustainable, please share ContentScale on social media or with your network. Once you've shared, your access will be unlocked instantly!</p>
 <div class="bg-gray-900 bg-opacity-50 rounded-lg p-4 mb-4">
-<h5 class="font-bold text-white mb-2">How to help:</h5>
-<p class="text-sm text-gray-300 mb-2">Click the buttons below to share. The "Unlock Access" button will activate automatically.</p>
+<h5 class="font-bold text-white mb-2">Step 1: Share on Social Media</h5>
+<p class="text-sm text-gray-300 mb-3">Click any button below to share:</p>
+<!-- UPDATED: Functional Share Buttons -->
 <div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
 <a href="#" onclick="shareSocial('x'); return false;" class="share-btn share-twitter"><i class="fab fa-x-twitter"></i> X</a>
 <a href="#" onclick="shareSocial('linkedin'); return false;" class="share-btn share-linkedin"><i class="fab fa-linkedin-in"></i> LinkedIn</a>
@@ -232,14 +224,19 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 <a href="#" onclick="shareSocial('whatsapp'); return false;" class="share-btn share-whatsapp"><i class="fab fa-whatsapp"></i> WhatsApp</a>
 <a href="#" onclick="shareSocial('copy'); return false;" class="share-btn share-copy"><i class="fas fa-link"></i> Copy Link</a>
 </div>
-<div class="flex items-center gap-4 mb-2">
+<div class="flex items-center gap-4 mb-4">
 <div class="flex-1 bg-gray-800 rounded-full h-4 overflow-hidden">
 <div id="shareProgressBar" class="bg-green-500 h-full transition-all duration-500" style="width: 0%"></div>
 </div>
-<span class="text-sm font-bold"><span id="shareCountDisplay">0</span>/5 Shares</span>
+<span class="text-sm font-bold"><span id="shareCountDisplay">0</span>/1 Share</span>
 </div>
-<button id="unlockAccessBtn" onclick="unlockAccess()" disabled class="w-full bg-gray-600 text-gray-400 px-6 py-3 rounded-lg font-bold cursor-not-allowed transition-all">🔓 Unlock bulk scan now!</button>
+<button id="unlockAccessBtn" onclick="unlockAccess()" disabled class="w-full bg-gray-600 text-gray-400 px-6 py-3 rounded-lg font-bold cursor-not-allowed transition-all">🔓 Unlock Access Now</button>
 </div>
+<h5 class="font-bold text-white mb-2">Step 2: Configure Email (Optional but Recommended)</h5>
+<p class="text-sm text-gray-300 mb-2">To send automated reports, you need a free SendGrid API key.</p>
+<a href="https://sendgrid.com/en-us" target="_blank" rel="noopener" class="inline-block bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded mb-2">
+<i class="fas fa-external-link-alt mr-1"></i> Get Free SendGrid Account
+</a>
 <p class="text-xs text-gray-400 mt-2">💡 Sharing helps us keep this tool free for everyone!</p>
 </div>
 </div>
@@ -277,7 +274,7 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 </div>
 </div>
 </div>
-<!-- API Config Accordion -->
+<!-- API Config Accordion - constrained width -->
 <div class="max-w-4xl mx-auto">
 <div class="accordion-item">
 <button onclick="toggleAccordion('apiConfig')" class="accordion-header">
@@ -335,7 +332,7 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 </div>
 </div>
 </div>
-<!-- CTA Banner -->
+<!-- CTA Banner - constrained -->
 <div class="mt-8 max-w-3xl mx-auto bg-gradient-to-r from-purple-800 via-pink-800 to-purple-800 rounded-xl p-6 text-center border border-purple-400">
 <h3 class="text-2xl font-bold mb-2 text-white">💼 Are You an SEO Specialist or Content Marketer?</h3>
 <p class="text-xl text-gray-200 mb-4">Work just a few hours per week while earning a full-time income. We train you in Modern SEO for the AI-era.</p>
@@ -355,9 +352,9 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 <h3 class="text-xl font-bold mb-4">🏆 Leaderboard Congratulations</h3>
 <p class="text-sm text-gray-400 mb-4">Sent to businesses with 85+ score</p>
 <div class="template-editor">
-<label class="block text-sm mb-2">Subject</label>
+<label class="block text-sm text-gray-300 mb-2">Subject</label>
 <input type="text" id="template-congrats-subject" class="w-full p-2 rounded border border-gray-600 mb-2" value="🎉 Congratulations! Your website ranked on ContentScale Leaderboard">
-<label class="block text-sm mb-2">Body (HTML)</label>
+<label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
 <textarea id="template-congrats-body" class="w-full p-2 rounded" style="min-height: 150px;">&lt;h1&gt;Congratulations!&lt;/h1&gt;&lt;p&gt;Your website scored {{score}}/100 on our SEO analysis.&lt;/p&gt;&lt;p&gt;You've been added to the ContentScale Leaderboard!&lt;/p&gt;&lt;p&gt;&lt;a href="{{leaderboard_url}}"&gt;View your ranking&lt;/a&gt;&lt;/p&gt;</textarea>
 </div>
 <button onclick="saveTemplate('congrats')" class="btn-primary btn w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
@@ -366,9 +363,9 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 <h3 class="text-xl font-bold mb-4">📈 Improvement Pitch</h3>
 <p class="text-sm text-gray-400 mb-4">Sent to businesses with website &lt;85 score</p>
 <div class="template-editor">
-<label class="block text-sm mb-2">Subject</label>
+<label class="block text-sm text-gray-300 mb-2">Subject</label>
 <input type="text" id="template-improvement-subject" class="w-full p-2 rounded border border-gray-600 mb-2" value="🚀 Quick SEO opportunity for {{company_name}}">
-<label class="block text-sm mb-2">Body (HTML)</label>
+<label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
 <textarea id="template-improvement-body" class="w-full p-2 rounded" style="min-height: 150px;">&lt;h1&gt;SEO Opportunity&lt;/h1&gt;&lt;p&gt;Hi {{company_name}} team,&lt;/p&gt;&lt;p&gt;Your website scored {{score}}/100 on our SEO analysis.&lt;/p&gt;&lt;p&gt;I noticed some quick wins that could improve your rankings.&lt;/p&gt;&lt;p&gt;Would you be open to a quick chat?&lt;/p&gt;</textarea>
 </div>
 <button onclick="saveTemplate('improvement')" class="btn-primary btn w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
@@ -377,9 +374,9 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 <h3 class="text-xl font-bold mb-4">🌐 Website Offer</h3>
 <p class="text-sm text-gray-400 mb-4">Sent to businesses without website</p>
 <div class="template-editor">
-<label class="block text-sm mb-2">Subject</label>
+<label class="block text-sm text-gray-300 mb-2">Subject</label>
 <input type="text" id="template-website-subject" class="w-full p-2 rounded border border-gray-600 mb-2" value="💻 Professional website for {{company_name}}">
-<label class="block text-sm mb-2">Body (HTML)</label>
+<label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
 <textarea id="template-website-body" class="w-full p-2 rounded" style="min-height: 150px;">&lt;h1&gt;Website Opportunity&lt;/h1&gt;&lt;p&gt;Hi {{company_name}} team,&lt;/p&gt;&lt;p&gt;I noticed you don't have a website yet.&lt;/p&gt;&lt;p&gt;I specialize in creating SEO-optimized websites that rank.&lt;/p&gt;&lt;p&gt;Interested in learning more?&lt;/p&gt;</textarea>
 </div>
 <button onclick="saveTemplate('website')" class="btn-primary btn w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
@@ -412,6 +409,7 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 <div class="stat-card"><div><div class="text-4xl mb-2">🌍</div><div class="text-3xl font-bold" id="countriesCount">0</div><div class="text-sm text-gray-200">Countries</div></div></div>
 <div class="stat-card"><div><div class="text-4xl mb-2">💼</div><div class="text-3xl font-bold" id="activeHelpers">0</div><div class="text-sm text-gray-200">Freelancers</div></div></div>
 </div>
+<!-- Leaderboard body - constrained -->
 <div class="max-w-5xl mx-auto">
 <div id="top3-container" class="grid-3 mb-10"></div>
 <div id="rankings4to15Container" class="mb-10">
@@ -453,9 +451,10 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 <p class="text-xl text-gray-300 mb-4">Expert content optimizers ready to help</p>
 <button onclick="openFreelancerModal()" class="btn-primary btn"><i class="fas fa-user-plus mr-2"></i> Become a Specialist</button>
 </div>
+<!-- FIX: corrected duplicate class attribute -->
 <div class="max-w-5xl mx-auto grid-3" id="freelancersGrid"></div>
 </div>
-</div>
+</div><!-- end main-content -->
 <!-- FOOTER -->
 <footer>
 <div class="max-w-7xl mx-auto px-6 py-12">
@@ -539,12 +538,13 @@ let webshareConfigured = false;
 let allLeaderboardEntries = [];
 let userTemplates = { congrats: { subject: '', body: '' }, improvement: { subject: '', body: '' }, website: { subject: '', body: '' } };
 let shareCount = 0;
-const requiredShares = 5;
+const requiredShares = 1; // Changed to 1 for easier testing, can be increased later
 document.addEventListener('DOMContentLoaded', function() {
 registerUser();
 loadLeaderboardData();
 loadFreelancers();
 loadUserTemplates();
+// Hide loading screen via JS as backup (CSS animation is primary)
 function revealPage() {
 const l = document.getElementById('loading-screen');
 if(l) { l.style.opacity = '0'; l.style.pointerEvents = 'none'; setTimeout(function(){ l.style.display = 'none'; }, 300); }
@@ -603,40 +603,30 @@ const activationNotice = document.getElementById('activationNotice');
 const activationBadge = document.getElementById('activationBadge');
 const bulkScannerForm = document.getElementById('bulkScannerForm');
 
-// Check expiry date logic
-let isExpired = false;
-if (data.expiresAt) {
-    const now = new Date();
-    const expDate = new Date(data.expiresAt);
-    if (expDate < now) isExpired = true;
-}
-
-if (isExpired) {
-    // Expired
-    if(activationNotice) activationNotice.classList.remove('hidden');
-    if(activationBadge) activationBadge.classList.remove('hidden');
-    if(bulkScannerForm) bulkScannerForm.classList.add('hidden');
-    userActivated = false;
-    return false;
+// Check if expired based on date
+if (data.expired) {
+if(activationNotice) activationNotice.classList.remove('hidden');
+if(activationBadge) activationBadge.classList.remove('hidden');
+if(bulkScannerForm) bulkScannerForm.classList.add('hidden');
+return false;
 }
 
 if (userActivated) {
-    // Active
-    activationNotice?.classList.add('hidden');
-    activationBadge?.classList.add('hidden');
-    bulkScannerForm?.classList.remove('hidden');
-    return true;
+activationNotice?.classList.add('hidden');
+activationBadge?.classList.add('hidden');
+bulkScannerForm?.classList.remove('hidden');
+return true;
 } else {
-    // Inactive
-    activationNotice?.classList.remove('hidden');
-    activationBadge?.classList.remove('hidden');
-    bulkScannerForm?.classList.add('hidden');
-    return false;
+activationNotice?.classList.remove('hidden');
+activationBadge?.classList.remove('hidden');
+bulkScannerForm?.classList.add('hidden');
+return false;
 }
 }
 } catch (error) { console.error('Activation check error:', error); }
 return false;
 }
+// UPDATED: Function handles X and Copy Link
 function shareSocial(platform) {
 const url = encodeURIComponent('https://app.contentscale.site');
 const text = encodeURIComponent("I'm using ContentScale to audit my SEO content! Check it out.");
@@ -657,7 +647,7 @@ incrementShare();
 console.error('Failed to copy: ', err);
 alert('❌ Failed to copy link. Please copy manually: https://app.contentscale.site');
 });
-return;
+return; // Exit early as we handled the logic inside the promise
 }
 if (shareUrl) {
 window.open(shareUrl, '_blank', 'width=600,height=400');
@@ -679,7 +669,7 @@ if (shareCount >= requiredShares) {
 btn.disabled = false;
 btn.classList.remove('bg-gray-600', 'text-gray-400', 'cursor-not-allowed');
 btn.classList.add('bg-green-600', 'hover:bg-green-700', 'text-white', 'cursor-pointer');
-btn.innerHTML = '🔓 Unlock 7 Days Access';
+btn.innerHTML = '🔓 Unlock Access Now';
 }
 }
 async function unlockAccess() {
@@ -688,7 +678,7 @@ try {
 const response = await fetch('/api/user/extend-trial', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId } });
 const data = await response.json();
 if (data.success) {
-alert('✅ Success! Your access has been extended by 7 days.');
+alert('✅ Success! Your access has been extended.');
 shareCount = 0;
 localStorage.removeItem('shareCount_' + userId);
 updateShareUI();
@@ -1008,10 +998,13 @@ const activated = await checkActivationStatus();
 if (!activated) { alert('🔒 Account activation required.'); return; }
 }
 if (!sendgridConfigured) {
-if (!confirm('⚠️ SendGrid not configured. Continue with default system?')) {
-document.getElementById('apiConfig').classList.remove('hidden');
+// PROFESSIONAL NOTIFICATION WITH LINK
+if (!confirm('⚠️ SendGrid is not configured.\n\nTo send automated emails, you need a free SendGrid API key.\n\nWould you like to visit SendGrid.com to get your free API key now?\n\n(Click Cancel to continue with limited functionality)')) {
+window.open('https://sendgrid.com/en-us', '_blank');
 return;
 }
+document.getElementById('apiConfig').classList.remove('hidden');
+return;
 }
 button.disabled = true;
 button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
@@ -1084,6 +1077,7 @@ body: JSON.stringify({ businesses: results.withoutWebsite, senderName: userName,
 alert('✅ Bulk scan complete! Emails are being sent via your SendGrid account.');
 } catch (error) { alert('⚠️ Scan complete but some emails may have failed. Check your SendGrid dashboard.'); }
 }
+// --- UPDATED: Connects to Server for Leaderboard Data ---
 async function loadLeaderboardData() {
 try {
 const response = await fetch('/api/leaderboard');
@@ -1235,6 +1229,7 @@ container.classList.toggle('hidden');
 toggleText.textContent = container.classList.contains('hidden') ? '📊 Show Rankings 16+' : '📊 Hide Rankings 16+';
 }
 }
+// --- UPDATED: Connects to Server for Freelancer Data ---
 async function loadFreelancers() {
 try {
 const response = await fetch('/api/freelancers');
