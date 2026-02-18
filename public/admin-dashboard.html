@@ -44,6 +44,22 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 .message-bubble { background: #1f2937; border-left: 4px solid #a855f7; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem; }
 .message-bubble.admin { border-left-color: #10b981; }
 .message-bubble.user { border-left-color: #3b82f6; }
+/* FIX: Layout Width Constraints */
+.layout-constrained { max-width: 1200px; margin: 0 auto; }
+.top-card { border-radius: 1rem; padding: 1.5rem; text-align: center; color: white; }
+.top-card.gold { background: linear-gradient(135deg, #fbbf24, #d97706); }
+.top-card.silver { background: linear-gradient(135deg, #e5e7eb, #6b7280); }
+.top-card.bronze { background: linear-gradient(135deg, #f97316, #c2410c); }
+.rank-card { background: #1f2937; border: 1px solid #374151; border-radius: 0.75rem; padding: 1rem; text-align: center; transition: all 0.2s; }
+.rank-card:hover { border-color: #a855f7; transform: translateY(-4px); }
+.rankings-table { width: 100%; background: #111827; border-radius: 0.75rem; overflow: hidden; }
+.rankings-table th { background: #1f2937; padding: 1rem; text-align: left; font-weight: 600; color: white; }
+.rankings-table td { padding: 1rem; border-bottom: 1px solid #374151; color: white; }
+.checkbox-wrapper { display: flex; align-items: center; gap: 0.5rem; }
+.checkbox-wrapper input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+.pending-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid #f59e0b; border-radius: 1rem; padding: 1.5rem; margin-bottom: 1rem; }
+.badge-pending { background: #f59e0b; color: white; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+.badge-approved { background: #10b981; color: white; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
 </style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -112,7 +128,8 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
                         <button onclick="loadLeaderboard()" class="btn btn-info"><i class="fas fa-sync-alt mr-2"></i> Refresh</button>
                     </div>
                 </div>
-                <div class="grid-4 mb-8">
+                <!-- ✅ FIX: Wrapped in layout-constrained to prevent stretching -->
+                <div class="layout-constrained grid-4 mb-8">
                     <div class="stat-card"><div><div class="text-4xl mb-2">🏢</div><div class="text-3xl font-bold" id="stat-total-agencies">0</div><div class="text-sm text-gray-200">Agencies</div></div></div>
                     <div class="stat-card"><div><div class="text-4xl mb-2">📊</div><div class="text-3xl font-bold" id="stat-avg-score">0</div><div class="text-sm text-gray-200">Avg. Score</div></div></div>
                     <div class="stat-card"><div><div class="text-4xl mb-2">🌍</div><div class="text-3xl font-bold" id="stat-countries">0</div><div class="text-sm text-gray-200">Countries</div></div></div>
@@ -137,7 +154,7 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
                     </button>
                     <div id="rankingsContainer" class="hidden mt-4">
                         <table class="rankings-table w-full bg-gray-900 rounded-lg overflow-hidden">
-                            <thead class="bg-gray-800"><tr><th class="p-3 text-left">Rank</th><th class="p-3 text-left">Company</th><th class="p-3 text-left">Score</th><th class="p-3 text-left">Actions</th></tr></thead>
+                            <thead class="bg-gray-800"><tr><th class="w-10"></th><th>Rank</th><th>Company</th><th>Website</th><th>Score</th><th>Country</th><th>Actions</th></tr></thead>
                             <tbody id="rankingsTbody"></tbody>
                         </table>
                     </div>
@@ -152,18 +169,21 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
                     <h2 class="text-3xl font-bold text-white">🎯 Freelancers</h2>
                     <button onclick="loadFreelancers()" class="btn btn-info"><i class="fas fa-sync-alt mr-2"></i> Refresh</button>
                 </div>
-                <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
-                    <div class="flex items-center gap-2">
-                        <input type="checkbox" id="select-all-freelancers" onchange="toggleSelectAll('freelancers')" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600">
-                        <label class="text-sm text-gray-300">Select All</label>
+                <!-- ✅ FIX: Wrapped in layout-constrained -->
+                <div class="layout-constrained">
+                    <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="select-all-freelancers" onchange="toggleSelectAll('freelancers')" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600">
+                            <label class="text-sm text-gray-300">Select All</label>
+                        </div>
+                        <button onclick="bulkDelete('freelancers')" class="btn btn-danger"><i class="fas fa-trash mr-2"></i> Delete Selected (<span id="selected-count-freelancers">0</span>)</button>
                     </div>
-                    <button onclick="bulkDelete('freelancers')" class="btn btn-danger"><i class="fas fa-trash mr-2"></i> Delete Selected (<span id="selected-count-freelancers">0</span>)</button>
+                    <div id="freelancersGrid" class="grid-3"></div>
                 </div>
-                <div id="freelancersGrid" class="grid-3"></div>
             </div>
         </div>
 
-        <!-- TAB 3: USERS MANAGEMENT (REAL DATA) -->
+        <!-- TAB 3: USERS MANAGEMENT -->
         <div id="tab-users" class="tab-content hidden">
             <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
                 <div class="flex justify-between items-center mb-6">
@@ -242,11 +262,21 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
     </div>
 </div>
 
-<!-- Message Modal -->
+<!-- Message Modal (Updated with Recipient Options) -->
 <div id="messageModal" class="modal">
     <div class="modal-content">
         <h2 class="text-2xl font-bold mb-4">Send Message</h2>
         <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-bold mb-1">Recipients</label>
+                <select id="msgRecipients" class="w-full p-3 border rounded text-black">
+                    <option value="all">All Users</option>
+                    <option value="active">Active Users</option>
+                    <option value="inactive">Inactive Users</option>
+                    <option value="bulk_scanner">Bulk Scanner Users</option>
+                    <option value="selected">Selected Users (from list)</option>
+                </select>
+            </div>
             <div>
                 <label class="block text-sm font-bold mb-1">Subject</label>
                 <input type="text" id="msgSubject" class="w-full p-3 border rounded text-black" placeholder="Important Update">
@@ -263,7 +293,7 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
     </div>
 </div>
 
-<!-- Add/Edit Leaderboard Modals (Simplified for brevity, same as before) -->
+<!-- Add/Edit Leaderboard Modals -->
 <div id="addLeaderboardModal" class="modal">
     <div class="modal-content">
         <h2 class="text-2xl font-bold mb-4">Add Entry</h2>
@@ -275,6 +305,21 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
     </div>
 </div>
 
+<div id="editLeaderboardModal" class="modal">
+    <div class="modal-content">
+        <h2 class="text-2xl font-bold mb-4">Edit Entry</h2>
+        <input type="hidden" id="edit-id">
+        <label class="block text-sm mb-1">Company Name</label>
+        <input type="text" id="edit-company" class="w-full p-2 mb-2 border text-black">
+        <label class="block text-sm mb-1">URL</label>
+        <input type="text" id="edit-url" class="w-full p-2 mb-2 border text-black">
+        <label class="block text-sm mb-1">Score</label>
+        <input type="number" id="edit-score" class="w-full p-2 mb-2 border text-black">
+        <button onclick="updateLeaderboardEntry()" class="btn btn-primary w-full">Update</button>
+        <button onclick="closeModal('editLeaderboardModal')" class="btn btn-danger w-full mt-2">Cancel</button>
+    </div>
+</div>
+
 <script>
 // ==========================================
 // GLOBAL STATE
@@ -282,7 +327,9 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 let currentAdminId = localStorage.getItem('admin_id');
 let allUsers = [];
 let selectedIds = { leaderboard: new Set(), freelancers: new Set(), users: new Set() };
-let messageTarget = null; // 'all', 'selected', or specific userId
+let messageTarget = null; 
+let allLeaderboard = [];
+let allFreelancers = [];
 
 // ==========================================
 // AUTH
@@ -357,7 +404,7 @@ function loadAllData() {
 }
 
 // ==========================================
-// USER MANAGEMENT (REAL LOGIC)
+// USER MANAGEMENT
 // ==========================================
 async function loadUsers() {
     try {
@@ -368,7 +415,6 @@ async function loadUsers() {
         const total = allUsers.length;
         const active = allUsers.filter(u => u.is_activated).length;
         const inactive = total - active;
-        // Simple expiring logic (within 7 days)
         const now = new Date();
         const expiring = allUsers.filter(u => {
             if (!u.activated_until) return false;
@@ -408,9 +454,10 @@ async function loadUsers() {
                 <div class="flex items-center gap-3">
                     <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleSelection('users', '${u.id}')">
                     <div>
-                        <div class="font-bold">${u.ip_address || 'Unknown IP'}</div>
-                        <div class="text-xs text-gray-400">ID: ${u.id.substring(0,8)}... | Created: ${new Date(u.created_at).toLocaleDateString()}</div>
+                        <div class="font-bold">ID: ${u.id.substring(0,8)}...</div>
+                        <div class="text-xs text-gray-400">IP: ${u.ip_address || 'Unknown'} | Created: ${new Date(u.created_at).toLocaleDateString()}</div>
                         ${u.activated_until ? `<div class="text-xs text-yellow-500">Expires: ${new Date(u.activated_until).toLocaleDateString()}</div>` : ''}
+                        <div class="text-xs text-gray-500 mt-1">Note: Bulk scan emails/names are logged per session. Link via IP or Email if available in logs.</div>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
@@ -436,7 +483,6 @@ function toggleSelectAll(type) {
     } else {
         selectedIds[type].clear();
     }
-    // Re-render to show checkboxes updated (simplified for users)
     if (type === 'users') loadUsers(); 
     updateCounts();
 }
@@ -447,7 +493,6 @@ function updateCounts() {
     document.getElementById('selected-count-users').textContent = selectedIds.users.size;
 }
 
-// Bulk Actions for Users
 function bulkActionUsers(action) {
     if (selectedIds.users.size === 0) return alert('Select users first');
     
@@ -470,7 +515,6 @@ async function confirmActivate() {
     if(!confirm(`Activate ${selectedIds.users.size} users for ${days} days?`)) return;
     
     try {
-        // We call activate for each user individually with the days param
         await Promise.all(Array.from(selectedIds.users).map(id => 
             apiCall(`/api/admin/users/${id}/activate`, 'POST', { days: parseInt(days) })
         ));
@@ -496,35 +540,41 @@ async function bulkDelete(type) {
         alert('Deleted successfully');
         selectedIds[type].clear();
         updateCounts();
-        loadAllData(); // Refresh everything
+        loadAllData();
     } catch (e) { alert(e.message); }
 }
 
 // ==========================================
-// MESSAGING
+// MESSAGING (Updated Logic)
 // ==========================================
 function openMessageModal(targetType, userId = null) {
     messageTarget = targetType;
-    if (targetType === 'single') messageTarget = userId; // Store specific ID
+    if (targetType === 'single') messageTarget = userId;
+    
+    // Set dropdown value if specific type
+    const select = document.getElementById('msgRecipients');
+    if (targetType === 'all') select.value = 'all';
+    if (targetType === 'selected') select.value = 'selected';
+    
     document.getElementById('messageModal').classList.add('active');
 }
 
 async function sendMessage() {
+    const recipients = document.getElementById('msgRecipients').value;
     const subject = document.getElementById('msgSubject').value;
     const body = document.getElementById('msgBody').value;
     if (!subject || !body) return alert('Fill all fields');
 
     try {
-        let payload = { subject, body };
+        let payload = { subject, body, recipients };
         
-        if (messageTarget === 'all') {
-            payload.recipients = 'all';
-        } else if (messageTarget === 'selected') {
-            payload.recipients = 'selected';
-            payload.user_ids = Array.from(selectedIds.users);
-        } else {
-            // Single user
+        if (recipients === 'selected' && messageTarget !== 'all' && messageTarget !== 'single') {
+             // If 'selected' was chosen manually but we have specific IDs from checkbox
+             payload.user_ids = Array.from(selectedIds.users);
+        } else if (messageTarget !== 'all' && messageTarget !== 'selected') {
+            // Single user message
             payload.recipientUserId = messageTarget;
+            payload.recipients = 'user'; // Override
         }
 
         await apiCall('/api/admin/messages/send', 'POST', payload);
@@ -545,7 +595,7 @@ async function loadMessages() {
         container.innerHTML = data.messages.map(m => `
             <div class="message-bubble ${m.sender_type === 'admin' ? 'admin' : 'user'}">
                 <div class="flex justify-between text-xs text-gray-400 mb-1">
-                    <span>${m.sender_type === 'admin' ? 'You' : 'User'} • ${new Date(m.created_at).toLocaleString()}</span>
+                    <span>${m.sender_type === 'admin' ? 'You' : 'User Reply'} • ${new Date(m.created_at).toLocaleString()}</span>
                     <span class="font-bold">${m.subject || 'No Subject'}</span>
                 </div>
                 <p class="text-sm">${m.body}</p>
@@ -555,41 +605,128 @@ async function loadMessages() {
 }
 
 // ==========================================
-// LEADERBOARD & FREELANCERS (Standard Logic)
+// LEADERBOARD & FREELANCERS (Restored Edit/Delete)
 // ==========================================
-// (Keeping standard logic for brevity, assuming previous working code exists for these parts)
-// Just ensuring global variables are set for toggleSelectAll to work
-window.allLeaderboard = [];
-window.allFreelancers = [];
-
 async function loadLeaderboard() {
     const data = await apiCall('/api/leaderboard');
     window.allLeaderboard = data.entries || [];
     document.getElementById('stat-total-agencies').textContent = data.stats.totalAgencies;
     document.getElementById('stat-avg-score').textContent = data.averageScore;
     document.getElementById('stat-verified').textContent = data.stats.verifiedCount;
-    // Render Top 3
+    
+    renderTop3();
+    renderRankings4to15();
+    renderRankings16Plus();
+    updateCounts();
+}
+
+function renderTop3() {
+    const container = document.getElementById('top3-container');
     const top3 = window.allLeaderboard.slice(0, 3);
-    document.getElementById('top3-container').innerHTML = top3.map((e, i) => `
-        <div class="card text-center p-6 bg-gradient-to-b from-gray-800 to-gray-900">
+    if (top3.length === 0) {
+        container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No entries</div>';
+        return;
+    }
+    container.innerHTML = top3.map((e, i) => `
+        <div class="top-card ${i===0?'gold':i===1?'silver':'bronze'}">
             <div class="text-4xl mb-2">${i===0?'🥇':i===1?'🥈':'🥉'}</div>
             <h3 class="font-bold text-xl">${e.company_name || e.url}</h3>
             <div class="text-3xl font-bold text-green-400 my-2">${e.score}</div>
-            <button onclick="editLeaderboard(${e.id})" class="btn btn-info text-xs mt-2">Edit</button>
+            <div class="flex gap-2 justify-center">
+                <button onclick="editLeaderboard(${e.id})" class="bg-blue-600 px-3 py-1 rounded text-sm">Edit</button>
+                <button onclick="deleteItem('leaderboard', ${e.id})" class="bg-red-600 px-3 py-1 rounded text-sm">Del</button>
+            </div>
         </div>
     `).join('');
-    updateCounts();
+}
+
+function renderRankings4to15() {
+    const grid = document.getElementById('rankings4to15Grid');
+    const rankings = window.allLeaderboard.slice(3, 15);
+    if (rankings.length === 0) {
+        document.getElementById('rankings4to15Container').style.display = 'none';
+        return;
+    }
+    document.getElementById('rankings4to15Container').style.display = 'block';
+    grid.innerHTML = rankings.map((e, i) => `
+        <div class="rank-card">
+            <div class="text-2xl font-bold text-gray-400 mb-2">#${i+4}</div>
+            <h4 class="font-bold text-white text-sm mb-2 truncate">${e.company_name || e.url}</h4>
+            <div class="text-2xl font-black text-green-400 mb-2">${e.score}</div>
+            <div class="flex gap-2 justify-center">
+                <button onclick="editLeaderboard(${e.id})" class="text-blue-400 text-xs">Edit</button>
+                <button onclick="deleteItem('leaderboard', ${e.id})" class="text-red-400 text-xs">Del</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderRankings16Plus() {
+    const tbody = document.getElementById('rankingsTbody');
+    const rankings = window.allLeaderboard.slice(15, 35);
+    tbody.innerHTML = rankings.map((e, i) => `
+        <tr>
+            <td class="w-10"><input type="checkbox" onchange="toggleSelection('leaderboard', ${e.id})"></td>
+            <td>${i+16}</td>
+            <td>${e.company_name || e.url}</td>
+            <td><a href="${e.url}" target="_blank" class="text-blue-400">${e.url}</a></td>
+            <td>${e.score}</td>
+            <td>${e.country}</td>
+            <td>
+                <button onclick="editLeaderboard(${e.id})" class="text-blue-400 mr-2">Edit</button>
+                <button onclick="deleteItem('leaderboard', ${e.id})" class="text-red-400">Del</button>
+            </td>
+        </tr>
+    `).join('');
+    document.getElementById('totalCount').textContent = window.allLeaderboard.length;
+}
+
+function editLeaderboard(id) {
+    const entry = window.allLeaderboard.find(e => e.id === id);
+    if(!entry) return;
+    document.getElementById('edit-id').value = entry.id;
+    document.getElementById('edit-company').value = entry.company_name || '';
+    document.getElementById('edit-url').value = entry.url;
+    document.getElementById('edit-score').value = entry.score;
+    document.getElementById('editLeaderboardModal').classList.add('active');
+}
+
+async function updateLeaderboardEntry() {
+    const id = document.getElementById('edit-id').value;
+    const company = document.getElementById('edit-company').value;
+    const url = document.getElementById('edit-url').value;
+    const score = parseInt(document.getElementById('edit-score').value);
+    
+    try {
+        await apiCall(`/api/admin/leaderboard/${id}`, 'PUT', { company_name: company, url, score });
+        alert('Updated!');
+        closeModal('editLeaderboardModal');
+        loadLeaderboard();
+    } catch(e) { alert(e.message); }
+}
+
+async function deleteItem(type, id) {
+    if(!confirm('Delete this item?')) return;
+    try {
+        if(type === 'leaderboard') await apiCall(`/api/admin/leaderboard/${id}`, 'DELETE');
+        if(type === 'freelancers') await apiCall(`/api/admin/freelancers/${id}`, 'DELETE');
+        alert('Deleted');
+        loadAllData();
+    } catch(e) { alert(e.message); }
 }
 
 async function loadFreelancers() {
     const data = await apiCall('/api/freelancers');
     window.allFreelancers = data.freelancers || [];
-    document.getElementById('freelancersGrid').innerHTML = window.allFreelancers.map(f => `
+    const grid = document.getElementById('freelancersGrid');
+    grid.innerHTML = window.allFreelancers.map(f => `
         <div class="card">
             <h3 class="font-bold">${f.name}</h3>
             <p class="text-sm text-gray-400">${f.title}</p>
             <div class="mt-4 flex gap-2">
                 <button onclick="toggleFeature(${f.id})" class="btn btn-warning text-xs flex-1">Featured</button>
+                <button onclick="editFreelancer(${f.id})" class="btn btn-info text-xs flex-1">Edit</button>
+                <button onclick="deleteItem('freelancers', ${f.id})" class="btn btn-danger text-xs flex-1">Del</button>
                 <input type="checkbox" onchange="toggleSelection('freelancers', ${f.id})">
             </div>
         </div>
@@ -597,27 +734,116 @@ async function loadFreelancers() {
     updateCounts();
 }
 
-async function loadPendingData() {
-    // Implementation similar to previous versions for pending approvals
-    document.getElementById('pending-leaderboard-container').innerHTML = '<p class="text-gray-400">Loading...</p>';
-    // Fetch and render pending items here
+function editFreelancer(id) {
+    const f = window.allFreelancers.find(x => x.id === id);
+    if(!f) return;
+    // Simple prompt edit for brevity, can be expanded to modal like leaderboard
+    const newName = prompt("Name:", f.name);
+    const newTitle = prompt("Title:", f.title);
+    if(newName && newTitle) {
+        apiCall(`/api/admin/freelancers/${id}`, 'PUT', { name: newName, title: newTitle })
+        .then(() => { alert('Updated'); loadFreelancers(); });
+    }
 }
 
-// Helpers
+async function toggleFeature(id) {
+    try {
+        await apiCall(`/api/admin/freelancers/${id}/toggle-featured`, 'POST');
+        loadFreelancers();
+    } catch(e) { alert(e.message); }
+}
+
+// ==========================================
+// PENDING TAB (Fixed)
+// ==========================================
+async function loadPendingData() {
+    try {
+        // Load Pending Leaderboard
+        const lbData = await apiCall('/api/admin/leaderboard/pending');
+        const lbContainer = document.getElementById('pending-leaderboard-container');
+        if(lbData.pending.length === 0) {
+            lbContainer.innerHTML = '<p class="text-gray-400">No pending leaderboard submissions.</p>';
+        } else {
+            lbContainer.innerHTML = lbData.pending.map(p => `
+                <div class="pending-card">
+                    <h4 class="font-bold">${p.company_name || p.url}</h4>
+                    <p class="text-sm text-gray-400">${p.url}</p>
+                    <p class="text-xl font-bold text-green-400 my-2">${p.score}/100</p>
+                    <div class="flex gap-2">
+                        <button onclick="approvePending('leaderboard', ${p.id})" class="btn btn-success flex-1">Approve</button>
+                        <button onclick="rejectPending('leaderboard', ${p.id})" class="btn btn-danger flex-1">Reject</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Load Pending Freelancers
+        const frData = await apiCall('/api/admin/freelancers/pending');
+        const frContainer = document.getElementById('pending-freelancers-container');
+        if(frData.pending.length === 0) {
+            frContainer.innerHTML = '<p class="text-gray-400">No pending freelancer applications.</p>';
+        } else {
+            frContainer.innerHTML = frData.pending.map(p => `
+                <div class="pending-card">
+                    <h4 class="font-bold">${p.name}</h4>
+                    <p class="text-sm text-gray-400">${p.email}</p>
+                    <p class="text-sm mt-2">${p.bio}</p>
+                    <div class="flex gap-2 mt-4">
+                        <button onclick="approvePending('freelancer', ${p.id})" class="btn btn-success flex-1">Approve</button>
+                        <button onclick="rejectPending('freelancer', ${p.id})" class="btn btn-danger flex-1">Reject</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+    } catch(e) {
+        console.error(e);
+        document.getElementById('pending-leaderboard-container').innerHTML = 'Error loading pending items.';
+        document.getElementById('pending-freelancers-container').innerHTML = 'Error loading pending items.';
+    }
+}
+
+async function approvePending(type, id) {
+    try {
+        if(type === 'leaderboard') await apiCall(`/api/admin/leaderboard/${id}/approve`, 'POST');
+        if(type === 'freelancer') await apiCall(`/api/admin/freelancers/${id}/approve`, 'POST');
+        alert('Approved!');
+        loadPendingData();
+        if(type === 'leaderboard') loadLeaderboard();
+        if(type === 'freelancer') loadFreelancers();
+    } catch(e) { alert(e.message); }
+}
+
+async function rejectPending(type, id) {
+    if(!confirm('Reject this item?')) return;
+    try {
+        if(type === 'leaderboard') await apiCall(`/api/admin/leaderboard/${id}/reject`, 'POST');
+        if(type === 'freelancer') await apiCall(`/api/admin/freelancers/${id}`, 'DELETE');
+        alert('Rejected');
+        loadPendingData();
+    } catch(e) { alert(e.message); }
+}
+
+// ==========================================
+// UTILS
+// ==========================================
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 function showAddLeaderboardModal() { document.getElementById('addLeaderboardModal').classList.add('active'); }
 function toggleRankings() { 
     const el = document.getElementById('rankingsContainer'); 
     el.classList.toggle('hidden'); 
 }
-function addLeaderboardEntry() {
-    // Implement add logic
-    closeModal('addLeaderboardModal');
-    loadLeaderboard();
+async function addLeaderboardEntry() {
+    const company = document.getElementById('add-company').value;
+    const url = document.getElementById('add-url').value;
+    const score = parseInt(document.getElementById('add-score').value);
+    if(!company || !url || !score) return alert('Fill all fields');
+    try {
+        await apiCall('/api/admin/leaderboard/manual-add', 'POST', { url, company_name: company, score });
+        alert('Added!');
+        closeModal('addLeaderboardModal');
+        loadLeaderboard();
+    } catch(e) { alert(e.message); }
 }
-function editLeaderboard(id) { alert('Edit functionality for ID: ' + id); }
-function toggleFeature(id) { alert('Toggle featured for ID: ' + id); }
-
 </script>
 </body>
 </html>
