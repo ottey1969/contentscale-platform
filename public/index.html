@@ -198,7 +198,7 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 <h3 class="text-xl font-bold text-white flex items-center gap-2">
 <span>📋 Bulk URL Scanner</span>
 <span class="text-xs px-2 py-1 bg-blue-600 rounded text-white">Batch Scan</span>
-<span id="activationBadge" class="text-xs px-2 py-1 bg-red-600 rounded text-white hidden">🔒 Activation Required</span>
+<span id="activationBadge" class="text-xs px-2 py-1 bg-red-600 rounded text-white hidden">🔒 Setup Required</span>
 </h3>
 <button onclick="toggleBulkScanner()" class="text-sm text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-2">
 <span id="bulkToggleText">Hide Bulk Scanner</span>
@@ -206,43 +206,52 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 </button>
 </div>
 <div id="bulkScannerContent">
-<!-- ACTIVATION NOTICE -->
-<div id="activationNotice" class="hidden bg-gradient-to-r from-purple-900 to-blue-900 border-2 border-purple-500 rounded-lg p-6 mb-6">
+<!-- PROFESSIONAL SETUP REQUIRED BOX -->
+<div id="setupNotice" class="hidden bg-gradient-to-r from-purple-900 to-blue-900 border-2 border-purple-500 rounded-lg p-6 mb-6">
 <div class="flex items-start gap-4">
-<div class="text-4xl">🔒</div>
+<div class="text-4xl">⚙️</div>
 <div class="flex-1">
-<h4 class="text-xl font-bold text-white mb-2">Unlock Bulk Scanning Access</h4>
-<p class="text-gray-200 mb-4">To keep this tool free and sustainable, please share ContentScale on social media or with your network. Once you've shared, your access will be unlocked instantly!</p>
+<h4 class="text-xl font-bold text-white mb-2">Setup Required to Unlock Bulk Scanning</h4>
+<p class="text-gray-200 mb-4">To ensure reliable email delivery and scanning, please configure your free API keys below.</p>
 <div class="bg-gray-900 bg-opacity-50 rounded-lg p-4 mb-4">
-<h5 class="font-bold text-white mb-2">Step 1: Share on Social Media</h5>
-<p class="text-sm text-gray-300 mb-3">Click any button below to share:</p>
-<!-- UPDATED: Functional Share Buttons -->
-<div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
-<a href="#" onclick="shareSocial('x'); return false;" class="share-btn share-twitter"><i class="fab fa-x-twitter"></i> X</a>
-<a href="#" onclick="shareSocial('linkedin'); return false;" class="share-btn share-linkedin"><i class="fab fa-linkedin-in"></i> LinkedIn</a>
-<a href="#" onclick="shareSocial('facebook'); return false;" class="share-btn share-facebook"><i class="fab fa-facebook-f"></i> Facebook</a>
-<a href="#" onclick="shareSocial('whatsapp'); return false;" class="share-btn share-whatsapp"><i class="fab fa-whatsapp"></i> WhatsApp</a>
-<a href="#" onclick="shareSocial('copy'); return false;" class="share-btn share-copy"><i class="fas fa-link"></i> Copy Link</a>
-</div>
-<div class="flex items-center gap-4 mb-4">
-<div class="flex-1 bg-gray-800 rounded-full h-4 overflow-hidden">
-<div id="shareProgressBar" class="bg-green-500 h-full transition-all duration-500" style="width: 0%"></div>
-</div>
-<span class="text-sm font-bold"><span id="shareCountDisplay">0</span>/1 Share</span>
-</div>
-<button id="unlockAccessBtn" onclick="unlockAccess()" disabled class="w-full bg-gray-600 text-gray-400 px-6 py-3 rounded-lg font-bold cursor-not-allowed transition-all">🔓 Unlock Access Now</button>
-</div>
-<h5 class="font-bold text-white mb-2">Step 2: Configure Email (Optional but Recommended)</h5>
-<p class="text-sm text-gray-300 mb-2">To send automated reports, you need a free SendGrid API key.</p>
-<a href="https://sendgrid.com/en-us" target="_blank" rel="noopener" class="inline-block bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded mb-2">
+<h5 class="font-bold text-white mb-3">Step 1: Get SendGrid Key (Free)</h5>
+<div class="flex flex-col md:flex-row gap-2 mb-4">
+<a href="https://sendgrid.com/en-us" target="_blank" rel="noopener" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center py-2 rounded text-sm font-bold">
 <i class="fas fa-external-link-alt mr-1"></i> Get Free SendGrid Account
 </a>
-<p class="text-xs text-gray-400 mt-2">💡 Sharing helps us keep this tool free for everyone!</p>
+<input type="password" id="sendgridKeyInput" placeholder="Paste SG.xxxxxx key here" class="flex-[2] p-2 rounded text-black text-sm">
+<button onclick="saveKey('sendgrid')" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm font-bold">
+<i class="fas fa-check"></i> Save
+</button>
+</div>
+<div class="flex items-center gap-2 mb-4">
+<span class="text-sm text-gray-400">Status:</span>
+<span id="sendgridStatusIcon" class="text-red-500 text-xl"><i class="fas fa-times-circle"></i></span>
+<span id="sendgridStatusText" class="text-sm text-gray-300">Not Configured</span>
+</div>
+
+<h5 class="font-bold text-white mb-3 mt-6">Step 2: Get WebShare Key (Free)</h5>
+<div class="flex flex-col md:flex-row gap-2 mb-4">
+<a href="https://www.webshare.io/" target="_blank" rel="noopener" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center py-2 rounded text-sm font-bold">
+<i class="fas fa-external-link-alt mr-1"></i> Get Free WebShare Account
+</a>
+<input type="password" id="webshareKeyInput" placeholder="Paste WebShare key here" class="flex-[2] p-2 rounded text-black text-sm">
+<button onclick="saveKey('webshare')" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm font-bold">
+<i class="fas fa-check"></i> Save
+</button>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-sm text-gray-400">Status:</span>
+<span id="webshareStatusIcon" class="text-red-500 text-xl"><i class="fas fa-times-circle"></i></span>
+<span id="webshareStatusText" class="text-sm text-gray-300">Not Configured</span>
+</div>
+</div>
+<p class="text-xs text-gray-400 mt-2">💡 Once both keys are saved, the Bulk Scanner will unlock automatically.</p>
 </div>
 </div>
 </div>
 <!-- BULK FORM -->
-<div id="bulkScannerForm">
+<div id="bulkScannerForm" class="hidden">
 <p class="text-gray-300 text-sm mb-4">Scan up to 100 websites at once. Based on scores, we automatically:</p>
 <ul class="text-sm text-gray-300 mb-4" style="margin-left: 1.5rem;">
 <li>🏆 <strong>85+ Score:</strong> Submit to leaderboard + send congratulations email</li>
@@ -280,7 +289,7 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 <button onclick="toggleAccordion('apiConfig')" class="accordion-header">
 <span class="flex items-center gap-2">
 <i class="fas fa-key text-purple-400"></i>
-<span class="font-bold">Configure Your API Keys (SendGrid + WebShare)</span>
+<span class="font-bold">Advanced API Configuration</span>
 <span id="apiStatusIndicator" class="api-status-indicator api-status-inactive"></span>
 </span>
 <i class="fas fa-chevron-down" id="apiConfigIcon"></i>
@@ -391,7 +400,6 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 <div><code class="text-purple-400">{{sender_name}}</code> - Your name</div>
 <div><code class="text-purple-400">{{sender_email}}</code> - Your email</div>
 <div><code class="text-purple-400">{{website_url}}</code> - Business website</div>
-</div>
 </div>
 </div>
 </div>
@@ -537,8 +545,6 @@ let sendgridConfigured = false;
 let webshareConfigured = false;
 let allLeaderboardEntries = [];
 let userTemplates = { congrats: { subject: '', body: '' }, improvement: { subject: '', body: '' }, website: { subject: '', body: '' } };
-let shareCount = 0;
-const requiredShares = 1; // Changed to 1 for easier testing, can be increased later
 document.addEventListener('DOMContentLoaded', function() {
 registerUser();
 loadLeaderboardData();
@@ -599,94 +605,56 @@ const data = await response.json();
 if (data.success) {
 userActivated = data.activated;
 activationChecked = true;
-const activationNotice = document.getElementById('activationNotice');
+const setupNotice = document.getElementById('setupNotice');
 const activationBadge = document.getElementById('activationBadge');
 const bulkScannerForm = document.getElementById('bulkScannerForm');
-
-// Check if expired based on date
 if (data.expired) {
-if(activationNotice) activationNotice.classList.remove('hidden');
+if(setupNotice) setupNotice.classList.remove('hidden');
 if(activationBadge) activationBadge.classList.remove('hidden');
 if(bulkScannerForm) bulkScannerForm.classList.add('hidden');
 return false;
 }
-
 if (userActivated) {
-activationNotice?.classList.add('hidden');
-activationBadge?.classList.add('hidden');
-bulkScannerForm?.classList.remove('hidden');
+if(setupNotice) setupNotice.classList.add('hidden');
+if(activationBadge) activationBadge.classList.add('hidden');
+if(bulkScannerForm) bulkScannerForm.classList.remove('hidden');
 return true;
 } else {
-activationNotice?.classList.remove('hidden');
-activationBadge?.classList.remove('hidden');
-bulkScannerForm?.classList.add('hidden');
+if(setupNotice) setupNotice.classList.remove('hidden');
+if(activationBadge) activationBadge.classList.remove('hidden');
+if(bulkScannerForm) bulkScannerForm.classList.add('hidden');
 return false;
 }
 }
 } catch (error) { console.error('Activation check error:', error); }
 return false;
 }
-// UPDATED: Function handles X and Copy Link
-function shareSocial(platform) {
-const url = encodeURIComponent('https://app.contentscale.site');
-const text = encodeURIComponent("I'm using ContentScale to audit my SEO content! Check it out.");
-let shareUrl = '';
-if (platform === 'x') {
-shareUrl = `https://x.com/intent/tweet?url=${url}&text=${text}`;
-} else if (platform === 'linkedin') {
-shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`;
-} else if (platform === 'facebook') {
-shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
-} else if (platform === 'whatsapp') {
-shareUrl = `https://wa.me/?text=${text} ${url}`;
-} else if (platform === 'copy') {
-navigator.clipboard.writeText('https://app.contentscale.site').then(() => {
-alert('✅ Link copied to clipboard!');
-incrementShare();
-}).catch(err => {
-console.error('Failed to copy: ', err);
-alert('❌ Failed to copy link. Please copy manually: https://app.contentscale.site');
-});
-return; // Exit early as we handled the logic inside the promise
-}
-if (shareUrl) {
-window.open(shareUrl, '_blank', 'width=600,height=400');
-incrementShare();
-}
-}
-function incrementShare() {
-if (shareCount < requiredShares) {
-shareCount++;
-localStorage.setItem('shareCount_' + userId, shareCount);
-updateShareUI();
-}
-}
-function updateShareUI() {
-document.getElementById('shareCountDisplay').textContent = shareCount;
-document.getElementById('shareProgressBar').style.width = (shareCount / requiredShares * 100) + '%';
-const btn = document.getElementById('unlockAccessBtn');
-if (shareCount >= requiredShares) {
-btn.disabled = false;
-btn.classList.remove('bg-gray-600', 'text-gray-400', 'cursor-not-allowed');
-btn.classList.add('bg-green-600', 'hover:bg-green-700', 'text-white', 'cursor-pointer');
-btn.innerHTML = '🔓 Unlock Access Now';
-}
-}
-async function unlockAccess() {
-if (shareCount < requiredShares) return;
+// NEW: Save Key Function for Setup Box
+async function saveKey(type) {
+if (!userId) { alert('❌ User not registered. Please refresh.'); return; }
+const inputId = type === 'sendgrid' ? 'sendgridKeyInput' : 'webshareKeyInput';
+const key = document.getElementById(inputId).value;
+if (!key) { alert('❌ Please paste a valid key'); return; }
 try {
-const response = await fetch('/api/user/extend-trial', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId } });
+const endpoint = type === 'sendgrid' ? '/api/user/sendgrid/configure' : '/api/user/webshare/configure';
+const payload = type === 'sendgrid' ? { apiKey: key, dailyLimit: 100 } : { apiKey: key };
+const response = await fetch(endpoint, {
+method: 'POST',
+headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+body: JSON.stringify(payload)
+});
 const data = await response.json();
 if (data.success) {
-alert('✅ Success! Your access has been extended.');
-shareCount = 0;
-localStorage.removeItem('shareCount_' + userId);
-updateShareUI();
-checkActivationStatus();
+alert(`✅ ${type === 'sendgrid' ? 'SendGrid' : 'WebShare'} key saved successfully!`);
+document.getElementById(inputId).value = ''; // Clear input
+loadApiStatus(); // Refresh status icons
+checkActivationStatus(); // Check if bulk scanner should unlock
 } else {
-alert('❌ Error: ' + (data.error || 'Failed to extend trial'));
+alert('❌ Error saving key: ' + (data.error || 'Unknown error'));
 }
-} catch (error) { alert('❌ Connection error'); }
+} catch (error) {
+alert('❌ Connection error: ' + error.message);
+}
 }
 async function loadApiStatus() {
 if (!userId) return;
@@ -696,6 +664,7 @@ const data = await response.json();
 if (data.success) {
 const indicator = document.getElementById('apiStatusIndicator');
 const statusText = document.getElementById('apiStatusText');
+// Update Advanced Config Section
 if (data.hasSendgrid || data.hasWebshare) {
 indicator.className = 'api-status-indicator api-status-active';
 statusText.textContent = 'Custom API keys configured';
@@ -705,16 +674,36 @@ statusText.textContent = 'Using default settings (limited)';
 }
 if (data.hasSendgrid) {
 document.getElementById('sendgridStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
+// Update Setup Box Icon
+document.getElementById('sendgridStatusIcon').innerHTML = '<i class="fas fa-check-circle"></i>';
+document.getElementById('sendgridStatusIcon').className = 'text-green-500 text-xl';
+document.getElementById('sendgridStatusText').textContent = 'Configured';
 if (data.sendgrid) {
 document.getElementById('sendgridUsed').textContent = data.sendgrid.used;
 document.getElementById('sendgridLimit').textContent = data.sendgrid.limit;
 document.getElementById('sendgridUsageBar').style.width = (data.sendgrid.used / data.sendgrid.limit * 100) + '%';
 }
 sendgridConfigured = true;
+} else {
+// Reset Setup Box Icon
+document.getElementById('sendgridStatusIcon').innerHTML = '<i class="fas fa-times-circle"></i>';
+document.getElementById('sendgridStatusIcon').className = 'text-red-500 text-xl';
+document.getElementById('sendgridStatusText').textContent = 'Not Configured';
+sendgridConfigured = false;
 }
 if (data.hasWebshare) {
 document.getElementById('webshareStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
+// Update Setup Box Icon
+document.getElementById('webshareStatusIcon').innerHTML = '<i class="fas fa-check-circle"></i>';
+document.getElementById('webshareStatusIcon').className = 'text-green-500 text-xl';
+document.getElementById('webshareStatusText').textContent = 'Configured';
 webshareConfigured = true;
+} else {
+// Reset Setup Box Icon
+document.getElementById('webshareStatusIcon').innerHTML = '<i class="fas fa-times-circle"></i>';
+document.getElementById('webshareStatusIcon').className = 'text-red-500 text-xl';
+document.getElementById('webshareStatusText').textContent = 'Not Configured';
+webshareConfigured = false;
 }
 }
 } catch (error) { console.error('Error loading API status:', error); }
@@ -995,16 +984,13 @@ if (!email || !email.includes('@')) { alert('❌ Please enter a valid email addr
 if (!name) { alert('❌ Please enter your name'); return; }
 if (!userActivated && !activationChecked) {
 const activated = await checkActivationStatus();
-if (!activated) { alert('🔒 Account activation required.'); return; }
+if (!activated) { alert('🔒 Account activation required. Please complete the setup steps above.'); return; }
 }
 if (!sendgridConfigured) {
-// PROFESSIONAL NOTIFICATION WITH LINK
-if (!confirm('⚠️ SendGrid is not configured.\n\nTo send automated emails, you need a free SendGrid API key.\n\nWould you like to visit SendGrid.com to get your free API key now?\n\n(Click Cancel to continue with limited functionality)')) {
-window.open('https://sendgrid.com/en-us', '_blank');
-return;
-}
+if (!confirm('⚠️ SendGrid not configured. Continue with default system?')) {
 document.getElementById('apiConfig').classList.remove('hidden');
 return;
+}
 }
 button.disabled = true;
 button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
