@@ -4,6 +4,7 @@
 // ✅ Click-to-Unlock extends by 7 days immediately
 // ✅ Social share is optional (visual only)
 // ✅ Admin has full manual control
+// ✅ BULK ACTIONS SUPPORT (Arrays of IDs)
 // ============================================
 process.env.PGSSLMODE = 'verify-full';
 process.env.NODE_NO_WARNINGS = '1';
@@ -233,7 +234,6 @@ async function createAllTables() {
     try {
         client = await pool.connect();
         console.log('📦 Checking database tables...');
-
         // Super Admins
         await client.query(`
             CREATE TABLE IF NOT EXISTS super_admins (
@@ -248,7 +248,6 @@ async function createAllTables() {
                 last_login TIMESTAMP
             )
         `);
-
         const adminCheck = await client.query(
             'SELECT COUNT(*) FROM super_admins WHERE username = $1',
             ['ot']
@@ -262,7 +261,6 @@ async function createAllTables() {
             );
             console.log('✅ Default admin created (ot/admin123)');
         }
-
         // Users table
         await client.query(`
             CREATE TABLE IF NOT EXISTS users (
@@ -273,7 +271,6 @@ async function createAllTables() {
                 created_at TIMESTAMP DEFAULT NOW()
             )
         `);
-
         // User API Keys table
         await client.query(`
             CREATE TABLE IF NOT EXISTS user_api_keys (
@@ -288,7 +285,6 @@ async function createAllTables() {
                 UNIQUE(user_id, service_name)
             )
         `);
-
         // User Email Templates table
         await client.query(`
             CREATE TABLE IF NOT EXISTS user_email_templates (
@@ -301,7 +297,6 @@ async function createAllTables() {
                 UNIQUE(user_id, template_type)
             )
         `);
-
         // Admin Messages table
         await client.query(`
             CREATE TABLE IF NOT EXISTS admin_messages (
@@ -316,7 +311,6 @@ async function createAllTables() {
             )
         `);
         console.log('✅ admin_messages table created/updated');
-
         // Scans table
         await client.query(`
             CREATE TABLE IF NOT EXISTS scans (
@@ -336,7 +330,6 @@ async function createAllTables() {
                 created_at TIMESTAMP DEFAULT NOW()
             )
         `);
-
         // Leaderboard table
         await client.query(`
             CREATE TABLE IF NOT EXISTS leaderboard (
@@ -359,7 +352,6 @@ async function createAllTables() {
                 created_at TIMESTAMP DEFAULT NOW()
             )
         `);
-
         // Freelancers table
         await client.query(`
             CREATE TABLE IF NOT EXISTS freelancers (
@@ -379,7 +371,6 @@ async function createAllTables() {
                 created_at TIMESTAMP DEFAULT NOW()
             )
         `);
-
         // Email Queue table
         await client.query(`
             CREATE TABLE IF NOT EXISTS email_queue (
@@ -395,7 +386,6 @@ async function createAllTables() {
                 created_at TIMESTAMP DEFAULT NOW()
             )
         `);
-
         console.log('✅ All database tables ready');
     } catch (error) {
         console.error('❌ Database setup error:', error.message);
@@ -411,18 +401,15 @@ app.post('/api/user/register', async (req, res) => {
     try {
         const userId = crypto.randomUUID();
         const ip = req.ip || req.connection.remoteAddress;
-        
         // Auto-activate for 7 days
         const expiryDate = new Date();
         expiryDate.setDate(expiryDate.getDate() + 7);
-
         await pool.query(
             `INSERT INTO users (id, ip_address, is_activated, activated_until, created_at)
             VALUES ($1, $2, TRUE, $3, NOW())
             ON CONFLICT (id) DO NOTHING`,
             [userId, ip, expiryDate]
         );
-
         const defaultTemplates = [
             {
                 type: 'congrats',
@@ -440,7 +427,6 @@ app.post('/api/user/register', async (req, res) => {
                 body: '<h1>Website Opportunity</h1><p>Hi {{company_name}} team,</p><p>I noticed you don\'t have a website yet.</p><p>I specialize in creating SEO-optimized websites that rank.</p><p>Interested in learning more?</p>'
             }
         ];
-
         for (const template of defaultTemplates) {
             await pool.query(
                 `INSERT INTO user_email_templates (user_id, template_type, subject, body)
@@ -449,8 +435,8 @@ app.post('/api/user/register', async (req, res) => {
                 [userId, template.type, template.subject, template.body]
             );
         }
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             userId,
             message: 'Account created! You have 7 days of free access.'
         });
@@ -476,16 +462,13 @@ app.get('/api/user/activation-status', async (req, res) => {
         if (result.rows.length === 0) {
             return res.json({ success: true, activated: false });
         }
-        
         const row = result.rows[0];
         let isActive = row.is_activated;
         let isExpired = false;
         let daysLeft = 0;
-
         if (isActive && row.activated_until) {
             const now = new Date();
             const expiry = new Date(row.activated_until);
-            
             if (expiry < now) {
                 isExpired = true;
                 isActive = false;
@@ -493,10 +476,9 @@ app.get('/api/user/activation-status', async (req, res) => {
                 await pool.query('UPDATE users SET is_activated = FALSE WHERE id = $1', [userId]);
             } else {
                 const diffTime = Math.abs(expiry - now);
-                daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+                daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             }
         }
-
         res.json({
             success: true,
             activated: isActive,
@@ -522,14 +504,12 @@ app.post('/api/user/extend-trial', async (req, res) => {
         // Add 7 days from NOW
         const newExpiry = new Date();
         newExpiry.setDate(newExpiry.getDate() + 7);
-
         await pool.query(
             'UPDATE users SET is_activated = TRUE, activated_until = $2 WHERE id = $1',
             [userId, newExpiry]
         );
-
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             message: 'Access extended by 7 days!',
             newExpiry: newExpiry
         });
@@ -834,7 +814,7 @@ app.post('/api/bulk-scan/send-website-offers', async (req, res) => {
 });
 
 // ============================================
-// ADMIN USER MANAGEMENT
+// ADMIN USER MANAGEMENT (BULK SUPPORT ADDED)
 // ============================================
 app.get('/api/admin/users', verifyAdmin, async (req, res) => {
     try {
@@ -846,29 +826,62 @@ app.get('/api/admin/users', verifyAdmin, async (req, res) => {
     }
 });
 
-// Admin Activate (Manual Override)
+// ✅ NEW: Bulk Activate (Accepts { ids: [...] })
+app.post('/api/admin/users/activate', verifyAdmin, async (req, res) => {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ success: false, error: 'No user IDs provided' });
+    }
+    try {
+        const daysToAdd = 7; // Default extension
+        const newExpiry = new Date();
+        newExpiry.setDate(newExpiry.getDate() + daysToAdd);
+        
+        // Loop through IDs and activate each
+        const promises = ids.map(id => 
+            pool.query('UPDATE users SET is_activated = TRUE, activated_until = $2 WHERE id = $1', [id, newExpiry])
+        );
+        await Promise.all(promises);
+        
+        res.json({ success: true, message: `${ids.length} users activated successfully` });
+    } catch (error) {
+        console.error('❌ Bulk activate error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ✅ NEW: Bulk Deactivate (Accepts { ids: [...] })
+app.post('/api/admin/users/deactivate', verifyAdmin, async (req, res) => {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ success: false, error: 'No user IDs provided' });
+    }
+    try {
+        const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
+        await pool.query(`UPDATE users SET is_activated = FALSE, activated_until = NULL WHERE id IN (${placeholders})`, ids);
+        res.json({ success: true, message: `${ids.length} users deactivated successfully` });
+    } catch (error) {
+        console.error('❌ Bulk deactivate error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Single Activate (Legacy support)
 app.post('/api/admin/users/:id/activate', verifyAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         const { days } = req.body;
-        
         let activatedUntil = null;
         if (days && !isNaN(days)) {
             const date = new Date();
             date.setDate(date.getDate() + parseInt(days));
             activatedUntil = date;
         } else {
-            // Default 7 days if not specified
             const date = new Date();
             date.setDate(date.getDate() + 7);
             activatedUntil = date;
         }
-
-        await pool.query(
-            'UPDATE users SET is_activated = TRUE, activated_until = $2 WHERE id = $1', 
-            [id, activatedUntil]
-        );
-        
+        await pool.query('UPDATE users SET is_activated = TRUE, activated_until = $2 WHERE id = $1', [id, activatedUntil]);
         res.json({ success: true, message: `User activated until ${activatedUntil.toLocaleDateString()}`, activatedUntil });
     } catch (error) {
         console.error('❌ Activate user error:', error.message);
@@ -876,7 +889,7 @@ app.post('/api/admin/users/:id/activate', verifyAdmin, async (req, res) => {
     }
 });
 
-// Admin Deactivate
+// Single Deactivate (Legacy support)
 app.post('/api/admin/users/:id/deactivate', verifyAdmin, async (req, res) => {
     try {
         const { id } = req.params;
@@ -888,7 +901,6 @@ app.post('/api/admin/users/:id/deactivate', verifyAdmin, async (req, res) => {
     }
 });
 
-// Admin Delete
 app.delete('/api/admin/users/:id', verifyAdmin, async (req, res) => {
     try {
         const { id } = req.params;
@@ -902,7 +914,6 @@ app.delete('/api/admin/users/:id', verifyAdmin, async (req, res) => {
     }
 });
 
-// Admin Bulk Delete
 app.post('/api/admin/users/bulk-delete', verifyAdmin, async (req, res) => {
     try {
         const { ids } = req.body;
@@ -920,28 +931,43 @@ app.post('/api/admin/users/bulk-delete', verifyAdmin, async (req, res) => {
     }
 });
 
-// Admin Send Message
+// ✅ UPDATED: Admin Send Message (Supports 'selected' recipients)
 app.post('/api/admin/messages/send', verifyAdmin, async (req, res) => {
-    const { recipientUserId, subject, body } = req.body;
+    const { recipientUserId, recipients, subject, body, user_ids } = req.body;
+    
     if (!body) {
         return res.status(400).json({ success: false, error: 'Message body required' });
     }
+
     try {
-        await pool.query(
-            `INSERT INTO admin_messages (sent_by, recipient_user_id, sender_type, subject, body)
-            VALUES ($1, $2, 'admin', $3, $4)`,
-            [req.admin.id, recipientUserId || null, subject || 'No Subject', body]
-        );
-        const target = recipientUserId ? `user ${recipientUserId}` : 'ALL USERS';
-        console.log(`📧 Admin message sent to ${target}`);
-        res.json({ success: true, message: `Message sent to ${target}` });
+        if (recipients === 'selected' && Array.isArray(user_ids)) {
+            // Send to multiple selected users
+            const promises = user_ids.map(uid => 
+                pool.query(
+                    `INSERT INTO admin_messages (sent_by, recipient_user_id, sender_type, subject, body)
+                    VALUES ($1, $2, 'admin', $3, $4)`,
+                    [req.admin.id, uid, subject || 'No Subject', body]
+                )
+            );
+            await Promise.all(promises);
+            res.json({ success: true, message: `Message sent to ${user_ids.length} selected users` });
+        } else {
+            // Send to single user or broadcast
+            const targetId = recipientUserId || null;
+            await pool.query(
+                `INSERT INTO admin_messages (sent_by, recipient_user_id, sender_type, subject, body)
+                VALUES ($1, $2, 'admin', $3, $4)`,
+                [req.admin.id, targetId, subject || 'No Subject', body]
+            );
+            const target = targetId ? `user ${targetId}` : 'ALL USERS';
+            res.json({ success: true, message: `Message sent to ${target}` });
+        }
     } catch (error) {
         console.error('❌ Send message error:', error.message);
-        res.json({ success: false, error: error.message });
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
-// Admin Get Messages
 app.get('/api/admin/messages', verifyAdmin, async (req, res) => {
     try {
         const result = await pool.query(
@@ -954,7 +980,6 @@ app.get('/api/admin/messages', verifyAdmin, async (req, res) => {
     }
 });
 
-
 // ============================================
 // SEO SCAN
 // ============================================
@@ -963,29 +988,18 @@ app.post('/api/scan', async (req, res) => {
     if (!url) return res.status(400).json({ success: false, error: 'URL required' });
     let scanUrl = url;
     if (!scanUrl.startsWith('http')) scanUrl = 'https://' + scanUrl;
-
     function isValidUrl(string) {
-        try {
-            new URL(string);
-            return true;
-        } catch (_) {
-            return false;
-        }
+        try { new URL(string); return true; } catch (_) { return false; }
     }
-
     if (!isValidUrl(scanUrl)) return res.status(400).json({ success: false, error: 'Invalid URL format' });
-
     try {
         console.log(`🔍 Scanning: ${scanUrl}`);
         const browser = await getBrowser();
-        if (!browser) {
-            return res.status(500).json({ success: false, error: 'Browser not available' });
-        }
+        if (!browser) return res.status(500).json({ success: false, error: 'Browser not available' });
         const page = await browser.newPage();
         await page.setViewport({ width: 1920, height: 1080 });
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
         await page.goto(scanUrl, { waitUntil: 'networkidle2', timeout: 25000 });
-
         const analysis = await page.evaluate((scanUrl, targetKeyword) => {
             const rawHtml = document.documentElement.outerHTML;
             const textContent = rawHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
@@ -994,7 +1008,6 @@ app.post('/api/scan', async (req, res) => {
             let keywordCount = 0;
             let hasKeywordInH1 = false;
             let hasKeywordInIntro = false;
-
             if (targetKeyword && targetKeyword.trim()) {
                 const escapedKeyword = targetKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                 const keywordRegex = new RegExp(`\\b${escapedKeyword}\\b`, 'gi');
@@ -1002,15 +1015,10 @@ app.post('/api/scan', async (req, res) => {
                 keywordCount = keywordMatches.length;
                 keywordDensity = wordCount > 0 ? (keywordCount / (wordCount / 100)) : 0;
                 const h1Elements = document.querySelectorAll('h1');
-                if (h1Elements.length > 0) {
-                    hasKeywordInH1 = h1Elements[0].textContent.toLowerCase().includes(targetKeyword.toLowerCase());
-                }
+                if (h1Elements.length > 0) hasKeywordInH1 = h1Elements[0].textContent.toLowerCase().includes(targetKeyword.toLowerCase());
                 const paragraphs = document.querySelectorAll('p');
-                if (paragraphs.length > 0) {
-                    hasKeywordInIntro = paragraphs[0].textContent.toLowerCase().includes(targetKeyword.toLowerCase());
-                }
+                if (paragraphs.length > 0) hasKeywordInIntro = paragraphs[0].textContent.toLowerCase().includes(targetKeyword.toLowerCase());
             }
-
             const h1Count = document.querySelectorAll('h1').length;
             const h2Count = document.querySelectorAll('h2').length;
             const h3Count = document.querySelectorAll('h3').length;
@@ -1038,25 +1046,19 @@ app.post('/api/scan', async (req, res) => {
                 } catch (e) {}
             });
             const images = document.querySelectorAll('img');
-            const imagesWithAlt = Array.from(images).filter(img =>
-                img.hasAttribute('alt') && img.getAttribute('alt').trim().length > 0
-            ).length;
+            const imagesWithAlt = Array.from(images).filter(img => img.hasAttribute('alt') && img.getAttribute('alt').trim().length > 0).length;
             const baseUrl = new URL(scanUrl);
             const baseDomain = baseUrl.hostname.replace('www.', '');
             const internalLinks = [];
             const externalLinks = [];
             Array.from(document.querySelectorAll('a[href]')).forEach(link => {
                 const href = link.getAttribute('href');
-                if (!href) return;
-                if (href.startsWith('mailto:') || href.startsWith('tel:')) return;
+                if (!href || href.startsWith('mailto:') || href.startsWith('tel:')) return;
                 try {
                     const linkUrl = new URL(href, scanUrl);
                     const linkDomain = linkUrl.hostname.replace('www.', '');
-                    if (linkDomain === baseDomain) {
-                        internalLinks.push({ href: linkUrl.href, text: link.textContent.trim() });
-                    } else {
-                        externalLinks.push({ href: linkUrl.href, text: link.textContent.trim() });
-                    }
+                    if (linkDomain === baseDomain) internalLinks.push({ href: linkUrl.href, text: link.textContent.trim() });
+                    else externalLinks.push({ href: linkUrl.href, text: link.textContent.trim() });
                 } catch (e) {}
             });
             const expertQuotes = [];
@@ -1064,247 +1066,80 @@ app.post('/api/scan', async (req, res) => {
                 const quoteText = blockquote.textContent.trim();
                 const cite = blockquote.querySelector('cite');
                 const attribution = cite ? cite.textContent.trim() : '';
-                if (quoteText.length > 20 && attribution.length > 5) {
-                    expertQuotes.push({ text: quoteText, attribution });
-                }
+                if (quoteText.length > 20 && attribution.length > 5) expertQuotes.push({ text: quoteText, attribution });
             });
             const caseStudies = [];
             const caseStudyKeywords = ['case study', 'results', 'metrics', 'roi'];
             document.querySelectorAll('section, article, div').forEach(el => {
                 const text = el.textContent.toLowerCase();
-                if (caseStudyKeywords.some(k => text.includes(k)) && text.length > 300) {
-                    if (/\d+[%$€£]/.test(text)) {
-                        caseStudies.push({ excerpt: el.textContent.substring(0, 200) + '...' });
-                    }
+                if (caseStudyKeywords.some(k => text.includes(k)) && text.length > 300 && /\d+[%$€£]/.test(text)) {
+                    caseStudies.push({ excerpt: el.textContent.substring(0, 200) + '...' });
                 }
             });
             const paragraphs = document.querySelectorAll('p');
-            const avgParagraphLength = Array.from(paragraphs)
-                .map(p => p.textContent.trim().split(/\s+/).length)
-                .reduce((a, b) => a + b, 0) / (paragraphs.length || 1);
-
+            const avgParagraphLength = Array.from(paragraphs).map(p => p.textContent.trim().split(/\s+/).length).reduce((a, b) => a + b, 0) / (paragraphs.length || 1);
             return {
-                url: scanUrl,
-                wordCount,
-                h1Count, h2Count, h3Count,
-                listCount, listItemCount,
-                metaTitle, metaTitleLength,
-                metaDescription, metaDescriptionLength,
-                hasMetaViewport, hasCanonical,
-                hasArticleSchema, hasFAQPageSchema, hasOrganizationSchema,
-                images: images.length, imagesWithAlt,
-                internalLinks, externalLinks,
-                expertQuotes, caseStudies,
-                keywordDensity, keywordCount,
-                hasKeywordInH1, hasKeywordInIntro,
-                avgParagraphLength
+                url: scanUrl, wordCount, h1Count, h2Count, h3Count, listCount, listItemCount,
+                metaTitle, metaTitleLength, metaDescription, metaDescriptionLength,
+                hasMetaViewport, hasCanonical, hasArticleSchema, hasFAQPageSchema, hasOrganizationSchema,
+                images: images.length, imagesWithAlt, internalLinks, externalLinks, expertQuotes, caseStudies,
+                keywordDensity, keywordCount, hasKeywordInH1, hasKeywordInIntro, avgParagraphLength
             };
         }, scanUrl, keyword);
-
         await page.close();
-
-        // Scoring Logic
-        let graafScore = 0;
-        let craftScore = 0;
-        let technicalScore = 0;
-        let uxScore = 0;
-
-        if (analysis.wordCount >= 2500) graafScore += 15;
-        else if (analysis.wordCount >= 1500) graafScore += 10;
-        else if (analysis.wordCount >= 1000) graafScore += 7;
-        else if (analysis.wordCount >= 500) graafScore += 4;
-
+        // Scoring
+        let graafScore = 0, craftScore = 0, technicalScore = 0, uxScore = 0;
+        if (analysis.wordCount >= 2500) graafScore += 15; else if (analysis.wordCount >= 1500) graafScore += 10; else if (analysis.wordCount >= 1000) graafScore += 7; else if (analysis.wordCount >= 500) graafScore += 4;
         if (analysis.keywordDensity >= 0.8 && analysis.keywordDensity <= 1.2) graafScore += 4;
-        if (analysis.hasKeywordInH1) graafScore += 2;
-        if (analysis.hasKeywordInIntro) graafScore += 2;
-        if (analysis.listItemCount >= 15) graafScore += 8;
-        else if (analysis.listItemCount >= 10) graafScore += 6;
-        else if (analysis.listItemCount >= 5) graafScore += 4;
-        if (analysis.h2Count >= 5) graafScore += 7;
-        else if (analysis.h2Count >= 3) graafScore += 5;
-        if (analysis.expertQuotes.length >= 4) graafScore += 8;
-        else if (analysis.expertQuotes.length >= 2) graafScore += 5;
-        else if (analysis.expertQuotes.length >= 1) graafScore += 3;
-        if (analysis.caseStudies.length >= 2) graafScore += 7;
-        else if (analysis.caseStudies.length >= 1) graafScore += 4;
+        if (analysis.hasKeywordInH1) graafScore += 2; if (analysis.hasKeywordInIntro) graafScore += 2;
+        if (analysis.listItemCount >= 15) graafScore += 8; else if (analysis.listItemCount >= 10) graafScore += 6; else if (analysis.listItemCount >= 5) graafScore += 4;
+        if (analysis.h2Count >= 5) graafScore += 7; else if (analysis.h2Count >= 3) graafScore += 5;
+        if (analysis.expertQuotes.length >= 4) graafScore += 8; else if (analysis.expertQuotes.length >= 2) graafScore += 5; else if (analysis.expertQuotes.length >= 1) graafScore += 3;
+        if (analysis.caseStudies.length >= 2) graafScore += 7; else if (analysis.caseStudies.length >= 1) graafScore += 4;
         graafScore = Math.min(50, graafScore);
-
-        if (analysis.h1Count === 1) craftScore += 12;
-        else if (analysis.h1Count === 0) craftScore += 0;
-        else craftScore += 3;
-        if (analysis.h2Count >= 5) craftScore += 8;
-        else if (analysis.h2Count >= 3) craftScore += 6;
+        if (analysis.h1Count === 1) craftScore += 12; else if (analysis.h1Count === 0) craftScore += 0; else craftScore += 3;
+        if (analysis.h2Count >= 5) craftScore += 8; else if (analysis.h2Count >= 3) craftScore += 6;
         if (analysis.avgParagraphLength <= 100) craftScore += 5;
         craftScore = Math.min(30, craftScore);
-
         if (analysis.metaTitleLength >= 50 && analysis.metaTitleLength <= 60) technicalScore += 3;
         if (analysis.metaDescriptionLength >= 150 && analysis.metaDescriptionLength <= 160) technicalScore += 3;
-        if (analysis.hasArticleSchema) technicalScore += 3;
-        if (analysis.hasFAQPageSchema) technicalScore += 3;
-        if (analysis.hasMetaViewport) technicalScore += 2;
-        if (analysis.hasCanonical) technicalScore += 2;
+        if (analysis.hasArticleSchema) technicalScore += 3; if (analysis.hasFAQPageSchema) technicalScore += 3;
+        if (analysis.hasMetaViewport) technicalScore += 2; if (analysis.hasCanonical) technicalScore += 2;
         if (analysis.images > 0 && analysis.imagesWithAlt >= Math.min(5, analysis.images)) technicalScore += 3;
         technicalScore = Math.min(20, technicalScore);
-
-        if (analysis.images >= 5) uxScore += 20;
-        else if (analysis.images >= 3) uxScore += 15;
-        else if (analysis.images >= 1) uxScore += 10;
-        if (analysis.wordCount >= 2000) uxScore += 25;
-        else if (analysis.wordCount >= 1500) uxScore += 20;
-        else if (analysis.wordCount >= 1000) uxScore += 15;
-        if (analysis.internalLinks.length >= 10) uxScore += 15;
-        else if (analysis.internalLinks.length >= 5) uxScore += 10;
-        if (analysis.externalLinks.length >= 5) uxScore += 10;
-        else if (analysis.externalLinks.length >= 3) uxScore += 5;
+        if (analysis.images >= 5) uxScore += 20; else if (analysis.images >= 3) uxScore += 15; else if (analysis.images >= 1) uxScore += 10;
+        if (analysis.wordCount >= 2000) uxScore += 25; else if (analysis.wordCount >= 1500) uxScore += 20; else if (analysis.wordCount >= 1000) uxScore += 15;
+        if (analysis.internalLinks.length >= 10) uxScore += 15; else if (analysis.internalLinks.length >= 5) uxScore += 10;
+        if (analysis.externalLinks.length >= 5) uxScore += 10; else if (analysis.externalLinks.length >= 3) uxScore += 5;
         uxScore = Math.min(100, uxScore);
-
-        const totalScore = Math.round(
-            (graafScore / 50 * 35) +
-            (craftScore / 30 * 25) +
-            (technicalScore / 20 * 20) +
-            (uxScore / 100 * 20)
-        );
-
-        const quality = totalScore >= 90 ? 'excellent' :
-            totalScore >= 80 ? 'very good' :
-                totalScore >= 70 ? 'good' :
-                    totalScore >= 60 ? 'average' : 'needs improvement';
-
+        const totalScore = Math.round((graafScore / 50 * 35) + (craftScore / 30 * 25) + (technicalScore / 20 * 20) + (uxScore / 100 * 20));
+        const quality = totalScore >= 90 ? 'excellent' : totalScore >= 80 ? 'very good' : totalScore >= 70 ? 'good' : totalScore >= 60 ? 'average' : 'needs improvement';
         const recommendations = [];
-        if (analysis.wordCount < 500) {
-            recommendations.push({
-                title: '📉 Content Depth Missing',
-                description: `Your page has only ${analysis.wordCount} words. Google considers this "thin content".`,
-                priority: 'high',
-                action: 'Expand your content to at least 1,500 words.',
-                learning: 'Google rewards pages that cover a topic exhaustively.',
-                target: 'Minimum 1,500 words'
-            });
-        } else if (analysis.wordCount < 1500) {
-            recommendations.push({
-                title: '⚠️ Content Could Be Deeper',
-                description: `With ${analysis.wordCount} words you lack depth compared to top rankings.`,
-                priority: 'medium',
-                action: 'Add sections on FAQs, Case Studies, or Step-by-Step Guides.',
-                learning: 'Long-form content ranks better in AI Overviews.',
-                target: '1,500+ words'
-            });
-        }
-        if (!analysis.hasArticleSchema) {
-            recommendations.push({
-                title: '🔍 Missing Structured Data (Schema)',
-                description: 'Your page is missing Article schema markup.',
-                priority: 'high',
-                action: 'Implement JSON-LD Article schema.',
-                learning: 'Schema increases rich snippet chance by 30%.',
-                target: 'Add JSON-LD Article Schema'
-            });
-        }
-        if (analysis.internalLinks.length < 5) {
-            recommendations.push({
-                title: '🕸️ Weak Internal Link Structure',
-                description: `You have only ${analysis.internalLinks.length} internal links.`,
-                priority: 'medium',
-                action: 'Link to 5-10 related articles on your site.',
-                learning: 'Internal links distribute Page Authority.',
-                target: '8-12 relevant internal links'
-            });
-        }
-        if (analysis.keywordCount === 0 && analysis.wordCount > 100) {
-             recommendations.push({
-                title: '❌ Focus Keyword Missing',
-                description: 'Your main keyword does not appear in the text.',
-                priority: 'high',
-                action: 'Naturally incorporate your focus keyword in the intro and H2s.',
-                learning: 'Helps Google understand primary intent.',
-                target: 'Keyword density of 0.5% - 1.5%'
-            });
-        }
-        if (analysis.h2Count < 3) {
-            recommendations.push({
-                title: '📑 Poor Heading Structure',
-                description: `You have only ${analysis.h2Count} subheadings (H2).`,
-                priority: 'medium',
-                action: 'Break up text with clear H2 and H3 subheadings.',
-                learning: 'Crucial for E-E-A-T and readability.',
-                target: 'Minimum 5 H2 headings'
-            });
-        }
-        if (analysis.images.length < 3) {
-             recommendations.push({
-                title: '🖼️ Too Few Visual Elements',
-                description: `You have only ${analysis.images.length} images.`,
-                priority: 'low',
-                action: 'Add at least 3 relevant images or infographics.',
-                learning: 'Visuals increase Time on Page.',
-                target: 'Minimum 1 image per 300 words'
-            });
-        }
-        if (analysis.expertQuotes.length === 0) {
-             recommendations.push({
-                title: '🎓 Missing Expertise Signals (E-E-A-T)',
-                description: 'Your content contains no expert quotes or citations.',
-                priority: 'medium',
-                action: 'Support claims with quotes from experts or data.',
-                learning: 'Google requires claims to be substantiated.',
-                target: 'Minimum 2 expert quotes'
-            });
-        }
-
-        const finalRecommendations = recommendations.length > 0 ? recommendations : [{
-            title: '🎉 Excellent Work!',
-            description: 'Your page meets the core principles of the GRAAF Framework.',
-            priority: 'none',
-            action: 'Continue producing high-quality content.',
-            learning: 'SEO is an ongoing process.',
-            target: 'Maintain current quality'
-        }];
-
+        if (analysis.wordCount < 500) recommendations.push({ title: '📉 Content Depth Missing', description: `Your page has only ${analysis.wordCount} words.`, priority: 'high', action: 'Expand content.', learning: 'Google rewards depth.', target: '1,500+ words' });
+        else if (analysis.wordCount < 1500) recommendations.push({ title: '⚠️ Content Could Be Deeper', description: `With ${analysis.wordCount} words you lack depth.`, priority: 'medium', action: 'Add FAQs/Case Studies.', learning: 'Long-form ranks better.', target: '1,500+ words' });
+        if (!analysis.hasArticleSchema) recommendations.push({ title: '🔍 Missing Schema', description: 'Missing Article schema.', priority: 'high', action: 'Implement JSON-LD.', learning: 'Increases rich snippets.', target: 'Add Schema' });
+        if (analysis.internalLinks.length < 5) recommendations.push({ title: '🕸️ Weak Internal Links', description: `Only ${analysis.internalLinks.length} internal links.`, priority: 'medium', action: 'Link to related pages.', learning: 'Distributes authority.', target: '8-12 links' });
+        if (analysis.keywordCount === 0 && analysis.wordCount > 100) recommendations.push({ title: '❌ Keyword Missing', description: 'Keyword not found.', priority: 'high', action: 'Add keyword naturally.', learning: 'Helps intent understanding.', target: '0.5-1.5%' });
+        if (analysis.h2Count < 3) recommendations.push({ title: '📑 Poor Headings', description: `Only ${analysis.h2Count} H2s.`, priority: 'medium', action: 'Add clear subheadings.', learning: 'Crucial for E-E-A-T.', target: '5+ H2s' });
+        if (analysis.images.length < 3) recommendations.push({ title: '🖼️ Few Images', description: `Only ${analysis.images.length} images.`, priority: 'low', action: 'Add visuals.', learning: 'Increases time on page.', target: '1 per 300 words' });
+        if (analysis.expertQuotes.length === 0) recommendations.push({ title: '🎓 Missing E-E-A-T', description: 'No expert quotes.', priority: 'medium', action: 'Add expert citations.', learning: 'Substantiates claims.', target: '2+ quotes' });
+        const finalRecommendations = recommendations.length > 0 ? recommendations : [{ title: '🎉 Excellent Work!', description: 'Meets GRAAF principles.', priority: 'none', action: 'Keep it up.', learning: 'Consistency is key.', target: 'Maintain quality' }];
         const result = {
-            success: true,
-            url: scanUrl,
-            score: totalScore,
-            quality: quality,
-            metrics: {
-                graaf: graafScore,
-                craft: craftScore,
-                technical: technicalScore,
-                content: Math.min(100, graafScore + craftScore),
-                ux: uxScore
-            },
+            success: true, url: scanUrl, score: totalScore, quality: quality,
+            metrics: { graaf: graafScore, craft: craftScore, technical: technicalScore, content: Math.min(100, graafScore + craftScore), ux: uxScore },
             content_stats: {
-                wordCount: analysis.wordCount,
-                h1Count: analysis.h1Count,
-                h2Count: analysis.h2Count,
-                h3Count: analysis.h3Count,
-                listCount: analysis.listCount,
-                listItemCount: analysis.listItemCount,
-                metaTitleLength: analysis.metaTitleLength,
-                metaDescriptionLength: analysis.metaDescriptionLength,
-                hasMetaViewport: analysis.hasMetaViewport,
-                hasCanonical: analysis.hasCanonical,
-                hasArticleSchema: analysis.hasArticleSchema,
-                hasFAQPageSchema: analysis.hasFAQPageSchema,
-                hasOrganizationSchema: analysis.hasOrganizationSchema,
-                images: analysis.images,
-                imagesWithAlt: analysis.imagesWithAlt,
-                internalLinks: analysis.internalLinks.length,
-                externalLinks: analysis.externalLinks.length,
-                expertQuotes: analysis.expertQuotes.length,
-                caseStudies: analysis.caseStudies.length,
-                keywordDensity: analysis.keywordDensity.toFixed(2),
-                keywordCount: analysis.keywordCount,
-                hasKeywordInH1: analysis.hasKeywordInH1,
-                hasKeywordInIntro: analysis.hasKeywordInIntro,
-                avgParagraphLength: Math.round(analysis.avgParagraphLength)
+                wordCount: analysis.wordCount, h1Count: analysis.h1Count, h2Count: analysis.h2Count, h3Count: analysis.h3Count,
+                listCount: analysis.listCount, listItemCount: analysis.listItemCount, metaTitleLength: analysis.metaTitleLength,
+                metaDescriptionLength: analysis.metaDescriptionLength, hasMetaViewport: analysis.hasMetaViewport, hasCanonical: analysis.hasCanonical,
+                hasArticleSchema: analysis.hasArticleSchema, hasFAQPageSchema: analysis.hasFAQPageSchema, hasOrganizationSchema: analysis.hasOrganizationSchema,
+                images: analysis.images, imagesWithAlt: analysis.imagesWithAlt, internalLinks: analysis.internalLinks.length,
+                externalLinks: analysis.externalLinks.length, expertQuotes: analysis.expertQuotes.length, caseStudies: analysis.caseStudies.length,
+                keywordDensity: analysis.keywordDensity.toFixed(2), keywordCount: analysis.keywordCount,
+                hasKeywordInH1: analysis.hasKeywordInH1, hasKeywordInIntro: analysis.hasKeywordInIntro, avgParagraphLength: Math.round(analysis.avgParagraphLength)
             },
-            recommendations: {
-                all: finalRecommendations,
-                count: finalRecommendations.length
-            },
+            recommendations: { all: finalRecommendations, count: finalRecommendations.length },
             timestamp: new Date().toISOString()
         };
-
         console.log(`✅ Scan complete: ${scanUrl} - ${totalScore}/100 (${quality})`);
         res.json(result);
     } catch (error) {
@@ -1313,85 +1148,26 @@ app.post('/api/scan', async (req, res) => {
     }
 });
 
-function isValidUrl(string) {
-    try {
-        new URL(string);
-        return true;
-    } catch (_) {
-        return false;
-    }
-}
+function isValidUrl(string) { try { new URL(string); return true; } catch (_) { return false; } }
 
 // ============================================
 // LEADERBOARD ENDPOINTS
 // ============================================
 app.get('/api/leaderboard', async (req, res) => {
-    if (!pool) {
-        return res.json({
-            success: true,
-            entries: [],
-            total: 0,
-            averageScore: 0,
-            stats: { totalAgencies: 0, avgScore: 0, countriesCount: 0, activeHelpers: 0, verifiedCount: 0 }
-        });
-    }
+    if (!pool) return res.json({ success: true, entries: [], total: 0, averageScore: 0, stats: { totalAgencies: 0, avgScore: 0, countriesCount: 0, activeHelpers: 0, verifiedCount: 0 } });
     try {
-        const result = await pool.query(`
-            SELECT
-                id,
-                ROW_NUMBER() OVER (ORDER BY score DESC) as rank,
-                company_name,
-                url,
-                score,
-                country,
-                city,
-                type,
-                is_verified as is_claimed,
-                admin_verified,
-                created_at,
-                graaf_score,
-                craft_score,
-                technical_score
-            FROM leaderboard
-            WHERE score IS NOT NULL
-            AND is_opted_out = FALSE
-            AND admin_verified = TRUE
-            ORDER BY score DESC
-            LIMIT 100
-        `);
+        const result = await pool.query(`SELECT id, ROW_NUMBER() OVER (ORDER BY score DESC) as rank, company_name, url, score, country, city, type, is_verified as is_claimed, admin_verified, created_at, graaf_score, craft_score, technical_score FROM leaderboard WHERE score IS NOT NULL AND is_opted_out = FALSE AND admin_verified = TRUE ORDER BY score DESC LIMIT 100`);
         const entries = result.rows;
         const totalAgencies = entries.length;
-        const avgScore = totalAgencies > 0
-            ? Math.round(entries.reduce((sum, e) => sum + (e.score || 0), 0) / totalAgencies)
-            : 0;
+        const avgScore = totalAgencies > 0 ? Math.round(entries.reduce((sum, e) => sum + (e.score || 0), 0) / totalAgencies) : 0;
         const countries = [...new Set(entries.map(e => e.country))].length;
         const verifiedCount = entries.filter(e => e.admin_verified === true).length;
-        const freelancersResult = await pool.query('SELECT COUNT(*) FROM freelancers WHERE is_approved = TRUE')
-            .catch(() => ({ rows: [{ count: '0' }] }));
+        const freelancersResult = await pool.query('SELECT COUNT(*) FROM freelancers WHERE is_approved = TRUE').catch(() => ({ rows: [{ count: '0' }] }));
         const activeHelpers = parseInt(freelancersResult.rows[0].count) || 0;
-
-        res.json({
-            success: true,
-            entries: entries,
-            total: totalAgencies,
-            averageScore: avgScore,
-            stats: {
-                totalAgencies: totalAgencies,
-                avgScore: avgScore,
-                countriesCount: countries,
-                activeHelpers: activeHelpers,
-                verifiedCount: verifiedCount
-            }
-        });
+        res.json({ success: true, entries: entries, total: totalAgencies, averageScore: avgScore, stats: { totalAgencies, avgScore, countriesCount, activeHelpers, verifiedCount } });
     } catch (error) {
         console.error('❌ Leaderboard error:', error);
-        res.json({
-            success: true,
-            entries: [],
-            total: 0,
-            averageScore: 0,
-            stats: { totalAgencies: 0, avgScore: 0, countriesCount: 0, activeHelpers: 0, verifiedCount: 0 }
-        });
+        res.json({ success: true, entries: [], total: 0, averageScore: 0, stats: { totalAgencies: 0, avgScore: 0, countriesCount: 0, activeHelpers: 0, verifiedCount: 0 } });
     }
 });
 
@@ -1401,46 +1177,22 @@ app.get('/api/leaderboard', async (req, res) => {
 app.get('/api/freelancers', async (req, res) => {
     if (!pool) return res.json({ success: true, freelancers: [] });
     try {
-        const result = await pool.query(`
-            SELECT
-                id, name, email, title, location, country, bio,
-                hourly_rate, availability, is_verified, is_featured
-            FROM freelancers
-            WHERE is_approved = TRUE
-            ORDER BY is_featured DESC, created_at DESC
-            LIMIT 50
-        `);
+        const result = await pool.query(`SELECT id, name, email, title, location, country, bio, hourly_rate, availability, is_verified, is_featured FROM freelancers WHERE is_approved = TRUE ORDER BY is_featured DESC, created_at DESC LIMIT 50`);
         res.json({ success: true, freelancers: result.rows });
     } catch (error) {
         console.error('Freelancers error:', error);
         res.json({ success: true, freelancers: [] });
     }
 });
-
 app.post('/api/freelancers/register', async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable' });
     try {
         const { name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_featured } = req.body;
-        if (!name || !email) {
-            return res.status(400).json({ success: false, error: 'Name and email are required' });
-        }
+        if (!name || !email) return res.status(400).json({ success: false, error: 'Name and email are required' });
         const existing = await pool.query('SELECT id FROM freelancers WHERE email = $1', [email]);
-        if (existing.rows.length > 0) {
-            return res.status(400).json({ success: false, error: 'Email already registered' });
-        }
-        const result = await pool.query(
-            `INSERT INTO freelancers
-            (name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_approved, is_featured)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, $10)
-            RETURNING id`,
-            [name, email, title || null, location || null, country || null, bio || null,
-                linkedin_url || null, hourly_rate || null, availability || null, is_featured || false]
-        );
-        res.json({
-            success: true,
-            message: 'Application submitted! We will review and approve soon.',
-            id: result.rows[0].id
-        });
+        if (existing.rows.length > 0) return res.status(400).json({ success: false, error: 'Email already registered' });
+        const result = await pool.query(`INSERT INTO freelancers (name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_approved, is_featured) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, $10) RETURNING id`, [name, email, title || null, location || null, country || null, bio || null, linkedin_url || null, hourly_rate || null, availability || null, is_featured || false]);
+        res.json({ success: true, message: 'Application submitted!', id: result.rows[0].id });
     } catch (error) {
         console.error('Freelancer registration error:', error);
         res.status(500).json({ success: false, error: 'Registration failed' });
@@ -1452,40 +1204,16 @@ app.post('/api/freelancers/register', async (req, res) => {
 // ============================================
 app.post('/api/setup/verify-admin', async (req, res) => {
     const { username, password } = req.body;
-    if (!username || !password) {
-        return res.status(400).json({ success: false, error: 'Credentials required' });
-    }
-    if (!pool) {
-        return res.status(503).json({
-            success: false,
-            error: 'Database unavailable',
-            db_status: 'disconnected'
-        });
-    }
+    if (!username || !password) return res.status(400).json({ success: false, error: 'Credentials required' });
+    if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable', db_status: 'disconnected' });
     try {
-        const result = await pool.query(
-            'SELECT * FROM super_admins WHERE username = $1 AND is_active = TRUE',
-            [username]
-        );
-        if (result.rows.length === 0) {
-            return res.status(401).json({ success: false, error: 'Invalid credentials' });
-        }
+        const result = await pool.query('SELECT * FROM super_admins WHERE username = $1 AND is_active = TRUE', [username]);
+        if (result.rows.length === 0) return res.status(401).json({ success: false, error: 'Invalid credentials' });
         const admin = result.rows[0];
         const isValid = await bcrypt.compare(password, admin.password_hash);
-        if (!isValid) {
-            return res.status(401).json({ success: false, error: 'Invalid credentials' });
-        }
+        if (!isValid) return res.status(401).json({ success: false, error: 'Invalid credentials' });
         await pool.query('UPDATE super_admins SET last_login = NOW() WHERE id = $1', [admin.id]);
-        res.json({
-            success: true,
-            admin_id: admin.id,
-            admin: {
-                id: admin.id,
-                username: admin.username,
-                full_name: admin.full_name,
-                role: admin.role
-            }
-        });
+        res.json({ success: true, admin_id: admin.id, admin: { id: admin.id, username: admin.username, full_name: admin.full_name, role: admin.role } });
     } catch (error) {
         console.error('❌ Login error:', error.message);
         res.status(500).json({ success: false, error: 'Server error' });
@@ -1498,39 +1226,25 @@ app.post('/api/setup/verify-admin', async (req, res) => {
 app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
     if (!pool) return res.json({ success: true, pending: [] });
     try {
-        const result = await pool.query(
-            `SELECT * FROM leaderboard
-            WHERE admin_verified = FALSE
-            ORDER BY created_at DESC
-            LIMIT 50`
-        );
+        const result = await pool.query(`SELECT * FROM leaderboard WHERE admin_verified = FALSE ORDER BY created_at DESC LIMIT 50`);
         res.json({ success: true, pending: result.rows });
     } catch (error) {
         console.error('Pending leaderboard error:', error);
         res.json({ success: true, pending: [] });
     }
 });
-
 app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable' });
     try {
         const { id } = req.params;
         const { final_country } = req.body;
-        await pool.query(
-            `UPDATE leaderboard
-            SET admin_verified = TRUE,
-            country = COALESCE($2, country),
-            is_verified = TRUE
-            WHERE id = $1`,
-            [id, final_country]
-        );
+        await pool.query(`UPDATE leaderboard SET admin_verified = TRUE, country = COALESCE($2, country), is_verified = TRUE WHERE id = $1`, [id, final_country]);
         res.json({ success: true });
     } catch (error) {
         console.error('Approve leaderboard error:', error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
-
 app.post('/api/admin/leaderboard/:id/reject', verifyAdmin, async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable' });
     try {
@@ -1541,14 +1255,11 @@ app.post('/api/admin/leaderboard/:id/reject', verifyAdmin, async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 });
-
 app.post('/api/admin/leaderboard/bulk-delete', verifyAdmin, async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable' });
     try {
         const { ids } = req.body;
-        if (!ids || !Array.isArray(ids) || ids.length === 0) {
-            return res.status(400).json({ success: false, error: 'No IDs received' });
-        }
+        if (!ids || !Array.isArray(ids) || ids.length === 0) return res.status(400).json({ success: false, error: 'No IDs received' });
         const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
         await pool.query(`DELETE FROM leaderboard WHERE id IN (${placeholders})`, ids);
         res.json({ success: true, message: `${ids.length} entries deleted` });
@@ -1557,101 +1268,49 @@ app.post('/api/admin/leaderboard/bulk-delete', verifyAdmin, async (req, res) => 
         res.status(500).json({ success: false, error: error.message });
     }
 });
-
 app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable' });
     try {
         const { url, company_name, score, country, city } = req.body;
-        if (!url || score === undefined) {
-            return res.status(400).json({ success: false, error: 'URL and score are required' });
-        }
+        if (!url || score === undefined) return res.status(400).json({ success: false, error: 'URL and score are required' });
         const truncatedCountry = (country || 'NL').trim().substring(0, 10);
-        const result = await pool.query(
-            `INSERT INTO leaderboard
-            (url, company_name, score, country, city, admin_verified, is_verified)
-            VALUES ($1, $2, $3, $4, $5, true, true)
-            ON CONFLICT (url)
-            DO UPDATE SET
-            score = EXCLUDED.score,
-            company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
-            country = COALESCE(EXCLUDED.country, leaderboard.country),
-            city = COALESCE(EXCLUDED.city, leaderboard.city),
-            admin_verified = true,
-            is_verified = true
-            RETURNING id, (xmax = 0) as inserted`,
-            [url, company_name || null, score, truncatedCountry, city || null]
-        );
+        const result = await pool.query(`INSERT INTO leaderboard (url, company_name, score, country, city, admin_verified, is_verified) VALUES ($1, $2, $3, $4, $5, true, true) ON CONFLICT (url) DO UPDATE SET score = EXCLUDED.score, company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name), country = COALESCE(EXCLUDED.country, leaderboard.country), city = COALESCE(EXCLUDED.city, leaderboard.city), admin_verified = true, is_verified = true RETURNING id, (xmax = 0) as inserted`, [url, company_name || null, score, truncatedCountry, city || null]);
         const wasInserted = result.rows[0].inserted;
-        res.json({
-            success: true,
-            action: wasInserted ? 'added' : 'updated',
-            id: result.rows[0].id,
-            message: wasInserted ? 'Entry added to leaderboard' : 'Leaderboard entry updated'
-        });
+        res.json({ success: true, action: wasInserted ? 'added' : 'updated', id: result.rows[0].id, message: wasInserted ? 'Entry added' : 'Entry updated' });
     } catch (error) {
         console.error('Manual leaderboard add error:', error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
-
 app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable' });
     try {
         const { id } = req.params;
         const { company_name, url, score, country, city } = req.body;
-        const updates = [];
-        const values = [];
+        const updates = [], values = [];
         let paramCount = 1;
-        if (company_name !== undefined) {
-            updates.push(`company_name = $${paramCount}`);
-            values.push(company_name);
-            paramCount++;
-        }
-        if (url !== undefined) {
-            updates.push(`url = $${paramCount}`);
-            values.push(url);
-            paramCount++;
-        }
-        if (score !== undefined) {
-            updates.push(`score = $${paramCount}`);
-            values.push(parseInt(score));
-            paramCount++;
-        }
-        if (country !== undefined) {
-            const truncatedCountry = country.trim().substring(0, 10);
-            updates.push(`country = $${paramCount}`);
-            values.push(truncatedCountry);
-            paramCount++;
-        }
-        if (city !== undefined) {
-            updates.push(`city = $${paramCount}`);
-            values.push(city);
-            paramCount++;
-        }
-        if (updates.length === 0) {
-            return res.status(400).json({ success: false, error: 'No fields to update' });
-        }
+        if (company_name !== undefined) { updates.push(`company_name = $${paramCount}`); values.push(company_name); paramCount++; }
+        if (url !== undefined) { updates.push(`url = $${paramCount}`); values.push(url); paramCount++; }
+        if (score !== undefined) { updates.push(`score = $${paramCount}`); values.push(parseInt(score)); paramCount++; }
+        if (country !== undefined) { updates.push(`country = $${paramCount}`); values.push(country.trim().substring(0, 10)); paramCount++; }
+        if (city !== undefined) { updates.push(`city = $${paramCount}`); values.push(city); paramCount++; }
+        if (updates.length === 0) return res.status(400).json({ success: false, error: 'No fields to update' });
         values.push(id);
         const query = `UPDATE leaderboard SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`;
         const result = await pool.query(query, values);
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, error: 'Entry not found' });
-        }
-        res.json({ success: true, message: 'Leaderboard entry updated', entry: result.rows[0] });
+        if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Entry not found' });
+        res.json({ success: true, message: 'Entry updated', entry: result.rows[0] });
     } catch (error) {
         console.error('Update leaderboard error:', error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
-
 app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable' });
     try {
         const { id } = req.params;
         const result = await pool.query('DELETE FROM leaderboard WHERE id = $1 RETURNING *', [id]);
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, error: 'Entry not found' });
-        }
+        if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Entry not found' });
         res.json({ success: true, message: 'Entry deleted' });
     } catch (error) {
         console.error('Delete leaderboard error:', error.message);
@@ -1665,30 +1324,23 @@ app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
 app.get('/api/admin/freelancers/pending', verifyAdmin, async (req, res) => {
     if (!pool) return res.json({ success: true, pending: [] });
     try {
-        const result = await pool.query(
-            `SELECT * FROM freelancers WHERE is_approved = FALSE ORDER BY created_at DESC LIMIT 50`
-        );
+        const result = await pool.query(`SELECT * FROM freelancers WHERE is_approved = FALSE ORDER BY created_at DESC LIMIT 50`);
         res.json({ success: true, pending: result.rows });
     } catch (error) {
         console.error('Pending freelancers error:', error);
         res.json({ success: true, pending: [] });
     }
 });
-
 app.post('/api/admin/freelancers/:id/approve', verifyAdmin, async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable' });
     try {
-        await pool.query(
-            'UPDATE freelancers SET is_approved = TRUE, is_verified = TRUE WHERE id = $1',
-            [req.params.id]
-        );
+        await pool.query('UPDATE freelancers SET is_approved = TRUE, is_verified = TRUE WHERE id = $1', [req.params.id]);
         res.json({ success: true });
     } catch (error) {
         console.error('Approve freelancer error:', error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
-
 app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable' });
     try {
@@ -1699,58 +1351,22 @@ app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 });
-
 app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable' });
     try {
         const { id } = req.params;
         const { name, email, title, location, country, bio, hourly_rate, is_featured } = req.body;
-        const updates = [];
-        const values = [];
+        const updates = [], values = [];
         let paramCount = 1;
-        if (name !== undefined) {
-            updates.push(`name = $${paramCount}`);
-            values.push(name);
-            paramCount++;
-        }
-        if (email !== undefined) {
-            updates.push(`email = $${paramCount}`);
-            values.push(email);
-            paramCount++;
-        }
-        if (title !== undefined) {
-            updates.push(`title = $${paramCount}`);
-            values.push(title);
-            paramCount++;
-        }
-        if (location !== undefined) {
-            updates.push(`location = $${paramCount}`);
-            values.push(location);
-            paramCount++;
-        }
-        if (country !== undefined) {
-            updates.push(`country = $${paramCount}`);
-            values.push(country);
-            paramCount++;
-        }
-        if (bio !== undefined) {
-            updates.push(`bio = $${paramCount}`);
-            values.push(bio);
-            paramCount++;
-        }
-        if (hourly_rate !== undefined) {
-            updates.push(`hourly_rate = $${paramCount}`);
-            values.push(hourly_rate);
-            paramCount++;
-        }
-        if (is_featured !== undefined) {
-            updates.push(`is_featured = $${paramCount}`);
-            values.push(is_featured);
-            paramCount++;
-        }
-        if (updates.length === 0) {
-            return res.status(400).json({ success: false, error: 'No fields to update' });
-        }
+        if (name !== undefined) { updates.push(`name = $${paramCount}`); values.push(name); paramCount++; }
+        if (email !== undefined) { updates.push(`email = $${paramCount}`); values.push(email); paramCount++; }
+        if (title !== undefined) { updates.push(`title = $${paramCount}`); values.push(title); paramCount++; }
+        if (location !== undefined) { updates.push(`location = $${paramCount}`); values.push(location); paramCount++; }
+        if (country !== undefined) { updates.push(`country = $${paramCount}`); values.push(country); paramCount++; }
+        if (bio !== undefined) { updates.push(`bio = $${paramCount}`); values.push(bio); paramCount++; }
+        if (hourly_rate !== undefined) { updates.push(`hourly_rate = $${paramCount}`); values.push(hourly_rate); paramCount++; }
+        if (is_featured !== undefined) { updates.push(`is_featured = $${paramCount}`); values.push(is_featured); paramCount++; }
+        if (updates.length === 0) return res.status(400).json({ success: false, error: 'No fields to update' });
         values.push(id);
         const query = `UPDATE freelancers SET ${updates.join(', ')} WHERE id = $${paramCount}`;
         await pool.query(query, values);
@@ -1760,35 +1376,25 @@ app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 });
-
 app.post('/api/admin/freelancers/:id/toggle-featured', verifyAdmin, async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable' });
     try {
         const { id } = req.params;
         const freelancer = await pool.query('SELECT is_featured FROM freelancers WHERE id = $1', [id]);
-        if (freelancer.rows.length === 0) {
-            return res.status(404).json({ success: false, error: 'Freelancer not found' });
-        }
+        if (freelancer.rows.length === 0) return res.status(404).json({ success: false, error: 'Freelancer not found' });
         const newFeatured = !freelancer.rows[0].is_featured;
         await pool.query('UPDATE freelancers SET is_featured = $1 WHERE id = $2', [newFeatured, id]);
-        res.json({
-            success: true,
-            is_featured: newFeatured,
-            message: `Featured ${newFeatured ? 'enabled' : 'disabled'}`
-        });
+        res.json({ success: true, is_featured: newFeatured, message: `Featured ${newFeatured ? 'enabled' : 'disabled'}` });
     } catch (error) {
         console.error('Toggle featured error:', error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
-
 app.post('/api/admin/freelancers/bulk-delete', verifyAdmin, async (req, res) => {
     if (!pool) return res.status(503).json({ success: false, error: 'Database unavailable' });
     try {
         const { ids } = req.body;
-        if (!ids || !Array.isArray(ids) || ids.length === 0) {
-            return res.status(400).json({ success: false, error: 'No IDs received' });
-        }
+        if (!ids || !Array.isArray(ids) || ids.length === 0) return res.status(400).json({ success: false, error: 'No IDs received' });
         const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
         await pool.query(`DELETE FROM freelancers WHERE id IN (${placeholders})`, ids);
         res.json({ success: true, message: `${ids.length} freelancers deleted` });
@@ -1801,48 +1407,25 @@ app.post('/api/admin/freelancers/bulk-delete', verifyAdmin, async (req, res) => 
 // ============================================
 // HTML ROUTES
 // ============================================
-app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/admin-dashboard.html'));
-});
-
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/index.html'));
-});
+app.get('/admin', (req, res) => { res.sendFile(path.join(__dirname, '../public/admin-dashboard.html')); });
+app.get('/', (req, res) => { res.sendFile(path.join(__dirname, '../public/index.html')); });
 
 // ============================================
 // HEALTH CHECK
 // ============================================
 app.get('/api/health', async (req, res) => {
     let dbStatus = 'disconnected';
-    if (pool) {
-        try {
-            await pool.query('SELECT 1');
-            dbStatus = 'connected';
-        } catch (e) {
-            dbStatus = 'error';
-        }
-    }
-    res.json({
-        status: 'running',
-        database: dbStatus,
-        puppeteer: browserInstance ? 'connected' : 'disconnected',
-        timestamp: new Date().toISOString()
-    });
+    if (pool) { try { await pool.query('SELECT 1'); dbStatus = 'connected'; } catch (e) { dbStatus = 'error'; } }
+    res.json({ status: 'running', database: dbStatus, puppeteer: browserInstance ? 'connected' : 'disconnected', timestamp: new Date().toISOString() });
 });
 
 // ============================================
 // CATCH-ALL ROUTE
 // ============================================
 app.get('*', (req, res) => {
-    if (req.path.startsWith('/api/')) {
-        return res.status(404).json({ error: 'API endpoint not found' });
-    }
+    if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'API endpoint not found' });
     const filePath = path.join(__dirname, '../public', req.path);
-    res.sendFile(filePath, (err) => {
-        if (err) {
-            res.sendFile(path.join(__dirname, '../public/index.html'));
-        }
-    });
+    res.sendFile(filePath, (err) => { if (err) res.sendFile(path.join(__dirname, '../public/index.html')); });
 });
 
 // ============================================
@@ -1850,11 +1433,7 @@ app.get('*', (req, res) => {
 // ============================================
 app.use((err, req, res, next) => {
     console.error('Server error:', err.message);
-    res.status(500).json({
-        success: false,
-        error: 'Internal server error',
-        message: process.env.NODE_ENV === 'development' ? err.message : undefined
-    });
+    res.status(500).json({ success: false, error: 'Internal server error', message: process.env.NODE_ENV === 'development' ? err.message : undefined });
 });
 
 // ============================================
@@ -1881,6 +1460,7 @@ async function startServer() {
         console.log('   • Click-to-Unlock: ✅ EXTENDS 7 DAYS IMMEDIATELY');
         console.log('   • Social Share: ✅ OPTIONAL (VISUAL ONLY)');
         console.log('   • Admin Control: ✅ FULL MANUAL OVERRIDE');
+        console.log('   • Bulk Actions: ✅ ARRAYS SUPPORTED');
         console.log('   • SendGrid Integration: ✅ REAL EMAILS');
         console.log('   • Email Templates: ✅ SAVED IN DB');
         console.log('   • Leaderboard: ✅ ACTIVE');
