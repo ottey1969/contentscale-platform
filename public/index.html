@@ -94,8 +94,8 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 .modal .modal-content p { color: #6b7280 !important; }
 /* SECTION WRAPPER: constrains inner content for professional appearance */
 .section-body { max-width: 1024px; margin-left: auto; margin-right: auto; }
-/* Social Share Button Styles */
-.share-btn { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem; border-radius: 0.5rem; font-weight: 600; transition: all 0.2s; color: white; text-decoration: none; }
+/* Social Share Buttons */
+.share-btn { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem; border-radius: 0.5rem; font-weight: 600; color: white; transition: all 0.2s; text-decoration: none; }
 .share-btn:hover { transform: translateY(-2px); opacity: 0.9; }
 .share-twitter { background-color: #1DA1F2; }
 .share-linkedin { background-color: #0077B5; }
@@ -184,27 +184,29 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 <div class="flex items-start gap-4">
 <div class="text-4xl">🔒</div>
 <div class="flex-1">
-<h4 class="text-xl font-bold mb-2">Activation Required for Bulk Scanning</h4>
-<p class="text-gray-200 mb-4">The bulk scanner with automated email outreach is a premium feature. Contact us via WhatsApp to activate your account!</p>
+<h4 class="text-xl font-bold mb-2">Trial Expired or Not Activated</h4>
+<p class="text-gray-200 mb-4">Your 7-day free trial has ended. Share ContentScale on 5 social platforms to unlock another 7 days for free!</p>
 <div class="bg-gray-900 bg-opacity-50 rounded-lg p-4 mb-4">
-<h5 class="font-bold mb-2">What you get with activation:</h5>
-<ul class="text-sm text-gray-200 space-y-1" style="list-style:none;padding-left:0">
-<li>✅ Scan up to 100 URLs at once</li>
-<li>✅ Automated email outreach to business owners</li>
-<li>✅ Your own SendGrid integration (100 emails/day free)</li>
-<li>✅ Editable email templates</li>
-<li>✅ Automatic leaderboard submissions (85+ score)</li>
-</ul>
+<h5 class="font-bold mb-2">How to unlock:</h5>
+<p class="text-sm text-gray-300 mb-2">Click the 5 buttons below to share. The "Unlock Access" button will activate automatically.</p>
+<div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
+<a href="#" onclick="shareSocial('twitter'); return false;" class="share-btn share-twitter"><i class="fab fa-twitter"></i> Twitter</a>
+<a href="#" onclick="shareSocial('linkedin'); return false;" class="share-btn share-linkedin"><i class="fab fa-linkedin-in"></i> LinkedIn</a>
+<a href="#" onclick="shareSocial('facebook'); return false;" class="share-btn share-facebook"><i class="fab fa-facebook-f"></i> Facebook</a>
+<a href="#" onclick="shareSocial('whatsapp'); return false;" class="share-btn share-whatsapp"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+<a href="#" onclick="shareSocial('reddit'); return false;" class="share-btn share-reddit"><i class="fab fa-reddit-alien"></i> Reddit</a>
 </div>
-<div class="flex gap-3 flex-wrap">
-<a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20activate%20bulk%20scanner." target="_blank" rel="noopener" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold inline-flex items-center gap-2 transition-all">
-<i class="fab fa-whatsapp text-xl"></i> Contact for Activation
-</a>
-<button onclick="checkActivationStatus()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold inline-flex items-center gap-2">
-<i class="fas fa-sync mr-2"></i> Refresh Status
+<div class="flex items-center gap-4 mb-2">
+<div class="flex-1 bg-gray-800 rounded-full h-4 overflow-hidden">
+<div id="shareProgressBar" class="bg-green-500 h-full transition-all duration-500" style="width: 0%"></div>
+</div>
+<span class="text-sm font-bold"><span id="shareCountDisplay">0</span>/5 Shares</span>
+</div>
+<button id="unlockAccessBtn" onclick="unlockAccess()" disabled class="w-full bg-gray-600 text-gray-400 px-6 py-3 rounded-lg font-bold cursor-not-allowed transition-all">
+🔒 Unlock 7 Days Access
 </button>
 </div>
-<p class="text-xs text-gray-400 mt-4">💡 Activation is free! We just need to verify your account.</p>
+<p class="text-xs text-gray-400 mt-2">💡 Sharing helps us keep this tool free for everyone!</p>
 </div>
 </div>
 </div>
@@ -507,41 +509,10 @@ https://example2.com" class="w-full p-3 rounded resize-none" style="color:#000!i
 </div>
 </div>
 </div>
-
-<!-- ✅ NEW: SOCIAL SHARE MODAL FOR EXPIRED USERS -->
-<div id="socialShareModal" class="modal">
-    <div class="modal-content text-center">
-        <div class="mb-6">
-            <h2 class="text-2xl font-bold mb-2" style="color:#111827!important">⏳ Your 7-Day Trial Has Expired</h2>
-            <p class="text-gray-600">Share ContentScale on 5 social platforms to unlock another 7 days of free access!</p>
-        </div>
-        
-        <div class="grid grid-cols-2 gap-3 mb-6">
-            <a href="#" onclick="shareSocial('twitter')" class="share-btn share-twitter"><i class="fab fa-twitter"></i> Twitter</a>
-            <a href="#" onclick="shareSocial('linkedin')" class="share-btn share-linkedin"><i class="fab fa-linkedin-in"></i> LinkedIn</a>
-            <a href="#" onclick="shareSocial('facebook')" class="share-btn share-facebook"><i class="fab fa-facebook-f"></i> Facebook</a>
-            <a href="#" onclick="shareSocial('whatsapp')" class="share-btn share-whatsapp"><i class="fab fa-whatsapp"></i> WhatsApp</a>
-            <a href="#" onclick="shareSocial('reddit')" class="share-btn share-reddit col-span-2"><i class="fab fa-reddit-alien"></i> Reddit</a>
-        </div>
-
-        <div class="mb-6">
-            <p class="text-sm font-bold mb-2">Progress: <span id="shareCountDisplay" class="text-purple-600">0</span> / 5</div>
-            <div class="progress-bar h-3 rounded-full bg-gray-200">
-                <div id="shareProgressBar" class="progress-bar-fill bg-purple-600" style="width: 0%"></div>
-            </div>
-        </div>
-
-        <button id="extendTrialBtn" onclick="extendTrial()" disabled class="btn btn-success w-full py-3 opacity-50 cursor-not-allowed">
-            🔓 Unlock 7 More Days
-        </button>
-        <p class="text-xs text-gray-500 mt-2">Button activates after 5 shares</p>
-    </div>
-</div>
-
 <script>
 let userId=null,userActivated=false,activationChecked=false,sendgridConfigured=false,webshareConfigured=false,allLeaderboardEntries=[];
 let userTemplates={congrats:{subject:"",body:""},improvement:{subject:"",body:""},website:{subject:"",body:""}};
-// ✅ NEW: Share Counter
+// Share Logic Variables
 let shareCount = 0;
 const requiredShares = 5;
 
@@ -579,12 +550,13 @@ userActivated=d.activated;
 activationChecked=true;
 var an=document.getElementById("activationNotice"),ab=document.getElementById("activationBadge"),bf=document.getElementById("bulkScannerForm");
 
-// ✅ NEW: Handle Expiration & Social Share
+// Check if expired
 if (d.expired) {
-    showSocialShareModal();
-    if(an)an.classList.add("hidden");
-    if(ab)ab.classList.add("hidden");
-    if(bf)bf.classList.add("hidden");
+    // Show Share Modal
+    if(an) an.classList.remove("hidden");
+    if(ab) ab.classList.add("hidden");
+    if(bf) bf.classList.add("hidden");
+    console.log('⏳ Trial expired - showing share modal');
     return false;
 }
 
@@ -592,25 +564,21 @@ if(userActivated){
 if(an)an.classList.add("hidden");
 if(ab)ab.classList.add("hidden");
 if(bf)bf.classList.remove("hidden");
+console.log('✅ User activated - bulk scanner enabled');
+return true;
 }else{
 if(an)an.classList.remove("hidden");
 if(ab)ab.classList.remove("hidden");
 if(bf)bf.classList.add("hidden");
+console.log('🔒 User not activated');
+return false;
 }
-return userActivated;
 }
 }catch(e){console.error(e);}
 return false;
 }
 
-// ✅ NEW: Social Share Functions
-function showSocialShareModal() {
-    // Reset counter if opening fresh
-    shareCount = parseInt(localStorage.getItem('shareCount_' + userId) || 0);
-    updateShareUI();
-    document.getElementById('socialShareModal').classList.add('active');
-}
-
+// Share Functions
 function shareSocial(platform) {
     const url = encodeURIComponent(window.location.href);
     const text = encodeURIComponent("I'm using ContentScale to audit my SEO content! Check it out.");
@@ -641,15 +609,16 @@ function updateShareUI() {
     const percentage = (shareCount / requiredShares) * 100;
     document.getElementById('shareProgressBar').style.width = percentage + '%';
     
-    const btn = document.getElementById('extendTrialBtn');
+    const btn = document.getElementById('unlockAccessBtn');
     if (shareCount >= requiredShares) {
         btn.disabled = false;
-        btn.classList.remove('opacity-50', 'cursor-not-allowed');
-        btn.innerHTML = '🎉 Claim 7 Free Days';
+        btn.classList.remove('bg-gray-600', 'text-gray-400', 'cursor-not-allowed');
+        btn.classList.add('bg-green-600', 'hover:bg-green-700', 'text-white', 'cursor-pointer');
+        btn.innerHTML = '🔓 Unlock 7 Days Access';
     }
 }
 
-async function extendTrial() {
+async function unlockAccess() {
     if (shareCount < requiredShares) return;
     try {
         const response = await fetch('/api/user/extend-trial', {
@@ -661,14 +630,15 @@ async function extendTrial() {
         });
         const data = await response.json();
         if (data.success) {
-            alert('✅ Success! Your trial has been extended by 7 days.');
-            localStorage.removeItem('shareCount_' + userId); // Reset counter
-            document.getElementById('socialShareModal').classList.remove('active');
-            checkActivationStatus(); // Re-check status
+            alert('✅ Success! Your access has been extended by 7 days.');
+            shareCount = 0;
+            localStorage.removeItem('shareCount_' + userId);
+            updateShareUI();
+            checkActivationStatus(); // Refresh status
         } else {
             alert('❌ Error: ' + (data.error || 'Failed to extend trial'));
         }
-    } catch (e) {
+    } catch (error) {
         alert('❌ Connection error');
     }
 }
@@ -900,7 +870,7 @@ fetch("/api/freelancers/register",{method:"POST",headers:{"Content-Type":"applic
 }
 function extractDomain(url){if(!url)return"Company";try{var h=new URL(url).hostname.replace("www.",""),n=h.split(".")[0];return n.charAt(0).toUpperCase()+n.slice(1);}catch(e){return"Company";}}
 function getFlag(c){var f={"Netherlands":"🇳🇱","NL":"🇳🇱","United Kingdom":"🇬🇧","UK":"🇬🇧","US":"🇺🇸","United States":"🇺🇸","Germany":"🇩🇪","DE":"🇩🇪","France":"🇫🇷","FR":"🇫🇷","Belgium":"🇧🇪","BE":"🇧🇪","Spain":"🇪🇸","ES":"🇪🇸","Italy":"🇮🇹","IT":"🇮🇹"};return f[c]||"🌐";}
-window.onclick=function(e){var m=document.getElementById("freelancerModal");if(e.target===m)closeModal(); var sm = document.getElementById("socialShareModal"); if(e.target===sm) { /* Do not close social modal on outside click to force action */ } };
+window.onclick=function(e){var m=document.getElementById("freelancerModal");if(e.target===m)closeModal();};
 </script>
 </body>
 </html>
