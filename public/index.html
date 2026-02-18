@@ -112,6 +112,7 @@ img[width][height] { aspect-ratio: attr(width) / attr(height); }
 .w-48.h-48 { width: 192px; height: 192px; }
 #main-content > div:first-child { min-height: 400px; }
 .modal input, .modal textarea { color: #000000 !important; background-color: #ffffff !important; border: 1px solid #d1d5db !important; }
+.modal input::placeholder, .modal textarea::placeholder { color: #6b7280 !important; opacity: 1 !important; }
 .modal label { color: #374151 !important; font-weight: 500; }
 .modal .modal-content { background: white !important; }
 .modal .modal-content h2 { color: #111827 !important; }
@@ -143,7 +144,7 @@ img[width][height] { aspect-ratio: attr(width) / attr(height); }
 /* Share Buttons Styling */
 .share-btn { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem; border-radius: 0.5rem; font-weight: 600; color: white; text-decoration: none; transition: all 0.2s; }
 .share-btn:hover { transform: translateY(-2px); opacity: 0.9; }
-.share-X.com { background-color: #1DA1F2; }
+.share-twitter { background-color: #1DA1F2; }
 .share-linkedin { background-color: #0077B5; }
 .share-facebook { background-color: #4267B2; }
 .share-whatsapp { background-color: #25D366; }
@@ -756,7 +757,6 @@ website: { subject: '', body: '' }
 // Share Logic Variables
 let shareCount = 0;
 const requiredShares = 5;
-
 // ==========================================
 // INIT
 // ==========================================
@@ -798,7 +798,6 @@ document.getElementById('bioCharCount').textContent = this.value.length + '/200'
 });
 }
 });
-
 // ==========================================
 // USER REGISTRATION
 // ==========================================
@@ -830,7 +829,6 @@ loadUserTemplates();
 console.error('❌ User registration error:', error);
 }
 }
-
 // ==========================================
 // ACTIVATION STATUS (CHECKS EXPIRY)
 // ==========================================
@@ -847,7 +845,6 @@ activationChecked = true;
 const activationNotice = document.getElementById('activationNotice');
 const activationBadge = document.getElementById('activationBadge');
 const bulkScannerForm = document.getElementById('bulkScannerForm');
-
 // Check if expired
 if (data.expired) {
 // Show Share Modal
@@ -857,7 +854,6 @@ if(bulkScannerForm) bulkScannerForm.classList.add('hidden');
 console.log('⏳ Trial expired - showing share modal');
 return false;
 }
-
 if(userActivated) {
 if (activationNotice) activationNotice.classList.add('hidden');
 if (activationBadge) activationBadge.classList.add('hidden');
@@ -878,7 +874,6 @@ console.error('❌ Activation check error:', error);
 return false;
 }
 }
-
 // ==========================================
 // SHARE TO UNLOCK LOGIC (FRONTEND)
 // ==========================================
@@ -886,18 +881,15 @@ function shareSocial(platform) {
 const url = encodeURIComponent(window.location.href);
 const text = encodeURIComponent("I'm using ContentScale to audit my SEO content! Check it out.");
 let shareUrl = '';
-
 if (platform === 'twitter') shareUrl = `https://twitter.com/intent/tweet?url=${url}&text=${text}`;
 if (platform === 'linkedin') shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`;
 if (platform === 'facebook') shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
 if (platform === 'whatsapp') shareUrl = `https://wa.me/?text=${text} ${url}`;
-
 if (shareUrl) {
 window.open(shareUrl, '_blank', 'width=600,height=400');
 incrementShare();
 }
 }
-
 function incrementShare() {
 if (shareCount < requiredShares) {
 shareCount++;
@@ -905,12 +897,10 @@ localStorage.setItem('shareCount_' + userId, shareCount);
 updateShareUI();
 }
 }
-
 function updateShareUI() {
 document.getElementById('shareCountDisplay').textContent = shareCount;
 const percentage = (shareCount / requiredShares) * 100;
 document.getElementById('shareProgressBar').style.width = percentage + '%';
-
 const btn = document.getElementById('unlockAccessBtn');
 if (shareCount >= requiredShares) {
 btn.disabled = false;
@@ -919,7 +909,6 @@ btn.classList.add('bg-green-600', 'hover:bg-green-700', 'text-white', 'cursor-po
 btn.innerHTML = '🔓 Unlock 7 Days Access';
 }
 }
-
 async function unlockAccess() {
 if (shareCount < requiredShares) return;
 try {
@@ -944,7 +933,6 @@ alert('❌ Error: ' + (data.error || 'Failed to extend trial'));
 alert('❌ Connection error');
 }
 }
-
 // ==========================================
 // API STATUS
 // ==========================================
@@ -984,7 +972,6 @@ webshareConfigured = true;
 console.error('Error loading API status:', error);
 }
 }
-
 // ==========================================
 // ACCORDION
 // ==========================================
@@ -996,7 +983,6 @@ content.classList.toggle('hidden');
 icon.style.transform = content.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
 }
 }
-
 // ==========================================
 // MODE SWITCHER
 // ==========================================
@@ -1021,7 +1007,6 @@ document.getElementById('bulkToggleText').textContent = 'Hide Bulk Scanner';
 document.getElementById('bulkScannerIcon').className = 'fas fa-chevron-up';
 }
 }
-
 function toggleBulkScanner() {
 const content = document.getElementById('bulkScannerContent');
 const icon = document.getElementById('bulkScannerIcon');
@@ -1041,7 +1026,6 @@ checkActivationStatus();
 }
 }
 }
-
 // ==========================================
 // SENDGRID FUNCTIONS
 // ==========================================
@@ -1081,7 +1065,6 @@ alert('❌ ' + (data.error || 'Failed to save configuration'));
 alert('❌ Error: ' + error.message);
 }
 }
-
 async function testSendgridConfig() {
 if (!userId) {
 alert('❌ User not registered');
@@ -1115,7 +1098,6 @@ alert('❌ ' + (data.error || 'Test failed'));
 alert('❌ Error: ' + error.message);
 }
 }
-
 // ==========================================
 // WEBSHARE FUNCTIONS
 // ==========================================
@@ -1155,7 +1137,6 @@ alert('❌ ' + (data.error || 'Failed to save configuration'));
 alert('❌ Error: ' + error.message);
 }
 }
-
 // ==========================================
 // EMAIL TEMPLATES
 // ==========================================
@@ -1185,7 +1166,6 @@ document.getElementById('template-website-body').value = userTemplates.website.b
 console.error('Error loading templates:', error);
 }
 }
-
 async function saveTemplate(type) {
 if (!userId) {
 alert('❌ User not registered. Please refresh the page.');
@@ -1217,7 +1197,6 @@ alert('❌ ' + (data.error || 'Failed to save template'));
 alert('❌ Error: ' + error.message);
 }
 }
-
 // ==========================================
 // SINGLE URL SCAN
 // ==========================================
@@ -1269,7 +1248,6 @@ button.disabled = false;
 button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
 }
 }
-
 function displayScanResult(data) {
 const resultDiv = document.getElementById('singleResult');
 const url = data.url || '';
@@ -1383,7 +1361,6 @@ Close
 resultDiv.classList.remove('hidden');
 resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
-
 function addToLeaderboard(url, score) {
 const companyName = prompt('Enter company name (optional):', '');
 const contactEmail = prompt('Enter your email to receive congratulations if approved (optional):', '');
@@ -1397,7 +1374,6 @@ return;
 }
 alert(`✅ Thank you! Admin will review your submission. If approved (85+ score required), a congratulations email will be sent to ${contactEmail}.`);
 }
-
 // ==========================================
 // BULK SCAN
 // ==========================================
@@ -1495,7 +1471,6 @@ button.disabled = false;
 button.innerHTML = '<i class="fas fa-rocket mr-2"></i> Start Bulk Scan';
 progress.classList.add('hidden');
 }
-
 function displayBulkResults(results, userEmail, userName) {
 const container = document.getElementById('bulkResultsContainer');
 const resultsDiv = document.getElementById('bulkResults');
@@ -1561,7 +1536,6 @@ html += `
 container.innerHTML = html;
 resultsDiv.classList.remove('hidden');
 }
-
 async function sendBulkEmails(results, userEmail, userName) {
 if (!userId) {
 console.warn('No userId - skipping email sending');
@@ -1613,7 +1587,6 @@ console.error('❌ Error sending bulk emails:', error);
 alert('⚠️ Scan complete but some emails may have failed. Check your SendGrid dashboard.');
 }
 }
-
 // ==========================================
 // LEADERBOARD FUNCTIONS
 // ==========================================
@@ -1639,7 +1612,6 @@ console.error('❌ Error loading leaderboard:', error);
 showEmptyLeaderboard();
 }
 }
-
 function showEmptyLeaderboard() {
 document.getElementById('totalAgencies').textContent = '0';
 document.getElementById('avgScore').textContent = '0';
@@ -1652,7 +1624,6 @@ container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No
 document.getElementById('rankings4to15Container').style.display = 'none';
 document.getElementById('totalCount').textContent = '0';
 }
-
 function renderTop3() {
 const container = document.getElementById('top3-container');
 if (!container) return;
@@ -1680,7 +1651,6 @@ return `
 `;
 }).join('');
 }
-
 function renderRankings4to15() {
 const grid = document.getElementById('rankings4to15Grid');
 if (!grid) return;
@@ -1706,7 +1676,6 @@ View Website <i class="fas fa-external-link-alt ml-1"></i>
 `;
 }).join('');
 }
-
 function renderRankings16Plus() {
 const tbody = document.getElementById('rankingsTbody');
 const totalCount = document.getElementById('totalCount');
@@ -1734,7 +1703,6 @@ return `
 `;
 }).join('');
 }
-
 function renderCountryFilters() {
 const div = document.getElementById('countryFilters');
 if (!div) return;
@@ -1747,13 +1715,11 @@ html += `<button class="filter-tag" onclick="filterByCountry('${country}')">${ge
 });
 div.innerHTML = html;
 }
-
 function filterByCountry(country) {
 document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
 event.target.classList.add('active');
 console.log('Filter by country:', country);
 }
-
 function filterAgencies() {
 const query = document.getElementById('searchInput')?.value.toLowerCase() || '';
 if (!query) {
@@ -1784,7 +1750,6 @@ return `
 }).join('');
 }
 }
-
 function toggleFilters() {
 const panel = document.getElementById('filterPanel');
 const icon = document.getElementById('filterIcon');
@@ -1794,7 +1759,6 @@ icon.classList.toggle('fa-chevron-down');
 icon.classList.toggle('fa-chevron-up');
 }
 }
-
 function toggleRankings() {
 const container = document.getElementById('rankingsContainer');
 const toggleText = document.getElementById('rankingsToggleText');
@@ -1803,7 +1767,6 @@ container.classList.toggle('hidden');
 toggleText.textContent = container.classList.contains('hidden') ? '📊 Show Rankings 16+' : '📊 Hide Rankings 16+';
 }
 }
-
 // ==========================================
 // FREELANCERS FUNCTIONS
 // ==========================================
@@ -1858,7 +1821,6 @@ console.error('❌ Error loading freelancers:', error);
 document.getElementById('freelancersGrid').innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Could not load freelancers</div>';
 }
 }
-
 function openFreelancerModal() {
 const modal = document.getElementById('freelancerModal');
 if (modal) {
@@ -1866,7 +1828,6 @@ modal.classList.add('active');
 document.body.style.overflow = 'hidden';
 }
 }
-
 function closeModal() {
 const modal = document.getElementById('freelancerModal');
 if (modal) {
@@ -1874,7 +1835,6 @@ modal.classList.remove('active');
 document.body.style.overflow = 'auto';
 }
 }
-
 function submitFreelancer() {
 const name = document.getElementById('freelancerName')?.value;
 const email = document.getElementById('freelancerEmail')?.value;
@@ -1924,7 +1884,6 @@ alert('❌ ' + (data.error || 'Registration failed'));
 alert('❌ Registration failed: ' + error.message);
 });
 }
-
 // ==========================================
 // UTILITY FUNCTIONS
 // ==========================================
@@ -1939,7 +1898,6 @@ return name.charAt(0).toUpperCase() + name.slice(1);
 return 'Company';
 }
 }
-
 function getCountryFlag(country) {
 const flags = {
 'Netherlands': '🇳🇱', 'NL': '🇳🇱',
@@ -1953,7 +1911,6 @@ const flags = {
 };
 return flags[country] || '🌐';
 }
-
 window.onclick = function(event) {
 const modal = document.getElementById('freelancerModal');
 if (event.target === modal) {
