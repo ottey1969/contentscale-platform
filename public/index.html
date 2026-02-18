@@ -542,10 +542,12 @@ const requiredShares = 5;
 
 document.addEventListener('DOMContentLoaded', function() {
   registerUser(); loadLeaderboardData(); loadFreelancers(); loadUserTemplates();
-  window.addEventListener('load', function() {
+  // Reveal page - handle both cases (load already fired or not yet)
+  function revealPage() {
     document.body.classList.add('loaded');
-    setTimeout(function() { const l = document.getElementById('loading-screen'); if(l) l.style.display = 'none'; }, 500);
-  });
+    setTimeout(function() { const l = document.getElementById('loading-screen'); if(l) l.style.display = 'none'; }, 300);
+  }
+  if (document.readyState === 'complete') { revealPage(); } else { window.addEventListener('load', revealPage); }
   document.getElementById('singleUrlInput')?.addEventListener('keypress', function(e) { if (e.key === 'Enter') scanSingleURL(); });
   const bulkInput = document.getElementById('bulkUrlInput');
   if (bulkInput) { bulkInput.addEventListener('input', function() { const urls = this.value.split('\n').filter(u => u.trim().length > 0); const counter = document.getElementById('bulkUrlCount'); if (counter) { counter.textContent = `${urls.length}/100`; counter.style.color = urls.length > 100 ? '#f87171' : '#d1d5db'; } }); }
