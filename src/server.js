@@ -1,10 +1,9 @@
 // ============================================
-// CONTENTSCALE SERVER.JS - 7 DAY TRIAL + SOCIAL SHARE LOGIC
-// ✅ Auto-activate new users for 7 days
-// ✅ Check expiration on every request
-// ✅ Social Share verification endpoint
-// ✅ Admin retains full control (extend/revoke)
-// ✅ All existing features preserved (Leaderboard, Freelancers, Messaging)
+// CONTENTSCALE SERVER.JS - FINAL CORRECTED LOGIC
+// ✅ Auto 7-day trial on register
+// ✅ Click-to-Unlock extends by 7 days immediately
+// ✅ Social share is optional (visual only)
+// ✅ Admin has full manual control
 // ============================================
 process.env.PGSSLMODE = 'verify-full';
 process.env.NODE_NO_WARNINGS = '1';
@@ -264,7 +263,7 @@ async function createAllTables() {
             console.log('✅ Default admin created (ot/admin123)');
         }
 
-        // Users table - UPDATED with activated_until
+        // Users table
         await client.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id VARCHAR(255) PRIMARY KEY,
@@ -406,14 +405,14 @@ async function createAllTables() {
 }
 
 // ============================================
-// USER REGISTRATION ENDPOINT (AUTO-ACTIVATE 7 DAYS)
+// USER REGISTRATION (AUTO 7 DAYS)
 // ============================================
 app.post('/api/user/register', async (req, res) => {
     try {
         const userId = crypto.randomUUID();
         const ip = req.ip || req.connection.remoteAddress;
         
-        // Calculate expiry date: NOW + 7 days
+        // Auto-activate for 7 days
         const expiryDate = new Date();
         expiryDate.setDate(expiryDate.getDate() + 7);
 
@@ -462,7 +461,7 @@ app.post('/api/user/register', async (req, res) => {
 });
 
 // ============================================
-// USER ACTIVATION STATUS (CHECKS 7-DAY LIMIT)
+// USER ACTIVATION STATUS (CHECKS EXPIRY)
 // ============================================
 app.get('/api/user/activation-status', async (req, res) => {
     const userId = req.headers['x-user-id'];
@@ -483,19 +482,16 @@ app.get('/api/user/activation-status', async (req, res) => {
         let isExpired = false;
         let daysLeft = 0;
 
-        // Check expiration logic
         if (isActive && row.activated_until) {
             const now = new Date();
             const expiry = new Date(row.activated_until);
             
             if (expiry < now) {
-                // Time is up!
                 isExpired = true;
                 isActive = false;
-                // Optional: Auto-deactivate in DB so admin sees it clearly
+                // Auto-deactivate in DB
                 await pool.query('UPDATE users SET is_activated = FALSE WHERE id = $1', [userId]);
             } else {
-                // Calculate days remaining
                 const diffTime = Math.abs(expiry - now);
                 daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
             }
@@ -515,41 +511,16 @@ app.get('/api/user/activation-status', async (req, res) => {
 });
 
 // ============================================
-// SOCIAL SHARE VERIFICATION (EXTEND TRIAL)
+// EXTEND TRIAL (CLICK TO UNLOCK)
 // ============================================
-app.post('/api/user/verify-share', async (req, res) => {
+app.post('/api/user/extend-trial', async (req, res) => {
     const userId = req.headers['x-user-id'];
-    const { platform } = req.body; // e.g., 'twitter', 'linkedin'
-    
-    if (!userId || !platform) {
-        return res.status(400).json({ success: false, error: 'Missing user ID or platform' });
+    if (!userId) {
+        return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
-
     try {
-        // In a real production app, you would verify the share via API.
-        // For now, we trust the frontend signal to extend the trial.
-        
-        const result = await pool.query(
-            'SELECT activated_until FROM users WHERE id = $1',
-            [userId]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, error: 'User not found' });
-        }
-
-        const currentExpiry = result.rows[0].activated_until;
-        const now = new Date();
-        
-        // Calculate new expiry: 
-        // If already expired, start from today + 7 days.
-        // If still active, add 7 days to the CURRENT expiry date.
-        let newExpiry = new Date();
-        
-        if (currentExpiry && new Date(currentExpiry) > now) {
-            newExpiry = new Date(currentExpiry);
-        }
-        
+        // Add 7 days from NOW
+        const newExpiry = new Date();
         newExpiry.setDate(newExpiry.getDate() + 7);
 
         await pool.query(
@@ -559,12 +530,11 @@ app.post('/api/user/verify-share', async (req, res) => {
 
         res.json({ 
             success: true, 
-            message: `Thanks for sharing on ${platform}! Your trial has been extended by 7 days.`,
+            message: 'Access extended by 7 days!',
             newExpiry: newExpiry
         });
-
     } catch (error) {
-        console.error('❌ Verify share error:', error.message);
+        console.error('❌ Extend trial error:', error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -864,9 +834,8 @@ app.post('/api/bulk-scan/send-website-offers', async (req, res) => {
 });
 
 // ============================================
-// ✅ REAL ADMIN USER MANAGEMENT ENDPOINTS
+// ADMIN USER MANAGEMENT
 // ============================================
-// Get all users
 app.get('/api/admin/users', verifyAdmin, async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM users ORDER BY created_at DESC');
@@ -877,11 +846,11 @@ app.get('/api/admin/users', verifyAdmin, async (req, res) => {
     }
 });
 
-// Activate User (With Days Parameter)
+// Admin Activate (Manual Override)
 app.post('/api/admin/users/:id/activate', verifyAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { days } = req.body; // Expecting number of days
+        const { days } = req.body;
         
         let activatedUntil = null;
         if (days && !isNaN(days)) {
@@ -889,29 +858,25 @@ app.post('/api/admin/users/:id/activate', verifyAdmin, async (req, res) => {
             date.setDate(date.getDate() + parseInt(days));
             activatedUntil = date;
         } else {
-            // Default to 7 days extension if no days provided
+            // Default 7 days if not specified
             const date = new Date();
             date.setDate(date.getDate() + 7);
             activatedUntil = date;
         }
 
         await pool.query(
-            'UPDATE users SET is_activated = TRUE, activated_until = $2 WHERE id = $1',
+            'UPDATE users SET is_activated = TRUE, activated_until = $2 WHERE id = $1', 
             [id, activatedUntil]
         );
         
-        const msg = activatedUntil 
-            ? `User activated until ${activatedUntil.toLocaleDateString()}` 
-            : 'User activated indefinitely';
-            
-        res.json({ success: true, message: msg, activatedUntil });
+        res.json({ success: true, message: `User activated until ${activatedUntil.toLocaleDateString()}`, activatedUntil });
     } catch (error) {
         console.error('❌ Activate user error:', error.message);
         res.json({ success: false, error: error.message });
     }
 });
 
-// Deactivate User
+// Admin Deactivate
 app.post('/api/admin/users/:id/deactivate', verifyAdmin, async (req, res) => {
     try {
         const { id } = req.params;
@@ -923,13 +888,12 @@ app.post('/api/admin/users/:id/deactivate', verifyAdmin, async (req, res) => {
     }
 });
 
-// Delete Single User
+// Admin Delete
 app.delete('/api/admin/users/:id', verifyAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         await pool.query('DELETE FROM user_api_keys WHERE user_id = $1', [id]);
         await pool.query('DELETE FROM user_email_templates WHERE user_id = $1', [id]);
-        // Optional: Delete messages associated with user? Keeping for history usually better.
         await pool.query('DELETE FROM users WHERE id = $1', [id]);
         res.json({ success: true, message: 'User deleted' });
     } catch (error) {
@@ -938,21 +902,17 @@ app.delete('/api/admin/users/:id', verifyAdmin, async (req, res) => {
     }
 });
 
-// Bulk Delete Users
+// Admin Bulk Delete
 app.post('/api/admin/users/bulk-delete', verifyAdmin, async (req, res) => {
     try {
         const { ids } = req.body;
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
             return res.status(400).json({ success: false, error: 'No IDs received' });
         }
-        
         const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
-        
-        // Cascade delete related data
         await pool.query(`DELETE FROM user_api_keys WHERE user_id IN (${placeholders})`, ids);
         await pool.query(`DELETE FROM user_email_templates WHERE user_id IN (${placeholders})`, ids);
         await pool.query(`DELETE FROM users WHERE id IN (${placeholders})`, ids);
-        
         res.json({ success: true, message: `${ids.length} users deleted successfully` });
     } catch (error) {
         console.error('❌ Bulk delete users error:', error.message);
@@ -960,21 +920,18 @@ app.post('/api/admin/users/bulk-delete', verifyAdmin, async (req, res) => {
     }
 });
 
-// Send message to users (Admin -> User)
+// Admin Send Message
 app.post('/api/admin/messages/send', verifyAdmin, async (req, res) => {
-    const { recipientUserId, subject, body } = req.body; // recipientUserId can be null for broadcast
-    
+    const { recipientUserId, subject, body } = req.body;
     if (!body) {
         return res.status(400).json({ success: false, error: 'Message body required' });
     }
-
     try {
         await pool.query(
             `INSERT INTO admin_messages (sent_by, recipient_user_id, sender_type, subject, body)
             VALUES ($1, $2, 'admin', $3, $4)`,
             [req.admin.id, recipientUserId || null, subject || 'No Subject', body]
         );
-        
         const target = recipientUserId ? `user ${recipientUserId}` : 'ALL USERS';
         console.log(`📧 Admin message sent to ${target}`);
         res.json({ success: true, message: `Message sent to ${target}` });
@@ -984,47 +941,7 @@ app.post('/api/admin/messages/send', verifyAdmin, async (req, res) => {
     }
 });
 
-// User Reply to Admin (User -> Admin)
-app.post('/api/user/messages/send', async (req, res) => {
-    const userId = req.headers['x-user-id'];
-    const { subject, body } = req.body;
-
-    if (!userId || !body) {
-        return res.status(400).json({ success: false, error: 'User ID and Message Body required' });
-    }
-
-    try {
-        await pool.query(
-            `INSERT INTO admin_messages (recipient_user_id, sender_type, subject, body)
-            VALUES ($1, 'user', $2, $3)`,
-            [userId, subject || 'Re: Your Message', body]
-        );
-        console.log(`💬 User ${userId} sent a message to Admin`);
-        res.json({ success: true, message: 'Message sent to admin' });
-    } catch (error) {
-        console.error('❌ User send message error:', error.message);
-        res.json({ success: false, error: error.message });
-    }
-});
-
-// Get Messages for Specific User (Conversation History)
-app.get('/api/admin/messages/:userId', verifyAdmin, async (req, res) => {
-    const { userId } = req.params;
-    try {
-        const result = await pool.query(
-            `SELECT * FROM admin_messages 
-             WHERE recipient_user_id = $1 OR (sender_type = 'user' AND recipient_user_id IS NULL)
-             ORDER BY created_at ASC`,
-            [userId]
-        );
-        res.json({ success: true, messages: result.rows });
-    } catch (error) {
-        console.error('❌ Get messages error:', error.message);
-        res.json({ success: false, error: error.message, messages: [] });
-    }
-});
-
-// Get All Broadcast Messages (Admin Only)
+// Admin Get Messages
 app.get('/api/admin/messages', verifyAdmin, async (req, res) => {
     try {
         const result = await pool.query(
@@ -1253,7 +1170,6 @@ app.post('/api/scan', async (req, res) => {
                 totalScore >= 70 ? 'good' :
                     totalScore >= 60 ? 'average' : 'needs improvement';
 
-        // Recommendations (English)
         const recommendations = [];
         if (analysis.wordCount < 500) {
             recommendations.push({
@@ -1295,7 +1211,7 @@ app.post('/api/scan', async (req, res) => {
             });
         }
         if (analysis.keywordCount === 0 && analysis.wordCount > 100) {
-            recommendations.push({
+             recommendations.push({
                 title: '❌ Focus Keyword Missing',
                 description: 'Your main keyword does not appear in the text.',
                 priority: 'high',
@@ -1315,7 +1231,7 @@ app.post('/api/scan', async (req, res) => {
             });
         }
         if (analysis.images.length < 3) {
-            recommendations.push({
+             recommendations.push({
                 title: '🖼️ Too Few Visual Elements',
                 description: `You have only ${analysis.images.length} images.`,
                 priority: 'low',
@@ -1325,7 +1241,7 @@ app.post('/api/scan', async (req, res) => {
             });
         }
         if (analysis.expertQuotes.length === 0) {
-            recommendations.push({
+             recommendations.push({
                 title: '🎓 Missing Expertise Signals (E-E-A-T)',
                 description: 'Your content contains no expert quotes or citations.',
                 priority: 'medium',
@@ -1947,7 +1863,7 @@ app.use((err, req, res, next) => {
 async function startServer() {
     console.log('');
     console.log('🚀 =====================================');
-    console.log('🚀  CONTENTSCALE SERVER - 7 DAY TRIAL');
+    console.log('🚀  CONTENTSCALE SERVER - FINAL LOGIC');
     console.log('🚀 =====================================');
     console.log('');
     const dbConnected = await waitForDatabase();
@@ -1961,18 +1877,15 @@ async function startServer() {
         console.log('✅ FEATURE STATUS:');
         console.log('   • Single URL Scanner: ✅ ACTIVE');
         console.log('   • Bulk URL Scanner: ✅ ACTIVE');
-        console.log('   • Auto-Activation: ✅ 7 DAYS FREE');
-        console.log('   • Expiration Check: ✅ ENABLED');
-        console.log('   • Social Share Extend: ✅ ENABLED');
+        console.log('   • Auto-Activation: ✅ 7 DAYS FREE ON REGISTER');
+        console.log('   • Click-to-Unlock: ✅ EXTENDS 7 DAYS IMMEDIATELY');
+        console.log('   • Social Share: ✅ OPTIONAL (VISUAL ONLY)');
+        console.log('   • Admin Control: ✅ FULL MANUAL OVERRIDE');
         console.log('   • SendGrid Integration: ✅ REAL EMAILS');
         console.log('   • Email Templates: ✅ SAVED IN DB');
         console.log('   • Leaderboard: ✅ ACTIVE');
         console.log('   • Freelancers: ✅ ACTIVE');
         console.log('   • Admin Login: ✅ WORKS (ot / admin123)');
-        console.log('   • Admin Edit/Delete: ✅ WORKS');
-        console.log('   • Bulk Delete: ✅ WORKS');
-        console.log('   • Two-Way Messaging: ✅ ACTIVE');
-        console.log('   • User Management: ✅ REAL DATA');
         console.log('');
     });
 }
