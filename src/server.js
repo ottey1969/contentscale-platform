@@ -2,8 +2,9 @@
 // CONTENTSCALE SERVER.JS - 7 DAY TRIAL + SOCIAL SHARE LOGIC
 // ✅ Auto-activate new users for 7 days
 // ✅ Check expiration on every request
+// ✅ Social Share verification endpoint
 // ✅ Admin retains full control (extend/revoke)
-// ✅ Ready for "Share to Unlock" frontend logic
+// ✅ All existing features preserved (Leaderboard, Freelancers, Messaging)
 // ============================================
 process.env.PGSSLMODE = 'verify-full';
 process.env.NODE_NO_WARNINGS = '1';
@@ -514,6 +515,61 @@ app.get('/api/user/activation-status', async (req, res) => {
 });
 
 // ============================================
+// SOCIAL SHARE VERIFICATION (EXTEND TRIAL)
+// ============================================
+app.post('/api/user/verify-share', async (req, res) => {
+    const userId = req.headers['x-user-id'];
+    const { platform } = req.body; // e.g., 'twitter', 'linkedin'
+    
+    if (!userId || !platform) {
+        return res.status(400).json({ success: false, error: 'Missing user ID or platform' });
+    }
+
+    try {
+        // In a real production app, you would verify the share via API.
+        // For now, we trust the frontend signal to extend the trial.
+        
+        const result = await pool.query(
+            'SELECT activated_until FROM users WHERE id = $1',
+            [userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'User not found' });
+        }
+
+        const currentExpiry = result.rows[0].activated_until;
+        const now = new Date();
+        
+        // Calculate new expiry: 
+        // If already expired, start from today + 7 days.
+        // If still active, add 7 days to the CURRENT expiry date.
+        let newExpiry = new Date();
+        
+        if (currentExpiry && new Date(currentExpiry) > now) {
+            newExpiry = new Date(currentExpiry);
+        }
+        
+        newExpiry.setDate(newExpiry.getDate() + 7);
+
+        await pool.query(
+            'UPDATE users SET is_activated = TRUE, activated_until = $2 WHERE id = $1',
+            [userId, newExpiry]
+        );
+
+        res.json({ 
+            success: true, 
+            message: `Thanks for sharing on ${platform}! Your trial has been extended by 7 days.`,
+            newExpiry: newExpiry
+        });
+
+    } catch (error) {
+        console.error('❌ Verify share error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ============================================
 // USER API KEYS STATUS ENDPOINT
 // ============================================
 app.get('/api/user/keys/status', async (req, res) => {
@@ -810,7 +866,6 @@ app.post('/api/bulk-scan/send-website-offers', async (req, res) => {
 // ============================================
 // ✅ REAL ADMIN USER MANAGEMENT ENDPOINTS
 // ============================================
-
 // Get all users
 app.get('/api/admin/users', verifyAdmin, async (req, res) => {
     try {
@@ -834,15 +889,14 @@ app.post('/api/admin/users/:id/activate', verifyAdmin, async (req, res) => {
             date.setDate(date.getDate() + parseInt(days));
             activatedUntil = date;
         } else {
-            // Default to 7 days if not specified, or indefinite if days=0? 
-            // Let's default to 7 days extension if no days provided
+            // Default to 7 days extension if no days provided
             const date = new Date();
             date.setDate(date.getDate() + 7);
             activatedUntil = date;
         }
 
         await pool.query(
-            'UPDATE users SET is_activated = TRUE, activated_until = $2 WHERE id = $1', 
+            'UPDATE users SET is_activated = TRUE, activated_until = $2 WHERE id = $1',
             [id, activatedUntil]
         );
         
@@ -1241,7 +1295,7 @@ app.post('/api/scan', async (req, res) => {
             });
         }
         if (analysis.keywordCount === 0 && analysis.wordCount > 100) {
-             recommendations.push({
+            recommendations.push({
                 title: '❌ Focus Keyword Missing',
                 description: 'Your main keyword does not appear in the text.',
                 priority: 'high',
@@ -1261,7 +1315,7 @@ app.post('/api/scan', async (req, res) => {
             });
         }
         if (analysis.images.length < 3) {
-             recommendations.push({
+            recommendations.push({
                 title: '🖼️ Too Few Visual Elements',
                 description: `You have only ${analysis.images.length} images.`,
                 priority: 'low',
@@ -1271,7 +1325,7 @@ app.post('/api/scan', async (req, res) => {
             });
         }
         if (analysis.expertQuotes.length === 0) {
-             recommendations.push({
+            recommendations.push({
                 title: '🎓 Missing Expertise Signals (E-E-A-T)',
                 description: 'Your content contains no expert quotes or citations.',
                 priority: 'medium',
@@ -1909,6 +1963,7 @@ async function startServer() {
         console.log('   • Bulk URL Scanner: ✅ ACTIVE');
         console.log('   • Auto-Activation: ✅ 7 DAYS FREE');
         console.log('   • Expiration Check: ✅ ENABLED');
+        console.log('   • Social Share Extend: ✅ ENABLED');
         console.log('   • SendGrid Integration: ✅ REAL EMAILS');
         console.log('   • Email Templates: ✅ SAVED IN DB');
         console.log('   • Leaderboard: ✅ ACTIVE');
