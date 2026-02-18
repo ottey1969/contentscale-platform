@@ -123,10 +123,11 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 .template-editor textarea { width: 100%; min-height: 200px; font-family: monospace; font-size: 0.875rem; color: #f3f4f6 !important; background-color: #1f2937 !important; }
 .share-btn { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem; border-radius: 0.5rem; font-weight: 600; color: white; text-decoration: none; transition: all 0.2s; }
 .share-btn:hover { transform: translateY(-2px); opacity: 0.9; }
-.share-twitter { background-color: #1DA1F2; }
+.share-twitter { background-color: #000000; } /* X is black */
 .share-linkedin { background-color: #0077B5; }
 .share-facebook { background-color: #4267B2; }
 .share-whatsapp { background-color: #25D366; }
+.share-copy { background-color: #4B5563; }
 </style>
 </head>
 <body class="bg-gray-900">
@@ -215,11 +216,13 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 <div class="bg-gray-900 bg-opacity-50 rounded-lg p-4 mb-4">
 <h5 class="font-bold text-white mb-2">How to help:</h5>
 <p class="text-sm text-gray-300 mb-2">Click the buttons below to share. The "Unlock Access" button will activate automatically.</p>
-<div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
-<a href="#" onclick="shareSocial('twitter'); return false;" class="share-btn share-twitter"><i class="fab fa-twitter"></i> Twitter</a>
+<!-- UPDATED: Grid adjusted for 5 items, Twitter changed to X, Copy Link added -->
+<div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
+<a href="#" onclick="shareSocial('x'); return false;" class="share-btn share-twitter"><i class="fab fa-x-twitter"></i> X</a>
 <a href="#" onclick="shareSocial('linkedin'); return false;" class="share-btn share-linkedin"><i class="fab fa-linkedin-in"></i> LinkedIn</a>
 <a href="#" onclick="shareSocial('facebook'); return false;" class="share-btn share-facebook"><i class="fab fa-facebook-f"></i> Facebook</a>
 <a href="#" onclick="shareSocial('whatsapp'); return false;" class="share-btn share-whatsapp"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+<a href="#" onclick="shareSocial('copy'); return false;" class="share-btn share-copy"><i class="fas fa-link"></i> Copy Link</a>
 </div>
 <div class="flex items-center gap-4 mb-2">
 <div class="flex-1 bg-gray-800 rounded-full h-4 overflow-hidden">
@@ -383,6 +386,7 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 <div><code class="text-purple-400">{{sender_name}}</code> - Your name</div>
 <div><code class="text-purple-400">{{sender_email}}</code> - Your email</div>
 <div><code class="text-purple-400">{{website_url}}</code> - Business website</div>
+</div>
 </div>
 </div>
 </div>
@@ -623,15 +627,35 @@ async function checkActivationStatus() {
     return false;
 }
 
+// UPDATED: Function handles X and Copy Link
 function shareSocial(platform) {
-    const url = encodeURIComponent(window.location.href);
+    const url = encodeURIComponent('https://app.contentscale.site');
     const text = encodeURIComponent("I'm using ContentScale to audit my SEO content! Check it out.");
     let shareUrl = '';
-    if (platform === 'twitter') shareUrl = `https://twitter.com/intent/tweet?url=${url}&text=${text}`;
-    if (platform === 'linkedin') shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`;
-    if (platform === 'facebook') shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
-    if (platform === 'whatsapp') shareUrl = `https://wa.me/?text=${text} ${url}`;
-    if (shareUrl) { window.open(shareUrl, '_blank', 'width=600,height=400'); incrementShare(); }
+    
+    if (platform === 'x') {
+        shareUrl = `https://x.com/intent/tweet?url=${url}&text=${text}`;
+    } else if (platform === 'linkedin') {
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`;
+    } else if (platform === 'facebook') {
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+    } else if (platform === 'whatsapp') {
+        shareUrl = `https://wa.me/?text=${text} ${url}`;
+    } else if (platform === 'copy') {
+        navigator.clipboard.writeText('https://app.contentscale.site').then(() => {
+            alert('✅ Link copied to clipboard!');
+            incrementShare();
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            alert('❌ Failed to copy link. Please copy manually: https://app.contentscale.site');
+        });
+        return; // Exit early as we handled the logic inside the promise
+    }
+    
+    if (shareUrl) { 
+        window.open(shareUrl, '_blank', 'width=600,height=400'); 
+        incrementShare(); 
+    }
 }
 
 function incrementShare() {
