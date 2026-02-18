@@ -94,720 +94,813 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 .modal .modal-content p { color: #6b7280 !important; }
 /* SECTION WRAPPER: constrains inner content for professional appearance */
 .section-body { max-width: 1024px; margin-left: auto; margin-right: auto; }
+/* Social Share Button Styles */
+.share-btn { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem; border-radius: 0.5rem; font-weight: 600; transition: all 0.2s; color: white; text-decoration: none; }
+.share-btn:hover { transform: translateY(-2px); opacity: 0.9; }
+.share-twitter { background-color: #1DA1F2; }
+.share-linkedin { background-color: #0077B5; }
+.share-facebook { background-color: #4267B2; }
+.share-whatsapp { background-color: #25D366; }
+.share-reddit { background-color: #FF4500; }
 </style>
 </head>
 <body class="bg-gray-900">
 <div id="loading-screen">
-  <div class="spinner mb-4"></div>
-  <p class="text-purple-400 font-bold animate-pulse">Loading ContentScale...</p>
+<div class="spinner mb-4"></div>
+<p class="text-purple-400 font-bold animate-pulse">Loading ContentScale...</p>
 </div>
 <a href="#main-content" class="skip-link">Skip to main content</a>
 <nav class="sticky top-0 z-50 border-b-2 border-purple-600 backdrop-blur-sm" style="background:rgba(3,7,18,0.95)">
-  <div class="max-w-7xl mx-auto px-6 py-4">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <span class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">ContentScale</span>
-        <span class="hidden sm:inline-block text-xs px-2 py-1 bg-purple-600 rounded text-white font-semibold">Pro</span>
-      </div>
-      <div class="hidden md:flex gap-6">
-        <a href="#lead-scanner" class="text-gray-300 hover:text-white transition-colors">Scanner</a>
-        <a href="#leaderboard" class="text-gray-300 hover:text-white transition-colors">Leaderboard</a>
-        <a href="#freelancers" class="text-gray-300 hover:text-white transition-colors">Experts</a>
-        <a href="#templates" class="text-gray-300 hover:text-white transition-colors">Templates</a>
-      </div>
-      <a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="btn-success btn">
-        <i class="fab fa-whatsapp"></i> Chat
-      </a>
-    </div>
-  </div>
+<div class="max-w-7xl mx-auto px-6 py-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">ContentScale</span>
+<span class="hidden sm:inline-block text-xs px-2 py-1 bg-purple-600 rounded text-white font-semibold">Pro</span>
+</div>
+<div class="hidden md:flex gap-6">
+<a href="#lead-scanner" class="text-gray-300 hover:text-white transition-colors">Scanner</a>
+<a href="#leaderboard" class="text-gray-300 hover:text-white transition-colors">Leaderboard</a>
+<a href="#freelancers" class="text-gray-300 hover:text-white transition-colors">Experts</a>
+<a href="#templates" class="text-gray-300 hover:text-white transition-colors">Templates</a>
+</div>
+<a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="btn-success btn">
+<i class="fab fa-whatsapp"></i> Chat
+</a>
+</div>
+</div>
 </nav>
-
 <div id="main-content" class="max-w-7xl mx-auto px-6 py-8">
-
 <!-- SCANNER SECTION -->
 <div id="lead-scanner" class="mb-16">
-  <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-    <div class="max-w-3xl mx-auto text-center mb-8">
-      <h2 class="text-4xl font-bold mb-3">SEO Content Quality Scanner</h2>
-      <p class="text-xl text-gray-200 mb-4">Check Your SEO Content Quality in Seconds</p>
-      <div class="flex flex-wrap gap-3 justify-center text-sm text-gray-300">
-        <span>✨ Free for freelancers</span><span>•</span>
-        <span>🔍 Single &amp; Bulk scanning</span><span>•</span>
-        <span>📊 Detailed analysis</span><span>•</span>
-        <span>📧 Your SendGrid emails</span><span>•</span>
-        <span>✏️ Editable templates</span>
-      </div>
-    </div>
-    <div class="flex justify-center gap-4 mb-8">
-      <button id="modeSingleBtn" onclick="switchMode('single')" class="mode-toggle active"><i class="fas fa-link mr-2"></i> Single URL</button>
-      <button id="modeBulkBtn" onclick="switchMode('bulk')" class="mode-toggle"><i class="fas fa-layer-group mr-2"></i> Bulk URLs</button>
-    </div>
-    <!-- SINGLE -->
-    <div id="singleMode" class="max-w-3xl mx-auto">
-      <div class="card">
-        <div class="flex flex-col sm:flex-row gap-3">
-          <input type="text" id="singleUrlInput" placeholder="https://business-website.com" class="flex-1" autocomplete="off" spellcheck="false">
-          <button onclick="scanSingleURL()" id="singleScanBtn" class="btn-primary btn whitespace-nowrap"><i class="fas fa-search"></i> Start Scan</button>
-        </div>
-        <div id="singleProgress" class="hidden mt-4">
-          <div class="progress-bar"><div id="singleProgressBar" class="progress-bar-fill" style="width:0%"></div></div>
-          <p id="singleProgressText" class="text-sm text-gray-300 text-center mt-2"></p>
-        </div>
-      </div>
-      <div id="singleResult" class="hidden mt-4"></div>
-    </div>
-    <div class="flex items-center gap-4 my-6 max-w-3xl mx-auto">
-      <div class="flex-1 border-t border-gray-700"></div><span class="text-gray-500 text-sm">OR</span><div class="flex-1 border-t border-gray-700"></div>
-    </div>
-    <!-- BULK -->
-    <div id="bulkMode" class="hidden max-w-4xl mx-auto">
-      <div class="card" style="border:2px solid #3b82f6">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-xl font-bold flex items-center gap-2">
-            <span>📋 Bulk URL Scanner</span>
-            <span class="text-xs px-2 py-1 bg-blue-600 rounded text-white">Batch Scan</span>
-            <span id="activationBadge" class="text-xs px-2 py-1 bg-red-600 rounded text-white hidden">🔒 Activation Required</span>
-          </h3>
-          <button onclick="toggleBulkScanner()" class="text-sm text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-2">
-            <span id="bulkToggleText">Hide Bulk Scanner</span>
-            <i class="fas fa-chevron-up" id="bulkScannerIcon"></i>
-          </button>
-        </div>
-        <div id="bulkScannerContent">
-          <div id="activationNotice" class="hidden bg-gradient-to-r from-purple-900 to-blue-900 border-2 border-purple-500 rounded-lg p-6 mb-6">
-            <div class="flex items-start gap-4">
-              <div class="text-4xl">🔒</div>
-              <div class="flex-1">
-                <h4 class="text-xl font-bold mb-2">Activation Required for Bulk Scanning</h4>
-                <p class="text-gray-200 mb-4">The bulk scanner with automated email outreach is a premium feature. Contact us via WhatsApp to activate your account!</p>
-                <div class="bg-gray-900 bg-opacity-50 rounded-lg p-4 mb-4">
-                  <h5 class="font-bold mb-2">What you get with activation:</h5>
-                  <ul class="text-sm text-gray-200 space-y-1" style="list-style:none;padding-left:0">
-                    <li>✅ Scan up to 100 URLs at once</li>
-                    <li>✅ Automated email outreach to business owners</li>
-                    <li>✅ Your own SendGrid integration (100 emails/day free)</li>
-                    <li>✅ Editable email templates</li>
-                    <li>✅ Automatic leaderboard submissions (85+ score)</li>
-                  </ul>
-                </div>
-                <div class="flex gap-3 flex-wrap">
-                  <a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20activate%20bulk%20scanner." target="_blank" rel="noopener" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold inline-flex items-center gap-2 transition-all">
-                    <i class="fab fa-whatsapp text-xl"></i> Contact for Activation
-                  </a>
-                  <button onclick="checkActivationStatus()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold inline-flex items-center gap-2">
-                    <i class="fas fa-sync mr-2"></i> Refresh Status
-                  </button>
-                </div>
-                <p class="text-xs text-gray-400 mt-4">💡 Activation is free! We just need to verify your account.</p>
-              </div>
-            </div>
-          </div>
-          <div id="bulkScannerForm">
-            <p class="text-gray-300 text-sm mb-4">Scan up to 100 websites at once. Based on scores, we automatically:</p>
-            <ul class="text-sm text-gray-300 mb-4" style="margin-left:1.5rem">
-              <li>🏆 <strong>85+ Score:</strong> Submit to leaderboard + send congratulations email</li>
-              <li>📧 <strong>&lt;85 with website:</strong> Email business owner with improvement pitch</li>
-              <li>🌐 <strong>&lt;85 without website:</strong> Email owner offering website creation</li>
-            </ul>
-            <div class="mb-4">
-              <label class="block text-sm text-gray-300 mb-2">Enter URLs (one per line, max 100)</label>
-              <textarea id="bulkUrlInput" rows="8" placeholder="https://example1.com
-https://example2.com" class="w-full p-3 rounded resize-none" style="color:#000!important;background:#fff!important;border:1px solid #d1d5db!important"></textarea>
-              <div class="flex justify-between mt-1">
-                <span class="text-xs text-gray-400">Up to 100 URLs</span>
-                <span id="bulkUrlCount" class="text-xs text-gray-400">0/100</span>
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-3 mb-4">
-              <div>
-                <label class="block text-sm text-gray-300 mb-2">Your Email *</label>
-                <input type="email" id="bulkScanEmail" placeholder="your@email.com" class="w-full p-2 rounded">
-              </div>
-              <div>
-                <label class="block text-sm text-gray-300 mb-2">Your Name *</label>
-                <input type="text" id="bulkScanName" placeholder="Your name" class="w-full p-2 rounded">
-              </div>
-            </div>
-            <button onclick="startBulkScan()" id="bulkScanBtn" class="btn-primary btn w-full"><i class="fas fa-rocket mr-2"></i> Start Bulk Scan</button>
-            <div id="bulkProgress" class="hidden mt-4">
-              <div class="progress-bar"><div id="bulkProgressBar" class="progress-bar-fill" style="width:0%"></div></div>
-              <p id="bulkProgressText" class="text-sm text-gray-300 text-center mt-2"></p>
-            </div>
-            <div id="bulkResults" class="hidden mt-4">
-              <h4 class="text-lg font-bold mb-3">Scan Results</h4>
-              <div id="bulkResultsContainer"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <!-- API Config Accordion - constrained width -->
-    <div class="max-w-4xl mx-auto">
-      <div class="accordion-item">
-        <button onclick="toggleAccordion('apiConfig')" class="accordion-header">
-          <span class="flex items-center gap-2">
-            <i class="fas fa-key text-purple-400"></i>
-            <span class="font-bold">Configure Your API Keys (SendGrid + WebShare)</span>
-            <span id="apiStatusIndicator" class="api-status-indicator api-status-inactive"></span>
-          </span>
-          <i class="fas fa-chevron-down" id="apiConfigIcon"></i>
-        </button>
-        <div id="apiConfig" class="accordion-content hidden">
-          <div class="bg-gray-900 rounded-lg p-5 border border-gray-700">
-            <div class="flex items-center gap-3 mb-4">
-              <span id="apiStatusText" class="text-sm text-gray-300">Configure your own API keys for unlimited usage</span>
-            </div>
-            <div class="grid md:grid-cols-2 gap-6">
-              <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                <h4 class="text-lg font-bold mb-3 flex items-center gap-2"><i class="fas fa-envelope text-blue-400"></i> SendGrid Configuration</h4>
-                <p class="text-xs text-gray-400 mb-3">Free plan: 100 emails/day</p>
-                <div class="space-y-3">
-                  <div>
-                    <label class="block text-sm text-gray-300 mb-1">SendGrid API Key</label>
-                    <input type="password" id="sendgridApiKey" placeholder="SG.xxxxxxxxxx" class="w-full p-2 rounded" autocomplete="off">
-                  </div>
-                  <div class="flex gap-2">
-                    <button onclick="saveSendgridConfig()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm font-semibold"><i class="fas fa-save mr-1"></i> Save</button>
-                    <button onclick="testSendgridConfig()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-semibold"><i class="fas fa-vial mr-1"></i> Test</button>
-                  </div>
-                  <div id="sendgridStatus" class="text-xs text-gray-400 mt-2"><span class="text-yellow-400">⚪ Not configured</span></div>
-                  <div class="border-t border-gray-700 pt-3">
-                    <h5 class="text-sm font-semibold mb-2 text-gray-300">Daily Usage</h5>
-                    <div class="progress-bar h-2 mb-1"><div id="sendgridUsageBar" class="progress-bar-fill" style="width:0%"></div></div>
-                    <div class="flex justify-between text-xs"><span id="sendgridUsed">0</span><span>/</span><span id="sendgridLimit">100</span></div>
-                  </div>
-                </div>
-              </div>
-              <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                <h4 class="text-lg font-bold mb-3 flex items-center gap-2"><i class="fas fa-globe text-green-400"></i> WebShare Proxy Configuration</h4>
-                <p class="text-xs text-gray-400 mb-3">10 free proxies for enhanced scanning</p>
-                <div class="space-y-3">
-                  <div>
-                    <label class="block text-sm text-gray-300 mb-1">WebShare API Key</label>
-                    <input type="password" id="webshareApiKey" placeholder="your-webshare-api-key" class="w-full p-2 rounded" autocomplete="off">
-                  </div>
-                  <div class="flex gap-2">
-                    <button onclick="saveWebshareConfig()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm font-semibold"><i class="fas fa-save mr-1"></i> Save</button>
-                    <button onclick="testWebshareConfig()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-semibold"><i class="fas fa-vial mr-1"></i> Test</button>
-                  </div>
-                  <div id="webshareStatus" class="text-xs text-gray-400 mt-2"><span class="text-yellow-400">⚪ Not configured</span></div>
-                  <div id="proxyList" class="hidden mt-3 border-t border-gray-700 pt-3">
-                    <h5 class="text-sm font-semibold mb-2 text-gray-300">Active Proxies</h5>
-                    <div id="proxyListContainer" class="space-y-1 max-h-32 overflow-y-auto text-xs"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="mt-4 text-xs text-gray-500 border-t border-gray-700 pt-3">
-              <p>💡 Your API keys are stored securely and only used for your account. Free tier limits apply.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <!-- CTA Banner -->
-    <div class="mt-8 max-w-3xl mx-auto bg-gradient-to-r from-purple-800 via-pink-800 to-purple-800 rounded-xl p-6 text-center border border-purple-400">
-      <h3 class="text-2xl font-bold mb-2">💼 Are You an SEO Specialist or Content Marketer?</h3>
-      <p class="text-xl text-gray-200 mb-4">Work just a few hours per week while earning a full-time income. We train you in Modern SEO for the AI-era.</p>
-      <button onclick="openFreelancerModal()" class="btn-white-black btn text-lg px-8 py-4 shadow-lg"><i class="fas fa-user-plus mr-2"></i> Become a Platform Specialist</button>
-    </div>
-  </div>
+<div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+<div class="max-w-3xl mx-auto text-center mb-8">
+<h2 class="text-4xl font-bold mb-3">SEO Content Quality Scanner</h2>
+<p class="text-xl text-gray-200 mb-4">Check Your SEO Content Quality in Seconds</p>
+<div class="flex flex-wrap gap-3 justify-center text-sm text-gray-300">
+<span>✨ Free for freelancers</span><span>•</span>
+<span>🔍 Single &amp; Bulk scanning</span><span>•</span>
+<span>📊 Detailed analysis</span><span>•</span>
+<span>📧 Your SendGrid emails</span><span>•</span>
+<span>✏️ Editable templates</span>
 </div>
-
+</div>
+<div class="flex justify-center gap-4 mb-8">
+<button id="modeSingleBtn" onclick="switchMode('single')" class="mode-toggle active"><i class="fas fa-link mr-2"></i> Single URL</button>
+<button id="modeBulkBtn" onclick="switchMode('bulk')" class="mode-toggle"><i class="fas fa-layer-group mr-2"></i> Bulk URLs</button>
+</div>
+<!-- SINGLE -->
+<div id="singleMode" class="max-w-3xl mx-auto">
+<div class="card">
+<div class="flex flex-col sm:flex-row gap-3">
+<input type="text" id="singleUrlInput" placeholder="https://business-website.com" class="flex-1" autocomplete="off" spellcheck="false">
+<button onclick="scanSingleURL()" id="singleScanBtn" class="btn-primary btn whitespace-nowrap"><i class="fas fa-search"></i> Start Scan</button>
+</div>
+<div id="singleProgress" class="hidden mt-4">
+<div class="progress-bar"><div id="singleProgressBar" class="progress-bar-fill" style="width:0%"></div></div>
+<p id="singleProgressText" class="text-sm text-gray-300 text-center mt-2"></p>
+</div>
+</div>
+<div id="singleResult" class="hidden mt-4"></div>
+</div>
+<div class="flex items-center gap-4 my-6 max-w-3xl mx-auto">
+<div class="flex-1 border-t border-gray-700"></div><span class="text-gray-500 text-sm">OR</span><div class="flex-1 border-t border-gray-700"></div>
+</div>
+<!-- BULK -->
+<div id="bulkMode" class="hidden max-w-4xl mx-auto">
+<div class="card" style="border:2px solid #3b82f6">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-xl font-bold flex items-center gap-2">
+<span>📋 Bulk URL Scanner</span>
+<span class="text-xs px-2 py-1 bg-blue-600 rounded text-white">Batch Scan</span>
+<span id="activationBadge" class="text-xs px-2 py-1 bg-red-600 rounded text-white hidden">🔒 Activation Required</span>
+</h3>
+<button onclick="toggleBulkScanner()" class="text-sm text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-2">
+<span id="bulkToggleText">Hide Bulk Scanner</span>
+<i class="fas fa-chevron-up" id="bulkScannerIcon"></i>
+</button>
+</div>
+<div id="bulkScannerContent">
+<div id="activationNotice" class="hidden bg-gradient-to-r from-purple-900 to-blue-900 border-2 border-purple-500 rounded-lg p-6 mb-6">
+<div class="flex items-start gap-4">
+<div class="text-4xl">🔒</div>
+<div class="flex-1">
+<h4 class="text-xl font-bold mb-2">Activation Required for Bulk Scanning</h4>
+<p class="text-gray-200 mb-4">The bulk scanner with automated email outreach is a premium feature. Contact us via WhatsApp to activate your account!</p>
+<div class="bg-gray-900 bg-opacity-50 rounded-lg p-4 mb-4">
+<h5 class="font-bold mb-2">What you get with activation:</h5>
+<ul class="text-sm text-gray-200 space-y-1" style="list-style:none;padding-left:0">
+<li>✅ Scan up to 100 URLs at once</li>
+<li>✅ Automated email outreach to business owners</li>
+<li>✅ Your own SendGrid integration (100 emails/day free)</li>
+<li>✅ Editable email templates</li>
+<li>✅ Automatic leaderboard submissions (85+ score)</li>
+</ul>
+</div>
+<div class="flex gap-3 flex-wrap">
+<a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20activate%20bulk%20scanner." target="_blank" rel="noopener" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold inline-flex items-center gap-2 transition-all">
+<i class="fab fa-whatsapp text-xl"></i> Contact for Activation
+</a>
+<button onclick="checkActivationStatus()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold inline-flex items-center gap-2">
+<i class="fas fa-sync mr-2"></i> Refresh Status
+</button>
+</div>
+<p class="text-xs text-gray-400 mt-4">💡 Activation is free! We just need to verify your account.</p>
+</div>
+</div>
+</div>
+<div id="bulkScannerForm">
+<p class="text-gray-300 text-sm mb-4">Scan up to 100 websites at once. Based on scores, we automatically:</p>
+<ul class="text-sm text-gray-300 mb-4" style="margin-left:1.5rem">
+<li>🏆 <strong>85+ Score:</strong> Submit to leaderboard + send congratulations email</li>
+<li>📧 <strong>&lt;85 with website:</strong> Email business owner with improvement pitch</li>
+<li>🌐 <strong>&lt;85 without website:</strong> Email owner offering website creation</li>
+</ul>
+<div class="mb-4">
+<label class="block text-sm text-gray-300 mb-2">Enter URLs (one per line, max 100)</label>
+<textarea id="bulkUrlInput" rows="8" placeholder="https://example1.com
+https://example2.com" class="w-full p-3 rounded resize-none" style="color:#000!important;background:#fff!important;border:1px solid #d1d5db!important"></textarea>
+<div class="flex justify-between mt-1">
+<span class="text-xs text-gray-400">Up to 100 URLs</span>
+<span id="bulkUrlCount" class="text-xs text-gray-400">0/100</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-3 mb-4">
+<div>
+<label class="block text-sm text-gray-300 mb-2">Your Email *</label>
+<input type="email" id="bulkScanEmail" placeholder="your@email.com" class="w-full p-2 rounded">
+</div>
+<div>
+<label class="block text-sm text-gray-300 mb-2">Your Name *</label>
+<input type="text" id="bulkScanName" placeholder="Your name" class="w-full p-2 rounded">
+</div>
+</div>
+<button onclick="startBulkScan()" id="bulkScanBtn" class="btn-primary btn w-full"><i class="fas fa-rocket mr-2"></i> Start Bulk Scan</button>
+<div id="bulkProgress" class="hidden mt-4">
+<div class="progress-bar"><div id="bulkProgressBar" class="progress-bar-fill" style="width:0%"></div></div>
+<p id="bulkProgressText" class="text-sm text-gray-300 text-center mt-2"></p>
+</div>
+<div id="bulkResults" class="hidden mt-4">
+<h4 class="text-lg font-bold mb-3">Scan Results</h4>
+<div id="bulkResultsContainer"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- API Config Accordion - constrained width -->
+<div class="max-w-4xl mx-auto">
+<div class="accordion-item">
+<button onclick="toggleAccordion('apiConfig')" class="accordion-header">
+<span class="flex items-center gap-2">
+<i class="fas fa-key text-purple-400"></i>
+<span class="font-bold">Configure Your API Keys (SendGrid + WebShare)</span>
+<span id="apiStatusIndicator" class="api-status-indicator api-status-inactive"></span>
+</span>
+<i class="fas fa-chevron-down" id="apiConfigIcon"></i>
+</button>
+<div id="apiConfig" class="accordion-content hidden">
+<div class="bg-gray-900 rounded-lg p-5 border border-gray-700">
+<div class="flex items-center gap-3 mb-4">
+<span id="apiStatusText" class="text-sm text-gray-300">Configure your own API keys for unlimited usage</span>
+</div>
+<div class="grid md:grid-cols-2 gap-6">
+<div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+<h4 class="text-lg font-bold mb-3 flex items-center gap-2"><i class="fas fa-envelope text-blue-400"></i> SendGrid Configuration</h4>
+<p class="text-xs text-gray-400 mb-3">Free plan: 100 emails/day</p>
+<div class="space-y-3">
+<div>
+<label class="block text-sm text-gray-300 mb-1">SendGrid API Key</label>
+<input type="password" id="sendgridApiKey" placeholder="SG.xxxxxxxxxx" class="w-full p-2 rounded" autocomplete="off">
+</div>
+<div class="flex gap-2">
+<button onclick="saveSendgridConfig()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm font-semibold"><i class="fas fa-save mr-1"></i> Save</button>
+<button onclick="testSendgridConfig()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-semibold"><i class="fas fa-vial mr-1"></i> Test</button>
+</div>
+<div id="sendgridStatus" class="text-xs text-gray-400 mt-2"><span class="text-yellow-400">⚪ Not configured</span></div>
+<div class="border-t border-gray-700 pt-3">
+<h5 class="text-sm font-semibold mb-2 text-gray-300">Daily Usage</h5>
+<div class="progress-bar h-2 mb-1"><div id="sendgridUsageBar" class="progress-bar-fill" style="width:0%"></div></div>
+<div class="flex justify-between text-xs"><span id="sendgridUsed">0</span><span>/</span><span id="sendgridLimit">100</span></div>
+</div>
+</div>
+</div>
+<div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+<h4 class="text-lg font-bold mb-3 flex items-center gap-2"><i class="fas fa-globe text-green-400"></i> WebShare Proxy Configuration</h4>
+<p class="text-xs text-gray-400 mb-3">10 free proxies for enhanced scanning</p>
+<div class="space-y-3">
+<div>
+<label class="block text-sm text-gray-300 mb-1">WebShare API Key</label>
+<input type="password" id="webshareApiKey" placeholder="your-webshare-api-key" class="w-full p-2 rounded" autocomplete="off">
+</div>
+<div class="flex gap-2">
+<button onclick="saveWebshareConfig()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm font-semibold"><i class="fas fa-save mr-1"></i> Save</button>
+<button onclick="testWebshareConfig()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-semibold"><i class="fas fa-vial mr-1"></i> Test</button>
+</div>
+<div id="webshareStatus" class="text-xs text-gray-400 mt-2"><span class="text-yellow-400">⚪ Not configured</span></div>
+<div id="proxyList" class="hidden mt-3 border-t border-gray-700 pt-3">
+<h5 class="text-sm font-semibold mb-2 text-gray-300">Active Proxies</h5>
+<div id="proxyListContainer" class="space-y-1 max-h-32 overflow-y-auto text-xs"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-4 text-xs text-gray-500 border-t border-gray-700 pt-3">
+<p>💡 Your API keys are stored securely and only used for your account. Free tier limits apply.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- CTA Banner -->
+<div class="mt-8 max-w-3xl mx-auto bg-gradient-to-r from-purple-800 via-pink-800 to-purple-800 rounded-xl p-6 text-center border border-purple-400">
+<h3 class="text-2xl font-bold mb-2">💼 Are You an SEO Specialist or Content Marketer?</h3>
+<p class="text-xl text-gray-200 mb-4">Work just a few hours per week while earning a full-time income. We train you in Modern SEO for the AI-era.</p>
+<button onclick="openFreelancerModal()" class="btn-white-black btn text-lg px-8 py-4 shadow-lg"><i class="fas fa-user-plus mr-2"></i> Become a Platform Specialist</button>
+</div>
+</div>
+</div>
 <!-- TEMPLATES SECTION -->
 <div id="templates" class="mb-16">
-  <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-    <div class="max-w-3xl mx-auto text-center mb-8">
-      <h2 class="text-4xl font-bold mb-3">✏️ Email Templates</h2>
-      <p class="text-xl text-gray-200">Customize your bulk scan email templates</p>
-    </div>
-    <div class="max-w-5xl mx-auto grid md:grid-cols-3 gap-6">
-      <div class="card">
-        <h3 class="text-xl font-bold mb-4">🏆 Leaderboard Congratulations</h3>
-        <p class="text-sm text-gray-400 mb-4">Sent to businesses with 85+ score</p>
-        <div class="template-editor">
-          <label class="block text-sm text-gray-300 mb-2">Subject</label>
-          <input type="text" id="template-congrats-subject" class="w-full p-2 rounded mb-2" value="🎉 Congratulations! Your website ranked on ContentScale Leaderboard">
-          <label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
-          <textarea id="template-congrats-body" class="w-full p-2 rounded" style="min-height:150px;color:#f3f4f6!important;background:#1f2937!important;border:1px solid #4b5563!important">&lt;h1&gt;Congratulations!&lt;/h1&gt;&lt;p&gt;Your website scored {{score}}/100 on our SEO analysis.&lt;/p&gt;&lt;p&gt;You've been added to the ContentScale Leaderboard!&lt;/p&gt;</textarea>
-        </div>
-        <button onclick="saveTemplate('congrats')" class="btn-primary btn w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
-      </div>
-      <div class="card">
-        <h3 class="text-xl font-bold mb-4">📈 Improvement Pitch</h3>
-        <p class="text-sm text-gray-400 mb-4">Sent to businesses with website &lt;85 score</p>
-        <div class="template-editor">
-          <label class="block text-sm text-gray-300 mb-2">Subject</label>
-          <input type="text" id="template-improvement-subject" class="w-full p-2 rounded mb-2" value="🚀 Quick SEO opportunity for {{company_name}}">
-          <label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
-          <textarea id="template-improvement-body" class="w-full p-2 rounded" style="min-height:150px;color:#f3f4f6!important;background:#1f2937!important;border:1px solid #4b5563!important">&lt;h1&gt;SEO Opportunity&lt;/h1&gt;&lt;p&gt;Hi {{company_name}} team,&lt;/p&gt;&lt;p&gt;Your website scored {{score}}/100 on our SEO analysis.&lt;/p&gt;</textarea>
-        </div>
-        <button onclick="saveTemplate('improvement')" class="btn-primary btn w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
-      </div>
-      <div class="card">
-        <h3 class="text-xl font-bold mb-4">🌐 Website Offer</h3>
-        <p class="text-sm text-gray-400 mb-4">Sent to businesses without website</p>
-        <div class="template-editor">
-          <label class="block text-sm text-gray-300 mb-2">Subject</label>
-          <input type="text" id="template-website-subject" class="w-full p-2 rounded mb-2" value="💻 Professional website for {{company_name}}">
-          <label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
-          <textarea id="template-website-body" class="w-full p-2 rounded" style="min-height:150px;color:#f3f4f6!important;background:#1f2937!important;border:1px solid #4b5563!important">&lt;h1&gt;Website Opportunity&lt;/h1&gt;&lt;p&gt;Hi {{company_name}} team,&lt;/p&gt;&lt;p&gt;I noticed you don't have a website yet.&lt;/p&gt;</textarea>
-        </div>
-        <button onclick="saveTemplate('website')" class="btn-primary btn w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
-      </div>
-    </div>
-    <div class="max-w-5xl mx-auto mt-6 bg-gray-800 rounded-lg p-4 border border-gray-700">
-      <h4 class="font-bold mb-2">📎 Available Variables:</h4>
-      <div class="grid md:grid-cols-3 gap-4 text-sm text-gray-400">
-        <div><code class="text-purple-400">{{company_name}}</code> - Business name</div>
-        <div><code class="text-purple-400">{{score}}</code> - SEO score (0-100)</div>
-        <div><code class="text-purple-400">{{leaderboard_url}}</code> - Link to leaderboard</div>
-        <div><code class="text-purple-400">{{sender_name}}</code> - Your name</div>
-        <div><code class="text-purple-400">{{sender_email}}</code> - Your email</div>
-        <div><code class="text-purple-400">{{website_url}}</code> - Business website</div>
-      </div>
-    </div>
-  </div>
+<div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+<div class="max-w-3xl mx-auto text-center mb-8">
+<h2 class="text-4xl font-bold mb-3">✏️ Email Templates</h2>
+<p class="text-xl text-gray-200">Customize your bulk scan email templates</p>
 </div>
-
+<div class="max-w-5xl mx-auto grid md:grid-cols-3 gap-6">
+<div class="card">
+<h3 class="text-xl font-bold mb-4">🏆 Leaderboard Congratulations</h3>
+<p class="text-sm text-gray-400 mb-4">Sent to businesses with 85+ score</p>
+<div class="template-editor">
+<label class="block text-sm text-gray-300 mb-2">Subject</label>
+<input type="text" id="template-congrats-subject" class="w-full p-2 rounded mb-2" value="🎉 Congratulations! Your website ranked on ContentScale Leaderboard">
+<label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
+<textarea id="template-congrats-body" class="w-full p-2 rounded" style="min-height:150px;color:#f3f4f6!important;background:#1f2937!important;border:1px solid #4b5563!important">&lt;h1&gt;Congratulations!&lt;/h1&gt;&lt;p&gt;Your website scored {{score}}/100 on our SEO analysis.&lt;/p&gt;&lt;p&gt;You've been added to the ContentScale Leaderboard!&lt;/p&gt;</textarea>
+</div>
+<button onclick="saveTemplate('congrats')" class="btn-primary btn w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
+</div>
+<div class="card">
+<h3 class="text-xl font-bold mb-4">📈 Improvement Pitch</h3>
+<p class="text-sm text-gray-400 mb-4">Sent to businesses with website &lt;85 score</p>
+<div class="template-editor">
+<label class="block text-sm text-gray-300 mb-2">Subject</label>
+<input type="text" id="template-improvement-subject" class="w-full p-2 rounded mb-2" value="🚀 Quick SEO opportunity for {{company_name}}">
+<label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
+<textarea id="template-improvement-body" class="w-full p-2 rounded" style="min-height:150px;color:#f3f4f6!important;background:#1f2937!important;border:1px solid #4b5563!important">&lt;h1&gt;SEO Opportunity&lt;/h1&gt;&lt;p&gt;Hi {{company_name}} team,&lt;/p&gt;&lt;p&gt;Your website scored {{score}}/100 on our SEO analysis.&lt;/p&gt;</textarea>
+</div>
+<button onclick="saveTemplate('improvement')" class="btn-primary btn w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
+</div>
+<div class="card">
+<h3 class="text-xl font-bold mb-4">🌐 Website Offer</h3>
+<p class="text-sm text-gray-400 mb-4">Sent to businesses without website</p>
+<div class="template-editor">
+<label class="block text-sm text-gray-300 mb-2">Subject</label>
+<input type="text" id="template-website-subject" class="w-full p-2 rounded mb-2" value="💻 Professional website for {{company_name}}">
+<label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
+<textarea id="template-website-body" class="w-full p-2 rounded" style="min-height:150px;color:#f3f4f6!important;background:#1f2937!important;border:1px solid #4b5563!important">&lt;h1&gt;Website Opportunity&lt;/h1&gt;&lt;p&gt;Hi {{company_name}} team,&lt;/p&gt;&lt;p&gt;I noticed you don't have a website yet.&lt;/p&gt;</textarea>
+</div>
+<button onclick="saveTemplate('website')" class="btn-primary btn w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
+</div>
+</div>
+<div class="max-w-5xl mx-auto mt-6 bg-gray-800 rounded-lg p-4 border border-gray-700">
+<h4 class="font-bold mb-2">📎 Available Variables:</h4>
+<div class="grid md:grid-cols-3 gap-4 text-sm text-gray-400">
+<div><code class="text-purple-400">{{company_name}}</code> - Business name</div>
+<div><code class="text-purple-400">{{score}}</code> - SEO score (0-100)</div>
+<div><code class="text-purple-400">{{leaderboard_url}}</code> - Link to leaderboard</div>
+<div><code class="text-purple-400">{{sender_name}}</code> - Your name</div>
+<div><code class="text-purple-400">{{sender_email}}</code> - Your email</div>
+<div><code class="text-purple-400">{{website_url}}</code> - Business website</div>
+</div>
+</div>
+</div>
+</div>
 <!-- LEADERBOARD SECTION -->
 <div id="leaderboard" class="mb-16">
-  <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-    <div class="max-w-3xl mx-auto text-center mb-8">
-      <h2 class="text-4xl font-bold mb-3">🏆 Elite Leaderboard</h2>
-      <p class="text-xl text-gray-200">Top performing websites automatically added</p>
-    </div>
-    <!-- Stats -->
-    <div class="max-w-4xl mx-auto grid-4 mb-10">
-      <div class="stat-card"><div><div class="text-4xl mb-2">🏢</div><div class="text-3xl font-bold" id="totalAgencies">0</div><div class="text-sm text-gray-200">Agencies</div></div></div>
-      <div class="stat-card"><div><div class="text-4xl mb-2">📊</div><div class="text-3xl font-bold" id="avgScore">0</div><div class="text-sm text-gray-200">Avg. Score</div></div></div>
-      <div class="stat-card"><div><div class="text-4xl mb-2">🌍</div><div class="text-3xl font-bold" id="countriesCount">0</div><div class="text-sm text-gray-200">Countries</div></div></div>
-      <div class="stat-card"><div><div class="text-4xl mb-2">💼</div><div class="text-3xl font-bold" id="activeHelpers">0</div><div class="text-sm text-gray-200">Freelancers</div></div></div>
-    </div>
-    <!-- Leaderboard body - constrained -->
-    <div class="max-w-5xl mx-auto">
-      <div id="top3-container" class="grid-3 mb-10"></div>
-      <div id="rankings4to15Container" class="mb-10">
-        <h3 class="text-2xl font-bold mb-6">Rankings 4-15</h3>
-        <div class="rankings-4-15-grid" id="rankings4to15Grid"></div>
-      </div>
-      <div class="bg-gray-800 rounded-lg p-4 mb-6">
-        <button onclick="toggleFilters()" class="w-full flex items-center justify-between text-left text-white">
-          <div class="flex items-center gap-2"><i class="fas fa-filter text-purple-400"></i><span class="font-semibold">Filters</span></div>
-          <i class="fas fa-chevron-down" id="filterIcon"></i>
-        </button>
-        <div id="filterPanel" class="hidden mt-4">
-          <div class="mb-4">
-            <div class="text-sm text-gray-300 mb-2">Country:</div>
-            <div class="flex flex-wrap gap-2" id="countryFilters"></div>
-          </div>
-          <input type="text" id="searchInput" placeholder="Search agencies..." oninput="filterAgencies()" class="w-full" autocomplete="off">
-        </div>
-      </div>
-      <div>
-        <button onclick="toggleRankings()" id="rankingsToggleBtn" class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-between transition-all">
-          <span id="rankingsToggleText">📊 Show Rankings 16+</span><span>▼</span>
-        </button>
-        <div id="rankingsContainer" class="hidden mt-4">
-          <p class="text-sm text-gray-300 mb-2">Showing 16-35 of <span id="totalCount">0</span> agencies</p>
-          <table class="rankings-table">
-            <thead><tr><th>Rank</th><th>Company</th><th>Website</th><th>Score</th><th>Country</th><th>Added</th></tr></thead>
-            <tbody id="rankingsTbody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
+<div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+<div class="max-w-3xl mx-auto text-center mb-8">
+<h2 class="text-4xl font-bold mb-3">🏆 Elite Leaderboard</h2>
+<p class="text-xl text-gray-200">Top performing websites automatically added</p>
 </div>
-
+<!-- Stats -->
+<div class="max-w-4xl mx-auto grid-4 mb-10">
+<div class="stat-card"><div><div class="text-4xl mb-2">🏢</div><div class="text-3xl font-bold" id="totalAgencies">0</div><div class="text-sm text-gray-200">Agencies</div></div></div>
+<div class="stat-card"><div><div class="text-4xl mb-2">📊</div><div class="text-3xl font-bold" id="avgScore">0</div><div class="text-sm text-gray-200">Avg. Score</div></div></div>
+<div class="stat-card"><div><div class="text-4xl mb-2">🌍</div><div class="text-3xl font-bold" id="countriesCount">0</div><div class="text-sm text-gray-200">Countries</div></div></div>
+<div class="stat-card"><div><div class="text-4xl mb-2">💼</div><div class="text-3xl font-bold" id="activeHelpers">0</div><div class="text-sm text-gray-200">Freelancers</div></div></div>
+</div>
+<!-- Leaderboard body - constrained -->
+<div class="max-w-5xl mx-auto">
+<div id="top3-container" class="grid-3 mb-10"></div>
+<div id="rankings4to15Container" class="mb-10">
+<h3 class="text-2xl font-bold mb-6">Rankings 4-15</h3>
+<div class="rankings-4-15-grid" id="rankings4to15Grid"></div>
+</div>
+<div class="bg-gray-800 rounded-lg p-4 mb-6">
+<button onclick="toggleFilters()" class="w-full flex items-center justify-between text-left text-white">
+<div class="flex items-center gap-2"><i class="fas fa-filter text-purple-400"></i><span class="font-semibold">Filters</span></div>
+<i class="fas fa-chevron-down" id="filterIcon"></i>
+</button>
+<div id="filterPanel" class="hidden mt-4">
+<div class="mb-4">
+<div class="text-sm text-gray-300 mb-2">Country:</div>
+<div class="flex flex-wrap gap-2" id="countryFilters"></div>
+</div>
+<input type="text" id="searchInput" placeholder="Search agencies..." oninput="filterAgencies()" class="w-full" autocomplete="off">
+</div>
+</div>
+<div>
+<button onclick="toggleRankings()" id="rankingsToggleBtn" class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-between transition-all">
+<span id="rankingsToggleText">📊 Show Rankings 16+</span><span>▼</span>
+</button>
+<div id="rankingsContainer" class="hidden mt-4">
+<p class="text-sm text-gray-300 mb-2">Showing 16-35 of <span id="totalCount">0</span> agencies</p>
+<table class="rankings-table">
+<thead><tr><th>Rank</th><th>Company</th><th>Website</th><th>Score</th><th>Country</th><th>Added</th></tr></thead>
+<tbody id="rankingsTbody"></tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
 <!-- FREELANCERS SECTION -->
 <div id="freelancers" class="mb-16">
-  <div class="max-w-3xl mx-auto text-center mb-8">
-    <h2 class="text-4xl font-bold mb-3">🎯 Verified SEO Specialists</h2>
-    <p class="text-xl text-gray-300 mb-4">Expert content optimizers ready to help</p>
-    <button onclick="openFreelancerModal()" class="btn-primary btn"><i class="fas fa-user-plus mr-2"></i> Become a Specialist</button>
-  </div>
-  <!-- FIX: Corrected duplicate class attribute -->
-  <div class="max-w-5xl mx-auto grid-3" id="freelancersGrid"></div>
+<div class="max-w-3xl mx-auto text-center mb-8">
+<h2 class="text-4xl font-bold mb-3">🎯 Verified SEO Specialists</h2>
+<p class="text-xl text-gray-300 mb-4">Expert content optimizers ready to help</p>
+<button onclick="openFreelancerModal()" class="btn-primary btn"><i class="fas fa-user-plus mr-2"></i> Become a Specialist</button>
 </div>
-
+<!-- FIX: Corrected duplicate class attribute -->
+<div class="max-w-5xl mx-auto grid-3" id="freelancersGrid"></div>
+</div>
 </div><!-- end main-content -->
-
 <!-- FOOTER -->
 <footer>
-  <div class="max-w-7xl mx-auto px-6 py-12">
-    <div class="grid md:grid-cols-4 gap-8 mb-8">
-      <div>
-        <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-4">ContentScale</div>
-        <p class="text-gray-400 text-sm">Professional SEO content optimization based on Google's E-E-A-T guidelines. Helping businesses recover traffic from AI Overviews since 2018.</p>
-      </div>
-      <div>
-        <h3 class="font-bold mb-4">Product</h3>
-        <ul class="space-y-2 text-sm">
-          <li><a href="#lead-scanner" class="text-gray-400 hover:text-white transition-colors">Lead Scanner</a></li>
-          <li><a href="#leaderboard" class="text-gray-400 hover:text-white transition-colors">Leaderboard</a></li>
-          <li><a href="#freelancers" class="text-gray-400 hover:text-white transition-colors">Specialists</a></li>
-          <li><a href="#templates" class="text-gray-400 hover:text-white transition-colors">Templates</a></li>
-        </ul>
-      </div>
-      <div>
-        <h3 class="font-bold mb-4">Company</h3>
-        <ul class="space-y-2 text-sm">
-          <li><a href="https://contentscale.site/about-us" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">About Us</a></li>
-          <li><a href="https://contentscale.site/privacy-policy" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">Privacy Policy</a></li>
-          <li><a href="https://contentscale.site/terms" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">Terms of Service</a></li>
-          <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Blog</a></li>
-        </ul>
-      </div>
-      <div>
-        <h3 class="font-bold mb-4">Contact</h3>
-        <ul class="space-y-2 text-sm">
-          <li class="text-gray-400"><i class="fas fa-envelope mr-2"></i><span class="reverse-email">moc.etlacsnestnoc@ofni</span></li>
-          <li><a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors"><i class="fab fa-whatsapp mr-2"></i>+31 6 2807 3996</a></li>
-          <li class="text-gray-400"><i class="fas fa-map-marker-alt mr-2"></i>Amsterdam, Netherlands</li>
-          <li class="text-gray-400"><i class="fas fa-clock mr-2"></i>Mon-Fri, 9:00-18:00 CET</li>
-        </ul>
-      </div>
-    </div>
-    <div class="border-t border-gray-700 pt-8 text-center text-sm text-gray-400">
-      <p>&copy; 2025 ContentScale. All rights reserved.</p>
-      <p class="mt-2">Built with 🚀 in Amsterdam</p>
-    </div>
-  </div>
+<div class="max-w-7xl mx-auto px-6 py-12">
+<div class="grid md:grid-cols-4 gap-8 mb-8">
+<div>
+<div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-4">ContentScale</div>
+<p class="text-gray-400 text-sm">Professional SEO content optimization based on Google's E-E-A-T guidelines. Helping businesses recover traffic from AI Overviews since 2018.</p>
+</div>
+<div>
+<h3 class="font-bold mb-4">Product</h3>
+<ul class="space-y-2 text-sm">
+<li><a href="#lead-scanner" class="text-gray-400 hover:text-white transition-colors">Lead Scanner</a></li>
+<li><a href="#leaderboard" class="text-gray-400 hover:text-white transition-colors">Leaderboard</a></li>
+<li><a href="#freelancers" class="text-gray-400 hover:text-white transition-colors">Specialists</a></li>
+<li><a href="#templates" class="text-gray-400 hover:text-white transition-colors">Templates</a></li>
+</ul>
+</div>
+<div>
+<h3 class="font-bold mb-4">Company</h3>
+<ul class="space-y-2 text-sm">
+<li><a href="https://contentscale.site/about-us" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">About Us</a></li>
+<li><a href="https://contentscale.site/privacy-policy" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">Privacy Policy</a></li>
+<li><a href="https://contentscale.site/terms" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">Terms of Service</a></li>
+<li><a href="#" class="text-gray-400 hover:text-white transition-colors">Blog</a></li>
+</ul>
+</div>
+<div>
+<h3 class="font-bold mb-4">Contact</h3>
+<ul class="space-y-2 text-sm">
+<li class="text-gray-400"><i class="fas fa-envelope mr-2"></i><span class="reverse-email">moc.etlacsnestnoc@ofni</span></li>
+<li><a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors"><i class="fab fa-whatsapp mr-2"></i>+31 6 2807 3996</a></li>
+<li class="text-gray-400"><i class="fas fa-map-marker-alt mr-2"></i>Amsterdam, Netherlands</li>
+<li class="text-gray-400"><i class="fas fa-clock mr-2"></i>Mon-Fri, 9:00-18:00 CET</li>
+</ul>
+</div>
+</div>
+<div class="border-t border-gray-700 pt-8 text-center text-sm text-gray-400">
+<p>&copy; 2025 ContentScale. All rights reserved.</p>
+<p class="mt-2">Built with 🚀 in Amsterdam</p>
+</div>
+</div>
 </footer>
-
 <!-- FREELANCER MODAL -->
 <div id="freelancerModal" class="modal">
-  <div class="modal-content">
-    <div class="flex justify-between items-center mb-6">
-      <h2 class="text-2xl font-bold" style="color:#111827!important">Register as Specialist</h2>
-      <button onclick="closeModal()" style="color:#6b7280!important;font-size:1.5rem;background:none;border:none;cursor:pointer">✕</button>
-    </div>
-    <div class="space-y-4">
-      <div><label class="block text-sm mb-2" style="color:#374151!important">Full Name *</label><input type="text" id="freelancerName" placeholder="Your name" class="w-full px-4 py-3 rounded-lg"></div>
-      <div><label class="block text-sm mb-2" style="color:#374151!important">Email *</label><input type="email" id="freelancerEmail" placeholder="your@email.com" class="w-full px-4 py-3 rounded-lg"></div>
-      <div><label class="block text-sm mb-2" style="color:#374151!important">Phone (optional)</label><input type="tel" id="freelancerPhone" placeholder="+31 6 12345678" class="w-full px-4 py-3 rounded-lg"></div>
-      <div><label class="block text-sm mb-2" style="color:#374151!important">Professional Title *</label><input type="text" id="freelancerTitle" placeholder="e.g. SEO Content Strategist" class="w-full px-4 py-3 rounded-lg"></div>
-      <div>
-        <label class="block text-sm mb-2" style="color:#374151!important">Bio (max 200 characters)</label>
-        <textarea id="freelancerBio" rows="3" maxlength="200" placeholder="Tell us about your expertise..." class="w-full px-4 py-3 rounded-lg resize-none"></textarea>
-        <div class="flex justify-between mt-1"><span class="text-xs" style="color:#6b7280!important">Maximum 200 characters</span><span id="bioCharCount" class="text-xs" style="color:#6b7280!important">0/200</span></div>
-      </div>
-      <div class="border-t border-gray-200 pt-4">
-        <div class="flex items-start gap-3 mb-4">
-          <input type="checkbox" id="featuredListing" class="w-4 h-4 mt-0.5">
-          <div>
-            <label for="featuredListing" class="text-sm font-medium" style="color:#111827!important">⭐ Featured Listing - €29/month</label>
-            <p class="text-xs mt-1" style="color:#6b7280!important">Word uitgelicht bovenaan de specialist lijst, krijg een speciale badge en 3x meer zichtbaarheid. <a href="https://paypal.me/ojgmedia?locale.x=en_US&amp;country.x=NL" target="_blank" rel="noopener" style="color:#3b82f6!important"><i class="fab fa-paypal"></i> Betaal via PayPal</a></p>
-          </div>
+<div class="modal-content">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-2xl font-bold" style="color:#111827!important">Register as Specialist</h2>
+<button onclick="closeModal()" style="color:#6b7280!important;font-size:1.5rem;background:none;border:none;cursor:pointer">✕</button>
+</div>
+<div class="space-y-4">
+<div><label class="block text-sm mb-2" style="color:#374151!important">Full Name *</label><input type="text" id="freelancerName" placeholder="Your name" class="w-full px-4 py-3 rounded-lg"></div>
+<div><label class="block text-sm mb-2" style="color:#374151!important">Email *</label><input type="email" id="freelancerEmail" placeholder="your@email.com" class="w-full px-4 py-3 rounded-lg"></div>
+<div><label class="block text-sm mb-2" style="color:#374151!important">Phone (optional)</label><input type="tel" id="freelancerPhone" placeholder="+31 6 12345678" class="w-full px-4 py-3 rounded-lg"></div>
+<div><label class="block text-sm mb-2" style="color:#374151!important">Professional Title *</label><input type="text" id="freelancerTitle" placeholder="e.g. SEO Content Strategist" class="w-full px-4 py-3 rounded-lg"></div>
+<div>
+<label class="block text-sm mb-2" style="color:#374151!important">Bio (max 200 characters)</label>
+<textarea id="freelancerBio" rows="3" maxlength="200" placeholder="Tell us about your expertise..." class="w-full px-4 py-3 rounded-lg resize-none"></textarea>
+<div class="flex justify-between mt-1"><span class="text-xs" style="color:#6b7280!important">Maximum 200 characters</span><span id="bioCharCount" class="text-xs" style="color:#6b7280!important">0/200</span></div>
+</div>
+<div class="border-t border-gray-200 pt-4">
+<div class="flex items-start gap-3 mb-4">
+<input type="checkbox" id="featuredListing" class="w-4 h-4 mt-0.5">
+<div>
+<label for="featuredListing" class="text-sm font-medium" style="color:#111827!important">⭐ Featured Listing - €29/month</label>
+<p class="text-xs mt-1" style="color:#6b7280!important">Word uitgelicht bovenaan de specialist lijst, krijg een speciale badge en 3x meer zichtbaarheid. <a href="https://paypal.me/ojgmedia?locale.x=en_US&amp;country.x=NL" target="_blank" rel="noopener" style="color:#3b82f6!important"><i class="fab fa-paypal"></i> Betaal via PayPal</a></p>
+</div>
+</div>
+<button onclick="submitFreelancer()" class="btn-primary btn w-full py-3">Submit Application</button>
+<p class="text-xs text-center mt-2" style="color:#6b7280!important">We'll review and approve within 24 hours.</p>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ✅ NEW: SOCIAL SHARE MODAL FOR EXPIRED USERS -->
+<div id="socialShareModal" class="modal">
+    <div class="modal-content text-center">
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold mb-2" style="color:#111827!important">⏳ Your 7-Day Trial Has Expired</h2>
+            <p class="text-gray-600">Share ContentScale on 5 social platforms to unlock another 7 days of free access!</p>
         </div>
-        <button onclick="submitFreelancer()" class="btn-primary btn w-full py-3">Submit Application</button>
-        <p class="text-xs text-center mt-2" style="color:#6b7280!important">We'll review and approve within 24 hours.</p>
-      </div>
+        
+        <div class="grid grid-cols-2 gap-3 mb-6">
+            <a href="#" onclick="shareSocial('twitter')" class="share-btn share-twitter"><i class="fab fa-twitter"></i> Twitter</a>
+            <a href="#" onclick="shareSocial('linkedin')" class="share-btn share-linkedin"><i class="fab fa-linkedin-in"></i> LinkedIn</a>
+            <a href="#" onclick="shareSocial('facebook')" class="share-btn share-facebook"><i class="fab fa-facebook-f"></i> Facebook</a>
+            <a href="#" onclick="shareSocial('whatsapp')" class="share-btn share-whatsapp"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+            <a href="#" onclick="shareSocial('reddit')" class="share-btn share-reddit col-span-2"><i class="fab fa-reddit-alien"></i> Reddit</a>
+        </div>
+
+        <div class="mb-6">
+            <p class="text-sm font-bold mb-2">Progress: <span id="shareCountDisplay" class="text-purple-600">0</span> / 5</div>
+            <div class="progress-bar h-3 rounded-full bg-gray-200">
+                <div id="shareProgressBar" class="progress-bar-fill bg-purple-600" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <button id="extendTrialBtn" onclick="extendTrial()" disabled class="btn btn-success w-full py-3 opacity-50 cursor-not-allowed">
+            🔓 Unlock 7 More Days
+        </button>
+        <p class="text-xs text-gray-500 mt-2">Button activates after 5 shares</p>
     </div>
-  </div>
 </div>
 
 <script>
 let userId=null,userActivated=false,activationChecked=false,sendgridConfigured=false,webshareConfigured=false,allLeaderboardEntries=[];
 let userTemplates={congrats:{subject:"",body:""},improvement:{subject:"",body:""},website:{subject:"",body:""}};
+// ✅ NEW: Share Counter
+let shareCount = 0;
+const requiredShares = 5;
 
 document.addEventListener("DOMContentLoaded",function(){
-  registerUser();loadLeaderboardData();loadFreelancers();loadUserTemplates();
-  window.addEventListener("load",function(){
-    document.body.classList.add("loaded");
-    setTimeout(function(){var l=document.getElementById("loading-screen");if(l)l.style.display="none";},500);
-  });
-  document.getElementById("singleUrlInput")?.addEventListener("keypress",function(e){if(e.key==="Enter")scanSingleURL();});
-  var bi=document.getElementById("bulkUrlInput");
-  if(bi){bi.addEventListener("input",function(){var u=this.value.split("\n").filter(x=>x.trim().length>0),c=document.getElementById("bulkUrlCount");if(c){c.textContent=u.length+"/100";c.style.color=u.length>100?"#f87171":"#d1d5db";}});}
-  var bt=document.getElementById("freelancerBio");
-  if(bt){bt.addEventListener("input",function(){document.getElementById("bioCharCount").textContent=this.value.length+"/200";});}
+registerUser();loadLeaderboardData();loadFreelancers();loadUserTemplates();
+window.addEventListener("load",function(){
+document.body.classList.add("loaded");
+setTimeout(function(){var l=document.getElementById("loading-screen");if(l)l.style.display="none";},500);
+});
+document.getElementById("singleUrlInput")?.addEventListener("keypress",function(e){if(e.key==="Enter")scanSingleURL();});
+var bi=document.getElementById("bulkUrlInput");
+if(bi){bi.addEventListener("input",function(){var u=this.value.split("\n").filter(x=>x.trim().length>0),c=document.getElementById("bulkUrlCount");if(c){c.textContent=u.length+"/100";c.style.color=u.length>100?"#f87171":"#d1d5db";}});}
+var bt=document.getElementById("freelancerBio");
+if(bt){bt.addEventListener("input",function(){document.getElementById("bioCharCount").textContent=this.value.length+"/200";});}
 });
 
 async function registerUser(){
-  try{
-    var s=localStorage.getItem("user_id");
-    if(!s){
-      var r=await fetch("/api/user/register",{method:"POST",headers:{"Content-Type":"application/json"}});
-      var d=await r.json();
-      if(d.success&&d.userId){userId=d.userId;localStorage.setItem("user_id",userId);loadApiStatus();checkActivationStatus();loadUserTemplates();}
-    }else{userId=s;loadApiStatus();checkActivationStatus();loadUserTemplates();}
-  }catch(e){console.error("Registration error:",e);}
+try{
+var s=localStorage.getItem("user_id");
+if(!s){
+var r=await fetch("/api/user/register",{method:"POST",headers:{"Content-Type":"application/json"}});
+var d=await r.json();
+if(d.success&&d.userId){userId=d.userId;localStorage.setItem("user_id",userId);loadApiStatus();checkActivationStatus();loadUserTemplates();}
+}else{userId=s;loadApiStatus();checkActivationStatus();loadUserTemplates();}
+}catch(e){console.error("Registration error:",e);}
 }
 
 async function checkActivationStatus(){
-  if(!userId)return false;
-  try{
-    var r=await fetch("/api/user/activation-status",{headers:{"x-user-id":userId}});
-    var d=await r.json();
-    if(d.success){
-      userActivated=d.activated;activationChecked=true;
-      var an=document.getElementById("activationNotice"),ab=document.getElementById("activationBadge"),bf=document.getElementById("bulkScannerForm");
-      if(userActivated){an?.classList.add("hidden");ab?.classList.add("hidden");bf?.classList.remove("hidden");}
-      else{an?.classList.remove("hidden");ab?.classList.remove("hidden");bf?.classList.add("hidden");}
-      return userActivated;
+if(!userId)return false;
+try{
+var r=await fetch("/api/user/activation-status",{headers:{"x-user-id":userId}});
+var d=await r.json();
+if(d.success){
+userActivated=d.activated;
+activationChecked=true;
+var an=document.getElementById("activationNotice"),ab=document.getElementById("activationBadge"),bf=document.getElementById("bulkScannerForm");
+
+// ✅ NEW: Handle Expiration & Social Share
+if (d.expired) {
+    showSocialShareModal();
+    if(an)an.classList.add("hidden");
+    if(ab)ab.classList.add("hidden");
+    if(bf)bf.classList.add("hidden");
+    return false;
+}
+
+if(userActivated){
+if(an)an.classList.add("hidden");
+if(ab)ab.classList.add("hidden");
+if(bf)bf.classList.remove("hidden");
+}else{
+if(an)an.classList.remove("hidden");
+if(ab)ab.classList.remove("hidden");
+if(bf)bf.classList.add("hidden");
+}
+return userActivated;
+}
+}catch(e){console.error(e);}
+return false;
+}
+
+// ✅ NEW: Social Share Functions
+function showSocialShareModal() {
+    // Reset counter if opening fresh
+    shareCount = parseInt(localStorage.getItem('shareCount_' + userId) || 0);
+    updateShareUI();
+    document.getElementById('socialShareModal').classList.add('active');
+}
+
+function shareSocial(platform) {
+    const url = encodeURIComponent(window.location.href);
+    const text = encodeURIComponent("I'm using ContentScale to audit my SEO content! Check it out.");
+    let shareUrl = '';
+
+    if (platform === 'twitter') shareUrl = `https://twitter.com/intent/tweet?url=${url}&text=${text}`;
+    if (platform === 'linkedin') shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`;
+    if (platform === 'facebook') shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+    if (platform === 'whatsapp') shareUrl = `https://wa.me/?text=${text} ${url}`;
+    if (platform === 'reddit') shareUrl = `https://reddit.com/submit?url=${url}&title=${text}`;
+
+    if (shareUrl) {
+        window.open(shareUrl, '_blank', 'width=600,height=400');
+        incrementShare();
     }
-  }catch(e){console.error(e);}
-  return false;
+}
+
+function incrementShare() {
+    if (shareCount < requiredShares) {
+        shareCount++;
+        localStorage.setItem('shareCount_' + userId, shareCount);
+        updateShareUI();
+    }
+}
+
+function updateShareUI() {
+    document.getElementById('shareCountDisplay').textContent = shareCount;
+    const percentage = (shareCount / requiredShares) * 100;
+    document.getElementById('shareProgressBar').style.width = percentage + '%';
+    
+    const btn = document.getElementById('extendTrialBtn');
+    if (shareCount >= requiredShares) {
+        btn.disabled = false;
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        btn.innerHTML = '🎉 Claim 7 Free Days';
+    }
+}
+
+async function extendTrial() {
+    if (shareCount < requiredShares) return;
+    try {
+        const response = await fetch('/api/user/extend-trial', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'x-user-id': userId 
+            }
+        });
+        const data = await response.json();
+        if (data.success) {
+            alert('✅ Success! Your trial has been extended by 7 days.');
+            localStorage.removeItem('shareCount_' + userId); // Reset counter
+            document.getElementById('socialShareModal').classList.remove('active');
+            checkActivationStatus(); // Re-check status
+        } else {
+            alert('❌ Error: ' + (data.error || 'Failed to extend trial'));
+        }
+    } catch (e) {
+        alert('❌ Connection error');
+    }
 }
 
 async function loadApiStatus(){
-  if(!userId)return;
-  try{
-    var r=await fetch("/api/user/keys/status",{headers:{"x-user-id":userId}});
-    var d=await r.json();
-    if(d.success){
-      var ind=document.getElementById("apiStatusIndicator"),st=document.getElementById("apiStatusText");
-      if(d.hasSendgrid||d.hasWebshare){ind.className="api-status-indicator api-status-active";st.textContent="Custom API keys configured";}
-      else{ind.className="api-status-indicator api-status-inactive";st.textContent="Using default settings (limited)";}
-      if(d.hasSendgrid){document.getElementById("sendgridStatus").innerHTML="<span style='color:#4ade80'>✅ Configured</span>";sendgridConfigured=true;
-        if(d.sendgrid){document.getElementById("sendgridUsed").textContent=d.sendgrid.used;document.getElementById("sendgridLimit").textContent=d.sendgrid.limit;document.getElementById("sendgridUsageBar").style.width=(d.sendgrid.used/d.sendgrid.limit*100)+"%";}}
-      if(d.hasWebshare){document.getElementById("webshareStatus").innerHTML="<span style='color:#4ade80'>✅ Configured</span>";webshareConfigured=true;}
-    }
-  }catch(e){console.error(e);}
+if(!userId)return;
+try{
+var r=await fetch("/api/user/keys/status",{headers:{"x-user-id":userId}});
+var d=await r.json();
+if(d.success){
+var ind=document.getElementById("apiStatusIndicator"),st=document.getElementById("apiStatusText");
+if(d.hasSendgrid||d.hasWebshare){ind.className="api-status-indicator api-status-active";st.textContent="Custom API keys configured";}
+else{ind.className="api-status-indicator api-status-inactive";st.textContent="Using default settings (limited)";}
+if(d.hasSendgrid){document.getElementById("sendgridStatus").innerHTML="<span style='color:#4ade80'>✅ Configured</span>";sendgridConfigured=true;
+if(d.sendgrid){document.getElementById("sendgridUsed").textContent=d.sendgrid.used;document.getElementById("sendgridLimit").textContent=d.sendgrid.limit;document.getElementById("sendgridUsageBar").style.width=(d.sendgrid.used/d.sendgrid.limit*100)+"%";}}
+if(d.hasWebshare){document.getElementById("webshareStatus").innerHTML="<span style='color:#4ade80'>✅ Configured</span>";webshareConfigured=true;}
 }
-
+}catch(e){console.error(e);}
+}
 function toggleAccordion(id){var c=document.getElementById(id),i=document.getElementById(id+"Icon");if(c){c.classList.toggle("hidden");i.style.transform=c.classList.contains("hidden")?"rotate(0deg)":"rotate(180deg)";}}
-
 function switchMode(m){
-  var sm=document.getElementById("singleMode"),bm=document.getElementById("bulkMode"),sb=document.getElementById("modeSingleBtn"),bb=document.getElementById("modeBulkBtn");
-  if(m==="single"){sm.classList.remove("hidden");bm.classList.add("hidden");sb.classList.add("active");bb.classList.remove("active");}
-  else{sm.classList.add("hidden");bm.classList.remove("hidden");sb.classList.remove("active");bb.classList.add("active");
-    document.getElementById("bulkScannerContent").classList.remove("hidden");
-    document.getElementById("bulkToggleText").textContent="Hide Bulk Scanner";
-    document.getElementById("bulkScannerIcon").className="fas fa-chevron-up";}
+var sm=document.getElementById("singleMode"),bm=document.getElementById("bulkMode"),sb=document.getElementById("modeSingleBtn"),bb=document.getElementById("modeBulkBtn");
+if(m==="single"){sm.classList.remove("hidden");bm.classList.add("hidden");sb.classList.add("active");bb.classList.remove("active");}
+else{sm.classList.add("hidden");bm.classList.remove("hidden");sb.classList.remove("active");bb.classList.add("active");
+document.getElementById("bulkScannerContent").classList.remove("hidden");
+document.getElementById("bulkToggleText").textContent="Hide Bulk Scanner";
+document.getElementById("bulkScannerIcon").className="fas fa-chevron-up";}
 }
-
 function toggleBulkScanner(){
-  var c=document.getElementById("bulkScannerContent"),icon=document.getElementById("bulkScannerIcon"),t=document.getElementById("bulkToggleText");
-  if(c){var h=c.classList.contains("hidden");c.classList.toggle("hidden");
-    if(icon){icon.className=h?"fas fa-chevron-down":"fas fa-chevron-up";}
-    if(t){t.textContent=h?"Show Bulk Scanner":"Hide Bulk Scanner";}
-    if(h&&!activationChecked)checkActivationStatus();}
+var c=document.getElementById("bulkScannerContent"),icon=document.getElementById("bulkScannerIcon"),t=document.getElementById("bulkToggleText");
+if(c){var h=c.classList.contains("hidden");c.classList.toggle("hidden");
+if(icon){icon.className=h?"fas fa-chevron-down":"fas fa-chevron-up";}
+if(t){t.textContent=h?"Show Bulk Scanner":"Hide Bulk Scanner";}
+if(h&&!activationChecked)checkActivationStatus();}
 }
-
 async function saveSendgridConfig(){
-  if(!userId){alert("❌ User not registered.");return;}
-  var k=document.getElementById("sendgridApiKey").value;
-  if(!k){alert("❌ Please enter your SendGrid API key");return;}
-  try{var r=await fetch("/api/user/sendgrid/configure",{method:"POST",headers:{"Content-Type":"application/json","x-user-id":userId},body:JSON.stringify({userId,apiKey:k,dailyLimit:100})});
-    var d=await r.json();if(d.success){alert("✅ SendGrid saved!");document.getElementById("sendgridStatus").innerHTML="<span style='color:#4ade80'>✅ Configured</span>";sendgridConfigured=true;loadApiStatus();}else alert("❌ "+(d.error||"Failed"));
-  }catch(e){alert("❌ "+e.message);}
+if(!userId){alert("❌ User not registered.");return;}
+var k=document.getElementById("sendgridApiKey").value;
+if(!k){alert("❌ Please enter your SendGrid API key");return;}
+try{var r=await fetch("/api/user/sendgrid/configure",{method:"POST",headers:{"Content-Type":"application/json","x-user-id":userId},body:JSON.stringify({userId,apiKey:k,dailyLimit:100})});
+var d=await r.json();if(d.success){alert("✅ SendGrid saved!");document.getElementById("sendgridStatus").innerHTML="<span style='color:#4ade80'>✅ Configured</span>";sendgridConfigured=true;loadApiStatus();}else alert("❌ "+(d.error||"Failed"));
+}catch(e){alert("❌ "+e.message);}
 }
-
 async function testSendgridConfig(){
-  if(!userId){alert("❌ User not registered");return;}
-  try{var r=await fetch("/api/email/send",{method:"POST",headers:{"Content-Type":"application/json","x-user-id":userId},body:JSON.stringify({to_email:"test@example.com",to_name:"Test",subject:"Test Email",html:"<p>Test</p>"})});
-    var d=await r.json();if(d.success)alert("✅ Test email sent!");else if(d.needs_api_key)alert("❌ No API key configured.");else alert("❌ "+(d.error||"Test failed"));
-  }catch(e){alert("❌ "+e.message);}
+if(!userId){alert("❌ User not registered");return;}
+try{var r=await fetch("/api/email/send",{method:"POST",headers:{"Content-Type":"application/json","x-user-id":userId},body:JSON.stringify({to_email:"test@example.com",to_name:"Test",subject:"Test Email",html:"<p>Test</p>"})});
+var d=await r.json();if(d.success)alert("✅ Test email sent!");else if(d.needs_api_key)alert("❌ No API key configured.");else alert("❌ "+(d.error||"Test failed"));
+}catch(e){alert("❌ "+e.message);}
 }
-
 async function saveWebshareConfig(){
-  if(!userId){alert("❌ User not registered.");return;}
-  var k=document.getElementById("webshareApiKey").value;if(!k){alert("❌ Please enter your WebShare API key");return;}
-  try{var r=await fetch("/api/user/webshare/configure",{method:"POST",headers:{"Content-Type":"application/json","x-user-id":userId},body:JSON.stringify({userId,apiKey:k})});
-    var d=await r.json();if(d.success){alert("✅ WebShare configured! "+d.proxy_count+" proxies.");document.getElementById("webshareStatus").innerHTML="<span style='color:#4ade80'>✅ Configured</span>";webshareConfigured=true;loadApiStatus();}else alert("❌ "+(d.error||"Failed"));
-  }catch(e){alert("❌ "+e.message);}
+if(!userId){alert("❌ User not registered.");return;}
+var k=document.getElementById("webshareApiKey").value;if(!k){alert("❌ Please enter your WebShare API key");return;}
+try{var r=await fetch("/api/user/webshare/configure",{method:"POST",headers:{"Content-Type":"application/json","x-user-id":userId},body:JSON.stringify({userId,apiKey:k})});
+var d=await r.json();if(d.success){alert("✅ WebShare configured! "+d.proxy_count+" proxies.");document.getElementById("webshareStatus").innerHTML="<span style='color:#4ade80'>✅ Configured</span>";webshareConfigured=true;loadApiStatus();}else alert("❌ "+(d.error||"Failed"));
+}catch(e){alert("❌ "+e.message);}
 }
-
 function testWebshareConfig(){alert("Testing WebShare configuration...");}
-
 async function loadUserTemplates(){
-  if(!userId)return;
-  try{var r=await fetch("/api/user/templates",{headers:{"x-user-id":userId}});var d=await r.json();
-    if(d.success&&d.templates){userTemplates=d.templates;
-      ["congrats","improvement","website"].forEach(t=>{if(userTemplates[t]){document.getElementById("template-"+t+"-subject").value=userTemplates[t].subject||"";document.getElementById("template-"+t+"-body").value=userTemplates[t].body||"";}});
-    }
-  }catch(e){console.error(e);}
+if(!userId)return;
+try{var r=await fetch("/api/user/templates",{headers:{"x-user-id":userId}});var d=await r.json();
+if(d.success&&d.templates){userTemplates=d.templates;
+["congrats","improvement","website"].forEach(t=>{if(userTemplates[t]){document.getElementById("template-"+t+"-subject").value=userTemplates[t].subject||"";document.getElementById("template-"+t+"-body").value=userTemplates[t].body||"";}});
 }
-
+}catch(e){console.error(e);}
+}
 async function saveTemplate(type){
-  if(!userId){alert("❌ User not registered.");return;}
-  var s=document.getElementById("template-"+type+"-subject").value,b=document.getElementById("template-"+type+"-body").value;
-  if(!s||!b){alert("❌ Please fill in both subject and body");return;}
-  try{var r=await fetch("/api/user/templates",{method:"POST",headers:{"Content-Type":"application/json","x-user-id":userId},body:JSON.stringify({type,subject:s,body:b})});
-    var d=await r.json();if(d.success){alert("✅ Template saved!");userTemplates[type]={subject:s,body:b};}else alert("❌ "+(d.error||"Failed"));
-  }catch(e){alert("❌ "+e.message);}
+if(!userId){alert("❌ User not registered.");return;}
+var s=document.getElementById("template-"+type+"-subject").value,b=document.getElementById("template-"+type+"-body").value;
+if(!s||!b){alert("❌ Please fill in both subject and body");return;}
+try{var r=await fetch("/api/user/templates",{method:"POST",headers:{"Content-Type":"application/json","x-user-id":userId},body:JSON.stringify({type,subject:s,body:b})});
+var d=await r.json();if(d.success){alert("✅ Template saved!");userTemplates[type]={subject:s,body:b};}else alert("❌ "+(d.error||"Failed"));
+}catch(e){alert("❌ "+e.message);}
 }
-
 async function scanSingleURL(){
-  var input=document.getElementById("singleUrlInput"),btn=document.getElementById("singleScanBtn"),prog=document.getElementById("singleProgress"),bar=document.getElementById("singleProgressBar"),txt=document.getElementById("singleProgressText"),res=document.getElementById("singleResult");
-  var url=input.value.trim();if(!url){alert("❌ Please enter a URL");return;}
-  if(!url.startsWith("http"))url="https://"+url;
-  btn.disabled=true;btn.innerHTML="<i class='fas fa-spinner fa-spin mr-2'></i>Scanning...";
-  prog.classList.remove("hidden");bar.style.width="20%";txt.textContent="Starting browser...";
-  try{
-    var r=await fetch("/api/scan",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url})});
-    bar.style.width="60%";txt.textContent="Analyzing content...";
-    var d=await r.json();if(!r.ok||!d.success)throw new Error(d.error||"Scan failed");
-    displayScanResult(d);bar.style.width="100%";txt.textContent="Scan complete!";
-    setTimeout(()=>{prog.classList.add("hidden");btn.disabled=false;btn.innerHTML="<i class='fas fa-search mr-2'></i> Start Scan";},500);
-  }catch(e){alert("❌ Scan failed: "+e.message);prog.classList.add("hidden");btn.disabled=false;btn.innerHTML="<i class='fas fa-search mr-2'></i> Start Scan";}
+var input=document.getElementById("singleUrlInput"),btn=document.getElementById("singleScanBtn"),prog=document.getElementById("singleProgress"),bar=document.getElementById("singleProgressBar"),txt=document.getElementById("singleProgressText"),res=document.getElementById("singleResult");
+var url=input.value.trim();if(!url){alert("❌ Please enter a URL");return;}
+if(!url.startsWith("http"))url="https://"+url;
+btn.disabled=true;btn.innerHTML="<i class='fas fa-spinner fa-spin mr-2'></i>Scanning...";
+prog.classList.remove("hidden");bar.style.width="20%";txt.textContent="Starting browser...";
+try{
+var r=await fetch("/api/scan",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url})});
+bar.style.width="60%";txt.textContent="Analyzing content...";
+var d=await r.json();if(!r.ok||!d.success)throw new Error(d.error||"Scan failed");
+displayScanResult(d);bar.style.width="100%";txt.textContent="Scan complete!";
+setTimeout(()=>{prog.classList.add("hidden");btn.disabled=false;btn.innerHTML="<i class='fas fa-search mr-2'></i> Start Scan";},500);
+}catch(e){alert("❌ Scan failed: "+e.message);prog.classList.add("hidden");btn.disabled=false;btn.innerHTML="<i class='fas fa-search mr-2'></i> Start Scan";}
 }
-
 function displayScanResult(data){
-  var res=document.getElementById("singleResult");
-  var url=data.url||"",quality=data.quality||"unknown",score=data.score||0;
-  var graaf=data.metrics?.graaf||0,craft=data.metrics?.craft||0,technical=data.metrics?.technical||0,words=data.content_stats?.wordCount||0;
-  var recs=data.recommendations?.all||[];
-  var recsHtml=recs.length>0?recs.map(rec=>{
-    var pc="priority-none";if(rec.priority==="high")pc="priority-high";else if(rec.priority==="medium")pc="priority-medium";else if(rec.priority==="low")pc="priority-low";
-    return "<div class='recommendation-card'><div class='flex items-start justify-between mb-2'><h4 class='recommendation-title'>"+(rec.title||"Recommendation")+"</h4>"+(rec.priority?"<span class='priority-badge "+pc+"'>"+(rec.priority.toUpperCase())+"</span>":"")+"</div><p class='recommendation-desc'>"+(rec.description||"")+"</p>"+(rec.action?"<div class='recommendation-section'><div class='recommendation-section-title'><i class='fas fa-wrench'></i> Action</div><p>"+(rec.action)+"</p></div>":"")+(rec.learning?"<div class='recommendation-section'><div class='recommendation-section-title'><i class='fas fa-graduation-cap'></i> Learning</div><p class='recommendation-learning'>"+(rec.learning)+"</p></div>":"")+"</div>";
-  }).join(""):"<p class='text-gray-400 text-sm'>No specific recommendations - your page is excellent!</p>";
-  var qc=quality==="excellent"?"bg-green-600":quality==="average"?"bg-yellow-600":quality==="needs improvement"?"bg-red-600":"bg-blue-600";
-  res.innerHTML="<div class='bg-gray-800 rounded-xl border-2 border-purple-500 p-6 mt-4'><div class='text-center mb-4'><h2 class='text-2xl font-bold mb-1'>📊 SEO Content Analysis</h2><p class='text-md text-gray-300 break-all'>"+url+"</p><span class='inline-block mt-2 px-3 py-1 "+qc+" text-white text-sm rounded-full'>Quality: "+(quality.charAt(0).toUpperCase()+quality.slice(1))+"</span></div><div class='text-center mb-6'><div class='text-6xl font-bold'>"+score+"</div><div class='text-sm text-gray-400'>out of 100</div></div><div class='grid grid-cols-2 md:grid-cols-4 gap-4 mb-5'><div class='bg-gray-900 rounded-lg p-4 text-center'><div class='text-sm text-gray-400 mb-1'>GRAAF (50)</div><div class='text-2xl font-bold text-purple-400'>"+graaf+"/50</div></div><div class='bg-gray-900 rounded-lg p-4 text-center'><div class='text-sm text-gray-400 mb-1'>CRAFT (30)</div><div class='text-2xl font-bold text-blue-400'>"+craft+"/30</div></div><div class='bg-gray-900 rounded-lg p-4 text-center'><div class='text-sm text-gray-400 mb-1'>Technical (20)</div><div class='text-2xl font-bold text-yellow-400'>"+technical+"/20</div></div><div class='bg-gray-900 rounded-lg p-4 text-center'><div class='text-sm text-gray-400 mb-1'>Words</div><div class='text-2xl font-bold'>"+words.toLocaleString()+"</div></div></div><div class='border-t border-gray-700 pt-5 mb-5'><h3 class='text-xl font-bold mb-4'>📋 Priority Recommendations</h3>"+recsHtml+"</div><div class='flex gap-3'><button onclick='addToLeaderboard(\""+url+"\","+score+")' class='flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-semibold transition-all'><i class='fas fa-trophy mr-2'></i> Add to Leaderboard</button><button onclick='document.getElementById(\"singleResult\").classList.add(\"hidden\")' class='flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold'>Close</button></div></div>";
-  res.classList.remove("hidden");res.scrollIntoView({behavior:"smooth",block:"nearest"});
+var res=document.getElementById("singleResult");
+var url=data.url||"",quality=data.quality||"unknown",score=data.score||0;
+var graaf=data.metrics?.graaf||0,craft=data.metrics?.craft||0,technical=data.metrics?.technical||0,words=data.content_stats?.wordCount||0;
+var recs=data.recommendations?.all||[];
+var recsHtml=recs.length>0?recs.map(rec=>{
+var pc="priority-none";if(rec.priority==="high")pc="priority-high";else if(rec.priority==="medium")pc="priority-medium";else if(rec.priority==="low")pc="priority-low";
+return "<div class='recommendation-card'><div class='flex items-start justify-between mb-2'><h4 class='recommendation-title'>"+(rec.title||"Recommendation")+"</h4>"+(rec.priority?"<span class='priority-badge "+pc+"'>"+(rec.priority.toUpperCase())+"</span>":"")+"</div><p class='recommendation-desc'>"+(rec.description||"")+"</p>"+(rec.action?"<div class='recommendation-section'><div class='recommendation-section-title'><i class='fas fa-wrench'></i> Action</div><p>"+(rec.action)+"</p></div>":"")+(rec.learning?"<div class='recommendation-section'><div class='recommendation-section-title'><i class='fas fa-graduation-cap'></i> Learning</div><p class='recommendation-learning'>"+(rec.learning)+"</p></div>":"")+"</div>";
+}).join(""):"<p class='text-gray-400 text-sm'>No specific recommendations - your page is excellent!</p>";
+var qc=quality==="excellent"?"bg-green-600":quality==="average"?"bg-yellow-600":quality==="needs improvement"?"bg-red-600":"bg-blue-600";
+res.innerHTML="<div class='bg-gray-800 rounded-xl border-2 border-purple-500 p-6 mt-4'><div class='text-center mb-4'><h2 class='text-2xl font-bold mb-1'>📊 SEO Content Analysis</h2><p class='text-md text-gray-300 break-all'>"+url+"</p><span class='inline-block mt-2 px-3 py-1 "+qc+" text-white text-sm rounded-full'>Quality: "+(quality.charAt(0).toUpperCase()+quality.slice(1))+"</span></div><div class='text-center mb-6'><div class='text-6xl font-bold'>"+score+"</div><div class='text-sm text-gray-400'>out of 100</div></div><div class='grid grid-cols-2 md:grid-cols-4 gap-4 mb-5'><div class='bg-gray-900 rounded-lg p-4 text-center'><div class='text-sm text-gray-400 mb-1'>GRAAF (50)</div><div class='text-2xl font-bold text-purple-400'>"+graaf+"/50</div></div><div class='bg-gray-900 rounded-lg p-4 text-center'><div class='text-sm text-gray-400 mb-1'>CRAFT (30)</div><div class='text-2xl font-bold text-blue-400'>"+craft+"/30</div></div><div class='bg-gray-900 rounded-lg p-4 text-center'><div class='text-sm text-gray-400 mb-1'>Technical (20)</div><div class='text-2xl font-bold text-yellow-400'>"+technical+"/20</div></div><div class='bg-gray-900 rounded-lg p-4 text-center'><div class='text-sm text-gray-400 mb-1'>Words</div><div class='text-2xl font-bold'>"+words.toLocaleString()+"</div></div></div><div class='border-t border-gray-700 pt-5 mb-5'><h3 class='text-xl font-bold mb-4'>📋 Priority Recommendations</h3>"+recsHtml+"</div><div class='flex gap-3'><button onclick='addToLeaderboard(\""+url+"\","+score+")' class='flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-semibold transition-all'><i class='fas fa-trophy mr-2'></i> Add to Leaderboard</button><button onclick='document.getElementById(\"singleResult\").classList.add(\"hidden\")' class='flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold'>Close</button></div></div>";
+res.classList.remove("hidden");res.scrollIntoView({behavior:"smooth",block:"nearest"});
 }
-
 function addToLeaderboard(url,score){
-  var e=prompt("Enter your email for approval notification (optional):","");
-  if(!e){alert("✅ Request sent to admin for approval (85+ required).");return;}
-  if(!e.includes("@")||!e.includes(".")){alert("❌ Please enter a valid email.");return;}
-  alert("✅ Thank you! If approved (85+ score required), a congratulations email will be sent to "+e+".");
+var e=prompt("Enter your email for approval notification (optional):","");
+if(!e){alert("✅ Request sent to admin for approval (85+ required).");return;}
+if(!e.includes("@")||!e.includes(".")){alert("❌ Please enter a valid email.");return;}
+alert("✅ Thank you! If approved (85+ score required), a congratulations email will be sent to "+e+".");
 }
-
 async function startBulkScan(){
-  var ui=document.getElementById("bulkUrlInput"),ei=document.getElementById("bulkScanEmail"),ni=document.getElementById("bulkScanName"),btn=document.getElementById("bulkScanBtn");
-  var urls=ui.value.split("\n").filter(u=>u.trim().length>0),email=ei.value.trim(),name=ni.value.trim();
-  if(!urls.length){alert("❌ Please enter at least one URL");return;}
-  if(urls.length>100){alert("❌ Maximum 100 URLs allowed");return;}
-  if(!email||!email.includes("@")){alert("❌ Please enter a valid email");return;}
-  if(!name){alert("❌ Please enter your name");return;}
-  if(!userActivated&&!activationChecked){var a=await checkActivationStatus();if(!a){alert("🔒 Account activation required.");return;}}
-  if(!sendgridConfigured){if(!confirm("⚠️ SendGrid not configured. Continue with default system?"))return;}
-  btn.disabled=true;btn.innerHTML="<i class='fas fa-spinner fa-spin mr-2'></i>Scanning...";
-  document.getElementById("bulkProgress").classList.remove("hidden");document.getElementById("bulkResults").classList.add("hidden");
-  var results={leaderboard:[],withWebsite:[],withoutWebsite:[],errors:[]};
-  for(var i=0;i<urls.length;i++){
-    var url=urls[i].trim();if(!url.startsWith("http"))url="https://"+url;
-    document.getElementById("bulkProgressText").textContent="Scanning "+(i+1)+" of "+urls.length+"...";
-    document.getElementById("bulkProgressBar").style.width=((i+1)/urls.length*100)+"%";
-    try{var r=await fetch("/api/scan",{method:"POST",headers:{"Content-Type":"application/json","x-user-id":userId||"anonymous"},body:JSON.stringify({url})});
-      var d=await r.json();if(d.success){var sc=d.score||0;if(sc>=85)results.leaderboard.push({url,score:sc,data:d});else if(sc>0)results.withWebsite.push({url,score:sc,data:d});else results.withoutWebsite.push({url,score:sc,data:d});}
-      else results.errors.push({url,error:d.error||"Scan failed"});
-    }catch(e){results.errors.push({url,error:e.message});}
-    await new Promise(res=>setTimeout(res,500));
-  }
-  displayBulkResults(results,email,name);await sendBulkEmails(results,email,name);
-  btn.disabled=false;btn.innerHTML="<i class='fas fa-rocket mr-2'></i> Start Bulk Scan";
-  document.getElementById("bulkProgress").classList.add("hidden");
+var ui=document.getElementById("bulkUrlInput"),ei=document.getElementById("bulkScanEmail"),ni=document.getElementById("bulkScanName"),btn=document.getElementById("bulkScanBtn");
+var urls=ui.value.split("\n").filter(u=>u.trim().length>0),email=ei.value.trim(),name=ni.value.trim();
+if(!urls.length){alert("❌ Please enter at least one URL");return;}
+if(urls.length>100){alert("❌ Maximum 100 URLs allowed");return;}
+if(!email||!email.includes("@")){alert("❌ Please enter a valid email");return;}
+if(!name){alert("❌ Please enter your name");return;}
+if(!userActivated&&!activationChecked){var a=await checkActivationStatus();if(!a){alert("🔒 Account activation required.");return;}}
+if(!sendgridConfigured){if(!confirm("⚠️ SendGrid not configured. Continue with default system?"))return;}
+btn.disabled=true;btn.innerHTML="<i class='fas fa-spinner fa-spin mr-2'></i>Scanning...";
+document.getElementById("bulkProgress").classList.remove("hidden");document.getElementById("bulkResults").classList.add("hidden");
+var results={leaderboard:[],withWebsite:[],withoutWebsite:[],errors:[]};
+for(var i=0;i<urls.length;i++){
+var url=urls[i].trim();if(!url.startsWith("http"))url="https://"+url;
+document.getElementById("bulkProgressText").textContent="Scanning "+(i+1)+" of "+urls.length+"...";
+document.getElementById("bulkProgressBar").style.width=((i+1)/urls.length*100)+"%";
+try{var r=await fetch("/api/scan",{method:"POST",headers:{"Content-Type":"application/json","x-user-id":userId||"anonymous"},body:JSON.stringify({url})});
+var d=await r.json();if(d.success){var sc=d.score||0;if(sc>=85)results.leaderboard.push({url,score:sc,data:d});else if(sc>0)results.withWebsite.push({url,score:sc,data:d});else results.withoutWebsite.push({url,score:sc,data:d});}
+else results.errors.push({url,error:d.error||"Scan failed"});
+}catch(e){results.errors.push({url,error:e.message});}
+await new Promise(res=>setTimeout(res,500));
 }
-
+displayBulkResults(results,email,name);await sendBulkEmails(results,email,name);
+btn.disabled=false;btn.innerHTML="<i class='fas fa-rocket mr-2'></i> Start Bulk Scan";
+document.getElementById("bulkProgress").classList.add("hidden");
+}
 function displayBulkResults(results,userEmail,userName){
-  var c=document.getElementById("bulkResultsContainer"),rd=document.getElementById("bulkResults"),h="";
-  if(results.leaderboard.length)h+="<div class='bg-green-900 bg-opacity-30 border border-green-500 rounded-lg p-4 mb-4'><h5 class='font-bold text-green-400 mb-2'>🏆 Leaderboard Candidates ("+results.leaderboard.length+")</h5><ul class='text-sm space-y-1'>"+results.leaderboard.map(r=>"<li>✅ "+r.url+" - Score: "+r.score+"/100</li>").join("")+"</ul></div>";
-  if(results.withWebsite.length)h+="<div class='bg-blue-900 bg-opacity-30 border border-blue-500 rounded-lg p-4 mb-4'><h5 class='font-bold text-blue-400 mb-2'>📧 Improvement Emails ("+results.withWebsite.length+")</h5><ul class='text-sm space-y-1'>"+results.withWebsite.map(r=>"<li>📨 "+r.url+" - Score: "+r.score+"/100</li>").join("")+"</ul></div>";
-  if(results.withoutWebsite.length)h+="<div class='bg-purple-900 bg-opacity-30 border border-purple-500 rounded-lg p-4 mb-4'><h5 class='font-bold text-purple-400 mb-2'>🌐 Website Offers ("+results.withoutWebsite.length+")</h5><ul class='text-sm space-y-1'>"+results.withoutWebsite.map(r=>"<li>📬 "+r.url+"</li>").join("")+"</ul></div>";
-  if(results.errors.length)h+="<div class='bg-red-900 bg-opacity-30 border border-red-500 rounded-lg p-4 mb-4'><h5 class='font-bold text-red-400 mb-2'>❌ Scan Errors ("+results.errors.length+")</h5><ul class='text-sm'>"+results.errors.map(r=>"<li>⚠️ "+r.url+" - "+r.error+"</li>").join("")+"</ul></div>";
-  h+="<div class='bg-gray-800 border border-gray-700 rounded-lg p-4'><p class='text-sm text-gray-300'>📬 Summary report sent to <strong>"+userEmail+"</strong></p></div>";
-  c.innerHTML=h;rd.classList.remove("hidden");
+var c=document.getElementById("bulkResultsContainer"),rd=document.getElementById("bulkResults"),h="";
+if(results.leaderboard.length)h+="<div class='bg-green-900 bg-opacity-30 border border-green-500 rounded-lg p-4 mb-4'><h5 class='font-bold text-green-400 mb-2'>🏆 Leaderboard Candidates ("+results.leaderboard.length+")</h5><ul class='text-sm space-y-1'>"+results.leaderboard.map(r=>"<li>✅ "+r.url+" - Score: "+r.score+"/100</li>").join("")+"</ul></div>";
+if(results.withWebsite.length)h+="<div class='bg-blue-900 bg-opacity-30 border border-blue-500 rounded-lg p-4 mb-4'><h5 class='font-bold text-blue-400 mb-2'>📧 Improvement Emails ("+results.withWebsite.length+")</h5><ul class='text-sm space-y-1'>"+results.withWebsite.map(r=>"<li>📨 "+r.url+" - Score: "+r.score+"/100</li>").join("")+"</ul></div>";
+if(results.withoutWebsite.length)h+="<div class='bg-purple-900 bg-opacity-30 border border-purple-500 rounded-lg p-4 mb-4'><h5 class='font-bold text-purple-400 mb-2'>🌐 Website Offers ("+results.withoutWebsite.length+")</h5><ul class='text-sm space-y-1'>"+results.withoutWebsite.map(r=>"<li>📬 "+r.url+"</li>").join("")+"</ul></div>";
+if(results.errors.length)h+="<div class='bg-red-900 bg-opacity-30 border border-red-500 rounded-lg p-4 mb-4'><h5 class='font-bold text-red-400 mb-2'>❌ Scan Errors ("+results.errors.length+")</h5><ul class='text-sm'>"+results.errors.map(r=>"<li>⚠️ "+r.url+" - "+r.error+"</li>").join("")+"</ul></div>";
+h+="<div class='bg-gray-800 border border-gray-700 rounded-lg p-4'><p class='text-sm text-gray-300'>📬 Summary report sent to <strong>"+userEmail+"</strong></p></div>";
+c.innerHTML=h;rd.classList.remove("hidden");
 }
-
 async function sendBulkEmails(results,userEmail,userName){
-  if(!userId)return;
-  try{
-    await fetch("/api/bulk-scan/send-summary",{method:"POST",headers:{"Content-Type":"application/json","x-user-id":userId},body:JSON.stringify({userEmail,userName,results})});
-    if(results.leaderboard.length)await fetch("/api/bulk-scan/submit-leaderboard",{method:"POST",headers:{"Content-Type":"application/json","x-user-id":userId},body:JSON.stringify({entries:results.leaderboard,submittedBy:userEmail})});
-    if(results.withWebsite.length)await fetch("/api/bulk-scan/send-improvement-emails",{method:"POST",headers:{"Content-Type":"application/json","x-user-id":userId},body:JSON.stringify({businesses:results.withWebsite,senderName:userName,senderEmail:userEmail})});
-    if(results.withoutWebsite.length)await fetch("/api/bulk-scan/send-website-offers",{method:"POST",headers:{"Content-Type":"application/json","x-user-id":userId},body:JSON.stringify({businesses:results.withoutWebsite,senderName:userName,senderEmail:userEmail})});
-    alert("✅ Bulk scan complete! Emails are being sent via your SendGrid account.");
-  }catch(e){alert("⚠️ Scan complete but some emails may have failed.");}
+if(!userId)return;
+try{
+await fetch("/api/bulk-scan/send-summary",{method:"POST",headers:{"Content-Type":"application/json","x-user-id":userId},body:JSON.stringify({userEmail,userName,results})});
+if(results.leaderboard.length)await fetch("/api/bulk-scan/submit-leaderboard",{method:"POST",headers:{"Content-Type":"application/json","x-user-id":userId},body:JSON.stringify({entries:results.leaderboard,submittedBy:userEmail})});
+if(results.withWebsite.length)await fetch("/api/bulk-scan/send-improvement-emails",{method:"POST",headers:{"Content-Type":"application/json","x-user-id":userId},body:JSON.stringify({businesses:results.withWebsite,senderName:userName,senderEmail:userEmail})});
+if(results.withoutWebsite.length)await fetch("/api/bulk-scan/send-website-offers",{method:"POST",headers:{"Content-Type":"application/json","x-user-id":userId},body:JSON.stringify({businesses:results.withoutWebsite,senderName:userName,senderEmail:userEmail})});
+alert("✅ Bulk scan complete! Emails are being sent via your SendGrid account.");
+}catch(e){alert("⚠️ Scan complete but some emails may have failed.");}
 }
-
 async function loadLeaderboardData(){
-  try{var r=await fetch("/api/leaderboard"),d=await r.json();
-    if(d.success&&d.entries&&d.entries.length>0){
-      allLeaderboardEntries=d.entries;
-      document.getElementById("totalAgencies").textContent=d.stats?.totalAgencies||0;
-      document.getElementById("avgScore").textContent=d.averageScore||0;
-      document.getElementById("countriesCount").textContent=d.stats?.countriesCount||0;
-      document.getElementById("activeHelpers").textContent=d.stats?.activeHelpers||0;
-      renderTop3();renderRankings4to15();renderRankings16Plus();renderCountryFilters();
-    }else showEmptyLeaderboard();
-  }catch(e){console.error(e);showEmptyLeaderboard();}
+try{var r=await fetch("/api/leaderboard"),d=await r.json();
+if(d.success&&d.entries&&d.entries.length>0){
+allLeaderboardEntries=d.entries;
+document.getElementById("totalAgencies").textContent=d.stats?.totalAgencies||0;
+document.getElementById("avgScore").textContent=d.averageScore||0;
+document.getElementById("countriesCount").textContent=d.stats?.countriesCount||0;
+document.getElementById("activeHelpers").textContent=d.stats?.activeHelpers||0;
+renderTop3();renderRankings4to15();renderRankings16Plus();renderCountryFilters();
+}else showEmptyLeaderboard();
+}catch(e){console.error(e);showEmptyLeaderboard();}
 }
-
 function showEmptyLeaderboard(){
-  ["totalAgencies","avgScore","countriesCount","activeHelpers"].forEach(id=>document.getElementById(id).textContent="0");
-  var c=document.getElementById("top3-container");if(c)c.innerHTML="<div class='col-span-3 text-center py-8 text-gray-400'>No leaderboard entries yet. Be the first!</div>";
-  document.getElementById("rankings4to15Container").style.display="none";
-  document.getElementById("totalCount").textContent="0";
+["totalAgencies","avgScore","countriesCount","activeHelpers"].forEach(id=>document.getElementById(id).textContent="0");
+var c=document.getElementById("top3-container");if(c)c.innerHTML="<div class='col-span-3 text-center py-8 text-gray-400'>No leaderboard entries yet. Be the first!</div>";
+document.getElementById("rankings4to15Container").style.display="none";
+document.getElementById("totalCount").textContent="0";
 }
-
 function renderTop3(){
-  var c=document.getElementById("top3-container");if(!c)return;
-  var top3=allLeaderboardEntries.slice(0,3);
-  if(!top3.length){c.innerHTML="<div class='col-span-3 text-center py-8 text-gray-400'>No entries found</div>";return;}
-  c.innerHTML=top3.map((e,i)=>{
-    var medal=i===0?"🥇":i===1?"🥈":"🥉",mc=i===0?"gold":i===1?"silver":"bronze",rt=i===0?"1st Worldwide":i===1?"2nd Worldwide":"3rd Worldwide";
-    var n=e.company_name||extractDomain(e.url);
-    return "<div class='top-card "+mc+"'><div class='text-5xl mb-2'>"+medal+"</div><div class='text-xs font-bold uppercase tracking-wider mb-2'>"+rt+"</div><h3 class='text-xl font-bold mb-2'>"+n+"</h3><div class='text-4xl font-black mb-2'>"+e.score+"/100</div><div class='mb-3'>"+getFlag(e.country)+" "+e.country+"</div><button onclick='window.open(\""+e.url+"\",\"_blank\")'>Visit Website</button></div>";
-  }).join("");
+var c=document.getElementById("top3-container");if(!c)return;
+var top3=allLeaderboardEntries.slice(0,3);
+if(!top3.length){c.innerHTML="<div class='col-span-3 text-center py-8 text-gray-400'>No entries found</div>";return;}
+c.innerHTML=top3.map((e,i)=>{
+var medal=i===0?"🥇":i===1?"🥈":"🥉",mc=i===0?"gold":i===1?"silver":"bronze",rt=i===0?"1st Worldwide":i===1?"2nd Worldwide":"3rd Worldwide";
+var n=e.company_name||extractDomain(e.url);
+return "<div class='top-card "+mc+"'><div class='text-5xl mb-2'>"+medal+"</div><div class='text-xs font-bold uppercase tracking-wider mb-2'>"+rt+"</div><h3 class='text-xl font-bold mb-2'>"+n+"</h3><div class='text-4xl font-black mb-2'>"+e.score+"/100</div><div class='mb-3'>"+getFlag(e.country)+" "+e.country+"</div><button onclick='window.open(\""+e.url+"\",\"_blank\")'>Visit Website</button></div>";
+}).join("");
 }
-
 function renderRankings4to15(){
-  var g=document.getElementById("rankings4to15Grid");if(!g)return;
-  var r=allLeaderboardEntries.slice(3,15);
-  if(!r.length){document.getElementById("rankings4to15Container").style.display="none";return;}
-  document.getElementById("rankings4to15Container").style.display="block";
-  g.innerHTML=r.map((e,i)=>{var n=e.company_name||extractDomain(e.url);return "<div class='rank-card'><div class='text-2xl font-bold text-gray-400 mb-2'>#"+(i+4)+"</div><h4 class='font-bold text-sm mb-2 truncate'>"+n+"</h4><div class='text-2xl font-black text-green-400 mb-2'>"+e.score+"</div><div class='text-xs text-gray-400 mb-2'>"+getFlag(e.country)+" "+e.country+"</div><a href='"+e.url+"' target='_blank' rel='noopener' class='text-xs text-blue-400 hover:underline'>View Website</a></div>";}).join("");
+var g=document.getElementById("rankings4to15Grid");if(!g)return;
+var r=allLeaderboardEntries.slice(3,15);
+if(!r.length){document.getElementById("rankings4to15Container").style.display="none";return;}
+document.getElementById("rankings4to15Container").style.display="block";
+g.innerHTML=r.map((e,i)=>{var n=e.company_name||extractDomain(e.url);return "<div class='rank-card'><div class='text-2xl font-bold text-gray-400 mb-2'>#"+(i+4)+"</div><h4 class='font-bold text-sm mb-2 truncate'>"+n+"</h4><div class='text-2xl font-black text-green-400 mb-2'>"+e.score+"</div><div class='text-xs text-gray-400 mb-2'>"+getFlag(e.country)+" "+e.country+"</div><a href='"+e.url+"' target='_blank' rel='noopener' class='text-xs text-blue-400 hover:underline'>View Website</a></div>";}).join("");
 }
-
 function renderRankings16Plus(){
-  var tb=document.getElementById("rankingsTbody"),tc=document.getElementById("totalCount");if(!tb)return;
-  var r=allLeaderboardEntries.slice(15,35);if(tc)tc.textContent=allLeaderboardEntries.length;
-  if(!r.length){tb.innerHTML="<tr><td colspan='6' class='text-center py-4 text-gray-400'>No more entries</td></tr>";return;}
-  tb.innerHTML=r.map((e,i)=>{var n=e.company_name||extractDomain(e.url),sc=e.score>=85?"text-green-400":e.score>=70?"text-yellow-400":"text-red-400";return "<tr><td><span class='inline-flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full font-bold'>"+(i+16)+"</span></td><td class='font-semibold'>"+n+"</td><td><a href='"+e.url+"' target='_blank' rel='noopener' class='text-blue-400 hover:underline text-sm'>"+(e.url.replace("https://","").substring(0,25))+"...</a></td><td><span class='text-lg font-bold "+sc+"'>"+e.score+"</span></td><td>"+getFlag(e.country)+" "+e.country+"</td><td class='text-gray-400'>"+new Date(e.created_at).toLocaleDateString()+"</td></tr>";}).join("");
+var tb=document.getElementById("rankingsTbody"),tc=document.getElementById("totalCount");if(!tb)return;
+var r=allLeaderboardEntries.slice(15,35);if(tc)tc.textContent=allLeaderboardEntries.length;
+if(!r.length){tb.innerHTML="<tr><td colspan='6' class='text-center py-4 text-gray-400'>No more entries</td></tr>";return;}
+tb.innerHTML=r.map((e,i)=>{var n=e.company_name||extractDomain(e.url),sc=e.score>=85?"text-green-400":e.score>=70?"text-yellow-400":"text-red-400";return "<tr><td><span class='inline-flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full font-bold'>"+(i+16)+"</span></td><td class='font-semibold'>"+n+"</td><td><a href='"+e.url+"' target='_blank' rel='noopener' class='text-blue-400 hover:underline text-sm'>"+(e.url.replace("https://","").substring(0,25))+"...</a></td><td><span class='text-lg font-bold "+sc+"'>"+e.score+"</span></td><td>"+getFlag(e.country)+" "+e.country+"</td><td class='text-gray-400'>"+new Date(e.created_at).toLocaleDateString()+"</td></tr>";}).join("");
 }
-
 function renderCountryFilters(){
-  var d=document.getElementById("countryFilters");if(!d)return;
-  var countries=[...new Set(allLeaderboardEntries.map(e=>e.country))];
-  var h="<button class='filter-tag active' onclick='filterByCountry(\"all\")'>🌍 All</button>";
-  countries.forEach(c=>{if(c)h+="<button class='filter-tag' onclick='filterByCountry(\""+c+"\")'>"+getFlag(c)+" "+c+"</button>";});
-  d.innerHTML=h;
+var d=document.getElementById("countryFilters");if(!d)return;
+var countries=[...new Set(allLeaderboardEntries.map(e=>e.country))];
+var h="<button class='filter-tag active' onclick='filterByCountry(\"all\")'>🌍 All</button>";
+countries.forEach(c=>{if(c)h+="<button class='filter-tag' onclick='filterByCountry(\""+c+"\")'>"+getFlag(c)+" "+c+"</button>";});
+d.innerHTML=h;
 }
-
 function filterByCountry(c){document.querySelectorAll(".filter-tag").forEach(t=>t.classList.remove("active"));event.target.classList.add("active");}
-
 function filterAgencies(){
-  var q=document.getElementById("searchInput")?.value.toLowerCase()||"";
-  if(!q){renderRankings4to15();renderRankings16Plus();return;}
-  var f=allLeaderboardEntries.filter(e=>(e.company_name||"").toLowerCase().includes(q)||(e.url||"").toLowerCase().includes(q)||extractDomain(e.url).toLowerCase().includes(q));
-  var g=document.getElementById("rankings4to15Grid");
-  if(g)g.innerHTML=f.slice(3,15).map((e,i)=>{var n=e.company_name||extractDomain(e.url);return "<div class='rank-card'><div class='text-2xl font-bold text-gray-400 mb-2'>#"+(i+4)+"</div><h4 class='font-bold text-sm mb-2 truncate'>"+n+"</h4><div class='text-2xl font-black text-green-400 mb-2'>"+e.score+"</div><div class='text-xs text-gray-400 mb-2'>"+getFlag(e.country)+" "+e.country+"</div><a href='"+e.url+"' target='_blank' class='text-xs text-blue-400 hover:underline'>View Website</a></div>";}).join("");
+var q=document.getElementById("searchInput")?.value.toLowerCase()||"";
+if(!q){renderRankings4to15();renderRankings16Plus();return;}
+var f=allLeaderboardEntries.filter(e=>(e.company_name||"").toLowerCase().includes(q)||(e.url||"").toLowerCase().includes(q)||extractDomain(e.url).toLowerCase().includes(q));
+var g=document.getElementById("rankings4to15Grid");
+if(g)g.innerHTML=f.slice(3,15).map((e,i)=>{var n=e.company_name||extractDomain(e.url);return "<div class='rank-card'><div class='text-2xl font-bold text-gray-400 mb-2'>#"+(i+4)+"</div><h4 class='font-bold text-sm mb-2 truncate'>"+n+"</h4><div class='text-2xl font-black text-green-400 mb-2'>"+e.score+"</div><div class='text-xs text-gray-400 mb-2'>"+getFlag(e.country)+" "+e.country+"</div><a href='"+e.url+"' target='_blank' class='text-xs text-blue-400 hover:underline'>View Website</a></div>";}).join("");
 }
-
 function toggleFilters(){var p=document.getElementById("filterPanel"),ic=document.getElementById("filterIcon");if(p){p.classList.toggle("hidden");ic.classList.toggle("fa-chevron-down");ic.classList.toggle("fa-chevron-up");}}
 function toggleRankings(){var c=document.getElementById("rankingsContainer"),t=document.getElementById("rankingsToggleText");if(c){c.classList.toggle("hidden");t.textContent=c.classList.contains("hidden")?"📊 Show Rankings 16+":"📊 Hide Rankings 16+";}}
-
 async function loadFreelancers(){
-  try{var r=await fetch("/api/freelancers"),d=await r.json();
-    var g=document.getElementById("freelancersGrid");if(!g)return;
-    var fl=d.freelancers||[];
-    if(!fl.length){g.innerHTML="<div class='col-span-3 text-center py-8 text-gray-400'>No specialists found yet.</div>";return;}
-    g.innerHTML=fl.map(f=>{var fn=f.name.split(" ")[0],init=f.name.split(" ").map(n=>n[0]).join("").toUpperCase();return "<div class='card hover:border-purple-500'><div class='card-content'><div class='flex items-start gap-4 mb-4'><div class='w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl font-bold'>"+init+"</div><div class='flex-1'><div class='flex items-center justify-between'><h3 class='font-bold text-lg'>"+f.name+"</h3>"+(f.is_featured?"<span class='text-xs px-2 py-1 bg-yellow-600 rounded font-semibold'>⭐ Featured</span>":"<span class='text-xs px-2 py-1 bg-green-600 rounded font-semibold'>✓ Verified</span>")+"</div><p class='text-sm text-gray-400'>"+(f.title||"SEO Specialist")+"</p></div></div><p class='text-gray-300 text-sm mb-4'>"+(f.bio||"No bio available")+"</p><div class='flex items-center justify-between text-sm mb-4'><span class='text-gray-400'><i class='fas fa-map-marker-alt mr-1'></i>"+(f.location||f.country||"Remote")+"</span>"+(f.hourly_rate?"<span class='text-purple-400'>💰 "+f.hourly_rate+"</span>":"")+"</div></div><div class='card-footer'><a href='https://wa.me/31628073996?text=Hi!%20I%20want%20to%20discuss%20SEO%20with%20"+encodeURIComponent(f.name)+"' target='_blank' rel='noopener' class='w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center justify-center gap-2' style='text-decoration:none!important'><i class='fab fa-whatsapp'></i> Contact "+fn+"</a></div></div>";}).join("");
-  }catch(e){console.error(e);document.getElementById("freelancersGrid").innerHTML="<div class='col-span-3 text-center py-8 text-gray-400'>Could not load specialists.</div>";}
+try{var r=await fetch("/api/freelancers"),d=await r.json();
+var g=document.getElementById("freelancersGrid");if(!g)return;
+var fl=d.freelancers||[];
+if(!fl.length){g.innerHTML="<div class='col-span-3 text-center py-8 text-gray-400'>No specialists found yet.</div>";return;}
+g.innerHTML=fl.map(f=>{var fn=f.name.split(" ")[0],init=f.name.split(" ").map(n=>n[0]).join("").toUpperCase();return "<div class='card hover:border-purple-500'><div class='card-content'><div class='flex items-start gap-4 mb-4'><div class='w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl font-bold'>"+init+"</div><div class='flex-1'><div class='flex items-center justify-between'><h3 class='font-bold text-lg'>"+f.name+"</h3>"+(f.is_featured?"<span class='text-xs px-2 py-1 bg-yellow-600 rounded font-semibold'>⭐ Featured</span>":"<span class='text-xs px-2 py-1 bg-green-600 rounded font-semibold'>✓ Verified</span>")+"</div><p class='text-sm text-gray-400'>"+(f.title||"SEO Specialist")+"</p></div></div><p class='text-gray-300 text-sm mb-4'>"+(f.bio||"No bio available")+"</p><div class='flex items-center justify-between text-sm mb-4'><span class='text-gray-400'><i class='fas fa-map-marker-alt mr-1'></i>"+(f.location||f.country||"Remote")+"</span>"+(f.hourly_rate?"<span class='text-purple-400'>💰 "+f.hourly_rate+"</span>":"")+"</div></div><div class='card-footer'><a href='https://wa.me/31628073996?text=Hi!%20I%20want%20to%20discuss%20SEO%20with%20"+encodeURIComponent(f.name)+"' target='_blank' rel='noopener' class='w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center justify-center gap-2' style='text-decoration:none!important'><i class='fab fa-whatsapp'></i> Contact "+fn+"</a></div></div>";}).join("");
+}catch(e){console.error(e);document.getElementById("freelancersGrid").innerHTML="<div class='col-span-3 text-center py-8 text-gray-400'>Could not load specialists.</div>";}
 }
-
 function openFreelancerModal(){var m=document.getElementById("freelancerModal");if(m){m.classList.add("active");document.body.style.overflow="hidden";}}
 function closeModal(){var m=document.getElementById("freelancerModal");if(m){m.classList.remove("active");document.body.style.overflow="auto";}}
-
 function submitFreelancer(){
-  var name=document.getElementById("freelancerName")?.value,email=document.getElementById("freelancerEmail")?.value;
-  if(!name||!email){alert("❌ Name and email are required");return;}
-  if(!email.includes("@")){alert("❌ Please enter a valid email");return;}
-  var isFeatured=document.getElementById("featuredListing")?.checked||false;
-  if(isFeatured)window.open("https://paypal.me/ojgmedia?locale.x=en_US&country.x=NL","_blank","noopener");
-  fetch("/api/freelancers/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,email,phone:document.getElementById("freelancerPhone")?.value,title:document.getElementById("freelancerTitle")?.value||"SEO Specialist",bio:document.getElementById("freelancerBio")?.value||null,is_featured:isFeatured})})
-  .then(r=>r.json()).then(d=>{if(d.success){alert("✅ Thank you "+name+"! We'll review within 24 hours.");closeModal();}else alert("❌ "+(d.error||"Registration failed"));})
-  .catch(e=>alert("❌ "+e.message));
+var name=document.getElementById("freelancerName")?.value,email=document.getElementById("freelancerEmail")?.value;
+if(!name||!email){alert("❌ Name and email are required");return;}
+if(!email.includes("@")){alert("❌ Please enter a valid email");return;}
+var isFeatured=document.getElementById("featuredListing")?.checked||false;
+if(isFeatured)window.open("https://paypal.me/ojgmedia?locale.x=en_US&country.x=NL","_blank","noopener");
+fetch("/api/freelancers/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,email,phone:document.getElementById("freelancerPhone")?.value,title:document.getElementById("freelancerTitle")?.value||"SEO Specialist",bio:document.getElementById("freelancerBio")?.value||null,is_featured:isFeatured})})
+.then(r=>r.json()).then(d=>{if(d.success){alert("✅ Thank you "+name+"! We'll review within 24 hours.");closeModal();}else alert("❌ "+(d.error||"Registration failed"));})
+.catch(e=>alert("❌ "+e.message));
 }
-
 function extractDomain(url){if(!url)return"Company";try{var h=new URL(url).hostname.replace("www.",""),n=h.split(".")[0];return n.charAt(0).toUpperCase()+n.slice(1);}catch(e){return"Company";}}
 function getFlag(c){var f={"Netherlands":"🇳🇱","NL":"🇳🇱","United Kingdom":"🇬🇧","UK":"🇬🇧","US":"🇺🇸","United States":"🇺🇸","Germany":"🇩🇪","DE":"🇩🇪","France":"🇫🇷","FR":"🇫🇷","Belgium":"🇧🇪","BE":"🇧🇪","Spain":"🇪🇸","ES":"🇪🇸","Italy":"🇮🇹","IT":"🇮🇹"};return f[c]||"🌐";}
-window.onclick=function(e){var m=document.getElementById("freelancerModal");if(e.target===m)closeModal();};
+window.onclick=function(e){var m=document.getElementById("freelancerModal");if(e.target===m)closeModal(); var sm = document.getElementById("socialShareModal"); if(e.target===sm) { /* Do not close social modal on outside click to force action */ } };
 </script>
 </body>
 </html>
