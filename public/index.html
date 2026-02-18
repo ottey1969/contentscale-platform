@@ -25,14 +25,6 @@ border-top: 5px solid #a855f7; border-radius: 50%;
 animation: spin 1s linear infinite;
 }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-/* ✅ NEW FIX: Force Freelancer Cards to not stretch too wide */
-.freelancer-card-fix {
-    max-width: 380px;
-    margin-left: auto;
-    margin-right: auto;
-    width: 100%;
-}
 </style>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'; this.onload=null;">
@@ -461,7 +453,8 @@ EMAIL TEMPLATES SECTION
 <h2 class="text-4xl font-bold mb-3 text-white">✏️ Email Templates</h2>
 <p class="text-xl text-gray-200">Customize your bulk scan email templates</p>
 </div>
-<div class="grid md:grid-cols-3 gap-6">
+<!-- ✅ FIX: Wrapped in max-w-5xl to prevent stretching -->
+<div class="max-w-5xl mx-auto grid md:grid-cols-3 gap-6">
 <!-- Congratulations Template -->
 <div class="card">
 <h3 class="text-xl font-bold mb-4">🏆 Leaderboard Congratulations</h3>
@@ -528,8 +521,8 @@ LEADERBOARD SECTION
 <h2 class="text-4xl font-bold mb-3 text-white">🏆 Elite Leaderboard</h2>
 <p class="text-xl text-gray-200">Top performing websites automatically added</p>
 </div>
-<!-- ✅ FIX: Wrapped stats in max-w-4xl (tighter) to prevent stretching -->
-<div class="max-w-4xl mx-auto grid-4 mb-8">
+<!-- ✅ FIX: Wrapped stats in max-w-6xl to prevent stretching -->
+<div class="max-w-6xl mx-auto grid-4 mb-8">
 <div class="stat-card">
 <div>
 <div class="text-4xl mb-2">🏢</div>
@@ -617,10 +610,8 @@ FREELANCERS SECTION
 <i class="fas fa-user-plus mr-2"></i> Become a Specialist
 </button>
 </div>
-<!-- ✅ FIX: Wrapped grid in max-w-5xl and added custom card class -->
-<div class="max-w-5xl mx-auto grid-3" id="freelancersGrid">
-    <!-- Content injected by JS with freelancer-card-fix class -->
-</div>
+<!-- ✅ FIX: Wrapped grid in max-w-6xl to prevent stretching -->
+<div class="max-w-6xl mx-auto" id="freelancersGrid" class="grid-3"></div>
 </div>
 </div>
 <!-- ============================================
@@ -1726,9 +1717,8 @@ return;
 grid.innerHTML = freelancers.map(f => {
 const firstName = f.name.split(' ')[0];
 const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase();
-// ✅ Apply the fix class here
 return `
-<div class="card hover:border-purple-500 freelancer-card-fix">
+<div class="card hover:border-purple-500">
 <div class="card-content">
 <div class="flex items-start gap-4 mb-4">
 <div class="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl font-bold text-white">
