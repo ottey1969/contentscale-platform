@@ -144,13 +144,11 @@ img[width][height] { aspect-ratio: attr(width) / attr(height); }
 </style>
 </head>
 <body class="bg-gray-900">
-
 <!-- ✅ FIX: Loading Screen -->
 <div id="loading-screen">
-    <div class="spinner mb-4"></div>
-    <p class="text-purple-400 font-bold animate-pulse">Loading ContentScale...</p>
+<div class="spinner mb-4"></div>
+<p class="text-purple-400 font-bold animate-pulse">Loading ContentScale...</p>
 </div>
-
 <a href="#main-content" class="skip-link">Skip to main content</a>
 <nav class="sticky top-0 z-50 bg-gray-900/95 border-b-2 border-purple-600 backdrop-blur-sm">
 <div class="max-w-7xl mx-auto px-6 py-4">
@@ -522,8 +520,8 @@ LEADERBOARD SECTION
 <h2 class="text-4xl font-bold mb-3 text-white">🏆 Elite Leaderboard</h2>
 <p class="text-xl text-gray-200">Top performing websites automatically added</p>
 </div>
-<!-- ✅ FIX: Wrapped stats in max-w-4xl to prevent stretching -->
-<div class="max-w-4xl mx-auto grid-4 mb-8">
+<!-- ✅ FIX: Wrapped stats in max-w-6xl to prevent stretching -->
+<div class="max-w-6xl mx-auto grid-4 mb-8">
 <div class="stat-card">
 <div>
 <div class="text-4xl mb-2">🏢</div>
@@ -611,8 +609,8 @@ FREELANCERS SECTION
 <i class="fas fa-user-plus mr-2"></i> Become a Specialist
 </button>
 </div>
-<!-- ✅ FIX: Wrapped grid in max-w-5xl to prevent stretching -->
-<div class="max-w-5xl mx-auto" id="freelancersGrid" class="grid-3"></div>
+<!-- ✅ FIX: Wrapped grid in max-w-6xl to prevent stretching -->
+<div class="max-w-6xl mx-auto" id="freelancersGrid" class="grid-3"></div>
 </div>
 </div>
 <!-- ============================================
@@ -769,16 +767,14 @@ registerUser();
 loadLeaderboardData();
 loadFreelancers();
 loadUserTemplates();
-
 // ✅ FIX: Reveal page after load
 window.addEventListener('load', function() {
-    document.body.classList.add('loaded');
-    setTimeout(function() {
-        const loader = document.getElementById('loading-screen');
-        if(loader) loader.style.display = 'none';
-    }, 500); // Small delay to ensure smooth fade
+document.body.classList.add('loaded');
+setTimeout(function() {
+const loader = document.getElementById('loading-screen');
+if(loader) loader.style.display = 'none';
+}, 500); // Small delay to ensure smooth fade
 });
-
 // Single URL enter key
 document.getElementById('singleUrlInput')?.addEventListener('keypress', function(e) {
 if (e.key === 'Enter') scanSingleURL();
