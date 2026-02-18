@@ -10,9 +10,9 @@
 <link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
 <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
 <style>
-body { visibility: hidden; opacity: 0; transition: opacity 0.3s ease-in; }
-body.loaded { visibility: visible; opacity: 1; }
-#loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #030712; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+body { visibility: visible; opacity: 1; }
+
+#loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #030712; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: hideLoader 0s 2s forwards; } @keyframes hideLoader { to { display: none; visibility: hidden; opacity: 0; pointer-events: none; } }
 .spinner { width: 50px; height: 50px; border: 5px solid #374151; border-top: 5px solid #a855f7; border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 </style>
@@ -542,11 +542,12 @@ const requiredShares = 5;
 
 document.addEventListener('DOMContentLoaded', function() {
   registerUser(); loadLeaderboardData(); loadFreelancers(); loadUserTemplates();
-  // Reveal page - handle both cases (load already fired or not yet)
+  // Hide loading screen via JS as backup (CSS animation is primary)
   function revealPage() {
-    document.body.classList.add('loaded');
-    setTimeout(function() { const l = document.getElementById('loading-screen'); if(l) l.style.display = 'none'; }, 300);
+    const l = document.getElementById('loading-screen');
+    if(l) { l.style.opacity = '0'; l.style.pointerEvents = 'none'; setTimeout(function(){ l.style.display = 'none'; }, 300); }
   }
+  setTimeout(revealPage, 1500);
   if (document.readyState === 'complete') { revealPage(); } else { window.addEventListener('load', revealPage); }
   document.getElementById('singleUrlInput')?.addEventListener('keypress', function(e) { if (e.key === 'Enter') scanSingleURL(); });
   const bulkInput = document.getElementById('bulkUrlInput');
