@@ -61,292 +61,268 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </head>
 <body class="bg-gray-900">
 
-<!-- LOGIN SCREEN -->
 <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
-    <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border-2 border-purple-500">
-        <div class="flex items-center justify-center mb-6">
-            <span class="text-5xl">👑</span>
-            <h1 class="text-3xl font-bold ml-3 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Admin</h1>
-        </div>
-        <p class="text-gray-400 text-center mb-8">ContentScale Platform Control</p>
-        <div id="login-error" class="hidden mb-6 p-4 bg-red-900/50 border border-red-700 rounded-lg text-red-200 text-sm"></div>
-        <div class="space-y-6">
-            <div>
-                <label class="block text-sm font-medium text-gray-300 mb-2">Username</label>
-                <input type="text" id="login-username" value="ot" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-300 mb-2">Password</label>
-                <input type="password" id="login-password" value="admin123" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white">
-            </div>
-            <button onclick="login()" id="login-btn" class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-lg font-bold text-lg transition-all transform hover:scale-105">
-                <i class="fas fa-lock mr-2"></i> Login
-            </button>
-        </div>
-    </div>
+<div class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border-2 border-purple-500">
+<div class="flex items-center justify-center mb-6">
+<span class="text-5xl">👑</span>
+<h1 class="text-3xl font-bold ml-3 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Admin</h1>
+</div>
+<p class="text-gray-400 text-center mb-8">ContentScale Platform Control</p>
+<div id="login-error" class="hidden mb-6 p-4 bg-red-900/50 border border-red-700 rounded-lg text-red-200 text-sm"></div>
+<div class="space-y-6">
+<div>
+<label class="block text-sm font-medium text-gray-300 mb-2">Username</label>
+<input type="text" id="login-username" value="ot" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white">
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+<input type="password" id="login-password" value="admin123" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white">
+</div>
+<button onclick="login()" id="login-btn" class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-lg font-bold text-lg transition-all transform hover:scale-105">
+<i class="fas fa-lock mr-2"></i> Login
+</button>
+</div>
+</div>
 </div>
 
-<!-- MAIN DASHBOARD -->
 <div id="main-dashboard" class="hidden">
-    <nav class="sticky top-0 z-50 bg-gray-900/95 border-b-2 border-purple-600 backdrop-blur-sm">
-        <div class="max-w-7xl mx-auto px-6 py-4">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <span class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Admin Dashboard</span>
-                    <span class="text-xs px-2 py-1 bg-purple-600 rounded text-white font-semibold"><span id="admin-username">Admin</span></span>
-                </div>
-                <div class="flex gap-3">
-                    <button onclick="logout()" class="btn btn-danger">
-                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
-                    </button>
-                </div>
-            </div>
-        </div>
-    </nav>
+<nav class="sticky top-0 z-50 bg-gray-900/95 border-b-2 border-purple-600 backdrop-blur-sm">
+<div class="max-w-7xl mx-auto px-6 py-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Admin Dashboard</span>
+<span class="text-xs px-2 py-1 bg-purple-600 rounded text-white font-semibold"><span id="admin-username">Admin</span></span>
+</div>
+<div class="flex gap-3">
+<button onclick="logout()" class="btn btn-danger">
+<i class="fas fa-sign-out-alt mr-2"></i> Logout
+</button>
+</div>
+</div>
+</div>
+</nav>
 
-    <div class="max-w-7xl mx-auto px-6 py-8">
-        <!-- TABS NAVIGATION -->
-        <div class="flex justify-center gap-4 mb-8 flex-wrap">
-            <button onclick="switchTab('leaderboard')" id="tabLeaderboardBtn" class="mode-toggle active"><i class="fas fa-trophy mr-2"></i> Leaderboard</button>
-            <button onclick="switchTab('freelancers')" id="tabFreelancersBtn" class="mode-toggle"><i class="fas fa-users mr-2"></i> Freelancers</button>
-            <button onclick="switchTab('users')" id="tabUsersBtn" class="mode-toggle"><i class="fas fa-user-cog mr-2"></i> Users</button>
-            <button onclick="switchTab('messages')" id="tabMessagesBtn" class="mode-toggle"><i class="fas fa-envelope mr-2"></i> Messages</button>
-            <button onclick="switchTab('pending')" id="tabPendingBtn" class="mode-toggle"><i class="fas fa-clock mr-2"></i> Pending</button>
-        </div>
-
-        <!-- TAB 1: LEADERBOARD -->
-        <div id="tab-leaderboard" class="tab-content">
-            <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-3xl font-bold text-white">🏆 Leaderboard</h2>
-                    <div class="flex gap-3">
-                        <button onclick="showAddLeaderboardModal()" class="btn btn-success"><i class="fas fa-plus-circle mr-2"></i> Add New</button>
-                        <button onclick="loadLeaderboard()" class="btn btn-info"><i class="fas fa-sync-alt mr-2"></i> Refresh</button>
-                    </div>
-                </div>
-                <div class="grid-4 mb-8">
-                    <div class="stat-card"><div><div class="text-4xl mb-2">🏢</div><div class="text-3xl font-bold" id="stat-total-agencies">0</div><div class="text-sm text-gray-200">Agencies</div></div></div>
-                    <div class="stat-card"><div><div class="text-4xl mb-2">📊</div><div class="text-3xl font-bold" id="stat-avg-score">0</div><div class="text-sm text-gray-200">Avg. Score</div></div></div>
-                    <div class="stat-card"><div><div class="text-4xl mb-2">🌍</div><div class="text-3xl font-bold" id="stat-countries">0</div><div class="text-sm text-gray-200">Countries</div></div></div>
-                    <div class="stat-card"><div><div class="text-4xl mb-2">✅</div><div class="text-3xl font-bold" id="stat-verified">0</div><div class="text-sm text-gray-200">Verified</div></div></div>
-                </div>
-                <!-- Bulk Actions -->
-                <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
-                    <div class="flex items-center gap-2">
-                        <input type="checkbox" id="select-all-leaderboard" onchange="toggleSelectAll('leaderboard')" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600">
-                        <label class="text-sm text-gray-300">Select All</label>
-                    </div>
-                    <button onclick="bulkDelete('leaderboard')" class="btn btn-danger"><i class="fas fa-trash mr-2"></i> Delete Selected (<span id="selected-count-leaderboard">0</span>)</button>
-                </div>
-                <div id="top3-container" class="grid-3 mb-10"></div>
-                <div id="rankings4to15Container" class="mb-10">
-                    <h3 class="text-2xl font-bold text-white mb-6">Rankings 4-15</h3>
-                    <div id="rankings4to15Grid" class="grid-3"></div>
-                </div>
-                <div class="bg-gray-800 rounded-lg p-4 mb-6 border border-gray-700">
-                    <button onclick="toggleRankings()" class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-between">
-                        <span id="rankingsToggleText">📊 Show Rankings 16+</span><span>▼</span>
-                    </button>
-                    <div id="rankingsContainer" class="hidden mt-4">
-                        <table class="rankings-table w-full bg-gray-900 rounded-lg overflow-hidden">
-                            <thead class="bg-gray-800"><tr><th class="p-3 text-left">Rank</th><th class="p-3 text-left">Company</th><th class="p-3 text-left">Score</th><th class="p-3 text-left">Actions</th></tr></thead>
-                            <tbody id="rankingsTbody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- TAB 2: FREELANCERS -->
-        <div id="tab-freelancers" class="tab-content hidden">
-            <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-3xl font-bold text-white">🎯 Freelancers</h2>
-                    <button onclick="loadFreelancers()" class="btn btn-info"><i class="fas fa-sync-alt mr-2"></i> Refresh</button>
-                </div>
-                <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
-                    <div class="flex items-center gap-2">
-                        <input type="checkbox" id="select-all-freelancers" onchange="toggleSelectAll('freelancers')" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600">
-                        <label class="text-sm text-gray-300">Select All</label>
-                    </div>
-                    <button onclick="bulkDelete('freelancers')" class="btn btn-danger"><i class="fas fa-trash mr-2"></i> Delete Selected (<span id="selected-count-freelancers">0</span>)</button>
-                </div>
-                <div id="freelancersGrid" class="grid-3"></div>
-            </div>
-        </div>
-
-        <!-- TAB 3: USERS MANAGEMENT (UPDATED FOR 7-DAY TRIAL) -->
-        <div id="tab-users" class="tab-content hidden">
-            <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-3xl font-bold text-white">👥 User Management</h2>
-                    <button onclick="loadUsers()" class="btn btn-info"><i class="fas fa-sync-alt mr-2"></i> Refresh</button>
-                </div>
-                
-                <!-- Stats -->
-                <div class="grid-4 mb-8">
-                    <div class="stat-card"><div><div class="text-4xl mb-2">👥</div><div class="text-3xl font-bold" id="stat-total-users">0</div><div class="text-sm text-gray-200">Total Users</div></div></div>
-                    <div class="stat-card"><div><div class="text-4xl mb-2">✅</div><div class="text-3xl font-bold" id="stat-active-users">0</div><div class="text-sm text-gray-200">Active</div></div></div>
-                    <div class="stat-card"><div><div class="text-4xl mb-2">⏳</div><div class="text-3xl font-bold" id="stat-expiring-users">0</div><div class="text-sm text-gray-200">Expiring Soon</div></div></div>
-                    <div class="stat-card"><div><div class="text-4xl mb-2">❌</div><div class="text-3xl font-bold" id="stat-inactive-users">0</div><div class="text-sm text-gray-200">Inactive/Expired</div></div></div>
-                </div>
-
-                <!-- Bulk Actions -->
-                <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
-                    <div class="flex items-center gap-2">
-                        <input type="checkbox" id="select-all-users" onchange="toggleSelectAll('users')" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600">
-                        <label class="text-sm text-gray-300">Select All</label>
-                    </div>
-                    <button onclick="bulkActionUsers('activate')" class="btn btn-success"><i class="fas fa-check mr-2"></i> Activate (7 Days)</button>
-                    <button onclick="bulkActionUsers('deactivate')" class="btn btn-warning"><i class="fas fa-times mr-2"></i> Deactivate</button>
-                    <button onclick="openMessageModal('selected')" class="btn btn-info"><i class="fas fa-envelope mr-2"></i> Message Selected</button>
-                    <button onclick="bulkDelete('users')" class="btn btn-danger"><i class="fas fa-trash mr-2"></i> Delete (<span id="selected-count-users">0</span>)</button>
-                </div>
-
-                <!-- Users List -->
-                <div id="usersContainer" class="space-y-4"></div>
-            </div>
-        </div>
-
-        <!-- TAB 4: MESSAGES HISTORY -->
-        <div id="tab-messages" class="tab-content hidden">
-            <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-3xl font-bold text-white">📧 Message History</h2>
-                    <button onclick="openMessageModal('all')" class="btn btn-primary"><i class="fas fa-paper-plane mr-2"></i> New Broadcast</button>
-                </div>
-                <div id="messagesContainer" class="space-y-4"></div>
-            </div>
-        </div>
-
-        <!-- TAB 5: PENDING -->
-        <div id="tab-pending" class="tab-content hidden">
-            <div class="bg-gradient-to-br from-yellow-900 via-orange-900 to-yellow-800 rounded-2xl p-8 border-2 border-yellow-500">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-3xl font-bold text-white">⏳ Pending Approvals</h2>
-                    <button onclick="loadPendingData()" class="btn btn-warning"><i class="fas fa-sync-alt mr-2"></i> Refresh</button>
-                </div>
-                <div class="mb-8">
-                    <h3 class="text-xl font-bold mb-4 text-yellow-400">🏆 Pending Leaderboard Submissions</h3>
-                    <div id="pending-leaderboard-container" class="space-y-4"></div>
-                </div>
-                <div class="mb-8">
-                    <h3 class="text-xl font-bold mb-4 text-yellow-400">🎯 Pending Freelancer Applications</h3>
-                    <div id="pending-freelancers-container" class="space-y-4"></div>
-                </div>
-            </div>
-        </div>
-    </div>
+<div class="max-w-7xl mx-auto px-6 py-8">
+<div class="flex justify-center gap-4 mb-8 flex-wrap">
+<button onclick="switchTab('leaderboard')" id="tabLeaderboardBtn" class="mode-toggle active"><i class="fas fa-trophy mr-2"></i> Leaderboard</button>
+<button onclick="switchTab('freelancers')" id="tabFreelancersBtn" class="mode-toggle"><i class="fas fa-users mr-2"></i> Freelancers</button>
+<button onclick="switchTab('users')" id="tabUsersBtn" class="mode-toggle"><i class="fas fa-user-cog mr-2"></i> Users</button>
+<button onclick="switchTab('messages')" id="tabMessagesBtn" class="mode-toggle"><i class="fas fa-envelope mr-2"></i> Messages</button>
+<button onclick="switchTab('pending')" id="tabPendingBtn" class="mode-toggle"><i class="fas fa-clock mr-2"></i> Pending</button>
 </div>
 
-<!-- MODALS -->
+<div id="tab-leaderboard" class="tab-content">
+<div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-3xl font-bold text-white">🏆 Leaderboard</h2>
+<div class="flex gap-3">
+<button onclick="showAddLeaderboardModal()" class="btn btn-success"><i class="fas fa-plus-circle mr-2"></i> Add New</button>
+<button onclick="loadLeaderboard()" class="btn btn-info"><i class="fas fa-sync-alt mr-2"></i> Refresh</button>
+</div>
+</div>
+<div class="grid-4 mb-8">
+<div class="stat-card"><div><div class="text-4xl mb-2">🏢</div><div class="text-3xl font-bold" id="stat-total-agencies">0</div><div class="text-sm text-gray-200">Agencies</div></div></div>
+<div class="stat-card"><div><div class="text-4xl mb-2">📊</div><div class="text-3xl font-bold" id="stat-avg-score">0</div><div class="text-sm text-gray-200">Avg. Score</div></div></div>
+<div class="stat-card"><div><div class="text-4xl mb-2">🌍</div><div class="text-3xl font-bold" id="stat-countries">0</div><div class="text-sm text-gray-200">Countries</div></div></div>
+<div class="stat-card"><div><div class="text-4xl mb-2">✅</div><div class="text-3xl font-bold" id="stat-verified">0</div><div class="text-sm text-gray-200">Verified</div></div></div>
+</div>
+<div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
+<div class="flex items-center gap-2">
+<input type="checkbox" id="select-all-leaderboard" onchange="toggleSelectAll('leaderboard')" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600">
+<label class="text-sm text-gray-300">Select All</label>
+</div>
+<button onclick="bulkDelete('leaderboard')" class="btn btn-danger"><i class="fas fa-trash mr-2"></i> Delete Selected (<span id="selected-count-leaderboard">0</span>)</button>
+</div>
+<div id="top3-container" class="grid-3 mb-10"></div>
+<div id="rankings4to15Container" class="mb-10">
+<h3 class="text-2xl font-bold text-white mb-6">Rankings 4-15</h3>
+<div id="rankings4to15Grid" class="grid-3"></div>
+</div>
+<div class="bg-gray-800 rounded-lg p-4 mb-6 border border-gray-700">
+<button onclick="toggleRankings()" class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-between">
+<span id="rankingsToggleText">📊 Show Rankings 16+</span><span>▼</span>
+</button>
+<div id="rankingsContainer" class="hidden mt-4">
+<table class="rankings-table w-full bg-gray-900 rounded-lg overflow-hidden">
+<thead class="bg-gray-800"><tr><th class="p-3 text-left">Rank</th><th class="p-3 text-left">Company</th><th class="p-3 text-left">Score</th><th class="p-3 text-left">Actions</th></tr></thead>
+<tbody id="rankingsTbody"></tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
 
-<!-- Activate User Modal -->
+<div id="tab-freelancers" class="tab-content hidden">
+<div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-3xl font-bold text-white">🎯 Freelancers</h2>
+<button onclick="loadFreelancers()" class="btn btn-info"><i class="fas fa-sync-alt mr-2"></i> Refresh</button>
+</div>
+<div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
+<div class="flex items-center gap-2">
+<input type="checkbox" id="select-all-freelancers" onchange="toggleSelectAll('freelancers')" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600">
+<label class="text-sm text-gray-300">Select All</label>
+</div>
+<button onclick="bulkDelete('freelancers')" class="btn btn-danger"><i class="fas fa-trash mr-2"></i> Delete Selected (<span id="selected-count-freelancers">0</span>)</button>
+</div>
+<div id="freelancersGrid" class="grid-3"></div>
+</div>
+</div>
+
+<div id="tab-users" class="tab-content hidden">
+<div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-3xl font-bold text-white">👥 User Management</h2>
+<button onclick="loadUsers()" class="btn btn-info"><i class="fas fa-sync-alt mr-2"></i> Refresh</button>
+</div>
+<div class="grid-4 mb-8">
+<div class="stat-card"><div><div class="text-4xl mb-2">👥</div><div class="text-3xl font-bold" id="stat-total-users">0</div><div class="text-sm text-gray-200">Total Users</div></div></div>
+<div class="stat-card"><div><div class="text-4xl mb-2">✅</div><div class="text-3xl font-bold" id="stat-active-users">0</div><div class="text-sm text-gray-200">Active</div></div></div>
+<div class="stat-card"><div><div class="text-4xl mb-2">⏳</div><div class="text-3xl font-bold" id="stat-expiring-users">0</div><div class="text-sm text-gray-200">Expiring Soon</div></div></div>
+<div class="stat-card"><div><div class="text-4xl mb-2">❌</div><div class="text-3xl font-bold" id="stat-inactive-users">0</div><div class="text-sm text-gray-200">Inactive/Expired</div></div></div>
+</div>
+<div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
+<div class="flex items-center gap-2">
+<input type="checkbox" id="select-all-users" onchange="toggleSelectAll('users')" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-600">
+<label class="text-sm text-gray-300">Select All</label>
+</div>
+<button onclick="bulkActionUsers('activate')" class="btn btn-success"><i class="fas fa-check mr-2"></i> Activate (7 Days)</button>
+<button onclick="bulkActionUsers('deactivate')" class="btn btn-warning"><i class="fas fa-times mr-2"></i> Deactivate</button>
+<button onclick="openMessageModal('selected')" class="btn btn-info"><i class="fas fa-envelope mr-2"></i> Message Selected</button>
+<button onclick="bulkDelete('users')" class="btn btn-danger"><i class="fas fa-trash mr-2"></i> Delete (<span id="selected-count-users">0</span>)</button>
+</div>
+<div id="usersContainer" class="space-y-4"></div>
+</div>
+</div>
+
+<div id="tab-messages" class="tab-content hidden">
+<div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-3xl font-bold text-white">📧 Message History</h2>
+<button onclick="openMessageModal('all')" class="btn btn-primary"><i class="fas fa-paper-plane mr-2"></i> New Broadcast</button>
+</div>
+<div id="messagesContainer" class="space-y-4"></div>
+</div>
+</div>
+
+<div id="tab-pending" class="tab-content hidden">
+<div class="bg-gradient-to-br from-yellow-900 via-orange-900 to-yellow-800 rounded-2xl p-8 border-2 border-yellow-500">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-3xl font-bold text-white">⏳ Pending Approvals</h2>
+<button onclick="loadPendingData()" class="btn btn-warning"><i class="fas fa-sync-alt mr-2"></i> Refresh</button>
+</div>
+<div class="mb-8">
+<h3 class="text-xl font-bold mb-4 text-yellow-400">🏆 Pending Leaderboard Submissions</h3>
+<div id="pending-leaderboard-container" class="space-y-4"></div>
+</div>
+<div class="mb-8">
+<h3 class="text-xl font-bold mb-4 text-yellow-400">🎯 Pending Freelancer Applications</h3>
+<div id="pending-freelancers-container" class="space-y-4"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
 <div id="activateModal" class="modal">
-    <div class="modal-content">
-        <h2 class="text-2xl font-bold mb-4">Activate Users</h2>
-        <p class="mb-4 text-gray-600">How many days should these users remain active?</p>
-        <input type="number" id="activateDays" value="7" min="1" class="w-full p-3 border rounded mb-4 text-black">
-        <div class="flex gap-3">
-            <button onclick="confirmActivate()" class="btn btn-success flex-1">Confirm Activation</button>
-            <button onclick="closeModal('activateModal')" class="btn btn-danger flex-1">Cancel</button>
-        </div>
-    </div>
+<div class="modal-content">
+<h2 class="text-2xl font-bold mb-4">Activate Users</h2>
+<p class="mb-4 text-gray-600">How many days should these users remain active?</p>
+<input type="number" id="activateDays" value="7" min="1" class="w-full p-3 border rounded mb-4 text-black">
+<div class="flex gap-3">
+<button onclick="confirmActivate()" class="btn btn-success flex-1">Confirm Activation</button>
+<button onclick="closeModal('activateModal')" class="btn btn-danger flex-1">Cancel</button>
+</div>
+</div>
 </div>
 
-<!-- Message Modal -->
 <div id="messageModal" class="modal">
-    <div class="modal-content">
-        <h2 class="text-2xl font-bold mb-4">Send Message</h2>
-        <div class="space-y-4">
-            <div>
-                <label class="block text-sm font-bold mb-1">Subject</label>
-                <input type="text" id="msgSubject" class="w-full p-3 border rounded text-black" placeholder="Important Update">
-            </div>
-            <div>
-                <label class="block text-sm font-bold mb-1">Message</label>
-                <textarea id="msgBody" rows="6" class="w-full p-3 border rounded text-black" placeholder="Write your message here..."></textarea>
-            </div>
-            <div class="flex gap-3">
-                <button onclick="sendMessage()" class="btn btn-primary flex-1">Send</button>
-                <button onclick="closeModal('messageModal')" class="btn btn-danger flex-1">Cancel</button>
-            </div>
-        </div>
-    </div>
+<div class="modal-content">
+<h2 class="text-2xl font-bold mb-4">Send Message</h2>
+<div class="space-y-4">
+<div>
+<label class="block text-sm font-bold mb-1">Subject</label>
+<input type="text" id="msgSubject" class="w-full p-3 border rounded text-black" placeholder="Important Update">
+</div>
+<div>
+<label class="block text-sm font-bold mb-1">Message</label>
+<textarea id="msgBody" rows="6" class="w-full p-3 border rounded text-black" placeholder="Write your message here..."></textarea>
+</div>
+<div class="flex gap-3">
+<button onclick="sendMessage()" class="btn btn-primary flex-1">Send</button>
+<button onclick="closeModal('messageModal')" class="btn btn-danger flex-1">Cancel</button>
+</div>
+</div>
+</div>
 </div>
 
-<!-- Add/Edit Leaderboard Modal -->
 <div id="addLeaderboardModal" class="modal">
-    <div class="modal-content">
-        <h2 class="text-2xl font-bold mb-4" id="lbModalTitle">Add Entry</h2>
-        <input type="hidden" id="edit-lb-id">
-        <div>
-            <label class="block text-sm font-bold mb-1 text-gray-700">Company Name</label>
-            <input type="text" id="lb-company" class="w-full p-2 mb-2 border text-black">
-        </div>
-        <div>
-            <label class="block text-sm font-bold mb-1 text-gray-700">URL</label>
-            <input type="text" id="lb-url" class="w-full p-2 mb-2 border text-black">
-        </div>
-        <div>
-            <label class="block text-sm font-bold mb-1 text-gray-700">Score (0-100)</label>
-            <input type="number" id="lb-score" class="w-full p-2 mb-2 border text-black">
-        </div>
-        <div>
-            <label class="block text-sm font-bold mb-1 text-gray-700">Country Code</label>
-            <input type="text" id="lb-country" placeholder="e.g. BE, NL, US" class="w-full p-2 mb-2 border text-black">
-        </div>
-        <div class="flex gap-2 mb-4">
-            <a id="lb-visit-link" href="#" target="_blank" class="flex-1 btn btn-info text-center">
-                <i class="fas fa-external-link-alt mr-2"></i> Visit Website
-            </a>
-        </div>
-        <button onclick="saveLeaderboardEntry()" class="btn btn-success w-full">Save Changes</button>
-        <button onclick="closeModal('addLeaderboardModal')" class="btn btn-danger w-full mt-2">Cancel</button>
-    </div>
+<div class="modal-content">
+<h2 class="text-2xl font-bold mb-4" id="lbModalTitle">Add Entry</h2>
+<input type="hidden" id="edit-lb-id">
+<div>
+<label class="block text-sm font-bold mb-1 text-gray-700">Company Name</label>
+<input type="text" id="lb-company" class="w-full p-2 mb-2 border text-black">
+</div>
+<div>
+<label class="block text-sm font-bold mb-1 text-gray-700">URL</label>
+<input type="text" id="lb-url" class="w-full p-2 mb-2 border text-black">
+</div>
+<div>
+<label class="block text-sm font-bold mb-1 text-gray-700">Score (0-100)</label>
+<input type="number" id="lb-score" class="w-full p-2 mb-2 border text-black">
+</div>
+<div>
+<label class="block text-sm font-bold mb-1 text-gray-700">Country Code</label>
+<input type="text" id="lb-country" placeholder="e.g. BE, NL, US" class="w-full p-2 mb-2 border text-black">
+</div>
+<div class="flex gap-2 mb-4">
+<a id="lb-visit-link" href="#" target="_blank" class="flex-1 btn btn-info text-center">
+<i class="fas fa-external-link-alt mr-2"></i> Visit Website
+</a>
+</div>
+<button onclick="saveLeaderboardEntry()" class="btn btn-success w-full">Save Changes</button>
+<button onclick="closeModal('addLeaderboardModal')" class="btn btn-danger w-full mt-2">Cancel</button>
+</div>
 </div>
 
-<!-- Edit Freelancer Modal -->
 <div id="editFreelancerModal" class="modal">
-    <div class="modal-content">
-        <h2 class="text-2xl font-bold mb-4 text-gray-900">Edit Freelancer</h2>
-        <input type="hidden" id="edit-fr-id">
-        <div class="space-y-3">
-            <div>
-                <label class="block text-sm font-bold mb-1 text-gray-700">Full Name *</label>
-                <input type="text" id="fr-name" class="w-full p-2 border text-black">
-            </div>
-            <div>
-                <label class="block text-sm font-bold mb-1 text-gray-700">Email *</label>
-                <input type="email" id="fr-email" class="w-full p-2 border text-black">
-            </div>
-            <div>
-                <label class="block text-sm font-bold mb-1 text-gray-700">Phone (Optional)</label>
-                <input type="text" id="fr-phone" class="w-full p-2 border text-black">
-            </div>
-            <div>
-                <label class="block text-sm font-bold mb-1 text-gray-700">Professional Title</label>
-                <input type="text" id="fr-title" class="w-full p-2 border text-black">
-            </div>
-            <div>
-                <label class="block text-sm font-bold mb-1 text-gray-700">Bio (Max 200 chars)</label>
-                <textarea id="fr-bio" rows="3" maxlength="200" class="w-full p-2 border text-black"></textarea>
-                <div class="text-xs text-gray-500 text-right"><span id="fr-bio-count">0</span>/200</div>
-            </div>
-            <div class="flex items-center gap-2 mt-2">
-                <input type="checkbox" id="fr-featured" class="w-4 h-4 text-purple-600">
-                <label for="fr-featured" class="text-sm font-bold text-gray-700">⭐ Featured Listing</label>
-            </div>
-            <button onclick="saveFreelancerEntry()" class="btn btn-primary w-full mt-4">Save Changes</button>
-            <button onclick="closeModal('editFreelancerModal')" class="btn btn-danger w-full mt-2">Cancel</button>
-        </div>
-    </div>
+<div class="modal-content">
+<h2 class="text-2xl font-bold mb-4 text-gray-900">Edit Freelancer</h2>
+<input type="hidden" id="edit-fr-id">
+<div class="space-y-3">
+<div>
+<label class="block text-sm font-bold mb-1 text-gray-700">Full Name *</label>
+<input type="text" id="fr-name" class="w-full p-2 border text-black">
+</div>
+<div>
+<label class="block text-sm font-bold mb-1 text-gray-700">Email *</label>
+<input type="email" id="fr-email" class="w-full p-2 border text-black">
+</div>
+<div>
+<label class="block text-sm font-bold mb-1 text-gray-700">Phone (Optional)</label>
+<input type="text" id="fr-phone" class="w-full p-2 border text-black">
+</div>
+<div>
+<label class="block text-sm font-bold mb-1 text-gray-700">Professional Title</label>
+<input type="text" id="fr-title" class="w-full p-2 border text-black">
+</div>
+<div>
+<label class="block text-sm font-bold mb-1 text-gray-700">Bio (Max 200 chars)</label>
+<textarea id="fr-bio" rows="3" maxlength="200" class="w-full p-2 border text-black"></textarea>
+<div class="text-xs text-gray-500 text-right"><span id="fr-bio-count">0</span>/200</div>
+</div>
+<div class="flex items-center gap-2 mt-2">
+<input type="checkbox" id="fr-featured" class="w-4 h-4 text-purple-600">
+<label for="fr-featured" class="text-sm font-bold text-gray-700">⭐ Featured Listing</label>
+</div>
+<button onclick="saveFreelancerEntry()" class="btn btn-primary w-full mt-4">Save Changes</button>
+<button onclick="closeModal('editFreelancerModal')" class="btn btn-danger w-full mt-2">Cancel</button>
+</div>
+</div>
 </div>
 
 <script>
-// ==========================================
-// GLOBAL STATE
-// ==========================================
 let currentAdminId = localStorage.getItem('admin_id');
 let allUsers = [];
 let selectedIds = { leaderboard: new Set(), freelancers: new Set(), users: new Set() };
@@ -354,539 +330,489 @@ let messageTarget = null;
 window.allLeaderboard = [];
 window.allFreelancers = [];
 
-// ==========================================
-// AUTH
-// ==========================================
 window.onload = function() {
-    if (currentAdminId) {
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('main-dashboard').classList.remove('hidden');
-        loadAllData();
-    }
+if (currentAdminId) {
+document.getElementById('login-screen').classList.add('hidden');
+document.getElementById('main-dashboard').classList.remove('hidden');
+loadAllData();
+}
 };
 
 async function login() {
-    const username = document.getElementById('login-username').value;
-    const password = document.getElementById('login-password').value;
-    try {
-        const res = await fetch('/api/setup/verify-admin', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
-        });
-        const data = await res.json();
-        if (data.success) {
-            localStorage.setItem('admin_id', data.admin_id);
-            currentAdminId = data.admin_id;
-            location.reload();
-        } else {
-            alert('Login failed: ' + data.error);
-        }
-    } catch (e) { alert('Connection error'); }
+const username = document.getElementById('login-username').value;
+const password = document.getElementById('login-password').value;
+try {
+const res = await fetch('/api/setup/verify-admin', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ username, password })
+});
+const data = await res.json();
+if (data.success) {
+localStorage.setItem('admin_id', data.admin_id);
+currentAdminId = data.admin_id;
+location.reload();
+} else {
+alert('Login failed: ' + data.error);
+}
+} catch (e) { alert('Connection error'); }
 }
 
 function logout() {
-    localStorage.removeItem('admin_id');
-    location.reload();
+localStorage.removeItem('admin_id');
+location.reload();
 }
 
-// ==========================================
-// API HELPER
-// ==========================================
 async function apiCall(endpoint, method = 'GET', body = null) {
-    const headers = { 'Content-Type': 'application/json' };
-    if (endpoint.includes('/admin/')) headers['x-admin-key'] = currentAdminId;
-    const options = { method, headers };
-    if (body) options.body = JSON.stringify(body);
-    const res = await fetch(endpoint, options);
-    const data = await res.json();
-    if (!data.success) throw new Error(data.error);
-    return data;
+const headers = { 'Content-Type': 'application/json' };
+if (endpoint.includes('/admin/')) headers['x-admin-key'] = currentAdminId;
+const options = { method, headers };
+if (body) options.body = JSON.stringify(body);
+const res = await fetch(endpoint, options);
+const data = await res.json();
+if (!data.success) throw new Error(data.error);
+return data;
 }
 
-// ==========================================
-// TABS
-// ==========================================
 function switchTab(tab) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-    document.querySelectorAll('.mode-toggle').forEach(el => el.classList.remove('active'));
-    document.getElementById('tab-' + tab).classList.remove('hidden');
-    document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1) + 'Btn').classList.add('active');
-    
-    if (tab === 'leaderboard') loadLeaderboard();
-    if (tab === 'freelancers') loadFreelancers();
-    if (tab === 'users') loadUsers();
-    if (tab === 'messages') loadMessages();
-    if (tab === 'pending') loadPendingData();
+document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+document.querySelectorAll('.mode-toggle').forEach(el => el.classList.remove('active'));
+document.getElementById('tab-' + tab).classList.remove('hidden');
+document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1) + 'Btn').classList.add('active');
+if (tab === 'leaderboard') loadLeaderboard();
+if (tab === 'freelancers') loadFreelancers();
+if (tab === 'users') loadUsers();
+if (tab === 'messages') loadMessages();
+if (tab === 'pending') loadPendingData();
 }
 
 function loadAllData() {
-    loadLeaderboard();
-    loadFreelancers();
-    loadUsers();
+loadLeaderboard();
+loadFreelancers();
+loadUsers();
 }
 
-// ==========================================
-// USER MANAGEMENT (UPDATED FOR 7-DAY TRIAL)
-// ==========================================
 async function loadUsers() {
-    try {
-        const data = await apiCall('/api/admin/users');
-        allUsers = data.users || [];
-        
-        const total = allUsers.length;
-        const active = allUsers.filter(u => u.is_activated).length;
-        const inactive = total - active;
-        
-        // Calculate expiring soon (less than 7 days left)
-        const now = new Date();
-        const expiring = allUsers.filter(u => {
-            if (!u.activated_until || !u.is_activated) return false;
-            const expDate = new Date(u.activated_until);
-            const diffTime = expDate - now;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            return diffDays > 0 && diffDays <= 7;
-        }).length;
+try {
+const data = await apiCall('/api/admin/users');
+allUsers = data.users || [];
+const total = allUsers.length;
+const active = allUsers.filter(u => u.is_activated).length;
+const inactive = total - active;
+const now = new Date();
+const expiring = allUsers.filter(u => {
+if (!u.activated_until || !u.is_activated) return false;
+const expDate = new Date(u.activated_until);
+const diffTime = expDate - now;
+const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+return diffDays > 0 && diffDays <= 7;
+}).length;
 
-        document.getElementById('stat-total-users').textContent = total;
-        document.getElementById('stat-active-users').textContent = active;
-        document.getElementById('stat-expiring-users').textContent = expiring;
-        document.getElementById('stat-inactive-users').textContent = inactive;
+document.getElementById('stat-total-users').textContent = total;
+document.getElementById('stat-active-users').textContent = active;
+document.getElementById('stat-expiring-users').textContent = expiring;
+document.getElementById('stat-inactive-users').textContent = inactive;
 
-        const container = document.getElementById('usersContainer');
-        if (total === 0) {
-            container.innerHTML = '<p class="text-center text-gray-400">No users found.</p>';
-            return;
-        }
-
-        container.innerHTML = allUsers.map(u => {
-            const isSelected = selectedIds.users.has(u.id);
-            let statusBadge = '<span class="badge-inactive">Inactive</span>';
-            let daysLeftHtml = '';
-            
-            if (u.is_activated) {
-                if (u.activated_until) {
-                    const expDate = new Date(u.activated_until);
-                    const diffTime = expDate - new Date();
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    
-                    if (diffDays <= 0) {
-                        statusBadge = '<span class="badge-inactive">Expired</span>';
-                    } else if (diffDays <= 7) {
-                        statusBadge = '<span class="badge-expiring">Expiring Soon</span>';
-                        daysLeftHtml = `<div class="text-xs text-orange-400 font-bold">${diffDays} days left</div>`;
-                    } else {
-                        statusBadge = '<span class="badge-active">Active</span>';
-                        daysLeftHtml = `<div class="text-xs text-green-400">${diffDays} days left</div>`;
-                    }
-                } else {
-                    statusBadge = '<span class="badge-active">Active (Indefinite)</span>';
-                }
-            }
-
-            return `
-            <div class="user-card">
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleSelection('users', '${u.id}')">
-                    <div>
-                        <div class="font-bold">${u.ip_address || 'Unknown IP'}</div>
-                        <div class="text-xs text-gray-400">ID: ${u.id.substring(0,8)}... | Created: ${new Date(u.created_at).toLocaleDateString()}</div>
-                        ${daysLeftHtml}
-                        ${u.activated_until ? `<div class="text-xs text-gray-500">Expires: ${new Date(u.activated_until).toLocaleDateString()}</div>` : ''}
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    ${statusBadge}
-                    ${u.is_activated ? 
-                        `<button onclick="extendUserAccess('${u.id}')" class="text-blue-400 hover:text-blue-300 text-xs" title="Extend Access"><i class="fas fa-clock"></i> Extend</button>` : 
-                        `<button onclick="activateSingleUser('${u.id}')" class="text-green-400 hover:text-green-300 text-xs" title="Activate"><i class="fas fa-check"></i> Activate</button>`
-                    }
-                    <button onclick="openMessageModal('single', '${u.id}')" class="text-blue-400 hover:text-blue-300" title="Message"><i class="fas fa-envelope"></i></button>
-                </div>
-            </div>`;
-        }).join('');
-    } catch (e) { console.error(e); }
+const container = document.getElementById('usersContainer');
+if (total === 0) {
+container.innerHTML = '<p class="text-center text-gray-400">No users found.</p>';
+return;
+}
+container.innerHTML = allUsers.map(u => {
+const isSelected = selectedIds.users.has(u.id);
+let statusBadge = '<span class="badge-inactive">Inactive</span>';
+let daysLeftHtml = '';
+if (u.is_activated) {
+if (u.activated_until) {
+const expDate = new Date(u.activated_until);
+const diffTime = expDate - new Date();
+const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+if (diffDays <= 0) {
+statusBadge = '<span class="badge-inactive">Expired</span>';
+} else if (diffDays <= 7) {
+statusBadge = '<span class="badge-expiring">Expiring Soon</span>';
+daysLeftHtml = `<div class="text-xs text-orange-400 font-bold">${diffDays} days left</div>`;
+} else {
+statusBadge = '<span class="badge-active">Active</span>';
+daysLeftHtml = `<div class="text-xs text-green-400">${diffDays} days left</div>`;
+}
+} else {
+statusBadge = '<span class="badge-active">Active (Indefinite)</span>';
+}
+}
+return `
+<div class="user-card">
+<div class="flex items-center gap-3">
+<input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleSelection('users', '${u.id}')">
+<div>
+<div class="font-bold">${u.ip_address || 'Unknown IP'}</div>
+<div class="text-xs text-gray-400">ID: ${u.id.substring(0,8)}... | Created: ${new Date(u.created_at).toLocaleDateString()}</div>
+${daysLeftHtml}
+${u.activated_until ? `<div class="text-xs text-gray-500">Expires: ${new Date(u.activated_until).toLocaleDateString()}</div>` : ''}
+</div>
+</div>
+<div class="flex items-center gap-2">
+${statusBadge}
+${u.is_activated ?
+`<button onclick="extendUserAccess('${u.id}')" class="text-blue-400 hover:text-blue-300 text-xs" title="Extend Access"><i class="fas fa-clock"></i> Extend</button>` :
+`<button onclick="activateSingleUser('${u.id}')" class="text-green-400 hover:text-green-300 text-xs" title="Activate"><i class="fas fa-check"></i> Activate</button>`
+}
+<button onclick="openMessageModal('single', '${u.id}')" class="text-blue-400 hover:text-blue-300" title="Message"><i class="fas fa-envelope"></i></button>
+</div>
+</div>`;
+}).join('');
+} catch (e) { console.error(e); }
 }
 
-// Helper to activate a single user
 async function activateSingleUser(id) {
-    try {
-        await apiCall(`/api/admin/users/${id}/activate`, 'POST', { days: 7 });
-        alert('✅ User activated for 7 days');
-        loadUsers();
-    } catch (e) {
-        alert('❌ Error: ' + e.message);
-    }
+try {
+await apiCall(`/api/admin/users/${id}/activate`, 'POST', { days: 7 });
+alert('✅ User activated for 7 days');
+loadUsers();
+} catch (e) {
+alert('❌ Error: ' + e.message);
+}
 }
 
-// Helper to extend user access
 async function extendUserAccess(id) {
-    const days = prompt("How many days to add?", "7");
-    if (!days) return;
-    try {
-        await apiCall(`/api/admin/users/${id}/activate`, 'POST', { days: parseInt(days) });
-        alert(`✅ User access extended by ${days} days`);
-        loadUsers();
-    } catch (e) {
-        alert('❌ Error: ' + e.message);
-    }
+const days = prompt("How many days to add?", "7");
+if (!days) return;
+try {
+await apiCall(`/api/admin/users/${id}/activate`, 'POST', { days: parseInt(days) });
+alert(`✅ User access extended by ${days} days`);
+loadUsers();
+} catch (e) {
+alert('❌ Error: ' + e.message);
+}
 }
 
 function toggleSelection(type, id) {
-    if (selectedIds[type].has(id)) selectedIds[type].delete(id);
-    else selectedIds[type].add(id);
-    updateCounts();
+if (selectedIds[type].has(id)) selectedIds[type].delete(id);
+else selectedIds[type].add(id);
+updateCounts();
 }
 
 function toggleSelectAll(type) {
-    const checkbox = document.getElementById(`select-all-${type}`);
-    const list = type === 'leaderboard' ? window.allLeaderboard : type === 'freelancers' ? window.allFreelancers : allUsers;
-    if (checkbox.checked) {
-        list.forEach(item => selectedIds[type].add(item.id));
-    } else {
-        selectedIds[type].clear();
-    }
-    if (type === 'users') loadUsers(); 
-    updateCounts();
+const checkbox = document.getElementById(`select-all-${type}`);
+const list = type === 'leaderboard' ? window.allLeaderboard : type === 'freelancers' ? window.allFreelancers : allUsers;
+if (checkbox.checked) {
+list.forEach(item => selectedIds[type].add(item.id));
+} else {
+selectedIds[type].clear();
+}
+if (type === 'users') loadUsers();
+updateCounts();
 }
 
 function updateCounts() {
-    document.getElementById('selected-count-leaderboard').textContent = selectedIds.leaderboard.size;
-    document.getElementById('selected-count-freelancers').textContent = selectedIds.freelancers.size;
-    document.getElementById('selected-count-users').textContent = selectedIds.users.size;
+document.getElementById('selected-count-leaderboard').textContent = selectedIds.leaderboard.size;
+document.getElementById('selected-count-freelancers').textContent = selectedIds.freelancers.size;
+document.getElementById('selected-count-users').textContent = selectedIds.users.size;
 }
 
 function bulkActionUsers(action) {
-    if (selectedIds.users.size === 0) return alert('Select users first');
-    
-    if (action === 'activate') {
-        document.getElementById('activateModal').classList.add('active');
-        return;
-    }
-    
-    if (action === 'deactivate') {
-        if(!confirm('Deactivate selected users?')) return;
-        Promise.all(Array.from(selectedIds.users).map(id => apiCall(`/api/admin/users/${id}/deactivate`, 'POST')))
-            .then(() => { alert('Users deactivated'); loadUsers(); selectedIds.users.clear(); updateCounts(); })
-            .catch(e => alert(e.message));
-    }
+if (selectedIds.users.size === 0) return alert('Select users first');
+if (action === 'activate') {
+document.getElementById('activateModal').classList.add('active');
+return;
+}
+if (action === 'deactivate') {
+if(!confirm('Deactivate selected users?')) return;
+Promise.all(Array.from(selectedIds.users).map(id => apiCall(`/api/admin/users/${id}/deactivate`, 'POST')))
+.then(() => { alert('Users deactivated'); loadUsers(); selectedIds.users.clear(); updateCounts(); })
+.catch(e => alert(e.message));
+}
 }
 
 async function confirmActivate() {
-    const days = document.getElementById('activateDays').value;
-    closeModal('activateModal');
-    if(!confirm(`Activate ${selectedIds.users.size} users for ${days} days?`)) return;
-    
-    try {
-        await Promise.all(Array.from(selectedIds.users).map(id => 
-            apiCall(`/api/admin/users/${id}/activate`, 'POST', { days: parseInt(days) })
-        ));
-        alert('Users activated successfully!');
-        loadUsers();
-        selectedIds.users.clear();
-        updateCounts();
-    } catch (e) { alert(e.message); }
+const days = document.getElementById('activateDays').value;
+closeModal('activateModal');
+if(!confirm(`Activate ${selectedIds.users.size} users for ${days} days?`)) return;
+try {
+await Promise.all(Array.from(selectedIds.users).map(id =>
+apiCall(`/api/admin/users/${id}/activate`, 'POST', { days: parseInt(days) })
+));
+alert('Users activated successfully!');
+loadUsers();
+selectedIds.users.clear();
+updateCounts();
+} catch (e) { alert(e.message); }
 }
 
 async function bulkDelete(type) {
-    const ids = Array.from(selectedIds[type]);
-    if (ids.length === 0) return alert('Select items first');
-    if (!confirm(`Delete ${ids.length} items permanently?`)) return;
-
-    let endpoint = '';
-    if (type === 'leaderboard') endpoint = '/api/admin/leaderboard/bulk-delete';
-    if (type === 'freelancers') endpoint = '/api/admin/freelancers/bulk-delete';
-    if (type === 'users') endpoint = '/api/admin/users/bulk-delete';
-
-    try {
-        await apiCall(endpoint, 'POST', { ids });
-        alert('Deleted successfully');
-        selectedIds[type].clear();
-        updateCounts();
-        loadAllData();
-    } catch (e) { alert(e.message); }
+const ids = Array.from(selectedIds[type]);
+if (ids.length === 0) return alert('Select items first');
+if (!confirm(`Delete ${ids.length} items permanently?`)) return;
+let endpoint = '';
+if (type === 'leaderboard') endpoint = '/api/admin/leaderboard/bulk-delete';
+if (type === 'freelancers') endpoint = '/api/admin/freelancers/bulk-delete';
+if (type === 'users') endpoint = '/api/admin/users/bulk-delete';
+try {
+await apiCall(endpoint, 'POST', { ids });
+alert('Deleted successfully');
+selectedIds[type].clear();
+updateCounts();
+loadAllData();
+} catch (e) { alert(e.message); }
 }
 
-// ==========================================
-// MESSAGING
-// ==========================================
 function openMessageModal(targetType, userId = null) {
-    messageTarget = targetType;
-    if (targetType === 'single') messageTarget = userId;
-    document.getElementById('messageModal').classList.add('active');
+messageTarget = targetType;
+if (targetType === 'single') messageTarget = userId;
+document.getElementById('messageModal').classList.add('active');
 }
 
 async function sendMessage() {
-    const subject = document.getElementById('msgSubject').value;
-    const body = document.getElementById('msgBody').value;
-    if (!subject || !body) return alert('Fill all fields');
-
-    try {
-        let payload = { subject, body };
-        
-        if (messageTarget === 'all') {
-            payload.recipients = 'all';
-        } else if (messageTarget === 'selected') {
-            payload.recipients = 'selected';
-            payload.user_ids = Array.from(selectedIds.users);
-        } else {
-            // Single user
-            payload.recipientUserId = messageTarget;
-        }
-
-        await apiCall('/api/admin/messages/send', 'POST', payload);
-        alert('Message sent!');
-        closeModal('messageModal');
-        loadMessages();
-    } catch (e) { alert(e.message); }
+const subject = document.getElementById('msgSubject').value;
+const body = document.getElementById('msgBody').value;
+if (!subject || !body) return alert('Fill all fields');
+try {
+let payload = { subject, body };
+if (messageTarget === 'all') {
+payload.recipients = 'all';
+} else if (messageTarget === 'selected') {
+payload.recipients = 'selected';
+payload.user_ids = Array.from(selectedIds.users);
+} else {
+payload.recipientUserId = messageTarget;
+}
+await apiCall('/api/admin/messages/send', 'POST', payload);
+alert('Message sent!');
+closeModal('messageModal');
+loadMessages();
+} catch (e) { alert(e.message); }
 }
 
 async function loadMessages() {
-    try {
-        const data = await apiCall('/api/admin/messages');
-        const container = document.getElementById('messagesContainer');
-        if (!data.messages || data.messages.length === 0) {
-            container.innerHTML = '<p class="text-center text-gray-400">No messages yet.</p>';
-            return;
-        }
-        container.innerHTML = data.messages.map(m => `
-            <div class="message-bubble ${m.sender_type === 'admin' ? 'admin' : 'user'}">
-                <div class="flex justify-between text-xs text-gray-400 mb-1">
-                    <span>${m.sender_type === 'admin' ? 'You' : 'User'} • ${new Date(m.created_at).toLocaleString()}</span>
-                    <span class="font-bold">${m.subject || 'No Subject'}</span>
-                </div>
-                <p class="text-sm">${m.body}</p>
-            </div>
-        `).join('');
-    } catch (e) { console.error(e); }
+try {
+const data = await apiCall('/api/admin/messages');
+const container = document.getElementById('messagesContainer');
+if (!data.messages || data.messages.length === 0) {
+container.innerHTML = '<p class="text-center text-gray-400">No messages yet.</p>';
+return;
+}
+container.innerHTML = data.messages.map(m => `
+<div class="message-bubble ${m.sender_type === 'admin' ? 'admin' : 'user'}">
+<div class="flex justify-between text-xs text-gray-400 mb-1">
+<span>${m.sender_type === 'admin' ? 'You' : 'User'} • ${new Date(m.created_at).toLocaleString()}</span>
+<span class="font-bold">${m.subject || 'No Subject'}</span>
+</div>
+<p class="text-sm">${m.body}</p>
+</div>
+`).join('');
+} catch (e) { console.error(e); }
 }
 
-// ==========================================
-// LEADERBOARD LOGIC
-// ==========================================
 async function loadLeaderboard() {
-    const data = await apiCall('/api/leaderboard');
-    window.allLeaderboard = data.entries || [];
-    document.getElementById('stat-total-agencies').textContent = data.stats.totalAgencies;
-    document.getElementById('stat-avg-score').textContent = data.averageScore;
-    document.getElementById('stat-verified').textContent = data.stats.verifiedCount;
-    
-    // Render Top 3
-    const top3 = window.allLeaderboard.slice(0, 3);
-    document.getElementById('top3-container').innerHTML = top3.map((e, i) => `
-        <div class="top-card ${i===0?'gold':i===1?'silver':'bronze'}">
-            <div class="text-5xl mb-2">${i===0?'🥇':i===1?'🥈':'🥉'}</div>
-            <h3 class="text-xl font-bold mb-2">${e.company_name || extractDomain(e.url)}</h3>
-            <div class="text-4xl font-black mb-2">${e.score}/100</div>
-            <div class="text-white/80 mb-3">${getFlag(e.country)} ${e.country}</div>
-            <button onclick="editLeaderboard(${e.id})" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg mb-2">
-                <i class="fas fa-edit mr-2"></i> Edit
-            </button>
-            <button onclick="deleteItem('leaderboard', ${e.id})" class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">
-                <i class="fas fa-trash mr-2"></i> Delete
-            </button>
-        </div>
-    `).join('');
-
-    // Render 4-15
-    const grid = document.getElementById('rankings4to15Grid');
-    const rankings = window.allLeaderboard.slice(3, 15);
-    grid.innerHTML = rankings.map((e, i) => `
-        <div class="rank-card">
-            <div class="text-2xl font-bold text-gray-400 mb-2">#${i+4}</div>
-            <h4 class="font-bold text-white text-sm mb-2 truncate">${e.company_name || extractDomain(e.url)}</h4>
-            <div class="text-2xl font-black text-green-400 mb-2">${e.score}</div>
-            <div class="text-xs text-gray-400 mb-2">${getFlag(e.country)} ${e.country}</div>
-            <div class="flex gap-2 justify-center">
-                <button onclick="editLeaderboard(${e.id})" class="text-blue-400 hover:text-blue-300 text-xs"><i class="fas fa-edit"></i> Edit</button>
-                <button onclick="deleteItem('leaderboard', ${e.id})" class="text-red-400 hover:text-red-300 text-xs"><i class="fas fa-trash"></i> Del</button>
-            </div>
-        </div>
-    `).join('');
-
-    // Render Table 16+
-    const tbody = document.getElementById('rankingsTbody');
-    const tableRows = window.allLeaderboard.slice(15, 35);
-    tbody.innerHTML = tableRows.map((e, i) => `
-        <tr>
-            <td class="w-10"><input type="checkbox" class="lb-checkbox" data-id="${e.id}" onchange="toggleSelection('leaderboard', ${e.id})"></td>
-            <td>${i+16}</td>
-            <td>${e.company_name || extractDomain(e.url)}</td>
-            <td><span class="text-lg font-bold ${e.score >= 85 ? 'text-green-400' : 'text-yellow-400'}">${e.score}</span></td>
-            <td>
-                <button onclick="editLeaderboard(${e.id})" class="text-blue-400 hover:text-blue-300 mr-2"><i class="fas fa-edit"></i></button>
-                <button onclick="deleteItem('leaderboard', ${e.id})" class="text-red-400 hover:text-red-300"><i class="fas fa-trash"></i></button>
-            </td>
-        </tr>
-    `).join('');
-    document.getElementById('totalCount').textContent = window.allLeaderboard.length;
+const data = await apiCall('/api/leaderboard');
+window.allLeaderboard = data.entries || [];
+document.getElementById('stat-total-agencies').textContent = data.stats.totalAgencies;
+document.getElementById('stat-avg-score').textContent = data.averageScore;
+document.getElementById('stat-verified').textContent = data.stats.verifiedCount;
+const top3 = window.allLeaderboard.slice(0, 3);
+document.getElementById('top3-container').innerHTML = top3.map((e, i) => `
+<div class="top-card ${i===0?'gold':i===1?'silver':'bronze'}">
+<div class="text-5xl mb-2">${i===0?'🥇':i===1?'🥈':'🥉'}</div>
+<h3 class="text-xl font-bold mb-2">${e.company_name || extractDomain(e.url)}</h3>
+<div class="text-4xl font-black mb-2">${e.score}/100</div>
+<div class="text-white/80 mb-3">${getFlag(e.country)} ${e.country}</div>
+<button onclick="editLeaderboard(${e.id})" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg mb-2">
+<i class="fas fa-edit mr-2"></i> Edit
+</button>
+<button onclick="deleteItem('leaderboard', ${e.id})" class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">
+<i class="fas fa-trash mr-2"></i> Delete
+</button>
+</div>
+`).join('');
+const grid = document.getElementById('rankings4to15Grid');
+const rankings = window.allLeaderboard.slice(3, 15);
+grid.innerHTML = rankings.map((e, i) => `
+<div class="rank-card">
+<div class="text-2xl font-bold text-gray-400 mb-2">#${i+4}</div>
+<h4 class="font-bold text-white text-sm mb-2 truncate">${e.company_name || extractDomain(e.url)}</h4>
+<div class="text-2xl font-black text-green-400 mb-2">${e.score}</div>
+<div class="text-xs text-gray-400 mb-2">${getFlag(e.country)} ${e.country}</div>
+<div class="flex gap-2 justify-center">
+<button onclick="editLeaderboard(${e.id})" class="text-blue-400 hover:text-blue-300 text-xs"><i class="fas fa-edit"></i> Edit</button>
+<button onclick="deleteItem('leaderboard', ${e.id})" class="text-red-400 hover:text-red-300 text-xs"><i class="fas fa-trash"></i> Del</button>
+</div>
+</div>
+`).join('');
+const tbody = document.getElementById('rankingsTbody');
+const tableRows = window.allLeaderboard.slice(15, 35);
+tbody.innerHTML = tableRows.map((e, i) => `
+<tr>
+<td class="w-10"><input type="checkbox" class="lb-checkbox" data-id="${e.id}" onchange="toggleSelection('leaderboard', ${e.id})"></td>
+<td>${i+16}</td>
+<td>${e.company_name || extractDomain(e.url)}</td>
+<td><span class="text-lg font-bold ${e.score >= 85 ? 'text-green-400' : 'text-yellow-400'}">${e.score}</span></td>
+<td>
+<button onclick="editLeaderboard(${e.id})" class="text-blue-400 hover:text-blue-300 mr-2"><i class="fas fa-edit"></i></button>
+<button onclick="deleteItem('leaderboard', ${e.id})" class="text-red-400 hover:text-red-300"><i class="fas fa-trash"></i></button>
+</td>
+</tr>
+`).join('');
+document.getElementById('totalCount').textContent = window.allLeaderboard.length;
 }
 
 function editLeaderboard(id) {
-    const entry = window.allLeaderboard.find(e => e.id === id);
-    if (!entry) return;
-    document.getElementById('lbModalTitle').textContent = 'Edit Leaderboard Entry';
-    document.getElementById('edit-lb-id').value = entry.id;
-    document.getElementById('lb-company').value = entry.company_name || '';
-    document.getElementById('lb-url').value = entry.url;
-    document.getElementById('lb-score').value = entry.score;
-    document.getElementById('lb-country').value = entry.country || '';
-    const visitLink = document.getElementById('lb-visit-link');
-    visitLink.href = entry.url;
-    visitLink.style.display = 'inline-block';
-    document.getElementById('addLeaderboardModal').classList.add('active');
+const entry = window.allLeaderboard.find(e => e.id === id);
+if (!entry) return;
+document.getElementById('lbModalTitle').textContent = 'Edit Leaderboard Entry';
+document.getElementById('edit-lb-id').value = entry.id;
+document.getElementById('lb-company').value = entry.company_name || '';
+document.getElementById('lb-url').value = entry.url;
+document.getElementById('lb-score').value = entry.score;
+document.getElementById('lb-country').value = entry.country || '';
+const visitLink = document.getElementById('lb-visit-link');
+visitLink.href = entry.url;
+visitLink.style.display = 'inline-block';
+document.getElementById('addLeaderboardModal').classList.add('active');
 }
 
 function showAddLeaderboardModal() {
-    document.getElementById('lbModalTitle').textContent = 'Add New Entry';
-    document.getElementById('edit-lb-id').value = '';
-    document.getElementById('lb-company').value = '';
-    document.getElementById('lb-url').value = '';
-    document.getElementById('lb-score').value = '';
-    document.getElementById('lb-country').value = '';
-    document.getElementById('lb-visit-link').style.display = 'none';
-    document.getElementById('addLeaderboardModal').classList.add('active');
+document.getElementById('lbModalTitle').textContent = 'Add New Entry';
+document.getElementById('edit-lb-id').value = '';
+document.getElementById('lb-company').value = '';
+document.getElementById('lb-url').value = '';
+document.getElementById('lb-score').value = '';
+document.getElementById('lb-country').value = '';
+document.getElementById('lb-visit-link').style.display = 'none';
+document.getElementById('addLeaderboardModal').classList.add('active');
 }
 
 async function saveLeaderboardEntry() {
-    const id = document.getElementById('edit-lb-id').value;
-    const company = document.getElementById('lb-company').value;
-    const url = document.getElementById('lb-url').value;
-    const score = parseInt(document.getElementById('lb-score').value);
-    const country = document.getElementById('lb-country').value;
-    if (!company || !url || !score) return alert('Company, URL and Score are required');
-    try {
-        if (id) {
-            await apiCall(`/api/admin/leaderboard/${id}`, 'PUT', { company_name: company, url, score, country });
-            alert('Entry updated!');
-        } else {
-            await apiCall('/api/admin/leaderboard/manual-add', 'POST', { company_name: company, url, score, country });
-            alert('Entry added!');
-        }
-        closeModal('addLeaderboardModal');
-        loadLeaderboard();
-    } catch (e) { alert('Error: ' + e.message); }
+const id = document.getElementById('edit-lb-id').value;
+const company = document.getElementById('lb-company').value;
+const url = document.getElementById('lb-url').value;
+const score = parseInt(document.getElementById('lb-score').value);
+const country = document.getElementById('lb-country').value;
+if (!company || !url || !score) return alert('Company, URL and Score are required');
+try {
+if (id) {
+await apiCall(`/api/admin/leaderboard/${id}`, 'PUT', { company_name: company, url, score, country });
+alert('Entry updated!');
+} else {
+await apiCall('/api/admin/leaderboard/manual-add', 'POST', { company_name: company, url, score, country });
+alert('Entry added!');
+}
+closeModal('addLeaderboardModal');
+loadLeaderboard();
+} catch (e) { alert('Error: ' + e.message); }
 }
 
-// ==========================================
-// FREELANCERS LOGIC
-// ==========================================
 async function loadFreelancers() {
-    const data = await apiCall('/api/freelancers');
-    window.allFreelancers = data.freelancers || [];
-    const grid = document.getElementById('freelancersGrid');
-    grid.innerHTML = window.allFreelancers.map(f => `
-        <div class="card">
-            <div class="flex justify-between items-start mb-2">
-                <h3 class="font-bold text-lg">${f.name}</h3>
-                ${f.is_featured ? '<span class="text-yellow-400 text-xs">⭐ Featured</span>' : ''}
-            </div>
-            <p class="text-sm text-gray-400 mb-4">${f.title || 'Specialist'}</p>
-            <div class="flex gap-2 mb-2">
-                <button onclick="editFreelancer(${f.id})" class="flex-1 btn btn-info text-xs">
-                    <i class="fas fa-edit mr-1"></i> Edit
-                </button>
-                <button onclick="deleteItem('freelancers', ${f.id})" class="flex-1 btn btn-danger text-xs">
-                    <i class="fas fa-trash mr-1"></i> Del
-                </button>
-            </div>
-            <div class="checkbox-wrapper mt-2">
-                <input type="checkbox" onchange="toggleSelection('freelancers', ${f.id})">
-                <span class="text-xs text-gray-400">Select</span>
-            </div>
-        </div>
-    `).join('');
-    updateCounts();
+const data = await apiCall('/api/freelancers');
+window.allFreelancers = data.freelancers || [];
+const grid = document.getElementById('freelancersGrid');
+grid.innerHTML = window.allFreelancers.map(f => `
+<div class="card">
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-bold text-lg">${f.name}</h3>
+${f.is_featured ? '<span class="text-yellow-400 text-xs">⭐ Featured</span>' : ''}
+</div>
+<p class="text-sm text-gray-400 mb-4">${f.title || 'Specialist'}</p>
+<div class="flex gap-2 mb-2">
+<button onclick="editFreelancer(${f.id})" class="flex-1 btn btn-info text-xs">
+<i class="fas fa-edit mr-1"></i> Edit
+</button>
+<button onclick="deleteItem('freelancers', ${f.id})" class="flex-1 btn btn-danger text-xs">
+<i class="fas fa-trash mr-1"></i> Del
+</button>
+</div>
+<div class="checkbox-wrapper mt-2">
+<input type="checkbox" onchange="toggleSelection('freelancers', ${f.id})">
+<span class="text-xs text-gray-400">Select</span>
+</div>
+</div>
+`).join('');
+updateCounts();
 }
 
 function editFreelancer(id) {
-    const f = window.allFreelancers.find(x => x.id === id);
-    if (!f) return;
-    document.getElementById('edit-fr-id').value = f.id;
-    document.getElementById('fr-name').value = f.name;
-    document.getElementById('fr-email').value = f.email;
-    document.getElementById('fr-phone').value = f.phone || '';
-    document.getElementById('fr-title').value = f.title || '';
-    document.getElementById('fr-bio').value = f.bio || '';
-    document.getElementById('fr-bio-count').textContent = (f.bio || '').length;
-    document.getElementById('fr-featured').checked = f.is_featured || false;
-    document.getElementById('editFreelancerModal').classList.add('active');
+const f = window.allFreelancers.find(x => x.id === id);
+if (!f) return;
+document.getElementById('edit-fr-id').value = f.id;
+document.getElementById('fr-name').value = f.name;
+document.getElementById('fr-email').value = f.email;
+document.getElementById('fr-phone').value = f.phone || '';
+document.getElementById('fr-title').value = f.title || '';
+document.getElementById('fr-bio').value = f.bio || '';
+document.getElementById('fr-bio-count').textContent = (f.bio || '').length;
+document.getElementById('fr-featured').checked = f.is_featured || false;
+document.getElementById('editFreelancerModal').classList.add('active');
 }
 
 async function saveFreelancerEntry() {
-    const id = document.getElementById('edit-fr-id').value;
-    const name = document.getElementById('fr-name').value;
-    const email = document.getElementById('fr-email').value;
-    const phone = document.getElementById('fr-phone').value;
-    const title = document.getElementById('fr-title').value;
-    const bio = document.getElementById('fr-bio').value;
-    const isFeatured = document.getElementById('fr-featured').checked;
-    if (!name || !email) return alert('Name and Email are required');
-    try {
-        await apiCall(`/api/admin/freelancers/${id}`, 'PUT', { name, email, phone, title, bio, is_featured: isFeatured });
-        alert('Freelancer updated!');
-        closeModal('editFreelancerModal');
-        loadFreelancers();
-    } catch (e) { alert('Error: ' + e.message); }
+const id = document.getElementById('edit-fr-id').value;
+const name = document.getElementById('fr-name').value;
+const email = document.getElementById('fr-email').value;
+const phone = document.getElementById('fr-phone').value;
+const title = document.getElementById('fr-title').value;
+const bio = document.getElementById('fr-bio').value;
+const isFeatured = document.getElementById('fr-featured').checked;
+if (!name || !email) return alert('Name and Email are required');
+try {
+await apiCall(`/api/admin/freelancers/${id}`, 'PUT', { name, email, phone, title, bio, is_featured: isFeatured });
+alert('Freelancer updated!');
+closeModal('editFreelancerModal');
+loadFreelancers();
+} catch (e) { alert('Error: ' + e.message); }
 }
 
-// ==========================================
-// HELPERS & PENDING
-// ==========================================
 function deleteItem(type, id) {
-    if (!confirm('Delete this item permanently?')) return;
-    const endpoint = type === 'leaderboard' ? `/api/admin/leaderboard/${id}` : `/api/admin/freelancers/${id}`;
-    apiCall(endpoint, 'DELETE')
-        .then(() => { alert('Deleted'); loadAllData(); })
-        .catch(e => alert(e.message));
+if (!confirm('Delete this item permanently?')) return;
+const endpoint = type === 'leaderboard' ? `/api/admin/leaderboard/${id}` : `/api/admin/freelancers/${id}`;
+apiCall(endpoint, 'DELETE')
+.then(() => { alert('Deleted'); loadAllData(); })
+.catch(e => alert(e.message));
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
 function toggleRankings() {
-    const el = document.getElementById('rankingsContainer');
-    el.classList.toggle('hidden');
+const el = document.getElementById('rankingsContainer');
+el.classList.toggle('hidden');
 }
 
 async function loadPendingData() {
-    try {
-        const lbData = await apiCall('/api/admin/leaderboard/pending');
-        const frData = await apiCall('/api/admin/freelancers/pending');
-        
-        const lbContainer = document.getElementById('pending-leaderboard-container');
-        lbContainer.innerHTML = lbData.pending.length ? lbData.pending.map(p => `
-            <div class="pending-card">
-                <h4 class="font-bold">${p.company_name || extractDomain(p.url)}</h4>
-                <p class="text-sm text-blue-400">${p.url}</p>
-                <p class="text-xl font-bold text-green-400 my-2">${p.score}/100</p>
-                <div class="flex gap-2">
-                    <button onclick="apiCall('/api/admin/leaderboard/${p.id}/approve', 'POST').then(()=>{alert('Approved');loadPendingData();loadLeaderboard();})" class="flex-1 btn btn-success">Approve</button>
-                    <button onclick="apiCall('/api/admin/leaderboard/${p.id}/reject', 'POST').then(()=>{alert('Rejected');loadPendingData();})" class="flex-1 btn btn-danger">Reject</button>
-                </div>
-            </div>
-        `).join('') : '<p class="text-gray-400">No pending submissions</p>';
-
-        const frContainer = document.getElementById('pending-freelancers-container');
-        frContainer.innerHTML = frData.pending.length ? frData.pending.map(p => `
-            <div class="pending-card">
-                <h4 class="font-bold">${p.name}</h4>
-                <p class="text-sm text-gray-400">${p.email}</p>
-                <p class="text-sm mb-2">${p.bio || 'No bio'}</p>
-                <div class="flex gap-2">
-                    <button onclick="apiCall('/api/admin/freelancers/${p.id}/approve', 'POST').then(()=>{alert('Approved');loadPendingData();loadFreelancers();})" class="flex-1 btn btn-success">Approve</button>
-                    <button onclick="apiCall('/api/admin/freelancers/${p.id}', 'DELETE').then(()=>{alert('Rejected');loadPendingData();})" class="flex-1 btn btn-danger">Reject</button>
-                </div>
-            </div>
-        `).join('') : '<p class="text-gray-400">No pending applications</p>';
-    } catch (e) { console.error(e); }
+try {
+const lbData = await apiCall('/api/admin/leaderboard/pending');
+const frData = await apiCall('/api/admin/freelancers/pending');
+const lbContainer = document.getElementById('pending-leaderboard-container');
+lbContainer.innerHTML = lbData.pending.length ? lbData.pending.map(p => `
+<div class="pending-card">
+<h4 class="font-bold">${p.company_name || extractDomain(p.url)}</h4>
+<p class="text-sm text-blue-400">${p.url}</p>
+<p class="text-xl font-bold text-green-400 my-2">${p.score}/100</p>
+<div class="flex gap-2">
+<button onclick="apiCall('/api/admin/leaderboard/${p.id}/approve', 'POST').then(()=>{alert('Approved');loadPendingData();loadLeaderboard();})" class="flex-1 btn btn-success">Approve</button>
+<button onclick="apiCall('/api/admin/leaderboard/${p.id}/reject', 'POST').then(()=>{alert('Rejected');loadPendingData();})" class="flex-1 btn btn-danger">Reject</button>
+</div>
+</div>
+`).join('') : '<p class="text-gray-400">No pending submissions</p>';
+const frContainer = document.getElementById('pending-freelancers-container');
+frContainer.innerHTML = frData.pending.length ? frData.pending.map(p => `
+<div class="pending-card">
+<h4 class="font-bold">${p.name}</h4>
+<p class="text-sm text-gray-400">${p.email}</p>
+<p class="text-sm mb-2">${p.bio || 'No bio'}</p>
+<div class="flex gap-2">
+<button onclick="apiCall('/api/admin/freelancers/${p.id}/approve', 'POST').then(()=>{alert('Approved');loadPendingData();loadFreelancers();})" class="flex-1 btn btn-success">Approve</button>
+<button onclick="apiCall('/api/admin/freelancers/${p.id}', 'DELETE').then(()=>{alert('Rejected');loadPendingData();})" class="flex-1 btn btn-danger">Reject</button>
+</div>
+</div>
+`).join('') : '<p class="text-gray-400">No pending applications</p>';
+} catch (e) { console.error(e); }
 }
 
 function extractDomain(url) {
-    try { return new URL(url).hostname.replace('www.', ''); } catch { return 'Unknown'; }
+try { return new URL(url).hostname.replace('www.', ''); } catch { return 'Unknown'; }
 }
+
 function getFlag(code) {
-    const flags = { 'NL': '🇳🇱', 'BE': '🇧🇪', 'US': '🇺🇸', 'UK': '🇬🇧', 'DE': '🇩🇪' };
-    return flags[code] || '🌐';
+const flags = { 'NL': '🇳🇱', 'BE': '🇧🇪', 'US': '🇺🇸', 'UK': '🇬🇧', 'DE': '🇩🇪' };
+return flags[code] || '🌐';
 }
 </script>
 </body>
