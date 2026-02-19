@@ -1,782 +1,1223 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ContentScale Blog - AI SEO & Content Optimization Tips</title>
-  <meta name="description" content="Learn how to optimize your content for AI-era SEO. Case studies, guides, and tips from ContentScale experts. GRAAF Framework, CRAFT methodology, and more.">
-  <meta name="keywords" content="SEO blog, content optimization, AI SEO, GRAAF framework, content marketing, SEO case studies">
-  <link rel="canonical" href="https://app.contentscale.site/blog/">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    .nav-bar { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-bottom: 2px solid #374151; position: sticky; top: 0; z-index: 1000; }
-    .nav-link { color: #9ca3af; padding: 12px 20px; font-weight: 600; transition: all 0.3s; border-bottom: 3px solid transparent; cursor: pointer; text-decoration: none; }
-    .nav-link:hover { color: white; border-bottom-color: #8b5cf6; }
-    .nav-link.active { color: white; border-bottom-color: #8b5cf6; }
-    
-    .blog-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid #334155; border-radius: 16px; padding: 24px; transition: all 0.3s; cursor: pointer; }
-    .blog-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(139, 92, 246, 0.3); border-color: #8b5cf6; }
-    .blog-card.featured { border-color: #f59e0b; background: linear-gradient(135deg, #1e293b 0%, #2d1f08 100%); }
-    .blog-card.featured::before { content: '⭐ FEATURED'; position: absolute; top: -12px; right: 24px; background: linear-gradient(135deg, #f59e0b 0%, #eab308 100%); color: #1e293b; padding: 6px 16px; border-radius: 20px; font-size: 11px; font-weight: 800; }
-    
-    .category-badge { display: inline-block; padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; margin-right: 8px; }
-    .cat-guide { background: #8b5cf6; color: white; }
-    .cat-case-study { background: #10b981; color: white; }
-    .cat-tips { background: #3b82f6; color: white; }
-    .cat-news { background: #f59e0b; color: white; }
-    .cat-agency { background: #ec4899; color: white; }
-    
-    .search-box { background: #1f2937; border: 2px solid #374151; border-radius: 12px; padding: 12px 20px; color: white; width: 100%; }
-    .search-box:focus { outline: none; border-color: #8b5cf6; }
-    
-    .filter-btn { background: #374151; color: #9ca3af; padding: 8px 16px; border-radius: 8px; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; font-size: 14px; font-weight: 600; margin: 4px; }
-    .filter-btn:hover { background: #4b5563; color: white; }
-    .filter-btn.active { background: #8b5cf6; color: white; border-color: #a78bfa; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ContentScale - Elite SEO Content Quality Scanner 2026 - 100/100</title>
+<meta name="description" content="Scan je content op 100/100 met ons Elite GRAAF Framework. Detecteert AI Overview ready content, E-E-A-T signals, en meer.">
+<link rel="preconnect" href="https://cdn.tailwindcss.com">
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
+<link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
+<link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+<style>
+body { visibility: visible; opacity: 1; }
+#loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #030712; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: hideLoader 0s 2s forwards; } @keyframes hideLoader { to { display: none; visibility: hidden; opacity: 0; pointer-events: none; } }
+.spinner { width: 50px; height: 50px; border: 5px solid #374151; border-top: 5px solid #a855f7; border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'; this.onload=null;">
+<noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background: #030712; color: white; line-height: 1.6; }
+h1, h2, h3, h4, h5, h6, p, a, span, div, button, input, textarea, select, label, li { color: white !important; }
+input, textarea, select { color: #000000 !important; background-color: #ffffff !important; border: 1px solid #d1d5db !important; }
+input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 1 !important; }
+.template-editor textarea { color: #f3f4f6 !important; background-color: #1f2937 !important; border: 1px solid #4b5563 !important; }
+.template-editor input[type="text"] { color: #f3f4f6 !important; background-color: #1f2937 !important; border: 1px solid #4b5563 !important; }
+.template-editor input[type="text"]::placeholder { color: #6b7280 !important; }
+.template-editor label { color: #d1d5db !important; }
+.text-gray-300, .text-gray-400, .text-gray-500 { color: #d1d5db !important; }
+.btn-white-black { background: white !important; color: #581c87 !important; font-weight: 700; border: 2px solid white; }
+.btn-white-black:hover { background: #f3f4f6 !important; color: #6b21a8 !important; }
+.bg-gray-900 { background-color: #030712; }
+.bg-gray-800 { background-color: #111827; }
+.bg-gray-700 { background-color: #1f2937; }
+.bg-gray-900\/95 { background-color: rgba(3, 7, 18, 0.95); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; transition: all 0.2s; border: none; cursor: pointer; }
+.btn-primary { background: linear-gradient(135deg, #7e22ce, #be185d); color: white; }
+.btn-primary:hover { background: linear-gradient(135deg, #6b21a8, #9d174d); transform: translateY(-2px); box-shadow: 0 10px 20px -5px rgba(126, 34, 206, 0.5); }
+.btn-secondary { background: linear-gradient(135deg, #1e40af, #0891b2); color: white; }
+.btn-success { background: #0f7b3a !important; color: white !important; }
+.btn-disabled { background: #6b7280 !important; color: white !important; cursor: not-allowed; opacity: 0.6; }
+.mode-toggle { position: relative; padding: 1rem 2rem; border-radius: 0.75rem; font-weight: 600; font-size: 1.1rem; background: #374151; color: white; border: 2px solid transparent; transition: all 0.2s; cursor: pointer; flex: 1; max-width: 280px; }
+.mode-toggle.active { background: linear-gradient(135deg, #7e22ce, #be185d); border: 2px solid rgba(255, 255, 255, 0.3); box-shadow: 0 4px 12px rgba(126, 34, 206, 0.4); }
+.mode-toggle.active::after { content: '✓'; position: absolute; top: -8px; right: -8px; width: 28px; height: 28px; background: #0f7b3a; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; border: 2px solid white; }
+.card { background: #111827; border: 1px solid #374151; border-radius: 1rem; padding: 1.5rem; transition: all 0.2s; display: flex; flex-direction: column; height: 100%; }
+.card:hover { border-color: #a855f7; transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }
+.card-content { flex: 1; }
+.card-footer { margin-top: auto; padding-top: 1rem; }
+.stat-card { position: relative; border-radius: 1rem; padding: 1.25rem; overflow: hidden; }
+.stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, #7e22ce, #6b21a8); opacity: 0.9; }
+.stat-card > div { position: relative; z-index: 10; }
+.top-card { border-radius: 1rem; padding: 1.5rem; text-align: center; color: white; }
+.top-card.gold { background: linear-gradient(135deg, #fbbf24, #d97706); }
+.top-card.silver { background: linear-gradient(135deg, #e5e7eb, #6b7280); }
+.top-card.bronze { background: linear-gradient(135deg, #f97316, #c2410c); }
+.top-card button { background: rgba(0, 0, 0, 0.3); border: 2px solid rgba(255, 255, 255, 0.3); color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 600; transition: all 0.2s; width: 100%; margin-top: 1rem; }
+.top-card button:hover { background: rgba(0, 0, 0, 0.5); border-color: rgba(255, 255, 255, 0.6); }
+.score-high { color: #4ade80; }
+.score-medium { color: #facc15; }
+.score-low { color: #f87171; }
+.progress-bar { height: 0.75rem; background: #374151; border-radius: 9999px; overflow: hidden; }
+.progress-bar-fill { height: 100%; background: linear-gradient(90deg, #a855f7, #ec4899); transition: width 0.3s; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
+@media (max-width: 1024px) { .grid-4 { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 768px) { .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+.rankings-4-15-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+@media (max-width: 1024px) { .rankings-4-15-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 768px) { .rankings-4-15-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .rankings-4-15-grid { grid-template-columns: 1fr; } }
+.rank-card { background: #1f2937; border: 1px solid #374151; border-radius: 0.75rem; padding: 1rem; text-align: center; transition: all 0.2s; }
+.rank-card:hover { border-color: #a855f7; transform: translateY(-4px); }
+.filter-tag { background: #374151; color: white; padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s; border: 1px solid #4b5563; }
+.filter-tag:hover { background: #4b5563; }
+.filter-tag.active { background: #7e22ce; border-color: #a855f7; }
+.rankings-table { width: 100%; background: #111827; border-radius: 0.75rem; overflow: hidden; }
+.rankings-table th { background: #1f2937; padding: 1rem; text-align: left; font-weight: 600; color: white; }
+.rankings-table td { padding: 1rem; border-bottom: 1px solid #374151; color: white; }
+.hidden { display: none; }
+.modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 9999; }
+.modal.active { display: flex; }
+.modal-content { background: #111827; border: 2px solid #a855f7; border-radius: 1rem; padding: 2rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+.reverse-email { unicode-bidi: bidi-override; direction: rtl; }
+.accordion-item { background: #111827; border: 1px solid #374151; border-radius: 0.75rem; overflow: hidden; transition: all 0.2s; margin-top: 1.5rem; }
+.accordion-item:hover { border-color: #a855f7; }
+.accordion-header { width: 100%; padding: 1.25rem 1.5rem; text-align: left; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid #a855f7; border-radius: 0.75rem; color: white; font-weight: 600; font-size: 1.125rem; cursor: pointer; }
+.accordion-header:hover { background: linear-gradient(135deg, #2d3748, #1a202c); }
+.accordion-content { padding: 1.5rem; background: #111827; border: 1px solid #374151; border-top: none; border-bottom-left-radius: 0.75rem; border-bottom-right-radius: 0.75rem; }
+footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
+.text-blue-400, a.text-blue-400 { color: #7dd3fc !important; text-decoration: underline; text-decoration-color: rgba(125, 211, 252, 0.4); text-underline-offset: 2px; }
+.text-blue-400:hover, a.text-blue-400:hover { color: #bae6fd !important; text-decoration-color: #bae6fd; }
+.skip-link { position: absolute; top: -40px; left: 0; background: #7e22ce; color: white; padding: 0.5rem 1rem; z-index: 100; transition: top 0.2s; }
+.skip-link:focus { top: 0; }
+#main-content > div:first-child { min-height: 400px; }
+.modal input, .modal textarea { color: #000000 !important; background-color: #ffffff !important; border: 1px solid #d1d5db !important; }
+.modal input::placeholder, .modal textarea::placeholder { color: #6b7280 !important; opacity: 1 !important; }
+.modal label { color: #374151 !important; font-weight: 500; }
+.modal .modal-content { background: white !important; }
+.modal .modal-content h2 { color: #111827 !important; }
+.modal .modal-content button { color: white !important; }
+.modal .modal-content p { color: #6b7280 !important; }
+.modal .modal-content .text-gray-400 { color: #6b7280 !important; }
+.api-status-indicator { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-left: 8px; }
+.api-status-active { background-color: #10b981; box-shadow: 0 0 8px #10b981; }
+.api-status-inactive { background-color: #6b7280; }
+.recommendation-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-left: 4px solid #7e22ce; border-radius: 0.75rem; padding: 1.25rem; margin-bottom: 1rem; transition: all 0.2s; }
+.recommendation-card:hover { border-left-color: #a855f7; transform: translateX(4px); }
+.priority-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; margin-left: 0.5rem; }
+.priority-high { background: #ef4444; color: white; }
+.priority-medium { background: #f59e0b; color: white; }
+.priority-low { background: #8b5cf6; color: white; }
+.priority-none { background: #10b981; color: white; }
+.recommendation-title { font-size: 1.125rem; font-weight: 700; margin-bottom: 0.5rem; color: #f3f4f6; }
+.recommendation-desc { color: #d1d5db; margin-bottom: 1rem; line-height: 1.5; }
+.recommendation-section { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #374151; }
+.recommendation-section-title { font-weight: 600; font-size: 0.875rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+.recommendation-section-title i { font-size: 0.75rem; }
+.recommendation-action { color: #f3f4f6; }
+.recommendation-learning { color: #60a5fa; }
+.recommendation-target { color: #34d399; }
+.template-editor { background: #1f2937; border: 1px solid #374151; border-radius: 0.5rem; padding: 1rem; margin-top: 1rem; }
+.template-editor textarea { width: 100%; min-height: 200px; font-family: monospace; font-size: 0.875rem; color: #f3f4f6 !important; background-color: #1f2937 !important; }
 
-    .line-clamp-2 {
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-    .line-clamp-3 {
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-  </style>
+/* Setup Required Box Styles */
+.setup-required-box { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); border: 2px solid #4f46e5; border-radius: 1rem; padding: 1.75rem; margin-bottom: 1.5rem; }
+.setup-step { background: #1e293b; border: 1px solid #374151; border-radius: 0.75rem; padding: 1.25rem; margin-bottom: 1rem; transition: border-color 0.3s; }
+.setup-step.completed { border-color: #10b981; background: rgba(16, 185, 129, 0.05); }
+.setup-step-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+.setup-step-number { width: 2rem; height: 2rem; border-radius: 50%; background: #374151; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.875rem; flex-shrink: 0; transition: background 0.3s; }
+.setup-step.completed .setup-step-number { background: #10b981; }
+.setup-step-status { margin-left: auto; font-size: 1.25rem; }
+.setup-input-row { display: flex; gap: 0.5rem; align-items: center; }
+.setup-input-row input { flex: 1; padding: 0.6rem 0.75rem; border-radius: 0.5rem; font-size: 0.875rem; }
+.setup-save-btn { background: linear-gradient(135deg, #7e22ce, #be185d); color: white !important; padding: 0.6rem 1.25rem; border-radius: 0.5rem; font-weight: 600; font-size: 0.875rem; border: none; cursor: pointer; white-space: nowrap; transition: opacity 0.2s; }
+.setup-save-btn:hover { opacity: 0.85; }
+.setup-link { color: #818cf8 !important; text-decoration: underline; font-size: 0.8rem; }
+.setup-status-text { font-size: 0.8rem; margin-top: 0.4rem; min-height: 1.2em; }
+.setup-all-done { background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(5,150,105,0.1)); border: 2px solid #10b981; border-radius: 0.75rem; padding: 1.25rem; text-align: center; margin-bottom: 1.5rem; }
+</style>
 </head>
-<body class="bg-gray-900 text-gray-100">
+<body class="bg-gray-900">
+<div id="loading-screen">
+  <div class="spinner mb-4"></div>
+  <p class="text-purple-400 font-bold animate-pulse">Loading ContentScale...</p>
+</div>
+<a href="#main-content" class="skip-link">Skip to main content</a>
+<nav class="sticky top-0 z-50 bg-gray-900/95 border-b-2 border-purple-600 backdrop-blur-sm">
+  <div class="max-w-7xl mx-auto px-6 py-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">ContentScale</span>
+        <span class="hidden sm:inline-block text-xs px-2 py-1 bg-purple-600 rounded text-white font-semibold">Pro</span>
+      </div>
+      <div class="hidden md:flex gap-6">
+        <a href="#lead-scanner" class="text-gray-300 hover:text-white transition-colors">Scanner</a>
+        <a href="#leaderboard" class="text-gray-300 hover:text-white transition-colors">Leaderboard</a>
+        <a href="#freelancers" class="text-gray-300 hover:text-white transition-colors">Experts</a>
+        <a href="#templates" class="text-gray-300 hover:text-white transition-colors">Templates</a>
+      </div>
+      <div class="flex gap-3">
+        <a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="btn-success btn"><i class="fab fa-whatsapp"></i> Chat</a>
+      </div>
+    </div>
+  </div>
+</nav>
 
-  <!-- NAVIGATION -->
-  <nav class="nav-bar">
-    <div class="max-w-6xl mx-auto px-6">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">ContentScale</div>
+<div id="main-content" class="max-w-7xl mx-auto px-6 py-8">
+
+  <!-- SCANNER SECTION -->
+  <div id="lead-scanner" class="mb-16">
+    <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+      <div class="max-w-3xl mx-auto text-center mb-8">
+        <h2 class="text-4xl font-bold mb-3 text-white">🎯 SEO Content Quality Scanner</h2>
+        <p class="text-xl text-gray-200 mb-2">Check Your SEO Content Quality in Seconds</p>
+        <div class="flex flex-wrap gap-3 justify-center text-sm text-gray-300">
+          <span>✨ Free for freelancers</span><span>•</span>
+          <span>🔍 Single &amp; Bulk scanning</span><span>•</span>
+          <span>📊 Detailed analysis</span><span>•</span>
+          <span>📧 Your SendGrid emails</span><span>•</span>
+          <span>✏️ Editable templates</span>
         </div>
-        <div class="flex items-center gap-1">
-          <a href="/" class="nav-link">🏠 Home</a>
-          <a href="/#scanner" class="nav-link">🔍 Scanner</a>
-          <a href="/#leaderboard" class="nav-link">🏆 Leaderboard</a>
-          <a href="/#pricing" class="nav-link">💰 Pricing</a>
-          <a href="/blog/index.html" class="nav-link active">📝 Blog</a>
-          <a href="/contact-form" class="nav-link">📞 Contact</a>
+      </div>
+
+      <div class="flex justify-center gap-4 mb-8">
+        <button id="modeSingleBtn" onclick="switchMode('single')" class="mode-toggle active"><i class="fas fa-link mr-2"></i> Single URL</button>
+        <button id="modeBulkBtn" onclick="switchMode('bulk')" class="mode-toggle"><i class="fas fa-layer-group mr-2"></i> Bulk URLs</button>
+      </div>
+
+      <!-- SINGLE MODE -->
+      <div id="singleMode" class="max-w-3xl mx-auto">
+        <div class="card">
+          <div class="flex flex-col sm:flex-row gap-3">
+            <input type="text" id="singleUrlInput" name="url" placeholder="https://business-website.com" class="flex-1" autocomplete="off" aria-autocomplete="none" spellcheck="false">
+            <button onclick="scanSingleURL()" id="singleScanBtn" class="btn-primary btn whitespace-nowrap"><i class="fas fa-search"></i> Start Scan</button>
+          </div>
+          <div id="singleProgress" class="hidden mt-4">
+            <div class="progress-bar"><div id="singleProgressBar" class="progress-bar-fill" style="width: 0%"></div></div>
+            <p id="singleProgressText" class="text-sm text-gray-300 text-center mt-2"></p>
+          </div>
+        </div>
+        <div id="singleResult" class="hidden mt-4"></div>
+      </div>
+
+      <div class="flex items-center gap-4 my-6 max-w-3xl mx-auto">
+        <div class="flex-1 border-t border-gray-700"></div><span class="text-gray-500 text-sm">OR</span><div class="flex-1 border-t border-gray-700"></div>
+      </div>
+
+      <!-- BULK MODE -->
+      <div id="bulkMode" class="hidden max-w-4xl mx-auto">
+        <div class="card" style="border: 2px solid #3b82f6;">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold text-white flex items-center gap-2">
+              <span>📋 Bulk URL Scanner</span>
+              <span class="text-xs px-2 py-1 bg-blue-600 rounded text-white">Batch Scan</span>
+            </h3>
+            <button onclick="toggleBulkScanner()" class="text-sm text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-2">
+              <span id="bulkToggleText">Hide Bulk Scanner</span>
+              <i class="fas fa-chevron-up" id="bulkScannerIcon" style="transition: transform 0.3s;"></i>
+            </button>
+          </div>
+
+          <div id="bulkScannerContent">
+
+            <!-- ================================================ -->
+            <!-- SETUP REQUIRED BOX (shown when keys missing)     -->
+            <!-- ================================================ -->
+            <div id="setupRequiredBox" class="setup-required-box">
+              <div class="flex items-center gap-3 mb-4">
+                <div class="text-3xl">⚙️</div>
+                <div>
+                  <h4 class="text-lg font-bold text-white">One-Time Setup — Your Own Free SendGrid Account</h4>
+                  <p class="text-sm text-gray-400">You need <a href="https://sendgrid.com/en-us" target="_blank" rel="noopener" style="color:#a78bfa!important;text-decoration:underline;">your own free SendGrid account</a> to send emails. It's free, takes 2 minutes, and you own it completely.</p>
+                </div>
+              </div>
+
+              <!-- Step 1: SendGrid -->
+              <div class="setup-step" id="setupStepSendgrid">
+                <div class="setup-step-header">
+                  <div class="setup-step-number" id="stepNum1">1</div>
+                  <div>
+                    <div class="font-semibold text-white">Your Own Free SendGrid API Key</div>
+                    <div class="text-xs text-gray-400">Create your <strong>own free account</strong> at SendGrid — 100 emails/day free, no credit card needed</div>
+                  </div>
+                  <div class="setup-step-status" id="stepStatus1">❌</div>
+                </div>
+                <div class="mb-2 flex flex-col gap-1">
+                  <a href="https://sendgrid.com/en-us" target="_blank" rel="noopener" class="setup-link">
+                    <i class="fas fa-external-link-alt mr-1"></i>Step 1 — Create your free SendGrid account (sendgrid.com/en-us)
+                  </a>
+                  <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" rel="noopener" class="setup-link">
+                    <i class="fas fa-key mr-1"></i>Step 2 — Generate your API key inside SendGrid → Settings → API Keys
+                  </a>
+                </div>
+                <div class="setup-input-row">
+                  <input type="password" id="setupSendgridKey" placeholder="Paste your own SG.xxxxxxxxxx key here" autocomplete="off">
+                  <button class="setup-save-btn" onclick="saveSetupSendgrid()"><i class="fas fa-save mr-1"></i> Save</button>
+                </div>
+                <p class="setup-status-text" id="sendgridSetupStatus"><span class="text-yellow-400">⚠️ Not configured — emails will not send until you add your own key</span></p>
+              </div>
+
+
+              <p class="text-xs text-gray-500 mt-3 text-center">
+                <i class="fas fa-lock mr-1"></i>Your API keys are stored securely and never shared. Setup takes less than 2 minutes.
+              </p>
+            </div>
+            <!-- END SETUP REQUIRED BOX -->
+
+            <!-- ALL DONE BANNER (hidden until both keys saved) -->
+            <div id="setupAllDone" class="setup-all-done hidden">
+              <div class="text-3xl mb-2">✅</div>
+              <div class="font-bold text-green-400 text-lg mb-1">You're all set!</div>
+              <p class="text-sm text-gray-300">Both API keys are configured. Bulk scanning with automated emails is now active.</p>
+            </div>
+
+            <!-- BULK SCAN FORM -->
+            <div id="bulkScannerForm">
+              <p class="text-gray-300 text-sm mb-4">Scan up to 100 websites at once. Based on scores, we automatically:</p>
+              <ul class="text-sm text-gray-300 mb-4" style="margin-left: 1.5rem;">
+                <li>🏆 <strong>85+ Score:</strong> Submit to leaderboard + send congratulations email</li>
+                <li>📧 <strong>&lt;85 with website:</strong> Email business owner with improvement pitch</li>
+                <li>🌐 <strong>&lt;85 without website:</strong> Email owner offering website creation</li>
+              </ul>
+              <div class="mb-4">
+                <label class="block text-sm text-gray-300 mb-2">Enter URLs (one per line, max 100)</label>
+                <textarea id="bulkUrlInput" rows="8" placeholder="https://example1.com&#10;https://example2.com&#10;https://example3.com" class="w-full p-3 rounded border border-gray-600 focus:border-purple-500 resize-none" style="color: #000000 !important; background-color: #ffffff !important;"></textarea>
+                <div class="flex justify-between mt-1">
+                  <span class="text-xs text-gray-400">Up to 100 URLs</span>
+                  <span id="bulkUrlCount" class="text-xs text-gray-400">0/100</span>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-3 mb-4">
+                <div><label class="block text-sm text-gray-300 mb-2">Your Email *</label><input type="email" id="bulkScanEmail" placeholder="your@email.com" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500"></div>
+                <div><label class="block text-sm text-gray-300 mb-2">Your Name *</label><input type="text" id="bulkScanName" placeholder="Your name" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500"></div>
+              </div>
+              <button onclick="startBulkScan()" id="bulkScanBtn" class="btn-primary btn w-full"><i class="fas fa-rocket mr-2"></i> Start Bulk Scan</button>
+              <div id="bulkProgress" class="hidden mt-4">
+                <div class="progress-bar"><div id="bulkProgressBar" class="progress-bar-fill" style="width: 0%"></div></div>
+                <p id="bulkProgressText" class="text-sm text-gray-300 text-center mt-2"></p>
+              </div>
+              <div id="bulkResults" class="hidden mt-4">
+                <h4 class="text-lg font-bold text-white mb-3">Scan Results</h4>
+                <div id="bulkResultsContainer"></div>
+              </div>
+            </div>
+
+          </div><!-- end bulkScannerContent -->
         </div>
       </div>
-    </div>
-  </nav>
 
-  <div class="max-w-6xl mx-auto px-6 py-12">
-    
-    <!-- HEADER -->
-    <div class="text-center mb-12">
-      <h1 class="text-5xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-        ContentScale Blog
-      </h1>
-      <p class="text-xl text-gray-400 mb-6">
-        AI-Era SEO Strategies, Case Studies & Expert Tips
-      </p>
-      <div class="max-w-xl mx-auto">
-        <input 
-          type="text" 
-          id="searchBox" 
-          class="search-box" 
-          placeholder="🔍 Search articles..."
-          onkeyup="filterBlogs()">
+
+
+      <!-- CTA Banner -->
+      <div class="mt-8 max-w-3xl mx-auto bg-gradient-to-r from-purple-800 via-pink-800 to-purple-800 rounded-xl p-6 text-center border border-purple-400">
+        <h3 class="text-2xl font-bold mb-2 text-white">💼 Are You an SEO Specialist or Content Marketer?</h3>
+        <p class="text-xl text-gray-200 mb-4">Work just a few hours per week while earning a full-time income. We train you in Modern SEO for the AI-era.</p>
+        <button onclick="openFreelancerModal()" class="btn-white-black btn text-lg px-8 py-4 shadow-lg"><i class="fas fa-user-plus mr-2"></i> Become a Platform Specialist</button>
       </div>
-    </div>
 
-    <!-- CATEGORIES FILTER -->
-    <div class="mb-8 text-center">
-      <div class="mb-3">
-        <span class="text-sm text-gray-500 uppercase font-bold">Filter by Category:</span>
-      </div>
-      <div class="flex flex-wrap justify-center">
-        <button class="filter-btn active" onclick="filterCategory('all')">All Posts</button>
-        <button class="filter-btn" onclick="filterCategory('guide')">📚 Guides</button>
-        <button class="filter-btn" onclick="filterCategory('case-study')">📊 Case Studies</button>
-        <button class="filter-btn" onclick="filterCategory('agency')">🏢 Agency Spotlights</button>
-        <button class="filter-btn" onclick="filterCategory('tips')">💡 Tips & Tricks</button>
-        <button class="filter-btn" onclick="filterCategory('news')">📰 News & Updates</button>
-      </div>
     </div>
-
-    <!-- FEATURED POST (dynamisch geladen) -->
-    <div id="featured-section" class="mb-12">
-      <h2 class="text-2xl font-bold mb-6 text-yellow-400">⭐ Featured Article</h2>
-      <div id="featured-post-container">
-        <!-- JavaScript laadt featured post hier -->
-      </div>
-    </div>
-
-    <!-- BLOG POSTS GRID (dynamisch geladen) -->
-    <div id="blog-grid">
-      <h2 class="text-2xl font-bold mb-6">Latest Articles</h2>
-      <div class="grid md:grid-cols-2 gap-6" id="posts-container">
-        <!-- JavaScript laadt posts hier -->
-      </div>
-    </div>
-
-    <!-- NO RESULTS -->
-    <div id="no-results" class="hidden text-center py-12">
-      <div class="text-6xl mb-4">🔍</div>
-      <h3 class="text-2xl font-bold mb-2">No Articles Found</h3>
-      <p class="text-gray-400 mb-6">Try different keywords or browse all posts</p>
-      <button onclick="filterCategory('all'); document.getElementById('searchBox').value=''" class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-bold transition">
-        Show All Posts
-      </button>
-    </div>
-
-    <!-- CTA SECTION -->
-    <div class="mt-16 bg-gradient-to-r from-purple-900 to-blue-900 rounded-lg p-8 text-center border border-purple-700">
-      <h3 class="text-3xl font-bold mb-3">Want to Improve Your Content Score?</h3>
-      <p class="text-lg text-gray-300 mb-6">
-        Get your free AI-powered content analysis in 30 seconds, or talk to Ot directly for expert guidance.
-      </p>
-      <div class="flex flex-col md:flex-row gap-4 justify-center">
-        <a href="/#scanner" class="inline-block bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-8 py-4 rounded-lg font-bold text-lg transition">
-          🚀 Scan Your Website Free
-        </a>
-        <a href="https://wa.me/31628073996?text=Hi%20Ot!%20I%20read%20your%20blog%20and%20want%20to%20improve%20my%20content%20score.%20Can%20we%20talk?" target="_blank" class="inline-block bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-8 py-4 rounded-lg font-bold text-lg transition">
-          💬 WhatsApp Ot
-        </a>
-      </div>
-    </div>
-
-    <!-- FOOTER -->
-    <div class="text-center text-gray-500 text-sm mt-12 pt-8 border-t border-gray-800">
-      <p class="mb-2">ContentScale Blog © 2025 • AI-Powered SEO Recovery</p>
-      <p>
-        <a href="https://app.contentscale.site" class="text-purple-400 hover:text-purple-300">Scanner</a> • 
-        <a href="https://wa.me/31628073996" class="text-green-400 hover:text-green-300">WhatsApp</a> •
-        <a href="mailto:info@contentscale.site" class="text-blue-400 hover:text-blue-300">Email</a>
-      </p>
-    </div>
-
   </div>
 
-  <script>
-    // Embedded blog-posts.json data — no external fetch, no decode error
-    const BLOG_DATA = {
-      "posts": [
-        {
-          "slug": "graaf-framework-ai-content-optimization",
-          "title": "GRAAF Framework: The Blueprint for AI Content Optimization",
-          "description": "Discover the 5-step GRAAF framework that helped 127 sites recover 90% of AI-driven traffic loss. Goal, Relevance, Authority, Accuracy, Format.",
-          "date": "2025-05-10",
-          "readTime": "8 min read",
-          "author": "Ottmar Francisca",
-          "featured": true,
-          "category": ["guide", "case-study"],
-          "metrics": {
-            "score": "91% avg",
-            "traffic": "+214%",
-            "sites": "127"
-          }
-        },
-        {
-          "slug": "seo-recovery-after-helpful-content-update",
-          "title": "From -67% to +189%: Ecommerce SEO Recovery After HCU",
-          "description": "Full case study: How a Dutch fashion retailer bounced back from the September 2024 Helpful Content Update using CRAFT and GRAAF.",
-          "date": "2025-04-28",
-          "readTime": "12 min read",
-          "author": "Ottmar Francisca",
-          "featured": false,
-          "category": ["case-study", "tips"],
-          "metrics": {
-            "traffic": "+189%",
-            "revenue": "€2.1M",
-            "months": "4"
-          }
-        },
-        {
-          "slug": "craft-methodology-content-optimization",
-          "title": "CRAFT: The 5-Step Content Optimization Routine We Use Daily",
-          "description": "Internal methodology: Context, Relevance, Authority, Format, Trust. Actionable checklist for editors and content managers.",
-          "date": "2025-04-15",
-          "readTime": "10 min read",
-          "author": "Ottmar Francisca",
-          "featured": false,
-          "category": ["guide", "agency"],
-          "metrics": {
-            "points": "5 pillars",
-            "examples": "14 fixes"
-          }
-        },
-        {
-          "slug": "agency-spotlight-seo-recovery-specialists",
-          "title": "Agency Spotlight: How Recovery Specialists Use ContentScale",
-          "description": "Interview with 3 agencies that scaled content optimization using the GRAAF framework. Workflow tips and client reporting.",
-          "date": "2025-04-02",
-          "readTime": "9 min read",
-          "author": "Ottmar Francisca",
-          "featured": false,
-          "category": ["agency", "case-study"],
-          "metrics": {
-            "businesses": "3 agencies",
-            "clients": "87"
-          }
-        },
-        {
-          "slug": "news-google-march-2025-core-update",
-          "title": "March 2025 Core Update: What We Observed (Live Data)",
-          "description": "Real-time analysis of volatility, winners vs losers, and why E-E-A-T signals matter more than ever. Exclusive insights.",
-          "date": "2025-03-20",
-          "readTime": "7 min read",
-          "author": "Ottmar Francisca",
-          "featured": false,
-          "category": ["news", "tips"],
-          "metrics": {
-            "type": "Breaking News",
-            "visitors": "10M+",
-            "framework": "GRAAF"
-          }
-        },
-        {
-          "slug": "quick-wins-ai-content-audit",
-          "title": "7 Quick Wins From an AI Content Audit (Under 30 Minutes)",
-          "description": "Practical fixes: thin content, entity optimization, internal linking, outdated stats. Screenshots and before/after.",
-          "date": "2025-03-05",
-          "readTime": "6 min read",
-          "author": "Ottmar Francisca",
-          "featured": false,
-          "category": ["tips", "guide"],
-          "metrics": {
-            "type": "Quick Wins",
-            "score": "+22 pts"
-          }
-        }
-      ]
-    };
-
-    let currentCategory = 'all';
-    let allPosts = [];
-
-    // Load from embedded data
-    function loadBlogPosts() {
-      allPosts = BLOG_DATA.posts.sort((a, b) => new Date(b.date) - new Date(a.date));
-      const featuredPost = allPosts.find(p => p.featured === true);
-
-      if (featuredPost) {
-        renderFeaturedPost(featuredPost);
-      }
-
-      const otherPosts = allPosts.filter(p => p.featured !== true);
-      renderOtherPosts(otherPosts);
-    }
-
-    function renderFeaturedPost(post) {
-      const container = document.getElementById('featured-post-container');
-
-      const categoryBadges = post.category.map(cat => {
-        const catClass = cat === 'guide' ? 'cat-guide' : 
-                         cat === 'case-study' ? 'cat-case-study' :
-                         cat === 'tips' ? 'cat-tips' :
-                         cat === 'news' ? 'cat-news' :
-                         cat === 'agency' ? 'cat-agency' : 'cat-guide';
-        const catLabel = cat.replace('-', ' ').toUpperCase();
-        return `<span class="category-badge ${catClass}">${catLabel}</span>`;
-      }).join(' ');
-
-      // ----- UPDATED HEADSHOT: real Ottmar Francisca image from GitHub -----
-      container.innerHTML = `
-        <div class="blog-card featured relative" onclick="window.location.href='/blog/${post.slug}'">
-          <div class="mb-4">
-            ${categoryBadges}
-            <span class="text-sm text-gray-500">📅 ${formatDate(post.date)} • ⏱️ ${post.readTime}</span>
+  <!-- TEMPLATES SECTION - hidden by default, shown when bulk mode is active -->
+  <div id="templates" class="mb-16 hidden">
+    <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+      <div class="max-w-3xl mx-auto text-center mb-8">
+        <h2 class="text-4xl font-bold mb-3 text-white">✏️ Email Templates</h2>
+        <p class="text-xl text-gray-200">Customize your bulk scan email templates</p>
+      </div>
+      <div class="max-w-5xl mx-auto grid md:grid-cols-3 gap-6">
+        <div class="card">
+          <h3 class="text-xl font-bold mb-4">🏆 Leaderboard Congratulations</h3>
+          <p class="text-sm text-gray-400 mb-4">Sent to businesses with 85+ score</p>
+          <div class="template-editor">
+            <label class="block text-sm text-gray-300 mb-2">Subject</label>
+            <input type="text" id="template-congrats-subject" class="w-full p-2 rounded border border-gray-600 mb-2" value="🎉 Congratulations! Your website ranked on ContentScale Leaderboard">
+            <label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
+            <textarea id="template-congrats-body" class="w-full p-2 rounded" style="min-height: 150px;">&lt;h1&gt;Congratulations!&lt;/h1&gt;&lt;p&gt;Your website scored {{score}}/100 on our SEO analysis.&lt;/p&gt;&lt;p&gt;You've been added to the ContentScale Leaderboard!&lt;/p&gt;&lt;p&gt;&lt;a href="{{leaderboard_url}}"&gt;View your ranking&lt;/a&gt;&lt;/p&gt;</textarea>
           </div>
-          <h3 class="text-3xl font-bold mb-3">${post.title}</h3>
-          <p class="text-gray-400 mb-4 leading-relaxed">
-            ${post.description}
-          </p>
-          <div class="flex items-center gap-3">
-            <img src="https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca-headshot.png" 
-                 alt="Ottmar Francisca headshot" 
-                 class="w-10 h-10 rounded-full object-cover border-2 border-purple-400"
-                 onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'40\\' height=\\'40\\'%3E%3Ccircle cx=\\'20\\' cy=\\'20\\' r=\\'20\\' fill=\\'%238b5cf6\\'/%3E%3Ctext x=\\'20\\' y=\\'26\\' text-anchor=\\'middle\\' fill=\\'white\\' font-size=\\'16\\' font-weight=\\'bold\\'%3EO%3C/text%3E%3C/svg%3E';">
-            <div>
-              <div class="font-bold text-sm">${post.author}</div>
-              <div class="text-xs text-gray-500">Founder & SEO Recovery Expert</div>
+          <button onclick="saveTemplate('congrats')" class="btn-primary btn w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
+        </div>
+        <div class="card">
+          <h3 class="text-xl font-bold mb-4">📈 Improvement Pitch</h3>
+          <p class="text-sm text-gray-400 mb-4">Sent to businesses with website &lt;85 score</p>
+          <div class="template-editor">
+            <label class="block text-sm text-gray-300 mb-2">Subject</label>
+            <input type="text" id="template-improvement-subject" class="w-full p-2 rounded border border-gray-600 mb-2" value="🚀 Quick SEO opportunity for {{company_name}}">
+            <label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
+            <textarea id="template-improvement-body" class="w-full p-2 rounded" style="min-height: 150px;">&lt;h1&gt;SEO Opportunity&lt;/h1&gt;&lt;p&gt;Hi {{company_name}} team,&lt;/p&gt;&lt;p&gt;Your website scored {{score}}/100 on our SEO analysis.&lt;/p&gt;&lt;p&gt;I noticed some quick wins that could improve your rankings.&lt;/p&gt;&lt;p&gt;Would you be open to a quick chat?&lt;/p&gt;</textarea>
+          </div>
+          <button onclick="saveTemplate('improvement')" class="btn-primary btn w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
+        </div>
+        <div class="card">
+          <h3 class="text-xl font-bold mb-4">🌐 Website Offer</h3>
+          <p class="text-sm text-gray-400 mb-4">Sent to businesses without website</p>
+          <div class="template-editor">
+            <label class="block text-sm text-gray-300 mb-2">Subject</label>
+            <input type="text" id="template-website-subject" class="w-full p-2 rounded border border-gray-600 mb-2" value="💻 Professional website for {{company_name}}">
+            <label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
+            <textarea id="template-website-body" class="w-full p-2 rounded" style="min-height: 150px;">&lt;h1&gt;Website Opportunity&lt;/h1&gt;&lt;p&gt;Hi {{company_name}} team,&lt;/p&gt;&lt;p&gt;I noticed you don't have a website yet.&lt;/p&gt;&lt;p&gt;I specialize in creating SEO-optimized websites that rank.&lt;/p&gt;&lt;p&gt;Interested in learning more?&lt;/p&gt;</textarea>
+          </div>
+          <button onclick="saveTemplate('website')" class="btn-primary btn w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
+        </div>
+      </div>
+      <div class="max-w-5xl mx-auto mt-8 bg-gray-800 rounded-lg p-4 border border-gray-700">
+        <h4 class="font-bold mb-2">📎 Available Variables:</h4>
+        <div class="grid md:grid-cols-3 gap-4 text-sm text-gray-400">
+          <div><code class="text-purple-400">{{company_name}}</code> - Business name</div>
+          <div><code class="text-purple-400">{{score}}</code> - SEO score (0-100)</div>
+          <div><code class="text-purple-400">{{leaderboard_url}}</code> - Link to leaderboard</div>
+          <div><code class="text-purple-400">{{sender_name}}</code> - Your name</div>
+          <div><code class="text-purple-400">{{sender_email}}</code> - Your email</div>
+          <div><code class="text-purple-400">{{website_url}}</code> - Business website</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEADERBOARD SECTION -->
+  <div id="leaderboard" class="mb-16">
+    <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+      <div class="max-w-3xl mx-auto text-center mb-8">
+        <h2 class="text-4xl font-bold mb-3 text-white">🏆 Elite Leaderboard</h2>
+        <p class="text-xl text-gray-200">Top performing websites automatically added</p>
+      </div>
+      <div class="max-w-4xl mx-auto grid-4 mb-8">
+        <div class="stat-card"><div><div class="text-4xl mb-2">🏢</div><div class="text-3xl font-bold" id="totalAgencies">0</div><div class="text-sm text-gray-200">Agencies</div></div></div>
+        <div class="stat-card"><div><div class="text-4xl mb-2">📊</div><div class="text-3xl font-bold" id="avgScore">0</div><div class="text-sm text-gray-200">Avg. Score</div></div></div>
+        <div class="stat-card"><div><div class="text-4xl mb-2">🌍</div><div class="text-3xl font-bold" id="countriesCount">0</div><div class="text-sm text-gray-200">Countries</div></div></div>
+        <div class="stat-card"><div><div class="text-4xl mb-2">💼</div><div class="text-3xl font-bold" id="activeHelpers">0</div><div class="text-sm text-gray-200">Freelancers</div></div></div>
+      </div>
+      <div class="max-w-5xl mx-auto">
+        <div id="top3-container" class="grid-3 mb-10"></div>
+        <div id="rankings4to15Container" class="mb-10">
+          <h3 class="text-2xl font-bold text-white mb-6">Rankings 4-15</h3>
+          <div class="rankings-4-15-grid" id="rankings4to15Grid"></div>
+        </div>
+        <div class="bg-gray-800 rounded-lg p-4 mb-6">
+          <button onclick="toggleFilters()" class="w-full flex items-center justify-between text-left text-white">
+            <div class="flex items-center gap-2"><i class="fas fa-filter text-purple-400"></i><span class="font-semibold">Filters</span></div>
+            <i class="fas fa-chevron-down" id="filterIcon"></i>
+          </button>
+          <div id="filterPanel" class="hidden mt-4">
+            <div class="mb-4">
+              <div class="text-sm text-gray-300 mb-2">Country:</div>
+              <div class="flex flex-wrap gap-2" id="countryFilters"></div>
             </div>
+            <input type="text" id="searchInput" placeholder="Search agencies..." oninput="filterAgencies()" class="w-full" autocomplete="off">
           </div>
         </div>
-      `;
-    }
-
-    function renderOtherPosts(posts) {
-      const container = document.getElementById('posts-container');
-
-      container.innerHTML = posts.map(post => {
-        const categoryBadges = post.category.map(cat => {
-          const catClass = cat === 'guide' ? 'cat-guide' : 
-                           cat === 'case-study' ? 'cat-case-study' :
-                           cat === 'tips' ? 'cat-tips' :
-                           cat === 'news' ? 'cat-news' :
-                           cat === 'agency' ? 'cat-agency' : 'cat-guide';
-          const catLabel = cat.replace('-', ' ').toUpperCase();
-          return `<span class="category-badge ${catClass}">${catLabel}</span>`;
-        }).join(' ');
-
-        const metricsHTML = Object.entries(post.metrics || {}).map(([key, value]) => {
-          const icon = key === 'score' ? '✅' : 
-                       key === 'traffic' ? '📈' : 
-                       key === 'revenue' ? '💰' :
-                       key === 'days' ? '⏱️' :
-                       key === 'points' ? '📚' :
-                       key === 'examples' ? '💡' :
-                       key === 'visitors' ? '📈' :
-                       key === 'months' ? '⏱️' :
-                       key === 'sites' ? '📊' :
-                       key === 'businesses' ? '🏢' :
-                       key === 'framework' ? '🎯' :
-                       key === 'type' ? '⚡' : '🎯';
-          const colorClass = key === 'score' ? 'text-green-400' : 
-                             key === 'traffic' || key === 'revenue' || key === 'visitors' ? 'text-blue-400' : 
-                             key === 'type' && (value === 'Quick Wins' || value === 'Breaking News') ? 'text-red-400' :
-                             'text-purple-400';
-          return `<span class="${colorClass}">${icon} ${value}</span>`;
-        }).join(' ');
-
-        return `
-          <div class="blog-card" data-category="${post.category.join(' ')}" onclick="window.location.href='/blog/${post.slug}'">
-            <div class="mb-3">
-              ${categoryBadges}
-              <div class="text-sm text-gray-500 mt-2">📅 ${formatDate(post.date)} • ⏱️ ${post.readTime}</div>
-            </div>
-            <h3 class="text-2xl font-bold mb-3">${post.title}</h3>
-            <p class="text-gray-400 mb-4">
-              ${post.description}
-            </p>
-            <div class="flex items-center gap-2 text-sm flex-wrap">
-              ${metricsHTML}
-            </div>
+        <div>
+          <button onclick="toggleRankings()" id="rankingsToggleBtn" class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-between transition-all">
+            <span id="rankingsToggleText">📊 Show Rankings 16+</span><span class="arrow">▼</span>
+          </button>
+          <div id="rankingsContainer" class="hidden mt-4">
+            <p class="text-sm text-gray-300 mb-2">Showing 16-35 of <span id="totalCount">0</span> agencies</p>
+            <table class="rankings-table">
+              <thead><tr><th>Rank</th><th>Company</th><th>Website</th><th>Score</th><th>Country</th><th>Added</th></tr></thead>
+              <tbody id="rankingsTbody"></tbody>
+            </table>
           </div>
-        `;
-      }).join('');
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FREELANCERS SECTION -->
+  <div id="freelancers" class="mb-16">
+    <div class="max-w-3xl mx-auto text-center mb-8">
+      <h2 class="text-4xl font-bold mb-3 text-white">🎯 Verified SEO Specialists</h2>
+      <p class="text-xl text-gray-300 mb-4">Expert content optimizers ready to help</p>
+      <button onclick="openFreelancerModal()" class="btn-primary btn"><i class="fas fa-user-plus mr-2"></i> Become a Specialist</button>
+    </div>
+    <div class="max-w-5xl mx-auto grid-3" id="freelancersGrid"></div>
+  </div>
+
+</div><!-- end main-content -->
+
+<!-- PLATFORM FOR EVERYONE -->
+<div style="background: linear-gradient(135deg, #1e1b4b, #312e81); border-top: 1px solid #4c1d95; border-bottom: 1px solid #4c1d95; padding: 3rem 1.5rem;">
+  <div class="max-w-5xl mx-auto text-center">
+    <h2 class="text-3xl font-bold text-white mb-3">Built for Everyone Who Owns a Digital Presence</h2>
+    <p class="text-lg text-gray-300 mb-6">ContentScale is free to use for all:</p>
+    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:0.75rem;margin-bottom:1.5rem;">
+      <span style="background:rgba(126,34,206,0.3);border:1px solid #7e22ce;padding:0.5rem 1.25rem;border-radius:9999px;font-weight:600;font-size:0.95rem;">🌐 Website Owners</span>
+      <span style="background:rgba(126,34,206,0.3);border:1px solid #7e22ce;padding:0.5rem 1.25rem;border-radius:9999px;font-weight:600;font-size:0.95rem;">💼 Freelancers</span>
+      <span style="background:rgba(126,34,206,0.3);border:1px solid #7e22ce;padding:0.5rem 1.25rem;border-radius:9999px;font-weight:600;font-size:0.95rem;">🏢 Agencies</span>
+      <span style="background:rgba(126,34,206,0.3);border:1px solid #7e22ce;padding:0.5rem 1.25rem;border-radius:9999px;font-weight:600;font-size:0.95rem;">🛒 Business Owners</span>
+      <span style="background:rgba(126,34,206,0.3);border:1px solid #7e22ce;padding:0.5rem 1.25rem;border-radius:9999px;font-weight:600;font-size:0.95rem;">🚀 Entrepreneurs</span>
+      <span style="background:rgba(126,34,206,0.3);border:1px solid #7e22ce;padding:0.5rem 1.25rem;border-radius:9999px;font-weight:600;font-size:0.95rem;">🔍 SEO Specialists</span>
+      <span style="background:rgba(126,34,206,0.3);border:1px solid #7e22ce;padding:0.5rem 1.25rem;border-radius:9999px;font-weight:600;font-size:0.95rem;">💡 Side Hustlers</span>
+    </div>
+    <p class="text-gray-400 text-sm">If you have a website, a business, or a side project — ContentScale helps you rank better, recover lost traffic, and stay ahead of Google's AI era.</p>
+  </div>
+</div>
+
+<!-- AUTHOR BIO -->
+<div style="background:#0f172a;border-bottom:1px solid #1e293b;padding:3rem 1.5rem;">
+  <div class="max-w-3xl mx-auto">
+    <div style="display:flex;align-items:flex-start;gap:1.5rem;flex-wrap:wrap;">
+      <div id="authorImgWrap" style="width:100px;height:100px;border-radius:50%;border:3px solid #7e22ce;flex-shrink:0;overflow:hidden;background:linear-gradient(135deg,#7e22ce,#be185d);display:flex;align-items:center;justify-content:center;">
+        <img
+          src="https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca.png"
+          alt="Ottmar Francisca"
+          style="width:100%;height:100%;object-fit:cover;display:block;"
+          onload="document.getElementById('authorInitials').style.display='none';"
+          onerror="this.style.display='none';document.getElementById('authorInitials').style.display='flex';"
+        >
+        <span id="authorInitials" style="display:none;color:white;font-size:2rem;font-weight:700;align-items:center;justify-content:center;">OF</span>
+      </div>
+      <div style="flex:1;min-width:200px;">
+        <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+          <h3 style="font-size:1.25rem;font-weight:700;color:white;">Ottmar Francisca</h3>
+          <span style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;font-size:0.75rem;font-weight:600;padding:0.2rem 0.75rem;border-radius:9999px;">Founder, ContentScale</span>
+        </div>
+        <p style="color:#9ca3af;font-size:0.875rem;line-height:1.7;margin-bottom:0.75rem;">
+          With 24+ years of experience — including roles in Dutch law enforcement and municipal operations — Ottmar brings a structured, data-driven mindset to SEO. Since 2018, he has specialized in helping businesses worldwide recover traffic lost to Google algorithm updates and AI Overviews. He created the proprietary <strong style="color:#c4b5fd;">GRAAF Framework</strong> — a proven methodology with a documented 78% recovery rate within 90 days, now serving clients across 47+ countries. Based in Amsterdam, he is the driving force behind ContentScale.
+        </p>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+          <a href="https://wa.me/31628073996" target="_blank" rel="noopener" style="color:#4ade80!important;font-size:0.8rem;display:flex;align-items:center;gap:0.4rem;"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+          <a href="https://contentscale.site" target="_blank" rel="noopener" style="color:#a78bfa!important;font-size:0.8rem;display:flex;align-items:center;gap:0.4rem;"><i class="fas fa-globe"></i> contentscale.site</a>
+          <span style="color:#6b7280;font-size:0.8rem;display:flex;align-items:center;gap:0.4rem;"><i class="fas fa-map-marker-alt"></i> Amsterdam, NL</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="max-w-7xl mx-auto px-6 py-12">
+    <div class="grid md:grid-cols-4 gap-8 mb-8">
+      <div>
+        <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-4">ContentScale</div>
+        <p class="text-gray-400 text-sm">Professional SEO content optimization based on Google's E-E-A-T guidelines. Helping businesses recover traffic from AI Overviews since 2018.</p>
+      </div>
+      <div>
+        <h3 class="font-bold mb-4 text-white">Product</h3>
+        <ul class="space-y-2 text-sm">
+          <li><a href="#lead-scanner" class="text-gray-400 hover:text-white transition-colors">Lead Scanner</a></li>
+          <li><a href="#leaderboard" class="text-gray-400 hover:text-white transition-colors">Leaderboard</a></li>
+          <li><a href="#freelancers" class="text-gray-400 hover:text-white transition-colors">Specialists</a></li>
+          <li><a href="#templates" class="text-gray-400 hover:text-white transition-colors">Templates</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="font-bold mb-4 text-white">Company</h3>
+        <ul class="space-y-2 text-sm">
+          <li><a href="https://contentscale.site/about-us" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">About Us</a></li>
+          <li><a href="https://contentscale.site/privacy-policy" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">Privacy Policy</a></li>
+          <li><a href="https://contentscale.site/terms" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">Terms of Service</a></li>
+          <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Blog</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="font-bold mb-4 text-white">Contact</h3>
+        <ul class="space-y-2 text-sm">
+          <li class="text-gray-400"><i class="fas fa-envelope mr-2"></i><span class="reverse-email">moc.etlacsnestnoc@ofni</span></li>
+          <li><a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors"><i class="fab fa-whatsapp mr-2"></i>+31 6 2807 3996</a></li>
+          <li class="text-gray-400"><i class="fas fa-map-marker-alt mr-2"></i>Amsterdam, Netherlands</li>
+          <li class="text-gray-400"><i class="fas fa-clock mr-2"></i>Mon-Fri, 9:00-18:00 CET</li>
+        </ul>
+      </div>
+    </div>
+    <div class="border-t border-gray-700 pt-8 text-center text-sm text-gray-400">
+      <p>&copy; 2025 ContentScale. All rights reserved.</p>
+      <p class="mt-2">Built with 🚀 in Amsterdam</p>
+    </div>
+  </div>
+</footer>
+
+<!-- FREELANCER MODAL -->
+<div id="freelancerModal" class="modal">
+  <div class="modal-content">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-2xl font-bold text-gray-900">Register as Specialist</h2>
+      <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700 text-2xl"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="space-y-4">
+      <div><label class="block text-sm mb-2 text-gray-700">Full Name *</label><input type="text" id="freelancerName" placeholder="Your name" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"></div>
+      <div><label class="block text-sm mb-2 text-gray-700">Email *</label><input type="email" id="freelancerEmail" placeholder="your@email.com" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"></div>
+      <div><label class="block text-sm mb-2 text-gray-700">Phone (optional)</label><input type="tel" id="freelancerPhone" placeholder="+31 6 12345678" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"></div>
+      <div><label class="block text-sm mb-2 text-gray-700">Professional Title *</label><input type="text" id="freelancerTitle" placeholder="e.g. SEO Content Strategist" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"></div>
+      <div>
+        <label class="block text-sm mb-2 text-gray-700">Bio (max 200 characters)</label>
+        <textarea id="freelancerBio" rows="3" maxlength="200" placeholder="Tell us about your expertise and experience..." class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"></textarea>
+        <div class="flex justify-between mt-1"><span class="text-xs text-gray-500">Maximum 200 characters</span><span id="bioCharCount" class="text-xs text-gray-500">0/200</span></div>
+      </div>
+      <div class="border-t border-gray-200 pt-4 mt-2">
+        <div class="flex items-start gap-3">
+          <div class="flex items-center h-5"><input type="checkbox" id="featuredListing" class="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500"></div>
+          <div class="flex flex-col">
+            <label for="featuredListing" class="text-sm font-medium text-gray-900">⭐ Featured Listing - €29/month</label>
+            <p class="text-xs text-gray-500 mt-0.5">Word uitgelicht bovenaan de specialist lijst, krijg een speciale badge en 3x meer zichtbaarheid. <a href="https://paypal.me/ojgmedia?locale.x=en_US&amp;country.x=NL" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1"><i class="fab fa-paypal text-sm"></i> Betaal via PayPal</a></p>
+            <p class="text-xs text-gray-400 mt-1">Betaal €29 per maand. Na betaling wordt je vermelding binnen 24 uur geüpgraded naar featured.</p>
+          </div>
+        </div>
+      </div>
+      <button onclick="submitFreelancer()" class="btn-primary btn w-full py-3">Submit Application</button>
+      <p class="text-xs text-gray-500 text-center">We'll review and approve within 24 hours. You'll receive an email with your verified specialist badge.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+let userId = null;
+let sendgridConfigured = false;
+let allLeaderboardEntries = [];
+let userTemplates = { congrats: { subject: '', body: '' }, improvement: { subject: '', body: '' }, website: { subject: '', body: '' } };
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', function () {
+    registerUser();
+    loadLeaderboardData();
+    loadFreelancers();
+
+    // Hide loading screen
+    function revealPage() {
+        const l = document.getElementById('loading-screen');
+        if (l) { l.style.opacity = '0'; l.style.pointerEvents = 'none'; setTimeout(() => l.style.display = 'none', 300); }
+    }
+    setTimeout(revealPage, 1500);
+    if (document.readyState === 'complete') revealPage();
+    else window.addEventListener('load', revealPage);
+
+    document.getElementById('singleUrlInput')?.addEventListener('keypress', e => { if (e.key === 'Enter') scanSingleURL(); });
+
+    // Pre-fill bulk scan fields from localStorage
+    const savedEmail = localStorage.getItem('bulk_email');
+    const savedName  = localStorage.getItem('bulk_name');
+    if (savedEmail) document.getElementById('bulkScanEmail').value = savedEmail;
+    if (savedName)  document.getElementById('bulkScanName').value  = savedName;
+
+    const bulkInput = document.getElementById('bulkUrlInput');
+    if (bulkInput) {
+        bulkInput.addEventListener('input', function () {
+            const urls = this.value.split('\n').filter(u => u.trim().length > 0);
+            const counter = document.getElementById('bulkUrlCount');
+            if (counter) { counter.textContent = `${urls.length}/100`; counter.style.color = urls.length > 100 ? '#f87171' : '#d1d5db'; }
+        });
     }
 
-    function formatDate(dateString) {
-      const date = new Date(dateString);
-      const options = { month: 'long', day: 'numeric', year: 'numeric' };
-      return date.toLocaleDateString('en-US', options);
-    }
+    const bioTextarea = document.getElementById('freelancerBio');
+    if (bioTextarea) bioTextarea.addEventListener('input', function () { document.getElementById('bioCharCount').textContent = this.value.length + '/200'; });
+});
 
-    function filterCategory(category) {
-      currentCategory = category;
-
-      document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.textContent.toLowerCase().includes(category) || (category === 'all' && btn.textContent === 'All Posts')) {
-          btn.classList.add('active');
-        }
-      });
-
-      filterBlogs();
-    }
-
-    function filterBlogs() {
-      const searchTerm = document.getElementById('searchBox').value.toLowerCase();
-      const posts = document.querySelectorAll('#posts-container .blog-card');
-      let visibleCount = 0;
-
-      posts.forEach(post => {
-        const categories = post.dataset.category || '';
-        const title = post.querySelector('h3')?.textContent.toLowerCase() || '';
-        const description = post.querySelector('p')?.textContent.toLowerCase() || '';
-
-        const matchesCategory = currentCategory === 'all' || categories.includes(currentCategory);
-        const matchesSearch = !searchTerm || title.includes(searchTerm) || description.includes(searchTerm);
-
-        if (matchesCategory && matchesSearch) {
-          post.style.display = 'block';
-          visibleCount++;
+// ============================================================
+// USER REGISTRATION
+// ============================================================
+async function registerUser() {
+    try {
+        let storedUserId = localStorage.getItem('user_id');
+        if (!storedUserId) {
+            const response = await fetch('/api/user/register', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+            const data = await response.json();
+            if (data.success && data.userId) {
+                userId = data.userId;
+                localStorage.setItem('user_id', userId);
+            }
         } else {
-          post.style.display = 'none';
+            userId = storedUserId;
         }
-      });
-
-      const noResults = document.getElementById('no-results');
-      const blogGrid = document.getElementById('blog-grid');
-
-      if (visibleCount === 0) {
-        noResults.classList.remove('hidden');
-        blogGrid.classList.add('hidden');
-      } else {
-        noResults.classList.add('hidden');
-        blogGrid.classList.remove('hidden');
-      }
+        // Always load after userId is set
+        loadApiStatus();
+        loadUserTemplates();
+    } catch (error) {
+        console.error('Registration error:', error);
     }
+}
 
-    document.addEventListener('DOMContentLoaded', function() {
-      loadBlogPosts();
-    });
-  </script>
-
-  <!-- NO external decode script – error removed -->
-</body>
-</html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ContentScale Blog - AI SEO & Content Optimization Tips</title>
-  <meta name="description" content="Learn how to optimize your content for AI-era SEO. Case studies, guides, and tips from ContentScale experts. GRAAF Framework, CRAFT methodology, and more.">
-  <meta name="keywords" content="SEO blog, content optimization, AI SEO, GRAAF framework, content marketing, SEO case studies">
-  <link rel="canonical" href="https://app.contentscale.site/blog/">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    .nav-bar { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-bottom: 2px solid #374151; position: sticky; top: 0; z-index: 1000; }
-    .nav-link { color: #9ca3af; padding: 12px 20px; font-weight: 600; transition: all 0.3s; border-bottom: 3px solid transparent; cursor: pointer; text-decoration: none; }
-    .nav-link:hover { color: white; border-bottom-color: #8b5cf6; }
-    .nav-link.active { color: white; border-bottom-color: #8b5cf6; }
-    
-    .blog-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid #334155; border-radius: 16px; padding: 24px; transition: all 0.3s; cursor: pointer; }
-    .blog-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(139, 92, 246, 0.3); border-color: #8b5cf6; }
-    .blog-card.featured { border-color: #f59e0b; background: linear-gradient(135deg, #1e293b 0%, #2d1f08 100%); }
-    .blog-card.featured::before { content: '⭐ FEATURED'; position: absolute; top: -12px; right: 24px; background: linear-gradient(135deg, #f59e0b 0%, #eab308 100%); color: #1e293b; padding: 6px 16px; border-radius: 20px; font-size: 11px; font-weight: 800; }
-    
-    .category-badge { display: inline-block; padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; margin-right: 8px; }
-    .cat-guide { background: #8b5cf6; color: white; }
-    .cat-case-study { background: #10b981; color: white; }
-    .cat-tips { background: #3b82f6; color: white; }
-    .cat-news { background: #f59e0b; color: white; }
-    .cat-agency { background: #ec4899; color: white; }
-    
-    .search-box { background: #1f2937; border: 2px solid #374151; border-radius: 12px; padding: 12px 20px; color: white; width: 100%; }
-    .search-box:focus { outline: none; border-color: #8b5cf6; }
-    
-    .filter-btn { background: #374151; color: #9ca3af; padding: 8px 16px; border-radius: 8px; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; font-size: 14px; font-weight: 600; margin: 4px; }
-    .filter-btn:hover { background: #4b5563; color: white; }
-    .filter-btn.active { background: #8b5cf6; color: white; border-color: #a78bfa; }
-
-    .line-clamp-2 {
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-    .line-clamp-3 {
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-  </style>
-</head>
-<body class="bg-gray-900 text-gray-100">
-
-  <!-- NAVIGATION -->
-  <nav class="nav-bar">
-    <div class="max-w-6xl mx-auto px-6">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">ContentScale</div>
-        </div>
-        <div class="flex items-center gap-1">
-          <a href="/" class="nav-link">🏠 Home</a>
-          <a href="/#scanner" class="nav-link">🔍 Scanner</a>
-          <a href="/#leaderboard" class="nav-link">🏆 Leaderboard</a>
-          <a href="/#pricing" class="nav-link">💰 Pricing</a>
-          <a href="/blog/index.html" class="nav-link active">📝 Blog</a>
-          <a href="/contact-form" class="nav-link">📞 Contact</a>
-        </div>
-      </div>
-    </div>
-  </nav>
-
-  <div class="max-w-6xl mx-auto px-6 py-12">
-    
-    <!-- HEADER -->
-    <div class="text-center mb-12">
-      <h1 class="text-5xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-        ContentScale Blog
-      </h1>
-      <p class="text-xl text-gray-400 mb-6">
-        AI-Era SEO Strategies, Case Studies & Expert Tips
-      </p>
-      <div class="max-w-xl mx-auto">
-        <input 
-          type="text" 
-          id="searchBox" 
-          class="search-box" 
-          placeholder="🔍 Search articles..."
-          onkeyup="filterBlogs()">
-      </div>
-    </div>
-
-    <!-- CATEGORIES FILTER -->
-    <div class="mb-8 text-center">
-      <div class="mb-3">
-        <span class="text-sm text-gray-500 uppercase font-bold">Filter by Category:</span>
-      </div>
-      <div class="flex flex-wrap justify-center">
-        <button class="filter-btn active" onclick="filterCategory('all')">All Posts</button>
-        <button class="filter-btn" onclick="filterCategory('guide')">📚 Guides</button>
-        <button class="filter-btn" onclick="filterCategory('case-study')">📊 Case Studies</button>
-        <button class="filter-btn" onclick="filterCategory('agency')">🏢 Agency Spotlights</button>
-        <button class="filter-btn" onclick="filterCategory('tips')">💡 Tips & Tricks</button>
-        <button class="filter-btn" onclick="filterCategory('news')">📰 News & Updates</button>
-      </div>
-    </div>
-
-    <!-- FEATURED POST (dynamisch geladen) -->
-    <div id="featured-section" class="mb-12">
-      <h2 class="text-2xl font-bold mb-6 text-yellow-400">⭐ Featured Article</h2>
-      <div id="featured-post-container">
-        <!-- JavaScript laadt featured post hier -->
-      </div>
-    </div>
-
-    <!-- BLOG POSTS GRID (dynamisch geladen) -->
-    <div id="blog-grid">
-      <h2 class="text-2xl font-bold mb-6">Latest Articles</h2>
-      <div class="grid md:grid-cols-2 gap-6" id="posts-container">
-        <!-- JavaScript laadt posts hier -->
-      </div>
-    </div>
-
-    <!-- NO RESULTS -->
-    <div id="no-results" class="hidden text-center py-12">
-      <div class="text-6xl mb-4">🔍</div>
-      <h3 class="text-2xl font-bold mb-2">No Articles Found</h3>
-      <p class="text-gray-400 mb-6">Try different keywords or browse all posts</p>
-      <button onclick="filterCategory('all'); document.getElementById('searchBox').value=''" class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-bold transition">
-        Show All Posts
-      </button>
-    </div>
-
-    <!-- CTA SECTION -->
-    <div class="mt-16 bg-gradient-to-r from-purple-900 to-blue-900 rounded-lg p-8 text-center border border-purple-700">
-      <h3 class="text-3xl font-bold mb-3">Want to Improve Your Content Score?</h3>
-      <p class="text-lg text-gray-300 mb-6">
-        Get your free AI-powered content analysis in 30 seconds, or talk to Ot directly for expert guidance.
-      </p>
-      <div class="flex flex-col md:flex-row gap-4 justify-center">
-        <a href="/#scanner" class="inline-block bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-8 py-4 rounded-lg font-bold text-lg transition">
-          🚀 Scan Your Website Free
-        </a>
-        <a href="https://wa.me/31628073996?text=Hi%20Ot!%20I%20read%20your%20blog%20and%20want%20to%20improve%20my%20content%20score.%20Can%20we%20talk?" target="_blank" class="inline-block bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-8 py-4 rounded-lg font-bold text-lg transition">
-          💬 WhatsApp Ot
-        </a>
-      </div>
-    </div>
-
-    <!-- FOOTER -->
-    <div class="text-center text-gray-500 text-sm mt-12 pt-8 border-t border-gray-800">
-      <p class="mb-2">ContentScale Blog © 2025 • AI-Powered SEO Recovery</p>
-      <p>
-        <a href="https://app.contentscale.site" class="text-purple-400 hover:text-purple-300">Scanner</a> • 
-        <a href="https://wa.me/31628073996" class="text-green-400 hover:text-green-300">WhatsApp</a> •
-        <a href="mailto:info@contentscale.site" class="text-blue-400 hover:text-blue-300">Email</a>
-      </p>
-    </div>
-
-  </div>
-
-  <script>
-    let currentCategory = 'all';
-    let allPosts = [];
-    
-    async function loadBlogPosts() {
-      try {
-        const response = await fetch('/blog/blog-posts.json');
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
+// ============================================================
+// API STATUS + SETUP BOX LOGIC
+// ============================================================
+async function loadApiStatus() {
+    if (!userId) return;
+    try {
+        const response = await fetch('/api/user/keys/status', { headers: { 'x-user-id': userId } });
         const data = await response.json();
-        allPosts = data.posts.sort((a, b) => new Date(b.date) - new Date(a.date));
-        const featuredPost = allPosts.find(p => p.featured === true);
-        
-        if (featuredPost) {
-          renderFeaturedPost(featuredPost);
+        if (data.success) {
+            sendgridConfigured = data.hasSendgrid;
+            checkSetupStatus();
         }
-        
-        const otherPosts = allPosts.filter(p => p.featured !== true);
-        renderOtherPosts(otherPosts);
-        
-      } catch (error) {
-        console.error('Error loading blog posts:', error);
-        document.getElementById('featured-post-container').innerHTML = '<p class="text-red-400">Error loading posts. Please refresh the page.</p>';
-      }
+    } catch (error) {
+        console.error('Error loading API status:', error);
+    }
+}
+
+function checkSetupStatus() {
+    const setupBox = document.getElementById('setupRequiredBox');
+    const allDone  = document.getElementById('setupAllDone');
+    const scanForm = document.getElementById('bulkScannerForm');
+    const step1    = document.getElementById('setupStepSendgrid');
+    const status1  = document.getElementById('stepStatus1');
+
+    if (sendgridConfigured) {
+        if (step1)   step1.classList.add('completed');
+        if (status1) status1.textContent = '✅';
+        const sg = document.getElementById('sendgridSetupStatus');
+        if (sg) sg.innerHTML = '<span class="text-green-400">✅ SendGrid configured — emails ready</span>';
+        if (setupBox) setupBox.classList.add('hidden');
+        if (allDone)  allDone.classList.remove('hidden');
+    } else {
+        if (step1)   step1.classList.remove('completed');
+        if (status1) status1.textContent = '❌';
+        if (setupBox) setupBox.classList.remove('hidden');
+        if (allDone)  allDone.classList.add('hidden');
     }
 
-    function renderFeaturedPost(post) {
-      const container = document.getElementById('featured-post-container');
-      
-      const categoryBadges = post.category.map(cat => {
-        const catClass = cat === 'guide' ? 'cat-guide' : 
-                         cat === 'case-study' ? 'cat-case-study' :
-                         cat === 'tips' ? 'cat-tips' :
-                         cat === 'news' ? 'cat-news' :
-                         cat === 'agency' ? 'cat-agency' : 'cat-guide';
-        const catLabel = cat.replace('-', ' ').toUpperCase();
-        return `<span class="category-badge ${catClass}">${catLabel}</span>`;
-      }).join(' ');
-      
-      container.innerHTML = `
-        <div class="blog-card featured relative" onclick="window.location.href='/blog/${post.slug}'">
-          <div class="mb-4">
-            ${categoryBadges}
-            <span class="text-sm text-gray-500">📅 ${formatDate(post.date)} • ⏱️ ${post.readTime}</span>
-          </div>
-          <h3 class="text-3xl font-bold mb-3">${post.title}</h3>
-          <p class="text-gray-400 mb-4 leading-relaxed">
-            ${post.description}
-          </p>
-          <div class="flex items-center gap-3">
-            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%238b5cf6'/%3E%3Ctext x='20' y='26' text-anchor='middle' fill='white' font-size='16' font-weight='bold'%3EO%3C/text%3E%3C/svg%3E" class="w-10 h-10 rounded-full">
-            <div>
-              <div class="font-bold text-sm">${post.author}</div>
-              <div class="text-xs text-gray-500">Founder & SEO Recovery Expert</div>
-            </div>
-          </div>
-        </div>
-      `;
-    }
+    // Scan form is always visible — setup box is a warning, not a blocker
+    if (scanForm) scanForm.classList.remove('hidden');
+}
 
-    function renderOtherPosts(posts) {
-      const container = document.getElementById('posts-container');
-      
-      container.innerHTML = posts.map(post => {
-        const categoryBadges = post.category.map(cat => {
-          const catClass = cat === 'guide' ? 'cat-guide' : 
-                           cat === 'case-study' ? 'cat-case-study' :
-                           cat === 'tips' ? 'cat-tips' :
-                           cat === 'news' ? 'cat-news' :
-                           cat === 'agency' ? 'cat-agency' : 'cat-guide';
-          const catLabel = cat.replace('-', ' ').toUpperCase();
-          return `<span class="category-badge ${catClass}">${catLabel}</span>`;
-        }).join(' ');
-        
-        const metricsHTML = Object.entries(post.metrics || {}).map(([key, value]) => {
-          const icon = key === 'score' ? '✅' : 
-                       key === 'traffic' ? '📈' : 
-                       key === 'revenue' ? '💰' :
-                       key === 'days' ? '⏱️' :
-                       key === 'points' ? '📚' :
-                       key === 'examples' ? '💡' :
-                       key === 'visitors' ? '📈' :
-                       key === 'months' ? '⏱️' :
-                       key === 'sites' ? '📊' :
-                       key === 'businesses' ? '🏢' :
-                       key === 'framework' ? '🎯' :
-                       key === 'type' ? '⚡' : '🎯';
-          const colorClass = key === 'score' ? 'text-green-400' : 
-                             key === 'traffic' || key === 'revenue' || key === 'visitors' ? 'text-blue-400' : 
-                             key === 'type' && (value === 'Quick Wins' || value === 'Breaking News') ? 'text-red-400' :
-                             'text-purple-400';
-          return `<span class="${colorClass}">${icon} ${value}</span>`;
-        }).join(' ');
-        
-        return `
-          <div class="blog-card" data-category="${post.category.join(' ')}" onclick="window.location.href='/blog/${post.slug}'">
-            <div class="mb-3">
-              ${categoryBadges}
-              <div class="text-sm text-gray-500 mt-2">📅 ${formatDate(post.date)} • ⏱️ ${post.readTime}</div>
-            </div>
-            <h3 class="text-2xl font-bold mb-3">${post.title}</h3>
-            <p class="text-gray-400 mb-4">
-              ${post.description}
-            </p>
-            <div class="flex items-center gap-2 text-sm flex-wrap">
-              ${metricsHTML}
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
+// ============================================================
+// SETUP BOX: INLINE SAVE BUTTONS
+// ============================================================
+async function saveSetupSendgrid() {
+    if (!userId) { alert('Please refresh the page — user not registered yet.'); return; }
+    const key = document.getElementById('setupSendgridKey').value.trim();
+    if (!key) { alert('Please paste your SendGrid API key.'); return; }
 
-    function formatDate(dateString) {
-      const date = new Date(dateString);
-      const options = { month: 'long', day: 'numeric', year: 'numeric' };
-      return date.toLocaleDateString('en-US', options);
-    }
-    
-    function filterCategory(category) {
-      currentCategory = category;
-      
-      document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.textContent.toLowerCase().includes(category) || (category === 'all' && btn.textContent === 'All Posts')) {
-          btn.classList.add('active');
-        }
-      });
-      
-      filterBlogs();
-    }
-    
-    function filterBlogs() {
-      const searchTerm = document.getElementById('searchBox').value.toLowerCase();
-      const posts = document.querySelectorAll('#posts-container .blog-card');
-      let visibleCount = 0;
-      
-      posts.forEach(post => {
-        const categories = post.dataset.category || '';
-        const title = post.querySelector('h3').textContent.toLowerCase();
-        const description = post.querySelector('p').textContent.toLowerCase();
-        
-        const matchesCategory = currentCategory === 'all' || categories.includes(currentCategory);
-        const matchesSearch = !searchTerm || title.includes(searchTerm) || description.includes(searchTerm);
-        
-        if (matchesCategory && matchesSearch) {
-          post.style.display = 'block';
-          visibleCount++;
+    const statusEl = document.getElementById('sendgridSetupStatus');
+    statusEl.innerHTML = '<span class="text-blue-400">Saving…</span>';
+
+    try {
+        const res = await fetch('/api/user/sendgrid/configure', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+            body: JSON.stringify({ userId, apiKey: key, dailyLimit: 100 })
+        });
+        const data = await res.json();
+        if (data.success) {
+            sendgridConfigured = true;
+            document.getElementById('setupSendgridKey').value = '';
+            checkSetupStatus();
         } else {
-          post.style.display = 'none';
+            statusEl.innerHTML = `<span class="text-red-400">❌ ${data.error || 'Save failed'}</span>`;
         }
-      });
-      
-      const noResults = document.getElementById('no-results');
-      const blogGrid = document.getElementById('blog-grid');
-      
-      if (visibleCount === 0) {
-        noResults.classList.remove('hidden');
-        blogGrid.classList.add('hidden');
-      } else {
-        noResults.classList.add('hidden');
-        blogGrid.classList.remove('hidden');
-      }
+    } catch (e) {
+        statusEl.innerHTML = '<span class="text-red-400">❌ Connection error</span>';
     }
-    
-    document.addEventListener('DOMContentLoaded', function() {
-      loadBlogPosts();
-    });
-    
-    document.addEventListener('click', function(e) {
-      const card = e.target.closest('.blog-card');
-      if (card) {
-        const title = card.querySelector('h3')?.textContent;
-        console.log('Blog card clicked:', title);
-      }
-    });
-  </script>
+}
 
+// ============================================================
+// API STATUS (used by setup box only)
+// ============================================================
+function switchMode(mode) {
+    const singleMode = document.getElementById('singleMode');
+    const bulkMode = document.getElementById('bulkMode');
+    const singleBtn = document.getElementById('modeSingleBtn');
+    const bulkBtn = document.getElementById('modeBulkBtn');
+    const templates = document.getElementById('templates');
+    if (mode === 'single') {
+        singleMode.classList.remove('hidden'); bulkMode.classList.add('hidden');
+        singleBtn.classList.add('active'); bulkBtn.classList.remove('active');
+        if (templates) templates.classList.add('hidden');
+    } else {
+        singleMode.classList.add('hidden'); bulkMode.classList.remove('hidden');
+        singleBtn.classList.remove('active'); bulkBtn.classList.add('active');
+        document.getElementById('bulkScannerContent').classList.remove('hidden');
+        document.getElementById('bulkToggleText').textContent = 'Hide Bulk Scanner';
+        document.getElementById('bulkScannerIcon').className = 'fas fa-chevron-up';
+        if (templates) templates.classList.remove('hidden');
+    }
+}
+
+function toggleBulkScanner() {
+    const content = document.getElementById('bulkScannerContent');
+    const icon = document.getElementById('bulkScannerIcon');
+    const toggleText = document.getElementById('bulkToggleText');
+    if (content) {
+        const isHidden = content.classList.contains('hidden');
+        content.classList.toggle('hidden');
+        if (icon) { icon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)'; icon.className = isHidden ? 'fas fa-chevron-down' : 'fas fa-chevron-up'; }
+        if (toggleText) toggleText.textContent = isHidden ? 'Show Bulk Scanner' : 'Hide Bulk Scanner';
+    }
+}
+
+// ============================================================
+// TEMPLATES
+// ============================================================
+async function loadUserTemplates() {
+    if (!userId) return;
+    try {
+        const response = await fetch('/api/user/templates', { headers: { 'x-user-id': userId } });
+        const data = await response.json();
+        if (data.success && data.templates) {
+            userTemplates = data.templates;
+            ['congrats', 'improvement', 'website'].forEach(t => {
+                if (userTemplates[t]) {
+                    const subEl = document.getElementById('template-' + t + '-subject');
+                    const bodyEl = document.getElementById('template-' + t + '-body');
+                    if (subEl) subEl.value = userTemplates[t].subject || '';
+                    if (bodyEl) bodyEl.value = userTemplates[t].body || '';
+                }
+            });
+        }
+    } catch (error) { console.error('Error loading templates:', error); }
+}
+
+async function saveTemplate(type) {
+    if (!userId) { alert('❌ User not registered. Please refresh the page.'); return; }
+    const subject = document.getElementById(`template-${type}-subject`).value;
+    const body = document.getElementById(`template-${type}-body`).value;
+    if (!subject || !body) { alert('❌ Please fill in both subject and body'); return; }
+    try {
+        const response = await fetch('/api/user/templates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+            body: JSON.stringify({ type, subject, body })
+        });
+        const data = await response.json();
+        if (data.success) { alert('✅ Template saved successfully!'); userTemplates[type] = { subject, body }; }
+        else alert('❌ ' + (data.error || 'Failed to save template'));
+    } catch (error) { alert('❌ Error: ' + error.message); }
+}
+
+// ============================================================
+// SINGLE URL SCAN
+// ============================================================
+async function scanSingleURL() {
+    const input = document.getElementById('singleUrlInput');
+    const button = document.getElementById('singleScanBtn');
+    const progress = document.getElementById('singleProgress');
+    const progressBar = document.getElementById('singleProgressBar');
+    const progressText = document.getElementById('singleProgressText');
+
+    let url = input.value.trim();
+    if (!url) { alert('❌ Please enter a URL'); return; }
+    if (!url.startsWith('http')) url = 'https://' + url;
+
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
+    progress.classList.remove('hidden');
+    progressBar.style.width = '20%';
+    progressText.textContent = 'Starting browser...';
+
+    try {
+        const response = await fetch('/api/scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) });
+        progressBar.style.width = '60%';
+        progressText.textContent = 'Analyzing content...';
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.error || 'Scan failed');
+        displayScanResult(data);
+        progressBar.style.width = '100%';
+        progressText.textContent = 'Scan complete!';
+        setTimeout(() => { progress.classList.add('hidden'); button.disabled = false; button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan'; }, 500);
+    } catch (error) {
+        alert('❌ Scan failed: ' + error.message);
+        progress.classList.add('hidden');
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
+    }
+}
+
+function displayScanResult(data) {
+    const resultDiv = document.getElementById('singleResult');
+    const url = data.url || '', quality = data.quality || 'unknown', currentScore = data.score || 0;
+    const graaf = data.metrics?.graaf || 0, craft = data.metrics?.craft || 0, technical = data.metrics?.technical || 0, words = data.content_stats?.wordCount || 0;
+    const recommendations = data.recommendations?.all || [];
+
+    let recsHtml = recommendations.length > 0 ? recommendations.map(rec => {
+        let pc = 'priority-none';
+        if (rec.priority === 'high') pc = 'priority-high';
+        else if (rec.priority === 'medium') pc = 'priority-medium';
+        else if (rec.priority === 'low') pc = 'priority-low';
+        return `<div class="recommendation-card">
+            <div class="flex items-start justify-between mb-2">
+                <h4 class="recommendation-title">${rec.title || 'Recommendation'}</h4>
+                ${rec.priority ? `<span class="priority-badge ${pc}">${rec.priority.toUpperCase()}</span>` : ''}
+            </div>
+            <p class="recommendation-desc">${rec.description || ''}</p>
+            ${rec.action ? `<div class="recommendation-section"><div class="recommendation-section-title"><i class="fas fa-wrench"></i> <span>Action</span></div><p class="recommendation-action">${rec.action}</p></div>` : ''}
+            ${rec.learning ? `<div class="recommendation-section"><div class="recommendation-section-title"><i class="fas fa-graduation-cap"></i> <span>Learning</span></div><p class="recommendation-learning">${rec.learning}</p></div>` : ''}
+            ${rec.target ? `<div class="recommendation-section"><div class="recommendation-section-title"><i class="fas fa-bullseye"></i> <span>Target</span></div><p class="recommendation-target">${rec.target}</p></div>` : ''}
+        </div>`;
+    }).join('') : '<p class="text-gray-400 text-sm">No specific recommendations — your page is excellent!</p>';
+
+    let qualityColor = 'bg-gray-600';
+    if (quality === 'excellent') qualityColor = 'bg-green-600';
+    else if (quality === 'very good') qualityColor = 'bg-blue-600';
+    else if (quality === 'good') qualityColor = 'bg-green-600';
+    else if (quality === 'average') qualityColor = 'bg-yellow-600';
+    else if (quality === 'needs improvement') qualityColor = 'bg-red-600';
+
+    resultDiv.innerHTML = `<div class="bg-gray-800 rounded-xl border-2 border-purple-500 p-6 mt-4">
+        <div class="text-center mb-4">
+            <h2 class="text-2xl font-bold text-white mb-1">📊 SEO Content Analysis</h2>
+            <p class="text-md text-gray-300 break-all">${url}</p>
+            <span class="inline-block mt-2 px-3 py-1 ${qualityColor} text-white text-sm rounded-full">Quality: ${quality.charAt(0).toUpperCase() + quality.slice(1)}</span>
+        </div>
+        <div class="text-center mb-6">
+            <div class="text-6xl font-bold text-white">${currentScore}</div>
+            <div class="text-sm text-gray-400">out of 100</div>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+            <div class="bg-gray-900 rounded-lg p-4 text-center"><div class="text-sm text-gray-400 mb-1">GRAAF (50)</div><div class="text-2xl font-bold text-purple-400">${graaf}/50</div></div>
+            <div class="bg-gray-900 rounded-lg p-4 text-center"><div class="text-sm text-gray-400 mb-1">CRAFT (30)</div><div class="text-2xl font-bold text-blue-400">${craft}/30</div></div>
+            <div class="bg-gray-900 rounded-lg p-4 text-center"><div class="text-sm text-gray-400 mb-1">Technical (20)</div><div class="text-2xl font-bold text-yellow-400">${technical}/20</div></div>
+            <div class="bg-gray-900 rounded-lg p-4 text-center"><div class="text-sm text-gray-400 mb-1">Words</div><div class="text-2xl font-bold text-white">${words.toLocaleString()}</div></div>
+        </div>
+        <div class="border-t border-gray-700 pt-5 mb-5">
+            <h3 class="text-xl font-bold text-white mb-4">📋 Priority Recommendations</h3>
+            ${recsHtml}
+        </div>
+        <div class="flex gap-3">
+            <button onclick="addToLeaderboard('${url}', ${currentScore})" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-semibold transition-all"><i class="fas fa-trophy mr-2"></i> Add to Leaderboard</button>
+            <button onclick="document.getElementById('singleResult').classList.add('hidden')" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold transition-all">Close</button>
+        </div>
+    </div>`;
+
+    resultDiv.classList.remove('hidden');
+    resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function addToLeaderboard(url, score) {
+    const contactEmail = prompt('Enter your email to receive congratulations if approved (optional):', '');
+    if (!contactEmail) { alert('✅ Your request has been sent to admin for approval (85+ required)'); return; }
+    if (!contactEmail.includes('@') || !contactEmail.includes('.')) { alert('❌ Please enter a valid email address'); return; }
+    alert(`✅ Thank you! Admin will review your submission. If approved (85+ score required), a congratulations email will be sent to ${contactEmail}.`);
+}
+
+// ============================================================
+// BULK SCAN
+// ============================================================
+async function startBulkScan() {
+    const urlInput = document.getElementById('bulkUrlInput');
+    const emailInput = document.getElementById('bulkScanEmail');
+    const nameInput = document.getElementById('bulkScanName');
+    const button = document.getElementById('bulkScanBtn');
+
+    const urls = urlInput.value.split('\n').filter(u => u.trim().length > 0);
+    const email = emailInput.value.trim();
+    const name = nameInput.value.trim();
+
+    if (!urls.length) { alert('❌ Please enter at least one URL'); return; }
+    if (urls.length > 100) { alert('❌ Maximum 100 URLs allowed'); return; }
+    if (!email || !email.includes('@')) { alert('❌ Please enter a valid email address'); return; }
+    if (!name) { alert('❌ Please enter your name'); return; }
+
+    // Save for next visit
+    localStorage.setItem('bulk_email', email);
+    localStorage.setItem('bulk_name', name);
+
+    if (!sendgridConfigured) {
+        // Flash the setup box to draw attention
+        const setupBox = document.getElementById('setupRequiredBox');
+        if (setupBox) {
+            setupBox.classList.remove('hidden');
+            setupBox.style.border = '2px solid #ef4444';
+            setupBox.style.boxShadow = '0 0 20px rgba(239,68,68,0.5)';
+            setupBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => {
+                setupBox.style.border = '';
+                setupBox.style.boxShadow = '';
+            }, 3000);
+        }
+        // Show inline error below the button
+        const btn = document.getElementById('bulkScanBtn');
+        const existing = document.getElementById('sendgridWarning');
+        if (!existing) {
+            const warn = document.createElement('p');
+            warn.id = 'sendgridWarning';
+            warn.style.cssText = 'color:#f87171!important;font-size:0.875rem;margin-top:0.75rem;text-align:center;';
+            warn.innerHTML = '⚠️ SendGrid is required to run bulk scans. Configure it above first.';
+            btn.parentNode.insertBefore(warn, btn.nextSibling);
+            setTimeout(() => warn.remove(), 4000);
+        }
+        return;
+    }
+
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
+    document.getElementById('bulkProgress').classList.remove('hidden');
+    document.getElementById('bulkResults').classList.add('hidden');
+    document.getElementById('bulkResultsContainer').innerHTML = '';
+
+    let results = { leaderboard: [], withWebsite: [], withoutWebsite: [], errors: [] };
+
+    for (let i = 0; i < urls.length; i++) {
+        let url = urls[i].trim();
+        if (!url.startsWith('http')) url = 'https://' + url;
+        document.getElementById('bulkProgressText').textContent = `Scanning ${i + 1} of ${urls.length}…`;
+        document.getElementById('bulkProgressBar').style.width = `${((i + 1) / urls.length) * 100}%`;
+        try {
+            const response = await fetch('/api/scan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-user-id': userId || 'anonymous' },
+                body: JSON.stringify({ url })
+            });
+            const data = await response.json();
+            if (data.success) {
+                const score = data.score || 0;
+                if (score >= 85) results.leaderboard.push({ url, score, data });
+                else if (score > 0) results.withWebsite.push({ url, score, data });
+                else results.withoutWebsite.push({ url, score, data });
+            } else results.errors.push({ url, error: data.error || 'Scan failed' });
+        } catch (error) { results.errors.push({ url, error: error.message }); }
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    displayBulkResults(results, email, name);
+    await sendBulkEmails(results, email, name);
+
+    button.disabled = false;
+    button.innerHTML = '<i class="fas fa-rocket mr-2"></i> Start Bulk Scan';
+    document.getElementById('bulkProgress').classList.add('hidden');
+}
+
+function displayBulkResults(results, userEmail, userName) {
+    let html = '';
+    if (results.leaderboard.length > 0) html += `<div class="bg-green-900 bg-opacity-30 border border-green-500 rounded-lg p-4 mb-4"><h5 class="font-bold text-green-400 mb-2">🏆 Leaderboard Candidates (${results.leaderboard.length})</h5><ul class="text-sm space-y-1">${results.leaderboard.map(r => `<li>✅ ${r.url} — Score: ${r.score}/100</li>`).join('')}</ul></div>`;
+    if (results.withWebsite.length > 0) html += `<div class="bg-blue-900 bg-opacity-30 border border-blue-500 rounded-lg p-4 mb-4"><h5 class="font-bold text-blue-400 mb-2">📧 Improvement Emails (${results.withWebsite.length})</h5><ul class="text-sm space-y-1">${results.withWebsite.map(r => `<li>📨 ${r.url} — Score: ${r.score}/100</li>`).join('')}</ul></div>`;
+    if (results.withoutWebsite.length > 0) html += `<div class="bg-purple-900 bg-opacity-30 border border-purple-500 rounded-lg p-4 mb-4"><h5 class="font-bold text-purple-400 mb-2">🌐 Website Offers (${results.withoutWebsite.length})</h5><ul class="text-sm space-y-1">${results.withoutWebsite.map(r => `<li>📬 ${r.url}</li>`).join('')}</ul></div>`;
+    if (results.errors.length > 0) html += `<div class="bg-red-900 bg-opacity-30 border border-red-500 rounded-lg p-4 mb-4"><h5 class="font-bold text-red-400 mb-2">❌ Scan Errors (${results.errors.length})</h5><ul class="text-sm space-y-1">${results.errors.map(r => `<li>⚠️ ${r.url} — ${r.error}</li>`).join('')}</ul></div>`;
+    html += `<div class="bg-gray-800 border border-gray-700 rounded-lg p-4"><p class="text-sm text-gray-300">📬 Summary report sent to <strong>${userEmail}</strong></p></div>`;
+    document.getElementById('bulkResultsContainer').innerHTML = html;
+    document.getElementById('bulkResults').classList.remove('hidden');
+}
+
+async function sendBulkEmails(results, userEmail, userName) {
+    if (!userId) return;
+    try {
+        await fetch('/api/bulk-scan/send-summary', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ userEmail, userName, results }) });
+        if (results.leaderboard.length > 0) await fetch('/api/bulk-scan/submit-leaderboard', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ entries: results.leaderboard, submittedBy: userEmail }) });
+        if (results.withWebsite.length > 0) await fetch('/api/bulk-scan/send-improvement-emails', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ businesses: results.withWebsite, senderName: userName, senderEmail: userEmail }) });
+        if (results.withoutWebsite.length > 0) await fetch('/api/bulk-scan/send-website-offers', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ businesses: results.withoutWebsite, senderName: userName, senderEmail: userEmail }) });
+        alert('✅ Bulk scan complete! Emails are being sent via your SendGrid account.');
+    } catch (error) { alert('⚠️ Scan complete but some emails may have failed. Check your SendGrid dashboard.'); }
+}
+
+// ============================================================
+// LEADERBOARD
+// ============================================================
+async function loadLeaderboardData() {
+    try {
+        const response = await fetch('/api/leaderboard');
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.json();
+        if (data.success && data.entries && data.entries.length > 0) {
+            allLeaderboardEntries = data.entries;
+            document.getElementById('totalAgencies').textContent = data.stats?.totalAgencies || 0;
+            document.getElementById('avgScore').textContent = data.averageScore || 0;
+            document.getElementById('countriesCount').textContent = data.stats?.countriesCount || 0;
+            document.getElementById('activeHelpers').textContent = data.stats?.activeHelpers || 0;
+            renderTop3(); renderRankings4to15(); renderRankings16Plus(); renderCountryFilters();
+        } else { showEmptyLeaderboard(); }
+    } catch (error) { console.error('Error loading leaderboard:', error); showEmptyLeaderboard(); }
+}
+
+function showEmptyLeaderboard() {
+    ['totalAgencies', 'avgScore', 'countriesCount', 'activeHelpers'].forEach(id => document.getElementById(id).textContent = '0');
+    const container = document.getElementById('top3-container');
+    if (container) container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No leaderboard entries found</div>';
+    document.getElementById('rankings4to15Container').style.display = 'none';
+    document.getElementById('totalCount').textContent = '0';
+}
+
+function renderTop3() {
+    const container = document.getElementById('top3-container');
+    if (!container) return;
+    const top3 = allLeaderboardEntries.slice(0, 3);
+    if (!top3.length) { container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No entries found</div>'; return; }
+    container.innerHTML = top3.map((entry, index) => {
+        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
+        const medalClass = index === 0 ? 'gold' : index === 1 ? 'silver' : 'bronze';
+        const rankText = index === 0 ? '1st Worldwide' : index === 1 ? '2nd Worldwide' : '3rd Worldwide';
+        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+        return `<div class="top-card ${medalClass}">
+            <div class="text-5xl mb-2">${medal}</div>
+            <div class="text-xs font-bold uppercase tracking-wider mb-2 text-white/80">${rankText}</div>
+            <h3 class="text-xl font-bold mb-2">${companyName}</h3>
+            <div class="text-4xl font-black mb-2">${entry.score}/100</div>
+            <div class="text-white/80 mb-3">${getCountryFlag(entry.country)} ${entry.country}</div>
+            <button onclick="window.open('${entry.url}', '_blank', 'noopener')" class="w-full bg-black/30 hover:bg-black/50 text-white px-4 py-2 rounded-lg border border-white/30 transition-all"><i class="fas fa-external-link-alt mr-2"></i> Visit Website</button>
+        </div>`;
+    }).join('');
+}
+
+function renderRankings4to15() {
+    const grid = document.getElementById('rankings4to15Grid');
+    if (!grid) return;
+    const rankings = allLeaderboardEntries.slice(3, 15);
+    if (!rankings.length) { document.getElementById('rankings4to15Container').style.display = 'none'; return; }
+    document.getElementById('rankings4to15Container').style.display = 'block';
+    grid.innerHTML = rankings.map((entry, index) => {
+        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+        return `<div class="rank-card">
+            <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${index + 4}</div>
+            <h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
+            <div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
+            <div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
+            <a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">View Website <i class="fas fa-external-link-alt ml-1"></i></a>
+        </div>`;
+    }).join('');
+}
+
+function renderRankings16Plus() {
+    const tbody = document.getElementById('rankingsTbody');
+    const totalCount = document.getElementById('totalCount');
+    if (!tbody) return;
+    const rankings = allLeaderboardEntries.slice(15, 35);
+    if (totalCount) totalCount.textContent = allLeaderboardEntries.length;
+    if (!rankings.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-400">No more entries</td></tr>'; return; }
+    tbody.innerHTML = rankings.map((entry, index) => {
+        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+        const sc = entry.score >= 85 ? 'text-green-400' : entry.score >= 70 ? 'text-yellow-400' : 'text-red-400';
+        return `<tr>
+            <td><span class="inline-flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full font-bold">${index + 16}</span></td>
+            <td class="font-semibold">${companyName}</td>
+            <td><a href="${entry.url}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">${entry.url.replace('https://', '').substring(0, 25)}...</a></td>
+            <td><span class="text-lg font-bold ${sc}">${entry.score}</span></td>
+            <td><span class="text-sm">${getCountryFlag(entry.country)} ${entry.country}</span></td>
+            <td><span class="text-sm text-gray-400">${new Date(entry.created_at).toLocaleDateString()}</span></td>
+        </tr>`;
+    }).join('');
+}
+
+function renderCountryFilters() {
+    const div = document.getElementById('countryFilters');
+    if (!div) return;
+    const countries = [...new Set(allLeaderboardEntries.map(e => e.country))];
+    let html = '<button class="filter-tag active" onclick="filterByCountry(\'all\')">🌍 All</button>';
+    countries.forEach(country => { if (country) html += `<button class="filter-tag" onclick="filterByCountry('${country}')">${getCountryFlag(country)} ${country}</button>`; });
+    div.innerHTML = html;
+}
+
+function filterByCountry(country) { document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active')); event.target.classList.add('active'); }
+
+function filterAgencies() {
+    const query = document.getElementById('searchInput')?.value.toLowerCase() || '';
+    if (!query) { renderRankings4to15(); renderRankings16Plus(); return; }
+    const filtered = allLeaderboardEntries.filter(entry =>
+        (entry.company_name || '').toLowerCase().includes(query) ||
+        (entry.url || '').toLowerCase().includes(query) ||
+        extractDomainFromUrl(entry.url).toLowerCase().includes(query)
+    );
+    const grid = document.getElementById('rankings4to15Grid');
+    if (grid) grid.innerHTML = filtered.slice(3, 15).map((entry, index) => {
+        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+        return `<div class="rank-card">
+            <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${index + 4}</div>
+            <h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
+            <div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
+            <div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
+            <a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">View Website</a>
+        </div>`;
+    }).join('');
+}
+
+function toggleFilters() {
+    const panel = document.getElementById('filterPanel');
+    const icon = document.getElementById('filterIcon');
+    if (panel) { panel.classList.toggle('hidden'); icon.classList.toggle('fa-chevron-down'); icon.classList.toggle('fa-chevron-up'); }
+}
+
+function toggleRankings() {
+    const container = document.getElementById('rankingsContainer');
+    const toggleText = document.getElementById('rankingsToggleText');
+    if (container) { container.classList.toggle('hidden'); toggleText.textContent = container.classList.contains('hidden') ? '📊 Show Rankings 16+' : '📊 Hide Rankings 16+'; }
+}
+
+// ============================================================
+// FREELANCERS
+// ============================================================
+async function loadFreelancers() {
+    try {
+        const response = await fetch('/api/freelancers');
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.json();
+        const grid = document.getElementById('freelancersGrid');
+        if (!grid) return;
+        const freelancers = data.freelancers || [];
+        if (!freelancers.length) { grid.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No freelancers found</div>'; return; }
+        grid.innerHTML = freelancers.map(f => {
+            const firstName = f.name.split(' ')[0];
+            const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase();
+            return `<div class="card hover:border-purple-500">
+                <div class="card-content">
+                    <div class="flex items-start gap-4 mb-4">
+                        <div class="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl font-bold text-white">${initials}</div>
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                                <h3 class="font-bold text-lg text-white">${f.name}</h3>
+                                ${f.is_featured ? '<span class="px-2 py-1 bg-yellow-600 rounded text-xs text-white font-semibold flex items-center gap-1">⭐ Featured</span>' : '<span class="px-2 py-1 bg-green-600 rounded text-xs text-white font-semibold">✓ Verified</span>'}
+                            </div>
+                            <p class="text-sm text-gray-400">${f.title || 'SEO Specialist'}</p>
+                        </div>
+                    </div>
+                    <p class="text-gray-300 text-sm mb-4">${f.bio || 'No bio available'}</p>
+                    <div class="flex items-center justify-between text-sm mb-4">
+                        <span class="text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i> ${f.location || f.country || 'Remote'}</span>
+                        ${f.hourly_rate ? `<span class="text-purple-400">💰 ${f.hourly_rate}</span>` : ''}
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20discuss%20SEO%20optimization%20with%20${encodeURIComponent(f.name)}" target="_blank" rel="noopener" class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 no-underline">
+                        <i class="fab fa-whatsapp"></i> Contact ${firstName}
+                    </a>
+                </div>
+            </div>`;
+        }).join('');
+    } catch (error) {
+        console.error('Error loading freelancers:', error);
+        document.getElementById('freelancersGrid').innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Could not load freelancers</div>';
+    }
+}
+
+function openFreelancerModal() { const modal = document.getElementById('freelancerModal'); if (modal) { modal.classList.add('active'); document.body.style.overflow = 'hidden'; } }
+function closeModal() { const modal = document.getElementById('freelancerModal'); if (modal) { modal.classList.remove('active'); document.body.style.overflow = 'auto'; } }
+
+function submitFreelancer() {
+    const name = document.getElementById('freelancerName')?.value;
+    const email = document.getElementById('freelancerEmail')?.value;
+    if (!name || !email) { alert('❌ Name and email are required'); return; }
+    if (!email.includes('@')) { alert('❌ Please enter a valid email'); return; }
+    const isFeatured = document.getElementById('featuredListing')?.checked || false;
+    if (isFeatured) window.open('https://paypal.me/ojgmedia?locale.x=en_US&country.x=NL', '_blank', 'noopener');
+    fetch('/api/freelancers/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, phone: document.getElementById('freelancerPhone')?.value, title: document.getElementById('freelancerTitle')?.value || 'SEO Specialist', bio: document.getElementById('freelancerBio')?.value || null, is_featured: isFeatured })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(`✅ Thank you ${name}! We'll review your application within 24 hours.${isFeatured ? ' Please complete the payment via PayPal.' : ''}`);
+            closeModal();
+            ['freelancerName', 'freelancerEmail', 'freelancerPhone', 'freelancerTitle', 'freelancerBio'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            document.getElementById('bioCharCount').textContent = '0/200';
+            document.getElementById('featuredListing').checked = false;
+        } else alert('❌ ' + (data.error || 'Registration failed'));
+    })
+    .catch(error => alert('❌ Registration failed: ' + error.message));
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function extractDomainFromUrl(url) {
+    if (!url) return 'Company';
+    try {
+        const hostname = new URL(url).hostname;
+        let name = hostname.replace('www.', '').split('.')[0];
+        return name.charAt(0).toUpperCase() + name.slice(1);
+    } catch (e) { return 'Company'; }
+}
+
+function getCountryFlag(country) {
+    const flags = { 'Netherlands': '🇳🇱', 'NL': '🇳🇱', 'United Kingdom': '🇬🇧', 'UK': '🇬🇧', 'US': '🇺🇸', 'United States': '🇺🇸', 'Germany': '🇩🇪', 'DE': '🇩🇪', 'France': '🇫🇷', 'FR': '🇫🇷', 'Belgium': '🇧🇪', 'BE': '🇧🇪', 'Spain': '🇪🇸', 'ES': '🇪🇸', 'Italy': '🇮🇹', 'IT': '🇮🇹' };
+    return flags[country] || '🌐';
+}
+
+window.onclick = function (event) { const modal = document.getElementById('freelancerModal'); if (event.target === modal) closeModal(); };
+</script>
 </body>
 </html>
