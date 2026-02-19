@@ -79,6 +79,10 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 .rankings-table { width: 100%; background: #111827; border-radius: 0.75rem; overflow: hidden; }
 .rankings-table th { background: #1f2937; padding: 1rem; text-align: left; font-weight: 600; color: white; }
 .rankings-table td { padding: 1rem; border-bottom: 1px solid #374151; color: white; }
+@media (max-width: 768px) {
+  .rankings-table-wrap { display: none; }
+  .rankings-mobile-msg { display: block !important; }
+}
 .hidden { display: none; }
 .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 9999; }
 .modal.active { display: flex; }
@@ -211,8 +215,8 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
       </div>
 
       <div class="flex justify-center gap-4 mb-8">
-        <button id="modeSingleBtn" onclick="switchMode('single')" class="mode-toggle active"><i class="fas fa-link mr-2"></i> Single URL</button>
-        <button id="modeBulkBtn" onclick="switchMode('bulk')" class="mode-toggle"><i class="fas fa-layer-group mr-2"></i> Bulk URLs</button>
+        <button id="modeSingleBtn" onclick="switchMode('single')" class="mode-toggle active"><i class="fas fa-link mr-2"></i> Scan Single URL</button>
+        <button id="modeBulkBtn" onclick="switchMode('bulk')" class="mode-toggle"><i class="fas fa-layer-group mr-2"></i> Scan Bulk URLs</button>
       </div>
 
       <!-- SINGLE MODE -->
@@ -234,15 +238,9 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
       <!-- BULK MODE -->
       <div id="bulkMode" class="hidden max-w-4xl mx-auto">
         <div class="card" style="border: 2px solid #3b82f6;">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-xl font-bold text-white flex items-center gap-2">
-              <span>📋 Bulk URL Scanner</span>
-              <span class="text-xs px-2 py-1 bg-blue-600 rounded text-white">Batch Scan</span>
-            </h3>
-            <button onclick="toggleBulkScanner()" class="text-sm text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-2">
-              <span id="bulkToggleText">Hide Bulk Scanner</span>
-              <i class="fas fa-chevron-up" id="bulkScannerIcon" style="transition: transform 0.3s;"></i>
-            </button>
+          <div class="flex items-center gap-3 mb-6">
+            <span class="text-xl font-bold text-white">📋 Bulk URL Scanner</span>
+            <span class="text-sm px-3 py-1 bg-blue-600 rounded-full text-white font-semibold">Batch Scan</span>
           </div>
 
           <div id="bulkScannerContent">
@@ -261,11 +259,11 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 
               <div class="setup-step" id="setupStepSendgrid">
                 <div class="setup-step-header">
+                  <div class="setup-step-status" id="stepStatus1">❌</div>
                   <div style="flex:1;min-width:0;">
                     <div class="font-semibold text-white">Your Own Free SendGrid API Key</div>
                     <div class="text-xs text-gray-400">Create your <strong>own free account</strong> at SendGrid — 100 emails/day free, no credit card needed</div>
                   </div>
-                  <div class="setup-step-status" id="stepStatus1">❌</div>
                 </div>
                 <div class="mb-2 flex flex-col gap-1">
                   <a href="https://sendgrid.com/en-us" target="_blank" rel="noopener" class="setup-link">
@@ -406,11 +404,11 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
         <h2 class="text-4xl font-bold mb-3 text-white">🏆 Elite Leaderboard</h2>
         <p class="text-xl text-gray-200">Top performing websites automatically added</p>
       </div>
-      <div class="max-w-4xl mx-auto grid-4 mb-8">
-        <div class="stat-card"><div><div class="text-4xl mb-2">🏢</div><div class="text-3xl font-bold" id="totalAgencies">0</div><div class="text-sm text-gray-200">Agencies</div></div></div>
-        <div class="stat-card"><div><div class="text-4xl mb-2">📊</div><div class="text-3xl font-bold" id="avgScore">0</div><div class="text-sm text-gray-200">Avg. Score</div></div></div>
-        <div class="stat-card"><div><div class="text-4xl mb-2">🌍</div><div class="text-3xl font-bold" id="countriesCount">0</div><div class="text-sm text-gray-200">Countries</div></div></div>
-        <div class="stat-card"><div><div class="text-4xl mb-2">💼</div><div class="text-3xl font-bold" id="activeHelpers">0</div><div class="text-sm text-gray-200">Freelancers</div></div></div>
+      <div style="max-width:900px;margin:0 auto 2rem;display:flex;flex-wrap:wrap;justify-content:center;gap:1rem;">
+        <div class="stat-card" style="min-width:160px;flex:1;max-width:200px;text-align:center;"><div><div class="text-4xl mb-2">🏢</div><div class="text-3xl font-bold" id="totalAgencies">0</div><div class="text-sm text-gray-200">Agencies</div></div></div>
+        <div class="stat-card" style="min-width:160px;flex:1;max-width:200px;text-align:center;"><div><div class="text-4xl mb-2">📊</div><div class="text-3xl font-bold" id="avgScore">0</div><div class="text-sm text-gray-200">Avg. Score</div></div></div>
+        <div class="stat-card" style="min-width:160px;flex:1;max-width:200px;text-align:center;"><div><div class="text-4xl mb-2">🌍</div><div class="text-3xl font-bold" id="countriesCount">0</div><div class="text-sm text-gray-200">Countries</div></div></div>
+        <div class="stat-card" style="min-width:160px;flex:1;max-width:200px;text-align:center;"><div><div class="text-4xl mb-2">💼</div><div class="text-3xl font-bold" id="activeHelpers">0</div><div class="text-sm text-gray-200">Freelancers</div></div></div>
       </div>
       <div class="max-w-5xl mx-auto">
         <div id="top3-container" class="grid-3 mb-10"></div>
@@ -437,10 +435,15 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
           </button>
           <div id="rankingsContainer" class="hidden mt-4">
             <p class="text-sm text-gray-300 mb-2">Showing 16-35 of <span id="totalCount">0</span> agencies</p>
-            <table class="rankings-table">
-              <thead><tr><th>Rank</th><th>Company</th><th>Website</th><th>Score</th><th>Country</th><th>Added</th></tr></thead>
-              <tbody id="rankingsTbody"></tbody>
-            </table>
+            <div class="rankings-mobile-msg hidden" style="background:#1f2937;border-radius:0.75rem;padding:1.25rem;text-align:center;color:#9ca3af;font-size:0.9rem;">
+              📊 Full rankings table available on desktop
+            </div>
+            <div class="rankings-table-wrap">
+              <table class="rankings-table">
+                <thead><tr><th>Rank</th><th>Company</th><th>Website</th><th>Score</th><th>Country</th><th>Added</th></tr></thead>
+                <tbody id="rankingsTbody"></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -478,33 +481,39 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 </div>
 
 <!-- AUTHOR BIO -->
-<div style="background:#0f172a;border-bottom:1px solid #1e293b;padding:3rem 1.5rem;">
-  <div class="max-w-3xl mx-auto">
-    <div style="display:flex;align-items:flex-start;gap:1.5rem;flex-wrap:wrap;">
-      <div id="authorImgWrap" style="width:100px;height:100px;border-radius:50%;border:3px solid #7e22ce;flex-shrink:0;overflow:hidden;background:linear-gradient(135deg,#7e22ce,#be185d);display:flex;align-items:center;justify-content:center;">
-        <img
-          src="https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca.png"
-          alt="Ottmar Francisca"
-          style="width:100%;height:100%;object-fit:cover;display:block;"
-          onload="document.getElementById('authorInitials').style.display='none';"
-          onerror="this.style.display='none';document.getElementById('authorInitials').style.display='flex';"
-        >
-        <span id="authorInitials" style="display:none;color:white;font-size:2rem;font-weight:700;align-items:center;justify-content:center;">OF</span>
+<div style="background:linear-gradient(180deg,#0a0a1a 0%,#0f0f2e 100%);padding:4rem 1.5rem;position:relative;overflow:hidden;">
+  <div style="position:absolute;top:-80px;right:-80px;width:300px;height:300px;background:radial-gradient(circle,rgba(126,34,206,0.12) 0%,transparent 70%);pointer-events:none;"></div>
+  <div style="position:absolute;bottom:-60px;left:-60px;width:250px;height:250px;background:radial-gradient(circle,rgba(190,24,93,0.08) 0%,transparent 70%);pointer-events:none;"></div>
+  <div style="max-width:680px;margin:0 auto;position:relative;z-index:1;text-align:center;">
+    <span style="display:inline-block;font-size:0.7rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:#7e22ce;border:1px solid rgba(126,34,206,0.4);padding:0.35rem 1rem;border-radius:9999px;margin-bottom:2rem;">About the Founder</span>
+    <div style="display:flex;justify-content:center;margin-bottom:1.25rem;margin-top:1.25rem;">
+      <div id="authorImgWrap" style="width:130px;height:130px;border-radius:1rem;overflow:hidden;background:linear-gradient(135deg,#7e22ce,#be185d);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px rgba(126,34,206,0.3),0 20px 40px rgba(0,0,0,0.5);">
+        <img src="https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca.png" alt="Ottmar Francisca" style="width:100%;height:100%;object-fit:cover;display:block;" onload="document.getElementById('authorInitials').style.display='none';" onerror="this.style.display='none';document.getElementById('authorInitials').style.display='flex';">
+        <span id="authorInitials" style="display:none;color:white;font-size:2.5rem;font-weight:700;width:100%;height:100%;align-items:center;justify-content:center;">OF</span>
       </div>
-      <div style="flex:1;min-width:200px;">
-        <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.5rem;">
-          <h3 style="font-size:1.25rem;font-weight:700;color:white;">Ottmar Francisca</h3>
-          <span style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;font-size:0.75rem;font-weight:600;padding:0.2rem 0.75rem;border-radius:9999px;">Founder, ContentScale</span>
-        </div>
-        <p style="color:#9ca3af;font-size:0.875rem;line-height:1.7;margin-bottom:0.75rem;">
-          With 24+ years of experience — including roles in Dutch law enforcement and municipal operations — Ottmar brings a structured, data-driven mindset to SEO. Since 2018, he has specialized in helping businesses worldwide recover traffic lost to Google algorithm updates and AI Overviews. He created the proprietary <strong style="color:#c4b5fd;">GRAAF Framework</strong> — a proven methodology with a documented 78% recovery rate within 90 days, now serving clients across 47+ countries. Based in Amsterdam, he is the driving force behind ContentScale.
-        </p>
-        <div style="display:flex;gap:1rem;flex-wrap:wrap;">
-          <a href="https://wa.me/31628073996" target="_blank" rel="noopener" style="color:#4ade80!important;font-size:0.8rem;display:flex;align-items:center;gap:0.4rem;"><i class="fab fa-whatsapp"></i> WhatsApp</a>
-          <a href="https://contentscale.site" target="_blank" rel="noopener" style="color:#a78bfa!important;font-size:0.8rem;display:flex;align-items:center;gap:0.4rem;"><i class="fas fa-globe"></i> contentscale.site</a>
-          <span style="color:#6b7280;font-size:0.8rem;display:flex;align-items:center;gap:0.4rem;"><i class="fas fa-map-marker-alt"></i> Amsterdam, NL</span>
-        </div>
+    </div>
+    <h3 style="font-size:1.75rem;font-weight:800;color:white;margin-bottom:0.25rem;letter-spacing:-0.02em;">Ottmar Francisca</h3>
+    <p style="font-size:0.85rem;color:#a78bfa;font-weight:600;margin-bottom:1.5rem;letter-spacing:0.06em;text-transform:uppercase;">Founder · ContentScale</p>
+    <div style="width:3rem;height:2px;background:linear-gradient(90deg,#7e22ce,#be185d);border-radius:2px;margin:0 auto 1.5rem;"></div>
+    <div style="display:flex;justify-content:center;gap:1rem;flex-wrap:wrap;margin-bottom:1.75rem;">
+      <div style="background:rgba(126,34,206,0.15);border:1px solid rgba(126,34,206,0.3);border-radius:0.75rem;padding:0.6rem 1.25rem;min-width:90px;">
+        <div style="font-size:1.1rem;font-weight:800;color:#c4b5fd;">78%</div>
+        <div style="font-size:0.65rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Recovery Rate</div>
       </div>
+      <div style="background:rgba(190,24,93,0.12);border:1px solid rgba(190,24,93,0.25);border-radius:0.75rem;padding:0.6rem 1.25rem;min-width:90px;">
+        <div style="font-size:1.1rem;font-weight:800;color:#f9a8d4;">47+</div>
+        <div style="font-size:0.65rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Countries</div>
+      </div>
+      <div style="background:rgba(14,165,233,0.1);border:1px solid rgba(14,165,233,0.2);border-radius:0.75rem;padding:0.6rem 1.25rem;min-width:90px;">
+        <div style="font-size:1.1rem;font-weight:800;color:#7dd3fc;">24+</div>
+        <div style="font-size:0.65rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Years Exp.</div>
+      </div>
+    </div>
+    <p style="color:#94a3b8;font-size:0.9rem;line-height:1.8;margin-bottom:1.75rem;">With 24+ years of professional experience including leadership roles in Dutch law enforcement and municipal operations, Ottmar built a reputation for systematic problem-solving before transitioning to SEO in 2018. He developed the proprietary <strong style="color:#c4b5fd;font-weight:700;">GRAAF Framework</strong>, a content methodology with a documented 78% traffic recovery rate within 90 days. Today he serves clients across 47+ countries, helping businesses reclaim rankings lost to Google AI Overviews and algorithm updates.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center;">
+      <a href="https://wa.me/31628073996" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.3);color:#4ade80!important;font-size:0.8rem;font-weight:600;padding:0.5rem 1.1rem;border-radius:0.5rem;text-decoration:none;"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+      <a href="https://contentscale.site" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:#a78bfa!important;font-size:0.8rem;font-weight:600;padding:0.5rem 1.1rem;border-radius:0.5rem;text-decoration:none;"><i class="fas fa-globe"></i> contentscale.site</a>
+      <a href="https://contentscale.site/about-us" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#94a3b8!important;font-size:0.8rem;font-weight:600;padding:0.5rem 1.1rem;border-radius:0.5rem;text-decoration:none;"><i class="fas fa-user"></i> Full Bio</a>
     </div>
   </div>
 </div>
