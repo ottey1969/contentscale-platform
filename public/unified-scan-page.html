@@ -231,8 +231,8 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
               <div class="flex items-center gap-3 mb-4">
                 <div class="text-3xl">⚙️</div>
                 <div>
-                  <h4 class="text-lg font-bold text-white">Setup Required to Use Bulk Scanner</h4>
-                  <p class="text-sm text-gray-400">Complete both steps below to unlock bulk scanning with automated email outreach.</p>
+                  <h4 class="text-lg font-bold text-white">One-Time Setup — Your Own Free SendGrid Account</h4>
+                  <p class="text-sm text-gray-400">You need <a href="https://sendgrid.com/en-us" target="_blank" rel="noopener" style="color:#a78bfa!important;text-decoration:underline;">your own free SendGrid account</a> to send emails. It's free, takes 2 minutes, and you own it completely.</p>
                 </div>
               </div>
 
@@ -241,21 +241,24 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
                 <div class="setup-step-header">
                   <div class="setup-step-number" id="stepNum1">1</div>
                   <div>
-                    <div class="font-semibold text-white">SendGrid — Email Delivery</div>
-                    <div class="text-xs text-gray-400">Required for sending automated emails to prospects</div>
+                    <div class="font-semibold text-white">Your Own Free SendGrid API Key</div>
+                    <div class="text-xs text-gray-400">Create your <strong>own free account</strong> at SendGrid — 100 emails/day free, no credit card needed</div>
                   </div>
                   <div class="setup-step-status" id="stepStatus1">❌</div>
                 </div>
-                <div class="mb-2">
-                  <a href="https://sendgrid.com/free/" target="_blank" rel="noopener" class="setup-link">
-                    <i class="fas fa-external-link-alt mr-1"></i>Get a free SendGrid API key (100 emails/day free)
+                <div class="mb-2 flex flex-col gap-1">
+                  <a href="https://sendgrid.com/en-us" target="_blank" rel="noopener" class="setup-link">
+                    <i class="fas fa-external-link-alt mr-1"></i>Step 1 — Create your free SendGrid account (sendgrid.com/en-us)
+                  </a>
+                  <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" rel="noopener" class="setup-link">
+                    <i class="fas fa-key mr-1"></i>Step 2 — Generate your API key inside SendGrid → Settings → API Keys
                   </a>
                 </div>
                 <div class="setup-input-row">
-                  <input type="password" id="setupSendgridKey" placeholder="SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+                  <input type="password" id="setupSendgridKey" placeholder="Paste your own SG.xxxxxxxxxx key here" autocomplete="off">
                   <button class="setup-save-btn" onclick="saveSetupSendgrid()"><i class="fas fa-save mr-1"></i> Save</button>
                 </div>
-                <p class="setup-status-text" id="sendgridSetupStatus"><span class="text-yellow-400">Not configured yet</span></p>
+                <p class="setup-status-text" id="sendgridSetupStatus"><span class="text-yellow-400">⚠️ Not configured — emails will not send until you add your own key</span></p>
               </div>
 
 
@@ -856,7 +859,30 @@ async function startBulkScan() {
     localStorage.setItem('bulk_name', name);
 
     if (!sendgridConfigured) {
-        if (!confirm('⚠️ SendGrid is not configured. Emails will not be sent automatically.\n\nContinue scan without email sending?')) return;
+        // Flash the setup box to draw attention
+        const setupBox = document.getElementById('setupRequiredBox');
+        if (setupBox) {
+            setupBox.classList.remove('hidden');
+            setupBox.style.border = '2px solid #ef4444';
+            setupBox.style.boxShadow = '0 0 20px rgba(239,68,68,0.5)';
+            setupBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => {
+                setupBox.style.border = '';
+                setupBox.style.boxShadow = '';
+            }, 3000);
+        }
+        // Show inline error below the button
+        const btn = document.getElementById('bulkScanBtn');
+        const existing = document.getElementById('sendgridWarning');
+        if (!existing) {
+            const warn = document.createElement('p');
+            warn.id = 'sendgridWarning';
+            warn.style.cssText = 'color:#f87171!important;font-size:0.875rem;margin-top:0.75rem;text-align:center;';
+            warn.innerHTML = '⚠️ SendGrid is required to run bulk scans. Configure it above first.';
+            btn.parentNode.insertBefore(warn, btn.nextSibling);
+            setTimeout(() => warn.remove(), 4000);
+        }
+        return;
     }
 
     button.disabled = true;
