@@ -130,28 +130,29 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 .hamburger.open span:nth-child(1) { transform: translateY(9px) rotate(45deg); }
 .hamburger.open span:nth-child(2) { opacity: 0; }
 .hamburger.open span:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
+.mobile-menu { display: none; }
 @media (max-width: 768px) {
   .hamburger { display: flex; }
-  .mobile-menu { display: none; position: absolute; top: 100%; left: 0; right: 0; background: #030712; border-bottom: 2px solid #7e22ce; padding: 1rem 1.5rem; z-index: 100; flex-direction: column; gap: 0; }
+  .mobile-menu { position: absolute; top: 100%; left: 0; right: 0; background: #030712; border-bottom: 2px solid #7e22ce; padding: 1rem 1.5rem; z-index: 100; flex-direction: column; gap: 0; }
   .mobile-menu.open { display: flex; }
   .mobile-menu a { padding: 0.85rem 0; border-bottom: 1px solid #1f2937; color: #d1d5db !important; font-size: 1rem; font-weight: 500; display: flex; align-items: center; gap: 0.75rem; transition: color 0.2s; }
   .mobile-menu a:last-child { border-bottom: none; }
   .mobile-menu a:hover { color: white !important; }
 }
 
-.setup-required-box { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); border: 2px solid #4f46e5; border-radius: 1rem; padding: 1.75rem; margin-bottom: 1.5rem; }
-.setup-step { background: #1e293b; border: 1px solid #374151; border-radius: 0.75rem; padding: 1.25rem; margin-bottom: 1rem; transition: border-color 0.3s; }
+.setup-required-box { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); border: 2px solid #4f46e5; border-radius: 1rem; padding: 1.25rem; margin-bottom: 1.5rem; overflow: hidden; box-sizing: border-box; }
+.setup-step { background: #1e293b; border: 1px solid #374151; border-radius: 0.75rem; padding: 1rem; margin-bottom: 1rem; transition: border-color 0.3s; overflow: hidden; box-sizing: border-box; }
 .setup-step.completed { border-color: #10b981; background: rgba(16, 185, 129, 0.05); }
-.setup-step-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+.setup-step-header { display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.75rem; }
 .setup-step-number { width: 2rem; height: 2rem; border-radius: 50%; background: #374151; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.875rem; flex-shrink: 0; transition: background 0.3s; }
 .setup-step.completed .setup-step-number { background: #10b981; }
-.setup-step-status { margin-left: auto; font-size: 1.25rem; }
-.setup-input-row { display: flex; gap: 0.5rem; align-items: center; }
-.setup-input-row input { flex: 1; padding: 0.6rem 0.75rem; border-radius: 0.5rem; font-size: 0.875rem; }
-.setup-save-btn { background: linear-gradient(135deg, #7e22ce, #be185d); color: white !important; padding: 0.6rem 1.25rem; border-radius: 0.5rem; font-weight: 600; font-size: 0.875rem; border: none; cursor: pointer; white-space: nowrap; transition: opacity 0.2s; }
+.setup-step-status { margin-left: auto; font-size: 1.25rem; flex-shrink: 0; }
+.setup-input-row { display: flex; gap: 0.5rem; align-items: center; min-width: 0; overflow: hidden; flex-wrap: wrap; }
+.setup-input-row input { flex: 1; min-width: 0; width: 100%; padding: 0.6rem 0.75rem; border-radius: 0.5rem; font-size: 0.875rem; box-sizing: border-box; }
+.setup-save-btn { background: linear-gradient(135deg, #7e22ce, #be185d); color: white !important; padding: 0.6rem 1.25rem; border-radius: 0.5rem; font-weight: 600; font-size: 0.875rem; border: none; cursor: pointer; white-space: nowrap; transition: opacity 0.2s; flex-shrink: 0; }
 .setup-save-btn:hover { opacity: 0.85; }
-.setup-link { color: #818cf8 !important; text-decoration: underline; font-size: 0.8rem; }
-.setup-status-text { font-size: 0.8rem; margin-top: 0.4rem; min-height: 1.2em; }
+.setup-link { color: #818cf8 !important; text-decoration: underline; font-size: 0.8rem; word-break: break-word; }
+.setup-status-text { font-size: 0.8rem; margin-top: 0.4rem; min-height: 1.2em; word-break: break-word; }
 .setup-all-done { background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(5,150,105,0.1)); border: 2px solid #10b981; border-radius: 0.75rem; padding: 1.25rem; text-align: center; margin-bottom: 1.5rem; }
 </style>
 </head>
@@ -229,9 +230,6 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
         <div id="singleResult" class="hidden mt-4"></div>
       </div>
 
-      <div class="flex items-center gap-4 my-6 max-w-3xl mx-auto">
-        <div class="flex-1 border-t border-gray-700"></div><span class="text-gray-500 text-sm">OR</span><div class="flex-1 border-t border-gray-700"></div>
-      </div>
 
       <!-- BULK MODE -->
       <div id="bulkMode" class="hidden max-w-4xl mx-auto">
@@ -261,11 +259,9 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
                 </div>
               </div>
 
-              <!-- Step 1: SendGrid -->
               <div class="setup-step" id="setupStepSendgrid">
                 <div class="setup-step-header">
-                  <div class="setup-step-number" id="stepNum1">1</div>
-                  <div>
+                  <div style="flex:1;min-width:0;">
                     <div class="font-semibold text-white">Your Own Free SendGrid API Key</div>
                     <div class="text-xs text-gray-400">Create your <strong>own free account</strong> at SendGrid — 100 emails/day free, no credit card needed</div>
                   </div>
@@ -273,14 +269,14 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
                 </div>
                 <div class="mb-2 flex flex-col gap-1">
                   <a href="https://sendgrid.com/en-us" target="_blank" rel="noopener" class="setup-link">
-                    <i class="fas fa-external-link-alt mr-1"></i>Step 1 — Create your free SendGrid account (sendgrid.com/en-us)
+                    <i class="fas fa-external-link-alt mr-1"></i>Step 1 — Create your free SendGrid account
                   </a>
                   <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" rel="noopener" class="setup-link">
-                    <i class="fas fa-key mr-1"></i>Step 2 — Generate your API key inside SendGrid → Settings → API Keys
+                    <i class="fas fa-key mr-1"></i>Step 2 — Generate your API key → Settings → API Keys
                   </a>
                 </div>
-                <div class="setup-input-row">
-                  <input type="password" id="setupSendgridKey" placeholder="Paste your own SG.xxxxxxxxxx key here" autocomplete="off">
+                <div class="setup-input-row" style="min-width:0;">
+                  <input type="password" id="setupSendgridKey" placeholder="Paste your SG. key here" autocomplete="off" style="min-width:0;width:100%;">
                   <button class="setup-save-btn" onclick="saveSetupSendgrid()"><i class="fas fa-save mr-1"></i> Save</button>
                 </div>
                 <p class="setup-status-text" id="sendgridSetupStatus"><span class="text-yellow-400">⚠️ Not configured — emails will not send until you add your own key</span></p>
