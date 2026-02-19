@@ -124,7 +124,21 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 .template-editor { background: #1f2937; border: 1px solid #374151; border-radius: 0.5rem; padding: 1rem; margin-top: 1rem; }
 .template-editor textarea { width: 100%; min-height: 200px; font-family: monospace; font-size: 0.875rem; color: #f3f4f6 !important; background-color: #1f2937 !important; }
 
-/* Setup Required Box Styles */
+/* Mobile hamburger menu */
+.hamburger { display: none; flex-direction: column; justify-content: space-between; width: 28px; height: 20px; cursor: pointer; padding: 0; background: none; border: none; }
+.hamburger span { display: block; width: 100%; height: 2px; background: white; border-radius: 2px; transition: all 0.3s; }
+.hamburger.open span:nth-child(1) { transform: translateY(9px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity: 0; }
+.hamburger.open span:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
+@media (max-width: 768px) {
+  .hamburger { display: flex; }
+  .mobile-menu { display: none; position: absolute; top: 100%; left: 0; right: 0; background: #030712; border-bottom: 2px solid #7e22ce; padding: 1rem 1.5rem; z-index: 100; flex-direction: column; gap: 0; }
+  .mobile-menu.open { display: flex; }
+  .mobile-menu a { padding: 0.85rem 0; border-bottom: 1px solid #1f2937; color: #d1d5db !important; font-size: 1rem; font-weight: 500; display: flex; align-items: center; gap: 0.75rem; transition: color 0.2s; }
+  .mobile-menu a:last-child { border-bottom: none; }
+  .mobile-menu a:hover { color: white !important; }
+}
+
 .setup-required-box { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); border: 2px solid #4f46e5; border-radius: 1rem; padding: 1.75rem; margin-bottom: 1.5rem; }
 .setup-step { background: #1e293b; border: 1px solid #374151; border-radius: 0.75rem; padding: 1.25rem; margin-bottom: 1rem; transition: border-color 0.3s; }
 .setup-step.completed { border-color: #10b981; background: rgba(16, 185, 129, 0.05); }
@@ -147,7 +161,7 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
   <p class="text-purple-400 font-bold animate-pulse">Loading ContentScale...</p>
 </div>
 <a href="#main-content" class="skip-link">Skip to main content</a>
-<nav class="sticky top-0 z-50 bg-gray-900/95 border-b-2 border-purple-600 backdrop-blur-sm">
+<nav class="sticky top-0 z-50 bg-gray-900/95 border-b-2 border-purple-600 backdrop-blur-sm" style="position:relative;">
   <div class="max-w-7xl mx-auto px-6 py-4">
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -160,10 +174,21 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
         <a href="#freelancers" class="text-gray-300 hover:text-white transition-colors">Experts</a>
         <a href="#templates" class="text-gray-300 hover:text-white transition-colors">Templates</a>
       </div>
-      <div class="flex gap-3">
+      <div class="flex items-center gap-3">
         <a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="btn-success btn"><i class="fab fa-whatsapp"></i> Chat</a>
+        <button class="hamburger md:hidden" id="hamburgerBtn" onclick="toggleMobileMenu()" aria-label="Open menu">
+          <span></span><span></span><span></span>
+        </button>
       </div>
     </div>
+  </div>
+  <!-- Mobile menu -->
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#lead-scanner" onclick="closeMobileMenu()"><i class="fas fa-search" style="width:18px;color:#a855f7!important;"></i> Scanner</a>
+    <a href="#leaderboard" onclick="closeMobileMenu()"><i class="fas fa-trophy" style="width:18px;color:#a855f7!important;"></i> Leaderboard</a>
+    <a href="#freelancers" onclick="closeMobileMenu()"><i class="fas fa-users" style="width:18px;color:#a855f7!important;"></i> Experts</a>
+    <a href="#templates" onclick="closeMobileMenu()"><i class="fas fa-envelope" style="width:18px;color:#a855f7!important;"></i> Templates</a>
+    <a href="https://wa.me/31628073996" target="_blank" rel="noopener"><i class="fab fa-whatsapp" style="width:18px;color:#4ade80!important;"></i> WhatsApp Chat</a>
   </div>
 </nav>
 
@@ -1219,6 +1244,26 @@ function getCountryFlag(country) {
     const flags = { 'Netherlands': '🇳🇱', 'NL': '🇳🇱', 'United Kingdom': '🇬🇧', 'UK': '🇬🇧', 'US': '🇺🇸', 'United States': '🇺🇸', 'Germany': '🇩🇪', 'DE': '🇩🇪', 'France': '🇫🇷', 'FR': '🇫🇷', 'Belgium': '🇧🇪', 'BE': '🇧🇪', 'Spain': '🇪🇸', 'ES': '🇪🇸', 'Italy': '🇮🇹', 'IT': '🇮🇹' };
     return flags[country] || '🌐';
 }
+
+function toggleMobileMenu() {
+    const menu = document.getElementById('mobileMenu');
+    const btn  = document.getElementById('hamburgerBtn');
+    menu.classList.toggle('open');
+    btn.classList.toggle('open');
+}
+function closeMobileMenu() {
+    document.getElementById('mobileMenu').classList.remove('open');
+    document.getElementById('hamburgerBtn').classList.remove('open');
+}
+// Close menu when clicking outside
+document.addEventListener('click', function(e) {
+    const menu = document.getElementById('mobileMenu');
+    const btn  = document.getElementById('hamburgerBtn');
+    if (menu && !menu.contains(e.target) && !btn.contains(e.target)) {
+        menu.classList.remove('open');
+        btn.classList.remove('open');
+    }
+});
 
 window.onclick = function (event) { const modal = document.getElementById('freelancerModal'); if (event.target === modal) closeModal(); };
 </script>
