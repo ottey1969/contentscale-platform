@@ -25,6 +25,9 @@ h1, h2, h3, h4, h5, h6, p, a, span, div, button, input, textarea, select, label,
 input, textarea, select { color: #000000 !important; background-color: #ffffff !important; border: 1px solid #d1d5db !important; }
 input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 1 !important; }
 .template-editor textarea { color: #f3f4f6 !important; background-color: #1f2937 !important; border: 1px solid #4b5563 !important; }
+.template-editor input[type="text"] { color: #f3f4f6 !important; background-color: #1f2937 !important; border: 1px solid #4b5563 !important; }
+.template-editor input[type="text"]::placeholder { color: #6b7280 !important; }
+.template-editor label { color: #d1d5db !important; }
 .text-gray-300, .text-gray-400, .text-gray-500 { color: #d1d5db !important; }
 .btn-white-black { background: white !important; color: #581c87 !important; font-weight: 700; border: 2px solid white; }
 .btn-white-black:hover { background: #f3f4f6 !important; color: #6b21a8 !important; }
@@ -255,27 +258,6 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
                 <p class="setup-status-text" id="sendgridSetupStatus"><span class="text-yellow-400">Not configured yet</span></p>
               </div>
 
-              <!-- Step 2: WebShare -->
-              <div class="setup-step" id="setupStepWebshare">
-                <div class="setup-step-header">
-                  <div class="setup-step-number" id="stepNum2">2</div>
-                  <div>
-                    <div class="font-semibold text-white">WebShare — Proxy Rotation</div>
-                    <div class="text-xs text-gray-400">Prevents rate-limiting when scanning many URLs</div>
-                  </div>
-                  <div class="setup-step-status" id="stepStatus2">❌</div>
-                </div>
-                <div class="mb-2">
-                  <a href="https://www.webshare.io/?referral_code=contentscale" target="_blank" rel="noopener" class="setup-link">
-                    <i class="fas fa-external-link-alt mr-1"></i>Get 10 free proxies from WebShare
-                  </a>
-                </div>
-                <div class="setup-input-row">
-                  <input type="password" id="setupWebshareKey" placeholder="Your WebShare API key" autocomplete="off">
-                  <button class="setup-save-btn" onclick="saveSetupWebshare()"><i class="fas fa-save mr-1"></i> Save</button>
-                </div>
-                <p class="setup-status-text" id="webshareSetupStatus"><span class="text-yellow-400">Not configured yet</span></p>
-              </div>
 
               <p class="text-xs text-gray-500 mt-3 text-center">
                 <i class="fas fa-lock mr-1"></i>Your API keys are stored securely and never shared. Setup takes less than 2 minutes.
@@ -325,64 +307,7 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
         </div>
       </div>
 
-      <!-- API Config Accordion -->
-      <div class="max-w-4xl mx-auto">
-        <div class="accordion-item">
-          <button onclick="toggleAccordion('apiConfig')" class="accordion-header">
-            <span class="flex items-center gap-2">
-              <i class="fas fa-key text-purple-400"></i>
-              <span class="font-bold">Configure Your API Keys (SendGrid + WebShare)</span>
-              <span id="apiStatusIndicator" class="api-status-indicator api-status-inactive"></span>
-            </span>
-            <i class="fas fa-chevron-down" id="apiConfigIcon"></i>
-          </button>
-          <div id="apiConfig" class="accordion-content hidden">
-            <div class="bg-gray-900 rounded-lg p-5 border border-gray-700">
-              <div class="flex items-center gap-3 mb-4">
-                <span id="apiStatusText" class="text-sm text-gray-300">Configure your own API keys for unlimited usage</span>
-              </div>
-              <div class="grid md:grid-cols-2 gap-6">
-                <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                  <h4 class="text-lg font-bold mb-3 flex items-center gap-2"><i class="fas fa-envelope text-blue-400"></i> SendGrid Configuration</h4>
-                  <p class="text-xs text-gray-400 mb-3">Free plan: 100 emails/day</p>
-                  <div class="space-y-3">
-                    <div><label class="block text-sm text-gray-300 mb-1">SendGrid API Key</label><input type="password" id="sendgridApiKey" placeholder="SG.xxxxxxxxxx" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500" autocomplete="off"></div>
-                    <div class="flex gap-2">
-                      <button onclick="saveSendgridConfig()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm font-semibold"><i class="fas fa-save mr-1"></i> Save</button>
-                      <button onclick="testSendgridConfig()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-semibold"><i class="fas fa-vial mr-1"></i> Test</button>
-                    </div>
-                    <div id="sendgridStatus" class="text-xs text-gray-400 mt-2"><span class="text-yellow-400">⚪ Not configured</span></div>
-                    <div class="border-t border-gray-700 pt-3 mt-2">
-                      <h5 class="text-sm font-semibold mb-2 text-gray-300">Daily Usage</h5>
-                      <div class="progress-bar h-2 mb-1"><div id="sendgridUsageBar" class="progress-bar-fill" style="width: 0%"></div></div>
-                      <div class="flex justify-between text-xs"><span id="sendgridUsed">0</span><span>/</span><span id="sendgridLimit">100</span></div>
-                    </div>
-                  </div>
-                </div>
-                <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                  <h4 class="text-lg font-bold mb-3 flex items-center gap-2"><i class="fas fa-globe text-green-400"></i> WebShare Proxy Configuration</h4>
-                  <p class="text-xs text-gray-400 mb-3">10 free proxies for enhanced scanning</p>
-                  <div class="space-y-3">
-                    <div><label class="block text-sm text-gray-300 mb-1">WebShare API Key</label><input type="password" id="webshareApiKey" placeholder="your-webshare-api-key" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500" autocomplete="off"></div>
-                    <div class="flex gap-2">
-                      <button onclick="saveWebshareConfig()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm font-semibold"><i class="fas fa-save mr-1"></i> Save</button>
-                      <button onclick="testWebshareConfig()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-semibold"><i class="fas fa-vial mr-1"></i> Test</button>
-                    </div>
-                    <div id="webshareStatus" class="text-xs text-gray-400 mt-2"><span class="text-yellow-400">⚪ Not configured</span></div>
-                    <div id="proxyList" class="hidden mt-3 border-t border-gray-700 pt-3">
-                      <h5 class="text-sm font-semibold mb-2 text-gray-300">Active Proxies</h5>
-                      <div id="proxyListContainer" class="space-y-1 max-h-32 overflow-y-auto text-xs"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="mt-4 text-xs text-gray-500 border-t border-gray-700 pt-3">
-                <p>💡 Your API keys are stored securely and only used for your account. Free tier limits apply.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+
 
       <!-- CTA Banner -->
       <div class="mt-8 max-w-3xl mx-auto bg-gradient-to-r from-purple-800 via-pink-800 to-purple-800 rounded-xl p-6 text-center border border-purple-400">
@@ -394,8 +319,8 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
     </div>
   </div>
 
-  <!-- TEMPLATES SECTION -->
-  <div id="templates" class="mb-16">
+  <!-- TEMPLATES SECTION - hidden by default, shown when bulk mode is active -->
+  <div id="templates" class="mb-16 hidden">
     <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
       <div class="max-w-3xl mx-auto text-center mb-8">
         <h2 class="text-4xl font-bold mb-3 text-white">✏️ Email Templates</h2>
@@ -592,7 +517,6 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 // ============================================================
 let userId = null;
 let sendgridConfigured = false;
-let webshareConfigured = false;
 let allLeaderboardEntries = [];
 let userTemplates = { congrats: { subject: '', body: '' }, improvement: { subject: '', body: '' }, website: { subject: '', body: '' } };
 
@@ -614,6 +538,12 @@ document.addEventListener('DOMContentLoaded', function () {
     else window.addEventListener('load', revealPage);
 
     document.getElementById('singleUrlInput')?.addEventListener('keypress', e => { if (e.key === 'Enter') scanSingleURL(); });
+
+    // Pre-fill bulk scan fields from localStorage
+    const savedEmail = localStorage.getItem('bulk_email');
+    const savedName  = localStorage.getItem('bulk_name');
+    if (savedEmail) document.getElementById('bulkScanEmail').value = savedEmail;
+    if (savedName)  document.getElementById('bulkScanName').value  = savedName;
 
     const bulkInput = document.getElementById('bulkUrlInput');
     if (bulkInput) {
@@ -661,33 +591,7 @@ async function loadApiStatus() {
         const response = await fetch('/api/user/keys/status', { headers: { 'x-user-id': userId } });
         const data = await response.json();
         if (data.success) {
-            const indicator = document.getElementById('apiStatusIndicator');
-            const statusText = document.getElementById('apiStatusText');
-
             sendgridConfigured = data.hasSendgrid;
-            webshareConfigured = data.hasWebshare;
-
-            if (sendgridConfigured || webshareConfigured) {
-                if (indicator) indicator.className = 'api-status-indicator api-status-active';
-                if (statusText) statusText.textContent = 'Custom API keys configured';
-            } else {
-                if (indicator) indicator.className = 'api-status-indicator api-status-inactive';
-                if (statusText) statusText.textContent = 'Using default settings (limited)';
-            }
-
-            if (sendgridConfigured) {
-                document.getElementById('sendgridStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
-                if (data.sendgrid) {
-                    document.getElementById('sendgridUsed').textContent = data.sendgrid.used;
-                    document.getElementById('sendgridLimit').textContent = data.sendgrid.limit;
-                    document.getElementById('sendgridUsageBar').style.width = (data.sendgrid.used / data.sendgrid.limit * 100) + '%';
-                }
-            }
-            if (webshareConfigured) {
-                document.getElementById('webshareStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
-            }
-
-            // Update the setup box
             checkSetupStatus();
         }
     } catch (error) {
@@ -695,52 +599,27 @@ async function loadApiStatus() {
     }
 }
 
-/**
- * Checks whether SendGrid + WebShare are configured.
- * - Updates step icons (❌ / ✅)
- * - Hides setup box and shows "all done" banner + scan form when both are ready
- * - Shows setup box and hides scan form when either is missing
- */
 function checkSetupStatus() {
-    const setupBox    = document.getElementById('setupRequiredBox');
-    const allDone     = document.getElementById('setupAllDone');
-    const scanForm    = document.getElementById('bulkScannerForm');
-    const step1       = document.getElementById('setupStepSendgrid');
-    const step2       = document.getElementById('setupStepWebshare');
-    const stepStatus1 = document.getElementById('stepStatus1');
-    const stepStatus2 = document.getElementById('stepStatus2');
+    const setupBox = document.getElementById('setupRequiredBox');
+    const allDone  = document.getElementById('setupAllDone');
+    const scanForm = document.getElementById('bulkScannerForm');
+    const step1    = document.getElementById('setupStepSendgrid');
+    const status1  = document.getElementById('stepStatus1');
 
-    // Update individual step visuals
     if (sendgridConfigured) {
-        if (step1) step1.classList.add('completed');
-        if (stepStatus1) stepStatus1.textContent = '✅';
-        document.getElementById('sendgridSetupStatus').innerHTML = '<span class="text-green-400">✅ SendGrid configured</span>';
-    } else {
-        if (step1) step1.classList.remove('completed');
-        if (stepStatus1) stepStatus1.textContent = '❌';
-    }
-
-    if (webshareConfigured) {
-        if (step2) step2.classList.add('completed');
-        if (stepStatus2) stepStatus2.textContent = '✅';
-        document.getElementById('webshareSetupStatus').innerHTML = '<span class="text-green-400">✅ WebShare configured</span>';
-    } else {
-        if (step2) step2.classList.remove('completed');
-        if (stepStatus2) stepStatus2.textContent = '❌';
-    }
-
-    const bothReady = sendgridConfigured && webshareConfigured;
-
-    if (bothReady) {
+        if (step1)  step1.classList.add('completed');
+        if (status1) status1.textContent = '✅';
+        const sg = document.getElementById('sendgridSetupStatus');
+        if (sg) sg.innerHTML = '<span class="text-green-400">✅ SendGrid configured — emails ready</span>';
         if (setupBox) setupBox.classList.add('hidden');
         if (allDone)  allDone.classList.remove('hidden');
         if (scanForm) scanForm.classList.remove('hidden');
     } else {
+        if (step1)  step1.classList.remove('completed');
+        if (status1) status1.textContent = '❌';
         if (setupBox) setupBox.classList.remove('hidden');
         if (allDone)  allDone.classList.add('hidden');
-        // Keep scan form visible below so user can still use it — just with a warning
-        // Uncomment next line if you want to HIDE the form until setup is done:
-        // if (scanForm) scanForm.classList.add('hidden');
+        if (scanForm) scanForm.classList.add('hidden');
     }
 }
 
@@ -764,7 +643,6 @@ async function saveSetupSendgrid() {
         const data = await res.json();
         if (data.success) {
             sendgridConfigured = true;
-            document.getElementById('sendgridApiKey').value = '••••••••••••';
             document.getElementById('setupSendgridKey').value = '';
             checkSetupStatus();
         } else {
@@ -775,129 +653,26 @@ async function saveSetupSendgrid() {
     }
 }
 
-async function saveSetupWebshare() {
-    if (!userId) { alert('Please refresh the page — user not registered yet.'); return; }
-    const key = document.getElementById('setupWebshareKey').value.trim();
-    if (!key) { alert('Please paste your WebShare API key.'); return; }
-
-    const statusEl = document.getElementById('webshareSetupStatus');
-    statusEl.innerHTML = '<span class="text-blue-400">Saving…</span>';
-
-    try {
-        const res = await fetch('/api/user/webshare/configure', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-            body: JSON.stringify({ userId, apiKey: key })
-        });
-        const data = await res.json();
-        if (data.success) {
-            webshareConfigured = true;
-            document.getElementById('webshareApiKey').value = '••••••••••••';
-            document.getElementById('setupWebshareKey').value = '';
-            checkSetupStatus();
-        } else {
-            statusEl.innerHTML = `<span class="text-red-400">❌ ${data.error || 'Save failed'}</span>`;
-        }
-    } catch (e) {
-        statusEl.innerHTML = '<span class="text-red-400">❌ Connection error</span>';
-    }
-}
-
 // ============================================================
-// ACCORDION SENDGRID / WEBSHARE (from main accordion)
-// ============================================================
-function toggleAccordion(id) {
-    const content = document.getElementById(id);
-    const icon = document.getElementById(id + 'Icon');
-    if (content) {
-        content.classList.toggle('hidden');
-        icon.style.transform = content.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
-    }
-}
-
-async function saveSendgridConfig() {
-    if (!userId) { alert('❌ User not registered. Please refresh the page.'); return; }
-    const apiKey = document.getElementById('sendgridApiKey').value;
-    if (!apiKey || apiKey.includes('••••')) { alert('❌ Please enter your SendGrid API key'); return; }
-    try {
-        const response = await fetch('/api/user/sendgrid/configure', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-            body: JSON.stringify({ userId, apiKey, dailyLimit: 100 })
-        });
-        const data = await response.json();
-        if (data.success) {
-            alert('✅ SendGrid configuration saved successfully');
-            document.getElementById('sendgridStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
-            sendgridConfigured = true;
-            loadApiStatus();
-        } else {
-            alert('❌ ' + (data.error || 'Failed to save configuration'));
-        }
-    } catch (error) { alert('❌ Error: ' + error.message); }
-}
-
-async function testSendgridConfig() {
-    if (!userId) { alert('❌ User not registered'); return; }
-    try {
-        const response = await fetch('/api/email/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-            body: JSON.stringify({ to_email: 'test@example.com', to_name: 'Test User', subject: 'Test Email from ContentScale', html: '<p>This is a test email from your ContentScale account.</p>' })
-        });
-        const data = await response.json();
-        if (data.success) alert('✅ Test email sent successfully!');
-        else if (data.needs_api_key) alert('❌ No SendGrid API key configured. Please add your key first.');
-        else if (data.limit_reached) alert('❌ Daily limit reached. Try again tomorrow.');
-        else alert('❌ ' + (data.error || 'Test failed'));
-    } catch (error) { alert('❌ Error: ' + error.message); }
-}
-
-async function saveWebshareConfig() {
-    if (!userId) { alert('❌ User not registered. Please refresh the page.'); return; }
-    const apiKey = document.getElementById('webshareApiKey').value;
-    if (!apiKey) { alert('❌ Please enter your WebShare API key'); return; }
-    try {
-        const response = await fetch('/api/user/webshare/configure', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-            body: JSON.stringify({ userId, apiKey })
-        });
-        const data = await response.json();
-        if (data.success) {
-            alert(`✅ WebShare configured! Found ${data.proxy_count || 10} proxies.`);
-            document.getElementById('webshareStatus').innerHTML = '<span class="text-green-400">✅ Configured</span>';
-            webshareConfigured = true;
-            if (data.proxy_count > 0) {
-                document.getElementById('proxyList').classList.remove('hidden');
-                document.getElementById('proxyListContainer').innerHTML = '<p class="text-green-400">✓ Proxies loaded successfully</p>';
-            }
-            loadApiStatus();
-        } else {
-            alert('❌ ' + (data.error || 'Failed to save configuration'));
-        }
-    } catch (error) { alert('❌ Error: ' + error.message); }
-}
-
-function testWebshareConfig() { alert('WebShare proxies active. No live test needed.'); }
-
-// ============================================================
-// MODE SWITCHING
+// API STATUS (used by setup box only)
 // ============================================================
 function switchMode(mode) {
     const singleMode = document.getElementById('singleMode');
     const bulkMode = document.getElementById('bulkMode');
     const singleBtn = document.getElementById('modeSingleBtn');
     const bulkBtn = document.getElementById('modeBulkBtn');
+    const templates = document.getElementById('templates');
     if (mode === 'single') {
         singleMode.classList.remove('hidden'); bulkMode.classList.add('hidden');
         singleBtn.classList.add('active'); bulkBtn.classList.remove('active');
+        if (templates) templates.classList.add('hidden');
     } else {
         singleMode.classList.add('hidden'); bulkMode.classList.remove('hidden');
         singleBtn.classList.remove('active'); bulkBtn.classList.add('active');
         document.getElementById('bulkScannerContent').classList.remove('hidden');
         document.getElementById('bulkToggleText').textContent = 'Hide Bulk Scanner';
         document.getElementById('bulkScannerIcon').className = 'fas fa-chevron-up';
+        if (templates) templates.classList.remove('hidden');
     }
 }
 
@@ -1074,6 +849,10 @@ async function startBulkScan() {
     if (urls.length > 100) { alert('❌ Maximum 100 URLs allowed'); return; }
     if (!email || !email.includes('@')) { alert('❌ Please enter a valid email address'); return; }
     if (!name) { alert('❌ Please enter your name'); return; }
+
+    // Save for next visit
+    localStorage.setItem('bulk_email', email);
+    localStorage.setItem('bulk_name', name);
 
     if (!sendgridConfigured) {
         if (!confirm('⚠️ SendGrid is not configured. Emails will not be sent automatically.\n\nContinue scan without email sending?')) return;
