@@ -607,20 +607,21 @@ function checkSetupStatus() {
     const status1  = document.getElementById('stepStatus1');
 
     if (sendgridConfigured) {
-        if (step1)  step1.classList.add('completed');
+        if (step1)   step1.classList.add('completed');
         if (status1) status1.textContent = '✅';
         const sg = document.getElementById('sendgridSetupStatus');
         if (sg) sg.innerHTML = '<span class="text-green-400">✅ SendGrid configured — emails ready</span>';
         if (setupBox) setupBox.classList.add('hidden');
         if (allDone)  allDone.classList.remove('hidden');
-        if (scanForm) scanForm.classList.remove('hidden');
     } else {
-        if (step1)  step1.classList.remove('completed');
+        if (step1)   step1.classList.remove('completed');
         if (status1) status1.textContent = '❌';
         if (setupBox) setupBox.classList.remove('hidden');
         if (allDone)  allDone.classList.add('hidden');
-        if (scanForm) scanForm.classList.add('hidden');
     }
+
+    // Scan form is always visible — setup box is a warning, not a blocker
+    if (scanForm) scanForm.classList.remove('hidden');
 }
 
 // ============================================================
