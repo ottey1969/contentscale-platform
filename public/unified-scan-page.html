@@ -582,6 +582,19 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
         <textarea id="freelancerBio" rows="3" maxlength="200" placeholder="Tell us about your expertise and experience..." class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"></textarea>
         <div class="flex justify-between mt-1"><span class="text-xs text-gray-500">Maximum 200 characters</span><span id="bioCharCount" class="text-xs text-gray-500">0/200</span></div>
       </div>
+      <div><label class="block text-sm mb-2 text-gray-700">Hourly Rate / Price Range *</label>
+        <select id="freelancerRate" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+          <option value="">Select your rate...</option>
+          <option value="€25 - €50 / hour">€25 - €50 / hour</option>
+          <option value="€50 - €75 / hour">€50 - €75 / hour</option>
+          <option value="€75 - €100 / hour">€75 - €100 / hour</option>
+          <option value="€100 - €150 / hour">€100 - €150 / hour</option>
+          <option value="€150+ / hour">€150+ / hour</option>
+          <option value="Project-based pricing">Project-based pricing</option>
+          <option value="Free consultation first">Free consultation first</option>
+        </select>
+      </div>
+
       <div class="border-t border-gray-200 pt-4 mt-2">
         <div class="flex items-start gap-3">
           <div class="flex items-center h-5"><input type="checkbox" id="featuredListing" class="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500"></div>
@@ -1327,14 +1340,14 @@ function submitFreelancer() {
     fetch('/api/freelancers/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, phone: document.getElementById('freelancerPhone')?.value, title: document.getElementById('freelancerTitle')?.value || 'SEO Specialist', bio: document.getElementById('freelancerBio')?.value || null, is_featured: isFeatured })
+        body: JSON.stringify({ name, email, phone: document.getElementById('freelancerPhone')?.value, title: document.getElementById('freelancerTitle')?.value || 'SEO Specialist', bio: document.getElementById('freelancerBio')?.value || null, hourly_rate: document.getElementById('freelancerRate')?.value || null, is_featured: isFeatured })
     })
     .then(r => r.json())
     .then(data => {
         if (data.success) {
             alert(`✅ Thank you ${name}! We'll review your application within 24 hours.${isFeatured ? ' Please complete the payment via PayPal.' : ''}`);
             closeModal();
-            ['freelancerName', 'freelancerEmail', 'freelancerPhone', 'freelancerTitle', 'freelancerBio'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            ['freelancerName', 'freelancerEmail', 'freelancerPhone', 'freelancerTitle', 'freelancerBio', 'freelancerRate'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
             document.getElementById('bioCharCount').textContent = '0/200';
             document.getElementById('featuredListing').checked = false;
         } else alert('❌ ' + (data.error || 'Registration failed'));
@@ -1355,7 +1368,61 @@ function extractDomainFromUrl(url) {
 }
 
 function getCountryFlag(country) {
-    const flags = { 'Netherlands': '🇳🇱', 'NL': '🇳🇱', 'United Kingdom': '🇬🇧', 'UK': '🇬🇧', 'US': '🇺🇸', 'United States': '🇺🇸', 'Germany': '🇩🇪', 'DE': '🇩🇪', 'France': '🇫🇷', 'FR': '🇫🇷', 'Belgium': '🇧🇪', 'BE': '🇧🇪', 'Spain': '🇪🇸', 'ES': '🇪🇸', 'Italy': '🇮🇹', 'IT': '🇮🇹' };
+    const flags = {
+        'Netherlands': '🇳🇱', 'NL': '🇳🇱',
+        'United Kingdom': '🇬🇧', 'UK': '🇬🇧', 'GB': '🇬🇧',
+        'United States': '🇺🇸', 'US': '🇺🇸', 'USA': '🇺🇸',
+        'Germany': '🇩🇪', 'DE': '🇩🇪',
+        'France': '🇫🇷', 'FR': '🇫🇷',
+        'Belgium': '🇧🇪', 'BE': '🇧🇪',
+        'Spain': '🇪🇸', 'ES': '🇪🇸',
+        'Italy': '🇮🇹', 'IT': '🇮🇹',
+        'New Zealand': '🇳🇿', 'NZ': '🇳🇿',
+        'Australia': '🇦🇺', 'AU': '🇦🇺',
+        'Canada': '🇨🇦', 'CA': '🇨🇦',
+        'Ireland': '🇮🇪', 'IE': '🇮🇪',
+        'Sweden': '🇸🇪', 'SE': '🇸🇪',
+        'Norway': '🇳🇴', 'NO': '🇳🇴',
+        'Denmark': '🇩🇰', 'DK': '🇩🇰',
+        'Finland': '🇫🇮', 'FI': '🇫🇮',
+        'Switzerland': '🇨🇭', 'CH': '🇨🇭',
+        'Austria': '🇦🇹', 'AT': '🇦🇹',
+        'Portugal': '🇵🇹', 'PT': '🇵🇹',
+        'Poland': '🇵🇱', 'PL': '🇵🇱',
+        'Czech Republic': '🇨🇿', 'CZ': '🇨🇿', 'Czechia': '🇨🇿',
+        'Hungary': '🇭🇺', 'HU': '🇭🇺',
+        'Romania': '🇷🇴', 'RO': '🇷🇴',
+        'Greece': '🇬🇷', 'GR': '🇬🇷',
+        'Turkey': '🇹🇷', 'TR': '🇹🇷',
+        'South Africa': '🇿🇦', 'ZA': '🇿🇦',
+        'Nigeria': '🇳🇬', 'NG': '🇳🇬',
+        'Kenya': '🇰🇪', 'KE': '🇰🇪',
+        'Ghana': '🇬🇭', 'GH': '🇬🇭',
+        'India': '🇮🇳', 'IN': '🇮🇳',
+        'Pakistan': '🇵🇰', 'PK': '🇵🇰',
+        'Bangladesh': '🇧🇩', 'BD': '🇧🇩',
+        'Philippines': '🇵🇭', 'PH': '🇵🇭',
+        'Indonesia': '🇮🇩', 'ID': '🇮🇩',
+        'Malaysia': '🇲🇾', 'MY': '🇲🇾',
+        'Singapore': '🇸🇬', 'SG': '🇸🇬',
+        'Thailand': '🇹🇭', 'TH': '🇹🇭',
+        'Vietnam': '🇻🇳', 'VN': '🇻🇳',
+        'Japan': '🇯🇵', 'JP': '🇯🇵',
+        'South Korea': '🇰🇷', 'KR': '🇰🇷',
+        'China': '🇨🇳', 'CN': '🇨🇳',
+        'Hong Kong': '🇭🇰', 'HK': '🇭🇰',
+        'Brazil': '🇧🇷', 'BR': '🇧🇷',
+        'Mexico': '🇲🇽', 'MX': '🇲🇽',
+        'Argentina': '🇦🇷', 'AR': '🇦🇷',
+        'Colombia': '🇨🇴', 'CO': '🇨🇴',
+        'Chile': '🇨🇱', 'CL': '🇨🇱',
+        'Peru': '🇵🇪', 'PE': '🇵🇪',
+        'United Arab Emirates': '🇦🇪', 'UAE': '🇦🇪', 'AE': '🇦🇪',
+        'Saudi Arabia': '🇸🇦', 'SA': '🇸🇦',
+        'Israel': '🇮🇱', 'IL': '🇮🇱',
+        'Russia': '🇷🇺', 'RU': '🇷🇺',
+        'Ukraine': '🇺🇦', 'UA': '🇺🇦',
+    };
     return flags[country] || '🌐';
 }
 
