@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -61,7 +60,6 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-gray-900">
-
 <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
 <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border-2 border-purple-500">
 <div class="flex items-center justify-center mb-6">
@@ -85,7 +83,6 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </div>
 </div>
 </div>
-
 <div id="main-dashboard" class="hidden">
 <nav class="sticky top-0 z-50 bg-gray-900/95 border-b-2 border-purple-600 backdrop-blur-sm">
 <div class="max-w-7xl mx-auto px-6 py-4">
@@ -102,7 +99,6 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </div>
 </div>
 </nav>
-
 <div class="max-w-7xl mx-auto px-6 py-8">
 <div class="flex justify-center gap-4 mb-8 flex-wrap">
 <button onclick="switchTab('leaderboard')" id="tabLeaderboardBtn" class="mode-toggle active"><i class="fas fa-trophy mr-2"></i> Leaderboard</button>
@@ -111,7 +107,6 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 <button onclick="switchTab('messages')" id="tabMessagesBtn" class="mode-toggle"><i class="fas fa-envelope mr-2"></i> Messages</button>
 <button onclick="switchTab('pending')" id="tabPendingBtn" class="mode-toggle"><i class="fas fa-clock mr-2"></i> Pending</button>
 </div>
-
 <div id="tab-leaderboard" class="tab-content">
 <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 <div class="flex justify-between items-center mb-6">
@@ -152,7 +147,6 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </div>
 </div>
 </div>
-
 <div id="tab-freelancers" class="tab-content hidden">
 <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 <div class="flex justify-between items-center mb-6">
@@ -169,7 +163,6 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 <div id="freelancersGrid" class="grid-3"></div>
 </div>
 </div>
-
 <div id="tab-users" class="tab-content hidden">
 <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 <div class="flex justify-between items-center mb-6">
@@ -195,7 +188,6 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 <div id="usersContainer" class="space-y-4"></div>
 </div>
 </div>
-
 <div id="tab-messages" class="tab-content hidden">
 <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 <div class="flex justify-between items-center mb-6">
@@ -205,7 +197,6 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 <div id="messagesContainer" class="space-y-4"></div>
 </div>
 </div>
-
 <div id="tab-pending" class="tab-content hidden">
 <div class="bg-gradient-to-br from-yellow-900 via-orange-900 to-yellow-800 rounded-2xl p-8 border-2 border-yellow-500">
 <div class="flex justify-between items-center mb-6">
@@ -224,7 +215,7 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </div>
 </div>
 </div>
-
+</div>
 <div id="activateModal" class="modal">
 <div class="modal-content">
 <h2 class="text-2xl font-bold mb-4">Activate Users</h2>
@@ -236,7 +227,6 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </div>
 </div>
 </div>
-
 <div id="messageModal" class="modal">
 <div class="modal-content">
 <h2 class="text-2xl font-bold mb-4">Send Message</h2>
@@ -256,7 +246,6 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </div>
 </div>
 </div>
-
 <div id="addLeaderboardModal" class="modal">
 <div class="modal-content">
 <h2 class="text-2xl font-bold mb-4" id="lbModalTitle">Add Entry</h2>
@@ -273,9 +262,38 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 <label class="block text-sm font-bold mb-1 text-gray-700">Score (0-100)</label>
 <input type="number" id="lb-score" class="w-full p-2 mb-2 border text-black">
 </div>
+<!-- UPDATED: Country Dropdown -->
 <div>
-<label class="block text-sm font-bold mb-1 text-gray-700">Country Code</label>
-<input type="text" id="lb-country" placeholder="e.g. BE, NL, US" class="w-full p-2 mb-2 border text-black">
+<label class="block text-sm font-bold mb-1 text-gray-700">Country</label>
+<select id="lb-country" class="w-full p-2 mb-2 border text-black">
+<option value="">Select Country...</option>
+<!-- Options populated by JS -->
+</select>
+</div>
+<!-- NEW: Niche Dropdown -->
+<div>
+<label class="block text-sm font-bold mb-1 text-gray-700">Industry / Niche</label>
+<select id="lb-niche" class="w-full p-2 mb-2 border text-black">
+<option value="">Select Niche...</option>
+<option value="E-commerce">E-commerce</option>
+<option value="Healthcare">Healthcare</option>
+<option value="Construction">Construction</option>
+<option value="Food & Beverage">Food & Beverage</option>
+<option value="Finance">Finance</option>
+<option value="Real Estate">Real Estate</option>
+<option value="Legal">Legal</option>
+<option value="Education">Education</option>
+<option value="Beauty & Wellness">Beauty & Wellness</option>
+<option value="Home Services">Home Services</option>
+<option value="Automotive">Automotive</option>
+<option value="Sustainability">Sustainability</option>
+<option value="Technology">Technology</option>
+<option value="Creative Arts">Creative Arts</option>
+<option value="Fitness">Fitness</option>
+<option value="Travel">Travel</option>
+<option value="Manufacturing">Manufacturing</option>
+<option value="Retail">Retail</option>
+</select>
 </div>
 <div class="flex gap-2 mb-4">
 <a id="lb-visit-link" href="#" target="_blank" class="flex-1 btn btn-info text-center">
@@ -286,7 +304,6 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 <button onclick="closeModal('addLeaderboardModal')" class="btn btn-danger w-full mt-2">Cancel</button>
 </div>
 </div>
-
 <div id="editFreelancerModal" class="modal">
 <div class="modal-content">
 <h2 class="text-2xl font-bold mb-4 text-gray-900">Edit Freelancer</h2>
@@ -322,7 +339,6 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </div>
 </div>
 </div>
-
 <script>
 let currentAdminId = localStorage.getItem('admin_id');
 let allUsers = [];
@@ -331,13 +347,42 @@ let messageTarget = null;
 window.allLeaderboard = [];
 window.allFreelancers = [];
 
+// Country List for Dropdowns
+const COUNTRY_LIST = [
+{ code: 'NL', name: 'Netherlands' }, { code: 'BE', name: 'Belgium' }, { code: 'US', name: 'United States' },
+{ code: 'UK', name: 'United Kingdom' }, { code: 'DE', name: 'Germany' }, { code: 'FR', name: 'France' },
+{ code: 'ES', name: 'Spain' }, { code: 'IT', name: 'Italy' }, { code: 'NZ', name: 'New Zealand' },
+{ code: 'AU', name: 'Australia' }, { code: 'CA', name: 'Canada' }, { code: 'IE', name: 'Ireland' },
+{ code: 'SE', name: 'Sweden' }, { code: 'NO', name: 'Norway' }, { code: 'DK', name: 'Denmark' },
+{ code: 'FI', name: 'Finland' }, { code: 'CH', name: 'Switzerland' }, { code: 'AT', name: 'Austria' },
+{ code: 'PT', name: 'Portugal' }, { code: 'PL', name: 'Poland' }, { code: 'CZ', name: 'Czech Republic' },
+{ code: 'ZA', name: 'South Africa' }, { code: 'NG', name: 'Nigeria' }, { code: 'IN', name: 'India' },
+{ code: 'PH', name: 'Philippines' }, { code: 'SG', name: 'Singapore' }, { code: 'JP', name: 'Japan' },
+{ code: 'BR', name: 'Brazil' }, { code: 'MX', name: 'Mexico' }, { code: 'AE', name: 'UAE' }
+];
+
 window.onload = function() {
+populateCountryDropdown();
 if (currentAdminId) {
 document.getElementById('login-screen').classList.add('hidden');
 document.getElementById('main-dashboard').classList.remove('hidden');
 loadAllData();
 }
 };
+
+function populateCountryDropdown() {
+const select = document.getElementById('lb-country');
+if (!select) return;
+// Keep the first option
+select.innerHTML = '<option value="">Select Country...</option>';
+COUNTRY_LIST.forEach(c => {
+const opt = document.createElement('option');
+opt.value = c.name; // Store full name
+opt.textContent = `${getFlag(c.code)} ${c.name}`;
+opt.dataset.code = c.code;
+select.appendChild(opt);
+});
+}
 
 async function login() {
 const username = document.getElementById('login-username').value;
@@ -358,12 +403,10 @@ alert('Login failed: ' + data.error);
 }
 } catch (e) { alert('Connection error'); }
 }
-
 function logout() {
 localStorage.removeItem('admin_id');
 location.reload();
 }
-
 async function apiCall(endpoint, method = 'GET', body = null) {
 const headers = { 'Content-Type': 'application/json' };
 if (endpoint.includes('/admin/')) headers['x-admin-key'] = currentAdminId;
@@ -374,7 +417,6 @@ const data = await res.json();
 if (!data.success) throw new Error(data.error);
 return data;
 }
-
 function switchTab(tab) {
 document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
 document.querySelectorAll('.mode-toggle').forEach(el => el.classList.remove('active'));
@@ -386,13 +428,11 @@ if (tab === 'users') loadUsers();
 if (tab === 'messages') loadMessages();
 if (tab === 'pending') loadPendingData();
 }
-
 function loadAllData() {
 loadLeaderboard();
 loadFreelancers();
 loadUsers();
 }
-
 async function loadUsers() {
 try {
 const data = await apiCall('/api/admin/users');
@@ -408,12 +448,10 @@ const diffTime = expDate - now;
 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 return diffDays > 0 && diffDays <= 7;
 }).length;
-
 document.getElementById('stat-total-users').textContent = total;
 document.getElementById('stat-active-users').textContent = active;
 document.getElementById('stat-expiring-users').textContent = expiring;
 document.getElementById('stat-inactive-users').textContent = inactive;
-
 const container = document.getElementById('usersContainer');
 if (total === 0) {
 container.innerHTML = '<p class="text-center text-gray-400">No users found.</p>';
@@ -464,7 +502,6 @@ ${u.is_activated ?
 }).join('');
 } catch (e) { console.error(e); }
 }
-
 async function activateSingleUser(id) {
 try {
 await apiCall(`/api/admin/users/${id}/activate`, 'POST', { days: 7 });
@@ -474,7 +511,6 @@ loadUsers();
 alert('❌ Error: ' + e.message);
 }
 }
-
 async function extendUserAccess(id) {
 const days = prompt("How many days to add?", "7");
 if (!days) return;
@@ -486,13 +522,11 @@ loadUsers();
 alert('❌ Error: ' + e.message);
 }
 }
-
 function toggleSelection(type, id) {
 if (selectedIds[type].has(id)) selectedIds[type].delete(id);
 else selectedIds[type].add(id);
 updateCounts();
 }
-
 function toggleSelectAll(type) {
 const checkbox = document.getElementById(`select-all-${type}`);
 const list = type === 'leaderboard' ? window.allLeaderboard : type === 'freelancers' ? window.allFreelancers : allUsers;
@@ -504,13 +538,11 @@ selectedIds[type].clear();
 if (type === 'users') loadUsers();
 updateCounts();
 }
-
 function updateCounts() {
 document.getElementById('selected-count-leaderboard').textContent = selectedIds.leaderboard.size;
 document.getElementById('selected-count-freelancers').textContent = selectedIds.freelancers.size;
 document.getElementById('selected-count-users').textContent = selectedIds.users.size;
 }
-
 function bulkActionUsers(action) {
 if (selectedIds.users.size === 0) return alert('Select users first');
 if (action === 'activate') {
@@ -524,7 +556,6 @@ Promise.all(Array.from(selectedIds.users).map(id => apiCall(`/api/admin/users/${
 .catch(e => alert(e.message));
 }
 }
-
 async function confirmActivate() {
 const days = document.getElementById('activateDays').value;
 closeModal('activateModal');
@@ -539,7 +570,6 @@ selectedIds.users.clear();
 updateCounts();
 } catch (e) { alert(e.message); }
 }
-
 async function bulkDelete(type) {
 const ids = Array.from(selectedIds[type]);
 if (ids.length === 0) return alert('Select items first');
@@ -556,13 +586,11 @@ updateCounts();
 loadAllData();
 } catch (e) { alert(e.message); }
 }
-
 function openMessageModal(targetType, userId = null) {
 messageTarget = targetType;
 if (targetType === 'single') messageTarget = userId;
 document.getElementById('messageModal').classList.add('active');
 }
-
 async function sendMessage() {
 const subject = document.getElementById('msgSubject').value;
 const body = document.getElementById('msgBody').value;
@@ -583,7 +611,6 @@ closeModal('messageModal');
 loadMessages();
 } catch (e) { alert(e.message); }
 }
-
 async function loadMessages() {
 try {
 const data = await apiCall('/api/admin/messages');
@@ -603,7 +630,6 @@ container.innerHTML = data.messages.map(m => `
 `).join('');
 } catch (e) { console.error(e); }
 }
-
 async function loadLeaderboard() {
 const data = await apiCall('/api/leaderboard');
 window.allLeaderboard = data.entries || [];
@@ -653,9 +679,18 @@ tbody.innerHTML = tableRows.map((e, i) => `
 </td>
 </tr>
 `).join('');
-document.getElementById('totalCount').textContent = window.allLeaderboard.length;
+// FIX: Check if element exists before updating (prevents crash in admin)
+const totalCountEl = document.getElementById('totalCount');
+if (totalCountEl) totalCountEl.textContent = window.allLeaderboard.length;
 }
-
+function normalizeCountry(value) {
+if (!value) return '';
+// If it's a code, find the full name
+const found = COUNTRY_LIST.find(c => c.code === value.toUpperCase());
+if (found) return found.name;
+// Otherwise return as is (assuming it's already a full name)
+return value;
+}
 function editLeaderboard(id) {
 const entry = window.allLeaderboard.find(e => e.id === id);
 if (!entry) return;
@@ -664,13 +699,18 @@ document.getElementById('edit-lb-id').value = entry.id;
 document.getElementById('lb-company').value = entry.company_name || '';
 document.getElementById('lb-url').value = entry.url;
 document.getElementById('lb-score').value = entry.score;
-document.getElementById('lb-country').value = entry.country || '';
+// Normalize country for dropdown
+const normalizedCountry = normalizeCountry(entry.country);
+document.getElementById('lb-country').value = normalizedCountry;
+// Set niche if available
+if (entry.niche) document.getElementById('lb-niche').value = entry.niche;
+else document.getElementById('lb-niche').value = '';
+
 const visitLink = document.getElementById('lb-visit-link');
 visitLink.href = entry.url;
 visitLink.style.display = 'inline-block';
 document.getElementById('addLeaderboardModal').classList.add('active');
 }
-
 function showAddLeaderboardModal() {
 document.getElementById('lbModalTitle').textContent = 'Add New Entry';
 document.getElementById('edit-lb-id').value = '';
@@ -678,30 +718,33 @@ document.getElementById('lb-company').value = '';
 document.getElementById('lb-url').value = '';
 document.getElementById('lb-score').value = '';
 document.getElementById('lb-country').value = '';
+document.getElementById('lb-niche').value = '';
 document.getElementById('lb-visit-link').style.display = 'none';
 document.getElementById('addLeaderboardModal').classList.add('active');
 }
-
 async function saveLeaderboardEntry() {
 const id = document.getElementById('edit-lb-id').value;
 const company = document.getElementById('lb-company').value;
 const url = document.getElementById('lb-url').value;
 const score = parseInt(document.getElementById('lb-score').value);
 const country = document.getElementById('lb-country').value;
+const niche = document.getElementById('lb-niche').value;
 if (!company || !url || !score) return alert('Company, URL and Score are required');
 try {
+const payload = { company_name: company, url, score, country };
+if (niche) payload.niche = niche;
+
 if (id) {
-await apiCall(`/api/admin/leaderboard/${id}`, 'PUT', { company_name: company, url, score, country });
+await apiCall(`/api/admin/leaderboard/${id}`, 'PUT', payload);
 alert('Entry updated!');
 } else {
-await apiCall('/api/admin/leaderboard/manual-add', 'POST', { company_name: company, url, score, country });
+await apiCall('/api/admin/leaderboard/manual-add', 'POST', payload);
 alert('Entry added!');
 }
 closeModal('addLeaderboardModal');
 loadLeaderboard();
 } catch (e) { alert('Error: ' + e.message); }
 }
-
 async function loadFreelancers() {
 const data = await apiCall('/api/freelancers');
 window.allFreelancers = data.freelancers || [];
@@ -729,7 +772,6 @@ ${f.is_featured ? '<span class="text-yellow-400 text-xs">⭐ Featured</span>' : 
 `).join('');
 updateCounts();
 }
-
 function editFreelancer(id) {
 const f = window.allFreelancers.find(x => x.id === id);
 if (!f) return;
@@ -743,7 +785,6 @@ document.getElementById('fr-bio-count').textContent = (f.bio || '').length;
 document.getElementById('fr-featured').checked = f.is_featured || false;
 document.getElementById('editFreelancerModal').classList.add('active');
 }
-
 async function saveFreelancerEntry() {
 const id = document.getElementById('edit-fr-id').value;
 const name = document.getElementById('fr-name').value;
@@ -760,7 +801,6 @@ closeModal('editFreelancerModal');
 loadFreelancers();
 } catch (e) { alert('Error: ' + e.message); }
 }
-
 function deleteItem(type, id) {
 if (!confirm('Delete this item permanently?')) return;
 const endpoint = type === 'leaderboard' ? `/api/admin/leaderboard/${id}` : `/api/admin/freelancers/${id}`;
@@ -768,14 +808,11 @@ apiCall(endpoint, 'DELETE')
 .then(() => { alert('Deleted'); loadAllData(); })
 .catch(e => alert(e.message));
 }
-
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-
 function toggleRankings() {
 const el = document.getElementById('rankingsContainer');
 el.classList.toggle('hidden');
 }
-
 async function loadPendingData() {
 try {
 const lbData = await apiCall('/api/admin/leaderboard/pending');
@@ -806,14 +843,19 @@ frContainer.innerHTML = frData.pending.length ? frData.pending.map(p => `
 `).join('') : '<p class="text-gray-400">No pending applications</p>';
 } catch (e) { console.error(e); }
 }
-
 function extractDomain(url) {
 try { return new URL(url).hostname.replace('www.', ''); } catch { return 'Unknown'; }
 }
-
-function getFlag(code) {
-const flags = { 'NL': '🇳🇱', 'BE': '🇧🇪', 'US': '🇺🇸', 'UK': '🇬🇧', 'DE': '🇩🇪' };
-return flags[code] || '🌐';
+function getFlag(codeOrName) {
+if (!codeOrName) return '🌐';
+const upper = codeOrName.toUpperCase();
+// Direct code match
+const directFlags = { 'NL': '🇳🇱', 'BE': '🇧🇪', 'US': '🇺🇸', 'UK': '🇬🇧', 'DE': '🇩🇪', 'FR': '🇫🇷', 'ES': '🇪🇸', 'IT': '🇮🇹', 'NZ': '🇳🇿', 'AU': '🇦🇺', 'CA': '🇨🇦', 'IE': '🇮🇪', 'SE': '🇸🇪', 'NO': '🇳🇴', 'DK': '🇩🇰', 'FI': '🇫🇮', 'CH': '🇨🇭', 'AT': '🇦🇹', 'PT': '🇵🇹', 'PL': '🇵🇱', 'CZ': '🇨🇿', 'ZA': '🇿🇦', 'NG': '🇳🇬', 'IN': '🇮🇳', 'PH': '🇵🇭', 'SG': '🇸🇬', 'JP': '🇯🇵', 'BR': '🇧🇷', 'MX': '🇲🇽', 'AE': '🇦🇪' };
+if (directFlags[upper]) return directFlags[upper];
+// Name match
+const found = COUNTRY_LIST.find(c => c.name.toUpperCase() === codeOrName.toUpperCase());
+if (found) return directFlags[found.code] || '🌐';
+return '🌐';
 }
 </script>
 </body>
