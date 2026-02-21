@@ -655,6 +655,7 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
   </div>
 </div>
 
+
 <script>
 // ============================================================
 // STATE
@@ -669,8 +670,8 @@ let userTemplates = { congrats: { subject: '', body: '' }, improvement: { subjec
 // ============================================================
 document.addEventListener('DOMContentLoaded', function () {
     registerUser();
-    loadLeaderboardData();
-    loadFreelancers();
+    loadLeaderboardData(); // Loads Stats + Entries
+    loadFreelancers();     // Loads Freelancers
     checkServerHealth();
 
     // Hide loading screen
@@ -682,12 +683,16 @@ document.addEventListener('DOMContentLoaded', function () {
     if (document.readyState === 'complete') revealPage();
     else window.addEventListener('load', revealPage);
 
-    document.getElementById('singleUrlInput')?.addEventListener('keypress', e => { if (e.key === 'Enter') scanSingleURL(); });
-    // Force clear single URL input — prevents browser autocomplete bleeding in
+    // Input listeners
     const urlInput = document.getElementById('singleUrlInput');
-    if (urlInput) { urlInput.value = ''; urlInput.setAttribute('autocomplete', 'off'); urlInput.setAttribute('autocorrect', 'off'); urlInput.setAttribute('autocapitalize', 'off'); }
+    if (urlInput) { 
+        urlInput.value = ''; 
+        urlInput.setAttribute('autocomplete', 'off'); 
+        urlInput.setAttribute('autocorrect', 'off'); 
+        urlInput.setAttribute('autocapitalize', 'off'); 
+        urlInput.addEventListener('keypress', e => { if (e.key === 'Enter') scanSingleURL(); });
+    }
 
-    // Pre-fill bulk scan fields from localStorage
     const savedEmail = localStorage.getItem('bulk_email');
     const savedName  = localStorage.getItem('bulk_name');
     if (savedEmail) document.getElementById('bulkScanEmail').value = savedEmail;
@@ -722,7 +727,6 @@ async function registerUser() {
         } else {
             userId = storedUserId;
         }
-        // Always load after userId is set
         loadApiStatus();
         loadUserTemplates();
     } catch (error) {
@@ -731,7 +735,7 @@ async function registerUser() {
 }
 
 // ============================================================
-// API STATUS + SETUP BOX LOGIC
+// API STATUS
 // ============================================================
 async function loadApiStatus() {
     if (!userId) return;
@@ -753,36 +757,29 @@ function checkSetupStatus() {
     const scanForm = document.getElementById('bulkScannerForm');
     const step1    = document.getElementById('setupStepSendgrid');
     const status1  = document.getElementById('stepStatus1');
-
+    
     if (sendgridConfigured) {
-        if (step1)   step1.classList.add('completed');
+        if (step1) step1.classList.add('completed');
         if (status1) status1.textContent = '✅';
         const sg = document.getElementById('sendgridSetupStatus');
         if (sg) sg.innerHTML = '<span class="text-green-400">✅ SendGrid configured — emails ready</span>';
         if (setupBox) setupBox.classList.add('hidden');
-        if (allDone)  allDone.classList.remove('hidden');
+        if (allDone) allDone.classList.remove('hidden');
     } else {
-        if (step1)   step1.classList.remove('completed');
+        if (step1) step1.classList.remove('completed');
         if (status1) status1.textContent = '❌';
         if (setupBox) setupBox.classList.remove('hidden');
-        if (allDone)  allDone.classList.add('hidden');
+        if (allDone) allDone.classList.add('hidden');
     }
-
-    // Scan form is always visible — setup box is a warning, not a blocker
     if (scanForm) scanForm.classList.remove('hidden');
 }
 
-// ============================================================
-// SETUP BOX: INLINE SAVE BUTTONS
-// ============================================================
 async function saveSetupSendgrid() {
-    if (!userId) { alert('Please refresh the page — user not registered yet.'); return; }
+    if (!userId) { alert('Please refresh the page.'); return; }
     const key = document.getElementById('setupSendgridKey').value.trim();
     if (!key) { alert('Please paste your SendGrid API key.'); return; }
-
     const statusEl = document.getElementById('sendgridSetupStatus');
     statusEl.innerHTML = '<span class="text-blue-400">Saving…</span>';
-
     try {
         const res = await fetch('/api/user/sendgrid/configure', {
             method: 'POST',
@@ -803,7 +800,7 @@ async function saveSetupSendgrid() {
 }
 
 // ============================================================
-// API STATUS (used by setup box only)
+// MODE SWITCHING
 // ============================================================
 function switchMode(mode) {
     const singleMode = document.getElementById('singleMode');
@@ -811,6 +808,7 @@ function switchMode(mode) {
     const singleBtn = document.getElementById('modeSingleBtn');
     const bulkBtn = document.getElementById('modeBulkBtn');
     const templates = document.getElementById('templates');
+    
     if (mode === 'single') {
         singleMode.classList.remove('hidden'); bulkMode.classList.add('hidden');
         singleBtn.classList.add('active'); bulkBtn.classList.remove('active');
@@ -819,139 +817,41 @@ function switchMode(mode) {
         singleMode.classList.add('hidden'); bulkMode.classList.remove('hidden');
         singleBtn.classList.remove('active'); bulkBtn.classList.add('active');
         document.getElementById('bulkScannerContent').classList.remove('hidden');
-        document.getElementById('bulkToggleText').textContent = 'Hide Bulk Scanner';
-        document.getElementById('bulkScannerIcon').className = 'fas fa-chevron-up';
         if (templates) templates.classList.remove('hidden');
-    }
-}
-
-function toggleBulkScanner() {
-    const content = document.getElementById('bulkScannerContent');
-    const icon = document.getElementById('bulkScannerIcon');
-    const toggleText = document.getElementById('bulkToggleText');
-    if (content) {
-        const isHidden = content.classList.contains('hidden');
-        content.classList.toggle('hidden');
-        if (icon) { icon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)'; icon.className = isHidden ? 'fas fa-chevron-down' : 'fas fa-chevron-up'; }
-        if (toggleText) toggleText.textContent = isHidden ? 'Show Bulk Scanner' : 'Hide Bulk Scanner';
     }
 }
 
 // ============================================================
 // TEMPLATES
 // ============================================================
-// ============================================================
-// DEFAULT TEMPLATES (Grade 3 level, legally compliant)
-// ============================================================
 const DEFAULT_TEMPLATES = {
     congrats: {
         subject: "🎉 Great news about {{company_name}}!",
-        body: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;">
-<div style="max-width:600px;margin:40px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
-  <div style="background:linear-gradient(135deg,#7e22ce,#be185d);padding:32px;text-align:center;">
-    <div style="font-size:48px;margin-bottom:8px;">🏆</div>
-    <h1 style="color:white;margin:0;font-size:26px;">You Did It!</h1>
-  </div>
-  <div style="padding:32px;">
-    <p style="font-size:16px;color:#333;line-height:1.6;">Hi <strong>{{company_name}}</strong>,</p>
-    <p style="font-size:16px;color:#333;line-height:1.6;">We checked your website. And wow — you scored <strong style="color:#7e22ce;font-size:20px;">{{score}} out of 100!</strong></p>
-    <p style="font-size:16px;color:#333;line-height:1.6;">That is really good. Most websites do not score this high.</p>
-    <div style="background:#f3e8ff;border-left:4px solid #7e22ce;padding:16px;border-radius:8px;margin:24px 0;">
-      <p style="margin:0;font-size:15px;color:#5b21b6;">🌟 We added your website to our <strong>Elite SEO Leaderboard</strong>. People can now see how good your website is!</p>
-    </div>
-    <div style="text-align:center;margin:28px 0;">
-      <a href="{{leaderboard_url}}" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:16px;font-weight:bold;display:inline-block;">👉 See My Ranking</a>
-    </div>
-    <p style="font-size:16px;color:#333;line-height:1.6;">Keep up the great work!</p>
-    <p style="font-size:15px;color:#555;margin-top:32px;">Warm regards,<br><strong>{{sender_name}}</strong><br><a href="mailto:{{sender_email}}" style="color:#7e22ce;">{{sender_email}}</a><br>ContentScale</p>
-  </div>
-  <div style="background:#f3f4f6;padding:16px;text-align:center;border-top:1px solid #e5e7eb;">
-    <p style="font-size:12px;color:#9ca3af;margin:0 0 6px;">You got this email because your website was scanned by ContentScale.</p>
-    <p style="font-size:12px;color:#9ca3af;margin:0;">ContentScale · Amsterdam, Netherlands · <a href="https://contentscale.site" style="color:#7e22ce;">contentscale.site</a></p>
-    <p style="font-size:12px;margin:8px 0 0;"><a href="{{unsubscribe_url}}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe from these emails</a></p>
-  </div>
-</div></body></html>`
+        body: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;"><div style="max-width:600px;margin:40px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);"><div style="background:linear-gradient(135deg,#7e22ce,#be185d);padding:32px;text-align:center;"><div style="font-size:48px;margin-bottom:8px;">🏆</div><h1 style="color:white;margin:0;font-size:26px;">You Did It!</h1></div><div style="padding:32px;"><p style="font-size:16px;color:#333;line-height:1.6;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:16px;color:#333;line-height:1.6;">We checked your website. And wow — you scored <strong style="color:#7e22ce;font-size:20px;">{{score}} out of 100!</strong></p><p style="font-size:16px;color:#333;line-height:1.6;">That is really good. Most websites do not score this high.</p><div style="background:#f3e8ff;border-left:4px solid #7e22ce;padding:16px;border-radius:8px;margin:24px 0;"><p style="margin:0;font-size:15px;color:#5b21b6;">🌟 We added your website to our <strong>Elite SEO Leaderboard</strong>. People can now see how good your website is!</p></div><div style="text-align:center;margin:28px 0;"><a href="{{leaderboard_url}}" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:16px;font-weight:bold;display:inline-block;">👉 See My Ranking</a></div><p style="font-size:16px;color:#333;line-height:1.6;">Keep up the great work!</p><p style="font-size:15px;color:#555;margin-top:32px;">Warm regards,<br><strong>{{sender_name}}</strong><br><a href="mailto:{{sender_email}}" style="color:#7e22ce;">{{sender_email}}</a><br>ContentScale</p></div><div style="background:#f3f4f6;padding:16px;text-align:center;border-top:1px solid #e5e7eb;"><p style="font-size:12px;color:#9ca3af;margin:0 0 6px;">You got this email because your website was scanned by ContentScale.</p><p style="font-size:12px;color:#9ca3af;margin:0;">ContentScale · Amsterdam, Netherlands · <a href="https://contentscale.site" style="color:#7e22ce;">contentscale.site</a></p><p style="font-size:12px;margin:8px 0 0;"><a href="{{unsubscribe_url}}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe from these emails</a></p></div></div></body></html>`
     },
     improvement: {
         subject: "Quick tip to get more visitors to {{company_name}}",
-        body: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;">
-<div style="max-width:600px;margin:40px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
-  <div style="background:linear-gradient(135deg,#1e40af,#0891b2);padding:32px;text-align:center;">
-    <div style="font-size:48px;margin-bottom:8px;">📈</div>
-    <h1 style="color:white;margin:0;font-size:26px;">Your Website Can Do Better</h1>
-  </div>
-  <div style="padding:32px;">
-    <p style="font-size:16px;color:#333;line-height:1.6;">Hi <strong>{{company_name}}</strong>,</p>
-    <p style="font-size:16px;color:#333;line-height:1.6;">My name is <strong>{{sender_name}}</strong>. I help businesses get more visitors from Google.</p>
-    <p style="font-size:16px;color:#333;line-height:1.6;">I checked your website. It scored <strong style="color:#1e40af;font-size:20px;">{{score}} out of 100</strong>.</p>
-    <p style="font-size:16px;color:#333;line-height:1.6;">That is okay. But there is room to grow!</p>
-    <div style="background:#eff6ff;border-left:4px solid #1e40af;padding:16px;border-radius:8px;margin:24px 0;">
-      <p style="margin:0 0 8px;font-size:15px;color:#1e3a8a;font-weight:bold;">What this means for you:</p>
-      <p style="margin:0;font-size:15px;color:#1e40af;">✅ More people can find you on Google<br>✅ More visitors = more customers<br>✅ Small fixes can make a big difference</p>
-    </div>
-    <p style="font-size:16px;color:#333;line-height:1.6;">I can show you exactly what to fix. It is easy. And it works fast.</p>
-    <p style="font-size:16px;color:#333;line-height:1.6;">Can we have a quick chat? Just 15 minutes.</p>
-    <div style="text-align:center;margin:28px 0;">
-      <a href="https://wa.me/31628073996" style="background:linear-gradient(135deg,#1e40af,#0891b2);color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:16px;font-weight:bold;display:inline-block;">💬 Yes, Let's Chat</a>
-    </div>
-    <p style="font-size:15px;color:#555;margin-top:32px;">Kind regards,<br><strong>{{sender_name}}</strong><br><a href="mailto:{{sender_email}}" style="color:#1e40af;">{{sender_email}}</a><br>ContentScale</p>
-  </div>
-  <div style="background:#f3f4f6;padding:16px;text-align:center;border-top:1px solid #e5e7eb;">
-    <p style="font-size:12px;color:#9ca3af;margin:0 0 6px;">You got this email because your website was scanned by ContentScale.</p>
-    <p style="font-size:12px;color:#9ca3af;margin:0;">ContentScale · Amsterdam, Netherlands · <a href="https://contentscale.site" style="color:#7e22ce;">contentscale.site</a></p>
-    <p style="font-size:12px;margin:8px 0 0;"><a href="{{unsubscribe_url}}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe from these emails</a></p>
-  </div>
-</div></body></html>`
+        body: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;"><div style="max-width:600px;margin:40px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);"><div style="background:linear-gradient(135deg,#1e40af,#0891b2);padding:32px;text-align:center;"><div style="font-size:48px;margin-bottom:8px;">📈</div><h1 style="color:white;margin:0;font-size:26px;">Your Website Can Do Better</h1></div><div style="padding:32px;"><p style="font-size:16px;color:#333;line-height:1.6;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:16px;color:#333;line-height:1.6;">My name is <strong>{{sender_name}}</strong>. I help businesses get more visitors from Google.</p><p style="font-size:16px;color:#333;line-height:1.6;">I checked your website. It scored <strong style="color:#1e40af;font-size:20px;">{{score}} out of 100</strong>.</p><p style="font-size:16px;color:#333;line-height:1.6;">That is okay. But there is room to grow!</p><div style="background:#eff6ff;border-left:4px solid #1e40af;padding:16px;border-radius:8px;margin:24px 0;"><p style="margin:0 0 8px;font-size:15px;color:#1e3a8a;font-weight:bold;">What this means for you:</p><p style="margin:0;font-size:15px;color:#1e40af;">✅ More people can find you on Google<br>✅ More visitors = more customers<br>✅ Small fixes can make a big difference</p></div><p style="font-size:16px;color:#333;line-height:1.6;">I can show you exactly what to fix. It is easy. And it works fast.</p><p style="font-size:16px;color:#333;line-height:1.6;">Can we have a quick chat? Just 15 minutes.</p><div style="text-align:center;margin:28px 0;"><a href="https://wa.me/31628073996" style="background:linear-gradient(135deg,#1e40af,#0891b2);color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:16px;font-weight:bold;display:inline-block;">💬 Yes, Let's Chat</a></div><p style="font-size:15px;color:#555;margin-top:32px;">Kind regards,<br><strong>{{sender_name}}</strong><br><a href="mailto:{{sender_email}}" style="color:#1e40af;">{{sender_email}}</a><br>ContentScale</p></div><div style="background:#f3f4f6;padding:16px;text-align:center;border-top:1px solid #e5e7eb;"><p style="font-size:12px;color:#9ca3af;margin:0 0 6px;">You got this email because your website was scanned by ContentScale.</p><p style="font-size:12px;color:#9ca3af;margin:0;">ContentScale · Amsterdam, Netherlands · <a href="https://contentscale.site" style="color:#7e22ce;">contentscale.site</a></p><p style="font-size:12px;margin:8px 0 0;"><a href="{{unsubscribe_url}}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe from these emails</a></p></div></div></body></html>`
     },
     website: {
         subject: "{{company_name}} — did you know a website gets you more customers?",
-        body: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;">
-<div style="max-width:600px;margin:40px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
-  <div style="background:linear-gradient(135deg,#065f46,#0891b2);padding:32px;text-align:center;">
-    <div style="font-size:48px;margin-bottom:8px;">🌐</div>
-    <h1 style="color:white;margin:0;font-size:26px;">Get Found on Google</h1>
-  </div>
-  <div style="padding:32px;">
-    <p style="font-size:16px;color:#333;line-height:1.6;">Hi <strong>{{company_name}}</strong>,</p>
-    <p style="font-size:16px;color:#333;line-height:1.6;">My name is <strong>{{sender_name}}</strong>. I help small businesses get more customers.</p>
-    <p style="font-size:16px;color:#333;line-height:1.6;">I looked for your business online. I could not find a website for you.</p>
-    <p style="font-size:16px;color:#333;line-height:1.6;">Here is the thing — <strong>most people look on Google before they buy anything.</strong></p>
-    <div style="background:#ecfdf5;border-left:4px solid #065f46;padding:16px;border-radius:8px;margin:24px 0;">
-      <p style="margin:0 0 8px;font-size:15px;color:#064e3b;font-weight:bold;">With a website you can:</p>
-      <p style="margin:0;font-size:15px;color:#065f46;">✅ Show up when people search Google<br>✅ Look professional and trusted<br>✅ Get customers even when you sleep<br>✅ Beat the competition near you</p>
-    </div>
-    <p style="font-size:16px;color:#333;line-height:1.6;">I build websites that show up on Google. Fast. Simple. Affordable.</p>
-    <p style="font-size:16px;color:#333;line-height:1.6;">Can I show you what it looks like? No cost. No pressure.</p>
-    <div style="text-align:center;margin:28px 0;">
-      <a href="https://wa.me/31628073996" style="background:linear-gradient(135deg,#065f46,#0891b2);color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:16px;font-weight:bold;display:inline-block;">💬 Show Me How</a>
-    </div>
-    <p style="font-size:15px;color:#555;margin-top:32px;">Kind regards,<br><strong>{{sender_name}}</strong><br><a href="mailto:{{sender_email}}" style="color:#065f46;">{{sender_email}}</a><br>ContentScale</p>
-  </div>
-  <div style="background:#f3f4f6;padding:16px;text-align:center;border-top:1px solid #e5e7eb;">
-    <p style="font-size:12px;color:#9ca3af;margin:0 0 6px;">You got this email because your business was found by ContentScale.</p>
-    <p style="font-size:12px;color:#9ca3af;margin:0;">ContentScale · Amsterdam, Netherlands · <a href="https://contentscale.site" style="color:#7e22ce;">contentscale.site</a></p>
-    <p style="font-size:12px;margin:8px 0 0;"><a href="{{unsubscribe_url}}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe from these emails</a></p>
-  </div>
-</div></body></html>`
+        body: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;"><div style="max-width:600px;margin:40px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);"><div style="background:linear-gradient(135deg,#065f46,#0891b2);padding:32px;text-align:center;"><div style="font-size:48px;margin-bottom:8px;">🌐</div><h1 style="color:white;margin:0;font-size:26px;">Get Found on Google</h1></div><div style="padding:32px;"><p style="font-size:16px;color:#333;line-height:1.6;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:16px;color:#333;line-height:1.6;">My name is <strong>{{sender_name}}</strong>. I help small businesses get more customers.</p><p style="font-size:16px;color:#333;line-height:1.6;">I looked for your business online. I could not find a website for you.</p><p style="font-size:16px;color:#333;line-height:1.6;">Here is the thing — <strong>most people look on Google before they buy anything.</strong></p><div style="background:#ecfdf5;border-left:4px solid #065f46;padding:16px;border-radius:8px;margin:24px 0;"><p style="margin:0 0 8px;font-size:15px;color:#064e3b;font-weight:bold;">With a website you can:</p><p style="margin:0;font-size:15px;color:#065f46;">✅ Show up when people search Google<br>✅ Look professional and trusted<br>✅ Get customers even when you sleep<br>✅ Beat the competition near you</p></div><p style="font-size:16px;color:#333;line-height:1.6;">I build websites that show up on Google. Fast. Simple. Affordable.</p><p style="font-size:16px;color:#333;line-height:1.6;">Can I show you what it looks like? No cost. No pressure.</p><div style="text-align:center;margin:28px 0;"><a href="https://wa.me/31628073996" style="background:linear-gradient(135deg,#065f46,#0891b2);color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:16px;font-weight:bold;display:inline-block;">💬 Show Me How</a></div><p style="font-size:15px;color:#555;margin-top:32px;">Kind regards,<br><strong>{{sender_name}}</strong><br><a href="mailto:{{sender_email}}" style="color:#065f46;">{{sender_email}}</a><br>ContentScale</p></div><div style="background:#f3f4f6;padding:16px;text-align:center;border-top:1px solid #e5e7eb;"><p style="font-size:12px;color:#9ca3af;margin:0 0 6px;">You got this email because your business was found by ContentScale.</p><p style="font-size:12px;color:#9ca3af;margin:0;">ContentScale · Amsterdam, Netherlands · <a href="https://contentscale.site" style="color:#7e22ce;">contentscale.site</a></p><p style="font-size:12px;margin:8px 0 0;"><a href="{{unsubscribe_url}}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe from these emails</a></p></div></div></body></html>`
     }
 };
 
 async function loadUserTemplates() {
-    // Set defaults first so templates are never empty
     ['congrats', 'improvement', 'website'].forEach(t => {
         const subEl = document.getElementById('template-' + t + '-subject');
         const bodyEl = document.getElementById('template-' + t + '-body');
         if (subEl && DEFAULT_TEMPLATES[t]) subEl.value = DEFAULT_TEMPLATES[t].subject;
         if (bodyEl && DEFAULT_TEMPLATES[t]) bodyEl.value = DEFAULT_TEMPLATES[t].body;
     });
-
     if (!userId) return;
     try {
         const response = await fetch('/api/user/templates', { headers: { 'x-user-id': userId } });
         const data = await response.json();
         if (data.success && data.templates) {
             userTemplates = data.templates;
-            // Override defaults only where user has saved a custom template
             ['congrats', 'improvement', 'website'].forEach(t => {
                 if (userTemplates[t] && userTemplates[t].subject) {
                     const subEl = document.getElementById('template-' + t + '-subject');
@@ -965,7 +865,7 @@ async function loadUserTemplates() {
 }
 
 async function saveTemplate(type) {
-    if (!userId) { alert('❌ User not registered. Please refresh the page.'); return; }
+    if (!userId) { alert('❌ User not registered.'); return; }
     const subject = document.getElementById(`template-${type}-subject`).value;
     const body = document.getElementById(`template-${type}-body`).value;
     if (!subject || !body) { alert('❌ Please fill in both subject and body'); return; }
@@ -990,17 +890,16 @@ async function scanSingleURL() {
     const progress = document.getElementById('singleProgress');
     const progressBar = document.getElementById('singleProgressBar');
     const progressText = document.getElementById('singleProgressText');
-
     let url = input.value.trim();
     if (!url) { alert('❌ Please enter a URL'); return; }
     if (!url.startsWith('http')) url = 'https://' + url;
-
+    
     button.disabled = true;
     button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
     progress.classList.remove('hidden');
     progressBar.style.width = '20%';
     progressText.textContent = 'Starting browser...';
-
+    
     try {
         const response = await fetch('/api/scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) });
         progressBar.style.width = '60%';
@@ -1024,7 +923,7 @@ function displayScanResult(data) {
     const url = data.url || '', quality = data.quality || 'unknown', currentScore = data.score || 0;
     const graaf = data.metrics?.graaf || 0, craft = data.metrics?.craft || 0, technical = data.metrics?.technical || 0, words = data.content_stats?.wordCount || 0;
     const recommendations = data.recommendations?.all || [];
-
+    
     let recsHtml = recommendations.length > 0 ? recommendations.map(rec => {
         let pc = 'priority-none';
         if (rec.priority === 'high') pc = 'priority-high';
@@ -1041,14 +940,14 @@ function displayScanResult(data) {
             ${rec.target ? `<div class="recommendation-section"><div class="recommendation-section-title"><i class="fas fa-bullseye"></i> <span>Target</span></div><p class="recommendation-target">${rec.target}</p></div>` : ''}
         </div>`;
     }).join('') : '<p class="text-gray-400 text-sm">No specific recommendations — your page is excellent!</p>';
-
+    
     let qualityColor = 'bg-gray-600';
     if (quality === 'excellent') qualityColor = 'bg-green-600';
     else if (quality === 'very good') qualityColor = 'bg-blue-600';
     else if (quality === 'good') qualityColor = 'bg-green-600';
     else if (quality === 'average') qualityColor = 'bg-yellow-600';
     else if (quality === 'needs improvement') qualityColor = 'bg-red-600';
-
+    
     resultDiv.innerHTML = `<div class="bg-gray-800 rounded-xl border-2 border-purple-500 p-6 mt-4">
         <div class="text-center mb-4">
             <h2 class="text-2xl font-bold text-white mb-1">📊 SEO Content Analysis</h2>
@@ -1074,7 +973,6 @@ function displayScanResult(data) {
             <button onclick="document.getElementById('singleResult').classList.add('hidden')" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold transition-all">Close</button>
         </div>
     </div>`;
-
     resultDiv.classList.remove('hidden');
     resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
@@ -1083,41 +981,40 @@ function shareResult(url, score, quality) {
     const domain = url.replace(/https?:\/\//, '').replace(/\/.*/, '');
     const medal = score >= 90 ? '🏆' : score >= 80 ? '⭐' : score >= 70 ? '📈' : '💡';
     const qualityLabel = (quality || 'good').charAt(0).toUpperCase() + (quality || 'good').slice(1);
-    const shareText = `${medal} ${domain} scored ${score}/100 on ContentScale SEO Scanner!\n\nQuality: ${qualityLabel}\nCheck yours free 👇`;
+    const shareText = `${medal} ${domain} scored ${score}/100 on ContentScale SEO Scanner!\nQuality: ${qualityLabel}\nCheck yours free 👇`;
     const shareUrl = `https://contentscale.site`;
     const fullShareText = shareText + '\n' + shareUrl;
-
-    // Build share modal
+    
     const existingModal = document.getElementById('shareModal');
     if (existingModal) existingModal.remove();
-
+    
     const modal = document.createElement('div');
     modal.id = 'shareModal';
     modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:99999;padding:1rem;';
     modal.innerHTML = `
-        <div style="background:#111827;border:2px solid #a855f7;border-radius:1rem;padding:2rem;max-width:480px;width:100%;position:relative;">
-            <button onclick="document.getElementById('shareModal').remove()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;color:#9ca3af;font-size:1.5rem;cursor:pointer;">✕</button>
-            <h3 style="font-size:1.5rem;font-weight:800;color:white;margin-bottom:0.5rem;text-align:center;">${medal} Share Your Score</h3>
-            <div style="background:#1f2937;border:1px solid #374151;border-radius:0.75rem;padding:1.25rem;margin:1.25rem 0;text-align:center;">
-                <div style="font-size:3rem;font-weight:900;color:white;line-height:1;">${score}</div>
-                <div style="color:#a855f7;font-size:0.875rem;font-weight:600;margin-top:0.25rem;">/ 100 · ${domain}</div>
-                <div style="color:#9ca3af;font-size:0.8rem;margin-top:0.25rem;">Quality: ${qualityLabel}</div>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:0.75rem;">
-                <button onclick="copyShareLink('${fullShareText.replace(/'/g, "\'")}', this)" style="background:linear-gradient(135deg,#7e22ce,#be185d);border:none;color:white;padding:0.875rem;border-radius:0.5rem;font-weight:700;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:0.5rem;">
-                    <i class="fas fa-copy"></i> Copy Score + Link
-                </button>
-                <a href="https://wa.me/?text=${encodeURIComponent(shareText + '\nhttps://contentscale.site')}" target="_blank" rel="noopener" style="background:#075e54;color:white!important;padding:0.875rem;border-radius:0.5rem;font-weight:700;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;text-decoration:none;">
-                    <i class="fab fa-whatsapp"></i> Share on WhatsApp
-                </a>
-                <a href="https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}&summary=${encodeURIComponent(shareText)}" target="_blank" rel="noopener" style="background:#0077b5;color:white!important;padding:0.875rem;border-radius:0.5rem;font-weight:700;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;text-decoration:none;">
-                    <i class="fab fa-linkedin"></i> Share on LinkedIn
-                </a>
-                <a href="https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}" target="_blank" rel="noopener" style="background:#1da1f2;color:white!important;padding:0.875rem;border-radius:0.5rem;font-weight:700;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;text-decoration:none;">
-                    <i class="fab fa-twitter"></i> Share on X / Twitter
-                </a>
-            </div>
-        </div>`;
+    <div style="background:#111827;border:2px solid #a855f7;border-radius:1rem;padding:2rem;max-width:480px;width:100%;position:relative;">
+        <button onclick="document.getElementById('shareModal').remove()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;color:#9ca3af;font-size:1.5rem;cursor:pointer;">✕</button>
+        <h3 style="font-size:1.5rem;font-weight:800;color:white;margin-bottom:0.5rem;text-align:center;">${medal} Share Your Score</h3>
+        <div style="background:#1f2937;border:1px solid #374151;border-radius:0.75rem;padding:1.25rem;margin:1.25rem 0;text-align:center;">
+            <div style="font-size:3rem;font-weight:900;color:white;line-height:1;">${score}</div>
+            <div style="color:#a855f7;font-size:0.875rem;font-weight:600;margin-top:0.25rem;">/ 100 · ${domain}</div>
+            <div style="color:#9ca3af;font-size:0.8rem;margin-top:0.25rem;">Quality: ${qualityLabel}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:0.75rem;">
+            <button onclick="copyShareLink('${fullShareText.replace(/'/g, "\\'")}', this)" style="background:linear-gradient(135deg,#7e22ce,#be185d);border:none;color:white;padding:0.875rem;border-radius:0.5rem;font-weight:700;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:0.5rem;">
+                <i class="fas fa-copy"></i> Copy Score + Link
+            </button>
+            <a href="https://wa.me/?text=${encodeURIComponent(shareText + '\nhttps://contentscale.site')}" target="_blank" rel="noopener" style="background:#075e54;color:white!important;padding:0.875rem;border-radius:0.5rem;font-weight:700;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;text-decoration:none;">
+                <i class="fab fa-whatsapp"></i> Share on WhatsApp
+            </a>
+            <a href="https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}&summary=${encodeURIComponent(shareText)}" target="_blank" rel="noopener" style="background:#0077b5;color:white!important;padding:0.875rem;border-radius:0.5rem;font-weight:700;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;text-decoration:none;">
+                <i class="fab fa-linkedin"></i> Share on LinkedIn
+            </a>
+            <a href="https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}" target="_blank" rel="noopener" style="background:#1da1f2;color:white!important;padding:0.875rem;border-radius:0.5rem;font-weight:700;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;text-decoration:none;">
+                <i class="fab fa-twitter"></i> Share on X / Twitter
+            </a>
+        </div>
+    </div>`;
     document.body.appendChild(modal);
     modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
 }
@@ -1148,12 +1045,12 @@ async function checkServerHealth() {
         const dbOk = data.database === 'connected';
         const counts = data.counts || {};
         const isOldServer = !data.version || data.version !== 'elite-v3';
-
+        
         if (!dbOk) {
             dot.style.background = '#f59e0b';
             dot.style.boxShadow = '0 0 6px #f59e0b';
             text.style.color = '#f59e0b';
-            text.textContent = 'Server online · DB reconnecting — retry in 8s…';
+            text.textContent = 'Server online · DB reconnecting…';
             setTimeout(checkServerHealth, 8000);
         } else if (isOldServer) {
             dot.style.background = '#f59e0b';
@@ -1166,14 +1063,13 @@ async function checkServerHealth() {
             text.style.color = '#10b981';
             const lb = counts.leaderboardTotal || 0;
             const fl = counts.freelancerTotal || 0;
-            text.textContent = `Server online · DB connected · ${lb} leaderboard entries · ${fl} freelancers`;
+            text.textContent = `Server online · DB connected · ${lb} leaderboard · ${fl} freelancers`;
         }
     } catch(e) {
         dot.style.background = '#ef4444';
         dot.style.boxShadow = '0 0 6px #ef4444';
         text.style.color = '#ef4444';
-        text.textContent = '❌ Server unreachable — check Railway deployment';
-        // Retry after 15s
+        text.textContent = '❌ Server unreachable';
         setTimeout(checkServerHealth, 15000);
     }
 }
@@ -1186,34 +1082,27 @@ async function startBulkScan() {
     const emailInput = document.getElementById('bulkScanEmail');
     const nameInput = document.getElementById('bulkScanName');
     const button = document.getElementById('bulkScanBtn');
-
     const urls = urlInput.value.split('\n').filter(u => u.trim().length > 0);
     const email = emailInput.value.trim();
     const name = nameInput.value.trim();
-
+    
     if (!urls.length) { alert('❌ Please enter at least one URL'); return; }
     if (urls.length > 100) { alert('❌ Maximum 100 URLs allowed'); return; }
     if (!email || !email.includes('@')) { alert('❌ Please enter a valid email address'); return; }
     if (!name) { alert('❌ Please enter your name'); return; }
-
-    // Save for next visit
+    
     localStorage.setItem('bulk_email', email);
     localStorage.setItem('bulk_name', name);
-
+    
     if (!sendgridConfigured) {
-        // Flash the setup box to draw attention
         const setupBox = document.getElementById('setupRequiredBox');
         if (setupBox) {
             setupBox.classList.remove('hidden');
             setupBox.style.border = '2px solid #ef4444';
             setupBox.style.boxShadow = '0 0 20px rgba(239,68,68,0.5)';
             setupBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            setTimeout(() => {
-                setupBox.style.border = '';
-                setupBox.style.boxShadow = '';
-            }, 3000);
+            setTimeout(() => { setupBox.style.border = ''; setupBox.style.boxShadow = ''; }, 3000);
         }
-        // Show inline error below the button
         const btn = document.getElementById('bulkScanBtn');
         const existing = document.getElementById('sendgridWarning');
         if (!existing) {
@@ -1226,15 +1115,14 @@ async function startBulkScan() {
         }
         return;
     }
-
+    
     button.disabled = true;
     button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
     document.getElementById('bulkProgress').classList.remove('hidden');
     document.getElementById('bulkResults').classList.add('hidden');
     document.getElementById('bulkResultsContainer').innerHTML = '';
-
+    
     let results = { leaderboard: [], withWebsite: [], withoutWebsite: [], errors: [] };
-
     for (let i = 0; i < urls.length; i++) {
         let url = urls[i].trim();
         if (!url.startsWith('http')) url = 'https://' + url;
@@ -1256,10 +1144,10 @@ async function startBulkScan() {
         } catch (error) { results.errors.push({ url, error: error.message }); }
         await new Promise(resolve => setTimeout(resolve, 500));
     }
-
+    
     displayBulkResults(results, email, name);
     await sendBulkEmails(results, email, name);
-
+    
     button.disabled = false;
     button.innerHTML = '<i class="fas fa-rocket mr-2"></i> Start Bulk Scan';
     document.getElementById('bulkProgress').classList.add('hidden');
@@ -1288,22 +1176,33 @@ async function sendBulkEmails(results, userEmail, userName) {
 }
 
 // ============================================================
-// LEADERBOARD
+// LEADERBOARD (FIXED STATS DISPLAY)
 // ============================================================
 async function loadLeaderboardData() {
     try {
         const response = await fetch('/api/leaderboard');
         if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.json();
+        
         if (data.success && data.entries && data.entries.length > 0) {
             allLeaderboardEntries = data.entries;
+            
+            // Update Stats Immediately
             document.getElementById('totalAgencies').textContent = data.stats?.totalAgencies || 0;
             document.getElementById('avgScore').textContent = data.averageScore || 0;
             document.getElementById('countriesCount').textContent = data.stats?.countriesCount || 0;
             document.getElementById('activeHelpers').textContent = data.stats?.activeHelpers || 0;
-            filterAgencies(); renderCountryFilters(); renderNicheFilters();
-        } else { showEmptyLeaderboard(); }
-    } catch (error) { console.error('Error loading leaderboard:', error); showEmptyLeaderboard('error'); }
+            
+            filterAgencies(); 
+            renderCountryFilters(); 
+            renderNicheFilters();
+        } else { 
+            showEmptyLeaderboard(); 
+        }
+    } catch (error) { 
+        console.error('❌ Error loading leaderboard:', error); 
+        showEmptyLeaderboard('error'); 
+    }
 }
 
 function showEmptyLeaderboard(reason) {
@@ -1317,99 +1216,22 @@ function showEmptyLeaderboard(reason) {
     document.getElementById('totalCount').textContent = '0';
 }
 
-function renderTop3() {
-    const container = document.getElementById('top3-container');
-    if (!container) return;
-    const top3 = allLeaderboardEntries.slice(0, 3);
-    if (!top3.length) { container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No entries found</div>'; return; }
-    container.innerHTML = top3.map((entry, index) => {
-        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
-        const medalClass = index === 0 ? 'gold' : index === 1 ? 'silver' : 'bronze';
-        const rankText = index === 0 ? '1st Worldwide' : index === 1 ? '2nd Worldwide' : '3rd Worldwide';
-        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-        return `<div class="top-card ${medalClass}">
-            <div class="text-5xl mb-2">${medal}</div>
-            <div class="text-xs font-bold uppercase tracking-wider mb-2 text-white/80">${rankText}</div>
-            <h3 class="text-xl font-bold mb-2">${companyName}</h3>
-            <div class="text-4xl font-black mb-2">${entry.score}/100</div>
-            <div class="text-white/80 mb-3">${getCountryFlag(entry.country)} ${entry.country}</div>
-            <button onclick="window.open('${entry.url}', '_blank', 'noopener')" class="w-full bg-black/30 hover:bg-black/50 text-white px-4 py-2 rounded-lg border border-white/30 transition-all"><i class="fas fa-external-link-alt mr-2"></i> Visit Website</button>
-        </div>`;
-    }).join('');
-}
-
-function renderRankings4to15() {
-    const grid = document.getElementById('rankings4to15Grid');
-    if (!grid) return;
-    const rankings = allLeaderboardEntries.slice(3, 15);
-    if (!rankings.length) { document.getElementById('rankings4to15Container').style.display = 'none'; return; }
-    document.getElementById('rankings4to15Container').style.display = 'block';
-    grid.innerHTML = rankings.map((entry, index) => {
-        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-        return `<div class="rank-card">
-            <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${index + 4}</div>
-            <h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
-            <div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
-            <div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
-            <a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">View Website <i class="fas fa-external-link-alt ml-1"></i></a>
-        </div>`;
-    }).join('');
-}
-
-function renderRankings16Plus() {
-    const tbody = document.getElementById('rankingsTbody');
-    const totalCount = document.getElementById('totalCount');
-    if (!tbody) return;
-    const rankings = allLeaderboardEntries.slice(15, 35);
-    if (totalCount) totalCount.textContent = allLeaderboardEntries.length;
-    if (!rankings.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-400">No more entries</td></tr>'; return; }
-    tbody.innerHTML = rankings.map((entry, index) => {
-        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-        const sc = entry.score >= 85 ? 'text-green-400' : entry.score >= 70 ? 'text-yellow-400' : 'text-red-400';
-        return `<tr>
-            <td><span class="inline-flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full font-bold">${index + 16}</span></td>
-            <td class="font-semibold">${companyName}</td>
-            <td><a href="${entry.url}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">${entry.url.replace('https://', '').substring(0, 25)}...</a></td>
-            <td><span class="text-lg font-bold ${sc}">${entry.score}</span></td>
-            <td><span class="text-sm">${getCountryFlag(entry.country)} ${entry.country}</span></td>
-            <td><span class="text-sm text-gray-400">${new Date(entry.created_at).toLocaleDateString()}</span></td>
-        </tr>`;
-    }).join('');
-}
-
-// ============================================================
-// FILTER STATE & CONFIG
-// ============================================================
+// Filter Logic (Same as before)
 const activeFilters = { score: 'all', country: 'all', niche: 'all', sort: 'score-desc' };
-
 const NICHES = [
-    { id: 'ecommerce',     label: 'E-commerce' },
-    { id: 'healthcare',    label: 'Healthcare' },
-    { id: 'construction',  label: 'Construction' },
-    { id: 'food',          label: 'Food & Restaurant' },
-    { id: 'finance',       label: 'Finance & Accounting' },
-    { id: 'realestate',    label: 'Real Estate' },
-    { id: 'legal',         label: 'Legal Services' },
-    { id: 'education',     label: 'Education' },
-    { id: 'beauty',        label: 'Beauty & Wellness' },
-    { id: 'homeservices',  label: 'Home Services' },
-    { id: 'automotive',    label: 'Automotive' },
-    { id: 'tech',          label: 'Tech & Software' },
-    { id: 'creative',      label: 'Creative & Design' },
-    { id: 'fitness',       label: 'Fitness & Sports' },
-    { id: 'travel',        label: 'Travel & Tourism' },
-    { id: 'sustainability',label: 'Sustainability' },
-    { id: 'logistics',     label: 'Logistics & Shipping' },
-    { id: 'other',         label: 'Other' },
+    { id: 'ecommerce', label: 'E-commerce' }, { id: 'healthcare', label: 'Healthcare' }, { id: 'construction', label: 'Construction' },
+    { id: 'food', label: 'Food & Restaurant' }, { id: 'finance', label: 'Finance' }, { id: 'realestate', label: 'Real Estate' },
+    { id: 'legal', label: 'Legal Services' }, { id: 'education', label: 'Education' }, { id: 'beauty', label: 'Beauty & Wellness' },
+    { id: 'homeservices', label: 'Home Services' }, { id: 'automotive', label: 'Automotive' }, { id: 'tech', label: 'Tech & Software' },
+    { id: 'creative', label: 'Creative & Design' }, { id: 'fitness', label: 'Fitness & Sports' }, { id: 'travel', label: 'Travel & Tourism' },
+    { id: 'sustainability', label: 'Sustainability' }, { id: 'logistics', label: 'Logistics' }, { id: 'other', label: 'Other' },
 ];
 
 function setFilter(type, value, btn) {
     activeFilters[type] = value;
     const groupMap = { score: 'scoreFilters', country: 'countryFilters', niche: 'nicheFilters', sort: 'sortFilters' };
     const groupId = groupMap[type];
-    if (groupId) {
-        document.querySelectorAll('#' + groupId + ' .filter-tag').forEach(function(t) { t.classList.remove('active'); });
-    }
+    if (groupId) document.querySelectorAll('#' + groupId + ' .filter-tag').forEach(t => t.classList.remove('active'));
     if (btn) btn.classList.add('active');
     filterAgencies();
     updateActiveChips();
@@ -1424,19 +1246,12 @@ function updateActiveChips() {
     var html = '';
     var chipStyle = 'display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:2px 8px;border-radius:9999px;margin:1px;';
     var btnStyle = 'background:none;border:none;cursor:pointer;padding:0 2px;font-weight:bold;';
-    if (activeFilters.score !== 'all') {
-        html += '<span style="' + chipStyle + 'background:#4c1d95;border:1px solid #7e22ce;color:#e9d5ff;">' + scoreLabels[activeFilters.score] + ' <button style="' + btnStyle + 'color:#e9d5ff;" onclick="resetFilter(&quot;score&quot;)">x</button></span> ';
-    }
-    if (activeFilters.country !== 'all') {
-        html += '<span style="' + chipStyle + 'background:#1e3a8a;border:1px solid #3b82f6;color:#bfdbfe;">' + getCountryFlag(activeFilters.country) + ' ' + activeFilters.country + ' <button style="' + btnStyle + 'color:#bfdbfe;" onclick="resetFilter(&quot;country&quot;)">x</button></span> ';
-    }
-    if (activeFilters.niche !== 'all') {
-        var n = NICHES.find(function(x){return x.id===activeFilters.niche;});
-        html += '<span style="' + chipStyle + 'background:#064e3b;border:1px solid #10b981;color:#a7f3d0;">' + (n ? n.label : activeFilters.niche) + ' <button style="' + btnStyle + 'color:#a7f3d0;" onclick="resetFilter(&quot;niche&quot;)">x</button></span> ';
-    }
-    if (activeFilters.sort !== 'score-desc') {
-        html += '<span style="' + chipStyle + 'background:#374151;border:1px solid #6b7280;color:#e5e7eb;">' + (sortLabels[activeFilters.sort]||activeFilters.sort) + ' <button style="' + btnStyle + 'color:#e5e7eb;" onclick="resetFilter(&quot;sort&quot;)">x</button></span>';
-    }
+    
+    if (activeFilters.score !== 'all') html += '<span style="' + chipStyle + 'background:#4c1d95;border:1px solid #7e22ce;color:#e9d5ff;">' + scoreLabels[activeFilters.score] + ' <button style="' + btnStyle + 'color:#e9d5ff;" onclick="resetFilter(&quot;score&quot;)">x</button></span> ';
+    if (activeFilters.country !== 'all') html += '<span style="' + chipStyle + 'background:#1e3a8a;border:1px solid #3b82f6;color:#bfdbfe;">' + getCountryFlag(activeFilters.country) + ' ' + activeFilters.country + ' <button style="' + btnStyle + 'color:#bfdbfe;" onclick="resetFilter(&quot;country&quot;)">x</button></span> ';
+    if (activeFilters.niche !== 'all') { var n = NICHES.find(x=>x.id===activeFilters.niche); html += '<span style="' + chipStyle + 'background:#064e3b;border:1px solid #10b981;color:#a7f3d0;">' + (n ? n.label : activeFilters.niche) + ' <button style="' + btnStyle + 'color:#a7f3d0;" onclick="resetFilter(&quot;niche&quot;)">x</button></span> '; }
+    if (activeFilters.sort !== 'score-desc') html += '<span style="' + chipStyle + 'background:#374151;border:1px solid #6b7280;color:#e5e7eb;">' + (sortLabels[activeFilters.sort]||activeFilters.sort) + ' <button style="' + btnStyle + 'color:#e5e7eb;" onclick="resetFilter(&quot;sort&quot;)">x</button></span>';
+    
     chips.innerHTML = html;
     var hasSearch = document.getElementById('searchInput') && document.getElementById('searchInput').value;
     var hasFilter = html.length > 0 || hasSearch;
@@ -1446,8 +1261,8 @@ function updateActiveChips() {
 function resetFilter(type) {
     activeFilters[type] = (type === 'sort') ? 'score-desc' : 'all';
     renderCountryFilters(); renderNicheFilters();
-    document.querySelectorAll('#scoreFilters .filter-tag').forEach(function(b,i){ b.classList.toggle('active', i===0); });
-    document.querySelectorAll('#sortFilters .filter-tag').forEach(function(b,i){ b.classList.toggle('active', i===0); });
+    document.querySelectorAll('#scoreFilters .filter-tag').forEach((b,i)=> b.classList.toggle('active', i===0));
+    document.querySelectorAll('#sortFilters .filter-tag').forEach((b,i)=> b.classList.toggle('active', i===0));
     filterAgencies(); updateActiveChips();
 }
 
@@ -1455,66 +1270,45 @@ function resetAllFilters() {
     activeFilters.score='all'; activeFilters.country='all'; activeFilters.niche='all'; activeFilters.sort='score-desc';
     var s = document.getElementById('searchInput'); if (s) s.value = '';
     renderCountryFilters(); renderNicheFilters();
-    document.querySelectorAll('#scoreFilters .filter-tag').forEach(function(b,i){ b.classList.toggle('active', i===0); });
-    document.querySelectorAll('#sortFilters .filter-tag').forEach(function(b,i){ b.classList.toggle('active', i===0); });
+    document.querySelectorAll('#scoreFilters .filter-tag').forEach((b,i)=> b.classList.toggle('active', i===0));
+    document.querySelectorAll('#sortFilters .filter-tag').forEach((b,i)=> b.classList.toggle('active', i===0));
     filterAgencies(); updateActiveChips();
 }
 
 function getFilteredEntries() {
     var query = (document.getElementById('searchInput') ? document.getElementById('searchInput').value.toLowerCase() : '');
     var entries = allLeaderboardEntries.slice();
-    // Search
-    if (query) entries = entries.filter(function(e){
-        return (e.company_name||'').toLowerCase().includes(query) || (e.url||'').toLowerCase().includes(query) || extractDomainFromUrl(e.url).toLowerCase().includes(query) || (e.niche||'').toLowerCase().includes(query);
-    });
-    // Score
-    if (activeFilters.score==='elite')    entries = entries.filter(function(e){ return e.score>=90; });
-    if (activeFilters.score==='pro')      entries = entries.filter(function(e){ return e.score>=85 && e.score<90; });
-    if (activeFilters.score==='good')     entries = entries.filter(function(e){ return e.score>=70 && e.score<85; });
-    if (activeFilters.score==='building') entries = entries.filter(function(e){ return e.score<70; });
-    // Country
-    if (activeFilters.country !== 'all') entries = entries.filter(function(e){ return e.country===activeFilters.country; });
-    // Niche
-    if (activeFilters.niche !== 'all') entries = entries.filter(function(e){ return (e.niche||'').toLowerCase()===activeFilters.niche; });
-    // Sort
-    if (activeFilters.sort==='score-desc') entries.sort(function(a,b){ return b.score-a.score; });
-    if (activeFilters.sort==='score-asc')  entries.sort(function(a,b){ return a.score-b.score; });
-    if (activeFilters.sort==='newest')     entries.sort(function(a,b){ return new Date(b.created_at)-new Date(a.created_at); });
-    if (activeFilters.sort==='az')         entries.sort(function(a,b){ return (a.company_name||'').localeCompare(b.company_name||''); });
+    if (query) entries = entries.filter(e => (e.company_name||'').toLowerCase().includes(query) || (e.url||'').toLowerCase().includes(query) || extractDomainFromUrl(e.url).toLowerCase().includes(query) || (e.niche||'').toLowerCase().includes(query));
+    if (activeFilters.score==='elite') entries = entries.filter(e => e.score>=90);
+    if (activeFilters.score==='pro') entries = entries.filter(e => e.score>=85 && e.score<90);
+    if (activeFilters.score==='good') entries = entries.filter(e => e.score>=70 && e.score<85);
+    if (activeFilters.score==='building') entries = entries.filter(e => e.score<70);
+    if (activeFilters.country !== 'all') entries = entries.filter(e => e.country===activeFilters.country);
+    if (activeFilters.niche !== 'all') entries = entries.filter(e => (e.niche||'').toLowerCase()===activeFilters.niche);
+    if (activeFilters.sort==='score-desc') entries.sort((a,b) => b.score-a.score);
+    if (activeFilters.sort==='score-asc') entries.sort((a,b) => a.score-b.score);
+    if (activeFilters.sort==='newest') entries.sort((a,b) => new Date(b.created_at)-new Date(a.created_at));
+    if (activeFilters.sort==='az') entries.sort((a,b) => (a.company_name||'').localeCompare(b.company_name||''));
     return entries;
 }
 
-function getNicheLabel(nicheId) {
-    var n = NICHES.find(function(x){ return x.id===(nicheId||'').toLowerCase(); });
-    return n ? n.label : nicheId;
-}
+function getNicheLabel(nicheId) { var n = NICHES.find(x=>x.id===(nicheId||'').toLowerCase()); return n ? n.label : nicheId; }
 
 function renderCountryFilters() {
-    var div = document.getElementById('countryFilters');
-    if (!div) return;
-    var countries = [];
-    allLeaderboardEntries.forEach(function(e){ if(e.country && countries.indexOf(e.country)<0) countries.push(e.country); });
+    var div = document.getElementById('countryFilters'); if (!div) return;
+    var countries = []; allLeaderboardEntries.forEach(e => { if(e.country && countries.indexOf(e.country)<0) countries.push(e.country); });
     countries.sort();
-    var html = '<button class="filter-tag ' + (activeFilters.country==='all'?'active':'') + '" onclick="setFilter('country','all',this)">All Countries</button>';
-    countries.forEach(function(country){ 
-        var safe = country.replace(/'/g, "&#39;");
-        html += '<button class="filter-tag ' + (activeFilters.country===country?'active':'') + '" onclick="setFilter('country','' + safe + '',this)">' + getCountryFlag(country) + ' ' + country + '</button>'; 
-    });
+    var html = '<button class="filter-tag ' + (activeFilters.country==='all'?'active':'') + '" onclick="setFilter(\'country\',\'all\',this)">All Countries</button>';
+    countries.forEach(country => { var safe = country.replace(/'/g, "&#39;"); html += '<button class="filter-tag ' + (activeFilters.country===country?'active':'') + '" onclick="setFilter(\'country\',\'' + safe + '\',this)">' + getCountryFlag(country) + ' ' + country + '</button>'; });
     div.innerHTML = html;
 }
 
 function renderNicheFilters() {
-    var div = document.getElementById('nicheFilters');
-    if (!div) return;
-    var usedNiches = {};
-    allLeaderboardEntries.forEach(function(e){ if(e.niche) usedNiches[e.niche.toLowerCase()]=true; });
+    var div = document.getElementById('nicheFilters'); if (!div) return;
+    var usedNiches = {}; allLeaderboardEntries.forEach(e => { if(e.niche) usedNiches[e.niche.toLowerCase()]=true; });
     var hasNiches = Object.keys(usedNiches).length > 0;
-    var html = '<button class="filter-tag ' + (activeFilters.niche==='all'?'active':'') + '" onclick="setFilter('niche','all',this)">All Industries</button>';
-    NICHES.forEach(function(n){
-        if (!hasNiches || usedNiches[n.id]) {
-            html += '<button class="filter-tag ' + (activeFilters.niche===n.id?'active':'') + '" onclick="setFilter('niche','' + n.id + '',this)">' + n.label + '</button>';
-        }
-    });
+    var html = '<button class="filter-tag ' + (activeFilters.niche==='all'?'active':'') + '" onclick="setFilter(\'niche\',\'all\',this)">All Industries</button>';
+    NICHES.forEach(n => { if (!hasNiches || usedNiches[n.id]) { html += '<button class="filter-tag ' + (activeFilters.niche===n.id?'active':'') + '" onclick="setFilter(\'niche\',\'' + n.id + '\',this)">' + n.label + '</button>'; } });
     div.innerHTML = html;
 }
 
@@ -1523,35 +1317,29 @@ function filterAgencies() {
     var total = allLeaderboardEntries.length;
     var countEl = document.getElementById('filterResultsCount');
     if (countEl) countEl.textContent = filtered.length < total ? '(' + filtered.length + ' of ' + total + ')' : '(' + total + ')';
-    renderFilteredTop3(filtered);
-    renderFilteredRankings4to15(filtered);
-    renderFilteredRankings16Plus(filtered);
-    updateActiveChips();
+    renderFilteredTop3(filtered); renderFilteredRankings4to15(filtered); renderFilteredRankings16Plus(filtered); updateActiveChips();
 }
 
 function renderFilteredTop3(filtered) {
-    var container = document.getElementById('top3-container');
-    if (!container) return;
+    var container = document.getElementById('top3-container'); if (!container) return;
     var top3 = filtered.slice(0, 3);
     if (!top3.length) { container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No results match your filters. <button onclick="resetAllFilters()" class="text-purple-400 underline ml-1">Clear filters</button></div>'; return; }
-    container.innerHTML = top3.map(function(entry, index) {
+    container.innerHTML = top3.map((entry, index) => {
         var medal = index===0?'gold':index===1?'silver':'bronze';
         var emo = index===0?'🥇':index===1?'🥈':'🥉';
         var rankText = index===0?'1st Worldwide':index===1?'2nd Worldwide':'3rd Worldwide';
         var name = entry.company_name || extractDomainFromUrl(entry.url);
         var nicheHtml = entry.niche ? '<div style="font-size:11px;background:rgba(0,0,0,0.25);padding:2px 8px;border-radius:9999px;display:inline-block;margin:2px 0;">' + getNicheLabel(entry.niche) + '</div><br>' : '';
-        return '<div class="top-card ' + medal + '"><div class="text-5xl mb-2">' + emo + '</div><div class="text-xs font-bold uppercase tracking-wider mb-2" style="color:rgba(255,255,255,0.8)">' + rankText + '</div><h3 class="text-xl font-bold mb-2">' + name + '</h3><div class="text-4xl font-black mb-2">' + entry.score + '/100</div>' + nicheHtml + '<div style="color:rgba(255,255,255,0.8);margin-bottom:0.75rem;">' + getCountryFlag(entry.country) + ' ' + entry.country + '</div><button onclick="window.open('' + entry.url + '','_blank','noopener')" class="w-full"><i class="fas fa-external-link-alt mr-2"></i> Visit Website</button></div>';
+        return '<div class="top-card ' + medal + '"><div class="text-5xl mb-2">' + emo + '</div><div class="text-xs font-bold uppercase tracking-wider mb-2" style="color:rgba(255,255,255,0.8)">' + rankText + '</div><h3 class="text-xl font-bold mb-2">' + name + '</h3><div class="text-4xl font-black mb-2">' + entry.score + '/100</div>' + nicheHtml + '<div style="color:rgba(255,255,255,0.8);margin-bottom:0.75rem;">' + getCountryFlag(entry.country) + ' ' + entry.country + '</div><button onclick="window.open(\'' + entry.url + '\',\'_blank\',\'noopener\')" class="w-full"><i class="fas fa-external-link-alt mr-2"></i> Visit Website</button></div>';
     }).join('');
 }
 
 function renderFilteredRankings4to15(filtered) {
-    var grid = document.getElementById('rankings4to15Grid');
-    var container = document.getElementById('rankings4to15Container');
-    if (!grid) return;
+    var grid = document.getElementById('rankings4to15Grid'); var container = document.getElementById('rankings4to15Container'); if (!grid) return;
     var rankings = filtered.slice(3, 15);
     if (!rankings.length) { if(container) container.style.display='none'; return; }
     if (container) container.style.display='block';
-    grid.innerHTML = rankings.map(function(entry, index) {
+    grid.innerHTML = rankings.map((entry, index) => {
         var name = entry.company_name || extractDomainFromUrl(entry.url);
         var nicheHtml = entry.niche ? '<div style="font-size:11px;color:#a855f7;margin-bottom:4px;">' + getNicheLabel(entry.niche) + '</div>' : '';
         return '<div class="rank-card"><div class="rank-number text-2xl font-bold text-gray-400 mb-2">#' + (index+4) + '</div><h4 class="font-bold text-white text-sm mb-2 truncate">' + name + '</h4><div class="text-2xl font-black text-green-400 mb-2">' + entry.score + '</div>' + nicheHtml + '<div class="text-xs text-gray-400 mb-2">' + getCountryFlag(entry.country) + ' ' + entry.country + '</div><a href="' + entry.url + '" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">View Website <i class="fas fa-external-link-alt ml-1"></i></a></div>';
@@ -1559,13 +1347,11 @@ function renderFilteredRankings4to15(filtered) {
 }
 
 function renderFilteredRankings16Plus(filtered) {
-    var tbody = document.getElementById('rankingsTbody');
-    var totalCount = document.getElementById('totalCount');
-    if (!tbody) return;
+    var tbody = document.getElementById('rankingsTbody'); var totalCount = document.getElementById('totalCount'); if (!tbody) return;
     var rankings = filtered.slice(15, 35);
     if (totalCount) totalCount.textContent = filtered.length;
     if (!rankings.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-400">No entries match your filters</td></tr>'; return; }
-    tbody.innerHTML = rankings.map(function(entry, index) {
+    tbody.innerHTML = rankings.map((entry, index) => {
         var name = entry.company_name || extractDomainFromUrl(entry.url);
         var sc = entry.score>=85?'text-green-400':entry.score>=70?'text-yellow-400':'text-red-400';
         var nicheHtml = entry.niche ? '<br><span style="font-size:11px;color:#a855f7;">' + getNicheLabel(entry.niche) + '</span>' : '';
@@ -1573,20 +1359,11 @@ function renderFilteredRankings16Plus(filtered) {
     }).join('');
 }
 
-function toggleFilters() {
-    var panel = document.getElementById('filterPanel');
-    var icon = document.getElementById('filterIcon');
-    if (panel) { panel.classList.toggle('hidden'); if(icon){icon.classList.toggle('fa-chevron-down');icon.classList.toggle('fa-chevron-up');} }
-}
-
-function toggleRankings() {
-    const container = document.getElementById('rankingsContainer');
-    const toggleText = document.getElementById('rankingsToggleText');
-    if (container) { container.classList.toggle('hidden'); toggleText.textContent = container.classList.contains('hidden') ? '📊 Show Rankings 16+' : '📊 Hide Rankings 16+'; }
-}
+function toggleFilters() { var panel = document.getElementById('filterPanel'); var icon = document.getElementById('filterIcon'); if (panel) { panel.classList.toggle('hidden'); if(icon){icon.classList.toggle('fa-chevron-down');icon.classList.toggle('fa-chevron-up');} } }
+function toggleRankings() { const container = document.getElementById('rankingsContainer'); const toggleText = document.getElementById('rankingsToggleText'); if (container) { container.classList.toggle('hidden'); toggleText.textContent = container.classList.contains('hidden') ? '📊 Show Rankings 16+' : '📊 Hide Rankings 16+'; } }
 
 // ============================================================
-// FREELANCERS
+// FREELANCERS (FIXED RENDERING)
 // ============================================================
 async function loadFreelancers() {
     try {
@@ -1595,8 +1372,14 @@ async function loadFreelancers() {
         const data = await response.json();
         const grid = document.getElementById('freelancersGrid');
         if (!grid) return;
+        
         const freelancers = data.freelancers || [];
-        if (!freelancers.length) { grid.innerHTML = '<div class="col-span-3 text-center py-8"><p class="text-gray-400 font-semibold mb-2">No approved freelancers yet</p><p class="text-gray-500 text-sm">Registrations are reviewed by admin within 24 hours</p></div>'; return; }
+        
+        if (!freelancers.length) { 
+            grid.innerHTML = '<div class="col-span-3 text-center py-8"><p class="text-gray-400 font-semibold mb-2">No approved freelancers yet</p><p class="text-gray-500 text-sm">Registrations are reviewed by admin within 24 hours</p></div>'; 
+            return; 
+        }
+        
         grid.innerHTML = freelancers.map(f => {
             const firstName = f.name.split(' ')[0];
             const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -1626,7 +1409,7 @@ async function loadFreelancers() {
             </div>`;
         }).join('');
     } catch (error) {
-        console.error('Error loading freelancers:', error);
+        console.error('❌ Error loading freelancers:', error);
         const fg = document.getElementById('freelancersGrid');
         if (fg) fg.innerHTML = '<div class="col-span-3 text-center py-8"><p class="text-red-400 font-semibold mb-2">⚠️ Could not load freelancers</p><p class="text-gray-500 text-sm">Check that the new server.js is deployed on Railway</p></div>';
     }
@@ -1642,10 +1425,19 @@ function submitFreelancer() {
     if (!email.includes('@')) { alert('❌ Please enter a valid email'); return; }
     const isFeatured = document.getElementById('featuredListing')?.checked || false;
     if (isFeatured) window.open('https://paypal.me/ojgmedia?locale.x=en_US&country.x=NL', '_blank', 'noopener');
+    
     fetch('/api/freelancers/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, phone: document.getElementById('freelancerPhone')?.value, title: document.getElementById('freelancerTitle')?.value || 'SEO Specialist', bio: document.getElementById('freelancerBio')?.value || null, hourly_rate: document.getElementById('freelancerRate')?.value || null, is_featured: isFeatured })
+        body: JSON.stringify({ 
+            name, 
+            email, 
+            phone: document.getElementById('freelancerPhone')?.value, 
+            title: document.getElementById('freelancerTitle')?.value || 'SEO Specialist', 
+            bio: document.getElementById('freelancerBio')?.value || null, 
+            hourly_rate: document.getElementById('freelancerRate')?.value || null, 
+            is_featured: isFeatured 
+        })
     })
     .then(r => r.json())
     .then(data => {
@@ -1660,97 +1452,15 @@ function submitFreelancer() {
     .catch(error => alert('❌ Registration failed: ' + error.message));
 }
 
-// ============================================================
-// HELPERS
-// ============================================================
-function extractDomainFromUrl(url) {
-    if (!url) return 'Company';
-    try {
-        const hostname = new URL(url).hostname;
-        let name = hostname.replace('www.', '').split('.')[0];
-        return name.charAt(0).toUpperCase() + name.slice(1);
-    } catch (e) { return 'Company'; }
-}
-
+// Helpers
+function extractDomainFromUrl(url) { if (!url) return 'Company'; try { const hostname = new URL(url).hostname; let name = hostname.replace('www.', '').split('.')[0]; return name.charAt(0).toUpperCase() + name.slice(1); } catch (e) { return 'Company'; } }
 function getCountryFlag(country) {
-    const flags = {
-        'Netherlands': '🇳🇱', 'NL': '🇳🇱',
-        'United Kingdom': '🇬🇧', 'UK': '🇬🇧', 'GB': '🇬🇧',
-        'United States': '🇺🇸', 'US': '🇺🇸', 'USA': '🇺🇸',
-        'Germany': '🇩🇪', 'DE': '🇩🇪',
-        'France': '🇫🇷', 'FR': '🇫🇷',
-        'Belgium': '🇧🇪', 'BE': '🇧🇪',
-        'Spain': '🇪🇸', 'ES': '🇪🇸',
-        'Italy': '🇮🇹', 'IT': '🇮🇹',
-        'New Zealand': '🇳🇿', 'NZ': '🇳🇿',
-        'Australia': '🇦🇺', 'AU': '🇦🇺',
-        'Canada': '🇨🇦', 'CA': '🇨🇦',
-        'Ireland': '🇮🇪', 'IE': '🇮🇪',
-        'Sweden': '🇸🇪', 'SE': '🇸🇪',
-        'Norway': '🇳🇴', 'NO': '🇳🇴',
-        'Denmark': '🇩🇰', 'DK': '🇩🇰',
-        'Finland': '🇫🇮', 'FI': '🇫🇮',
-        'Switzerland': '🇨🇭', 'CH': '🇨🇭',
-        'Austria': '🇦🇹', 'AT': '🇦🇹',
-        'Portugal': '🇵🇹', 'PT': '🇵🇹',
-        'Poland': '🇵🇱', 'PL': '🇵🇱',
-        'Czech Republic': '🇨🇿', 'CZ': '🇨🇿', 'Czechia': '🇨🇿',
-        'Hungary': '🇭🇺', 'HU': '🇭🇺',
-        'Romania': '🇷🇴', 'RO': '🇷🇴',
-        'Greece': '🇬🇷', 'GR': '🇬🇷',
-        'Turkey': '🇹🇷', 'TR': '🇹🇷',
-        'South Africa': '🇿🇦', 'ZA': '🇿🇦',
-        'Nigeria': '🇳🇬', 'NG': '🇳🇬',
-        'Kenya': '🇰🇪', 'KE': '🇰🇪',
-        'Ghana': '🇬🇭', 'GH': '🇬🇭',
-        'India': '🇮🇳', 'IN': '🇮🇳',
-        'Pakistan': '🇵🇰', 'PK': '🇵🇰',
-        'Bangladesh': '🇧🇩', 'BD': '🇧🇩',
-        'Philippines': '🇵🇭', 'PH': '🇵🇭',
-        'Indonesia': '🇮🇩', 'ID': '🇮🇩',
-        'Malaysia': '🇲🇾', 'MY': '🇲🇾',
-        'Singapore': '🇸🇬', 'SG': '🇸🇬',
-        'Thailand': '🇹🇭', 'TH': '🇹🇭',
-        'Vietnam': '🇻🇳', 'VN': '🇻🇳',
-        'Japan': '🇯🇵', 'JP': '🇯🇵',
-        'South Korea': '🇰🇷', 'KR': '🇰🇷',
-        'China': '🇨🇳', 'CN': '🇨🇳',
-        'Hong Kong': '🇭🇰', 'HK': '🇭🇰',
-        'Brazil': '🇧🇷', 'BR': '🇧🇷',
-        'Mexico': '🇲🇽', 'MX': '🇲🇽',
-        'Argentina': '🇦🇷', 'AR': '🇦🇷',
-        'Colombia': '🇨🇴', 'CO': '🇨🇴',
-        'Chile': '🇨🇱', 'CL': '🇨🇱',
-        'Peru': '🇵🇪', 'PE': '🇵🇪',
-        'United Arab Emirates': '🇦🇪', 'UAE': '🇦🇪', 'AE': '🇦🇪',
-        'Saudi Arabia': '🇸🇦', 'SA': '🇸🇦',
-        'Israel': '🇮🇱', 'IL': '🇮🇱',
-        'Russia': '🇷🇺', 'RU': '🇷🇺',
-        'Ukraine': '🇺🇦', 'UA': '🇺🇦',
-    };
+    const flags = { 'Netherlands': '🇳🇱', 'NL': '🇳🇱', 'United Kingdom': '🇬🇧', 'UK': '🇬🇧', 'US': '🇺🇸', 'United States': '🇺🇸', 'Germany': '🇩🇪', 'DE': '🇩🇪', 'France': '🇫🇷', 'FR': '🇫🇷', 'Belgium': '🇧🇪', 'BE': '🇧🇪', 'Spain': '🇪🇸', 'ES': '🇪🇸', 'Italy': '🇮🇹', 'IT': '🇮🇹', 'New Zealand': '🇳🇿', 'NZ': '🇳🇿', 'Australia': '🇦🇺', 'AU': '🇦🇺', 'Canada': '🇨🇦', 'CA': '🇨🇦' };
     return flags[country] || '🌐';
 }
-
-function toggleMobileMenu() {
-    const menu = document.getElementById('mobileMenu');
-    const btn  = document.getElementById('hamburgerBtn');
-    menu.classList.toggle('open');
-    btn.classList.toggle('open');
-}
-function closeMobileMenu() {
-    document.getElementById('mobileMenu').classList.remove('open');
-    document.getElementById('hamburgerBtn').classList.remove('open');
-}
-// Close menu when clicking outside
-document.addEventListener('click', function(e) {
-    const menu = document.getElementById('mobileMenu');
-    const btn  = document.getElementById('hamburgerBtn');
-    if (menu && !menu.contains(e.target) && !btn.contains(e.target)) {
-        menu.classList.remove('open');
-        btn.classList.remove('open');
-    }
-});
-
+function toggleMobileMenu() { const menu = document.getElementById('mobileMenu'); const btn = document.getElementById('hamburgerBtn'); menu.classList.toggle('open'); btn.classList.toggle('open'); }
+function closeMobileMenu() { document.getElementById('mobileMenu').classList.remove('open'); document.getElementById('hamburgerBtn').classList.remove('open'); }
+document.addEventListener('click', function(e) { const menu = document.getElementById('mobileMenu'); const btn = document.getElementById('hamburgerBtn'); if (menu && !menu.contains(e.target) && !btn.contains(e.target)) { menu.classList.remove('open'); btn.classList.remove('open'); } });
 window.onclick = function (event) { const modal = document.getElementById('freelancerModal'); if (event.target === modal) closeModal(); };
 </script>
 </body>
