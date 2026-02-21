@@ -1146,16 +1146,35 @@ async function checkServerHealth() {
         const res = await fetch('/api/health', { signal: AbortSignal.timeout(5000) });
         const data = await res.json();
         const dbOk = data.database === 'connected';
-        dot.style.background = dbOk ? '#10b981' : '#f59e0b';
-        dot.style.boxShadow = dbOk ? '0 0 6px #10b981' : '0 0 6px #f59e0b';
-        text.style.color = dbOk ? '#10b981' : '#f59e0b';
-        text.textContent = dbOk ? 'Server online · DB connected' : 'Server online · DB reconnecting…';
-        if (!dbOk) setTimeout(checkServerHealth, 8000);
+        const counts = data.counts || {};
+        const isOldServer = !data.version || data.version !== 'elite-v3';
+
+        if (!dbOk) {
+            dot.style.background = '#f59e0b';
+            dot.style.boxShadow = '0 0 6px #f59e0b';
+            text.style.color = '#f59e0b';
+            text.textContent = 'Server online · DB reconnecting — retry in 8s…';
+            setTimeout(checkServerHealth, 8000);
+        } else if (isOldServer) {
+            dot.style.background = '#f59e0b';
+            dot.style.boxShadow = '0 0 6px #f59e0b';
+            text.style.color = '#f59e0b';
+            text.textContent = '⚠️ Old server.js deployed — please update Railway';
+        } else {
+            dot.style.background = '#10b981';
+            dot.style.boxShadow = '0 0 6px #10b981';
+            text.style.color = '#10b981';
+            const lb = counts.leaderboardTotal || 0;
+            const fl = counts.freelancerTotal || 0;
+            text.textContent = `Server online · DB connected · ${lb} leaderboard entries · ${fl} freelancers`;
+        }
     } catch(e) {
         dot.style.background = '#ef4444';
         dot.style.boxShadow = '0 0 6px #ef4444';
         text.style.color = '#ef4444';
-        text.textContent = 'Server unreachable — check Railway deployment';
+        text.textContent = '❌ Server unreachable — check Railway deployment';
+        // Retry after 15s
+        setTimeout(checkServerHealth, 15000);
     }
 }
 
@@ -1284,13 +1303,16 @@ async function loadLeaderboardData() {
             document.getElementById('activeHelpers').textContent = data.stats?.activeHelpers || 0;
             filterAgencies(); renderCountryFilters(); renderNicheFilters();
         } else { showEmptyLeaderboard(); }
-    } catch (error) { console.error('Error loading leaderboard:', error); showEmptyLeaderboard(); }
+    } catch (error) { console.error('Error loading leaderboard:', error); showEmptyLeaderboard('error'); }
 }
 
-function showEmptyLeaderboard() {
+function showEmptyLeaderboard(reason) {
     ['totalAgencies', 'avgScore', 'countriesCount', 'activeHelpers'].forEach(id => document.getElementById(id).textContent = '0');
     const container = document.getElementById('top3-container');
-    if (container) container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No leaderboard entries found</div>';
+    const msg = reason === 'error'
+        ? '<div class="col-span-3 text-center py-8"><p class="text-red-400 font-semibold mb-2">⚠️ Could not connect to server</p><p class="text-gray-400 text-sm">Deploy the new server.js to Railway, then refresh</p></div>'
+        : '<div class="col-span-3 text-center py-8"><p class="text-gray-400 font-semibold mb-2">No leaderboard entries yet</p><p class="text-gray-500 text-sm">Scan websites with 85+ score to add them</p></div>';
+    if (container) container.innerHTML = msg;
     document.getElementById('rankings4to15Container').style.display = 'none';
     document.getElementById('totalCount').textContent = '0';
 }
@@ -1574,7 +1596,7 @@ async function loadFreelancers() {
         const grid = document.getElementById('freelancersGrid');
         if (!grid) return;
         const freelancers = data.freelancers || [];
-        if (!freelancers.length) { grid.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No freelancers found</div>'; return; }
+        if (!freelancers.length) { grid.innerHTML = '<div class="col-span-3 text-center py-8"><p class="text-gray-400 font-semibold mb-2">No approved freelancers yet</p><p class="text-gray-500 text-sm">Registrations are reviewed by admin within 24 hours</p></div>'; return; }
         grid.innerHTML = freelancers.map(f => {
             const firstName = f.name.split(' ')[0];
             const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -1605,7 +1627,8 @@ async function loadFreelancers() {
         }).join('');
     } catch (error) {
         console.error('Error loading freelancers:', error);
-        document.getElementById('freelancersGrid').innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Could not load freelancers</div>';
+        const fg = document.getElementById('freelancersGrid');
+        if (fg) fg.innerHTML = '<div class="col-span-3 text-center py-8"><p class="text-red-400 font-semibold mb-2">⚠️ Could not load freelancers</p><p class="text-gray-500 text-sm">Check that the new server.js is deployed on Railway</p></div>';
     }
 }
 
