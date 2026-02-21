@@ -546,13 +546,31 @@ app.post('/api/scan', async (req, res) => {
             const statsPattern = /\d+%|\$[\d,.]+|€[\d,.]+|\d{1,3}(,\d{3})+|\d+x\s/g;
             const statsFound = (cleanText.match(statsPattern) || []).length;
 
-            // Direct Answer Box — first paragraph 40–150 words containing a number
-            const firstPara = paragraphs.length > 0 ? paragraphs[0].textContent.trim() : '';
-            const firstParaWords = firstPara.split(/\s+/).length;
-            const hasDirectAnswer = firstParaWords >= 30 && firstParaWords <= 150 && /\d/.test(firstPara);
+            // Direct Answer Box detection
+            // Fix: scan first 300 words of ALL body text (not just first <p>)
+            // Homepages use hero text in <h2>, <div>, <span> — not just <p>
+            const first300Words = cleanText.split(/\s+/).slice(0, 300).join(' ');
+            const hasDirectAnswer = /\d/.test(first300Words) && first300Words.length > 150;
 
-            // TL;DR / Key Takeaways
-            const hasTLDR = /tl;dr|key takeaways|quick summary|at a glance|in this article/i.test(rawHtml);
+            // TL;DR / Key Takeaways detection — broadened for homepage structures
+            // Matches: TL;DR, Key Takeaways, Quick Summary, bullet intro sections,
+            // feature/benefits sections, "Why choose", "What you get", numbered highlights
+            const hasTLDR = /tl;dr|key takeaways|quick summary|at a glance|in this article|what you('ll| will) get|why choose|key benefits|what we do|highlights|our approach|how it works/i.test(rawHtml) ||
+                // Also check: 3+ bullet points within the first 600 words of content
+                (() => {
+                    const earlyLists = Array.from(document.querySelectorAll('ul, ol'));
+                    for (const list of earlyLists) {
+                        const items = list.querySelectorAll('li');
+                        if (items.length >= 3) {
+                            // Check it appears early in the page (within first half of body)
+                            const bodyLen = (document.body || {}).innerText ? document.body.innerText.length : 9999;
+                            const listText = list.innerText || '';
+                            const listPos = (document.body.innerText || '').indexOf(listText.substring(0, 50));
+                            if (listPos < bodyLen * 0.5) return true;
+                        }
+                    }
+                    return false;
+                })();
 
             // Table of Contents
             const hasTOC = /table of contents|on this page|jump to section|contents/i.test(rawHtml) ||
