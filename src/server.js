@@ -377,7 +377,7 @@ app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
 app.get('/api/leaderboard', async (req, res) => {
     if (!pool) return res.json({ success: true, entries: [], stats: {} });
     try {
-        const r = await pool.query(`SELECT id, ROW_NUMBER() OVER (ORDER BY score DESC) as rank, company_name, url, score, country, niche, is_verified as is_claimed, admin_verified, created_at FROM leaderboard WHERE score IS NOT NULL AND is_opted_out = FALSE AND admin_verified = TRUE ORDER BY score DESC LIMIT 100`);
+        const r = await pool.query(`SELECT id, ROW_NUMBER() OVER (ORDER BY score DESC) as rank, company_name, url, score, country, niche, is_verified as is_claimed, admin_verified, created_at FROM leaderboard WHERE score IS NOT NULL AND is_opted_out = FALSE ORDER BY score DESC LIMIT 100`);
         const entries = r.rows;
         const total = entries.length;
         const avg = total > 0 ? Math.round(entries.reduce((sum, e) => sum + (e.score || 0), 0) / total) : 0;
@@ -1182,8 +1182,20 @@ app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, '../public/adm
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, '../public/index.html')));
 app.get('/api/health', async (req, res) => {
     let db = 'disconnected';
-    if (pool) { try { await pool.query('SELECT 1'); db = 'connected'; } catch (e) {} }
-    res.json({ status: 'running', database: db, puppeteer: browserInstance ? 'ready' : 'not started', version: 'elite-v3' });
+    let leaderboardTotal = 0, leaderboardApproved = 0, freelancerTotal = 0;
+    if (pool) {
+        try {
+            await pool.query('SELECT 1');
+            db = 'connected';
+            const lbAll = await pool.query('SELECT COUNT(*) FROM leaderboard').catch(() => ({ rows: [{ count: 0 }] }));
+            const lbApproved = await pool.query("SELECT COUNT(*) FROM leaderboard WHERE admin_verified = TRUE AND is_opted_out = FALSE").catch(() => ({ rows: [{ count: 0 }] }));
+            const flAll = await pool.query('SELECT COUNT(*) FROM freelancers WHERE is_approved = TRUE').catch(() => ({ rows: [{ count: 0 }] }));
+            leaderboardTotal = parseInt(lbAll.rows[0].count) || 0;
+            leaderboardApproved = parseInt(lbApproved.rows[0].count) || 0;
+            freelancerTotal = parseInt(flAll.rows[0].count) || 0;
+        } catch (e) {}
+    }
+    res.json({ status: 'running', database: db, puppeteer: browserInstance ? 'ready' : 'not started', version: 'elite-v3', counts: { leaderboardTotal, leaderboardApproved, freelancerTotal } });
 });
 
 app.use((err, req, res, next) => {
