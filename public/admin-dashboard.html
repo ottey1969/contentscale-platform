@@ -352,7 +352,6 @@ let selectedIds = { leaderboard: new Set(), freelancers: new Set(), users: new S
 let messageTarget = null;
 window.allLeaderboard = [];
 window.allFreelancers = [];
-
 // Country List for Dropdowns
 const COUNTRY_LIST = [
 { code: 'NL', name: 'Netherlands' }, { code: 'BE', name: 'Belgium' }, { code: 'US', name: 'United States' },
@@ -366,7 +365,6 @@ const COUNTRY_LIST = [
 { code: 'PH', name: 'Philippines' }, { code: 'SG', name: 'Singapore' }, { code: 'JP', name: 'Japan' },
 { code: 'BR', name: 'Brazil' }, { code: 'MX', name: 'Mexico' }, { code: 'AE', name: 'UAE' }
 ];
-
 window.onload = function() {
 populateCountryDropdown();
 if (currentAdminId) {
@@ -375,7 +373,6 @@ document.getElementById('main-dashboard').classList.remove('hidden');
 loadAllData();
 }
 };
-
 function populateCountryDropdown() {
 const select = document.getElementById('lb-country');
 if (!select) return;
@@ -389,7 +386,6 @@ opt.dataset.code = c.code;
 select.appendChild(opt);
 });
 }
-
 async function login() {
 const username = document.getElementById('login-username').value;
 const password = document.getElementById('login-password').value;
@@ -643,6 +639,12 @@ window.allLeaderboard = data.entries || [];
 document.getElementById('stat-total-agencies').textContent = data.stats.totalAgencies;
 document.getElementById('stat-avg-score').textContent = data.averageScore;
 document.getElementById('stat-verified').textContent = data.stats.verifiedCount;
+
+// ✅ FIX: Calculate Countries Correctly
+const validEntries = window.allLeaderboard.filter(e => e.country && e.country.trim() !== '');
+const uniqueCountries = [...new Set(validEntries.map(e => e.country))];
+document.getElementById('stat-countries').textContent = uniqueCountries.length;
+
 const top3 = window.allLeaderboard.slice(0, 3);
 document.getElementById('top3-container').innerHTML = top3.map((e, i) => `
 <div class="top-card ${i===0?'gold':i===1?'silver':'bronze'}">
@@ -712,7 +714,6 @@ document.getElementById('lb-country').value = normalizedCountry;
 // Set niche if available
 if (entry.niche) document.getElementById('lb-niche').value = entry.niche;
 else document.getElementById('lb-niche').value = '';
-
 const visitLink = document.getElementById('lb-visit-link');
 visitLink.href = entry.url;
 visitLink.style.display = 'inline-block';
@@ -740,7 +741,6 @@ if (!company || !url || !score) return alert('Company, URL and Score are require
 try {
 const payload = { company_name: company, url, score, country };
 if (niche) payload.niche = niche;
-
 if (id) {
 await apiCall(`/api/admin/leaderboard/${id}`, 'PUT', payload);
 alert('Entry updated!');
