@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ContentScale - Elite SEO Content Quality Scanner 2026 - 100/100</title>
-<!-- ✅ FAVICON ADDED HERE (Purple Robot Icon) -->
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%237e22ce'/%3E%3Crect x='20' y='25' width='60' height='40' rx='10' fill='%231f2937'/%3E%3Ccircle cx='40' cy='45' r='5' fill='%23a855f7'/%3E%3Ccircle cx='60' cy='45' r='5' fill='%23a855f7'/%3E%3Cpath d='M 30 60 Q 50 70 70 60' stroke='%23a855f7' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Crect x='45' y='15' width='10' height='15' fill='%231f2937'/%3E%3Crect x='45' y='15' width='10' height='15' fill='%237e22ce' opacity='0.5'/%3E%3C/svg%3E">
 <meta name="description" content="Scan je content op 100/100 met ons Elite GRAAF Framework. Detecteert AI Overview ready content, E-E-A-T signals, en meer.">
 <link rel="preconnect" href="https://cdn.tailwindcss.com">
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
@@ -82,8 +80,8 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 .rankings-table th { background: #1f2937; padding: 1rem; text-align: left; font-weight: 600; color: white; }
 .rankings-table td { padding: 1rem; border-bottom: 1px solid #374151; color: white; }
 @media (max-width: 768px) {
-.rankings-table-wrap { display: none; }
-.rankings-mobile-msg { display: block !important; }
+  .rankings-table-wrap { display: none; }
+  .rankings-mobile-msg { display: block !important; }
 }
 .hidden { display: none; }
 .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 9999; }
@@ -129,6 +127,7 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 .recommendation-target { color: #34d399; }
 .template-editor { background: #1f2937; border: 1px solid #374151; border-radius: 0.5rem; padding: 1rem; margin-top: 1rem; }
 .template-editor textarea { width: 100%; min-height: 200px; font-family: monospace; font-size: 0.875rem; color: #f3f4f6 !important; background-color: #1f2937 !important; }
+
 /* Mobile hamburger menu */
 .hamburger { display: none; flex-direction: column; justify-content: space-between; width: 28px; height: 20px; cursor: pointer; padding: 0; background: none; border: none; }
 .hamburger span { display: block; width: 100%; height: 2px; background: white; border-radius: 2px; transition: all 0.3s; }
@@ -137,13 +136,14 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 .hamburger.open span:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
 .mobile-menu { display: none; }
 @media (max-width: 768px) {
-.hamburger { display: flex; }
-.mobile-menu { position: absolute; top: 100%; left: 0; right: 0; background: #030712; border-bottom: 2px solid #7e22ce; padding: 1rem 1.5rem; z-index: 100; flex-direction: column; gap: 0; }
-.mobile-menu.open { display: flex; }
-.mobile-menu a { padding: 0.85rem 0; border-bottom: 1px solid #1f2937; color: #d1d5db !important; font-size: 1rem; font-weight: 500; display: flex; align-items: center; gap: 0.75rem; transition: color 0.2s; }
-.mobile-menu a:last-child { border-bottom: none; }
-.mobile-menu a:hover { color: white !important; }
+  .hamburger { display: flex; }
+  .mobile-menu { position: absolute; top: 100%; left: 0; right: 0; background: #030712; border-bottom: 2px solid #7e22ce; padding: 1rem 1.5rem; z-index: 100; flex-direction: column; gap: 0; }
+  .mobile-menu.open { display: flex; }
+  .mobile-menu a { padding: 0.85rem 0; border-bottom: 1px solid #1f2937; color: #d1d5db !important; font-size: 1rem; font-weight: 500; display: flex; align-items: center; gap: 0.75rem; transition: color 0.2s; }
+  .mobile-menu a:last-child { border-bottom: none; }
+  .mobile-menu a:hover { color: white !important; }
 }
+
 .setup-required-box { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); border: 2px solid #4f46e5; border-radius: 1rem; padding: 1.25rem; margin-bottom: 1.5rem; overflow: hidden; box-sizing: border-box; }
 .setup-step { background: #1e293b; border: 1px solid #374151; border-radius: 0.75rem; padding: 1rem; margin-bottom: 1rem; transition: border-color 0.3s; overflow: hidden; box-sizing: border-box; }
 .setup-step.completed { border-color: #10b981; background: rgba(16, 185, 129, 0.05); }
@@ -162,471 +162,499 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 </head>
 <body class="bg-gray-900">
 <div id="loading-screen">
-<div class="spinner mb-4"></div>
-<p class="text-purple-400 font-bold animate-pulse">Loading ContentScale...</p>
+  <div class="spinner mb-4"></div>
+  <p class="text-purple-400 font-bold animate-pulse">Loading ContentScale...</p>
 </div>
 <a href="#main-content" class="skip-link">Skip to main content</a>
 <nav class="sticky top-0 z-50 bg-gray-900/95 border-b-2 border-purple-600 backdrop-blur-sm" style="position:relative;">
-<div class="max-w-7xl mx-auto px-6 py-4">
-<div class="flex items-center justify-between">
-<div class="flex items-center gap-3">
-<span class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">ContentScale</span>
-<span class="hidden sm:inline-block text-xs px-2 py-1 bg-purple-600 rounded text-white font-semibold">Pro</span>
-</div>
-<div class="hidden md:flex gap-6">
-<a href="#lead-scanner" class="text-gray-300 hover:text-white transition-colors">Scanner</a>
-<a href="#leaderboard" class="text-gray-300 hover:text-white transition-colors">Leaderboard</a>
-<a href="#freelancers" class="text-gray-300 hover:text-white transition-colors">Experts</a>
-<a href="#templates" class="text-gray-300 hover:text-white transition-colors">Templates</a>
-</div>
-<div class="flex items-center gap-3">
-<a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="btn-success btn"><i class="fab fa-whatsapp"></i> Chat</a>
-<button class="hamburger md:hidden" id="hamburgerBtn" onclick="toggleMobileMenu()" aria-label="Open menu">
-<span></span><span></span><span></span>
-</button>
-</div>
-</div>
-</div>
-<!-- Mobile menu -->
-<div class="mobile-menu" id="mobileMenu">
-<a href="#lead-scanner" onclick="closeMobileMenu()"><i class="fas fa-search" style="width:18px;color:#a855f7!important;"></i> Scanner</a>
-<a href="#leaderboard" onclick="closeMobileMenu()"><i class="fas fa-trophy" style="width:18px;color:#a855f7!important;"></i> Leaderboard</a>
-<a href="#freelancers" onclick="closeMobileMenu()"><i class="fas fa-users" style="width:18px;color:#a855f7!important;"></i> Experts</a>
-<a href="#templates" onclick="closeMobileMenu()"><i class="fas fa-envelope" style="width:18px;color:#a855f7!important;"></i> Templates</a>
-<a href="https://wa.me/31628073996" target="_blank" rel="noopener"><i class="fab fa-whatsapp" style="width:18px;color:#4ade80!important;"></i> WhatsApp Chat</a>
-</div>
+  <div class="max-w-7xl mx-auto px-6 py-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">ContentScale</span>
+        <span class="hidden sm:inline-block text-xs px-2 py-1 bg-purple-600 rounded text-white font-semibold">Pro</span>
+      </div>
+      <div class="hidden md:flex gap-6">
+        <a href="#lead-scanner" class="text-gray-300 hover:text-white transition-colors">Scanner</a>
+        <a href="#leaderboard" class="text-gray-300 hover:text-white transition-colors">Leaderboard</a>
+        <a href="#freelancers" class="text-gray-300 hover:text-white transition-colors">Experts</a>
+        <a href="#templates" class="text-gray-300 hover:text-white transition-colors">Templates</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="btn-success btn"><i class="fab fa-whatsapp"></i> Chat</a>
+        <button class="hamburger md:hidden" id="hamburgerBtn" onclick="toggleMobileMenu()" aria-label="Open menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- Mobile menu -->
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#lead-scanner" onclick="closeMobileMenu()"><i class="fas fa-search" style="width:18px;color:#a855f7!important;"></i> Scanner</a>
+    <a href="#leaderboard" onclick="closeMobileMenu()"><i class="fas fa-trophy" style="width:18px;color:#a855f7!important;"></i> Leaderboard</a>
+    <a href="#freelancers" onclick="closeMobileMenu()"><i class="fas fa-users" style="width:18px;color:#a855f7!important;"></i> Experts</a>
+    <a href="#templates" onclick="closeMobileMenu()"><i class="fas fa-envelope" style="width:18px;color:#a855f7!important;"></i> Templates</a>
+    <a href="https://wa.me/31628073996" target="_blank" rel="noopener"><i class="fab fa-whatsapp" style="width:18px;color:#4ade80!important;"></i> WhatsApp Chat</a>
+  </div>
 </nav>
-<div id="main-content" class="max-w-7xl mx-auto px-6 py-8">
-<!-- SCANNER SECTION -->
-<div id="lead-scanner" class="mb-16">
-<div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-<div class="max-w-3xl mx-auto text-center mb-8">
-<h2 class="text-4xl font-bold mb-3 text-white">🎯 SEO Content Quality Scanner</h2>
-<p class="text-xl text-gray-200 mb-2">Check Your SEO Content Quality in Seconds</p>
-<div class="flex flex-wrap gap-3 justify-center text-sm text-gray-300">
-<span>✨ Free for freelancers</span><span>•</span>
-<span>🔍 Single &amp; Bulk scanning</span><span>•</span>
-<span>📊 Detailed analysis</span><span>•</span>
-<span>📧 Your SendGrid emails</span><span>•</span>
-<span>✏️ Editable templates</span>
-</div>
-</div>
-<div class="flex justify-center gap-4 mb-8">
-<button id="modeSingleBtn" onclick="switchMode('single')" class="mode-toggle active"><i class="fas fa-link mr-2"></i> Scan Single URL</button>
-<button id="modeBulkBtn" onclick="switchMode('bulk')" class="mode-toggle"><i class="fas fa-layer-group mr-2"></i> Scan Bulk URLs</button>
-</div>
-<!-- SINGLE MODE -->
-<div id="singleMode" class="max-w-3xl mx-auto">
-<div class="card">
-<div class="flex flex-col sm:flex-row gap-3">
-<input type="text" id="singleUrlInput" placeholder="https://business-website.com" class="flex-1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-<button onclick="scanSingleURL()" id="singleScanBtn" class="btn-primary btn whitespace-nowrap"><i class="fas fa-search"></i> Start Scan</button>
-</div>
-<div id="singleProgress" class="hidden mt-4">
-<div class="progress-bar"><div id="singleProgressBar" class="progress-bar-fill" style="width: 0%"></div></div>
-<p id="singleProgressText" class="text-sm text-gray-300 text-center mt-2"></p>
-</div>
-</div>
-<div id="singleResult" class="hidden mt-4"></div>
-</div>
-<!-- BULK MODE -->
-<div id="bulkMode" class="hidden max-w-4xl mx-auto">
-<div class="card" style="border: 2px solid #3b82f6;">
-<div class="flex items-center gap-3 mb-6">
-<span class="text-xl font-bold text-white">📋 Bulk URL Scanner</span>
-<span class="text-sm px-3 py-1 bg-blue-600 rounded-full text-white font-semibold">Batch Scan</span>
-</div>
-<div id="bulkScannerContent">
-<!-- ================================================ -->
-<!-- SETUP REQUIRED BOX (shown when keys missing)     -->
-<!-- ================================================ -->
-<div id="setupRequiredBox" class="setup-required-box">
-<div class="flex items-center gap-3 mb-4">
-<div class="text-3xl">⚙️</div>
-<div>
-<h4 class="text-lg font-bold text-white">One-Time Setup — Your Own Free SendGrid Account</h4>
-<p class="text-sm text-gray-400">You need <a href="https://sendgrid.com/en-us" target="_blank" rel="noopener" style="color:#a78bfa!important;text-decoration:underline;">your own free SendGrid account</a> to send emails. It's free, takes 2 minutes, and you own it completely.</p>
-</div>
-</div>
-<div class="setup-step" id="setupStepSendgrid">
-<div class="setup-step-header">
-<div class="setup-step-status" id="stepStatus1">❌</div>
-<div style="flex:1;min-width:0;">
-<div class="font-semibold text-white">Your Own Free SendGrid API Key</div>
-<div class="text-xs text-gray-400">Create your <strong>own free account</strong> at SendGrid — 100 emails/day free, no credit card needed</div>
-</div>
-</div>
-<div class="mb-2 flex flex-col gap-1">
-<a href="https://sendgrid.com/en-us" target="_blank" rel="noopener" class="setup-link">
-<i class="fas fa-external-link-alt mr-1"></i>Step 1 — Create your free SendGrid account
-</a>
-<a href="https://app.sendgrid.com/settings/api_keys" target="_blank" rel="noopener" class="setup-link">
-<i class="fas fa-key mr-1"></i>Step 2 — Generate your API key → Settings → API Keys
-</a>
-</div>
-<div class="setup-input-row" style="min-width:0;">
-<input type="password" id="setupSendgridKey" placeholder="Paste your SG. key here" autocomplete="off" style="min-width:0;width:100%;">
-<button class="setup-save-btn" onclick="saveSetupSendgrid()"><i class="fas fa-save mr-1"></i> Save</button>
-</div>
-<p class="setup-status-text" id="sendgridSetupStatus"><span class="text-yellow-400">⚠️ Not configured — emails will not send until you add your own key</span></p>
-</div>
-<p class="text-xs text-gray-500 mt-3 text-center">
-<i class="fas fa-lock mr-1"></i>Your API keys are stored securely and never shared. Setup takes less than 2 minutes.
-</p>
-</div>
-<!-- END SETUP REQUIRED BOX -->
-<!-- ALL DONE BANNER (hidden until both keys saved) -->
-<div id="setupAllDone" class="setup-all-done hidden">
-<div class="text-3xl mb-2">✅</div>
-<div class="font-bold text-green-400 text-lg mb-1">You're all set!</div>
-<p class="text-sm text-gray-300">Both API keys are configured. Bulk scanning with automated emails is now active.</p>
-</div>
-<!-- BULK SCAN FORM -->
-<div id="bulkScannerForm">
-<p class="text-gray-300 text-sm mb-4">Scan up to 100 websites at once. Based on scores, we automatically:</p>
-<ul class="text-sm text-gray-300 mb-4" style="margin-left: 1.5rem;">
-<li>🏆 <strong>85+ Score:</strong> Submit to leaderboard + send congratulations email</li>
-<li>📧 <strong>&lt;85 with website:</strong> Email business owner with improvement pitch</li>
-<li>🌐 <strong>&lt;85 without website:</strong> Email owner offering website creation</li>
-</ul>
-<div class="mb-4">
-<label class="block text-sm text-gray-300 mb-2">Enter URLs (one per line, max 100)</label>
-<textarea id="bulkUrlInput" rows="8" placeholder="https://example1.com&#10;https://example2.com&#10;https://example3.com" class="w-full p-3 rounded border border-gray-600 focus:border-purple-500 resize-none" style="color: #000000 !important; background-color: #ffffff !important;"></textarea>
-<div class="flex justify-between mt-1">
-<span class="text-xs text-gray-400">Up to 100 URLs</span>
-<span id="bulkUrlCount" class="text-xs text-gray-400">0/100</span>
-</div>
-</div>
-<div class="grid grid-cols-2 gap-3 mb-4">
-<div><label class="block text-sm text-gray-300 mb-2">Your Email *</label><input type="email" id="bulkScanEmail" placeholder="your@email.com" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500"></div>
-<div><label class="block text-sm text-gray-300 mb-2">Your Name *</label><input type="text" id="bulkScanName" placeholder="Your name" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500"></div>
-</div>
-<button onclick="startBulkScan()" id="bulkScanBtn" class="btn-primary btn w-full"><i class="fas fa-rocket mr-2"></i> Start Bulk Scan</button>
-<div id="bulkProgress" class="hidden mt-4">
-<div class="progress-bar"><div id="bulkProgressBar" class="progress-bar-fill" style="width: 0%"></div></div>
-<p id="bulkProgressText" class="text-sm text-gray-300 text-center mt-2"></p>
-</div>
-<div id="bulkResults" class="hidden mt-4">
-<h4 class="text-lg font-bold text-white mb-3">Scan Results</h4>
-<div id="bulkResultsContainer"></div>
-</div>
-</div>
-</div><!-- end bulkScannerContent -->
-</div>
-</div>
-<!-- CTA Banner -->
-<div class="mt-8 max-w-3xl mx-auto bg-gradient-to-r from-purple-800 via-pink-800 to-purple-800 rounded-xl p-6 text-center border border-purple-400">
-<h3 class="text-2xl font-bold mb-2 text-white">💼 Are You an SEO Specialist or Content Marketer?</h3>
-<p class="text-xl text-gray-200 mb-4">Work just a few hours per week while earning a full-time income. We train you in Modern SEO for the AI-era.</p>
-<button onclick="openFreelancerModal()" class="btn-white-black btn text-lg px-8 py-4 shadow-lg"><i class="fas fa-user-plus mr-2"></i> Become a Platform Specialist</button>
-</div>
-</div>
-</div>
-<!-- TEMPLATES SECTION - hidden by default, shown when bulk mode is active -->
-<div id="templates" class="mb-16 hidden">
-<div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-<div class="max-w-3xl mx-auto text-center mb-8">
-<h2 class="text-4xl font-bold mb-3 text-white">✏️ Email Templates</h2>
-<p class="text-xl text-gray-200">Customize your bulk scan email templates</p>
-</div>
-<div class="max-w-5xl mx-auto grid md:grid-cols-3 gap-6">
-<div class="card">
-<h3 class="text-xl font-bold mb-4">🏆 Leaderboard Congratulations</h3>
-<p class="text-sm text-gray-400 mb-4">Sent to businesses with 85+ score</p>
-<div class="template-editor">
-<label class="block text-sm text-gray-300 mb-2">Subject</label>
-<input type="text" id="template-congrats-subject" class="w-full p-2 rounded border border-gray-600 mb-2" value="🎉 Congratulations! Your website ranked on ContentScale Leaderboard">
-<label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
-<textarea id="template-congrats-body" class="w-full p-2 rounded" style="min-height: 150px;"></textarea>
-</div>
-<button onclick="saveTemplate('congrats')" class="btn-primary btn w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
-</div>
-<div class="card">
-<h3 class="text-xl font-bold mb-4">📈 Improvement Pitch</h3>
-<p class="text-sm text-gray-400 mb-4">Sent to businesses with website &lt;85 score</p>
-<div class="template-editor">
-<label class="block text-sm text-gray-300 mb-2">Subject</label>
-<input type="text" id="template-improvement-subject" class="w-full p-2 rounded border border-gray-600 mb-2" value="🚀 Quick SEO opportunity for {{company_name}}">
-<label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
-<textarea id="template-improvement-body" class="w-full p-2 rounded" style="min-height: 150px;"></textarea>
-</div>
-<button onclick="saveTemplate('improvement')" class="btn-primary btn w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
-</div>
-<div class="card">
-<h3 class="text-xl font-bold mb-4">🌐 Website Offer</h3>
-<p class="text-sm text-gray-400 mb-4">Sent to businesses without website</p>
-<div class="template-editor">
-<label class="block text-sm text-gray-300 mb-2">Subject</label>
-<input type="text" id="template-website-subject" class="w-full p-2 rounded border border-gray-600 mb-2" value="💻 Professional website for {{company_name}}">
-<label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
-<textarea id="template-website-body" class="w-full p-2 rounded" style="min-height: 150px;"></textarea>
-</div>
-<button onclick="saveTemplate('website')" class="btn-primary btn w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
-</div>
-</div>
-<div class="max-w-5xl mx-auto mt-8 bg-gray-800 rounded-lg p-4 border border-gray-700">
-<h4 class="font-bold mb-2">📎 Available Variables:</h4>
-<div class="grid md:grid-cols-3 gap-4 text-sm text-gray-400">
-<div><code class="text-purple-400">{{company_name}}</code> - Business name</div>
-<div><code class="text-purple-400">{{score}}</code> - SEO score (0-100)</div>
-<div><code class="text-purple-400">{{leaderboard_url}}</code> - Link to leaderboard</div>
-<div><code class="text-purple-400">{{sender_name}}</code> - Your name</div>
-<div><code class="text-purple-400">{{sender_email}}</code> - Your email</div>
-<div><code class="text-purple-400">{{website_url}}</code> - Business website</div>
-<div><code class="text-purple-400">{{unsubscribe_url}}</code> - <span class="text-red-400 font-bold">⚠️ Required by law</span></div>
-</div>
-<div class="mt-4 p-3 bg-red-900/30 border border-red-500 rounded text-sm text-red-200">
-<strong>⚖️ Legal Requirement:</strong> Under GDPR and CAN-SPAM, every commercial email MUST include a working unsubscribe link and a physical mailing address. The templates above include these automatically. Do not remove them.
-</div>
-</div>
-</div>
-</div>
-<!-- LEADERBOARD SECTION -->
-<div id="leaderboard" class="mb-16">
-<div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-<div class="max-w-3xl mx-auto text-center mb-8">
-<h2 class="text-4xl font-bold mb-3 text-white">🏆 Elite Leaderboard</h2>
-<p class="text-xl text-gray-200">Top performing websites automatically added</p>
-</div>
-<div style="max-width:900px;margin:0 auto 2rem;display:flex;flex-wrap:wrap;justify-content:center;gap:1rem;">
-<div class="stat-card" style="min-width:160px;flex:1;max-width:200px;text-align:center;"><div><div class="text-4xl mb-2">🏢</div><div class="text-3xl font-bold" id="totalAgencies">0</div><div class="text-sm text-gray-200">Agencies</div></div></div>
-<div class="stat-card" style="min-width:160px;flex:1;max-width:200px;text-align:center;"><div><div class="text-4xl mb-2">📊</div><div class="text-3xl font-bold" id="avgScore">0</div><div class="text-sm text-gray-200">Avg. Score</div></div></div>
-<div class="stat-card" style="min-width:160px;flex:1;max-width:200px;text-align:center;"><div><div class="text-4xl mb-2">🌍</div><div class="text-3xl font-bold" id="countriesCount">0</div><div class="text-sm text-gray-200">Countries</div></div></div>
-<div class="stat-card" style="min-width:160px;flex:1;max-width:200px;text-align:center;"><div><div class="text-4xl mb-2">💼</div><div class="text-3xl font-bold" id="activeHelpers">0</div><div class="text-sm text-gray-200">Freelancers</div></div></div>
-</div>
-<div class="max-w-5xl mx-auto">
-<div id="top3-container" class="grid-3 mb-10"></div>
-<div id="rankings4to15Container" class="mb-10">
-<h3 class="text-2xl font-bold text-white mb-6">Rankings 4-15</h3>
-<div class="rankings-4-15-grid" id="rankings4to15Grid"></div>
-</div>
-<div class="bg-gray-800 rounded-lg p-4 mb-6">
-<!-- Enhanced Filter Header -->
-<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-<div class="flex-1">
-<label class="sr-only">Search</label>
-<input type="text" id="searchInput" placeholder="🔍 Search agencies, URLs..." oninput="handleFilterChange()" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 focus:border-purple-500 text-white" autocomplete="off">
-</div>
-<div class="flex items-center gap-2 flex-wrap" id="activeFilterChips">
-<!-- Active chips injected here -->
-</div>
-<div id="clearFiltersBtn" class="hidden">
-<button onclick="clearAllFilters()" class="text-xs bg-gray-600 hover:bg-gray-500 text-white px-3 py-1.5 rounded-full transition-colors">Clear All</button>
-</div>
-</div>
 
-<!-- Collapsible Filter Panel -->
-<button onclick="toggleFilters()" class="w-full flex items-center justify-between text-left text-white py-2">
-<div class="flex items-center gap-2"><i class="fas fa-sliders-h text-purple-400"></i><span class="font-semibold">Advanced Filters</span></div>
-<i class="fas fa-chevron-down" id="filterIcon"></i>
-</button>
-<div id="filterPanel" class="hidden mt-4 space-y-4">
-<!-- Score Range -->
-<div>
-<div class="text-sm text-gray-300 mb-2">Score Range:</div>
-<div class="flex flex-wrap gap-2" id="scoreFilters">
-<button class="filter-tag active" onclick="setFilter('score','all',this)">All Scores</button>
-<button class="filter-tag" onclick="setFilter('score','elite',this)">Elite (90+)</button>
-<button class="filter-tag" onclick="setFilter('score','pro',this)">Pro (85-89)</button>
-<button class="filter-tag" onclick="setFilter('score','good',this)">Good (70-84)</button>
-<button class="filter-tag" onclick="setFilter('score','low',this)">Under 70</button>
-</div>
-</div>
-<!-- Country -->
-<div>
-<div class="text-sm text-gray-300 mb-2">Country:</div>
-<div class="flex flex-wrap gap-2" id="countryFilters"></div>
-</div>
-<!-- Niche -->
-<div>
-<div class="text-sm text-gray-300 mb-2">Industry / Niche:</div>
-<div class="flex flex-wrap gap-2" id="nicheFilters"></div>
-</div>
-<!-- Sort -->
-<div>
-<div class="text-sm text-gray-300 mb-2">Sort By:</div>
-<select id="sortSelect" onchange="setSort(this.value)" class="bg-gray-700 border border-gray-600 text-white rounded px-3 py-1.5 focus:border-purple-500">
-<option value="score_desc">Score (High to Low)</option>
-<option value="score_asc">Score (Low to High)</option>
-<option value="newest">Newest First</option>
-<option value="az">A to Z</option>
-</select>
-</div>
-</div>
-</div>
-<div>
-<button onclick="toggleRankings()" id="rankingsToggleBtn" class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-between transition-all">
-<span id="rankingsToggleText">📊 Show Rankings 16+</span><span class="arrow">▼</span>
-</button>
-<div id="rankingsContainer" class="hidden mt-4">
-<p class="text-sm text-gray-300 mb-2">Showing 16-35 of <span id="totalCount">0</span> agencies</p>
-<div class="rankings-mobile-msg hidden" style="background:#1f2937;border-radius:0.75rem;padding:1.25rem;text-align:center;color:#9ca3af;font-size:0.9rem;">
-📊 Full rankings table available on desktop
-</div>
-<div class="rankings-table-wrap">
-<table class="rankings-table">
-<thead><tr><th>Rank</th><th>Company</th><th>Website</th><th>Score</th><th>Country</th><th>Added</th></tr></thead>
-<tbody id="rankingsTbody"></tbody>
-</table>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<!-- FREELANCERS SECTION -->
-<div id="freelancers" class="mb-16">
-<div class="max-w-3xl mx-auto text-center mb-8">
-<h2 class="text-4xl font-bold mb-3 text-white">🎯 Verified SEO Specialists</h2>
-<p class="text-xl text-gray-300 mb-4">Expert content optimizers ready to help</p>
-<button onclick="openFreelancerModal()" class="btn-primary btn"><i class="fas fa-user-plus mr-2"></i> Become a Specialist</button>
-</div>
-<div class="max-w-5xl mx-auto grid-3" id="freelancersGrid"></div>
-</div>
+<div id="main-content" class="max-w-7xl mx-auto px-6 py-8">
+
+  <!-- SCANNER SECTION -->
+  <div id="lead-scanner" class="mb-16">
+    <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+      <div class="max-w-3xl mx-auto text-center mb-8">
+        <h2 class="text-4xl font-bold mb-3 text-white">🎯 SEO Content Quality Scanner</h2>
+        <p class="text-xl text-gray-200 mb-2">Check Your SEO Content Quality in Seconds</p>
+        <div class="flex flex-wrap gap-3 justify-center text-sm text-gray-300">
+          <span>✨ Free for freelancers</span><span>•</span>
+          <span>🔍 Single &amp; Bulk scanning</span><span>•</span>
+          <span>📊 Detailed analysis</span><span>•</span>
+          <span>📧 Your SendGrid emails</span><span>•</span>
+          <span>✏️ Editable templates</span>
+        </div>
+      </div>
+
+      <div class="flex justify-center gap-4 mb-8">
+        <button id="modeSingleBtn" onclick="switchMode('single')" class="mode-toggle active"><i class="fas fa-link mr-2"></i> Scan Single URL</button>
+        <button id="modeBulkBtn" onclick="switchMode('bulk')" class="mode-toggle"><i class="fas fa-layer-group mr-2"></i> Scan Bulk URLs</button>
+      </div>
+
+      <!-- SINGLE MODE -->
+      <div id="singleMode" class="max-w-3xl mx-auto">
+        <div class="card">
+          <div class="flex flex-col sm:flex-row gap-3">
+            <input type="text" id="singleUrlInput" placeholder="https://business-website.com" class="flex-1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+            <button onclick="scanSingleURL()" id="singleScanBtn" class="btn-primary btn whitespace-nowrap"><i class="fas fa-search"></i> Start Scan</button>
+          </div>
+          <div id="singleProgress" class="hidden mt-4">
+            <div class="progress-bar"><div id="singleProgressBar" class="progress-bar-fill" style="width: 0%"></div></div>
+            <p id="singleProgressText" class="text-sm text-gray-300 text-center mt-2"></p>
+          </div>
+        </div>
+        <div id="singleResult" class="hidden mt-4"></div>
+      </div>
+
+
+      <!-- BULK MODE -->
+      <div id="bulkMode" class="hidden max-w-4xl mx-auto">
+        <div class="card" style="border: 2px solid #3b82f6;">
+          <div class="flex items-center gap-3 mb-6">
+            <span class="text-xl font-bold text-white">📋 Bulk URL Scanner</span>
+            <span class="text-sm px-3 py-1 bg-blue-600 rounded-full text-white font-semibold">Batch Scan</span>
+          </div>
+
+          <div id="bulkScannerContent">
+
+            <!-- ================================================ -->
+            <!-- SETUP REQUIRED BOX (shown when keys missing)     -->
+            <!-- ================================================ -->
+            <div id="setupRequiredBox" class="setup-required-box">
+              <div class="flex items-center gap-3 mb-4">
+                <div class="text-3xl">⚙️</div>
+                <div>
+                  <h4 class="text-lg font-bold text-white">One-Time Setup — Your Own Free SendGrid Account</h4>
+                  <p class="text-sm text-gray-400">You need <a href="https://sendgrid.com/en-us" target="_blank" rel="noopener" style="color:#a78bfa!important;text-decoration:underline;">your own free SendGrid account</a> to send emails. It's free, takes 2 minutes, and you own it completely.</p>
+                </div>
+              </div>
+
+              <div class="setup-step" id="setupStepSendgrid">
+                <div class="setup-step-header">
+                  <div class="setup-step-status" id="stepStatus1">❌</div>
+                  <div style="flex:1;min-width:0;">
+                    <div class="font-semibold text-white">Your Own Free SendGrid API Key</div>
+                    <div class="text-xs text-gray-400">Create your <strong>own free account</strong> at SendGrid — 100 emails/day free, no credit card needed</div>
+                  </div>
+                </div>
+                <div class="mb-2 flex flex-col gap-1">
+                  <a href="https://sendgrid.com/en-us" target="_blank" rel="noopener" class="setup-link">
+                    <i class="fas fa-external-link-alt mr-1"></i>Step 1 — Create your free SendGrid account
+                  </a>
+                  <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" rel="noopener" class="setup-link">
+                    <i class="fas fa-key mr-1"></i>Step 2 — Generate your API key → Settings → API Keys
+                  </a>
+                </div>
+                <div class="setup-input-row" style="min-width:0;">
+                  <input type="password" id="setupSendgridKey" placeholder="Paste your SG. key here" autocomplete="off" style="min-width:0;width:100%;">
+                  <button class="setup-save-btn" onclick="saveSetupSendgrid()"><i class="fas fa-save mr-1"></i> Save</button>
+                </div>
+                <p class="setup-status-text" id="sendgridSetupStatus"><span class="text-yellow-400">⚠️ Not configured — emails will not send until you add your own key</span></p>
+              </div>
+
+
+              <p class="text-xs text-gray-500 mt-3 text-center">
+                <i class="fas fa-lock mr-1"></i>Your API keys are stored securely and never shared. Setup takes less than 2 minutes.
+              </p>
+            </div>
+            <!-- END SETUP REQUIRED BOX -->
+
+            <!-- ALL DONE BANNER (hidden until both keys saved) -->
+            <div id="setupAllDone" class="setup-all-done hidden">
+              <div class="text-3xl mb-2">✅</div>
+              <div class="font-bold text-green-400 text-lg mb-1">You're all set!</div>
+              <p class="text-sm text-gray-300">Both API keys are configured. Bulk scanning with automated emails is now active.</p>
+            </div>
+
+            <!-- BULK SCAN FORM -->
+            <div id="bulkScannerForm">
+              <p class="text-gray-300 text-sm mb-4">Scan up to 100 websites at once. Based on scores, we automatically:</p>
+              <ul class="text-sm text-gray-300 mb-4" style="margin-left: 1.5rem;">
+                <li>🏆 <strong>85+ Score:</strong> Submit to leaderboard + send congratulations email</li>
+                <li>📧 <strong>&lt;85 with website:</strong> Email business owner with improvement pitch</li>
+                <li>🌐 <strong>&lt;85 without website:</strong> Email owner offering website creation</li>
+              </ul>
+              <div class="mb-4">
+                <label class="block text-sm text-gray-300 mb-2">Enter URLs (one per line, max 100)</label>
+                <textarea id="bulkUrlInput" rows="8" placeholder="https://example1.com&#10;https://example2.com&#10;https://example3.com" class="w-full p-3 rounded border border-gray-600 focus:border-purple-500 resize-none" style="color: #000000 !important; background-color: #ffffff !important;"></textarea>
+                <div class="flex justify-between mt-1">
+                  <span class="text-xs text-gray-400">Up to 100 URLs</span>
+                  <span id="bulkUrlCount" class="text-xs text-gray-400">0/100</span>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-3 mb-4">
+                <div><label class="block text-sm text-gray-300 mb-2">Your Email *</label><input type="email" id="bulkScanEmail" placeholder="your@email.com" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500"></div>
+                <div><label class="block text-sm text-gray-300 mb-2">Your Name *</label><input type="text" id="bulkScanName" placeholder="Your name" class="w-full p-2 rounded border border-gray-600 focus:border-purple-500"></div>
+              </div>
+              <button onclick="startBulkScan()" id="bulkScanBtn" class="btn-primary btn w-full"><i class="fas fa-rocket mr-2"></i> Start Bulk Scan</button>
+              <div id="bulkProgress" class="hidden mt-4">
+                <div class="progress-bar"><div id="bulkProgressBar" class="progress-bar-fill" style="width: 0%"></div></div>
+                <p id="bulkProgressText" class="text-sm text-gray-300 text-center mt-2"></p>
+              </div>
+              <div id="bulkResults" class="hidden mt-4">
+                <h4 class="text-lg font-bold text-white mb-3">Scan Results</h4>
+                <div id="bulkResultsContainer"></div>
+              </div>
+            </div>
+
+          </div><!-- end bulkScannerContent -->
+        </div>
+      </div>
+
+
+
+      <!-- CTA Banner -->
+      <div class="mt-8 max-w-3xl mx-auto bg-gradient-to-r from-purple-800 via-pink-800 to-purple-800 rounded-xl p-6 text-center border border-purple-400">
+        <h3 class="text-2xl font-bold mb-2 text-white">💼 Are You an SEO Specialist or Content Marketer?</h3>
+        <p class="text-xl text-gray-200 mb-4">Work just a few hours per week while earning a full-time income. We train you in Modern SEO for the AI-era.</p>
+        <button onclick="openFreelancerModal()" class="btn-white-black btn text-lg px-8 py-4 shadow-lg"><i class="fas fa-user-plus mr-2"></i> Become a Platform Specialist</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- TEMPLATES SECTION - hidden by default, shown when bulk mode is active -->
+  <div id="templates" class="mb-16 hidden">
+    <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+      <div class="max-w-3xl mx-auto text-center mb-8">
+        <h2 class="text-4xl font-bold mb-3 text-white">✏️ Email Templates</h2>
+        <p class="text-xl text-gray-200">Customize your bulk scan email templates</p>
+      </div>
+      <div class="max-w-5xl mx-auto grid md:grid-cols-3 gap-6">
+        <div class="card">
+          <h3 class="text-xl font-bold mb-4">🏆 Leaderboard Congratulations</h3>
+          <p class="text-sm text-gray-400 mb-4">Sent to businesses with 85+ score</p>
+          <div class="template-editor">
+            <label class="block text-sm text-gray-300 mb-2">Subject</label>
+            <input type="text" id="template-congrats-subject" class="w-full p-2 rounded border border-gray-600 mb-2" value="🎉 Congratulations! Your website ranked on ContentScale Leaderboard">
+            <label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
+            <textarea id="template-congrats-body" class="w-full p-2 rounded" style="min-height: 150px;">&lt;h1&gt;Congratulations!&lt;/h1&gt;&lt;p&gt;Your website scored {{score}}/100 on our SEO analysis.&lt;/p&gt;&lt;p&gt;You've been added to the ContentScale Leaderboard!&lt;/p&gt;&lt;p&gt;&lt;a href="{{leaderboard_url}}"&gt;View your ranking&lt;/a&gt;&lt;/p&gt;</textarea>
+          </div>
+          <button onclick="saveTemplate('congrats')" class="btn-primary btn w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
+        </div>
+        <div class="card">
+          <h3 class="text-xl font-bold mb-4">📈 Improvement Pitch</h3>
+          <p class="text-sm text-gray-400 mb-4">Sent to businesses with website &lt;85 score</p>
+          <div class="template-editor">
+            <label class="block text-sm text-gray-300 mb-2">Subject</label>
+            <input type="text" id="template-improvement-subject" class="w-full p-2 rounded border border-gray-600 mb-2" value="🚀 Quick SEO opportunity for {{company_name}}">
+            <label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
+            <textarea id="template-improvement-body" class="w-full p-2 rounded" style="min-height: 150px;">&lt;h1&gt;SEO Opportunity&lt;/h1&gt;&lt;p&gt;Hi {{company_name}} team,&lt;/p&gt;&lt;p&gt;Your website scored {{score}}/100 on our SEO analysis.&lt;/p&gt;&lt;p&gt;I noticed some quick wins that could improve your rankings.&lt;/p&gt;&lt;p&gt;Would you be open to a quick chat?&lt;/p&gt;</textarea>
+          </div>
+          <button onclick="saveTemplate('improvement')" class="btn-primary btn w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
+        </div>
+        <div class="card">
+          <h3 class="text-xl font-bold mb-4">🌐 Website Offer</h3>
+          <p class="text-sm text-gray-400 mb-4">Sent to businesses without website</p>
+          <div class="template-editor">
+            <label class="block text-sm text-gray-300 mb-2">Subject</label>
+            <input type="text" id="template-website-subject" class="w-full p-2 rounded border border-gray-600 mb-2" value="💻 Professional website for {{company_name}}">
+            <label class="block text-sm text-gray-300 mb-2">Body (HTML)</label>
+            <textarea id="template-website-body" class="w-full p-2 rounded" style="min-height: 150px;">&lt;h1&gt;Website Opportunity&lt;/h1&gt;&lt;p&gt;Hi {{company_name}} team,&lt;/p&gt;&lt;p&gt;I noticed you don't have a website yet.&lt;/p&gt;&lt;p&gt;I specialize in creating SEO-optimized websites that rank.&lt;/p&gt;&lt;p&gt;Interested in learning more?&lt;/p&gt;</textarea>
+          </div>
+          <button onclick="saveTemplate('website')" class="btn-primary btn w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
+        </div>
+      </div>
+      <div class="max-w-5xl mx-auto mt-8 bg-gray-800 rounded-lg p-4 border border-gray-700">
+        <h4 class="font-bold mb-2">📎 Available Variables:</h4>
+        <div class="grid md:grid-cols-3 gap-4 text-sm text-gray-400">
+          <div><code class="text-purple-400">{{company_name}}</code> - Business name</div>
+          <div><code class="text-purple-400">{{score}}</code> - SEO score (0-100)</div>
+          <div><code class="text-purple-400">{{leaderboard_url}}</code> - Link to leaderboard</div>
+          <div><code class="text-purple-400">{{sender_name}}</code> - Your name</div>
+          <div><code class="text-purple-400">{{sender_email}}</code> - Your email</div>
+          <div><code class="text-purple-400">{{website_url}}</code> - Business website</div>
+          <div><code class="text-green-400">{{unsubscribe_url}}</code> - Unsubscribe link <span class="text-red-400 font-bold">⚠️ Required by law</span></div>
+        </div>
+      </div>
+      <div class="max-w-5xl mx-auto mt-4 bg-red-900 bg-opacity-30 border border-red-500 rounded-lg p-4">
+        <p class="text-sm text-red-300"><strong>⚖️ Legal requirement (GDPR + CAN-SPAM):</strong> Every commercial email you send must include an unsubscribe link. The templates below already include <code class="text-green-400">{{unsubscribe_url}}</code>. Do not remove it — sending emails without it can result in fines and your SendGrid account being banned.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEADERBOARD SECTION -->
+  <div id="leaderboard" class="mb-16">
+    <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+      <div class="max-w-3xl mx-auto text-center mb-8">
+        <h2 class="text-4xl font-bold mb-3 text-white">🏆 Elite Leaderboard</h2>
+        <p class="text-xl text-gray-200">Top performing websites automatically added</p>
+        <div id="serverStatus" class="mt-3 inline-flex items-center gap-2 text-sm px-3 py-1 rounded-full bg-gray-800 border border-gray-700">
+          <span id="serverStatusDot" class="w-2 h-2 rounded-full bg-gray-500" style="width:8px;height:8px;border-radius:50%;background:#6b7280;flex-shrink:0;display:inline-block;"></span>
+          <span id="serverStatusText" style="color:#9ca3af;">Checking server...</span>
+        </div>
+      </div>
+      <div style="max-width:900px;margin:0 auto 2rem;display:flex;flex-wrap:wrap;justify-content:center;gap:1rem;">
+        <div class="stat-card" style="min-width:160px;flex:1;max-width:200px;text-align:center;"><div><div class="text-4xl mb-2">🏢</div><div class="text-3xl font-bold" id="totalAgencies">0</div><div class="text-sm text-gray-200">Agencies</div></div></div>
+        <div class="stat-card" style="min-width:160px;flex:1;max-width:200px;text-align:center;"><div><div class="text-4xl mb-2">📊</div><div class="text-3xl font-bold" id="avgScore">0</div><div class="text-sm text-gray-200">Avg. Score</div></div></div>
+        <div class="stat-card" style="min-width:160px;flex:1;max-width:200px;text-align:center;"><div><div class="text-4xl mb-2">🌍</div><div class="text-3xl font-bold" id="countriesCount">0</div><div class="text-sm text-gray-200">Countries</div></div></div>
+        <div class="stat-card" style="min-width:160px;flex:1;max-width:200px;text-align:center;"><div><div class="text-4xl mb-2">💼</div><div class="text-3xl font-bold" id="activeHelpers">0</div><div class="text-sm text-gray-200">Freelancers</div></div></div>
+      </div>
+      <div class="max-w-5xl mx-auto">
+        <div id="top3-container" class="grid-3 mb-10"></div>
+        <div id="rankings4to15Container" class="mb-10">
+          <h3 class="text-2xl font-bold text-white mb-6">Rankings 4-15</h3>
+          <div class="rankings-4-15-grid" id="rankings4to15Grid"></div>
+        </div>
+        <div class="bg-gray-800 rounded-lg p-4 mb-6 border border-gray-700">
+          <!-- Filter header row -->
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <i class="fas fa-sliders-h text-purple-400"></i>
+              <span class="font-semibold text-white">Find &amp; Filter</span>
+              <span id="filterResultsCount" class="text-xs text-gray-400 ml-1"></span>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span id="activeFilterChips" class="flex flex-wrap gap-1"></span>
+              <button onclick="resetAllFilters()" id="resetFiltersBtn" class="hidden text-xs text-red-400 hover:text-red-300 border border-red-800 rounded px-2 py-1">Clear all</button>
+              <button onclick="toggleFilters()" class="text-gray-400 hover:text-white ml-1">
+                <i class="fas fa-chevron-down" id="filterIcon"></i>
+              </button>
+            </div>
+          </div>
+          <!-- Always-visible search bar -->
+          <input type="text" id="searchInput" placeholder="Search by agency name, domain, niche..." oninput="filterAgencies()" class="w-full mb-0" autocomplete="off" style="border-radius:0.5rem;padding:0.6rem 0.75rem;">
+          <!-- Collapsible panel -->
+          <div id="filterPanel" class="hidden mt-4 space-y-4">
+            <!-- Score Range -->
+            <div>
+              <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Score Range</div>
+              <div class="flex flex-wrap gap-2" id="scoreFilters">
+                <button class="filter-tag active" onclick="setFilter('score','all',this)">All Scores</button>
+                <button class="filter-tag" onclick="setFilter('score','elite',this)">Elite 90+</button>
+                <button class="filter-tag" onclick="setFilter('score','pro',this)">Pro 85-89</button>
+                <button class="filter-tag" onclick="setFilter('score','good',this)">Good 70-84</button>
+                <button class="filter-tag" onclick="setFilter('score','building',this)">Under 70</button>
+              </div>
+            </div>
+            <!-- Country -->
+            <div>
+              <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Country</div>
+              <div class="flex flex-wrap gap-2" id="countryFilters"></div>
+            </div>
+            <!-- Niche -->
+            <div>
+              <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Industry / Niche</div>
+              <div class="flex flex-wrap gap-2" id="nicheFilters"></div>
+            </div>
+            <!-- Sort -->
+            <div class="pt-3 border-t border-gray-700">
+              <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Sort by</div>
+              <div class="flex flex-wrap gap-2" id="sortFilters">
+                <button class="filter-tag active" onclick="setFilter('sort','score-desc',this)">Score High-Low</button>
+                <button class="filter-tag" onclick="setFilter('sort','score-asc',this)">Score Low-High</button>
+                <button class="filter-tag" onclick="setFilter('sort','newest',this)">Newest First</button>
+                <button class="filter-tag" onclick="setFilter('sort','az',this)">A to Z</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <button onclick="toggleRankings()" id="rankingsToggleBtn" class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-between transition-all">
+            <span id="rankingsToggleText">📊 Show Rankings 16+</span><span class="arrow">▼</span>
+          </button>
+          <div id="rankingsContainer" class="hidden mt-4">
+            <p class="text-sm text-gray-300 mb-2">Showing 16-35 of <span id="totalCount">0</span> agencies</p>
+            <div class="rankings-mobile-msg hidden" style="background:#1f2937;border-radius:0.75rem;padding:1.25rem;text-align:center;color:#9ca3af;font-size:0.9rem;">
+              📊 Full rankings table available on desktop
+            </div>
+            <div class="rankings-table-wrap">
+              <table class="rankings-table">
+                <thead><tr><th>Rank</th><th>Company</th><th>Website</th><th>Score</th><th>Country</th><th>Added</th></tr></thead>
+                <tbody id="rankingsTbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FREELANCERS SECTION -->
+  <div id="freelancers" class="mb-16">
+    <div class="max-w-3xl mx-auto text-center mb-8">
+      <h2 class="text-4xl font-bold mb-3 text-white">🎯 Verified SEO Specialists</h2>
+      <p class="text-xl text-gray-300 mb-4">Expert content optimizers ready to help</p>
+      <button onclick="openFreelancerModal()" class="btn-primary btn"><i class="fas fa-user-plus mr-2"></i> Become a Specialist</button>
+    </div>
+    <div class="max-w-5xl mx-auto grid-3" id="freelancersGrid"></div>
+  </div>
+
 </div><!-- end main-content -->
+
 <!-- PLATFORM FOR EVERYONE -->
 <div style="background: linear-gradient(135deg, #1e1b4b, #312e81); border-top: 1px solid #4c1d95; border-bottom: 1px solid #4c1d95; padding: 3rem 1.5rem;">
-<div class="max-w-5xl mx-auto text-center">
-<h2 class="text-3xl font-bold text-white mb-3">Built for Everyone Who Owns a Digital Presence</h2>
-<p class="text-lg text-gray-300 mb-6">ContentScale is free to use for all:</p>
-<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:0.75rem;margin-bottom:1.5rem;">
-<span style="background:rgba(126,34,206,0.3);border:1px solid #7e22ce;padding:0.5rem 1.25rem;border-radius:9999px;font-weight:600;font-size:0.95rem;">🌐 Website Owners</span>
-<span style="background:rgba(126,34,206,0.3);border:1px solid #7e22ce;padding:0.5rem 1.25rem;border-radius:9999px;font-weight:600;font-size:0.95rem;">💼 Freelancers</span>
-<span style="background:rgba(126,34,206,0.3);border:1px solid #7e22ce;padding:0.5rem 1.25rem;border-radius:9999px;font-weight:600;font-size:0.95rem;">🏢 Agencies</span>
-<span style="background:rgba(126,34,206,0.3);border:1px solid #7e22ce;padding:0.5rem 1.25rem;border-radius:9999px;font-weight:600;font-size:0.95rem;">🛒 Business Owners</span>
-<span style="background:rgba(126,34,206,0.3);border:1px solid #7e22ce;padding:0.5rem 1.25rem;border-radius:9999px;font-weight:600;font-size:0.95rem;">🚀 Entrepreneurs</span>
-<span style="background:rgba(126,34,206,0.3);border:1px solid #7e22ce;padding:0.5rem 1.25rem;border-radius:9999px;font-weight:600;font-size:0.95rem;">🔍 SEO Specialists</span>
-<span style="background:rgba(126,34,206,0.3);border:1px solid #7e22ce;padding:0.5rem 1.25rem;border-radius:9999px;font-weight:600;font-size:0.95rem;">💡 Side Hustlers</span>
+  <div class="max-w-5xl mx-auto text-center">
+    <h2 class="text-3xl font-bold text-white mb-3">Built for Everyone Who Owns a Digital Presence</h2>
+    <p class="text-lg text-gray-300 mb-6">ContentScale is free to use for all:</p>
+    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:0.75rem;margin-bottom:1.5rem;">
+      <span style="background:rgba(126,34,206,0.3);border:1px solid #7e22ce;padding:0.5rem 1.25rem;border-radius:9999px;font-weight:600;font-size:0.95rem;">🌐 Website Owners</span>
+      <span style="background:rgba(126,34,206,0.3);border:1px solid #7e22ce;padding:0.5rem 1.25rem;border-radius:9999px;font-weight:600;font-size:0.95rem;">💼 Freelancers</span>
+      <span style="background:rgba(126,34,206,0.3);border:1px solid #7e22ce;padding:0.5rem 1.25rem;border-radius:9999px;font-weight:600;font-size:0.95rem;">🏢 Agencies</span>
+      <span style="background:rgba(126,34,206,0.3);border:1px solid #7e22ce;padding:0.5rem 1.25rem;border-radius:9999px;font-weight:600;font-size:0.95rem;">🛒 Business Owners</span>
+      <span style="background:rgba(126,34,206,0.3);border:1px solid #7e22ce;padding:0.5rem 1.25rem;border-radius:9999px;font-weight:600;font-size:0.95rem;">🚀 Entrepreneurs</span>
+      <span style="background:rgba(126,34,206,0.3);border:1px solid #7e22ce;padding:0.5rem 1.25rem;border-radius:9999px;font-weight:600;font-size:0.95rem;">🔍 SEO Specialists</span>
+      <span style="background:rgba(126,34,206,0.3);border:1px solid #7e22ce;padding:0.5rem 1.25rem;border-radius:9999px;font-weight:600;font-size:0.95rem;">💡 Side Hustlers</span>
+    </div>
+    <p class="text-gray-400 text-sm">If you have a website, a business, or a side project — ContentScale helps you rank better, recover lost traffic, and stay ahead of Google's AI era.</p>
+  </div>
 </div>
-<p class="text-gray-400 text-sm">If you have a website, a business, or a side project — ContentScale helps you rank better, recover lost traffic, and stay ahead of Google's AI era.</p>
-</div>
-</div>
+
 <!-- AUTHOR BIO -->
 <div style="background:linear-gradient(180deg,#0a0a1a 0%,#0f0f2e 100%);padding:4rem 1.5rem;position:relative;overflow:hidden;">
-<div style="position:absolute;top:-80px;right:-80px;width:300px;height:300px;background:radial-gradient(circle,rgba(126,34,206,0.12) 0%,transparent 70%);pointer-events:none;"></div>
-<div style="position:absolute;bottom:-60px;left:-60px;width:250px;height:250px;background:radial-gradient(circle,rgba(190,24,93,0.08) 0%,transparent 70%);pointer-events:none;"></div>
-<div style="max-width:680px;margin:0 auto;position:relative;z-index:1;text-align:center;">
-<span style="display:inline-block;font-size:0.7rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:#7e22ce;border:1px solid rgba(126,34,206,0.4);padding:0.35rem 1rem;border-radius:9999px;margin-bottom:2rem;">About the Founder</span>
-<div style="display:flex;justify-content:center;margin-bottom:1.25rem;margin-top:1.25rem;">
-<div id="authorImgWrap" style="width:130px;height:130px;border-radius:1rem;overflow:hidden;background:linear-gradient(135deg,#7e22ce,#be185d);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px rgba(126,34,206,0.3),0 20px 40px rgba(0,0,0,0.5);">
-<img src="https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca.png" alt="Ottmar Francisca" style="width:100%;height:100%;object-fit:cover;display:block;" onload="document.getElementById('authorInitials').style.display='none';" onerror="this.style.display='none';document.getElementById('authorInitials').style.display='flex';">
-<span id="authorInitials" style="display:none;color:white;font-size:2.5rem;font-weight:700;width:100%;height:100%;align-items:center;justify-content:center;">OF</span>
+  <div style="position:absolute;top:-80px;right:-80px;width:300px;height:300px;background:radial-gradient(circle,rgba(126,34,206,0.12) 0%,transparent 70%);pointer-events:none;"></div>
+  <div style="position:absolute;bottom:-60px;left:-60px;width:250px;height:250px;background:radial-gradient(circle,rgba(190,24,93,0.08) 0%,transparent 70%);pointer-events:none;"></div>
+  <div style="max-width:680px;margin:0 auto;position:relative;z-index:1;text-align:center;">
+    <span style="display:inline-block;font-size:0.7rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:#7e22ce;border:1px solid rgba(126,34,206,0.4);padding:0.35rem 1rem;border-radius:9999px;margin-bottom:2rem;">About the Founder</span>
+    <div style="display:flex;justify-content:center;margin-bottom:1.25rem;margin-top:1.25rem;">
+      <div id="authorImgWrap" style="width:130px;height:130px;border-radius:1rem;overflow:hidden;background:linear-gradient(135deg,#7e22ce,#be185d);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px rgba(126,34,206,0.3),0 20px 40px rgba(0,0,0,0.5);">
+        <img src="https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca.png" alt="Ottmar Francisca" style="width:100%;height:100%;object-fit:cover;display:block;" onload="document.getElementById('authorInitials').style.display='none';" onerror="this.style.display='none';document.getElementById('authorInitials').style.display='flex';">
+        <span id="authorInitials" style="display:none;color:white;font-size:2.5rem;font-weight:700;width:100%;height:100%;align-items:center;justify-content:center;">OF</span>
+      </div>
+    </div>
+    <h3 style="font-size:1.75rem;font-weight:800;color:white;margin-bottom:0.25rem;letter-spacing:-0.02em;">Ottmar Francisca</h3>
+    <p style="font-size:0.85rem;color:#a78bfa;font-weight:600;margin-bottom:1.5rem;letter-spacing:0.06em;text-transform:uppercase;">Founder · ContentScale</p>
+    <div style="width:3rem;height:2px;background:linear-gradient(90deg,#7e22ce,#be185d);border-radius:2px;margin:0 auto 1.5rem;"></div>
+    <div style="display:flex;justify-content:center;gap:1rem;flex-wrap:wrap;margin-bottom:1.75rem;">
+      <div style="background:rgba(126,34,206,0.15);border:1px solid rgba(126,34,206,0.3);border-radius:0.75rem;padding:0.6rem 1.25rem;min-width:90px;">
+        <div style="font-size:1.1rem;font-weight:800;color:#c4b5fd;">78%</div>
+        <div style="font-size:0.65rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Recovery Rate</div>
+      </div>
+      <div style="background:rgba(190,24,93,0.12);border:1px solid rgba(190,24,93,0.25);border-radius:0.75rem;padding:0.6rem 1.25rem;min-width:90px;">
+        <div style="font-size:1.1rem;font-weight:800;color:#f9a8d4;">47+</div>
+        <div style="font-size:0.65rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Countries</div>
+      </div>
+      <div style="background:rgba(14,165,233,0.1);border:1px solid rgba(14,165,233,0.2);border-radius:0.75rem;padding:0.6rem 1.25rem;min-width:90px;">
+        <div style="font-size:1.1rem;font-weight:800;color:#7dd3fc;">24+</div>
+        <div style="font-size:0.65rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Years Exp.</div>
+      </div>
+    </div>
+    <p style="color:#94a3b8;font-size:0.9rem;line-height:1.8;margin-bottom:1.75rem;">With 24+ years of professional experience including leadership roles in Dutch law enforcement and municipal operations, Ottmar built a reputation for systematic problem-solving before transitioning to SEO in 2018. He developed the proprietary <strong style="color:#c4b5fd;font-weight:700;">GRAAF Framework</strong>, a content methodology with a documented 78% traffic recovery rate within 90 days. Today he serves clients across 47+ countries, helping businesses reclaim rankings lost to Google AI Overviews and algorithm updates.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center;">
+      <a href="https://wa.me/31628073996" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.3);color:#4ade80!important;font-size:0.8rem;font-weight:600;padding:0.5rem 1.1rem;border-radius:0.5rem;text-decoration:none;"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+      <a href="https://contentscale.site" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:#a78bfa!important;font-size:0.8rem;font-weight:600;padding:0.5rem 1.1rem;border-radius:0.5rem;text-decoration:none;"><i class="fas fa-globe"></i> contentscale.site</a>
+      <a href="https://contentscale.site/about-us" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#94a3b8!important;font-size:0.8rem;font-weight:600;padding:0.5rem 1.1rem;border-radius:0.5rem;text-decoration:none;"><i class="fas fa-user"></i> Full Bio</a>
+    </div>
+  </div>
 </div>
-</div>
-<h3 style="font-size:1.75rem;font-weight:800;color:white;margin-bottom:0.25rem;letter-spacing:-0.02em;">Ottmar Francisca</h3>
-<p style="font-size:0.85rem;color:#a78bfa;font-weight:600;margin-bottom:1.5rem;letter-spacing:0.06em;text-transform:uppercase;">Founder · ContentScale</p>
-<div style="width:3rem;height:2px;background:linear-gradient(90deg,#7e22ce,#be185d);border-radius:2px;margin:0 auto 1.5rem;"></div>
-<div style="display:flex;justify-content:center;gap:1rem;flex-wrap:wrap;margin-bottom:1.75rem;">
-<div style="background:rgba(126,34,206,0.15);border:1px solid rgba(126,34,206,0.3);border-radius:0.75rem;padding:0.6rem 1.25rem;min-width:90px;">
-<div style="font-size:1.1rem;font-weight:800;color:#c4b5fd;">78%</div>
-<div style="font-size:0.65rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Recovery Rate</div>
-</div>
-<div style="background:rgba(190,24,93,0.12);border:1px solid rgba(190,24,93,0.25);border-radius:0.75rem;padding:0.6rem 1.25rem;min-width:90px;">
-<div style="font-size:1.1rem;font-weight:800;color:#f9a8d4;">47+</div>
-<div style="font-size:0.65rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Countries</div>
-</div>
-<div style="background:rgba(14,165,233,0.1);border:1px solid rgba(14,165,233,0.2);border-radius:0.75rem;padding:0.6rem 1.25rem;min-width:90px;">
-<div style="font-size:1.1rem;font-weight:800;color:#7dd3fc;">24+</div>
-<div style="font-size:0.65rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Years Exp.</div>
-</div>
-</div>
-<p style="color:#94a3b8;font-size:0.9rem;line-height:1.8;margin-bottom:1.75rem;">With 24+ years of professional experience including leadership roles in Dutch law enforcement and municipal operations, Ottmar built a reputation for systematic problem-solving before transitioning to SEO in 2018. He developed the proprietary <strong style="color:#c4b5fd;font-weight:700;">GRAAF Framework</strong>, a content methodology with a documented 78% traffic recovery rate within 90 days. Today he serves clients across 47+ countries, helping businesses reclaim rankings lost to Google AI Overviews and algorithm updates.</p>
-<div style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center;">
-<a href="https://wa.me/31628073996" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.3);color:#4ade80!important;font-size:0.8rem;font-weight:600;padding:0.5rem 1.1rem;border-radius:0.5rem;text-decoration:none;"><i class="fab fa-whatsapp"></i> WhatsApp</a>
-<a href="https://contentscale.site" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:#a78bfa!important;font-size:0.8rem;font-weight:600;padding:0.5rem 1.1rem;border-radius:0.5rem;text-decoration:none;"><i class="fas fa-globe"></i> contentscale.site</a>
-<a href="https://contentscale.site/about-us" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#94a3b8!important;font-size:0.8rem;font-weight:600;padding:0.5rem 1.1rem;border-radius:0.5rem;text-decoration:none;"><i class="fas fa-user"></i> Full Bio</a>
-</div>
-</div>
-</div>
+
 <!-- FOOTER -->
 <footer>
-<div class="max-w-7xl mx-auto px-6 py-12">
-<div class="grid md:grid-cols-4 gap-8 mb-8">
-<div>
-<div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-4">ContentScale</div>
-<p class="text-gray-400 text-sm">Professional SEO content optimization based on Google's E-E-A-T guidelines. Helping businesses recover traffic from AI Overviews since 2018.</p>
-</div>
-<div>
-<h3 class="font-bold mb-4 text-white">Product</h3>
-<ul class="space-y-2 text-sm">
-<li><a href="#lead-scanner" class="text-gray-400 hover:text-white transition-colors">Lead Scanner</a></li>
-<li><a href="#leaderboard" class="text-gray-400 hover:text-white transition-colors">Leaderboard</a></li>
-<li><a href="#freelancers" class="text-gray-400 hover:text-white transition-colors">Specialists</a></li>
-<li><a href="#templates" class="text-gray-400 hover:text-white transition-colors">Templates</a></li>
-</ul>
-</div>
-<div>
-<h3 class="font-bold mb-4 text-white">Company</h3>
-<ul class="space-y-2 text-sm">
-<li><a href="https://contentscale.site/about-us" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">About Us</a></li>
-<li><a href="https://contentscale.site/privacy-policy" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">Privacy Policy</a></li>
-<li><a href="https://contentscale.site/terms" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">Terms of Service</a></li>
-<li><a href="#" class="text-gray-400 hover:text-white transition-colors">Blog</a></li>
-</ul>
-</div>
-<div>
-<h3 class="font-bold mb-4 text-white">Contact</h3>
-<ul class="space-y-2 text-sm">
-<li class="text-gray-400"><i class="fas fa-envelope mr-2"></i><span class="reverse-email">moc.etlacsnestnoc@ofni</span></li>
-<li><a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors"><i class="fab fa-whatsapp mr-2"></i>+31 6 2807 3996</a></li>
-<li class="text-gray-400"><i class="fas fa-map-marker-alt mr-2"></i>Amsterdam, Netherlands</li>
-<li class="text-gray-400"><i class="fas fa-clock mr-2"></i>Mon-Fri, 9:00-18:00 CET</li>
-</ul>
-</div>
-</div>
-<div class="border-t border-gray-700 pt-8 text-center text-sm text-gray-400">
-<p>&copy; 2025 ContentScale. All rights reserved.</p>
-<p class="mt-2">Built with 🚀 in Amsterdam</p>
-</div>
-</div>
+  <div class="max-w-7xl mx-auto px-6 py-12">
+    <div class="grid md:grid-cols-4 gap-8 mb-8">
+      <div>
+        <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-4">ContentScale</div>
+        <p class="text-gray-400 text-sm">Professional SEO content optimization based on Google's E-E-A-T guidelines. Helping businesses recover traffic from AI Overviews since 2018.</p>
+      </div>
+      <div>
+        <h3 class="font-bold mb-4 text-white">Product</h3>
+        <ul class="space-y-2 text-sm">
+          <li><a href="#lead-scanner" class="text-gray-400 hover:text-white transition-colors">Lead Scanner</a></li>
+          <li><a href="#leaderboard" class="text-gray-400 hover:text-white transition-colors">Leaderboard</a></li>
+          <li><a href="#freelancers" class="text-gray-400 hover:text-white transition-colors">Specialists</a></li>
+          <li><a href="#templates" class="text-gray-400 hover:text-white transition-colors">Templates</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="font-bold mb-4 text-white">Company</h3>
+        <ul class="space-y-2 text-sm">
+          <li><a href="https://contentscale.site/about-us" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">About Us</a></li>
+          <li><a href="https://contentscale.site/privacy-policy" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">Privacy Policy</a></li>
+          <li><a href="https://contentscale.site/terms" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors">Terms of Service</a></li>
+          <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Blog</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="font-bold mb-4 text-white">Contact</h3>
+        <ul class="space-y-2 text-sm">
+          <li class="text-gray-400"><i class="fas fa-envelope mr-2"></i><span class="reverse-email">moc.etlacsnestnoc@ofni</span></li>
+          <li><a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors"><i class="fab fa-whatsapp mr-2"></i>+31 6 2807 3996</a></li>
+          <li class="text-gray-400"><i class="fas fa-map-marker-alt mr-2"></i>Amsterdam, Netherlands</li>
+          <li class="text-gray-400"><i class="fas fa-clock mr-2"></i>Mon-Fri, 9:00-18:00 CET</li>
+        </ul>
+      </div>
+    </div>
+    <div class="border-t border-gray-700 pt-8 text-center text-sm text-gray-400">
+      <p>&copy; 2025 ContentScale. All rights reserved.</p>
+      <p class="mt-2">Built with 🚀 in Amsterdam</p>
+    </div>
+  </div>
 </footer>
+
 <!-- FREELANCER MODAL -->
 <div id="freelancerModal" class="modal">
-<div class="modal-content">
-<div class="flex justify-between items-center mb-6">
-<h2 class="text-2xl font-bold text-gray-900">Register as Specialist</h2>
-<button onclick="closeModal()" class="text-gray-500 hover:text-gray-700 text-2xl"><i class="fas fa-times"></i></button>
+  <div class="modal-content">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-2xl font-bold text-gray-900">Register as Specialist</h2>
+      <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700 text-2xl"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="space-y-4">
+      <div><label class="block text-sm mb-2 text-gray-700">Full Name *</label><input type="text" id="freelancerName" placeholder="Your name" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"></div>
+      <div><label class="block text-sm mb-2 text-gray-700">Email *</label><input type="email" id="freelancerEmail" placeholder="your@email.com" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"></div>
+      <div><label class="block text-sm mb-2 text-gray-700">Phone (optional)</label><input type="tel" id="freelancerPhone" placeholder="+31 6 12345678" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"></div>
+      <div><label class="block text-sm mb-2 text-gray-700">Professional Title *</label><input type="text" id="freelancerTitle" placeholder="e.g. SEO Content Strategist" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"></div>
+      <div>
+        <label class="block text-sm mb-2 text-gray-700">Bio (max 200 characters)</label>
+        <textarea id="freelancerBio" rows="3" maxlength="200" placeholder="Tell us about your expertise and experience..." class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"></textarea>
+        <div class="flex justify-between mt-1"><span class="text-xs text-gray-500">Maximum 200 characters</span><span id="bioCharCount" class="text-xs text-gray-500">0/200</span></div>
+      </div>
+      <div><label class="block text-sm mb-2 text-gray-700">Hourly Rate / Price Range *</label>
+        <select id="freelancerRate" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+          <option value="">Select your rate...</option>
+          <option value="€25 - €50 / hour">€25 - €50 / hour</option>
+          <option value="€50 - €75 / hour">€50 - €75 / hour</option>
+          <option value="€75 - €100 / hour">€75 - €100 / hour</option>
+          <option value="€100 - €150 / hour">€100 - €150 / hour</option>
+          <option value="€150+ / hour">€150+ / hour</option>
+          <option value="Project-based pricing">Project-based pricing</option>
+          <option value="Free consultation first">Free consultation first</option>
+        </select>
+      </div>
+
+      <div class="border-t border-gray-200 pt-4 mt-2">
+        <div class="flex items-start gap-3">
+          <div class="flex items-center h-5"><input type="checkbox" id="featuredListing" class="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500"></div>
+          <div class="flex flex-col">
+            <label for="featuredListing" class="text-sm font-medium text-gray-900">⭐ Featured Listing - €29/month</label>
+            <p class="text-xs text-gray-500 mt-0.5">Word uitgelicht bovenaan de specialist lijst, krijg een speciale badge en 3x meer zichtbaarheid. <a href="https://paypal.me/ojgmedia?locale.x=en_US&amp;country.x=NL" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1"><i class="fab fa-paypal text-sm"></i> Betaal via PayPal</a></p>
+            <p class="text-xs text-gray-400 mt-1">Betaal €29 per maand. Na betaling wordt je vermelding binnen 24 uur geüpgraded naar featured.</p>
+          </div>
+        </div>
+      </div>
+      <button onclick="submitFreelancer()" class="btn-primary btn w-full py-3">Submit Application</button>
+      <p class="text-xs text-gray-500 text-center">We'll review and approve within 24 hours. You'll receive an email with your verified specialist badge.</p>
+    </div>
+  </div>
 </div>
-<div class="space-y-4">
-<div><label class="block text-sm mb-2 text-gray-700">Full Name *</label><input type="text" id="freelancerName" placeholder="Your name" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"></div>
-<div><label class="block text-sm mb-2 text-gray-700">Email *</label><input type="email" id="freelancerEmail" placeholder="your@email.com" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"></div>
-<div><label class="block text-sm mb-2 text-gray-700">Phone (optional)</label><input type="tel" id="freelancerPhone" placeholder="+31 6 12345678" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"></div>
-<div><label class="block text-sm mb-2 text-gray-700">Professional Title *</label><input type="text" id="freelancerTitle" placeholder="e.g. SEO Content Strategist" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"></div>
-<div>
-<label class="block text-sm mb-2 text-gray-700">Bio (max 200 characters)</label>
-<textarea id="freelancerBio" rows="3" maxlength="200" placeholder="Tell us about your expertise and experience..." class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"></textarea>
-<div class="flex justify-between mt-1"><span class="text-xs text-gray-500">Maximum 200 characters</span><span id="bioCharCount" class="text-xs text-gray-500">0/200</span></div>
-</div>
-<!-- NEW PRICE RANGE FIELD -->
-<div>
-<label class="block text-sm mb-2 text-gray-700">Hourly Rate / Price Range</label>
-<select id="freelancerRate" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-<option value="">Select your rate...</option>
-<option value="€25–50/hr">€25 – €50 per hour</option>
-<option value="€50–75/hr">€50 – €75 per hour</option>
-<option value="€75–100/hr">€75 – €100 per hour</option>
-<option value="€100–150/hr">€100 – €150 per hour</option>
-<option value="€150+/hr">€150+ per hour</option>
-<option value="Project-based">Project-based pricing</option>
-<option value="Free consultation first">Free consultation first</option>
-</select>
-</div>
-<!-- END NEW FIELD -->
-<div class="border-t border-gray-200 pt-4 mt-2">
-<div class="flex items-start gap-3">
-<div class="flex items-center h-5"><input type="checkbox" id="featuredListing" class="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500"></div>
-<div class="flex flex-col">
-<label for="featuredListing" class="text-sm font-medium text-gray-900">⭐ Featured Listing - €29/month</label>
-<p class="text-xs text-gray-500 mt-0.5">Word uitgelicht bovenaan de specialist lijst, krijg een speciale badge en 3x meer zichtbaarheid. <a href="https://paypal.me/ojgmedia?locale.x=en_US&amp;country.x=NL" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1"><i class="fab fa-paypal text-sm"></i> Betaal via PayPal</a></p>
-<p class="text-xs text-gray-400 mt-1">Betaal €29 per maand. Na betaling wordt je vermelding binnen 24 uur geüpgraded naar featured.</p>
-</div>
-</div>
-</div>
-<button onclick="submitFreelancer()" class="btn-primary btn w-full py-3">Submit Application</button>
-<p class="text-xs text-gray-500 text-center">We'll review and approve within 24 hours. You'll receive an email with your verified specialist badge.</p>
-</div>
-</div>
-</div>
+
 <script>
 // ============================================================
 // STATE
@@ -636,785 +664,1070 @@ let sendgridConfigured = false;
 let allLeaderboardEntries = [];
 let userTemplates = { congrats: { subject: '', body: '' }, improvement: { subject: '', body: '' }, website: { subject: '', body: '' } };
 
-// Filter State
-let activeFilters = {
-score: 'all',
-country: 'all',
-niche: 'all',
-search: '',
-sort: 'score_desc'
-};
-
-const NICHES = [
-'E-commerce', 'Healthcare', 'Construction', 'Food & Beverage', 
-'Finance', 'Real Estate', 'Legal', 'Education', 'Beauty & Wellness', 
-'Home Services', 'Automotive', 'Sustainability', 'Technology', 
-'Creative Arts', 'Fitness', 'Travel', 'Manufacturing', 'Retail'
-];
-
-// Default Templates (Grade-3 HTML + Unsubscribe)
-const DEFAULT_TEMPLATES = {
-congrats: {
-subject: "🎉 Congratulations! Your website ranked on ContentScale Leaderboard",
-body: `<!DOCTYPE html><html><head><style>body{font-family:Arial,sans-serif;line-height:1.6;color:#333;}</style></head><body><div style="max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#7e22ce;">Congratulations!</h1><p>Great news! Your website <strong>{{company_name}}</strong> has scored <strong>{{score}}/100</strong> on our elite SEO analysis.</p><p>You've been officially added to the <a href="{{leaderboard_url}}" style="color:#7e22ce;">ContentScale Leaderboard</a>.</p><p>Keep up the excellent work!</p><hr style="border:0;border-top:1px solid #eee;margin:20px 0;"><p style="font-size:12px;color:#666;">Sent by {{sender_name}}<br>ContentScale · Amsterdam, Netherlands<br><a href="{{unsubscribe_url}}" style="color:#666;">Unsubscribe</a></p></div></body></html>`
-},
-improvement: {
-subject: "🚀 Quick SEO opportunity for {{company_name}}",
-body: `<!DOCTYPE html><html><head><style>body{font-family:Arial,sans-serif;line-height:1.6;color:#333;}</style></head><body><div style="max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#7e22ce;">SEO Opportunity</h1><p>Hi {{company_name}} team,</p><p>I analyzed your website and found it scored <strong>{{score}}/100</strong> on our SEO metrics.</p><p>I noticed some quick wins that could significantly improve your rankings and traffic, especially with the new Google AI Overviews.</p><p>Would you be open to a quick 10-minute chat this week?</p><p>Best regards,<br>{{sender_name}}</p><hr style="border:0;border-top:1px solid #eee;margin:20px 0;"><p style="font-size:12px;color:#666;">Sent by {{sender_name}}<br>ContentScale · Amsterdam, Netherlands<br><a href="{{unsubscribe_url}}" style="color:#666;">Unsubscribe</a></p></div></body></html>`
-},
-website: {
-subject: "💻 Professional website for {{company_name}}",
-body: `<!DOCTYPE html><html><head><style>body{font-family:Arial,sans-serif;line-height:1.6;color:#333;}</style></head><body><div style="max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#7e22ce;">Website Opportunity</h1><p>Hi {{company_name}} team,</p><p>I noticed you don't have a website yet (or it wasn't detected).</p><p>I specialize in creating SEO-optimized websites that rank well in the AI era.</p><p>Interested in learning more about how a professional site could grow your business?</p><p>Best regards,<br>{{sender_name}}</p><hr style="border:0;border-top:1px solid #eee;margin:20px 0;"><p style="font-size:12px;color:#666;">Sent by {{sender_name}}<br>ContentScale · Amsterdam, Netherlands<br><a href="{{unsubscribe_url}}" style="color:#666;">Unsubscribe</a></p></div></body></html>`
-}
-};
-
 // ============================================================
 // INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', function () {
-registerUser();
-loadLeaderboardData();
-loadFreelancers();
-// Hide loading screen
-function revealPage() {
-const l = document.getElementById('loading-screen');
-if (l) { l.style.opacity = '0'; l.style.pointerEvents = 'none'; setTimeout(() => l.style.display = 'none', 300); }
-}
-setTimeout(revealPage, 1500);
-if (document.readyState === 'complete') revealPage();
-else window.addEventListener('load', revealPage);
-document.getElementById('singleUrlInput')?.addEventListener('keypress', e => { if (e.key === 'Enter') scanSingleURL(); });
-// Force clear single URL input
-const urlInput = document.getElementById('singleUrlInput');
-if (urlInput) { urlInput.value = ''; urlInput.setAttribute('autocomplete', 'off'); urlInput.setAttribute('autocorrect', 'off'); urlInput.setAttribute('autocapitalize', 'off'); }
-// Pre-fill bulk scan fields
-const savedEmail = localStorage.getItem('bulk_email');
-const savedName  = localStorage.getItem('bulk_name');
-if (savedEmail) document.getElementById('bulkScanEmail').value = savedEmail;
-if (savedName)  document.getElementById('bulkScanName').value  = savedName;
-const bulkInput = document.getElementById('bulkUrlInput');
-if (bulkInput) {
-bulkInput.addEventListener('input', function () {
-const urls = this.value.split('\n').filter(u => u.trim().length > 0);
-const counter = document.getElementById('bulkUrlCount');
-if (counter) { counter.textContent = `${urls.length}/100`; counter.style.color = urls.length > 100 ? '#f87171' : '#d1d5db'; }
-});
-}
-const bioTextarea = document.getElementById('freelancerBio');
-if (bioTextarea) bioTextarea.addEventListener('input', function () { document.getElementById('bioCharCount').textContent = this.value.length + '/200'; });
+    registerUser();
+    loadLeaderboardData();
+    loadFreelancers();
+    checkServerHealth();
+
+    // Hide loading screen
+    function revealPage() {
+        const l = document.getElementById('loading-screen');
+        if (l) { l.style.opacity = '0'; l.style.pointerEvents = 'none'; setTimeout(() => l.style.display = 'none', 300); }
+    }
+    setTimeout(revealPage, 1500);
+    if (document.readyState === 'complete') revealPage();
+    else window.addEventListener('load', revealPage);
+
+    document.getElementById('singleUrlInput')?.addEventListener('keypress', e => { if (e.key === 'Enter') scanSingleURL(); });
+    // Force clear single URL input — prevents browser autocomplete bleeding in
+    const urlInput = document.getElementById('singleUrlInput');
+    if (urlInput) { urlInput.value = ''; urlInput.setAttribute('autocomplete', 'off'); urlInput.setAttribute('autocorrect', 'off'); urlInput.setAttribute('autocapitalize', 'off'); }
+
+    // Pre-fill bulk scan fields from localStorage
+    const savedEmail = localStorage.getItem('bulk_email');
+    const savedName  = localStorage.getItem('bulk_name');
+    if (savedEmail) document.getElementById('bulkScanEmail').value = savedEmail;
+    if (savedName)  document.getElementById('bulkScanName').value  = savedName;
+
+    const bulkInput = document.getElementById('bulkUrlInput');
+    if (bulkInput) {
+        bulkInput.addEventListener('input', function () {
+            const urls = this.value.split('\n').filter(u => u.trim().length > 0);
+            const counter = document.getElementById('bulkUrlCount');
+            if (counter) { counter.textContent = `${urls.length}/100`; counter.style.color = urls.length > 100 ? '#f87171' : '#d1d5db'; }
+        });
+    }
+
+    const bioTextarea = document.getElementById('freelancerBio');
+    if (bioTextarea) bioTextarea.addEventListener('input', function () { document.getElementById('bioCharCount').textContent = this.value.length + '/200'; });
 });
 
 // ============================================================
 // USER REGISTRATION
 // ============================================================
 async function registerUser() {
-try {
-let storedUserId = localStorage.getItem('user_id');
-if (!storedUserId) {
-const response = await fetch('/api/user/register', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-const data = await response.json();
-if (data.success && data.userId) {
-userId = data.userId;
-localStorage.setItem('user_id', userId);
-}
-} else {
-userId = storedUserId;
-}
-loadApiStatus();
-loadUserTemplates();
-} catch (error) {
-console.error('Registration error:', error);
-}
+    try {
+        let storedUserId = localStorage.getItem('user_id');
+        if (!storedUserId) {
+            const response = await fetch('/api/user/register', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+            const data = await response.json();
+            if (data.success && data.userId) {
+                userId = data.userId;
+                localStorage.setItem('user_id', userId);
+            }
+        } else {
+            userId = storedUserId;
+        }
+        // Always load after userId is set
+        loadApiStatus();
+        loadUserTemplates();
+    } catch (error) {
+        console.error('Registration error:', error);
+    }
 }
 
 // ============================================================
 // API STATUS + SETUP BOX LOGIC
 // ============================================================
 async function loadApiStatus() {
-if (!userId) return;
-try {
-const response = await fetch('/api/user/keys/status', { headers: { 'x-user-id': userId } });
-const data = await response.json();
-if (data.success) {
-sendgridConfigured = data.hasSendgrid;
-checkSetupStatus();
+    if (!userId) return;
+    try {
+        const response = await fetch('/api/user/keys/status', { headers: { 'x-user-id': userId } });
+        const data = await response.json();
+        if (data.success) {
+            sendgridConfigured = data.hasSendgrid;
+            checkSetupStatus();
+        }
+    } catch (error) {
+        console.error('Error loading API status:', error);
+    }
 }
-} catch (error) {
-console.error('Error loading API status:', error);
-}
-}
+
 function checkSetupStatus() {
-const setupBox = document.getElementById('setupRequiredBox');
-const allDone  = document.getElementById('setupAllDone');
-const scanForm = document.getElementById('bulkScannerForm');
-const step1    = document.getElementById('setupStepSendgrid');
-const status1  = document.getElementById('stepStatus1');
-if (sendgridConfigured) {
-if (step1)   step1.classList.add('completed');
-if (status1) status1.textContent = '✅';
-const sg = document.getElementById('sendgridSetupStatus');
-if (sg) sg.innerHTML = '<span class="text-green-400">✅ SendGrid configured — emails ready</span>';
-if (setupBox) setupBox.classList.add('hidden');
-if (allDone)  allDone.classList.remove('hidden');
-} else {
-if (step1)   step1.classList.remove('completed');
-if (status1) status1.textContent = '❌';
-if (setupBox) setupBox.classList.remove('hidden');
-if (allDone)  allDone.classList.add('hidden');
-}
-if (scanForm) scanForm.classList.remove('hidden');
-}
-async function saveSetupSendgrid() {
-if (!userId) { alert('Please refresh the page — user not registered yet.'); return; }
-const key = document.getElementById('setupSendgridKey').value.trim();
-if (!key) { alert('Please paste your SendGrid API key.'); return; }
-const statusEl = document.getElementById('sendgridSetupStatus');
-statusEl.innerHTML = '<span class="text-blue-400">Saving…</span>';
-try {
-const res = await fetch('/api/user/sendgrid/configure', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-body: JSON.stringify({ userId, apiKey: key, dailyLimit: 100 })
-});
-const data = await res.json();
-if (data.success) {
-sendgridConfigured = true;
-document.getElementById('setupSendgridKey').value = '';
-checkSetupStatus();
-} else {
-statusEl.innerHTML = `<span class="text-red-400">❌ ${data.error || 'Save failed'}</span>`;
-}
-} catch (e) {
-statusEl.innerHTML = '<span class="text-red-400">❌ Connection error</span>';
-}
+    const setupBox = document.getElementById('setupRequiredBox');
+    const allDone  = document.getElementById('setupAllDone');
+    const scanForm = document.getElementById('bulkScannerForm');
+    const step1    = document.getElementById('setupStepSendgrid');
+    const status1  = document.getElementById('stepStatus1');
+
+    if (sendgridConfigured) {
+        if (step1)   step1.classList.add('completed');
+        if (status1) status1.textContent = '✅';
+        const sg = document.getElementById('sendgridSetupStatus');
+        if (sg) sg.innerHTML = '<span class="text-green-400">✅ SendGrid configured — emails ready</span>';
+        if (setupBox) setupBox.classList.add('hidden');
+        if (allDone)  allDone.classList.remove('hidden');
+    } else {
+        if (step1)   step1.classList.remove('completed');
+        if (status1) status1.textContent = '❌';
+        if (setupBox) setupBox.classList.remove('hidden');
+        if (allDone)  allDone.classList.add('hidden');
+    }
+
+    // Scan form is always visible — setup box is a warning, not a blocker
+    if (scanForm) scanForm.classList.remove('hidden');
 }
 
 // ============================================================
-// MODE SWITCHING
+// SETUP BOX: INLINE SAVE BUTTONS
+// ============================================================
+async function saveSetupSendgrid() {
+    if (!userId) { alert('Please refresh the page — user not registered yet.'); return; }
+    const key = document.getElementById('setupSendgridKey').value.trim();
+    if (!key) { alert('Please paste your SendGrid API key.'); return; }
+
+    const statusEl = document.getElementById('sendgridSetupStatus');
+    statusEl.innerHTML = '<span class="text-blue-400">Saving…</span>';
+
+    try {
+        const res = await fetch('/api/user/sendgrid/configure', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+            body: JSON.stringify({ userId, apiKey: key, dailyLimit: 100 })
+        });
+        const data = await res.json();
+        if (data.success) {
+            sendgridConfigured = true;
+            document.getElementById('setupSendgridKey').value = '';
+            checkSetupStatus();
+        } else {
+            statusEl.innerHTML = `<span class="text-red-400">❌ ${data.error || 'Save failed'}</span>`;
+        }
+    } catch (e) {
+        statusEl.innerHTML = '<span class="text-red-400">❌ Connection error</span>';
+    }
+}
+
+// ============================================================
+// API STATUS (used by setup box only)
 // ============================================================
 function switchMode(mode) {
-const singleMode = document.getElementById('singleMode');
-const bulkMode = document.getElementById('bulkMode');
-const singleBtn = document.getElementById('modeSingleBtn');
-const bulkBtn = document.getElementById('modeBulkBtn');
-const templates = document.getElementById('templates');
-if (mode === 'single') {
-singleMode.classList.remove('hidden'); bulkMode.classList.add('hidden');
-singleBtn.classList.add('active'); bulkBtn.classList.remove('active');
-if (templates) templates.classList.add('hidden');
-} else {
-singleMode.classList.add('hidden'); bulkMode.classList.remove('hidden');
-singleBtn.classList.remove('active'); bulkBtn.classList.add('active');
-document.getElementById('bulkScannerContent').classList.remove('hidden');
-if (templates) templates.classList.remove('hidden');
+    const singleMode = document.getElementById('singleMode');
+    const bulkMode = document.getElementById('bulkMode');
+    const singleBtn = document.getElementById('modeSingleBtn');
+    const bulkBtn = document.getElementById('modeBulkBtn');
+    const templates = document.getElementById('templates');
+    if (mode === 'single') {
+        singleMode.classList.remove('hidden'); bulkMode.classList.add('hidden');
+        singleBtn.classList.add('active'); bulkBtn.classList.remove('active');
+        if (templates) templates.classList.add('hidden');
+    } else {
+        singleMode.classList.add('hidden'); bulkMode.classList.remove('hidden');
+        singleBtn.classList.remove('active'); bulkBtn.classList.add('active');
+        document.getElementById('bulkScannerContent').classList.remove('hidden');
+        document.getElementById('bulkToggleText').textContent = 'Hide Bulk Scanner';
+        document.getElementById('bulkScannerIcon').className = 'fas fa-chevron-up';
+        if (templates) templates.classList.remove('hidden');
+    }
 }
+
+function toggleBulkScanner() {
+    const content = document.getElementById('bulkScannerContent');
+    const icon = document.getElementById('bulkScannerIcon');
+    const toggleText = document.getElementById('bulkToggleText');
+    if (content) {
+        const isHidden = content.classList.contains('hidden');
+        content.classList.toggle('hidden');
+        if (icon) { icon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)'; icon.className = isHidden ? 'fas fa-chevron-down' : 'fas fa-chevron-up'; }
+        if (toggleText) toggleText.textContent = isHidden ? 'Show Bulk Scanner' : 'Hide Bulk Scanner';
+    }
 }
 
 // ============================================================
 // TEMPLATES
 // ============================================================
+// ============================================================
+// DEFAULT TEMPLATES (Grade 3 level, legally compliant)
+// ============================================================
+const DEFAULT_TEMPLATES = {
+    congrats: {
+        subject: "🎉 Great news about {{company_name}}!",
+        body: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;">
+<div style="max-width:600px;margin:40px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+  <div style="background:linear-gradient(135deg,#7e22ce,#be185d);padding:32px;text-align:center;">
+    <div style="font-size:48px;margin-bottom:8px;">🏆</div>
+    <h1 style="color:white;margin:0;font-size:26px;">You Did It!</h1>
+  </div>
+  <div style="padding:32px;">
+    <p style="font-size:16px;color:#333;line-height:1.6;">Hi <strong>{{company_name}}</strong>,</p>
+    <p style="font-size:16px;color:#333;line-height:1.6;">We checked your website. And wow — you scored <strong style="color:#7e22ce;font-size:20px;">{{score}} out of 100!</strong></p>
+    <p style="font-size:16px;color:#333;line-height:1.6;">That is really good. Most websites do not score this high.</p>
+    <div style="background:#f3e8ff;border-left:4px solid #7e22ce;padding:16px;border-radius:8px;margin:24px 0;">
+      <p style="margin:0;font-size:15px;color:#5b21b6;">🌟 We added your website to our <strong>Elite SEO Leaderboard</strong>. People can now see how good your website is!</p>
+    </div>
+    <div style="text-align:center;margin:28px 0;">
+      <a href="{{leaderboard_url}}" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:16px;font-weight:bold;display:inline-block;">👉 See My Ranking</a>
+    </div>
+    <p style="font-size:16px;color:#333;line-height:1.6;">Keep up the great work!</p>
+    <p style="font-size:15px;color:#555;margin-top:32px;">Warm regards,<br><strong>{{sender_name}}</strong><br><a href="mailto:{{sender_email}}" style="color:#7e22ce;">{{sender_email}}</a><br>ContentScale</p>
+  </div>
+  <div style="background:#f3f4f6;padding:16px;text-align:center;border-top:1px solid #e5e7eb;">
+    <p style="font-size:12px;color:#9ca3af;margin:0 0 6px;">You got this email because your website was scanned by ContentScale.</p>
+    <p style="font-size:12px;color:#9ca3af;margin:0;">ContentScale · Amsterdam, Netherlands · <a href="https://contentscale.site" style="color:#7e22ce;">contentscale.site</a></p>
+    <p style="font-size:12px;margin:8px 0 0;"><a href="{{unsubscribe_url}}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe from these emails</a></p>
+  </div>
+</div></body></html>`
+    },
+    improvement: {
+        subject: "Quick tip to get more visitors to {{company_name}}",
+        body: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;">
+<div style="max-width:600px;margin:40px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+  <div style="background:linear-gradient(135deg,#1e40af,#0891b2);padding:32px;text-align:center;">
+    <div style="font-size:48px;margin-bottom:8px;">📈</div>
+    <h1 style="color:white;margin:0;font-size:26px;">Your Website Can Do Better</h1>
+  </div>
+  <div style="padding:32px;">
+    <p style="font-size:16px;color:#333;line-height:1.6;">Hi <strong>{{company_name}}</strong>,</p>
+    <p style="font-size:16px;color:#333;line-height:1.6;">My name is <strong>{{sender_name}}</strong>. I help businesses get more visitors from Google.</p>
+    <p style="font-size:16px;color:#333;line-height:1.6;">I checked your website. It scored <strong style="color:#1e40af;font-size:20px;">{{score}} out of 100</strong>.</p>
+    <p style="font-size:16px;color:#333;line-height:1.6;">That is okay. But there is room to grow!</p>
+    <div style="background:#eff6ff;border-left:4px solid #1e40af;padding:16px;border-radius:8px;margin:24px 0;">
+      <p style="margin:0 0 8px;font-size:15px;color:#1e3a8a;font-weight:bold;">What this means for you:</p>
+      <p style="margin:0;font-size:15px;color:#1e40af;">✅ More people can find you on Google<br>✅ More visitors = more customers<br>✅ Small fixes can make a big difference</p>
+    </div>
+    <p style="font-size:16px;color:#333;line-height:1.6;">I can show you exactly what to fix. It is easy. And it works fast.</p>
+    <p style="font-size:16px;color:#333;line-height:1.6;">Can we have a quick chat? Just 15 minutes.</p>
+    <div style="text-align:center;margin:28px 0;">
+      <a href="https://wa.me/31628073996" style="background:linear-gradient(135deg,#1e40af,#0891b2);color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:16px;font-weight:bold;display:inline-block;">💬 Yes, Let's Chat</a>
+    </div>
+    <p style="font-size:15px;color:#555;margin-top:32px;">Kind regards,<br><strong>{{sender_name}}</strong><br><a href="mailto:{{sender_email}}" style="color:#1e40af;">{{sender_email}}</a><br>ContentScale</p>
+  </div>
+  <div style="background:#f3f4f6;padding:16px;text-align:center;border-top:1px solid #e5e7eb;">
+    <p style="font-size:12px;color:#9ca3af;margin:0 0 6px;">You got this email because your website was scanned by ContentScale.</p>
+    <p style="font-size:12px;color:#9ca3af;margin:0;">ContentScale · Amsterdam, Netherlands · <a href="https://contentscale.site" style="color:#7e22ce;">contentscale.site</a></p>
+    <p style="font-size:12px;margin:8px 0 0;"><a href="{{unsubscribe_url}}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe from these emails</a></p>
+  </div>
+</div></body></html>`
+    },
+    website: {
+        subject: "{{company_name}} — did you know a website gets you more customers?",
+        body: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;">
+<div style="max-width:600px;margin:40px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+  <div style="background:linear-gradient(135deg,#065f46,#0891b2);padding:32px;text-align:center;">
+    <div style="font-size:48px;margin-bottom:8px;">🌐</div>
+    <h1 style="color:white;margin:0;font-size:26px;">Get Found on Google</h1>
+  </div>
+  <div style="padding:32px;">
+    <p style="font-size:16px;color:#333;line-height:1.6;">Hi <strong>{{company_name}}</strong>,</p>
+    <p style="font-size:16px;color:#333;line-height:1.6;">My name is <strong>{{sender_name}}</strong>. I help small businesses get more customers.</p>
+    <p style="font-size:16px;color:#333;line-height:1.6;">I looked for your business online. I could not find a website for you.</p>
+    <p style="font-size:16px;color:#333;line-height:1.6;">Here is the thing — <strong>most people look on Google before they buy anything.</strong></p>
+    <div style="background:#ecfdf5;border-left:4px solid #065f46;padding:16px;border-radius:8px;margin:24px 0;">
+      <p style="margin:0 0 8px;font-size:15px;color:#064e3b;font-weight:bold;">With a website you can:</p>
+      <p style="margin:0;font-size:15px;color:#065f46;">✅ Show up when people search Google<br>✅ Look professional and trusted<br>✅ Get customers even when you sleep<br>✅ Beat the competition near you</p>
+    </div>
+    <p style="font-size:16px;color:#333;line-height:1.6;">I build websites that show up on Google. Fast. Simple. Affordable.</p>
+    <p style="font-size:16px;color:#333;line-height:1.6;">Can I show you what it looks like? No cost. No pressure.</p>
+    <div style="text-align:center;margin:28px 0;">
+      <a href="https://wa.me/31628073996" style="background:linear-gradient(135deg,#065f46,#0891b2);color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:16px;font-weight:bold;display:inline-block;">💬 Show Me How</a>
+    </div>
+    <p style="font-size:15px;color:#555;margin-top:32px;">Kind regards,<br><strong>{{sender_name}}</strong><br><a href="mailto:{{sender_email}}" style="color:#065f46;">{{sender_email}}</a><br>ContentScale</p>
+  </div>
+  <div style="background:#f3f4f6;padding:16px;text-align:center;border-top:1px solid #e5e7eb;">
+    <p style="font-size:12px;color:#9ca3af;margin:0 0 6px;">You got this email because your business was found by ContentScale.</p>
+    <p style="font-size:12px;color:#9ca3af;margin:0;">ContentScale · Amsterdam, Netherlands · <a href="https://contentscale.site" style="color:#7e22ce;">contentscale.site</a></p>
+    <p style="font-size:12px;margin:8px 0 0;"><a href="{{unsubscribe_url}}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe from these emails</a></p>
+  </div>
+</div></body></html>`
+    }
+};
+
 async function loadUserTemplates() {
-if (!userId) return;
-try {
-const response = await fetch('/api/user/templates', { headers: { 'x-user-id': userId } });
-const data = await response.json();
-if (data.success && data.templates) {
-userTemplates = data.templates;
+    // Set defaults first so templates are never empty
+    ['congrats', 'improvement', 'website'].forEach(t => {
+        const subEl = document.getElementById('template-' + t + '-subject');
+        const bodyEl = document.getElementById('template-' + t + '-body');
+        if (subEl && DEFAULT_TEMPLATES[t]) subEl.value = DEFAULT_TEMPLATES[t].subject;
+        if (bodyEl && DEFAULT_TEMPLATES[t]) bodyEl.value = DEFAULT_TEMPLATES[t].body;
+    });
+
+    if (!userId) return;
+    try {
+        const response = await fetch('/api/user/templates', { headers: { 'x-user-id': userId } });
+        const data = await response.json();
+        if (data.success && data.templates) {
+            userTemplates = data.templates;
+            // Override defaults only where user has saved a custom template
+            ['congrats', 'improvement', 'website'].forEach(t => {
+                if (userTemplates[t] && userTemplates[t].subject) {
+                    const subEl = document.getElementById('template-' + t + '-subject');
+                    const bodyEl = document.getElementById('template-' + t + '-body');
+                    if (subEl) subEl.value = userTemplates[t].subject;
+                    if (bodyEl) bodyEl.value = userTemplates[t].body;
+                }
+            });
+        }
+    } catch (error) { console.error('Error loading templates:', error); }
 }
-// Apply defaults (either saved or system defaults)
-['congrats', 'improvement', 'website'].forEach(t => {
-const subEl = document.getElementById('template-' + t + '-subject');
-const bodyEl = document.getElementById('template-' + t + '-body');
-const saved = userTemplates[t];
-if (subEl) subEl.value = (saved && saved.subject) ? saved.subject : DEFAULT_TEMPLATES[t].subject;
-if (bodyEl) bodyEl.value = (saved && saved.body) ? saved.body : DEFAULT_TEMPLATES[t].body;
-});
-} catch (error) { console.error('Error loading templates:', error); }
-}
+
 async function saveTemplate(type) {
-if (!userId) { alert('❌ User not registered. Please refresh the page.'); return; }
-const subject = document.getElementById(`template-${type}-subject`).value;
-const body = document.getElementById(`template-${type}-body`).value;
-if (!subject || !body) { alert('❌ Please fill in both subject and body'); return; }
-try {
-const response = await fetch('/api/user/templates', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-body: JSON.stringify({ type, subject, body })
-});
-const data = await response.json();
-if (data.success) { alert('✅ Template saved successfully!'); userTemplates[type] = { subject, body }; }
-else alert('❌ ' + (data.error || 'Failed to save template'));
-} catch (error) { alert('❌ Error: ' + error.message); }
+    if (!userId) { alert('❌ User not registered. Please refresh the page.'); return; }
+    const subject = document.getElementById(`template-${type}-subject`).value;
+    const body = document.getElementById(`template-${type}-body`).value;
+    if (!subject || !body) { alert('❌ Please fill in both subject and body'); return; }
+    try {
+        const response = await fetch('/api/user/templates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+            body: JSON.stringify({ type, subject, body })
+        });
+        const data = await response.json();
+        if (data.success) { alert('✅ Template saved successfully!'); userTemplates[type] = { subject, body }; }
+        else alert('❌ ' + (data.error || 'Failed to save template'));
+    } catch (error) { alert('❌ Error: ' + error.message); }
 }
 
 // ============================================================
 // SINGLE URL SCAN
 // ============================================================
 async function scanSingleURL() {
-const input = document.getElementById('singleUrlInput');
-const button = document.getElementById('singleScanBtn');
-const progress = document.getElementById('singleProgress');
-const progressBar = document.getElementById('singleProgressBar');
-const progressText = document.getElementById('singleProgressText');
-let url = input.value.trim();
-if (!url) { alert('❌ Please enter a URL'); return; }
-if (!url.startsWith('http')) url = 'https://' + url;
-button.disabled = true;
-button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
-progress.classList.remove('hidden');
-progressBar.style.width = '20%';
-progressText.textContent = 'Starting browser...';
-try {
-const response = await fetch('/api/scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) });
-progressBar.style.width = '60%';
-progressText.textContent = 'Analyzing content...';
-const data = await response.json();
-if (!response.ok || !data.success) throw new Error(data.error || 'Scan failed');
-displayScanResult(data);
-progressBar.style.width = '100%';
-progressText.textContent = 'Scan complete!';
-setTimeout(() => { progress.classList.add('hidden'); button.disabled = false; button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan'; }, 500);
-} catch (error) {
-alert('❌ Scan failed: ' + error.message);
-progress.classList.add('hidden');
-button.disabled = false;
-button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
+    const input = document.getElementById('singleUrlInput');
+    const button = document.getElementById('singleScanBtn');
+    const progress = document.getElementById('singleProgress');
+    const progressBar = document.getElementById('singleProgressBar');
+    const progressText = document.getElementById('singleProgressText');
+
+    let url = input.value.trim();
+    if (!url) { alert('❌ Please enter a URL'); return; }
+    if (!url.startsWith('http')) url = 'https://' + url;
+
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
+    progress.classList.remove('hidden');
+    progressBar.style.width = '20%';
+    progressText.textContent = 'Starting browser...';
+
+    try {
+        const response = await fetch('/api/scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) });
+        progressBar.style.width = '60%';
+        progressText.textContent = 'Analyzing content...';
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.error || 'Scan failed');
+        displayScanResult(data);
+        progressBar.style.width = '100%';
+        progressText.textContent = 'Scan complete!';
+        setTimeout(() => { progress.classList.add('hidden'); button.disabled = false; button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan'; }, 500);
+    } catch (error) {
+        alert('❌ Scan failed: ' + error.message);
+        progress.classList.add('hidden');
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
+    }
 }
-}
+
 function displayScanResult(data) {
-const resultDiv = document.getElementById('singleResult');
-const url = data.url || '', quality = data.quality || 'unknown', currentScore = data.score || 0;
-const graaf = data.metrics?.graaf || 0, craft = data.metrics?.craft || 0, technical = data.metrics?.technical || 0, words = data.content_stats?.wordCount || 0;
-const recommendations = data.recommendations?.all || [];
-let recsHtml = recommendations.length > 0 ? recommendations.map(rec => {
-let pc = 'priority-none';
-if (rec.priority === 'high') pc = 'priority-high';
-else if (rec.priority === 'medium') pc = 'priority-medium';
-else if (rec.priority === 'low') pc = 'priority-low';
-return `<div class="recommendation-card">
-<div class="flex items-start justify-between mb-2">
-<h4 class="recommendation-title">${rec.title || 'Recommendation'}</h4>
-${rec.priority ? `<span class="priority-badge ${pc}">${rec.priority.toUpperCase()}</span>` : ''}
-</div>
-<p class="recommendation-desc">${rec.description || ''}</p>
-${rec.action ? `<div class="recommendation-section"><div class="recommendation-section-title"><i class="fas fa-wrench"></i> <span>Action</span></div><p class="recommendation-action">${rec.action}</p></div>` : ''}
-${rec.learning ? `<div class="recommendation-section"><div class="recommendation-section-title"><i class="fas fa-graduation-cap"></i> <span>Learning</span></div><p class="recommendation-learning">${rec.learning}</p></div>` : ''}
-${rec.target ? `<div class="recommendation-section"><div class="recommendation-section-title"><i class="fas fa-bullseye"></i> <span>Target</span></div><p class="recommendation-target">${rec.target}</p></div>` : ''}
-</div>`;
-}).join('') : '<p class="text-gray-400 text-sm">No specific recommendations — your page is excellent!</p>';
-let qualityColor = 'bg-gray-600';
-if (quality === 'excellent') qualityColor = 'bg-green-600';
-else if (quality === 'very good') qualityColor = 'bg-blue-600';
-else if (quality === 'good') qualityColor = 'bg-green-600';
-else if (quality === 'average') qualityColor = 'bg-yellow-600';
-else if (quality === 'needs improvement') qualityColor = 'bg-red-600';
-resultDiv.innerHTML = `<div class="bg-gray-800 rounded-xl border-2 border-purple-500 p-6 mt-4">
-<div class="text-center mb-4">
-<h2 class="text-2xl font-bold text-white mb-1">📊 SEO Content Analysis</h2>
-<p class="text-md text-gray-300 break-all">${url}</p>
-<span class="inline-block mt-2 px-3 py-1 ${qualityColor} text-white text-sm rounded-full">Quality: ${quality.charAt(0).toUpperCase() + quality.slice(1)}</span>
-</div>
-<div class="text-center mb-6">
-<div class="text-6xl font-bold text-white">${currentScore}</div>
-<div class="text-sm text-gray-400">out of 100</div>
-</div>
-<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
-<div class="bg-gray-900 rounded-lg p-4 text-center"><div class="text-sm text-gray-400 mb-1">GRAAF (50)</div><div class="text-2xl font-bold text-purple-400">${graaf}/50</div></div>
-<div class="bg-gray-900 rounded-lg p-4 text-center"><div class="text-sm text-gray-400 mb-1">CRAFT (30)</div><div class="text-2xl font-bold text-blue-400">${craft}/30</div></div>
-<div class="bg-gray-900 rounded-lg p-4 text-center"><div class="text-sm text-gray-400 mb-1">Technical (20)</div><div class="text-2xl font-bold text-yellow-400">${technical}/20</div></div>
-<div class="bg-gray-900 rounded-lg p-4 text-center"><div class="text-sm text-gray-400 mb-1">Words</div><div class="text-2xl font-bold text-white">${words.toLocaleString()}</div></div>
-</div>
-<div class="border-t border-gray-700 pt-5 mb-5">
-<h3 class="text-xl font-bold text-white mb-4">📋 Priority Recommendations</h3>
-${recsHtml}
-</div>
-<div class="flex gap-3">
-<button onclick="addToLeaderboard('${url}', ${currentScore})" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-semibold transition-all"><i class="fas fa-trophy mr-2"></i> Add to Leaderboard</button>
-<button onclick="document.getElementById('singleResult').classList.add('hidden')" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold transition-all">Close</button>
-</div>
-</div>`;
-resultDiv.classList.remove('hidden');
-resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    const resultDiv = document.getElementById('singleResult');
+    const url = data.url || '', quality = data.quality || 'unknown', currentScore = data.score || 0;
+    const graaf = data.metrics?.graaf || 0, craft = data.metrics?.craft || 0, technical = data.metrics?.technical || 0, words = data.content_stats?.wordCount || 0;
+    const recommendations = data.recommendations?.all || [];
+
+    let recsHtml = recommendations.length > 0 ? recommendations.map(rec => {
+        let pc = 'priority-none';
+        if (rec.priority === 'high') pc = 'priority-high';
+        else if (rec.priority === 'medium') pc = 'priority-medium';
+        else if (rec.priority === 'low') pc = 'priority-low';
+        return `<div class="recommendation-card">
+            <div class="flex items-start justify-between mb-2">
+                <h4 class="recommendation-title">${rec.title || 'Recommendation'}</h4>
+                ${rec.priority ? `<span class="priority-badge ${pc}">${rec.priority.toUpperCase()}</span>` : ''}
+            </div>
+            <p class="recommendation-desc">${rec.description || ''}</p>
+            ${rec.action ? `<div class="recommendation-section"><div class="recommendation-section-title"><i class="fas fa-wrench"></i> <span>Action</span></div><p class="recommendation-action">${rec.action}</p></div>` : ''}
+            ${rec.learning ? `<div class="recommendation-section"><div class="recommendation-section-title"><i class="fas fa-graduation-cap"></i> <span>Learning</span></div><p class="recommendation-learning">${rec.learning}</p></div>` : ''}
+            ${rec.target ? `<div class="recommendation-section"><div class="recommendation-section-title"><i class="fas fa-bullseye"></i> <span>Target</span></div><p class="recommendation-target">${rec.target}</p></div>` : ''}
+        </div>`;
+    }).join('') : '<p class="text-gray-400 text-sm">No specific recommendations — your page is excellent!</p>';
+
+    let qualityColor = 'bg-gray-600';
+    if (quality === 'excellent') qualityColor = 'bg-green-600';
+    else if (quality === 'very good') qualityColor = 'bg-blue-600';
+    else if (quality === 'good') qualityColor = 'bg-green-600';
+    else if (quality === 'average') qualityColor = 'bg-yellow-600';
+    else if (quality === 'needs improvement') qualityColor = 'bg-red-600';
+
+    resultDiv.innerHTML = `<div class="bg-gray-800 rounded-xl border-2 border-purple-500 p-6 mt-4">
+        <div class="text-center mb-4">
+            <h2 class="text-2xl font-bold text-white mb-1">📊 SEO Content Analysis</h2>
+            <p class="text-md text-gray-300 break-all">${url}</p>
+            <span class="inline-block mt-2 px-3 py-1 ${qualityColor} text-white text-sm rounded-full">Quality: ${quality.charAt(0).toUpperCase() + quality.slice(1)}</span>
+        </div>
+        <div class="text-center mb-6">
+            <div class="text-6xl font-bold text-white">${currentScore}</div>
+            <div class="text-sm text-gray-400">out of 100</div>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+            <div class="bg-gray-900 rounded-lg p-4 text-center"><div class="text-sm text-gray-400 mb-1">GRAAF (50)</div><div class="text-2xl font-bold text-purple-400">${graaf}/50</div></div>
+            <div class="bg-gray-900 rounded-lg p-4 text-center"><div class="text-sm text-gray-400 mb-1">CRAFT (30)</div><div class="text-2xl font-bold text-blue-400">${craft}/30</div></div>
+            <div class="bg-gray-900 rounded-lg p-4 text-center"><div class="text-sm text-gray-400 mb-1">Technical (20)</div><div class="text-2xl font-bold text-yellow-400">${technical}/20</div></div>
+            <div class="bg-gray-900 rounded-lg p-4 text-center"><div class="text-sm text-gray-400 mb-1">Words</div><div class="text-2xl font-bold text-white">${words.toLocaleString()}</div></div>
+        </div>
+        <div class="border-t border-gray-700 pt-5 mb-5">
+            <h3 class="text-xl font-bold text-white mb-4">📋 Priority Recommendations</h3>
+            ${recsHtml}
+        </div>
+        <div class="flex gap-3">
+            <button onclick="shareResult('${url}', ${currentScore}, '${quality}')" class="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-4 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"><i class="fas fa-share-alt"></i> Share My Score</button>
+            <button onclick="document.getElementById('singleResult').classList.add('hidden')" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold transition-all">Close</button>
+        </div>
+    </div>`;
+
+    resultDiv.classList.remove('hidden');
+    resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
-function addToLeaderboard(url, score) {
-const contactEmail = prompt('Enter your email to receive congratulations if approved (optional):', '');
-if (!contactEmail) { alert('✅ Your request has been sent to admin for approval (85+ required)'); return; }
-if (!contactEmail.includes('@') || !contactEmail.includes('.')) { alert('❌ Please enter a valid email address'); return; }
-alert(`✅ Thank you! Admin will review your submission. If approved (85+ score required), a congratulations email will be sent to ${contactEmail}.`);
+
+function shareResult(url, score, quality) {
+    const domain = url.replace(/https?:\/\//, '').replace(/\/.*/, '');
+    const medal = score >= 90 ? '🏆' : score >= 80 ? '⭐' : score >= 70 ? '📈' : '💡';
+    const qualityLabel = (quality || 'good').charAt(0).toUpperCase() + (quality || 'good').slice(1);
+    const shareText = `${medal} ${domain} scored ${score}/100 on ContentScale SEO Scanner!\n\nQuality: ${qualityLabel}\nCheck yours free 👇`;
+    const shareUrl = `https://contentscale.site`;
+    const fullShareText = shareText + '\n' + shareUrl;
+
+    // Build share modal
+    const existingModal = document.getElementById('shareModal');
+    if (existingModal) existingModal.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'shareModal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:99999;padding:1rem;';
+    modal.innerHTML = `
+        <div style="background:#111827;border:2px solid #a855f7;border-radius:1rem;padding:2rem;max-width:480px;width:100%;position:relative;">
+            <button onclick="document.getElementById('shareModal').remove()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;color:#9ca3af;font-size:1.5rem;cursor:pointer;">✕</button>
+            <h3 style="font-size:1.5rem;font-weight:800;color:white;margin-bottom:0.5rem;text-align:center;">${medal} Share Your Score</h3>
+            <div style="background:#1f2937;border:1px solid #374151;border-radius:0.75rem;padding:1.25rem;margin:1.25rem 0;text-align:center;">
+                <div style="font-size:3rem;font-weight:900;color:white;line-height:1;">${score}</div>
+                <div style="color:#a855f7;font-size:0.875rem;font-weight:600;margin-top:0.25rem;">/ 100 · ${domain}</div>
+                <div style="color:#9ca3af;font-size:0.8rem;margin-top:0.25rem;">Quality: ${qualityLabel}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                <button onclick="copyShareLink('${fullShareText.replace(/'/g, "\'")}', this)" style="background:linear-gradient(135deg,#7e22ce,#be185d);border:none;color:white;padding:0.875rem;border-radius:0.5rem;font-weight:700;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:0.5rem;">
+                    <i class="fas fa-copy"></i> Copy Score + Link
+                </button>
+                <a href="https://wa.me/?text=${encodeURIComponent(shareText + '\nhttps://contentscale.site')}" target="_blank" rel="noopener" style="background:#075e54;color:white!important;padding:0.875rem;border-radius:0.5rem;font-weight:700;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;text-decoration:none;">
+                    <i class="fab fa-whatsapp"></i> Share on WhatsApp
+                </a>
+                <a href="https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}&summary=${encodeURIComponent(shareText)}" target="_blank" rel="noopener" style="background:#0077b5;color:white!important;padding:0.875rem;border-radius:0.5rem;font-weight:700;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;text-decoration:none;">
+                    <i class="fab fa-linkedin"></i> Share on LinkedIn
+                </a>
+                <a href="https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}" target="_blank" rel="noopener" style="background:#1da1f2;color:white!important;padding:0.875rem;border-radius:0.5rem;font-weight:700;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;text-decoration:none;">
+                    <i class="fab fa-twitter"></i> Share on X / Twitter
+                </a>
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+function copyShareLink(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        btn.style.background = '#059669';
+        setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; }, 2000);
+    }).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+        document.body.removeChild(ta);
+        btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i> Copy Score + Link'; }, 2000);
+    });
+}
+
+async function checkServerHealth() {
+    const dot = document.getElementById('serverStatusDot');
+    const text = document.getElementById('serverStatusText');
+    if (!dot || !text) return;
+    try {
+        const res = await fetch('/api/health', { signal: AbortSignal.timeout(5000) });
+        const data = await res.json();
+        const dbOk = data.database === 'connected';
+        dot.style.background = dbOk ? '#10b981' : '#f59e0b';
+        dot.style.boxShadow = dbOk ? '0 0 6px #10b981' : '0 0 6px #f59e0b';
+        text.style.color = dbOk ? '#10b981' : '#f59e0b';
+        text.textContent = dbOk ? 'Server online · DB connected' : 'Server online · DB reconnecting…';
+        if (!dbOk) setTimeout(checkServerHealth, 8000);
+    } catch(e) {
+        dot.style.background = '#ef4444';
+        dot.style.boxShadow = '0 0 6px #ef4444';
+        text.style.color = '#ef4444';
+        text.textContent = 'Server unreachable — check Railway deployment';
+    }
 }
 
 // ============================================================
 // BULK SCAN
 // ============================================================
 async function startBulkScan() {
-const urlInput = document.getElementById('bulkUrlInput');
-const emailInput = document.getElementById('bulkScanEmail');
-const nameInput = document.getElementById('bulkScanName');
-const button = document.getElementById('bulkScanBtn');
-const urls = urlInput.value.split('\n').filter(u => u.trim().length > 0);
-const email = emailInput.value.trim();
-const name = nameInput.value.trim();
-if (!urls.length) { alert('❌ Please enter at least one URL'); return; }
-if (urls.length > 100) { alert('❌ Maximum 100 URLs allowed'); return; }
-if (!email || !email.includes('@')) { alert('❌ Please enter a valid email address'); return; }
-if (!name) { alert('❌ Please enter your name'); return; }
-localStorage.setItem('bulk_email', email);
-localStorage.setItem('bulk_name', name);
-if (!sendgridConfigured) {
-const setupBox = document.getElementById('setupRequiredBox');
-if (setupBox) {
-setupBox.classList.remove('hidden');
-setupBox.style.border = '2px solid #ef4444';
-setupBox.style.boxShadow = '0 0 20px rgba(239,68,68,0.5)';
-setupBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
-setTimeout(() => {
-setupBox.style.border = '';
-setupBox.style.boxShadow = '';
-}, 3000);
+    const urlInput = document.getElementById('bulkUrlInput');
+    const emailInput = document.getElementById('bulkScanEmail');
+    const nameInput = document.getElementById('bulkScanName');
+    const button = document.getElementById('bulkScanBtn');
+
+    const urls = urlInput.value.split('\n').filter(u => u.trim().length > 0);
+    const email = emailInput.value.trim();
+    const name = nameInput.value.trim();
+
+    if (!urls.length) { alert('❌ Please enter at least one URL'); return; }
+    if (urls.length > 100) { alert('❌ Maximum 100 URLs allowed'); return; }
+    if (!email || !email.includes('@')) { alert('❌ Please enter a valid email address'); return; }
+    if (!name) { alert('❌ Please enter your name'); return; }
+
+    // Save for next visit
+    localStorage.setItem('bulk_email', email);
+    localStorage.setItem('bulk_name', name);
+
+    if (!sendgridConfigured) {
+        // Flash the setup box to draw attention
+        const setupBox = document.getElementById('setupRequiredBox');
+        if (setupBox) {
+            setupBox.classList.remove('hidden');
+            setupBox.style.border = '2px solid #ef4444';
+            setupBox.style.boxShadow = '0 0 20px rgba(239,68,68,0.5)';
+            setupBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => {
+                setupBox.style.border = '';
+                setupBox.style.boxShadow = '';
+            }, 3000);
+        }
+        // Show inline error below the button
+        const btn = document.getElementById('bulkScanBtn');
+        const existing = document.getElementById('sendgridWarning');
+        if (!existing) {
+            const warn = document.createElement('p');
+            warn.id = 'sendgridWarning';
+            warn.style.cssText = 'color:#f87171!important;font-size:0.875rem;margin-top:0.75rem;text-align:center;';
+            warn.innerHTML = '⚠️ SendGrid is required to run bulk scans. Configure it above first.';
+            btn.parentNode.insertBefore(warn, btn.nextSibling);
+            setTimeout(() => warn.remove(), 4000);
+        }
+        return;
+    }
+
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
+    document.getElementById('bulkProgress').classList.remove('hidden');
+    document.getElementById('bulkResults').classList.add('hidden');
+    document.getElementById('bulkResultsContainer').innerHTML = '';
+
+    let results = { leaderboard: [], withWebsite: [], withoutWebsite: [], errors: [] };
+
+    for (let i = 0; i < urls.length; i++) {
+        let url = urls[i].trim();
+        if (!url.startsWith('http')) url = 'https://' + url;
+        document.getElementById('bulkProgressText').textContent = `Scanning ${i + 1} of ${urls.length}…`;
+        document.getElementById('bulkProgressBar').style.width = `${((i + 1) / urls.length) * 100}%`;
+        try {
+            const response = await fetch('/api/scan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-user-id': userId || 'anonymous' },
+                body: JSON.stringify({ url })
+            });
+            const data = await response.json();
+            if (data.success) {
+                const score = data.score || 0;
+                if (score >= 85) results.leaderboard.push({ url, score, data });
+                else if (score > 0) results.withWebsite.push({ url, score, data });
+                else results.withoutWebsite.push({ url, score, data });
+            } else results.errors.push({ url, error: data.error || 'Scan failed' });
+        } catch (error) { results.errors.push({ url, error: error.message }); }
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    displayBulkResults(results, email, name);
+    await sendBulkEmails(results, email, name);
+
+    button.disabled = false;
+    button.innerHTML = '<i class="fas fa-rocket mr-2"></i> Start Bulk Scan';
+    document.getElementById('bulkProgress').classList.add('hidden');
 }
-const btn = document.getElementById('bulkScanBtn');
-const existing = document.getElementById('sendgridWarning');
-if (!existing) {
-const warn = document.createElement('p');
-warn.id = 'sendgridWarning';
-warn.style.cssText = 'color:#f87171!important;font-size:0.875rem;margin-top:0.75rem;text-align:center;';
-warn.innerHTML = '⚠️ SendGrid is required to run bulk scans. Configure it above first.';
-btn.parentNode.insertBefore(warn, btn.nextSibling);
-setTimeout(() => warn.remove(), 4000);
-}
-return;
-}
-button.disabled = true;
-button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
-document.getElementById('bulkProgress').classList.remove('hidden');
-document.getElementById('bulkResults').classList.add('hidden');
-document.getElementById('bulkResultsContainer').innerHTML = '';
-let results = { leaderboard: [], withWebsite: [], withoutWebsite: [], errors: [] };
-for (let i = 0; i < urls.length; i++) {
-let url = urls[i].trim();
-if (!url.startsWith('http')) url = 'https://' + url;
-document.getElementById('bulkProgressText').textContent = `Scanning ${i + 1} of ${urls.length}…`;
-document.getElementById('bulkProgressBar').style.width = `${((i + 1) / urls.length) * 100}%`;
-try {
-const response = await fetch('/api/scan', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json', 'x-user-id': userId || 'anonymous' },
-body: JSON.stringify({ url })
-});
-const data = await response.json();
-if (data.success) {
-const score = data.score || 0;
-if (score >= 85) results.leaderboard.push({ url, score, data });
-else if (score > 0) results.withWebsite.push({ url, score, data });
-else results.withoutWebsite.push({ url, score, data });
-} else results.errors.push({ url, error: data.error || 'Scan failed' });
-} catch (error) { results.errors.push({ url, error: error.message }); }
-await new Promise(resolve => setTimeout(resolve, 500));
-}
-displayBulkResults(results, email, name);
-await sendBulkEmails(results, email, name);
-button.disabled = false;
-button.innerHTML = '<i class="fas fa-rocket mr-2"></i> Start Bulk Scan';
-document.getElementById('bulkProgress').classList.add('hidden');
-}
+
 function displayBulkResults(results, userEmail, userName) {
-let html = '';
-if (results.leaderboard.length > 0) html += `<div class="bg-green-900 bg-opacity-30 border border-green-500 rounded-lg p-4 mb-4"><h5 class="font-bold text-green-400 mb-2">🏆 Leaderboard Candidates (${results.leaderboard.length})</h5><ul class="text-sm space-y-1">${results.leaderboard.map(r => `<li>✅ ${r.url} — Score: ${r.score}/100</li>`).join('')}</ul></div>`;
-if (results.withWebsite.length > 0) html += `<div class="bg-blue-900 bg-opacity-30 border border-blue-500 rounded-lg p-4 mb-4"><h5 class="font-bold text-blue-400 mb-2">📧 Improvement Emails (${results.withWebsite.length})</h5><ul class="text-sm space-y-1">${results.withWebsite.map(r => `<li>📨 ${r.url} — Score: ${r.score}/100</li>`).join('')}</ul></div>`;
-if (results.withoutWebsite.length > 0) html += `<div class="bg-purple-900 bg-opacity-30 border border-purple-500 rounded-lg p-4 mb-4"><h5 class="font-bold text-purple-400 mb-2">🌐 Website Offers (${results.withoutWebsite.length})</h5><ul class="text-sm space-y-1">${results.withoutWebsite.map(r => `<li>📬 ${r.url}</li>`).join('')}</ul></div>`;
-if (results.errors.length > 0) html += `<div class="bg-red-900 bg-opacity-30 border border-red-500 rounded-lg p-4 mb-4"><h5 class="font-bold text-red-400 mb-2">❌ Scan Errors (${results.errors.length})</h5><ul class="text-sm space-y-1">${results.errors.map(r => `<li>⚠️ ${r.url} — ${r.error}</li>`).join('')}</ul></div>`;
-html += `<div class="bg-gray-800 border border-gray-700 rounded-lg p-4"><p class="text-sm text-gray-300">📬 Summary report sent to <strong>${userEmail}</strong></p></div>`;
-document.getElementById('bulkResultsContainer').innerHTML = html;
-document.getElementById('bulkResults').classList.remove('hidden');
+    let html = '';
+    if (results.leaderboard.length > 0) html += `<div class="bg-green-900 bg-opacity-30 border border-green-500 rounded-lg p-4 mb-4"><h5 class="font-bold text-green-400 mb-2">🏆 Leaderboard Candidates (${results.leaderboard.length})</h5><ul class="text-sm space-y-1">${results.leaderboard.map(r => `<li>✅ ${r.url} — Score: ${r.score}/100</li>`).join('')}</ul></div>`;
+    if (results.withWebsite.length > 0) html += `<div class="bg-blue-900 bg-opacity-30 border border-blue-500 rounded-lg p-4 mb-4"><h5 class="font-bold text-blue-400 mb-2">📧 Improvement Emails (${results.withWebsite.length})</h5><ul class="text-sm space-y-1">${results.withWebsite.map(r => `<li>📨 ${r.url} — Score: ${r.score}/100</li>`).join('')}</ul></div>`;
+    if (results.withoutWebsite.length > 0) html += `<div class="bg-purple-900 bg-opacity-30 border border-purple-500 rounded-lg p-4 mb-4"><h5 class="font-bold text-purple-400 mb-2">🌐 Website Offers (${results.withoutWebsite.length})</h5><ul class="text-sm space-y-1">${results.withoutWebsite.map(r => `<li>📬 ${r.url}</li>`).join('')}</ul></div>`;
+    if (results.errors.length > 0) html += `<div class="bg-red-900 bg-opacity-30 border border-red-500 rounded-lg p-4 mb-4"><h5 class="font-bold text-red-400 mb-2">❌ Scan Errors (${results.errors.length})</h5><ul class="text-sm space-y-1">${results.errors.map(r => `<li>⚠️ ${r.url} — ${r.error}</li>`).join('')}</ul></div>`;
+    html += `<div class="bg-gray-800 border border-gray-700 rounded-lg p-4"><p class="text-sm text-gray-300">📬 Summary report sent to <strong>${userEmail}</strong></p></div>`;
+    document.getElementById('bulkResultsContainer').innerHTML = html;
+    document.getElementById('bulkResults').classList.remove('hidden');
 }
+
 async function sendBulkEmails(results, userEmail, userName) {
-if (!userId) return;
-try {
-await fetch('/api/bulk-scan/send-summary', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ userEmail, userName, results }) });
-if (results.leaderboard.length > 0) await fetch('/api/bulk-scan/submit-leaderboard', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ entries: results.leaderboard, submittedBy: userEmail }) });
-if (results.withWebsite.length > 0) await fetch('/api/bulk-scan/send-improvement-emails', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ businesses: results.withWebsite, senderName: userName, senderEmail: userEmail }) });
-if (results.withoutWebsite.length > 0) await fetch('/api/bulk-scan/send-website-offers', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ businesses: results.withoutWebsite, senderName: userName, senderEmail: userEmail }) });
-alert('✅ Bulk scan complete! Emails are being sent via your SendGrid account.');
-} catch (error) { alert('⚠️ Scan complete but some emails may have failed. Check your SendGrid dashboard.'); }
+    if (!userId) return;
+    try {
+        await fetch('/api/bulk-scan/send-summary', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ userEmail, userName, results }) });
+        if (results.leaderboard.length > 0) await fetch('/api/bulk-scan/submit-leaderboard', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ entries: results.leaderboard, submittedBy: userEmail }) });
+        if (results.withWebsite.length > 0) await fetch('/api/bulk-scan/send-improvement-emails', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ businesses: results.withWebsite, senderName: userName, senderEmail: userEmail }) });
+        if (results.withoutWebsite.length > 0) await fetch('/api/bulk-scan/send-website-offers', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ businesses: results.withoutWebsite, senderName: userName, senderEmail: userEmail }) });
+        alert('✅ Bulk scan complete! Emails are being sent via your SendGrid account.');
+    } catch (error) { alert('⚠️ Scan complete but some emails may have failed. Check your SendGrid dashboard.'); }
 }
 
 // ============================================================
-// LEADERBOARD & FILTERS
+// LEADERBOARD
 // ============================================================
 async function loadLeaderboardData() {
-try {
-const response = await fetch('/api/leaderboard');
-if (!response.ok) throw new Error('Network response was not ok');
-const data = await response.json();
-if (data.success && data.entries && data.entries.length > 0) {
-allLeaderboardEntries = data.entries;
-document.getElementById('totalAgencies').textContent = data.stats?.totalAgencies || 0;
-document.getElementById('avgScore').textContent = data.averageScore || 0;
-document.getElementById('countriesCount').textContent = data.stats?.countriesCount || 0;
-document.getElementById('activeHelpers').textContent = data.stats?.activeHelpers || 0;
-// Initialize filters then render
-initFilters();
-filterAgencies(); 
-} else { showEmptyLeaderboard(); }
-} catch (error) { console.error('Error loading leaderboard:', error); showEmptyLeaderboard(); }
+    try {
+        const response = await fetch('/api/leaderboard');
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.json();
+        if (data.success && data.entries && data.entries.length > 0) {
+            allLeaderboardEntries = data.entries;
+            document.getElementById('totalAgencies').textContent = data.stats?.totalAgencies || 0;
+            document.getElementById('avgScore').textContent = data.averageScore || 0;
+            document.getElementById('countriesCount').textContent = data.stats?.countriesCount || 0;
+            document.getElementById('activeHelpers').textContent = data.stats?.activeHelpers || 0;
+            filterAgencies(); renderCountryFilters(); renderNicheFilters();
+        } else { showEmptyLeaderboard(); }
+    } catch (error) { console.error('Error loading leaderboard:', error); showEmptyLeaderboard(); }
 }
+
 function showEmptyLeaderboard() {
-['totalAgencies', 'avgScore', 'countriesCount', 'activeHelpers'].forEach(id => document.getElementById(id).textContent = '0');
-const container = document.getElementById('top3-container');
-if (container) container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No leaderboard entries found</div>';
-document.getElementById('rankings4to15Container').style.display = 'none';
-document.getElementById('totalCount').textContent = '0';
+    ['totalAgencies', 'avgScore', 'countriesCount', 'activeHelpers'].forEach(id => document.getElementById(id).textContent = '0');
+    const container = document.getElementById('top3-container');
+    if (container) container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No leaderboard entries found</div>';
+    document.getElementById('rankings4to15Container').style.display = 'none';
+    document.getElementById('totalCount').textContent = '0';
 }
 
-// --- FILTER LOGIC ---
-function initFilters() {
-renderCountryFilters();
-renderNicheFilters();
-updateActiveChips();
+function renderTop3() {
+    const container = document.getElementById('top3-container');
+    if (!container) return;
+    const top3 = allLeaderboardEntries.slice(0, 3);
+    if (!top3.length) { container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No entries found</div>'; return; }
+    container.innerHTML = top3.map((entry, index) => {
+        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
+        const medalClass = index === 0 ? 'gold' : index === 1 ? 'silver' : 'bronze';
+        const rankText = index === 0 ? '1st Worldwide' : index === 1 ? '2nd Worldwide' : '3rd Worldwide';
+        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+        return `<div class="top-card ${medalClass}">
+            <div class="text-5xl mb-2">${medal}</div>
+            <div class="text-xs font-bold uppercase tracking-wider mb-2 text-white/80">${rankText}</div>
+            <h3 class="text-xl font-bold mb-2">${companyName}</h3>
+            <div class="text-4xl font-black mb-2">${entry.score}/100</div>
+            <div class="text-white/80 mb-3">${getCountryFlag(entry.country)} ${entry.country}</div>
+            <button onclick="window.open('${entry.url}', '_blank', 'noopener')" class="w-full bg-black/30 hover:bg-black/50 text-white px-4 py-2 rounded-lg border border-white/30 transition-all"><i class="fas fa-external-link-alt mr-2"></i> Visit Website</button>
+        </div>`;
+    }).join('');
 }
 
-function handleFilterChange() {
-activeFilters.search = document.getElementById('searchInput').value.toLowerCase();
-filterAgencies();
+function renderRankings4to15() {
+    const grid = document.getElementById('rankings4to15Grid');
+    if (!grid) return;
+    const rankings = allLeaderboardEntries.slice(3, 15);
+    if (!rankings.length) { document.getElementById('rankings4to15Container').style.display = 'none'; return; }
+    document.getElementById('rankings4to15Container').style.display = 'block';
+    grid.innerHTML = rankings.map((entry, index) => {
+        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+        return `<div class="rank-card">
+            <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${index + 4}</div>
+            <h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
+            <div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
+            <div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
+            <a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">View Website <i class="fas fa-external-link-alt ml-1"></i></a>
+        </div>`;
+    }).join('');
 }
+
+function renderRankings16Plus() {
+    const tbody = document.getElementById('rankingsTbody');
+    const totalCount = document.getElementById('totalCount');
+    if (!tbody) return;
+    const rankings = allLeaderboardEntries.slice(15, 35);
+    if (totalCount) totalCount.textContent = allLeaderboardEntries.length;
+    if (!rankings.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-400">No more entries</td></tr>'; return; }
+    tbody.innerHTML = rankings.map((entry, index) => {
+        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+        const sc = entry.score >= 85 ? 'text-green-400' : entry.score >= 70 ? 'text-yellow-400' : 'text-red-400';
+        return `<tr>
+            <td><span class="inline-flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full font-bold">${index + 16}</span></td>
+            <td class="font-semibold">${companyName}</td>
+            <td><a href="${entry.url}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">${entry.url.replace('https://', '').substring(0, 25)}...</a></td>
+            <td><span class="text-lg font-bold ${sc}">${entry.score}</span></td>
+            <td><span class="text-sm">${getCountryFlag(entry.country)} ${entry.country}</span></td>
+            <td><span class="text-sm text-gray-400">${new Date(entry.created_at).toLocaleDateString()}</span></td>
+        </tr>`;
+    }).join('');
+}
+
+// ============================================================
+// FILTER STATE & CONFIG
+// ============================================================
+const activeFilters = { score: 'all', country: 'all', niche: 'all', sort: 'score-desc' };
+
+const NICHES = [
+    { id: 'ecommerce',     label: 'E-commerce' },
+    { id: 'healthcare',    label: 'Healthcare' },
+    { id: 'construction',  label: 'Construction' },
+    { id: 'food',          label: 'Food & Restaurant' },
+    { id: 'finance',       label: 'Finance & Accounting' },
+    { id: 'realestate',    label: 'Real Estate' },
+    { id: 'legal',         label: 'Legal Services' },
+    { id: 'education',     label: 'Education' },
+    { id: 'beauty',        label: 'Beauty & Wellness' },
+    { id: 'homeservices',  label: 'Home Services' },
+    { id: 'automotive',    label: 'Automotive' },
+    { id: 'tech',          label: 'Tech & Software' },
+    { id: 'creative',      label: 'Creative & Design' },
+    { id: 'fitness',       label: 'Fitness & Sports' },
+    { id: 'travel',        label: 'Travel & Tourism' },
+    { id: 'sustainability',label: 'Sustainability' },
+    { id: 'logistics',     label: 'Logistics & Shipping' },
+    { id: 'other',         label: 'Other' },
+];
 
 function setFilter(type, value, btn) {
-activeFilters[type] = value;
-// Update UI buttons
-const parent = btn.parentElement;
-Array.from(parent.children).forEach(c => c.classList.remove('active'));
-btn.classList.add('active');
-updateActiveChips();
-filterAgencies();
-}
-
-function setSort(value) {
-activeFilters.sort = value;
-filterAgencies();
-}
-
-function resetFilter(type) {
-if(type === 'score') { activeFilters.score = 'all'; document.querySelector('#scoreFilters .active')?.classList.remove('active'); document.querySelector('#scoreFilters button:first-child')?.classList.add('active'); }
-if(type === 'country') { activeFilters.country = 'all'; document.querySelector('#countryFilters .active')?.classList.remove('active'); document.querySelector('#countryFilters button:first-child')?.classList.add('active'); }
-if(type === 'niche') { activeFilters.niche = 'all'; document.querySelector('#nicheFilters .active')?.classList.remove('active'); document.querySelector('#nicheFilters button:first-child')?.classList.add('active'); }
-if(type === 'search') { document.getElementById('searchInput').value = ''; activeFilters.search = ''; }
-updateActiveChips();
-filterAgencies();
-}
-
-function clearAllFilters() {
-activeFilters = { score: 'all', country: 'all', niche: 'all', search: '', sort: 'score_desc' };
-document.getElementById('searchInput').value = '';
-document.querySelectorAll('.filter-tag').forEach(b => b.classList.remove('active'));
-document.querySelectorAll('#scoreFilters button, #countryFilters button, #nicheFilters button').forEach(b => {
-if(b.innerText.includes('All') || b.innerText.includes('Scores')) b.classList.add('active');
-});
-document.getElementById('sortSelect').value = 'score_desc';
-updateActiveChips();
-filterAgencies();
+    activeFilters[type] = value;
+    const groupMap = { score: 'scoreFilters', country: 'countryFilters', niche: 'nicheFilters', sort: 'sortFilters' };
+    const groupId = groupMap[type];
+    if (groupId) {
+        document.querySelectorAll('#' + groupId + ' .filter-tag').forEach(function(t) { t.classList.remove('active'); });
+    }
+    if (btn) btn.classList.add('active');
+    filterAgencies();
+    updateActiveChips();
 }
 
 function updateActiveChips() {
-const container = document.getElementById('activeFilterChips');
-const clearBtn = document.getElementById('clearFiltersBtn');
-let html = '';
-let hasActive = false;
+    var chips = document.getElementById('activeFilterChips');
+    var resetBtn = document.getElementById('resetFiltersBtn');
+    if (!chips) return;
+    var scoreLabels = { elite:'Elite 90+', pro:'Pro 85-89', good:'Good 70-84', building:'Under 70' };
+    var sortLabels = { 'score-asc':'Score Low-High', newest:'Newest', az:'A to Z' };
+    var html = '';
+    var chipStyle = 'display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:2px 8px;border-radius:9999px;margin:1px;';
+    var btnStyle = 'background:none;border:none;cursor:pointer;padding:0 2px;font-weight:bold;';
+    if (activeFilters.score !== 'all') {
+        html += '<span style="' + chipStyle + 'background:#4c1d95;border:1px solid #7e22ce;color:#e9d5ff;">' + scoreLabels[activeFilters.score] + ' <button style="' + btnStyle + 'color:#e9d5ff;" onclick="resetFilter(&quot;score&quot;)">x</button></span> ';
+    }
+    if (activeFilters.country !== 'all') {
+        html += '<span style="' + chipStyle + 'background:#1e3a8a;border:1px solid #3b82f6;color:#bfdbfe;">' + getCountryFlag(activeFilters.country) + ' ' + activeFilters.country + ' <button style="' + btnStyle + 'color:#bfdbfe;" onclick="resetFilter(&quot;country&quot;)">x</button></span> ';
+    }
+    if (activeFilters.niche !== 'all') {
+        var n = NICHES.find(function(x){return x.id===activeFilters.niche;});
+        html += '<span style="' + chipStyle + 'background:#064e3b;border:1px solid #10b981;color:#a7f3d0;">' + (n ? n.label : activeFilters.niche) + ' <button style="' + btnStyle + 'color:#a7f3d0;" onclick="resetFilter(&quot;niche&quot;)">x</button></span> ';
+    }
+    if (activeFilters.sort !== 'score-desc') {
+        html += '<span style="' + chipStyle + 'background:#374151;border:1px solid #6b7280;color:#e5e7eb;">' + (sortLabels[activeFilters.sort]||activeFilters.sort) + ' <button style="' + btnStyle + 'color:#e5e7eb;" onclick="resetFilter(&quot;sort&quot;)">x</button></span>';
+    }
+    chips.innerHTML = html;
+    var hasSearch = document.getElementById('searchInput') && document.getElementById('searchInput').value;
+    var hasFilter = html.length > 0 || hasSearch;
+    if (resetBtn) resetBtn.classList.toggle('hidden', !hasFilter);
+}
 
-if (activeFilters.score !== 'all') {
-hasActive = true;
-const labels = { elite: 'Elite 90+', pro: 'Pro 85-89', good: 'Good 70-84', low: 'Under 70' };
-html += `<span class="bg-purple-600 text-white px-3 py-1 rounded-full text-xs flex items-center gap-2">${labels[activeFilters.score]} <button onclick="resetFilter(&quot;score&quot;)" class="hover:text-gray-300">✕</button></span>`;
-}
-if (activeFilters.country !== 'all') {
-hasActive = true;
-html += `<span class="bg-blue-600 text-white px-3 py-1 rounded-full text-xs flex items-center gap-2">${activeFilters.country} <button onclick="resetFilter(&quot;country&quot;)" class="hover:text-gray-300">✕</button></span>`;
-}
-if (activeFilters.niche !== 'all') {
-hasActive = true;
-html += `<span class="bg-pink-600 text-white px-3 py-1 rounded-full text-xs flex items-center gap-2">${activeFilters.niche} <button onclick="resetFilter(&quot;niche&quot;)" class="hover:text-gray-300">✕</button></span>`;
-}
-if (activeFilters.search) {
-hasActive = true;
-html += `<span class="bg-gray-600 text-white px-3 py-1 rounded-full text-xs flex items-center gap-2">Search: "${activeFilters.search}" <button onclick="resetFilter(&quot;search&quot;)" class="hover:text-gray-300">✕</button></span>`;
+function resetFilter(type) {
+    activeFilters[type] = (type === 'sort') ? 'score-desc' : 'all';
+    renderCountryFilters(); renderNicheFilters();
+    document.querySelectorAll('#scoreFilters .filter-tag').forEach(function(b,i){ b.classList.toggle('active', i===0); });
+    document.querySelectorAll('#sortFilters .filter-tag').forEach(function(b,i){ b.classList.toggle('active', i===0); });
+    filterAgencies(); updateActiveChips();
 }
 
-container.innerHTML = html;
-clearBtn.classList.toggle('hidden', !hasActive);
+function resetAllFilters() {
+    activeFilters.score='all'; activeFilters.country='all'; activeFilters.niche='all'; activeFilters.sort='score-desc';
+    var s = document.getElementById('searchInput'); if (s) s.value = '';
+    renderCountryFilters(); renderNicheFilters();
+    document.querySelectorAll('#scoreFilters .filter-tag').forEach(function(b,i){ b.classList.toggle('active', i===0); });
+    document.querySelectorAll('#sortFilters .filter-tag').forEach(function(b,i){ b.classList.toggle('active', i===0); });
+    filterAgencies(); updateActiveChips();
 }
 
 function getFilteredEntries() {
-let filtered = [...allLeaderboardEntries];
-
-// Search
-if (activeFilters.search) {
-filtered = filtered.filter(e => 
-(e.company_name || '').toLowerCase().includes(activeFilters.search) ||
-(e.url || '').toLowerCase().includes(activeFilters.search) ||
-extractDomainFromUrl(e.url).toLowerCase().includes(activeFilters.search)
-);
+    var query = (document.getElementById('searchInput') ? document.getElementById('searchInput').value.toLowerCase() : '');
+    var entries = allLeaderboardEntries.slice();
+    // Search
+    if (query) entries = entries.filter(function(e){
+        return (e.company_name||'').toLowerCase().includes(query) || (e.url||'').toLowerCase().includes(query) || extractDomainFromUrl(e.url).toLowerCase().includes(query) || (e.niche||'').toLowerCase().includes(query);
+    });
+    // Score
+    if (activeFilters.score==='elite')    entries = entries.filter(function(e){ return e.score>=90; });
+    if (activeFilters.score==='pro')      entries = entries.filter(function(e){ return e.score>=85 && e.score<90; });
+    if (activeFilters.score==='good')     entries = entries.filter(function(e){ return e.score>=70 && e.score<85; });
+    if (activeFilters.score==='building') entries = entries.filter(function(e){ return e.score<70; });
+    // Country
+    if (activeFilters.country !== 'all') entries = entries.filter(function(e){ return e.country===activeFilters.country; });
+    // Niche
+    if (activeFilters.niche !== 'all') entries = entries.filter(function(e){ return (e.niche||'').toLowerCase()===activeFilters.niche; });
+    // Sort
+    if (activeFilters.sort==='score-desc') entries.sort(function(a,b){ return b.score-a.score; });
+    if (activeFilters.sort==='score-asc')  entries.sort(function(a,b){ return a.score-b.score; });
+    if (activeFilters.sort==='newest')     entries.sort(function(a,b){ return new Date(b.created_at)-new Date(a.created_at); });
+    if (activeFilters.sort==='az')         entries.sort(function(a,b){ return (a.company_name||'').localeCompare(b.company_name||''); });
+    return entries;
 }
 
-// Score
-if (activeFilters.score !== 'all') {
-filtered = filtered.filter(e => {
-const s = e.score || 0;
-if (activeFilters.score === 'elite') return s >= 90;
-if (activeFilters.score === 'pro') return s >= 85 && s < 90;
-if (activeFilters.score === 'good') return s >= 70 && s < 85;
-if (activeFilters.score === 'low') return s < 70;
-return true;
-});
-}
-
-// Country
-if (activeFilters.country !== 'all') {
-filtered = filtered.filter(e => (e.country || '') === activeFilters.country);
-}
-
-// Niche
-if (activeFilters.niche !== 'all') {
-filtered = filtered.filter(e => (e.niche || '') === activeFilters.niche);
-}
-
-// Sort
-if (activeFilters.sort === 'score_desc') filtered.sort((a,b) => (b.score||0) - (a.score||0));
-if (activeFilters.sort === 'score_asc') filtered.sort((a,b) => (a.score||0) - (b.score||0));
-if (activeFilters.sort === 'az') filtered.sort((a,b) => (a.company_name||'').localeCompare(b.company_name||''));
-if (activeFilters.sort === 'newest') filtered.sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0));
-
-return filtered;
+function getNicheLabel(nicheId) {
+    var n = NICHES.find(function(x){ return x.id===(nicheId||'').toLowerCase(); });
+    return n ? n.label : nicheId;
 }
 
 function renderCountryFilters() {
-const div = document.getElementById('countryFilters');
-if (!div) return;
-const countries = [...new Set(allLeaderboardEntries.map(e => e.country).filter(Boolean))].sort();
-let html = '<button class="filter-tag active" onclick="setFilter(\'country\',\'all\',this)">🌍 All Countries</button>';
-countries.forEach(country => { 
-if (country) html += `<button class="filter-tag" onclick="setFilter('country','${country.replace(/'/g, "&apos;")}',this)">${getCountryFlag(country)} ${country}</button>`; 
-});
-div.innerHTML = html;
+    var div = document.getElementById('countryFilters');
+    if (!div) return;
+    var countries = [];
+    allLeaderboardEntries.forEach(function(e){ if(e.country && countries.indexOf(e.country)<0) countries.push(e.country); });
+    countries.sort();
+    var html = '<button class="filter-tag ' + (activeFilters.country==='all'?'active':'') + '" onclick="setFilter('country','all',this)">All Countries</button>';
+    countries.forEach(function(country){ 
+        var safe = country.replace(/'/g, "&#39;");
+        html += '<button class="filter-tag ' + (activeFilters.country===country?'active':'') + '" onclick="setFilter('country','' + safe + '',this)">' + getCountryFlag(country) + ' ' + country + '</button>'; 
+    });
+    div.innerHTML = html;
 }
 
 function renderNicheFilters() {
-const div = document.getElementById('nicheFilters');
-if (!div) return;
-const niches = [...new Set(allLeaderboardEntries.map(e => e.niche).filter(Boolean))].sort();
-if (niches.length === 0) { div.innerHTML = '<span class="text-xs text-gray-500">No niche data available yet</span>'; return; }
-let html = '<button class="filter-tag active" onclick="setFilter(\'niche\',\'all\',this)">All Industries</button>';
-niches.forEach(niche => { 
-html += `<button class="filter-tag" onclick="setFilter('niche','${niche.replace(/'/g, "&apos;")}',this)">${niche}</button>`; 
-});
-div.innerHTML = html;
+    var div = document.getElementById('nicheFilters');
+    if (!div) return;
+    var usedNiches = {};
+    allLeaderboardEntries.forEach(function(e){ if(e.niche) usedNiches[e.niche.toLowerCase()]=true; });
+    var hasNiches = Object.keys(usedNiches).length > 0;
+    var html = '<button class="filter-tag ' + (activeFilters.niche==='all'?'active':'') + '" onclick="setFilter('niche','all',this)">All Industries</button>';
+    NICHES.forEach(function(n){
+        if (!hasNiches || usedNiches[n.id]) {
+            html += '<button class="filter-tag ' + (activeFilters.niche===n.id?'active':'') + '" onclick="setFilter('niche','' + n.id + '',this)">' + n.label + '</button>';
+        }
+    });
+    div.innerHTML = html;
 }
 
 function filterAgencies() {
-const filtered = getFilteredEntries();
-updateActiveChips();
-// Update counts
-document.getElementById('totalCount').textContent = filtered.length;
-// Render sections
-renderFilteredTop3(filtered);
-renderFilteredRankings4to15(filtered);
-renderFilteredRankings16Plus(filtered);
+    var filtered = getFilteredEntries();
+    var total = allLeaderboardEntries.length;
+    var countEl = document.getElementById('filterResultsCount');
+    if (countEl) countEl.textContent = filtered.length < total ? '(' + filtered.length + ' of ' + total + ')' : '(' + total + ')';
+    renderFilteredTop3(filtered);
+    renderFilteredRankings4to15(filtered);
+    renderFilteredRankings16Plus(filtered);
+    updateActiveChips();
 }
 
-function renderFilteredTop3(entries) {
-const container = document.getElementById('top3-container');
-if (!container) return;
-const top3 = entries.slice(0, 3);
-if (!top3.length) { container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No entries match your filters</div>'; return; }
-container.innerHTML = top3.map((entry, index) => {
-const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
-const medalClass = index === 0 ? 'gold' : index === 1 ? 'silver' : 'bronze';
-const rankText = index === 0 ? '1st Worldwide' : index === 1 ? '2nd Worldwide' : '3rd Worldwide';
-const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-return `<div class="top-card ${medalClass}">
-<div class="text-5xl mb-2">${medal}</div>
-<div class="text-xs font-bold uppercase tracking-wider mb-2 text-white/80">${rankText}</div>
-<h3 class="text-xl font-bold mb-2">${companyName}</h3>
-<div class="text-4xl font-black mb-2">${entry.score}/100</div>
-<div class="text-white/80 mb-3">${getCountryFlag(entry.country)} ${entry.country}</div>
-<button onclick="window.open('${entry.url}', '_blank', 'noopener')" class="w-full bg-black/30 hover:bg-black/50 text-white px-4 py-2 rounded-lg border border-white/30 transition-all"><i class="fas fa-external-link-alt mr-2"></i> Visit Website</button>
-</div>`;
-}).join('');
+function renderFilteredTop3(filtered) {
+    var container = document.getElementById('top3-container');
+    if (!container) return;
+    var top3 = filtered.slice(0, 3);
+    if (!top3.length) { container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No results match your filters. <button onclick="resetAllFilters()" class="text-purple-400 underline ml-1">Clear filters</button></div>'; return; }
+    container.innerHTML = top3.map(function(entry, index) {
+        var medal = index===0?'gold':index===1?'silver':'bronze';
+        var emo = index===0?'🥇':index===1?'🥈':'🥉';
+        var rankText = index===0?'1st Worldwide':index===1?'2nd Worldwide':'3rd Worldwide';
+        var name = entry.company_name || extractDomainFromUrl(entry.url);
+        var nicheHtml = entry.niche ? '<div style="font-size:11px;background:rgba(0,0,0,0.25);padding:2px 8px;border-radius:9999px;display:inline-block;margin:2px 0;">' + getNicheLabel(entry.niche) + '</div><br>' : '';
+        return '<div class="top-card ' + medal + '"><div class="text-5xl mb-2">' + emo + '</div><div class="text-xs font-bold uppercase tracking-wider mb-2" style="color:rgba(255,255,255,0.8)">' + rankText + '</div><h3 class="text-xl font-bold mb-2">' + name + '</h3><div class="text-4xl font-black mb-2">' + entry.score + '/100</div>' + nicheHtml + '<div style="color:rgba(255,255,255,0.8);margin-bottom:0.75rem;">' + getCountryFlag(entry.country) + ' ' + entry.country + '</div><button onclick="window.open('' + entry.url + '','_blank','noopener')" class="w-full"><i class="fas fa-external-link-alt mr-2"></i> Visit Website</button></div>';
+    }).join('');
 }
 
-function renderFilteredRankings4to15(entries) {
-const grid = document.getElementById('rankings4to15Grid');
-if (!grid) return;
-const rankings = entries.slice(3, 15);
-if (!rankings.length) { document.getElementById('rankings4to15Container').style.display = 'none'; return; }
-document.getElementById('rankings4to15Container').style.display = 'block';
-grid.innerHTML = rankings.map((entry, index) => {
-const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-return `<div class="rank-card">
-<div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${index + 4}</div>
-<h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
-<div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
-<div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
-<a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">View Website <i class="fas fa-external-link-alt ml-1"></i></a>
-</div>`;
-}).join('');
+function renderFilteredRankings4to15(filtered) {
+    var grid = document.getElementById('rankings4to15Grid');
+    var container = document.getElementById('rankings4to15Container');
+    if (!grid) return;
+    var rankings = filtered.slice(3, 15);
+    if (!rankings.length) { if(container) container.style.display='none'; return; }
+    if (container) container.style.display='block';
+    grid.innerHTML = rankings.map(function(entry, index) {
+        var name = entry.company_name || extractDomainFromUrl(entry.url);
+        var nicheHtml = entry.niche ? '<div style="font-size:11px;color:#a855f7;margin-bottom:4px;">' + getNicheLabel(entry.niche) + '</div>' : '';
+        return '<div class="rank-card"><div class="rank-number text-2xl font-bold text-gray-400 mb-2">#' + (index+4) + '</div><h4 class="font-bold text-white text-sm mb-2 truncate">' + name + '</h4><div class="text-2xl font-black text-green-400 mb-2">' + entry.score + '</div>' + nicheHtml + '<div class="text-xs text-gray-400 mb-2">' + getCountryFlag(entry.country) + ' ' + entry.country + '</div><a href="' + entry.url + '" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">View Website <i class="fas fa-external-link-alt ml-1"></i></a></div>';
+    }).join('');
 }
 
-function renderFilteredRankings16Plus(entries) {
-const tbody = document.getElementById('rankingsTbody');
-const totalCount = document.getElementById('totalCount');
-if (!tbody) return;
-const rankings = entries.slice(15, 35);
-if (totalCount) totalCount.textContent = entries.length;
-if (!rankings.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-400">No more entries</td></tr>'; return; }
-tbody.innerHTML = rankings.map((entry, index) => {
-const companyName = entry.company_name || extractDomainFromUrl(entry.url);
-const sc = entry.score >= 85 ? 'text-green-400' : entry.score >= 70 ? 'text-yellow-400' : 'text-red-400';
-return `<tr>
-<td><span class="inline-flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full font-bold">${index + 16}</span></td>
-<td class="font-semibold">${companyName}</td>
-<td><a href="${entry.url}" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">${entry.url.replace('https://', '').substring(0, 25)}...</a></td>
-<td><span class="text-lg font-bold ${sc}">${entry.score}</span></td>
-<td><span class="text-sm">${getCountryFlag(entry.country)} ${entry.country}</span></td>
-<td><span class="text-sm text-gray-400">${new Date(entry.created_at).toLocaleDateString()}</span></td>
-</tr>`;
-}).join('');
+function renderFilteredRankings16Plus(filtered) {
+    var tbody = document.getElementById('rankingsTbody');
+    var totalCount = document.getElementById('totalCount');
+    if (!tbody) return;
+    var rankings = filtered.slice(15, 35);
+    if (totalCount) totalCount.textContent = filtered.length;
+    if (!rankings.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-400">No entries match your filters</td></tr>'; return; }
+    tbody.innerHTML = rankings.map(function(entry, index) {
+        var name = entry.company_name || extractDomainFromUrl(entry.url);
+        var sc = entry.score>=85?'text-green-400':entry.score>=70?'text-yellow-400':'text-red-400';
+        var nicheHtml = entry.niche ? '<br><span style="font-size:11px;color:#a855f7;">' + getNicheLabel(entry.niche) + '</span>' : '';
+        return '<tr><td><span class="inline-flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full font-bold">' + (index+16) + '</span></td><td class="font-semibold">' + name + nicheHtml + '</td><td><a href="' + entry.url + '" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">' + entry.url.replace('https://','').substring(0,25) + '...</a></td><td><span class="text-lg font-bold ' + sc + '">' + entry.score + '</span></td><td><span class="text-sm">' + getCountryFlag(entry.country) + ' ' + entry.country + '</span></td><td><span class="text-sm text-gray-400">' + new Date(entry.created_at).toLocaleDateString() + '</span></td></tr>';
+    }).join('');
 }
 
 function toggleFilters() {
-const panel = document.getElementById('filterPanel');
-const icon = document.getElementById('filterIcon');
-if (panel) { panel.classList.toggle('hidden'); icon.classList.toggle('fa-chevron-down'); icon.classList.toggle('fa-chevron-up'); }
+    var panel = document.getElementById('filterPanel');
+    var icon = document.getElementById('filterIcon');
+    if (panel) { panel.classList.toggle('hidden'); if(icon){icon.classList.toggle('fa-chevron-down');icon.classList.toggle('fa-chevron-up');} }
 }
+
 function toggleRankings() {
-const container = document.getElementById('rankingsContainer');
-const toggleText = document.getElementById('rankingsToggleText');
-if (container) { container.classList.toggle('hidden'); toggleText.textContent = container.classList.contains('hidden') ? '📊 Show Rankings 16+' : '📊 Hide Rankings 16+'; }
+    const container = document.getElementById('rankingsContainer');
+    const toggleText = document.getElementById('rankingsToggleText');
+    if (container) { container.classList.toggle('hidden'); toggleText.textContent = container.classList.contains('hidden') ? '📊 Show Rankings 16+' : '📊 Hide Rankings 16+'; }
 }
 
 // ============================================================
 // FREELANCERS
 // ============================================================
 async function loadFreelancers() {
-try {
-const response = await fetch('/api/freelancers');
-if (!response.ok) throw new Error('Network response was not ok');
-const data = await response.json();
-const grid = document.getElementById('freelancersGrid');
-if (!grid) return;
-const freelancers = data.freelancers || [];
-if (!freelancers.length) { grid.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No freelancers found</div>'; return; }
-grid.innerHTML = freelancers.map(f => {
-const firstName = f.name.split(' ')[0];
-const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase();
-return `<div class="card hover:border-purple-500">
-<div class="card-content">
-<div class="flex items-start gap-4 mb-4">
-<div class="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl font-bold text-white">${initials}</div>
-<div class="flex-1">
-<div class="flex items-center justify-between">
-<h3 class="font-bold text-lg text-white">${f.name}</h3>
-${f.is_featured ? '<span class="px-2 py-1 bg-yellow-600 rounded text-xs text-white font-semibold flex items-center gap-1">⭐ Featured</span>' : '<span class="px-2 py-1 bg-green-600 rounded text-xs text-white font-semibold">✓ Verified</span>'}
-</div>
-<p class="text-sm text-gray-400">${f.title || 'SEO Specialist'}</p>
-</div>
-</div>
-<p class="text-gray-300 text-sm mb-4">${f.bio || 'No bio available'}</p>
-<div class="flex items-center justify-between text-sm mb-4">
-<span class="text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i> ${f.location || f.country || 'Remote'}</span>
-${f.hourly_rate ? `<span class="text-purple-400">💰 ${f.hourly_rate}</span>` : ''}
-</div>
-</div>
-<div class="card-footer">
-<a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20discuss%20SEO%20optimization%20with%20${encodeURIComponent(f.name)}" target="_blank" rel="noopener" class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 no-underline">
-<i class="fab fa-whatsapp"></i> Contact ${firstName}
-</a>
-</div>
-</div>`;
-}).join('');
-} catch (error) {
-console.error('Error loading freelancers:', error);
-document.getElementById('freelancersGrid').innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Could not load freelancers</div>';
+    try {
+        const response = await fetch('/api/freelancers');
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.json();
+        const grid = document.getElementById('freelancersGrid');
+        if (!grid) return;
+        const freelancers = data.freelancers || [];
+        if (!freelancers.length) { grid.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No freelancers found</div>'; return; }
+        grid.innerHTML = freelancers.map(f => {
+            const firstName = f.name.split(' ')[0];
+            const initials = f.name.split(' ').map(n => n[0]).join('').toUpperCase();
+            return `<div class="card hover:border-purple-500">
+                <div class="card-content">
+                    <div class="flex items-start gap-4 mb-4">
+                        <div class="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl font-bold text-white">${initials}</div>
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                                <h3 class="font-bold text-lg text-white">${f.name}</h3>
+                                ${f.is_featured ? '<span class="px-2 py-1 bg-yellow-600 rounded text-xs text-white font-semibold flex items-center gap-1">⭐ Featured</span>' : '<span class="px-2 py-1 bg-green-600 rounded text-xs text-white font-semibold">✓ Verified</span>'}
+                            </div>
+                            <p class="text-sm text-gray-400">${f.title || 'SEO Specialist'}</p>
+                        </div>
+                    </div>
+                    <p class="text-gray-300 text-sm mb-4">${f.bio || 'No bio available'}</p>
+                    <div class="flex items-center justify-between text-sm mb-4">
+                        <span class="text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i> ${f.location || f.country || 'Remote'}</span>
+                        ${f.hourly_rate ? `<span class="text-purple-400">💰 ${f.hourly_rate}</span>` : ''}
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="https://wa.me/31628073996?text=Hi!%20I%20want%20to%20discuss%20SEO%20optimization%20with%20${encodeURIComponent(f.name)}" target="_blank" rel="noopener" class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 no-underline">
+                        <i class="fab fa-whatsapp"></i> Contact ${firstName}
+                    </a>
+                </div>
+            </div>`;
+        }).join('');
+    } catch (error) {
+        console.error('Error loading freelancers:', error);
+        document.getElementById('freelancersGrid').innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">Could not load freelancers</div>';
+    }
 }
-}
+
 function openFreelancerModal() { const modal = document.getElementById('freelancerModal'); if (modal) { modal.classList.add('active'); document.body.style.overflow = 'hidden'; } }
 function closeModal() { const modal = document.getElementById('freelancerModal'); if (modal) { modal.classList.remove('active'); document.body.style.overflow = 'auto'; } }
+
 function submitFreelancer() {
-const name = document.getElementById('freelancerName')?.value;
-const email = document.getElementById('freelancerEmail')?.value;
-if (!name || !email) { alert('❌ Name and email are required'); return; }
-if (!email.includes('@')) { alert('❌ Please enter a valid email'); return; }
-// Get the new price range value
-const hourlyRate = document.getElementById('freelancerRate')?.value || '';
-const isFeatured = document.getElementById('featuredListing')?.checked || false;
-if (isFeatured) window.open('https://paypal.me/ojgmedia?locale.x=en_US&country.x=NL', '_blank', 'noopener');
-fetch('/api/freelancers/register', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({ 
-name, 
-email, 
-phone: document.getElementById('freelancerPhone')?.value, 
-title: document.getElementById('freelancerTitle')?.value || 'SEO Specialist', 
-bio: document.getElementById('freelancerBio')?.value || null, 
-hourly_rate: hourlyRate, // Sending the new field
-is_featured: isFeatured 
-})
-})
-.then(r => r.json())
-.then(data => {
-if (data.success) {
-alert(`✅ Thank you ${name}! We'll review your application within 24 hours.${isFeatured ? ' Please complete the payment via PayPal.' : ''}`);
-closeModal();
-['freelancerName', 'freelancerEmail', 'freelancerPhone', 'freelancerTitle', 'freelancerBio', 'freelancerRate'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-document.getElementById('bioCharCount').textContent = '0/200';
-document.getElementById('featuredListing').checked = false;
-} else alert('❌ ' + (data.error || 'Registration failed'));
-})
-.catch(error => alert('❌ Registration failed: ' + error.message));
+    const name = document.getElementById('freelancerName')?.value;
+    const email = document.getElementById('freelancerEmail')?.value;
+    if (!name || !email) { alert('❌ Name and email are required'); return; }
+    if (!email.includes('@')) { alert('❌ Please enter a valid email'); return; }
+    const isFeatured = document.getElementById('featuredListing')?.checked || false;
+    if (isFeatured) window.open('https://paypal.me/ojgmedia?locale.x=en_US&country.x=NL', '_blank', 'noopener');
+    fetch('/api/freelancers/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, phone: document.getElementById('freelancerPhone')?.value, title: document.getElementById('freelancerTitle')?.value || 'SEO Specialist', bio: document.getElementById('freelancerBio')?.value || null, hourly_rate: document.getElementById('freelancerRate')?.value || null, is_featured: isFeatured })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(`✅ Thank you ${name}! We'll review your application within 24 hours.${isFeatured ? ' Please complete the payment via PayPal.' : ''}`);
+            closeModal();
+            ['freelancerName', 'freelancerEmail', 'freelancerPhone', 'freelancerTitle', 'freelancerBio', 'freelancerRate'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            document.getElementById('bioCharCount').textContent = '0/200';
+            document.getElementById('featuredListing').checked = false;
+        } else alert('❌ ' + (data.error || 'Registration failed'));
+    })
+    .catch(error => alert('❌ Registration failed: ' + error.message));
 }
 
 // ============================================================
 // HELPERS
 // ============================================================
 function extractDomainFromUrl(url) {
-if (!url) return 'Company';
-try {
-const hostname = new URL(url).hostname;
-let name = hostname.replace('www.', '').split('.')[0];
-return name.charAt(0).toUpperCase() + name.slice(1);
-} catch (e) { return 'Company'; }
+    if (!url) return 'Company';
+    try {
+        const hostname = new URL(url).hostname;
+        let name = hostname.replace('www.', '').split('.')[0];
+        return name.charAt(0).toUpperCase() + name.slice(1);
+    } catch (e) { return 'Company'; }
 }
+
 function getCountryFlag(country) {
-const flags = { 
-'Netherlands': '🇳🇱', 'NL': '🇳🇱', 'United Kingdom': '🇬🇧', 'UK': '🇬🇧', 'US': '🇺🇸', 'United States': '🇺🇸', 
-'Germany': '🇩🇪', 'DE': '🇩🇪', 'France': '🇫🇷', 'FR': '🇫🇷', 'Belgium': '🇧🇪', 'BE': '🇧🇪', 'Spain': '🇪🇸', 'ES': '🇪🇸', 
-'Italy': '🇮🇹', 'IT': '🇮🇹', 'New Zealand': '🇳🇿', 'NZ': '🇳🇿', 'Australia': '🇦🇺', 'AU': '🇦🇺', 'Canada': '🇨🇦', 'CA': '🇨🇦',
-'Ireland': '🇮🇪', 'IE': '🇮🇪', 'Sweden': '🇸🇪', 'SE': '🇸🇪', 'Norway': '🇳🇴', 'NO': '🇳🇴', 'Denmark': '🇩🇰', 'DK': '🇩🇰',
-'Finland': '🇫🇮', 'FI': '🇫🇮', 'Switzerland': '🇨🇭', 'CH': '🇨🇭', 'Austria': '🇦🇹', 'AT': '🇦🇹', 'Portugal': '🇵🇹', 'PT': '🇵🇹',
-'Poland': '🇵🇱', 'PL': '🇵🇱', 'Czech Republic': '🇨🇿', 'CZ': '🇨🇿', 'South Africa': '🇿🇦', 'ZA': '🇿🇦', 'Nigeria': '🇳🇬', 'NG': '🇳🇬',
-'India': '🇮🇳', 'IN': '🇮🇳', 'Philippines': '🇵🇭', 'PH': '🇵🇭', 'Singapore': '🇸🇬', 'SG': '🇸🇬', 'Japan': '🇯🇵', 'JP': '🇯🇵',
-'Brazil': '🇧🇷', 'BR': '🇧🇷', 'Mexico': '🇲🇽', 'MX': '🇲🇽', 'UAE': '🇦🇪', 'AE': '🇦🇪'
-};
-return flags[country] || '🌐';
+    const flags = {
+        'Netherlands': '🇳🇱', 'NL': '🇳🇱',
+        'United Kingdom': '🇬🇧', 'UK': '🇬🇧', 'GB': '🇬🇧',
+        'United States': '🇺🇸', 'US': '🇺🇸', 'USA': '🇺🇸',
+        'Germany': '🇩🇪', 'DE': '🇩🇪',
+        'France': '🇫🇷', 'FR': '🇫🇷',
+        'Belgium': '🇧🇪', 'BE': '🇧🇪',
+        'Spain': '🇪🇸', 'ES': '🇪🇸',
+        'Italy': '🇮🇹', 'IT': '🇮🇹',
+        'New Zealand': '🇳🇿', 'NZ': '🇳🇿',
+        'Australia': '🇦🇺', 'AU': '🇦🇺',
+        'Canada': '🇨🇦', 'CA': '🇨🇦',
+        'Ireland': '🇮🇪', 'IE': '🇮🇪',
+        'Sweden': '🇸🇪', 'SE': '🇸🇪',
+        'Norway': '🇳🇴', 'NO': '🇳🇴',
+        'Denmark': '🇩🇰', 'DK': '🇩🇰',
+        'Finland': '🇫🇮', 'FI': '🇫🇮',
+        'Switzerland': '🇨🇭', 'CH': '🇨🇭',
+        'Austria': '🇦🇹', 'AT': '🇦🇹',
+        'Portugal': '🇵🇹', 'PT': '🇵🇹',
+        'Poland': '🇵🇱', 'PL': '🇵🇱',
+        'Czech Republic': '🇨🇿', 'CZ': '🇨🇿', 'Czechia': '🇨🇿',
+        'Hungary': '🇭🇺', 'HU': '🇭🇺',
+        'Romania': '🇷🇴', 'RO': '🇷🇴',
+        'Greece': '🇬🇷', 'GR': '🇬🇷',
+        'Turkey': '🇹🇷', 'TR': '🇹🇷',
+        'South Africa': '🇿🇦', 'ZA': '🇿🇦',
+        'Nigeria': '🇳🇬', 'NG': '🇳🇬',
+        'Kenya': '🇰🇪', 'KE': '🇰🇪',
+        'Ghana': '🇬🇭', 'GH': '🇬🇭',
+        'India': '🇮🇳', 'IN': '🇮🇳',
+        'Pakistan': '🇵🇰', 'PK': '🇵🇰',
+        'Bangladesh': '🇧🇩', 'BD': '🇧🇩',
+        'Philippines': '🇵🇭', 'PH': '🇵🇭',
+        'Indonesia': '🇮🇩', 'ID': '🇮🇩',
+        'Malaysia': '🇲🇾', 'MY': '🇲🇾',
+        'Singapore': '🇸🇬', 'SG': '🇸🇬',
+        'Thailand': '🇹🇭', 'TH': '🇹🇭',
+        'Vietnam': '🇻🇳', 'VN': '🇻🇳',
+        'Japan': '🇯🇵', 'JP': '🇯🇵',
+        'South Korea': '🇰🇷', 'KR': '🇰🇷',
+        'China': '🇨🇳', 'CN': '🇨🇳',
+        'Hong Kong': '🇭🇰', 'HK': '🇭🇰',
+        'Brazil': '🇧🇷', 'BR': '🇧🇷',
+        'Mexico': '🇲🇽', 'MX': '🇲🇽',
+        'Argentina': '🇦🇷', 'AR': '🇦🇷',
+        'Colombia': '🇨🇴', 'CO': '🇨🇴',
+        'Chile': '🇨🇱', 'CL': '🇨🇱',
+        'Peru': '🇵🇪', 'PE': '🇵🇪',
+        'United Arab Emirates': '🇦🇪', 'UAE': '🇦🇪', 'AE': '🇦🇪',
+        'Saudi Arabia': '🇸🇦', 'SA': '🇸🇦',
+        'Israel': '🇮🇱', 'IL': '🇮🇱',
+        'Russia': '🇷🇺', 'RU': '🇷🇺',
+        'Ukraine': '🇺🇦', 'UA': '🇺🇦',
+    };
+    return flags[country] || '🌐';
 }
+
 function toggleMobileMenu() {
-const menu = document.getElementById('mobileMenu');
-const btn  = document.getElementById('hamburgerBtn');
-menu.classList.toggle('open');
-btn.classList.toggle('open');
+    const menu = document.getElementById('mobileMenu');
+    const btn  = document.getElementById('hamburgerBtn');
+    menu.classList.toggle('open');
+    btn.classList.toggle('open');
 }
 function closeMobileMenu() {
-document.getElementById('mobileMenu').classList.remove('open');
-document.getElementById('hamburgerBtn').classList.remove('open');
+    document.getElementById('mobileMenu').classList.remove('open');
+    document.getElementById('hamburgerBtn').classList.remove('open');
 }
+// Close menu when clicking outside
 document.addEventListener('click', function(e) {
-const menu = document.getElementById('mobileMenu');
-const btn  = document.getElementById('hamburgerBtn');
-if (menu && !menu.contains(e.target) && !btn.contains(e.target)) {
-menu.classList.remove('open');
-btn.classList.remove('open');
-}
+    const menu = document.getElementById('mobileMenu');
+    const btn  = document.getElementById('hamburgerBtn');
+    if (menu && !menu.contains(e.target) && !btn.contains(e.target)) {
+        menu.classList.remove('open');
+        btn.classList.remove('open');
+    }
 });
+
 window.onclick = function (event) { const modal = document.getElementById('freelancerModal'); if (event.target === modal) closeModal(); };
 </script>
 </body>
