@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ContentScale - Elite SEO Content Quality Scanner 2026 - 100/100</title>
+<!-- ✅ FAVICON ADDED HERE (Purple Robot Icon) -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%237e22ce'/%3E%3Crect x='20' y='25' width='60' height='40' rx='10' fill='%231f2937'/%3E%3Ccircle cx='40' cy='45' r='5' fill='%23a855f7'/%3E%3Ccircle cx='60' cy='45' r='5' fill='%23a855f7'/%3E%3Cpath d='M 30 60 Q 50 70 70 60' stroke='%23a855f7' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Crect x='45' y='15' width='10' height='15' fill='%231f2937'/%3E%3Crect x='45' y='15' width='10' height='15' fill='%237e22ce' opacity='0.5'/%3E%3C/svg%3E">
+
 <meta name="description" content="Scan je content op 100/100 met ons Elite GRAAF Framework. Detecteert AI Overview ready content, E-E-A-T signals, en meer.">
 <link rel="preconnect" href="https://cdn.tailwindcss.com">
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
@@ -392,11 +395,7 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
           <div><code class="text-purple-400">{{sender_name}}</code> - Your name</div>
           <div><code class="text-purple-400">{{sender_email}}</code> - Your email</div>
           <div><code class="text-purple-400">{{website_url}}</code> - Business website</div>
-          <div><code class="text-green-400">{{unsubscribe_url}}</code> - Unsubscribe link <span class="text-red-400 font-bold">⚠️ Required by law</span></div>
         </div>
-      </div>
-      <div class="max-w-5xl mx-auto mt-4 bg-red-900 bg-opacity-30 border border-red-500 rounded-lg p-4">
-        <p class="text-sm text-red-300"><strong>⚖️ Legal requirement (GDPR + CAN-SPAM):</strong> Every commercial email you send must include an unsubscribe link. The templates below already include <code class="text-green-400">{{unsubscribe_url}}</code>. Do not remove it — sending emails without it can result in fines and your SendGrid account being banned.</p>
       </div>
     </div>
   </div>
@@ -582,19 +581,6 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
         <textarea id="freelancerBio" rows="3" maxlength="200" placeholder="Tell us about your expertise and experience..." class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"></textarea>
         <div class="flex justify-between mt-1"><span class="text-xs text-gray-500">Maximum 200 characters</span><span id="bioCharCount" class="text-xs text-gray-500">0/200</span></div>
       </div>
-      <div><label class="block text-sm mb-2 text-gray-700">Hourly Rate / Price Range *</label>
-        <select id="freelancerRate" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-          <option value="">Select your rate...</option>
-          <option value="€25 - €50 / hour">€25 - €50 / hour</option>
-          <option value="€50 - €75 / hour">€50 - €75 / hour</option>
-          <option value="€75 - €100 / hour">€75 - €100 / hour</option>
-          <option value="€100 - €150 / hour">€100 - €150 / hour</option>
-          <option value="€150+ / hour">€150+ / hour</option>
-          <option value="Project-based pricing">Project-based pricing</option>
-          <option value="Free consultation first">Free consultation first</option>
-        </select>
-      </div>
-
       <div class="border-t border-gray-200 pt-4 mt-2">
         <div class="flex items-start gap-3">
           <div class="flex items-center h-5"><input type="checkbox" id="featuredListing" class="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500"></div>
@@ -795,124 +781,19 @@ function toggleBulkScanner() {
 // ============================================================
 // TEMPLATES
 // ============================================================
-// ============================================================
-// DEFAULT TEMPLATES (Grade 3 level, legally compliant)
-// ============================================================
-const DEFAULT_TEMPLATES = {
-    congrats: {
-        subject: "🎉 Great news about {{company_name}}!",
-        body: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;">
-<div style="max-width:600px;margin:40px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
-  <div style="background:linear-gradient(135deg,#7e22ce,#be185d);padding:32px;text-align:center;">
-    <div style="font-size:48px;margin-bottom:8px;">🏆</div>
-    <h1 style="color:white;margin:0;font-size:26px;">You Did It!</h1>
-  </div>
-  <div style="padding:32px;">
-    <p style="font-size:16px;color:#333;line-height:1.6;">Hi <strong>{{company_name}}</strong>,</p>
-    <p style="font-size:16px;color:#333;line-height:1.6;">We checked your website. And wow — you scored <strong style="color:#7e22ce;font-size:20px;">{{score}} out of 100!</strong></p>
-    <p style="font-size:16px;color:#333;line-height:1.6;">That is really good. Most websites do not score this high.</p>
-    <div style="background:#f3e8ff;border-left:4px solid #7e22ce;padding:16px;border-radius:8px;margin:24px 0;">
-      <p style="margin:0;font-size:15px;color:#5b21b6;">🌟 We added your website to our <strong>Elite SEO Leaderboard</strong>. People can now see how good your website is!</p>
-    </div>
-    <div style="text-align:center;margin:28px 0;">
-      <a href="{{leaderboard_url}}" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:16px;font-weight:bold;display:inline-block;">👉 See My Ranking</a>
-    </div>
-    <p style="font-size:16px;color:#333;line-height:1.6;">Keep up the great work!</p>
-    <p style="font-size:15px;color:#555;margin-top:32px;">Warm regards,<br><strong>{{sender_name}}</strong><br><a href="mailto:{{sender_email}}" style="color:#7e22ce;">{{sender_email}}</a><br>ContentScale</p>
-  </div>
-  <div style="background:#f3f4f6;padding:16px;text-align:center;border-top:1px solid #e5e7eb;">
-    <p style="font-size:12px;color:#9ca3af;margin:0 0 6px;">You got this email because your website was scanned by ContentScale.</p>
-    <p style="font-size:12px;color:#9ca3af;margin:0;">ContentScale · Amsterdam, Netherlands · <a href="https://contentscale.site" style="color:#7e22ce;">contentscale.site</a></p>
-    <p style="font-size:12px;margin:8px 0 0;"><a href="{{unsubscribe_url}}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe from these emails</a></p>
-  </div>
-</div></body></html>`
-    },
-    improvement: {
-        subject: "Quick tip to get more visitors to {{company_name}}",
-        body: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;">
-<div style="max-width:600px;margin:40px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
-  <div style="background:linear-gradient(135deg,#1e40af,#0891b2);padding:32px;text-align:center;">
-    <div style="font-size:48px;margin-bottom:8px;">📈</div>
-    <h1 style="color:white;margin:0;font-size:26px;">Your Website Can Do Better</h1>
-  </div>
-  <div style="padding:32px;">
-    <p style="font-size:16px;color:#333;line-height:1.6;">Hi <strong>{{company_name}}</strong>,</p>
-    <p style="font-size:16px;color:#333;line-height:1.6;">My name is <strong>{{sender_name}}</strong>. I help businesses get more visitors from Google.</p>
-    <p style="font-size:16px;color:#333;line-height:1.6;">I checked your website. It scored <strong style="color:#1e40af;font-size:20px;">{{score}} out of 100</strong>.</p>
-    <p style="font-size:16px;color:#333;line-height:1.6;">That is okay. But there is room to grow!</p>
-    <div style="background:#eff6ff;border-left:4px solid #1e40af;padding:16px;border-radius:8px;margin:24px 0;">
-      <p style="margin:0 0 8px;font-size:15px;color:#1e3a8a;font-weight:bold;">What this means for you:</p>
-      <p style="margin:0;font-size:15px;color:#1e40af;">✅ More people can find you on Google<br>✅ More visitors = more customers<br>✅ Small fixes can make a big difference</p>
-    </div>
-    <p style="font-size:16px;color:#333;line-height:1.6;">I can show you exactly what to fix. It is easy. And it works fast.</p>
-    <p style="font-size:16px;color:#333;line-height:1.6;">Can we have a quick chat? Just 15 minutes.</p>
-    <div style="text-align:center;margin:28px 0;">
-      <a href="https://wa.me/31628073996" style="background:linear-gradient(135deg,#1e40af,#0891b2);color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:16px;font-weight:bold;display:inline-block;">💬 Yes, Let's Chat</a>
-    </div>
-    <p style="font-size:15px;color:#555;margin-top:32px;">Kind regards,<br><strong>{{sender_name}}</strong><br><a href="mailto:{{sender_email}}" style="color:#1e40af;">{{sender_email}}</a><br>ContentScale</p>
-  </div>
-  <div style="background:#f3f4f6;padding:16px;text-align:center;border-top:1px solid #e5e7eb;">
-    <p style="font-size:12px;color:#9ca3af;margin:0 0 6px;">You got this email because your website was scanned by ContentScale.</p>
-    <p style="font-size:12px;color:#9ca3af;margin:0;">ContentScale · Amsterdam, Netherlands · <a href="https://contentscale.site" style="color:#7e22ce;">contentscale.site</a></p>
-    <p style="font-size:12px;margin:8px 0 0;"><a href="{{unsubscribe_url}}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe from these emails</a></p>
-  </div>
-</div></body></html>`
-    },
-    website: {
-        subject: "{{company_name}} — did you know a website gets you more customers?",
-        body: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;">
-<div style="max-width:600px;margin:40px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
-  <div style="background:linear-gradient(135deg,#065f46,#0891b2);padding:32px;text-align:center;">
-    <div style="font-size:48px;margin-bottom:8px;">🌐</div>
-    <h1 style="color:white;margin:0;font-size:26px;">Get Found on Google</h1>
-  </div>
-  <div style="padding:32px;">
-    <p style="font-size:16px;color:#333;line-height:1.6;">Hi <strong>{{company_name}}</strong>,</p>
-    <p style="font-size:16px;color:#333;line-height:1.6;">My name is <strong>{{sender_name}}</strong>. I help small businesses get more customers.</p>
-    <p style="font-size:16px;color:#333;line-height:1.6;">I looked for your business online. I could not find a website for you.</p>
-    <p style="font-size:16px;color:#333;line-height:1.6;">Here is the thing — <strong>most people look on Google before they buy anything.</strong></p>
-    <div style="background:#ecfdf5;border-left:4px solid #065f46;padding:16px;border-radius:8px;margin:24px 0;">
-      <p style="margin:0 0 8px;font-size:15px;color:#064e3b;font-weight:bold;">With a website you can:</p>
-      <p style="margin:0;font-size:15px;color:#065f46;">✅ Show up when people search Google<br>✅ Look professional and trusted<br>✅ Get customers even when you sleep<br>✅ Beat the competition near you</p>
-    </div>
-    <p style="font-size:16px;color:#333;line-height:1.6;">I build websites that show up on Google. Fast. Simple. Affordable.</p>
-    <p style="font-size:16px;color:#333;line-height:1.6;">Can I show you what it looks like? No cost. No pressure.</p>
-    <div style="text-align:center;margin:28px 0;">
-      <a href="https://wa.me/31628073996" style="background:linear-gradient(135deg,#065f46,#0891b2);color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:16px;font-weight:bold;display:inline-block;">💬 Show Me How</a>
-    </div>
-    <p style="font-size:15px;color:#555;margin-top:32px;">Kind regards,<br><strong>{{sender_name}}</strong><br><a href="mailto:{{sender_email}}" style="color:#065f46;">{{sender_email}}</a><br>ContentScale</p>
-  </div>
-  <div style="background:#f3f4f6;padding:16px;text-align:center;border-top:1px solid #e5e7eb;">
-    <p style="font-size:12px;color:#9ca3af;margin:0 0 6px;">You got this email because your business was found by ContentScale.</p>
-    <p style="font-size:12px;color:#9ca3af;margin:0;">ContentScale · Amsterdam, Netherlands · <a href="https://contentscale.site" style="color:#7e22ce;">contentscale.site</a></p>
-    <p style="font-size:12px;margin:8px 0 0;"><a href="{{unsubscribe_url}}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe from these emails</a></p>
-  </div>
-</div></body></html>`
-    }
-};
-
 async function loadUserTemplates() {
-    // Set defaults first so templates are never empty
-    ['congrats', 'improvement', 'website'].forEach(t => {
-        const subEl = document.getElementById('template-' + t + '-subject');
-        const bodyEl = document.getElementById('template-' + t + '-body');
-        if (subEl && DEFAULT_TEMPLATES[t]) subEl.value = DEFAULT_TEMPLATES[t].subject;
-        if (bodyEl && DEFAULT_TEMPLATES[t]) bodyEl.value = DEFAULT_TEMPLATES[t].body;
-    });
-
     if (!userId) return;
     try {
         const response = await fetch('/api/user/templates', { headers: { 'x-user-id': userId } });
         const data = await response.json();
         if (data.success && data.templates) {
             userTemplates = data.templates;
-            // Override defaults only where user has saved a custom template
             ['congrats', 'improvement', 'website'].forEach(t => {
-                if (userTemplates[t] && userTemplates[t].subject) {
+                if (userTemplates[t]) {
                     const subEl = document.getElementById('template-' + t + '-subject');
                     const bodyEl = document.getElementById('template-' + t + '-body');
-                    if (subEl) subEl.value = userTemplates[t].subject;
-                    if (bodyEl) bodyEl.value = userTemplates[t].body;
+                    if (subEl) subEl.value = userTemplates[t].subject || '';
+                    if (bodyEl) bodyEl.value = userTemplates[t].body || '';
                 }
             });
         }
@@ -1340,14 +1221,14 @@ function submitFreelancer() {
     fetch('/api/freelancers/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, phone: document.getElementById('freelancerPhone')?.value, title: document.getElementById('freelancerTitle')?.value || 'SEO Specialist', bio: document.getElementById('freelancerBio')?.value || null, hourly_rate: document.getElementById('freelancerRate')?.value || null, is_featured: isFeatured })
+        body: JSON.stringify({ name, email, phone: document.getElementById('freelancerPhone')?.value, title: document.getElementById('freelancerTitle')?.value || 'SEO Specialist', bio: document.getElementById('freelancerBio')?.value || null, is_featured: isFeatured })
     })
     .then(r => r.json())
     .then(data => {
         if (data.success) {
             alert(`✅ Thank you ${name}! We'll review your application within 24 hours.${isFeatured ? ' Please complete the payment via PayPal.' : ''}`);
             closeModal();
-            ['freelancerName', 'freelancerEmail', 'freelancerPhone', 'freelancerTitle', 'freelancerBio', 'freelancerRate'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            ['freelancerName', 'freelancerEmail', 'freelancerPhone', 'freelancerTitle', 'freelancerBio'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
             document.getElementById('bioCharCount').textContent = '0/200';
             document.getElementById('featuredListing').checked = false;
         } else alert('❌ ' + (data.error || 'Registration failed'));
@@ -1368,61 +1249,7 @@ function extractDomainFromUrl(url) {
 }
 
 function getCountryFlag(country) {
-    const flags = {
-        'Netherlands': '🇳🇱', 'NL': '🇳🇱',
-        'United Kingdom': '🇬🇧', 'UK': '🇬🇧', 'GB': '🇬🇧',
-        'United States': '🇺🇸', 'US': '🇺🇸', 'USA': '🇺🇸',
-        'Germany': '🇩🇪', 'DE': '🇩🇪',
-        'France': '🇫🇷', 'FR': '🇫🇷',
-        'Belgium': '🇧🇪', 'BE': '🇧🇪',
-        'Spain': '🇪🇸', 'ES': '🇪🇸',
-        'Italy': '🇮🇹', 'IT': '🇮🇹',
-        'New Zealand': '🇳🇿', 'NZ': '🇳🇿',
-        'Australia': '🇦🇺', 'AU': '🇦🇺',
-        'Canada': '🇨🇦', 'CA': '🇨🇦',
-        'Ireland': '🇮🇪', 'IE': '🇮🇪',
-        'Sweden': '🇸🇪', 'SE': '🇸🇪',
-        'Norway': '🇳🇴', 'NO': '🇳🇴',
-        'Denmark': '🇩🇰', 'DK': '🇩🇰',
-        'Finland': '🇫🇮', 'FI': '🇫🇮',
-        'Switzerland': '🇨🇭', 'CH': '🇨🇭',
-        'Austria': '🇦🇹', 'AT': '🇦🇹',
-        'Portugal': '🇵🇹', 'PT': '🇵🇹',
-        'Poland': '🇵🇱', 'PL': '🇵🇱',
-        'Czech Republic': '🇨🇿', 'CZ': '🇨🇿', 'Czechia': '🇨🇿',
-        'Hungary': '🇭🇺', 'HU': '🇭🇺',
-        'Romania': '🇷🇴', 'RO': '🇷🇴',
-        'Greece': '🇬🇷', 'GR': '🇬🇷',
-        'Turkey': '🇹🇷', 'TR': '🇹🇷',
-        'South Africa': '🇿🇦', 'ZA': '🇿🇦',
-        'Nigeria': '🇳🇬', 'NG': '🇳🇬',
-        'Kenya': '🇰🇪', 'KE': '🇰🇪',
-        'Ghana': '🇬🇭', 'GH': '🇬🇭',
-        'India': '🇮🇳', 'IN': '🇮🇳',
-        'Pakistan': '🇵🇰', 'PK': '🇵🇰',
-        'Bangladesh': '🇧🇩', 'BD': '🇧🇩',
-        'Philippines': '🇵🇭', 'PH': '🇵🇭',
-        'Indonesia': '🇮🇩', 'ID': '🇮🇩',
-        'Malaysia': '🇲🇾', 'MY': '🇲🇾',
-        'Singapore': '🇸🇬', 'SG': '🇸🇬',
-        'Thailand': '🇹🇭', 'TH': '🇹🇭',
-        'Vietnam': '🇻🇳', 'VN': '🇻🇳',
-        'Japan': '🇯🇵', 'JP': '🇯🇵',
-        'South Korea': '🇰🇷', 'KR': '🇰🇷',
-        'China': '🇨🇳', 'CN': '🇨🇳',
-        'Hong Kong': '🇭🇰', 'HK': '🇭🇰',
-        'Brazil': '🇧🇷', 'BR': '🇧🇷',
-        'Mexico': '🇲🇽', 'MX': '🇲🇽',
-        'Argentina': '🇦🇷', 'AR': '🇦🇷',
-        'Colombia': '🇨🇴', 'CO': '🇨🇴',
-        'Chile': '🇨🇱', 'CL': '🇨🇱',
-        'Peru': '🇵🇪', 'PE': '🇵🇪',
-        'United Arab Emirates': '🇦🇪', 'UAE': '🇦🇪', 'AE': '🇦🇪',
-        'Saudi Arabia': '🇸🇦', 'SA': '🇸🇦',
-        'Israel': '🇮🇱', 'IL': '🇮🇱',
-        'Russia': '🇷🇺', 'RU': '🇷🇺',
-        'Ukraine': '🇺🇦', 'UA': '🇺🇦',
-    };
+    const flags = { 'Netherlands': '🇳🇱', 'NL': '🇳🇱', 'United Kingdom': '🇬🇧', 'UK': '🇬🇧', 'US': '🇺🇸', 'United States': '🇺🇸', 'Germany': '🇩🇪', 'DE': '🇩🇪', 'France': '🇫🇷', 'FR': '🇫🇷', 'Belgium': '🇧🇪', 'BE': '🇧🇪', 'Spain': '🇪🇸', 'ES': '🇪🇸', 'Italy': '🇮🇹', 'IT': '🇮🇹' };
     return flags[country] || '🌐';
 }
 
