@@ -1343,13 +1343,22 @@ const name = document.getElementById('freelancerName')?.value;
 const email = document.getElementById('freelancerEmail')?.value;
 if (!name || !email) { alert('❌ Name and email are required'); return; }
 if (!email.includes('@')) { alert('❌ Please enter a valid email'); return; }
+// Get the new price range value
 const hourlyRate = document.getElementById('freelancerRate')?.value || '';
 const isFeatured = document.getElementById('featuredListing')?.checked || false;
 if (isFeatured) window.open('https://paypal.me/ojgmedia?locale.x=en_US&country.x=NL', '_blank', 'noopener');
 fetch('/api/freelancers/register', {
 method: 'POST',
 headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({ name, email, phone: document.getElementById('freelancerPhone')?.value, title: document.getElementById('freelancerTitle')?.value || 'SEO Specialist', bio: document.getElementById('freelancerBio')?.value || null, hourly_rate: hourlyRate, is_featured: isFeatured })
+body: JSON.stringify({ 
+name, 
+email, 
+phone: document.getElementById('freelancerPhone')?.value, 
+title: document.getElementById('freelancerTitle')?.value || 'SEO Specialist', 
+bio: document.getElementById('freelancerBio')?.value || null, 
+hourly_rate: hourlyRate, // Sending the new field
+is_featured: isFeatured 
+})
 })
 .then(r => r.json())
 .then(data => {
