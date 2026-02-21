@@ -420,57 +420,17 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
           <h3 class="text-2xl font-bold text-white mb-6">Rankings 4-15</h3>
           <div class="rankings-4-15-grid" id="rankings4to15Grid"></div>
         </div>
-        <div class="bg-gray-800 rounded-lg p-4 mb-6 border border-gray-700">
-          <!-- Filter header row -->
-          <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-2">
-              <i class="fas fa-sliders-h text-purple-400"></i>
-              <span class="font-semibold text-white">Find &amp; Filter</span>
-              <span id="filterResultsCount" class="text-xs text-gray-400 ml-1"></span>
-            </div>
-            <div class="flex items-center gap-2 flex-wrap">
-              <span id="activeFilterChips" class="flex flex-wrap gap-1"></span>
-              <button onclick="resetAllFilters()" id="resetFiltersBtn" class="hidden text-xs text-red-400 hover:text-red-300 border border-red-800 rounded px-2 py-1">Clear all</button>
-              <button onclick="toggleFilters()" class="text-gray-400 hover:text-white ml-1">
-                <i class="fas fa-chevron-down" id="filterIcon"></i>
-              </button>
-            </div>
-          </div>
-          <!-- Always-visible search bar -->
-          <input type="text" id="searchInput" placeholder="Search by agency name, domain, niche..." oninput="filterAgencies()" class="w-full mb-0" autocomplete="off" style="border-radius:0.5rem;padding:0.6rem 0.75rem;">
-          <!-- Collapsible panel -->
-          <div id="filterPanel" class="hidden mt-4 space-y-4">
-            <!-- Score Range -->
-            <div>
-              <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Score Range</div>
-              <div class="flex flex-wrap gap-2" id="scoreFilters">
-                <button class="filter-tag active" onclick="setFilter('score','all',this)">All Scores</button>
-                <button class="filter-tag" onclick="setFilter('score','elite',this)">Elite 90+</button>
-                <button class="filter-tag" onclick="setFilter('score','pro',this)">Pro 85-89</button>
-                <button class="filter-tag" onclick="setFilter('score','good',this)">Good 70-84</button>
-                <button class="filter-tag" onclick="setFilter('score','building',this)">Under 70</button>
-              </div>
-            </div>
-            <!-- Country -->
-            <div>
-              <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Country</div>
+        <div class="bg-gray-800 rounded-lg p-4 mb-6">
+          <button onclick="toggleFilters()" class="w-full flex items-center justify-between text-left text-white">
+            <div class="flex items-center gap-2"><i class="fas fa-filter text-purple-400"></i><span class="font-semibold">Filters</span></div>
+            <i class="fas fa-chevron-down" id="filterIcon"></i>
+          </button>
+          <div id="filterPanel" class="hidden mt-4">
+            <div class="mb-4">
+              <div class="text-sm text-gray-300 mb-2">Country:</div>
               <div class="flex flex-wrap gap-2" id="countryFilters"></div>
             </div>
-            <!-- Niche -->
-            <div>
-              <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Industry / Niche</div>
-              <div class="flex flex-wrap gap-2" id="nicheFilters"></div>
-            </div>
-            <!-- Sort -->
-            <div class="pt-3 border-t border-gray-700">
-              <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Sort by</div>
-              <div class="flex flex-wrap gap-2" id="sortFilters">
-                <button class="filter-tag active" onclick="setFilter('sort','score-desc',this)">Score High-Low</button>
-                <button class="filter-tag" onclick="setFilter('sort','score-asc',this)">Score Low-High</button>
-                <button class="filter-tag" onclick="setFilter('sort','newest',this)">Newest First</button>
-                <button class="filter-tag" onclick="setFilter('sort','az',this)">A to Z</button>
-              </div>
-            </div>
+            <input type="text" id="searchInput" placeholder="Search agencies..." oninput="filterAgencies()" class="w-full" autocomplete="off">
           </div>
         </div>
         <div>
@@ -622,19 +582,6 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
         <textarea id="freelancerBio" rows="3" maxlength="200" placeholder="Tell us about your expertise and experience..." class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"></textarea>
         <div class="flex justify-between mt-1"><span class="text-xs text-gray-500">Maximum 200 characters</span><span id="bioCharCount" class="text-xs text-gray-500">0/200</span></div>
       </div>
-      <div><label class="block text-sm mb-2 text-gray-700">Hourly Rate / Price Range *</label>
-        <select id="freelancerRate" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-          <option value="">Select your rate...</option>
-          <option value="€25 - €50 / hour">€25 - €50 / hour</option>
-          <option value="€50 - €75 / hour">€50 - €75 / hour</option>
-          <option value="€75 - €100 / hour">€75 - €100 / hour</option>
-          <option value="€100 - €150 / hour">€100 - €150 / hour</option>
-          <option value="€150+ / hour">€150+ / hour</option>
-          <option value="Project-based pricing">Project-based pricing</option>
-          <option value="Free consultation first">Free consultation first</option>
-        </select>
-      </div>
-
       <div class="border-t border-gray-200 pt-4 mt-2">
         <div class="flex items-start gap-3">
           <div class="flex items-center h-5"><input type="checkbox" id="featuredListing" class="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500"></div>
@@ -1204,7 +1151,7 @@ async function loadLeaderboardData() {
             document.getElementById('avgScore').textContent = data.averageScore || 0;
             document.getElementById('countriesCount').textContent = data.stats?.countriesCount || 0;
             document.getElementById('activeHelpers').textContent = data.stats?.activeHelpers || 0;
-            filterAgencies(); renderCountryFilters(); renderNicheFilters();
+            renderTop3(); renderRankings4to15(); renderRankings16Plus(); renderCountryFilters();
         } else { showEmptyLeaderboard(); }
     } catch (error) { console.error('Error loading leaderboard:', error); showEmptyLeaderboard(); }
 }
@@ -1277,192 +1224,42 @@ function renderRankings16Plus() {
     }).join('');
 }
 
-// ============================================================
-// FILTER STATE & CONFIG
-// ============================================================
-const activeFilters = { score: 'all', country: 'all', niche: 'all', sort: 'score-desc' };
-
-const NICHES = [
-    { id: 'ecommerce',     label: 'E-commerce' },
-    { id: 'healthcare',    label: 'Healthcare' },
-    { id: 'construction',  label: 'Construction' },
-    { id: 'food',          label: 'Food & Restaurant' },
-    { id: 'finance',       label: 'Finance & Accounting' },
-    { id: 'realestate',    label: 'Real Estate' },
-    { id: 'legal',         label: 'Legal Services' },
-    { id: 'education',     label: 'Education' },
-    { id: 'beauty',        label: 'Beauty & Wellness' },
-    { id: 'homeservices',  label: 'Home Services' },
-    { id: 'automotive',    label: 'Automotive' },
-    { id: 'tech',          label: 'Tech & Software' },
-    { id: 'creative',      label: 'Creative & Design' },
-    { id: 'fitness',       label: 'Fitness & Sports' },
-    { id: 'travel',        label: 'Travel & Tourism' },
-    { id: 'sustainability',label: 'Sustainability' },
-    { id: 'logistics',     label: 'Logistics & Shipping' },
-    { id: 'other',         label: 'Other' },
-];
-
-function setFilter(type, value, btn) {
-    activeFilters[type] = value;
-    const groupMap = { score: 'scoreFilters', country: 'countryFilters', niche: 'nicheFilters', sort: 'sortFilters' };
-    const groupId = groupMap[type];
-    if (groupId) {
-        document.querySelectorAll('#' + groupId + ' .filter-tag').forEach(function(t) { t.classList.remove('active'); });
-    }
-    if (btn) btn.classList.add('active');
-    filterAgencies();
-    updateActiveChips();
-}
-
-function updateActiveChips() {
-    var chips = document.getElementById('activeFilterChips');
-    var resetBtn = document.getElementById('resetFiltersBtn');
-    if (!chips) return;
-    var scoreLabels = { elite:'Elite 90+', pro:'Pro 85-89', good:'Good 70-84', building:'Under 70' };
-    var sortLabels = { 'score-asc':'Score Low-High', newest:'Newest', az:'A to Z' };
-    var html = '';
-    if (activeFilters.score !== 'all') html += '<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;background:#4c1d95;border:1px solid #7e22ce;color:#e9d5ff;padding:2px 8px;border-radius:9999px;">' + scoreLabels[activeFilters.score] + ' <button onclick="resetFilter('score')" style="background:none;border:none;color:#e9d5ff;cursor:pointer;padding:0 2px;">x</button></span> ';
-    if (activeFilters.country !== 'all') html += '<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;background:#1e3a8a;border:1px solid #3b82f6;color:#bfdbfe;padding:2px 8px;border-radius:9999px;">' + getCountryFlag(activeFilters.country) + ' ' + activeFilters.country + ' <button onclick="resetFilter('country')" style="background:none;border:none;color:#bfdbfe;cursor:pointer;padding:0 2px;">x</button></span> ';
-    if (activeFilters.niche !== 'all') { var n = NICHES.find(function(x){return x.id===activeFilters.niche;}); html += '<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;background:#064e3b;border:1px solid #10b981;color:#a7f3d0;padding:2px 8px;border-radius:9999px;">' + (n ? n.label : activeFilters.niche) + ' <button onclick="resetFilter('niche')" style="background:none;border:none;color:#a7f3d0;cursor:pointer;padding:0 2px;">x</button></span> '; }
-    if (activeFilters.sort !== 'score-desc') html += '<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;background:#374151;border:1px solid #6b7280;color:#e5e7eb;padding:2px 8px;border-radius:9999px;">' + (sortLabels[activeFilters.sort]||activeFilters.sort) + ' <button onclick="resetFilter('sort')" style="background:none;border:none;color:#e5e7eb;cursor:pointer;padding:0 2px;">x</button></span>';
-    chips.innerHTML = html;
-    var hasSearch = document.getElementById('searchInput') && document.getElementById('searchInput').value;
-    var hasFilter = html.length > 0 || hasSearch;
-    if (resetBtn) resetBtn.classList.toggle('hidden', !hasFilter);
-}
-
-function resetFilter(type) {
-    activeFilters[type] = (type === 'sort') ? 'score-desc' : 'all';
-    renderCountryFilters(); renderNicheFilters();
-    document.querySelectorAll('#scoreFilters .filter-tag').forEach(function(b,i){ b.classList.toggle('active', i===0); });
-    document.querySelectorAll('#sortFilters .filter-tag').forEach(function(b,i){ b.classList.toggle('active', i===0); });
-    filterAgencies(); updateActiveChips();
-}
-
-function resetAllFilters() {
-    activeFilters.score='all'; activeFilters.country='all'; activeFilters.niche='all'; activeFilters.sort='score-desc';
-    var s = document.getElementById('searchInput'); if (s) s.value = '';
-    renderCountryFilters(); renderNicheFilters();
-    document.querySelectorAll('#scoreFilters .filter-tag').forEach(function(b,i){ b.classList.toggle('active', i===0); });
-    document.querySelectorAll('#sortFilters .filter-tag').forEach(function(b,i){ b.classList.toggle('active', i===0); });
-    filterAgencies(); updateActiveChips();
-}
-
-function getFilteredEntries() {
-    var query = (document.getElementById('searchInput') ? document.getElementById('searchInput').value.toLowerCase() : '');
-    var entries = allLeaderboardEntries.slice();
-    // Search
-    if (query) entries = entries.filter(function(e){
-        return (e.company_name||'').toLowerCase().includes(query) || (e.url||'').toLowerCase().includes(query) || extractDomainFromUrl(e.url).toLowerCase().includes(query) || (e.niche||'').toLowerCase().includes(query);
-    });
-    // Score
-    if (activeFilters.score==='elite')    entries = entries.filter(function(e){ return e.score>=90; });
-    if (activeFilters.score==='pro')      entries = entries.filter(function(e){ return e.score>=85 && e.score<90; });
-    if (activeFilters.score==='good')     entries = entries.filter(function(e){ return e.score>=70 && e.score<85; });
-    if (activeFilters.score==='building') entries = entries.filter(function(e){ return e.score<70; });
-    // Country
-    if (activeFilters.country !== 'all') entries = entries.filter(function(e){ return e.country===activeFilters.country; });
-    // Niche
-    if (activeFilters.niche !== 'all') entries = entries.filter(function(e){ return (e.niche||'').toLowerCase()===activeFilters.niche; });
-    // Sort
-    if (activeFilters.sort==='score-desc') entries.sort(function(a,b){ return b.score-a.score; });
-    if (activeFilters.sort==='score-asc')  entries.sort(function(a,b){ return a.score-b.score; });
-    if (activeFilters.sort==='newest')     entries.sort(function(a,b){ return new Date(b.created_at)-new Date(a.created_at); });
-    if (activeFilters.sort==='az')         entries.sort(function(a,b){ return (a.company_name||'').localeCompare(b.company_name||''); });
-    return entries;
-}
-
-function getNicheLabel(nicheId) {
-    var n = NICHES.find(function(x){ return x.id===(nicheId||'').toLowerCase(); });
-    return n ? n.label : nicheId;
-}
-
 function renderCountryFilters() {
-    var div = document.getElementById('countryFilters');
+    const div = document.getElementById('countryFilters');
     if (!div) return;
-    var countries = [];
-    allLeaderboardEntries.forEach(function(e){ if(e.country && countries.indexOf(e.country)<0) countries.push(e.country); });
-    countries.sort();
-    var html = '<button class="filter-tag ' + (activeFilters.country==='all'?'active':'') + '" onclick="setFilter('country','all',this)">All Countries</button>';
-    countries.forEach(function(c){ html += '<button class="filter-tag ' + (activeFilters.country===c?'active':'') + '" onclick="setFilter('country','' + c.replace(/'/g,"\'") + '',this)">' + getCountryFlag(c) + ' ' + c + '</button>'; });
+    const countries = [...new Set(allLeaderboardEntries.map(e => e.country))];
+    let html = '<button class="filter-tag active" onclick="filterByCountry(\'all\')">🌍 All</button>';
+    countries.forEach(country => { if (country) html += `<button class="filter-tag" onclick="filterByCountry('${country}')">${getCountryFlag(country)} ${country}</button>`; });
     div.innerHTML = html;
 }
 
-function renderNicheFilters() {
-    var div = document.getElementById('nicheFilters');
-    if (!div) return;
-    var usedNiches = {};
-    allLeaderboardEntries.forEach(function(e){ if(e.niche) usedNiches[e.niche.toLowerCase()]=true; });
-    var hasNiches = Object.keys(usedNiches).length > 0;
-    var html = '<button class="filter-tag ' + (activeFilters.niche==='all'?'active':'') + '" onclick="setFilter('niche','all',this)">All Industries</button>';
-    NICHES.forEach(function(n){
-        if (!hasNiches || usedNiches[n.id]) {
-            html += '<button class="filter-tag ' + (activeFilters.niche===n.id?'active':'') + '" onclick="setFilter('niche','' + n.id + '',this)">' + n.label + '</button>';
-        }
-    });
-    div.innerHTML = html;
-}
+function filterByCountry(country) { document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active')); event.target.classList.add('active'); }
 
 function filterAgencies() {
-    var filtered = getFilteredEntries();
-    var total = allLeaderboardEntries.length;
-    var countEl = document.getElementById('filterResultsCount');
-    if (countEl) countEl.textContent = filtered.length < total ? '(' + filtered.length + ' of ' + total + ')' : '(' + total + ')';
-    renderFilteredTop3(filtered);
-    renderFilteredRankings4to15(filtered);
-    renderFilteredRankings16Plus(filtered);
-    updateActiveChips();
-}
-
-function renderFilteredTop3(filtered) {
-    var container = document.getElementById('top3-container');
-    if (!container) return;
-    var top3 = filtered.slice(0, 3);
-    if (!top3.length) { container.innerHTML = '<div class="col-span-3 text-center py-8 text-gray-400">No results match your filters. <button onclick="resetAllFilters()" class="text-purple-400 underline ml-1">Clear filters</button></div>'; return; }
-    container.innerHTML = top3.map(function(entry, index) {
-        var medal = index===0?'gold':index===1?'silver':'bronze';
-        var emo = index===0?'🥇':index===1?'🥈':'🥉';
-        var rankText = index===0?'1st Worldwide':index===1?'2nd Worldwide':'3rd Worldwide';
-        var name = entry.company_name || extractDomainFromUrl(entry.url);
-        var nicheHtml = entry.niche ? '<div style="font-size:11px;background:rgba(0,0,0,0.25);padding:2px 8px;border-radius:9999px;display:inline-block;margin:2px 0;">' + getNicheLabel(entry.niche) + '</div><br>' : '';
-        return '<div class="top-card ' + medal + '"><div class="text-5xl mb-2">' + emo + '</div><div class="text-xs font-bold uppercase tracking-wider mb-2" style="color:rgba(255,255,255,0.8)">' + rankText + '</div><h3 class="text-xl font-bold mb-2">' + name + '</h3><div class="text-4xl font-black mb-2">' + entry.score + '/100</div>' + nicheHtml + '<div style="color:rgba(255,255,255,0.8);margin-bottom:0.75rem;">' + getCountryFlag(entry.country) + ' ' + entry.country + '</div><button onclick="window.open('' + entry.url + '','_blank','noopener')" class="w-full"><i class="fas fa-external-link-alt mr-2"></i> Visit Website</button></div>';
-    }).join('');
-}
-
-function renderFilteredRankings4to15(filtered) {
-    var grid = document.getElementById('rankings4to15Grid');
-    var container = document.getElementById('rankings4to15Container');
-    if (!grid) return;
-    var rankings = filtered.slice(3, 15);
-    if (!rankings.length) { if(container) container.style.display='none'; return; }
-    if (container) container.style.display='block';
-    grid.innerHTML = rankings.map(function(entry, index) {
-        var name = entry.company_name || extractDomainFromUrl(entry.url);
-        var nicheHtml = entry.niche ? '<div style="font-size:11px;color:#a855f7;margin-bottom:4px;">' + getNicheLabel(entry.niche) + '</div>' : '';
-        return '<div class="rank-card"><div class="rank-number text-2xl font-bold text-gray-400 mb-2">#' + (index+4) + '</div><h4 class="font-bold text-white text-sm mb-2 truncate">' + name + '</h4><div class="text-2xl font-black text-green-400 mb-2">' + entry.score + '</div>' + nicheHtml + '<div class="text-xs text-gray-400 mb-2">' + getCountryFlag(entry.country) + ' ' + entry.country + '</div><a href="' + entry.url + '" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">View Website <i class="fas fa-external-link-alt ml-1"></i></a></div>';
-    }).join('');
-}
-
-function renderFilteredRankings16Plus(filtered) {
-    var tbody = document.getElementById('rankingsTbody');
-    var totalCount = document.getElementById('totalCount');
-    if (!tbody) return;
-    var rankings = filtered.slice(15, 35);
-    if (totalCount) totalCount.textContent = filtered.length;
-    if (!rankings.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-400">No entries match your filters</td></tr>'; return; }
-    tbody.innerHTML = rankings.map(function(entry, index) {
-        var name = entry.company_name || extractDomainFromUrl(entry.url);
-        var sc = entry.score>=85?'text-green-400':entry.score>=70?'text-yellow-400':'text-red-400';
-        var nicheHtml = entry.niche ? '<br><span style="font-size:11px;color:#a855f7;">' + getNicheLabel(entry.niche) + '</span>' : '';
-        return '<tr><td><span class="inline-flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full font-bold">' + (index+16) + '</span></td><td class="font-semibold">' + name + nicheHtml + '</td><td><a href="' + entry.url + '" target="_blank" rel="noopener" class="text-blue-400 hover:underline text-sm">' + entry.url.replace('https://','').substring(0,25) + '...</a></td><td><span class="text-lg font-bold ' + sc + '">' + entry.score + '</span></td><td><span class="text-sm">' + getCountryFlag(entry.country) + ' ' + entry.country + '</span></td><td><span class="text-sm text-gray-400">' + new Date(entry.created_at).toLocaleDateString() + '</span></td></tr>';
+    const query = document.getElementById('searchInput')?.value.toLowerCase() || '';
+    if (!query) { renderRankings4to15(); renderRankings16Plus(); return; }
+    const filtered = allLeaderboardEntries.filter(entry =>
+        (entry.company_name || '').toLowerCase().includes(query) ||
+        (entry.url || '').toLowerCase().includes(query) ||
+        extractDomainFromUrl(entry.url).toLowerCase().includes(query)
+    );
+    const grid = document.getElementById('rankings4to15Grid');
+    if (grid) grid.innerHTML = filtered.slice(3, 15).map((entry, index) => {
+        const companyName = entry.company_name || extractDomainFromUrl(entry.url);
+        return `<div class="rank-card">
+            <div class="rank-number text-2xl font-bold text-gray-400 mb-2">#${index + 4}</div>
+            <h4 class="font-bold text-white text-sm mb-2 truncate">${companyName}</h4>
+            <div class="text-2xl font-black text-green-400 mb-2">${entry.score}</div>
+            <div class="text-xs text-gray-400 mb-2">${getCountryFlag(entry.country)} ${entry.country}</div>
+            <a href="${entry.url}" target="_blank" rel="noopener" class="text-xs text-blue-400 hover:underline block">View Website</a>
+        </div>`;
     }).join('');
 }
 
 function toggleFilters() {
-    var panel = document.getElementById('filterPanel');
-    var icon = document.getElementById('filterIcon');
-    if (panel) { panel.classList.toggle('hidden'); if(icon){icon.classList.toggle('fa-chevron-down');icon.classList.toggle('fa-chevron-up');} }
+    const panel = document.getElementById('filterPanel');
+    const icon = document.getElementById('filterIcon');
+    if (panel) { panel.classList.toggle('hidden'); icon.classList.toggle('fa-chevron-down'); icon.classList.toggle('fa-chevron-up'); }
 }
 
 function toggleRankings() {
@@ -1530,14 +1327,14 @@ function submitFreelancer() {
     fetch('/api/freelancers/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, phone: document.getElementById('freelancerPhone')?.value, title: document.getElementById('freelancerTitle')?.value || 'SEO Specialist', bio: document.getElementById('freelancerBio')?.value || null, hourly_rate: document.getElementById('freelancerRate')?.value || null, is_featured: isFeatured })
+        body: JSON.stringify({ name, email, phone: document.getElementById('freelancerPhone')?.value, title: document.getElementById('freelancerTitle')?.value || 'SEO Specialist', bio: document.getElementById('freelancerBio')?.value || null, is_featured: isFeatured })
     })
     .then(r => r.json())
     .then(data => {
         if (data.success) {
             alert(`✅ Thank you ${name}! We'll review your application within 24 hours.${isFeatured ? ' Please complete the payment via PayPal.' : ''}`);
             closeModal();
-            ['freelancerName', 'freelancerEmail', 'freelancerPhone', 'freelancerTitle', 'freelancerBio', 'freelancerRate'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            ['freelancerName', 'freelancerEmail', 'freelancerPhone', 'freelancerTitle', 'freelancerBio'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
             document.getElementById('bioCharCount').textContent = '0/200';
             document.getElementById('featuredListing').checked = false;
         } else alert('❌ ' + (data.error || 'Registration failed'));
@@ -1558,61 +1355,7 @@ function extractDomainFromUrl(url) {
 }
 
 function getCountryFlag(country) {
-    const flags = {
-        'Netherlands': '🇳🇱', 'NL': '🇳🇱',
-        'United Kingdom': '🇬🇧', 'UK': '🇬🇧', 'GB': '🇬🇧',
-        'United States': '🇺🇸', 'US': '🇺🇸', 'USA': '🇺🇸',
-        'Germany': '🇩🇪', 'DE': '🇩🇪',
-        'France': '🇫🇷', 'FR': '🇫🇷',
-        'Belgium': '🇧🇪', 'BE': '🇧🇪',
-        'Spain': '🇪🇸', 'ES': '🇪🇸',
-        'Italy': '🇮🇹', 'IT': '🇮🇹',
-        'New Zealand': '🇳🇿', 'NZ': '🇳🇿',
-        'Australia': '🇦🇺', 'AU': '🇦🇺',
-        'Canada': '🇨🇦', 'CA': '🇨🇦',
-        'Ireland': '🇮🇪', 'IE': '🇮🇪',
-        'Sweden': '🇸🇪', 'SE': '🇸🇪',
-        'Norway': '🇳🇴', 'NO': '🇳🇴',
-        'Denmark': '🇩🇰', 'DK': '🇩🇰',
-        'Finland': '🇫🇮', 'FI': '🇫🇮',
-        'Switzerland': '🇨🇭', 'CH': '🇨🇭',
-        'Austria': '🇦🇹', 'AT': '🇦🇹',
-        'Portugal': '🇵🇹', 'PT': '🇵🇹',
-        'Poland': '🇵🇱', 'PL': '🇵🇱',
-        'Czech Republic': '🇨🇿', 'CZ': '🇨🇿', 'Czechia': '🇨🇿',
-        'Hungary': '🇭🇺', 'HU': '🇭🇺',
-        'Romania': '🇷🇴', 'RO': '🇷🇴',
-        'Greece': '🇬🇷', 'GR': '🇬🇷',
-        'Turkey': '🇹🇷', 'TR': '🇹🇷',
-        'South Africa': '🇿🇦', 'ZA': '🇿🇦',
-        'Nigeria': '🇳🇬', 'NG': '🇳🇬',
-        'Kenya': '🇰🇪', 'KE': '🇰🇪',
-        'Ghana': '🇬🇭', 'GH': '🇬🇭',
-        'India': '🇮🇳', 'IN': '🇮🇳',
-        'Pakistan': '🇵🇰', 'PK': '🇵🇰',
-        'Bangladesh': '🇧🇩', 'BD': '🇧🇩',
-        'Philippines': '🇵🇭', 'PH': '🇵🇭',
-        'Indonesia': '🇮🇩', 'ID': '🇮🇩',
-        'Malaysia': '🇲🇾', 'MY': '🇲🇾',
-        'Singapore': '🇸🇬', 'SG': '🇸🇬',
-        'Thailand': '🇹🇭', 'TH': '🇹🇭',
-        'Vietnam': '🇻🇳', 'VN': '🇻🇳',
-        'Japan': '🇯🇵', 'JP': '🇯🇵',
-        'South Korea': '🇰🇷', 'KR': '🇰🇷',
-        'China': '🇨🇳', 'CN': '🇨🇳',
-        'Hong Kong': '🇭🇰', 'HK': '🇭🇰',
-        'Brazil': '🇧🇷', 'BR': '🇧🇷',
-        'Mexico': '🇲🇽', 'MX': '🇲🇽',
-        'Argentina': '🇦🇷', 'AR': '🇦🇷',
-        'Colombia': '🇨🇴', 'CO': '🇨🇴',
-        'Chile': '🇨🇱', 'CL': '🇨🇱',
-        'Peru': '🇵🇪', 'PE': '🇵🇪',
-        'United Arab Emirates': '🇦🇪', 'UAE': '🇦🇪', 'AE': '🇦🇪',
-        'Saudi Arabia': '🇸🇦', 'SA': '🇸🇦',
-        'Israel': '🇮🇱', 'IL': '🇮🇱',
-        'Russia': '🇷🇺', 'RU': '🇷🇺',
-        'Ukraine': '🇺🇦', 'UA': '🇺🇦',
-    };
+    const flags = { 'Netherlands': '🇳🇱', 'NL': '🇳🇱', 'United Kingdom': '🇬🇧', 'UK': '🇬🇧', 'US': '🇺🇸', 'United States': '🇺🇸', 'Germany': '🇩🇪', 'DE': '🇩🇪', 'France': '🇫🇷', 'FR': '🇫🇷', 'Belgium': '🇧🇪', 'BE': '🇧🇪', 'Spain': '🇪🇸', 'ES': '🇪🇸', 'Italy': '🇮🇹', 'IT': '🇮🇹' };
     return flags[country] || '🌐';
 }
 
