@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -273,63 +274,8 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 <input type="number" id="lb-score" class="w-full p-2 mb-2 border text-black">
 </div>
 <div>
-<label class="block text-sm font-bold mb-1 text-gray-700">Country</label>
-<select id="lb-country" class="w-full p-2 mb-2 border text-black rounded">
-  <option value="">-- Select Country --</option>
-  <option value="Netherlands">🇳🇱 Netherlands</option>
-  <option value="Belgium">🇧🇪 Belgium</option>
-  <option value="United Kingdom">🇬🇧 United Kingdom</option>
-  <option value="United States">🇺🇸 United States</option>
-  <option value="Germany">🇩🇪 Germany</option>
-  <option value="France">🇫🇷 France</option>
-  <option value="Spain">🇪🇸 Spain</option>
-  <option value="Italy">🇮🇹 Italy</option>
-  <option value="New Zealand">🇳🇿 New Zealand</option>
-  <option value="Australia">🇦🇺 Australia</option>
-  <option value="Canada">🇨🇦 Canada</option>
-  <option value="Ireland">🇮🇪 Ireland</option>
-  <option value="Sweden">🇸🇪 Sweden</option>
-  <option value="Norway">🇳🇴 Norway</option>
-  <option value="Denmark">🇩🇰 Denmark</option>
-  <option value="Finland">🇫🇮 Finland</option>
-  <option value="Switzerland">🇨🇭 Switzerland</option>
-  <option value="Austria">🇦🇹 Austria</option>
-  <option value="Portugal">🇵🇹 Portugal</option>
-  <option value="Poland">🇵🇱 Poland</option>
-  <option value="Czech Republic">🇨🇿 Czech Republic</option>
-  <option value="Hungary">🇭🇺 Hungary</option>
-  <option value="Romania">🇷🇴 Romania</option>
-  <option value="Greece">🇬🇷 Greece</option>
-  <option value="Turkey">🇹🇷 Turkey</option>
-  <option value="South Africa">🇿🇦 South Africa</option>
-  <option value="Nigeria">🇳🇬 Nigeria</option>
-  <option value="Kenya">🇰🇪 Kenya</option>
-  <option value="Ghana">🇬🇭 Ghana</option>
-  <option value="India">🇮🇳 India</option>
-  <option value="Pakistan">🇵🇰 Pakistan</option>
-  <option value="Bangladesh">🇧🇩 Bangladesh</option>
-  <option value="Philippines">🇵🇭 Philippines</option>
-  <option value="Indonesia">🇮🇩 Indonesia</option>
-  <option value="Malaysia">🇲🇾 Malaysia</option>
-  <option value="Singapore">🇸🇬 Singapore</option>
-  <option value="Thailand">🇹🇭 Thailand</option>
-  <option value="Vietnam">🇻🇳 Vietnam</option>
-  <option value="Japan">🇯🇵 Japan</option>
-  <option value="South Korea">🇰🇷 South Korea</option>
-  <option value="China">🇨🇳 China</option>
-  <option value="Hong Kong">🇭🇰 Hong Kong</option>
-  <option value="Brazil">🇧🇷 Brazil</option>
-  <option value="Mexico">🇲🇽 Mexico</option>
-  <option value="Argentina">🇦🇷 Argentina</option>
-  <option value="Colombia">🇨🇴 Colombia</option>
-  <option value="Chile">🇨🇱 Chile</option>
-  <option value="Peru">🇵🇪 Peru</option>
-  <option value="United Arab Emirates">🇦🇪 United Arab Emirates</option>
-  <option value="Saudi Arabia">🇸🇦 Saudi Arabia</option>
-  <option value="Israel">🇮🇱 Israel</option>
-  <option value="Russia">🇷🇺 Russia</option>
-  <option value="Ukraine">🇺🇦 Ukraine</option>
-</select>
+<label class="block text-sm font-bold mb-1 text-gray-700">Country Code</label>
+<input type="text" id="lb-country" placeholder="e.g. BE, NL, US" class="w-full p-2 mb-2 border text-black">
 </div>
 <div class="flex gap-2 mb-4">
 <a id="lb-visit-link" href="#" target="_blank" class="flex-1 btn btn-info text-center">
@@ -865,63 +811,9 @@ function extractDomain(url) {
 try { return new URL(url).hostname.replace('www.', ''); } catch { return 'Unknown'; }
 }
 
-function getFlag(country) {
-    const flags = {
-        'Netherlands': '🇳🇱', 'NL': '🇳🇱',
-        'United Kingdom': '🇬🇧', 'UK': '🇬🇧', 'GB': '🇬🇧',
-        'United States': '🇺🇸', 'US': '🇺🇸', 'USA': '🇺🇸',
-        'Germany': '🇩🇪', 'DE': '🇩🇪',
-        'France': '🇫🇷', 'FR': '🇫🇷',
-        'Belgium': '🇧🇪', 'BE': '🇧🇪',
-        'Spain': '🇪🇸', 'ES': '🇪🇸',
-        'Italy': '🇮🇹', 'IT': '🇮🇹',
-        'New Zealand': '🇳🇿', 'NZ': '🇳🇿',
-        'Australia': '🇦🇺', 'AU': '🇦🇺',
-        'Canada': '🇨🇦', 'CA': '🇨🇦',
-        'Ireland': '🇮🇪', 'IE': '🇮🇪',
-        'Sweden': '🇸🇪', 'SE': '🇸🇪',
-        'Norway': '🇳🇴', 'NO': '🇳🇴',
-        'Denmark': '🇩🇰', 'DK': '🇩🇰',
-        'Finland': '🇫🇮', 'FI': '🇫🇮',
-        'Switzerland': '🇨🇭', 'CH': '🇨🇭',
-        'Austria': '🇦🇹', 'AT': '🇦🇹',
-        'Portugal': '🇵🇹', 'PT': '🇵🇹',
-        'Poland': '🇵🇱', 'PL': '🇵🇱',
-        'Czech Republic': '🇨🇿', 'CZ': '🇨🇿', 'Czechia': '🇨🇿',
-        'Hungary': '🇭🇺', 'HU': '🇭🇺',
-        'Romania': '🇷🇴', 'RO': '🇷🇴',
-        'Greece': '🇬🇷', 'GR': '🇬🇷',
-        'Turkey': '🇹🇷', 'TR': '🇹🇷',
-        'South Africa': '🇿🇦', 'ZA': '🇿🇦',
-        'Nigeria': '🇳🇬', 'NG': '🇳🇬',
-        'Kenya': '🇰🇪', 'KE': '🇰🇪',
-        'Ghana': '🇬🇭', 'GH': '🇬🇭',
-        'India': '🇮🇳', 'IN': '🇮🇳',
-        'Pakistan': '🇵🇰', 'PK': '🇵🇰',
-        'Bangladesh': '🇧🇩', 'BD': '🇧🇩',
-        'Philippines': '🇵🇭', 'PH': '🇵🇭',
-        'Indonesia': '🇮🇩', 'ID': '🇮🇩',
-        'Malaysia': '🇲🇾', 'MY': '🇲🇾',
-        'Singapore': '🇸🇬', 'SG': '🇸🇬',
-        'Thailand': '🇹🇭', 'TH': '🇹🇭',
-        'Vietnam': '🇻🇳', 'VN': '🇻🇳',
-        'Japan': '🇯🇵', 'JP': '🇯🇵',
-        'South Korea': '🇰🇷', 'KR': '🇰🇷',
-        'China': '🇨🇳', 'CN': '🇨🇳',
-        'Hong Kong': '🇭🇰', 'HK': '🇭🇰',
-        'Brazil': '🇧🇷', 'BR': '🇧🇷',
-        'Mexico': '🇲🇽', 'MX': '🇲🇽',
-        'Argentina': '🇦🇷', 'AR': '🇦🇷',
-        'Colombia': '🇨🇴', 'CO': '🇨🇴',
-        'Chile': '🇨🇱', 'CL': '🇨🇱',
-        'Peru': '🇵🇪', 'PE': '🇵🇪',
-        'United Arab Emirates': '🇦🇪', 'UAE': '🇦🇪', 'AE': '🇦🇪',
-        'Saudi Arabia': '🇸🇦', 'SA': '🇸🇦',
-        'Israel': '🇮🇱', 'IL': '🇮🇱',
-        'Russia': '🇷🇺', 'RU': '🇷🇺',
-        'Ukraine': '🇺🇦', 'UA': '🇺🇦',
-    };
-    return flags[country] || '🌐';
+function getFlag(code) {
+const flags = { 'NL': '🇳🇱', 'BE': '🇧🇪', 'US': '🇺🇸', 'UK': '🇬🇧', 'DE': '🇩🇪' };
+return flags[code] || '🌐';
 }
 </script>
 </body>
