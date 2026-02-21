@@ -325,6 +325,12 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 <label class="block text-sm font-bold mb-1 text-gray-700">Professional Title</label>
 <input type="text" id="fr-title" class="w-full p-2 border text-black">
 </div>
+<!-- NEW: Hourly Rate Field -->
+<div>
+<label class="block text-sm font-bold mb-1 text-gray-700">Hourly Rate / Price Range</label>
+<input type="text" id="fr-hourly-rate" class="w-full p-2 border text-black" placeholder="e.g. €50–75/hr or Project-based">
+</div>
+<!-- END NEW FIELD -->
 <div>
 <label class="block text-sm font-bold mb-1 text-gray-700">Bio (Max 200 chars)</label>
 <textarea id="fr-bio" rows="3" maxlength="200" class="w-full p-2 border text-black"></textarea>
@@ -468,6 +474,7 @@ const diffTime = expDate - new Date();
 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 if (diffDays <= 0) {
 statusBadge = '<span class="badge-inactive">Expired</span>';
+daysLeftHtml = `<div class="text-xs text-orange-400 font-bold">${diffDays} days left</div>`;
 } else if (diffDays <= 7) {
 statusBadge = '<span class="badge-expiring">Expiring Soon</span>';
 daysLeftHtml = `<div class="text-xs text-orange-400 font-bold">${diffDays} days left</div>`;
@@ -780,6 +787,9 @@ document.getElementById('fr-name').value = f.name;
 document.getElementById('fr-email').value = f.email;
 document.getElementById('fr-phone').value = f.phone || '';
 document.getElementById('fr-title').value = f.title || '';
+// NEW: Set Hourly Rate
+document.getElementById('fr-hourly-rate').value = f.hourly_rate || '';
+// END NEW
 document.getElementById('fr-bio').value = f.bio || '';
 document.getElementById('fr-bio-count').textContent = (f.bio || '').length;
 document.getElementById('fr-featured').checked = f.is_featured || false;
@@ -791,11 +801,20 @@ const name = document.getElementById('fr-name').value;
 const email = document.getElementById('fr-email').value;
 const phone = document.getElementById('fr-phone').value;
 const title = document.getElementById('fr-title').value;
+const hourlyRate = document.getElementById('fr-hourly-rate').value; // NEW
 const bio = document.getElementById('fr-bio').value;
 const isFeatured = document.getElementById('fr-featured').checked;
 if (!name || !email) return alert('Name and Email are required');
 try {
-await apiCall(`/api/admin/freelancers/${id}`, 'PUT', { name, email, phone, title, bio, is_featured: isFeatured });
+await apiCall(`/api/admin/freelancers/${id}`, 'PUT', { 
+name, 
+email, 
+phone, 
+title, 
+hourly_rate: hourlyRate, // NEW
+bio, 
+is_featured: isFeatured 
+});
 alert('Freelancer updated!');
 closeModal('editFreelancerModal');
 loadFreelancers();
