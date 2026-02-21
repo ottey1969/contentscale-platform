@@ -725,11 +725,17 @@ app.post('/api/scan', async (req, res) => {
                 target: '1,500+ words minimum; 2,500+ for competitive terms'
             });
         } else if (analysis.wordCount < 2500) {
+            const wordGapSuggestions = [];
+            if (analysis.caseStudyCount < 1) wordGapSuggestions.push('a case study with before/after metrics');
+            if (analysis.expertQuoteCount < 2) wordGapSuggestions.push('an expert quote section with 3+ cited sources');
+            if (!analysis.hasTLDR) wordGapSuggestions.push("a 'Key Takeaways' summary section");
+            wordGapSuggestions.push("a deeper 'How it works' or 'Why it matters' breakdown");
+            const wordGapAction = `Add ${wordGapSuggestions.slice(0, 3).join(', or ')}. Each adds 200–400 organic words naturally.`;
             recommendations.push({
                 title: '📊 Content Length: Good But Not Elite',
                 description: `${analysis.wordCount} words is solid. 400–800 more strategic words pushes you from Good to Elite tier.`,
                 priority: 'low',
-                action: 'Add a FAQ section, a verified case study with data, or an expert quote section. Each adds natural depth.',
+                action: wordGapAction,
                 learning: "Long-form content earns 77% more backlinks than short content (Backlinko). More importantly, it satisfies Google's comprehensiveness signal and boosts average dwell time.",
                 target: '2,500+ words for GRAAF Elite tier'
             });
