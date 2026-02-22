@@ -71,13 +71,36 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; }
 .setup-input-row input { flex: 1; padding: 0.6rem; border-radius: 0.5rem; }
 .setup-save-btn { background: linear-gradient(135deg, #7e22ce, #be185d); color: white !important; padding: 0.6rem 1.25rem; border-radius: 0.5rem; font-weight: 600; border: none; cursor: pointer; }
 
+/* Leaderboard filter selects */
+#filterNiche, #filterCountry, #filterBizType, #filterScore {
+  background: #1e1b4b !important;
+  color: #e5e7eb !important;
+  border: 1px solid #4c1d95 !important;
+  appearance: auto;
+}
+#filterNiche option, #filterCountry option, #filterBizType option, #filterScore option {
+  background: #1e1b4b !important;
+  color: #e5e7eb !important;
+}
+
 /* Skip link */
 .skip-link { position: absolute; top: -40px; left: 0; background: #7e22ce; color: white !important; padding: 8px; z-index: 100; transition: top 0.2s; }
 .skip-link:focus { top: 0; }
 
-/* Hamburger */
-.hamburger { display: none; flex-direction: column; gap: 4px; cursor: pointer; background: none; border: none; padding: 4px; }
-.hamburger span { width: 24px; height: 2px; background: white; display: block; }
+/* ── NAV: desktop links ≥768px, hamburger <768px ── */
+.nav-desktop { display: flex; gap: 1.5rem; align-items: center; }
+.nav-desktop a { color: #d1d5db !important; text-decoration: none; font-size: 0.95rem; transition: color 0.15s; }
+.nav-desktop a:hover { color: #ffffff !important; }
+.hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; background: none; border: none; padding: 6px; }
+.hamburger span { width: 24px; height: 2px; background: white; display: block; border-radius: 2px; }
+@media (max-width: 767px) {
+  .nav-desktop { display: none !important; }
+  .hamburger   { display: flex !important; }
+}
+.mobile-menu { display: none; flex-direction: column; background: #030712; border-bottom: 2px solid #7e22ce; }
+.mobile-menu.open { display: flex; }
+.mobile-menu a { padding: 0.75rem 1.5rem; border-bottom: 1px solid #1f2937; color: #d1d5db !important; text-decoration: none; font-size: 0.95rem; }
+.mobile-menu a:hover { background: rgba(126,34,206,0.15); color: white !important; }
 
 /* Footer column links */
 footer a { color: #9ca3af !important; text-decoration: none; transition: color 0.2s; }
@@ -127,11 +150,11 @@ footer p { color: #9ca3af !important; }
       <span class="text-2xl font-bold" style="background:linear-gradient(90deg,#c084fc,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">ContentScale</span>
       <span class="hidden sm:inline-block text-xs px-2 py-1 bg-purple-600 rounded font-semibold" style="color:white!important;">Pro</span>
     </div>
-    <div class="hidden md:flex gap-6">
-      <a href="#lead-scanner" class="text-gray-300 hover:text-white transition-colors">Scanner</a>
-      <a href="#leaderboard" class="text-gray-300 hover:text-white transition-colors">Leaderboard</a>
-      <a href="#freelancers" class="text-gray-300 hover:text-white transition-colors">Experts</a>
-      <a href="#templates" class="text-gray-300 hover:text-white transition-colors">Templates</a>
+    <div class="nav-desktop">
+      <a href="#lead-scanner">Scanner</a>
+      <a href="#leaderboard">Leaderboard</a>
+      <a href="#freelancers">Experts</a>
+      <a href="#templates">Templates</a>
     </div>
     <div class="flex items-center gap-3">
       <a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="btn btn-success"><i class="fab fa-whatsapp"></i> Chat</a>
@@ -338,17 +361,126 @@ footer p { color: #9ca3af !important; }
   </div>
 
   <!-- ============================================================
-       LEADERBOARD SECTION — data from server, no changes
+       LEADERBOARD SECTION
        ============================================================ -->
   <div id="leaderboard" class="mb-16">
     <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-      <div class="text-center mb-8">
-        <h2 class="text-4xl font-bold mb-3">🏆 Elite Leaderboard</h2>
-        <p class="text-xl" style="color:#e5e7eb!important;">Top performing websites</p>
+
+      <!-- Header -->
+      <div class="text-center mb-6">
+        <h2 class="text-4xl font-bold mb-2">🏆 Elite Leaderboard</h2>
+        <p style="color:#e5e7eb!important;">Top performing websites ranked by ContentScore</p>
       </div>
-      <!-- FIX: was grid-3, now proper grid class -->
-      <div id="top3-container" class="top3-grid mt-4"></div>
+
+      <!-- ── FILTERS ── -->
+      <div class="max-w-5xl mx-auto mb-8 p-4 rounded-xl" style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+
+          <!-- Niche -->
+          <div>
+            <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">🏷️ Niche</label>
+            <select id="filterNiche" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+              <option value="">All Niches</option>
+              <!-- Agencies & Services — sell content quality to clients -->
+              <optgroup label="── Agencies & Services">
+                <option value="seoagency">SEO Agency</option>
+                <option value="contentmarketing">Content Marketing Agency</option>
+                <option value="digitalmarketing">Digital Marketing Agency</option>
+                <option value="webdesign">Web Design & Dev Agency</option>
+                <option value="prагентство">PR Agency</option>
+              </optgroup>
+              <!-- YMYL — Google scrutinises hardest, content errors = lost trust -->
+              <optgroup label="── YMYL (High Stakes)">
+                <option value="legal">Legal / Law Firm</option>
+                <option value="healthcare">Healthcare / Medical</option>
+                <option value="finance">Finance / Fintech</option>
+                <option value="insurance">Insurance</option>
+                <option value="tax">Accounting / Tax</option>
+                <option value="mentalhealth">Mental Health / Therapy</option>
+              </optgroup>
+              <!-- High competition — ranking matters enormously -->
+              <optgroup label="── High Competition">
+                <option value="saas">SaaS / Software</option>
+                <option value="ecommerce">E-Commerce / Retail</option>
+                <option value="realestate">Real Estate</option>
+                <option value="travel">Travel & Tourism</option>
+                <option value="recruitment">Recruitment / HR</option>
+                <option value="insurance">Insurance</option>
+              </optgroup>
+              <!-- Service businesses — content IS the pitch -->
+              <optgroup label="── Service Businesses">
+                <option value="coaching">Coaching / Consulting</option>
+                <option value="local">Local Business</option>
+                <option value="homeservices">Home Services (Plumber, Builder…)</option>
+                <option value="restaurant">Restaurant / Food</option>
+                <option value="beautywellness">Beauty & Wellness</option>
+                <option value="automotive">Automotive</option>
+              </optgroup>
+              <!-- Content-driven — live and die by organic traffic -->
+              <optgroup label="── Content-Driven">
+                <option value="blog">Blog / News / Media</option>
+                <option value="education">Education / eLearning</option>
+                <option value="nonprofit">Non-Profit</option>
+                <option value="other">Other</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <!-- Country -->
+          <div>
+            <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">🌍 Country</label>
+            <select id="filterCountry" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+              <option value="">All Countries</option>
+            </select>
+          </div>
+
+          <!-- Business Type -->
+          <div>
+            <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">🏢 Business Type</label>
+            <select id="filterBizType" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+              <option value="">All Types</option>
+              <option value="b2b">B2B</option>
+              <option value="b2c">B2C</option>
+              <option value="local">Local</option>
+              <option value="enterprise">Enterprise</option>
+              <option value="startup">Startup</option>
+              <option value="nonprofit">Non-Profit</option>
+            </select>
+          </div>
+
+          <!-- Score Range -->
+          <div>
+            <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">📊 Score Range</label>
+            <select id="filterScore" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+              <option value="">All Scores</option>
+              <option value="95">Elite 95–100</option>
+              <option value="90">Excellent 90–94</option>
+              <option value="85">Strong 85–89</option>
+            </select>
+          </div>
+
+        </div>
+
+        <!-- Active filter count + reset -->
+        <div class="flex items-center justify-between mt-3">
+          <span id="filterCount" class="text-xs" style="color:#9ca3af!important;"></span>
+          <button onclick="resetLeaderboardFilters()" class="text-xs px-3 py-1 rounded" style="background:rgba(139,92,246,0.2);color:#c084fc!important;border:1px solid #7c3aed;cursor:pointer;">Reset Filters</button>
+        </div>
+      </div>
+      <!-- ── END FILTERS ── -->
+
+      <!-- Top 3 podium -->
+      <div id="top3-container" class="top3-grid"></div>
+
+      <!-- Ranks 4–15 -->
       <div id="rankings4to15Container" class="mt-8"></div>
+
+      <!-- Empty state for filters -->
+      <div id="leaderboardEmpty" class="hidden text-center py-8" style="color:#6b7280!important;">
+        <div class="text-4xl mb-3">🔍</div>
+        <p>No entries match your filters. Try a different combination.</p>
+      </div>
+
     </div>
   </div>
 
@@ -885,46 +1017,206 @@ async function sendBulkEmails(results, userEmail, userName) {
 }
 
 // ============================================================
-// LEADERBOARD — unchanged server calls
+// LEADERBOARD — with filters + gold/silver/bronze colors
 // ============================================================
+let allLeaderboardEntries = [];
+
+// Medal config: proper gold / silver / bronze
+const MEDAL = [
+  {
+    emoji: '🥇',
+    label: 'GOLD',
+    bg: 'linear-gradient(160deg,#3d2800 0%,#6b3f00 40%,#1a1000 100%)',
+    border: '#ffd700',
+    glow: 'rgba(255,215,0,0.35)',
+    scoreColor: '#ffd700',
+    badgeText: '#3d2800',
+    badgeBg: '#ffd700'
+  },
+  {
+    emoji: '🥈',
+    label: 'SILVER',
+    bg: 'linear-gradient(160deg,#1e2a35 0%,#37505f 40%,#0d1520 100%)',
+    border: '#b0c4d8',
+    glow: 'rgba(176,196,216,0.25)',
+    scoreColor: '#b0c4d8',
+    badgeText: '#1e2a35',
+    badgeBg: '#b0c4d8'
+  },
+  {
+    emoji: '🥉',
+    label: 'BRONZE',
+    bg: 'linear-gradient(160deg,#2d1400 0%,#7c3a00 40%,#1a0a00 100%)',
+    border: '#cd7f32',
+    glow: 'rgba(205,127,50,0.25)',
+    scoreColor: '#cd7f32',
+    badgeText: '#2d1400',
+    badgeBg: '#cd7f32'
+  }
+];
+
 async function loadLeaderboardData() {
   try {
     const response = await fetch('/api/leaderboard');
     const data = await response.json();
     if (data.success && data.entries && data.entries.length > 0) {
-      const top3 = data.entries.slice(0, 3);
-      const container = document.getElementById('top3-container');
-      container.innerHTML = top3.map((e, i) => `
-        <div style="background:${i===0?'linear-gradient(to bottom,#78350f,#111827)':'linear-gradient(to bottom,#374151,#111827)'};padding:24px;border-radius:12px;text-align:center;border:1px solid ${i===0?'#f59e0b':'#4b5563'};">
-          <div style="font-size:2.5rem;margin-bottom:8px;">${i===0?'🥇':i===1?'🥈':'🥉'}</div>
-          <h3 style="font-weight:700;font-size:1.1rem;margin-bottom:4px;">${e.company_name || e.url}</h3>
-          <div style="font-size:2rem;font-weight:900;color:#4ade80!important;margin-bottom:8px;">${e.score}/100</div>
-          <div style="font-size:0.85rem;color:#9ca3af!important;">${e.country || ''}</div>
-          <a href="${e.url}" target="_blank" rel="noopener" style="display:inline-block;margin-top:12px;font-size:0.75rem;background:rgba(0,0,0,0.3);padding:4px 12px;border-radius:4px;color:#d1d5db!important;">Visit Site →</a>
-        </div>`).join('');
-
-      const rest = data.entries.slice(3, 15);
-      if (rest.length > 0) {
-        document.getElementById('rankings4to15Container').innerHTML = `
-          <div style="background:#111827;border:1px solid #374151;border-radius:12px;overflow:hidden;">
-            ${rest.map((e, i) => `
-              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid #1f2937;">
-                <div style="display:flex;align-items:center;gap:12px;">
-                  <span style="color:#6b7280!important;font-weight:700;width:24px;">${i+4}</span>
-                  <span style="font-weight:600;">${e.company_name || e.url}</span>
-                </div>
-                <div style="display:flex;align-items:center;gap:16px;">
-                  <span style="color:#9ca3af!important;font-size:0.85rem;">${e.country || ''}</span>
-                  <span style="font-weight:700;color:#4ade80!important;">${e.score}/100</span>
-                  <a href="${e.url}" target="_blank" rel="noopener" style="font-size:0.75rem;color:#818cf8!important;">Visit →</a>
-                </div>
-              </div>`).join('')}
-          </div>`;
-      }
+      allLeaderboardEntries = data.entries;
+      populateCountryFilter(data.entries);
+      renderLeaderboard(data.entries);
     } else {
-      document.getElementById('top3-container').innerHTML = '<p style="color:#6b7280!important;text-align:center;grid-column:1/-1;">No leaderboard entries yet. Be the first to scan your site!</p>';
+      document.getElementById('top3-container').innerHTML =
+        '<p style="color:#6b7280!important;text-align:center;grid-column:1/-1;padding:2rem 0;">No leaderboard entries yet. Be the first to scan your site!</p>';
     }
-  } catch (e) { console.error(e); document.getElementById('top3-container').innerHTML = '<p style="color:#6b7280!important;text-align:center;grid-column:1/-1;">Unable to load leaderboard.</p>'; }
+  } catch (e) {
+    console.error(e);
+    document.getElementById('top3-container').innerHTML =
+      '<p style="color:#6b7280!important;text-align:center;grid-column:1/-1;">Unable to load leaderboard.</p>';
+  }
+}
+
+function populateCountryFilter(entries) {
+  const countries = [...new Set(entries.map(e => e.country).filter(Boolean))].sort();
+  const sel = document.getElementById('filterCountry');
+  countries.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c;
+    opt.textContent = c;
+    sel.appendChild(opt);
+  });
+}
+
+function applyLeaderboardFilters() {
+  const niche    = document.getElementById('filterNiche').value.toLowerCase();
+  const country  = document.getElementById('filterCountry').value;
+  const bizType  = document.getElementById('filterBizType').value.toLowerCase();
+  const scoreMin = document.getElementById('filterScore').value;
+
+  let filtered = allLeaderboardEntries.filter(e => {
+    if (niche    && (e.niche || '').toLowerCase() !== niche)       return false;
+    if (country  && (e.country || '') !== country)                 return false;
+    if (bizType  && (e.business_type || '').toLowerCase() !== bizType) return false;
+    if (scoreMin && e.score < parseInt(scoreMin))                  return false;
+    return true;
+  });
+
+  // Count active filters
+  const active = [niche, country, bizType, scoreMin].filter(Boolean).length;
+  document.getElementById('filterCount').textContent =
+    active > 0 ? `${active} filter${active>1?'s':''} active — ${filtered.length} result${filtered.length!==1?'s':''}` : '';
+
+  renderLeaderboard(filtered);
+}
+
+function resetLeaderboardFilters() {
+  ['filterNiche','filterCountry','filterBizType','filterScore'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('filterCount').textContent = '';
+  renderLeaderboard(allLeaderboardEntries);
+}
+
+function renderLeaderboard(entries) {
+  const top3Container   = document.getElementById('top3-container');
+  const restContainer   = document.getElementById('rankings4to15Container');
+  const emptyState      = document.getElementById('leaderboardEmpty');
+
+  if (!entries || entries.length === 0) {
+    top3Container.innerHTML  = '';
+    restContainer.innerHTML  = '';
+    emptyState.classList.remove('hidden');
+    return;
+  }
+  emptyState.classList.add('hidden');
+
+  // ── TOP 3 PODIUM — gold / silver / bronze ──
+  const top3 = entries.slice(0, 3);
+  top3Container.innerHTML = top3.map((e, i) => {
+    const m = MEDAL[i];
+    const name = e.company_name || new URL(e.url.startsWith('http') ? e.url : 'https://'+e.url).hostname;
+    const tags = [e.niche, e.business_type, e.country].filter(Boolean);
+    return `
+      <div style="
+        background:${m.bg};
+        border:2px solid ${m.border};
+        border-radius:16px;
+        padding:28px 20px 24px;
+        text-align:center;
+        position:relative;
+        box-shadow:0 0 28px ${m.glow}, inset 0 1px 0 rgba(255,255,255,0.07);
+        transition:transform 0.2s;
+      " onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='translateY(0)'">
+
+        <!-- rank badge -->
+        <div style="
+          position:absolute;top:-14px;left:50%;transform:translateX(-50%);
+          background:${m.badgeBg};color:${m.badgeText}!important;
+          font-size:0.65rem;font-weight:800;letter-spacing:0.1em;
+          padding:3px 12px;border-radius:99px;
+        ">${m.label}</div>
+
+        <!-- medal emoji -->
+        <div style="font-size:3rem;margin-bottom:6px;line-height:1;">${m.emoji}</div>
+
+        <!-- company name -->
+        <h3 style="font-weight:800;font-size:1.05rem;margin-bottom:6px;color:#f9fafb!important;line-height:1.3;">${name}</h3>
+
+        <!-- score -->
+        <div style="font-size:2.5rem;font-weight:900;color:${m.scoreColor}!important;line-height:1;margin-bottom:4px;">${e.score}</div>
+        <div style="font-size:0.75rem;color:rgba(255,255,255,0.5)!important;margin-bottom:12px;">/ 100</div>
+
+        <!-- tags: niche · type · country -->
+        ${tags.length ? `<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin-bottom:14px;">
+          ${tags.map(t => `<span style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.75)!important;font-size:0.68rem;padding:2px 8px;border-radius:99px;">${t}</span>`).join('')}
+        </div>` : ''}
+
+        <a href="${e.url}" target="_blank" rel="noopener" style="
+          display:inline-block;font-size:0.75rem;
+          background:rgba(0,0,0,0.35);color:${m.border}!important;
+          padding:5px 14px;border-radius:8px;
+          border:1px solid ${m.border};font-weight:600;
+          text-decoration:none;
+        ">Visit Site →</a>
+      </div>`;
+  }).join('');
+
+  // ── RANKS 4–15 LIST ──
+  const rest = entries.slice(3, 15);
+  if (rest.length > 0) {
+    restContainer.innerHTML = `
+      <div style="background:#111827;border:1px solid #374151;border-radius:12px;overflow:hidden;margin-top:8px;">
+        ${rest.map((e, i) => {
+          const rank = i + 4;
+          const name = e.company_name || (e.url.replace(/https?:\/\//,'').split('/')[0]);
+          const rankColor = rank <= 10 ? '#c084fc' : '#6b7280';
+          return `
+            <div style="
+              display:flex;align-items:center;justify-content:space-between;
+              padding:13px 20px;
+              border-bottom:1px solid #1f2937;
+              transition:background 0.15s;
+            " onmouseover="this.style.background='rgba(126,34,206,0.08)'" onmouseout="this.style.background='transparent'">
+
+              <div style="display:flex;align-items:center;gap:14px;min-width:0;">
+                <span style="font-size:0.85rem;font-weight:800;color:${rankColor}!important;width:22px;flex-shrink:0;">${rank}</span>
+                <div style="min-width:0;">
+                  <div style="font-weight:600;color:#f3f4f6!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
+                  <div style="font-size:0.7rem;color:#6b7280!important;margin-top:1px;">
+                    ${[e.niche, e.business_type, e.country].filter(Boolean).join(' · ')}
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:flex;align-items:center;gap:16px;flex-shrink:0;">
+                <span style="font-weight:800;font-size:1.05rem;color:#4ade80!important;">${e.score}<span style="font-size:0.7rem;font-weight:400;color:#6b7280!important;">/100</span></span>
+                <a href="${e.url}" target="_blank" rel="noopener" style="font-size:0.75rem;color:#818cf8!important;text-decoration:none;font-weight:600;">Visit →</a>
+              </div>
+
+            </div>`;
+        }).join('')}
+      </div>`;
+  } else {
+    restContainer.innerHTML = '';
+  }
 }
 
 // ============================================================
