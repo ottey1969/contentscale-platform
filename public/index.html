@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -158,6 +158,8 @@ footer { background: #111827; border-top: 2px solid #374151; margin-top: 4rem; }
 .setup-link { color: #818cf8 !important; text-decoration: underline; font-size: 0.8rem; word-break: break-word; }
 .setup-status-text { font-size: 0.8rem; margin-top: 0.4rem; min-height: 1.2em; word-break: break-word; }
 .setup-all-done { background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(5,150,105,0.1)); border: 2px solid #10b981; border-radius: 0.75rem; padding: 1.25rem; text-align: center; margin-bottom: 1.5rem; }
+/* Niche Input Fix */
+#nicheOtherInput { display: none; margin-top: 0.5rem; }
 </style>
 </head>
 <body class="bg-gray-900">
@@ -1025,7 +1027,9 @@ function shareResult(url, score, quality) {
 const domain = url.replace(/https?:\/\//, '').replace(/\/.*/, '');
 const medal = score >= 90 ? '🏆' : score >= 80 ? '⭐' : score >= 70 ? '📈' : '💡';
 const qualityLabel = (quality || 'good').charAt(0).toUpperCase() + (quality || 'good').slice(1);
-const shareText = `${medal} ${domain} scored ${score}/100 on ContentScale SEO Scanner!\nQuality: ${qualityLabel}\nCheck yours free 👇`;
+const shareText = `${medal} ${domain} scored ${score}/100 on ContentScale SEO Scanner!
+Quality: ${qualityLabel}
+Check yours free 👇`;
 const shareUrl = `https://contentscale.site`;
 const fullShareText = shareText + '\n' + shareUrl;
 // Build share modal
@@ -1204,10 +1208,63 @@ document.getElementById('bulkResults').classList.remove('hidden');
 async function sendBulkEmails(results, userEmail, userName) {
 if (!userId) return;
 try {
+// 1. Send Summary to User
 await fetch('/api/bulk-scan/send-summary', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ userEmail, userName, results }) });
-if (results.leaderboard.length > 0) await fetch('/api/bulk-scan/submit-leaderboard', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ entries: results.leaderboard, submittedBy: userEmail }) });
-if (results.withWebsite.length > 0) await fetch('/api/bulk-scan/send-improvement-emails', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ businesses: results.withWebsite, senderName: userName, senderEmail: userEmail }) });
-if (results.withoutWebsite.length > 0) await fetch('/api/bulk-scan/send-website-offers', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ businesses: results.withoutWebsite, senderName: userName, senderEmail: userEmail }) });
+
+// 2. Process Leaderboard Entries (85+)
+if (results.leaderboard.length > 0) {
+// Submit to leaderboard
+await fetch('/api/bulk-scan/submit-leaderboard', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ entries: results.leaderboard, submittedBy: userEmail }) });
+// Send Congrats Email using Template
+const template = userTemplates.congrats || DEFAULT_TEMPLATES.congrats;
+for (const item of results.leaderboard) {
+let body = template.body.replace('{{company_name}}', extractDomainFromUrl(item.url))
+.replace('{{score}}', item.score)
+.replace('{{leaderboard_url}}', 'https://contentscale.site#leaderboard')
+.replace('{{sender_name}}', userName)
+.replace('{{sender_email}}', userEmail)
+.replace('{{unsubscribe_url}}', 'https://contentscale.site/unsubscribe');
+await fetch('/api/email/send', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+body: JSON.stringify({ to_email: userEmail, subject: template.subject.replace('{{company_name}}', extractDomainFromUrl(item.url)), html: body })
+});
+}
+}
+
+// 3. Process Improvement Emails (<85 with website)
+if (results.withWebsite.length > 0) {
+const template = userTemplates.improvement || DEFAULT_TEMPLATES.improvement;
+for (const item of results.withWebsite) {
+let body = template.body.replace('{{company_name}}', extractDomainFromUrl(item.url))
+.replace('{{score}}', item.score)
+.replace('{{sender_name}}', userName)
+.replace('{{sender_email}}', userEmail)
+.replace('{{unsubscribe_url}}', 'https://contentscale.site/unsubscribe');
+await fetch('/api/email/send', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+body: JSON.stringify({ to_email: userEmail, subject: template.subject.replace('{{company_name}}', extractDomainFromUrl(item.url)), html: body })
+});
+}
+}
+
+// 4. Process Website Offers (<85 without website)
+if (results.withoutWebsite.length > 0) {
+const template = userTemplates.website || DEFAULT_TEMPLATES.website;
+for (const item of results.withoutWebsite) {
+let body = template.body.replace('{{company_name}}', extractDomainFromUrl(item.url))
+.replace('{{sender_name}}', userName)
+.replace('{{sender_email}}', userEmail)
+.replace('{{unsubscribe_url}}', 'https://contentscale.site/unsubscribe');
+await fetch('/api/email/send', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+body: JSON.stringify({ to_email: userEmail, subject: template.subject.replace('{{company_name}}', extractDomainFromUrl(item.url)), html: body })
+});
+}
+}
+
 alert('✅ Bulk scan complete! Emails are being sent via your SendGrid account.');
 } catch (error) { alert('⚠️ Scan complete but some emails may have failed. Check your SendGrid dashboard.'); }
 }
@@ -1318,7 +1375,8 @@ const NICHES = [
 { id: 'travel',        label: 'Travel & Tourism' },
 { id: 'sustainability',label: 'Sustainability' },
 { id: 'logistics',     label: 'Logistics & Shipping' },
-{ id: 'other',         label: 'Other' },
+{ id: 'seoagency',     label: 'SEO Agency' }, // ADDED
+{ id: 'other',         label: 'Other (Specify...)' } // ADDED
 ];
 function setFilter(type, value, btn) {
 activeFilters[type] = value;
@@ -1328,6 +1386,13 @@ if (groupId) {
 document.querySelectorAll('#' + groupId + ' .filter-tag').forEach(function(t) { t.classList.remove('active'); });
 }
 if (btn) btn.classList.add('active');
+// Show manual input if "Other" is selected
+if (type === 'niche' && value === 'other') {
+document.getElementById('nicheOtherInput').style.display = 'block';
+document.getElementById('nicheOtherInput').focus();
+} else if (type === 'niche') {
+document.getElementById('nicheOtherInput').style.display = 'none';
+}
 filterAgencies();
 updateActiveChips();
 }
@@ -1348,7 +1413,9 @@ html += '<span style="' + chipStyle + 'background:#1e3a8a;border:1px solid #3b82
 }
 if (activeFilters.niche !== 'all') {
 var n = NICHES.find(function(x){return x.id===activeFilters.niche;});
-html += '<span style="' + chipStyle + 'background:#064e3b;border:1px solid #10b981;color:#a7f3d0;">' + (n ? n.label : activeFilters.niche) + ' <button style="' + btnStyle + 'color:#a7f3d0;" onclick="resetFilter(&quot;niche&quot;)">x</button></span> ';
+var label = n ? n.label : activeFilters.niche;
+if(activeFilters.niche === 'other-manual') label = document.getElementById('nicheOtherInput').value || 'Other';
+html += '<span style="' + chipStyle + 'background:#064e3b;border:1px solid #10b981;color:#a7f3d0;">' + label + ' <button style="' + btnStyle + 'color:#a7f3d0;" onclick="resetFilter(&quot;niche&quot;)">x</button></span> ';
 }
 if (activeFilters.sort !== 'score-desc') {
 html += '<span style="' + chipStyle + 'background:#374151;border:1px solid #6b7280;color:#e5e7eb;">' + (sortLabels[activeFilters.sort]||activeFilters.sort) + ' <button style="' + btnStyle + 'color:#e5e7eb;" onclick="resetFilter(&quot;sort&quot;)">x</button></span>';
@@ -1363,6 +1430,7 @@ activeFilters[type] = (type === 'sort') ? 'score-desc' : 'all';
 renderCountryFilters(); renderNicheFilters();
 document.querySelectorAll('#scoreFilters .filter-tag').forEach(function(b,i){ b.classList.toggle('active', i===0); });
 document.querySelectorAll('#sortFilters .filter-tag').forEach(function(b,i){ b.classList.toggle('active', i===0); });
+document.getElementById('nicheOtherInput').style.display = 'none';
 filterAgencies(); updateActiveChips();
 }
 function resetAllFilters() {
@@ -1371,6 +1439,7 @@ var s = document.getElementById('searchInput'); if (s) s.value = '';
 renderCountryFilters(); renderNicheFilters();
 document.querySelectorAll('#scoreFilters .filter-tag').forEach(function(b,i){ b.classList.toggle('active', i===0); });
 document.querySelectorAll('#sortFilters .filter-tag').forEach(function(b,i){ b.classList.toggle('active', i===0); });
+document.getElementById('nicheOtherInput').style.display = 'none';
 filterAgencies(); updateActiveChips();
 }
 function getFilteredEntries() {
@@ -1388,7 +1457,14 @@ if (activeFilters.score==='building') entries = entries.filter(function(e){ retu
 // Country
 if (activeFilters.country !== 'all') entries = entries.filter(function(e){ return e.country===activeFilters.country; });
 // Niche
-if (activeFilters.niche !== 'all') entries = entries.filter(function(e){ return (e.niche||'').toLowerCase()===activeFilters.niche; });
+if (activeFilters.niche !== 'all') {
+var manualVal = document.getElementById('nicheOtherInput').value.toLowerCase();
+entries = entries.filter(function(e){ 
+var entryNiche = (e.niche||'').toLowerCase();
+if(activeFilters.niche === 'other-manual') return entryNiche === manualVal;
+return entryNiche === activeFilters.niche; 
+});
+}
 // Sort
 if (activeFilters.sort==='score-desc') entries.sort(function(a,b){ return b.score-a.score; });
 if (activeFilters.sort==='score-asc')  entries.sort(function(a,b){ return a.score-b.score; });
@@ -1397,6 +1473,7 @@ if (activeFilters.sort==='az')         entries.sort(function(a,b){ return (a.com
 return entries;
 }
 function getNicheLabel(nicheId) {
+if(nicheId === 'other-manual') return document.getElementById('nicheOtherInput').value || 'Other';
 var n = NICHES.find(function(x){ return x.id===(nicheId||'').toLowerCase(); });
 return n ? n.label : nicheId;
 }
@@ -1421,11 +1498,17 @@ allLeaderboardEntries.forEach(function(e){ if(e.niche) usedNiches[e.niche.toLowe
 var hasNiches = Object.keys(usedNiches).length > 0;
 var html = '<button class="filter-tag ' + (activeFilters.niche==='all'?'active':'') + '" onclick="setFilter(\'niche\',\'all\',this)">All Industries</button>';
 NICHES.forEach(function(n){
-if (!hasNiches || usedNiches[n.id]) {
+if (!hasNiches || usedNiches[n.id] || n.id === 'other') {
 html += '<button class="filter-tag ' + (activeFilters.niche===n.id?'active':'') + '" onclick="setFilter(\'niche\',\'' + n.id + '\',this)">' + n.label + '</button>';
 }
 });
+// Add manual input field after the buttons
+html += '<div id="nicheOtherInput"><input type="text" id="nicheManualEntry" placeholder="Type niche manually..." class="w-full p-2 rounded border border-gray-600 bg-gray-800 text-white" oninput="activeFilters.niche=\'other-manual\'; filterAgencies(); updateActiveChips();"></div>';
 div.innerHTML = html;
+// Restore display state if "other" was previously selected
+if(activeFilters.niche === 'other' || activeFilters.niche === 'other-manual') {
+document.getElementById('nicheOtherInput').style.display = 'block';
+}
 }
 function filterAgencies() {
 var filtered = getFilteredEntries();
