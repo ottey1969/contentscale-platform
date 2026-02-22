@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -216,6 +216,7 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </div>
 </div>
 </div>
+</div>
 <div id="activateModal" class="modal">
 <div class="modal-content">
 <h2 class="text-2xl font-bold mb-4">Activate Users</h2>
@@ -409,16 +410,44 @@ function logout() {
 localStorage.removeItem('admin_id');
 location.reload();
 }
+
+// --- IMPROVED API CALL FUNCTION ---
 async function apiCall(endpoint, method = 'GET', body = null) {
-const headers = { 'Content-Type': 'application/json' };
-if (endpoint.includes('/admin/')) headers['x-admin-key'] = currentAdminId;
-const options = { method, headers };
-if (body) options.body = JSON.stringify(body);
-const res = await fetch(endpoint, options);
-const data = await res.json();
-if (!data.success) throw new Error(data.error);
-return data;
+    const headers = { 'Content-Type': 'application/json' };
+    if (endpoint.includes('/admin/')) headers['x-admin-key'] = currentAdminId;
+    
+    const options = { method, headers };
+    if (body) options.body = JSON.stringify(body);
+    
+    try {
+        const res = await fetch(endpoint, options);
+        
+        // Check if response is OK (status 200-299)
+        if (!res.ok) {
+            // Try to get error text if it's not JSON
+            const text = await res.text();
+            if (text.startsWith('<!DOCTYPE') || text.startsWith('<html')) {
+                throw new Error(`Server returned an HTML page (Status ${res.status}). The endpoint might be missing or the server crashed.`);
+            }
+            // Try to parse as JSON if it's not HTML
+            try {
+                const errJson = JSON.parse(text);
+                throw new Error(errJson.error || `Error ${res.status}`);
+            } catch (e) {
+                throw new Error(text || `Error ${res.status}`);
+            }
+        }
+
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+        return data;
+    } catch (error) {
+        console.error("API Call Failed:", error);
+        throw error;
+    }
 }
+// ----------------------------------
+
 function switchTab(tab) {
 document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
 document.querySelectorAll('.mode-toggle').forEach(el => el.classList.remove('active'));
@@ -503,7 +532,7 @@ ${u.is_activated ?
 </div>
 </div>`;
 }).join('');
-} catch (e) { console.error(e); }
+} catch (e) { console.error(e); alert('Failed to load users: ' + e.message); }
 }
 async function activateSingleUser(id) {
 try {
@@ -587,7 +616,10 @@ alert('Deleted successfully');
 selectedIds[type].clear();
 updateCounts();
 loadAllData();
-} catch (e) { alert(e.message); }
+} catch (e) { 
+    // This will now show the specific error message from the improved apiCall
+    alert('Delete failed: ' + e.message); 
+}
 }
 function openMessageModal(targetType, userId = null) {
 messageTarget = targetType;
@@ -634,63 +666,66 @@ container.innerHTML = data.messages.map(m => `
 } catch (e) { console.error(e); }
 }
 async function loadLeaderboard() {
-const data = await apiCall('/api/leaderboard');
-window.allLeaderboard = data.entries || [];
-document.getElementById('stat-total-agencies').textContent = data.stats.totalAgencies;
-document.getElementById('stat-avg-score').textContent = data.averageScore;
-document.getElementById('stat-verified').textContent = data.stats.verifiedCount;
-
-// ✅ FIX: Calculate Countries Correctly
-const validEntries = window.allLeaderboard.filter(e => e.country && e.country.trim() !== '');
-const uniqueCountries = [...new Set(validEntries.map(e => e.country))];
-document.getElementById('stat-countries').textContent = uniqueCountries.length;
-
-const top3 = window.allLeaderboard.slice(0, 3);
-document.getElementById('top3-container').innerHTML = top3.map((e, i) => `
-<div class="top-card ${i===0?'gold':i===1?'silver':'bronze'}">
-<div class="text-5xl mb-2">${i===0?'🥇':i===1?'🥈':'🥉'}</div>
-<h3 class="text-xl font-bold mb-2">${e.company_name || extractDomain(e.url)}</h3>
-<div class="text-4xl font-black mb-2">${e.score}/100</div>
-<div class="text-white/80 mb-3">${getFlag(e.country)} ${e.country}</div>
-<button onclick="editLeaderboard(${e.id})" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg mb-2">
-<i class="fas fa-edit mr-2"></i> Edit
-</button>
-<button onclick="deleteItem('leaderboard', ${e.id})" class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">
-<i class="fas fa-trash mr-2"></i> Delete
-</button>
-</div>
-`).join('');
-const grid = document.getElementById('rankings4to15Grid');
-const rankings = window.allLeaderboard.slice(3, 15);
-grid.innerHTML = rankings.map((e, i) => `
-<div class="rank-card">
-<div class="text-2xl font-bold text-gray-400 mb-2">#${i+4}</div>
-<h4 class="font-bold text-white text-sm mb-2 truncate">${e.company_name || extractDomain(e.url)}</h4>
-<div class="text-2xl font-black text-green-400 mb-2">${e.score}</div>
-<div class="text-xs text-gray-400 mb-2">${getFlag(e.country)} ${e.country}</div>
-<div class="flex gap-2 justify-center">
-<button onclick="editLeaderboard(${e.id})" class="text-blue-400 hover:text-blue-300 text-xs"><i class="fas fa-edit"></i> Edit</button>
-<button onclick="deleteItem('leaderboard', ${e.id})" class="text-red-400 hover:text-red-300 text-xs"><i class="fas fa-trash"></i> Del</button>
-</div>
-</div>
-`).join('');
-const tbody = document.getElementById('rankingsTbody');
-const tableRows = window.allLeaderboard.slice(15, 35);
-tbody.innerHTML = tableRows.map((e, i) => `
-<tr>
-<td class="w-10"><input type="checkbox" class="lb-checkbox" data-id="${e.id}" onchange="toggleSelection('leaderboard', ${e.id})"></td>
-<td>${i+16}</td>
-<td>${e.company_name || extractDomain(e.url)}</td>
-<td><span class="text-lg font-bold ${e.score >= 85 ? 'text-green-400' : 'text-yellow-400'}">${e.score}</span></td>
-<td>
-<button onclick="editLeaderboard(${e.id})" class="text-blue-400 hover:text-blue-300 mr-2"><i class="fas fa-edit"></i></button>
-<button onclick="deleteItem('leaderboard', ${e.id})" class="text-red-400 hover:text-red-300"><i class="fas fa-trash"></i></button>
-</td>
-</tr>
-`).join('');
-// FIX: Check if element exists before updating (prevents crash in admin)
-const totalCountEl = document.getElementById('totalCount');
-if (totalCountEl) totalCountEl.textContent = window.allLeaderboard.length;
+try {
+    const data = await apiCall('/api/leaderboard');
+    window.allLeaderboard = data.entries || [];
+    document.getElementById('stat-total-agencies').textContent = data.stats.totalAgencies;
+    document.getElementById('stat-avg-score').textContent = data.averageScore;
+    document.getElementById('stat-verified').textContent = data.stats.verifiedCount;
+    // ✅ FIX: Calculate Countries Correctly
+    const validEntries = window.allLeaderboard.filter(e => e.country && e.country.trim() !== '');
+    const uniqueCountries = [...new Set(validEntries.map(e => e.country))];
+    document.getElementById('stat-countries').textContent = uniqueCountries.length;
+    const top3 = window.allLeaderboard.slice(0, 3);
+    document.getElementById('top3-container').innerHTML = top3.map((e, i) => `
+    <div class="top-card ${i===0?'gold':i===1?'silver':'bronze'}">
+    <div class="text-5xl mb-2">${i===0?'🥇':i===1?'🥈':'🥉'}</div>
+    <h3 class="text-xl font-bold mb-2">${e.company_name || extractDomain(e.url)}</h3>
+    <div class="text-4xl font-black mb-2">${e.score}/100</div>
+    <div class="text-white/80 mb-3">${getFlag(e.country)} ${e.country}</div>
+    <button onclick="editLeaderboard(${e.id})" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg mb-2">
+    <i class="fas fa-edit mr-2"></i> Edit
+    </button>
+    <button onclick="deleteItem('leaderboard', ${e.id})" class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">
+    <i class="fas fa-trash mr-2"></i> Delete
+    </button>
+    </div>
+    `).join('');
+    const grid = document.getElementById('rankings4to15Grid');
+    const rankings = window.allLeaderboard.slice(3, 15);
+    grid.innerHTML = rankings.map((e, i) => `
+    <div class="rank-card">
+    <div class="text-2xl font-bold text-gray-400 mb-2">#${i+4}</div>
+    <h4 class="font-bold text-white text-sm mb-2 truncate">${e.company_name || extractDomain(e.url)}</h4>
+    <div class="text-2xl font-black text-green-400 mb-2">${e.score}</div>
+    <div class="text-xs text-gray-400 mb-2">${getFlag(e.country)} ${e.country}</div>
+    <div class="flex gap-2 justify-center">
+    <button onclick="editLeaderboard(${e.id})" class="text-blue-400 hover:text-blue-300 text-xs"><i class="fas fa-edit"></i> Edit</button>
+    <button onclick="deleteItem('leaderboard', ${e.id})" class="text-red-400 hover:text-red-300 text-xs"><i class="fas fa-trash"></i> Del</button>
+    </div>
+    </div>
+    `).join('');
+    const tbody = document.getElementById('rankingsTbody');
+    const tableRows = window.allLeaderboard.slice(15, 35);
+    tbody.innerHTML = tableRows.map((e, i) => `
+    <tr>
+    <td class="w-10"><input type="checkbox" class="lb-checkbox" data-id="${e.id}" onchange="toggleSelection('leaderboard', ${e.id})"></td>
+    <td>${i+16}</td>
+    <td>${e.company_name || extractDomain(e.url)}</td>
+    <td><span class="text-lg font-bold ${e.score >= 85 ? 'text-green-400' : 'text-yellow-400'}">${e.score}</span></td>
+    <td>
+    <button onclick="editLeaderboard(${e.id})" class="text-blue-400 hover:text-blue-300 mr-2"><i class="fas fa-edit"></i></button>
+    <button onclick="deleteItem('leaderboard', ${e.id})" class="text-red-400 hover:text-red-300"><i class="fas fa-trash"></i></button>
+    </td>
+    </tr>
+    `).join('');
+    // FIX: Check if element exists before updating (prevents crash in admin)
+    const totalCountEl = document.getElementById('totalCount');
+    if (totalCountEl) totalCountEl.textContent = window.allLeaderboard.length;
+} catch (e) {
+    console.error(e);
+    alert("Failed to load leaderboard: " + e.message);
+}
 }
 function normalizeCountry(value) {
 if (!value) return '';
@@ -753,31 +788,36 @@ loadLeaderboard();
 } catch (e) { alert('Error: ' + e.message); }
 }
 async function loadFreelancers() {
-const data = await apiCall('/api/freelancers');
-window.allFreelancers = data.freelancers || [];
-const grid = document.getElementById('freelancersGrid');
-grid.innerHTML = window.allFreelancers.map(f => `
-<div class="card">
-<div class="flex justify-between items-start mb-2">
-<h3 class="font-bold text-lg">${f.name}</h3>
-${f.is_featured ? '<span class="text-yellow-400 text-xs">⭐ Featured</span>' : ''}
-</div>
-<p class="text-sm text-gray-400 mb-4">${f.title || 'Specialist'}</p>
-<div class="flex gap-2 mb-2">
-<button onclick="editFreelancer(${f.id})" class="flex-1 btn btn-info text-xs">
-<i class="fas fa-edit mr-1"></i> Edit
-</button>
-<button onclick="deleteItem('freelancers', ${f.id})" class="flex-1 btn btn-danger text-xs">
-<i class="fas fa-trash mr-1"></i> Del
-</button>
-</div>
-<div class="checkbox-wrapper mt-2">
-<input type="checkbox" onchange="toggleSelection('freelancers', ${f.id})">
-<span class="text-xs text-gray-400">Select</span>
-</div>
-</div>
-`).join('');
-updateCounts();
+try {
+    const data = await apiCall('/api/freelancers');
+    window.allFreelancers = data.freelancers || [];
+    const grid = document.getElementById('freelancersGrid');
+    grid.innerHTML = window.allFreelancers.map(f => `
+    <div class="card">
+    <div class="flex justify-between items-start mb-2">
+    <h3 class="font-bold text-lg">${f.name}</h3>
+    ${f.is_featured ? '<span class="text-yellow-400 text-xs">⭐ Featured</span>' : ''}
+    </div>
+    <p class="text-sm text-gray-400 mb-4">${f.title || 'Specialist'}</p>
+    <div class="flex gap-2 mb-2">
+    <button onclick="editFreelancer(${f.id})" class="flex-1 btn btn-info text-xs">
+    <i class="fas fa-edit mr-1"></i> Edit
+    </button>
+    <button onclick="deleteItem('freelancers', ${f.id})" class="flex-1 btn btn-danger text-xs">
+    <i class="fas fa-trash mr-1"></i> Del
+    </button>
+    </div>
+    <div class="checkbox-wrapper mt-2">
+    <input type="checkbox" onchange="toggleSelection('freelancers', ${f.id})">
+    <span class="text-xs text-gray-400">Select</span>
+    </div>
+    </div>
+    `).join('');
+    updateCounts();
+} catch (e) {
+    console.error(e);
+    alert("Failed to load freelancers: " + e.message);
+}
 }
 function editFreelancer(id) {
 const f = window.allFreelancers.find(x => x.id === id);
@@ -806,14 +846,14 @@ const bio = document.getElementById('fr-bio').value;
 const isFeatured = document.getElementById('fr-featured').checked;
 if (!name || !email) return alert('Name and Email are required');
 try {
-await apiCall(`/api/admin/freelancers/${id}`, 'PUT', { 
-name, 
-email, 
-phone, 
-title, 
+await apiCall(`/api/admin/freelancers/${id}`, 'PUT', {
+name,
+email,
+phone,
+title,
 hourly_rate: hourlyRate, // NEW
-bio, 
-is_featured: isFeatured 
+bio,
+is_featured: isFeatured
 });
 alert('Freelancer updated!');
 closeModal('editFreelancerModal');
