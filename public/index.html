@@ -1844,21 +1844,265 @@ async function scanSingleURL() {
 
 function displayScanResult(data) {
   const resultDiv = document.getElementById('singleResult');
-  const score = data.score || 0;
-  const quality = data.quality || 'unknown';
+  const score     = data.score || 0;
+  const quality   = data.quality || 'unknown';
+  const metrics   = data.metrics || {};
+  const stats     = data.content_stats || {};
+  const recs      = (data.recommendations?.all || data.recommendations || []);
+
+  // Score colour
+  const scoreColor = score >= 85 ? '#4ade80' : score >= 70 ? '#fbbf24' : '#f87171';
+  const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
+
+  // Priority helpers
+  const priorityConfig = {
+    high:   { color: '#f87171', bg: 'rgba(239,68,68,0.08)',   border: '#7f1d1d', label: '🔴 High Priority' },
+    medium: { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)',  border: '#78350f', label: '🟡 Medium Priority' },
+    low:    { color: '#60a5fa', bg: 'rgba(96,165,250,0.08)',  border: '#1e3a5f', label: '🔵 Quick Win' },
+    none:   { color: '#4ade80', bg: 'rgba(74,222,128,0.08)',  border: '#14532d', label: '✅ All Good' }
+  };
+
+  // Count by priority
+  const highCount   = recs.filter(r => r.priority === 'high').length;
+  const medCount    = recs.filter(r => r.priority === 'medium').length;
+  const lowCount    = recs.filter(r => r.priority === 'low').length;
+
+  // Build recommendation cards
+  const recCards = recs.map((rec, i) => {
+    const p = priorityConfig[rec.priority] || priorityConfig.low;
+    return `
+      <div style="background:${p.bg};border:1px solid ${p.border};border-radius:10px;padding:16px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">
+          <div style="font-weight:700;font-size:0.95rem;color:#f1f5f9!important;line-height:1.3;">${rec.title}</div>
+          <span style="font-size:0.7rem;color:${p.color}!important;white-space:nowrap;font-weight:600;margin-top:2px;">${p.label}</span>
+        </div>
+        <p style="font-size:0.82rem;color:#94a3b8!important;margin-bottom:10px;line-height:1.5;">${rec.description}</p>
+        <div style="background:rgba(0,0,0,0.25);border-radius:7px;padding:10px;margin-bottom:8px;">
+          <div style="font-size:0.72rem;font-weight:700;color:#a78bfa!important;margin-bottom:4px;">⚡ ACTION</div>
+          <p style="font-size:0.82rem;color:#e2e8f0!important;line-height:1.5;margin:0;">${rec.action}</p>
+        </div>
+        ${rec.learning ? `
+        <div style="background:rgba(0,0,0,0.15);border-radius:7px;padding:10px;margin-bottom:8px;">
+          <div style="font-size:0.72rem;font-weight:700;color:#60a5fa!important;margin-bottom:4px;">📚 WHY IT MATTERS</div>
+          <p style="font-size:0.8rem;color:#94a3b8!important;line-height:1.5;margin:0;">${rec.learning}</p>
+        </div>` : ''}
+        ${rec.target ? `
+        <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+          <span style="font-size:0.7rem;font-weight:700;color:#4ade80!important;">🎯 TARGET:</span>
+          <span style="font-size:0.78rem;color:#86efac!important;">${rec.target}</span>
+        </div>` : ''}
+      </div>`;
+  }).join('');
+
   resultDiv.innerHTML = `
-    <div style="background:#1f2937;border-radius:12px;border:2px solid #7e22ce;padding:24px;margin-top:16px;text-align:center;">
-      <h2 style="font-size:1.4rem;font-weight:700;margin-bottom:8px;">📊 SEO Analysis</h2>
-      <p style="color:#9ca3af!important;margin-bottom:16px;word-break:break-all;">${data.url}</p>
-      <div style="font-size:4rem;font-weight:900;color:white!important;margin-bottom:4px;">${score}</div>
-      <div style="font-size:0.85rem;color:#9ca3af!important;margin-bottom:24px;">out of 100 · ${quality.toUpperCase()}</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;">
-        <div style="background:#030712;padding:12px;border-radius:8px;"><div style="font-size:0.7rem;color:#9ca3af!important;">GRAAF</div><div style="font-size:1.5rem;font-weight:700;color:#c084fc!important;">${data.metrics?.graaf||0}/50</div></div>
-        <div style="background:#030712;padding:12px;border-radius:8px;"><div style="font-size:0.7rem;color:#9ca3af!important;">CRAFT</div><div style="font-size:1.5rem;font-weight:700;color:#60a5fa!important;">${data.metrics?.craft||0}/30</div></div>
-        <div style="background:#030712;padding:12px;border-radius:8px;"><div style="font-size:0.7rem;color:#9ca3af!important;">Tech</div><div style="font-size:1.5rem;font-weight:700;color:#fbbf24!important;">${data.metrics?.technical||0}/20</div></div>
+    <div style="background:#0f172a;border-radius:16px;border:2px solid #4c1d95;overflow:hidden;margin-top:16px;">
+
+      <!-- HEADER: score -->
+      <div style="background:linear-gradient(135deg,#1e1b4b,#2d1b69,#1e1b4b);padding:28px 24px;text-align:center;">
+        <p style="color:#6b7280!important;font-size:0.8rem;margin-bottom:12px;word-break:break-all;">${data.url}</p>
+        <div style="font-size:5rem;font-weight:900;color:${scoreColor}!important;line-height:1;margin-bottom:6px;">${score}</div>
+        <div style="font-size:0.9rem;margin-bottom:4px;"><span style="color:${scoreColor}!important;font-weight:700;">${scoreLabel}</span> <span style="color:#6b7280!important;">· out of 100</span></div>
+        <div style="font-size:0.8rem;color:#6b7280!important;">${quality.replace(/_/g,' ').toUpperCase()}</div>
       </div>
-      <button onclick="document.getElementById('singleResult').classList.add('hidden')" style="background:#374151;color:white!important;padding:8px 20px;border-radius:6px;border:none;cursor:pointer;font-weight:600;">Close</button>
+
+      <div style="padding:20px 20px 24px;">
+
+        <!-- 3 FRAMEWORK SCORES -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;">
+          <div style="background:#1e1b4b;padding:14px;border-radius:10px;text-align:center;border:1px solid #3730a3;">
+            <div style="font-size:0.68rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.05em;margin-bottom:4px;">GRAAF</div>
+            <div style="font-size:1.8rem;font-weight:900;color:#c084fc!important;">${metrics.graaf||0}</div>
+            <div style="font-size:0.68rem;color:#6b7280!important;">/ 50</div>
+            <div style="background:#1a1042;border-radius:4px;height:4px;margin-top:8px;"><div style="background:#a78bfa;height:4px;border-radius:4px;width:${Math.round(((metrics.graaf||0)/50)*100)}%;"></div></div>
+          </div>
+          <div style="background:#1e2a35;padding:14px;border-radius:10px;text-align:center;border:1px solid #1d4ed8;">
+            <div style="font-size:0.68rem;font-weight:700;color:#60a5fa!important;letter-spacing:0.05em;margin-bottom:4px;">CRAFT</div>
+            <div style="font-size:1.8rem;font-weight:900;color:#60a5fa!important;">${metrics.craft||0}</div>
+            <div style="font-size:0.68rem;color:#6b7280!important;">/ 30</div>
+            <div style="background:#0c1520;border-radius:4px;height:4px;margin-top:8px;"><div style="background:#60a5fa;height:4px;border-radius:4px;width:${Math.round(((metrics.craft||0)/30)*100)}%;"></div></div>
+          </div>
+          <div style="background:#1c1a0e;padding:14px;border-radius:10px;text-align:center;border:1px solid #92400e;">
+            <div style="font-size:0.68rem;font-weight:700;color:#fbbf24!important;letter-spacing:0.05em;margin-bottom:4px;">TECHNICAL</div>
+            <div style="font-size:1.8rem;font-weight:900;color:#fbbf24!important;">${metrics.technical||0}</div>
+            <div style="font-size:0.68rem;color:#6b7280!important;">/ 20</div>
+            <div style="background:#0c0a02;border-radius:4px;height:4px;margin-top:8px;"><div style="background:#fbbf24;height:4px;border-radius:4px;width:${Math.round(((metrics.technical||0)/20)*100)}%;"></div></div>
+          </div>
+        </div>
+
+        <!-- QUICK STATS ROW -->
+        ${stats.wordCount ? `
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin-bottom:20px;padding:12px;background:#111827;border-radius:10px;border:1px solid #1f2937;">
+          <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#e2e8f0!important;">${stats.wordCount?.toLocaleString()}</div><div style="font-size:0.68rem;color:#6b7280!important;">words</div></div>
+          <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#e2e8f0!important;">${stats.h2Count||0}</div><div style="font-size:0.68rem;color:#6b7280!important;">H2 headings</div></div>
+          <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#e2e8f0!important;">${stats.images||0}</div><div style="font-size:0.68rem;color:#6b7280!important;">images</div></div>
+          <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#e2e8f0!important;">${stats.internalLinks||0}</div><div style="font-size:0.68rem;color:#6b7280!important;">internal links</div></div>
+          <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:${stats.hasArticleSchema ? '#4ade80' : '#f87171'}!important;">${stats.hasArticleSchema ? '✅' : '❌'}</div><div style="font-size:0.68rem;color:#6b7280!important;">schema</div></div>
+          <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:${stats.hasCanonical ? '#4ade80' : '#f87171'}!important;">${stats.hasCanonical ? '✅' : '❌'}</div><div style="font-size:0.68rem;color:#6b7280!important;">canonical</div></div>
+        </div>` : ''}
+
+        <!-- ══════════════════════════════════════════════
+             BADGE SECTION — embed on your website
+             Shown for all scores — messaging adapts by tier
+             ══════════════════════════════════════════════ -->
+        ${(() => {
+          // Tier config based on score
+          const tier = score >= 85 ? {
+            pill: 'CONTENT OPTIMIZED', pillBg: '#f0fdf4', pillBorder: '#86efac', pillText: '#14532d',
+            headline: '✨ This content is ranking-ready!', headlineColor: '#166534',
+            accent: '#84cc16', accentDark: '#3f6212', accentMid: '#4d7c0f',
+            bg: 'linear-gradient(135deg,#f7fee7 0%,#ecfccb 100%)', border: '#84cc16',
+            shadow: 'rgba(132,204,22,0.25)', scoreColor: '#84cc16',
+            tagline: 'Optimized with GRAAF + CRAFT frameworks',
+            resultText: '🎉 This content is ranking-ready!', resultBg: '#dcfce7', resultBorder: '#86efac', resultTextColor: '#166534',
+            qualityLabel: scoreLabel
+          } : score >= 70 ? {
+            pill: 'CONTENT VERIFIED', pillBg: '#eff6ff', pillBorder: '#93c5fd', pillText: '#1e3a8a',
+            headline: '✅ Good content quality verified!', headlineColor: '#1e40af',
+            accent: '#3b82f6', accentDark: '#1e3a8a', accentMid: '#1d4ed8',
+            bg: 'linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%)', border: '#3b82f6',
+            shadow: 'rgba(59,130,246,0.2)', scoreColor: '#3b82f6',
+            tagline: 'Scored with GRAAF + CRAFT frameworks',
+            resultText: '💡 This content meets quality standards', resultBg: '#dbeafe', resultBorder: '#93c5fd', resultTextColor: '#1e40af',
+            qualityLabel: scoreLabel
+          } : {
+            pill: 'CONTENT ANALYZED', pillBg: '#fefce8', pillBorder: '#fde047', pillText: '#713f12',
+            headline: '📊 Content analysis complete', headlineColor: '#92400e',
+            accent: '#f59e0b', accentDark: '#78350f', accentMid: '#92400e',
+            bg: 'linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%)', border: '#f59e0b',
+            shadow: 'rgba(245,158,11,0.2)', scoreColor: '#f59e0b',
+            tagline: 'Analyzed with GRAAF + CRAFT frameworks',
+            resultText: '🔧 Improvements identified — score in progress', resultBg: '#fef3c7', resultBorder: '#fde047', resultTextColor: '#92400e',
+            qualityLabel: scoreLabel
+          };
+
+          const animName = `glow_${score}`;
+          const escapedUrl = (data.url||'').replace(/'/g,"\\'");
+          const shortUrl   = (data.url||'').replace(/https?:\/\/(www\.)?/,'').replace(/\/$/,'');
+
+          // The badge HTML that users embed — fully self-contained
+          const badgeHtml = `<div style="background:${tier.bg};padding:22px 24px;border-radius:12px;box-shadow:0 4px 24px ${tier.shadow};max-width:420px;border:2px solid ${tier.border};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;"><style>@keyframes ${animName}{0%,100%{text-shadow:0 0 8px ${tier.scoreColor}55;transform:scale(1)}50%{text-shadow:0 0 20px ${tier.scoreColor}99,0 0 35px ${tier.scoreColor}44;transform:scale(1.06)}} .cs-score-${score}{animation:${animName} 2.5s ease-in-out infinite;display:inline-block}</style><div style="text-align:center"><div style="display:inline-block;background:${tier.pillBg};padding:5px 16px;border-radius:50px;margin-bottom:12px;border:1px solid ${tier.pillBorder}"><span style="font-size:0.78rem;color:${tier.pillText};font-weight:700;letter-spacing:0.05em">✓ ${tier.pill}</span></div><div style="font-size:0.95rem;color:${tier.headlineColor};font-weight:700;margin-bottom:14px">${tier.headline}</div><div style="margin-bottom:6px"><span class="cs-score-${score}" style="font-size:3.8rem;font-weight:800;color:${tier.scoreColor}">${score}</span><span style="font-size:1.4rem;color:#9ca3af;font-weight:400">/100</span></div><div style="font-size:1rem;color:${tier.accentDark};font-weight:700;margin-bottom:4px">${tier.qualityLabel}</div><div style="font-size:0.8rem;color:${tier.accentMid};font-style:italic;margin-bottom:16px">${tier.tagline}</div><div style="background:white;padding:8px 14px;border-radius:8px;display:inline-block;font-size:0.82rem;color:#374151;border:1px solid ${tier.border};margin-bottom:14px;word-break:break-all">📄 <a href="${escapedUrl}" style="color:${tier.accentDark};text-decoration:none;font-weight:600" target="_blank">${shortUrl}</a></div><div style="background:${tier.resultBg};padding:10px 14px;border-radius:8px;border:1px solid ${tier.resultBorder};margin-bottom:14px"><p style="font-size:0.82rem;color:${tier.resultTextColor};margin:0;font-weight:600">${tier.resultText}</p></div><div style="font-size:0.72rem;color:${tier.accentMid}">Verified by <a href="https://app.contentscale.site" style="color:${tier.accentDark};text-decoration:none;font-weight:700">ContentScale SEO Platform</a></div></div></div>`;
+
+          // Escaped for textarea display
+          const escapedCode = badgeHtml
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+          return `
+          <div style="margin-bottom:24px;border-radius:14px;overflow:hidden;border:2px solid ${tier.border};box-shadow:0 4px 24px ${tier.shadow};">
+
+            <!-- Header -->
+            <div style="background:${tier.bg};padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+              <div>
+                <div style="font-weight:800;font-size:0.95rem;color:${tier.accentDark}!important;">🏅 Your ContentScore Badge</div>
+                <div style="font-size:0.78rem;color:${tier.accentMid}!important;margin-top:2px;">Embed on your website to build trust with visitors</div>
+              </div>
+              <div style="display:inline-block;background:white;padding:4px 14px;border-radius:50px;border:1px solid ${tier.pillBorder};font-size:0.72rem;color:${tier.pillText}!important;font-weight:700;">${score >= 85 ? '⭐ Premium Badge' : score >= 70 ? '✅ Standard Badge' : '📊 Analyst Badge'}</div>
+            </div>
+
+            <div style="background:#0f172a;padding:20px;">
+
+              <!-- Preview -->
+              <div style="font-size:0.72rem;font-weight:700;color:#6b7280!important;letter-spacing:0.08em;margin-bottom:10px;">PREVIEW</div>
+              <div style="display:flex;justify-content:center;margin-bottom:20px;">
+                <div style="background:${tier.bg};padding:22px 24px;border-radius:12px;box-shadow:0 4px 24px ${tier.shadow};max-width:340px;width:100%;border:2px solid ${tier.border};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+                  <div style="text-align:center;">
+                    <div style="display:inline-block;background:white;padding:5px 16px;border-radius:50px;margin-bottom:12px;border:1px solid ${tier.pillBorder};">
+                      <span style="font-size:0.78rem;color:${tier.pillText}!important;font-weight:700;letter-spacing:0.05em;">✓ ${tier.pill}</span>
+                    </div>
+                    <div style="font-size:0.95rem;color:${tier.headlineColor}!important;font-weight:700;margin-bottom:14px;">${tier.headline}</div>
+                    <div style="margin-bottom:6px;">
+                      <span style="font-size:3.8rem;font-weight:800;color:${tier.scoreColor}!important;">${score}</span><span style="font-size:1.4rem;color:#9ca3af!important;font-weight:400;">/100</span>
+                    </div>
+                    <div style="font-size:1rem;color:${tier.accentDark}!important;font-weight:700;margin-bottom:3px;">${tier.qualityLabel}</div>
+                    <div style="font-size:0.78rem;color:${tier.accentMid}!important;font-style:italic;margin-bottom:14px;">${tier.tagline}</div>
+                    <div style="background:white;padding:7px 12px;border-radius:7px;display:inline-block;font-size:0.78rem;color:#374151!important;border:1px solid ${tier.border};margin-bottom:12px;word-break:break-all;">
+                      📄 <a href="${escapedUrl}" style="color:${tier.accentDark}!important;text-decoration:none;font-weight:600;" target="_blank">${shortUrl}</a>
+                    </div>
+                    <div style="background:${tier.resultBg};padding:9px 12px;border-radius:7px;border:1px solid ${tier.resultBorder};margin-bottom:12px;">
+                      <p style="font-size:0.8rem;color:${tier.resultTextColor}!important;margin:0;font-weight:600;">${tier.resultText}</p>
+                    </div>
+                    <div style="font-size:0.7rem;color:${tier.accentMid}!important;">
+                      Verified by <a href="https://app.contentscale.site" style="color:${tier.accentDark}!important;text-decoration:none;font-weight:700;">ContentScale SEO Platform</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Embed code -->
+              <div style="font-size:0.72rem;font-weight:700;color:#6b7280!important;letter-spacing:0.08em;margin-bottom:8px;">EMBED CODE — paste anywhere in your website HTML</div>
+              <div style="position:relative;">
+                <textarea id="badgeEmbedCode" readonly rows="4"
+                  style="width:100%;background:#030712;color:#94a3b8!important;border:1px solid #1e293b;border-radius:8px;padding:12px;font-size:0.72rem;font-family:monospace;resize:none;line-height:1.5;box-sizing:border-box;"
+                  onclick="this.select()">${badgeHtml.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+                <button onclick="
+                  const raw = \`${badgeHtml.replace(/`/g,'\\`').replace(/\$/g,'\\$')}\`;
+                  navigator.clipboard.writeText(raw).then(()=>{
+                    this.textContent='✅ Copied!';
+                    this.style.background='#14532d';
+                    setTimeout(()=>{this.textContent='📋 Copy Code';this.style.background='#1e293b';},2000);
+                  }).catch(()=>{
+                    document.getElementById('badgeEmbedCode').select();
+                    document.execCommand('copy');
+                    this.textContent='✅ Copied!';
+                    setTimeout(()=>{this.textContent='📋 Copy Code';},2000);
+                  })"
+                  style="position:absolute;top:8px;right:8px;background:#1e293b;color:#e2e8f0!important;border:1px solid #334155;border-radius:6px;padding:5px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;">
+                  📋 Copy Code
+                </button>
+              </div>
+
+              <!-- Why use it -->
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:14px;">
+                <div style="background:#111827;border-radius:8px;padding:10px;text-align:center;border:1px solid #1f2937;">
+                  <div style="font-size:1.2rem;margin-bottom:4px;">🔒</div>
+                  <div style="font-size:0.72rem;color:#94a3b8!important;line-height:1.4;">Builds visitor<br>trust instantly</div>
+                </div>
+                <div style="background:#111827;border-radius:8px;padding:10px;text-align:center;border:1px solid #1f2937;">
+                  <div style="font-size:1.2rem;margin-bottom:4px;">📈</div>
+                  <div style="font-size:0.72rem;color:#94a3b8!important;line-height:1.4;">Signals content<br>quality to Google</div>
+                </div>
+                <div style="background:#111827;border-radius:8px;padding:10px;text-align:center;border:1px solid #1f2937;">
+                  <div style="font-size:1.2rem;margin-bottom:4px;">🏆</div>
+                  <div style="font-size:0.72rem;color:#94a3b8!important;line-height:1.4;">Stand out from<br>competitors</div>
+                </div>
+                <div style="background:#111827;border-radius:8px;padding:10px;text-align:center;border:1px solid #1f2937;">
+                  <div style="font-size:1.2rem;margin-bottom:4px;">💚</div>
+                  <div style="font-size:0.72rem;color:#94a3b8!important;line-height:1.4;">100% free —<br>no account needed</div>
+                </div>
+              </div>
+
+            </div>
+          </div>`;
+        })()}
+
+        <!-- RECOMMENDATIONS HEADER -->
+        ${recs.length > 0 ? `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+          <div style="font-weight:800;font-size:1rem;color:#f1f5f9!important;">
+            📋 ${recs.length} Recommendation${recs.length !== 1 ? 's' : ''}
+          </div>
+          <div style="display:flex;gap:8px;font-size:0.75rem;">
+            ${highCount > 0 ? `<span style="background:rgba(239,68,68,0.15);color:#f87171!important;padding:2px 8px;border-radius:99px;border:1px solid #7f1d1d;">${highCount} high</span>` : ''}
+            ${medCount  > 0 ? `<span style="background:rgba(251,191,36,0.15);color:#fbbf24!important;padding:2px 8px;border-radius:99px;border:1px solid #78350f;">${medCount} medium</span>` : ''}
+            ${lowCount  > 0 ? `<span style="background:rgba(96,165,250,0.15);color:#60a5fa!important;padding:2px 8px;border-radius:99px;border:1px solid #1e3a5f;">${lowCount} quick win${lowCount !== 1 ? 's' : ''}</span>` : ''}
+          </div>
+        </div>
+        ${recCards}` : ''}
+
+        <!-- CTA + CLOSE -->
+        <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">
+          <a href="https://wa.me/31628073996?text=Hi%2C%20I%20just%20scanned%20${encodeURIComponent(data.url)}%20and%20got%20${score}/100.%20Can%20you%20help%20improve%20it%3F"
+            target="_blank" rel="noopener"
+            style="flex:1;min-width:160px;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#25d366,#128c7e);color:white!important;padding:12px 20px;border-radius:10px;font-weight:700;text-decoration:none;font-size:0.9rem;">
+            <i class="fab fa-whatsapp"></i> Get Help Improving This
+          </a>
+          <button onclick="document.getElementById('singleResult').classList.add('hidden')"
+            style="padding:12px 20px;background:#1e293b;color:#94a3b8!important;border:1px solid #334155;border-radius:10px;cursor:pointer;font-weight:600;font-size:0.9rem;">
+            Close
+          </button>
+        </div>
+      </div>
     </div>`;
+
   resultDiv.classList.remove('hidden');
   resultDiv.scrollIntoView({ behavior: 'smooth' });
 }
