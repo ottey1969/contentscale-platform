@@ -71,6 +71,11 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; }
 .setup-input-row input { flex: 1; padding: 0.6rem; border-radius: 0.5rem; }
 .setup-save-btn { background: linear-gradient(135deg, #7e22ce, #be185d); color: white !important; padding: 0.6rem 1.25rem; border-radius: 0.5rem; font-weight: 600; border: none; cursor: pointer; }
 
+/* Variable rows in templates panel */
+.var-row { display:flex; align-items:baseline; gap:8px; padding:5px 8px; border-radius:6px; border:1px solid #1e293b; background:#0f172a; font-size:0.78rem; }
+.var-row code { white-space:nowrap; font-family:monospace; font-size:0.78rem; flex-shrink:0; }
+.var-row span { color:#94a3b8!important; }
+
 /* Leaderboard filter selects */
 #filterNiche, #filterCountry, #filterBizType, #filterScore {
   background: #1e1b4b !important;
@@ -348,14 +353,74 @@ footer p { color: #9ca3af !important; }
           <button onclick="saveTemplate('website')" class="btn btn-primary w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
         </div>
       </div>
-      <div class="mt-8 rounded-lg p-4" style="background:#1f2937;border:1px solid #374151;">
-        <h4 class="font-bold mb-2">📎 Available Variables:</h4>
-        <div class="cards-grid text-sm" style="color:#9ca3af!important;">
-          <div><code style="color:#c084fc!important;">{{company_name}}</code> — Business name</div>
-          <div><code style="color:#c084fc!important;">{{score}}</code> — SEO score</div>
-          <div><code style="color:#c084fc!important;">{{sender_name}}</code> — Your name</div>
-          <div><code style="color:#4ade80!important;">{{unsubscribe_url}}</code> — Unsubscribe link (Required)</div>
+      <div class="mt-8 rounded-lg p-5" style="background:#0f172a;border:1px solid #334155;">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="text-lg">📎</span>
+          <h4 class="font-bold text-base">Available Variables</h4>
+          <span class="text-xs px-2 py-0.5 rounded-full" style="background:#1e293b;color:#94a3b8!important;">Use in both Subject &amp; Body</span>
         </div>
+
+        <!-- Group: Business -->
+        <div class="mb-4">
+          <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">🏢 Business</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px;">
+            <div class="var-row"><code style="color:#c084fc!important;">{{company_name}}</code><span>Business / domain name</span></div>
+            <div class="var-row"><code style="color:#c084fc!important;">{{domain}}</code><span>Clean domain (no https://)</span></div>
+            <div class="var-row"><code style="color:#c084fc!important;">{{website_url}}</code><span>Full scanned URL</span></div>
+            <div class="var-row"><code style="color:#c084fc!important;">{{industry}}</code><span>Detected industry / niche</span></div>
+            <div class="var-row"><code style="color:#c084fc!important;">{{city}}</code><span>Detected city (if found)</span></div>
+            <div class="var-row"><code style="color:#c084fc!important;">{{country}}</code><span>Detected country</span></div>
+          </div>
+        </div>
+
+        <!-- Group: Score & Analysis -->
+        <div class="mb-4">
+          <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">📊 Score &amp; Analysis</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px;">
+            <div class="var-row"><code style="color:#38bdf8!important;">{{score}}</code><span>Total ContentScore (0–100)</span></div>
+            <div class="var-row"><code style="color:#38bdf8!important;">{{score_label}}</code><span>Elite / Excellent / Good / Needs Work</span></div>
+            <div class="var-row"><code style="color:#38bdf8!important;">{{score_bar}}</code><span>Visual HTML progress bar</span></div>
+            <div class="var-row"><code style="color:#38bdf8!important;">{{graaf_score}}</code><span>GRAAF sub-score (/50)</span></div>
+            <div class="var-row"><code style="color:#38bdf8!important;">{{craft_score}}</code><span>CRAFT sub-score (/30)</span></div>
+            <div class="var-row"><code style="color:#38bdf8!important;">{{tech_score}}</code><span>Technical sub-score (/20)</span></div>
+            <div class="var-row"><code style="color:#38bdf8!important;">{{word_count}}</code><span>Detected word count</span></div>
+            <div class="var-row"><code style="color:#38bdf8!important;">{{top_issue}}</code><span>Top recommended fix</span></div>
+            <div class="var-row"><code style="color:#38bdf8!important;">{{page_title}}</code><span>Scanned page &lt;title&gt;</span></div>
+          </div>
+        </div>
+
+        <!-- Group: Sender / You -->
+        <div class="mb-4">
+          <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">👤 Sender (You)</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px;">
+            <div class="var-row"><code style="color:#fb923c!important;">{{sender_name}}</code><span>Your name (from form)</span></div>
+            <div class="var-row"><code style="color:#fb923c!important;">{{sender_email}}</code><span>Your email (from form)</span></div>
+            <div class="var-row"><code style="color:#fb923c!important;">{{sender_phone}}</code><span>+31 6 2807 3996</span></div>
+            <div class="var-row"><code style="color:#fb923c!important;">{{sender_whatsapp}}</code><span>WhatsApp chat link</span></div>
+            <div class="var-row"><code style="color:#fb923c!important;">{{sender_company}}</code><span>ContentScale</span></div>
+          </div>
+        </div>
+
+        <!-- Group: Links & Dates -->
+        <div class="mb-4">
+          <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">🔗 Links &amp; Dates</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px;">
+            <div class="var-row"><code style="color:#a3e635!important;">{{leaderboard_url}}</code><span>Link to leaderboard page</span></div>
+            <div class="var-row"><code style="color:#a3e635!important;">{{cta_url}}</code><span>Main CTA link (WhatsApp)</span></div>
+            <div class="var-row"><code style="color:#a3e635!important;">{{date}}</code><span>Today's date (Feb 22, 2026)</span></div>
+            <div class="var-row"><code style="color:#a3e635!important;">{{month}}</code><span>Current month (February)</span></div>
+            <div class="var-row"><code style="color:#a3e635!important;">{{year}}</code><span>Current year (2026)</span></div>
+          </div>
+        </div>
+
+        <!-- Group: Required -->
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">⚠️ Required</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px;">
+            <div class="var-row" style="border-color:#dc2626!important;"><code style="color:#f87171!important;">{{unsubscribe_url}}</code><span style="color:#fca5a5!important;">Must include in every email (GDPR)</span></div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -431,6 +496,81 @@ footer p { color: #9ca3af !important; }
             <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">🌍 Country</label>
             <select id="filterCountry" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
               <option value="">All Countries</option>
+              <!-- Europe -->
+              <optgroup label="── Europe">
+                <option value="Netherlands">🇳🇱 Netherlands</option>
+                <option value="Germany">🇩🇪 Germany</option>
+                <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                <option value="France">🇫🇷 France</option>
+                <option value="Spain">🇪🇸 Spain</option>
+                <option value="Italy">🇮🇹 Italy</option>
+                <option value="Belgium">🇧🇪 Belgium</option>
+                <option value="Sweden">🇸🇪 Sweden</option>
+                <option value="Norway">🇳🇴 Norway</option>
+                <option value="Denmark">🇩🇰 Denmark</option>
+                <option value="Finland">🇫🇮 Finland</option>
+                <option value="Switzerland">🇨🇭 Switzerland</option>
+                <option value="Austria">🇦🇹 Austria</option>
+                <option value="Poland">🇵🇱 Poland</option>
+                <option value="Portugal">🇵🇹 Portugal</option>
+                <option value="Ireland">🇮🇪 Ireland</option>
+                <option value="Czech Republic">🇨🇿 Czech Republic</option>
+                <option value="Hungary">🇭🇺 Hungary</option>
+                <option value="Romania">🇷🇴 Romania</option>
+                <option value="Greece">🇬🇷 Greece</option>
+                <option value="Ukraine">🇺🇦 Ukraine</option>
+              </optgroup>
+              <!-- North America -->
+              <optgroup label="── North America">
+                <option value="United States">🇺🇸 United States</option>
+                <option value="Canada">🇨🇦 Canada</option>
+                <option value="Mexico">🇲🇽 Mexico</option>
+              </optgroup>
+              <!-- Latin America -->
+              <optgroup label="── Latin America">
+                <option value="Brazil">🇧🇷 Brazil</option>
+                <option value="Argentina">🇦🇷 Argentina</option>
+                <option value="Colombia">🇨🇴 Colombia</option>
+                <option value="Chile">🇨🇱 Chile</option>
+                <option value="Peru">🇵🇪 Peru</option>
+              </optgroup>
+              <!-- Asia Pacific -->
+              <optgroup label="── Asia Pacific">
+                <option value="Australia">🇦🇺 Australia</option>
+                <option value="New Zealand">🇳🇿 New Zealand</option>
+                <option value="India">🇮🇳 India</option>
+                <option value="Japan">🇯🇵 Japan</option>
+                <option value="China">🇨🇳 China</option>
+                <option value="South Korea">🇰🇷 South Korea</option>
+                <option value="Singapore">🇸🇬 Singapore</option>
+                <option value="Indonesia">🇮🇩 Indonesia</option>
+                <option value="Malaysia">🇲🇾 Malaysia</option>
+                <option value="Philippines">🇵🇭 Philippines</option>
+                <option value="Thailand">🇹🇭 Thailand</option>
+                <option value="Vietnam">🇻🇳 Vietnam</option>
+                <option value="Pakistan">🇵🇰 Pakistan</option>
+                <option value="Bangladesh">🇧🇩 Bangladesh</option>
+              </optgroup>
+              <!-- Middle East -->
+              <optgroup label="── Middle East">
+                <option value="United Arab Emirates">🇦🇪 United Arab Emirates</option>
+                <option value="Saudi Arabia">🇸🇦 Saudi Arabia</option>
+                <option value="Israel">🇮🇱 Israel</option>
+                <option value="Turkey">🇹🇷 Turkey</option>
+                <option value="Egypt">🇪🇬 Egypt</option>
+              </optgroup>
+              <!-- Africa -->
+              <optgroup label="── Africa">
+                <option value="South Africa">🇿🇦 South Africa</option>
+                <option value="Nigeria">🇳🇬 Nigeria</option>
+                <option value="Kenya">🇰🇪 Kenya</option>
+                <option value="Ghana">🇬🇭 Ghana</option>
+                <option value="Morocco">🇲🇦 Morocco</option>
+              </optgroup>
+              <!-- Other -->
+              <optgroup label="──">
+                <option value="Other">🌐 Other</option>
+              </optgroup>
             </select>
           </div>
 
@@ -623,84 +763,364 @@ let sendgridConfigured = false;
 let userTemplates = {};
 
 const DEFAULT_TEMPLATES = {
+
+  // ── TEMPLATE 1: CONGRATS (score ≥ 85) ───────────────────────────────────
+  // Psychology: Pride + Social proof + Subtle upsell to maintain/reach 100
   congrats: {
-    subject: "🎉 Great news about {{company_name}}!",
-    body: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;">
-<div style="max-width:600px;margin:40px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
-<div style="background:linear-gradient(135deg,#7e22ce,#be185d);padding:32px;text-align:center;">
-<div style="font-size:48px;margin-bottom:8px;">🏆</div>
-<h1 style="color:white;margin:0;font-size:26px;">You Did It!</h1>
+    subject: "🏆 {{company_name}} just made the Elite Leaderboard ({{score}}/100)",
+    body: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f0f4f8;font-family:Arial,Helvetica,sans-serif;">
+
+<div style="max-width:600px;margin:32px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.12);">
+
+  <!-- HEADER -->
+  <div style="background:linear-gradient(135deg,#5b21b6 0%,#7e22ce 50%,#be185d 100%);padding:40px 32px;text-align:center;">
+    <div style="font-size:56px;line-height:1;margin-bottom:12px;">🏆</div>
+    <h1 style="color:#ffffff;margin:0;font-size:28px;font-weight:800;letter-spacing:-0.5px;">You Are Elite.</h1>
+    <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-size:16px;">Top {{score_label}} · ContentScore {{score}}/100</p>
+  </div>
+
+  <!-- BODY -->
+  <div style="padding:36px 32px;">
+
+    <p style="font-size:17px;color:#111827;line-height:1.7;margin:0 0 16px;">Hi <strong>{{company_name}}</strong>,</p>
+
+    <p style="font-size:16px;color:#374151;line-height:1.7;margin:0 0 24px;">
+      My name is <strong>{{sender_name}}</strong> from <strong>{{sender_company}}</strong>.<br>
+      I scan websites to see how well they rank on Google — and yours just impressed me.
+    </p>
+
+    <!-- Score highlight box -->
+    <div style="background:linear-gradient(135deg,#fdf4ff,#fce7f3);border:2px solid #d946ef;border-radius:12px;padding:24px;margin:0 0 28px;text-align:center;">
+      <p style="margin:0 0 4px;font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;">Your ContentScore</p>
+      <div style="font-size:52px;font-weight:900;color:#7e22ce;line-height:1;">{{score}}</div>
+      <div style="font-size:14px;color:#6b7280;margin-bottom:12px;">out of 100 &nbsp;·&nbsp; <strong style="color:#059669;">{{score_label}}</strong></div>
+      {{score_bar}}
+      <p style="margin:12px 0 0;font-size:13px;color:#9ca3af;">Only the top 15% of websites reach this level.</p>
+    </div>
+
+    <!-- Breakdown -->
+    <p style="font-size:15px;color:#374151;font-weight:700;margin:0 0 12px;">Your Score Breakdown:</p>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:28px;">
+      <tr>
+        <td style="padding:10px 12px;background:#f5f3ff;border-radius:8px 0 0 8px;font-size:14px;color:#374151;font-weight:600;">GRAAF Framework</td>
+        <td style="padding:10px 12px;background:#f5f3ff;font-size:14px;color:#7e22ce;font-weight:800;text-align:right;border-radius:0 8px 8px 0;">{{graaf_score}} / 50</td>
+      </tr>
+      <tr><td colspan="2" style="padding:3px 0;"></td></tr>
+      <tr>
+        <td style="padding:10px 12px;background:#eff6ff;border-radius:8px 0 0 8px;font-size:14px;color:#374151;font-weight:600;">CRAFT Methodology</td>
+        <td style="padding:10px 12px;background:#eff6ff;font-size:14px;color:#1d4ed8;font-weight:800;text-align:right;border-radius:0 8px 8px 0;">{{craft_score}} / 30</td>
+      </tr>
+      <tr><td colspan="2" style="padding:3px 0;"></td></tr>
+      <tr>
+        <td style="padding:10px 12px;background:#fefce8;border-radius:8px 0 0 8px;font-size:14px;color:#374151;font-weight:600;">Technical SEO</td>
+        <td style="padding:10px 12px;background:#fefce8;font-size:14px;color:#b45309;font-weight:800;text-align:right;border-radius:0 8px 8px 0;">{{tech_score}} / 20</td>
+      </tr>
+    </table>
+
+    <!-- Leaderboard notice -->
+    <div style="background:#f0fdf4;border-left:4px solid #16a34a;border-radius:0 8px 8px 0;padding:16px 20px;margin-bottom:28px;">
+      <p style="margin:0;font-size:15px;color:#15803d;line-height:1.6;">
+        ✅ <strong>We added {{company_name}} to our Elite Leaderboard.</strong><br>
+        Your website is now visible to thousands of businesses and buyers who use ContentScale to find trusted suppliers.
+      </p>
+    </div>
+
+    <!-- Want to reach 100? -->
+    <p style="font-size:16px;color:#374151;line-height:1.7;margin:0 0 12px;">
+      You are already in the top {{score_label}} tier. But there is still room to reach a perfect <strong>100/100</strong> — and the websites that do get significantly more traffic from Google.
+    </p>
+    <p style="font-size:16px;color:#374151;line-height:1.7;margin:0 0 28px;">
+      Want to know exactly what it would take? I can show you in 15 minutes. No cost. No pressure.
+    </p>
+
+    <!-- CTA Button -->
+    <div style="text-align:center;margin-bottom:32px;">
+      <a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#7e22ce,#be185d);color:#ffffff;font-size:16px;font-weight:700;padding:16px 40px;border-radius:10px;text-decoration:none;letter-spacing:0.02em;">
+        💬 Let's Talk — WhatsApp
+      </a>
+      <p style="margin:10px 0 0;font-size:12px;color:#9ca3af;">Or reply directly to this email · Mon–Fri 9:00–18:00 CET</p>
+    </div>
+
+    <!-- Signature -->
+    <div style="border-top:1px solid #f3f4f6;padding-top:24px;">
+      <p style="font-size:15px;color:#374151;margin:0;">Warm regards,</p>
+      <p style="font-size:15px;color:#111827;font-weight:700;margin:4px 0;">{{sender_name}}</p>
+      <p style="font-size:13px;color:#6b7280;margin:2px 0;">{{sender_company}} · Amsterdam, Netherlands</p>
+      <p style="font-size:13px;color:#6b7280;margin:2px 0;">📞 {{sender_phone}} · <a href="{{leaderboard_url}}" style="color:#7e22ce;">View Leaderboard</a></p>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 32px;text-align:center;">
+    <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.8;">
+      {{sender_company}} · Amsterdam, Netherlands · {{year}}<br>
+      You received this because your website was scanned by our ContentScore tool.<br>
+      <a href="{{unsubscribe_url}}" style="color:#7e22ce;text-decoration:underline;">Unsubscribe</a>
+    </p>
+  </div>
+
 </div>
-<div style="padding:32px;">
-<p style="font-size:16px;color:#333;line-height:1.6;">Hi <strong>{{company_name}}</strong>,</p>
-<p style="font-size:16px;color:#333;line-height:1.6;">We checked your website. And wow — you scored <strong style="color:#7e22ce;font-size:20px;">{{score}} out of 100!</strong></p>
-<p style="font-size:16px;color:#333;line-height:1.6;">That is really good. Most websites do not score this high.</p>
-<div style="background:#f3e8ff;border-left:4px solid #7e22ce;padding:16px;border-radius:8px;margin:24px 0;">
-<p style="margin:0;font-size:15px;color:#5b21b6;">🌟 We added your website to our <strong>Elite SEO Leaderboard</strong>. People can now see how good your website is!</p>
-</div>
-<p style="font-size:16px;color:#333;line-height:1.6;">Keep up the great work!</p>
-<p style="font-size:15px;color:#555;margin-top:32px;">Warm regards,<br><strong>{{sender_name}}</strong><br>ContentScale</p>
-</div>
-<div style="background:#f3f4f6;padding:16px;text-align:center;border-top:1px solid #e5e7eb;">
-<p style="font-size:12px;color:#9ca3af;margin:0;">ContentScale · Amsterdam · <a href="{{unsubscribe_url}}" style="color:#7e22ce;">Unsubscribe</a></p>
-</div>
-</div></body></html>`
+</body></html>`
   },
+
+  // ── TEMPLATE 2: IMPROVEMENT PITCH (score < 85, has website) ─────────────
+  // Psychology: Specific diagnosis + urgency (competitors improving) + easy next step
   improvement: {
-    subject: "Quick tip to get more visitors to {{company_name}}",
-    body: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;">
-<div style="max-width:600px;margin:40px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
-<div style="background:linear-gradient(135deg,#1e40af,#0891b2);padding:32px;text-align:center;">
-<div style="font-size:48px;margin-bottom:8px;">📈</div>
-<h1 style="color:white;margin:0;font-size:26px;">Your Website Can Do Better</h1>
+    subject: "I found 1 issue holding {{company_name}} back on Google (score: {{score}}/100)",
+    body: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f0f4f8;font-family:Arial,Helvetica,sans-serif;">
+
+<div style="max-width:600px;margin:32px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.12);">
+
+  <!-- HEADER -->
+  <div style="background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 50%,#0891b2 100%);padding:40px 32px;text-align:center;">
+    <div style="font-size:56px;line-height:1;margin-bottom:12px;">📊</div>
+    <h1 style="color:#ffffff;margin:0;font-size:26px;font-weight:800;">Your Free SEO Report</h1>
+    <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-size:15px;">{{company_name}} · Scanned {{date}}</p>
+  </div>
+
+  <!-- BODY -->
+  <div style="padding:36px 32px;">
+
+    <p style="font-size:17px;color:#111827;line-height:1.7;margin:0 0 16px;">Hi <strong>{{company_name}}</strong>,</p>
+
+    <p style="font-size:16px;color:#374151;line-height:1.7;margin:0 0 24px;">
+      My name is <strong>{{sender_name}}</strong>. I help businesses rank higher on Google and get more customers from search.<br><br>
+      I ran a free scan of your website. Here is what I found.
+    </p>
+
+    <!-- Score card -->
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:24px;margin-bottom:28px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div>
+          <p style="margin:0 0 4px;font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;">ContentScore</p>
+          <div style="font-size:44px;font-weight:900;color:#1e3a8a;line-height:1;">{{score}}<span style="font-size:20px;font-weight:400;color:#94a3b8;">/100</span></div>
+        </div>
+        <div style="text-align:right;">
+          <span style="display:inline-block;background:#fef3c7;color:#b45309;font-size:13px;font-weight:700;padding:6px 14px;border-radius:99px;">{{score_label}}</span>
+          <p style="margin:6px 0 0;font-size:12px;color:#94a3b8;">Industry avg: 71/100</p>
+        </div>
+      </div>
+      {{score_bar}}
+    </div>
+
+    <!-- 3-pillar breakdown -->
+    <p style="font-size:15px;color:#374151;font-weight:700;margin:0 0 12px;">Where Points Are Lost:</p>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
+      <tr style="background:#f1f5f9;">
+        <td style="padding:11px 14px;font-size:14px;color:#374151;border-radius:8px 0 0 8px;"><strong>GRAAF</strong> <span style="font-size:12px;color:#94a3b8;">(credibility &amp; relevance)</span></td>
+        <td style="padding:11px 14px;font-size:15px;font-weight:800;color:#7e22ce;text-align:right;border-radius:0 8px 8px 0;">{{graaf_score}} / 50</td>
+      </tr>
+      <tr><td colspan="2" style="padding:2px;"></td></tr>
+      <tr style="background:#f1f5f9;">
+        <td style="padding:11px 14px;font-size:14px;color:#374151;border-radius:8px 0 0 8px;"><strong>CRAFT</strong> <span style="font-size:12px;color:#94a3b8;">(content quality)</span></td>
+        <td style="padding:11px 14px;font-size:15px;font-weight:800;color:#1d4ed8;text-align:right;border-radius:0 8px 8px 0;">{{craft_score}} / 30</td>
+      </tr>
+      <tr><td colspan="2" style="padding:2px;"></td></tr>
+      <tr style="background:#f1f5f9;">
+        <td style="padding:11px 14px;font-size:14px;color:#374151;border-radius:8px 0 0 8px;"><strong>Technical</strong> <span style="font-size:12px;color:#94a3b8;">(speed &amp; structure)</span></td>
+        <td style="padding:11px 14px;font-size:15px;font-weight:800;color:#b45309;text-align:right;border-radius:0 8px 8px 0;">{{tech_score}} / 20</td>
+      </tr>
+    </table>
+    <p style="font-size:12px;color:#94a3b8;margin:4px 0 28px;">Total: {{score}}/100 · Powered by GRAAF + CRAFT Framework</p>
+
+    <!-- #1 issue callout -->
+    <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:20px 24px;margin-bottom:28px;">
+      <p style="margin:0 0 6px;font-size:13px;color:#9a3412;text-transform:uppercase;font-weight:700;letter-spacing:0.06em;">🔍 Top Issue Found</p>
+      <p style="margin:0;font-size:16px;color:#1c1917;font-weight:600;line-height:1.5;">{{top_issue}}</p>
+      <p style="margin:8px 0 0;font-size:13px;color:#78350f;">Fixing this one issue alone can move your score 8–15 points up.</p>
+    </div>
+
+    <!-- What happens with a better score -->
+    <p style="font-size:15px;color:#374151;font-weight:700;margin:0 0 12px;">What a higher score means for you:</p>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:28px;">
+      <tr>
+        <td style="padding:8px 12px;font-size:14px;color:#374151;">📈</td>
+        <td style="padding:8px 12px;font-size:14px;color:#374151;">More people find you on Google when they search for what you offer</td>
+      </tr>
+      <tr style="background:#f8fafc;">
+        <td style="padding:8px 12px;font-size:14px;color:#374151;">🤖</td>
+        <td style="padding:8px 12px;font-size:14px;color:#374151;">Google AI Overviews start showing your content — free top-of-page visibility</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 12px;font-size:14px;color:#374151;">💰</td>
+        <td style="padding:8px 12px;font-size:14px;color:#374151;">More visitors = more enquiries = more revenue, without paying for ads</td>
+      </tr>
+    </table>
+
+    <p style="font-size:16px;color:#374151;line-height:1.7;margin:0 0 8px;">
+      I work with businesses in {{country}} and 47+ countries to fix exactly this. Most see results within 30–60 days.
+    </p>
+    <p style="font-size:16px;color:#374151;line-height:1.7;margin:0 0 28px;">
+      Can I show you a quick plan for <strong>{{company_name}}</strong>? Takes 15 minutes on WhatsApp. No cost. No obligation.
+    </p>
+
+    <!-- CTA -->
+    <div style="text-align:center;margin-bottom:32px;">
+      <a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#25d366,#128c7e);color:#ffffff;font-size:16px;font-weight:700;padding:16px 40px;border-radius:10px;text-decoration:none;">
+        💬 Yes — Show Me How to Improve
+      </a>
+      <p style="margin:10px 0 0;font-size:12px;color:#9ca3af;">Average response time: under 2 hours</p>
+    </div>
+
+    <!-- Signature -->
+    <div style="border-top:1px solid #f3f4f6;padding-top:24px;">
+      <p style="font-size:15px;color:#374151;margin:0;">Kind regards,</p>
+      <p style="font-size:15px;color:#111827;font-weight:700;margin:4px 0;">{{sender_name}}</p>
+      <p style="font-size:13px;color:#6b7280;margin:2px 0;">{{sender_company}} · SEO Recovery Expert · Amsterdam</p>
+      <p style="font-size:13px;color:#6b7280;margin:2px 0;">📞 {{sender_phone}}</p>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 32px;text-align:center;">
+    <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.8;">
+      {{sender_company}} · Amsterdam, Netherlands · {{year}}<br>
+      You received this because your website <strong>{{website_url}}</strong> was scanned by our free ContentScore tool.<br>
+      <a href="{{unsubscribe_url}}" style="color:#1d4ed8;text-decoration:underline;">Unsubscribe</a>
+    </p>
+  </div>
+
 </div>
-<div style="padding:32px;">
-<p style="font-size:16px;color:#333;line-height:1.6;">Hi <strong>{{company_name}}</strong>,</p>
-<p style="font-size:16px;color:#333;line-height:1.6;">My name is <strong>{{sender_name}}</strong>. I help businesses get more visitors from Google.</p>
-<p style="font-size:16px;color:#333;line-height:1.6;">I checked your website. It scored <strong style="color:#1e40af;font-size:20px;">{{score}} out of 100</strong>.</p>
-<p style="font-size:16px;color:#333;line-height:1.6;">That is okay. But there is room to grow!</p>
-<div style="background:#eff6ff;border-left:4px solid #1e40af;padding:16px;border-radius:8px;margin:24px 0;">
-<p style="margin:0;font-size:15px;color:#1e40af;">✅ More people can find you on Google<br>✅ More visitors = more customers</p>
-</div>
-<p style="font-size:16px;color:#333;line-height:1.6;">I can show you exactly what to fix. It is easy. And it works fast.</p>
-<p style="font-size:16px;color:#333;line-height:1.6;">Can we have a quick chat? Just 15 minutes.</p>
-<div style="text-align:center;margin:28px 0;">
-<a href="https://wa.me/31628073996" style="background:linear-gradient(135deg,#1e40af,#0891b2);color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold;">💬 Yes, Let's Chat</a>
-</div>
-<p style="font-size:15px;color:#555;margin-top:32px;">Kind regards,<br><strong>{{sender_name}}</strong><br>ContentScale</p>
-</div>
-<div style="background:#f3f4f6;padding:16px;text-align:center;border-top:1px solid #e5e7eb;">
-<p style="font-size:12px;color:#9ca3af;margin:0;">ContentScale · Amsterdam · <a href="{{unsubscribe_url}}" style="color:#7e22ce;">Unsubscribe</a></p>
-</div>
-</div></body></html>`
+</body></html>`
   },
+
+  // ── TEMPLATE 3: WEBSITE OFFER (no website / score = 0) ──────────────────
+  // Psychology: Opportunity cost + fear of missing out + simple low-friction ask
   website: {
-    subject: "{{company_name}} — did you know a website gets you more customers?",
-    body: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;">
-<div style="max-width:600px;margin:40px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
-<div style="background:linear-gradient(135deg,#065f46,#0891b2);padding:32px;text-align:center;">
-<div style="font-size:48px;margin-bottom:8px;">🌐</div>
-<h1 style="color:white;font-size:26px;margin:0;">Get Found on Google</h1>
+    subject: "Your competitors in {{country}} are getting customers online — are you?",
+    body: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f0f4f8;font-family:Arial,Helvetica,sans-serif;">
+
+<div style="max-width:600px;margin:32px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.12);">
+
+  <!-- HEADER -->
+  <div style="background:linear-gradient(135deg,#064e3b 0%,#065f46 50%,#0891b2 100%);padding:40px 32px;text-align:center;">
+    <div style="font-size:56px;line-height:1;margin-bottom:12px;">🌐</div>
+    <h1 style="color:#ffffff;margin:0;font-size:26px;font-weight:800;">Your Business Is Invisible Online.</h1>
+    <p style="color:rgba(255,255,255,0.85);margin:10px 0 0;font-size:15px;">Here is how to fix that — fast and affordable.</p>
+  </div>
+
+  <!-- BODY -->
+  <div style="padding:36px 32px;">
+
+    <p style="font-size:17px;color:#111827;line-height:1.7;margin:0 0 16px;">Hi <strong>{{company_name}}</strong>,</p>
+
+    <p style="font-size:16px;color:#374151;line-height:1.7;margin:0 0 16px;">
+      My name is <strong>{{sender_name}}</strong>. I help businesses like yours get found on Google and win more customers — without spending money on ads.
+    </p>
+
+    <p style="font-size:16px;color:#374151;line-height:1.7;margin:0 0 24px;">
+      I searched for <strong>{{company_name}}</strong> online today. I could not find a website for you.
+    </p>
+
+    <!-- What they are missing -->
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:20px 24px;margin-bottom:28px;">
+      <p style="margin:0 0 12px;font-size:15px;color:#991b1b;font-weight:700;">⚠️ What this costs you every month:</p>
+      <table style="width:100%;border-collapse:collapse;">
+        <tr>
+          <td style="padding:7px 0;font-size:14px;color:#7f1d1d;">❌</td>
+          <td style="padding:7px 0;font-size:14px;color:#374151;">Customers searching Google for what you offer — going to your competitors instead</td>
+        </tr>
+        <tr>
+          <td style="padding:7px 0;font-size:14px;color:#7f1d1d;">❌</td>
+          <td style="padding:7px 0;font-size:14px;color:#374151;">No way for people to find your opening hours, location, or prices at 11pm</td>
+        </tr>
+        <tr>
+          <td style="padding:7px 0;font-size:14px;color:#7f1d1d;">❌</td>
+          <td style="padding:7px 0;font-size:14px;color:#374151;">Looking less professional than competitors who do have a website</td>
+        </tr>
+        <tr>
+          <td style="padding:7px 0;font-size:14px;color:#7f1d1d;">❌</td>
+          <td style="padding:7px 0;font-size:14px;color:#374151;">Missing referral traffic from Google Maps, social media, and directory sites</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- What they can have -->
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px 24px;margin-bottom:28px;">
+      <p style="margin:0 0 12px;font-size:15px;color:#14532d;font-weight:700;">✅ With a proper website you get:</p>
+      <table style="width:100%;border-collapse:collapse;">
+        <tr>
+          <td style="padding:7px 0;font-size:14px;color:#166534;">✔</td>
+          <td style="padding:7px 0;font-size:14px;color:#374151;">Show up on Google when people search for your service in {{country}}</td>
+        </tr>
+        <tr>
+          <td style="padding:7px 0;font-size:14px;color:#166534;">✔</td>
+          <td style="padding:7px 0;font-size:14px;color:#374151;">Look professional and trusted — even against bigger competitors</td>
+        </tr>
+        <tr>
+          <td style="padding:7px 0;font-size:14px;color:#166534;">✔</td>
+          <td style="padding:7px 0;font-size:14px;color:#374151;">Get new customers even when you are sleeping or on holiday</td>
+        </tr>
+        <tr>
+          <td style="padding:7px 0;font-size:14px;color:#166534;">✔</td>
+          <td style="padding:7px 0;font-size:14px;color:#374151;">One-time investment that keeps working for years — no monthly ad spend</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- How we work -->
+    <p style="font-size:15px;color:#374151;font-weight:700;margin:0 0 12px;">How it works — 3 simple steps:</p>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:28px;">
+      <tr style="background:#f8fafc;">
+        <td style="padding:12px 14px;border-radius:8px 0 0 8px;font-size:22px;width:40px;text-align:center;">1</td>
+        <td style="padding:12px 14px;border-radius:0 8px 8px 0;font-size:14px;color:#374151;"><strong>We talk</strong> — 15 minutes on WhatsApp to understand your business</td>
+      </tr>
+      <tr><td colspan="2" style="padding:3px;"></td></tr>
+      <tr style="background:#f8fafc;">
+        <td style="padding:12px 14px;border-radius:8px 0 0 8px;font-size:22px;width:40px;text-align:center;">2</td>
+        <td style="padding:12px 14px;border-radius:0 8px 8px 0;font-size:14px;color:#374151;"><strong>We build</strong> — a fast, Google-optimised website made for {{country}}</td>
+      </tr>
+      <tr><td colspan="2" style="padding:3px;"></td></tr>
+      <tr style="background:#f8fafc;">
+        <td style="padding:12px 14px;border-radius:8px 0 0 8px;font-size:22px;width:40px;text-align:center;">3</td>
+        <td style="padding:12px 14px;border-radius:0 8px 8px 0;font-size:14px;color:#374151;"><strong>You grow</strong> — more visitors, more calls, more customers. Guaranteed.</td>
+      </tr>
+    </table>
+
+    <p style="font-size:16px;color:#374151;line-height:1.7;margin:0 0 28px;">
+      No technical knowledge needed. No long contracts. Just a simple website that works — and keeps working.
+    </p>
+
+    <!-- CTA -->
+    <div style="text-align:center;margin-bottom:32px;">
+      <a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#25d366,#128c7e);color:#ffffff;font-size:16px;font-weight:700;padding:16px 40px;border-radius:10px;text-decoration:none;">
+        💬 I Want More Customers — Let's Talk
+      </a>
+      <p style="margin:10px 0 0;font-size:13px;color:#9ca3af;">Free 15-minute call · No cost · No pressure · No commitment</p>
+    </div>
+
+    <!-- Signature -->
+    <div style="border-top:1px solid #f3f4f6;padding-top:24px;">
+      <p style="font-size:15px;color:#374151;margin:0;">Kind regards,</p>
+      <p style="font-size:15px;color:#111827;font-weight:700;margin:4px 0;">{{sender_name}}</p>
+      <p style="font-size:13px;color:#6b7280;margin:2px 0;">{{sender_company}} · Website &amp; SEO Specialist · Amsterdam</p>
+      <p style="font-size:13px;color:#6b7280;margin:2px 0;">📞 {{sender_phone}} &nbsp;·&nbsp; <a href="{{cta_url}}" style="color:#065f46;">WhatsApp Me</a></p>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 32px;text-align:center;">
+    <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.8;">
+      {{sender_company}} · Amsterdam, Netherlands · {{year}}<br>
+      You received this because your business was found during a local search in {{country}}.<br>
+      <a href="{{unsubscribe_url}}" style="color:#065f46;text-decoration:underline;">Unsubscribe</a>
+    </p>
+  </div>
+
 </div>
-<div style="padding:32px;">
-<p style="font-size:16px;color:#333;line-height:1.6;">Hi <strong>{{company_name}}</strong>,</p>
-<p style="font-size:16px;color:#333;line-height:1.6;">My name is <strong>{{sender_name}}</strong>. I help small businesses get more customers.</p>
-<p style="font-size:16px;color:#333;line-height:1.6;">I looked for your business online. I could not find a website for you.</p>
-<p style="font-size:16px;color:#333;line-height:1.6;">Here is the thing — <strong>most people look on Google before they buy anything.</strong></p>
-<div style="background:#ecfdf5;border-left:4px solid #065f46;padding:16px;border-radius:8px;margin:24px 0;">
-<p style="margin:0;font-size:15px;color:#065f46;">✅ Show up when people search Google<br>✅ Look professional and trusted<br>✅ Get customers even when you sleep</p>
-</div>
-<p style="font-size:16px;color:#333;line-height:1.6;">I build websites that show up on Google. Fast. Simple. Affordable.</p>
-<p style="font-size:16px;color:#333;line-height:1.6;">Can I show you what it looks like? No cost. No pressure.</p>
-<div style="text-align:center;margin:28px 0;">
-<a href="https://wa.me/31628073996" style="background:linear-gradient(135deg,#065f46,#0891b2);color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold;">💬 Show Me How</a>
-</div>
-<p style="font-size:15px;color:#555;margin-top:32px;">Kind regards,<br><strong>{{sender_name}}</strong><br>ContentScale</p>
-</div>
-<div style="background:#f3f4f6;padding:16px;text-align:center;border-top:1px solid #e5e7eb;">
-<p style="font-size:12px;color:#9ca3af;margin:0;">ContentScale · Amsterdam · <a href="{{unsubscribe_url}}" style="color:#7e22ce;">Unsubscribe</a></p>
-</div>
-</div></body></html>`
+</body></html>`
   }
 };
 
@@ -976,37 +1396,131 @@ function displayBulkResults(results, userEmail, userName) {
   document.getElementById('bulkResults').classList.remove('hidden');
 }
 
+// ============================================================
+// CENTRAL VARIABLE REPLACEMENT
+// All template variables resolved here — add new ones once here.
+// ============================================================
+function applyVars(text, item, userEmail, userName) {
+  if (!text) return text;
+
+  const url      = item.url || '';
+  const domain   = url.replace(/https?:\/\//,'').replace(/\/.*$/,'');
+  const score    = item.score || 0;
+  const metrics  = item.data?.metrics || {};
+  const graaf    = metrics.graaf    ?? 0;
+  const craft    = metrics.craft    ?? 0;
+  const tech     = metrics.technical ?? 0;
+  const wordCnt  = item.data?.word_count ?? item.data?.wordCount ?? '—';
+  const pageTitle= item.data?.title || domain;
+  const industry = item.data?.industry || item.data?.niche || '—';
+  const city     = item.data?.city    || '—';
+  const country  = item.data?.country || '—';
+  const topIssue = (item.data?.recommendations && item.data.recommendations[0]?.title) || 'Content quality improvement';
+
+  // Score label
+  const scoreLabel = score >= 95 ? 'Elite' : score >= 85 ? 'Excellent' : score >= 70 ? 'Good' : 'Needs Work';
+
+  // Visual score bar (inline HTML)
+  const barColor  = score >= 85 ? '#4ade80' : score >= 70 ? '#fbbf24' : '#f87171';
+  const scoreBar  = `<div style="background:#e5e7eb;border-radius:99px;height:10px;width:100%;margin:8px 0;">
+    <div style="background:${barColor};width:${score}%;height:10px;border-radius:99px;"></div>
+  </div>`;
+
+  // Dates
+  const now       = new Date();
+  const dateStr   = now.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  const monthStr  = now.toLocaleDateString('en-US', { month:'long' });
+  const yearStr   = now.getFullYear().toString();
+
+  // Links
+  const unsubUrl  = 'https://contentscale.site/unsubscribe';
+  const lbUrl     = 'https://contentscale.site#leaderboard';
+  const ctaUrl    = 'https://wa.me/31628073996';
+
+  return text
+    // Business
+    .replace(/{{company_name}}/g,    domain)
+    .replace(/{{domain}}/g,          domain)
+    .replace(/{{website_url}}/g,     url)
+    .replace(/{{industry}}/g,        industry)
+    .replace(/{{city}}/g,            city)
+    .replace(/{{country}}/g,         country)
+    // Score & Analysis
+    .replace(/{{score}}/g,           score)
+    .replace(/{{score_label}}/g,     scoreLabel)
+    .replace(/{{score_bar}}/g,       scoreBar)
+    .replace(/{{graaf_score}}/g,     graaf)
+    .replace(/{{craft_score}}/g,     craft)
+    .replace(/{{tech_score}}/g,      tech)
+    .replace(/{{word_count}}/g,      wordCnt)
+    .replace(/{{top_issue}}/g,       topIssue)
+    .replace(/{{page_title}}/g,      pageTitle)
+    // Sender
+    .replace(/{{sender_name}}/g,     userName)
+    .replace(/{{sender_email}}/g,    userEmail)
+    .replace(/{{sender_phone}}/g,    '+31 6 2807 3996')
+    .replace(/{{sender_whatsapp}}/g, ctaUrl)
+    .replace(/{{sender_company}}/g,  'ContentScale')
+    // Links & Dates
+    .replace(/{{leaderboard_url}}/g, lbUrl)
+    .replace(/{{cta_url}}/g,         ctaUrl)
+    .replace(/{{date}}/g,            dateStr)
+    .replace(/{{month}}/g,           monthStr)
+    .replace(/{{year}}/g,            yearStr)
+    .replace(/{{unsubscribe_url}}/g, unsubUrl);
+}
+
 async function sendBulkEmails(results, userEmail, userName) {
   if (!userId) return;
-  const unsubscribeUrl = 'https://contentscale.site/unsubscribe';
-  const leaderboardUrl = 'https://contentscale.site#leaderboard';
   try {
+    // 1. Congrats (≥85)
     if (results.leaderboard.length > 0) {
-      await fetch('/api/bulk-scan/submit-leaderboard', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ entries: results.leaderboard, submittedBy: userEmail }) });
+      await fetch('/api/bulk-scan/submit-leaderboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+        body: JSON.stringify({ entries: results.leaderboard, submittedBy: userEmail })
+      });
       const tpl = userTemplates.congrats || DEFAULT_TEMPLATES.congrats;
       for (const item of results.leaderboard) {
-        const domain = item.url.replace(/https?:\/\//, '').replace(/\/.*/, '');
-        const body = tpl.body.replace(/{{company_name}}/g, domain).replace(/{{score}}/g, item.score).replace(/{{leaderboard_url}}/g, leaderboardUrl).replace(/{{sender_name}}/g, userName).replace(/{{sender_email}}/g, userEmail).replace(/{{unsubscribe_url}}/g, unsubscribeUrl);
-        const subject = tpl.subject.replace(/{{company_name}}/g, domain);
-        await fetch('/api/email/send', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ to_email: userEmail, subject, html: body }) });
+        await fetch('/api/email/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+          body: JSON.stringify({
+            to_email: userEmail,
+            subject:  applyVars(tpl.subject, item, userEmail, userName),
+            html:     applyVars(tpl.body,    item, userEmail, userName)
+          })
+        });
       }
     }
+    // 2. Improvement (<85, has website)
     if (results.withWebsite.length > 0) {
       const tpl = userTemplates.improvement || DEFAULT_TEMPLATES.improvement;
       for (const item of results.withWebsite) {
-        const domain = item.url.replace(/https?:\/\//, '').replace(/\/.*/, '');
-        const body = tpl.body.replace(/{{company_name}}/g, domain).replace(/{{score}}/g, item.score).replace(/{{sender_name}}/g, userName).replace(/{{sender_email}}/g, userEmail).replace(/{{unsubscribe_url}}/g, unsubscribeUrl);
-        const subject = tpl.subject.replace(/{{company_name}}/g, domain);
-        await fetch('/api/email/send', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ to_email: userEmail, subject, html: body }) });
+        await fetch('/api/email/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+          body: JSON.stringify({
+            to_email: userEmail,
+            subject:  applyVars(tpl.subject, item, userEmail, userName),
+            html:     applyVars(tpl.body,    item, userEmail, userName)
+          })
+        });
       }
     }
+    // 3. Website offer (no website / score 0)
     if (results.withoutWebsite.length > 0) {
       const tpl = userTemplates.website || DEFAULT_TEMPLATES.website;
       for (const item of results.withoutWebsite) {
-        const domain = item.url.replace(/https?:\/\//, '').replace(/\/.*/, '');
-        const body = tpl.body.replace(/{{company_name}}/g, domain).replace(/{{sender_name}}/g, userName).replace(/{{sender_email}}/g, userEmail).replace(/{{unsubscribe_url}}/g, unsubscribeUrl);
-        const subject = tpl.subject.replace(/{{company_name}}/g, domain);
-        await fetch('/api/email/send', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ to_email: userEmail, subject, html: body }) });
+        await fetch('/api/email/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+          body: JSON.stringify({
+            to_email: userEmail,
+            subject:  applyVars(tpl.subject, item, userEmail, userName),
+            html:     applyVars(tpl.body,    item, userEmail, userName)
+          })
+        });
       }
     }
     alert('✅ Bulk scan complete! Emails sent via your SendGrid account.');
@@ -1061,7 +1575,6 @@ async function loadLeaderboardData() {
     const data = await response.json();
     if (data.success && data.entries && data.entries.length > 0) {
       allLeaderboardEntries = data.entries;
-      populateCountryFilter(data.entries);
       renderLeaderboard(data.entries);
     } else {
       document.getElementById('top3-container').innerHTML =
@@ -1072,17 +1585,6 @@ async function loadLeaderboardData() {
     document.getElementById('top3-container').innerHTML =
       '<p style="color:#6b7280!important;text-align:center;grid-column:1/-1;">Unable to load leaderboard.</p>';
   }
-}
-
-function populateCountryFilter(entries) {
-  const countries = [...new Set(entries.map(e => e.country).filter(Boolean))].sort();
-  const sel = document.getElementById('filterCountry');
-  countries.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c;
-    opt.textContent = c;
-    sel.appendChild(opt);
-  });
 }
 
 function applyLeaderboardFilters() {
@@ -1179,44 +1681,64 @@ function renderLeaderboard(entries) {
       </div>`;
   }).join('');
 
-  // ── RANKS 4–15 LIST ──
-  const rest = entries.slice(3, 15);
+  // ── RANKS 4+ LIST ──
+  const rest = entries.slice(3);   // everything after top 3, up to 100
   if (rest.length > 0) {
+    const DEFAULT_SHOW = 22;       // shows ranks 4-25 on load
+    const showAll     = rest.length <= DEFAULT_SHOW;
+    const visible     = showAll ? rest : rest.slice(0, DEFAULT_SHOW);
+
     restContainer.innerHTML = `
-      <div style="background:#111827;border:1px solid #374151;border-radius:12px;overflow:hidden;margin-top:8px;">
-        ${rest.map((e, i) => {
-          const rank = i + 4;
-          const name = e.company_name || (e.url.replace(/https?:\/\//,'').split('/')[0]);
-          const rankColor = rank <= 10 ? '#c084fc' : '#6b7280';
-          return `
-            <div style="
-              display:flex;align-items:center;justify-content:space-between;
-              padding:13px 20px;
-              border-bottom:1px solid #1f2937;
-              transition:background 0.15s;
-            " onmouseover="this.style.background='rgba(126,34,206,0.08)'" onmouseout="this.style.background='transparent'">
-
-              <div style="display:flex;align-items:center;gap:14px;min-width:0;">
-                <span style="font-size:0.85rem;font-weight:800;color:${rankColor}!important;width:22px;flex-shrink:0;">${rank}</span>
-                <div style="min-width:0;">
-                  <div style="font-weight:600;color:#f3f4f6!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
-                  <div style="font-size:0.7rem;color:#6b7280!important;margin-top:1px;">
-                    ${[e.niche, e.business_type, e.country].filter(Boolean).join(' · ')}
-                  </div>
-                </div>
-              </div>
-
-              <div style="display:flex;align-items:center;gap:16px;flex-shrink:0;">
-                <span style="font-weight:800;font-size:1.05rem;color:#4ade80!important;">${e.score}<span style="font-size:0.7rem;font-weight:400;color:#6b7280!important;">/100</span></span>
-                <a href="${e.url}" target="_blank" rel="noopener" style="font-size:0.75rem;color:#818cf8!important;text-decoration:none;font-weight:600;">Visit →</a>
-              </div>
-
-            </div>`;
-        }).join('')}
-      </div>`;
+      <div id="rankingsList" style="background:#111827;border:1px solid #374151;border-radius:12px;overflow:hidden;margin-top:8px;">
+        ${buildRankRows(visible, 4)}
+      </div>
+      ${!showAll ? `
+      <div id="loadMoreWrap" style="text-align:center;margin-top:16px;">
+        <button onclick="expandRankings(${JSON.stringify(rest).replace(/"/g,"'")})"
+          style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white!important;
+                 border:none;padding:10px 32px;border-radius:8px;font-weight:700;
+                 cursor:pointer;font-size:0.9rem;">
+          Show More <span style="opacity:.7;font-weight:400;">(${rest.length - DEFAULT_SHOW} more entries)</span>
+        </button>
+      </div>` : ''}`;
   } else {
     restContainer.innerHTML = '';
   }
+}
+
+function buildRankRows(entries, startRank) {
+  return entries.map((e, i) => {
+    const rank = startRank + i;
+    const name = e.company_name || (e.url.replace(/https?:\/\//,'').split('/')[0]);
+    const rankColor = rank <= 10 ? '#c084fc' : rank <= 25 ? '#818cf8' : '#6b7280';
+    const rowBg     = rank % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent';
+    return `
+      <div style="
+        display:flex;align-items:center;justify-content:space-between;
+        padding:13px 20px;background:${rowBg};
+        border-bottom:1px solid #1f2937;transition:background 0.15s;
+      " onmouseover="this.style.background='rgba(126,34,206,0.1)'" onmouseout="this.style.background='${rowBg}'">
+        <div style="display:flex;align-items:center;gap:14px;min-width:0;">
+          <span style="font-size:0.85rem;font-weight:800;color:${rankColor}!important;width:28px;flex-shrink:0;text-align:right;">${rank}</span>
+          <div style="min-width:0;">
+            <div style="font-weight:600;color:#f3f4f6!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
+            <div style="font-size:0.7rem;color:#6b7280!important;margin-top:1px;">
+              ${[e.niche, e.business_type, e.country].filter(Boolean).join(' · ')}
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;flex-shrink:0;">
+          <span style="font-weight:800;font-size:1.05rem;color:#4ade80!important;">${e.score}<span style="font-size:0.7rem;font-weight:400;color:#6b7280!important;">/100</span></span>
+          <a href="${e.url}" target="_blank" rel="noopener" style="font-size:0.75rem;color:#818cf8!important;text-decoration:none;font-weight:600;">Visit →</a>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function expandRankings(rest) {
+  document.getElementById('rankingsList').innerHTML = buildRankRows(rest, 4);
+  const wrap = document.getElementById('loadMoreWrap');
+  if (wrap) wrap.innerHTML = `<p style="text-align:center;font-size:0.8rem;color:#6b7280!important;margin-top:12px;">Showing all ${rest.length} entries (ranks 4–${rest.length + 3})</p>`;
 }
 
 // ============================================================
