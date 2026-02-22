@@ -187,22 +187,27 @@ footer p { color: #9ca3af !important; }
         <p class="text-xl text-gray-200 mb-4">Check Your SEO Content Quality in Seconds</p>
         <!-- Feature tags row -->
         <div class="flex flex-wrap justify-center gap-x-4 gap-y-2">
-          <span class="feature-tag">✨ Free for freelancers</span>
+          <span class="feature-tag">🔍 Free single scan</span>
           <span class="feature-tag">•</span>
-          <span class="feature-tag">🔍 Single &amp; Bulk scanning</span>
+          <span class="feature-tag">🏆 Leaderboard submission</span>
           <span class="feature-tag">•</span>
-          <span class="feature-tag">📊 Detailed analysis</span>
+          <span class="feature-tag">📋 I Have a List — on request</span>
           <span class="feature-tag">•</span>
-          <span class="feature-tag">📧 Your SendGrid emails</span>
-          <span class="feature-tag">•</span>
-          <span class="feature-tag">✏️ Editable templates</span>
+          <span class="feature-tag">🤖 Find Me Leads — on request</span>
         </div>
       </div>
 
       <!-- Mode toggle -->
-      <div class="flex justify-center gap-4 mb-8">
-        <button id="modeSingleBtn" onclick="switchMode('single')" class="mode-toggle active"><i class="fas fa-link mr-2"></i> Scan Single URL</button>
-        <button id="modeBulkBtn" onclick="switchMode('bulk')" class="mode-toggle"><i class="fas fa-layer-group mr-2"></i> Scan Bulk URLs</button>
+      <div class="flex flex-wrap justify-center gap-4 mb-8">
+        <button id="modeSingleBtn" onclick="switchMode('single')" class="mode-toggle active">
+          <i class="fas fa-search mr-2"></i> Scan a Website
+        </button>
+        <button id="modeBulkBtn" onclick="switchMode('bulk')" class="mode-toggle">
+          <i class="fas fa-list mr-2"></i> I Have a List
+        </button>
+        <button id="modeDiscoverBtn" onclick="switchMode('discover')" class="mode-toggle">
+          <i class="fas fa-robot mr-2"></i> Find Me Leads
+        </button>
       </div>
 
       <!-- SINGLE MODE -->
@@ -223,42 +228,57 @@ footer p { color: #9ca3af !important; }
       <!-- BULK MODE -->
       <div id="bulkMode" class="hidden">
         <div class="card max-w-4xl mx-auto" style="border:2px solid #3b82f6;">
-          <div class="flex items-center gap-3 mb-6">
-            <span class="text-xl font-bold">📋 Bulk URL Scanner</span>
-            <span class="text-xs px-3 py-1 bg-blue-600 rounded-full" style="color:white!important;">Batch Scan</span>
+          <div class="flex items-center gap-3 mb-2">
+            <span class="text-xl font-bold">📋 I Have a List</span>
+            <span class="text-xs px-3 py-1 bg-blue-600 rounded-full" style="color:white!important;">Batch Scan + Email</span>
           </div>
+          <p class="text-sm mb-5" style="color:#9ca3af!important;">
+            Already have URLs? Paste them here. The system scans every site, scores it, auto-emails each business the right message, and submits top scores to the leaderboard — all in one run.
+          </p>
 
           <div id="bulkScannerContent">
-            <!-- Setup Box -->
-            <div id="setupRequiredBox" class="setup-required-box">
-              <div class="flex items-center gap-3 mb-4">
-                <div class="text-3xl">⚙️</div>
-                <div>
-                  <h4 class="font-bold">One-Time Setup — Your Own Free SendGrid Account</h4>
-                  <p class="text-sm" style="color:#9ca3af!important;">You need <a href="https://sendgrid.com" target="_blank" rel="noopener" class="underline" style="color:#818cf8!important;">your own free SendGrid account</a> to send emails.</p>
+
+            <!-- ACCESS GATE — shown to visitors without access -->
+            <div id="bulkAccessGate" class="hidden">
+              <div class="rounded-xl p-8 text-center" style="background:linear-gradient(135deg,#0f172a,#1e1b4b);border:2px solid #4c1d95;">
+                <div style="font-size:3rem;margin-bottom:12px;">🔒</div>
+                <h3 class="text-xl font-bold mb-3">Bulk Scanning is Available on Request</h3>
+                <p class="text-sm mb-2" style="color:#9ca3af!important;">
+                  Bulk scanning, automated email outreach, and Auto-Discover are available for businesses and freelancers who want to use ContentScale as a lead generation tool.
+                </p>
+                <p class="text-sm mb-6" style="color:#9ca3af!important;">
+                  Contact me on WhatsApp and I'll get you set up — usually within a few hours.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                  <a href="https://wa.me/31628073996?text=Hi%20Ottmar%2C%20I%20want%20access%20to%20ContentScale%20bulk%20scanning" target="_blank" rel="noopener"
+                    style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#25d366,#128c7e);color:white!important;padding:12px 28px;border-radius:10px;font-weight:700;text-decoration:none;font-size:0.95rem;">
+                    <i class="fab fa-whatsapp"></i> Request Access on WhatsApp
+                  </a>
+                  <a href="mailto:hello@contentscale.site?subject=Bulk%20Access%20Request"
+                    style="display:inline-flex;align-items:center;gap:8px;background:#1e293b;color:#e2e8f0!important;padding:12px 28px;border-radius:10px;font-weight:600;text-decoration:none;font-size:0.95rem;border:1px solid #334155;">
+                    <i class="fas fa-envelope"></i> Email Instead
+                  </a>
                 </div>
-              </div>
-              <div class="setup-step" id="setupStepSendgrid">
-                <div class="flex justify-between items-start mb-2">
-                  <div class="font-semibold">Your SendGrid API Key</div>
-                  <div id="stepStatus1" class="text-xl">❌</div>
+                <div class="mt-6 grid grid-cols-3 gap-4 text-center" style="font-size:0.78rem;color:#6b7280!important;">
+                  <div><div style="font-size:1.5rem;color:#a78bfa!important;font-weight:900;">100</div>emails / day</div>
+                  <div><div style="font-size:1.5rem;color:#a78bfa!important;font-weight:900;">100</div>URLs / batch</div>
+                  <div><div style="font-size:1.5rem;color:#a78bfa!important;font-weight:900;">200</div>leads / month</div>
                 </div>
-                <div class="mb-2 text-xs" style="color:#9ca3af!important;">
-                  <a href="https://sendgrid.com" target="_blank" rel="noopener" class="underline" style="color:#818cf8!important;">Step 1: Create Account</a> •
-                  <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" rel="noopener" class="underline" style="color:#818cf8!important;">Step 2: Get API Key</a>
-                </div>
-                <div class="setup-input-row">
-                  <input type="password" id="setupSendgridKey" placeholder="Paste SG. key here">
-                  <button class="setup-save-btn" onclick="saveSetupSendgrid()">Save</button>
-                </div>
-                <p id="sendgridSetupStatus" class="text-xs mt-2" style="color:#fbbf24!important;">⚠️ Not configured</p>
               </div>
             </div>
 
-            <!-- All Done Banner -->
-            <div id="setupAllDone" class="hidden mb-4 rounded-lg p-4 text-center" style="background:rgba(16,185,129,0.1);border:2px solid #10b981;">
-              <div class="text-2xl mb-1">✅</div>
-              <div class="font-bold" style="color:#34d399!important;">You're all set! Bulk scanning active.</div>
+            <!-- ACTIVE STATUS BANNER — shown when access is confirmed by server -->
+            <div id="setupAllDone" class="hidden mb-5 rounded-xl p-4" style="background:rgba(16,185,129,0.08);border:1px solid #065f46;">
+              <div class="flex items-center justify-between flex-wrap gap-3">
+                <div class="flex items-center gap-3">
+                  <span style="font-size:1.5rem;">✅</span>
+                  <div>
+                    <div class="font-bold" style="color:#34d399!important;">Bulk scanning active</div>
+                    <div id="dailyLimitBadge" class="text-xs mt-1" style="color:#6b7280!important;">Loading usage...</div>
+                  </div>
+                </div>
+                <div id="queueBadge" class="hidden text-xs px-3 py-1 rounded-full" style="background:#451a03;color:#fde68a!important;border:1px solid #92400e;"></div>
+              </div>
             </div>
 
             <!-- Bulk Form -->
@@ -292,7 +312,195 @@ footer p { color: #9ca3af !important; }
         </div>
       </div>
 
-      <!-- Specialist CTA -->
+      <!-- AUTO-DISCOVER MODE -->
+      <div id="discoverMode" class="hidden">
+        <div class="card max-w-4xl mx-auto" style="border:2px solid #f59e0b;">
+
+          <div class="flex items-center gap-3 mb-2">
+            <span class="text-xl font-bold">🤖 Find Me Leads</span>
+            <span class="text-xs px-3 py-1 rounded-full font-semibold" style="background:#92400e;color:#fde68a!important;">Powered by Apify</span>
+          </div>
+          <p class="text-sm mb-6" style="color:#9ca3af!important;">
+            No list yet? Pick a niche + city. Apify finds real businesses on Google Maps. ContentScore scans every website automatically. Right email sent to each business. Zero manual work.
+          </p>
+
+          <!-- Pipeline visualiser -->
+          <div class="flex items-center justify-center gap-2 mb-6 flex-wrap" style="font-size:0.78rem;">
+            <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:8px;padding:8px 14px;text-align:center;">
+              <div style="font-size:1.2rem;">📍</div>
+              <div style="color:#fde68a!important;font-weight:700;">1. You pick</div>
+              <div style="color:#94a3b8!important;">Niche + Location</div>
+            </div>
+            <div style="color:#6b7280!important;font-size:1.2rem;">→</div>
+            <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:8px;padding:8px 14px;text-align:center;">
+              <div style="font-size:1.2rem;">🗺️</div>
+              <div style="color:#fde68a!important;font-weight:700;">2. Apify scrapes</div>
+              <div style="color:#94a3b8!important;">Google Maps leads</div>
+            </div>
+            <div style="color:#6b7280!important;font-size:1.2rem;">→</div>
+            <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:8px;padding:8px 14px;text-align:center;">
+              <div style="font-size:1.2rem;">📊</div>
+              <div style="color:#fde68a!important;font-weight:700;">3. ContentScore</div>
+              <div style="color:#94a3b8!important;">Scans all URLs</div>
+            </div>
+            <div style="color:#6b7280!important;font-size:1.2rem;">→</div>
+            <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:8px;padding:8px 14px;text-align:center;">
+              <div style="font-size:1.2rem;">📧</div>
+              <div style="color:#fde68a!important;font-weight:700;">4. Auto email</div>
+              <div style="color:#94a3b8!important;">Sent via SendGrid</div>
+            </div>
+          </div>
+
+          <!-- ACCESS GATE for discover mode -->
+          <div id="discoverAccessGate" class="hidden mb-5 rounded-xl p-8 text-center" style="background:linear-gradient(135deg,#0f172a,#1e1b4b);border:2px solid #4c1d95;">
+            <div style="font-size:3rem;margin-bottom:12px;">🤖</div>
+            <h3 class="text-xl font-bold mb-3">Auto-Discover is Available on Request</h3>
+            <p class="text-sm mb-6" style="color:#9ca3af!important;">
+              Auto-Discover uses Apify to find leads on Google Maps, scan them automatically, and send emails — all in one click. Contact me to get access.
+            </p>
+            <a href="https://wa.me/31628073996?text=Hi%20Ottmar%2C%20I%20want%20access%20to%20Auto-Discover" target="_blank" rel="noopener"
+              style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#25d366,#128c7e);color:white!important;padding:12px 28px;border-radius:10px;font-weight:700;text-decoration:none;">
+              <i class="fab fa-whatsapp"></i> Request Access on WhatsApp
+            </a>
+          </div>
+
+          <!-- Apify key warning (only shown when token missing but access granted) -->
+          <div id="apifyKeyWarning" class="hidden mb-4 rounded-lg p-3" style="background:#451a03;border:1px solid #92400e;">
+            <p class="text-sm" style="color:#fde68a!important;">⚠️ Apify token not set. Add it via browser console: <code style="background:#1c0a00;padding:2px 6px;border-radius:4px;font-size:0.75rem;color:#fbbf24!important;">localStorage.setItem('apifyToken','your_token')</code> then refresh.</p>
+          </div>
+
+          <!-- Discovery Form -->
+          <div id="discoverForm" class="hidden">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+
+              <!-- Niche -->
+              <div>
+                <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">🏷️ Business Niche *</label>
+                <select id="discoverNiche" class="w-full p-3 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+                  <option value="">Select a niche...</option>
+                  <optgroup label="── Agencies">
+                    <option value="SEO agency">SEO Agency</option>
+                    <option value="digital marketing agency">Digital Marketing Agency</option>
+                    <option value="web design agency">Web Design Agency</option>
+                    <option value="content marketing agency">Content Marketing Agency</option>
+                  </optgroup>
+                  <optgroup label="── YMYL">
+                    <option value="law firm">Law Firm</option>
+                    <option value="dental clinic">Dental Clinic</option>
+                    <option value="medical clinic">Medical Clinic</option>
+                    <option value="financial advisor">Financial Advisor</option>
+                    <option value="accountant">Accountant</option>
+                    <option value="insurance broker">Insurance Broker</option>
+                    <option value="therapist">Therapist / Psychologist</option>
+                  </optgroup>
+                  <optgroup label="── High Competition">
+                    <option value="real estate agent">Real Estate Agent</option>
+                    <option value="hotel">Hotel</option>
+                    <option value="car dealership">Car Dealership</option>
+                    <option value="recruitment agency">Recruitment Agency</option>
+                    <option value="software company">Software Company</option>
+                  </optgroup>
+                  <optgroup label="── Local Services">
+                    <option value="plumber">Plumber</option>
+                    <option value="electrician">Electrician</option>
+                    <option value="cleaning company">Cleaning Company</option>
+                    <option value="personal trainer">Personal Trainer</option>
+                    <option value="hairdresser">Hairdresser / Salon</option>
+                    <option value="restaurant">Restaurant</option>
+                    <option value="architect">Architect</option>
+                    <option value="photographer">Photographer</option>
+                    <option value="catering">Catering Company</option>
+                  </optgroup>
+                  <optgroup label="── Other">
+                    <option value="online coach">Online Coach / Consultant</option>
+                    <option value="e-commerce store">E-Commerce Store</option>
+                    <option value="logistics company">Logistics Company</option>
+                    <option value="other business">Other</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <!-- Custom niche override -->
+              <div>
+                <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">✏️ Or Type Custom Niche</label>
+                <input type="text" id="discoverNicheCustom" placeholder="e.g. orthodontist, yoga studio..." class="w-full p-3 rounded text-sm">
+              </div>
+
+              <!-- Location -->
+              <div>
+                <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">📍 City / Location *</label>
+                <input type="text" id="discoverLocation" placeholder="e.g. Amsterdam, London, New York..." class="w-full p-3 rounded text-sm">
+              </div>
+
+              <!-- Country context -->
+              <div>
+                <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">🌍 Country</label>
+                <select id="discoverCountry" class="w-full p-3 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+                  <option value="Netherlands">🇳🇱 Netherlands</option>
+                  <option value="Germany">🇩🇪 Germany</option>
+                  <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                  <option value="United States">🇺🇸 United States</option>
+                  <option value="Belgium">🇧🇪 Belgium</option>
+                  <option value="France">🇫🇷 France</option>
+                  <option value="Spain">🇪🇸 Spain</option>
+                  <option value="Australia">🇦🇺 Australia</option>
+                  <option value="Canada">🇨🇦 Canada</option>
+                  <option value="Singapore">🇸🇬 Singapore</option>
+                  <option value="Other">🌐 Other</option>
+                </select>
+              </div>
+
+              <!-- Max results -->
+              <div>
+                <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">🔢 Max Leads to Find</label>
+                <select id="discoverMaxResults" class="w-full p-3 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+                  <option value="20">20 leads (fast · ~1 min)</option>
+                  <option value="50" selected>50 leads (recommended · ~2 min)</option>
+                  <option value="100">100 leads (thorough · ~4 min)</option>
+                </select>
+              </div>
+
+              <!-- Filter: only with website -->
+              <div class="flex items-center gap-3 pt-5">
+                <input type="checkbox" id="discoverWebsiteOnly" checked style="width:18px;height:18px;cursor:pointer;background:#ffffff!important;border:2px solid #7e22ce!important;">
+                <label for="discoverWebsiteOnly" class="text-sm" style="color:#e5e7eb!important;cursor:pointer;">Only scan businesses that have a website</label>
+              </div>
+
+            </div>
+
+            <!-- Your details -->
+            <div class="grid grid-cols-2 gap-3 mb-4">
+              <input type="email" id="discoverEmail" placeholder="Your Email *" class="p-3 rounded">
+              <input type="text" id="discoverName" placeholder="Your Name *" class="p-3 rounded">
+            </div>
+
+            <!-- Start button -->
+            <button onclick="startAutoDiscover()" id="discoverBtn" class="btn w-full" style="background:linear-gradient(135deg,#b45309,#f59e0b);color:white!important;font-size:1rem;padding:1rem;">
+              <i class="fas fa-rocket mr-2"></i> Find Leads &amp; Scan Automatically
+            </button>
+
+            <!-- Pipeline progress -->
+            <div id="discoverProgress" class="hidden mt-5">
+              <!-- Step indicators -->
+              <div class="flex justify-between mb-3" style="font-size:0.75rem;">
+                <span id="dStep1" style="color:#6b7280!important;">① Finding leads...</span>
+                <span id="dStep2" style="color:#6b7280!important;">② Extracting URLs</span>
+                <span id="dStep3" style="color:#6b7280!important;">③ Scanning scores</span>
+                <span id="dStep4" style="color:#6b7280!important;">④ Sending emails</span>
+              </div>
+              <div class="progress-bar"><div id="discoverProgressBar" class="progress-bar-fill" style="width:0%;background:linear-gradient(90deg,#f59e0b,#ef4444);"></div></div>
+              <p id="discoverProgressText" class="text-sm text-center mt-2" style="color:#d1d5db!important;"></p>
+            </div>
+
+            <!-- Results -->
+            <div id="discoverResults" class="hidden mt-4">
+              <div id="discoverResultsContainer"></div>
+            </div>
+
+          </div>
+        </div>
+      </div>
       <div class="mt-8 max-w-3xl mx-auto rounded-xl p-6 text-center border border-purple-400" style="background:linear-gradient(135deg,#5b21b6,#9d174d,#5b21b6);">
         <h3 class="text-2xl font-bold mb-2">💼 Are You an SEO Specialist?</h3>
         <p class="text-lg mb-4" style="color:#e9d5ff!important;">Work few hours, earn full-time income. We train you in Modern SEO.</p>
@@ -1134,6 +1342,14 @@ document.addEventListener('DOMContentLoaded', function () {
   registerUser();
   loadLeaderboardData();
   loadFreelancers();
+  updateDailyLimitUI();       // show today's send count immediately
+  processEmailQueue();        // drain any queued emails from yesterday's overflow
+  // Show queue badge if overflow waiting
+  const qc = getQueue().length;
+  if (qc > 0) {
+    const qb = document.getElementById('queueBadge');
+    if (qb) { qb.textContent = `⏳ ${qc} emails queued from previous runs — sending now...`; qb.classList.remove('hidden'); }
+  }
   setTimeout(() => {
     const l = document.getElementById('loading-screen');
     if (l) { l.style.opacity = '0'; l.style.transition = 'opacity 0.4s'; setTimeout(() => l.style.display = 'none', 400); }
@@ -1175,51 +1391,295 @@ async function loadApiStatus() {
   } catch (error) { console.error('Error loading API status:', error); }
 }
 
+// ============================================================
+// ACCESS GATE — server tells us if this user has bulk access
+// Keys live in Railway env vars, not pasted by users
+// ============================================================
 function checkSetupStatus() {
-  const setupBox = document.getElementById('setupRequiredBox');
-  const allDone = document.getElementById('setupAllDone');
-  const step1 = document.getElementById('setupStepSendgrid');
-  const status1 = document.getElementById('stepStatus1');
-  const sgStatus = document.getElementById('sendgridSetupStatus');
+  const gate      = document.getElementById('bulkAccessGate');
+  const allDone   = document.getElementById('setupAllDone');
+  const dGate     = document.getElementById('discoverAccessGate');
+  const dForm     = document.getElementById('discoverForm');
+
   if (sendgridConfigured) {
-    if (step1) step1.classList.add('completed');
-    if (status1) status1.textContent = '✅';
-    if (sgStatus) sgStatus.innerHTML = '<span style="color:#4ade80!important;">✅ SendGrid configured</span>';
-    if (setupBox) setupBox.classList.add('hidden');
+    // User has access — show form, hide gate
+    if (gate)    gate.classList.add('hidden');
     if (allDone) allDone.classList.remove('hidden');
+    if (dGate)   dGate.classList.add('hidden');
+    if (dForm)   dForm.classList.remove('hidden');
+    updateDailyLimitUI();
   } else {
-    if (step1) step1.classList.remove('completed');
-    if (status1) status1.textContent = '❌';
-    if (setupBox) setupBox.classList.remove('hidden');
+    // No access — show gate, hide form
+    if (gate)    gate.classList.remove('hidden');
     if (allDone) allDone.classList.add('hidden');
+    if (dGate)   dGate.classList.remove('hidden');
+    if (dForm)   dForm.classList.add('hidden');
   }
 }
 
-async function saveSetupSendgrid() {
-  if (!userId) { alert('Please refresh.'); return; }
-  const key = document.getElementById('setupSendgridKey').value.trim();
-  if (!key) { alert('Paste key.'); return; }
-  const statusEl = document.getElementById('sendgridSetupStatus');
-  statusEl.innerHTML = '<span style="color:#60a5fa!important;">Saving…</span>';
-  try {
-    const res = await fetch('/api/user/sendgrid/configure', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-      body: JSON.stringify({ userId, apiKey: key, dailyLimit: 100 })
-    });
-    const data = await res.json();
-    if (data.success) {
-      sendgridConfigured = true;
-      document.getElementById('setupSendgridKey').value = '';
-      checkSetupStatus();
-    } else {
-      statusEl.innerHTML = `<span style="color:#f87171!important;">❌ ${data.error}</span>`;
-    }
-  } catch (e) { statusEl.innerHTML = '<span style="color:#f87171!important;">❌ Error</span>'; }
+// ============================================================
+// APIFY SETUP + AUTO-DISCOVER PIPELINE
+// ============================================================
+
+// For admin testing: set token once via browser console.
+// localStorage.setItem('apifyToken', 'apify_api_xxxx') then refresh.
+function saveSetupApify() { /* no-op — use browser console or Railway env */ }
+
+// Step indicator helper
+function setDiscoverStep(step, status) {
+  const el = document.getElementById('dStep' + step);
+  if (!el) return;
+  const labels = ['', '① Finding leads...', '② Extracting URLs', '③ Scanning scores', '④ Sending emails'];
+  const colors = { active: '#fbbf24', done: '#4ade80', idle: '#6b7280' };
+  el.textContent = labels[step];
+  el.style.color = colors[status] + '!important';
+  el.style.fontWeight = status === 'active' ? '700' : '400';
 }
 
-// ============================================================
-// TEMPLATES LOGIC
+function setDiscoverProgress(pct, text) {
+  document.getElementById('discoverProgressBar').style.width = pct + '%';
+  document.getElementById('discoverProgressText').textContent = text;
+}
+
+// Main Auto-Discover pipeline
+async function startAutoDiscover() {
+  const apifyToken = localStorage.getItem('apifyToken');
+  if (!apifyToken) {
+    document.getElementById('apifyKeyWarning').classList.remove('hidden');
+    document.getElementById('apifyKeyWarning').scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
+
+  const nicheSelect = document.getElementById('discoverNiche').value;
+  const nicheCustom = document.getElementById('discoverNicheCustom').value.trim();
+  const niche       = nicheCustom || nicheSelect;
+  const location    = document.getElementById('discoverLocation').value.trim();
+  const country     = document.getElementById('discoverCountry').value;
+  const maxResults  = parseInt(document.getElementById('discoverMaxResults').value);
+  const websiteOnly = document.getElementById('discoverWebsiteOnly').checked;
+  const email       = document.getElementById('discoverEmail').value.trim();
+  const name        = document.getElementById('discoverName').value.trim();
+
+  if (!niche)    { alert('❌ Please select or type a niche.'); return; }
+  if (!location) { alert('❌ Please enter a city or location.'); return; }
+  if (!email || !name) { alert('❌ Please enter your email and name.'); return; }
+
+  const btn = document.getElementById('discoverBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Running pipeline...';
+
+  const progress = document.getElementById('discoverProgress');
+  progress.classList.remove('hidden');
+  document.getElementById('discoverResults').classList.add('hidden');
+
+  // Reset step indicators
+  [1,2,3,4].forEach(s => setDiscoverStep(s, 'idle'));
+
+  try {
+    // ── STEP 1: Call Apify Google Maps Scraper ──────────────────
+    setDiscoverStep(1, 'active');
+    setDiscoverProgress(5, `Searching Google Maps for "${niche}" in ${location}...`);
+
+    const searchQuery = `${niche} in ${location}`;
+
+    // Trigger Apify Google Maps Scraper Actor
+    const runRes = await fetch(
+      'https://api.apify.com/v2/acts/compass~crawler-google-places/runs',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apifyToken}`
+        },
+        body: JSON.stringify({
+          searchStringsArray: [searchQuery],
+          maxCrawledPlacesPerSearch: maxResults,
+          language: 'en',
+          exportPlaceUrls: true,
+          includeWebResults: true,
+          skipClosedPlaces: false
+        })
+      }
+    );
+
+    if (!runRes.ok) {
+      const err = await runRes.json();
+      throw new Error(err.error?.message || `Apify error ${runRes.status}. Check your token.`);
+    }
+
+    const runData = await runRes.json();
+    const runId   = runData.data?.id;
+    if (!runId) throw new Error('Could not start Apify run. Check your token and Apify account.');
+
+    setDiscoverProgress(15, `Apify run started (ID: ${runId.slice(0,8)}...). Waiting for results...`);
+
+    // ── Poll until run finishes (max 3 min) ────────────────────
+    let attempts = 0;
+    let runStatus = 'RUNNING';
+    while (runStatus === 'RUNNING' || runStatus === 'READY') {
+      await new Promise(r => setTimeout(r, 4000));
+      attempts++;
+      const statusRes  = await fetch(
+        `https://api.apify.com/v2/acts/compass~crawler-google-places/runs/${runId}`,
+        { headers: { 'Authorization': `Bearer ${apifyToken}` } }
+      );
+      const statusData = await statusRes.json();
+      runStatus = statusData.data?.status;
+      const pct = Math.min(15 + attempts * 3, 40);
+      setDiscoverProgress(pct, `Scraping Google Maps... (${attempts * 4}s elapsed)`);
+      if (attempts > 45) throw new Error('Apify run timed out after 3 minutes. Try fewer leads.');
+    }
+
+    if (runStatus !== 'SUCCEEDED') throw new Error(`Apify run ${runStatus}. Check your Apify dashboard.`);
+
+    setDiscoverStep(1, 'done');
+    setDiscoverStep(2, 'active');
+    setDiscoverProgress(42, 'Fetching business data from Apify...');
+
+    // ── STEP 2: Fetch dataset items ────────────────────────────
+    const dataRes = await fetch(
+      `https://api.apify.com/v2/acts/compass~crawler-google-places/runs/${runId}/dataset/items?format=json&clean=true`,
+      { headers: { 'Authorization': `Bearer ${apifyToken}` } }
+    );
+    const places = await dataRes.json();
+
+    // Extract usable URLs
+    let urls = places
+      .filter(p => p.website)
+      .map(p => ({
+        url:     p.website.startsWith('http') ? p.website : 'https://' + p.website,
+        name:    p.title || p.name || '',
+        email:   p.email || (p.emails && p.emails[0]) || null,
+        emails:  p.emails || [],
+        phone:   p.phone || p.phoneUnformatted || '',
+        address: p.address || '',
+        country: country
+      }));
+
+    // If websiteOnly not checked, include places without websites (score will be 0)
+    if (!websiteOnly) {
+      const noSite = places
+        .filter(p => !p.website)
+        .map(p => ({
+          url: '', name: p.title || p.name || '',
+          email: p.email || (p.emails && p.emails[0]) || null,
+          emails: p.emails || [],
+          phone: p.phone || '', address: p.address || '', country
+        }));
+      urls = [...urls, ...noSite];
+    }
+
+    if (urls.length === 0) throw new Error('No businesses found. Try a different niche or location.');
+
+    setDiscoverStep(2, 'done');
+    setDiscoverStep(3, 'active');
+    setDiscoverProgress(50, `Found ${urls.length} businesses. Starting ContentScore scan...`);
+
+    // ── STEP 3: Run ContentScore on each URL ───────────────────
+    const results = { leaderboard: [], withWebsite: [], withoutWebsite: [], errors: [] };
+    let scanned = 0;
+
+    for (const place of urls) {
+      if (!place.url) {
+        results.withoutWebsite.push({ url: place.name, score: 0, data: { country, ...place } });
+        scanned++;
+        continue;
+      }
+      try {
+        const scanRes  = await fetch('/api/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: place.url })
+        });
+        const scanData = await scanRes.json();
+        const score    = scanData.score || 0;
+        const item = { url: place.url, score, data: { ...scanData, country, name: place.name, email: place.email, emails: place.emails, phone: place.phone, address: place.address } };
+
+        if (score >= 70)   results.leaderboard.push(item);
+        else               results.withWebsite.push(item);
+      } catch (e) {
+        results.errors.push({ url: place.url, error: e.message });
+      }
+      scanned++;
+      const pct = 50 + Math.round((scanned / urls.length) * 35);
+      setDiscoverProgress(pct, `Scanning ${scanned}/${urls.length}: ${place.name || place.url}`);
+    }
+
+    setDiscoverStep(3, 'done');
+    setDiscoverStep(4, 'active');
+    setDiscoverProgress(88, 'Sending emails via SendGrid...');
+
+    // ── STEP 4: Send emails ────────────────────────────────────
+    let emailStats = { sent: 0, queued: 0, skipped: 0 };
+    if (sendgridConfigured) {
+      emailStats = await sendBulkEmails(results, email, name);
+    }
+
+    setDiscoverStep(4, 'done');
+    setDiscoverProgress(100, '✅ Pipeline complete!');
+
+    // ── Show summary ───────────────────────────────────────────
+    const total = urls.length;
+    const errCount = results.errors.length;
+    document.getElementById('discoverResultsContainer').innerHTML = `
+      <div style="background:#111827;border:1px solid #374151;border-radius:12px;padding:24px;margin-top:8px;">
+        <h4 style="font-weight:800;font-size:1.1rem;margin-bottom:16px;color:#f9fafb!important;">
+          🎯 Auto-Discover Complete — <em style="color:#fbbf24!important;">${niche}</em> in ${location}
+        </h4>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;">
+          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:16px;text-align:center;">
+            <div style="font-size:2rem;font-weight:900;color:#4ade80!important;">${results.leaderboard.length}</div>
+            <div style="font-size:0.75rem;color:#6b7280!important;">🏆 Leaderboard (70+)</div>
+          </div>
+          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:16px;text-align:center;">
+            <div style="font-size:2rem;font-weight:900;color:#60a5fa!important;">${results.withWebsite.length}</div>
+            <div style="font-size:0.75rem;color:#6b7280!important;">📈 Improvement emails</div>
+          </div>
+          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:16px;text-align:center;">
+            <div style="font-size:2rem;font-weight:900;color:#a78bfa!important;">${results.withoutWebsite.length}</div>
+            <div style="font-size:0.75rem;color:#6b7280!important;">🌐 No-website offers</div>
+          </div>
+          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:16px;text-align:center;">
+            <div style="font-size:2rem;font-weight:900;color:#f87171!important;">${errCount}</div>
+            <div style="font-size:0.75rem;color:#6b7280!important;">❌ Errors</div>
+          </div>
+        </div>
+        ${results.leaderboard.length > 0 ? `
+        <div style="background:rgba(74,222,128,0.05);border:1px solid #166534;border-radius:8px;padding:12px 16px;margin-bottom:12px;">
+          <p style="font-size:0.85rem;color:#4ade80!important;font-weight:700;margin-bottom:6px;">🏆 Top Performers (added to leaderboard):</p>
+          ${results.leaderboard.slice(0,5).map(r =>
+            `<div style="display:flex;justify-content:space-between;font-size:0.8rem;padding:3px 0;border-bottom:1px solid #1f2937;">
+               <span style="color:#d1d5db!important;">${r.data?.name || r.url}</span>
+               <span style="color:#4ade80!important;font-weight:700;">${r.score}/100</span>
+             </div>`
+          ).join('')}
+          ${results.leaderboard.length > 5 ? `<p style="font-size:0.75rem;color:#6b7280!important;margin-top:4px;">+${results.leaderboard.length - 5} more</p>` : ''}
+        </div>` : ''}
+        <p style="font-size:0.85rem;color:#9ca3af!important;text-align:center;margin:0;">
+          ${sendgridConfigured
+            ? `📧 Sent: <strong style="color:#4ade80!important;">${emailStats.sent}</strong> &nbsp;·&nbsp; Queued: <strong style="color:#fbbf24!important;">${emailStats.queued}</strong> &nbsp;·&nbsp; No email found: <strong style="color:#9ca3af!important;">${emailStats.skipped}</strong>`
+            : '⚠️ SendGrid not configured — no emails sent.'}
+        </p>
+      </div>`;
+
+    document.getElementById('discoverResults').classList.remove('hidden');
+    document.getElementById('discoverResults').scrollIntoView({ behavior: 'smooth' });
+
+  } catch (err) {
+    console.error(err);
+    setDiscoverProgress(0, '');
+    document.getElementById('discoverResultsContainer').innerHTML = `
+      <div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:8px;padding:16px;margin-top:8px;">
+        <p style="color:#f87171!important;font-weight:700;">❌ Pipeline Error</p>
+        <p style="color:#fca5a5!important;font-size:0.85rem;">${err.message}</p>
+        <p style="color:#9ca3af!important;font-size:0.8rem;margin-top:8px;">Common fixes: Check your Apify token · Make sure you have credits in your Apify account · Try fewer leads</p>
+      </div>`;
+    document.getElementById('discoverResults').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-rocket mr-2"></i> Find Leads & Scan Automatically';
+  }
+}
 // ============================================================
 async function loadUserTemplates() {
   ['congrats', 'improvement', 'website'].forEach(t => {
@@ -1267,19 +1727,34 @@ async function saveTemplate(type) {
 // MODE TOGGLE
 // ============================================================
 function switchMode(mode) {
-  const singleMode = document.getElementById('singleMode');
-  const bulkMode = document.getElementById('bulkMode');
-  const templates = document.getElementById('templates');
-  const singleBtn = document.getElementById('modeSingleBtn');
-  const bulkBtn = document.getElementById('modeBulkBtn');
+  const singleMode   = document.getElementById('singleMode');
+  const bulkMode     = document.getElementById('bulkMode');
+  const discoverMode = document.getElementById('discoverMode');
+  const templates    = document.getElementById('templates');
+  const singleBtn    = document.getElementById('modeSingleBtn');
+  const bulkBtn      = document.getElementById('modeBulkBtn');
+  const discoverBtn  = document.getElementById('modeDiscoverBtn');
+
+  // hide all, deactivate all buttons
+  [singleMode, bulkMode, discoverMode].forEach(el => el && el.classList.add('hidden'));
+  [singleBtn, bulkBtn, discoverBtn].forEach(el => el && el.classList.remove('active'));
+
   if (mode === 'single') {
-    singleMode.classList.remove('hidden'); bulkMode.classList.add('hidden');
-    singleBtn.classList.add('active'); bulkBtn.classList.remove('active');
+    singleMode.classList.remove('hidden');
+    singleBtn.classList.add('active');
     if (templates) templates.classList.add('hidden');
-  } else {
-    singleMode.classList.add('hidden'); bulkMode.classList.remove('hidden');
-    singleBtn.classList.remove('active'); bulkBtn.classList.add('active');
+  } else if (mode === 'bulk') {
+    bulkMode.classList.remove('hidden');
+    bulkBtn.classList.add('active');
     if (templates) templates.classList.remove('hidden');
+  } else if (mode === 'discover') {
+    discoverMode.classList.remove('hidden');
+    discoverBtn.classList.add('active');
+    if (templates) templates.classList.remove('hidden');
+    // show warning if Apify token missing
+    const hasToken = !!localStorage.getItem('apifyToken');
+    const warn = document.getElementById('apifyKeyWarning');
+    if (warn) warn.classList.toggle('hidden', hasToken);
   }
 }
 
@@ -1353,8 +1828,7 @@ async function startBulkScan() {
   if (!urls.length) { alert('❌ Enter URLs'); return; }
   if (!email || !name) { alert('❌ Enter Email and Name'); return; }
   if (!sendgridConfigured) {
-    alert('⚠️ Configure SendGrid first (see setup box above).');
-    document.getElementById('setupRequiredBox').scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('bulkAccessGate')?.scrollIntoView({ behavior: 'smooth' });
     return;
   }
   button.disabled = true;
@@ -1382,7 +1856,30 @@ async function startBulkScan() {
     await new Promise(resolve => setTimeout(resolve, 500));
   }
   displayBulkResults(results, email, name);
-  await sendBulkEmails(results, email, name);
+  const emailStats = await sendBulkEmails(results, email, name);
+  const queueCount = getQueue().length;
+  if (queueCount > 0) {
+    const qb = document.getElementById('queueBadge');
+    if (qb) { qb.textContent = `⏳ ${queueCount} emails queued for tomorrow (daily limit reached)`; qb.classList.remove('hidden'); }
+  }
+  const total = results.leaderboard.length + results.withWebsite.length + results.withoutWebsite.length;
+  const noEmail = total - emailStats.sent - emailStats.queued;
+  const summaryEl = document.getElementById('bulkResultsContainer');
+  if (summaryEl) {
+    summaryEl.innerHTML += `
+      <div style="background:#1f2937;border:1px solid #374151;border-radius:8px;padding:16px;margin-top:8px;">
+        <p style="font-size:0.9rem;font-weight:700;margin-bottom:8px;color:#f9fafb!important;">📧 Email Summary</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;font-size:0.82rem;">
+          <div style="text-align:center;"><span style="color:#4ade80!important;font-size:1.5rem;font-weight:900;">${emailStats.sent}</span><br><span style="color:#6b7280!important;">Sent today</span></div>
+          <div style="text-align:center;"><span style="color:#fbbf24!important;font-size:1.5rem;font-weight:900;">${emailStats.queued}</span><br><span style="color:#6b7280!important;">Queued</span></div>
+          <div style="text-align:center;"><span style="color:#9ca3af!important;font-size:1.5rem;font-weight:900;">${noEmail}</span><br><span style="color:#6b7280!important;">No email found</span></div>
+          <div style="text-align:center;"><span style="color:#818cf8!important;font-size:1.5rem;font-weight:900;">${getRemainingToday()}</span><br><span style="color:#6b7280!important;">Left today</span></div>
+        </div>
+        ${emailStats.queued > 0 ? `<p style="font-size:0.75rem;color:#fbbf24!important;margin-top:10px;">⏳ Queued emails will send automatically when you open this page tomorrow.</p>` : ''}
+        ${noEmail > 0 ? `<p style="font-size:0.75rem;color:#9ca3af!important;margin-top:6px;">ℹ️ ${noEmail} businesses had no email address found via Apify or website scan.</p>` : ''}
+      </div>`;
+  }
+  updateDailyLimitUI();
   button.disabled = false;
   button.innerHTML = '<i class="fas fa-rocket mr-2"></i> Start Bulk Scan';
   document.getElementById('bulkProgress').classList.add('hidden');
@@ -1400,55 +1897,118 @@ function displayBulkResults(results, userEmail, userName) {
 }
 
 // ============================================================
+// DAILY EMAIL LIMIT TRACKER (localStorage)
+// ============================================================
+const DAILY_LIMIT = 100;
+
+function getTodayKey() {
+  return 'emailsSent_' + new Date().toISOString().slice(0, 10); // e.g. emailsSent_2026-02-22
+}
+
+function getDailySentCount() {
+  return parseInt(localStorage.getItem(getTodayKey()) || '0');
+}
+
+function incrementDailySent(n = 1) {
+  const key = getTodayKey();
+  const current = getDailySentCount();
+  localStorage.setItem(key, current + n);
+  updateDailyLimitUI();
+}
+
+function getRemainingToday() {
+  return Math.max(0, DAILY_LIMIT - getDailySentCount());
+}
+
+function updateDailyLimitUI() {
+  const sent = getDailySentCount();
+  const remaining = getRemainingToday();
+  const el = document.getElementById('dailyLimitBadge');
+  if (el) {
+    const color = remaining > 50 ? '#4ade80' : remaining > 20 ? '#fbbf24' : '#f87171';
+    el.innerHTML = `📧 Today: <strong style="color:${color}!important;">${sent}/${DAILY_LIMIT}</strong> emails sent &nbsp;·&nbsp; <span style="color:${color}!important;">${remaining} remaining</span>`;
+  }
+}
+
+// ============================================================
+// EMAIL QUEUE (localStorage) — stores overflow for next day
+// ============================================================
+function getQueue() {
+  try { return JSON.parse(localStorage.getItem('emailQueue') || '[]'); } catch { return []; }
+}
+
+function addToQueue(items) {
+  const q = getQueue();
+  localStorage.setItem('emailQueue', JSON.stringify([...q, ...items]));
+}
+
+function clearQueue() {
+  localStorage.removeItem('emailQueue');
+}
+
+// ============================================================
+// EMAIL EXTRACTOR — gets business email from all available sources
+// Priority: Apify place email > scan contact email > website contact page guess
+// ============================================================
+function extractBusinessEmail(item) {
+  // 1. From Apify place data (most reliable — Google Maps sometimes has it)
+  const d = item.data || {};
+  if (d.email)                 return d.email;
+  if (d.emails?.[0])           return d.emails[0];
+  if (d.contactEmail)          return d.contactEmail;
+  if (d.contact_email)         return d.contact_email;
+
+  // 2. From website scan result
+  if (d.extractedEmail)        return d.extractedEmail;
+  if (d.emails_found?.[0])     return d.emails_found[0];
+
+  // 3. Not found
+  return null;
+}
+
+// ============================================================
 // CENTRAL VARIABLE REPLACEMENT
 // All template variables resolved here — add new ones once here.
 // ============================================================
-function applyVars(text, item, userEmail, userName) {
+function applyVars(text, item, senderEmail, senderName) {
   if (!text) return text;
 
-  const url      = item.url || '';
-  const domain   = url.replace(/https?:\/\//,'').replace(/\/.*$/,'');
-  const score    = item.score || 0;
-  const metrics  = item.data?.metrics || {};
-  const graaf    = metrics.graaf    ?? 0;
-  const craft    = metrics.craft    ?? 0;
-  const tech     = metrics.technical ?? 0;
-  const wordCnt  = item.data?.word_count ?? item.data?.wordCount ?? '—';
-  const pageTitle= item.data?.title || domain;
-  const industry = item.data?.industry || item.data?.niche || '—';
-  const city     = item.data?.city    || '—';
-  const country  = item.data?.country || '—';
-  const topIssue = (item.data?.recommendations && item.data.recommendations[0]?.title) || 'Content quality improvement';
+  const url        = item.url || '';
+  const domain     = url.replace(/https?:\/\//,'').replace(/\/.*$/,'') || item.data?.name || '';
+  const score      = item.score || 0;
+  const metrics    = item.data?.metrics || {};
+  const graaf      = metrics.graaf    ?? 0;
+  const craft      = metrics.craft    ?? 0;
+  const tech       = metrics.technical ?? 0;
+  const wordCnt    = item.data?.word_count ?? item.data?.wordCount ?? '—';
+  const pageTitle  = item.data?.title || domain;
+  const industry   = item.data?.industry || item.data?.niche || item.data?.name || '—';
+  const city       = item.data?.city    || item.data?.address?.split(',')[1]?.trim() || '—';
+  const country    = item.data?.country || '—';
+  const companyName = item.data?.name   || domain;
+  const topIssue   = (item.data?.recommendations && item.data.recommendations[0]?.title) || 'Content quality improvement';
 
-  // Score label
   const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
 
-  // Visual score bar (inline HTML)
   const barColor  = score >= 85 ? '#4ade80' : score >= 70 ? '#fbbf24' : '#f87171';
-  const scoreBar  = `<div style="background:#e5e7eb;border-radius:99px;height:10px;width:100%;margin:8px 0;">
-    <div style="background:${barColor};width:${score}%;height:10px;border-radius:99px;"></div>
-  </div>`;
+  const scoreBar  = `<div style="background:#e5e7eb;border-radius:99px;height:10px;width:100%;margin:8px 0;"><div style="background:${barColor};width:${score}%;height:10px;border-radius:99px;"></div></div>`;
 
-  // Dates
   const now       = new Date();
   const dateStr   = now.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
   const monthStr  = now.toLocaleDateString('en-US', { month:'long' });
   const yearStr   = now.getFullYear().toString();
 
-  // Links
   const unsubUrl  = 'https://contentscale.site/unsubscribe';
   const lbUrl     = 'https://contentscale.site#leaderboard';
   const ctaUrl    = 'https://wa.me/31628073996';
 
   return text
-    // Business
-    .replace(/{{company_name}}/g,    domain)
+    .replace(/{{company_name}}/g,    companyName)
     .replace(/{{domain}}/g,          domain)
     .replace(/{{website_url}}/g,     url)
     .replace(/{{industry}}/g,        industry)
     .replace(/{{city}}/g,            city)
     .replace(/{{country}}/g,         country)
-    // Score & Analysis
     .replace(/{{score}}/g,           score)
     .replace(/{{score_label}}/g,     scoreLabel)
     .replace(/{{score_bar}}/g,       scoreBar)
@@ -1458,13 +2018,11 @@ function applyVars(text, item, userEmail, userName) {
     .replace(/{{word_count}}/g,      wordCnt)
     .replace(/{{top_issue}}/g,       topIssue)
     .replace(/{{page_title}}/g,      pageTitle)
-    // Sender
-    .replace(/{{sender_name}}/g,     userName)
-    .replace(/{{sender_email}}/g,    userEmail)
+    .replace(/{{sender_name}}/g,     senderName)
+    .replace(/{{sender_email}}/g,    senderEmail)
     .replace(/{{sender_phone}}/g,    '+31 6 2807 3996')
     .replace(/{{sender_whatsapp}}/g, ctaUrl)
     .replace(/{{sender_company}}/g,  'ContentScale')
-    // Links & Dates
     .replace(/{{leaderboard_url}}/g, lbUrl)
     .replace(/{{cta_url}}/g,         ctaUrl)
     .replace(/{{date}}/g,            dateStr)
@@ -1473,63 +2031,113 @@ function applyVars(text, item, userEmail, userName) {
     .replace(/{{unsubscribe_url}}/g, unsubUrl);
 }
 
-async function sendBulkEmails(results, userEmail, userName) {
-  if (!userId) return;
-  try {
-    // 1. Congrats (≥85)
-    if (results.leaderboard.length > 0) {
-      await fetch('/api/bulk-scan/submit-leaderboard', {
+// ============================================================
+// CORE EMAIL SENDER — respects daily cap, queues overflow
+// Returns { sent, queued, skipped }
+// ============================================================
+async function sendEmailToBusinesses(bucket, templateKey, senderEmail, senderName) {
+  const tpl = userTemplates[templateKey] || DEFAULT_TEMPLATES[templateKey];
+  let sent = 0, queued = 0, skipped = 0;
+
+  for (const item of bucket) {
+    const bizEmail = extractBusinessEmail(item);
+
+    if (!bizEmail) {
+      skipped++;
+      continue; // no email found for this business — skip
+    }
+
+    // Check daily cap
+    if (getRemainingToday() <= 0) {
+      // Queue overflow for later
+      addToQueue([{
+        to_email: bizEmail,
+        subject:  applyVars(tpl.subject, item, senderEmail, senderName),
+        html:     applyVars(tpl.body,    item, senderEmail, senderName),
+        queued_at: new Date().toISOString()
+      }]);
+      queued++;
+      continue;
+    }
+
+    // Send email
+    try {
+      await fetch('/api/email/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-        body: JSON.stringify({ entries: results.leaderboard, submittedBy: userEmail })
+        body: JSON.stringify({
+          to_email: bizEmail,
+          subject:  applyVars(tpl.subject, item, senderEmail, senderName),
+          html:     applyVars(tpl.body,    item, senderEmail, senderName)
+        })
       });
-      const tpl = userTemplates.congrats || DEFAULT_TEMPLATES.congrats;
-      for (const item of results.leaderboard) {
-        await fetch('/api/email/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-          body: JSON.stringify({
-            to_email: userEmail,
-            subject:  applyVars(tpl.subject, item, userEmail, userName),
-            html:     applyVars(tpl.body,    item, userEmail, userName)
-          })
-        });
-      }
+      incrementDailySent();
+      sent++;
+    } catch (e) {
+      console.error('Email send failed:', bizEmail, e);
+      skipped++;
     }
-    // 2. Improvement (<85, has website)
-    if (results.withWebsite.length > 0) {
-      const tpl = userTemplates.improvement || DEFAULT_TEMPLATES.improvement;
-      for (const item of results.withWebsite) {
-        await fetch('/api/email/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-          body: JSON.stringify({
-            to_email: userEmail,
-            subject:  applyVars(tpl.subject, item, userEmail, userName),
-            html:     applyVars(tpl.body,    item, userEmail, userName)
-          })
-        });
-      }
-    }
-    // 3. Website offer (no website / score 0)
-    if (results.withoutWebsite.length > 0) {
-      const tpl = userTemplates.website || DEFAULT_TEMPLATES.website;
-      for (const item of results.withoutWebsite) {
-        await fetch('/api/email/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-          body: JSON.stringify({
-            to_email: userEmail,
-            subject:  applyVars(tpl.subject, item, userEmail, userName),
-            html:     applyVars(tpl.body,    item, userEmail, userName)
-          })
-        });
-      }
-    }
-    alert('✅ Bulk scan complete! Emails sent via your SendGrid account.');
-  } catch (error) {
-    console.error(error);
-    alert('⚠️ Scan complete but some emails may have failed. Check SendGrid dashboard.');
+  }
+
+  return { sent, queued, skipped };
+}
+
+// ============================================================
+// SEND BULK EMAILS — orchestrates all 3 buckets
+// ============================================================
+async function sendBulkEmails(results, senderEmail, senderName) {
+  if (!userId) return { sent: 0, queued: 0, skipped: 0, noEmail: 0 };
+
+  let totalSent = 0, totalQueued = 0, totalSkipped = 0;
+
+  // 1. Leaderboard ≥70 — submit + congrats email
+  if (results.leaderboard.length > 0) {
+    await fetch('/api/bulk-scan/submit-leaderboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+      body: JSON.stringify({ entries: results.leaderboard, submittedBy: senderEmail })
+    }).catch(e => console.warn('Leaderboard submit failed', e));
+
+    const r = await sendEmailToBusinesses(results.leaderboard, 'congrats', senderEmail, senderName);
+    totalSent += r.sent; totalQueued += r.queued; totalSkipped += r.skipped;
+  }
+
+  // 2. Improvement pitch — <70 with website
+  if (results.withWebsite.length > 0) {
+    const r = await sendEmailToBusinesses(results.withWebsite, 'improvement', senderEmail, senderName);
+    totalSent += r.sent; totalQueued += r.queued; totalSkipped += r.skipped;
+  }
+
+  // 3. Website offer — no website / score 0
+  if (results.withoutWebsite.length > 0) {
+    const r = await sendEmailToBusinesses(results.withoutWebsite, 'website', senderEmail, senderName);
+    totalSent += r.sent; totalQueued += r.queued; totalSkipped += r.skipped;
+  }
+
+  return { sent: totalSent, queued: totalQueued, skipped: totalSkipped };
+}
+
+// ============================================================
+// PROCESS QUEUED EMAILS (call manually or on page load)
+// ============================================================
+async function processEmailQueue() {
+  const queue = getQueue();
+  if (!queue.length || !userId) return;
+  if (getRemainingToday() <= 0) return; // still at limit
+
+  const toSend = queue.splice(0, getRemainingToday());
+  localStorage.setItem('emailQueue', JSON.stringify(queue)); // save remainder
+
+  for (const item of toSend) {
+    if (getRemainingToday() <= 0) break;
+    try {
+      await fetch('/api/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+        body: JSON.stringify({ to_email: item.to_email, subject: item.subject, html: item.html })
+      });
+      incrementDailySent();
+    } catch (e) { console.error('Queue send failed', e); }
   }
 }
 
