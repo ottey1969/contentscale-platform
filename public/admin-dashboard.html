@@ -411,7 +411,7 @@ localStorage.removeItem('admin_id');
 location.reload();
 }
 
-// --- IMPROVED API CALL FUNCTION ---
+// --- IMPROVED API CALL FUNCTION WITH ERROR HANDLING ---
 async function apiCall(endpoint, method = 'GET', body = null) {
     const headers = { 'Content-Type': 'application/json' };
     if (endpoint.includes('/admin/')) headers['x-admin-key'] = currentAdminId;
