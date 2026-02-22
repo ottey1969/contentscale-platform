@@ -265,9 +265,9 @@ footer p { color: #9ca3af !important; }
             <div id="bulkScannerForm">
               <p class="text-sm mb-2" style="color:#d1d5db!important;">Based on scores, we automatically:</p>
               <ul class="text-sm mb-4 ml-4 list-disc" style="color:#d1d5db!important;">
-                <li>🏆 <strong>85+ Score:</strong> Submit to leaderboard + send congratulations email</li>
-                <li>📧 <strong>&lt;85 with website:</strong> Email business owner with improvement pitch</li>
-                <li>🌐 <strong>&lt;85 without website:</strong> Email owner offering website creation</li>
+                <li>🏆 <strong>70+ Score:</strong> Submit to leaderboard + send congratulations email</li>
+                <li>📧 <strong>&lt;70 with website:</strong> Email business owner with improvement pitch</li>
+                <li>🌐 <strong>&lt;70 without website:</strong> Email owner offering website creation</li>
               </ul>
               <div class="mb-4">
                 <label class="block text-sm mb-2" style="color:#e5e7eb!important;">Enter URLs (one per line, max 100)</label>
@@ -434,7 +434,7 @@ footer p { color: #9ca3af !important; }
       <!-- Header -->
       <div class="text-center mb-6">
         <h2 class="text-4xl font-bold mb-2">🏆 Elite Leaderboard</h2>
-        <p style="color:#e5e7eb!important;">Top performing websites ranked by ContentScore</p>
+        <p style="color:#e5e7eb!important;">Top performing websites · ContentScore 70–100</p>
       </div>
 
       <!-- ── FILTERS ── -->
@@ -592,10 +592,13 @@ footer p { color: #9ca3af !important; }
           <div>
             <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">📊 Score Range</label>
             <select id="filterScore" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
-              <option value="">All Scores</option>
-              <option value="95">Elite 95–100</option>
-              <option value="90">Excellent 90–94</option>
-              <option value="85">Strong 85–89</option>
+              <option value="">All Scores (70–100)</option>
+              <option value="95">🏅 Elite · 95–100</option>
+              <option value="90">⭐ Excellent · 90–94</option>
+              <option value="85">💪 Strong · 85–89</option>
+              <option value="80">✅ Good · 80–84</option>
+              <option value="75">📈 Solid · 75–79</option>
+              <option value="70">🎯 Qualified · 70–74</option>
             </select>
           </div>
 
@@ -1369,7 +1372,7 @@ async function startBulkScan() {
       const data = await response.json();
       if (data.success) {
         const score = data.score || 0;
-        if (score >= 85) results.leaderboard.push({ url, score, data });
+        if (score >= 70) results.leaderboard.push({ url, score, data });
         else if (score > 0) results.withWebsite.push({ url, score, data });
         else results.withoutWebsite.push({ url, score, data });
       } else {
@@ -1418,7 +1421,7 @@ function applyVars(text, item, userEmail, userName) {
   const topIssue = (item.data?.recommendations && item.data.recommendations[0]?.title) || 'Content quality improvement';
 
   // Score label
-  const scoreLabel = score >= 95 ? 'Elite' : score >= 85 ? 'Excellent' : score >= 70 ? 'Good' : 'Needs Work';
+  const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
 
   // Visual score bar (inline HTML)
   const barColor  = score >= 85 ? '#4ade80' : score >= 70 ? '#fbbf24' : '#f87171';
