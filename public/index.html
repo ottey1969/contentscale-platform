@@ -8,285 +8,478 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
+/* ============================================================
+   BASE RESET — keep white on dark backgrounds
+   FIX: Removed "button" from blanket color:white rule.
+   Buttons get their own explicit color rules.
+   ============================================================ */
 body { visibility: visible; opacity: 1; font-family: system-ui, -apple-system, sans-serif; background: #030712; color: white; }
-h1, h2, h3, h4, h5, h6, p, a, span, div, button, input, textarea, select, label, li { color: white !important; }
+h1, h2, h3, h4, h5, h6, p, a, span, div, label, li { color: white !important; }
+
+/* Inputs: always black text on white bg */
 input, textarea, select { color: #000000 !important; background-color: #ffffff !important; border: 1px solid #d1d5db !important; }
 input::placeholder, textarea::placeholder { color: #6b7280 !important; }
+
+/* Template editor inputs: dark theme */
 .template-editor textarea { color: #f3f4f6 !important; background-color: #1f2937 !important; border: 1px solid #4b5563 !important; }
 .template-editor input[type="text"] { color: #f3f4f6 !important; background-color: #1f2937 !important; border: 1px solid #4b5563 !important; }
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; transition: all 0.2s; border: none; cursor: pointer; }
-.btn-primary { background: linear-gradient(135deg, #7e22ce, #be185d); color: white; }
+
+/* ============================================================
+   BUTTONS — explicit colors, no blanket override
+   ============================================================ */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; transition: all 0.2s; border: none; cursor: pointer; color: white !important; }
+.btn-primary { background: linear-gradient(135deg, #7e22ce, #be185d); color: white !important; }
 .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -5px rgba(126, 34, 206, 0.5); }
 .btn-success { background: #0f7b3a !important; color: white !important; }
-.mode-toggle { position: relative; padding: 1rem 2rem; border-radius: 0.75rem; font-weight: 600; background: #374151; color: white; border: 2px solid transparent; cursor: pointer; flex: 1; max-width: 280px; }
-.mode-toggle.active { background: linear-gradient(135deg, #7e22ce, #be185d); border: 2px solid rgba(255, 255, 255, 0.3); }
+
+/* FIX: "Are you a Specialist?" button — white bg, dark purple text */
+.btn-specialist { background: #ffffff; color: #5b21b6 !important; font-weight: 700; padding: 0.75rem 2rem; border-radius: 0.5rem; border: none; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.5rem; }
+.btn-specialist:hover { background: #f3f0ff; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+.btn-specialist i, .btn-specialist span { color: #5b21b6 !important; }
+
+/* Mode toggle */
+.mode-toggle { position: relative; padding: 1rem 2rem; border-radius: 0.75rem; font-weight: 600; background: #374151; color: white !important; border: 2px solid transparent; cursor: pointer; flex: 1; max-width: 280px; }
+.mode-toggle.active { background: linear-gradient(135deg, #7e22ce, #be185d); border: 2px solid rgba(255,255,255,0.3); }
 .mode-toggle.active::after { content: '✓'; position: absolute; top: -8px; right: -8px; width: 28px; height: 28px; background: #0f7b3a; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2px solid white; }
+
+/* Card */
 .card { background: #111827; border: 1px solid #374151; border-radius: 1rem; padding: 1.5rem; }
+
+/* Progress bar */
 .progress-bar { height: 0.75rem; background: #374151; border-radius: 9999px; overflow: hidden; }
 .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #a855f7, #ec4899); transition: width 0.3s; }
+
 .hidden { display: none; }
-.modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 9999; }
+
+/* Modal */
+.modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 9999; }
 .modal.active { display: flex; }
-.modal-content { background: white !important; color: #111827 !important; border: 2px solid #a855f7; border-radius: 1rem; padding: 2rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+.modal-content { background: white !important; border: 2px solid #a855f7; border-radius: 1rem; padding: 2rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
 .modal-content h2, .modal-content label, .modal-content p { color: #111827 !important; }
-.modal input, .modal textarea { color: #000000 !important; background-color: #ffffff !important; }
+.modal input, .modal textarea, .modal select { color: #000000 !important; background-color: #ffffff !important; }
+/* Modal select options fix */
+.modal select option { color: #000000 !important; background-color: #ffffff !important; }
+/* Modal buttons */
+.modal .btn-primary { color: white !important; }
+.modal .btn-cancel { background: #dc2626; color: white !important; }
+
+/* Setup box */
 .setup-required-box { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); border: 2px solid #4f46e5; border-radius: 1rem; padding: 1.25rem; margin-bottom: 1.5rem; }
 .setup-step { background: #1e293b; border: 1px solid #374151; border-radius: 0.75rem; padding: 1rem; margin-bottom: 1rem; }
-.setup-step.completed { border-color: #10b981; background: rgba(16, 185, 129, 0.05); }
+.setup-step.completed { border-color: #10b981; background: rgba(16,185,129,0.05); }
 .setup-input-row { display: flex; gap: 0.5rem; align-items: center; }
 .setup-input-row input { flex: 1; padding: 0.6rem; border-radius: 0.5rem; }
 .setup-save-btn { background: linear-gradient(135deg, #7e22ce, #be185d); color: white !important; padding: 0.6rem 1.25rem; border-radius: 0.5rem; font-weight: 600; border: none; cursor: pointer; }
-.hamburger { display: none; flex-direction: column; gap: 4px; cursor: pointer; background: none; border: none; }
-.hamburger span { width: 24px; height: 2px; background: white; }
-@media (max-width: 768px) { .hamburger { display: flex; } .mobile-menu { display: none; flex-direction: column; background: #030712; padding: 1rem; border-bottom: 2px solid #7e22ce; } .mobile-menu.open { display: flex; } }
+
+/* Skip link */
+.skip-link { position: absolute; top: -40px; left: 0; background: #7e22ce; color: white !important; padding: 8px; z-index: 100; transition: top 0.2s; }
+.skip-link:focus { top: 0; }
+
+/* Hamburger */
+.hamburger { display: none; flex-direction: column; gap: 4px; cursor: pointer; background: none; border: none; padding: 4px; }
+.hamburger span { width: 24px; height: 2px; background: white; display: block; }
+
+/* Footer column links */
+footer a { color: #9ca3af !important; text-decoration: none; transition: color 0.2s; }
+footer a:hover { color: #ffffff !important; }
+footer h3, footer h4 { color: #ffffff !important; }
+footer p { color: #9ca3af !important; }
+.footer-brand-desc { color: #9ca3af !important; }
+
+/* Leaderboard top3 grid */
+.top3-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+
+/* Freelancer / rankings grid */
+.cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+
+/* Feature tags */
+.feature-tag { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.85rem; color: #d1d5db !important; }
+
+/* Stats badge */
+.stat-badge { background: rgba(255,255,255,0.1); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); border-radius: 0.75rem; padding: 1rem 1.5rem; text-align: center; min-width: 120px; }
+.stat-badge .stat-num { font-size: 1.75rem; font-weight: 800; color: white !important; display: block; }
+.stat-badge .stat-label { font-size: 0.8rem; color: rgba(255,255,255,0.8) !important; display: block; margin-top: 2px; }
+
+@media (max-width: 768px) {
+  .hamburger { display: flex; }
+  .mobile-menu { display: none; flex-direction: column; background: #030712; padding: 1rem; border-bottom: 2px solid #7e22ce; }
+  .mobile-menu.open { display: flex; }
+  .top3-grid { grid-template-columns: 1fr; }
+}
+
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 </style>
 </head>
 <body class="bg-gray-900">
 
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
 <!-- Loading Screen -->
 <div id="loading-screen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#030712;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-<div style="width:50px;height:50px;border:5px solid #374151;border-top:5px solid #a855f7;border-radius:50%;animation:spin 1s linear infinite;"></div>
-<p class="text-purple-400 font-bold mt-4 animate-pulse">Loading ContentScale...</p>
+  <div style="width:50px;height:50px;border:5px solid #374151;border-top:5px solid #a855f7;border-radius:50%;animation:spin 1s linear infinite;"></div>
+  <p style="color:#a855f7;font-weight:700;margin-top:1rem;">Loading ContentScale...</p>
 </div>
-<style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
 
 <!-- Navigation -->
-<nav class="sticky top-0 z-50 bg-gray-900/95 border-b-2 border-purple-600 backdrop-blur-sm">
-<div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-<div class="flex items-center gap-3">
-<span class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">ContentScale</span>
-<span class="hidden sm:inline-block text-xs px-2 py-1 bg-purple-600 rounded text-white font-semibold">Pro</span>
-</div>
-<div class="hidden md:flex gap-6">
-<a href="#lead-scanner" class="text-gray-300 hover:text-white">Scanner</a>
-<a href="#leaderboard" class="text-gray-300 hover:text-white">Leaderboard</a>
-<a href="#freelancers" class="text-gray-300 hover:text-white">Experts</a>
-<a href="#templates" class="text-gray-300 hover:text-white">Templates</a>
-</div>
-<div class="flex items-center gap-3">
-<a href="https://wa.me/31628073996" target="_blank" class="btn-success btn"><i class="fab fa-whatsapp"></i> Chat</a>
-<button class="hamburger" onclick="toggleMobileMenu()"><span></span><span></span><span></span></button>
-</div>
-</div>
-<div class="mobile-menu" id="mobileMenu">
-<a href="#lead-scanner" onclick="toggleMobileMenu()" class="py-2 border-b border-gray-800">Scanner</a>
-<a href="#leaderboard" onclick="toggleMobileMenu()" class="py-2 border-b border-gray-800">Leaderboard</a>
-<a href="#freelancers" onclick="toggleMobileMenu()" class="py-2 border-b border-gray-800">Experts</a>
-<a href="#templates" onclick="toggleMobileMenu()" class="py-2">Templates</a>
-</div>
+<nav class="sticky top-0 z-50 border-b-2 border-purple-600 backdrop-blur-sm" style="background:rgba(3,7,18,0.97)">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl font-bold" style="background:linear-gradient(90deg,#c084fc,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">ContentScale</span>
+      <span class="hidden sm:inline-block text-xs px-2 py-1 bg-purple-600 rounded font-semibold" style="color:white!important;">Pro</span>
+    </div>
+    <div class="hidden md:flex gap-6">
+      <a href="#lead-scanner" class="text-gray-300 hover:text-white transition-colors">Scanner</a>
+      <a href="#leaderboard" class="text-gray-300 hover:text-white transition-colors">Leaderboard</a>
+      <a href="#freelancers" class="text-gray-300 hover:text-white transition-colors">Experts</a>
+      <a href="#templates" class="text-gray-300 hover:text-white transition-colors">Templates</a>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="btn btn-success"><i class="fab fa-whatsapp"></i> Chat</a>
+      <button class="hamburger" onclick="toggleMobileMenu()" aria-label="Open menu"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#lead-scanner" onclick="toggleMobileMenu()" class="py-2 border-b border-gray-800">Scanner</a>
+    <a href="#leaderboard" onclick="toggleMobileMenu()" class="py-2 border-b border-gray-800">Leaderboard</a>
+    <a href="#freelancers" onclick="toggleMobileMenu()" class="py-2 border-b border-gray-800">Experts</a>
+    <a href="#templates" onclick="toggleMobileMenu()" class="py-2">Templates</a>
+  </div>
 </nav>
 
 <div id="main-content" class="max-w-7xl mx-auto px-6 py-8">
 
-<!-- SCANNER SECTION -->
-<div id="lead-scanner" class="mb-16">
-<div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-<div class="text-center mb-8">
-<h2 class="text-4xl font-bold mb-3">🎯 SEO Content Quality Scanner</h2>
-<p class="text-xl text-gray-200">Check Your SEO Content Quality in Seconds</p>
-</div>
+  <!-- ============================================================
+       SCANNER SECTION
+       ============================================================ -->
+  <div id="lead-scanner" class="mb-16">
+    <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 
-<div class="flex justify-center gap-4 mb-8">
-<button id="modeSingleBtn" onclick="switchMode('single')" class="mode-toggle active"><i class="fas fa-link mr-2"></i> Scan Single URL</button>
-<button id="modeBulkBtn" onclick="switchMode('bulk')" class="mode-toggle"><i class="fas fa-layer-group mr-2"></i> Scan Bulk URLs</button>
-</div>
+      <div class="text-center mb-8 max-w-3xl mx-auto">
+        <h2 class="text-4xl font-bold mb-3">🎯 SEO Content Quality Scanner</h2>
+        <p class="text-xl text-gray-200 mb-4">Check Your SEO Content Quality in Seconds</p>
+        <!-- Feature tags row -->
+        <div class="flex flex-wrap justify-center gap-x-4 gap-y-2">
+          <span class="feature-tag">✨ Free for freelancers</span>
+          <span class="feature-tag">•</span>
+          <span class="feature-tag">🔍 Single &amp; Bulk scanning</span>
+          <span class="feature-tag">•</span>
+          <span class="feature-tag">📊 Detailed analysis</span>
+          <span class="feature-tag">•</span>
+          <span class="feature-tag">📧 Your SendGrid emails</span>
+          <span class="feature-tag">•</span>
+          <span class="feature-tag">✏️ Editable templates</span>
+        </div>
+      </div>
 
-<!-- SINGLE MODE -->
-<div id="singleMode">
-<div class="card max-w-3xl mx-auto">
-<div class="flex flex-col sm:flex-row gap-3">
-<input type="text" id="singleUrlInput" placeholder="https://business-website.com" class="flex-1 p-3 rounded bg-white text-black">
-<button onclick="scanSingleURL()" id="singleScanBtn" class="btn-primary btn whitespace-nowrap"><i class="fas fa-search"></i> Start Scan</button>
-</div>
-<div id="singleProgress" class="hidden mt-4">
-<div class="progress-bar"><div id="singleProgressBar" class="progress-bar-fill" style="width: 0%"></div></div>
-<p id="singleProgressText" class="text-sm text-center mt-2"></p>
-</div>
-<div id="singleResult" class="hidden mt-4"></div>
-</div>
-</div>
+      <!-- Mode toggle -->
+      <div class="flex justify-center gap-4 mb-8">
+        <button id="modeSingleBtn" onclick="switchMode('single')" class="mode-toggle active"><i class="fas fa-link mr-2"></i> Scan Single URL</button>
+        <button id="modeBulkBtn" onclick="switchMode('bulk')" class="mode-toggle"><i class="fas fa-layer-group mr-2"></i> Scan Bulk URLs</button>
+      </div>
 
-<!-- BULK MODE -->
-<div id="bulkMode" class="hidden">
-<div class="card max-w-4xl mx-auto" style="border: 2px solid #3b82f6;">
-<div class="flex items-center gap-3 mb-6">
-<span class="text-xl font-bold">📋 Bulk URL Scanner</span>
-<span class="text-xs px-3 py-1 bg-blue-600 rounded-full">Batch Scan</span>
-</div>
+      <!-- SINGLE MODE -->
+      <div id="singleMode">
+        <div class="card max-w-3xl mx-auto">
+          <div class="flex flex-col sm:flex-row gap-3">
+            <input type="text" id="singleUrlInput" placeholder="https://business-website.com" class="flex-1 p-3 rounded">
+            <button onclick="scanSingleURL()" id="singleScanBtn" class="btn btn-primary whitespace-nowrap"><i class="fas fa-search"></i> Start Scan</button>
+          </div>
+          <div id="singleProgress" class="hidden mt-4">
+            <div class="progress-bar"><div id="singleProgressBar" class="progress-bar-fill" style="width:0%"></div></div>
+            <p id="singleProgressText" class="text-sm text-center mt-2 text-gray-300"></p>
+          </div>
+          <div id="singleResult" class="hidden mt-4"></div>
+        </div>
+      </div>
 
-<div id="bulkScannerContent">
-<!-- Setup Box -->
-<div id="setupRequiredBox" class="setup-required-box">
-<div class="flex items-center gap-3 mb-4">
-<div class="text-3xl">⚙️</div>
-<div>
-<h4 class="font-bold">One-Time Setup — Your Own Free SendGrid Account</h4>
-<p class="text-sm text-gray-400">You need <a href="https://sendgrid.com" target="_blank" class="underline">your own free SendGrid account</a> to send emails.</p>
-</div>
-</div>
-<div class="setup-step" id="setupStepSendgrid">
-<div class="flex justify-between items-start mb-2">
-<div class="font-semibold">Your SendGrid API Key</div>
-<div id="stepStatus1" class="text-xl">❌</div>
-</div>
-<div class="mb-2 text-xs text-gray-400">
-<a href="https://sendgrid.com" target="_blank" class="underline">Step 1: Create Account</a> • 
-<a href="https://app.sendgrid.com/settings/api_keys" target="_blank" class="underline">Step 2: Get API Key</a>
-</div>
-<div class="setup-input-row">
-<input type="password" id="setupSendgridKey" placeholder="Paste SG. key here">
-<button class="setup-save-btn" onclick="saveSetupSendgrid()">Save</button>
-</div>
-<p id="sendgridSetupStatus" class="text-xs mt-2 text-yellow-400">⚠️ Not configured</p>
-</div>
-</div>
+      <!-- BULK MODE -->
+      <div id="bulkMode" class="hidden">
+        <div class="card max-w-4xl mx-auto" style="border:2px solid #3b82f6;">
+          <div class="flex items-center gap-3 mb-6">
+            <span class="text-xl font-bold">📋 Bulk URL Scanner</span>
+            <span class="text-xs px-3 py-1 bg-blue-600 rounded-full" style="color:white!important;">Batch Scan</span>
+          </div>
 
-<!-- All Done Banner -->
-<div id="setupAllDone" class="hidden bg-green-900/30 border-2 border-green-500 rounded-lg p-4 text-center mb-4">
-<div class="text-2xl mb-1">✅</div>
-<div class="font-bold text-green-400">You're all set! Bulk scanning active.</div>
-</div>
+          <div id="bulkScannerContent">
+            <!-- Setup Box -->
+            <div id="setupRequiredBox" class="setup-required-box">
+              <div class="flex items-center gap-3 mb-4">
+                <div class="text-3xl">⚙️</div>
+                <div>
+                  <h4 class="font-bold">One-Time Setup — Your Own Free SendGrid Account</h4>
+                  <p class="text-sm" style="color:#9ca3af!important;">You need <a href="https://sendgrid.com" target="_blank" rel="noopener" class="underline" style="color:#818cf8!important;">your own free SendGrid account</a> to send emails.</p>
+                </div>
+              </div>
+              <div class="setup-step" id="setupStepSendgrid">
+                <div class="flex justify-between items-start mb-2">
+                  <div class="font-semibold">Your SendGrid API Key</div>
+                  <div id="stepStatus1" class="text-xl">❌</div>
+                </div>
+                <div class="mb-2 text-xs" style="color:#9ca3af!important;">
+                  <a href="https://sendgrid.com" target="_blank" rel="noopener" class="underline" style="color:#818cf8!important;">Step 1: Create Account</a> •
+                  <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" rel="noopener" class="underline" style="color:#818cf8!important;">Step 2: Get API Key</a>
+                </div>
+                <div class="setup-input-row">
+                  <input type="password" id="setupSendgridKey" placeholder="Paste SG. key here">
+                  <button class="setup-save-btn" onclick="saveSetupSendgrid()">Save</button>
+                </div>
+                <p id="sendgridSetupStatus" class="text-xs mt-2" style="color:#fbbf24!important;">⚠️ Not configured</p>
+              </div>
+            </div>
 
-<!-- Form -->
-<div id="bulkScannerForm">
-<p class="text-sm text-gray-300 mb-4">Based on scores, we automatically:</p>
-<ul class="text-sm text-gray-300 mb-4 ml-4 list-disc">
-<li>🏆 <strong>85+ Score:</strong> Submit to leaderboard + send congratulations email</li>
-<li>📧 <strong>&lt;85 with website:</strong> Email business owner with improvement pitch</li>
-<li>🌐 <strong>&lt;85 without website:</strong> Email owner offering website creation</li>
-</ul>
-<div class="mb-4">
-<label class="block text-sm mb-2">Enter URLs (one per line, max 100)</label>
-<textarea id="bulkUrlInput" rows="8" placeholder="https://example1.com&#10;https://example2.com" class="w-full p-3 rounded bg-white text-black"></textarea>
-<div class="flex justify-between text-xs text-gray-400 mt-1"><span>Max 100</span><span id="bulkUrlCount">0/100</span></div>
-</div>
-<div class="grid grid-cols-2 gap-3 mb-4">
-<input type="email" id="bulkScanEmail" placeholder="Your Email *" class="p-2 rounded bg-white text-black">
-<input type="text" id="bulkScanName" placeholder="Your Name *" class="p-2 rounded bg-white text-black">
-</div>
-<button onclick="startBulkScan()" id="bulkScanBtn" class="btn-primary btn w-full"><i class="fas fa-rocket mr-2"></i> Start Bulk Scan</button>
-<div id="bulkProgress" class="hidden mt-4">
-<div class="progress-bar"><div id="bulkProgressBar" class="progress-bar-fill" style="width: 0%"></div></div>
-<p id="bulkProgressText" class="text-sm text-center mt-2"></p>
-</div>
-<div id="bulkResults" class="hidden mt-4"></div>
-</div>
-</div>
-</div>
-</div>
+            <!-- All Done Banner -->
+            <div id="setupAllDone" class="hidden mb-4 rounded-lg p-4 text-center" style="background:rgba(16,185,129,0.1);border:2px solid #10b981;">
+              <div class="text-2xl mb-1">✅</div>
+              <div class="font-bold" style="color:#34d399!important;">You're all set! Bulk scanning active.</div>
+            </div>
 
-<!-- CTA -->
-<div class="mt-8 max-w-3xl mx-auto bg-gradient-to-r from-purple-800 via-pink-800 to-purple-800 rounded-xl p-6 text-center border border-purple-400">
-<h3 class="text-2xl font-bold mb-2">💼 Are You an SEO Specialist?</h3>
-<p class="text-lg mb-4">Work few hours, earn full-time income. We train you in Modern SEO.</p>
-<button onclick="openFreelancerModal()" class="bg-white text-purple-900 font-bold px-8 py-3 rounded-lg hover:bg-gray-100"><i class="fas fa-user-plus mr-2"></i> Become a Specialist</button>
-</div>
-</div>
+            <!-- Bulk Form -->
+            <div id="bulkScannerForm">
+              <p class="text-sm mb-2" style="color:#d1d5db!important;">Based on scores, we automatically:</p>
+              <ul class="text-sm mb-4 ml-4 list-disc" style="color:#d1d5db!important;">
+                <li>🏆 <strong>85+ Score:</strong> Submit to leaderboard + send congratulations email</li>
+                <li>📧 <strong>&lt;85 with website:</strong> Email business owner with improvement pitch</li>
+                <li>🌐 <strong>&lt;85 without website:</strong> Email owner offering website creation</li>
+              </ul>
+              <div class="mb-4">
+                <label class="block text-sm mb-2" style="color:#e5e7eb!important;">Enter URLs (one per line, max 100)</label>
+                <textarea id="bulkUrlInput" rows="8" placeholder="https://example1.com&#10;https://example2.com" class="w-full p-3 rounded" oninput="updateBulkCount()"></textarea>
+                <div class="flex justify-between text-xs mt-1" style="color:#9ca3af!important;"><span>Max 100</span><span id="bulkUrlCount">0/100</span></div>
+              </div>
+              <div class="grid grid-cols-2 gap-3 mb-4">
+                <input type="email" id="bulkScanEmail" placeholder="Your Email *" class="p-2 rounded">
+                <input type="text" id="bulkScanName" placeholder="Your Name *" class="p-2 rounded">
+              </div>
+              <button onclick="startBulkScan()" id="bulkScanBtn" class="btn btn-primary w-full"><i class="fas fa-rocket mr-2"></i> Start Bulk Scan</button>
+              <div id="bulkProgress" class="hidden mt-4">
+                <div class="progress-bar"><div id="bulkProgressBar" class="progress-bar-fill" style="width:0%"></div></div>
+                <p id="bulkProgressText" class="text-sm text-center mt-2" style="color:#d1d5db!important;"></p>
+              </div>
+              <!-- FIX: added #bulkResultsContainer inside #bulkResults -->
+              <div id="bulkResults" class="hidden mt-4">
+                <div id="bulkResultsContainer"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-<!-- TEMPLATES SECTION (NOW PRE-FILLED) -->
-<div id="templates" class="mb-16 hidden">
-<div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-<div class="text-center mb-8">
-<h2 class="text-4xl font-bold mb-3">✏️ Email Templates</h2>
-<p class="text-xl">Customize your bulk scan email templates (Grade 3 Level)</p>
-</div>
-<div class="grid md:grid-cols-3 gap-6">
-<!-- Congrats Template -->
-<div class="card">
-<h3 class="text-xl font-bold mb-2">🏆 Leaderboard Congratulations</h3>
-<p class="text-sm text-gray-400 mb-4">Sent to businesses with 85+ score</p>
-<div class="template-editor">
-<label class="block text-sm mb-1">Subject</label>
-<input type="text" id="template-congrats-subject" class="w-full p-2 rounded mb-2">
-<label class="block text-sm mb-1">Body (HTML)</label>
-<textarea id="template-congrats-body" class="w-full p-2 rounded" style="min-height: 200px;"></textarea>
-</div>
-<button onclick="saveTemplate('congrats')" class="btn-primary btn w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
-</div>
-<!-- Improvement Template -->
-<div class="card">
-<h3 class="text-xl font-bold mb-2">📈 Improvement Pitch</h3>
-<p class="text-sm text-gray-400 mb-4">Sent to businesses with website &lt;85 score</p>
-<div class="template-editor">
-<label class="block text-sm mb-1">Subject</label>
-<input type="text" id="template-improvement-subject" class="w-full p-2 rounded mb-2">
-<label class="block text-sm mb-1">Body (HTML)</label>
-<textarea id="template-improvement-body" class="w-full p-2 rounded" style="min-height: 200px;"></textarea>
-</div>
-<button onclick="saveTemplate('improvement')" class="btn-primary btn w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
-</div>
-<!-- Website Template -->
-<div class="card">
-<h3 class="text-xl font-bold mb-2">🌐 Website Offer</h3>
-<p class="text-sm text-gray-400 mb-4">Sent to businesses without website</p>
-<div class="template-editor">
-<label class="block text-sm mb-1">Subject</label>
-<input type="text" id="template-website-subject" class="w-full p-2 rounded mb-2">
-<label class="block text-sm mb-1">Body (HTML)</label>
-<textarea id="template-website-body" class="w-full p-2 rounded" style="min-height: 200px;"></textarea>
-</div>
-<button onclick="saveTemplate('website')" class="btn-primary btn w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
-</div>
-</div>
-<div class="mt-8 bg-gray-800 rounded-lg p-4 border border-gray-700">
-<h4 class="font-bold mb-2">📎 Available Variables:</h4>
-<div class="grid md:grid-cols-3 gap-4 text-sm text-gray-400">
-<div><code class="text-purple-400">{{company_name}}</code> - Business name</div>
-<div><code class="text-purple-400">{{score}}</code> - SEO score</div>
-<div><code class="text-purple-400">{{sender_name}}</code> - Your name</div>
-<div><code class="text-green-400">{{unsubscribe_url}}</code> - Unsubscribe link (Required)</div>
-</div>
-</div>
-</div>
-</div>
+      <!-- Specialist CTA -->
+      <div class="mt-8 max-w-3xl mx-auto rounded-xl p-6 text-center border border-purple-400" style="background:linear-gradient(135deg,#5b21b6,#9d174d,#5b21b6);">
+        <h3 class="text-2xl font-bold mb-2">💼 Are You an SEO Specialist?</h3>
+        <p class="text-lg mb-4" style="color:#e9d5ff!important;">Work few hours, earn full-time income. We train you in Modern SEO.</p>
+        <!-- FIX: uses .btn-specialist class for correct dark text on white background -->
+        <button onclick="openFreelancerModal()" class="btn-specialist">
+          <i class="fas fa-user-plus"></i>
+          <span>Become a Specialist</span>
+        </button>
+      </div>
 
-<!-- LEADERBOARD SECTION -->
-<div id="leaderboard" class="mb-16">
-<div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500 text-center">
-<h2 class="text-4xl font-bold mb-3">🏆 Elite Leaderboard</h2>
-<p class="text-xl text-gray-200">Top performing websites</p>
-<div id="top3-container" class="grid-3 gap-4 mt-8"></div>
-<div id="rankings4to15Container" class="mt-8"></div>
-</div>
-</div>
+    </div>
+  </div>
 
-<!-- FREELANCERS SECTION -->
-<div id="freelancers" class="mb-16">
-<div class="text-center mb-8">
-<h2 class="text-4xl font-bold mb-3">🎯 Verified SEO Specialists</h2>
-<button onclick="openFreelancerModal()" class="btn-primary btn"><i class="fas fa-user-plus mr-2"></i> Become a Specialist</button>
-</div>
-<div class="grid-3 gap-4" id="freelancersGrid"></div>
-</div>
+  <!-- ============================================================
+       TEMPLATES SECTION
+       ============================================================ -->
+  <div id="templates" class="mb-16 hidden">
+    <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+      <div class="text-center mb-8">
+        <h2 class="text-4xl font-bold mb-3">✏️ Email Templates</h2>
+        <p class="text-xl" style="color:#e5e7eb!important;">Customize your bulk scan email templates (Grade 3 Level)</p>
+      </div>
+      <div class="cards-grid">
+        <!-- Congrats Template -->
+        <div class="card">
+          <h3 class="text-xl font-bold mb-2">🏆 Leaderboard Congratulations</h3>
+          <p class="text-sm mb-4" style="color:#9ca3af!important;">Sent to businesses with 85+ score</p>
+          <div class="template-editor">
+            <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
+            <input type="text" id="template-congrats-subject" class="w-full p-2 rounded mb-2">
+            <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
+            <textarea id="template-congrats-body" class="w-full p-2 rounded" style="min-height:200px;"></textarea>
+          </div>
+          <button onclick="saveTemplate('congrats')" class="btn btn-primary w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
+        </div>
+        <!-- Improvement Template -->
+        <div class="card">
+          <h3 class="text-xl font-bold mb-2">📈 Improvement Pitch</h3>
+          <p class="text-sm mb-4" style="color:#9ca3af!important;">Sent to businesses with website &lt;85 score</p>
+          <div class="template-editor">
+            <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
+            <input type="text" id="template-improvement-subject" class="w-full p-2 rounded mb-2">
+            <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
+            <textarea id="template-improvement-body" class="w-full p-2 rounded" style="min-height:200px;"></textarea>
+          </div>
+          <button onclick="saveTemplate('improvement')" class="btn btn-primary w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
+        </div>
+        <!-- Website Template -->
+        <div class="card">
+          <h3 class="text-xl font-bold mb-2">🌐 Website Offer</h3>
+          <p class="text-sm mb-4" style="color:#9ca3af!important;">Sent to businesses without website</p>
+          <div class="template-editor">
+            <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
+            <input type="text" id="template-website-subject" class="w-full p-2 rounded mb-2">
+            <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
+            <textarea id="template-website-body" class="w-full p-2 rounded" style="min-height:200px;"></textarea>
+          </div>
+          <button onclick="saveTemplate('website')" class="btn btn-primary w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
+        </div>
+      </div>
+      <div class="mt-8 rounded-lg p-4" style="background:#1f2937;border:1px solid #374151;">
+        <h4 class="font-bold mb-2">📎 Available Variables:</h4>
+        <div class="cards-grid text-sm" style="color:#9ca3af!important;">
+          <div><code style="color:#c084fc!important;">{{company_name}}</code> — Business name</div>
+          <div><code style="color:#c084fc!important;">{{score}}</code> — SEO score</div>
+          <div><code style="color:#c084fc!important;">{{sender_name}}</code> — Your name</div>
+          <div><code style="color:#4ade80!important;">{{unsubscribe_url}}</code> — Unsubscribe link (Required)</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-</div>
+  <!-- ============================================================
+       LEADERBOARD SECTION — data from server, no changes
+       ============================================================ -->
+  <div id="leaderboard" class="mb-16">
+    <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+      <div class="text-center mb-8">
+        <h2 class="text-4xl font-bold mb-3">🏆 Elite Leaderboard</h2>
+        <p class="text-xl" style="color:#e5e7eb!important;">Top performing websites</p>
+      </div>
+      <!-- FIX: was grid-3, now proper grid class -->
+      <div id="top3-container" class="top3-grid mt-4"></div>
+      <div id="rankings4to15Container" class="mt-8"></div>
+    </div>
+  </div>
 
-<!-- FOOTER -->
-<footer class="bg-gray-900 border-t-2 border-gray-800 py-12">
-<div class="max-w-7xl mx-auto px-6 text-center text-gray-400">
-<p>&copy; 2025 ContentScale. Built with 🚀 in Amsterdam.</p>
-</div>
+  <!-- ============================================================
+       FREELANCERS SECTION — data from server, no changes
+       ============================================================ -->
+  <div id="freelancers" class="mb-16">
+    <div class="text-center mb-8">
+      <h2 class="text-4xl font-bold mb-3">🎯 Verified SEO Specialists</h2>
+      <button onclick="openFreelancerModal()" class="btn btn-primary mt-2"><i class="fas fa-user-plus mr-2"></i> Become a Specialist</button>
+    </div>
+    <!-- FIX: was grid-3, now proper grid class -->
+    <div class="cards-grid" id="freelancersGrid"></div>
+  </div>
+
+</div><!-- end #main-content -->
+
+<!-- ============================================================
+     FOOTER — full 4-column layout with Privacy Policy
+     ============================================================ -->
+<footer class="border-t-2 border-gray-800 pt-12 pb-8 mt-8" style="background:#030712;">
+  <div class="max-w-7xl mx-auto px-6">
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-8 pb-8">
+
+      <!-- Brand column -->
+      <div class="md:col-span-1">
+        <span class="text-xl font-bold" style="background:linear-gradient(90deg,#c084fc,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">ContentScale</span>
+        <p class="text-sm mt-3 footer-brand-desc leading-relaxed">Elite SEO Content Quality Scanner. GRAAF + CRAFT frameworks. Helping businesses recover traffic from Google algorithm updates since 2018.</p>
+        <p class="text-xs mt-3 footer-brand-desc">Amsterdam, Netherlands · 47+ countries served</p>
+        <div class="flex gap-3 mt-4">
+          <a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="text-green-400 hover:text-green-300 transition-colors text-xl" style="color:#4ade80!important;"><i class="fab fa-whatsapp"></i></a>
+          <a href="https://linkedin.com/in/ottmar-joseph-gregory-francisca" target="_blank" rel="noopener" class="text-blue-400 hover:text-blue-300 transition-colors text-xl" style="color:#60a5fa!important;"><i class="fab fa-linkedin"></i></a>
+        </div>
+      </div>
+
+      <!-- Product links -->
+      <div>
+        <h4 class="font-semibold mb-4 text-white">Product</h4>
+        <ul class="space-y-2 text-sm">
+          <li><a href="#lead-scanner">Lead Scanner</a></li>
+          <li><a href="#leaderboard">Leaderboard</a></li>
+          <li><a href="#freelancers">SEO Specialists</a></li>
+          <li><a href="#templates">Email Templates</a></li>
+        </ul>
+      </div>
+
+      <!-- Company links -->
+      <div>
+        <h4 class="font-semibold mb-4 text-white">Company</h4>
+        <ul class="space-y-2 text-sm">
+          <li><a href="https://contentscale.site/about-us" target="_blank" rel="noopener">About Us</a></li>
+          <li><a href="https://contentscale.site/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a></li>
+          <li><a href="/app-privacy-policy.html">App Privacy Policy</a></li>
+          <li><a href="https://contentscale.site/terms" target="_blank" rel="noopener">Terms of Service</a></li>
+          <li><a href="https://contentscale.site" target="_blank" rel="noopener">Main Website</a></li>
+        </ul>
+      </div>
+
+      <!-- Contact -->
+      <div>
+        <h4 class="font-semibold mb-4 text-white">Contact</h4>
+        <ul class="space-y-2 text-sm">
+          <li class="flex items-center gap-2" style="color:#9ca3af!important;">
+            <i class="fab fa-whatsapp" style="color:#4ade80!important;"></i>
+            <a href="https://wa.me/31628073996" target="_blank" rel="noopener">+31 6 2807 3996</a>
+          </li>
+          <li class="flex items-center gap-2" style="color:#9ca3af!important;">
+            <i class="fas fa-envelope" style="color:#818cf8!important;"></i>
+            <span>hello@contentscale.site</span>
+          </li>
+          <li class="flex items-center gap-2" style="color:#9ca3af!important;">
+            <i class="fas fa-map-marker-alt" style="color:#f87171!important;"></i>
+            <span>Amsterdam, Netherlands</span>
+          </li>
+          <li class="flex items-center gap-2" style="color:#9ca3af!important;">
+            <i class="fas fa-clock" style="color:#fbbf24!important;"></i>
+            <span>Mon–Fri, 9:00–18:00 CET</span>
+          </li>
+        </ul>
+      </div>
+
+    </div><!-- end grid -->
+
+    <!-- Popular resources row -->
+    <div class="border-t border-gray-800 pt-6 pb-4">
+      <p class="text-xs text-center mb-3" style="color:#6b7280!important;">Popular Resources:</p>
+      <div class="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs">
+        <a href="https://contentscale.site/traffic-drop-recovery/" target="_blank" rel="noopener" style="color:#818cf8!important;">Traffic Drop Recovery</a>
+        <span style="color:#374151!important;">|</span>
+        <a href="https://contentscale.site/ai-overview-optimization/" target="_blank" rel="noopener" style="color:#818cf8!important;">AI Overview Optimization</a>
+        <span style="color:#374151!important;">|</span>
+        <a href="https://contentscale.site/international-seo/" target="_blank" rel="noopener" style="color:#818cf8!important;">International SEO</a>
+        <span style="color:#374151!important;">|</span>
+        <a href="https://contentscale.site/seo-contentscore/" target="_blank" rel="noopener" style="color:#818cf8!important;">SEO ContentScore Tool</a>
+        <span style="color:#374151!important;">|</span>
+        <a href="https://contentscale.site/graaf-framework/" target="_blank" rel="noopener" style="color:#818cf8!important;">GRAAF Framework</a>
+      </div>
+    </div>
+
+    <!-- Bottom bar -->
+    <div class="border-t border-gray-800 pt-6 text-center text-xs" style="color:#6b7280!important;">
+      <p class="mb-1">© 2026 ContentScale — Ottmar Francisca · Amsterdam · Built with 🚀 in the Netherlands</p>
+      <p>Privacy-First Platform · Zero Data Collection · GDPR Compliant</p>
+      <p class="mt-2 italic" style="color:#4b5563!important;">GRAAF Framework is a proprietary SEO methodology by Ottmar Francisca, complementing Julia McCoy's CRAFT Framework.</p>
+    </div>
+
+  </div>
 </footer>
 
-<!-- MODALS -->
+<!-- ============================================================
+     FREELANCER MODAL
+     ============================================================ -->
 <div id="freelancerModal" class="modal">
-<div class="modal-content">
-<h2 class="text-2xl font-bold mb-4">Register as Specialist</h2>
-<div class="space-y-4">
-<input type="text" id="freelancerName" placeholder="Full Name *" class="w-full p-3 rounded bg-gray-50 text-black">
-<input type="email" id="freelancerEmail" placeholder="Email *" class="w-full p-3 rounded bg-gray-50 text-black">
-<input type="text" id="freelancerTitle" placeholder="Professional Title *" class="w-full p-3 rounded bg-gray-50 text-black">
-<textarea id="freelancerBio" rows="3" placeholder="Bio (max 200 chars)" class="w-full p-3 rounded bg-gray-50 text-black"></textarea>
-<select id="freelancerRate" class="w-full p-3 rounded bg-gray-50 text-black">
-<option value="">Select Rate...</option>
-<option value="€50 - €75 / hour">€50 - €75 / hour</option>
-<option value="€75 - €100 / hour">€75 - €100 / hour</option>
-<option value="Project-based">Project-based</option>
-</select>
-<button onclick="submitFreelancer()" class="btn-primary btn w-full">Submit Application</button>
-<button onclick="closeModal()" class="btn btn-danger w-full bg-red-600">Cancel</button>
-</div>
-</div>
+  <div class="modal-content">
+    <h2 class="text-2xl font-bold mb-4" style="color:#111827!important;">Register as Specialist</h2>
+    <div class="space-y-4">
+      <input type="text" id="freelancerName" placeholder="Full Name *" class="w-full p-3 rounded">
+      <input type="email" id="freelancerEmail" placeholder="Email *" class="w-full p-3 rounded">
+      <input type="text" id="freelancerTitle" placeholder="Professional Title *" class="w-full p-3 rounded">
+      <textarea id="freelancerBio" rows="3" placeholder="Bio (max 200 chars)" class="w-full p-3 rounded"></textarea>
+      <select id="freelancerRate" class="w-full p-3 rounded">
+        <option value="">Select Rate...</option>
+        <option value="€50 - €75 / hour">€50 - €75 / hour</option>
+        <option value="€75 - €100 / hour">€75 - €100 / hour</option>
+        <option value="Project-based">Project-based</option>
+      </select>
+      <button onclick="submitFreelancer()" class="btn btn-primary w-full">Submit Application</button>
+      <button onclick="closeModal()" class="btn btn-cancel w-full">Cancel</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -297,11 +490,10 @@ let userId = null;
 let sendgridConfigured = false;
 let userTemplates = {};
 
-// ✅ THESE ARE THE GRADE 3 TEMPLATES
 const DEFAULT_TEMPLATES = {
-congrats: {
-subject: "🎉 Great news about {{company_name}}!",
-body: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;">
+  congrats: {
+    subject: "🎉 Great news about {{company_name}}!",
+    body: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;">
 <div style="max-width:600px;margin:40px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
 <div style="background:linear-gradient(135deg,#7e22ce,#be185d);padding:32px;text-align:center;">
 <div style="font-size:48px;margin-bottom:8px;">🏆</div>
@@ -321,10 +513,10 @@ body: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background
 <p style="font-size:12px;color:#9ca3af;margin:0;">ContentScale · Amsterdam · <a href="{{unsubscribe_url}}" style="color:#7e22ce;">Unsubscribe</a></p>
 </div>
 </div></body></html>`
-},
-improvement: {
-subject: "Quick tip to get more visitors to {{company_name}}",
-body: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;">
+  },
+  improvement: {
+    subject: "Quick tip to get more visitors to {{company_name}}",
+    body: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;">
 <div style="max-width:600px;margin:40px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
 <div style="background:linear-gradient(135deg,#1e40af,#0891b2);padding:32px;text-align:center;">
 <div style="font-size:48px;margin-bottom:8px;">📈</div>
@@ -349,14 +541,14 @@ body: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background
 <p style="font-size:12px;color:#9ca3af;margin:0;">ContentScale · Amsterdam · <a href="{{unsubscribe_url}}" style="color:#7e22ce;">Unsubscribe</a></p>
 </div>
 </div></body></html>`
-},
-website: {
-subject: "{{company_name}} — did you know a website gets you more customers?",
-body: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;">
+  },
+  website: {
+    subject: "{{company_name}} — did you know a website gets you more customers?",
+    body: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;">
 <div style="max-width:600px;margin:40px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
 <div style="background:linear-gradient(135deg,#065f46,#0891b2);padding:32px;text-align:center;">
 <div style="font-size:48px;margin-bottom:8px;">🌐</div>
-<h1 style="color:white;margin:0;font-size:26px;">Get Found on Google</h1>
+<h1 style="color:white;font-size:26px;margin:0;">Get Found on Google</h1>
 </div>
 <div style="padding:32px;">
 <p style="font-size:16px;color:#333;line-height:1.6;">Hi <strong>{{company_name}}</strong>,</p>
@@ -377,451 +569,411 @@ body: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background
 <p style="font-size:12px;color:#9ca3af;margin:0;">ContentScale · Amsterdam · <a href="{{unsubscribe_url}}" style="color:#7e22ce;">Unsubscribe</a></p>
 </div>
 </div></body></html>`
-}
+  }
 };
 
 // ============================================================
 // INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', function () {
-registerUser();
-loadLeaderboardData();
-loadFreelancers();
-// Hide loader
-setTimeout(() => {
-const l = document.getElementById('loading-screen');
-if(l) { l.style.opacity='0'; setTimeout(()=>l.style.display='none', 300); }
-}, 1500);
+  registerUser();
+  loadLeaderboardData();
+  loadFreelancers();
+  setTimeout(() => {
+    const l = document.getElementById('loading-screen');
+    if (l) { l.style.opacity = '0'; l.style.transition = 'opacity 0.4s'; setTimeout(() => l.style.display = 'none', 400); }
+  }, 1200);
 });
 
+function updateBulkCount() {
+  const lines = document.getElementById('bulkUrlInput').value.split('\n').filter(u => u.trim().length > 0);
+  document.getElementById('bulkUrlCount').textContent = Math.min(lines.length, 100) + '/100';
+}
+
 async function registerUser() {
-try {
-let storedUserId = localStorage.getItem('user_id');
-if (!storedUserId) {
-const response = await fetch('/api/user/register', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-const data = await response.json();
-if (data.success && data.userId) {
-userId = data.userId;
-localStorage.setItem('user_id', userId);
-}
-} else {
-userId = storedUserId;
-}
-loadApiStatus();
-loadUserTemplates(); // Loads templates into the visible text areas
-} catch (error) { console.error('Registration error:', error); }
+  try {
+    let storedUserId = localStorage.getItem('user_id');
+    if (!storedUserId) {
+      const response = await fetch('/api/user/register', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+      const data = await response.json();
+      if (data.success && data.userId) {
+        userId = data.userId;
+        localStorage.setItem('user_id', userId);
+      }
+    } else {
+      userId = storedUserId;
+    }
+    loadApiStatus();
+    loadUserTemplates();
+  } catch (error) { console.error('Registration error:', error); }
 }
 
 async function loadApiStatus() {
-if (!userId) return;
-try {
-const response = await fetch('/api/user/keys/status', { headers: { 'x-user-id': userId } });
-const data = await response.json();
-if (data.success) {
-sendgridConfigured = data.hasSendgrid;
-checkSetupStatus();
-}
-} catch (error) { console.error('Error loading API status:', error); }
+  if (!userId) return;
+  try {
+    const response = await fetch('/api/user/keys/status', { headers: { 'x-user-id': userId } });
+    const data = await response.json();
+    if (data.success) {
+      sendgridConfigured = data.hasSendgrid;
+      checkSetupStatus();
+    }
+  } catch (error) { console.error('Error loading API status:', error); }
 }
 
 function checkSetupStatus() {
-const setupBox = document.getElementById('setupRequiredBox');
-const allDone = document.getElementById('setupAllDone');
-const step1 = document.getElementById('setupStepSendgrid');
-const status1 = document.getElementById('stepStatus1');
-const sgStatus = document.getElementById('sendgridSetupStatus');
-
-if (sendgridConfigured) {
-if (step1) step1.classList.add('completed');
-if (status1) status1.textContent = '✅';
-if (sgStatus) sgStatus.innerHTML = '<span class="text-green-400">✅ SendGrid configured</span>';
-if (setupBox) setupBox.classList.add('hidden');
-if (allDone) allDone.classList.remove('hidden');
-} else {
-if (step1) step1.classList.remove('completed');
-if (status1) status1.textContent = '❌';
-if (setupBox) setupBox.classList.remove('hidden');
-if (allDone) allDone.classList.add('hidden');
-}
+  const setupBox = document.getElementById('setupRequiredBox');
+  const allDone = document.getElementById('setupAllDone');
+  const step1 = document.getElementById('setupStepSendgrid');
+  const status1 = document.getElementById('stepStatus1');
+  const sgStatus = document.getElementById('sendgridSetupStatus');
+  if (sendgridConfigured) {
+    if (step1) step1.classList.add('completed');
+    if (status1) status1.textContent = '✅';
+    if (sgStatus) sgStatus.innerHTML = '<span style="color:#4ade80!important;">✅ SendGrid configured</span>';
+    if (setupBox) setupBox.classList.add('hidden');
+    if (allDone) allDone.classList.remove('hidden');
+  } else {
+    if (step1) step1.classList.remove('completed');
+    if (status1) status1.textContent = '❌';
+    if (setupBox) setupBox.classList.remove('hidden');
+    if (allDone) allDone.classList.add('hidden');
+  }
 }
 
 async function saveSetupSendgrid() {
-if (!userId) { alert('Please refresh.'); return; }
-const key = document.getElementById('setupSendgridKey').value.trim();
-if (!key) { alert('Paste key.'); return; }
-const statusEl = document.getElementById('sendgridSetupStatus');
-statusEl.innerHTML = '<span class="text-blue-400">Saving…</span>';
-try {
-const res = await fetch('/api/user/sendgrid/configure', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-body: JSON.stringify({ userId, apiKey: key, dailyLimit: 100 })
-});
-const data = await res.json();
-if (data.success) {
-sendgridConfigured = true;
-document.getElementById('setupSendgridKey').value = '';
-checkSetupStatus();
-} else {
-statusEl.innerHTML = `<span class="text-red-400">❌ ${data.error}</span>`;
-}
-} catch (e) { statusEl.innerHTML = '<span class="text-red-400">❌ Error</span>'; }
+  if (!userId) { alert('Please refresh.'); return; }
+  const key = document.getElementById('setupSendgridKey').value.trim();
+  if (!key) { alert('Paste key.'); return; }
+  const statusEl = document.getElementById('sendgridSetupStatus');
+  statusEl.innerHTML = '<span style="color:#60a5fa!important;">Saving…</span>';
+  try {
+    const res = await fetch('/api/user/sendgrid/configure', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+      body: JSON.stringify({ userId, apiKey: key, dailyLimit: 100 })
+    });
+    const data = await res.json();
+    if (data.success) {
+      sendgridConfigured = true;
+      document.getElementById('setupSendgridKey').value = '';
+      checkSetupStatus();
+    } else {
+      statusEl.innerHTML = `<span style="color:#f87171!important;">❌ ${data.error}</span>`;
+    }
+  } catch (e) { statusEl.innerHTML = '<span style="color:#f87171!important;">❌ Error</span>'; }
 }
 
 // ============================================================
-// TEMPLATES LOGIC (LOAD & SAVE)
+// TEMPLATES LOGIC
 // ============================================================
 async function loadUserTemplates() {
-// 1. Fill inputs with defaults first so they are never empty
-['congrats', 'improvement', 'website'].forEach(t => {
-const subEl = document.getElementById('template-' + t + '-subject');
-const bodyEl = document.getElementById('template-' + t + '-body');
-if (subEl && DEFAULT_TEMPLATES[t]) subEl.value = DEFAULT_TEMPLATES[t].subject;
-if (bodyEl && DEFAULT_TEMPLATES[t]) bodyEl.value = DEFAULT_TEMPLATES[t].body;
-});
-
-if (!userId) return;
-// 2. Fetch user customizations if they exist
-try {
-const response = await fetch('/api/user/templates', { headers: { 'x-user-id': userId } });
-const data = await response.json();
-if (data.success && data.templates) {
-userTemplates = data.templates;
-// Override defaults only where user has saved a custom template
-['congrats', 'improvement', 'website'].forEach(t => {
-if (userTemplates[t] && userTemplates[t].subject) {
-const subEl = document.getElementById('template-' + t + '-subject');
-const bodyEl = document.getElementById('template-' + t + '-body');
-if (subEl) subEl.value = userTemplates[t].subject;
-if (bodyEl) bodyEl.value = userTemplates[t].body;
-}
-});
-}
-} catch (error) { console.error('Error loading templates:', error); }
+  ['congrats', 'improvement', 'website'].forEach(t => {
+    const subEl = document.getElementById('template-' + t + '-subject');
+    const bodyEl = document.getElementById('template-' + t + '-body');
+    if (subEl && DEFAULT_TEMPLATES[t]) subEl.value = DEFAULT_TEMPLATES[t].subject;
+    if (bodyEl && DEFAULT_TEMPLATES[t]) bodyEl.value = DEFAULT_TEMPLATES[t].body;
+  });
+  if (!userId) return;
+  try {
+    const response = await fetch('/api/user/templates', { headers: { 'x-user-id': userId } });
+    const data = await response.json();
+    if (data.success && data.templates) {
+      userTemplates = data.templates;
+      ['congrats', 'improvement', 'website'].forEach(t => {
+        if (userTemplates[t] && userTemplates[t].subject) {
+          const subEl = document.getElementById('template-' + t + '-subject');
+          const bodyEl = document.getElementById('template-' + t + '-body');
+          if (subEl) subEl.value = userTemplates[t].subject;
+          if (bodyEl) bodyEl.value = userTemplates[t].body;
+        }
+      });
+    }
+  } catch (error) { console.error('Error loading templates:', error); }
 }
 
 async function saveTemplate(type) {
-if (!userId) { alert('❌ User not registered. Refresh page.'); return; }
-const subject = document.getElementById(`template-${type}-subject`).value;
-const body = document.getElementById(`template-${type}-body`).value;
-if (!subject || !body) { alert('❌ Fill both fields'); return; }
-try {
-const response = await fetch('/api/user/templates', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-body: JSON.stringify({ type, subject, body })
-});
-const data = await response.json();
-if (data.success) { 
-alert('✅ Template saved!'); 
-userTemplates[type] = { subject, body }; 
-} else { alert('❌ ' + (data.error || 'Failed')); }
-} catch (error) { alert('❌ Error: ' + error.message); }
+  if (!userId) { alert('❌ User not registered. Refresh page.'); return; }
+  const subject = document.getElementById(`template-${type}-subject`).value;
+  const body = document.getElementById(`template-${type}-body`).value;
+  if (!subject || !body) { alert('❌ Fill both fields'); return; }
+  try {
+    const response = await fetch('/api/user/templates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+      body: JSON.stringify({ type, subject, body })
+    });
+    const data = await response.json();
+    if (data.success) { alert('✅ Template saved!'); userTemplates[type] = { subject, body }; }
+    else { alert('❌ ' + (data.error || 'Failed')); }
+  } catch (error) { alert('❌ Error: ' + error.message); }
 }
 
 // ============================================================
-// BULK SCAN LOGIC (CONNECTED TO TEMPLATES)
+// MODE TOGGLE
 // ============================================================
 function switchMode(mode) {
-const singleMode = document.getElementById('singleMode');
-const bulkMode = document.getElementById('bulkMode');
-const templates = document.getElementById('templates');
-const singleBtn = document.getElementById('modeSingleBtn');
-const bulkBtn = document.getElementById('modeBulkBtn');
-
-if (mode === 'single') {
-singleMode.classList.remove('hidden'); bulkMode.classList.add('hidden');
-singleBtn.classList.add('active'); bulkBtn.classList.remove('active');
-if (templates) templates.classList.add('hidden');
-} else {
-singleMode.classList.add('hidden'); bulkMode.classList.remove('hidden');
-singleBtn.classList.remove('active'); bulkBtn.classList.add('active');
-if (templates) templates.classList.remove('hidden');
-}
-}
-
-async function startBulkScan() {
-const urlInput = document.getElementById('bulkUrlInput');
-const emailInput = document.getElementById('bulkScanEmail');
-const nameInput = document.getElementById('bulkScanName');
-const button = document.getElementById('bulkScanBtn');
-
-const urls = urlInput.value.split('\n').filter(u => u.trim().length > 0);
-const email = emailInput.value.trim();
-const name = nameInput.value.trim();
-
-if (!urls.length) { alert('❌ Enter URLs'); return; }
-if (!email || !name) { alert('❌ Enter Email and Name'); return; }
-if (!sendgridConfigured) { 
-alert('⚠️ Configure SendGrid first (see setup box above).'); 
-document.getElementById('setupRequiredBox').scrollIntoView({behavior:'smooth'});
-return; 
-}
-
-button.disabled = true;
-button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
-document.getElementById('bulkProgress').classList.remove('hidden');
-document.getElementById('bulkResults').classList.add('hidden');
-
-let results = { leaderboard: [], withWebsite: [], withoutWebsite: [], errors: [] };
-
-for (let i = 0; i < urls.length; i++) {
-let url = urls[i].trim();
-if (!url.startsWith('http')) url = 'https://' + url;
-document.getElementById('bulkProgressText').textContent = `Scanning ${i + 1} of ${urls.length}…`;
-document.getElementById('bulkProgressBar').style.width = `${((i + 1) / urls.length) * 100}%`;
-
-try {
-const response = await fetch('/api/scan', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json', 'x-user-id': userId || 'anonymous' },
-body: JSON.stringify({ url })
-});
-const data = await response.json();
-if (data.success) {
-const score = data.score || 0;
-// Determine category based on score
-if (score >= 85) results.leaderboard.push({ url, score, data });
-else if (score > 0) results.withWebsite.push({ url, score, data });
-else results.withoutWebsite.push({ url, score, data });
-} else {
-results.errors.push({ url, error: data.error });
-}
-} catch (error) {
-results.errors.push({ url, error: error.message });
-}
-await new Promise(resolve => setTimeout(resolve, 500));
-}
-
-displayBulkResults(results, email, name);
-await sendBulkEmails(results, email, name); // ✅ SENDS EMAILS USING TEMPLATES
-
-button.disabled = false;
-button.innerHTML = '<i class="fas fa-rocket mr-2"></i> Start Bulk Scan';
-document.getElementById('bulkProgress').classList.add('hidden');
-}
-
-function displayBulkResults(results, userEmail, userName) {
-let html = '';
-if (results.leaderboard.length > 0) html += `<div class="bg-green-900/30 border border-green-500 rounded p-4 mb-4"><h5 class="font-bold text-green-400">🏆 Leaderboard (${results.leaderboard.length})</h5><ul class="text-sm">${results.leaderboard.map(r => `<li>✅ ${r.url} — ${r.score}/100</li>`).join('')}</ul></div>`;
-if (results.withWebsite.length > 0) html += `<div class="bg-blue-900/30 border border-blue-500 rounded p-4 mb-4"><h5 class="font-bold text-blue-400">📧 Improvement Emails (${results.withWebsite.length})</h5><ul class="text-sm">${results.withWebsite.map(r => `<li>📨 ${r.url} — ${r.score}/100</li>`).join('')}</ul></div>`;
-if (results.withoutWebsite.length > 0) html += `<div class="bg-purple-900/30 border border-purple-500 rounded p-4 mb-4"><h5 class="font-bold text-purple-400">🌐 Website Offers (${results.withoutWebsite.length})</h5><ul class="text-sm">${results.withoutWebsite.map(r => `<li>📬 ${r.url}</li>`).join('')}</ul></div>`;
-if (results.errors.length > 0) html += `<div class="bg-red-900/30 border border-red-500 rounded p-4 mb-4"><h5 class="font-bold text-red-400">❌ Errors (${results.errors.length})</h5></div>`;
-html += `<div class="bg-gray-800 border border-gray-700 rounded p-4"><p class="text-sm">📬 Summary sent to <strong>${userEmail}</strong></p></div>`;
-document.getElementById('bulkResultsContainer').innerHTML = html;
-document.getElementById('bulkResults').classList.remove('hidden');
-}
-
-// ✅ THIS FUNCTION NOW USES THE TEMPLATES DIRECTLY
-async function sendBulkEmails(results, userEmail, userName) {
-if (!userId) return;
-const unsubscribeUrl = 'https://contentscale.site/unsubscribe';
-const leaderboardUrl = 'https://contentscale.site#leaderboard';
-
-try {
-// 1. Send Congrats (Score >= 85)
-if (results.leaderboard.length > 0) {
-// Submit to leaderboard first
-await fetch('/api/bulk-scan/submit-leaderboard', { 
-method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, 
-body: JSON.stringify({ entries: results.leaderboard, submittedBy: userEmail }) 
-});
-
-// Send Emails using the Template
-const tpl = userTemplates.congrats || DEFAULT_TEMPLATES.congrats;
-for (const item of results.leaderboard) {
-const domain = item.url.replace(/https?:\/\//, '').replace(/\/.*/, '');
-const body = tpl.body.replace(/{{company_name}}/g, domain)
-.replace(/{{score}}/g, item.score)
-.replace(/{{leaderboard_url}}/g, leaderboardUrl)
-.replace(/{{sender_name}}/g, userName)
-.replace(/{{sender_email}}/g, userEmail)
-.replace(/{{unsubscribe_url}}/g, unsubscribeUrl);
-const subject = tpl.subject.replace(/{{company_name}}/g, domain);
-
-await fetch('/api/email/send', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-body: JSON.stringify({ to_email: userEmail, subject: subject, html: body })
-});
-}
-}
-
-// 2. Send Improvement (Score < 85, Has Website)
-if (results.withWebsite.length > 0) {
-const tpl = userTemplates.improvement || DEFAULT_TEMPLATES.improvement;
-for (const item of results.withWebsite) {
-const domain = item.url.replace(/https?:\/\//, '').replace(/\/.*/, '');
-const body = tpl.body.replace(/{{company_name}}/g, domain)
-.replace(/{{score}}/g, item.score)
-.replace(/{{sender_name}}/g, userName)
-.replace(/{{sender_email}}/g, userEmail)
-.replace(/{{unsubscribe_url}}/g, unsubscribeUrl);
-const subject = tpl.subject.replace(/{{company_name}}/g, domain);
-
-await fetch('/api/email/send', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-body: JSON.stringify({ to_email: userEmail, subject: subject, html: body })
-});
-}
-}
-
-// 3. Send Website Offer (Score < 85, No Website detected or low score)
-if (results.withoutWebsite.length > 0) {
-const tpl = userTemplates.website || DEFAULT_TEMPLATES.website;
-for (const item of results.withoutWebsite) {
-const domain = item.url.replace(/https?:\/\//, '').replace(/\/.*/, '');
-const body = tpl.body.replace(/{{company_name}}/g, domain)
-.replace(/{{sender_name}}/g, userName)
-.replace(/{{sender_email}}/g, userEmail)
-.replace(/{{unsubscribe_url}}/g, unsubscribeUrl);
-const subject = tpl.subject.replace(/{{company_name}}/g, domain);
-
-await fetch('/api/email/send', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-body: JSON.stringify({ to_email: userEmail, subject: subject, html: body })
-});
-}
-}
-
-alert('✅ Bulk scan complete! Emails sent via your SendGrid account.');
-} catch (error) { 
-console.error(error);
-alert('⚠️ Scan complete but some emails may have failed. Check SendGrid dashboard.'); 
-}
+  const singleMode = document.getElementById('singleMode');
+  const bulkMode = document.getElementById('bulkMode');
+  const templates = document.getElementById('templates');
+  const singleBtn = document.getElementById('modeSingleBtn');
+  const bulkBtn = document.getElementById('modeBulkBtn');
+  if (mode === 'single') {
+    singleMode.classList.remove('hidden'); bulkMode.classList.add('hidden');
+    singleBtn.classList.add('active'); bulkBtn.classList.remove('active');
+    if (templates) templates.classList.add('hidden');
+  } else {
+    singleMode.classList.add('hidden'); bulkMode.classList.remove('hidden');
+    singleBtn.classList.remove('active'); bulkBtn.classList.add('active');
+    if (templates) templates.classList.remove('hidden');
+  }
 }
 
 // ============================================================
-// HELPER FUNCTIONS (Single Scan, Leaderboard, Freelancers)
+// SINGLE SCAN
 // ============================================================
 async function scanSingleURL() {
-const input = document.getElementById('singleUrlInput');
-const button = document.getElementById('singleScanBtn');
-const progress = document.getElementById('singleProgress');
-const progressBar = document.getElementById('singleProgressBar');
-const progressText = document.getElementById('singleProgressText');
-let url = input.value.trim();
-if (!url) { alert('❌ Enter URL'); return; }
-if (!url.startsWith('http')) url = 'https://' + url;
-
-button.disabled = true;
-button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
-progress.classList.remove('hidden');
-progressBar.style.width = '20%';
-progressText.textContent = 'Starting...';
-
-try {
-const response = await fetch('/api/scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) });
-progressBar.style.width = '60%';
-progressText.textContent = 'Analyzing...';
-const data = await response.json();
-if (!response.ok || !data.success) throw new Error(data.error || 'Scan failed');
-displayScanResult(data);
-progressBar.style.width = '100%';
-progressText.textContent = 'Complete!';
-setTimeout(() => { progress.classList.add('hidden'); button.disabled = false; button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan'; }, 1000);
-} catch (error) {
-alert('❌ Scan failed: ' + error.message);
-progress.classList.add('hidden');
-button.disabled = false;
-button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
-}
+  const input = document.getElementById('singleUrlInput');
+  const button = document.getElementById('singleScanBtn');
+  const progress = document.getElementById('singleProgress');
+  const progressBar = document.getElementById('singleProgressBar');
+  const progressText = document.getElementById('singleProgressText');
+  let url = input.value.trim();
+  if (!url) { alert('❌ Enter URL'); return; }
+  if (!url.startsWith('http')) url = 'https://' + url;
+  button.disabled = true;
+  button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
+  progress.classList.remove('hidden');
+  progressBar.style.width = '20%';
+  progressText.textContent = 'Starting...';
+  try {
+    const response = await fetch('/api/scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) });
+    progressBar.style.width = '60%';
+    progressText.textContent = 'Analyzing...';
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.error || 'Scan failed');
+    displayScanResult(data);
+    progressBar.style.width = '100%';
+    progressText.textContent = 'Complete!';
+    setTimeout(() => { progress.classList.add('hidden'); button.disabled = false; button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan'; }, 1000);
+  } catch (error) {
+    alert('❌ Scan failed: ' + error.message);
+    progress.classList.add('hidden');
+    button.disabled = false;
+    button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
+  }
 }
 
 function displayScanResult(data) {
-const resultDiv = document.getElementById('singleResult');
-const score = data.score || 0;
-const quality = data.quality || 'unknown';
-resultDiv.innerHTML = `
-<div class="bg-gray-800 rounded-xl border-2 border-purple-500 p-6 mt-4 text-center">
-<h2 class="text-2xl font-bold mb-2">📊 SEO Analysis</h2>
-<p class="text-gray-300 mb-4 break-all">${data.url}</p>
-<div class="text-6xl font-bold text-white mb-2">${score}</div>
-<div class="text-sm text-gray-400 mb-6">out of 100 · ${quality.toUpperCase()}</div>
-<div class="grid grid-cols-3 gap-4 mb-6">
-<div class="bg-gray-900 p-3 rounded"><div class="text-xs text-gray-400">GRAAF</div><div class="text-xl font-bold text-purple-400">${data.metrics?.graaf||0}/50</div></div>
-<div class="bg-gray-900 p-3 rounded"><div class="text-xs text-gray-400">CRAFT</div><div class="text-xl font-bold text-blue-400">${data.metrics?.craft||0}/30</div></div>
-<div class="bg-gray-900 p-3 rounded"><div class="text-xs text-gray-400">Tech</div><div class="text-xl font-bold text-yellow-400">${data.metrics?.technical||0}/20</div></div>
-</div>
-<button onclick="document.getElementById('singleResult').classList.add('hidden')" class="btn btn-secondary">Close</button>
-</div>`;
-resultDiv.classList.remove('hidden');
-resultDiv.scrollIntoView({ behavior: 'smooth' });
+  const resultDiv = document.getElementById('singleResult');
+  const score = data.score || 0;
+  const quality = data.quality || 'unknown';
+  resultDiv.innerHTML = `
+    <div style="background:#1f2937;border-radius:12px;border:2px solid #7e22ce;padding:24px;margin-top:16px;text-align:center;">
+      <h2 style="font-size:1.4rem;font-weight:700;margin-bottom:8px;">📊 SEO Analysis</h2>
+      <p style="color:#9ca3af!important;margin-bottom:16px;word-break:break-all;">${data.url}</p>
+      <div style="font-size:4rem;font-weight:900;color:white!important;margin-bottom:4px;">${score}</div>
+      <div style="font-size:0.85rem;color:#9ca3af!important;margin-bottom:24px;">out of 100 · ${quality.toUpperCase()}</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;">
+        <div style="background:#030712;padding:12px;border-radius:8px;"><div style="font-size:0.7rem;color:#9ca3af!important;">GRAAF</div><div style="font-size:1.5rem;font-weight:700;color:#c084fc!important;">${data.metrics?.graaf||0}/50</div></div>
+        <div style="background:#030712;padding:12px;border-radius:8px;"><div style="font-size:0.7rem;color:#9ca3af!important;">CRAFT</div><div style="font-size:1.5rem;font-weight:700;color:#60a5fa!important;">${data.metrics?.craft||0}/30</div></div>
+        <div style="background:#030712;padding:12px;border-radius:8px;"><div style="font-size:0.7rem;color:#9ca3af!important;">Tech</div><div style="font-size:1.5rem;font-weight:700;color:#fbbf24!important;">${data.metrics?.technical||0}/20</div></div>
+      </div>
+      <button onclick="document.getElementById('singleResult').classList.add('hidden')" style="background:#374151;color:white!important;padding:8px 20px;border-radius:6px;border:none;cursor:pointer;font-weight:600;">Close</button>
+    </div>`;
+  resultDiv.classList.remove('hidden');
+  resultDiv.scrollIntoView({ behavior: 'smooth' });
 }
 
+// ============================================================
+// BULK SCAN
+// ============================================================
+async function startBulkScan() {
+  const urlInput = document.getElementById('bulkUrlInput');
+  const emailInput = document.getElementById('bulkScanEmail');
+  const nameInput = document.getElementById('bulkScanName');
+  const button = document.getElementById('bulkScanBtn');
+  const urls = urlInput.value.split('\n').filter(u => u.trim().length > 0);
+  const email = emailInput.value.trim();
+  const name = nameInput.value.trim();
+  if (!urls.length) { alert('❌ Enter URLs'); return; }
+  if (!email || !name) { alert('❌ Enter Email and Name'); return; }
+  if (!sendgridConfigured) {
+    alert('⚠️ Configure SendGrid first (see setup box above).');
+    document.getElementById('setupRequiredBox').scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
+  button.disabled = true;
+  button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
+  document.getElementById('bulkProgress').classList.remove('hidden');
+  document.getElementById('bulkResults').classList.add('hidden');
+  let results = { leaderboard: [], withWebsite: [], withoutWebsite: [], errors: [] };
+  for (let i = 0; i < urls.length; i++) {
+    let url = urls[i].trim();
+    if (!url.startsWith('http')) url = 'https://' + url;
+    document.getElementById('bulkProgressText').textContent = `Scanning ${i + 1} of ${urls.length}…`;
+    document.getElementById('bulkProgressBar').style.width = `${((i + 1) / urls.length) * 100}%`;
+    try {
+      const response = await fetch('/api/scan', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId || 'anonymous' }, body: JSON.stringify({ url }) });
+      const data = await response.json();
+      if (data.success) {
+        const score = data.score || 0;
+        if (score >= 85) results.leaderboard.push({ url, score, data });
+        else if (score > 0) results.withWebsite.push({ url, score, data });
+        else results.withoutWebsite.push({ url, score, data });
+      } else {
+        results.errors.push({ url, error: data.error });
+      }
+    } catch (error) { results.errors.push({ url, error: error.message }); }
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  displayBulkResults(results, email, name);
+  await sendBulkEmails(results, email, name);
+  button.disabled = false;
+  button.innerHTML = '<i class="fas fa-rocket mr-2"></i> Start Bulk Scan';
+  document.getElementById('bulkProgress').classList.add('hidden');
+}
+
+function displayBulkResults(results, userEmail, userName) {
+  let html = '';
+  if (results.leaderboard.length > 0) html += `<div style="background:rgba(16,185,129,0.1);border:1px solid #10b981;border-radius:8px;padding:16px;margin-bottom:12px;"><h5 style="font-weight:700;color:#4ade80!important;margin-bottom:8px;">🏆 Leaderboard (${results.leaderboard.length})</h5><ul style="font-size:0.85rem;">${results.leaderboard.map(r => `<li>✅ ${r.url} — ${r.score}/100</li>`).join('')}</ul></div>`;
+  if (results.withWebsite.length > 0) html += `<div style="background:rgba(59,130,246,0.1);border:1px solid #3b82f6;border-radius:8px;padding:16px;margin-bottom:12px;"><h5 style="font-weight:700;color:#60a5fa!important;margin-bottom:8px;">📧 Improvement Emails (${results.withWebsite.length})</h5><ul style="font-size:0.85rem;">${results.withWebsite.map(r => `<li>📨 ${r.url} — ${r.score}/100</li>`).join('')}</ul></div>`;
+  if (results.withoutWebsite.length > 0) html += `<div style="background:rgba(126,34,206,0.1);border:1px solid #7e22ce;border-radius:8px;padding:16px;margin-bottom:12px;"><h5 style="font-weight:700;color:#c084fc!important;margin-bottom:8px;">🌐 Website Offers (${results.withoutWebsite.length})</h5><ul style="font-size:0.85rem;">${results.withoutWebsite.map(r => `<li>📬 ${r.url}</li>`).join('')}</ul></div>`;
+  if (results.errors.length > 0) html += `<div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:8px;padding:16px;margin-bottom:12px;"><h5 style="font-weight:700;color:#f87171!important;margin-bottom:8px;">❌ Errors (${results.errors.length})</h5><ul style="font-size:0.85rem;">${results.errors.map(r => `<li>${r.url}</li>`).join('')}</ul></div>`;
+  html += `<div style="background:#1f2937;border:1px solid #374151;border-radius:8px;padding:16px;"><p style="font-size:0.85rem;">📬 Summary sent to <strong>${userEmail}</strong></p></div>`;
+  document.getElementById('bulkResultsContainer').innerHTML = html;
+  document.getElementById('bulkResults').classList.remove('hidden');
+}
+
+async function sendBulkEmails(results, userEmail, userName) {
+  if (!userId) return;
+  const unsubscribeUrl = 'https://contentscale.site/unsubscribe';
+  const leaderboardUrl = 'https://contentscale.site#leaderboard';
+  try {
+    if (results.leaderboard.length > 0) {
+      await fetch('/api/bulk-scan/submit-leaderboard', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ entries: results.leaderboard, submittedBy: userEmail }) });
+      const tpl = userTemplates.congrats || DEFAULT_TEMPLATES.congrats;
+      for (const item of results.leaderboard) {
+        const domain = item.url.replace(/https?:\/\//, '').replace(/\/.*/, '');
+        const body = tpl.body.replace(/{{company_name}}/g, domain).replace(/{{score}}/g, item.score).replace(/{{leaderboard_url}}/g, leaderboardUrl).replace(/{{sender_name}}/g, userName).replace(/{{sender_email}}/g, userEmail).replace(/{{unsubscribe_url}}/g, unsubscribeUrl);
+        const subject = tpl.subject.replace(/{{company_name}}/g, domain);
+        await fetch('/api/email/send', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ to_email: userEmail, subject, html: body }) });
+      }
+    }
+    if (results.withWebsite.length > 0) {
+      const tpl = userTemplates.improvement || DEFAULT_TEMPLATES.improvement;
+      for (const item of results.withWebsite) {
+        const domain = item.url.replace(/https?:\/\//, '').replace(/\/.*/, '');
+        const body = tpl.body.replace(/{{company_name}}/g, domain).replace(/{{score}}/g, item.score).replace(/{{sender_name}}/g, userName).replace(/{{sender_email}}/g, userEmail).replace(/{{unsubscribe_url}}/g, unsubscribeUrl);
+        const subject = tpl.subject.replace(/{{company_name}}/g, domain);
+        await fetch('/api/email/send', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ to_email: userEmail, subject, html: body }) });
+      }
+    }
+    if (results.withoutWebsite.length > 0) {
+      const tpl = userTemplates.website || DEFAULT_TEMPLATES.website;
+      for (const item of results.withoutWebsite) {
+        const domain = item.url.replace(/https?:\/\//, '').replace(/\/.*/, '');
+        const body = tpl.body.replace(/{{company_name}}/g, domain).replace(/{{sender_name}}/g, userName).replace(/{{sender_email}}/g, userEmail).replace(/{{unsubscribe_url}}/g, unsubscribeUrl);
+        const subject = tpl.subject.replace(/{{company_name}}/g, domain);
+        await fetch('/api/email/send', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ to_email: userEmail, subject, html: body }) });
+      }
+    }
+    alert('✅ Bulk scan complete! Emails sent via your SendGrid account.');
+  } catch (error) {
+    console.error(error);
+    alert('⚠️ Scan complete but some emails may have failed. Check SendGrid dashboard.');
+  }
+}
+
+// ============================================================
+// LEADERBOARD — unchanged server calls
+// ============================================================
 async function loadLeaderboardData() {
-try {
-const response = await fetch('/api/leaderboard');
-const data = await response.json();
-if (data.success && data.entries && data.entries.length > 0) {
-const top3 = data.entries.slice(0, 3);
-const container = document.getElementById('top3-container');
-container.innerHTML = top3.map((e, i) => `
-<div class="bg-gradient-to-b ${i===0?'from-yellow-600':'from-gray-700'} to-gray-900 p-6 rounded-xl text-center border ${i===0?'border-yellow-400':'border-gray-600'}">
-<div class="text-4xl mb-2">${i===0?'🥇':i===1?'🥈':'🥉'}</div>
-<h3 class="font-bold text-lg mb-1">${e.company_name || e.url}</h3>
-<div class="text-3xl font-black text-green-400 mb-2">${e.score}/100</div>
-<div class="text-sm text-gray-300">${e.country}</div>
-<a href="${e.url}" target="_blank" class="inline-block mt-4 text-xs bg-black/30 px-3 py-1 rounded hover:bg-black/50">Visit Site</a>
-</div>`).join('');
-}
-} catch (e) { console.error(e); }
+  try {
+    const response = await fetch('/api/leaderboard');
+    const data = await response.json();
+    if (data.success && data.entries && data.entries.length > 0) {
+      const top3 = data.entries.slice(0, 3);
+      const container = document.getElementById('top3-container');
+      container.innerHTML = top3.map((e, i) => `
+        <div style="background:${i===0?'linear-gradient(to bottom,#78350f,#111827)':'linear-gradient(to bottom,#374151,#111827)'};padding:24px;border-radius:12px;text-align:center;border:1px solid ${i===0?'#f59e0b':'#4b5563'};">
+          <div style="font-size:2.5rem;margin-bottom:8px;">${i===0?'🥇':i===1?'🥈':'🥉'}</div>
+          <h3 style="font-weight:700;font-size:1.1rem;margin-bottom:4px;">${e.company_name || e.url}</h3>
+          <div style="font-size:2rem;font-weight:900;color:#4ade80!important;margin-bottom:8px;">${e.score}/100</div>
+          <div style="font-size:0.85rem;color:#9ca3af!important;">${e.country || ''}</div>
+          <a href="${e.url}" target="_blank" rel="noopener" style="display:inline-block;margin-top:12px;font-size:0.75rem;background:rgba(0,0,0,0.3);padding:4px 12px;border-radius:4px;color:#d1d5db!important;">Visit Site →</a>
+        </div>`).join('');
+
+      const rest = data.entries.slice(3, 15);
+      if (rest.length > 0) {
+        document.getElementById('rankings4to15Container').innerHTML = `
+          <div style="background:#111827;border:1px solid #374151;border-radius:12px;overflow:hidden;">
+            ${rest.map((e, i) => `
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid #1f2937;">
+                <div style="display:flex;align-items:center;gap:12px;">
+                  <span style="color:#6b7280!important;font-weight:700;width:24px;">${i+4}</span>
+                  <span style="font-weight:600;">${e.company_name || e.url}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:16px;">
+                  <span style="color:#9ca3af!important;font-size:0.85rem;">${e.country || ''}</span>
+                  <span style="font-weight:700;color:#4ade80!important;">${e.score}/100</span>
+                  <a href="${e.url}" target="_blank" rel="noopener" style="font-size:0.75rem;color:#818cf8!important;">Visit →</a>
+                </div>
+              </div>`).join('')}
+          </div>`;
+      }
+    } else {
+      document.getElementById('top3-container').innerHTML = '<p style="color:#6b7280!important;text-align:center;grid-column:1/-1;">No leaderboard entries yet. Be the first to scan your site!</p>';
+    }
+  } catch (e) { console.error(e); document.getElementById('top3-container').innerHTML = '<p style="color:#6b7280!important;text-align:center;grid-column:1/-1;">Unable to load leaderboard.</p>'; }
 }
 
+// ============================================================
+// FREELANCERS — unchanged server calls
+// ============================================================
 async function loadFreelancers() {
-try {
-const response = await fetch('/api/freelancers');
-const data = await response.json();
-const grid = document.getElementById('freelancersGrid');
-if (data.success && data.freelancers && data.freelancers.length > 0) {
-grid.innerHTML = data.freelancers.map(f => `
-<div class="card hover:border-purple-500">
-<div class="flex items-center gap-4 mb-4">
-<div class="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center font-bold text-xl">${f.name.charAt(0)}</div>
-<div>
-<h3 class="font-bold">${f.name}</h3>
-<p class="text-sm text-gray-400">${f.title || 'Specialist'}</p>
-</div>
-</div>
-<p class="text-sm text-gray-300 mb-4">${f.bio || 'No bio available.'}</p>
-<a href="https://wa.me/31628073996" class="block w-full bg-green-600 hover:bg-green-700 text-center py-2 rounded font-semibold">Contact</a>
-</div>`).join('');
-} else {
-grid.innerHTML = '<p class="text-center text-gray-400 col-span-3">No specialists yet. Be the first!</p>';
-}
-} catch (e) { console.error(e); }
+  try {
+    const response = await fetch('/api/freelancers');
+    const data = await response.json();
+    const grid = document.getElementById('freelancersGrid');
+    if (data.success && data.freelancers && data.freelancers.length > 0) {
+      grid.innerHTML = data.freelancers.map(f => `
+        <div class="card" style="border:1px solid #374151;transition:border-color 0.2s;" onmouseover="this.style.borderColor='#7e22ce'" onmouseout="this.style.borderColor='#374151'">
+          <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+            <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#7e22ce,#be185d);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.25rem;">${f.name.charAt(0)}</div>
+            <div>
+              <h3 style="font-weight:700;margin-bottom:2px;">${f.name}</h3>
+              <p style="font-size:0.85rem;color:#9ca3af!important;">${f.title || 'Specialist'}</p>
+            </div>
+          </div>
+          <p style="font-size:0.85rem;color:#d1d5db!important;margin-bottom:16px;">${f.bio || 'No bio available.'}</p>
+          <a href="https://wa.me/31628073996" target="_blank" rel="noopener" style="display:block;width:100%;background:#0f7b3a;color:white!important;text-align:center;padding:10px;border-radius:8px;font-weight:600;text-decoration:none;">Contact</a>
+        </div>`).join('');
+    } else {
+      grid.innerHTML = '<p style="text-align:center;color:#6b7280!important;grid-column:1/-1;">No specialists yet. Be the first!</p>';
+    }
+  } catch (e) { console.error(e); }
 }
 
+// ============================================================
+// MODAL + MOBILE MENU
+// ============================================================
 function openFreelancerModal() { document.getElementById('freelancerModal').classList.add('active'); }
 function closeModal() { document.getElementById('freelancerModal').classList.remove('active'); }
 function toggleMobileMenu() { document.getElementById('mobileMenu').classList.toggle('open'); }
 
 async function submitFreelancer() {
-const name = document.getElementById('freelancerName').value;
-const email = document.getElementById('freelancerEmail').value;
-const title = document.getElementById('freelancerTitle').value;
-const bio = document.getElementById('freelancerBio').value;
-const rate = document.getElementById('freelancerRate').value;
-
-if (!name || !email || !title) { alert('❌ Name, Email, and Title required'); return; }
-
-try {
-const res = await fetch('/api/freelancers/register', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({ name, email, title, bio, hourly_rate: rate })
-});
-const data = await res.json();
-if (data.success) {
-alert('✅ Application submitted! We will review within 24h.');
-closeModal();
-loadFreelancers();
-} else {
-alert('❌ ' + (data.error || 'Failed'));
-}
-} catch (e) { alert('❌ Error: ' + e.message); }
+  const name = document.getElementById('freelancerName').value;
+  const email = document.getElementById('freelancerEmail').value;
+  const title = document.getElementById('freelancerTitle').value;
+  const bio = document.getElementById('freelancerBio').value;
+  const rate = document.getElementById('freelancerRate').value;
+  if (!name || !email || !title) { alert('❌ Name, Email, and Title required'); return; }
+  try {
+    const res = await fetch('/api/freelancers/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, title, bio, hourly_rate: rate }) });
+    const data = await res.json();
+    if (data.success) { alert('✅ Application submitted! We will review within 24h.'); closeModal(); loadFreelancers(); }
+    else { alert('❌ ' + (data.error || 'Failed')); }
+  } catch (e) { alert('❌ Error: ' + e.message); }
 }
 </script>
 </body>
