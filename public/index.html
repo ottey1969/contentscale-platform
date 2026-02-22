@@ -283,27 +283,59 @@ footer p { color: #9ca3af !important; }
 
             <!-- Bulk Form -->
             <div id="bulkScannerForm">
-              <p class="text-sm mb-2" style="color:#d1d5db!important;">Based on scores, we automatically:</p>
-              <ul class="text-sm mb-4 ml-4 list-disc" style="color:#d1d5db!important;">
-                <li>🏆 <strong>70+ Score:</strong> Submit to leaderboard + send congratulations email</li>
-                <li>📧 <strong>&lt;70 with website:</strong> Email business owner with improvement pitch</li>
-                <li>🌐 <strong>&lt;70 without website:</strong> Email owner offering website creation</li>
-              </ul>
-              <div class="mb-4">
-                <label class="block text-sm mb-2" style="color:#e5e7eb!important;">Enter URLs (one per line, max 100)</label>
-                <textarea id="bulkUrlInput" rows="8" placeholder="https://example1.com&#10;https://example2.com" class="w-full p-3 rounded" oninput="updateBulkCount()"></textarea>
-                <div class="flex justify-between text-xs mt-1" style="color:#9ca3af!important;"><span>Max 100</span><span id="bulkUrlCount">0/100</span></div>
+
+              <!-- URL input -->
+              <div class="mb-5">
+                <label class="block text-sm font-semibold mb-2" style="color:#e5e7eb!important;">Enter URLs — one per line, max 100</label>
+                <textarea id="bulkUrlInput" rows="8" placeholder="https://example1.com&#10;https://example2.com&#10;https://example3.com" class="w-full p-3 rounded" oninput="updateBulkCount()"></textarea>
+                <div class="flex justify-between text-xs mt-1" style="color:#9ca3af!important;"><span>One URL per line</span><span id="bulkUrlCount">0/100</span></div>
               </div>
-              <div class="grid grid-cols-2 gap-3 mb-4">
-                <input type="email" id="bulkScanEmail" placeholder="Your Email *" class="p-2 rounded">
-                <input type="text" id="bulkScanName" placeholder="Your Name *" class="p-2 rounded">
+
+              <!-- What happens toggle -->
+              <div class="mb-5 rounded-xl p-4" style="background:#0f172a;border:1px solid #1e293b;">
+                <p class="text-sm font-semibold mb-3" style="color:#e5e7eb!important;">What do you want to do with the results?</p>
+
+                <!-- Always on -->
+                <label class="flex items-start gap-3 mb-3 cursor-default">
+                  <div style="width:20px;height:20px;background:#4ade80;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
+                    <i class="fas fa-check" style="font-size:10px;color:#052e16!important;"></i>
+                  </div>
+                  <div>
+                    <span class="text-sm font-semibold" style="color:#e5e7eb!important;">📊 Scan &amp; score every URL</span>
+                    <p class="text-xs mt-0.5" style="color:#6b7280!important;">Always on — shows GRAAF / CRAFT / Technical breakdown for each site</p>
+                  </div>
+                </label>
+
+                <label class="flex items-start gap-3 mb-3 cursor-default">
+                  <div style="width:20px;height:20px;background:#4ade80;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
+                    <i class="fas fa-check" style="font-size:10px;color:#052e16!important;"></i>
+                  </div>
+                  <div>
+                    <span class="text-sm font-semibold" style="color:#e5e7eb!important;">🏆 Submit 70+ scores to leaderboard</span>
+                    <p class="text-xs mt-0.5" style="color:#6b7280!important;">Always on — top performers get free exposure on the public leaderboard</p>
+                  </div>
+                </label>
+
+                <!-- Optional email toggle -->
+                <label class="flex items-start gap-3 cursor-pointer" id="emailToggleLabel" onclick="toggleBulkEmail()">
+                  <div id="emailToggleBox" style="width:20px;height:20px;background:#374151;border:2px solid #4b5563;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;transition:all 0.15s;">
+                  </div>
+                  <div>
+                    <span class="text-sm font-semibold" style="color:#e5e7eb!important;">📧 Also send automated emails to each business</span>
+                    <p class="text-xs mt-0.5" style="color:#6b7280!important;">Congrats email (70+) · Improvement pitch (&lt;70 with website) · Website offer (&lt;70 no website)</p>
+                  </div>
+                </label>
               </div>
-              <button onclick="startBulkScan()" id="bulkScanBtn" class="btn btn-primary w-full"><i class="fas fa-rocket mr-2"></i> Start Bulk Scan</button>
+
+              <!-- Start button -->
+              <button onclick="startBulkScan()" id="bulkScanBtn" class="btn btn-primary w-full" style="font-size:1rem;padding:0.9rem;">
+                <i class="fas fa-rocket mr-2"></i> <span id="bulkBtnLabel">Scan All URLs</span>
+              </button>
+
               <div id="bulkProgress" class="hidden mt-4">
                 <div class="progress-bar"><div id="bulkProgressBar" class="progress-bar-fill" style="width:0%"></div></div>
                 <p id="bulkProgressText" class="text-sm text-center mt-2" style="color:#d1d5db!important;"></p>
               </div>
-              <!-- FIX: added #bulkResultsContainer inside #bulkResults -->
               <div id="bulkResults" class="hidden mt-4">
                 <div id="bulkResultsContainer"></div>
               </div>
@@ -1425,7 +1457,24 @@ function checkSetupStatus() {
 // localStorage.setItem('apifyToken', 'apify_api_xxxx') then refresh.
 function saveSetupApify() { /* no-op — use browser console or Railway env */ }
 
-// Step indicator helper
+let bulkEmailEnabled = false;
+
+function toggleBulkEmail() {
+  bulkEmailEnabled = !bulkEmailEnabled;
+  const box   = document.getElementById('emailToggleBox');
+  const label = document.getElementById('bulkBtnLabel');
+  if (bulkEmailEnabled) {
+    box.style.background = '#4ade80';
+    box.style.border     = '2px solid #4ade80';
+    box.innerHTML        = '<i class="fas fa-check" style="font-size:10px;color:#052e16!important;"></i>';
+    label.textContent    = 'Scan All URLs + Send Emails';
+  } else {
+    box.style.background = '#374151';
+    box.style.border     = '2px solid #4b5563';
+    box.innerHTML        = '';
+    label.textContent    = 'Scan All URLs';
+  }
+}
 function setDiscoverStep(step, status) {
   const el = document.getElementById('dStep' + step);
   if (!el) return;
@@ -1819,79 +1868,90 @@ function displayScanResult(data) {
 // ============================================================
 async function startBulkScan() {
   const urlInput = document.getElementById('bulkUrlInput');
-  const emailInput = document.getElementById('bulkScanEmail');
-  const nameInput = document.getElementById('bulkScanName');
-  const button = document.getElementById('bulkScanBtn');
-  const urls = urlInput.value.split('\n').filter(u => u.trim().length > 0);
-  const email = emailInput.value.trim();
-  const name = nameInput.value.trim();
-  if (!urls.length) { alert('❌ Enter URLs'); return; }
-  if (!email || !name) { alert('❌ Enter Email and Name'); return; }
-  if (!sendgridConfigured) {
+  const button   = document.getElementById('bulkScanBtn');
+  const urls     = urlInput.value.split('\n').map(u => u.trim()).filter(u => u.length > 0);
+
+  if (!urls.length) { alert('❌ Enter at least one URL'); return; }
+
+  if (bulkEmailEnabled && !sendgridConfigured) {
     document.getElementById('bulkAccessGate')?.scrollIntoView({ behavior: 'smooth' });
     return;
   }
+
   button.disabled = true;
-  button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
+  button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Scanning...';
   document.getElementById('bulkProgress').classList.remove('hidden');
   document.getElementById('bulkResults').classList.add('hidden');
+
   let results = { leaderboard: [], withWebsite: [], withoutWebsite: [], errors: [] };
+
   for (let i = 0; i < urls.length; i++) {
-    let url = urls[i].trim();
+    let url = urls[i];
     if (!url.startsWith('http')) url = 'https://' + url;
-    document.getElementById('bulkProgressText').textContent = `Scanning ${i + 1} of ${urls.length}…`;
+    document.getElementById('bulkProgressText').textContent = `Scanning ${i + 1} of ${urls.length} — ${url}`;
     document.getElementById('bulkProgressBar').style.width = `${((i + 1) / urls.length) * 100}%`;
     try {
-      const response = await fetch('/api/scan', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId || 'anonymous' }, body: JSON.stringify({ url }) });
+      const response = await fetch('/api/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-id': userId || 'anonymous' },
+        body: JSON.stringify({ url })
+      });
       const data = await response.json();
       if (data.success) {
         const score = data.score || 0;
-        if (score >= 70) results.leaderboard.push({ url, score, data });
+        if (score >= 70)    results.leaderboard.push({ url, score, data });
         else if (score > 0) results.withWebsite.push({ url, score, data });
-        else results.withoutWebsite.push({ url, score, data });
+        else                results.withoutWebsite.push({ url, score, data });
       } else {
         results.errors.push({ url, error: data.error });
       }
-    } catch (error) { results.errors.push({ url, error: error.message }); }
-    await new Promise(resolve => setTimeout(resolve, 500));
+    } catch (e) { results.errors.push({ url, error: e.message }); }
+    await new Promise(r => setTimeout(r, 300));
   }
-  displayBulkResults(results, email, name);
-  const emailStats = await sendBulkEmails(results, email, name);
-  const queueCount = getQueue().length;
-  if (queueCount > 0) {
-    const qb = document.getElementById('queueBadge');
-    if (qb) { qb.textContent = `⏳ ${queueCount} emails queued for tomorrow (daily limit reached)`; qb.classList.remove('hidden'); }
+
+  displayBulkResults(results);
+
+  // Submit leaderboard entries always
+  if (results.leaderboard.length > 0 && userId) {
+    fetch('/api/bulk-scan/submit-leaderboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+      body: JSON.stringify({ entries: results.leaderboard })
+    }).catch(e => console.warn('Leaderboard submit:', e));
   }
-  const total = results.leaderboard.length + results.withWebsite.length + results.withoutWebsite.length;
-  const noEmail = total - emailStats.sent - emailStats.queued;
-  const summaryEl = document.getElementById('bulkResultsContainer');
-  if (summaryEl) {
-    summaryEl.innerHTML += `
-      <div style="background:#1f2937;border:1px solid #374151;border-radius:8px;padding:16px;margin-top:8px;">
-        <p style="font-size:0.9rem;font-weight:700;margin-bottom:8px;color:#f9fafb!important;">📧 Email Summary</p>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;font-size:0.82rem;">
-          <div style="text-align:center;"><span style="color:#4ade80!important;font-size:1.5rem;font-weight:900;">${emailStats.sent}</span><br><span style="color:#6b7280!important;">Sent today</span></div>
-          <div style="text-align:center;"><span style="color:#fbbf24!important;font-size:1.5rem;font-weight:900;">${emailStats.queued}</span><br><span style="color:#6b7280!important;">Queued</span></div>
-          <div style="text-align:center;"><span style="color:#9ca3af!important;font-size:1.5rem;font-weight:900;">${noEmail}</span><br><span style="color:#6b7280!important;">No email found</span></div>
-          <div style="text-align:center;"><span style="color:#818cf8!important;font-size:1.5rem;font-weight:900;">${getRemainingToday()}</span><br><span style="color:#6b7280!important;">Left today</span></div>
-        </div>
-        ${emailStats.queued > 0 ? `<p style="font-size:0.75rem;color:#fbbf24!important;margin-top:10px;">⏳ Queued emails will send automatically when you open this page tomorrow.</p>` : ''}
-        ${noEmail > 0 ? `<p style="font-size:0.75rem;color:#9ca3af!important;margin-top:6px;">ℹ️ ${noEmail} businesses had no email address found via Apify or website scan.</p>` : ''}
-      </div>`;
+
+  // Emails only if toggled on
+  if (bulkEmailEnabled) {
+    const emailStats = await sendBulkEmails(results, 'ottmar@contentscale.site', 'Ottmar');
+    const queueCount = getQueue().length;
+    const summaryEl  = document.getElementById('bulkResultsContainer');
+    if (summaryEl) {
+      summaryEl.innerHTML += `
+        <div style="background:#1f2937;border:1px solid #374151;border-radius:8px;padding:16px;margin-top:8px;">
+          <p style="font-size:0.9rem;font-weight:700;margin-bottom:8px;color:#f9fafb!important;">📧 Email Summary</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;font-size:0.82rem;text-align:center;">
+            <div><span style="color:#4ade80!important;font-size:1.4rem;font-weight:900;">${emailStats.sent}</span><br><span style="color:#6b7280!important;">Sent today</span></div>
+            <div><span style="color:#fbbf24!important;font-size:1.4rem;font-weight:900;">${emailStats.queued}</span><br><span style="color:#6b7280!important;">Queued</span></div>
+            <div><span style="color:#9ca3af!important;font-size:1.4rem;font-weight:900;">${emailStats.skipped}</span><br><span style="color:#6b7280!important;">No email found</span></div>
+            <div><span style="color:#818cf8!important;font-size:1.4rem;font-weight:900;">${getRemainingToday()}</span><br><span style="color:#6b7280!important;">Left today</span></div>
+          </div>
+          ${queueCount > 0 ? `<p style="font-size:0.75rem;color:#fbbf24!important;margin-top:10px;">⏳ ${queueCount} emails queued — will send automatically when you open this page tomorrow.</p>` : ''}
+        </div>`;
+    }
+    updateDailyLimitUI();
   }
-  updateDailyLimitUI();
+
   button.disabled = false;
-  button.innerHTML = '<i class="fas fa-rocket mr-2"></i> Start Bulk Scan';
+  button.innerHTML = `<i class="fas fa-rocket mr-2"></i> ${bulkEmailEnabled ? 'Scan All URLs + Send Emails' : 'Scan All URLs'}`;
   document.getElementById('bulkProgress').classList.add('hidden');
 }
 
-function displayBulkResults(results, userEmail, userName) {
+function displayBulkResults(results) {
   let html = '';
   if (results.leaderboard.length > 0) html += `<div style="background:rgba(16,185,129,0.1);border:1px solid #10b981;border-radius:8px;padding:16px;margin-bottom:12px;"><h5 style="font-weight:700;color:#4ade80!important;margin-bottom:8px;">🏆 Leaderboard (${results.leaderboard.length})</h5><ul style="font-size:0.85rem;">${results.leaderboard.map(r => `<li>✅ ${r.url} — ${r.score}/100</li>`).join('')}</ul></div>`;
   if (results.withWebsite.length > 0) html += `<div style="background:rgba(59,130,246,0.1);border:1px solid #3b82f6;border-radius:8px;padding:16px;margin-bottom:12px;"><h5 style="font-weight:700;color:#60a5fa!important;margin-bottom:8px;">📧 Improvement Emails (${results.withWebsite.length})</h5><ul style="font-size:0.85rem;">${results.withWebsite.map(r => `<li>📨 ${r.url} — ${r.score}/100</li>`).join('')}</ul></div>`;
   if (results.withoutWebsite.length > 0) html += `<div style="background:rgba(126,34,206,0.1);border:1px solid #7e22ce;border-radius:8px;padding:16px;margin-bottom:12px;"><h5 style="font-weight:700;color:#c084fc!important;margin-bottom:8px;">🌐 Website Offers (${results.withoutWebsite.length})</h5><ul style="font-size:0.85rem;">${results.withoutWebsite.map(r => `<li>📬 ${r.url}</li>`).join('')}</ul></div>`;
   if (results.errors.length > 0) html += `<div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:8px;padding:16px;margin-bottom:12px;"><h5 style="font-weight:700;color:#f87171!important;margin-bottom:8px;">❌ Errors (${results.errors.length})</h5><ul style="font-size:0.85rem;">${results.errors.map(r => `<li>${r.url}</li>`).join('')}</ul></div>`;
-  html += `<div style="background:#1f2937;border:1px solid #374151;border-radius:8px;padding:16px;"><p style="font-size:0.85rem;">📬 Summary sent to <strong>${userEmail}</strong></p></div>`;
   document.getElementById('bulkResultsContainer').innerHTML = html;
   document.getElementById('bulkResults').classList.remove('hidden');
 }
