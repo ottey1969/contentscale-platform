@@ -11,6 +11,8 @@
 // ✅ Expert quote detection: blockquote + testimonial CSS
 // ✅ New: Direct Answer, TL;DR, TOC, Author Bio, Stats
 // ✅ SendGrid + Admin + Leaderboard + Freelancers preserved
+// ✅ UPDATE: /api/user/keys/status returns hasSendgrid:true when SENDGRID_API_KEY env var is set
+// ✅ UPDATE: /api/email/send falls back to server SENDGRID_API_KEY env var (no user key required)
 // ============================================
 process.env.PGSSLMODE = 'verify-full';
 process.env.NODE_NO_WARNINGS = '1';
@@ -27,6 +29,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
 console.log('📊 Database URL:', process.env.DATABASE_URL ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
+console.log('📧 SendGrid Key:', process.env.SENDGRID_API_KEY ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
 
 // ============================================
 // DATABASE CONFIGURATIE
@@ -168,7 +171,6 @@ async function createAllTables() {
         await client.query(`CREATE TABLE IF NOT EXISTS scans (id SERIAL PRIMARY KEY, url TEXT NOT NULL, score INTEGER, quality VARCHAR(50), graaf_score INTEGER, craft_score INTEGER, technical_score INTEGER, breakdown JSONB, recommendations JSONB DEFAULT '[]', scan_type VARCHAR(50) DEFAULT 'manual', created_at TIMESTAMP DEFAULT NOW())`);
 
         // 3. Leaderboard (WITH MIGRATION FIX)
-        // We create the table first (if not exists) with a safe default, then alter it.
         await client.query(`CREATE TABLE IF NOT EXISTS leaderboard (id SERIAL PRIMARY KEY, url TEXT NOT NULL UNIQUE, company_name VARCHAR(255), score INTEGER NOT NULL, country VARCHAR(100) DEFAULT 'NL', city VARCHAR(255), type VARCHAR(100) DEFAULT 'seo_agency', location VARCHAR(255), is_verified BOOLEAN DEFAULT FALSE, is_opted_out BOOLEAN DEFAULT FALSE, submission_ip VARCHAR(50), admin_verified BOOLEAN DEFAULT TRUE, auto_detected_country VARCHAR(100), graaf_score INTEGER, craft_score INTEGER, technical_score INTEGER, niche VARCHAR(100), created_at TIMESTAMP DEFAULT NOW())`);
         
         // 🛠️ MIGRATION: Ensure country column is wide enough (Fixes "value too long" error)
@@ -215,15 +217,27 @@ app.post('/api/user/register', async (req, res) => {
         res.json({ success: true, userId });
     } catch (error) { res.json({ success: false, error: 'Registration failed' }); }
 });
+
+// ============================================
+// ✅ UPDATED: hasSendgrid is TRUE when server env var SENDGRID_API_KEY is set.
+// Users no longer need to paste their own key — the server key is used for everyone.
+// ============================================
 app.get('/api/user/keys/status', async (req, res) => {
     const userId = req.headers['x-user-id'];
+    // Server-level SendGrid key takes priority — if set, all users have access
+    const serverHasSendgrid = !!process.env.SENDGRID_API_KEY;
+    if (serverHasSendgrid) {
+        return res.json({ success: true, hasSendgrid: true, source: 'server' });
+    }
+    // Fallback: check if this user has their own key stored (legacy / future per-user support)
     if (!userId) return res.json({ success: true, hasSendgrid: false });
     try {
         const result = await pool.query('SELECT service_name, api_key, daily_limit, used_today FROM user_api_keys WHERE user_id = $1', [userId]);
         const hasSendgrid = result.rows.some(r => r.service_name === 'sendgrid');
-        res.json({ success: true, hasSendgrid, sendgrid: hasSendgrid ? result.rows.find(r => r.service_name === 'sendgrid') : null });
+        res.json({ success: true, hasSendgrid, source: 'user', sendgrid: hasSendgrid ? result.rows.find(r => r.service_name === 'sendgrid') : null });
     } catch (e) { res.json({ success: true, hasSendgrid: false }); }
 });
+
 app.post('/api/user/sendgrid/configure', async (req, res) => {
     const { userId, apiKey, dailyLimit } = req.body;
     if (!userId || !apiKey) return res.json({ success: false, error: 'Missing fields' });
@@ -232,6 +246,7 @@ app.post('/api/user/sendgrid/configure', async (req, res) => {
         res.json({ success: true });
     } catch (e) { res.json({ success: false, error: e.message }); }
 });
+
 app.get('/api/user/templates', async (req, res) => {
     const userId = req.headers['x-user-id'];
     if (!userId) return res.json({ success: false, error: 'No ID' });
@@ -250,19 +265,86 @@ app.post('/api/user/templates', async (req, res) => {
         res.json({ success: true });
     } catch (e) { res.json({ success: false, error: e.message }); }
 });
+
+// ============================================
+// ✅ UPDATED: /api/email/send
+// Priority: server SENDGRID_API_KEY env var → user's own stored key → error
+// Daily limit tracked server-side in email_queue table (counts per calendar day)
+// ============================================
 app.post('/api/email/send', async (req, res) => {
     const userId = req.headers['x-user-id'];
     const { to_email, subject, html } = req.body;
+    if (!to_email || !subject || !html) return res.json({ success: false, error: 'Missing fields' });
+
+    let apiKeyToUse = null;
+    let dailyLimit = 100;
+
+    // 1. Try server-level key first (Railway env var)
+    if (process.env.SENDGRID_API_KEY) {
+        apiKeyToUse = process.env.SENDGRID_API_KEY;
+        dailyLimit = parseInt(process.env.SENDGRID_DAILY_LIMIT || '100');
+    } else if (userId && pool) {
+        // 2. Fallback: user's own stored key
+        try {
+            const result = await pool.query("SELECT api_key, daily_limit, used_today FROM user_api_keys WHERE user_id = $1 AND service_name = 'sendgrid'", [userId]);
+            if (result.rows.length > 0) {
+                apiKeyToUse = result.rows[0].api_key;
+                dailyLimit = result.rows[0].daily_limit;
+                // Check user-level daily limit
+                if (result.rows[0].used_today >= dailyLimit) {
+                    return res.json({ success: false, limit_reached: true, error: 'Daily limit reached' });
+                }
+            }
+        } catch (e) { console.error('Key lookup error:', e.message); }
+    }
+
+    if (!apiKeyToUse) return res.json({ success: false, needs_api_key: true, error: 'No SendGrid key configured' });
+
+    // Check server-level daily limit (count rows in email_queue sent today)
+    if (process.env.SENDGRID_API_KEY && pool) {
+        try {
+            const today = new Date().toISOString().slice(0, 10);
+            const countRes = await pool.query(
+                "SELECT COUNT(*) FROM email_queue WHERE status = 'sent' AND sent_at::date = $1::date",
+                [today]
+            );
+            const sentToday = parseInt(countRes.rows[0].count) || 0;
+            if (sentToday >= dailyLimit) {
+                return res.json({ success: false, limit_reached: true, error: `Daily limit of ${dailyLimit} reached` });
+            }
+        } catch (e) { console.warn('Daily limit check failed:', e.message); }
+    }
+
     try {
-        const result = await pool.query("SELECT api_key, daily_limit, used_today FROM user_api_keys WHERE user_id = $1 AND service_name = 'sendgrid'", [userId]);
-        if (result.rows.length === 0) return res.json({ success: false, needs_api_key: true });
-        const key = result.rows[0];
-        if (key.used_today >= key.daily_limit) return res.json({ success: false, limit_reached: true });
-        sgMail.setApiKey(key.api_key);
-        await sgMail.send({ to: to_email, from: 'noreply@contentscale.site', subject, html });
-        await pool.query("UPDATE user_api_keys SET used_today = used_today + 1 WHERE user_id = $1 AND service_name = 'sendgrid'", [userId]);
+        sgMail.setApiKey(apiKeyToUse);
+        await sgMail.send({
+            to: to_email,
+            from: process.env.SENDGRID_FROM_EMAIL || 'noreply@contentscale.site',
+            subject,
+            html
+        });
+
+        // Log sent email to queue table for daily tracking
+        if (pool) {
+            await pool.query(
+                `INSERT INTO email_queue (user_id, to_email, subject, body, status, sent_at) VALUES ($1, $2, $3, $4, 'sent', NOW())`,
+                [userId || 'server', to_email, subject, html]
+            ).catch(e => console.warn('Email log failed:', e.message));
+        }
+
+        // Also increment user-level counter if using user key
+        if (!process.env.SENDGRID_API_KEY && userId && pool) {
+            await pool.query(
+                "UPDATE user_api_keys SET used_today = used_today + 1 WHERE user_id = $1 AND service_name = 'sendgrid'",
+                [userId]
+            ).catch(e => console.warn('Counter update failed:', e.message));
+        }
+
         res.json({ success: true });
-    } catch (e) { res.json({ success: false, error: e.message }); }
+    } catch (e) {
+        console.error('❌ SendGrid send error:', e.message);
+        res.json({ success: false, error: e.message });
+    }
 });
 
 // Bulk Scan Placeholders
@@ -303,7 +385,7 @@ app.delete('/api/admin/users/:id', verifyAdmin, async (req, res) => {
     } catch (e) { res.json({ success: false, error: e.message }); }
 });
 
-// ✅ FIXED: Bulk Delete Users
+// ✅ Bulk Delete Users
 app.post('/api/admin/users/bulk-delete', verifyAdmin, async (req, res) => {
     try {
         const { ids } = req.body;
@@ -366,7 +448,7 @@ app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// ✅ FIXED: Bulk Delete Leaderboard
+// ✅ Bulk Delete Leaderboard
 app.post('/api/admin/leaderboard/bulk-delete', verifyAdmin, async (req, res) => {
     try {
         const { ids } = req.body;
@@ -406,7 +488,7 @@ app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// ✅ FIXED: Bulk Delete Freelancers
+// ✅ Bulk Delete Freelancers
 app.post('/api/admin/freelancers/bulk-delete', verifyAdmin, async (req, res) => {
     try {
         const { ids } = req.body;
@@ -584,11 +666,10 @@ app.post('/api/scan', async (req, res) => {
             const statsFound = (cleanText.match(statsPattern) || []).length;
             
             // Direct Answer Box detection
-            // Fix: scan first 300 words of ALL body text (not just first <p>)
             const first300Words = cleanText.split(/\s+/).slice(0, 300).join(' ');
             const hasDirectAnswer = /\d/.test(first300Words) && first300Words.length > 150;
             
-            // TL;DR / Key Takeaways detection — broadened for homepage structures
+            // TL;DR / Key Takeaways detection
             const hasTLDR = /tl;dr|key takeaways|quick summary|at a glance|in this article|what you('ll| will) get|why choose|key benefits|what we do|highlights|our approach|how it works/i.test(rawHtml) ||
                 (() => {
                     const earlyLists = Array.from(document.querySelectorAll('ul, ol'));
@@ -704,401 +785,125 @@ app.post('/api/scan', async (req, res) => {
         
         // ============================================
         // 📋 RECOMMENDATIONS — 34 checks
-        // Each has: title, description, priority, action, learning, target
         // ============================================
         const recommendations = [];
         
-        // ── GRAAF: WORD COUNT ──────────────────────────────────────
         if (analysis.wordCount < 500) {
-            recommendations.push({
-                title: '🚨 Critical: Content Is Too Thin',
-                description: `Only ${analysis.wordCount} words found. This is well below what Google considers a substantive page.`,
-                priority: 'high',
-                action: 'Expand with deep explanations, examples, case studies, and FAQs. Aim for 2,500+ words.',
-                learning: "Thin content (< 500 words) is the #1 trigger for Google Helpful Content penalties. Pages with 2,500+ words earn 3.7x more backlinks on average (Backlinko).",
-                target: 'Minimum 1,500 words; ideal 2,500+'
-            });
+            recommendations.push({ title: '🚨 Critical: Content Is Too Thin', description: `Only ${analysis.wordCount} words found. This is well below what Google considers a substantive page.`, priority: 'high', action: 'Expand with deep explanations, examples, case studies, and FAQs. Aim for 2,500+ words.', learning: "Thin content (< 500 words) is the #1 trigger for Google Helpful Content penalties. Pages with 2,500+ words earn 3.7x more backlinks on average (Backlinko).", target: 'Minimum 1,500 words; ideal 2,500+' });
         } else if (analysis.wordCount < 1500) {
-            recommendations.push({
-                title: '📝 Increase Content Depth',
-                description: `${analysis.wordCount} words found — decent start, but below the threshold for competitive rankings.`,
-                priority: 'medium',
-                action: "Add a FAQ section (5–8 questions), a 'How it works' breakdown, or real client examples.",
-                learning: "Pages ranking on page 1 average 1,890 words. Google's QRG rewards 'comprehensive, accurate, clearly written' content.",
-                target: '1,500+ words minimum; 2,500+ for competitive terms'
-            });
+            recommendations.push({ title: '📝 Increase Content Depth', description: `${analysis.wordCount} words found — decent start, but below the threshold for competitive rankings.`, priority: 'medium', action: "Add a FAQ section (5–8 questions), a 'How it works' breakdown, or real client examples.", learning: "Pages ranking on page 1 average 1,890 words. Google's QRG rewards 'comprehensive, accurate, clearly written' content.", target: '1,500+ words minimum; 2,500+ for competitive terms' });
         } else if (analysis.wordCount < 2500) {
-            recommendations.push({
-                title: '📊 Content Length: Good But Not Elite',
-                description: `${analysis.wordCount} words is solid. 400–800 more strategic words pushes you from Good to Elite tier.`,
-                priority: 'low',
-                action: "Add a case study with before/after metrics, an expert quote section, or a 'Key Takeaways' summary.",
-                learning: "Long-form content earns 77% more backlinks than short content. It satisfies Google's comprehensiveness signal.",
-                target: '2,500+ words for GRAAF Elite tier'
-            });
+            recommendations.push({ title: '📊 Content Length: Good But Not Elite', description: `${analysis.wordCount} words is solid. 400–800 more strategic words pushes you from Good to Elite tier.`, priority: 'low', action: "Add a case study with before/after metrics, an expert quote section, or a 'Key Takeaways' summary.", learning: "Long-form content earns 77% more backlinks than short content. It satisfies Google's comprehensiveness signal.", target: '2,500+ words for GRAAF Elite tier' });
         }
         
-        // ── GRAAF: STATISTICS ──────────────────────────────────────
         if (analysis.statsFound < 3) {
-            recommendations.push({
-                title: '📈 Add Data & Statistics',
-                description: `Only ${analysis.statsFound} measurable data points found. Google rewards content built on real evidence.`,
-                priority: 'high',
-                action: "Add 8+ statistics from 2023–2025 sources. Format: 'X% of [group] report [outcome] ([Source Name, Year])'.",
-                learning: "Data-backed content earns 3x more backlinks. Statistics signal the Accuracy pillar of GRAAF.",
-                target: '8+ cited statistics from reputable 2023–2025 sources'
-            });
+            recommendations.push({ title: '📈 Add Data & Statistics', description: `Only ${analysis.statsFound} measurable data points found. Google rewards content built on real evidence.`, priority: 'high', action: "Add 8+ statistics from 2023–2025 sources. Format: 'X% of [group] report [outcome] ([Source Name, Year])'.", learning: "Data-backed content earns 3x more backlinks. Statistics signal the Accuracy pillar of GRAAF.", target: '8+ cited statistics from reputable 2023–2025 sources' });
         } else if (analysis.statsFound < 8) {
-            recommendations.push({
-                title: '📈 Strengthen Your Evidence Base',
-                description: `Found ${analysis.statsFound} data points. Reaching 8+ unlocks the full GRAAF statistics score.`,
-                priority: 'medium',
-                action: "Add recent statistics (2023–2025) with full attribution.",
-                learning: "Pages with 8+ cited statistics rank 47% higher for informational queries.",
-                target: '8+ cited statistics with source and year'
-            });
+            recommendations.push({ title: '📈 Strengthen Your Evidence Base', description: `Found ${analysis.statsFound} data points. Reaching 8+ unlocks the full GRAAF statistics score.`, priority: 'medium', action: "Add recent statistics (2023–2025) with full attribution.", learning: "Pages with 8+ cited statistics rank 47% higher for informational queries.", target: '8+ cited statistics with source and year' });
         }
         
-        // ── GRAAF: EXPERT QUOTES ───────────────────────────────────
         if (analysis.expertQuoteCount === 0) {
-            recommendations.push({
-                title: '💬 Add Expert Quotes & Credibility Signals',
-                description: 'No expert quotes, attributed testimonials, or blockquote credibility signals detected.',
-                priority: 'high',
-                action: "Add 3–5 quotes from named experts. Format: \"Quote text\" — [Name, Title, Organization].",
-                learning: "Google's E-E-A-T explicitly rewards content that cites credible outside sources. Pages with 3+ expert citations outrank those without by 52%.",
-                target: '3–5 attributed expert quotes using blockquote + cite HTML'
-            });
+            recommendations.push({ title: '💬 Add Expert Quotes & Credibility Signals', description: 'No expert quotes, attributed testimonials, or blockquote credibility signals detected.', priority: 'high', action: "Add 3–5 quotes from named experts. Format: \"Quote text\" — [Name, Title, Organization].", learning: "Google's E-E-A-T explicitly rewards content that cites credible outside sources. Pages with 3+ expert citations outrank those without by 52%.", target: '3–5 attributed expert quotes using blockquote + cite HTML' });
         } else if (analysis.expertQuoteCount < 3) {
-            recommendations.push({
-                title: '💬 Add More Expert Citations',
-                description: `Found ${analysis.expertQuoteCount} credibility signal(s). 2 more would unlock the full GRAAF credibility score.`,
-                priority: 'medium',
-                action: "Add quotes from industry publications or recognized professionals.",
-                learning: "Expert citations are the fastest way to improve your GRAAF Authoritativeness score.",
-                target: '3–5 attributed expert quotes'
-            });
+            recommendations.push({ title: '💬 Add More Expert Citations', description: `Found ${analysis.expertQuoteCount} credibility signal(s). 2 more would unlock the full GRAAF credibility score.`, priority: 'medium', action: "Add quotes from industry publications or recognized professionals.", learning: "Expert citations are the fastest way to improve your GRAAF Authoritativeness score.", target: '3–5 attributed expert quotes' });
         }
         
-        // ── GRAAF: CASE STUDIES ────────────────────────────────────
         if (analysis.caseStudyCount === 0) {
-            recommendations.push({
-                title: '📊 Add Case Studies With Real Metrics',
-                description: "No case studies with measurable results detected. This is the most powerful E-E-A-T signal — first-hand Experience.",
-                priority: 'high',
-                action: "Add a 'Challenge / Solution / Results' section with real percentages or numbers.",
-                learning: "The first 'E' in E-E-A-T is Experience. Case studies with real metrics are the most direct proof.",
-                target: '2 case studies with Challenge/Solution/Results format and measurable metrics'
-            });
+            recommendations.push({ title: '📊 Add Case Studies With Real Metrics', description: "No case studies with measurable results detected. This is the most powerful E-E-A-T signal — first-hand Experience.", priority: 'high', action: "Add a 'Challenge / Solution / Results' section with real percentages or numbers.", learning: "The first 'E' in E-E-A-T is Experience. Case studies with real metrics are the most direct proof.", target: '2 case studies with Challenge/Solution/Results format and measurable metrics' });
         } else if (analysis.caseStudyCount < 2) {
-            recommendations.push({
-                title: '📊 Add a Second Case Study',
-                description: `Found ${analysis.caseStudyCount} case study section. A second would maximize your GRAAF case study score.`,
-                priority: 'medium',
-                action: "Add another real-world example with before/after metrics.",
-                learning: "Two diverse case studies signal consistent, repeatable results.",
-                target: '2 case studies with quantifiable results'
-            });
+            recommendations.push({ title: '📊 Add a Second Case Study', description: `Found ${analysis.caseStudyCount} case study section. A second would maximize your GRAAF case study score.`, priority: 'medium', action: "Add another real-world example with before/after metrics.", learning: "Two diverse case studies signal consistent, repeatable results.", target: '2 case studies with quantifiable results' });
         }
         
-        // ── GRAAF: DIRECT ANSWER ───────────────────────────────────
         if (!analysis.hasDirectAnswer) {
-            recommendations.push({
-                title: '🎯 Add a Direct Answer Box',
-                description: 'No concise direct answer detected in the first 150 words. Google uses this for Featured Snippets and AI Overviews.',
-                priority: 'high',
-                action: "Write a 40–80 word paragraph immediately after your H1 that directly answers the main question.",
-                learning: "Pages with a clear direct answer in the first 150 words are 4.5x more likely to appear in Google AI Overviews.",
-                target: '40–80 word direct answer paragraph within first 150 words'
-            });
+            recommendations.push({ title: '🎯 Add a Direct Answer Box', description: 'No concise direct answer detected in the first 150 words. Google uses this for Featured Snippets and AI Overviews.', priority: 'high', action: "Write a 40–80 word paragraph immediately after your H1 that directly answers the main question.", learning: "Pages with a clear direct answer in the first 150 words are 4.5x more likely to appear in Google AI Overviews.", target: '40–80 word direct answer paragraph within first 150 words' });
         }
         
-        // ── GRAAF: TL;DR ───────────────────────────────────────────
         if (!analysis.hasTLDR) {
-            recommendations.push({
-                title: '📌 Add a TL;DR / Key Takeaways Section',
-                description: "No 'Key Takeaways' or 'Quick Summary' section detected. This is one of the fastest wins for AI Overview inclusion.",
-                priority: 'medium',
-                action: "Add a 'Key Takeaways' section near the top with 5 bullet points.",
-                learning: "Bullet-formatted summaries are heavily favored by Google's AI for snippet extraction.",
-                target: '5 bullet takeaways with specific stats near the top of the page'
-            });
+            recommendations.push({ title: '📌 Add a TL;DR / Key Takeaways Section', description: "No 'Key Takeaways' or 'Quick Summary' section detected. This is one of the fastest wins for AI Overview inclusion.", priority: 'medium', action: "Add a 'Key Takeaways' section near the top with 5 bullet points.", learning: "Bullet-formatted summaries are heavily favored by Google's AI for snippet extraction.", target: '5 bullet takeaways with specific stats near the top of the page' });
         }
         
-        // ── GRAAF: LIST ITEMS ──────────────────────────────────────
         if (analysis.listItemCount < 5) {
-            recommendations.push({
-                title: '📋 Improve Scannability With Lists',
-                description: `Only ${analysis.listItemCount} list items found. Content without lists is harder to scan.`,
-                priority: 'medium',
-                action: "Convert key points into bulleted or numbered lists. Aim for 15+ list items.",
-                learning: "79% of users scan web content. Lists increase chances of featured snippet selection.",
-                target: '15+ list items spread naturally through the content'
-            });
+            recommendations.push({ title: '📋 Improve Scannability With Lists', description: `Only ${analysis.listItemCount} list items found. Content without lists is harder to scan.`, priority: 'medium', action: "Convert key points into bulleted or numbered lists. Aim for 15+ list items.", learning: "79% of users scan web content. Lists increase chances of featured snippet selection.", target: '15+ list items spread naturally through the content' });
         } else if (analysis.listItemCount < 15) {
-            recommendations.push({
-                title: '📋 Add More Structured Lists',
-                description: `${analysis.listItemCount} list items found. Reaching 15+ improves both scannability and GRAAF scoring.`,
-                priority: 'low',
-                action: "Look for sections with 3+ parallel ideas and convert them to bullet lists.",
-                learning: "Structured lists signal scannable, user-friendly content.",
-                target: '15+ list items'
-            });
+            recommendations.push({ title: '📋 Add More Structured Lists', description: `${analysis.listItemCount} list items found. Reaching 15+ improves both scannability and GRAAF scoring.`, priority: 'low', action: "Look for sections with 3+ parallel ideas and convert them to bullet lists.", learning: "Structured lists signal scannable, user-friendly content.", target: '15+ list items' });
         }
         
-        // ── CRAFT: H1 ─────────────────────────────────────────────
         if (analysis.h1Count === 0) {
-            recommendations.push({
-                title: '⚠️ Critical: No H1 Heading Found',
-                description: 'No H1 tag detected. This is a fundamental on-page SEO issue.',
-                priority: 'high',
-                action: "Add exactly one H1 tag containing your primary keyword.",
-                learning: "The H1 is the strongest on-page keyword signal. Missing H1 means Google guesses.",
-                target: 'Exactly 1 H1 containing the primary keyword'
-            });
+            recommendations.push({ title: '⚠️ Critical: No H1 Heading Found', description: 'No H1 tag detected. This is a fundamental on-page SEO issue.', priority: 'high', action: "Add exactly one H1 tag containing your primary keyword.", learning: "The H1 is the strongest on-page keyword signal. Missing H1 means Google guesses.", target: 'Exactly 1 H1 containing the primary keyword' });
         } else if (analysis.h1Count > 1) {
-            recommendations.push({
-                title: '⚠️ Multiple H1 Tags Detected',
-                description: `Found ${analysis.h1Count} H1 tags. Multiple H1s dilute your topical signal.`,
-                priority: 'medium',
-                action: "Keep only one H1. Change others to H2 or H3.",
-                learning: "Multiple H1s confuse Google about the page's primary topic.",
-                target: 'Exactly 1 H1 tag'
-            });
+            recommendations.push({ title: '⚠️ Multiple H1 Tags Detected', description: `Found ${analysis.h1Count} H1 tags. Multiple H1s dilute your topical signal.`, priority: 'medium', action: "Keep only one H1. Change others to H2 or H3.", learning: "Multiple H1s confuse Google about the page's primary topic.", target: 'Exactly 1 H1 tag' });
         }
         
-        // ── CRAFT: H2 STRUCTURE ────────────────────────────────────
         if (analysis.h2Count < 3) {
-            recommendations.push({
-                title: '📑 Add More Section Headings (H2s)',
-                description: `Only ${analysis.h2Count} H2 headings found. Poor heading structure reduces crawlability.`,
-                priority: 'medium',
-                action: "Structure your content with 5+ H2 headings. Each major topic gets its own H2.",
-                learning: "H2s are crawlability signals. Content with 5+ H2s ranks 23% higher for secondary keywords.",
-                target: '5+ H2 headings with keyword-rich, descriptive text'
-            });
+            recommendations.push({ title: '📑 Add More Section Headings (H2s)', description: `Only ${analysis.h2Count} H2 headings found. Poor heading structure reduces crawlability.`, priority: 'medium', action: "Structure your content with 5+ H2 headings. Each major topic gets its own H2.", learning: "H2s are crawlability signals. Content with 5+ H2s ranks 23% higher for secondary keywords.", target: '5+ H2 headings with keyword-rich, descriptive text' });
         }
         
-        // ── CRAFT: PARAGRAPH LENGTH ────────────────────────────────
         if (analysis.avgParagraphLength > 100) {
-            recommendations.push({
-                title: '📱 Shorten Paragraphs for Mobile Readability',
-                description: `Average paragraph length is ${Math.round(analysis.avgParagraphLength)} words. Long paragraphs kill mobile engagement.`,
-                priority: 'medium',
-                action: "Break paragraphs at 50–80 words maximum. One idea per paragraph.",
-                learning: "Paragraphs over 100 words increase mobile abandonment by 37%.",
-                target: 'Average paragraph length 40–80 words'
-            });
+            recommendations.push({ title: '📱 Shorten Paragraphs for Mobile Readability', description: `Average paragraph length is ${Math.round(analysis.avgParagraphLength)} words. Long paragraphs kill mobile engagement.`, priority: 'medium', action: "Break paragraphs at 50–80 words maximum. One idea per paragraph.", learning: "Paragraphs over 100 words increase mobile abandonment by 37%.", target: 'Average paragraph length 40–80 words' });
         }
         
-        // ── CRAFT: FAQ SECTION ─────────────────────────────────────
         if (!analysis.hasFAQContent) {
-            recommendations.push({
-                title: '❓ Add a FAQ Section',
-                description: "No FAQ section detected. FAQs are powerful for capturing 'People Also Ask' rankings.",
-                priority: 'medium',
-                action: "Add an FAQ section with 5–10 real questions your audience asks.",
-                learning: "'People Also Ask' boxes now appear in 80% of Google searches.",
-                target: "FAQ section titled 'Frequently Asked Questions' with 5–10 Q&A pairs"
-            });
+            recommendations.push({ title: '❓ Add a FAQ Section', description: "No FAQ section detected. FAQs are powerful for capturing 'People Also Ask' rankings.", priority: 'medium', action: "Add an FAQ section with 5–10 real questions your audience asks.", learning: "'People Also Ask' boxes now appear in 80% of Google searches.", target: "FAQ section titled 'Frequently Asked Questions' with 5–10 Q&A pairs" });
         }
         
-        // ── CRAFT: TABLE OF CONTENTS ───────────────────────────────
         if (!analysis.hasTOC) {
-            recommendations.push({
-                title: '📑 Add a Table of Contents',
-                description: 'No Table of Contents detected. A TOC improves crawlability and user experience.',
-                priority: 'low',
-                action: "Add a 'Table of Contents' section after your intro with anchor links to each H2.",
-                learning: "Pages with a TOC are more likely to receive sitelinks in Google search results.",
-                target: 'Table of Contents with anchor links to all H2 sections'
-            });
+            recommendations.push({ title: '📑 Add a Table of Contents', description: 'No Table of Contents detected. A TOC improves crawlability and user experience.', priority: 'low', action: "Add a 'Table of Contents' section after your intro with anchor links to each H2.", learning: "Pages with a TOC are more likely to receive sitelinks in Google search results.", target: 'Table of Contents with anchor links to all H2 sections' });
         }
         
-        // ── CRAFT: AUTHOR BIO ──────────────────────────────────────
         if (!analysis.hasAuthorBio) {
-            recommendations.push({
-                title: '✍️ Add an Author Bio',
-                description: 'No author bio detected. Google explicitly evaluates author expertise.',
-                priority: 'medium',
-                action: "Add a 200–250 word author bio with credentials, certifications, and achievements.",
-                learning: "E-E-A-T's first 'E' is Experience. Google's quality raters look for evidence of real credentials.",
-                target: '200–250 word author bio with credentials and measurable achievements'
-            });
+            recommendations.push({ title: '✍️ Add an Author Bio', description: 'No author bio detected. Google explicitly evaluates author expertise.', priority: 'medium', action: "Add a 200–250 word author bio with credentials, certifications, and achievements.", learning: "E-E-A-T's first 'E' is Experience. Google's quality raters look for evidence of real credentials.", target: '200–250 word author bio with credentials and measurable achievements' });
         }
         
-        // ── TECHNICAL: ARTICLE SCHEMA ─────────────────────────────
         if (!analysis.hasArticleSchema) {
-            recommendations.push({
-                title: '🛠️ Add Article Schema (JSON-LD)',
-                description: "No Article, BlogPosting, or NewsArticle schema detected.",
-                priority: 'high',
-                action: "Add Article JSON-LD schema to your <head> with headline, author, datePublished, dateModified.",
-                learning: "Article schema enables rich snippets and tells Google exactly what type of content this is.",
-                target: 'Article or BlogPosting JSON-LD schema with author, datePublished, dateModified'
-            });
+            recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', description: "No Article, BlogPosting, or NewsArticle schema detected.", priority: 'high', action: "Add Article JSON-LD schema to your <head> with headline, author, datePublished, dateModified.", learning: "Article schema enables rich snippets and tells Google exactly what type of content this is.", target: 'Article or BlogPosting JSON-LD schema with author, datePublished, dateModified' });
         }
         
-        // ── TECHNICAL: FAQPAGE SCHEMA ─────────────────────────────
         if (analysis.hasFAQContent && !analysis.hasFAQPageSchema) {
-            recommendations.push({
-                title: '🛠️ Add FAQPage Schema to Your FAQ Section',
-                description: 'FAQ content detected but no FAQPage schema found.',
-                priority: 'high',
-                action: "Generate FAQPage JSON-LD for all your FAQ questions.",
-                learning: "FAQPage schema makes your FAQ answers eligible for expanded 'People Also Ask' appearances.",
-                target: 'FAQPage JSON-LD with all Q&A pairs marked up'
-            });
+            recommendations.push({ title: '🛠️ Add FAQPage Schema to Your FAQ Section', description: 'FAQ content detected but no FAQPage schema found.', priority: 'high', action: "Generate FAQPage JSON-LD for all your FAQ questions.", learning: "FAQPage schema makes your FAQ answers eligible for expanded 'People Also Ask' appearances.", target: 'FAQPage JSON-LD with all Q&A pairs marked up' });
         } else if (!analysis.hasFAQContent && !analysis.hasFAQPageSchema) {
-            recommendations.push({
-                title: '🛠️ Add FAQ Section + FAQPage Schema',
-                description: 'No FAQ section or FAQPage schema detected.',
-                priority: 'medium',
-                action: "1) Add a FAQ section. 2) Add FAQPage JSON-LD schema.",
-                learning: "FAQPage schema is one of the highest-ROI schema types available.",
-                target: 'FAQ section + FAQPage JSON-LD schema'
-            });
+            recommendations.push({ title: '🛠️ Add FAQ Section + FAQPage Schema', description: 'No FAQ section or FAQPage schema detected.', priority: 'medium', action: "1) Add a FAQ section. 2) Add FAQPage JSON-LD schema.", learning: "FAQPage schema is one of the highest-ROI schema types available.", target: 'FAQ section + FAQPage JSON-LD schema' });
         }
         
-        // ── TECHNICAL: CANONICAL TAG ───────────────────────────────
         if (!analysis.hasCanonical) {
-            recommendations.push({
-                title: '🔗 Add a Canonical Tag',
-                description: 'No canonical tag detected. Without it, Google may index multiple versions as duplicates.',
-                priority: 'medium',
-                action: "Add <link rel=\"canonical\" href=\"...\"> to your <head>.",
-                learning: "Canonical tags prevent duplicate content penalties and concentrate ranking signals.",
-                target: 'Self-referencing canonical tag in <head>'
-            });
+            recommendations.push({ title: '🔗 Add a Canonical Tag', description: 'No canonical tag detected. Without it, Google may index multiple versions as duplicates.', priority: 'medium', action: "Add <link rel=\"canonical\" href=\"...\"> to your <head>.", learning: "Canonical tags prevent duplicate content penalties and concentrate ranking signals.", target: 'Self-referencing canonical tag in <head>' });
         }
         
-        // ── TECHNICAL: META TITLE ──────────────────────────────────
         if (analysis.metaTitleLength === 0) {
-            recommendations.push({
-                title: '🏷️ Critical: Missing Meta Title',
-                description: 'No title tag found. This is a critical SEO issue.',
-                priority: 'high',
-                action: "Add a <title> tag with 50–60 characters containing your primary keyword.",
-                learning: "The title tag is Google's #1 on-page SEO signal.",
-                target: '50–60 character title tag with primary keyword in first 30 characters'
-            });
+            recommendations.push({ title: '🏷️ Critical: Missing Meta Title', description: 'No title tag found. This is a critical SEO issue.', priority: 'high', action: "Add a <title> tag with 50–60 characters containing your primary keyword.", learning: "The title tag is Google's #1 on-page SEO signal.", target: '50–60 character title tag with primary keyword in first 30 characters' });
         } else if (analysis.metaTitleLength < 40) {
-            recommendations.push({
-                title: '🏷️ Meta Title Too Short',
-                description: `Title is ${analysis.metaTitleLength} characters. You have unused SERP real estate.`,
-                priority: 'low',
-                action: "Expand to 50–60 characters. Add a year or benefit phrase.",
-                learning: "Title tags of 50–60 characters maximize click-through rate.",
-                target: '50–60 characters'
-            });
+            recommendations.push({ title: '🏷️ Meta Title Too Short', description: `Title is ${analysis.metaTitleLength} characters. You have unused SERP real estate.`, priority: 'low', action: "Expand to 50–60 characters. Add a year or benefit phrase.", learning: "Title tags of 50–60 characters maximize click-through rate.", target: '50–60 characters' });
         } else if (analysis.metaTitleLength > 65) {
-            recommendations.push({
-                title: '🏷️ Meta Title Too Long — Will Be Truncated',
-                description: `Title is ${analysis.metaTitleLength} characters. Google truncates at ~60–65 characters.`,
-                priority: 'low',
-                action: "Trim to 50–60 characters. Move the primary keyword to the front.",
-                learning: "Truncated titles appear incomplete in search results.",
-                target: '50–60 characters'
-            });
+            recommendations.push({ title: '🏷️ Meta Title Too Long — Will Be Truncated', description: `Title is ${analysis.metaTitleLength} characters. Google truncates at ~60–65 characters.`, priority: 'low', action: "Trim to 50–60 characters. Move the primary keyword to the front.", learning: "Truncated titles appear incomplete in search results.", target: '50–60 characters' });
         }
         
-        // ── TECHNICAL: META DESCRIPTION ───────────────────────────
         if (analysis.metaDescriptionLength === 0) {
-            recommendations.push({
-                title: '📝 Missing Meta Description',
-                description: 'No meta description found. Google will auto-generate one — usually poorly.',
-                priority: 'medium',
-                action: "Add a <meta name=\"description\"> with 140–160 characters including a CTA.",
-                learning: "Meta descriptions are your search result ad copy. Compelling descriptions increase clicks by 5–20%.",
-                target: '140–160 character meta description with keyword + CTA'
-            });
+            recommendations.push({ title: '📝 Missing Meta Description', description: 'No meta description found. Google will auto-generate one — usually poorly.', priority: 'medium', action: "Add a <meta name=\"description\"> with 140–160 characters including a CTA.", learning: "Meta descriptions are your search result ad copy. Compelling descriptions increase clicks by 5–20%.", target: '140–160 character meta description with keyword + CTA' });
         } else if (analysis.metaDescriptionLength < 100) {
-            recommendations.push({
-                title: '📝 Meta Description Too Short',
-                description: `Description is ${analysis.metaDescriptionLength} characters. You have unused SERP space.`,
-                priority: 'low',
-                action: "Expand to 140–160 characters. Add a benefit statement.",
-                learning: "Longer, compelling meta descriptions consistently outperform short ones.",
-                target: '140–160 characters with keyword + CTA'
-            });
+            recommendations.push({ title: '📝 Meta Description Too Short', description: `Description is ${analysis.metaDescriptionLength} characters. You have unused SERP space.`, priority: 'low', action: "Expand to 140–160 characters. Add a benefit statement.", learning: "Longer, compelling meta descriptions consistently outperform short ones.", target: '140–160 characters with keyword + CTA' });
         } else if (analysis.metaDescriptionLength > 165) {
-            recommendations.push({
-                title: '📝 Meta Description Too Long',
-                description: `Description is ${analysis.metaDescriptionLength} characters. Google truncates after ~160 characters.`,
-                priority: 'low',
-                action: "Trim to 140–160 characters. Put the most important information first.",
-                learning: "Truncated descriptions end mid-sentence in search results.",
-                target: '140–160 characters'
-            });
+            recommendations.push({ title: '📝 Meta Description Too Long', description: `Description is ${analysis.metaDescriptionLength} characters. Google truncates after ~160 characters.`, priority: 'low', action: "Trim to 140–160 characters. Put the most important information first.", learning: "Truncated descriptions end mid-sentence in search results.", target: '140–160 characters' });
         }
         
-        // ── TECHNICAL: IMAGES ─────────────────────────────────────
         if (analysis.images === 0) {
-            recommendations.push({
-                title: '🖼️ Add Images to Your Content',
-                description: 'No images detected. Images are critical for engagement and UX.',
-                priority: 'medium',
-                action: "Add at least 3–5 images with descriptive alt text.",
-                learning: "Content with images gets 94% more views. Alt text is how Google reads images.",
-                target: '3–5 images with descriptive alt text on every image'
-            });
+            recommendations.push({ title: '🖼️ Add Images to Your Content', description: 'No images detected. Images are critical for engagement and UX.', priority: 'medium', action: "Add at least 3–5 images with descriptive alt text.", learning: "Content with images gets 94% more views. Alt text is how Google reads images.", target: '3–5 images with descriptive alt text on every image' });
         } else if (analysis.imagesWithAlt < Math.min(analysis.images, 3)) {
-            recommendations.push({
-                title: '🖼️ Add Alt Text to Your Images',
-                description: `${analysis.images} images found but only ${analysis.imagesWithAlt} have alt text.`,
-                priority: 'medium',
-                action: "Add descriptive alt text to every image.",
-                learning: "Alt text serves three purposes: Google understanding, accessibility, and keyword signals.",
-                target: 'Alt text on 100% of images'
-            });
+            recommendations.push({ title: '🖼️ Add Alt Text to Your Images', description: `${analysis.images} images found but only ${analysis.imagesWithAlt} have alt text.`, priority: 'medium', action: "Add descriptive alt text to every image.", learning: "Alt text serves three purposes: Google understanding, accessibility, and keyword signals.", target: 'Alt text on 100% of images' });
         }
         
-        // ── TECHNICAL: INTERNAL LINKS ─────────────────────────────
         if (analysis.internalLinks < 5) {
-            recommendations.push({
-                title: '🔗 Add More Internal Links',
-                description: `Only ${analysis.internalLinks} internal links found. Internal linking is underused.`,
-                priority: 'medium',
-                action: "Add 8–12 contextual internal links to related pages.",
-                learning: "Internal links transfer link equity and help Google crawl faster.",
-                target: '8–12 internal links with descriptive anchor text'
-            });
+            recommendations.push({ title: '🔗 Add More Internal Links', description: `Only ${analysis.internalLinks} internal links found. Internal linking is underused.`, priority: 'medium', action: "Add 8–12 contextual internal links to related pages.", learning: "Internal links transfer link equity and help Google crawl faster.", target: '8–12 internal links with descriptive anchor text' });
         } else if (analysis.internalLinks < 8) {
-            recommendations.push({
-                title: '🔗 Strengthen Internal Link Structure',
-                description: `${analysis.internalLinks} internal links found — close to optimal.`,
-                priority: 'low',
-                action: "Find unlinked topic mentions and add contextual links.",
-                learning: "Every internal link is a vote for the destination page.",
-                target: '8–12 internal links'
-            });
+            recommendations.push({ title: '🔗 Strengthen Internal Link Structure', description: `${analysis.internalLinks} internal links found — close to optimal.`, priority: 'low', action: "Find unlinked topic mentions and add contextual links.", learning: "Every internal link is a vote for the destination page.", target: '8–12 internal links' });
         }
         
-        // ── TECHNICAL: EXTERNAL LINKS ─────────────────────────────
         if (analysis.externalLinks === 0) {
-            recommendations.push({
-                title: '🌐 Add Authoritative External Links',
-                description: 'No external links found. Linking to high-quality sources is a direct E-E-A-T signal.',
-                priority: 'low',
-                action: "Link out to 3–5 authoritative sources (.gov, .edu, industry pubs).",
-                learning: "Linking out to authoritative sites signals research depth and quality.",
-                target: '3–5 outbound links to authoritative sources'
-            });
+            recommendations.push({ title: '🌐 Add Authoritative External Links', description: 'No external links found. Linking to high-quality sources is a direct E-E-A-T signal.', priority: 'low', action: "Link out to 3–5 authoritative sources (.gov, .edu, industry pubs).", learning: "Linking out to authoritative sites signals research depth and quality.", target: '3–5 outbound links to authoritative sources' });
         }
         
-        // ── TECHNICAL: OPEN GRAPH ─────────────────────────────────
         if (!analysis.hasOpenGraph) {
-            recommendations.push({
-                title: '📱 Add Open Graph Meta Tags',
-                description: 'No Open Graph tags detected. Your page displays poorly when shared socially.',
-                priority: 'low',
-                action: "Add og:title, og:description, og:image (1200×630px), og:url to your <head>.",
-                learning: "Open Graph tags control how your page appears when shared socially, driving referral traffic.",
-                target: 'og:title, og:description, og:image (1200×630px), og:url'
-            });
+            recommendations.push({ title: '📱 Add Open Graph Meta Tags', description: 'No Open Graph tags detected. Your page displays poorly when shared socially.', priority: 'low', action: "Add og:title, og:description, og:image (1200×630px), og:url to your <head>.", learning: "Open Graph tags control how your page appears when shared socially, driving referral traffic.", target: 'og:title, og:description, og:image (1200×630px), og:url' });
         }
         
-        // ── DEFAULT: ELITE ────────────────────────────────────────
         const finalRecommendations = recommendations.length > 0 ? recommendations : [{
             title: '🏆 Elite Content — Outstanding Work!',
             description: 'Your page meets all GRAAF Framework, CRAFT, and Technical SEO requirements.',
@@ -1179,7 +984,7 @@ app.get('/api/health', async (req, res) => {
             freelancerTotal = parseInt(flAll.rows[0].count) || 0;
         } catch (e) {}
     }
-    res.json({ status: 'running', database: db, puppeteer: browserInstance ? 'ready' : 'not started', version: 'elite-v4-fixed', counts: { leaderboardTotal, leaderboardApproved, freelancerTotal } });
+    res.json({ status: 'running', database: db, puppeteer: browserInstance ? 'ready' : 'not started', version: 'elite-v4-fixed', sendgrid: process.env.SENDGRID_API_KEY ? 'configured' : 'not configured', counts: { leaderboardTotal, leaderboardApproved, freelancerTotal } });
 });
 
 app.use((err, req, res, next) => {
@@ -1194,11 +999,13 @@ async function startServer() {
     console.log('🚀  Bulk Delete Routes Added');
     console.log('🚀  34 Recommendation Checks');
     console.log('🚀  GRAAF 50 + CRAFT 30 + Technical 20');
+    console.log('🚀  SendGrid: Server env var (no user setup needed)');
     console.log('🚀 =====================================\n');
     const dbConnected = await waitForDatabase();
     app.listen(PORT, () => {
         console.log(`📍 Server: http://localhost:${PORT}`);
         console.log(`📊 DB:     ${dbConnected ? '✅ Connected' : '❌ Disconnected'}`);
+        console.log(`📧 Email:  ${process.env.SENDGRID_API_KEY ? '✅ SendGrid ready' : '❌ SENDGRID_API_KEY not set'}`);
         console.log('\n✅ Elite scanner ready\n');
     });
 }
