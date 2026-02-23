@@ -147,6 +147,15 @@ footer p { color: #9ca3af !important; }
 }
 
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+/* ── Main section tab system ── */
+.main-section { display: none !important; }
+.main-section.section-visible { display: block !important; }
+
+.page-tabs { display: flex; gap: 0; background: #111827; border-radius: 12px; padding: 4px; border: 1px solid #374151; overflow: hidden; flex-wrap: wrap; }
+.page-tab { flex: 1; min-width: 120px; padding: 10px 18px; border-radius: 8px; font-weight: 700; font-size: 0.88rem; border: none; cursor: pointer; transition: all 0.2s; background: transparent; color: #9ca3af !important; text-align: center; white-space: nowrap; }
+.page-tab.active { background: linear-gradient(135deg, #7e22ce, #be185d); color: white !important; box-shadow: 0 2px 12px rgba(126,34,206,0.4); }
+.page-tab:hover:not(.active) { background: rgba(255,255,255,0.06); color: #e5e7eb !important; }
+
 </style>
 </head>
 <body class="bg-gray-900">
@@ -167,10 +176,10 @@ footer p { color: #9ca3af !important; }
       <span class="hidden sm:inline-block text-xs px-2 py-1 bg-purple-600 rounded font-semibold" style="color:white!important;">Pro</span>
     </div>
     <div class="nav-desktop">
-      <a href="#lead-scanner">Scanner</a>
-      <a href="#leaderboard">Leaderboard</a>
-      <a href="#freelancers">Experts</a>
-      <a href="#templates">Templates</a>
+      <a href="#lead-scanner" onclick="switchPageSection('scanner')">Scanner</a>
+      <a href="javascript:void(0)" onclick="switchPageSection('leaderboard')">Leaderboard</a>
+      <a href="javascript:void(0)" onclick="switchPageSection('experts')">Experts</a>
+      <a href="javascript:void(0)" onclick="switchPageSection('templates')">Templates</a>
     </div>
     <div class="flex items-center gap-3">
       <a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="btn btn-success" aria-label="Chat on WhatsApp"><i class="fab fa-whatsapp"></i> Chat</a>
@@ -178,10 +187,10 @@ footer p { color: #9ca3af !important; }
     </div>
   </div>
   <div class="mobile-menu" id="mobileMenu">
-    <a href="#lead-scanner" onclick="toggleMobileMenu()" class="py-2 border-b border-gray-800">Scanner</a>
-    <a href="#leaderboard" onclick="toggleMobileMenu()" class="py-2 border-b border-gray-800">Leaderboard</a>
-    <a href="#freelancers" onclick="toggleMobileMenu()" class="py-2 border-b border-gray-800">Experts</a>
-    <a href="#templates" onclick="toggleMobileMenu()" class="py-2">Templates</a>
+    <a href="javascript:void(0)" onclick="switchPageSection('scanner');toggleMobileMenu();" class="py-2 border-b border-gray-800">Scanner</a>
+    <a href="javascript:void(0)" onclick="switchPageSection('leaderboard');toggleMobileMenu();" class="py-2 border-b border-gray-800">Leaderboard</a>
+    <a href="javascript:void(0)" onclick="switchPageSection('experts');toggleMobileMenu();" class="py-2 border-b border-gray-800">Experts</a>
+    <a href="javascript:void(0)" onclick="switchPageSection('templates');toggleMobileMenu();" class="py-2">Templates</a>
   </div>
 </nav>
 
@@ -199,10 +208,19 @@ footer p { color: #9ca3af !important; }
 
 <main id="main-content" class="max-w-7xl mx-auto px-6 py-8">
 
+  <!-- ── Page section tabs ── -->
+  <div class="page-tabs mb-8" role="tablist">
+    <button class="page-tab active" id="tab-scanner" onclick="switchPageSection('scanner')" role="tab">🎯 Scanner</button>
+    <button class="page-tab" id="tab-leaderboard" onclick="switchPageSection('leaderboard')" role="tab">🏆 Leaderboard</button>
+    <button class="page-tab" id="tab-experts" onclick="switchPageSection('experts')" role="tab">🎯 SEO Experts</button>
+    <button class="page-tab" id="tab-templates" onclick="switchPageSection('templates')" role="tab">✏️ Templates</button>
+  </div>
+
+
   <!-- ============================================================
        SCANNER SECTION
        ============================================================ -->
-  <div id="lead-scanner" class="mb-16">
+  <div id="lead-scanner" class="mb-16 main-section section-visible" data-section="scanner">
     <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 
       <div class="text-center mb-8 max-w-3xl mx-auto">
@@ -277,8 +295,8 @@ footer p { color: #9ca3af !important; }
             <span class="text-xl font-bold">📋 I Have a List</span>
             <span class="text-xs px-3 py-1 bg-blue-600 rounded-full" style="color:white!important;">Batch Scan + Email</span>
           </div>
-          <p class="text-sm mb-5" style="color:#9ca3af!important;">
-            Already have URLs? Paste them here. The system scans every site, scores it, auto-emails each business the right message, and submits top scores to the leaderboard — all in one run.
+          <p class="text-sm mb-5" style="color:#e5e7eb!important;">
+            Already have URLs? Paste them here. Scan every site with the same GRAAF + CRAFT analysis, get full scores and recommendations for each — sorted best to lowest.
           </p>
 
           <div id="bulkScannerContent">
@@ -299,8 +317,7 @@ footer p { color: #9ca3af !important; }
                     style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#25d366,#128c7e);color:white!important;padding:12px 28px;border-radius:10px;font-weight:700;text-decoration:none;font-size:0.95rem;">
                     <i class="fab fa-whatsapp"></i> Request Access on WhatsApp
                   </a>
-                  <a href="mailto:hello@contentscale.site?subject=Bulk%20Access%20Request"
-                    style="display:inline-flex;align-items:center;gap:8px;background:#1e293b;color:#e2e8f0!important;padding:12px 28px;border-radius:10px;font-weight:600;text-decoration:none;font-size:0.95rem;border:1px solid #334155;">
+                  <a href="/cdn-cgi/l/email-protection#355d5059595a75565a5b41505b4146565459501b465c41500a4640575f505641087740595e10070574565650464610070567504440504641" style="display:inline-flex;align-items:center;gap:8px;background:#1e293b;color:#e2e8f0!important;padding:12px 28px;border-radius:10px;font-weight:600;text-decoration:none;font-size:0.95rem;border:1px solid #334155;">
                     <i class="fas fa-envelope"></i> Email Instead
                   </a>
                 </div>
@@ -347,7 +364,7 @@ footer p { color: #9ca3af !important; }
                   </div>
                   <div>
                     <span class="text-sm font-semibold" style="color:#e5e7eb!important;">📊 Scan &amp; score every URL</span>
-                    <p class="text-xs mt-0.5" style="color:#6b7280!important;">Always on — shows GRAAF / CRAFT / Technical breakdown for each site</p>
+                    <p class="text-xs mt-0.5" style="color:#e5e7eb!important;">Always on — shows GRAAF / CRAFT / Technical breakdown for each site</p>
                   </div>
                 </label>
 
@@ -357,7 +374,7 @@ footer p { color: #9ca3af !important; }
                   </div>
                   <div>
                     <span class="text-sm font-semibold" style="color:#e5e7eb!important;">🏆 Submit 70+ scores to leaderboard</span>
-                    <p class="text-xs mt-0.5" style="color:#6b7280!important;">Always on — top performers get free exposure on the public leaderboard</p>
+                    <p class="text-xs mt-0.5" style="color:#e5e7eb!important;">Always on — top performers get free exposure on the public leaderboard</p>
                   </div>
                 </label>
 
@@ -367,7 +384,7 @@ footer p { color: #9ca3af !important; }
                   </div>
                   <div>
                     <span class="text-sm font-semibold" style="color:#e5e7eb!important;">📧 Also send automated emails to each business</span>
-                    <p class="text-xs mt-0.5" style="color:#6b7280!important;">Congrats email (70+) · Improvement pitch (&lt;70 with website) · Website offer (&lt;70 no website)</p>
+                    <p class="text-xs mt-0.5" style="color:#d1d5db!important;">Congrats email (70+) · Improvement pitch (&lt;70 with website) · Website offer (&lt;70 no website)</p>
                   </div>
                 </label>
               </div>
@@ -754,7 +771,7 @@ footer p { color: #9ca3af !important; }
               <p style="color:#fde68a;font-size:0.78rem;margin-bottom:8px;">Protects your domain from being spoofed. Tells receiving servers what to do if SPF/DKIM fail.</p>
               <div style="background:#0c0500;border-radius:6px;padding:8px 12px;font-family:monospace;font-size:0.75rem;color:#fbbf24;">
                 <div style="color:#6b7280;margin-bottom:2px;">Name: _dmarc (or _dmarc.yourdomain.com)</div>
-                v=DMARC1; p=none; rua=mailto:dmarc@yourdomain.com
+                v=DMARC1; p=none; rua=mailto:<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="e2868f839081a29b8d9790868d8f838b8ccc818d8f">[email&#160;protected]</a>
               </div>
               <p style="color:#92400e;font-size:0.72rem;margin-top:6px;">Start with p=none (monitor only). Move to p=quarantine after 2 weeks of clean reports.</p>
             </div>
@@ -784,7 +801,7 @@ footer p { color: #9ca3af !important; }
   <!-- ============================================================
        TEMPLATES SECTION
        ============================================================ -->
-  <div id="templates" class="mb-16 hidden">
+  <div id="templates" class="mb-16 main-section" data-section="templates">
     <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
       <div class="text-center mb-8">
         <h2 class="text-4xl font-bold mb-3">✏️ Email Templates</h2>
@@ -915,7 +932,7 @@ footer p { color: #9ca3af !important; }
   <!-- ============================================================
        LEADERBOARD SECTION
        ============================================================ -->
-  <div id="leaderboard" class="mb-16">
+  <div id="leaderboard" class="mb-16 main-section" data-section="leaderboard">
     <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 
       <!-- Header -->
@@ -1120,7 +1137,7 @@ footer p { color: #9ca3af !important; }
   <!-- ============================================================
        FREELANCERS SECTION — data from server, no changes
        ============================================================ -->
-  <div id="freelancers" class="mb-16">
+  <div id="freelancers" class="mb-16 main-section" data-section="experts">
     <div class="text-center mb-8">
       <h2 class="text-4xl font-bold mb-3">🎯 Verified SEO Specialists</h2>
       <button onclick="openFreelancerModal()" class="btn btn-primary mt-2"><i class="fas fa-user-plus mr-2"></i> Become a Specialist</button>
@@ -1155,9 +1172,9 @@ footer p { color: #9ca3af !important; }
         <h4 class="font-semibold mb-4 text-white">Product</h4>
         <ul class="space-y-2 text-sm">
           <li><a href="#lead-scanner">Lead Scanner</a></li>
-          <li><a href="#leaderboard">Leaderboard</a></li>
+          <li><a href="javascript:void(0)" onclick="switchPageSection('leaderboard')">Leaderboard</a></li>
           <li><a href="#freelancers">SEO Specialists</a></li>
-          <li><a href="#templates">Email Templates</a></li>
+          <li><a href="javascript:void(0)" onclick="switchPageSection('templates')">Email Templates</a></li>
         </ul>
       </div>
 
@@ -1183,7 +1200,7 @@ footer p { color: #9ca3af !important; }
           </li>
           <li class="flex items-center gap-2" style="color:#9ca3af!important;">
             <i class="fas fa-envelope" style="color:#818cf8!important;"></i>
-            <span>hello@contentscale.site</span>
+            <span><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="1078757c7c7f50737f7e64757e646373717c753e63796475">[email&#160;protected]</a></span>
           </li>
           <li class="flex items-center gap-2" style="color:#9ca3af!important;">
             <i class="fas fa-map-marker-alt" style="color:#f87171!important;"></i>
@@ -1247,7 +1264,7 @@ footer p { color: #9ca3af !important; }
   </div>
 </div>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ============================================================
 // STATE & DEFAULT TEMPLATES (GRADE 3 LEVEL)
 // ============================================================
@@ -2226,6 +2243,8 @@ function switchMode(mode) {
     singleMode.classList.remove('hidden');
     singleBtn.classList.add('active');
     if (templates) templates.classList.add('hidden');
+    document.getElementById('warmupPanel').classList.remove('hidden');
+    loadWarmupStatus();
   } else if (mode === 'bulk') {
     bulkMode.classList.remove('hidden');
     bulkBtn.classList.add('active');
@@ -2283,7 +2302,8 @@ async function scanSingleURL() {
       scanHistory.unshift({ url: data.url || url, score: data.score, date: new Date().toISOString() });
       localStorage.setItem('cs_scanHistory', JSON.stringify(scanHistory.slice(0, 20)));
     } catch(e) {}
-    // #6 — Fetch rank after scan to inject into badge
+
+    // #5 — Fetch rank after scan to inject into badge (kept from before)
     if (data.score >= 70) {
       fetch('/api/leaderboard').then(r => r.json()).then(lb => {
         const entries = lb.entries || [];
@@ -2293,7 +2313,7 @@ async function scanSingleURL() {
         if (rank) {
           const rankEl = document.getElementById('badgeRankDisplay');
           if (rankEl) {
-            rankEl.innerHTML = `<span style="font-size:0.78rem;font-weight:700;color:#a78bfa!important;">🏅 Ranked <strong style="color:#e9d5ff!important;">#${rank}</strong> of ${total} on ContentScale Leaderboard</span>`;
+            rankEl.innerHTML = `<span style="font-size:0.78rem;font-weight:700;color:#ffffff!important;">🏅 Ranked <strong style="color:#e9d5ff!important;">#${rank}</strong> of ${total} on ContentScale Leaderboard</span>`;
             rankEl.classList.remove('hidden'); rankEl.style.display = 'inline-block';
           }
         }
@@ -2332,8 +2352,8 @@ async function scanSingleURL() {
   }
 }
 
-function displayScanResult(data) {
-  const resultDiv = document.getElementById('singleResult');
+function displayScanResult(data, targetEl) {
+  const resultDiv = targetEl || document.getElementById('singleResult');
   const score     = data.score || 0;
   const quality   = data.quality || 'unknown';
   const metrics   = data.metrics || {};
@@ -2524,14 +2544,14 @@ function displayScanResult(data) {
             <div style="background:#0f172a;padding:22px;">
 
               <!-- ── Badge Preview (white wrapper for readability) ── -->
-              <div style="font-size:0.7rem;font-weight:700;color:#64748b!important;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;text-align:center;">— Badge Preview —</div>
+              <div style="font-size:0.7rem;font-weight:700;color:#94a3b8!important;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;text-align:center;">— Badge Preview —</div>
               <div style="display:flex;justify-content:center;margin-bottom:24px;">
                 <div style="background:white;border-radius:16px;padding:4px;box-shadow:0 8px 32px rgba(0,0,0,0.4);max-width:380px;width:100%;">
                   <div style="background:${tier.bg};padding:22px 20px;border-radius:13px;border:2px solid ${tier.border};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;text-align:center;">
                     <div style="display:inline-block;background:white;padding:5px 18px;border-radius:50px;margin-bottom:14px;border:1px solid ${tier.pillBorder};">
                       <span style="font-size:0.78rem;color:${tier.pillText}!important;font-weight:700;letter-spacing:0.06em;">✓ ${tier.pill}</span>
                     </div>
-                    <div id="badgeRankDisplay" class="hidden" style="margin-bottom:10px;padding:4px 14px;background:rgba(124,58,237,0.1);border-radius:50px;border:1px solid #7c3aed;"></div>
+                    <div id="badgeRankDisplay" class="hidden" style="margin-bottom:10px;padding:5px 16px;background:#4c1d95;border-radius:50px;border:1px solid #a78bfa;"></div>
                     <div style="font-size:0.95rem;color:${tier.headlineColor}!important;font-weight:700;margin-bottom:14px;">${tier.headline}</div>
                     <div style="margin-bottom:8px;">
                       <span style="font-size:4rem;font-weight:900;color:${tier.scoreColor}!important;display:inline-block;">${score}</span><span style="font-size:1.5rem;color:#6b7280!important;font-weight:400;">/100</span>
@@ -2552,14 +2572,14 @@ function displayScanResult(data) {
               </div>
 
               <!-- ── 3 Embed Options ── -->
-              <div style="font-size:0.7rem;font-weight:700;color:#64748b!important;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:14px;text-align:center;">— Choose Your Embed Format —</div>
+              <div style="font-size:0.7rem;font-weight:700;color:#94a3b8!important;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:14px;text-align:center;">— Choose Your Embed Format —</div>
 
               <!-- Option 1: Full Badge -->
               <div style="border:1px solid #1e3a5f;border-radius:12px;overflow:hidden;margin-bottom:12px;">
                 <div style="background:#0c1e35;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid #1e3a5f;">
                   <div>
                     <span style="font-size:0.82rem;font-weight:700;color:#60a5fa!important;">📦 Full Badge Widget</span>
-                    <span style="font-size:0.72rem;color:#475569!important;margin-left:10px;">Best for websites &amp; landing pages — shows score, quality tier &amp; verification</span>
+                    <span style="font-size:0.72rem;color:#93c5fd!important;margin-left:10px;">Best for websites &amp; landing pages — shows score, quality tier &amp; verification</span>
                   </div>
                   <button onclick="window._copyBadge('full',${score})" id="copyBtn_full_${score}"
                     style="background:#1d4ed8;color:white!important;border:none;border-radius:6px;padding:6px 14px;font-size:0.75rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">
@@ -2575,7 +2595,7 @@ function displayScanResult(data) {
                 <div style="background:#0a1a0a;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid #1a2e1a;">
                   <div>
                     <span style="font-size:0.82rem;font-weight:700;color:#4ade80!important;">💠 Compact Inline Badge</span>
-                    <span style="font-size:0.72rem;color:#475569!important;margin-left:10px;">Fits in footers, sidebars or blog posts — small pill showing score</span>
+                    <span style="font-size:0.72rem;color:#86efac!important;margin-left:10px;">Fits in footers, sidebars or blog posts — small pill showing score</span>
                   </div>
                   <button onclick="window._copyBadge('compact',${score})" id="copyBtn_compact_${score}"
                     style="background:#166534;color:white!important;border:none;border-radius:6px;padding:6px 14px;font-size:0.75rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">
@@ -2591,7 +2611,7 @@ function displayScanResult(data) {
                 <div style="background:#170d2b;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid #2d1b4e;">
                   <div>
                     <span style="font-size:0.82rem;font-weight:700;color:#a78bfa!important;">🔗 Text Link Only</span>
-                    <span style="font-size:0.72rem;color:#475569!important;margin-left:10px;">Minimal — one line of text for email signatures, articles or docs</span>
+                    <span style="font-size:0.72rem;color:#c4b5fd!important;margin-left:10px;">Minimal — one line of text for email signatures, articles or docs</span>
                   </div>
                   <button onclick="window._copyBadge('text',${score})" id="copyBtn_text_${score}"
                     style="background:#4c1d95;color:white!important;border:none;border-radius:6px;padding:6px 14px;font-size:0.75rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">
@@ -2606,19 +2626,19 @@ function displayScanResult(data) {
               <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;">
                 <div style="background:#111827;border-radius:8px;padding:10px;text-align:center;border:1px solid #1e293b;">
                   <div style="font-size:1.1rem;margin-bottom:4px;">🔒</div>
-                  <div style="font-size:0.7rem;color:#64748b!important;line-height:1.4;">Builds visitor<br>trust instantly</div>
+                  <div style="font-size:0.7rem;color:#94a3b8!important;line-height:1.4;">Builds visitor<br>trust instantly</div>
                 </div>
                 <div style="background:#111827;border-radius:8px;padding:10px;text-align:center;border:1px solid #1e293b;">
                   <div style="font-size:1.1rem;margin-bottom:4px;">📈</div>
-                  <div style="font-size:0.7rem;color:#64748b!important;line-height:1.4;">Signals content<br>quality to Google</div>
+                  <div style="font-size:0.7rem;color:#94a3b8!important;line-height:1.4;">Signals content<br>quality to Google</div>
                 </div>
                 <div style="background:#111827;border-radius:8px;padding:10px;text-align:center;border:1px solid #1e293b;">
                   <div style="font-size:1.1rem;margin-bottom:4px;">🔗</div>
-                  <div style="font-size:0.7rem;color:#64748b!important;line-height:1.4;">Free backlink to<br>ContentScale</div>
+                  <div style="font-size:0.7rem;color:#94a3b8!important;line-height:1.4;">Free backlink to<br>ContentScale</div>
                 </div>
                 <div style="background:#111827;border-radius:8px;padding:10px;text-align:center;border:1px solid #1e293b;">
                   <div style="font-size:1.1rem;margin-bottom:4px;">💚</div>
-                  <div style="font-size:0.7rem;color:#64748b!important;line-height:1.4;">100% free —<br>always</div>
+                  <div style="font-size:0.7rem;color:#94a3b8!important;line-height:1.4;">100% free —<br>always</div>
                 </div>
               </div>
 
@@ -2651,12 +2671,17 @@ function displayScanResult(data) {
             style="padding:12px 20px;background:#1e293b;color:#94a3b8!important;border:1px solid #334155;border-radius:10px;cursor:pointer;font-weight:600;font-size:0.9rem;">
             Close
           </button>
+          ${score >= 70 ? `
+          <button id="singleLbBtn" onclick="submitSingleToLeaderboard('${url}', ${score}, '${(data.title||'').replace(/'/g,'')}')"
+            style="padding:12px 24px;background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.9rem;display:inline-flex;align-items:center;gap:8px;">
+            🏆 Submit to Leaderboard
+          </button>` : ''}
         </div>
       </div>
     </div>`;
 
   resultDiv.classList.remove('hidden');
-  resultDiv.scrollIntoView({ behavior: 'smooth' });
+  if (!targetEl) resultDiv.scrollIntoView({ behavior: 'smooth' });
 }
 
 // ============================================================
@@ -2668,11 +2693,6 @@ async function startBulkScan() {
   const urls     = urlInput.value.split('\n').map(u => u.trim()).filter(u => u.length > 0);
 
   if (!urls.length) { alert('❌ Enter at least one URL'); return; }
-
-  if (bulkEmailEnabled && !sendgridConfigured) {
-    document.getElementById('bulkAccessGate')?.scrollIntoView({ behavior: 'smooth' });
-    return;
-  }
 
   button.disabled = true;
   button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Scanning...';
@@ -2708,39 +2728,8 @@ async function startBulkScan() {
 
   displayBulkResults(results);
 
-  // Submit leaderboard entries always
-  if (results.leaderboard.length > 0 && userId) {
-    fetch('/api/bulk-scan/submit-leaderboard', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-      body: JSON.stringify({ entries: results.leaderboard })
-    }).catch(e => console.warn('Leaderboard submit:', e));
-  }
-
-  // Emails only if toggled on
-  if (bulkEmailEnabled) {
-    const bulkReplyTo = localStorage.getItem('discoverReplyTo') || 'hello@contentscale.site';
-    const emailStats = await sendBulkEmails(results, bulkReplyTo, bulkReplyTo.split('@')[0]);
-    const queueCount = getQueue().length;
-    const summaryEl  = document.getElementById('bulkResultsContainer');
-    if (summaryEl) {
-      summaryEl.innerHTML += `
-        <div style="background:#1f2937;border:1px solid #374151;border-radius:8px;padding:16px;margin-top:8px;">
-          <p style="font-size:0.9rem;font-weight:700;margin-bottom:8px;color:#f9fafb!important;">📧 Email Summary</p>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;font-size:0.82rem;text-align:center;">
-            <div><span style="color:#4ade80!important;font-size:1.4rem;font-weight:900;">${emailStats.sent}</span><br><span style="color:#6b7280!important;">Sent today</span></div>
-            <div><span style="color:#fbbf24!important;font-size:1.4rem;font-weight:900;">${emailStats.queued}</span><br><span style="color:#6b7280!important;">Queued</span></div>
-            <div><span style="color:#9ca3af!important;font-size:1.4rem;font-weight:900;">${emailStats.skipped}</span><br><span style="color:#6b7280!important;">No email found</span></div>
-            <div><span style="color:#818cf8!important;font-size:1.4rem;font-weight:900;">${getRemainingToday()}</span><br><span style="color:#6b7280!important;">Left today</span></div>
-          </div>
-          ${queueCount > 0 ? `<p style="font-size:0.75rem;color:#fbbf24!important;margin-top:10px;">⏳ ${queueCount} emails queued — will send automatically when you open this page tomorrow.</p>` : ''}
-        </div>`;
-    }
-    updateDailyLimitUI();
-  }
-
   button.disabled = false;
-  button.innerHTML = `<i class="fas fa-rocket mr-2"></i> ${bulkEmailEnabled ? 'Scan All URLs + Send Emails' : 'Scan All URLs'}`;
+  button.innerHTML = '<i class="fas fa-rocket mr-2"></i> Scan All URLs';
   document.getElementById('bulkProgress').classList.add('hidden');
 }
 
@@ -2766,50 +2755,164 @@ function retryBulkUrl(url) {
 }
 
 function displayBulkResults(results) {
-  let html = '';
-  if (results.leaderboard.length > 0) html += `<div style="background:rgba(16,185,129,0.1);border:1px solid #10b981;border-radius:8px;padding:16px;margin-bottom:12px;"><h5 style="font-weight:700;color:#4ade80!important;margin-bottom:8px;">🏆 Leaderboard (${results.leaderboard.length})</h5><ul style="font-size:0.85rem;">${results.leaderboard.map(r => `<li>✅ ${r.url} — ${r.score}/100</li>`).join('')}</ul></div>`;
-  if (results.almostMade && results.almostMade.length > 0) html += `<div style="background:rgba(245,158,11,0.1);border:1px solid #f59e0b;border-radius:10px;padding:16px;margin-bottom:12px;"><h5 style="font-weight:800;color:#fbbf24!important;margin-bottom:8px;">🎯 Almost Made It — 65-69 (${results.almostMade.length})</h5><p style="font-size:0.75rem;color:#6b7280!important;margin-bottom:8px;">Warmest leads — {{gap}} points from leaderboard</p><ul style="font-size:0.85rem;">${results.almostMade.map(r => `<li>⚡ ${r.url} — ${r.score}/100 (${70-r.score} pts away)</li>`).join('')}</ul></div>`;
-  if (results.withWebsite.length > 0) html += `<div style="background:rgba(59,130,246,0.1);border:1px solid #3b82f6;border-radius:8px;padding:16px;margin-bottom:12px;"><h5 style="font-weight:700;color:#60a5fa!important;margin-bottom:8px;">📧 Improvement Emails (${results.withWebsite.length})</h5><ul style="font-size:0.85rem;">${results.withWebsite.map(r => `<li>📨 ${r.url} — ${r.score}/100</li>`).join('')}</ul></div>`;
-  if (results.withoutWebsite.length > 0) html += `<div style="background:rgba(126,34,206,0.1);border:1px solid #7e22ce;border-radius:8px;padding:16px;margin-bottom:12px;"><h5 style="font-weight:700;color:#c084fc!important;margin-bottom:8px;">🌐 Website Offers (${results.withoutWebsite.length})</h5><ul style="font-size:0.85rem;">${results.withoutWebsite.map(r => `<li>📬 ${r.url}</li>`).join('')}</ul></div>`;
-  if (results.errors.length > 0) html += `<div style="background:rgba(239,68,68,0.08);border:1px solid #ef4444;border-radius:10px;padding:16px;margin-bottom:12px;">
-  <h5 style="font-weight:800;color:#f87171!important;margin-bottom:10px;">❌ Failed Scans (${results.errors.length})</h5>
-  ${results.errors.map(r => {
-    const msg = r.error || 'Unknown error';
-    const isBlocked = msg.toLowerCase().includes('block') || msg.includes('403') || msg.toLowerCase().includes('forbidden');
-    const isTimeout = msg.toLowerCase().includes('timeout') || msg.toLowerCase().includes('timed out');
-    const icon = isBlocked ? '🚫' : isTimeout ? '⏱️' : '⚠️';
-    const reason = isBlocked ? 'Site blocks scanners' : isTimeout ? 'Timeout' : msg.slice(0,60);
-    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;background:rgba(239,68,68,0.06);border-radius:6px;margin-bottom:6px;flex-wrap:wrap;">
-      <div><span style="font-size:0.8rem;color:#fca5a5!important;">${icon} ${r.url}</span><span style="font-size:0.72rem;color:#6b7280!important;margin-left:8px;">${reason}</span></div>
-      <button onclick="retryBulkUrl('${r.url}')" style="background:#7f1d1d;color:white!important;border:1px solid #ef4444;border-radius:5px;padding:3px 10px;font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap;">🔄 Retry</button>
-    </div>`;
-  }).join('')}
-</div>`;
-  document.getElementById('bulkResultsContainer').innerHTML = html;
+  const container = document.getElementById('bulkResultsContainer');
+  if (!container) return;
+
+  const all = [
+    ...results.leaderboard,
+    ...(results.almostMade || []),
+    ...results.withWebsite,
+    ...results.withoutWebsite
+  ];
+
+  if (!all.length && !results.errors.length) {
+    container.innerHTML = '<p style="color:#6b7280;text-align:center;padding:24px;">No results.</p>';
+    document.getElementById('bulkResults').classList.remove('hidden');
+    return;
+  }
+
+  // Sort best → lowest
+  all.sort((a, b) => (b.score || 0) - (a.score || 0));
+
+  const total = all.length;
+  const lb    = results.leaderboard.length;
+  const errs  = results.errors.length;
+
+  container.innerHTML = `
+    <div style="background:#111827;border:1px solid #374151;border-radius:12px;padding:16px;margin-bottom:16px;display:flex;gap:20px;flex-wrap:wrap;align-items:center;">
+      <div style="text-align:center;"><div style="font-size:1.6rem;font-weight:900;color:#e5e7eb;">${total}</div><div style="font-size:0.72rem;color:#6b7280;">Scanned</div></div>
+      <div style="text-align:center;"><div style="font-size:1.6rem;font-weight:900;color:#4ade80;">${lb}</div><div style="font-size:0.72rem;color:#6b7280;">Score 70+</div></div>
+      <div style="text-align:center;"><div style="font-size:1.6rem;font-weight:900;color:#f87171;">${errs}</div><div style="font-size:0.72rem;color:#6b7280;">Errors</div></div>
+      <div style="flex:1;text-align:right;font-size:0.78rem;color:#6b7280;">Sorted best → lowest</div>
+    </div>
+    ${lb > 0 ? `<div style="background:linear-gradient(135deg,#1e1b4b,#312e81);border:1px solid #4c1d95;border-radius:12px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="color:#e9d5ff;font-weight:700;font-size:0.9rem;">🏆 Submit to Leaderboard</div>
+        <div style="color:#a78bfa;font-size:0.75rem;margin-top:2px;">Select sites scoring 70+ — submitted ones appear in your Activity</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span id="bulkLbCounter" style="color:#c4b5fd;font-size:0.78rem;font-weight:600;">0 selected</span>
+        <button onclick="document.querySelectorAll(\'.bulk-lb-check:not(:disabled)\').forEach(c=>c.checked=true);updateBulkLbCount();"
+          style="background:#2e1065;color:#c4b5fd;border:1px solid #4c1d95;border-radius:8px;padding:6px 12px;font-size:0.75rem;cursor:pointer;">Select All</button>
+        <button id="bulkLbSubmitBtn" onclick="submitBulkToLeaderboard()" disabled
+          style="background:#7e22ce;color:white;border:none;border-radius:8px;padding:8px 18px;font-size:0.82rem;font-weight:700;cursor:pointer;opacity:0.5;">
+          🏆 Submit to Leaderboard
+        </button>
+      </div>
+    </div>` : ''}`;
+
+  all.forEach((item, i) => {
+    const score = item.score || 0;
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'margin-bottom:16px;position:relative;';
+
+    if (i < 3) {
+      const medals = ['🥇','🥈','🥉'];
+      const label = document.createElement('div');
+      label.style.cssText = 'font-size:0.75rem;font-weight:700;color:#a78bfa;margin-bottom:4px;padding-left:4px;';
+      label.textContent = medals[i] + ' #' + (i+1) + ' of ' + total;
+      wrapper.appendChild(label);
+    }
+
+    if (score >= 70) {
+      const cbWrap = document.createElement('div');
+      cbWrap.style.cssText = 'position:absolute;top:12px;right:12px;z-index:10;display:flex;align-items:center;gap:6px;background:rgba(30,27,75,0.92);border:1px solid #4c1d95;border-radius:8px;padding:6px 10px;cursor:pointer;';
+      const safeName = (item.data && item.data.title || '').replace(/"/g,'&quot;');
+      cbWrap.innerHTML = '<input type="checkbox" class="bulk-lb-check"'
+        + ' data-url="' + item.url + '" data-score="' + score + '" data-name="' + safeName + '"'
+        + ' onchange="updateBulkLbCount()"'
+        + ' style="width:16px;height:16px;accent-color:#7e22ce;cursor:pointer;">'
+        + '<label style="color:#c4b5fd;font-size:0.72rem;font-weight:600;cursor:pointer;white-space:nowrap;">Add to leaderboard</label>';
+      cbWrap.addEventListener('click', function(e) {
+        if (e.target.tagName !== 'INPUT') this.querySelector('input').click();
+      });
+      wrapper.appendChild(cbWrap);
+    }
+
+    const cardDiv = document.createElement('div');
+    wrapper.appendChild(cardDiv);
+    container.appendChild(wrapper);
+    displayScanResult(item.data, cardDiv);
+  });
+
+  if (results.errors.length > 0) {
+    const errDiv = document.createElement('div');
+    errDiv.style.cssText = 'background:rgba(239,68,68,0.08);border:1px solid #7f1d1d;border-radius:10px;padding:14px 16px;margin-top:8px;';
+    errDiv.innerHTML = '<p style="font-weight:700;color:#f87171;margin-bottom:8px;">\u274C Failed to scan (' + results.errors.length + ')</p>'
+      + results.errors.map(r => {
+        const msg = r.error || 'Unknown error';
+        const isBlocked = msg.toLowerCase().includes('block') || msg.includes('403');
+        const icon = isBlocked ? '\ud83d\udeab' : '\u26a0\ufe0f';
+        return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #1f2937;flex-wrap:wrap;">'
+          + '<span style="font-size:0.8rem;color:#fca5a5;">' + icon + ' ' + r.url + '</span>'
+          + '<button onclick="retryBulkUrl(\\'' + r.url + '\\')" style="background:#7f1d1d;color:white;border:1px solid #ef4444;border-radius:5px;padding:3px 10px;font-size:0.72rem;cursor:pointer;">\ud83d\udd04 Retry</button>'
+          + '</div>';
+      }).join('');
+    container.appendChild(errDiv);
+  }
+
   document.getElementById('bulkResults').classList.remove('hidden');
+}
+
+
+async function submitSingleToLeaderboard(url, score, name) {
+  const btn = document.getElementById('singleLbBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '\u23f3 Submitting...'; }
+  try {
+    const res = await fetch('/api/leaderboard/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-user-id': userId || '' },
+      body: JSON.stringify({ url, score, company_name: name || '', admin_verified: false })
+    });
+    const data = await res.json();
+    if (data.success) {
+      if (btn) { btn.innerHTML = '\u2705 Submitted \u2014 pending review'; btn.style.background = '#065f46'; }
+    } else {
+      if (btn) { btn.disabled = false; btn.innerHTML = '\ud83c\udfc6 Submit to Leaderboard'; }
+      alert('\u274c ' + (data.error || 'Submission failed'));
+    }
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.innerHTML = '\ud83c\udfc6 Submit to Leaderboard'; }
+    alert('\u274c Error: ' + e.message);
+  }
+}
+
+function submitBulkCardToLeaderboard(url, score, name, btnEl) {
+  if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '\u23f3 Submitting...'; }
+  fetch('/api/leaderboard/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-user-id': userId || '' },
+    body: JSON.stringify({ url, score, company_name: name || '', admin_verified: false })
+  }).then(r => r.json()).then(data => {
+    if (data.success) {
+      if (btnEl) { btnEl.innerHTML = '\u2705 Submitted'; btnEl.style.background = '#065f46'; btnEl.disabled = true; }
+    } else {
+      if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = '\ud83c\udfc6 Add to Leaderboard'; }
+      alert('\u274c ' + (data.error || 'Failed'));
+    }
+  }).catch(e => {
+    if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = '\ud83c\udfc6 Add to Leaderboard'; }
+  });
 }
 
 // ============================================================
 // EMAIL WARMUP + DAILY LIMIT TRACKER
 // ============================================================
-let DAILY_LIMIT = 100; // overridden by warmup cap fetched from server
+let DAILY_LIMIT = 100;
 
 const WARMUP_SCHEDULE = [
-  { week: 1, days: '1–7',   cap: 5,   label: 'Week 1',  tip: 'Send only to colleagues and addresses you control. Focus on getting opens and replies to build domain reputation.' },
-  { week: 2, days: '8–14',  cap: 20,  label: 'Week 2',  tip: 'Mix in a few real warm leads. Still prioritise engagement — replies matter more than volume right now.' },
-  { week: 3, days: '15–21', cap: 40,  label: 'Week 3',  tip: 'Start sending to cold leads. Your domain reputation is building — watch for any spam complaints.' },
-  { week: 4, days: '22–28', cap: 70,  label: 'Week 4',  tip: 'Near full volume. Review open rates in SendGrid. If above 20%, you\'re in good shape for full sending.' },
-  { week: 5, days: '29+',   cap: 100, label: 'Week 5+', tip: 'Full sending capacity. Keep monitoring spam complaint rates — stay under 0.1% to protect your reputation.' },
+  { week: 1, days: '1\u20137',   cap: 5,   label: 'Week 1',  tip: 'Send only to colleagues and addresses you control. Focus on getting opens and replies to build domain reputation.' },
+  { week: 2, days: '8\u201314',  cap: 20,  label: 'Week 2',  tip: 'Mix in a few real warm leads. Still prioritise engagement \u2014 replies matter more than volume right now.' },
+  { week: 3, days: '15\u201321', cap: 40,  label: 'Week 3',  tip: 'Start sending to cold leads. Your domain reputation is building \u2014 watch for any spam complaints.' },
+  { week: 4, days: '22\u201328', cap: 70,  label: 'Week 4',  tip: "Near full volume. Review open rates in SendGrid. If above 20%, you're in good shape for full sending." },
+  { week: 5, days: '29+',   cap: 100, label: 'Week 5+', tip: "Full sending capacity. Keep monitoring spam complaint rates \u2014 stay under 0.1% to protect your reputation." },
 ];
 
 async function loadWarmupStatus() {
   try {
     const data = await fetch('/api/warmup', { headers: { 'x-user-id': userId || '' } }).then(r => r.json());
     renderWarmupUI(data);
-    if (data.active && data.dailyCap) {
-      DAILY_LIMIT = data.dailyCap;
-      updateDailyLimitUI();
-    }
+    if (data.active && data.dailyCap) { DAILY_LIMIT = data.dailyCap; updateDailyLimitUI(); }
   } catch (e) { console.warn('Warmup load failed', e); }
 }
 
@@ -2819,47 +2922,37 @@ function renderWarmupUI(data) {
   const statsBadge= document.getElementById('warmupStatusBadge');
   const statsBox  = document.getElementById('warmupCurrentStats');
   const adviceBox = document.getElementById('warmupAdvice');
-
-  // Build schedule grid
   const grid = document.getElementById('warmupScheduleGrid');
   if (grid) {
     const currentWeek = data.active ? Math.ceil((data.dayNumber || 1) / 7) : 0;
-    grid.innerHTML = WARMUP_SCHEDULE.map((w, i) => {
-      const isActive  = data.active && currentWeek === w.week;
-      const isPast    = data.active && currentWeek > w.week;
-      const bg        = isActive ? 'background:#1e1b4b;border:2px solid #7e22ce;' : isPast ? 'background:#0f2d1a;border:1px solid #166534;' : 'background:#111827;border:1px solid #1f2937;';
-      const scoreCol  = isActive ? '#a78bfa' : isPast ? '#4ade80' : '#6b7280';
-      const badge     = isActive ? '<div style="background:#7e22ce;color:white;font-size:0.6rem;font-weight:700;padding:1px 6px;border-radius:99px;margin-bottom:4px;display:inline-block;">CURRENT</div><br>' : isPast ? '<div style="color:#4ade80;font-size:0.7rem;">✓ Done</div>' : '';
-      return '<div style="' + bg + 'border-radius:10px;padding:10px 8px;text-align:center;">'
-        + badge
-        + '<div style="font-size:0.7rem;color:#9ca3af;margin-bottom:2px;">Days ' + w.days + '</div>'
-        + '<div style="font-size:1.3rem;font-weight:900;color:' + scoreCol + ';">' + w.cap + '</div>'
-        + '<div style="font-size:0.65rem;color:#6b7280;">emails/day</div>'
-        + '</div>';
+    grid.innerHTML = WARMUP_SCHEDULE.map((w) => {
+      const isActive = data.active && currentWeek === w.week;
+      const isPast   = data.active && currentWeek > w.week;
+      const bg = isActive ? 'background:#1e1b4b;border:2px solid #7e22ce;' : isPast ? 'background:#0f2d1a;border:1px solid #166534;' : 'background:#111827;border:1px solid #1f2937;';
+      const scoreCol = isActive ? '#a78bfa' : isPast ? '#4ade80' : '#6b7280';
+      const badge = isActive ? '<div style="background:#7e22ce;color:white;font-size:0.6rem;font-weight:700;padding:1px 6px;border-radius:99px;margin-bottom:4px;display:inline-block;">CURRENT</div><br>' : isPast ? '<div style="color:#4ade80;font-size:0.7rem;">\u2713 Done</div>' : '';
+      return '<div style="' + bg + 'border-radius:10px;padding:10px 8px;text-align:center;">' + badge + '<div style="font-size:0.7rem;color:#9ca3af;margin-bottom:2px;">Days ' + w.days + '</div><div style="font-size:1.3rem;font-weight:900;color:' + scoreCol + ';">' + w.cap + '</div><div style="font-size:0.65rem;color:#6b7280;">emails/day</div></div>';
     }).join('');
   }
-
   if (!data.active) {
-    if (statsBadge) { statsBadge.textContent = '⏳ Not started'; statsBadge.style.background = '#1f2937'; statsBadge.style.color = '#9ca3af'; }
-    if (statsBox)   statsBox.classList.add('hidden');
-    if (startBtn)   startBtn.classList.remove('hidden');
-    if (stopBtn)    stopBtn.classList.add('hidden');
-    if (adviceBox)  adviceBox.innerHTML = '<strong style="color:#a78bfa;">💡 Before you start:</strong> Make sure your SPF, DKIM and DMARC records are set up first (see below). Then click <strong>Start Warmup Today</strong> — your daily cap will increase automatically each week, even if you close the browser.';
+    if (statsBadge) { statsBadge.textContent = '\u23f3 Not started'; statsBadge.style.background = '#1f2937'; statsBadge.style.color = '#9ca3af'; }
+    if (statsBox) statsBox.classList.add('hidden');
+    if (startBtn) startBtn.classList.remove('hidden');
+    if (stopBtn) stopBtn.classList.add('hidden');
+    if (adviceBox) adviceBox.innerHTML = '<strong style="color:#a78bfa;">\ud83d\udca1 Before you start:</strong> Make sure your SPF, DKIM and DMARC records are set up first. Then click <strong>Start Warmup Today</strong>.';
     return;
   }
-
   const week = Math.min(5, Math.ceil(data.dayNumber / 7));
   const sched = WARMUP_SCHEDULE[week - 1] || WARMUP_SCHEDULE[4];
-  const pct   = Math.min(100, Math.round((data.dayNumber / 35) * 100));
-
-  if (statsBadge) { statsBadge.textContent = '🔥 Warmup Active — Week ' + week; statsBadge.style.background = '#1e1b4b'; statsBadge.style.color = '#a78bfa'; }
-  if (statsBox)   statsBox.classList.remove('hidden');
+  const pct = Math.min(100, Math.round((data.dayNumber / 35) * 100));
+  if (statsBadge) { statsBadge.textContent = '\ud83d\udd25 Warmup Active \u2014 Week ' + week; statsBadge.style.background = '#1e1b4b'; statsBadge.style.color = '#a78bfa'; }
+  if (statsBox) statsBox.classList.remove('hidden');
   const dayEl  = document.getElementById('warmupDay');  if (dayEl)  dayEl.textContent  = data.dayNumber;
   const capEl  = document.getElementById('warmupCap');  if (capEl)  capEl.textContent  = data.dailyCap;
   const weekEl = document.getElementById('warmupWeek'); if (weekEl) weekEl.textContent = week;
   const bar    = document.getElementById('warmupProgressBar'); if (bar) bar.style.width = pct + '%';
-  const lbl    = document.getElementById('warmupProgressLabel'); if (lbl) lbl.textContent = 'Week ' + week + ' of 5' + (week >= 5 ? ' — Full speed!' : '');
-  if (adviceBox) adviceBox.innerHTML = '<strong style="color:#fbbf24;">💡 Week ' + week + ' tip:</strong> ' + sched.tip;
+  const lbl    = document.getElementById('warmupProgressLabel'); if (lbl) lbl.textContent = 'Week ' + week + ' of 5' + (week >= 5 ? ' \u2014 Full speed!' : '');
+  if (adviceBox) adviceBox.innerHTML = '<strong style="color:#fbbf24;">\ud83d\udca1 Week ' + week + ' tip:</strong> ' + sched.tip;
   if (startBtn) startBtn.classList.add('hidden');
   if (stopBtn)  stopBtn.classList.remove('hidden');
 }
@@ -2869,371 +2962,171 @@ async function startWarmup() {
   if (btn) { btn.disabled = true; btn.textContent = 'Starting...'; }
   try {
     const data = await fetch('/api/warmup/start', { method: 'POST', headers: { 'x-user-id': userId || '' } }).then(r => r.json());
-    if (data.success) {
-      DAILY_LIMIT = data.dailyCap || 5;
-      updateDailyLimitUI();
-      loadWarmupStatus();
-    }
+    if (data.success) { DAILY_LIMIT = data.dailyCap || 5; updateDailyLimitUI(); loadWarmupStatus(); }
   } catch (e) { console.error(e); }
   if (btn) btn.disabled = false;
 }
 
 async function stopWarmup() {
-  if (!confirm('Stop warmup? Your daily cap will return to 100. Only do this after completing all 5 weeks.')) return;
+  if (!confirm('Stop warmup? Your daily cap will return to 100.')) return;
   await fetch('/api/warmup/stop', { method: 'POST', headers: { 'x-user-id': userId || '' } }).catch(() => {});
-  DAILY_LIMIT = 100;
-  updateDailyLimitUI();
-  loadWarmupStatus();
+  DAILY_LIMIT = 100; updateDailyLimitUI(); loadWarmupStatus();
 }
 
-function getTodayKey() {
-  return 'emailsSent_' + new Date().toISOString().slice(0, 10); // e.g. emailsSent_2026-02-22
-}
-
-function getDailySentCount() {
-  return parseInt(localStorage.getItem(getTodayKey()) || '0');
-}
-
-function incrementDailySent(n = 1) {
-  const key = getTodayKey();
-  const current = getDailySentCount();
-  localStorage.setItem(key, current + n);
-  updateDailyLimitUI();
-}
-
-function getRemainingToday() {
-  return Math.max(0, DAILY_LIMIT - getDailySentCount());
-}
+function getTodayKey() { return 'emailsSent_' + new Date().toISOString().slice(0, 10); }
+function getDailySentCount() { return parseInt(localStorage.getItem(getTodayKey()) || '0'); }
+function incrementDailySent(n = 1) { const k = getTodayKey(); localStorage.setItem(k, getDailySentCount() + n); updateDailyLimitUI(); }
+function getRemainingToday() { return Math.max(0, DAILY_LIMIT - getDailySentCount()); }
 
 function updateDailyLimitUI() {
-  const sent = getDailySentCount();
-  const remaining = getRemainingToday();
+  const sent = getDailySentCount(), remaining = getRemainingToday();
   const el = document.getElementById('dailyLimitBadge');
   if (el) {
     const color = remaining > 50 ? '#4ade80' : remaining > 20 ? '#fbbf24' : '#f87171';
-    el.innerHTML = `📧 Today: <strong style="color:${color}!important;">${sent}/${DAILY_LIMIT}</strong> emails sent &nbsp;·&nbsp; <span style="color:${color}!important;">${remaining} remaining</span>`;
+    el.innerHTML = `\ud83d\udce7 Today: <strong style="color:${color}!important;">${sent}/${DAILY_LIMIT}</strong> emails sent &nbsp;\u00b7&nbsp; <span style="color:${color}!important;">${remaining} remaining</span>`;
   }
 }
 
 // ============================================================
-// EMAIL QUEUE (localStorage) — stores overflow for next day
+// EMAIL QUEUE
 // ============================================================
-function getQueue() {
-  try { return JSON.parse(localStorage.getItem('emailQueue') || '[]'); } catch { return []; }
-}
-
-function addToQueue(items) {
-  const q = getQueue();
-  localStorage.setItem('emailQueue', JSON.stringify([...q, ...items]));
-}
-
-function clearQueue() {
-  localStorage.removeItem('emailQueue');
-}
+function getQueue() { try { return JSON.parse(localStorage.getItem('emailQueue') || '[]'); } catch { return []; } }
+function addToQueue(items) { const q = getQueue(); localStorage.setItem('emailQueue', JSON.stringify([...q, ...items])); }
+function clearQueue() { localStorage.removeItem('emailQueue'); }
 
 // ============================================================
-// EMAIL EXTRACTOR — gets business email from all available sources
-// Priority: Apify place email > scan contact email > website contact page guess
+// EMAIL EXTRACTOR
 // ============================================================
 function extractBusinessEmail(item) {
   const d = item.data || {};
-
-  // 1. From website scan (most reliable — extracted from actual page)
-  if (d.extractedEmail)             return d.extractedEmail;
+  if (d.extractedEmail)  return d.extractedEmail;
   if (d.emails_found && d.emails_found[0]) return d.emails_found[0];
   if (d.content_stats && d.content_stats.extractedEmail) return d.content_stats.extractedEmail;
   if (d.content_stats && d.content_stats.emails_found && d.content_stats.emails_found[0]) return d.content_stats.emails_found[0];
-
-  // 2. From Apify Google Maps data
-  if (d.email)                      return d.email;
-  if (d.emails && d.emails[0])      return d.emails[0];
-  if (d.contactEmail)               return d.contactEmail;
-  if (d.contact_email)              return d.contact_email;
-
-  // 3. Not found
+  if (d.email)           return d.email;
+  if (d.emails && d.emails[0]) return d.emails[0];
+  if (d.contactEmail)    return d.contactEmail;
+  if (d.contact_email)   return d.contact_email;
   return null;
 }
 
 // ============================================================
 // CENTRAL VARIABLE REPLACEMENT
-// All template variables resolved here — add new ones once here.
 // ============================================================
 function applyVars(text, item, senderEmail, senderName) {
   if (!text) return text;
-
-  const url        = item.url || '';
-  const domain     = url.replace(/https?:\/\//,'').replace(/\/.*$/,'') || item.data?.name || '';
-  const score      = item.score || 0;
-  const metrics    = item.data?.metrics || {};
-  const graaf      = metrics.graaf    ?? 0;
-  const craft      = metrics.craft    ?? 0;
-  const tech       = metrics.technical ?? 0;
-  const wordCnt    = item.data?.word_count ?? item.data?.wordCount ?? '—';
-  const pageTitle  = item.data?.title || domain;
-  const industry   = item.data?.industry || item.data?.niche || item.data?.name || '—';
-  const city       = item.data?.city    || item.data?.address?.split(',')[1]?.trim() || '—';
-  const country    = item.data?.country || '—';
-  const companyName = item.data?.name   || domain;
-  const topIssue   = (item.data?.recommendations && item.data.recommendations[0]?.title) || 'Content quality improvement';
-
+  const url = item.url || '';
+  const domain = url.replace(/https?:\/\//,'').replace(/\/.*$/,'') || item.data?.name || '';
+  const score = item.score || 0;
+  const metrics = item.data?.metrics || {};
+  const graaf = metrics.graaf ?? 0, craft = metrics.craft ?? 0, tech = metrics.technical ?? 0;
+  const wordCnt = item.data?.word_count ?? item.data?.wordCount ?? '\u2014';
+  const pageTitle = item.data?.title || domain;
+  const industry = item.data?.industry || item.data?.niche || item.data?.name || '\u2014';
+  const city = item.data?.city || item.data?.address?.split(',')[1]?.trim() || '\u2014';
+  const country = item.data?.country || '\u2014';
+  const companyName = item.data?.name || domain;
+  const topIssue = (item.data?.recommendations && item.data.recommendations[0]?.title) || 'Content quality improvement';
   const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
-
-  const barColor  = score >= 85 ? '#4ade80' : score >= 70 ? '#fbbf24' : '#f87171';
-  const scoreBar  = `<div style="background:#e5e7eb;border-radius:99px;height:10px;width:100%;margin:8px 0;"><div style="background:${barColor};width:${score}%;height:10px;border-radius:99px;"></div></div>`;
-
-  const now       = new Date();
-  const dateStr   = now.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
-  const monthStr  = now.toLocaleDateString('en-US', { month:'long' });
-  const yearStr   = now.getFullYear().toString();
-
+  const barColor = score >= 85 ? '#4ade80' : score >= 70 ? '#fbbf24' : '#f87171';
+  const scoreBar = `<div style="background:#e5e7eb;border-radius:99px;height:10px;width:100%;margin:8px 0;"><div style="background:${barColor};width:${score}%;height:10px;border-radius:99px;"></div></div>`;
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  const monthStr = now.toLocaleDateString('en-US', { month:'long' });
+  const yearStr = now.getFullYear().toString();
   const recipientEmail = extractBusinessEmail(item) || '';
-  const unsubUrl  = 'https://app.contentscale.site/unsubscribe?email=' + encodeURIComponent(recipientEmail);
-  const lbUrl     = 'https://contentscale.site#leaderboard';
-  const ctaUrl    = 'https://wa.me/31628073996';
-
-  // ── Email-safe badge (static — no JS/CSS animations, works in all email clients) ──
-  const badgeBorderColor = score >= 85 ? '#84cc16' : score >= 70 ? '#3b82f6' : '#f59e0b';
-  const badgeBg          = score >= 85 ? 'linear-gradient(135deg,#f7fee7,#ecfccb)' : score >= 70 ? 'linear-gradient(135deg,#eff6ff,#dbeafe)' : 'linear-gradient(135deg,#fffbeb,#fef3c7)';
-  const badgeScoreColor  = score >= 85 ? '#4d7c0f' : score >= 70 ? '#1e3a8a' : '#78350f';
-  const badgePillBg      = score >= 85 ? '#f0fdf4' : score >= 70 ? '#eff6ff' : '#fefce8';
-  const badgePillText    = score >= 85 ? '#14532d' : score >= 70 ? '#1e3a8a' : '#713f12';
-  const badgePillLabel   = score >= 85 ? '✓ CONTENT OPTIMIZED' : score >= 70 ? '✓ CONTENT VERIFIED' : '✓ CONTENT ANALYZED';
-  const badgeResultBg    = score >= 85 ? '#dcfce7' : score >= 70 ? '#dbeafe' : '#fef3c7';
-  const badgeResultText  = score >= 85 ? '#166534' : score >= 70 ? '#1e40af' : '#92400e';
-  const badgeResultMsg   = score >= 85 ? '🎉 This content is ranking-ready!' : score >= 70 ? '💡 This content meets quality standards' : '🔧 Improvements identified';
-  const badgeTagline     = score >= 85 ? 'Optimized with GRAAF + CRAFT frameworks' : score >= 70 ? 'Scored with GRAAF + CRAFT frameworks' : 'Analyzed with GRAAF + CRAFT frameworks';
-  // Full URL for specificity — shows exact page that was scored
-  const badgeFullUrl     = url;
-  const badgeDisplayUrl  = url.replace(/https?:\/\//, '').replace(/\/$/, '');
-  const badgeDomain      = badgeDisplayUrl.split('/')[0];
-  const badgePath        = badgeDisplayUrl.includes('/') ? '/' + badgeDisplayUrl.split('/').slice(1).join('/') : '';
-
-  const badgeWidget = `<!-- ============================================================
-   ContentScore Badge — Email Embed
-   Created by Ottmar Francisca · ContentScale SEO Platform
-   Score: ${score}/100 · Page: ${badgeDisplayUrl}
-   ============================================================ -->
-<table cellpadding="0" cellspacing="0" border="0" align="center" style="margin:28px auto;max-width:400px;width:100%;">
-  <tr>
-    <td style="background:${score >= 85 ? '#f7fee7' : score >= 70 ? '#eff6ff' : '#fffbeb'};border:2px solid ${badgeBorderColor};border-radius:14px;padding:24px 28px;text-align:center;font-family:Arial,Helvetica,sans-serif;">
-      <!-- Pill -->
-      <div style="display:inline-block;background:${badgePillBg};border:1px solid ${badgeBorderColor};border-radius:50px;padding:5px 18px;margin-bottom:14px;">
-        <span style="font-size:12px;color:${badgePillText};font-weight:700;letter-spacing:1px;">${badgePillLabel}</span>
-      </div>
-      <!-- Score -->
-      <div style="margin:0 0 8px;">
-        <span style="font-size:64px;font-weight:900;color:${badgeBorderColor};line-height:1;">${score}</span><span style="font-size:22px;color:#9ca3af;font-weight:400;">/100</span>
-      </div>
-      <!-- Label + tagline -->
-      <div style="font-size:17px;color:${badgeScoreColor};font-weight:700;margin-bottom:4px;">${scoreLabel}</div>
-      <div style="font-size:12px;color:${badgeScoreColor};font-style:italic;margin-bottom:18px;opacity:0.8;">${badgeTagline}</div>
-      <!-- URL box -->
-      <div style="background:#ffffff;border:1.5px solid ${badgeBorderColor};border-radius:8px;padding:8px 14px;display:inline-block;margin-bottom:14px;max-width:100%;word-break:break-all;">
-        <span style="font-size:13px;color:#374151;">📄 </span><a href="${badgeFullUrl}" style="font-size:13px;color:${badgeScoreColor};text-decoration:none;"><strong>${badgeDomain}</strong><span style="font-weight:400;opacity:0.75;">${badgePath}</span></a>
-      </div>
-      <!-- Result message -->
-      <div style="background:${badgeResultBg};border-radius:8px;padding:10px 14px;margin-bottom:16px;">
-        <p style="font-size:13px;color:${badgeResultText};margin:0;font-weight:600;">${badgeResultMsg}</p>
-      </div>
-      <!-- Byline -->
-      <div style="font-size:11px;color:${badgeScoreColor};opacity:0.7;">
-        Verified by <a href="https://app.contentscale.site" style="color:${badgeScoreColor};text-decoration:none;font-weight:700;">ContentScale SEO Platform</a>
-      </div>
-    </td>
-  </tr>
-</table>
-<!-- ============================================================
-   End ContentScore Badge — Email Embed
-   ============================================================ -->`;
-
+  const unsubUrl = 'https://app.contentscale.site/unsubscribe?email=' + encodeURIComponent(recipientEmail);
+  const lbUrl = 'https://contentscale.site#leaderboard';
+  const ctaUrl = 'https://wa.me/31628073996';
+  const badgeWidget = `<table cellpadding="0" cellspacing="0" border="0" align="center"><tr><td style="background:#f7fee7;border:2px solid #84cc16;border-radius:14px;padding:16px;text-align:center;"><div style="font-size:40px;font-weight:900;color:#84cc16;">${score}</div><div style="color:#4d7c0f;font-size:12px;font-weight:700;">${scoreLabel} \u00b7 ContentScale Verified</div></td></tr></table>`;
   return text
-    .replace(/{{company_name}}/g,    companyName)
-    .replace(/{{domain}}/g,          domain)
-    .replace(/{{website_url}}/g,     url)
-    .replace(/{{industry}}/g,        industry)
-    .replace(/{{city}}/g,            city)
-    .replace(/{{country}}/g,         country)
-    .replace(/{{score}}/g,           score)
-    .replace(/{{score_label}}/g,     scoreLabel)
-    .replace(/{{score_bar}}/g,       scoreBar)
-    .replace(/{{graaf_score}}/g,     graaf)
-    .replace(/{{craft_score}}/g,     craft)
-    .replace(/{{tech_score}}/g,      tech)
-    .replace(/{{word_count}}/g,      wordCnt)
-    .replace(/{{top_issue}}/g,       topIssue)
-    .replace(/{{page_title}}/g,      pageTitle)
-    .replace(/{{sender_name}}/g,     senderName)
-    .replace(/{{sender_email}}/g,    senderEmail)
-    .replace(/{{sender_phone}}/g,    '+31 6 2807 3996')
-    .replace(/{{sender_whatsapp}}/g, ctaUrl)
-    .replace(/{{sender_company}}/g,  'ContentScale')
-    .replace(/{{leaderboard_url}}/g, lbUrl)
-    .replace(/{{cta_url}}/g,         ctaUrl)
-    .replace(/{{date}}/g,            dateStr)
-    .replace(/{{month}}/g,           monthStr)
-    .replace(/{{year}}/g,            yearStr)
-    .replace(/{{unsubscribe_url}}/g, unsubUrl)
-    .replace(/{{badge_widget}}/g,    badgeWidget)
-    .replace(/{{gap}}/g,             String(Math.max(0, 70 - score)));
+    .replace(/{{company_name}}/g, companyName).replace(/{{domain}}/g, domain).replace(/{{website_url}}/g, url)
+    .replace(/{{industry}}/g, industry).replace(/{{city}}/g, city).replace(/{{country}}/g, country)
+    .replace(/{{score}}/g, score).replace(/{{score_label}}/g, scoreLabel).replace(/{{score_bar}}/g, scoreBar)
+    .replace(/{{graaf_score}}/g, graaf).replace(/{{craft_score}}/g, craft).replace(/{{tech_score}}/g, tech)
+    .replace(/{{word_count}}/g, wordCnt).replace(/{{top_issue}}/g, topIssue).replace(/{{page_title}}/g, pageTitle)
+    .replace(/{{sender_name}}/g, senderName).replace(/{{sender_email}}/g, senderEmail)
+    .replace(/{{sender_phone}}/g, '+31 6 2807 3996').replace(/{{sender_whatsapp}}/g, ctaUrl)
+    .replace(/{{sender_company}}/g, 'ContentScale').replace(/{{leaderboard_url}}/g, lbUrl)
+    .replace(/{{cta_url}}/g, ctaUrl).replace(/{{date}}/g, dateStr).replace(/{{month}}/g, monthStr)
+    .replace(/{{year}}/g, yearStr).replace(/{{unsubscribe_url}}/g, unsubUrl)
+    .replace(/{{badge_widget}}/g, badgeWidget).replace(/{{gap}}/g, String(Math.max(0, 70 - score)));
 }
 
 // ============================================================
-// CORE EMAIL SENDER — respects daily cap, queues overflow
-// Returns { sent, queued, skipped }
+// CORE EMAIL SENDER
 // ============================================================
 async function sendEmailToBusinesses(bucket, templateKey, senderEmail, senderName) {
   const tpl = userTemplates[templateKey] || DEFAULT_TEMPLATES[templateKey];
   let sent = 0, queued = 0, skipped = 0;
-
   for (const item of bucket) {
     const bizEmail = extractBusinessEmail(item);
-
-    if (!bizEmail) {
-      skipped++;
-      continue; // no email found for this business — skip
-    }
-
-    // Check daily cap
+    if (!bizEmail) { skipped++; continue; }
     if (getRemainingToday() <= 0) {
-      // Queue overflow for later
-      addToQueue([{
-        to_email: bizEmail,
-        subject:  applyVars(tpl.subject, item, senderEmail, senderName),
-        html:     applyVars(tpl.body,    item, senderEmail, senderName),
-        queued_at: new Date().toISOString()
-      }]);
-      queued++;
-      continue;
+      addToQueue([{ to_email: bizEmail, subject: applyVars(tpl.subject, item, senderEmail, senderName), html: applyVars(tpl.body, item, senderEmail, senderName), queued_at: new Date().toISOString() }]);
+      queued++; continue;
     }
-
-    // Send email
     try {
-      await fetch('/api/email/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-        body: JSON.stringify({
-          to_email:      bizEmail,
-          subject:       applyVars(tpl.subject, item, senderEmail, senderName),
-          html:          applyVars(tpl.body,    item, senderEmail, senderName),
-          business_url:  item.url || null,
-          business_name: (item.data && item.data.name) || null,
-          score:         item.score || null,
-          template_type: templateKey
-        })
-      });
-      incrementDailySent();
-      sent++;
-    } catch (e) {
-      console.error('Email send failed:', bizEmail, e);
-      skipped++;
-    }
+      await fetch('/api/email/send', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ to_email: bizEmail, subject: applyVars(tpl.subject, item, senderEmail, senderName), html: applyVars(tpl.body, item, senderEmail, senderName), business_url: item.url || null, business_name: (item.data && item.data.name) || null, score: item.score || null, template_type: templateKey }) });
+      incrementDailySent(); sent++;
+    } catch (e) { console.error('Email send failed:', bizEmail, e); skipped++; }
   }
-
   return { sent, queued, skipped };
 }
 
 // ============================================================
-// SEND BULK EMAILS — orchestrates all 3 buckets
+// SEND BULK EMAILS
 // ============================================================
 async function sendBulkEmails(results, senderEmail, senderName) {
-  if (!userId) return { sent: 0, queued: 0, skipped: 0, noEmail: 0 };
-
+  if (!userId) return { sent: 0, queued: 0, skipped: 0 };
   let totalSent = 0, totalQueued = 0, totalSkipped = 0;
-
-  // 1. Leaderboard ≥70 — submit + congrats email
   if (results.leaderboard.length > 0) {
-    await fetch('/api/bulk-scan/submit-leaderboard', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-      body: JSON.stringify({ entries: results.leaderboard, submittedBy: senderEmail })
-    }).catch(e => console.warn('Leaderboard submit failed', e));
-
+    await fetch('/api/bulk-scan/submit-leaderboard', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ entries: results.leaderboard, submittedBy: senderEmail }) }).catch(e => console.warn(e));
     const r = await sendEmailToBusinesses(results.leaderboard, 'congrats', senderEmail, senderName);
     totalSent += r.sent; totalQueued += r.queued; totalSkipped += r.skipped;
   }
-
-  // 2. Almost made it — 65-69 score (warmest lead)
   if (results.almostMade && results.almostMade.length > 0) {
     const r = await sendEmailToBusinesses(results.almostMade, 'almostMade', senderEmail, senderName);
     totalSent += r.sent; totalQueued += r.queued; totalSkipped += r.skipped;
   }
-
-  // 3. Improvement pitch — <65 with website
   if (results.withWebsite.length > 0) {
     const r = await sendEmailToBusinesses(results.withWebsite, 'improvement', senderEmail, senderName);
     totalSent += r.sent; totalQueued += r.queued; totalSkipped += r.skipped;
   }
-
-  // 3. Website offer — no website / score 0
   if (results.withoutWebsite.length > 0) {
     const r = await sendEmailToBusinesses(results.withoutWebsite, 'website', senderEmail, senderName);
     totalSent += r.sent; totalQueued += r.queued; totalSkipped += r.skipped;
   }
-
   return { sent: totalSent, queued: totalQueued, skipped: totalSkipped };
 }
 
 // ============================================================
-// PROCESS QUEUED EMAILS (call manually or on page load)
+// PROCESS QUEUED EMAILS
 // ============================================================
 async function processEmailQueue() {
   const queue = getQueue();
   if (!queue.length || !userId) return;
-  if (getRemainingToday() <= 0) return; // still at limit
-
+  if (getRemainingToday() <= 0) return;
   const toSend = queue.splice(0, getRemainingToday());
-  localStorage.setItem('emailQueue', JSON.stringify(queue)); // save remainder
-
+  localStorage.setItem('emailQueue', JSON.stringify(queue));
   for (const item of toSend) {
     if (getRemainingToday() <= 0) break;
     try {
-      await fetch('/api/email/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-        body: JSON.stringify({ to_email: item.to_email, subject: item.subject, html: item.html })
-      });
+      await fetch('/api/email/send', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId }, body: JSON.stringify({ to_email: item.to_email, subject: item.subject, html: item.html }) });
       incrementDailySent();
     } catch (e) { console.error('Queue send failed', e); }
   }
 }
 
 // ============================================================
-// LEADERBOARD — with filters + gold/silver/bronze colors
+// LEADERBOARD
 // ============================================================
 let allLeaderboardEntries = [];
 
-// Medal config: proper gold / silver / bronze
 const MEDAL = [
-  {
-    emoji: '🥇',
-    label: 'GOLD',
-    bg: 'linear-gradient(160deg,#3d2800 0%,#6b3f00 40%,#1a1000 100%)',
-    border: '#ffd700',
-    glow: 'rgba(255,215,0,0.35)',
-    scoreColor: '#ffd700',
-    badgeText: '#3d2800',
-    badgeBg: '#ffd700'
-  },
-  {
-    emoji: '🥈',
-    label: 'SILVER',
-    bg: 'linear-gradient(160deg,#1e2a35 0%,#37505f 40%,#0d1520 100%)',
-    border: '#b0c4d8',
-    glow: 'rgba(176,196,216,0.25)',
-    scoreColor: '#b0c4d8',
-    badgeText: '#1e2a35',
-    badgeBg: '#b0c4d8'
-  },
-  {
-    emoji: '🥉',
-    label: 'BRONZE',
-    bg: 'linear-gradient(160deg,#2d1400 0%,#7c3a00 40%,#1a0a00 100%)',
-    border: '#cd7f32',
-    glow: 'rgba(205,127,50,0.25)',
-    scoreColor: '#cd7f32',
-    badgeText: '#2d1400',
-    badgeBg: '#cd7f32'
-  }
+  { emoji: '\ud83e\udd47', label: 'GOLD',   bg: 'linear-gradient(160deg,#3d2800 0%,#6b3f00 40%,#1a1000 100%)', border: '#ffd700', glow: 'rgba(255,215,0,0.35)',   scoreColor: '#ffd700', badgeText: '#ffd700', badgeBg: 'rgba(61,40,0,0.85)'   },
+  { emoji: '\ud83e\udd48', label: 'SILVER', bg: 'linear-gradient(160deg,#1e2a35 0%,#37505f 40%,#0d1520 100%)', border: '#b0c4d8', glow: 'rgba(176,196,216,0.25)', scoreColor: '#b0c4d8', badgeText: '#b0c4d8', badgeBg: 'rgba(30,42,53,0.85)'   },
+  { emoji: '\ud83e\udd49', label: 'BRONZE', bg: 'linear-gradient(160deg,#2d1400 0%,#7c3a00 40%,#1a0a00 100%)', border: '#cd7f32', glow: 'rgba(205,127,50,0.25)',  scoreColor: '#cd7f32', badgeText: '#cd7f32', badgeBg: 'rgba(45,20,0,0.85)'   }
 ];
 
 async function loadLeaderboardData() {
@@ -3244,155 +3137,80 @@ async function loadLeaderboardData() {
       allLeaderboardEntries = data.entries;
       renderLeaderboard(data.entries);
     } else {
-      document.getElementById('top3-container').innerHTML =
-        '<p style="color:#6b7280!important;text-align:center;grid-column:1/-1;padding:2rem 0;">No leaderboard entries yet. Be the first to scan your site!</p>';
+      document.getElementById('top3-container').innerHTML = '<p style="color:#6b7280!important;text-align:center;grid-column:1/-1;padding:2rem 0;">No leaderboard entries yet. Be the first to scan your site!</p>';
     }
   } catch (e) {
-    console.error(e);
-    document.getElementById('top3-container').innerHTML =
-      '<p style="color:#6b7280!important;text-align:center;grid-column:1/-1;">Unable to load leaderboard.</p>';
+    document.getElementById('top3-container').innerHTML = '<p style="color:#6b7280!important;text-align:center;grid-column:1/-1;">Unable to load leaderboard.</p>';
   }
 }
 
 function applyLeaderboardFilters() {
-  const niche    = document.getElementById('filterNiche').value.toLowerCase();
-  const country  = document.getElementById('filterCountry').value;
-  const bizType  = document.getElementById('filterBizType').value.toLowerCase();
-  const scoreMin = document.getElementById('filterScore').value;
-
+  const niche   = document.getElementById('filterNiche').value.toLowerCase();
+  const country = document.getElementById('filterCountry').value;
+  const bizType = document.getElementById('filterBizType').value.toLowerCase();
+  const scoreMin= document.getElementById('filterScore').value;
   let filtered = allLeaderboardEntries.filter(e => {
-    if (niche    && (e.niche || '').toLowerCase() !== niche)       return false;
-    if (country  && (e.country || '') !== country)                 return false;
+    if (niche    && (e.niche || '').toLowerCase() !== niche) return false;
+    if (country  && (e.country || '') !== country) return false;
     if (bizType  && (e.business_type || '').toLowerCase() !== bizType) return false;
-    if (scoreMin && e.score < parseInt(scoreMin))                  return false;
+    if (scoreMin && e.score < parseInt(scoreMin)) return false;
     return true;
   });
-
-  // Count active filters
   const active = [niche, country, bizType, scoreMin].filter(Boolean).length;
-  document.getElementById('filterCount').textContent =
-    active > 0 ? `${active} filter${active>1?'s':''} active — ${filtered.length} result${filtered.length!==1?'s':''}` : '';
-
+  document.getElementById('filterCount').textContent = active > 0 ? `${active} filter${active>1?'s':''} active \u2014 ${filtered.length} result${filtered.length!==1?'s':''}` : '';
   renderLeaderboard(filtered);
 }
 
 function resetLeaderboardFilters() {
-  ['filterNiche','filterCountry','filterBizType','filterScore'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
+  ['filterNiche','filterCountry','filterBizType','filterScore'].forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('filterCount').textContent = '';
   renderLeaderboard(allLeaderboardEntries);
 }
 
 function renderLeaderboard(entries) {
-  // #5 — Niche context header
   const activeNiche   = document.getElementById('filterNiche')?.value || '';
   const activeCountry = document.getElementById('filterCountry')?.value || '';
   const nicheHeader   = document.getElementById('leaderboardNicheHeader');
   if (nicheHeader) {
     if (activeNiche || activeCountry) {
-      const label = [activeNiche, activeCountry].filter(Boolean).join(' · ');
-      nicheHeader.innerHTML = `
-        <div style="text-align:center;margin-bottom:20px;padding:14px 20px;background:rgba(124,58,237,0.15);border:1px solid #7c3aed;border-radius:12px;">
-          <div style="font-size:0.72rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Filtered View</div>
-          <div style="font-size:1.2rem;font-weight:800;color:#e9d5ff!important;">🏆 Top ${entries.length} · ${label}</div>
-          <div style="font-size:0.78rem;color:#7c3aed!important;margin-top:4px;">Showing ${entries.length} result${entries.length!==1?'s':''} · <button onclick="resetLeaderboardFilters()" style="background:none;border:none;color:#a78bfa!important;cursor:pointer;font-weight:700;font-size:0.78rem;text-decoration:underline;">Clear filters</button></div>
-        </div>`;
+      const label = [activeNiche, activeCountry].filter(Boolean).join(' \u00b7 ');
+      nicheHeader.innerHTML = `<div style="text-align:center;margin-bottom:20px;padding:14px 20px;background:rgba(124,58,237,0.15);border:1px solid #7c3aed;border-radius:12px;"><div style="font-size:0.72rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Filtered View</div><div style="font-size:1.2rem;font-weight:800;color:#e9d5ff!important;">\ud83c\udfc6 Top ${entries.length} \u00b7 ${label}</div><div style="font-size:0.78rem;color:#7c3aed!important;margin-top:4px;">Showing ${entries.length} result${entries.length!==1?'s':''} \u00b7 <button onclick="resetLeaderboardFilters()" style="background:none;border:none;color:#a78bfa!important;cursor:pointer;font-weight:700;font-size:0.78rem;text-decoration:underline;">Clear filters</button></div></div>`;
       nicheHeader.classList.remove('hidden');
-    } else {
-      nicheHeader.classList.add('hidden');
-    }
+    } else { nicheHeader.classList.add('hidden'); }
   }
-  const top3Container   = document.getElementById('top3-container');
-  const restContainer   = document.getElementById('rankings4to15Container');
-  const emptyState      = document.getElementById('leaderboardEmpty');
-
-  if (!entries || entries.length === 0) {
-    top3Container.innerHTML  = '';
-    restContainer.innerHTML  = '';
-    emptyState.classList.remove('hidden');
-    return;
-  }
+  const top3Container = document.getElementById('top3-container');
+  const restContainer = document.getElementById('rankings4to15Container');
+  const emptyState    = document.getElementById('leaderboardEmpty');
+  if (!entries || entries.length === 0) { top3Container.innerHTML = ''; restContainer.innerHTML = ''; emptyState.classList.remove('hidden'); return; }
   emptyState.classList.add('hidden');
 
-  // ── TOP 3 PODIUM — gold / silver / bronze ──
+  // Top 3 podium
   const top3 = entries.slice(0, 3);
   top3Container.innerHTML = top3.map((e, i) => {
     const m = MEDAL[i];
-    const name = e.company_name || new URL(e.url.startsWith('http') ? e.url : 'https://'+e.url).hostname;
+    const name = e.company_name || (() => { try { return new URL(e.url.startsWith('http') ? e.url : 'https://'+e.url).hostname; } catch(err) { return e.url; } })();
     const tags = [e.niche, e.business_type, e.country].filter(Boolean);
-    return `
-      <div style="
-        background:${m.bg};
-        border:2px solid ${m.border};
-        border-radius:16px;
-        padding:28px 20px 24px;
-        text-align:center;
-        position:relative;
-        box-shadow:0 0 28px ${m.glow}, inset 0 1px 0 rgba(255,255,255,0.07);
-        transition:transform 0.2s;
-      " onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='translateY(0)'">
-
-        <!-- rank badge -->
-        <div style="
-          position:absolute;top:-14px;left:50%;transform:translateX(-50%);
-          background:${m.badgeBg};color:${m.badgeText}!important;
-          font-size:0.65rem;font-weight:800;letter-spacing:0.1em;
-          padding:3px 12px;border-radius:99px;
-        ">${m.label}</div>
-
-        <!-- medal emoji -->
-        <div style="font-size:3rem;margin-bottom:6px;line-height:1;">${m.emoji}</div>
-
-        <!-- company name -->
-        <h3 style="font-weight:800;font-size:1.05rem;margin-bottom:6px;color:#f9fafb!important;line-height:1.3;">${name}</h3>
-
-        <!-- score -->
-        <div style="font-size:2.5rem;font-weight:900;color:${m.scoreColor}!important;line-height:1;margin-bottom:4px;">${e.score}</div>
-        <div style="font-size:0.75rem;color:rgba(255,255,255,0.5)!important;margin-bottom:12px;">/ 100</div>
-
-        <!-- tags: niche · type · country -->
-        ${tags.length ? `<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin-bottom:14px;">
-          ${tags.map(t => `<span style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.75)!important;font-size:0.68rem;padding:2px 8px;border-radius:99px;">${t}</span>`).join('')}
-        </div>` : ''}
-
-        <a href="${e.url}" target="_blank" rel="noopener" style="
-          display:inline-flex;align-items:center;gap:6px;
-          font-size:0.78rem;font-weight:700;letter-spacing:0.02em;
-          background:${m.border};color:#fff!important;
-          padding:8px 18px;border-radius:10px;
-          border:none;text-decoration:none;
-          box-shadow:0 2px 10px ${m.glow};
-          transition:opacity 0.15s;
-        " onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
-          🔍 Visit Scanned Site
-        </a>
-      </div>`;
+    return `<div style="background:${m.bg};border:2px solid ${m.border};border-radius:16px;padding:28px 20px 24px;text-align:center;position:relative;box-shadow:0 0 28px ${m.glow},inset 0 1px 0 rgba(255,255,255,0.07);transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='translateY(0)'">
+      <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:${m.badgeBg};color:${m.badgeText}!important;font-size:0.65rem;font-weight:800;letter-spacing:0.1em;padding:3px 12px;border-radius:99px;">${m.label}</div>
+      <div style="font-size:3rem;margin-bottom:6px;line-height:1;">${m.emoji}</div>
+      <h3 style="font-weight:800;font-size:1.05rem;margin-bottom:6px;color:#f9fafb!important;line-height:1.3;">${name}</h3>
+      <div style="font-size:2.5rem;font-weight:900;color:${m.scoreColor}!important;line-height:1;margin-bottom:4px;">${e.score}</div>
+      <div style="font-size:0.75rem;color:rgba(255,255,255,0.5)!important;margin-bottom:12px;">/ 100</div>
+      ${tags.length ? `<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin-bottom:14px;">${tags.map(t => `<span style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.75)!important;font-size:0.68rem;padding:2px 8px;border-radius:99px;">${t}</span>`).join('')}</div>` : ''}
+      <a href="${e.url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;font-size:0.78rem;font-weight:800;letter-spacing:0.02em;background:${m.badgeBg};color:${m.badgeText}!important;padding:8px 18px;border-radius:10px;border:none;text-decoration:none;box-shadow:0 2px 10px ${m.glow};transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">\ud83d\udd0d Visit Scanned Site</a>
+    </div>`;
   }).join('');
 
-  // ── RANKS 4+ LIST ──
-  const rest = entries.slice(3);   // everything after top 3, up to 100
+  // Ranks 4+
+  const rest = entries.slice(3);
   if (rest.length > 0) {
-    const DEFAULT_SHOW = 22;       // shows ranks 4-25 on load
-    const showAll     = rest.length <= DEFAULT_SHOW;
-    const visible     = showAll ? rest : rest.slice(0, DEFAULT_SHOW);
-
-    restContainer.innerHTML = `
-      <div id="rankingsList" style="background:#111827;border:1px solid #374151;border-radius:12px;overflow:hidden;margin-top:8px;">
-        ${buildRankRows(visible, 4)}
-      </div>
-      ${!showAll ? `
-      <div id="loadMoreWrap" style="text-align:center;margin-top:16px;">
-        <button onclick="expandRankings(${JSON.stringify(rest).replace(/"/g,"'")})"
-          style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white!important;
-                 border:none;padding:10px 32px;border-radius:8px;font-weight:700;
-                 cursor:pointer;font-size:0.9rem;">
-          Show More <span style="opacity:.7;font-weight:400;">(${rest.length - DEFAULT_SHOW} more entries)</span>
-        </button>
-      </div>` : ''}`;
-  } else {
-    restContainer.innerHTML = '';
-  }
+    const DEFAULT_SHOW = 22, showAll = rest.length <= DEFAULT_SHOW;
+    const visible = showAll ? rest : rest.slice(0, DEFAULT_SHOW);
+    restContainer.innerHTML = `<div id="rankingsList" style="background:#111827;border:1px solid #374151;border-radius:12px;overflow:hidden;margin-top:8px;">${buildRankRows(visible, 4)}</div>
+    ${!showAll ? `<div id="loadMoreWrap" style="text-align:center;margin-top:16px;"><button onclick="expandRankings()" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white!important;border:none;padding:10px 32px;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.9rem;">Show More <span style="opacity:.7;font-weight:400;">(${rest.length - DEFAULT_SHOW} more entries)</span></button></div>` : ''}`;
+    // Store rest for expandRankings
+    window._lbRestEntries = rest;
+  } else { restContainer.innerHTML = ''; }
 }
 
 function buildRankRows(entries, startRank) {
@@ -3400,38 +3218,29 @@ function buildRankRows(entries, startRank) {
     const rank = startRank + i;
     const name = e.company_name || (e.url.replace(/https?:\/\//,'').split('/')[0]);
     const rankColor = rank <= 10 ? '#c084fc' : rank <= 25 ? '#818cf8' : '#6b7280';
-    const rowBg     = rank % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent';
-    return `
-      <div style="
-        display:flex;align-items:center;justify-content:space-between;
-        padding:13px 20px;background:${rowBg};
-        border-bottom:1px solid #1f2937;transition:background 0.15s;
-      " onmouseover="this.style.background='rgba(126,34,206,0.1)'" onmouseout="this.style.background='${rowBg}'">
-        <div style="display:flex;align-items:center;gap:14px;min-width:0;">
-          <span style="font-size:0.85rem;font-weight:800;color:${rankColor}!important;width:28px;flex-shrink:0;text-align:right;">${rank}</span>
-          <div style="min-width:0;">
-            <div style="font-weight:600;color:#f3f4f6!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
-            <div style="font-size:0.7rem;color:#9ca3af!important;margin-top:1px;">
-              ${[e.niche, e.business_type, e.country].filter(Boolean).join(' · ')}
-            </div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;gap:16px;flex-shrink:0;">
-          <span style="font-weight:800;font-size:1.05rem;color:#4ade80!important;">${e.score}<span style="font-size:0.7rem;font-weight:400;color:#9ca3af!important;">/100</span></span>
-          <a href="${e.url}" target="_blank" rel="noopener" style="font-size:0.75rem;color:#818cf8!important;text-decoration:none;font-weight:600;">Visit →</a>
-        </div>
-      </div>`;
+    const rowBg = rank % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:13px 20px;background:${rowBg};border-bottom:1px solid #1f2937;transition:background 0.15s;" onmouseover="this.style.background='rgba(126,34,206,0.1)'" onmouseout="this.style.background='${rowBg}'">
+      <div style="display:flex;align-items:center;gap:14px;min-width:0;">
+        <span style="font-size:0.85rem;font-weight:800;color:${rankColor}!important;width:28px;flex-shrink:0;text-align:right;">${rank}</span>
+        <div style="min-width:0;"><div style="font-weight:600;color:#f3f4f6!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div><div style="font-size:0.7rem;color:#9ca3af!important;margin-top:1px;">${[e.niche, e.business_type, e.country].filter(Boolean).join(' \u00b7 ')}</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;flex-shrink:0;">
+        <span style="font-weight:800;font-size:1.05rem;color:#4ade80!important;">${e.score}<span style="font-size:0.7rem;font-weight:400;color:#9ca3af!important;">/100</span></span>
+        <a href="${e.url}" target="_blank" rel="noopener" style="font-size:0.75rem;color:#818cf8!important;text-decoration:none;font-weight:600;">Visit \u2192</a>
+      </div>
+    </div>`;
   }).join('');
 }
 
-function expandRankings(rest) {
+function expandRankings() {
+  const rest = window._lbRestEntries || [];
   document.getElementById('rankingsList').innerHTML = buildRankRows(rest, 4);
   const wrap = document.getElementById('loadMoreWrap');
-  if (wrap) wrap.innerHTML = `<p style="text-align:center;font-size:0.8rem;color:#6b7280!important;margin-top:12px;">Showing all ${rest.length} entries (ranks 4–${rest.length + 3})</p>`;
+  if (wrap) wrap.innerHTML = `<p style="text-align:center;font-size:0.8rem;color:#6b7280!important;margin-top:12px;">Showing all ${rest.length} entries (ranks 4\u2013${rest.length + 3})</p>`;
 }
 
 // ============================================================
-// FREELANCERS — unchanged server calls
+// FREELANCERS
 // ============================================================
 async function loadFreelancers() {
   try {
@@ -3441,102 +3250,51 @@ async function loadFreelancers() {
     if (data.success && data.freelancers && data.freelancers.length > 0) {
       function renderCard(f, featured) {
         var borderColor = featured ? '#7e22ce' : '#374151';
-        var cardStyle = featured
-          ? 'border:2px solid #7e22ce;background:linear-gradient(135deg,#0f0a1e,#1a1040);'
-          : 'border:1px solid #374151;';
-        var avatarSize = featured ? '52' : '48';
+        var cardStyle = featured ? 'border:2px solid #7e22ce;background:linear-gradient(135deg,#0f0a1e,#1a1040);' : 'border:1px solid #374151;';
+        var bio = (f.bio || 'No bio available.').slice(0, 120) + ((f.bio || '').length > 120 ? '\u2026' : '');
         var badge = f.is_featured ? '<span style="font-size:0.6rem;background:#7e22ce;color:white!important;padding:2px 7px;border-radius:99px;margin-left:6px;white-space:nowrap;">FEATURED</span>' : '';
-        var bio = (f.bio || 'No bio available.').slice(0, 120) + ((f.bio || '').length > 120 ? '…' : '');
-        return '<div class="card" style="' + cardStyle + 'transition:border-color 0.2s;display:flex;flex-direction:column;' + (featured ? 'flex:1;' : '') + '" onmouseover="this.style.borderColor=\'#a855f7\'" onmouseout="this.style.borderColor=\'' + borderColor + '\'">'
+        return '<div class="card" style="' + cardStyle + 'transition:border-color 0.2s;display:flex;flex-direction:column;" onmouseover="this.style.borderColor=\\'#a855f7\\'" onmouseout="this.style.borderColor=\\'' + borderColor + '\\'">'
           + '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">'
-          + '<div style="width:' + avatarSize + 'px;height:' + avatarSize + 'px;border-radius:50%;background:linear-gradient(135deg,#7e22ce,#be185d);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.25rem;border:' + (featured ? '2px solid #a855f7' : 'none') + ';">' + f.name.charAt(0) + '</div>'
-          + '<div style="flex:1;min-width:0;">'
-          + '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;"><h3 style="font-weight:700;margin-bottom:0;">' + f.name + '</h3>' + badge + '</div>'
-          + '<p style="font-size:0.82rem;color:#9ca3af!important;margin-top:2px;">' + (f.title || 'Specialist') + '</p>'
-          + '</div></div>'
+          + '<div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#7e22ce,#be185d);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.25rem;">' + f.name.charAt(0) + '</div>'
+          + '<div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;"><h3 style="font-weight:700;margin-bottom:0;">' + f.name + '</h3>' + badge + '</div><p style="font-size:0.82rem;color:#9ca3af!important;margin-top:2px;">' + (f.title || 'Specialist') + '</p></div></div>'
           + '<p style="font-size:0.85rem;color:#d1d5db!important;margin-bottom:16px;flex:1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5;max-height:3.9rem;">' + bio + '</p>'
           + '<a href="https://wa.me/31628073996" target="_blank" rel="noopener" style="display:block;width:100%;background:#0f7b3a;color:white!important;text-align:center;padding:10px;border-radius:8px;font-weight:600;text-decoration:none;margin-top:auto;">Contact</a>'
           + '</div>';
       }
-
       var featured = data.freelancers.filter(function(f){ return f.is_featured; });
       var standard = data.freelancers.filter(function(f){ return !f.is_featured; });
-
-      // If no featured flags set, treat first 4 as featured, rest as standard
-      if (featured.length === 0) {
-        featured = data.freelancers.slice(0, 4);
-        standard = data.freelancers.slice(4);
-      }
-
-      var featuredHTML = '';
-      if (featured.length > 0) {
-        featuredHTML = '<div style="display:flex;flex-direction:column;gap:16px;">'
-          + '<div style="font-size:0.7rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;">⭐ Featured Specialists</div>'
-          + '<div style="display:flex;flex-direction:column;gap:16px;flex:1;">'
-          + featured.map(function(f){ return renderCard(f, true); }).join('')
-          + '</div>'
-          + '</div>';
-      }
-      var standardHTML = '';
-      if (standard.length > 0) {
-        standardHTML = '<div style="display:flex;flex-direction:column;gap:16px;">'
-          + '<div style="font-size:0.7rem;font-weight:700;color:#6b7280!important;letter-spacing:0.1em;text-transform:uppercase;">🔍 More Specialists</div>'
-          + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;flex:1;grid-auto-rows:1fr;">' + standard.map(function(f){ return renderCard(f, false); }).join('') + '</div>'
-          + '</div>';
-      }
-      if (featured.length > 0 && standard.length > 0) {
-        grid.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1.6fr;gap:24px;align-items:stretch;">' + featuredHTML + standardHTML + '</div>';
-      } else {
-        grid.innerHTML = featuredHTML || standardHTML;
-      }
+      if (featured.length === 0) { featured = data.freelancers.slice(0,4); standard = data.freelancers.slice(4); }
+      var featuredHTML = featured.length > 0 ? '<div style="display:flex;flex-direction:column;gap:16px;"><div style="font-size:0.7rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;">\u2b50 Featured Specialists</div><div style="display:flex;flex-direction:column;gap:16px;flex:1;">' + featured.map(function(f){ return renderCard(f, true); }).join('') + '</div></div>' : '';
+      var standardHTML = standard.length > 0 ? '<div style="display:flex;flex-direction:column;gap:16px;"><div style="font-size:0.7rem;font-weight:700;color:#6b7280!important;letter-spacing:0.1em;text-transform:uppercase;">\ud83d\udd0d More Specialists</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;flex:1;">' + standard.map(function(f){ return renderCard(f, false); }).join('') + '</div></div>' : '';
+      grid.innerHTML = (featured.length > 0 && standard.length > 0) ? '<div style="display:grid;grid-template-columns:1fr 1.6fr;gap:24px;align-items:stretch;">' + featuredHTML + standardHTML + '</div>' : (featuredHTML || standardHTML);
     } else {
-      // 8 placeholder cards: top 4 featured, bottom 4 standard
+      // Placeholder cards
       function makeCard(f, featured) {
         var borderColor = featured ? (f.real ? '#7e22ce' : '#4c1d95') : '#374151';
-        var avatarBg = featured
-          ? (f.real ? 'linear-gradient(135deg,#7e22ce,#be185d)' : 'linear-gradient(135deg,#4c1d95,#312e81)')
-          : 'linear-gradient(135deg,#1f2937,#374151)';
+        var avatarBg = featured ? (f.real ? 'linear-gradient(135deg,#7e22ce,#be185d)' : 'linear-gradient(135deg,#4c1d95,#312e81)') : 'linear-gradient(135deg,#1f2937,#374151)';
         var cardBg = featured ? 'background:linear-gradient(135deg,#0f0a1e,#1a1040);' : '';
         var opacity = (!f.real && featured) ? 'opacity:0.75;' : (!featured ? 'opacity:0.65;' : '');
-        var btn = f.real
-          ? '<a href="https://wa.me/31628073996" target="_blank" rel="noopener" style="display:block;width:100%;background:#0f7b3a;color:white!important;text-align:center;padding:10px;border-radius:8px;font-weight:600;text-decoration:none;margin-top:auto;">Contact</a>'
-          : '<button onclick="openFreelancerModal()" style="display:block;width:100%;background:' + (featured ? 'linear-gradient(135deg,#7e22ce,#be185d)' : '#1f2937') + ';color:' + (featured ? 'white' : '#d1d5db') + '!important;text-align:center;padding:10px;border-radius:8px;font-weight:600;border:' + (featured ? 'none' : '1px solid #374151') + ';cursor:pointer;margin-top:auto;">Apply for This Spot</button>';
+        var btn = f.real ? '<a href="https://wa.me/31628073996" target="_blank" rel="noopener" style="display:block;width:100%;background:#0f7b3a;color:white!important;text-align:center;padding:10px;border-radius:8px;font-weight:600;text-decoration:none;margin-top:auto;">Contact</a>' : '<button onclick="openFreelancerModal()" style="display:block;width:100%;background:' + (featured ? 'linear-gradient(135deg,#7e22ce,#be185d)' : '#1f2937') + ';color:white!important;text-align:center;padding:10px;border-radius:8px;font-weight:600;border:none;cursor:pointer;margin-top:auto;">Apply for This Spot</button>';
         var badge = f.badge ? '<span style="font-size:0.6rem;background:' + (f.real ? '#7e22ce' : '#4c1d95') + ';color:white!important;padding:2px 7px;border-radius:99px;white-space:nowrap;">' + f.badge + '</span>' : '';
-        return '<div class="card" style="border:' + (featured ? '2px' : '1px') + ' solid ' + borderColor + ';' + cardBg + 'transition:border-color 0.2s,opacity 0.2s;display:flex;flex-direction:column;' + opacity + '" onmouseover="this.style.borderColor=\'#a855f7\';this.style.opacity=\'1\'" onmouseout="this.style.borderColor=\'' + borderColor + '\';this.style.opacity=\'' + ((!f.real&&featured)||!featured ? (featured?'0.75':'0.65') : '1') + '\'">'
-          + '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">'
-          + '<div style="width:' + (featured?'52':'48') + 'px;height:' + (featured?'52':'48') + 'px;border-radius:50%;background:' + avatarBg + ';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.25rem;border:' + (featured?'2px solid '+(f.real?'#a855f7':'#6d28d9'):'1px solid #4b5563') + ';">' + f.initial + '</div>'
-          + '<div style="flex:1;min-width:0;">'
-          + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"><h3 style="font-weight:700;margin-bottom:0;">' + f.name + '</h3>' + badge + '</div>'
-          + '<p style="font-size:0.82rem;color:#9ca3af!important;margin-top:2px;">' + f.title + '</p>'
-          + '</div></div>'
+        return '<div class="card" style="border:' + (featured ? '2' : '1') + 'px solid ' + borderColor + ';' + cardBg + 'transition:border-color 0.2s;display:flex;flex-direction:column;' + opacity + '" onmouseover="this.style.borderColor=\\'#a855f7\\';this.style.opacity=\\'1\\'" onmouseout="this.style.borderColor=\\'' + borderColor + '\\';this.style.opacity=\\'' + ((!f.real&&featured)||!featured?(featured?'0.75':'0.65'):'1') + '\\'">'
+          + '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;"><div style="width:' + (featured?'52':'48') + 'px;height:' + (featured?'52':'48') + 'px;border-radius:50%;background:' + avatarBg + ';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.25rem;border:' + (featured?'2px solid '+(f.real?'#a855f7':'#6d28d9'):'1px solid #4b5563') + ';">' + f.initial + '</div><div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"><h3 style="font-weight:700;margin-bottom:0;">' + f.name + '</h3>' + badge + '</div><p style="font-size:0.82rem;color:#9ca3af!important;margin-top:2px;">' + f.title + '</p></div></div>'
           + '<p style="font-size:0.85rem;color:#d1d5db!important;margin-bottom:16px;flex:1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5;max-height:3.9rem;">' + f.bio + '</p>'
           + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:0.75rem;color:#6b7280!important;"><span>' + f.country + '</span><span>' + f.rate + '</span></div>'
           + btn + '</div>';
       }
-
       var featured = [
-        { name: 'Ottmar Francisca', title: 'GRAAF Framework Creator · SEO Recovery Expert', bio: 'Founder of ContentScale. 24+ years in leadership. 78% traffic recovery rate across 200+ clients. Specialized in Google algorithm recovery and AI Overview optimization.', country: '🇳🇱 Netherlands', rate: '€150 / hour', badge: 'FOUNDER', initial: 'O', real: true },
-        { name: 'Open Spot', title: 'Senior SEO Strategist', bio: 'This featured spot is available for a verified SEO strategist. Featured specialists appear at the top of the grid and get priority visibility to all businesses using ContentScale.', country: '🌍 Any country', rate: 'Your rate', badge: 'FEATURED', initial: '★', real: false },
-        { name: 'Open Spot', title: 'Technical SEO Expert', bio: 'Schema markup, Core Web Vitals, site architecture — this featured spot is open for a technical SEO expert who wants to connect with businesses recovering from Google updates.', country: '🌍 Any country', rate: 'Your rate', badge: 'FEATURED', initial: '★', real: false },
-        { name: 'Open Spot', title: 'Content & AI SEO Specialist', bio: 'AI Overview optimization, E-E-A-T content strategy, CRAFT framework — this featured spot is available for a specialist in modern AI-era SEO content.', country: '🌍 Any country', rate: 'Your rate', badge: 'FEATURED', initial: '★', real: false }
+        { name: 'Ottmar Francisca', title: 'GRAAF Framework Creator \u00b7 SEO Recovery Expert', bio: 'Founder of ContentScale. 24+ years in leadership. 78% traffic recovery rate across 200+ clients. Specialized in Google algorithm recovery and AI Overview optimization.', country: '\ud83c\uddf3\ud83c\uddf1 Netherlands', rate: '\u20ac150 / hour', badge: 'FOUNDER', initial: 'O', real: true },
+        { name: 'Open Spot', title: 'Senior SEO Strategist', bio: 'This featured spot is available for a verified SEO strategist.', country: '\ud83c\udf0d Any country', rate: 'Your rate', badge: 'FEATURED', initial: '\u2605', real: false },
+        { name: 'Open Spot', title: 'Technical SEO Expert', bio: 'Schema markup, Core Web Vitals \u2014 this featured spot is open for a technical SEO expert.', country: '\ud83c\udf0d Any country', rate: 'Your rate', badge: 'FEATURED', initial: '\u2605', real: false },
+        { name: 'Open Spot', title: 'Content & AI SEO Specialist', bio: 'AI Overview optimization, E-E-A-T content strategy \u2014 this featured spot is available.', country: '\ud83c\udf0d Any country', rate: 'Your rate', badge: 'FEATURED', initial: '\u2605', real: false }
       ];
       var standard = [
-        { name: 'Open Spot', title: 'Local SEO Specialist', bio: 'Google Business Profile optimization, local citations, maps ranking — apply to join ContentScale and connect with local businesses across Europe and beyond.', country: '🌍 Any country', rate: 'Your rate', initial: '?', real: false },
-        { name: 'Open Spot', title: 'Link Building Expert', bio: 'Authority building, digital PR, outreach — join the ContentScale specialist network and work with businesses that need credibility signals to recover lost rankings.', country: '🌍 Any country', rate: 'Your rate', initial: '?', real: false },
-        { name: 'Open Spot', title: 'SEO Copywriter', bio: 'GRAAF-optimized content, long-form articles, FAQ sections — apply to become a verified ContentScale specialist and get matched with clients who need your skills.', country: '🌍 Any country', rate: 'Your rate', initial: '?', real: false },
-        { name: 'Open Spot', title: 'Analytics & Reporting Expert', bio: 'GA4, Search Console, rank tracking — help businesses understand what the numbers mean after an algorithm update. Apply to join the ContentScale network.', country: '🌍 Any country', rate: 'Your rate', initial: '?', real: false }
+        { name: 'Open Spot', title: 'Local SEO Specialist', bio: 'Google Business Profile, local citations \u2014 apply to join ContentScale.', country: '\ud83c\udf0d Any country', rate: 'Your rate', initial: '?', real: false },
+        { name: 'Open Spot', title: 'Link Building Expert', bio: 'Authority building, digital PR \u2014 join the ContentScale specialist network.', country: '\ud83c\udf0d Any country', rate: 'Your rate', initial: '?', real: false },
+        { name: 'Open Spot', title: 'SEO Copywriter', bio: 'GRAAF-optimized content \u2014 apply to become a verified ContentScale specialist.', country: '\ud83c\udf0d Any country', rate: 'Your rate', initial: '?', real: false },
+        { name: 'Open Spot', title: 'Analytics & Reporting Expert', bio: 'GA4, Search Console \u2014 help businesses understand what the numbers mean.', country: '\ud83c\udf0d Any country', rate: 'Your rate', initial: '?', real: false }
       ];
-
-      grid.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1.6fr;gap:24px;align-items:stretch;">'
-        + '<div style="display:flex;flex-direction:column;gap:16px;">'
-        + '<div style="font-size:0.7rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;">⭐ Featured Specialists</div>'
-        + featured.map(function(f){ return makeCard(f, true); }).join('')
-        + '</div>'
-        + '<div style="display:flex;flex-direction:column;gap:16px;">'
-        + '<div style="font-size:0.7rem;font-weight:700;color:#6b7280!important;letter-spacing:0.1em;text-transform:uppercase;">🔍 Available Spots</div>'
-        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">' + standard.map(function(f){ return makeCard(f, false); }).join('') + '</div>'
-        + '</div>'
-        + '</div>';
+      grid.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1.6fr;gap:24px;align-items:stretch;"><div style="display:flex;flex-direction:column;gap:16px;"><div style="font-size:0.7rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;">\u2b50 Featured Specialists</div>' + featured.map(function(f){ return makeCard(f, true); }).join('') + '</div><div style="display:flex;flex-direction:column;gap:16px;"><div style="font-size:0.7rem;font-weight:700;color:#6b7280!important;letter-spacing:0.1em;text-transform:uppercase;">\ud83d\udd0d Available Spots</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">' + standard.map(function(f){ return makeCard(f, false); }).join('') + '</div></div></div>';
     }
   } catch (e) { console.error(e); }
 }
@@ -3548,7 +3306,9 @@ function openFreelancerModal() { document.getElementById('freelancerModal').clas
 function closeModal() { document.getElementById('freelancerModal').classList.remove('active'); }
 function toggleMobileMenu() { document.getElementById('mobileMenu').classList.toggle('open'); }
 
-// ── MY ACTIVITY ──────────────────────────────────────────────────────────────
+// ============================================================
+// MY ACTIVITY
+// ============================================================
 let allActivityScans = [];
 
 async function loadUserActivity() {
@@ -3557,8 +3317,6 @@ async function loadUserActivity() {
     const data = await res.json();
     if (!data.success) return;
     allActivityScans = data.scans || [];
-
-    // Stats
     const total = allActivityScans.length;
     const emailed = allActivityScans.filter(s => s.email_status === 'has_email').length;
     const noEmail = allActivityScans.filter(s => s.email_status === 'no_email').length;
@@ -3567,7 +3325,6 @@ async function loadUserActivity() {
     document.getElementById('actStatEmailed').textContent = emailed;
     document.getElementById('actStatNoEmail').textContent = noEmail;
     document.getElementById('actStatLeaderboard').textContent = lb;
-
     filterActivity();
   } catch (e) { console.error(e); }
 }
@@ -3583,62 +3340,34 @@ function filterActivity() {
 
 function renderActivityTable(scans) {
   const tbody = document.getElementById('activityTableBody');
-  if (!scans.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="py-6 text-center" style="color:#6b7280;">No scans yet — run Find Me Leads to get started.</td></tr>';
-    return;
-  }
+  if (!scans.length) { tbody.innerHTML = '<tr><td colspan="6" class="py-6 text-center" style="color:#6b7280;">No scans yet \u2014 run a scan to get started.</td></tr>'; return; }
   tbody.innerHTML = scans.map(s => {
-    const score = s.score !== null
-      ? '<span style="font-weight:700;color:' + (s.score>=70?'#4ade80':s.score>=50?'#fbbf24':'#f87171') + ';">' + s.score + '/100</span>'
-      : '—';
-    const statusBadge = s.email_status === 'has_email'
-      ? '<span style="background:#0f2d1a;color:#4ade80;padding:2px 8px;border-radius:99px;font-size:0.72rem;">✉ Sent</span>'
-      : '<span style="background:#1c1917;color:#9ca3af;padding:2px 8px;border-radius:99px;font-size:0.72rem;">✗ No email</span>';
-    let rec = '—';
-    try { const r = JSON.parse(s.recommendations || '[]'); rec = r[0] || '—'; } catch {}
+    const score = s.score !== null ? '<span style="font-weight:700;color:' + (s.score>=70?'#4ade80':s.score>=50?'#fbbf24':'#f87171') + ';">' + s.score + '/100</span>' : '\u2014';
+    const statusBadge = s.email_status === 'has_email' ? '<span style="background:#0f2d1a;color:#4ade80;padding:2px 8px;border-radius:99px;font-size:0.72rem;">\u2709 Sent</span>' : '<span style="background:#1c1917;color:#9ca3af;padding:2px 8px;border-radius:99px;font-size:0.72rem;">\u2717 No email</span>';
+    let rec = '\u2014'; try { const r = JSON.parse(s.recommendations || '[]'); rec = r[0] || '\u2014'; } catch {}
     const dt = new Date(s.created_at);
     const dateStr = dt.toLocaleDateString('nl-NL', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
-    const urlDisplay = s.business_url ? '<a href="' + s.business_url + '" target="_blank" style="color:#60a5fa;">' + (s.business_name || s.business_url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]) + '</a>' : '—';
+    const urlDisplay = s.business_url ? '<a href="' + s.business_url + '" target="_blank" style="color:#60a5fa;">' + (s.business_name || s.business_url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]) + '</a>' : '\u2014';
     const emailCell = s.email_found ? '<span style="color:#d1d5db;font-size:0.78rem;">' + s.email_found + '</span>' : '<span style="color:#6b7280;font-size:0.78rem;">not found</span>';
-    return '<tr style="border-bottom:1px solid #1f2937;">'
-      + '<td class="py-3 pr-4">' + urlDisplay + '</td>'
-      + '<td class="py-3 pr-4">' + score + '</td>'
-      + '<td class="py-3 pr-4">' + emailCell + '</td>'
-      + '<td class="py-3 pr-4">' + statusBadge + '</td>'
-      + '<td class="py-3 pr-4" style="color:#9ca3af;font-size:0.78rem;max-width:240px;">' + rec + '</td>'
-      + '<td class="py-3" style="color:#6b7280;font-size:0.72rem;white-space:nowrap;">' + dateStr + '</td>'
-      + '</tr>';
+    return '<tr style="border-bottom:1px solid #1f2937;"><td class="py-3 pr-4">' + urlDisplay + '</td><td class="py-3 pr-4">' + score + '</td><td class="py-3 pr-4">' + emailCell + '</td><td class="py-3 pr-4">' + statusBadge + '</td><td class="py-3 pr-4" style="color:#9ca3af;font-size:0.78rem;max-width:240px;">' + rec + '</td><td class="py-3" style="color:#6b7280;font-size:0.72rem;white-space:nowrap;">' + dateStr + '</td></tr>';
   }).join('');
 }
-// ─────────────────────────────────────────────────────────────────────────────
 
 function exportActivityCSV() {
   const rows = [['Business','URL','Score','Email Found','Status','Top Issue','Scanned']];
   allActivityScans.forEach(s => {
-    let rec = '';
-    try { rec = JSON.parse(s.recommendations || '[]')[0] || ''; } catch {}
-    rows.push([
-      s.business_name || '', s.business_url || '', s.score || '',
-      s.email_found || '', s.email_status || '', rec,
-      new Date(s.created_at).toLocaleString('nl-NL')
-    ]);
+    let rec = ''; try { rec = JSON.parse(s.recommendations || '[]')[0] || ''; } catch {}
+    rows.push([s.business_name || '', s.business_url || '', s.score || '', s.email_found || '', s.email_status || '', rec, new Date(s.created_at).toLocaleString('nl-NL')]);
   });
-  const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
-  const a = document.createElement('a');
-  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-  a.download = 'contentscale-scan-activity-' + new Date().toISOString().split('T')[0] + '.csv';
-  a.click();
+  const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('
+');
+  const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv); a.download = 'contentscale-activity-' + new Date().toISOString().split('T')[0] + '.csv'; a.click();
 }
 
 function exportActivityPDF() {
-  // Load jsPDF from CDN then generate
   if (window.jspdf) { doGeneratePDF(); return; }
-  const s = document.createElement('script');
-  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-  s.onload = function() {
-    if (window.jspdf) { window.jsPDF = window.jspdf.jsPDF; }
-    doGeneratePDF();
-  };
+  const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+  s.onload = function() { if (window.jspdf) window.jsPDF = window.jspdf.jsPDF; doGeneratePDF(); };
   document.head.appendChild(s);
 }
 
@@ -3647,84 +3376,46 @@ function doGeneratePDF() {
   if (!jsPDF) { alert('PDF library failed to load. Try again.'); return; }
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const date = new Date().toLocaleDateString('nl-NL', { day:'2-digit', month:'long', year:'numeric' });
-
-  // Header
-  doc.setFillColor(126, 34, 206);
-  doc.rect(0, 0, 297, 22, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(14); doc.setFont('helvetica', 'bold');
-  doc.text('ContentScale — Scan Activity Report', 14, 10);
-  doc.setFontSize(9); doc.setFont('helvetica', 'normal');
-  doc.text('Generated: ' + date + '  ·  app.contentscale.site', 14, 17);
-
-  // Summary stats
+  doc.setFillColor(126, 34, 206); doc.rect(0, 0, 297, 22, 'F');
+  doc.setTextColor(255, 255, 255); doc.setFontSize(14); doc.setFont('helvetica', 'bold');
+  doc.text('ContentScale \u2014 Scan Activity Report', 14, 10); doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+  doc.text('Generated: ' + date + '  \u00b7  app.contentscale.site', 14, 17);
   const total = allActivityScans.length;
   const emailed = allActivityScans.filter(s => s.email_status === 'has_email').length;
-  const noEmail = allActivityScans.filter(s => s.email_status === 'no_email').length;
-  const lb = allActivityScans.filter(s => s.score >= 70).length;
-
-  doc.setTextColor(30, 30, 30);
-  doc.setFontSize(9); doc.setFont('helvetica', 'bold');
-  doc.text('Summary:', 14, 30);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Total scanned: ' + total + '   |   Emails sent: ' + emailed + '   |   No email found: ' + noEmail + '   |   Leaderboard (70+): ' + lb, 14, 36);
-
-  // Table headers
-  const cols = ['Business', 'URL', 'Score', 'Email Found', 'Status', 'Scanned'];
-  const colW  = [55, 65, 18, 55, 22, 35];
+  doc.setTextColor(30, 30, 30); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+  doc.text('Summary:', 14, 30); doc.setFont('helvetica', 'normal');
+  doc.text('Total: ' + total + '  |  Emails: ' + emailed, 14, 36);
+  const cols = ['Business','URL','Score','Email','Status','Scanned'];
+  const colW = [55,65,18,55,22,35];
   let y = 45;
-  doc.setFillColor(240, 235, 255);
-  doc.rect(14, y - 5, 269, 8, 'F');
+  doc.setFillColor(240, 235, 255); doc.rect(14, y-5, 269, 8, 'F');
   doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
-  let x = 14;
-  cols.forEach((col, i) => { doc.text(col, x + 2, y); x += colW[i]; });
-
-  // Table rows
+  let x = 14; cols.forEach((col, i) => { doc.text(col, x+2, y); x += colW[i]; });
   doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
   allActivityScans.forEach((s, idx) => {
-    y += 8;
-    if (y > 190) { doc.addPage(); y = 20; }
-    if (idx % 2 === 0) { doc.setFillColor(250, 248, 255); doc.rect(14, y - 5, 269, 7, 'F'); }
-    const scoreColor = s.score >= 70 ? [5, 150, 105] : s.score >= 50 ? [180, 83, 9] : [185, 28, 28];
-    x = 14;
-    doc.setTextColor(30, 30, 30);
-    doc.text((s.business_name || '—').substring(0, 28), x + 2, y); x += colW[0];
-    doc.setTextColor(37, 99, 235);
-    doc.text((s.business_url || '—').replace(/^https?:\/\/(www\.)?/, '').substring(0, 32), x + 2, y); x += colW[1];
-    doc.setTextColor(...scoreColor); doc.setFont('helvetica', 'bold');
-    doc.text(s.score !== null ? String(s.score) : '—', x + 2, y); x += colW[2];
-    doc.setTextColor(30, 30, 30); doc.setFont('helvetica', 'normal');
-    doc.text((s.email_found || 'not found').substring(0, 30), x + 2, y); x += colW[3];
-    doc.setTextColor(s.email_status === 'has_email' ? 5 : 107, s.email_status === 'has_email' ? 150 : 114, s.email_status === 'has_email' ? 105 : 128);
-    doc.text(s.email_status === 'has_email' ? 'Sent' : 'No email', x + 2, y); x += colW[4];
-    doc.setTextColor(100, 100, 100);
-    doc.text(new Date(s.created_at).toLocaleDateString('nl-NL'), x + 2, y);
+    y += 8; if (y > 190) { doc.addPage(); y = 20; }
+    if (idx % 2 === 0) { doc.setFillColor(250, 248, 255); doc.rect(14, y-5, 269, 7, 'F'); }
+    x = 14; doc.setTextColor(30,30,30);
+    doc.text((s.business_name||'\u2014').substring(0,28), x+2, y); x += colW[0];
+    doc.setTextColor(37,99,235); doc.text((s.business_url||'\u2014').replace(/^https?:\/\/(www\.)?/,'').substring(0,32), x+2, y); x += colW[1];
+    const sc = s.score >= 70 ? [5,150,105] : s.score >= 50 ? [180,83,9] : [185,28,28];
+    doc.setTextColor(...sc); doc.setFont('helvetica', 'bold');
+    doc.text(s.score !== null ? String(s.score) : '\u2014', x+2, y); x += colW[2];
+    doc.setTextColor(30,30,30); doc.setFont('helvetica', 'normal');
+    doc.text((s.email_found||'not found').substring(0,30), x+2, y); x += colW[3];
+    doc.setTextColor(s.email_status==='has_email'?5:107, s.email_status==='has_email'?150:114, s.email_status==='has_email'?105:128);
+    doc.text(s.email_status==='has_email'?'Sent':'No email', x+2, y); x += colW[4];
+    doc.setTextColor(100,100,100); doc.text(new Date(s.created_at).toLocaleDateString('nl-NL'), x+2, y);
   });
-
-  // Footer
-  doc.setTextColor(150, 150, 150); doc.setFontSize(7);
-  doc.text('ContentScale · app.contentscale.site · GRAAF + CRAFT Framework', 14, 200);
-
-  doc.save('contentscale-scan-report-' + new Date().toISOString().split('T')[0] + '.pdf');
+  doc.save('contentscale-report-' + new Date().toISOString().split('T')[0] + '.pdf');
 }
 
 function exportActivityDOCX() {
-  // Generate DOCX via server endpoint
-  fetch('/api/export/scan-report-docx', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-user-id': userId || '' },
-    body: JSON.stringify({ scans: allActivityScans })
-  }).then(r => {
-    if (!r.ok) throw new Error('Server error');
-    return r.blob();
-  }).then(blob => {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'contentscale-scan-report-' + new Date().toISOString().split('T')[0] + '.docx';
-    a.click();
-  }).catch(() => alert('❌ DOCX export failed. Try CSV instead.'));
+  fetch('/api/export/scan-report-docx', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': userId || '' }, body: JSON.stringify({ scans: allActivityScans }) })
+    .then(r => { if (!r.ok) throw new Error('Server error'); return r.blob(); })
+    .then(blob => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'contentscale-report-' + new Date().toISOString().split('T')[0] + '.docx'; a.click(); })
+    .catch(() => alert('\u274c DOCX export failed. Try CSV instead.'));
 }
-// ─────────────────────────────────────────────────────────────────────────────
 
 async function submitFreelancer() {
   const name = document.getElementById('freelancerName').value;
@@ -3732,14 +3423,28 @@ async function submitFreelancer() {
   const title = document.getElementById('freelancerTitle').value;
   const bio = document.getElementById('freelancerBio').value;
   const rate = document.getElementById('freelancerRate').value;
-  if (!name || !email || !title) { alert('❌ Name, Email, and Title required'); return; }
+  if (!name || !email || !title) { alert('\u274c Name, Email, and Title required'); return; }
   try {
     const res = await fetch('/api/freelancers/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, title, bio, hourly_rate: rate }) });
     const data = await res.json();
-    if (data.success) { alert('✅ Application submitted! We will review within 24h.'); closeModal(); loadFreelancers(); }
-    else { alert('❌ ' + (data.error || 'Failed')); }
-  } catch (e) { alert('❌ Error: ' + e.message); }
+    if (data.success) { alert('\u2705 Application submitted! We will review within 24h.'); closeModal(); loadFreelancers(); }
+    else { alert('\u274c ' + (data.error || 'Failed')); }
+  } catch (e) { alert('\u274c Error: ' + e.message); }
 }
+// ── Page section tab switcher ──
+function switchPageSection(section) {
+  document.querySelectorAll('.main-section').forEach(el => el.classList.remove('section-visible'));
+  const target = document.querySelector(`[data-section="${section}"]`);
+  if (target) target.classList.add('section-visible');
+  document.querySelectorAll('.page-tab').forEach(btn => btn.classList.remove('active'));
+  const activeTab = document.getElementById('tab-' + section);
+  if (activeTab) activeTab.classList.add('active');
+  // Load leaderboard data when switching to it
+  if (section === 'leaderboard') loadLeaderboardData();
+  if (section === 'experts') loadFreelancers();
+}
+
+
 </script>
 </body>
 </html>
