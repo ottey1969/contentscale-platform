@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ContentScale - Elite SEO Content Quality Scanner 2026</title>
+<title>ContentScale - Elite SEO Content Quality Scanner 2026!</title>
 <meta name="description" content="Scan any website with the GRAAF + CRAFT framework and get a ContentScore from 0–100. Free SEO content quality scanner used in 47+ countries. See where you rank on the Elite Leaderboard.">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%237e22ce'/%3E%3Crect x='20' y='25' width='60' height='40' rx='10' fill='%231f2937'/%3E%3Ccircle cx='40' cy='45' r='5' fill='%23a855f7'/%3E%3Ccircle cx='60' cy='45' r='5' fill='%23a855f7'/%3E%3Cpath d='M 30 60 Q 50 70 70 60' stroke='%23a855f7' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Crect x='45' y='15' width='10' height='15' fill='%231f2937'/%3E%3Crect x='45' y='15' width='10' height='15' fill='%237e22ce' opacity='0.5'/%3E%3C/svg%3E">
 
@@ -1046,7 +1046,7 @@ footer p { color: #9ca3af !important; }
       <input type="text" id="freelancerName" placeholder="Full Name *" class="w-full p-3 rounded">
       <input type="email" id="freelancerEmail" placeholder="Email *" class="w-full p-3 rounded">
       <input type="text" id="freelancerTitle" placeholder="Professional Title *" class="w-full p-3 rounded">
-      <textarea id="freelancerBio" rows="3" placeholder="Bio (max 200 chars)" class="w-full p-3 rounded"></textarea>
+      <textarea id="freelancerBio" rows="3" placeholder="Bio (max 120 chars)" maxlength="120" class="w-full p-3 rounded"></textarea>
       <select id="freelancerRate" aria-label="Hourly rate" class="w-full p-3 rounded">
         <option value="">Select Rate...</option>
         <option value="€50 - €75 / hour">€50 - €75 / hour</option>
@@ -3110,7 +3110,7 @@ async function loadFreelancers() {
     const grid = document.getElementById('freelancersGrid');
     if (data.success && data.freelancers && data.freelancers.length > 0) {
       grid.innerHTML = data.freelancers.map(f => `
-        <div class="card" style="border:1px solid #374151;transition:border-color 0.2s;" onmouseover="this.style.borderColor='#7e22ce'" onmouseout="this.style.borderColor='#374151'">
+        <div class="card" style="border:1px solid #374151;transition:border-color 0.2s;display:flex;flex-direction:column;" onmouseover="this.style.borderColor='#7e22ce'" onmouseout="this.style.borderColor='#374151'">
           <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
             <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#7e22ce,#be185d);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.25rem;">${f.name.charAt(0)}</div>
             <div>
@@ -3118,8 +3118,8 @@ async function loadFreelancers() {
               <p style="font-size:0.85rem;color:#9ca3af!important;">${f.title || 'Specialist'}</p>
             </div>
           </div>
-          <p style="font-size:0.85rem;color:#d1d5db!important;margin-bottom:16px;">${f.bio || 'No bio available.'}</p>
-          <a href="https://wa.me/31628073996" target="_blank" rel="noopener" style="display:block;width:100%;background:#0f7b3a;color:white!important;text-align:center;padding:10px;border-radius:8px;font-weight:600;text-decoration:none;">Contact</a>
+          <p style="font-size:0.85rem;color:#d1d5db!important;margin-bottom:16px;flex:1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5;max-height:3.9rem;">${(f.bio || 'No bio available.').slice(0,120)}${(f.bio||'').length > 120 ? '…' : ''}</p>
+          <a href="https://wa.me/31628073996" target="_blank" rel="noopener" style="display:block;width:100%;background:#0f7b3a;color:white!important;text-align:center;padding:10px;border-radius:8px;font-weight:600;text-decoration:none;margin-top:auto;">Contact</a>
         </div>`).join('');
     } else {
       grid.innerHTML = '<p style="text-align:center;color:#6b7280!important;grid-column:1/-1;">No specialists yet. Be the first!</p>';
