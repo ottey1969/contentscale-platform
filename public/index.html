@@ -2463,7 +2463,11 @@ function displayScanResult(data, targetEl) {
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin-bottom:20px;padding:12px;background:#111827;border-radius:10px;border:1px solid #1f2937;">
           <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#e2e8f0!important;">${stats.wordCount?.toLocaleString()}</div><div style="font-size:0.68rem;color:#6b7280!important;">words</div></div>
           <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:${(stats.h1Count||0)===1?'#4ade80':'#f87171'}!important;">${stats.h1Count||0}</div><div style="font-size:0.68rem;color:#6b7280!important;">H1 ${(stats.h1Count||0)===1?'✅':'⚠️'}</div></div><div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#e2e8f0!important;">${stats.h2Count||0}</div><div style="font-size:0.68rem;color:#6b7280!important;">H2 headings</div></div>
-          <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#e2e8f0!important;">${stats.images||0}</div><div style="font-size:0.68rem;color:#6b7280!important;">images</div></div>
+          <div style="text-align:center;" title="Includes all &lt;img&gt; tags, inline SVGs, and icon elements found on the page">
+            <div style="font-size:1.1rem;font-weight:800;color:${(stats.images||0) > 30 ? '#fbbf24' : '#e2e8f0'}!important;">${stats.images||0}</div>
+            <div style="font-size:0.68rem;color:#6b7280!important;">images${(stats.images||0) > 30 ? ' ⚠️' : ''}</div>
+            ${(stats.images||0) > 30 ? `<div style="font-size:0.6rem;color:#6b7280!important;margin-top:1px;">incl. icons/SVGs</div>` : ''}
+          </div>
           <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#e2e8f0!important;">${stats.internalLinks||0}</div><div style="font-size:0.68rem;color:#6b7280!important;">internal links</div></div>
           <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:${stats.hasArticleSchema ? '#4ade80' : '#f87171'}!important;">${stats.hasArticleSchema ? '✅' : '❌'}</div><div style="font-size:0.68rem;color:#6b7280!important;">schema</div></div>
           <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:${stats.hasCanonical ? '#4ade80' : '#f87171'}!important;">${stats.hasCanonical ? '✅' : '❌'}</div><div style="font-size:0.68rem;color:#6b7280!important;">canonical</div></div>
