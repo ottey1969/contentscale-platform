@@ -193,7 +193,9 @@ async function createAllTables() {
         await client.query(`CREATE TABLE IF NOT EXISTS scan_log (id SERIAL PRIMARY KEY, user_id VARCHAR(255), business_url TEXT, business_name VARCHAR(255), score INTEGER, niche VARCHAR(100), city VARCHAR(255), country VARCHAR(100), email_found VARCHAR(255), email_status VARCHAR(50) DEFAULT 'no_email', recommendations TEXT, created_at TIMESTAMP DEFAULT NOW())`);
         await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS recommendations TEXT`).catch(() => {});
         // 7. Email suppression list (unsubscribes — respected forever across all future scans)
-        await client.query(`CREATE TABLE IF NOT EXISTS email_suppression (id SERIAL PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, unsubscribed_at TIMESTAMP DEFAULT NOW(), reason VARCHAR(100) DEFAULT 'user_request')`);        // Migrate: add columns if they don't exist yet
+        await client.query(`CREATE TABLE IF NOT EXISTS email_suppression (id SERIAL PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, unsubscribed_at TIMESTAMP DEFAULT NOW(), reason VARCHAR(100) DEFAULT 'user_request')`);
+        // 8. Warmup config — tracks when each user started their email warmup
+        await client.query(`CREATE TABLE IF NOT EXISTS warmup_config (id SERIAL PRIMARY KEY, user_id VARCHAR(255) UNIQUE NOT NULL, warmup_start_date DATE NOT NULL DEFAULT CURRENT_DATE, is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW())`);        // Migrate: add columns if they don't exist yet
         await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS business_url TEXT`).catch(() => {});
         await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS business_name VARCHAR(255)`).catch(() => {});
         await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS score INTEGER`).catch(() => {});
@@ -279,6 +281,50 @@ app.post('/api/user/templates', async (req, res) => {
 // Priority: server SENDGRID_API_KEY env var → user's own stored key → error
 // Daily limit tracked server-side in email_queue table (counts per calendar day)
 // ============================================
+// ── Warmup Config ──────────────────────────────────────────────────────────
+function calcWarmupCap(dayNumber) {
+    if (dayNumber <= 7)  return 5;   // Week 1: 5/day
+    if (dayNumber <= 14) return 20;  // Week 2: 20/day
+    if (dayNumber <= 21) return 40;  // Week 3: 40/day
+    if (dayNumber <= 28) return 70;  // Week 4: 70/day
+    return 100;                       // Week 5+: full 100/day
+}
+
+app.get('/api/warmup', async (req, res) => {
+    const userId = req.headers['x-user-id'];
+    if (!userId || !pool) return res.json({ success: false, active: false, cap: 100 });
+    try {
+        const r = await pool.query(`SELECT warmup_start_date, is_active FROM warmup_config WHERE user_id = $1`, [userId]);
+        if (!r.rows.length) return res.json({ success: true, active: false, startDate: null, dayNumber: 0, dailyCap: 100 });
+        const row = r.rows[0];
+        if (!row.is_active) return res.json({ success: true, active: false, dailyCap: 100 });
+        const dayNumber = Math.floor((new Date() - new Date(row.warmup_start_date)) / 86400000) + 1;
+        const dailyCap  = calcWarmupCap(dayNumber);
+        res.json({ success: true, active: true, startDate: row.warmup_start_date, dayNumber, dailyCap });
+    } catch (e) { res.json({ success: false, active: false, dailyCap: 100 }); }
+});
+
+app.post('/api/warmup/start', async (req, res) => {
+    const userId = req.headers['x-user-id'];
+    if (!userId || !pool) return res.json({ success: false });
+    try {
+        await pool.query(
+            `INSERT INTO warmup_config (user_id, warmup_start_date, is_active) VALUES ($1, CURRENT_DATE, TRUE)
+             ON CONFLICT (user_id) DO UPDATE SET warmup_start_date = CURRENT_DATE, is_active = TRUE`, [userId]
+        );
+        res.json({ success: true, dailyCap: 5 });
+    } catch (e) { res.json({ success: false, error: e.message }); }
+});
+
+app.post('/api/warmup/stop', async (req, res) => {
+    const userId = req.headers['x-user-id'];
+    if (!userId || !pool) return res.json({ success: false });
+    try {
+        await pool.query(`UPDATE warmup_config SET is_active = FALSE WHERE user_id = $1`, [userId]);
+        res.json({ success: true });
+    } catch (e) { res.json({ success: false, error: e.message }); }
+});
+
 // ── Unsubscribe ────────────────────────────────────────────────────────────
 app.get('/unsubscribe', async (req, res) => {
     const { email, token } = req.query;
@@ -312,6 +358,16 @@ app.post('/api/email/send', async (req, res) => {
     const { to_email, subject, html, business_url, business_name, score, template_type } = req.body;
     if (!to_email || !subject || !html) return res.json({ success: false, error: 'Missing fields' });
 
+    // Check warmup cap — use warmup daily limit if active, otherwise default
+    let dailyLimit = parseInt(process.env.SENDGRID_DAILY_LIMIT || '100');
+    if (pool) {
+        const wup = await pool.query(`SELECT warmup_start_date FROM warmup_config WHERE user_id = $1 AND is_active = TRUE`, [userId || 'server']).catch(() => ({ rows: [] }));
+        if (wup.rows.length) {
+            const day = Math.floor((new Date() - new Date(wup.rows[0].warmup_start_date)) / 86400000) + 1;
+            dailyLimit = calcWarmupCap(day);
+        }
+    }
+
     // Check suppression list — respect unsubscribes permanently
     if (pool) {
         const sup = await pool.query(`SELECT id FROM email_suppression WHERE email = $1`, [to_email.toLowerCase()]).catch(() => ({ rows: [] }));
@@ -319,12 +375,10 @@ app.post('/api/email/send', async (req, res) => {
     }
 
     let apiKeyToUse = null;
-    let dailyLimit = 100;
 
     // 1. Try server-level key first (Railway env var)
     if (process.env.SENDGRID_API_KEY) {
         apiKeyToUse = process.env.SENDGRID_API_KEY;
-        dailyLimit = parseInt(process.env.SENDGRID_DAILY_LIMIT || '100');
     } else if (userId && pool) {
         // 2. Fallback: user's own stored key
         try {
