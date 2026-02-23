@@ -550,8 +550,13 @@ footer p { color: #9ca3af !important; }
 
             <!-- Your details -->
             <div class="grid grid-cols-2 gap-3 mb-4">
-              <input type="email" id="discoverEmail" placeholder="Your Email *" class="p-3 rounded">
-              <input type="text" id="discoverName" placeholder="Your Name *" class="p-3 rounded">
+              
+            </div>
+
+            <!-- Reply-To Email -->
+            <div class="mb-4">
+              <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">📧 Your Reply-To Email <span style="color:#9ca3af!important;font-weight:400;">(businesses reply to this)</span></label>
+              <input type="email" id="discoverReplyTo" placeholder="e.g. hello@yourcompany.com" class="w-full p-3 rounded text-sm" autocomplete="off" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;" oninput="localStorage.setItem('discoverReplyTo', this.value)">
             </div>
 
             <!-- Start button -->
@@ -1552,7 +1557,10 @@ document.addEventListener('DOMContentLoaded', function () {
   loadFreelancers();
   updateDailyLimitUI();       // show today's send count immediately
   processEmailQueue();        // drain any queued emails from yesterday's overflow
-  checkRescanReminder();      // #1 — show rescan banner if >30 days since last scan
+  checkRescanReminder();
+  // Restore saved reply-to email
+  const savedReplyTo = localStorage.getItem('discoverReplyTo');
+  if (savedReplyTo) { const el = document.getElementById('discoverReplyTo'); if (el) el.value = savedReplyTo; }      // #1 — show rescan banner if >30 days since last scan
   // Show queue badge if overflow waiting
   const qc = getQueue().length;
   if (qc > 0) {
@@ -1723,12 +1731,11 @@ async function startAutoDiscover() {
   const country     = document.getElementById('discoverCountry').value;
   const maxResults  = parseInt(document.getElementById('discoverMaxResults').value);
   const websiteOnly = document.getElementById('discoverWebsiteOnly').checked;
-  const email       = document.getElementById('discoverEmail').value.trim();
-  const name        = document.getElementById('discoverName').value.trim();
-
   if (!niche)    { alert('❌ Please select or type a niche.'); return; }
   if (!location) { alert('❌ Please enter a city or location.'); return; }
-  if (!email || !name) { alert('❌ Please enter your email and name.'); return; }
+  const replyTo = document.getElementById('discoverReplyTo').value.trim();
+  if (!replyTo)  { alert('❌ Please enter your Reply-To email so businesses can respond.'); return; }
+  localStorage.setItem('discoverReplyTo', replyTo);
 
   const btn = document.getElementById('discoverBtn');
   btn.disabled = true;
@@ -1882,7 +1889,7 @@ async function startAutoDiscover() {
     // ── STEP 4: Send emails ────────────────────────────────────
     let emailStats = { sent: 0, queued: 0, skipped: 0 };
     if (sendgridConfigured) {
-      emailStats = await sendBulkEmails(results, email, name);
+      emailStats = await sendBulkEmails(results, replyTo, replyTo.split('@')[0]);
     }
 
     setDiscoverStep(4, 'done');
@@ -2497,7 +2504,8 @@ async function startBulkScan() {
 
   // Emails only if toggled on
   if (bulkEmailEnabled) {
-    const emailStats = await sendBulkEmails(results, 'ottmar@contentscale.site', 'Ottmar');
+    const bulkReplyTo = localStorage.getItem('discoverReplyTo') || 'hello@contentscale.site';
+    const emailStats = await sendBulkEmails(results, bulkReplyTo, bulkReplyTo.split('@')[0]);
     const queueCount = getQueue().length;
     const summaryEl  = document.getElementById('bulkResultsContainer');
     if (summaryEl) {
