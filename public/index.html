@@ -1242,7 +1242,7 @@ const DEFAULT_TEMPLATES = {
   </div>
 
 </div>
-</body></html>\`
+</body></html>`
   },
 
   // ── TEMPLATE 2: IMPROVEMENT PITCH (score < 65, has website) ─────────────
@@ -2626,43 +2626,43 @@ function applyVars(text, item, senderEmail, senderName) {
   const badgeDomain      = badgeDisplayUrl.split('/')[0];
   const badgePath        = badgeDisplayUrl.includes('/') ? '/' + badgeDisplayUrl.split('/').slice(1).join('/') : '';
 
-  const badgeWidget = \`<!-- ============================================================
+  const badgeWidget = `<!-- ============================================================
    ContentScore Badge — Email Embed
    Created by Ottmar Francisca · ContentScale SEO Platform
-   Score: \${score}/100 · Page: \${badgeDisplayUrl}
+   Score: ${score}/100 · Page: ${badgeDisplayUrl}
    ============================================================ -->
 <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin:28px auto;max-width:400px;width:100%;">
   <tr>
-    <td style="background:\${score >= 85 ? '#f7fee7' : score >= 70 ? '#eff6ff' : '#fffbeb'};border:2px solid \${badgeBorderColor};border-radius:14px;padding:24px 28px;text-align:center;font-family:Arial,Helvetica,sans-serif;">
+    <td style="background:${score >= 85 ? '#f7fee7' : score >= 70 ? '#eff6ff' : '#fffbeb'};border:2px solid ${badgeBorderColor};border-radius:14px;padding:24px 28px;text-align:center;font-family:Arial,Helvetica,sans-serif;">
       <!-- Pill -->
-      <div style="display:inline-block;background:\${badgePillBg};border:1px solid \${badgeBorderColor};border-radius:50px;padding:5px 18px;margin-bottom:14px;">
-        <span style="font-size:12px;color:\${badgePillText};font-weight:700;letter-spacing:1px;">\${badgePillLabel}</span>
+      <div style="display:inline-block;background:${badgePillBg};border:1px solid ${badgeBorderColor};border-radius:50px;padding:5px 18px;margin-bottom:14px;">
+        <span style="font-size:12px;color:${badgePillText};font-weight:700;letter-spacing:1px;">${badgePillLabel}</span>
       </div>
       <!-- Score -->
       <div style="margin:0 0 8px;">
-        <span style="font-size:64px;font-weight:900;color:\${badgeBorderColor};line-height:1;">\${score}</span><span style="font-size:22px;color:#9ca3af;font-weight:400;">/100</span>
+        <span style="font-size:64px;font-weight:900;color:${badgeBorderColor};line-height:1;">${score}</span><span style="font-size:22px;color:#9ca3af;font-weight:400;">/100</span>
       </div>
       <!-- Label + tagline -->
-      <div style="font-size:17px;color:\${badgeScoreColor};font-weight:700;margin-bottom:4px;">\${scoreLabel}</div>
-      <div style="font-size:12px;color:\${badgeScoreColor};font-style:italic;margin-bottom:18px;opacity:0.8;">\${badgeTagline}</div>
+      <div style="font-size:17px;color:${badgeScoreColor};font-weight:700;margin-bottom:4px;">${scoreLabel}</div>
+      <div style="font-size:12px;color:${badgeScoreColor};font-style:italic;margin-bottom:18px;opacity:0.8;">${badgeTagline}</div>
       <!-- URL box -->
-      <div style="background:#ffffff;border:1.5px solid \${badgeBorderColor};border-radius:8px;padding:8px 14px;display:inline-block;margin-bottom:14px;max-width:100%;word-break:break-all;">
-        <span style="font-size:13px;color:#374151;">📄 </span><a href="\${badgeFullUrl}" style="font-size:13px;color:\${badgeScoreColor};text-decoration:none;"><strong>\${badgeDomain}</strong><span style="font-weight:400;opacity:0.75;">\${badgePath}</span></a>
+      <div style="background:#ffffff;border:1.5px solid ${badgeBorderColor};border-radius:8px;padding:8px 14px;display:inline-block;margin-bottom:14px;max-width:100%;word-break:break-all;">
+        <span style="font-size:13px;color:#374151;">📄 </span><a href="${badgeFullUrl}" style="font-size:13px;color:${badgeScoreColor};text-decoration:none;"><strong>${badgeDomain}</strong><span style="font-weight:400;opacity:0.75;">${badgePath}</span></a>
       </div>
       <!-- Result message -->
-      <div style="background:\${badgeResultBg};border-radius:8px;padding:10px 14px;margin-bottom:16px;">
-        <p style="font-size:13px;color:\${badgeResultText};margin:0;font-weight:600;">\${badgeResultMsg}</p>
+      <div style="background:${badgeResultBg};border-radius:8px;padding:10px 14px;margin-bottom:16px;">
+        <p style="font-size:13px;color:${badgeResultText};margin:0;font-weight:600;">${badgeResultMsg}</p>
       </div>
       <!-- Byline -->
-      <div style="font-size:11px;color:\${badgeScoreColor};opacity:0.7;">
-        Verified by <a href="https://app.contentscale.site" style="color:\${badgeScoreColor};text-decoration:none;font-weight:700;">ContentScale SEO Platform</a>
+      <div style="font-size:11px;color:${badgeScoreColor};opacity:0.7;">
+        Verified by <a href="https://app.contentscale.site" style="color:${badgeScoreColor};text-decoration:none;font-weight:700;">ContentScale SEO Platform</a>
       </div>
     </td>
   </tr>
 </table>
 <!-- ============================================================
    End ContentScore Badge — Email Embed
-   ============================================================ -->\`;
+   ============================================================ -->`;
 
   return text
     .replace(/{{company_name}}/g,    companyName)
