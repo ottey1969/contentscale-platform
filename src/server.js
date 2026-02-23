@@ -1029,7 +1029,7 @@ app.get('/api/apify/run-status/:runId', async (req, res) => {
     const token = req.headers['x-apify-token'];
     if (!token) return res.status(401).json({ error: 'No Apify token' });
     try {
-        const r = await fetch(`${APIFY_BASE}/acts/compass~crawler-google-places/runs/${req.params.runId}`, {
+        const r = await fetch(`${APIFY_BASE}/actor-runs/${req.params.runId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await r.json();
@@ -1041,7 +1041,8 @@ app.get('/api/apify/dataset/:runId', async (req, res) => {
     const token = req.headers['x-apify-token'];
     if (!token) return res.status(401).json({ error: 'No Apify token' });
     try {
-        const r = await fetch(`${APIFY_BASE}/acts/compass~crawler-google-places/runs/${req.params.runId}/dataset/items?format=json&clean=true`, {
+        // Apify dataset items endpoint — works via run ID directly
+        const r = await fetch(`${APIFY_BASE}/actor-runs/${req.params.runId}/dataset/items?format=json&clean=true`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await r.json();
