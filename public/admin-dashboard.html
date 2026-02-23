@@ -92,7 +92,9 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 <span class="text-xs px-2 py-1 bg-purple-600 rounded text-white font-semibold"><span id="admin-username">Admin</span></span>
 </div>
 <div class="flex gap-3">
-<button onclick="logout()" class="btn btn-danger"><i class="fas fa-sign-out-alt mr-2"></i> Logout</button>
+<button onclick="logout()" class="btn btn-danger">
+<i class="fas fa-sign-out-alt mr-2"></i> Logout
+</button>
 </div>
 </div>
 </div>
@@ -103,10 +105,10 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 <button onclick="switchTab('freelancers')" id="tabFreelancersBtn" class="mode-toggle"><i class="fas fa-users mr-2"></i> Freelancers</button>
 <button onclick="switchTab('users')" id="tabUsersBtn" class="mode-toggle"><i class="fas fa-user-cog mr-2"></i> Users</button>
 <button onclick="switchTab('messages')" id="tabMessagesBtn" class="mode-toggle"><i class="fas fa-envelope mr-2"></i> Messages</button>
-<button onclick="switchTab('pending')" id="tabPendingBtn" class="mode-toggle"><i class="fas fa-clock mr-2"></i> Pending <span id="pendingBadge" class="hidden ml-1 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded-full"></span></button>
+<button onclick="switchTab('pending')" id="tabPendingBtn" class="mode-toggle"><i class="fas fa-clock mr-2"></i> Pending</button>
+<button onclick="switchTab('emaillog')" id="tabEmaillogBtn" class="mode-toggle"><i class="fas fa-paper-plane mr-2"></i> Email Log</button>
+<button onclick="switchTab('scanlog')" id="tabScanlogBtn" class="mode-toggle"><i class="fas fa-list mr-2"></i> Scan Log</button>
 </div>
-
-<!-- LEADERBOARD TAB -->
 <div id="tab-leaderboard" class="tab-content">
 <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 <div class="flex justify-between items-center mb-6">
@@ -139,6 +141,7 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 <span id="rankingsToggleText">📊 Show Rankings 16+</span><span id="rankingsToggleArrow">▼</span>
 </button>
 <div id="rankingsContainer" class="hidden mt-4">
+<!-- FIX 2: Added checkbox <th> to match tbody which has checkbox <td> -->
 <table class="rankings-table w-full bg-gray-900 rounded-lg overflow-hidden">
 <thead class="bg-gray-800"><tr><th class="p-3 w-10"></th><th class="p-3 text-left">Rank</th><th class="p-3 text-left">Company</th><th class="p-3 text-left">Score</th><th class="p-3 text-left">Actions</th></tr></thead>
 <tbody id="rankingsTbody"></tbody>
@@ -147,8 +150,6 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </div>
 </div>
 </div>
-
-<!-- FREELANCERS TAB -->
 <div id="tab-freelancers" class="tab-content hidden">
 <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 <div class="flex justify-between items-center mb-6">
@@ -165,8 +166,6 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 <div id="freelancersGrid" class="grid-3"></div>
 </div>
 </div>
-
-<!-- USERS TAB -->
 <div id="tab-users" class="tab-content hidden">
 <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 <div class="flex justify-between items-center mb-6">
@@ -192,8 +191,6 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 <div id="usersContainer" class="space-y-4"></div>
 </div>
 </div>
-
-<!-- MESSAGES TAB -->
 <div id="tab-messages" class="tab-content hidden">
 <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 <div class="flex justify-between items-center mb-6">
@@ -203,8 +200,6 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 <div id="messagesContainer" class="space-y-4"></div>
 </div>
 </div>
-
-<!-- PENDING TAB -->
 <div id="tab-pending" class="tab-content hidden">
 <div class="bg-gradient-to-br from-yellow-900 via-orange-900 to-yellow-800 rounded-2xl p-8 border-2 border-yellow-500">
 <div class="flex justify-between items-center mb-6">
@@ -213,7 +208,6 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </div>
 <div class="mb-8">
 <h3 class="text-xl font-bold mb-4 text-yellow-400">🏆 Pending Leaderboard Submissions</h3>
-<p class="text-sm text-yellow-200 mb-4 opacity-80">Review company name and details before approving — edit anything that looks wrong first.</p>
 <div id="pending-leaderboard-container" class="space-y-4"></div>
 </div>
 <div class="mb-8">
@@ -222,11 +216,11 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </div>
 </div>
 </div>
-
 </div>
 </div>
-
-<!-- MODALS -->
+</div>
+</div>
+<!-- Modals -->
 <div id="activateModal" class="modal">
 <div class="modal-content">
 <h2 class="text-2xl font-bold mb-4">Activate Users</h2>
@@ -238,7 +232,6 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </div>
 </div>
 </div>
-
 <div id="messageModal" class="modal">
 <div class="modal-content">
 <h2 class="text-2xl font-bold mb-4">Send Message</h2>
@@ -258,7 +251,6 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </div>
 </div>
 </div>
-
 <div id="addLeaderboardModal" class="modal">
 <div class="modal-content">
 <h2 class="text-2xl font-bold mb-4" id="lbModalTitle">Add Entry</h2>
@@ -277,7 +269,9 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </div>
 <div>
 <label class="block text-sm font-bold mb-1 text-gray-700">Country</label>
-<select id="lb-country" class="w-full p-2 mb-2 border text-black"><option value="">Select Country...</option></select>
+<select id="lb-country" class="w-full p-2 mb-2 border text-black">
+<option value="">Select Country...</option>
+</select>
 </div>
 <div>
 <label class="block text-sm font-bold mb-1 text-gray-700">Industry / Niche</label>
@@ -304,64 +298,14 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </select>
 </div>
 <div class="flex gap-2 mb-4">
-<a id="lb-visit-link" href="#" target="_blank" class="flex-1 btn btn-info text-center"><i class="fas fa-external-link-alt mr-2"></i> Visit Website</a>
+<a id="lb-visit-link" href="#" target="_blank" class="flex-1 btn btn-info text-center">
+<i class="fas fa-external-link-alt mr-2"></i> Visit Website
+</a>
 </div>
 <button onclick="saveLeaderboardEntry()" class="btn btn-success w-full">Save Changes</button>
 <button onclick="closeModal('addLeaderboardModal')" class="btn btn-danger w-full mt-2">Cancel</button>
 </div>
 </div>
-
-<!-- Edit & Approve Pending Leaderboard Modal -->
-<div id="pendingApproveModal" class="modal">
-<div class="modal-content">
-<h2 class="text-2xl font-bold mb-2">✏️ Edit & Approve</h2>
-<p class="text-sm text-gray-600 mb-4">Clean up the company name and details before publishing to the leaderboard.</p>
-<input type="hidden" id="pending-lb-id">
-<div>
-<label class="block text-sm font-bold mb-1 text-gray-700">Company Name <span class="text-red-500">*</span></label>
-<input type="text" id="pending-lb-company" class="w-full p-2 mb-2 border text-black" placeholder="Clean professional name">
-</div>
-<div>
-<label class="block text-sm font-bold mb-1 text-gray-700">URL</label>
-<input type="text" id="pending-lb-url" class="w-full p-2 mb-2 border text-black">
-</div>
-<div>
-<label class="block text-sm font-bold mb-1 text-gray-700">Score</label>
-<input type="number" id="pending-lb-score" class="w-full p-2 mb-2 border text-black">
-</div>
-<div>
-<label class="block text-sm font-bold mb-1 text-gray-700">Country</label>
-<select id="pending-lb-country" class="w-full p-2 mb-2 border text-black"><option value="">Select Country...</option></select>
-</div>
-<div>
-<label class="block text-sm font-bold mb-1 text-gray-700">Niche</label>
-<select id="pending-lb-niche" class="w-full p-2 mb-4 border text-black">
-<option value="">Select Niche...</option>
-<option value="E-commerce">E-commerce</option>
-<option value="Healthcare">Healthcare</option>
-<option value="Construction">Construction</option>
-<option value="Food & Beverage">Food & Beverage</option>
-<option value="Finance">Finance</option>
-<option value="Real Estate">Real Estate</option>
-<option value="Legal">Legal</option>
-<option value="Education">Education</option>
-<option value="Beauty & Wellness">Beauty & Wellness</option>
-<option value="Home Services">Home Services</option>
-<option value="Automotive">Automotive</option>
-<option value="Sustainability">Sustainability</option>
-<option value="Technology">Technology</option>
-<option value="Creative Arts">Creative Arts</option>
-<option value="Fitness">Fitness</option>
-<option value="Travel">Travel</option>
-<option value="Manufacturing">Manufacturing</option>
-<option value="Retail">Retail</option>
-</select>
-</div>
-<button onclick="saveAndApprovePending()" class="btn btn-success w-full mb-2">✅ Save & Approve — Publish to Leaderboard</button>
-<button onclick="closeModal('pendingApproveModal')" class="btn btn-danger w-full">Cancel</button>
-</div>
-</div>
-
 <div id="editFreelancerModal" class="modal">
 <div class="modal-content">
 <h2 class="text-2xl font-bold mb-4 text-gray-900">Edit Freelancer</h2>
@@ -389,6 +333,7 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </div>
 <div>
 <label class="block text-sm font-bold mb-1 text-gray-700">Bio (Max 200 chars)</label>
+<!-- FIX 1: Added oninput handler so character counter updates as user types -->
 <textarea id="fr-bio" rows="3" maxlength="200" class="w-full p-2 border text-black"
   oninput="document.getElementById('fr-bio-count').textContent=this.value.length"></textarea>
 <div class="text-xs text-gray-500 text-right"><span id="fr-bio-count">0</span>/200</div>
@@ -402,7 +347,6 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </div>
 </div>
 </div>
-
 <script>
 let currentAdminId = localStorage.getItem('admin_id');
 let allUsers = [];
@@ -425,46 +369,25 @@ const COUNTRY_LIST = [
 ];
 
 window.onload = function() {
-  populateCountryDropdowns();
+  populateCountryDropdown();
   if (currentAdminId) {
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('main-dashboard').classList.remove('hidden');
     loadAllData();
-    checkPendingCount();
   }
 };
 
-function populateCountryDropdowns() {
-  ['lb-country', 'pending-lb-country'].forEach(id => {
-    const select = document.getElementById(id);
-    if (!select) return;
-    select.innerHTML = '<option value="">Select Country...</option>';
-    COUNTRY_LIST.forEach(c => {
-      const opt = document.createElement('option');
-      opt.value = c.name;
-      opt.textContent = `${getFlag(c.code)} ${c.name}`;
-      opt.dataset.code = c.code;
-      select.appendChild(opt);
-    });
+function populateCountryDropdown() {
+  const select = document.getElementById('lb-country');
+  if (!select) return;
+  select.innerHTML = '<option value="">Select Country...</option>';
+  COUNTRY_LIST.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.name;
+    opt.textContent = `${getFlag(c.code)} ${c.name}`;
+    opt.dataset.code = c.code;
+    select.appendChild(opt);
   });
-}
-
-// Show pending count badge on tab
-async function checkPendingCount() {
-  try {
-    const [lb, fr] = await Promise.all([
-      apiCall('/api/admin/leaderboard/pending').catch(() => ({ pending: [] })),
-      apiCall('/api/admin/freelancers/pending').catch(() => ({ pending: [] }))
-    ]);
-    const total = (lb.pending?.length || 0) + (fr.pending?.length || 0);
-    const badge = document.getElementById('pendingBadge');
-    if (total > 0) {
-      badge.textContent = total;
-      badge.classList.remove('hidden');
-    } else {
-      badge.classList.add('hidden');
-    }
-  } catch (e) {}
 }
 
 async function login() {
@@ -472,7 +395,8 @@ async function login() {
   const password = document.getElementById('login-password').value;
   try {
     const res = await fetch('/api/setup/verify-admin', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
     const data = await res.json();
@@ -480,11 +404,16 @@ async function login() {
       localStorage.setItem('admin_id', data.admin_id);
       currentAdminId = data.admin_id;
       location.reload();
-    } else { alert('Login failed: ' + data.error); }
+    } else {
+      alert('Login failed: ' + data.error);
+    }
   } catch (e) { alert('Connection error'); }
 }
 
-function logout() { localStorage.removeItem('admin_id'); location.reload(); }
+function logout() {
+  localStorage.removeItem('admin_id');
+  location.reload();
+}
 
 async function apiCall(endpoint, method = 'GET', body = null) {
   const headers = { 'Content-Type': 'application/json' };
@@ -495,14 +424,23 @@ async function apiCall(endpoint, method = 'GET', body = null) {
     const res = await fetch(endpoint, options);
     if (!res.ok) {
       const text = await res.text();
-      if (text.startsWith('<!DOCTYPE') || text.startsWith('<html')) throw new Error(`Server returned HTML (Status ${res.status})`);
-      try { const errJson = JSON.parse(text); throw new Error(errJson.error || `Error ${res.status}`); }
-      catch (e) { throw new Error(text || `Error ${res.status}`); }
+      if (text.startsWith('<!DOCTYPE') || text.startsWith('<html')) {
+        throw new Error(`Server returned HTML page (Status ${res.status}). Endpoint may be missing.`);
+      }
+      try {
+        const errJson = JSON.parse(text);
+        throw new Error(errJson.error || `Error ${res.status}`);
+      } catch (e) {
+        throw new Error(text || `Error ${res.status}`);
+      }
     }
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
     return data;
-  } catch (error) { console.error('API Call Failed:', error); throw error; }
+  } catch (error) {
+    console.error('API Call Failed:', error);
+    throw error;
+  }
 }
 
 function switchTab(tab) {
@@ -515,9 +453,15 @@ function switchTab(tab) {
   if (tab === 'users') loadUsers();
   if (tab === 'messages') loadMessages();
   if (tab === 'pending') loadPendingData();
+  if (tab === 'emaillog') loadEmailLog();
+  if (tab === 'scanlog')  loadScanLog();
 }
 
-function loadAllData() { loadLeaderboard(); loadFreelancers(); loadUsers(); }
+function loadAllData() {
+  loadLeaderboard();
+  loadFreelancers();
+  loadUsers();
+}
 
 async function loadUsers() {
   try {
@@ -525,60 +469,85 @@ async function loadUsers() {
     allUsers = data.users || [];
     const total = allUsers.length;
     const active = allUsers.filter(u => u.is_activated).length;
+    const inactive = total - active;
     const now = new Date();
     const expiring = allUsers.filter(u => {
       if (!u.activated_until || !u.is_activated) return false;
-      const diffDays = Math.ceil((new Date(u.activated_until) - now) / 86400000);
+      const expDate = new Date(u.activated_until);
+      const diffDays = Math.ceil((expDate - now) / (1000 * 60 * 60 * 24));
       return diffDays > 0 && diffDays <= 7;
     }).length;
     document.getElementById('stat-total-users').textContent = total;
     document.getElementById('stat-active-users').textContent = active;
     document.getElementById('stat-expiring-users').textContent = expiring;
-    document.getElementById('stat-inactive-users').textContent = total - active;
+    document.getElementById('stat-inactive-users').textContent = inactive;
     const container = document.getElementById('usersContainer');
-    if (total === 0) { container.innerHTML = '<p class="text-center text-gray-400">No users found.</p>'; return; }
+    if (total === 0) {
+      container.innerHTML = '<p class="text-center text-gray-400">No users found.</p>';
+      return;
+    }
     container.innerHTML = allUsers.map(u => {
+      const isSelected = selectedIds.users.has(u.id);
       let statusBadge = '<span class="badge-inactive">Inactive</span>';
       let daysLeftHtml = '';
       if (u.is_activated) {
         if (u.activated_until) {
-          const diffDays = Math.ceil((new Date(u.activated_until) - now) / 86400000);
-          if (diffDays <= 0) { statusBadge = '<span class="badge-inactive">Expired</span>'; }
-          else if (diffDays <= 7) { statusBadge = '<span class="badge-expiring">Expiring Soon</span>'; daysLeftHtml = `<div class="text-xs text-orange-400 font-bold">${diffDays} days left</div>`; }
-          else { statusBadge = '<span class="badge-active">Active</span>'; daysLeftHtml = `<div class="text-xs text-green-400">${diffDays} days left</div>`; }
-        } else { statusBadge = '<span class="badge-active">Active (Indefinite)</span>'; }
+          const expDate = new Date(u.activated_until);
+          const diffDays = Math.ceil((expDate - new Date()) / (1000 * 60 * 60 * 24));
+          if (diffDays <= 0) {
+            statusBadge = '<span class="badge-inactive">Expired</span>';
+            daysLeftHtml = `<div class="text-xs text-orange-400 font-bold">${diffDays} days left</div>`;
+          } else if (diffDays <= 7) {
+            statusBadge = '<span class="badge-expiring">Expiring Soon</span>';
+            daysLeftHtml = `<div class="text-xs text-orange-400 font-bold">${diffDays} days left</div>`;
+          } else {
+            statusBadge = '<span class="badge-active">Active</span>';
+            daysLeftHtml = `<div class="text-xs text-green-400">${diffDays} days left</div>`;
+          }
+        } else {
+          statusBadge = '<span class="badge-active">Active (Indefinite)</span>';
+        }
       }
-      return `<div class="user-card">
+      return `
+      <div class="user-card">
         <div class="flex items-center gap-3">
-          <input type="checkbox" ${selectedIds.users.has(u.id) ? 'checked' : ''} onchange="toggleSelection('users', '${u.id}')">
+          <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleSelection('users', '${u.id}')">
           <div>
             <div class="font-bold">${u.ip_address || 'Unknown IP'}</div>
             <div class="text-xs text-gray-400">ID: ${u.id.substring(0,8)}... | Created: ${new Date(u.created_at).toLocaleDateString()}</div>
             ${daysLeftHtml}
+            ${u.activated_until ? `<div class="text-xs text-gray-500">Expires: ${new Date(u.activated_until).toLocaleDateString()}</div>` : ''}
           </div>
         </div>
         <div class="flex items-center gap-2">
           ${statusBadge}
-          ${u.is_activated
-            ? `<button onclick="extendUserAccess('${u.id}')" class="text-blue-400 text-xs"><i class="fas fa-clock"></i> Extend</button>`
-            : `<button onclick="activateSingleUser('${u.id}')" class="text-green-400 text-xs"><i class="fas fa-check"></i> Activate</button>`}
-          <button onclick="openMessageModal('single', '${u.id}')" class="text-blue-400"><i class="fas fa-envelope"></i></button>
+          ${u.is_activated ?
+            `<button onclick="extendUserAccess('${u.id}')" class="text-blue-400 hover:text-blue-300 text-xs" title="Extend Access"><i class="fas fa-clock"></i> Extend</button>` :
+            `<button onclick="activateSingleUser('${u.id}')" class="text-green-400 hover:text-green-300 text-xs" title="Activate"><i class="fas fa-check"></i> Activate</button>`
+          }
+          <button onclick="openMessageModal('single', '${u.id}')" class="text-blue-400 hover:text-blue-300" title="Message"><i class="fas fa-envelope"></i></button>
         </div>
       </div>`;
     }).join('');
-  } catch (e) { alert('Failed to load users: ' + e.message); }
+  } catch (e) { console.error(e); alert('Failed to load users: ' + e.message); }
 }
 
 async function activateSingleUser(id) {
-  try { await apiCall(`/api/admin/users/${id}/activate`, 'POST', { days: 7 }); alert('✅ Activated for 7 days'); loadUsers(); }
-  catch (e) { alert('❌ ' + e.message); }
+  try {
+    await apiCall(`/api/admin/users/${id}/activate`, 'POST', { days: 7 });
+    alert('✅ User activated for 7 days');
+    loadUsers();
+  } catch (e) { alert('❌ Error: ' + e.message); }
 }
 
 async function extendUserAccess(id) {
   const days = prompt('How many days to add?', '7');
   if (!days) return;
-  try { await apiCall(`/api/admin/users/${id}/activate`, 'POST', { days: parseInt(days) }); alert(`✅ Extended by ${days} days`); loadUsers(); }
-  catch (e) { alert('❌ ' + e.message); }
+  try {
+    await apiCall(`/api/admin/users/${id}/activate`, 'POST', { days: parseInt(days) });
+    alert(`✅ User access extended by ${days} days`);
+    loadUsers();
+  } catch (e) { alert('❌ Error: ' + e.message); }
 }
 
 function toggleSelection(type, id) {
@@ -590,8 +559,11 @@ function toggleSelection(type, id) {
 function toggleSelectAll(type) {
   const checkbox = document.getElementById(`select-all-${type}`);
   const list = type === 'leaderboard' ? window.allLeaderboard : type === 'freelancers' ? window.allFreelancers : allUsers;
-  if (checkbox.checked) list.forEach(item => selectedIds[type].add(item.id));
-  else selectedIds[type].clear();
+  if (checkbox.checked) {
+    list.forEach(item => selectedIds[type].add(item.id));
+  } else {
+    selectedIds[type].clear();
+  }
   if (type === 'users') loadUsers();
   updateCounts();
 }
@@ -604,7 +576,10 @@ function updateCounts() {
 
 function bulkActionUsers(action) {
   if (selectedIds.users.size === 0) return alert('Select users first');
-  if (action === 'activate') { document.getElementById('activateModal').classList.add('active'); return; }
+  if (action === 'activate') {
+    document.getElementById('activateModal').classList.add('active');
+    return;
+  }
   if (action === 'deactivate') {
     if (!confirm('Deactivate selected users?')) return;
     Promise.all(Array.from(selectedIds.users).map(id => apiCall(`/api/admin/users/${id}/deactivate`, 'POST')))
@@ -618,8 +593,13 @@ async function confirmActivate() {
   closeModal('activateModal');
   if (!confirm(`Activate ${selectedIds.users.size} users for ${days} days?`)) return;
   try {
-    await Promise.all(Array.from(selectedIds.users).map(id => apiCall(`/api/admin/users/${id}/activate`, 'POST', { days: parseInt(days) })));
-    alert('Users activated!'); loadUsers(); selectedIds.users.clear(); updateCounts();
+    await Promise.all(Array.from(selectedIds.users).map(id =>
+      apiCall(`/api/admin/users/${id}/activate`, 'POST', { days: parseInt(days) })
+    ));
+    alert('Users activated successfully!');
+    loadUsers();
+    selectedIds.users.clear();
+    updateCounts();
   } catch (e) { alert(e.message); }
 }
 
@@ -627,15 +607,22 @@ async function bulkDelete(type) {
   const ids = Array.from(selectedIds[type]);
   if (ids.length === 0) return alert('Select items first');
   if (!confirm(`Delete ${ids.length} items permanently?`)) return;
-  const endpoints = { leaderboard: '/api/admin/leaderboard/bulk-delete', freelancers: '/api/admin/freelancers/bulk-delete', users: '/api/admin/users/bulk-delete' };
+  let endpoint = '';
+  if (type === 'leaderboard') endpoint = '/api/admin/leaderboard/bulk-delete';
+  if (type === 'freelancers') endpoint = '/api/admin/freelancers/bulk-delete';
+  if (type === 'users') endpoint = '/api/admin/users/bulk-delete';
   try {
-    await apiCall(endpoints[type], 'POST', { ids });
-    alert('Deleted successfully'); selectedIds[type].clear(); updateCounts(); loadAllData();
+    await apiCall(endpoint, 'POST', { ids });
+    alert('Deleted successfully');
+    selectedIds[type].clear();
+    updateCounts();
+    loadAllData();
   } catch (e) { alert('Delete failed: ' + e.message); }
 }
 
 function openMessageModal(targetType, userId = null) {
-  messageTarget = targetType === 'single' ? userId : targetType;
+  messageTarget = targetType;
+  if (targetType === 'single') messageTarget = userId;
   document.getElementById('messageModal').classList.add('active');
 }
 
@@ -645,11 +632,18 @@ async function sendMessage() {
   if (!subject || !body) return alert('Fill all fields');
   try {
     let payload = { subject, body };
-    if (messageTarget === 'all') payload.recipients = 'all';
-    else if (messageTarget === 'selected') { payload.recipients = 'selected'; payload.user_ids = Array.from(selectedIds.users); }
-    else payload.recipientUserId = messageTarget;
+    if (messageTarget === 'all') {
+      payload.recipients = 'all';
+    } else if (messageTarget === 'selected') {
+      payload.recipients = 'selected';
+      payload.user_ids = Array.from(selectedIds.users);
+    } else {
+      payload.recipientUserId = messageTarget;
+    }
     await apiCall('/api/admin/messages/send', 'POST', payload);
-    alert('Message sent!'); closeModal('messageModal'); loadMessages();
+    alert('Message sent!');
+    closeModal('messageModal');
+    loadMessages();
   } catch (e) { alert(e.message); }
 }
 
@@ -657,15 +651,19 @@ async function loadMessages() {
   try {
     const data = await apiCall('/api/admin/messages');
     const container = document.getElementById('messagesContainer');
-    if (!data.messages?.length) { container.innerHTML = '<p class="text-center text-gray-400">No messages yet.</p>'; return; }
+    if (!data.messages || data.messages.length === 0) {
+      container.innerHTML = '<p class="text-center text-gray-400">No messages yet.</p>';
+      return;
+    }
     container.innerHTML = data.messages.map(m => `
       <div class="message-bubble ${m.sender_type === 'admin' ? 'admin' : 'user'}">
         <div class="flex justify-between text-xs text-gray-400 mb-1">
-          <span>${m.sender_type === 'admin' ? 'You' : 'User'} · ${new Date(m.created_at).toLocaleString()}</span>
+          <span>${m.sender_type === 'admin' ? 'You' : 'User'} • ${new Date(m.created_at).toLocaleString()}</span>
           <span class="font-bold">${m.subject || 'No Subject'}</span>
         </div>
         <p class="text-sm">${m.body}</p>
-      </div>`).join('');
+      </div>
+    `).join('');
   } catch (e) { console.error(e); }
 }
 
@@ -676,49 +674,67 @@ async function loadLeaderboard() {
     document.getElementById('stat-total-agencies').textContent = data.stats.totalAgencies;
     document.getElementById('stat-avg-score').textContent = data.averageScore;
     document.getElementById('stat-verified').textContent = data.stats.verifiedCount;
-    const validEntries = window.allLeaderboard.filter(e => e.country?.trim());
-    document.getElementById('stat-countries').textContent = [...new Set(validEntries.map(e => e.country))].length;
+    const validEntries = window.allLeaderboard.filter(e => e.country && e.country.trim() !== '');
+    const uniqueCountries = [...new Set(validEntries.map(e => e.country))];
+    document.getElementById('stat-countries').textContent = uniqueCountries.length;
 
-    document.getElementById('top3-container').innerHTML = window.allLeaderboard.slice(0, 3).map((e, i) => `
+    const top3 = window.allLeaderboard.slice(0, 3);
+    document.getElementById('top3-container').innerHTML = top3.map((e, i) => `
       <div class="top-card ${i===0?'gold':i===1?'silver':'bronze'}">
         <div class="text-5xl mb-2">${i===0?'🥇':i===1?'🥈':'🥉'}</div>
         <h3 class="text-xl font-bold mb-2">${e.company_name || extractDomain(e.url)}</h3>
         <div class="text-4xl font-black mb-2">${e.score}/100</div>
         <div class="text-white/80 mb-3">${getFlag(e.country)} ${e.country}</div>
-        <button onclick="editLeaderboard(${e.id})" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg mb-2"><i class="fas fa-edit mr-2"></i> Edit</button>
-        <button onclick="deleteItem('leaderboard', ${e.id})" class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"><i class="fas fa-trash mr-2"></i> Delete</button>
-      </div>`).join('');
+        <button onclick="editLeaderboard(${e.id})" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg mb-2">
+          <i class="fas fa-edit mr-2"></i> Edit
+        </button>
+        <button onclick="deleteItem('leaderboard', ${e.id})" class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">
+          <i class="fas fa-trash mr-2"></i> Delete
+        </button>
+      </div>
+    `).join('');
 
-    document.getElementById('rankings4to15Grid').innerHTML = window.allLeaderboard.slice(3, 15).map((e, i) => `
+    const grid = document.getElementById('rankings4to15Grid');
+    grid.innerHTML = window.allLeaderboard.slice(3, 15).map((e, i) => `
       <div class="rank-card">
         <div class="text-2xl font-bold text-gray-400 mb-2">#${i+4}</div>
         <h4 class="font-bold text-white text-sm mb-2 truncate">${e.company_name || extractDomain(e.url)}</h4>
         <div class="text-2xl font-black text-green-400 mb-2">${e.score}</div>
         <div class="text-xs text-gray-400 mb-2">${getFlag(e.country)} ${e.country}</div>
         <div class="flex gap-2 justify-center">
-          <button onclick="editLeaderboard(${e.id})" class="text-blue-400 text-xs"><i class="fas fa-edit"></i> Edit</button>
-          <button onclick="deleteItem('leaderboard', ${e.id})" class="text-red-400 text-xs"><i class="fas fa-trash"></i> Del</button>
+          <button onclick="editLeaderboard(${e.id})" class="text-blue-400 hover:text-blue-300 text-xs"><i class="fas fa-edit"></i> Edit</button>
+          <button onclick="deleteItem('leaderboard', ${e.id})" class="text-red-400 hover:text-red-300 text-xs"><i class="fas fa-trash"></i> Del</button>
         </div>
-      </div>`).join('');
+      </div>
+    `).join('');
 
-    document.getElementById('rankingsTbody').innerHTML = window.allLeaderboard.slice(15, 35).map((e, i) => `
+    const tbody = document.getElementById('rankingsTbody');
+    tbody.innerHTML = window.allLeaderboard.slice(15, 35).map((e, i) => `
       <tr>
         <td class="w-10"><input type="checkbox" class="lb-checkbox" data-id="${e.id}" onchange="toggleSelection('leaderboard', ${e.id})"></td>
         <td>${i+16}</td>
         <td>${e.company_name || extractDomain(e.url)}</td>
         <td><span class="text-lg font-bold ${e.score >= 85 ? 'text-green-400' : 'text-yellow-400'}">${e.score}</span></td>
         <td>
-          <button onclick="editLeaderboard(${e.id})" class="text-blue-400 mr-2"><i class="fas fa-edit"></i></button>
-          <button onclick="deleteItem('leaderboard', ${e.id})" class="text-red-400"><i class="fas fa-trash"></i></button>
+          <button onclick="editLeaderboard(${e.id})" class="text-blue-400 hover:text-blue-300 mr-2"><i class="fas fa-edit"></i></button>
+          <button onclick="deleteItem('leaderboard', ${e.id})" class="text-red-400 hover:text-red-300"><i class="fas fa-trash"></i></button>
         </td>
-      </tr>`).join('');
-  } catch (e) { alert('Failed to load leaderboard: ' + e.message); }
+      </tr>
+    `).join('');
+
+    const totalCountEl = document.getElementById('totalCount');
+    if (totalCountEl) totalCountEl.textContent = window.allLeaderboard.length;
+  } catch (e) {
+    console.error(e);
+    alert('Failed to load leaderboard: ' + e.message);
+  }
 }
 
 function normalizeCountry(value) {
   if (!value) return '';
   const found = COUNTRY_LIST.find(c => c.code === value.toUpperCase());
-  return found ? found.name : value;
+  if (found) return found.name;
+  return value;
 }
 
 function editLeaderboard(id) {
@@ -732,13 +748,17 @@ function editLeaderboard(id) {
   document.getElementById('lb-country').value = normalizeCountry(entry.country);
   document.getElementById('lb-niche').value = entry.niche || '';
   const visitLink = document.getElementById('lb-visit-link');
-  visitLink.href = entry.url; visitLink.style.display = 'inline-block';
+  visitLink.href = entry.url;
+  visitLink.style.display = 'inline-block';
   document.getElementById('addLeaderboardModal').classList.add('active');
 }
 
 function showAddLeaderboardModal() {
   document.getElementById('lbModalTitle').textContent = 'Add New Entry';
-  ['edit-lb-id','lb-company','lb-url','lb-score'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('edit-lb-id').value = '';
+  document.getElementById('lb-company').value = '';
+  document.getElementById('lb-url').value = '';
+  document.getElementById('lb-score').value = '';
   document.getElementById('lb-country').value = '';
   document.getElementById('lb-niche').value = '';
   document.getElementById('lb-visit-link').style.display = 'none';
@@ -756,9 +776,15 @@ async function saveLeaderboardEntry() {
   try {
     const payload = { company_name: company, url, score, country };
     if (niche) payload.niche = niche;
-    if (id) { await apiCall(`/api/admin/leaderboard/${id}`, 'PUT', payload); alert('Entry updated!'); }
-    else { await apiCall('/api/admin/leaderboard/manual-add', 'POST', payload); alert('Entry added!'); }
-    closeModal('addLeaderboardModal'); loadLeaderboard();
+    if (id) {
+      await apiCall(`/api/admin/leaderboard/${id}`, 'PUT', payload);
+      alert('Entry updated!');
+    } else {
+      await apiCall('/api/admin/leaderboard/manual-add', 'POST', payload);
+      alert('Entry added!');
+    }
+    closeModal('addLeaderboardModal');
+    loadLeaderboard();
   } catch (e) { alert('Error: ' + e.message); }
 }
 
@@ -766,7 +792,8 @@ async function loadFreelancers() {
   try {
     const data = await apiCall('/api/freelancers');
     window.allFreelancers = data.freelancers || [];
-    document.getElementById('freelancersGrid').innerHTML = window.allFreelancers.map(f => `
+    const grid = document.getElementById('freelancersGrid');
+    grid.innerHTML = window.allFreelancers.map(f => `
       <div class="card">
         <div class="flex justify-between items-start mb-2">
           <h3 class="font-bold text-lg">${f.name}</h3>
@@ -774,16 +801,24 @@ async function loadFreelancers() {
         </div>
         <p class="text-sm text-gray-400 mb-4">${f.title || 'Specialist'}</p>
         <div class="flex gap-2 mb-2">
-          <button onclick="editFreelancer(${f.id})" class="flex-1 btn btn-info text-xs"><i class="fas fa-edit mr-1"></i> Edit</button>
-          <button onclick="deleteItem('freelancers', ${f.id})" class="flex-1 btn btn-danger text-xs"><i class="fas fa-trash mr-1"></i> Del</button>
+          <button onclick="editFreelancer(${f.id})" class="flex-1 btn btn-info text-xs">
+            <i class="fas fa-edit mr-1"></i> Edit
+          </button>
+          <button onclick="deleteItem('freelancers', ${f.id})" class="flex-1 btn btn-danger text-xs">
+            <i class="fas fa-trash mr-1"></i> Del
+          </button>
         </div>
         <div class="checkbox-wrapper mt-2">
           <input type="checkbox" onchange="toggleSelection('freelancers', ${f.id})">
           <span class="text-xs text-gray-400">Select</span>
         </div>
-      </div>`).join('');
+      </div>
+    `).join('');
     updateCounts();
-  } catch (e) { alert('Failed to load freelancers: ' + e.message); }
+  } catch (e) {
+    console.error(e);
+    alert('Failed to load freelancers: ' + e.message);
+  }
 }
 
 function editFreelancer(id) {
@@ -797,6 +832,7 @@ function editFreelancer(id) {
   document.getElementById('fr-hourly-rate').value = f.hourly_rate || '';
   const bio = f.bio || '';
   document.getElementById('fr-bio').value = bio;
+  // FIX 1 companion: also set counter when opening modal
   document.getElementById('fr-bio-count').textContent = bio.length;
   document.getElementById('fr-featured').checked = f.is_featured || false;
   document.getElementById('editFreelancerModal').classList.add('active');
@@ -806,119 +842,90 @@ async function saveFreelancerEntry() {
   const id = document.getElementById('edit-fr-id').value;
   const name = document.getElementById('fr-name').value;
   const email = document.getElementById('fr-email').value;
+  const phone = document.getElementById('fr-phone').value;
+  const title = document.getElementById('fr-title').value;
+  const hourlyRate = document.getElementById('fr-hourly-rate').value;
+  const bio = document.getElementById('fr-bio').value;
+  const isFeatured = document.getElementById('fr-featured').checked;
   if (!name || !email) return alert('Name and Email are required');
   try {
     await apiCall(`/api/admin/freelancers/${id}`, 'PUT', {
-      name, email,
-      phone: document.getElementById('fr-phone').value,
-      title: document.getElementById('fr-title').value,
-      hourly_rate: document.getElementById('fr-hourly-rate').value,
-      bio: document.getElementById('fr-bio').value,
-      is_featured: document.getElementById('fr-featured').checked
+      name, email, phone, title,
+      hourly_rate: hourlyRate,
+      bio,
+      is_featured: isFeatured
     });
-    alert('Freelancer updated!'); closeModal('editFreelancerModal'); loadFreelancers();
+    alert('Freelancer updated!');
+    closeModal('editFreelancerModal');
+    loadFreelancers();
   } catch (e) { alert('Error: ' + e.message); }
 }
 
 function deleteItem(type, id) {
   if (!confirm('Delete this item permanently?')) return;
   const endpoint = type === 'leaderboard' ? `/api/admin/leaderboard/${id}` : `/api/admin/freelancers/${id}`;
-  apiCall(endpoint, 'DELETE').then(() => { alert('Deleted'); loadAllData(); }).catch(e => alert(e.message));
+  apiCall(endpoint, 'DELETE')
+    .then(() => { alert('Deleted'); loadAllData(); })
+    .catch(e => alert(e.message));
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
+// FIX 3: toggleRankings now correctly updates both text AND arrow
 function toggleRankings() {
-  const el    = document.getElementById('rankingsContainer');
-  const label = document.getElementById('rankingsToggleText');
-  const arrow = document.getElementById('rankingsToggleArrow');
+  const el     = document.getElementById('rankingsContainer');
+  const label  = document.getElementById('rankingsToggleText');
+  const arrow  = document.getElementById('rankingsToggleArrow');
   const isHidden = el.classList.toggle('hidden');
   label.textContent = isHidden ? '📊 Show Rankings 16+' : '📊 Hide Rankings 16+';
   arrow.textContent = isHidden ? '▼' : '▲';
 }
 
-// ── Pending: open edit & approve modal ──────────────────────────
-function openPendingApprove(p) {
-  document.getElementById('pending-lb-id').value = p.id;
-  document.getElementById('pending-lb-company').value = p.company_name || extractDomain(p.url);
-  document.getElementById('pending-lb-url').value = p.url;
-  document.getElementById('pending-lb-score').value = p.score;
-  document.getElementById('pending-lb-country').value = normalizeCountry(p.country || 'NL');
-  document.getElementById('pending-lb-niche').value = p.niche || '';
-  document.getElementById('pendingApproveModal').classList.add('active');
-}
-
-async function saveAndApprovePending() {
-  const id      = document.getElementById('pending-lb-id').value;
-  const company = document.getElementById('pending-lb-company').value.trim();
-  const url     = document.getElementById('pending-lb-url').value.trim();
-  const score   = parseInt(document.getElementById('pending-lb-score').value);
-  const country = document.getElementById('pending-lb-country').value;
-  const niche   = document.getElementById('pending-lb-niche').value;
-  if (!company) return alert('Company name is required before approving');
-  try {
-    // 1. Update the entry with clean data
-    await apiCall(`/api/admin/leaderboard/${id}`, 'PUT', { company_name: company, url, score, country, niche });
-    // 2. Approve it (sets admin_verified = TRUE)
-    await apiCall(`/api/admin/leaderboard/${id}/approve`, 'POST', { final_country: country });
-    alert(`✅ "${company}" is now live on the leaderboard!`);
-    closeModal('pendingApproveModal');
-    loadPendingData();
-    loadLeaderboard();
-    checkPendingCount();
-  } catch (e) { alert('Error: ' + e.message); }
-}
-
 async function loadPendingData() {
   try {
-    const [lbData, frData] = await Promise.all([
-      apiCall('/api/admin/leaderboard/pending'),
-      apiCall('/api/admin/freelancers/pending')
-    ]);
+    const lbData = await apiCall('/api/admin/leaderboard/pending');
+    const frData = await apiCall('/api/admin/freelancers/pending');
 
     const lbContainer = document.getElementById('pending-leaderboard-container');
-    lbContainer.innerHTML = lbData.pending?.length ? lbData.pending.map(p => `
-      <div class="pending-card">
-        <div class="flex justify-between items-start mb-2 flex-wrap gap-2">
+    lbContainer.innerHTML = lbData.pending.length ? lbData.pending.map(p => `
+      <div class="pending-card" style="border:1px solid #374151;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
           <div>
-            <h4 class="font-bold text-lg">${p.company_name || extractDomain(p.url)}</h4>
-            <p class="text-sm text-blue-400">${p.url}</p>
-            <p class="text-xs text-gray-400 mt-1">${getFlag(p.country || '')} ${p.country || 'Unknown country'} · ${p.niche || 'No niche'}</p>
+            <h4 class="font-bold text-white text-lg">${p.company_name || extractDomain(p.url)}</h4>
+            <a href="${p.url}" target="_blank" style="color:#60a5fa;font-size:0.8rem;word-break:break-all;">${p.url}</a>
           </div>
-          <div class="text-3xl font-black text-green-400">${p.score}/100</div>
+          <span style="font-size:1.8rem;font-weight:900;color:${p.score>=70?'#4ade80':p.score>=50?'#fbbf24':'#f87171'};white-space:nowrap;margin-left:12px;">${p.score}/100</span>
         </div>
-        <div class="flex gap-2 mt-3">
-          <button onclick='openPendingApprove(${JSON.stringify(p)})' class="flex-1 btn btn-warning">
-            <i class="fas fa-edit mr-1"></i> Edit & Approve
-          </button>
-          <button onclick="rejectPending(${p.id})" class="btn btn-danger px-4">
-            <i class="fas fa-times"></i>
-          </button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;font-size:0.78rem;">
+          ${p.niche ? '<span style="background:#1e1b4b;color:#a78bfa;padding:2px 8px;border-radius:99px;">'+p.niche+'</span>' : ''}
+          ${p.city ? '<span style="background:#0f2d1a;color:#4ade80;padding:2px 8px;border-radius:99px;">📍 '+p.city+'</span>' : ''}
+          ${p.country ? '<span style="background:#1c1917;color:#d1d5db;padding:2px 8px;border-radius:99px;">'+p.country+'</span>' : ''}
         </div>
-      </div>`).join('') : '<p class="text-gray-400 text-center py-4">✅ No pending leaderboard submissions</p>';
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
+          <input id="approve-niche-${p.id}" type="text" placeholder="Niche (e.g. SEO Agency)" value="${p.niche||''}" class="p-2 rounded text-sm" style="background:#111827;border:1px solid #374151;color:#e5e7eb;">
+          <input id="approve-city-${p.id}" type="text" placeholder="City (e.g. Amsterdam)" value="${p.city||''}" class="p-2 rounded text-sm" style="background:#111827;border:1px solid #374151;color:#e5e7eb;">
+          <input id="approve-country-${p.id}" type="text" placeholder="Country (e.g. NL)" value="${p.country||''}" class="p-2 rounded text-sm" style="background:#111827;border:1px solid #374151;color:#e5e7eb;">
+        </div>
+        <div class="flex gap-2">
+          <button onclick="approveLB(${p.id})" class="flex-1 btn btn-success">✅ Approve & Add to Leaderboard</button>
+          <button onclick="apiCall('/api/admin/leaderboard/${p.id}/reject','POST').then(()=>{alert('Rejected');loadPendingData();})" class="btn btn-danger px-4">✗ Reject</button>
+        </div>
+      </div>
+    `).join('') : '<p class="text-gray-400">✅ No pending leaderboard submissions</p>';
 
     const frContainer = document.getElementById('pending-freelancers-container');
-    frContainer.innerHTML = frData.pending?.length ? frData.pending.map(p => `
+    frContainer.innerHTML = frData.pending.length ? frData.pending.map(p => `
       <div class="pending-card">
         <h4 class="font-bold">${p.name}</h4>
         <p class="text-sm text-gray-400">${p.email}</p>
-        <p class="text-sm mb-3">${p.bio || 'No bio provided'}</p>
+        <p class="text-sm mb-2">${p.bio || 'No bio'}</p>
         <div class="flex gap-2">
-          <button onclick="apiCall('/api/admin/freelancers/${p.id}/approve','POST').then(()=>{alert('✅ Approved');loadPendingData();loadFreelancers();checkPendingCount();})" class="flex-1 btn btn-success">Approve</button>
-          <button onclick="apiCall('/api/admin/freelancers/${p.id}','DELETE').then(()=>{alert('Rejected');loadPendingData();checkPendingCount();})" class="flex-1 btn btn-danger">Reject</button>
+          <button onclick="apiCall('/api/admin/freelancers/${p.id}/approve','POST').then(()=>{alert('Approved');loadPendingData();loadFreelancers();})" class="flex-1 btn btn-success">Approve</button>
+          <button onclick="apiCall('/api/admin/freelancers/${p.id}','DELETE').then(()=>{alert('Rejected');loadPendingData();})" class="flex-1 btn btn-danger">Reject</button>
         </div>
-      </div>`).join('') : '<p class="text-gray-400 text-center py-4">✅ No pending freelancer applications</p>';
-
-    checkPendingCount();
+      </div>
+    `).join('') : '<p class="text-gray-400">No pending applications</p>';
   } catch (e) { console.error(e); }
-}
-
-async function rejectPending(id) {
-  if (!confirm('Reject and delete this submission?')) return;
-  try {
-    await apiCall(`/api/admin/leaderboard/${id}/reject`, 'POST');
-    loadPendingData(); checkPendingCount();
-  } catch (e) { alert(e.message); }
 }
 
 function extractDomain(url) {
@@ -927,12 +934,264 @@ function extractDomain(url) {
 
 function getFlag(codeOrName) {
   if (!codeOrName) return '🌐';
-  const flags = { 'NL':'🇳🇱','BE':'🇧🇪','US':'🇺🇸','UK':'🇬🇧','DE':'🇩🇪','FR':'🇫🇷','ES':'🇪🇸','IT':'🇮🇹','NZ':'🇳🇿','AU':'🇦🇺','CA':'🇨🇦','IE':'🇮🇪','SE':'🇸🇪','NO':'🇳🇴','DK':'🇩🇰','FI':'🇫🇮','CH':'🇨🇭','AT':'🇦🇹','PT':'🇵🇹','PL':'🇵🇱','CZ':'🇨🇿','ZA':'🇿🇦','NG':'🇳🇬','IN':'🇮🇳','PH':'🇵🇭','SG':'🇸🇬','JP':'🇯🇵','BR':'🇧🇷','MX':'🇲🇽','AE':'🇦🇪' };
   const upper = codeOrName.toUpperCase();
-  if (flags[upper]) return flags[upper];
-  const found = COUNTRY_LIST.find(c => c.name.toUpperCase() === upper);
-  return found ? (flags[found.code] || '🌐') : '🌐';
+  const directFlags = { 'NL':'🇳🇱','BE':'🇧🇪','US':'🇺🇸','UK':'🇬🇧','DE':'🇩🇪','FR':'🇫🇷','ES':'🇪🇸','IT':'🇮🇹','NZ':'🇳🇿','AU':'🇦🇺','CA':'🇨🇦','IE':'🇮🇪','SE':'🇸🇪','NO':'🇳🇴','DK':'🇩🇰','FI':'🇫🇮','CH':'🇨🇭','AT':'🇦🇹','PT':'🇵🇹','PL':'🇵🇱','CZ':'🇨🇿','ZA':'🇿🇦','NG':'🇳🇬','IN':'🇮🇳','PH':'🇵🇭','SG':'🇸🇬','JP':'🇯🇵','BR':'🇧🇷','MX':'🇲🇽','AE':'🇦🇪' };
+  if (directFlags[upper]) return directFlags[upper];
+  const found = COUNTRY_LIST.find(c => c.name.toUpperCase() === codeOrName.toUpperCase());
+  if (found) return directFlags[found.code] || '🌐';
+  return '🌐';
+}
+
+let allEmailLogs = [];
+
+function approveLB(id) {
+  const niche   = (document.getElementById('approve-niche-'  + id) || {}).value || null;
+  const city    = (document.getElementById('approve-city-'   + id) || {}).value || null;
+  const country = (document.getElementById('approve-country-'+ id) || {}).value || null;
+  apiCall('/api/admin/leaderboard/' + id + '/approve', 'POST', { final_country: country, city, niche })
+    .then(() => { loadPendingData(); loadLeaderboard(); });
+}
+
+async function loadEmailLog() {
+  try {
+    // Load stats
+    const stats = await apiCall('/api/admin/email-stats');
+    if (stats.success) {
+      document.getElementById('statSentToday').textContent = stats.sentToday;
+      document.getElementById('statRemaining').textContent = stats.remainingToday;
+      document.getElementById('statQueued').textContent = stats.queued;
+      document.getElementById('statTotal').textContent = stats.totalSent;
+      document.getElementById('statLimitLabel').textContent = stats.sentToday + ' / ' + stats.dailyLimit;
+      const pct = Math.min(100, Math.round((stats.sentToday / stats.dailyLimit) * 100));
+      document.getElementById('statProgressBar').style.width = pct + '%';
+      document.getElementById('statProgressBar').style.background = pct >= 90 ? 'linear-gradient(90deg,#ef4444,#f59e0b)' : 'linear-gradient(90deg,#4ade80,#f59e0b)';
+    }
+    // Load log
+    const data = await apiCall('/api/admin/email-log?limit=200');
+    if (data.success) {
+      allEmailLogs = data.emails;
+      renderEmailLog(allEmailLogs);
+    }
+  } catch (e) { console.error(e); }
+}
+
+function renderEmailLog(emails) {
+  const tbody = document.getElementById('emailLogBody');
+  if (!emails.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center" style="color:#6b7280;">No emails sent yet.</td></tr>';
+    return;
+  }
+  const typeColors = { congrats: '#4ade80', improvement: '#60a5fa', almostMade: '#fbbf24', website: '#a78bfa' };
+  tbody.innerHTML = emails.map(e => {
+    const dt = e.sent_at ? new Date(e.sent_at) : new Date(e.created_at);
+    const dateStr = dt.toLocaleDateString('nl-NL', { day:'2-digit', month:'short', year:'numeric' });
+    const timeStr = dt.toLocaleTimeString('nl-NL', { hour:'2-digit', minute:'2-digit' });
+    const score = e.score ? '<span style="color:' + (e.score >= 70 ? '#4ade80' : e.score >= 50 ? '#fbbf24' : '#f87171') + ';font-weight:700;">' + e.score + '</span>' : '—';
+    const typeColor = typeColors[e.template_type] || '#9ca3af';
+    const typeLabel = { congrats: '🏆 Congrats', improvement: '📈 Improve', almostMade: '⚡ Almost', website: '🌐 Website' }[e.template_type] || (e.template_type || '—');
+    const urlLink = e.business_url ? '<a href="' + e.business_url + '" target="_blank" style="color:#60a5fa;text-decoration:underline;font-size:0.75rem;">' + new URL(e.business_url).hostname.replace('www.', '') + '</a>' : '—';
+    return '<tr style="border-bottom:1px solid #1f2937;" onmouseover="this.style.background=\'#111827\'" onmouseout="this.style.background=\'transparent\'">'
+      + '<td class="py-2 pr-4" style="color:#9ca3af;white-space:nowrap;font-size:0.75rem;">' + dateStr + '<br>' + timeStr + '</td>'
+      + '<td class="py-2 pr-4" style="color:#e5e7eb;">' + (e.to_email || '—') + '</td>'
+      + '<td class="py-2 pr-4" style="color:#d1d5db;">' + (e.business_name || '—') + '</td>'
+      + '<td class="py-2 pr-4">' + score + '</td>'
+      + '<td class="py-2 pr-4"><span style="color:' + typeColor + ';font-size:0.75rem;">' + typeLabel + '</span></td>'
+      + '<td class="py-2">' + (e.business_url ? urlLink : '—') + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+function filterEmailLog() {
+  const q = document.getElementById('emailLogSearch').value.toLowerCase();
+  if (!q) { renderEmailLog(allEmailLogs); return; }
+  renderEmailLog(allEmailLogs.filter(e =>
+    (e.to_email || '').toLowerCase().includes(q) ||
+    (e.business_name || '').toLowerCase().includes(q) ||
+    (e.business_url || '').toLowerCase().includes(q)
+  ));
+}
+
+function exportEmailLog() {
+  const rows = [['Date', 'Time', 'To Email', 'Business', 'Score', 'Type', 'URL']];
+  allEmailLogs.forEach(e => {
+    const dt = e.sent_at ? new Date(e.sent_at) : new Date(e.created_at);
+    rows.push([
+      dt.toLocaleDateString('nl-NL'),
+      dt.toLocaleTimeString('nl-NL', { hour:'2-digit', minute:'2-digit' }),
+      e.to_email || '', e.business_name || '', e.score || '', e.template_type || '', e.business_url || ''
+    ]);
+  });
+  const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'email-log-' + new Date().toISOString().split('T')[0] + '.csv';
+  a.click();
+}
+
+let allScanLogs = [];
+
+async function loadScanLog() {
+  try {
+    const data = await apiCall('/api/admin/scan-log?limit=500');
+    if (data.success) { allScanLogs = data.scans; filterScanLog(); }
+  } catch (e) { console.error(e); }
+}
+
+function filterScanLog() {
+  const q = (document.getElementById('scanLogSearch').value || '').toLowerCase();
+  const f = document.getElementById('scanLogFilter').value;
+  let rows = allScanLogs;
+  if (q) rows = rows.filter(s => (s.business_name||'').toLowerCase().includes(q) || (s.business_url||'').toLowerCase().includes(q));
+  if (f) rows = rows.filter(s => s.email_status === f);
+  renderScanLog(rows);
+}
+
+function renderScanLog(scans) {
+  const tbody = document.getElementById('scanLogBody');
+  if (!scans.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center" style="color:#6b7280;">No scans yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = scans.map(s => {
+    const dt = new Date(s.created_at);
+    const dateStr = dt.toLocaleDateString('nl-NL', { day:'2-digit', month:'short' }) + ' ' + dt.toLocaleTimeString('nl-NL', { hour:'2-digit', minute:'2-digit' });
+    const score = s.score !== null ? '<span style="color:' + (s.score>=70?'#4ade80':s.score>=50?'#fbbf24':'#f87171') + ';font-weight:700;">' + s.score + '</span>' : '—';
+    const statusBadge = s.email_status === 'has_email'
+      ? '<span style="background:#0f2d1a;color:#4ade80;padding:2px 7px;border-radius:99px;font-size:0.7rem;">✉ Found</span>'
+      : '<span style="background:#1c1917;color:#9ca3af;padding:2px 7px;border-radius:99px;font-size:0.7rem;">✗ No email</span>';
+    let recs = '';
+    try { const r = JSON.parse(s.recommendations || '[]'); recs = r.slice(0,3).join(' · '); } catch {}
+    const urlLink = s.business_url ? '<a href="' + s.business_url + '" target="_blank" style="color:#60a5fa;font-size:0.75rem;">' + (s.business_url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]) + '</a>' : '—';
+    return '<tr style="border-bottom:1px solid #1f2937;" onmouseover="this.style.background=\'#111827\'" onmouseout="this.style.background=\'transparent\'">'
+      + '<td class="py-2 pr-3" style="color:#9ca3af;white-space:nowrap;font-size:0.72rem;">' + dateStr + '</td>'
+      + '<td class="py-2 pr-3"><div style="font-weight:600;color:#e5e7eb;">' + (s.business_name || '—') + '</div><div>' + urlLink + '</div></td>'
+      + '<td class="py-2 pr-3">' + score + '</td>'
+      + '<td class="py-2 pr-3" style="color:#a78bfa;font-size:0.78rem;">' + (s.niche || '—') + '</td>'
+      + '<td class="py-2 pr-3" style="color:#d1d5db;font-size:0.78rem;">' + (s.city || '—') + '</td>'
+      + '<td class="py-2 pr-3" style="color:#60a5fa;font-size:0.75rem;">' + (s.email_found || '—') + '</td>'
+      + '<td class="py-2 pr-3">' + statusBadge + '</td>'
+      + '<td class="py-2" style="color:#6b7280;font-size:0.72rem;max-width:280px;">' + (recs || '—') + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+function exportScanLog() {
+  const rows = [['Date','Business','URL','Score','Niche','City','Country','Email','Status','Recommendations']];
+  allScanLogs.forEach(s => {
+    let recs = '';
+    try { recs = JSON.parse(s.recommendations || '[]').join('; '); } catch {}
+    rows.push([new Date(s.created_at).toLocaleString('nl-NL'), s.business_name||'', s.business_url||'', s.score||'', s.niche||'', s.city||'', s.country||'', s.email_found||'', s.email_status||'', recs]);
+  });
+  const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'scan-log-' + new Date().toISOString().split('T')[0] + '.csv';
+  a.click();
 }
 </script>
+<!-- EMAIL LOG TAB -->
+<div id="tab-emaillog" class="tab-content hidden">
+  <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 border border-gray-700">
+
+    <!-- Daily Stats Bar -->
+    <div id="emailStatsBar" class="grid grid-cols-4 gap-4 mb-6">
+      <div class="rounded-lg p-4 text-center" style="background:#0f2d1a;border:1px solid #166534;">
+        <div id="statSentToday" class="text-3xl font-black" style="color:#4ade80;">—</div>
+        <div class="text-xs mt-1" style="color:#86efac;">Sent Today</div>
+      </div>
+      <div class="rounded-lg p-4 text-center" style="background:#1e1b4b;border:1px solid #4c1d95;">
+        <div id="statRemaining" class="text-3xl font-black" style="color:#a78bfa;">—</div>
+        <div class="text-xs mt-1" style="color:#c4b5fd;">Remaining Today</div>
+      </div>
+      <div class="rounded-lg p-4 text-center" style="background:#1c0a00;border:1px solid #92400e;">
+        <div id="statQueued" class="text-3xl font-black" style="color:#fbbf24;">—</div>
+        <div class="text-xs mt-1" style="color:#fde68a;">Queued (pending)</div>
+      </div>
+      <div class="rounded-lg p-4 text-center" style="background:#0f172a;border:1px solid #334155;">
+        <div id="statTotal" class="text-3xl font-black" style="color:#94a3b8;">—</div>
+        <div class="text-xs mt-1" style="color:#cbd5e1;">Total Sent (all time)</div>
+      </div>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="mb-6">
+      <div class="flex justify-between text-xs mb-1" style="color:#9ca3af;">
+        <span>Daily SendGrid usage</span>
+        <span id="statLimitLabel">— / 100</span>
+      </div>
+      <div class="w-full rounded-full h-3" style="background:#1f2937;">
+        <div id="statProgressBar" class="h-3 rounded-full transition-all" style="background:linear-gradient(90deg,#4ade80,#f59e0b);width:0%;"></div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-bold text-white">📧 Email Log</h3>
+      <div class="flex gap-2">
+        <input type="text" id="emailLogSearch" placeholder="Search email or business..." class="p-2 rounded text-sm" style="background:#111827;border:1px solid #374151;color:#e5e7eb;width:240px;" oninput="filterEmailLog()">
+        <button onclick="loadEmailLog()" class="btn btn-warning text-sm px-4 py-2"><i class="fas fa-sync-alt mr-1"></i> Refresh</button>
+        <button onclick="exportEmailLog()" class="btn btn-success text-sm px-4 py-2"><i class="fas fa-download mr-1"></i> CSV</button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div style="overflow-x:auto;">
+      <table class="w-full text-sm" style="border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:1px solid #374151;color:#9ca3af;text-align:left;">
+            <th class="pb-2 pr-4">Date & Time</th>
+            <th class="pb-2 pr-4">To Email</th>
+            <th class="pb-2 pr-4">Business</th>
+            <th class="pb-2 pr-4">Score</th>
+            <th class="pb-2 pr-4">Type</th>
+            <th class="pb-2">URL</th>
+          </tr>
+        </thead>
+        <tbody id="emailLogBody">
+          <tr><td colspan="6" class="py-8 text-center" style="color:#6b7280;">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- SCAN LOG TAB -->
+<div id="tab-scanlog" class="tab-content hidden">
+  <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 border border-gray-700">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-bold text-white">🔍 All Scanned Businesses</h3>
+      <div class="flex gap-2">
+        <input type="text" id="scanLogSearch" placeholder="Search name or URL..." class="p-2 rounded text-sm" style="background:#111827;border:1px solid #374151;color:#e5e7eb;width:240px;" oninput="filterScanLog()">
+        <select id="scanLogFilter" onchange="filterScanLog()" class="p-2 rounded text-sm" style="background:#111827;border:1px solid #374151;color:#e5e7eb;">
+          <option value="">All</option>
+          <option value="no_email">No email found</option>
+          <option value="has_email">Email found</option>
+        </select>
+        <button onclick="loadScanLog()" class="btn btn-warning text-sm px-4 py-2"><i class="fas fa-sync-alt mr-1"></i> Refresh</button>
+        <button onclick="exportScanLog()" class="btn btn-success text-sm px-4 py-2"><i class="fas fa-download mr-1"></i> CSV</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="w-full text-sm" style="border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:1px solid #374151;color:#9ca3af;text-align:left;">
+            <th class="pb-2 pr-3">Date</th>
+            <th class="pb-2 pr-3">Business</th>
+            <th class="pb-2 pr-3">Score</th>
+            <th class="pb-2 pr-3">Niche</th>
+            <th class="pb-2 pr-3">City</th>
+            <th class="pb-2 pr-3">Email</th>
+            <th class="pb-2 pr-3">Status</th>
+            <th class="pb-2">Top Recommendations</th>
+          </tr>
+        </thead>
+        <tbody id="scanLogBody">
+          <tr><td colspan="8" class="py-8 text-center" style="color:#6b7280;">Click Refresh to load.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
