@@ -2631,16 +2631,19 @@ function clearQueue() {
 // Priority: Apify place email > scan contact email > website contact page guess
 // ============================================================
 function extractBusinessEmail(item) {
-  // 1. From Apify place data (most reliable — Google Maps sometimes has it)
   const d = item.data || {};
-  if (d.email)                 return d.email;
-  if (d.emails?.[0])           return d.emails[0];
-  if (d.contactEmail)          return d.contactEmail;
-  if (d.contact_email)         return d.contact_email;
 
-  // 2. From website scan result
-  if (d.extractedEmail)        return d.extractedEmail;
-  if (d.emails_found?.[0])     return d.emails_found[0];
+  // 1. From website scan (most reliable — extracted from actual page)
+  if (d.extractedEmail)             return d.extractedEmail;
+  if (d.emails_found && d.emails_found[0]) return d.emails_found[0];
+  if (d.content_stats && d.content_stats.extractedEmail) return d.content_stats.extractedEmail;
+  if (d.content_stats && d.content_stats.emails_found && d.content_stats.emails_found[0]) return d.content_stats.emails_found[0];
+
+  // 2. From Apify Google Maps data
+  if (d.email)                      return d.email;
+  if (d.emails && d.emails[0])      return d.emails[0];
+  if (d.contactEmail)               return d.contactEmail;
+  if (d.contact_email)              return d.contact_email;
 
   // 3. Not found
   return null;
