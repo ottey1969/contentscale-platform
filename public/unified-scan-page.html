@@ -3361,8 +3361,7 @@ function exportActivityCSV() {
     let rec = ''; try { rec = JSON.parse(s.recommendations || '[]')[0] || ''; } catch {}
     rows.push([s.business_name || '', s.business_url || '', s.score || '', s.email_found || '', s.email_status || '', rec, new Date(s.created_at).toLocaleString('nl-NL')]);
   });
-  const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('
-');
+  const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
   const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv); a.download = 'contentscale-activity-' + new Date().toISOString().split('T')[0] + '.csv'; a.click();
 }
 
