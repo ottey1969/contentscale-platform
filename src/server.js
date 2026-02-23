@@ -471,6 +471,181 @@ app.post('/api/admin/messages/send', verifyAdmin, async (req, res) => {
 });
 
 // Leaderboard Admin
+
+// ── DOCX Export endpoint ─────────────────────────────────────────────────────
+app.post('/api/export/scan-report-docx', async (req, res) => {
+    const { scans } = req.body;
+    if (!scans || !Array.isArray(scans)) return res.status(400).json({ error: 'No scan data' });
+
+    const { spawn } = require('child_process');
+    const os = require('os');
+    const path = require('path');
+    const fs = require('fs');
+
+    const tmpJson = path.join(os.tmpdir(), 'scandata_' + Date.now() + '.json');
+    const tmpDocx = path.join(os.tmpdir(), 'scanreport_' + Date.now() + '.docx');
+
+    fs.writeFileSync(tmpJson, JSON.stringify(scans));
+
+    const pyScript = `
+import sys, json
+from docx import Document
+from docx.shared import Pt, RGBColor, Cm
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
+import datetime
+
+json_path = sys.argv[1]
+out_path  = sys.argv[2]
+
+with open(json_path) as f:
+    scans = json.load(f)
+
+doc = Document()
+
+# Page margins
+for section in doc.sections:
+    section.top_margin    = Cm(2)
+    section.bottom_margin = Cm(2)
+    section.left_margin   = Cm(2.5)
+    section.right_margin  = Cm(2.5)
+
+# Title block
+title = doc.add_paragraph()
+title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+run = title.add_run('ContentScale — Scan Activity Report')
+run.bold = True
+run.font.size = Pt(20)
+run.font.color.rgb = RGBColor(126, 34, 206)
+
+sub = doc.add_paragraph()
+sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
+sub.add_run('Generated: ' + datetime.datetime.now().strftime('%d %B %Y') + '  ·  app.contentscale.site').font.color.rgb = RGBColor(120, 120, 120)
+
+doc.add_paragraph()
+
+# Summary stats
+total   = len(scans)
+emailed = sum(1 for s in scans if s.get('email_status') == 'has_email')
+no_em   = sum(1 for s in scans if s.get('email_status') == 'no_email')
+lb      = sum(1 for s in scans if (s.get('score') or 0) >= 70)
+
+stats_p = doc.add_paragraph()
+stats_p.add_run('Summary   ').bold = True
+stats_p.add_run(f'Total scanned: {total}   |   Emails sent: {emailed}   |   No email found: {no_em}   |   Leaderboard (70+): {lb}')
+
+doc.add_paragraph()
+
+# Table
+headers = ['Business', 'URL', 'Score', 'Email Found', 'Status', 'Top Issue', 'Scanned']
+widths  = [Cm(4.5), Cm(5.5), Cm(1.5), Cm(5), Cm(2.2), Cm(5), Cm(2.8)]
+
+table = doc.add_table(rows=1, cols=len(headers))
+table.style = 'Table Grid'
+
+# Header row
+hdr = table.rows[0]
+for i, (cell, w) in enumerate(zip(hdr.cells, widths)):
+    cell.width = w
+    p = cell.paragraphs[0]
+    run = p.add_run(headers[i])
+    run.bold = True
+    run.font.size = Pt(8)
+    run.font.color.rgb = RGBColor(255, 255, 255)
+    tc = cell._tc
+    tcPr = tc.get_or_add_tcPr()
+    shd = OxmlElement('w:shd')
+    shd.set(qn('w:val'), 'clear')
+    shd.set(qn('w:color'), 'auto')
+    shd.set(qn('w:fill'), '7E22CE')
+    tcPr.append(shd)
+
+# Data rows
+for idx, s in enumerate(scans):
+    score = s.get('score')
+    if score is None: score_str = '—'
+    else: score_str = str(score)
+
+    rec = ''
+    try:
+        import json as j2
+        recs = j2.loads(s.get('recommendations') or '[]')
+        rec = recs[0] if recs else ''
+    except: pass
+
+    dt_str = ''
+    try:
+        from datetime import datetime
+        dt_str = datetime.fromisoformat(s.get('created_at','').replace('Z','+00:00')).strftime('%d/%m/%Y')
+    except: dt_str = str(s.get('created_at',''))[:10]
+
+    row_data = [
+        (s.get('business_name') or '—')[:40],
+        (s.get('business_url') or '—').replace('https://','').replace('http://','').replace('www.','')[:40],
+        score_str,
+        (s.get('email_found') or 'not found')[:35],
+        'Sent' if s.get('email_status') == 'has_email' else 'No email',
+        rec[:50],
+        dt_str
+    ]
+
+    row = table.add_row()
+    fill = 'F5F3FF' if idx % 2 == 0 else 'FFFFFF'
+    for i, (cell, val) in enumerate(zip(row.cells, row_data)):
+        p = cell.paragraphs[0]
+        run = p.add_run(val)
+        run.font.size = Pt(7.5)
+        # Score color
+        if i == 2 and score is not None:
+            if score >= 70:   run.font.color.rgb = RGBColor(5, 150, 105)
+            elif score >= 50: run.font.color.rgb = RGBColor(180, 83, 9)
+            else:             run.font.color.rgb = RGBColor(185, 28, 28)
+            run.bold = True
+        # Status color
+        if i == 4:
+            run.font.color.rgb = RGBColor(5, 150, 105) if val == 'Sent' else RGBColor(107, 114, 128)
+        # Row shading
+        tc = cell._tc
+        tcPr = tc.get_or_add_tcPr()
+        shd = OxmlElement('w:shd')
+        shd.set(qn('w:val'), 'clear')
+        shd.set(qn('w:color'), 'auto')
+        shd.set(qn('w:fill'), fill)
+        tcPr.append(shd)
+
+# Footer
+doc.add_paragraph()
+footer_p = doc.add_paragraph()
+footer_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+fr = footer_p.add_run('ContentScale  ·  app.contentscale.site  ·  GRAAF + CRAFT Framework  ·  By Ottmar Francisca')
+fr.font.size = Pt(7)
+fr.font.color.rgb = RGBColor(150, 150, 150)
+
+doc.save(out_path)
+print('OK')
+`;
+
+    const tmpPy = path.join(os.tmpdir(), 'gendocx_' + Date.now() + '.py');
+    fs.writeFileSync(tmpPy, pyScript);
+
+    const py = spawn('python3', [tmpPy, tmpJson, tmpDocx]);
+    let stderr = '';
+    py.stderr.on('data', d => stderr += d);
+    py.on('close', code => {
+        fs.unlinkSync(tmpPy);
+        fs.unlinkSync(tmpJson);
+        if (code !== 0 || !fs.existsSync(tmpDocx)) {
+            return res.status(500).json({ error: 'DOCX generation failed', detail: stderr });
+        }
+        const buf = fs.readFileSync(tmpDocx);
+        fs.unlinkSync(tmpDocx);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        res.setHeader('Content-Disposition', 'attachment; filename="contentscale-scan-report.docx"');
+        res.send(buf);
+    });
+});
+
 app.get('/api/scan-log', async (req, res) => {
     if (!pool) return res.json({ success: false, error: 'No DB' });
     const userId = req.headers['x-user-id'];
