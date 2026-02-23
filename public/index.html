@@ -629,7 +629,7 @@ footer p { color: #9ca3af !important; }
         </div>
       </div>
 
-      <!-- Filter + search -->
+      <!-- Filter + search + export -->
       <div class="flex gap-3 mb-4 flex-wrap">
         <input type="text" id="actSearch" placeholder="Search business or URL..." oninput="filterActivity()" class="p-2 rounded text-sm flex-1" style="background:#111827;border:1px solid #374151;color:#e5e7eb;min-width:200px;">
         <select id="actFilter" onchange="filterActivity()" class="p-2 rounded text-sm" style="background:#111827;border:1px solid #374151;color:#e5e7eb;">
@@ -637,6 +637,9 @@ footer p { color: #9ca3af !important; }
           <option value="no_email">No email found</option>
           <option value="has_email">Email sent</option>
         </select>
+        <button onclick="exportActivityCSV()" class="btn text-sm px-4 py-2" style="background:#065f46;color:white;">⬇ CSV</button>
+        <button onclick="exportActivityPDF()" class="btn text-sm px-4 py-2" style="background:#7e22ce;color:white;">⬇ PDF</button>
+        <button onclick="exportActivityDOCX()" class="btn text-sm px-4 py-2" style="background:#1e3a8a;color:white;">⬇ DOCX</button>
       </div>
 
       <!-- Table -->
@@ -3388,6 +3391,120 @@ function renderActivityTable(scans) {
       + '<td class="py-3" style="color:#6b7280;font-size:0.72rem;white-space:nowrap;">' + dateStr + '</td>'
       + '</tr>';
   }).join('');
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+function exportActivityCSV() {
+  const rows = [['Business','URL','Score','Email Found','Status','Top Issue','Scanned']];
+  allActivityScans.forEach(s => {
+    let rec = '';
+    try { rec = JSON.parse(s.recommendations || '[]')[0] || ''; } catch {}
+    rows.push([
+      s.business_name || '', s.business_url || '', s.score || '',
+      s.email_found || '', s.email_status || '', rec,
+      new Date(s.created_at).toLocaleString('nl-NL')
+    ]);
+  });
+  const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'contentscale-scan-activity-' + new Date().toISOString().split('T')[0] + '.csv';
+  a.click();
+}
+
+function exportActivityPDF() {
+  // Load jsPDF from CDN then generate
+  if (window.jspdf) { doGeneratePDF(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+  s.onload = function() {
+    if (window.jspdf) { window.jsPDF = window.jspdf.jsPDF; }
+    doGeneratePDF();
+  };
+  document.head.appendChild(s);
+}
+
+function doGeneratePDF() {
+  const { jsPDF } = window;
+  if (!jsPDF) { alert('PDF library failed to load. Try again.'); return; }
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const date = new Date().toLocaleDateString('nl-NL', { day:'2-digit', month:'long', year:'numeric' });
+
+  // Header
+  doc.setFillColor(126, 34, 206);
+  doc.rect(0, 0, 297, 22, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(14); doc.setFont('helvetica', 'bold');
+  doc.text('ContentScale — Scan Activity Report', 14, 10);
+  doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+  doc.text('Generated: ' + date + '  ·  app.contentscale.site', 14, 17);
+
+  // Summary stats
+  const total = allActivityScans.length;
+  const emailed = allActivityScans.filter(s => s.email_status === 'has_email').length;
+  const noEmail = allActivityScans.filter(s => s.email_status === 'no_email').length;
+  const lb = allActivityScans.filter(s => s.score >= 70).length;
+
+  doc.setTextColor(30, 30, 30);
+  doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+  doc.text('Summary:', 14, 30);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Total scanned: ' + total + '   |   Emails sent: ' + emailed + '   |   No email found: ' + noEmail + '   |   Leaderboard (70+): ' + lb, 14, 36);
+
+  // Table headers
+  const cols = ['Business', 'URL', 'Score', 'Email Found', 'Status', 'Scanned'];
+  const colW  = [55, 65, 18, 55, 22, 35];
+  let y = 45;
+  doc.setFillColor(240, 235, 255);
+  doc.rect(14, y - 5, 269, 8, 'F');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+  let x = 14;
+  cols.forEach((col, i) => { doc.text(col, x + 2, y); x += colW[i]; });
+
+  // Table rows
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+  allActivityScans.forEach((s, idx) => {
+    y += 8;
+    if (y > 190) { doc.addPage(); y = 20; }
+    if (idx % 2 === 0) { doc.setFillColor(250, 248, 255); doc.rect(14, y - 5, 269, 7, 'F'); }
+    const scoreColor = s.score >= 70 ? [5, 150, 105] : s.score >= 50 ? [180, 83, 9] : [185, 28, 28];
+    x = 14;
+    doc.setTextColor(30, 30, 30);
+    doc.text((s.business_name || '—').substring(0, 28), x + 2, y); x += colW[0];
+    doc.setTextColor(37, 99, 235);
+    doc.text((s.business_url || '—').replace(/^https?:\/\/(www\.)?/, '').substring(0, 32), x + 2, y); x += colW[1];
+    doc.setTextColor(...scoreColor); doc.setFont('helvetica', 'bold');
+    doc.text(s.score !== null ? String(s.score) : '—', x + 2, y); x += colW[2];
+    doc.setTextColor(30, 30, 30); doc.setFont('helvetica', 'normal');
+    doc.text((s.email_found || 'not found').substring(0, 30), x + 2, y); x += colW[3];
+    doc.setTextColor(s.email_status === 'has_email' ? 5 : 107, s.email_status === 'has_email' ? 150 : 114, s.email_status === 'has_email' ? 105 : 128);
+    doc.text(s.email_status === 'has_email' ? 'Sent' : 'No email', x + 2, y); x += colW[4];
+    doc.setTextColor(100, 100, 100);
+    doc.text(new Date(s.created_at).toLocaleDateString('nl-NL'), x + 2, y);
+  });
+
+  // Footer
+  doc.setTextColor(150, 150, 150); doc.setFontSize(7);
+  doc.text('ContentScale · app.contentscale.site · GRAAF + CRAFT Framework', 14, 200);
+
+  doc.save('contentscale-scan-report-' + new Date().toISOString().split('T')[0] + '.pdf');
+}
+
+function exportActivityDOCX() {
+  // Generate DOCX via server endpoint
+  fetch('/api/export/scan-report-docx', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-user-id': userId || '' },
+    body: JSON.stringify({ scans: allActivityScans })
+  }).then(r => {
+    if (!r.ok) throw new Error('Server error');
+    return r.blob();
+  }).then(blob => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'contentscale-scan-report-' + new Date().toISOString().split('T')[0] + '.docx';
+    a.click();
+  }).catch(() => alert('❌ DOCX export failed. Try CSV instead.'));
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
