@@ -3122,7 +3122,69 @@ async function loadFreelancers() {
           <a href="https://wa.me/31628073996" target="_blank" rel="noopener" style="display:block;width:100%;background:#0f7b3a;color:white!important;text-align:center;padding:10px;border-radius:8px;font-weight:600;text-decoration:none;margin-top:auto;">Contact</a>
         </div>`).join('');
     } else {
-      grid.innerHTML = '<p style="text-align:center;color:#6b7280!important;grid-column:1/-1;">No specialists yet. Be the first!</p>';
+      // 8 placeholder cards: top 4 featured (prominent), bottom 4 standard
+      const featured = [
+        { name: 'Ottmar Francisca', title: 'GRAAF Framework Creator · SEO Recovery Expert', bio: 'Founder of ContentScale. 24+ years in leadership. 78% traffic recovery rate across 200+ clients. Specialized in Google algorithm recovery and AI Overview optimization.', country: '🇳🇱 Netherlands', rate: '€150 / hour', badge: 'FOUNDER', initial: 'O', real: true },
+        { name: 'Open Spot', title: 'Senior SEO Strategist', bio: 'This featured spot is available for a verified SEO strategist. Featured specialists appear at the top of the grid and get priority visibility to all businesses using ContentScale.', country: '🌍 Any country', rate: 'Your rate', badge: 'FEATURED', initial: '★', real: false },
+        { name: 'Open Spot', title: 'Technical SEO Expert', bio: 'Schema markup, Core Web Vitals, site architecture — this featured spot is open for a technical SEO expert who wants to connect with businesses recovering from Google updates.', country: '🌍 Any country', rate: 'Your rate', badge: 'FEATURED', initial: '★', real: false },
+        { name: 'Open Spot', title: 'Content & AI SEO Specialist', bio: 'AI Overview optimization, E-E-A-T content strategy, CRAFT framework implementation — this featured spot is available for a specialist in modern AI-era SEO.', country: '🌍 Any country', rate: 'Your rate', badge: 'FEATURED', initial: '★', real: false }
+      ];
+      const standard = [
+        { name: 'Open Spot', title: 'Local SEO Specialist', bio: 'Google Business Profile optimization, local citations, maps ranking — apply to join ContentScale and connect with local businesses across Europe and beyond.', country: '🌍 Any country', rate: 'Your rate' },
+        { name: 'Open Spot', title: 'Link Building Expert', bio: 'Authority building, digital PR, outreach — join the ContentScale specialist network and work with businesses that need credibility signals to recover lost rankings.', country: '🌍 Any country', rate: 'Your rate' },
+        { name: 'Open Spot', title: 'SEO Copywriter', bio: 'GRAAF-optimized content, long-form articles, FAQ sections — apply to become a verified ContentScale specialist and get matched with clients who need your skills.', country: '🌍 Any country', rate: 'Your rate' },
+        { name: 'Open Spot', title: 'Analytics & Reporting Expert', bio: 'GA4, Search Console, rank tracking — help businesses understand what the numbers mean after an algorithm update. Apply to join the ContentScale network.', country: '🌍 Any country', rate: 'Your rate' }
+      ];
+
+      const featuredHTML = \`
+        <div style="margin-bottom:16px;">
+          <div style="font-size:0.7rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">⭐ Featured Specialists</div>
+          <div class="cards-grid">
+            \${featured.map(f => \`
+              <div class="card" style="border:2px solid \${f.real ? '#7e22ce' : '#4c1d95'};background:linear-gradient(135deg,#0f0a1e,#1a1040);transition:border-color 0.2s;display:flex;flex-direction:column;\${!f.real ? 'opacity:0.75;' : ''}" onmouseover="this.style.borderColor='#a855f7'" onmouseout="this.style.borderColor='\${f.real ? '#7e22ce' : '#4c1d95'}'">
+                <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+                  <div style="width:52px;height:52px;border-radius:50%;background:\${f.real ? 'linear-gradient(135deg,#7e22ce,#be185d)' : 'linear-gradient(135deg,#4c1d95,#312e81)'};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.3rem;border:2px solid \${f.real ? '#a855f7' : '#6d28d9'};">\${f.initial}</div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                      <h3 style="font-weight:700;margin-bottom:0;">\${f.name}</h3>
+                      <span style="font-size:0.6rem;background:\${f.real ? '#7e22ce' : '#4c1d95'};color:white!important;padding:2px 7px;border-radius:99px;white-space:nowrap;">\${f.badge}</span>
+                    </div>
+                    <p style="font-size:0.82rem;color:#9ca3af!important;margin-top:2px;">\${f.title}</p>
+                  </div>
+                </div>
+                <p style="font-size:0.85rem;color:#d1d5db!important;margin-bottom:16px;flex:1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5;max-height:3.9rem;">\${f.bio}</p>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:0.75rem;color:#6b7280!important;">
+                  <span>\${f.country}</span><span>\${f.rate}</span>
+                </div>
+                \${f.real
+                  ? '<a href="https://wa.me/31628073996" target="_blank" rel="noopener" style="display:block;width:100%;background:#0f7b3a;color:white!important;text-align:center;padding:10px;border-radius:8px;font-weight:600;text-decoration:none;margin-top:auto;">Contact</a>'
+                  : '<button onclick="openFreelancerModal()" style="display:block;width:100%;background:linear-gradient(135deg,#7e22ce,#be185d);color:white!important;text-align:center;padding:10px;border-radius:8px;font-weight:600;border:none;cursor:pointer;margin-top:auto;">Apply for This Spot</button>'
+                }
+              </div>\`).join('')}
+          </div>
+        </div>
+        <div>
+          <div style="font-size:0.7rem;font-weight:700;color:#6b7280!important;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">🔍 Available Spots</div>
+          <div class="cards-grid">
+            \${standard.map(f => \`
+              <div class="card" style="border:1px solid #374151;transition:border-color 0.2s;display:flex;flex-direction:column;opacity:0.65;" onmouseover="this.style.borderColor='#7e22ce';this.style.opacity='1'" onmouseout="this.style.borderColor='#374151';this.style.opacity='0.65'">
+                <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+                  <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#1f2937,#374151);display:flex;align-items:center;justify-content:center;font-size:1.3rem;border:1px solid #4b5563;">?</div>
+                  <div>
+                    <h3 style="font-weight:700;margin-bottom:2px;">\${f.name}</h3>
+                    <p style="font-size:0.82rem;color:#9ca3af!important;">\${f.title}</p>
+                  </div>
+                </div>
+                <p style="font-size:0.85rem;color:#d1d5db!important;margin-bottom:16px;flex:1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5;max-height:3.9rem;">\${f.bio}</p>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:0.75rem;color:#6b7280!important;">
+                  <span>\${f.country}</span><span>\${f.rate}</span>
+                </div>
+                <button onclick="openFreelancerModal()" style="display:block;width:100%;background:#1f2937;color:#d1d5db!important;text-align:center;padding:10px;border-radius:8px;font-weight:600;border:1px solid #374151;cursor:pointer;margin-top:auto;">Apply for This Spot</button>
+              </div>\`).join('')}
+          </div>
+        </div>\`;
+
+      grid.innerHTML = featuredHTML;
     }
   } catch (e) { console.error(e); }
 }
