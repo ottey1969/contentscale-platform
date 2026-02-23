@@ -188,8 +188,16 @@ async function createAllTables() {
         await client.query(`CREATE TABLE IF NOT EXISTS freelancers (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL, email VARCHAR(255) NOT NULL UNIQUE, title VARCHAR(255), location VARCHAR(255), country VARCHAR(100), bio TEXT, linkedin_url TEXT, hourly_rate VARCHAR(50), availability VARCHAR(100), is_approved BOOLEAN DEFAULT FALSE, is_verified BOOLEAN DEFAULT FALSE, is_featured BOOLEAN DEFAULT FALSE, created_at TIMESTAMP DEFAULT NOW())`);
         
         // 5. Email Queue
-        await client.query(`CREATE TABLE IF NOT EXISTS email_queue (id SERIAL PRIMARY KEY, user_id VARCHAR(255), to_email VARCHAR(255) NOT NULL, to_name VARCHAR(255), subject TEXT NOT NULL, body TEXT NOT NULL, status VARCHAR(50) DEFAULT 'pending', sent_at TIMESTAMP, error_message TEXT, created_at TIMESTAMP DEFAULT NOW())`);
-        
+        await client.query(`CREATE TABLE IF NOT EXISTS email_queue (id SERIAL PRIMARY KEY, user_id VARCHAR(255), to_email VARCHAR(255) NOT NULL, to_name VARCHAR(255), subject TEXT NOT NULL, body TEXT NOT NULL, status VARCHAR(50) DEFAULT 'pending', sent_at TIMESTAMP, error_message TEXT, created_at TIMESTAMP DEFAULT NOW(), business_url TEXT, business_name VARCHAR(255), score INTEGER, template_type VARCHAR(50))`);
+        // 6. Scan Log (tracks every auto-discover scan — including no-email businesses)
+        await client.query(`CREATE TABLE IF NOT EXISTS scan_log (id SERIAL PRIMARY KEY, user_id VARCHAR(255), business_url TEXT, business_name VARCHAR(255), score INTEGER, niche VARCHAR(100), city VARCHAR(255), country VARCHAR(100), email_found VARCHAR(255), email_status VARCHAR(50) DEFAULT 'no_email', recommendations TEXT, created_at TIMESTAMP DEFAULT NOW())`);
+        await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS recommendations TEXT`).catch(() => {});
+        // 7. Email suppression list (unsubscribes — respected forever across all future scans)
+        await client.query(`CREATE TABLE IF NOT EXISTS email_suppression (id SERIAL PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, unsubscribed_at TIMESTAMP DEFAULT NOW(), reason VARCHAR(100) DEFAULT 'user_request')`);        // Migrate: add columns if they don't exist yet
+        await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS business_url TEXT`).catch(() => {});
+        await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS business_name VARCHAR(255)`).catch(() => {});
+        await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS score INTEGER`).catch(() => {});
+        await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS template_type VARCHAR(50)`).catch(() => {});
         console.log('✅ All tables ready & migrated');
     } catch (error) {
         console.error('❌ DB Setup error:', error.message);
@@ -271,10 +279,44 @@ app.post('/api/user/templates', async (req, res) => {
 // Priority: server SENDGRID_API_KEY env var → user's own stored key → error
 // Daily limit tracked server-side in email_queue table (counts per calendar day)
 // ============================================
+// ── Unsubscribe ────────────────────────────────────────────────────────────
+app.get('/unsubscribe', async (req, res) => {
+    const { email, token } = req.query;
+    if (!email) return res.send(`<!DOCTYPE html><html><body style="font-family:Arial;text-align:center;padding:60px;background:#030712;color:#e5e7eb;"><h2>⚠️ Invalid unsubscribe link.</h2></body></html>`);
+    try {
+        if (pool) await pool.query(`INSERT INTO email_suppression (email) VALUES ($1) ON CONFLICT (email) DO NOTHING`, [email.toLowerCase()]);
+        res.send(`<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Unsubscribed</title></head>
+<body style="font-family:Arial,Helvetica,sans-serif;background:#030712;color:#e5e7eb;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">
+  <div style="text-align:center;max-width:480px;padding:40px;">
+    <div style="font-size:56px;margin-bottom:16px;">✅</div>
+    <h1 style="color:#4ade80;margin-bottom:8px;">You've been unsubscribed.</h1>
+    <p style="color:#9ca3af;margin-bottom:24px;">${email} has been removed from all future ContentScale scan emails. This is permanent and respected across all future scans.</p>
+    <a href="https://app.contentscale.site" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Back to ContentScale</a>
+  </div>
+</body></html>`);
+    } catch (e) { res.send(`<p>Error: ${e.message}</p>`); }
+});
+
+app.post('/api/unsubscribe', async (req, res) => {
+    const { email } = req.body;
+    if (!email || !pool) return res.json({ success: false });
+    try {
+        await pool.query(`INSERT INTO email_suppression (email) VALUES ($1) ON CONFLICT (email) DO NOTHING`, [email.toLowerCase()]);
+        res.json({ success: true });
+    } catch (e) { res.json({ success: false, error: e.message }); }
+});
+
 app.post('/api/email/send', async (req, res) => {
     const userId = req.headers['x-user-id'];
-    const { to_email, subject, html } = req.body;
+    const { to_email, subject, html, business_url, business_name, score, template_type } = req.body;
     if (!to_email || !subject || !html) return res.json({ success: false, error: 'Missing fields' });
+
+    // Check suppression list — respect unsubscribes permanently
+    if (pool) {
+        const sup = await pool.query(`SELECT id FROM email_suppression WHERE email = $1`, [to_email.toLowerCase()]).catch(() => ({ rows: [] }));
+        if (sup.rows.length > 0) return res.json({ success: false, suppressed: true, error: 'Email unsubscribed' });
+    }
 
     let apiKeyToUse = null;
     let dailyLimit = 100;
@@ -327,8 +369,8 @@ app.post('/api/email/send', async (req, res) => {
         // Log sent email to queue table for daily tracking
         if (pool) {
             await pool.query(
-                `INSERT INTO email_queue (user_id, to_email, subject, body, status, sent_at) VALUES ($1, $2, $3, $4, 'sent', NOW())`,
-                [userId || 'server', to_email, subject, html]
+                `INSERT INTO email_queue (user_id, to_email, subject, body, status, sent_at, business_url, business_name, score, template_type) VALUES ($1, $2, $3, $4, 'sent', NOW(), $5, $6, $7, $8)`,
+                [userId || 'server', to_email, subject, html, business_url || null, business_name || null, score || null, template_type || null]
             ).catch(e => console.warn('Email log failed:', e.message));
         }
 
@@ -429,13 +471,98 @@ app.post('/api/admin/messages/send', verifyAdmin, async (req, res) => {
 });
 
 // Leaderboard Admin
+app.get('/api/scan-log', async (req, res) => {
+    if (!pool) return res.json({ success: false, error: 'No DB' });
+    const userId = req.headers['x-user-id'];
+    if (!userId) return res.json({ success: false, error: 'No user ID' });
+    try {
+        const r = await pool.query(
+            `SELECT id, business_url, business_name, score, niche, city, country, email_found, email_status, recommendations, created_at
+             FROM scan_log WHERE user_id = $1 ORDER BY created_at DESC LIMIT 200`, [userId]
+        );
+        res.json({ success: true, scans: r.rows });
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.post('/api/scan-log', async (req, res) => {
+    if (!pool) return res.json({ success: false });
+    const { user_id, business_url, business_name, score, niche, city, country, email_found, email_status, recommendations } = req.body;
+    try {
+        await pool.query(
+            `INSERT INTO scan_log (user_id, business_url, business_name, score, niche, city, country, email_found, email_status, recommendations)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+             ON CONFLICT DO NOTHING`,
+            [user_id || null, business_url, business_name || null, score || null, niche || null, city || null, country || null, email_found || null, email_status || 'no_email', recommendations ? JSON.stringify(recommendations) : null]
+        );
+        res.json({ success: true });
+    } catch (e) { res.json({ success: false, error: e.message }); }
+});
+
+app.get('/api/admin/scan-log', verifyAdmin, async (req, res) => {
+    if (!pool) return res.json({ success: false, error: 'No DB' });
+    const limit = parseInt(req.query.limit) || 200;
+    try {
+        const r = await pool.query(
+            `SELECT id, business_url, business_name, score, niche, city, country, email_found, email_status, recommendations, created_at
+             FROM scan_log ORDER BY created_at DESC LIMIT $1`, [limit]
+        );
+        res.json({ success: true, scans: r.rows });
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.get('/api/admin/email-log', verifyAdmin, async (req, res) => {
+    if (!pool) return res.json({ success: false, error: 'No DB' });
+    const limit = parseInt(req.query.limit) || 200;
+    const offset = parseInt(req.query.offset) || 0;
+    try {
+        const r = await pool.query(
+            `SELECT id, to_email, business_name, business_url, score, template_type, subject, status, sent_at, created_at
+             FROM email_queue ORDER BY COALESCE(sent_at, created_at) DESC LIMIT $1 OFFSET $2`,
+            [limit, offset]
+        );
+        const countRes = await pool.query(`SELECT COUNT(*) FROM email_queue WHERE status='sent'`);
+        res.json({ success: true, emails: r.rows, total: parseInt(countRes.rows[0].count) });
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.get('/api/admin/email-stats', verifyAdmin, async (req, res) => {
+    if (!pool) return res.json({ success: false, error: 'No DB' });
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const [sentToday, queued, totalSent] = await Promise.all([
+            pool.query(`SELECT COUNT(*) FROM email_queue WHERE status='sent' AND sent_at::date = $1::date`, [today]),
+            pool.query(`SELECT COUNT(*) FROM email_queue WHERE status='pending'`),
+            pool.query(`SELECT COUNT(*) FROM email_queue WHERE status='sent'`)
+        ]);
+        const dailyLimit = 100;
+        res.json({
+            success: true,
+            sentToday: parseInt(sentToday.rows[0].count),
+            dailyLimit,
+            remainingToday: Math.max(0, dailyLimit - parseInt(sentToday.rows[0].count)),
+            queued: parseInt(queued.rows[0].count),
+            totalSent: parseInt(totalSent.rows[0].count)
+        });
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
     try { const r = await pool.query(`SELECT * FROM leaderboard WHERE admin_verified = FALSE ORDER BY created_at DESC LIMIT 50`); res.json({ success: true, pending: r.rows }); }
     catch (e) { res.json({ success: true, pending: [] }); }
 });
 app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => {
-    try { await pool.query(`UPDATE leaderboard SET admin_verified = TRUE, country = COALESCE($2, country), is_verified = TRUE WHERE id = $1`, [req.params.id, req.body.final_country]); res.json({ success: true }); }
-    catch (e) { res.status(500).json({ success: false, error: e.message }); }
+    try {
+        const { final_country, city, niche } = req.body;
+        await pool.query(
+            `UPDATE leaderboard SET admin_verified = TRUE, is_verified = TRUE,
+             country = COALESCE($2, country),
+             city = COALESCE($3, city),
+             niche = COALESCE($4, niche)
+             WHERE id = $1`,
+            [req.params.id, final_country || null, city || null, niche || null]
+        );
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 app.post('/api/admin/leaderboard/:id/reject', verifyAdmin, async (req, res) => {
     try { await pool.query('DELETE FROM leaderboard WHERE id = $1', [req.params.id]); res.json({ success: true }); }
