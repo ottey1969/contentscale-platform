@@ -231,6 +231,9 @@ footer p { color: #9ca3af !important; }
         <button id="modeDiscoverBtn" onclick="switchMode('discover')" class="mode-toggle">
           <i class="fas fa-robot mr-2"></i> Find Me Leads
         </button>
+        <button id="modeActivityBtn" onclick="switchMode('activity')" class="mode-toggle">
+          <i class="fas fa-history mr-2"></i> My Activity
+        </button>
       </div>
 
       <!-- SINGLE MODE -->
@@ -595,6 +598,65 @@ footer p { color: #9ca3af !important; }
         </button>
       </div>
 
+    </div>
+  </div>
+
+  <!-- ============================================================
+       MY ACTIVITY SECTION
+       ============================================================ -->
+  <div id="activityMode" class="hidden mb-16">
+    <div class="card" style="border:1px solid #374151;">
+      <h2 class="text-2xl font-bold mb-2 text-white">📊 My Scan Activity</h2>
+      <p style="color:#9ca3af;font-size:0.9rem;margin-bottom:20px;">Every business scanned in your sessions — including which ones received emails and which didn't.</p>
+
+      <!-- Stats row -->
+      <div class="grid grid-cols-4 gap-4 mb-6" id="activityStats">
+        <div class="rounded-lg p-3 text-center" style="background:#0f172a;border:1px solid #1e293b;">
+          <div id="actStatScanned" class="text-2xl font-black" style="color:#60a5fa;">—</div>
+          <div class="text-xs mt-1" style="color:#6b7280;">Total Scanned</div>
+        </div>
+        <div class="rounded-lg p-3 text-center" style="background:#0f172a;border:1px solid #1e293b;">
+          <div id="actStatEmailed" class="text-2xl font-black" style="color:#4ade80;">—</div>
+          <div class="text-xs mt-1" style="color:#6b7280;">Emails Sent</div>
+        </div>
+        <div class="rounded-lg p-3 text-center" style="background:#0f172a;border:1px solid #1e293b;">
+          <div id="actStatNoEmail" class="text-2xl font-black" style="color:#f87171;">—</div>
+          <div class="text-xs mt-1" style="color:#6b7280;">No Email Found</div>
+        </div>
+        <div class="rounded-lg p-3 text-center" style="background:#0f172a;border:1px solid #1e293b;">
+          <div id="actStatLeaderboard" class="text-2xl font-black" style="color:#fbbf24;">—</div>
+          <div class="text-xs mt-1" style="color:#6b7280;">Leaderboard (70+)</div>
+        </div>
+      </div>
+
+      <!-- Filter + search -->
+      <div class="flex gap-3 mb-4 flex-wrap">
+        <input type="text" id="actSearch" placeholder="Search business or URL..." oninput="filterActivity()" class="p-2 rounded text-sm flex-1" style="background:#111827;border:1px solid #374151;color:#e5e7eb;min-width:200px;">
+        <select id="actFilter" onchange="filterActivity()" class="p-2 rounded text-sm" style="background:#111827;border:1px solid #374151;color:#e5e7eb;">
+          <option value="">All businesses</option>
+          <option value="no_email">No email found</option>
+          <option value="has_email">Email sent</option>
+        </select>
+      </div>
+
+      <!-- Table -->
+      <div style="overflow-x:auto;">
+        <table class="w-full text-sm" style="border-collapse:collapse;">
+          <thead>
+            <tr style="border-bottom:1px solid #374151;color:#6b7280;text-align:left;">
+              <th class="pb-2 pr-4">Business</th>
+              <th class="pb-2 pr-4">Score</th>
+              <th class="pb-2 pr-4">Email</th>
+              <th class="pb-2 pr-4">Status</th>
+              <th class="pb-2 pr-4">Top Issue</th>
+              <th class="pb-2">Scanned</th>
+            </tr>
+          </thead>
+          <tbody id="activityTableBody">
+            <tr><td colspan="6" class="py-6 text-center" style="color:#6b7280;">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -1876,6 +1938,25 @@ async function startAutoDiscover() {
         if (score >= 70)       results.leaderboard.push(item);
         else if (score >= 65) results.almostMade.push(item);
         else               results.withWebsite.push(item);
+
+        // Log every scan — so admin can see all businesses including no-email ones
+        var emailFound = place.email || (place.emails && place.emails[0]) || null;
+        fetch('/api/scan-log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: userId,
+            business_url: place.url,
+            business_name: place.name,
+            score: score,
+            niche: niche,
+            city: location,
+            country: country,
+            email_found: emailFound,
+            email_status: emailFound ? 'has_email' : 'no_email',
+            recommendations: scanData.recommendations ? scanData.recommendations.slice(0, 5).map(function(r){ return r.title || r; }) : []
+          })
+        }).catch(function(){});
       } catch (e) {
         results.errors.push({ url: place.url, error: e.message });
       }
@@ -2009,14 +2090,16 @@ function switchMode(mode) {
   const singleMode   = document.getElementById('singleMode');
   const bulkMode     = document.getElementById('bulkMode');
   const discoverMode = document.getElementById('discoverMode');
+  const activityMode = document.getElementById('activityMode');
   const templates    = document.getElementById('templates');
   const singleBtn    = document.getElementById('modeSingleBtn');
   const bulkBtn      = document.getElementById('modeBulkBtn');
   const discoverBtn  = document.getElementById('modeDiscoverBtn');
+  const activityBtn  = document.getElementById('modeActivityBtn');
 
   // hide all, deactivate all buttons
-  [singleMode, bulkMode, discoverMode].forEach(el => el && el.classList.add('hidden'));
-  [singleBtn, bulkBtn, discoverBtn].forEach(el => el && el.classList.remove('active'));
+  [singleMode, bulkMode, discoverMode, activityMode].forEach(el => el && el.classList.add('hidden'));
+  [singleBtn, bulkBtn, discoverBtn, activityBtn].forEach(el => el && el.classList.remove('active'));
 
   if (mode === 'single') {
     singleMode.classList.remove('hidden');
@@ -2034,6 +2117,11 @@ function switchMode(mode) {
     const hasToken = !!localStorage.getItem('apifyToken');
     const warn = document.getElementById('apifyKeyWarning');
     if (warn) warn.classList.toggle('hidden', hasToken);
+  } else if (mode === 'activity') {
+    if (activityMode) activityMode.classList.remove('hidden');
+    if (activityBtn) activityBtn.classList.add('active');
+    if (templates) templates.classList.add('hidden');
+    loadUserActivity();
   }
 }
 
@@ -2681,7 +2769,8 @@ function applyVars(text, item, senderEmail, senderName) {
   const monthStr  = now.toLocaleDateString('en-US', { month:'long' });
   const yearStr   = now.getFullYear().toString();
 
-  const unsubUrl  = 'https://contentscale.site/unsubscribe';
+  const recipientEmail = extractBusinessEmail(item) || '';
+  const unsubUrl  = 'https://app.contentscale.site/unsubscribe?email=' + encodeURIComponent(recipientEmail);
   const lbUrl     = 'https://contentscale.site#leaderboard';
   const ctaUrl    = 'https://wa.me/31628073996';
 
@@ -2806,9 +2895,13 @@ async function sendEmailToBusinesses(bucket, templateKey, senderEmail, senderNam
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
         body: JSON.stringify({
-          to_email: bizEmail,
-          subject:  applyVars(tpl.subject, item, senderEmail, senderName),
-          html:     applyVars(tpl.body,    item, senderEmail, senderName)
+          to_email:      bizEmail,
+          subject:       applyVars(tpl.subject, item, senderEmail, senderName),
+          html:          applyVars(tpl.body,    item, senderEmail, senderName),
+          business_url:  item.url || null,
+          business_name: (item.data && item.data.name) || null,
+          score:         item.score || null,
+          template_type: templateKey
         })
       });
       incrementDailySent();
@@ -3233,6 +3326,70 @@ async function loadFreelancers() {
 function openFreelancerModal() { document.getElementById('freelancerModal').classList.add('active'); }
 function closeModal() { document.getElementById('freelancerModal').classList.remove('active'); }
 function toggleMobileMenu() { document.getElementById('mobileMenu').classList.toggle('open'); }
+
+// ── MY ACTIVITY ──────────────────────────────────────────────────────────────
+let allActivityScans = [];
+
+async function loadUserActivity() {
+  try {
+    const res = await fetch('/api/scan-log?user=me', { headers: { 'x-user-id': userId || '' } });
+    const data = await res.json();
+    if (!data.success) return;
+    allActivityScans = data.scans || [];
+
+    // Stats
+    const total = allActivityScans.length;
+    const emailed = allActivityScans.filter(s => s.email_status === 'has_email').length;
+    const noEmail = allActivityScans.filter(s => s.email_status === 'no_email').length;
+    const lb = allActivityScans.filter(s => s.score >= 70).length;
+    document.getElementById('actStatScanned').textContent = total;
+    document.getElementById('actStatEmailed').textContent = emailed;
+    document.getElementById('actStatNoEmail').textContent = noEmail;
+    document.getElementById('actStatLeaderboard').textContent = lb;
+
+    filterActivity();
+  } catch (e) { console.error(e); }
+}
+
+function filterActivity() {
+  const q = (document.getElementById('actSearch').value || '').toLowerCase();
+  const f = document.getElementById('actFilter').value;
+  let rows = allActivityScans;
+  if (q) rows = rows.filter(s => (s.business_name||'').toLowerCase().includes(q) || (s.business_url||'').toLowerCase().includes(q));
+  if (f) rows = rows.filter(s => s.email_status === f);
+  renderActivityTable(rows);
+}
+
+function renderActivityTable(scans) {
+  const tbody = document.getElementById('activityTableBody');
+  if (!scans.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="py-6 text-center" style="color:#6b7280;">No scans yet — run Find Me Leads to get started.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = scans.map(s => {
+    const score = s.score !== null
+      ? '<span style="font-weight:700;color:' + (s.score>=70?'#4ade80':s.score>=50?'#fbbf24':'#f87171') + ';">' + s.score + '/100</span>'
+      : '—';
+    const statusBadge = s.email_status === 'has_email'
+      ? '<span style="background:#0f2d1a;color:#4ade80;padding:2px 8px;border-radius:99px;font-size:0.72rem;">✉ Sent</span>'
+      : '<span style="background:#1c1917;color:#9ca3af;padding:2px 8px;border-radius:99px;font-size:0.72rem;">✗ No email</span>';
+    let rec = '—';
+    try { const r = JSON.parse(s.recommendations || '[]'); rec = r[0] || '—'; } catch {}
+    const dt = new Date(s.created_at);
+    const dateStr = dt.toLocaleDateString('nl-NL', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+    const urlDisplay = s.business_url ? '<a href="' + s.business_url + '" target="_blank" style="color:#60a5fa;">' + (s.business_name || s.business_url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]) + '</a>' : '—';
+    const emailCell = s.email_found ? '<span style="color:#d1d5db;font-size:0.78rem;">' + s.email_found + '</span>' : '<span style="color:#6b7280;font-size:0.78rem;">not found</span>';
+    return '<tr style="border-bottom:1px solid #1f2937;">'
+      + '<td class="py-3 pr-4">' + urlDisplay + '</td>'
+      + '<td class="py-3 pr-4">' + score + '</td>'
+      + '<td class="py-3 pr-4">' + emailCell + '</td>'
+      + '<td class="py-3 pr-4">' + statusBadge + '</td>'
+      + '<td class="py-3 pr-4" style="color:#9ca3af;font-size:0.78rem;max-width:240px;">' + rec + '</td>'
+      + '<td class="py-3" style="color:#6b7280;font-size:0.72rem;white-space:nowrap;">' + dateStr + '</td>'
+      + '</tr>';
+  }).join('');
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 async function submitFreelancer() {
   const name = document.getElementById('freelancerName').value;
