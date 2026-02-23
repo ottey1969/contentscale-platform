@@ -1817,7 +1817,9 @@ async function startAutoDiscover() {
       `/api/apify/dataset/${runId}`,
       { headers: { 'x-apify-token': apifyToken } }
     );
-    const places = await dataRes.json();
+    const dataRaw = await dataRes.json();
+    // Apify returns array directly or wrapped in {items:[]}
+    const places = Array.isArray(dataRaw) ? dataRaw : (dataRaw.items || dataRaw.data || []);
 
     // Extract usable URLs
     let urls = places
@@ -3128,7 +3130,7 @@ async function loadFreelancers() {
         var avatarSize = featured ? '52' : '48';
         var badge = f.is_featured ? '<span style="font-size:0.6rem;background:#7e22ce;color:white!important;padding:2px 7px;border-radius:99px;margin-left:6px;white-space:nowrap;">FEATURED</span>' : '';
         var bio = (f.bio || 'No bio available.').slice(0, 120) + ((f.bio || '').length > 120 ? '…' : '');
-        return '<div class="card" style="' + cardStyle + 'transition:border-color 0.2s;display:flex;flex-direction:column;" onmouseover="this.style.borderColor=\'#a855f7\'" onmouseout="this.style.borderColor=\'' + borderColor + '\'">'
+        return '<div class="card" style="' + cardStyle + 'transition:border-color 0.2s;display:flex;flex-direction:column;' + (featured ? 'flex:1;' : '') + '" onmouseover="this.style.borderColor=\'#a855f7\'" onmouseout="this.style.borderColor=\'' + borderColor + '\'">'
           + '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">'
           + '<div style="width:' + avatarSize + 'px;height:' + avatarSize + 'px;border-radius:50%;background:linear-gradient(135deg,#7e22ce,#be185d);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.25rem;border:' + (featured ? '2px solid #a855f7' : 'none') + ';">' + f.name.charAt(0) + '</div>'
           + '<div style="flex:1;min-width:0;">'
@@ -3153,18 +3155,20 @@ async function loadFreelancers() {
       if (featured.length > 0) {
         featuredHTML = '<div style="display:flex;flex-direction:column;gap:16px;">'
           + '<div style="font-size:0.7rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;">⭐ Featured Specialists</div>'
+          + '<div style="display:flex;flex-direction:column;gap:16px;flex:1;">'
           + featured.map(function(f){ return renderCard(f, true); }).join('')
+          + '</div>'
           + '</div>';
       }
       var standardHTML = '';
       if (standard.length > 0) {
         standardHTML = '<div style="display:flex;flex-direction:column;gap:16px;">'
           + '<div style="font-size:0.7rem;font-weight:700;color:#6b7280!important;letter-spacing:0.1em;text-transform:uppercase;">🔍 More Specialists</div>'
-          + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">' + standard.map(function(f){ return renderCard(f, false); }).join('') + '</div>'
+          + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;flex:1;grid-auto-rows:1fr;">' + standard.map(function(f){ return renderCard(f, false); }).join('') + '</div>'
           + '</div>';
       }
       if (featured.length > 0 && standard.length > 0) {
-        grid.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1.6fr;gap:24px;align-items:start;">' + featuredHTML + standardHTML + '</div>';
+        grid.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1.6fr;gap:24px;align-items:stretch;">' + featuredHTML + standardHTML + '</div>';
       } else {
         grid.innerHTML = featuredHTML || standardHTML;
       }
@@ -3206,7 +3210,7 @@ async function loadFreelancers() {
         { name: 'Open Spot', title: 'Analytics & Reporting Expert', bio: 'GA4, Search Console, rank tracking — help businesses understand what the numbers mean after an algorithm update. Apply to join the ContentScale network.', country: '🌍 Any country', rate: 'Your rate', initial: '?', real: false }
       ];
 
-      grid.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1.6fr;gap:24px;align-items:start;">'
+      grid.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1.6fr;gap:24px;align-items:stretch;">'
         + '<div style="display:flex;flex-direction:column;gap:16px;">'
         + '<div style="font-size:0.7rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;">⭐ Featured Specialists</div>'
         + featured.map(function(f){ return makeCard(f, true); }).join('')
