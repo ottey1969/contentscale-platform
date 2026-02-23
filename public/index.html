@@ -3138,20 +3138,25 @@ async function loadFreelancers() {
         standard = data.freelancers.slice(4);
       }
 
-      var html = '';
+      var featuredHTML = '';
       if (featured.length > 0) {
-        html += '<div style="margin-bottom:20px;">'
-          + '<div style="font-size:0.7rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">⭐ Featured Specialists</div>'
-          + '<div class="cards-grid">' + featured.map(function(f){ return renderCard(f, true); }).join('') + '</div>'
+        featuredHTML = '<div style="display:flex;flex-direction:column;gap:16px;">'
+          + '<div style="font-size:0.7rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;">⭐ Featured Specialists</div>'
+          + featured.map(function(f){ return renderCard(f, true); }).join('')
           + '</div>';
       }
+      var standardHTML = '';
       if (standard.length > 0) {
-        html += '<div>'
-          + '<div style="font-size:0.7rem;font-weight:700;color:#6b7280!important;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">🔍 More Specialists</div>'
-          + '<div class="cards-grid">' + standard.map(function(f){ return renderCard(f, false); }).join('') + '</div>'
+        standardHTML = '<div style="display:flex;flex-direction:column;gap:16px;">'
+          + '<div style="font-size:0.7rem;font-weight:700;color:#6b7280!important;letter-spacing:0.1em;text-transform:uppercase;">🔍 More Specialists</div>'
+          + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">' + standard.map(function(f){ return renderCard(f, false); }).join('') + '</div>'
           + '</div>';
       }
-      grid.innerHTML = html;
+      if (featured.length > 0 && standard.length > 0) {
+        grid.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1.6fr;gap:24px;align-items:start;">' + featuredHTML + standardHTML + '</div>';
+      } else {
+        grid.innerHTML = featuredHTML || standardHTML;
+      }
     } else {
       // 8 placeholder cards: top 4 featured, bottom 4 standard
       function makeCard(f, featured) {
@@ -3190,14 +3195,15 @@ async function loadFreelancers() {
         { name: 'Open Spot', title: 'Analytics & Reporting Expert', bio: 'GA4, Search Console, rank tracking — help businesses understand what the numbers mean after an algorithm update. Apply to join the ContentScale network.', country: '🌍 Any country', rate: 'Your rate', initial: '?', real: false }
       ];
 
-      grid.innerHTML =
-        '<div style="margin-bottom:16px;">'
-        + '<div style="font-size:0.7rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">⭐ Featured Specialists</div>'
-        + '<div class="cards-grid">' + featured.map(function(f){ return makeCard(f, true); }).join('') + '</div>'
+      grid.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1.6fr;gap:24px;align-items:start;">'
+        + '<div style="display:flex;flex-direction:column;gap:16px;">'
+        + '<div style="font-size:0.7rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;">⭐ Featured Specialists</div>'
+        + featured.map(function(f){ return makeCard(f, true); }).join('')
         + '</div>'
-        + '<div>'
-        + '<div style="font-size:0.7rem;font-weight:700;color:#6b7280!important;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">🔍 Available Spots</div>'
-        + '<div class="cards-grid">' + standard.map(function(f){ return makeCard(f, false); }).join('') + '</div>'
+        + '<div style="display:flex;flex-direction:column;gap:16px;">'
+        + '<div style="font-size:0.7rem;font-weight:700;color:#6b7280!important;letter-spacing:0.1em;text-transform:uppercase;">🔍 Available Spots</div>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">' + standard.map(function(f){ return makeCard(f, false); }).join('') + '</div>'
+        + '</div>'
         + '</div>';
     }
   } catch (e) { console.error(e); }
