@@ -3472,10 +3472,32 @@ function switchPageSection(section) {
   document.querySelectorAll('.page-tab').forEach(btn => btn.classList.remove('active'));
   const activeTab = document.getElementById('tab-' + section);
   if (activeTab) activeTab.classList.add('active');
-  // Load leaderboard data when switching to it
+  // Hide scanner-only panels when not on scanner tab
+  const warmup   = document.getElementById('warmupPanel');
+  const activity = document.getElementById('activityMode');
+  const scanner  = document.getElementById('lead-scanner');
+  if (section !== 'scanner') {
+    if (warmup)   warmup.classList.add('hidden');
+    if (activity) activity.classList.add('hidden');
+    // Deactivate all mode toggles so scanner state is clean on return
+    ['modeSingleBtn','modeBulkBtn','modeDiscoverBtn','modeActivityBtn'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('active');
+    });
+    if (scanner) {
+      ['singleMode','bulkMode','discoverMode'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
+    }
+  } else {
+    // Returning to scanner — restore default single mode view
+    switchMode('single');
+  }
+  // Load data for the selected section
   if (section === 'leaderboard') loadLeaderboardData();
   if (section === 'experts') loadFreelancers();
-  // Scroll to top of main content so the section header is always visible
+  // Scroll to top so section header is always the first thing visible
   const main = document.getElementById('main-content');
   if (main) main.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
