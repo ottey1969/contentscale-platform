@@ -2356,6 +2356,7 @@ async function scanSingleURL() {
 
 function displayScanResult(data, targetEl) {
   const resultDiv = targetEl || document.getElementById('singleResult');
+  const url       = data.url || '';
   const score     = data.score || 0;
   const quality   = data.quality || 'unknown';
   const metrics   = data.metrics || {};
@@ -2857,6 +2858,55 @@ function displayBulkResults(results) {
 }
 
 
+// ── Bulk leaderboard selection counter ──────────────────────────
+function updateBulkLbCount() {
+  const checked = document.querySelectorAll('.bulk-lb-check:checked').length;
+  const counter  = document.getElementById('bulkLbCounter');
+  const submitBtn = document.getElementById('bulkLbSubmitBtn');
+  if (counter) counter.textContent = checked + ' selected';
+  if (submitBtn) {
+    submitBtn.disabled = checked === 0;
+    submitBtn.style.opacity = checked > 0 ? '1' : '0.5';
+  }
+}
+
+// ── Submit all checked bulk entries to leaderboard ───────────────
+async function submitBulkToLeaderboard() {
+  const checks = document.querySelectorAll('.bulk-lb-check:checked');
+  if (!checks.length) return;
+  const btn = document.getElementById('bulkLbSubmitBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Submitting...'; }
+  let success = 0, failed = 0;
+  for (const cb of checks) {
+    try {
+      const res = await fetch('/api/leaderboard/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-id': userId || '' },
+        body: JSON.stringify({ url: cb.dataset.url, score: parseInt(cb.dataset.score), company_name: cb.dataset.name || '', admin_verified: false })
+      });
+      const data = await res.json();
+      if (data.success) { cb.disabled = true; cb.checked = false; success++; }
+      else failed++;
+    } catch(e) { failed++; }
+  }
+  if (btn) {
+    btn.innerHTML = '✅ ' + success + ' submitted' + (failed > 0 ? ' · ' + failed + ' failed' : '');
+    btn.style.background = '#065f46';
+  }
+  updateBulkLbCount();
+}
+
+// ── doRescan: fallback global so HTML onclick="doRescan()" never throws ──
+// checkRescanReminder() also sets rescanBtn.onclick directly (which wins at runtime).
+function doRescan() {
+  const history = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
+  const input   = document.getElementById('singleUrlInput');
+  const banner  = document.getElementById('rescanBanner');
+  if (history.length && input) input.value = history[0].url;
+  if (banner) banner.classList.add('hidden');
+  scanSingleURL();
+}
+
 async function submitSingleToLeaderboard(url, score, name) {
   const btn = document.getElementById('singleLbBtn');
   if (btn) { btn.disabled = true; btn.innerHTML = '\u23f3 Submitting...'; }
@@ -2877,24 +2927,6 @@ async function submitSingleToLeaderboard(url, score, name) {
     if (btn) { btn.disabled = false; btn.innerHTML = '\ud83c\udfc6 Submit to Leaderboard'; }
     alert('\u274c Error: ' + e.message);
   }
-}
-
-function submitBulkCardToLeaderboard(url, score, name, btnEl) {
-  if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '\u23f3 Submitting...'; }
-  fetch('/api/leaderboard/submit', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-user-id': userId || '' },
-    body: JSON.stringify({ url, score, company_name: name || '', admin_verified: false })
-  }).then(r => r.json()).then(data => {
-    if (data.success) {
-      if (btnEl) { btnEl.innerHTML = '\u2705 Submitted'; btnEl.style.background = '#065f46'; btnEl.disabled = true; }
-    } else {
-      if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = '\ud83c\udfc6 Add to Leaderboard'; }
-      alert('\u274c ' + (data.error || 'Failed'));
-    }
-  }).catch(e => {
-    if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = '\ud83c\udfc6 Add to Leaderboard'; }
-  });
 }
 
 // ============================================================
@@ -3443,6 +3475,9 @@ function switchPageSection(section) {
   // Load leaderboard data when switching to it
   if (section === 'leaderboard') loadLeaderboardData();
   if (section === 'experts') loadFreelancers();
+  // Scroll to top of main content so the section header is always visible
+  const main = document.getElementById('main-content');
+  if (main) main.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 
