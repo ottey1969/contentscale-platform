@@ -4,9 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ContentScale - Elite SEO Content Quality Scanner 2026</title>
+<meta name="description" content="Scan any website with the GRAAF + CRAFT framework and get a ContentScore from 0–100. Free SEO content quality scanner used in 47+ countries. See where you rank on the Elite Leaderboard.">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%237e22ce'/%3E%3Crect x='20' y='25' width='60' height='40' rx='10' fill='%231f2937'/%3E%3Ccircle cx='40' cy='45' r='5' fill='%23a855f7'/%3E%3Ccircle cx='60' cy='45' r='5' fill='%23a855f7'/%3E%3Cpath d='M 30 60 Q 50 70 70 60' stroke='%23a855f7' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Crect x='45' y='15' width='10' height='15' fill='%231f2937'/%3E%3Crect x='45' y='15' width='10' height='15' fill='%237e22ce' opacity='0.5'/%3E%3C/svg%3E">
+
+<!-- Preconnect to CDN origins — reduces connection overhead -->
+<link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+
+<!-- Tailwind — still render-blocking but preconnect reduces latency -->
 <script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<!-- Font Awesome — deferred so it doesn't block initial render -->
+<!-- Loads as print stylesheet (non-blocking), swaps to all media once loaded -->
+<link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
 <style>
 /* ============================================================
    BASE RESET — keep white on dark backgrounds
@@ -162,7 +173,7 @@ footer p { color: #9ca3af !important; }
       <a href="#templates">Templates</a>
     </div>
     <div class="flex items-center gap-3">
-      <a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="btn btn-success"><i class="fab fa-whatsapp"></i> Chat</a>
+      <a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="btn btn-success" aria-label="Chat on WhatsApp"><i class="fab fa-whatsapp"></i> Chat</a>
       <button class="hamburger" onclick="toggleMobileMenu()" aria-label="Open menu"><span></span><span></span><span></span></button>
     </div>
   </div>
@@ -186,7 +197,7 @@ footer p { color: #9ca3af !important; }
   </span>
 </div>
 
-<div id="main-content" class="max-w-7xl mx-auto px-6 py-8">
+<main id="main-content" class="max-w-7xl mx-auto px-6 py-8">
 
   <!-- ============================================================
        SCANNER SECTION
@@ -445,7 +456,7 @@ footer p { color: #9ca3af !important; }
               <!-- Niche -->
               <div>
                 <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">🏷️ Business Niche *</label>
-                <select id="discoverNiche" class="w-full p-3 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+                <select id="discoverNiche" aria-label="Business niche" class="w-full p-3 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
                   <option value="">Select a niche...</option>
                   <optgroup label="── Agencies">
                     <option value="SEO agency">SEO Agency</option>
@@ -504,7 +515,7 @@ footer p { color: #9ca3af !important; }
               <!-- Country context -->
               <div>
                 <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">🌍 Country</label>
-                <select id="discoverCountry" class="w-full p-3 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+                <select id="discoverCountry" aria-label="Country" class="w-full p-3 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
                   <option value="Netherlands">🇳🇱 Netherlands</option>
                   <option value="Germany">🇩🇪 Germany</option>
                   <option value="United Kingdom">🇬🇧 United Kingdom</option>
@@ -522,7 +533,7 @@ footer p { color: #9ca3af !important; }
               <!-- Max results -->
               <div>
                 <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">🔢 Max Leads to Find</label>
-                <select id="discoverMaxResults" class="w-full p-3 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+                <select id="discoverMaxResults" aria-label="Maximum leads to find" class="w-full p-3 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
                   <option value="20">20 leads (fast · ~1 min)</option>
                   <option value="50" selected>50 leads (recommended · ~2 min)</option>
                   <option value="100">100 leads (thorough · ~4 min)</option>
@@ -735,7 +746,7 @@ footer p { color: #9ca3af !important; }
           <!-- Niche -->
           <div>
             <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">🏷️ Niche</label>
-            <select id="filterNiche" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+            <select id="filterNiche" aria-label="Filter by niche" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
               <option value="">All Niches</option>
               <!-- Agencies & Services — sell content quality to clients -->
               <optgroup label="── Agencies & Services">
@@ -785,7 +796,7 @@ footer p { color: #9ca3af !important; }
           <!-- Country -->
           <div>
             <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">🌍 Country</label>
-            <select id="filterCountry" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+            <select id="filterCountry" aria-label="Filter by country" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
               <option value="">All Countries</option>
               <!-- Europe -->
               <optgroup label="── Europe">
@@ -868,7 +879,7 @@ footer p { color: #9ca3af !important; }
           <!-- Business Type -->
           <div>
             <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">🏢 Business Type</label>
-            <select id="filterBizType" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+            <select id="filterBizType" aria-label="Filter by business type" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
               <option value="">All Types</option>
               <option value="b2b">B2B</option>
               <option value="b2c">B2C</option>
@@ -882,7 +893,7 @@ footer p { color: #9ca3af !important; }
           <!-- Score Range -->
           <div>
             <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">📊 Score Range</label>
-            <select id="filterScore" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+            <select id="filterScore" aria-label="Filter by score range" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
               <option value="">All Scores (70–100)</option>
               <option value="95">🏅 Elite · 95–100</option>
               <option value="90">⭐ Excellent · 90–94</option>
@@ -930,7 +941,7 @@ footer p { color: #9ca3af !important; }
     <div class="cards-grid" id="freelancersGrid"></div>
   </div>
 
-</div><!-- end #main-content -->
+</main><!-- end #main-content -->
 
 <!-- ============================================================
      FOOTER — full 4-column layout with Privacy Policy
@@ -1036,7 +1047,7 @@ footer p { color: #9ca3af !important; }
       <input type="email" id="freelancerEmail" placeholder="Email *" class="w-full p-3 rounded">
       <input type="text" id="freelancerTitle" placeholder="Professional Title *" class="w-full p-3 rounded">
       <textarea id="freelancerBio" rows="3" placeholder="Bio (max 200 chars)" class="w-full p-3 rounded"></textarea>
-      <select id="freelancerRate" class="w-full p-3 rounded">
+      <select id="freelancerRate" aria-label="Hourly rate" class="w-full p-3 rounded">
         <option value="">Select Rate...</option>
         <option value="€50 - €75 / hour">€50 - €75 / hour</option>
         <option value="€75 - €100 / hour">€75 - €100 / hour</option>
