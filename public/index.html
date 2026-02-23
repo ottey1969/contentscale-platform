@@ -1750,20 +1750,23 @@ async function startAutoDiscover() {
 
     // Trigger Apify Google Maps Scraper Actor
     const runRes = await fetch(
-      'https://api.apify.com/v2/acts/compass~crawler-google-places/runs',
+      '/api/apify/start-run',
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apifyToken}`
+          'x-apify-token': apifyToken
         },
         body: JSON.stringify({
-          searchStringsArray: [searchQuery],
-          maxCrawledPlacesPerSearch: maxResults,
-          language: 'en',
-          exportPlaceUrls: true,
-          includeWebResults: true,
+          actorId: 'compass~crawler-google-places',
+          input: {
+            searchStringsArray: [searchQuery],
+            maxCrawledPlacesPerSearch: maxResults,
+            language: 'en',
+            exportPlaceUrls: true,
+            includeWebResults: true,
           skipClosedPlaces: false
+          }
         })
       }
     );
@@ -1786,8 +1789,8 @@ async function startAutoDiscover() {
       await new Promise(r => setTimeout(r, 4000));
       attempts++;
       const statusRes  = await fetch(
-        `https://api.apify.com/v2/acts/compass~crawler-google-places/runs/${runId}`,
-        { headers: { 'Authorization': `Bearer ${apifyToken}` } }
+        `/api/apify/run-status/${runId}`,
+        { headers: { 'x-apify-token': apifyToken } }
       );
       const statusData = await statusRes.json();
       runStatus = statusData.data?.status;
@@ -1804,8 +1807,8 @@ async function startAutoDiscover() {
 
     // ── STEP 2: Fetch dataset items ────────────────────────────
     const dataRes = await fetch(
-      `https://api.apify.com/v2/acts/compass~crawler-google-places/runs/${runId}/dataset/items?format=json&clean=true`,
-      { headers: { 'Authorization': `Bearer ${apifyToken}` } }
+      `/api/apify/dataset/${runId}`,
+      { headers: { 'x-apify-token': apifyToken } }
     );
     const places = await dataRes.json();
 
