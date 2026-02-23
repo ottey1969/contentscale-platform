@@ -1006,6 +1006,50 @@ app.post('/api/scan', async (req, res) => {
 // Routes
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, '../public/admin-dashboard.html')));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, '../public/index.html')));
+
+// ── Apify proxy routes (avoids CORS from browser) ──────────────────────────
+const APIFY_BASE = 'https://api.apify.com/v2';
+
+app.post('/api/apify/start-run', async (req, res) => {
+    const token = req.headers['x-apify-token'];
+    if (!token) return res.status(401).json({ error: 'No Apify token' });
+    try {
+        const { actorId, input } = req.body;
+        const r = await fetch(`${APIFY_BASE}/acts/${actorId}/runs`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(input)
+        });
+        const data = await r.json();
+        res.status(r.status).json(data);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/apify/run-status/:runId', async (req, res) => {
+    const token = req.headers['x-apify-token'];
+    if (!token) return res.status(401).json({ error: 'No Apify token' });
+    try {
+        const r = await fetch(`${APIFY_BASE}/acts/compass~crawler-google-places/runs/${req.params.runId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await r.json();
+        res.status(r.status).json(data);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/apify/dataset/:runId', async (req, res) => {
+    const token = req.headers['x-apify-token'];
+    if (!token) return res.status(401).json({ error: 'No Apify token' });
+    try {
+        const r = await fetch(`${APIFY_BASE}/acts/compass~crawler-google-places/runs/${req.params.runId}/dataset/items?format=json&clean=true`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await r.json();
+        res.status(r.status).json(data);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// ───────────────────────────────────────────────────────────────────────────
+
 app.get('/api/health', async (req, res) => {
     let db = 'disconnected';
     let leaderboardTotal = 0, leaderboardApproved = 0, freelancerTotal = 0;
