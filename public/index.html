@@ -1419,453 +1419,466 @@ let bulkEmailEnabled = false;
 
 const DEFAULT_TEMPLATES = {
 
-  // ── TEMPLATE 1: CONGRATS (score ≥ 85) ───────────────────────────────────
-  // Psychology: Pride + Social proof + Subtle upsell to maintain/reach 100
+  // ── TEMPLATE 1: CONGRATS (score ≥ 85) ─────────────────────────────────────
   congrats: {
-    subject: "🏆 {{company_name}} just made the Elite Leaderboard ({{score}}/100)",
+    subject: `🏆 {{company_name}} — You scored {{score}}/100. You made the Elite Leaderboard.`,
     body: `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f0f4f8;font-family:Arial,Helvetica,sans-serif;">
-
-<div style="max-width:600px;margin:32px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.12);">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>You Made the Elite Leaderboard</title>
+</head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased;">
+<div style="max-width:600px;margin:0 auto;background:#ffffff;">
 
   <!-- HEADER -->
-  <div style="background:linear-gradient(135deg,#5b21b6 0%,#7e22ce 50%,#be185d 100%);padding:40px 32px;text-align:center;">
-    <div style="font-size:56px;line-height:1;margin-bottom:12px;">🏆</div>
-    <h1 style="color:#ffffff;margin:0;font-size:28px;font-weight:800;letter-spacing:-0.5px;">You Are Elite.</h1>
-    <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-size:16px;">Top {{score_label}} · ContentScore {{score}}/100</p>
+  <div style="background:linear-gradient(135deg,#5b21b6 0%,#7e22ce 50%,#be185d 100%);padding:48px 32px 40px;text-align:center;">
+    <div style="font-size:60px;line-height:1;margin-bottom:16px;">🏆</div>
+    <h1 style="color:#ffffff;margin:0 0 8px;font-size:30px;font-weight:900;letter-spacing:-0.5px;">You Made the Elite Leaderboard.</h1>
+    <p style="color:rgba(255,255,255,0.9);margin:0;font-size:16px;font-weight:500;">ContentScore: {{score}} / 100 &nbsp;·&nbsp; {{score_label}}</p>
+  </div>
+
+  <!-- SCORE BADGE -->
+  <div style="background:#fdf4ff;padding:32px;text-align:center;border-bottom:1px solid #f3e8ff;">
+    <p style="margin:0 0 8px;font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">Your ContentScore</p>
+    <div style="font-size:72px;font-weight:900;color:#7e22ce;line-height:1;margin-bottom:8px;">{{score}}</div>
+    <div style="font-size:14px;color:#6b7280;margin-bottom:16px;">out of 100</div>
+    {{score_bar}}
+    <div style="margin-top:16px;display:inline-block;background:#f3e8ff;border:1px solid #d8b4fe;border-radius:99px;padding:8px 20px;">
+      <span style="font-size:13px;color:#6b21a8;font-weight:700;">Top 15% of all websites scanned</span>
+    </div>
   </div>
 
   <!-- BODY -->
-  <div style="padding:36px 32px;">
+  <div style="padding:36px 32px 28px;">
 
-    <p style="font-size:17px;color:#111827;line-height:1.7;margin:0 0 16px;">Hi <strong>{{company_name}}</strong>,</p>
+    <p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p>
 
-    <p style="font-size:16px;color:#374151;line-height:1.7;margin:0 0 24px;">
-      My name is <strong>{{sender_name}}</strong> from <strong>{{sender_company}}</strong>.<br>
-      I scan websites to see how well they rank on Google — and yours just impressed me.
+    <p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">
+      My name is <strong>{{sender_name}}</strong>. I work at <strong>{{sender_company}}</strong>.<br>
+      I scan websites to check content quality and Google readiness.<br>
+      I scanned your site today. Your score is impressive.
     </p>
 
-    <!-- Score highlight box -->
-    <div style="background:linear-gradient(135deg,#fdf4ff,#fce7f3);border:2px solid #d946ef;border-radius:12px;padding:24px;margin:0 0 28px;text-align:center;">
-      <p style="margin:0 0 4px;font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;">Your ContentScore</p>
-      <div style="font-size:52px;font-weight:900;color:#7e22ce;line-height:1;">{{score}}</div>
-      <div style="font-size:14px;color:#6b7280;margin-bottom:12px;">out of 100 &nbsp;·&nbsp; <strong style="color:#059669;">{{score_label}}</strong></div>
-      {{score_bar}}
-      <p style="margin:12px 0 0;font-size:13px;color:#9ca3af;">Only the top 15% of websites reach this level.</p>
-    </div>
-
-    <!-- Breakdown -->
-    <p style="font-size:15px;color:#374151;font-weight:700;margin:0 0 12px;">Your Score Breakdown:</p>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:28px;">
+    <!-- Score breakdown -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 4px;margin-bottom:28px;">
       <tr>
-        <td style="padding:10px 12px;background:#f5f3ff;border-radius:8px 0 0 8px;font-size:14px;color:#374151;font-weight:600;">GRAAF Framework</td>
-        <td style="padding:10px 12px;background:#f5f3ff;font-size:14px;color:#7e22ce;font-weight:800;text-align:right;border-radius:0 8px 8px 0;">{{graaf_score}} / 50</td>
+        <td style="background:#f5f3ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;color:#374151;font-weight:600;">GRAAF &nbsp;<span style="font-weight:400;color:#9ca3af;">Credibility &amp; Relevance</span></td>
+        <td style="background:#f5f3ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:16px;font-weight:900;color:#7e22ce;text-align:right;white-space:nowrap;">{{graaf_score}} / 50</td>
       </tr>
-      <tr><td colspan="2" style="padding:3px 0;"></td></tr>
       <tr>
-        <td style="padding:10px 12px;background:#eff6ff;border-radius:8px 0 0 8px;font-size:14px;color:#374151;font-weight:600;">CRAFT Methodology</td>
-        <td style="padding:10px 12px;background:#eff6ff;font-size:14px;color:#1d4ed8;font-weight:800;text-align:right;border-radius:0 8px 8px 0;">{{craft_score}} / 30</td>
+        <td style="background:#eff6ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;color:#374151;font-weight:600;">CRAFT &nbsp;<span style="font-weight:400;color:#9ca3af;">Content Quality</span></td>
+        <td style="background:#eff6ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:16px;font-weight:900;color:#1d4ed8;text-align:right;white-space:nowrap;">{{craft_score}} / 30</td>
       </tr>
-      <tr><td colspan="2" style="padding:3px 0;"></td></tr>
       <tr>
-        <td style="padding:10px 12px;background:#fefce8;border-radius:8px 0 0 8px;font-size:14px;color:#374151;font-weight:600;">Technical SEO</td>
-        <td style="padding:10px 12px;background:#fefce8;font-size:14px;color:#b45309;font-weight:800;text-align:right;border-radius:0 8px 8px 0;">{{tech_score}} / 20</td>
+        <td style="background:#fefce8;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;color:#374151;font-weight:600;">Technical &nbsp;<span style="font-weight:400;color:#9ca3af;">Speed &amp; Structure</span></td>
+        <td style="background:#fefce8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:16px;font-weight:900;color:#b45309;text-align:right;white-space:nowrap;">{{tech_score}} / 20</td>
       </tr>
     </table>
 
     <!-- Leaderboard notice -->
-    <div style="background:#f0fdf4;border-left:4px solid #16a34a;border-radius:0 8px 8px 0;padding:16px 20px;margin-bottom:28px;">
-      <p style="margin:0;font-size:15px;color:#15803d;line-height:1.6;">
-        ✅ <strong>We added {{company_name}} to our Elite Leaderboard.</strong><br>
-        Your website is now visible to thousands of businesses and buyers who use ContentScale to find trusted suppliers.
+    <div style="background:#f0fdf4;border-left:4px solid #16a34a;padding:16px 20px;border-radius:0 8px 8px 0;margin-bottom:28px;">
+      <p style="margin:0;font-size:15px;color:#15803d;line-height:1.6;font-weight:600;">
+        ✅ {{company_name}} is now on the ContentScale Elite Leaderboard.
+      </p>
+      <p style="margin:6px 0 0;font-size:14px;color:#166534;line-height:1.5;">
+        Thousands of buyers use our leaderboard to find trusted suppliers. Your site is now visible to them.
       </p>
     </div>
 
-    <!-- ContentScore Badge — Embed on your website -->
+    <!-- Badge -->
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px 24px;margin-bottom:28px;">
       <p style="font-size:15px;color:#111827;font-weight:700;margin:0 0 6px;">🏅 Your Free ContentScore Badge</p>
       <p style="font-size:14px;color:#374151;line-height:1.6;margin:0 0 14px;">
-        Copy and paste the code below to add your badge to your website — it shows visitors your content is verified and builds trust instantly.
+        Add this badge to your website. It shows visitors that your content is verified. It builds trust fast.
       </p>
       {{badge_widget}}
-      <p style="font-size:13px;color:#6b7280;margin:12px 0 0;">Paste the HTML above anywhere on your website. It links back to your verified page.</p>
     </div>
 
-    <!-- Want to reach 100? -->
-    <p style="font-size:16px;color:#374151;line-height:1.7;margin:0 0 12px;">
-      You are already in the top {{score_label}} tier. But there is still room to reach a perfect <strong>100/100</strong> — and the websites that do get significantly more traffic from Google.
+    <!-- Upsell to 100 -->
+    <p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 8px;">
+      You are already in the top tier. But a perfect <strong>100/100</strong> is still possible.
     </p>
-    <p style="font-size:16px;color:#374151;line-height:1.7;margin:0 0 28px;">
-      Want to know exactly what it would take? I can show you in 15 minutes. No cost. No pressure.
+    <p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 28px;">
+      Websites that score 100 get more Google traffic. I can show you what to fix — in 15 minutes. Free.
     </p>
 
-    <!-- CTA Button -->
+    <!-- CTA -->
     <div style="text-align:center;margin-bottom:32px;">
-      <a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#7e22ce,#be185d);color:#ffffff;font-size:16px;font-weight:700;padding:16px 40px;border-radius:10px;text-decoration:none;letter-spacing:0.02em;">
+      <a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#7e22ce,#be185d);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">
         💬 Let's Talk — WhatsApp
       </a>
-      <p style="margin:10px 0 0;font-size:12px;color:#9ca3af;">Or reply directly to this email · Mon–Fri 9:00–18:00 CET</p>
+      <p style="margin:10px 0 0;font-size:12px;color:#9ca3af;">Or reply to this email · Mon–Fri 9:00–18:00 CET</p>
     </div>
 
     <!-- Signature -->
     <div style="border-top:1px solid #f3f4f6;padding-top:24px;">
-      <p style="font-size:15px;color:#374151;margin:0;">Warm regards,</p>
-      <p style="font-size:15px;color:#111827;font-weight:700;margin:4px 0;">{{sender_name}}</p>
-      <p style="font-size:13px;color:#6b7280;margin:2px 0;">{{sender_company}} · Amsterdam, Netherlands</p>
-      <p style="font-size:13px;color:#6b7280;margin:2px 0;">📞 {{sender_phone}} · <a href="{{leaderboard_url}}" style="color:#7e22ce;">View Leaderboard</a></p>
+      <p style="font-size:14px;color:#374151;margin:0 0 2px;">Warm regards,</p>
+      <p style="font-size:15px;color:#111827;font-weight:700;margin:0 0 2px;">{{sender_name}}</p>
+      <p style="font-size:13px;color:#6b7280;margin:0 0 2px;">{{sender_company}} · Amsterdam, Netherlands</p>
+      <p style="font-size:13px;color:#6b7280;margin:0;">📞 {{sender_phone}} &nbsp;·&nbsp; <a href="{{leaderboard_url}}" style="color:#7e22ce;text-decoration:none;">View Full Leaderboard</a></p>
     </div>
 
   </div>
 
   <!-- FOOTER -->
-  <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 32px;text-align:center;">
+  <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;">
     <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.8;">
       {{sender_company}} · Amsterdam, Netherlands · {{year}}<br>
-      You received this because your website was scanned by our ContentScore tool.<br>
-      <a href="{{unsubscribe_url}}" style="color:#7e22ce;text-decoration:underline;">Unsubscribe</a>
+      You received this because your site was scanned by our free ContentScore tool.<br>
+      <a href="{{unsubscribe_url}}" style="color:#7e22ce;">Unsubscribe</a>
     </p>
   </div>
 
 </div>
-</body></html>`
+</body>
+</html>`
   },
 
-  // ── TEMPLATE 4: ALMOST MADE IT (score 65–69) ───────────────────────────────
-  // Psychology: Specific gap + exact fix + "so close" urgency
-  almostMade: {
-    subject: "{{company_name}}: {{gap}} points from the Elite Leaderboard (score {{score}}/100)",
-    body: `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f0f4f8;font-family:Arial,Helvetica,sans-serif;">
-<div style="max-width:600px;margin:32px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.12);">
-
-  <!-- HEADER -->
-  <div style="background:linear-gradient(135deg,#78350f 0%,#b45309 50%,#d97706 100%);padding:40px 32px;text-align:center;">
-    <div style="font-size:56px;line-height:1;margin-bottom:12px;">🎯</div>
-    <h1 style="color:#ffffff;margin:0;font-size:28px;font-weight:800;letter-spacing:-0.5px;">So Close.</h1>
-    <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-size:16px;">{{gap}} points from the Elite Leaderboard</p>
-  </div>
-
-  <!-- BODY -->
-  <div style="padding:36px 32px;">
-
-    <p style="font-size:17px;color:#111827;line-height:1.7;margin:0 0 16px;">Hi <strong>{{company_name}}</strong>,</p>
-
-    <p style="font-size:16px;color:#374151;line-height:1.7;margin:0 0 24px;">
-      My name is <strong>{{sender_name}}</strong> from <strong>{{sender_company}}</strong>.<br>
-      I scan websites for content quality — and yours almost made our Elite Leaderboard.
-    </p>
-
-    <!-- Score highlight box -->
-    <div style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:2px solid #f59e0b;border-radius:12px;padding:24px;margin:0 0 28px;text-align:center;">
-      <p style="margin:0 0 4px;font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;">Your ContentScore</p>
-      <div style="font-size:52px;font-weight:900;color:#b45309;line-height:1;">{{score}}</div>
-      <div style="font-size:14px;color:#6b7280;margin-bottom:8px;">out of 100 &nbsp;·&nbsp; <strong style="color:#b45309;">{{score_label}}</strong></div>
-      {{score_bar}}
-      <div style="margin-top:12px;background:#fef9c3;border-radius:8px;padding:10px 16px;display:inline-block;">
-        <span style="font-size:14px;color:#713f12;font-weight:700;">⚡ Just {{gap}} points from the Elite Leaderboard (70+)</span>
-      </div>
-    </div>
-
-    <!-- The one fix -->
-    <p style="font-size:15px;color:#374151;font-weight:700;margin:0 0 8px;">The #1 thing holding you back:</p>
-    <div style="background:#fff7ed;border-left:4px solid #f59e0b;border-radius:0 8px 8px 0;padding:16px 20px;margin-bottom:28px;">
-      <p style="margin:0;font-size:15px;color:#92400e;line-height:1.6;">{{top_issue}}</p>
-    </div>
-
-    <p style="font-size:16px;color:#374151;line-height:1.7;margin:0 0 24px;">
-      Fix that one issue and your site hits the leaderboard — which means free exposure to thousands of buyers who use ContentScale to find trusted suppliers. I can walk you through exactly what to change. Takes 15 minutes.
-    </p>
-
-    <!-- CTA -->
-    <div style="text-align:center;margin-bottom:32px;">
-      <a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#b45309,#d97706);color:#ffffff;font-size:16px;font-weight:700;padding:16px 40px;border-radius:10px;text-decoration:none;">
-        💬 Let's Fix It — WhatsApp
-      </a>
-      <p style="margin:10px 0 0;font-size:12px;color:#9ca3af;">Or reply directly · Mon–Fri 9:00–18:00 CET</p>
-    </div>
-
-    <!-- Signature -->
-    <div style="border-top:1px solid #f3f4f6;padding-top:24px;">
-      <p style="font-size:15px;color:#374151;margin:0;">Warm regards,</p>
-      <p style="font-size:15px;color:#111827;font-weight:700;margin:4px 0;">{{sender_name}}</p>
-      <p style="font-size:13px;color:#6b7280;margin:2px 0;">{{sender_company}} · Amsterdam, Netherlands</p>
-      <p style="font-size:13px;color:#6b7280;margin:2px 0;">📞 {{sender_phone}} · <a href="{{leaderboard_url}}" style="color:#b45309;">View Leaderboard</a></p>
-    </div>
-
-  </div>
-
-  <!-- FOOTER -->
-  <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 32px;text-align:center;">
-    <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.8;">
-      {{sender_company}} · Amsterdam, Netherlands · {{year}}<br>
-      You received this because your website was scanned by our ContentScore tool.<br>
-      <a href="{{unsubscribe_url}}" style="color:#b45309;text-decoration:underline;">Unsubscribe</a>
-    </p>
-  </div>
-
-</div>
-</body></html>`
-  },
-
-  // ── TEMPLATE 2: IMPROVEMENT PITCH (score < 65, has website) ─────────────
-  // Psychology: Specific diagnosis + urgency (competitors improving) + easy next step
+  // ── TEMPLATE 2: IMPROVEMENT PITCH (score < 65, has website) ───────────────
   improvement: {
-    subject: "I found 1 issue holding {{company_name}} back on Google (score: {{score}}/100)",
+    subject: `{{company_name}}: Your website scored {{score}}/100. Here is what is holding you back.`,
     body: `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f0f4f8;font-family:Arial,Helvetica,sans-serif;">
-
-<div style="max-width:600px;margin:32px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.12);">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Your Free SEO Scan Result</title>
+</head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased;">
+<div style="max-width:600px;margin:0 auto;background:#ffffff;">
 
   <!-- HEADER -->
-  <div style="background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 50%,#0891b2 100%);padding:40px 32px;text-align:center;">
-    <div style="font-size:56px;line-height:1;margin-bottom:12px;">📊</div>
-    <h1 style="color:#ffffff;margin:0;font-size:26px;font-weight:800;">Your Free SEO Report</h1>
-    <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-size:15px;">{{company_name}} · Scanned {{date}}</p>
+  <div style="background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 60%,#0284c7 100%);padding:48px 32px 40px;text-align:center;">
+    <div style="font-size:56px;line-height:1;margin-bottom:16px;">📊</div>
+    <h1 style="color:#ffffff;margin:0 0 8px;font-size:28px;font-weight:900;">Your Free Website Scan</h1>
+    <p style="color:rgba(255,255,255,0.9);margin:0;font-size:15px;">{{domain}} &nbsp;·&nbsp; Scanned on {{date}}</p>
   </div>
 
-  <!-- BODY -->
-  <div style="padding:36px 32px;">
-
-    <p style="font-size:17px;color:#111827;line-height:1.7;margin:0 0 16px;">Hi <strong>{{company_name}}</strong>,</p>
-
-    <p style="font-size:16px;color:#374151;line-height:1.7;margin:0 0 24px;">
-      My name is <strong>{{sender_name}}</strong>. I help businesses rank higher on Google and get more customers from search.<br><br>
-      I ran a free scan of your website. Here is what I found.
-    </p>
-
-    <!-- Score card -->
-    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:24px;margin-bottom:28px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <div>
-          <p style="margin:0 0 4px;font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;">ContentScore</p>
-          <div style="font-size:44px;font-weight:900;color:#1e3a8a;line-height:1;">{{score}}<span style="font-size:20px;font-weight:400;color:#94a3b8;">/100</span></div>
-        </div>
-        <div style="text-align:right;">
-          <span style="display:inline-block;background:#fef3c7;color:#b45309;font-size:13px;font-weight:700;padding:6px 14px;border-radius:99px;">{{score_label}}</span>
-          <p style="margin:6px 0 0;font-size:12px;color:#94a3b8;">Industry avg: 71/100</p>
-        </div>
-      </div>
-      {{score_bar}}
-    </div>
-
-    <!-- 3-pillar breakdown -->
-    <p style="font-size:15px;color:#374151;font-weight:700;margin:0 0 12px;">Where Points Are Lost:</p>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
-      <tr style="background:#f1f5f9;">
-        <td style="padding:11px 14px;font-size:14px;color:#374151;border-radius:8px 0 0 8px;"><strong>GRAAF</strong> <span style="font-size:12px;color:#94a3b8;">(credibility &amp; relevance)</span></td>
-        <td style="padding:11px 14px;font-size:15px;font-weight:800;color:#7e22ce;text-align:right;border-radius:0 8px 8px 0;">{{graaf_score}} / 50</td>
-      </tr>
-      <tr><td colspan="2" style="padding:2px;"></td></tr>
-      <tr style="background:#f1f5f9;">
-        <td style="padding:11px 14px;font-size:14px;color:#374151;border-radius:8px 0 0 8px;"><strong>CRAFT</strong> <span style="font-size:12px;color:#94a3b8;">(content quality)</span></td>
-        <td style="padding:11px 14px;font-size:15px;font-weight:800;color:#1d4ed8;text-align:right;border-radius:0 8px 8px 0;">{{craft_score}} / 30</td>
-      </tr>
-      <tr><td colspan="2" style="padding:2px;"></td></tr>
-      <tr style="background:#f1f5f9;">
-        <td style="padding:11px 14px;font-size:14px;color:#374151;border-radius:8px 0 0 8px;"><strong>Technical</strong> <span style="font-size:12px;color:#94a3b8;">(speed &amp; structure)</span></td>
-        <td style="padding:11px 14px;font-size:15px;font-weight:800;color:#b45309;text-align:right;border-radius:0 8px 8px 0;">{{tech_score}} / 20</td>
+  <!-- SCORE -->
+  <div style="background:#f8fafc;padding:28px 32px;border-bottom:1px solid #e2e8f0;">
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td>
+          <p style="margin:0 0 4px;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">ContentScore</p>
+          <div style="font-size:56px;font-weight:900;color:#1e3a8a;line-height:1;">{{score}}<span style="font-size:22px;font-weight:400;color:#94a3b8;">/100</span></div>
+        </td>
+        <td style="text-align:right;vertical-align:top;padding-top:8px;">
+          <div style="display:inline-block;background:#fef3c7;color:#b45309;font-size:13px;font-weight:700;padding:7px 16px;border-radius:99px;margin-bottom:6px;">{{score_label}}</div>
+          <p style="margin:4px 0 0;font-size:11px;color:#94a3b8;">Avg website: 71 / 100</p>
+        </td>
       </tr>
     </table>
-    <p style="font-size:12px;color:#94a3b8;margin:4px 0 28px;">Total: {{score}}/100 · Powered by GRAAF + CRAFT Framework</p>
+    <div style="margin-top:14px;">{{score_bar}}</div>
+  </div>
 
-    <!-- #1 issue callout -->
+  <!-- BODY -->
+  <div style="padding:32px;">
+
+    <p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p>
+
+    <p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">
+      My name is <strong>{{sender_name}}</strong>. I work at <strong>{{sender_company}}</strong>.<br>
+      I help businesses get more visitors from Google — without paying for ads.<br><br>
+      I ran a free scan of your website. Your score is <strong>{{score}} out of 100</strong>. Here is what the scan found.
+    </p>
+
+    <!-- Pillars -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 4px;margin-bottom:28px;">
+      <tr>
+        <td style="background:#f5f3ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;color:#374151;font-weight:600;">GRAAF &nbsp;<span style="font-weight:400;color:#9ca3af;font-size:12px;">Credibility &amp; Relevance</span></td>
+        <td style="background:#f5f3ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:16px;font-weight:900;color:#7e22ce;text-align:right;white-space:nowrap;">{{graaf_score}} / 50</td>
+      </tr>
+      <tr>
+        <td style="background:#eff6ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;color:#374151;font-weight:600;">CRAFT &nbsp;<span style="font-weight:400;color:#9ca3af;font-size:12px;">Content Quality</span></td>
+        <td style="background:#eff6ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:16px;font-weight:900;color:#1d4ed8;text-align:right;white-space:nowrap;">{{craft_score}} / 30</td>
+      </tr>
+      <tr>
+        <td style="background:#fefce8;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;color:#374151;font-weight:600;">Technical &nbsp;<span style="font-weight:400;color:#9ca3af;font-size:12px;">Speed &amp; Structure</span></td>
+        <td style="background:#fefce8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:16px;font-weight:900;color:#b45309;text-align:right;white-space:nowrap;">{{tech_score}} / 20</td>
+      </tr>
+    </table>
+
+    <!-- Top issue -->
     <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:20px 24px;margin-bottom:28px;">
-      <p style="margin:0 0 6px;font-size:13px;color:#9a3412;text-transform:uppercase;font-weight:700;letter-spacing:0.06em;">🔍 Top Issue Found</p>
-      <p style="margin:0;font-size:16px;color:#1c1917;font-weight:600;line-height:1.5;">{{top_issue}}</p>
-      <p style="margin:8px 0 0;font-size:13px;color:#78350f;">Fixing this one issue alone can move your score 8–15 points up.</p>
+      <p style="margin:0 0 6px;font-size:12px;color:#9a3412;text-transform:uppercase;font-weight:700;letter-spacing:0.06em;">🔍 Top Issue Found</p>
+      <p style="margin:0 0 8px;font-size:16px;color:#1c1917;font-weight:700;line-height:1.5;">{{top_issue}}</p>
+      <p style="margin:0;font-size:13px;color:#78350f;line-height:1.5;">Fix this one issue. Your score can jump 8–15 points. Google will notice.</p>
     </div>
 
-    <!-- What happens with a better score -->
-    <p style="font-size:15px;color:#374151;font-weight:700;margin:0 0 12px;">What a higher score means for you:</p>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:28px;">
+    <!-- What it means -->
+    <p style="font-size:15px;color:#374151;font-weight:700;margin:0 0 12px;">A higher score means:</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
       <tr>
-        <td style="padding:8px 12px;font-size:14px;color:#374151;">📈</td>
-        <td style="padding:8px 12px;font-size:14px;color:#374151;">More people find you on Google when they search for what you offer</td>
+        <td style="padding:9px 8px;font-size:18px;width:32px;">📈</td>
+        <td style="padding:9px 0;font-size:14px;color:#374151;line-height:1.5;">More people find you on Google when they search for your service</td>
       </tr>
       <tr style="background:#f8fafc;">
-        <td style="padding:8px 12px;font-size:14px;color:#374151;">🤖</td>
-        <td style="padding:8px 12px;font-size:14px;color:#374151;">Google AI Overviews start showing your content — free top-of-page visibility</td>
+        <td style="padding:9px 8px;font-size:18px;width:32px;">🤖</td>
+        <td style="padding:9px 0;font-size:14px;color:#374151;line-height:1.5;">Google AI shows your content at the top — for free</td>
       </tr>
       <tr>
-        <td style="padding:8px 12px;font-size:14px;color:#374151;">💰</td>
-        <td style="padding:8px 12px;font-size:14px;color:#374151;">More visitors = more enquiries = more revenue, without paying for ads</td>
+        <td style="padding:9px 8px;font-size:18px;width:32px;">💰</td>
+        <td style="padding:9px 0;font-size:14px;color:#374151;line-height:1.5;">More visitors. More enquiries. More revenue. No ad spend.</td>
       </tr>
     </table>
 
-    <p style="font-size:16px;color:#374151;line-height:1.7;margin:0 0 8px;">
-      I work with businesses in {{country}} and 47+ countries to fix exactly this. Most see results within 30–60 days.
+    <p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 8px;">
+      I work with businesses in {{country}} and 47+ countries. Most see results in 30–60 days.
     </p>
-    <p style="font-size:16px;color:#374151;line-height:1.7;margin:0 0 28px;">
-      Can I show you a quick plan for <strong>{{company_name}}</strong>? Takes 15 minutes on WhatsApp. No cost. No obligation.
+    <p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 28px;">
+      Can I show you a quick fix plan for <strong>{{company_name}}</strong>? Free 15-minute call. No pressure.
     </p>
 
     <!-- CTA -->
     <div style="text-align:center;margin-bottom:32px;">
-      <a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#25d366,#128c7e);color:#ffffff;font-size:16px;font-weight:700;padding:16px 40px;border-radius:10px;text-decoration:none;">
+      <a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#25d366,#128c7e);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">
         💬 Yes — Show Me How to Improve
       </a>
-      <p style="margin:10px 0 0;font-size:12px;color:#9ca3af;">Average response time: under 2 hours</p>
+      <p style="margin:10px 0 0;font-size:12px;color:#9ca3af;">Average reply: under 2 hours</p>
     </div>
 
     <!-- Signature -->
     <div style="border-top:1px solid #f3f4f6;padding-top:24px;">
-      <p style="font-size:15px;color:#374151;margin:0;">Kind regards,</p>
-      <p style="font-size:15px;color:#111827;font-weight:700;margin:4px 0;">{{sender_name}}</p>
-      <p style="font-size:13px;color:#6b7280;margin:2px 0;">{{sender_company}} · SEO Recovery Expert · Amsterdam</p>
-      <p style="font-size:13px;color:#6b7280;margin:2px 0;">📞 {{sender_phone}}</p>
+      <p style="font-size:14px;color:#374151;margin:0 0 2px;">Kind regards,</p>
+      <p style="font-size:15px;color:#111827;font-weight:700;margin:0 0 2px;">{{sender_name}}</p>
+      <p style="font-size:13px;color:#6b7280;margin:0 0 2px;">{{sender_company}} · SEO Recovery Specialist · Amsterdam</p>
+      <p style="font-size:13px;color:#6b7280;margin:0;">📞 {{sender_phone}}</p>
     </div>
 
   </div>
 
   <!-- FOOTER -->
-  <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 32px;text-align:center;">
+  <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;">
     <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.8;">
       {{sender_company}} · Amsterdam, Netherlands · {{year}}<br>
-      You received this because your website <strong>{{website_url}}</strong> was scanned by our free ContentScore tool.<br>
-      <a href="{{unsubscribe_url}}" style="color:#1d4ed8;text-decoration:underline;">Unsubscribe</a>
+      Your website <strong>{{domain}}</strong> was scanned by our free ContentScore tool.<br>
+      <a href="{{unsubscribe_url}}" style="color:#1d4ed8;">Unsubscribe</a>
     </p>
   </div>
 
 </div>
-</body></html>`
+</body>
+</html>`
   },
 
-  // ── TEMPLATE 3: WEBSITE OFFER (no website / score = 0) ──────────────────
-  // Psychology: Opportunity cost + fear of missing out + simple low-friction ask
-  website: {
-    subject: "Your competitors in {{country}} are getting customers online — are you?",
+  // ── TEMPLATE 3: ALMOST MADE IT (score 65–69) ───────────────────────────────
+  almostMade: {
+    subject: `{{company_name}} — {{gap}} points from the Elite Leaderboard (score {{score}}/100)`,
     body: `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f0f4f8;font-family:Arial,Helvetica,sans-serif;">
-
-<div style="max-width:600px;margin:32px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.12);">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>So Close — Just {{gap}} Points Away</title>
+</head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased;">
+<div style="max-width:600px;margin:0 auto;background:#ffffff;">
 
   <!-- HEADER -->
-  <div style="background:linear-gradient(135deg,#064e3b 0%,#065f46 50%,#0891b2 100%);padding:40px 32px;text-align:center;">
-    <div style="font-size:56px;line-height:1;margin-bottom:12px;">🌐</div>
-    <h1 style="color:#ffffff;margin:0;font-size:26px;font-weight:800;">Your Business Is Invisible Online.</h1>
-    <p style="color:rgba(255,255,255,0.85);margin:10px 0 0;font-size:15px;">Here is how to fix that — fast and affordable.</p>
+  <div style="background:linear-gradient(135deg,#78350f 0%,#b45309 50%,#d97706 100%);padding:48px 32px 40px;text-align:center;">
+    <div style="font-size:60px;line-height:1;margin-bottom:16px;">🎯</div>
+    <h1 style="color:#ffffff;margin:0 0 8px;font-size:30px;font-weight:900;">So Close.</h1>
+    <p style="color:rgba(255,255,255,0.9);margin:0;font-size:16px;font-weight:500;">Just {{gap}} points from the Elite Leaderboard.</p>
+  </div>
+
+  <!-- SCORE -->
+  <div style="background:#fffbeb;padding:28px 32px;text-align:center;border-bottom:1px solid #fde68a;">
+    <p style="margin:0 0 6px;font-size:11px;color:#92400e;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">Your ContentScore</p>
+    <div style="font-size:72px;font-weight:900;color:#b45309;line-height:1;margin-bottom:8px;">{{score}}</div>
+    <div style="font-size:14px;color:#6b7280;margin-bottom:14px;">out of 100 &nbsp;·&nbsp; <strong style="color:#b45309;">{{score_label}}</strong></div>
+    {{score_bar}}
+    <div style="margin-top:14px;background:#fef9c3;border:1px solid #fde047;border-radius:99px;padding:10px 24px;display:inline-block;">
+      <span style="font-size:14px;color:#713f12;font-weight:700;">⚡ Only {{gap}} points from the Elite Leaderboard (70+)</span>
+    </div>
   </div>
 
   <!-- BODY -->
-  <div style="padding:36px 32px;">
+  <div style="padding:32px;">
 
-    <p style="font-size:17px;color:#111827;line-height:1.7;margin:0 0 16px;">Hi <strong>{{company_name}}</strong>,</p>
+    <p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p>
 
-    <p style="font-size:16px;color:#374151;line-height:1.7;margin:0 0 16px;">
-      My name is <strong>{{sender_name}}</strong>. I help businesses like yours get found on Google and win more customers — without spending money on ads.
+    <p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">
+      My name is <strong>{{sender_name}}</strong>. I work at <strong>{{sender_company}}</strong>.<br>
+      I scan websites for content quality.<br>
+      Your site almost made our Elite Leaderboard. You are <strong>{{gap}} points away</strong>.
     </p>
 
-    <p style="font-size:16px;color:#374151;line-height:1.7;margin:0 0 24px;">
-      I searched for <strong>{{company_name}}</strong> online today. I could not find a website for you.
-    </p>
-
-    <!-- What they are missing -->
-    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:20px 24px;margin-bottom:28px;">
-      <p style="margin:0 0 12px;font-size:15px;color:#991b1b;font-weight:700;">⚠️ What this costs you every month:</p>
-      <table style="width:100%;border-collapse:collapse;">
-        <tr>
-          <td style="padding:7px 0;font-size:14px;color:#7f1d1d;">❌</td>
-          <td style="padding:7px 0;font-size:14px;color:#374151;">Customers searching Google for what you offer — going to your competitors instead</td>
-        </tr>
-        <tr>
-          <td style="padding:7px 0;font-size:14px;color:#7f1d1d;">❌</td>
-          <td style="padding:7px 0;font-size:14px;color:#374151;">No way for people to find your opening hours, location, or prices at 11pm</td>
-        </tr>
-        <tr>
-          <td style="padding:7px 0;font-size:14px;color:#7f1d1d;">❌</td>
-          <td style="padding:7px 0;font-size:14px;color:#374151;">Looking less professional than competitors who do have a website</td>
-        </tr>
-        <tr>
-          <td style="padding:7px 0;font-size:14px;color:#7f1d1d;">❌</td>
-          <td style="padding:7px 0;font-size:14px;color:#374151;">Missing referral traffic from Google Maps, social media, and directory sites</td>
-        </tr>
-      </table>
+    <!-- The one thing -->
+    <p style="font-size:15px;color:#374151;font-weight:700;margin:0 0 8px;">The main thing holding you back:</p>
+    <div style="background:#fff7ed;border-left:4px solid #f59e0b;border-radius:0 10px 10px 0;padding:18px 22px;margin-bottom:28px;">
+      <p style="margin:0 0 6px;font-size:15px;color:#92400e;font-weight:700;line-height:1.5;">{{top_issue}}</p>
+      <p style="margin:0;font-size:13px;color:#78350f;">Fix this one thing. You hit the leaderboard. It is that simple.</p>
     </div>
 
-    <!-- What they can have -->
-    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px 24px;margin-bottom:28px;">
-      <p style="margin:0 0 12px;font-size:15px;color:#14532d;font-weight:700;">✅ With a proper website you get:</p>
-      <table style="width:100%;border-collapse:collapse;">
-        <tr>
-          <td style="padding:7px 0;font-size:14px;color:#166534;">✔</td>
-          <td style="padding:7px 0;font-size:14px;color:#374151;">Show up on Google when people search for your service in {{country}}</td>
-        </tr>
-        <tr>
-          <td style="padding:7px 0;font-size:14px;color:#166534;">✔</td>
-          <td style="padding:7px 0;font-size:14px;color:#374151;">Look professional and trusted — even against bigger competitors</td>
-        </tr>
-        <tr>
-          <td style="padding:7px 0;font-size:14px;color:#166534;">✔</td>
-          <td style="padding:7px 0;font-size:14px;color:#374151;">Get new customers even when you are sleeping or on holiday</td>
-        </tr>
-        <tr>
-          <td style="padding:7px 0;font-size:14px;color:#166534;">✔</td>
-          <td style="padding:7px 0;font-size:14px;color:#374151;">One-time investment that keeps working for years — no monthly ad spend</td>
-        </tr>
-      </table>
-    </div>
-
-    <!-- How we work -->
-    <p style="font-size:15px;color:#374151;font-weight:700;margin:0 0 12px;">How it works — 3 simple steps:</p>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:28px;">
-      <tr style="background:#f8fafc;">
-        <td style="padding:12px 14px;border-radius:8px 0 0 8px;font-size:22px;width:40px;text-align:center;">1</td>
-        <td style="padding:12px 14px;border-radius:0 8px 8px 0;font-size:14px;color:#374151;"><strong>We talk</strong> — 15 minutes on WhatsApp to understand your business</td>
+    <!-- What the leaderboard gives you -->
+    <p style="font-size:15px;color:#374151;font-weight:700;margin:0 0 12px;">Why the leaderboard matters:</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+      <tr>
+        <td style="padding:9px 8px;font-size:18px;width:32px;">👁️</td>
+        <td style="padding:9px 0;font-size:14px;color:#374151;line-height:1.5;">Thousands of buyers use our leaderboard to find trusted suppliers</td>
       </tr>
-      <tr><td colspan="2" style="padding:3px;"></td></tr>
-      <tr style="background:#f8fafc;">
-        <td style="padding:12px 14px;border-radius:8px 0 0 8px;font-size:22px;width:40px;text-align:center;">2</td>
-        <td style="padding:12px 14px;border-radius:0 8px 8px 0;font-size:14px;color:#374151;"><strong>We build</strong> — a fast, Google-optimised website made for {{country}}</td>
+      <tr style="background:#fffbeb;">
+        <td style="padding:9px 8px;font-size:18px;width:32px;">🔗</td>
+        <td style="padding:9px 0;font-size:14px;color:#374151;line-height:1.5;">A public link to your verified score — you can share it anywhere</td>
       </tr>
-      <tr><td colspan="2" style="padding:3px;"></td></tr>
-      <tr style="background:#f8fafc;">
-        <td style="padding:12px 14px;border-radius:8px 0 0 8px;font-size:22px;width:40px;text-align:center;">3</td>
-        <td style="padding:12px 14px;border-radius:0 8px 8px 0;font-size:14px;color:#374151;"><strong>You grow</strong> — more visitors, more calls, more customers. Guaranteed.</td>
+      <tr>
+        <td style="padding:9px 8px;font-size:18px;width:32px;">🏅</td>
+        <td style="padding:9px 0;font-size:14px;color:#374151;line-height:1.5;">A free embeddable badge for your website — builds trust instantly</td>
       </tr>
     </table>
 
-    <p style="font-size:16px;color:#374151;line-height:1.7;margin:0 0 28px;">
-      No technical knowledge needed. No long contracts. Just a simple website that works — and keeps working.
+    <p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 28px;">
+      I can show you exactly what to fix. Takes 15 minutes on WhatsApp. Free. No pressure.
     </p>
 
     <!-- CTA -->
     <div style="text-align:center;margin-bottom:32px;">
-      <a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#25d366,#128c7e);color:#ffffff;font-size:16px;font-weight:700;padding:16px 40px;border-radius:10px;text-decoration:none;">
-        💬 I Want More Customers — Let's Talk
+      <a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#b45309,#d97706);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">
+        💬 Let's Get You on the Leaderboard
       </a>
-      <p style="margin:10px 0 0;font-size:13px;color:#9ca3af;">Free 15-minute call · No cost · No pressure · No commitment</p>
+      <p style="margin:10px 0 0;font-size:12px;color:#9ca3af;">Or reply to this email · Mon–Fri 9:00–18:00 CET</p>
     </div>
 
     <!-- Signature -->
     <div style="border-top:1px solid #f3f4f6;padding-top:24px;">
-      <p style="font-size:15px;color:#374151;margin:0;">Kind regards,</p>
-      <p style="font-size:15px;color:#111827;font-weight:700;margin:4px 0;">{{sender_name}}</p>
-      <p style="font-size:13px;color:#6b7280;margin:2px 0;">{{sender_company}} · Website &amp; SEO Specialist · Amsterdam</p>
-      <p style="font-size:13px;color:#6b7280;margin:2px 0;">📞 {{sender_phone}} &nbsp;·&nbsp; <a href="{{cta_url}}" style="color:#065f46;">WhatsApp Me</a></p>
+      <p style="font-size:14px;color:#374151;margin:0 0 2px;">Warm regards,</p>
+      <p style="font-size:15px;color:#111827;font-weight:700;margin:0 0 2px;">{{sender_name}}</p>
+      <p style="font-size:13px;color:#6b7280;margin:0 0 2px;">{{sender_company}} · Amsterdam, Netherlands</p>
+      <p style="font-size:13px;color:#6b7280;margin:0;">📞 {{sender_phone}} &nbsp;·&nbsp; <a href="{{leaderboard_url}}" style="color:#b45309;text-decoration:none;">View Leaderboard</a></p>
     </div>
 
   </div>
 
   <!-- FOOTER -->
-  <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 32px;text-align:center;">
+  <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;">
     <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.8;">
       {{sender_company}} · Amsterdam, Netherlands · {{year}}<br>
-      You received this because your business was found during a local search in {{country}}.<br>
-      <a href="{{unsubscribe_url}}" style="color:#065f46;text-decoration:underline;">Unsubscribe</a>
+      Your website was scanned by our free ContentScore tool.<br>
+      <a href="{{unsubscribe_url}}" style="color:#b45309;">Unsubscribe</a>
     </p>
   </div>
 
 </div>
-</body></html>`
+</body>
+</html>`
+  },
+
+  // ── TEMPLATE 4: WEBSITE OFFER (no website found) ──────────────────────────
+  website: {
+    subject: `{{company_name}} — your competitors in {{country}} are getting online customers. Are you?`,
+    body: `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Get Found Online — Free Advice</title>
+</head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased;">
+<div style="max-width:600px;margin:0 auto;background:#ffffff;">
+
+  <!-- HEADER -->
+  <div style="background:linear-gradient(135deg,#064e3b 0%,#065f46 60%,#0891b2 100%);padding:48px 32px 40px;text-align:center;">
+    <div style="font-size:60px;line-height:1;margin-bottom:16px;">🌐</div>
+    <h1 style="color:#ffffff;margin:0 0 8px;font-size:28px;font-weight:900;">Your Business Is Not Online Yet.</h1>
+    <p style="color:rgba(255,255,255,0.9);margin:0;font-size:15px;">Here is how to fix that — fast and affordable.</p>
+  </div>
+
+  <!-- ALERT BOX -->
+  <div style="background:#fef2f2;border-bottom:2px solid #fecaca;padding:20px 32px;text-align:center;">
+    <p style="margin:0;font-size:15px;color:#991b1b;font-weight:700;">
+      ⚠️ Every day without a website, customers go to your competitors.
+    </p>
+  </div>
+
+  <!-- BODY -->
+  <div style="padding:32px;">
+
+    <p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p>
+
+    <p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 8px;">
+      My name is <strong>{{sender_name}}</strong>. I work at <strong>{{sender_company}}</strong>.
+    </p>
+    <p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">
+      I searched for <strong>{{company_name}}</strong> online today. I could not find a website for you. This is costing you customers every single day.
+    </p>
+
+    <!-- What they lose -->
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:20px 24px;margin-bottom:20px;">
+      <p style="margin:0 0 12px;font-size:14px;color:#991b1b;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Without a website, you lose:</p>
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr><td style="padding:6px 0;font-size:14px;color:#7f1d1d;width:20px;">✗</td><td style="padding:6px 0;font-size:14px;color:#374151;line-height:1.5;">Customers who search Google for your service in {{country}}</td></tr>
+        <tr><td style="padding:6px 0;font-size:14px;color:#7f1d1d;width:20px;">✗</td><td style="padding:6px 0;font-size:14px;color:#374151;line-height:1.5;">People who want to check your hours, prices, and location</td></tr>
+        <tr><td style="padding:6px 0;font-size:14px;color:#7f1d1d;width:20px;">✗</td><td style="padding:6px 0;font-size:14px;color:#374151;line-height:1.5;">The trust that comes from looking professional online</td></tr>
+        <tr><td style="padding:6px 0;font-size:14px;color:#7f1d1d;width:20px;">✗</td><td style="padding:6px 0;font-size:14px;color:#374151;line-height:1.5;">New customers while you sleep — competitors get them instead</td></tr>
+      </table>
+    </div>
+
+    <!-- What they gain -->
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px 24px;margin-bottom:28px;">
+      <p style="margin:0 0 12px;font-size:14px;color:#14532d;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">With a good website, you get:</p>
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr><td style="padding:6px 0;font-size:14px;color:#166534;width:20px;">✔</td><td style="padding:6px 0;font-size:14px;color:#374151;line-height:1.5;">Found on Google when people search for what you offer</td></tr>
+        <tr><td style="padding:6px 0;font-size:14px;color:#166534;width:20px;">✔</td><td style="padding:6px 0;font-size:14px;color:#374151;line-height:1.5;">Customers reading about your services at any time of day</td></tr>
+        <tr><td style="padding:6px 0;font-size:14px;color:#166534;width:20px;">✔</td><td style="padding:6px 0;font-size:14px;color:#374151;line-height:1.5;">More trust — look as professional as your biggest competitors</td></tr>
+        <tr><td style="padding:6px 0;font-size:14px;color:#166534;width:20px;">✔</td><td style="padding:6px 0;font-size:14px;color:#374151;line-height:1.5;">New leads coming in daily — no paid ads needed</td></tr>
+      </table>
+    </div>
+
+    <!-- How it works -->
+    <p style="font-size:15px;color:#374151;font-weight:700;margin:0 0 12px;">How it works — 3 simple steps:</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 4px;margin-bottom:28px;">
+      <tr>
+        <td style="background:#f0fdf4;padding:14px 16px;border-radius:8px 0 0 8px;font-size:22px;font-weight:900;color:#065f46;width:44px;text-align:center;">1</td>
+        <td style="background:#f0fdf4;padding:14px 16px;border-radius:0 8px 8px 0;font-size:14px;color:#374151;line-height:1.5;"><strong>We talk</strong> — 15 minutes. I learn about your business.</td>
+      </tr>
+      <tr>
+        <td style="background:#f0fdf4;padding:14px 16px;border-radius:8px 0 0 8px;font-size:22px;font-weight:900;color:#065f46;width:44px;text-align:center;">2</td>
+        <td style="background:#f0fdf4;padding:14px 16px;border-radius:0 8px 8px 0;font-size:14px;color:#374151;line-height:1.5;"><strong>We build</strong> — a fast, Google-optimised website for {{country}}.</td>
+      </tr>
+      <tr>
+        <td style="background:#f0fdf4;padding:14px 16px;border-radius:8px 0 0 8px;font-size:22px;font-weight:900;color:#065f46;width:44px;text-align:center;">3</td>
+        <td style="background:#f0fdf4;padding:14px 16px;border-radius:0 8px 8px 0;font-size:14px;color:#374151;line-height:1.5;"><strong>You grow</strong> — more visitors, more calls, more customers.</td>
+      </tr>
+    </table>
+
+    <p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 28px;">
+      No technical knowledge needed. No long contracts. One call and we take it from there.
+    </p>
+
+    <!-- CTA -->
+    <div style="text-align:center;margin-bottom:32px;">
+      <a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#25d366,#128c7e);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">
+        💬 I Want More Customers — Let's Talk
+      </a>
+      <p style="margin:10px 0 0;font-size:12px;color:#9ca3af;">Free 15-minute call · No cost · No pressure</p>
+    </div>
+
+    <!-- Signature -->
+    <div style="border-top:1px solid #f3f4f6;padding-top:24px;">
+      <p style="font-size:14px;color:#374151;margin:0 0 2px;">Kind regards,</p>
+      <p style="font-size:15px;color:#111827;font-weight:700;margin:0 0 2px;">{{sender_name}}</p>
+      <p style="font-size:13px;color:#6b7280;margin:0 0 2px;">{{sender_company}} · Website &amp; SEO Specialist · Amsterdam</p>
+      <p style="font-size:13px;color:#6b7280;margin:0;">📞 {{sender_phone}} &nbsp;·&nbsp; <a href="{{cta_url}}" style="color:#065f46;text-decoration:none;">WhatsApp Me</a></p>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;">
+    <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.8;">
+      {{sender_company}} · Amsterdam, Netherlands · {{year}}<br>
+      Your business was found during a local search in {{country}}.<br>
+      <a href="{{unsubscribe_url}}" style="color:#065f46;">Unsubscribe</a>
+    </p>
+  </div>
+
+</div>
+</body>
+</html>`
   }
+
 };
 
 // ============================================================
@@ -2324,10 +2337,11 @@ async function startAutoDiscover() {
 }
 // ============================================================
 async function loadUserTemplates() {
+  // Always seed defaults first
   ['congrats', 'almostMade', 'improvement', 'website'].forEach(t => {
-    const subEl = document.getElementById('template-' + t + '-subject');
+    const subEl  = document.getElementById('template-' + t + '-subject');
     const bodyEl = document.getElementById('template-' + t + '-body');
-    if (subEl && DEFAULT_TEMPLATES[t]) subEl.value = DEFAULT_TEMPLATES[t].subject;
+    if (subEl  && DEFAULT_TEMPLATES[t]) subEl.value  = DEFAULT_TEMPLATES[t].subject;
     if (bodyEl && DEFAULT_TEMPLATES[t]) bodyEl.value = DEFAULT_TEMPLATES[t].body;
   });
   if (!userId) return;
@@ -2337,10 +2351,11 @@ async function loadUserTemplates() {
     if (data.success && data.templates) {
       userTemplates = data.templates;
       ['congrats', 'almostMade', 'improvement', 'website'].forEach(t => {
-        if (userTemplates[t] && userTemplates[t].subject) {
-          const subEl = document.getElementById('template-' + t + '-subject');
+        // Only overwrite if server has a non-empty saved version
+        if (userTemplates[t] && userTemplates[t].subject && userTemplates[t].body && userTemplates[t].body.trim().length > 50) {
+          const subEl  = document.getElementById('template-' + t + '-subject');
           const bodyEl = document.getElementById('template-' + t + '-body');
-          if (subEl) subEl.value = userTemplates[t].subject;
+          if (subEl)  subEl.value  = userTemplates[t].subject;
           if (bodyEl) bodyEl.value = userTemplates[t].body;
         }
       });
