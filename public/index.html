@@ -358,6 +358,11 @@ footer p { color: #9ca3af !important; }
                 </label>
               </div>
 
+              <!-- Email lock note — shown when SendGrid not configured -->
+              <div id="emailLockNote" class="hidden mt-2 rounded-lg px-3 py-2" style="background:rgba(99,102,241,0.08);border:1px solid #4338ca;">
+                <p style="font-size:0.78rem;color:#818cf8!important;margin:0;">🔒 Email sending is available on request — <a href="https://wa.me/31628073996" target="_blank" style="color:#a5b4fc!important;font-weight:700;text-decoration:underline;">contact Ottmar on WhatsApp</a> to unlock. Scanning &amp; leaderboard submission are always free.</p>
+              </div>
+
               <!-- Start button -->
               <button onclick="startBulkScan()" id="bulkScanBtn" class="btn btn-primary w-full" style="font-size:1rem;padding:0.9rem;">
                 <i class="fas fa-rocket mr-2"></i> <span id="bulkBtnLabel">Scan All URLs</span>
@@ -1050,6 +1055,7 @@ footer p { color: #9ca3af !important; }
 let userId = null;
 let sendgridConfigured = false;
 let userTemplates = {};
+let bulkEmailEnabled = false;
 
 const DEFAULT_TEMPLATES = {
 
@@ -1593,20 +1599,29 @@ function checkSetupStatus() {
   const allDone   = document.getElementById('setupAllDone');
   const dGate     = document.getElementById('discoverAccessGate');
   const dForm     = document.getElementById('discoverForm');
+  const emailToggleLabel = document.getElementById('emailToggleLabel');
+  const emailLockNote    = document.getElementById('emailLockNote');
+
+  // Scanning is ALWAYS free — hide the access gate
+  if (gate)    gate.classList.add('hidden');
 
   if (sendgridConfigured) {
-    // User has access — show form, hide gate
-    if (gate)    gate.classList.add('hidden');
+    // SendGrid configured — unlock email toggle + show active banner
     if (allDone) allDone.classList.remove('hidden');
     if (dGate)   dGate.classList.add('hidden');
     if (dForm)   dForm.classList.remove('hidden');
+    // Remove lock styling from email toggle
+    if (emailToggleLabel) emailToggleLabel.style.opacity = '1';
+    if (emailLockNote)    emailLockNote.classList.add('hidden');
     updateDailyLimitUI();
   } else {
-    // No access — show gate, hide form
-    if (gate)    gate.classList.remove('hidden');
+    // No SendGrid — scanning still works, but email toggle is greyed out
     if (allDone) allDone.classList.add('hidden');
     if (dGate)   dGate.classList.remove('hidden');
     if (dForm)   dForm.classList.add('hidden');
+    // Grey out email toggle so it's clear it's locked
+    if (emailToggleLabel) emailToggleLabel.style.opacity = '0.45';
+    if (emailLockNote)    emailLockNote.classList.remove('hidden');
   }
 }
 
@@ -1641,6 +1656,10 @@ window._copyBadge = function(type, score) {
 };
 
 function toggleBulkEmail() {
+  if (!sendgridConfigured) {
+    alert('📧 Email sending requires SendGrid.\n\nScanning is free — your results still show scores, recommendations, and leaderboard submissions.\n\nTo enable emails, contact Ottmar on WhatsApp to get access.');
+    return;
+  }
   bulkEmailEnabled = !bulkEmailEnabled;
   const box   = document.getElementById('emailToggleBox');
   const label = document.getElementById('bulkBtnLabel');
