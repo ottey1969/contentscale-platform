@@ -1012,7 +1012,7 @@ footer p { color: #9ca3af !important; }
 
     <!-- Popular resources row -->
     <div class="border-t border-gray-800 pt-6 pb-4">
-      <p class="text-xs text-center mb-3" style="color:#6b7280!important;">Popular Resources:</p>
+      <p class="text-xs text-center mb-3" style="color:#9ca3af!important;">Popular Resources:</p>
       <div class="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs">
         <a href="https://contentscale.site/traffic-drop-recovery/" target="_blank" rel="noopener" style="color:#818cf8!important;">Traffic Drop Recovery</a>
         <span style="color:#374151!important;">|</span>
@@ -1027,10 +1027,10 @@ footer p { color: #9ca3af !important; }
     </div>
 
     <!-- Bottom bar -->
-    <div class="border-t border-gray-800 pt-6 text-center text-xs" style="color:#6b7280!important;">
+    <div class="border-t border-gray-800 pt-6 text-center text-xs" style="color:#9ca3af!important;">
       <p class="mb-1">© 2026 ContentScale — Ottmar Francisca · Amsterdam · Built with 🚀 in the Netherlands</p>
       <p>Privacy-First Platform · Zero Data Collection · GDPR Compliant</p>
-      <p class="mt-2 italic" style="color:#4b5563!important;">GRAAF Framework is a proprietary SEO methodology by Ottmar Francisca, complementing Julia McCoy's CRAFT Framework.</p>
+      <p class="mt-2 italic" style="color:#9ca3af!important;">GRAAF Framework is a proprietary SEO methodology by Ottmar Francisca, complementing Julia McCoy's CRAFT Framework.</p>
     </div>
 
   </div>
@@ -1644,6 +1644,12 @@ function checkSetupStatus() {
 // localStorage.setItem('apifyToken', 'apify_api_xxxx') then refresh.
 function saveSetupApify() { /* no-op — use browser console or Railway env */ }
 
+// ── Strip comment blocks from badge HTML for display (textareas only) ──
+// Comments start with /* === and end with === */
+function _stripBadgeComments(html) {
+  return html.replace(/\/\*[\s\S]*?\*\//g, '').trim();
+}
+
 // ── Badge copy helper — called by all 3 embed option buttons ──
 window._copyBadge = function(type, score) {
   const key = type === 'full' ? '_badgeFull_' : type === 'compact' ? '_badgeCompact_' : '_badgeText_';
@@ -2063,7 +2069,7 @@ async function scanSingleURL() {
           const rankEl = document.getElementById('badgeRankDisplay');
           if (rankEl) {
             rankEl.innerHTML = `<span style="font-size:0.78rem;font-weight:700;color:#a78bfa!important;">🏅 Ranked <strong style="color:#e9d5ff!important;">#${rank}</strong> of ${total} on ContentScale Leaderboard</span>`;
-            rankEl.classList.remove('hidden');
+            rankEl.classList.remove('hidden'); rankEl.style.display = 'inline-block';
           }
         }
       }).catch(() => {}); // rank is a bonus, never block on failure
@@ -2246,7 +2252,7 @@ function displayScanResult(data) {
    Created by Ottmar Francisca · ContentScale SEO Platform
    To update: search for this comment block in your HTML
    ============================================================ */
-<div style="background:${tier.bg};padding:22px 24px;border-radius:12px;box-shadow:0 4px 24px ${tier.shadow};max-width:400px;border:2px solid ${tier.border};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;text-align:center;"><style>@keyframes ${animName}{0%,100%{text-shadow:0 0 8px ${tier.scoreColor}66,0 0 16px ${tier.scoreColor}33;transform:scale(1)}50%{text-shadow:0 0 20px ${tier.scoreColor}cc,0 0 40px ${tier.scoreColor}55;transform:scale(1.06)}}.cs-score-${score}{animation:${animName} 2.5s ease-in-out infinite;display:inline-block}</style><div style="display:inline-block;background:${tier.pillBg};padding:5px 18px;border-radius:50px;margin-bottom:14px;border:1px solid ${tier.pillBorder};"><span style="font-size:0.78rem;color:${tier.pillText};font-weight:700;letter-spacing:0.06em;">✓ ${tier.pill}</span></div><div style="font-size:1rem;color:${tier.headlineColor};font-weight:700;margin-bottom:14px;">${tier.headline}</div><div style="margin-bottom:8px;"><span class="cs-score-${score}" style="font-size:4rem;font-weight:900;color:${tier.scoreColor};">${score}</span><span style="font-size:1.5rem;color:#6b7280;font-weight:400;">/100</span></div><div style="font-size:1.05rem;color:${tier.accentDark};font-weight:700;margin-bottom:4px;">${tier.qualityLabel}</div><div style="font-size:0.8rem;color:${tier.accentMid};font-style:italic;margin-bottom:16px;">${tier.tagline}</div><div style="background:white;padding:8px 14px;border-radius:8px;display:inline-block;font-size:0.82rem;color:#374151;border:1.5px solid ${tier.border};margin-bottom:12px;word-break:break-all;">📄 <a href="${scannedUrl}" style="color:${tier.accentDark};text-decoration:none;" target="_blank"><span style="font-weight:700;">${urlDomain}</span><span style="color:${tier.accentMid};opacity:0.8;">${urlPath}</span></a></div><div style="background:${tier.resultBg};padding:10px 14px;border-radius:8px;border:1px solid ${tier.resultBorder};margin-bottom:14px;"><p style="font-size:0.82rem;color:${tier.resultTextColor};margin:0;font-weight:600;">${tier.resultText}</p></div><div style="font-size:0.72rem;color:${tier.accentMid};">Verified by <a href="https://app.contentscale.site" style="color:${tier.accentDark};text-decoration:none;font-weight:600;">ContentScale SEO Platform</a></div></div>
+<div style="text-align:center;"><div style="background:${tier.bg};padding:22px 24px;border-radius:12px;box-shadow:0 4px 24px ${tier.shadow};max-width:400px;border:2px solid ${tier.border};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;text-align:center;display:inline-block;"><style>@keyframes ${animName}{0%,100%{text-shadow:0 0 8px ${tier.scoreColor}66,0 0 16px ${tier.scoreColor}33;transform:scale(1)}50%{text-shadow:0 0 20px ${tier.scoreColor}cc,0 0 40px ${tier.scoreColor}55;transform:scale(1.06)}}.cs-score-${score}{animation:${animName} 2.5s ease-in-out infinite;display:inline-block}</style><div style="display:inline-block;background:${tier.pillBg};padding:5px 18px;border-radius:50px;margin-bottom:14px;border:1px solid ${tier.pillBorder};"><span style="font-size:0.78rem;color:${tier.pillText};font-weight:700;letter-spacing:0.06em;">✓ ${tier.pill}</span></div><div style="font-size:1rem;color:${tier.headlineColor};font-weight:700;margin-bottom:14px;">${tier.headline}</div><div style="margin-bottom:8px;"><span class="cs-score-${score}" style="font-size:4rem;font-weight:900;color:${tier.scoreColor};">${score}</span><span style="font-size:1.5rem;color:#6b7280;font-weight:400;">/100</span></div><div style="font-size:1.05rem;color:${tier.accentDark};font-weight:700;margin-bottom:4px;">${tier.qualityLabel}</div><div style="font-size:0.8rem;color:${tier.accentMid};font-style:italic;margin-bottom:16px;">${tier.tagline}</div><div style="background:white;padding:8px 14px;border-radius:8px;display:inline-block;font-size:0.82rem;color:#374151;border:1.5px solid ${tier.border};margin-bottom:12px;word-break:break-all;">📄 <a href="${scannedUrl}" style="color:${tier.accentDark};text-decoration:none;" target="_blank"><span style="font-weight:700;">${urlDomain}</span><span style="color:${tier.accentMid};opacity:0.8;">${urlPath}</span></a></div><div style="background:${tier.resultBg};padding:10px 14px;border-radius:8px;border:1px solid ${tier.resultBorder};margin-bottom:14px;"><p style="font-size:0.82rem;color:${tier.resultTextColor};margin:0;font-weight:600;">${tier.resultText}</p></div><div style="font-size:0.72rem;color:${tier.accentMid};">Verified by <a href="https://app.contentscale.site" style="color:${tier.accentDark};text-decoration:none;font-weight:600;">ContentScale SEO Platform</a></div></div></div>
 /* ============================================================
    End ContentScore Widget — Full Badge
    ============================================================ */`;
@@ -2257,7 +2263,7 @@ function displayScanResult(data) {
    Created by Ottmar Francisca · ContentScale SEO Platform
    To update: search for this comment block in your HTML
    ============================================================ */
-<span style="display:inline-flex;align-items:center;gap:8px;background:${tier.pillBg};border:1.5px solid ${tier.border};border-radius:50px;padding:6px 16px 6px 10px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;text-decoration:none;" title="ContentScore Verified"><span style="background:${tier.bg};border-radius:50%;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:900;color:${tier.scoreColor};border:2px solid ${tier.border};flex-shrink:0;">${score}</span><span style="font-size:0.8rem;color:${tier.accentDark};font-weight:600;">ContentScore Verified &nbsp;<span style="color:${tier.accentMid};font-weight:400;">· ${tier.qualityLabel}</span></span></span>
+<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:${tier.pillBg};border:1.5px solid ${tier.border};border-radius:50px;padding:6px 16px 6px 10px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;text-decoration:none;cursor:pointer;" title="ContentScore ${score}/100 — ${tier.qualityLabel} · Verified by ContentScale"><span style="background:${tier.bg};border-radius:50%;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:900;color:${tier.scoreColor};border:2px solid ${tier.border};flex-shrink:0;">${score}</span><span style="font-size:0.8rem;color:${tier.accentDark};font-weight:600;">ContentScore Verified &nbsp;<span style="color:${tier.accentMid};font-weight:400;">· ${tier.qualityLabel}</span></span></a>
 /* ============================================================
    End ContentScore Widget — Compact Inline Badge
    ============================================================ */`;
@@ -2268,7 +2274,7 @@ function displayScanResult(data) {
    Created by Ottmar Francisca · ContentScale SEO Platform
    To update: search for this comment block in your HTML
    ============================================================ */
-<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:0.8rem;color:${tier.accentDark};text-decoration:none;font-weight:600;" title="ContentScore ${score}/100 — ${tier.qualityLabel}">✓ ContentScore ${score}/100 — ${tier.qualityLabel} | <span style="text-decoration:underline;">Verified by ContentScale</span></a>
+<span style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:0.8rem;color:${tier.accentDark};font-weight:600;">✓ ContentScore ${score}/100 — ${tier.qualityLabel} | Verified by <a href="https://app.contentscale.site" target="_blank" rel="noopener" style="color:${tier.accentDark};text-decoration:underline;font-weight:700;">ContentScale</a></span>
 /* ============================================================
    End ContentScore Widget — Text Link Badge
    ============================================================ */`;
@@ -2300,7 +2306,7 @@ function displayScanResult(data) {
                     <div style="display:inline-block;background:white;padding:5px 18px;border-radius:50px;margin-bottom:14px;border:1px solid ${tier.pillBorder};">
                       <span style="font-size:0.78rem;color:${tier.pillText}!important;font-weight:700;letter-spacing:0.06em;">✓ ${tier.pill}</span>
                     </div>
-                    <div id="badgeRankDisplay" class="hidden" style="margin-bottom:10px;padding:4px 14px;background:rgba(124,58,237,0.1);border-radius:50px;border:1px solid #7c3aed;display:inline-block;"></div>
+                    <div id="badgeRankDisplay" class="hidden" style="margin-bottom:10px;padding:4px 14px;background:rgba(124,58,237,0.1);border-radius:50px;border:1px solid #7c3aed;"></div>
                     <div style="font-size:0.95rem;color:${tier.headlineColor}!important;font-weight:700;margin-bottom:14px;">${tier.headline}</div>
                     <div style="margin-bottom:8px;">
                       <span style="font-size:4rem;font-weight:900;color:${tier.scoreColor}!important;display:inline-block;">${score}</span><span style="font-size:1.5rem;color:#6b7280!important;font-weight:400;">/100</span>
@@ -2336,7 +2342,7 @@ function displayScanResult(data) {
                   </button>
                 </div>
                 <textarea readonly rows="3" onclick="this.select()"
-                  style="width:100%;background:#060e1a;color:#475569!important;border:none;padding:10px 14px;font-size:0.7rem;font-family:monospace;resize:none;line-height:1.6;box-sizing:border-box;display:block;">${fullBadge.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+                  style="width:100%;background:#060e1a;color:#e2e8f0!important;border:none;padding:10px 14px;font-size:0.7rem;font-family:monospace;resize:none;line-height:1.6;box-sizing:border-box;display:block;">${_stripBadgeComments(fullBadge).replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
               </div>
 
               <!-- Option 2: Compact Inline -->
@@ -2352,7 +2358,7 @@ function displayScanResult(data) {
                   </button>
                 </div>
                 <textarea readonly rows="2" onclick="this.select()"
-                  style="width:100%;background:#040d04;color:#475569!important;border:none;padding:10px 14px;font-size:0.7rem;font-family:monospace;resize:none;line-height:1.6;box-sizing:border-box;display:block;">${compactBadge.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+                  style="width:100%;background:#040d04;color:#e2e8f0!important;border:none;padding:10px 14px;font-size:0.7rem;font-family:monospace;resize:none;line-height:1.6;box-sizing:border-box;display:block;">${_stripBadgeComments(compactBadge).replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
               </div>
 
               <!-- Option 3: Text Link -->
@@ -2368,7 +2374,7 @@ function displayScanResult(data) {
                   </button>
                 </div>
                 <textarea readonly rows="2" onclick="this.select()"
-                  style="width:100%;background:#0b0618;color:#475569!important;border:none;padding:10px 14px;font-size:0.7rem;font-family:monospace;resize:none;line-height:1.6;box-sizing:border-box;display:block;">${textLink.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+                  style="width:100%;background:#0b0618;color:#e2e8f0!important;border:none;padding:10px 14px;font-size:0.7rem;font-family:monospace;resize:none;line-height:1.6;box-sizing:border-box;display:block;">${_stripBadgeComments(textLink).replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
               </div>
 
               <!-- Why use it -->
@@ -3075,13 +3081,13 @@ function buildRankRows(entries, startRank) {
           <span style="font-size:0.85rem;font-weight:800;color:${rankColor}!important;width:28px;flex-shrink:0;text-align:right;">${rank}</span>
           <div style="min-width:0;">
             <div style="font-weight:600;color:#f3f4f6!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
-            <div style="font-size:0.7rem;color:#6b7280!important;margin-top:1px;">
+            <div style="font-size:0.7rem;color:#9ca3af!important;margin-top:1px;">
               ${[e.niche, e.business_type, e.country].filter(Boolean).join(' · ')}
             </div>
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:16px;flex-shrink:0;">
-          <span style="font-weight:800;font-size:1.05rem;color:#4ade80!important;">${e.score}<span style="font-size:0.7rem;font-weight:400;color:#6b7280!important;">/100</span></span>
+          <span style="font-weight:800;font-size:1.05rem;color:#4ade80!important;">${e.score}<span style="font-size:0.7rem;font-weight:400;color:#9ca3af!important;">/100</span></span>
           <a href="${e.url}" target="_blank" rel="noopener" style="font-size:0.75rem;color:#818cf8!important;text-decoration:none;font-weight:600;">Visit →</a>
         </div>
       </div>`;
