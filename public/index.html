@@ -3143,12 +3143,16 @@ function renderLeaderboard(entries) {
         </div>` : ''}
 
         <a href="${e.url}" target="_blank" rel="noopener" style="
-          display:inline-block;font-size:0.75rem;
-          background:rgba(0,0,0,0.35);color:${m.border}!important;
-          padding:5px 14px;border-radius:8px;
-          border:1px solid ${m.border};font-weight:600;
-          text-decoration:none;
-        ">Visit Site →</a>
+          display:inline-flex;align-items:center;gap:6px;
+          font-size:0.78rem;font-weight:700;letter-spacing:0.02em;
+          background:${m.border};color:#fff!important;
+          padding:8px 18px;border-radius:10px;
+          border:none;text-decoration:none;
+          box-shadow:0 2px 10px ${m.glow};
+          transition:opacity 0.15s;
+        " onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+          🔍 Visit Scanned Site
+        </a>
       </div>`;
   }).join('');
 
