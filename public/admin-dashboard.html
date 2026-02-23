@@ -92,9 +92,7 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 <span class="text-xs px-2 py-1 bg-purple-600 rounded text-white font-semibold"><span id="admin-username">Admin</span></span>
 </div>
 <div class="flex gap-3">
-<button onclick="logout()" class="btn btn-danger">
-<i class="fas fa-sign-out-alt mr-2"></i> Logout
-</button>
+<button onclick="logout()" class="btn btn-danger"><i class="fas fa-sign-out-alt mr-2"></i> Logout</button>
 </div>
 </div>
 </div>
@@ -105,8 +103,10 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 <button onclick="switchTab('freelancers')" id="tabFreelancersBtn" class="mode-toggle"><i class="fas fa-users mr-2"></i> Freelancers</button>
 <button onclick="switchTab('users')" id="tabUsersBtn" class="mode-toggle"><i class="fas fa-user-cog mr-2"></i> Users</button>
 <button onclick="switchTab('messages')" id="tabMessagesBtn" class="mode-toggle"><i class="fas fa-envelope mr-2"></i> Messages</button>
-<button onclick="switchTab('pending')" id="tabPendingBtn" class="mode-toggle"><i class="fas fa-clock mr-2"></i> Pending</button>
+<button onclick="switchTab('pending')" id="tabPendingBtn" class="mode-toggle"><i class="fas fa-clock mr-2"></i> Pending <span id="pendingBadge" class="hidden ml-1 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded-full"></span></button>
 </div>
+
+<!-- LEADERBOARD TAB -->
 <div id="tab-leaderboard" class="tab-content">
 <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 <div class="flex justify-between items-center mb-6">
@@ -139,7 +139,6 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 <span id="rankingsToggleText">📊 Show Rankings 16+</span><span id="rankingsToggleArrow">▼</span>
 </button>
 <div id="rankingsContainer" class="hidden mt-4">
-<!-- FIX 2: Added checkbox <th> to match tbody which has checkbox <td> -->
 <table class="rankings-table w-full bg-gray-900 rounded-lg overflow-hidden">
 <thead class="bg-gray-800"><tr><th class="p-3 w-10"></th><th class="p-3 text-left">Rank</th><th class="p-3 text-left">Company</th><th class="p-3 text-left">Score</th><th class="p-3 text-left">Actions</th></tr></thead>
 <tbody id="rankingsTbody"></tbody>
@@ -148,6 +147,8 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </div>
 </div>
 </div>
+
+<!-- FREELANCERS TAB -->
 <div id="tab-freelancers" class="tab-content hidden">
 <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 <div class="flex justify-between items-center mb-6">
@@ -164,6 +165,8 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 <div id="freelancersGrid" class="grid-3"></div>
 </div>
 </div>
+
+<!-- USERS TAB -->
 <div id="tab-users" class="tab-content hidden">
 <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 <div class="flex justify-between items-center mb-6">
@@ -189,6 +192,8 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 <div id="usersContainer" class="space-y-4"></div>
 </div>
 </div>
+
+<!-- MESSAGES TAB -->
 <div id="tab-messages" class="tab-content hidden">
 <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 <div class="flex justify-between items-center mb-6">
@@ -198,6 +203,8 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 <div id="messagesContainer" class="space-y-4"></div>
 </div>
 </div>
+
+<!-- PENDING TAB -->
 <div id="tab-pending" class="tab-content hidden">
 <div class="bg-gradient-to-br from-yellow-900 via-orange-900 to-yellow-800 rounded-2xl p-8 border-2 border-yellow-500">
 <div class="flex justify-between items-center mb-6">
@@ -206,6 +213,7 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </div>
 <div class="mb-8">
 <h3 class="text-xl font-bold mb-4 text-yellow-400">🏆 Pending Leaderboard Submissions</h3>
+<p class="text-sm text-yellow-200 mb-4 opacity-80">Review company name and details before approving — edit anything that looks wrong first.</p>
 <div id="pending-leaderboard-container" class="space-y-4"></div>
 </div>
 <div class="mb-8">
@@ -214,11 +222,11 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </div>
 </div>
 </div>
+
 </div>
 </div>
-</div>
-</div>
-<!-- Modals -->
+
+<!-- MODALS -->
 <div id="activateModal" class="modal">
 <div class="modal-content">
 <h2 class="text-2xl font-bold mb-4">Activate Users</h2>
@@ -230,6 +238,7 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </div>
 </div>
 </div>
+
 <div id="messageModal" class="modal">
 <div class="modal-content">
 <h2 class="text-2xl font-bold mb-4">Send Message</h2>
@@ -249,6 +258,7 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </div>
 </div>
 </div>
+
 <div id="addLeaderboardModal" class="modal">
 <div class="modal-content">
 <h2 class="text-2xl font-bold mb-4" id="lbModalTitle">Add Entry</h2>
@@ -267,9 +277,7 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </div>
 <div>
 <label class="block text-sm font-bold mb-1 text-gray-700">Country</label>
-<select id="lb-country" class="w-full p-2 mb-2 border text-black">
-<option value="">Select Country...</option>
-</select>
+<select id="lb-country" class="w-full p-2 mb-2 border text-black"><option value="">Select Country...</option></select>
 </div>
 <div>
 <label class="block text-sm font-bold mb-1 text-gray-700">Industry / Niche</label>
@@ -296,14 +304,64 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </select>
 </div>
 <div class="flex gap-2 mb-4">
-<a id="lb-visit-link" href="#" target="_blank" class="flex-1 btn btn-info text-center">
-<i class="fas fa-external-link-alt mr-2"></i> Visit Website
-</a>
+<a id="lb-visit-link" href="#" target="_blank" class="flex-1 btn btn-info text-center"><i class="fas fa-external-link-alt mr-2"></i> Visit Website</a>
 </div>
 <button onclick="saveLeaderboardEntry()" class="btn btn-success w-full">Save Changes</button>
 <button onclick="closeModal('addLeaderboardModal')" class="btn btn-danger w-full mt-2">Cancel</button>
 </div>
 </div>
+
+<!-- Edit & Approve Pending Leaderboard Modal -->
+<div id="pendingApproveModal" class="modal">
+<div class="modal-content">
+<h2 class="text-2xl font-bold mb-2">✏️ Edit & Approve</h2>
+<p class="text-sm text-gray-600 mb-4">Clean up the company name and details before publishing to the leaderboard.</p>
+<input type="hidden" id="pending-lb-id">
+<div>
+<label class="block text-sm font-bold mb-1 text-gray-700">Company Name <span class="text-red-500">*</span></label>
+<input type="text" id="pending-lb-company" class="w-full p-2 mb-2 border text-black" placeholder="Clean professional name">
+</div>
+<div>
+<label class="block text-sm font-bold mb-1 text-gray-700">URL</label>
+<input type="text" id="pending-lb-url" class="w-full p-2 mb-2 border text-black">
+</div>
+<div>
+<label class="block text-sm font-bold mb-1 text-gray-700">Score</label>
+<input type="number" id="pending-lb-score" class="w-full p-2 mb-2 border text-black">
+</div>
+<div>
+<label class="block text-sm font-bold mb-1 text-gray-700">Country</label>
+<select id="pending-lb-country" class="w-full p-2 mb-2 border text-black"><option value="">Select Country...</option></select>
+</div>
+<div>
+<label class="block text-sm font-bold mb-1 text-gray-700">Niche</label>
+<select id="pending-lb-niche" class="w-full p-2 mb-4 border text-black">
+<option value="">Select Niche...</option>
+<option value="E-commerce">E-commerce</option>
+<option value="Healthcare">Healthcare</option>
+<option value="Construction">Construction</option>
+<option value="Food & Beverage">Food & Beverage</option>
+<option value="Finance">Finance</option>
+<option value="Real Estate">Real Estate</option>
+<option value="Legal">Legal</option>
+<option value="Education">Education</option>
+<option value="Beauty & Wellness">Beauty & Wellness</option>
+<option value="Home Services">Home Services</option>
+<option value="Automotive">Automotive</option>
+<option value="Sustainability">Sustainability</option>
+<option value="Technology">Technology</option>
+<option value="Creative Arts">Creative Arts</option>
+<option value="Fitness">Fitness</option>
+<option value="Travel">Travel</option>
+<option value="Manufacturing">Manufacturing</option>
+<option value="Retail">Retail</option>
+</select>
+</div>
+<button onclick="saveAndApprovePending()" class="btn btn-success w-full mb-2">✅ Save & Approve — Publish to Leaderboard</button>
+<button onclick="closeModal('pendingApproveModal')" class="btn btn-danger w-full">Cancel</button>
+</div>
+</div>
+
 <div id="editFreelancerModal" class="modal">
 <div class="modal-content">
 <h2 class="text-2xl font-bold mb-4 text-gray-900">Edit Freelancer</h2>
@@ -331,7 +389,6 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </div>
 <div>
 <label class="block text-sm font-bold mb-1 text-gray-700">Bio (Max 200 chars)</label>
-<!-- FIX 1: Added oninput handler so character counter updates as user types -->
 <textarea id="fr-bio" rows="3" maxlength="200" class="w-full p-2 border text-black"
   oninput="document.getElementById('fr-bio-count').textContent=this.value.length"></textarea>
 <div class="text-xs text-gray-500 text-right"><span id="fr-bio-count">0</span>/200</div>
@@ -345,6 +402,7 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 </div>
 </div>
 </div>
+
 <script>
 let currentAdminId = localStorage.getItem('admin_id');
 let allUsers = [];
@@ -367,25 +425,46 @@ const COUNTRY_LIST = [
 ];
 
 window.onload = function() {
-  populateCountryDropdown();
+  populateCountryDropdowns();
   if (currentAdminId) {
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('main-dashboard').classList.remove('hidden');
     loadAllData();
+    checkPendingCount();
   }
 };
 
-function populateCountryDropdown() {
-  const select = document.getElementById('lb-country');
-  if (!select) return;
-  select.innerHTML = '<option value="">Select Country...</option>';
-  COUNTRY_LIST.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c.name;
-    opt.textContent = `${getFlag(c.code)} ${c.name}`;
-    opt.dataset.code = c.code;
-    select.appendChild(opt);
+function populateCountryDropdowns() {
+  ['lb-country', 'pending-lb-country'].forEach(id => {
+    const select = document.getElementById(id);
+    if (!select) return;
+    select.innerHTML = '<option value="">Select Country...</option>';
+    COUNTRY_LIST.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.name;
+      opt.textContent = `${getFlag(c.code)} ${c.name}`;
+      opt.dataset.code = c.code;
+      select.appendChild(opt);
+    });
   });
+}
+
+// Show pending count badge on tab
+async function checkPendingCount() {
+  try {
+    const [lb, fr] = await Promise.all([
+      apiCall('/api/admin/leaderboard/pending').catch(() => ({ pending: [] })),
+      apiCall('/api/admin/freelancers/pending').catch(() => ({ pending: [] }))
+    ]);
+    const total = (lb.pending?.length || 0) + (fr.pending?.length || 0);
+    const badge = document.getElementById('pendingBadge');
+    if (total > 0) {
+      badge.textContent = total;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  } catch (e) {}
 }
 
 async function login() {
@@ -393,8 +472,7 @@ async function login() {
   const password = document.getElementById('login-password').value;
   try {
     const res = await fetch('/api/setup/verify-admin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
     const data = await res.json();
@@ -402,16 +480,11 @@ async function login() {
       localStorage.setItem('admin_id', data.admin_id);
       currentAdminId = data.admin_id;
       location.reload();
-    } else {
-      alert('Login failed: ' + data.error);
-    }
+    } else { alert('Login failed: ' + data.error); }
   } catch (e) { alert('Connection error'); }
 }
 
-function logout() {
-  localStorage.removeItem('admin_id');
-  location.reload();
-}
+function logout() { localStorage.removeItem('admin_id'); location.reload(); }
 
 async function apiCall(endpoint, method = 'GET', body = null) {
   const headers = { 'Content-Type': 'application/json' };
@@ -422,23 +495,14 @@ async function apiCall(endpoint, method = 'GET', body = null) {
     const res = await fetch(endpoint, options);
     if (!res.ok) {
       const text = await res.text();
-      if (text.startsWith('<!DOCTYPE') || text.startsWith('<html')) {
-        throw new Error(`Server returned HTML page (Status ${res.status}). Endpoint may be missing.`);
-      }
-      try {
-        const errJson = JSON.parse(text);
-        throw new Error(errJson.error || `Error ${res.status}`);
-      } catch (e) {
-        throw new Error(text || `Error ${res.status}`);
-      }
+      if (text.startsWith('<!DOCTYPE') || text.startsWith('<html')) throw new Error(`Server returned HTML (Status ${res.status})`);
+      try { const errJson = JSON.parse(text); throw new Error(errJson.error || `Error ${res.status}`); }
+      catch (e) { throw new Error(text || `Error ${res.status}`); }
     }
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
     return data;
-  } catch (error) {
-    console.error('API Call Failed:', error);
-    throw error;
-  }
+  } catch (error) { console.error('API Call Failed:', error); throw error; }
 }
 
 function switchTab(tab) {
@@ -453,11 +517,7 @@ function switchTab(tab) {
   if (tab === 'pending') loadPendingData();
 }
 
-function loadAllData() {
-  loadLeaderboard();
-  loadFreelancers();
-  loadUsers();
-}
+function loadAllData() { loadLeaderboard(); loadFreelancers(); loadUsers(); }
 
 async function loadUsers() {
   try {
@@ -465,85 +525,60 @@ async function loadUsers() {
     allUsers = data.users || [];
     const total = allUsers.length;
     const active = allUsers.filter(u => u.is_activated).length;
-    const inactive = total - active;
     const now = new Date();
     const expiring = allUsers.filter(u => {
       if (!u.activated_until || !u.is_activated) return false;
-      const expDate = new Date(u.activated_until);
-      const diffDays = Math.ceil((expDate - now) / (1000 * 60 * 60 * 24));
+      const diffDays = Math.ceil((new Date(u.activated_until) - now) / 86400000);
       return diffDays > 0 && diffDays <= 7;
     }).length;
     document.getElementById('stat-total-users').textContent = total;
     document.getElementById('stat-active-users').textContent = active;
     document.getElementById('stat-expiring-users').textContent = expiring;
-    document.getElementById('stat-inactive-users').textContent = inactive;
+    document.getElementById('stat-inactive-users').textContent = total - active;
     const container = document.getElementById('usersContainer');
-    if (total === 0) {
-      container.innerHTML = '<p class="text-center text-gray-400">No users found.</p>';
-      return;
-    }
+    if (total === 0) { container.innerHTML = '<p class="text-center text-gray-400">No users found.</p>'; return; }
     container.innerHTML = allUsers.map(u => {
-      const isSelected = selectedIds.users.has(u.id);
       let statusBadge = '<span class="badge-inactive">Inactive</span>';
       let daysLeftHtml = '';
       if (u.is_activated) {
         if (u.activated_until) {
-          const expDate = new Date(u.activated_until);
-          const diffDays = Math.ceil((expDate - new Date()) / (1000 * 60 * 60 * 24));
-          if (diffDays <= 0) {
-            statusBadge = '<span class="badge-inactive">Expired</span>';
-            daysLeftHtml = `<div class="text-xs text-orange-400 font-bold">${diffDays} days left</div>`;
-          } else if (diffDays <= 7) {
-            statusBadge = '<span class="badge-expiring">Expiring Soon</span>';
-            daysLeftHtml = `<div class="text-xs text-orange-400 font-bold">${diffDays} days left</div>`;
-          } else {
-            statusBadge = '<span class="badge-active">Active</span>';
-            daysLeftHtml = `<div class="text-xs text-green-400">${diffDays} days left</div>`;
-          }
-        } else {
-          statusBadge = '<span class="badge-active">Active (Indefinite)</span>';
-        }
+          const diffDays = Math.ceil((new Date(u.activated_until) - now) / 86400000);
+          if (diffDays <= 0) { statusBadge = '<span class="badge-inactive">Expired</span>'; }
+          else if (diffDays <= 7) { statusBadge = '<span class="badge-expiring">Expiring Soon</span>'; daysLeftHtml = `<div class="text-xs text-orange-400 font-bold">${diffDays} days left</div>`; }
+          else { statusBadge = '<span class="badge-active">Active</span>'; daysLeftHtml = `<div class="text-xs text-green-400">${diffDays} days left</div>`; }
+        } else { statusBadge = '<span class="badge-active">Active (Indefinite)</span>'; }
       }
-      return `
-      <div class="user-card">
+      return `<div class="user-card">
         <div class="flex items-center gap-3">
-          <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleSelection('users', '${u.id}')">
+          <input type="checkbox" ${selectedIds.users.has(u.id) ? 'checked' : ''} onchange="toggleSelection('users', '${u.id}')">
           <div>
             <div class="font-bold">${u.ip_address || 'Unknown IP'}</div>
             <div class="text-xs text-gray-400">ID: ${u.id.substring(0,8)}... | Created: ${new Date(u.created_at).toLocaleDateString()}</div>
             ${daysLeftHtml}
-            ${u.activated_until ? `<div class="text-xs text-gray-500">Expires: ${new Date(u.activated_until).toLocaleDateString()}</div>` : ''}
           </div>
         </div>
         <div class="flex items-center gap-2">
           ${statusBadge}
-          ${u.is_activated ?
-            `<button onclick="extendUserAccess('${u.id}')" class="text-blue-400 hover:text-blue-300 text-xs" title="Extend Access"><i class="fas fa-clock"></i> Extend</button>` :
-            `<button onclick="activateSingleUser('${u.id}')" class="text-green-400 hover:text-green-300 text-xs" title="Activate"><i class="fas fa-check"></i> Activate</button>`
-          }
-          <button onclick="openMessageModal('single', '${u.id}')" class="text-blue-400 hover:text-blue-300" title="Message"><i class="fas fa-envelope"></i></button>
+          ${u.is_activated
+            ? `<button onclick="extendUserAccess('${u.id}')" class="text-blue-400 text-xs"><i class="fas fa-clock"></i> Extend</button>`
+            : `<button onclick="activateSingleUser('${u.id}')" class="text-green-400 text-xs"><i class="fas fa-check"></i> Activate</button>`}
+          <button onclick="openMessageModal('single', '${u.id}')" class="text-blue-400"><i class="fas fa-envelope"></i></button>
         </div>
       </div>`;
     }).join('');
-  } catch (e) { console.error(e); alert('Failed to load users: ' + e.message); }
+  } catch (e) { alert('Failed to load users: ' + e.message); }
 }
 
 async function activateSingleUser(id) {
-  try {
-    await apiCall(`/api/admin/users/${id}/activate`, 'POST', { days: 7 });
-    alert('✅ User activated for 7 days');
-    loadUsers();
-  } catch (e) { alert('❌ Error: ' + e.message); }
+  try { await apiCall(`/api/admin/users/${id}/activate`, 'POST', { days: 7 }); alert('✅ Activated for 7 days'); loadUsers(); }
+  catch (e) { alert('❌ ' + e.message); }
 }
 
 async function extendUserAccess(id) {
   const days = prompt('How many days to add?', '7');
   if (!days) return;
-  try {
-    await apiCall(`/api/admin/users/${id}/activate`, 'POST', { days: parseInt(days) });
-    alert(`✅ User access extended by ${days} days`);
-    loadUsers();
-  } catch (e) { alert('❌ Error: ' + e.message); }
+  try { await apiCall(`/api/admin/users/${id}/activate`, 'POST', { days: parseInt(days) }); alert(`✅ Extended by ${days} days`); loadUsers(); }
+  catch (e) { alert('❌ ' + e.message); }
 }
 
 function toggleSelection(type, id) {
@@ -555,11 +590,8 @@ function toggleSelection(type, id) {
 function toggleSelectAll(type) {
   const checkbox = document.getElementById(`select-all-${type}`);
   const list = type === 'leaderboard' ? window.allLeaderboard : type === 'freelancers' ? window.allFreelancers : allUsers;
-  if (checkbox.checked) {
-    list.forEach(item => selectedIds[type].add(item.id));
-  } else {
-    selectedIds[type].clear();
-  }
+  if (checkbox.checked) list.forEach(item => selectedIds[type].add(item.id));
+  else selectedIds[type].clear();
   if (type === 'users') loadUsers();
   updateCounts();
 }
@@ -572,10 +604,7 @@ function updateCounts() {
 
 function bulkActionUsers(action) {
   if (selectedIds.users.size === 0) return alert('Select users first');
-  if (action === 'activate') {
-    document.getElementById('activateModal').classList.add('active');
-    return;
-  }
+  if (action === 'activate') { document.getElementById('activateModal').classList.add('active'); return; }
   if (action === 'deactivate') {
     if (!confirm('Deactivate selected users?')) return;
     Promise.all(Array.from(selectedIds.users).map(id => apiCall(`/api/admin/users/${id}/deactivate`, 'POST')))
@@ -589,13 +618,8 @@ async function confirmActivate() {
   closeModal('activateModal');
   if (!confirm(`Activate ${selectedIds.users.size} users for ${days} days?`)) return;
   try {
-    await Promise.all(Array.from(selectedIds.users).map(id =>
-      apiCall(`/api/admin/users/${id}/activate`, 'POST', { days: parseInt(days) })
-    ));
-    alert('Users activated successfully!');
-    loadUsers();
-    selectedIds.users.clear();
-    updateCounts();
+    await Promise.all(Array.from(selectedIds.users).map(id => apiCall(`/api/admin/users/${id}/activate`, 'POST', { days: parseInt(days) })));
+    alert('Users activated!'); loadUsers(); selectedIds.users.clear(); updateCounts();
   } catch (e) { alert(e.message); }
 }
 
@@ -603,22 +627,15 @@ async function bulkDelete(type) {
   const ids = Array.from(selectedIds[type]);
   if (ids.length === 0) return alert('Select items first');
   if (!confirm(`Delete ${ids.length} items permanently?`)) return;
-  let endpoint = '';
-  if (type === 'leaderboard') endpoint = '/api/admin/leaderboard/bulk-delete';
-  if (type === 'freelancers') endpoint = '/api/admin/freelancers/bulk-delete';
-  if (type === 'users') endpoint = '/api/admin/users/bulk-delete';
+  const endpoints = { leaderboard: '/api/admin/leaderboard/bulk-delete', freelancers: '/api/admin/freelancers/bulk-delete', users: '/api/admin/users/bulk-delete' };
   try {
-    await apiCall(endpoint, 'POST', { ids });
-    alert('Deleted successfully');
-    selectedIds[type].clear();
-    updateCounts();
-    loadAllData();
+    await apiCall(endpoints[type], 'POST', { ids });
+    alert('Deleted successfully'); selectedIds[type].clear(); updateCounts(); loadAllData();
   } catch (e) { alert('Delete failed: ' + e.message); }
 }
 
 function openMessageModal(targetType, userId = null) {
-  messageTarget = targetType;
-  if (targetType === 'single') messageTarget = userId;
+  messageTarget = targetType === 'single' ? userId : targetType;
   document.getElementById('messageModal').classList.add('active');
 }
 
@@ -628,18 +645,11 @@ async function sendMessage() {
   if (!subject || !body) return alert('Fill all fields');
   try {
     let payload = { subject, body };
-    if (messageTarget === 'all') {
-      payload.recipients = 'all';
-    } else if (messageTarget === 'selected') {
-      payload.recipients = 'selected';
-      payload.user_ids = Array.from(selectedIds.users);
-    } else {
-      payload.recipientUserId = messageTarget;
-    }
+    if (messageTarget === 'all') payload.recipients = 'all';
+    else if (messageTarget === 'selected') { payload.recipients = 'selected'; payload.user_ids = Array.from(selectedIds.users); }
+    else payload.recipientUserId = messageTarget;
     await apiCall('/api/admin/messages/send', 'POST', payload);
-    alert('Message sent!');
-    closeModal('messageModal');
-    loadMessages();
+    alert('Message sent!'); closeModal('messageModal'); loadMessages();
   } catch (e) { alert(e.message); }
 }
 
@@ -647,19 +657,15 @@ async function loadMessages() {
   try {
     const data = await apiCall('/api/admin/messages');
     const container = document.getElementById('messagesContainer');
-    if (!data.messages || data.messages.length === 0) {
-      container.innerHTML = '<p class="text-center text-gray-400">No messages yet.</p>';
-      return;
-    }
+    if (!data.messages?.length) { container.innerHTML = '<p class="text-center text-gray-400">No messages yet.</p>'; return; }
     container.innerHTML = data.messages.map(m => `
       <div class="message-bubble ${m.sender_type === 'admin' ? 'admin' : 'user'}">
         <div class="flex justify-between text-xs text-gray-400 mb-1">
-          <span>${m.sender_type === 'admin' ? 'You' : 'User'} • ${new Date(m.created_at).toLocaleString()}</span>
+          <span>${m.sender_type === 'admin' ? 'You' : 'User'} · ${new Date(m.created_at).toLocaleString()}</span>
           <span class="font-bold">${m.subject || 'No Subject'}</span>
         </div>
         <p class="text-sm">${m.body}</p>
-      </div>
-    `).join('');
+      </div>`).join('');
   } catch (e) { console.error(e); }
 }
 
@@ -670,67 +676,49 @@ async function loadLeaderboard() {
     document.getElementById('stat-total-agencies').textContent = data.stats.totalAgencies;
     document.getElementById('stat-avg-score').textContent = data.averageScore;
     document.getElementById('stat-verified').textContent = data.stats.verifiedCount;
-    const validEntries = window.allLeaderboard.filter(e => e.country && e.country.trim() !== '');
-    const uniqueCountries = [...new Set(validEntries.map(e => e.country))];
-    document.getElementById('stat-countries').textContent = uniqueCountries.length;
+    const validEntries = window.allLeaderboard.filter(e => e.country?.trim());
+    document.getElementById('stat-countries').textContent = [...new Set(validEntries.map(e => e.country))].length;
 
-    const top3 = window.allLeaderboard.slice(0, 3);
-    document.getElementById('top3-container').innerHTML = top3.map((e, i) => `
+    document.getElementById('top3-container').innerHTML = window.allLeaderboard.slice(0, 3).map((e, i) => `
       <div class="top-card ${i===0?'gold':i===1?'silver':'bronze'}">
         <div class="text-5xl mb-2">${i===0?'🥇':i===1?'🥈':'🥉'}</div>
         <h3 class="text-xl font-bold mb-2">${e.company_name || extractDomain(e.url)}</h3>
         <div class="text-4xl font-black mb-2">${e.score}/100</div>
         <div class="text-white/80 mb-3">${getFlag(e.country)} ${e.country}</div>
-        <button onclick="editLeaderboard(${e.id})" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg mb-2">
-          <i class="fas fa-edit mr-2"></i> Edit
-        </button>
-        <button onclick="deleteItem('leaderboard', ${e.id})" class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">
-          <i class="fas fa-trash mr-2"></i> Delete
-        </button>
-      </div>
-    `).join('');
+        <button onclick="editLeaderboard(${e.id})" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg mb-2"><i class="fas fa-edit mr-2"></i> Edit</button>
+        <button onclick="deleteItem('leaderboard', ${e.id})" class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"><i class="fas fa-trash mr-2"></i> Delete</button>
+      </div>`).join('');
 
-    const grid = document.getElementById('rankings4to15Grid');
-    grid.innerHTML = window.allLeaderboard.slice(3, 15).map((e, i) => `
+    document.getElementById('rankings4to15Grid').innerHTML = window.allLeaderboard.slice(3, 15).map((e, i) => `
       <div class="rank-card">
         <div class="text-2xl font-bold text-gray-400 mb-2">#${i+4}</div>
         <h4 class="font-bold text-white text-sm mb-2 truncate">${e.company_name || extractDomain(e.url)}</h4>
         <div class="text-2xl font-black text-green-400 mb-2">${e.score}</div>
         <div class="text-xs text-gray-400 mb-2">${getFlag(e.country)} ${e.country}</div>
         <div class="flex gap-2 justify-center">
-          <button onclick="editLeaderboard(${e.id})" class="text-blue-400 hover:text-blue-300 text-xs"><i class="fas fa-edit"></i> Edit</button>
-          <button onclick="deleteItem('leaderboard', ${e.id})" class="text-red-400 hover:text-red-300 text-xs"><i class="fas fa-trash"></i> Del</button>
+          <button onclick="editLeaderboard(${e.id})" class="text-blue-400 text-xs"><i class="fas fa-edit"></i> Edit</button>
+          <button onclick="deleteItem('leaderboard', ${e.id})" class="text-red-400 text-xs"><i class="fas fa-trash"></i> Del</button>
         </div>
-      </div>
-    `).join('');
+      </div>`).join('');
 
-    const tbody = document.getElementById('rankingsTbody');
-    tbody.innerHTML = window.allLeaderboard.slice(15, 35).map((e, i) => `
+    document.getElementById('rankingsTbody').innerHTML = window.allLeaderboard.slice(15, 35).map((e, i) => `
       <tr>
         <td class="w-10"><input type="checkbox" class="lb-checkbox" data-id="${e.id}" onchange="toggleSelection('leaderboard', ${e.id})"></td>
         <td>${i+16}</td>
         <td>${e.company_name || extractDomain(e.url)}</td>
         <td><span class="text-lg font-bold ${e.score >= 85 ? 'text-green-400' : 'text-yellow-400'}">${e.score}</span></td>
         <td>
-          <button onclick="editLeaderboard(${e.id})" class="text-blue-400 hover:text-blue-300 mr-2"><i class="fas fa-edit"></i></button>
-          <button onclick="deleteItem('leaderboard', ${e.id})" class="text-red-400 hover:text-red-300"><i class="fas fa-trash"></i></button>
+          <button onclick="editLeaderboard(${e.id})" class="text-blue-400 mr-2"><i class="fas fa-edit"></i></button>
+          <button onclick="deleteItem('leaderboard', ${e.id})" class="text-red-400"><i class="fas fa-trash"></i></button>
         </td>
-      </tr>
-    `).join('');
-
-    const totalCountEl = document.getElementById('totalCount');
-    if (totalCountEl) totalCountEl.textContent = window.allLeaderboard.length;
-  } catch (e) {
-    console.error(e);
-    alert('Failed to load leaderboard: ' + e.message);
-  }
+      </tr>`).join('');
+  } catch (e) { alert('Failed to load leaderboard: ' + e.message); }
 }
 
 function normalizeCountry(value) {
   if (!value) return '';
   const found = COUNTRY_LIST.find(c => c.code === value.toUpperCase());
-  if (found) return found.name;
-  return value;
+  return found ? found.name : value;
 }
 
 function editLeaderboard(id) {
@@ -744,17 +732,13 @@ function editLeaderboard(id) {
   document.getElementById('lb-country').value = normalizeCountry(entry.country);
   document.getElementById('lb-niche').value = entry.niche || '';
   const visitLink = document.getElementById('lb-visit-link');
-  visitLink.href = entry.url;
-  visitLink.style.display = 'inline-block';
+  visitLink.href = entry.url; visitLink.style.display = 'inline-block';
   document.getElementById('addLeaderboardModal').classList.add('active');
 }
 
 function showAddLeaderboardModal() {
   document.getElementById('lbModalTitle').textContent = 'Add New Entry';
-  document.getElementById('edit-lb-id').value = '';
-  document.getElementById('lb-company').value = '';
-  document.getElementById('lb-url').value = '';
-  document.getElementById('lb-score').value = '';
+  ['edit-lb-id','lb-company','lb-url','lb-score'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('lb-country').value = '';
   document.getElementById('lb-niche').value = '';
   document.getElementById('lb-visit-link').style.display = 'none';
@@ -772,15 +756,9 @@ async function saveLeaderboardEntry() {
   try {
     const payload = { company_name: company, url, score, country };
     if (niche) payload.niche = niche;
-    if (id) {
-      await apiCall(`/api/admin/leaderboard/${id}`, 'PUT', payload);
-      alert('Entry updated!');
-    } else {
-      await apiCall('/api/admin/leaderboard/manual-add', 'POST', payload);
-      alert('Entry added!');
-    }
-    closeModal('addLeaderboardModal');
-    loadLeaderboard();
+    if (id) { await apiCall(`/api/admin/leaderboard/${id}`, 'PUT', payload); alert('Entry updated!'); }
+    else { await apiCall('/api/admin/leaderboard/manual-add', 'POST', payload); alert('Entry added!'); }
+    closeModal('addLeaderboardModal'); loadLeaderboard();
   } catch (e) { alert('Error: ' + e.message); }
 }
 
@@ -788,8 +766,7 @@ async function loadFreelancers() {
   try {
     const data = await apiCall('/api/freelancers');
     window.allFreelancers = data.freelancers || [];
-    const grid = document.getElementById('freelancersGrid');
-    grid.innerHTML = window.allFreelancers.map(f => `
+    document.getElementById('freelancersGrid').innerHTML = window.allFreelancers.map(f => `
       <div class="card">
         <div class="flex justify-between items-start mb-2">
           <h3 class="font-bold text-lg">${f.name}</h3>
@@ -797,24 +774,16 @@ async function loadFreelancers() {
         </div>
         <p class="text-sm text-gray-400 mb-4">${f.title || 'Specialist'}</p>
         <div class="flex gap-2 mb-2">
-          <button onclick="editFreelancer(${f.id})" class="flex-1 btn btn-info text-xs">
-            <i class="fas fa-edit mr-1"></i> Edit
-          </button>
-          <button onclick="deleteItem('freelancers', ${f.id})" class="flex-1 btn btn-danger text-xs">
-            <i class="fas fa-trash mr-1"></i> Del
-          </button>
+          <button onclick="editFreelancer(${f.id})" class="flex-1 btn btn-info text-xs"><i class="fas fa-edit mr-1"></i> Edit</button>
+          <button onclick="deleteItem('freelancers', ${f.id})" class="flex-1 btn btn-danger text-xs"><i class="fas fa-trash mr-1"></i> Del</button>
         </div>
         <div class="checkbox-wrapper mt-2">
           <input type="checkbox" onchange="toggleSelection('freelancers', ${f.id})">
           <span class="text-xs text-gray-400">Select</span>
         </div>
-      </div>
-    `).join('');
+      </div>`).join('');
     updateCounts();
-  } catch (e) {
-    console.error(e);
-    alert('Failed to load freelancers: ' + e.message);
-  }
+  } catch (e) { alert('Failed to load freelancers: ' + e.message); }
 }
 
 function editFreelancer(id) {
@@ -828,7 +797,6 @@ function editFreelancer(id) {
   document.getElementById('fr-hourly-rate').value = f.hourly_rate || '';
   const bio = f.bio || '';
   document.getElementById('fr-bio').value = bio;
-  // FIX 1 companion: also set counter when opening modal
   document.getElementById('fr-bio-count').textContent = bio.length;
   document.getElementById('fr-featured').checked = f.is_featured || false;
   document.getElementById('editFreelancerModal').classList.add('active');
@@ -838,76 +806,119 @@ async function saveFreelancerEntry() {
   const id = document.getElementById('edit-fr-id').value;
   const name = document.getElementById('fr-name').value;
   const email = document.getElementById('fr-email').value;
-  const phone = document.getElementById('fr-phone').value;
-  const title = document.getElementById('fr-title').value;
-  const hourlyRate = document.getElementById('fr-hourly-rate').value;
-  const bio = document.getElementById('fr-bio').value;
-  const isFeatured = document.getElementById('fr-featured').checked;
   if (!name || !email) return alert('Name and Email are required');
   try {
     await apiCall(`/api/admin/freelancers/${id}`, 'PUT', {
-      name, email, phone, title,
-      hourly_rate: hourlyRate,
-      bio,
-      is_featured: isFeatured
+      name, email,
+      phone: document.getElementById('fr-phone').value,
+      title: document.getElementById('fr-title').value,
+      hourly_rate: document.getElementById('fr-hourly-rate').value,
+      bio: document.getElementById('fr-bio').value,
+      is_featured: document.getElementById('fr-featured').checked
     });
-    alert('Freelancer updated!');
-    closeModal('editFreelancerModal');
-    loadFreelancers();
+    alert('Freelancer updated!'); closeModal('editFreelancerModal'); loadFreelancers();
   } catch (e) { alert('Error: ' + e.message); }
 }
 
 function deleteItem(type, id) {
   if (!confirm('Delete this item permanently?')) return;
   const endpoint = type === 'leaderboard' ? `/api/admin/leaderboard/${id}` : `/api/admin/freelancers/${id}`;
-  apiCall(endpoint, 'DELETE')
-    .then(() => { alert('Deleted'); loadAllData(); })
-    .catch(e => alert(e.message));
+  apiCall(endpoint, 'DELETE').then(() => { alert('Deleted'); loadAllData(); }).catch(e => alert(e.message));
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-// FIX 3: toggleRankings now correctly updates both text AND arrow
 function toggleRankings() {
-  const el     = document.getElementById('rankingsContainer');
-  const label  = document.getElementById('rankingsToggleText');
-  const arrow  = document.getElementById('rankingsToggleArrow');
+  const el    = document.getElementById('rankingsContainer');
+  const label = document.getElementById('rankingsToggleText');
+  const arrow = document.getElementById('rankingsToggleArrow');
   const isHidden = el.classList.toggle('hidden');
   label.textContent = isHidden ? '📊 Show Rankings 16+' : '📊 Hide Rankings 16+';
   arrow.textContent = isHidden ? '▼' : '▲';
 }
 
+// ── Pending: open edit & approve modal ──────────────────────────
+function openPendingApprove(p) {
+  document.getElementById('pending-lb-id').value = p.id;
+  document.getElementById('pending-lb-company').value = p.company_name || extractDomain(p.url);
+  document.getElementById('pending-lb-url').value = p.url;
+  document.getElementById('pending-lb-score').value = p.score;
+  document.getElementById('pending-lb-country').value = normalizeCountry(p.country || 'NL');
+  document.getElementById('pending-lb-niche').value = p.niche || '';
+  document.getElementById('pendingApproveModal').classList.add('active');
+}
+
+async function saveAndApprovePending() {
+  const id      = document.getElementById('pending-lb-id').value;
+  const company = document.getElementById('pending-lb-company').value.trim();
+  const url     = document.getElementById('pending-lb-url').value.trim();
+  const score   = parseInt(document.getElementById('pending-lb-score').value);
+  const country = document.getElementById('pending-lb-country').value;
+  const niche   = document.getElementById('pending-lb-niche').value;
+  if (!company) return alert('Company name is required before approving');
+  try {
+    // 1. Update the entry with clean data
+    await apiCall(`/api/admin/leaderboard/${id}`, 'PUT', { company_name: company, url, score, country, niche });
+    // 2. Approve it (sets admin_verified = TRUE)
+    await apiCall(`/api/admin/leaderboard/${id}/approve`, 'POST', { final_country: country });
+    alert(`✅ "${company}" is now live on the leaderboard!`);
+    closeModal('pendingApproveModal');
+    loadPendingData();
+    loadLeaderboard();
+    checkPendingCount();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
 async function loadPendingData() {
   try {
-    const lbData = await apiCall('/api/admin/leaderboard/pending');
-    const frData = await apiCall('/api/admin/freelancers/pending');
+    const [lbData, frData] = await Promise.all([
+      apiCall('/api/admin/leaderboard/pending'),
+      apiCall('/api/admin/freelancers/pending')
+    ]);
 
     const lbContainer = document.getElementById('pending-leaderboard-container');
-    lbContainer.innerHTML = lbData.pending.length ? lbData.pending.map(p => `
+    lbContainer.innerHTML = lbData.pending?.length ? lbData.pending.map(p => `
       <div class="pending-card">
-        <h4 class="font-bold">${p.company_name || extractDomain(p.url)}</h4>
-        <p class="text-sm text-blue-400">${p.url}</p>
-        <p class="text-xl font-bold text-green-400 my-2">${p.score}/100</p>
-        <div class="flex gap-2">
-          <button onclick="apiCall('/api/admin/leaderboard/${p.id}/approve','POST').then(()=>{alert('Approved');loadPendingData();loadLeaderboard();})" class="flex-1 btn btn-success">Approve</button>
-          <button onclick="apiCall('/api/admin/leaderboard/${p.id}/reject','POST').then(()=>{alert('Rejected');loadPendingData();})" class="flex-1 btn btn-danger">Reject</button>
+        <div class="flex justify-between items-start mb-2 flex-wrap gap-2">
+          <div>
+            <h4 class="font-bold text-lg">${p.company_name || extractDomain(p.url)}</h4>
+            <p class="text-sm text-blue-400">${p.url}</p>
+            <p class="text-xs text-gray-400 mt-1">${getFlag(p.country || '')} ${p.country || 'Unknown country'} · ${p.niche || 'No niche'}</p>
+          </div>
+          <div class="text-3xl font-black text-green-400">${p.score}/100</div>
         </div>
-      </div>
-    `).join('') : '<p class="text-gray-400">No pending submissions</p>';
+        <div class="flex gap-2 mt-3">
+          <button onclick='openPendingApprove(${JSON.stringify(p)})' class="flex-1 btn btn-warning">
+            <i class="fas fa-edit mr-1"></i> Edit & Approve
+          </button>
+          <button onclick="rejectPending(${p.id})" class="btn btn-danger px-4">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>`).join('') : '<p class="text-gray-400 text-center py-4">✅ No pending leaderboard submissions</p>';
 
     const frContainer = document.getElementById('pending-freelancers-container');
-    frContainer.innerHTML = frData.pending.length ? frData.pending.map(p => `
+    frContainer.innerHTML = frData.pending?.length ? frData.pending.map(p => `
       <div class="pending-card">
         <h4 class="font-bold">${p.name}</h4>
         <p class="text-sm text-gray-400">${p.email}</p>
-        <p class="text-sm mb-2">${p.bio || 'No bio'}</p>
+        <p class="text-sm mb-3">${p.bio || 'No bio provided'}</p>
         <div class="flex gap-2">
-          <button onclick="apiCall('/api/admin/freelancers/${p.id}/approve','POST').then(()=>{alert('Approved');loadPendingData();loadFreelancers();})" class="flex-1 btn btn-success">Approve</button>
-          <button onclick="apiCall('/api/admin/freelancers/${p.id}','DELETE').then(()=>{alert('Rejected');loadPendingData();})" class="flex-1 btn btn-danger">Reject</button>
+          <button onclick="apiCall('/api/admin/freelancers/${p.id}/approve','POST').then(()=>{alert('✅ Approved');loadPendingData();loadFreelancers();checkPendingCount();})" class="flex-1 btn btn-success">Approve</button>
+          <button onclick="apiCall('/api/admin/freelancers/${p.id}','DELETE').then(()=>{alert('Rejected');loadPendingData();checkPendingCount();})" class="flex-1 btn btn-danger">Reject</button>
         </div>
-      </div>
-    `).join('') : '<p class="text-gray-400">No pending applications</p>';
+      </div>`).join('') : '<p class="text-gray-400 text-center py-4">✅ No pending freelancer applications</p>';
+
+    checkPendingCount();
   } catch (e) { console.error(e); }
+}
+
+async function rejectPending(id) {
+  if (!confirm('Reject and delete this submission?')) return;
+  try {
+    await apiCall(`/api/admin/leaderboard/${id}/reject`, 'POST');
+    loadPendingData(); checkPendingCount();
+  } catch (e) { alert(e.message); }
 }
 
 function extractDomain(url) {
@@ -916,12 +927,11 @@ function extractDomain(url) {
 
 function getFlag(codeOrName) {
   if (!codeOrName) return '🌐';
+  const flags = { 'NL':'🇳🇱','BE':'🇧🇪','US':'🇺🇸','UK':'🇬🇧','DE':'🇩🇪','FR':'🇫🇷','ES':'🇪🇸','IT':'🇮🇹','NZ':'🇳🇿','AU':'🇦🇺','CA':'🇨🇦','IE':'🇮🇪','SE':'🇸🇪','NO':'🇳🇴','DK':'🇩🇰','FI':'🇫🇮','CH':'🇨🇭','AT':'🇦🇹','PT':'🇵🇹','PL':'🇵🇱','CZ':'🇨🇿','ZA':'🇿🇦','NG':'🇳🇬','IN':'🇮🇳','PH':'🇵🇭','SG':'🇸🇬','JP':'🇯🇵','BR':'🇧🇷','MX':'🇲🇽','AE':'🇦🇪' };
   const upper = codeOrName.toUpperCase();
-  const directFlags = { 'NL':'🇳🇱','BE':'🇧🇪','US':'🇺🇸','UK':'🇬🇧','DE':'🇩🇪','FR':'🇫🇷','ES':'🇪🇸','IT':'🇮🇹','NZ':'🇳🇿','AU':'🇦🇺','CA':'🇨🇦','IE':'🇮🇪','SE':'🇸🇪','NO':'🇳🇴','DK':'🇩🇰','FI':'🇫🇮','CH':'🇨🇭','AT':'🇦🇹','PT':'🇵🇹','PL':'🇵🇱','CZ':'🇨🇿','ZA':'🇿🇦','NG':'🇳🇬','IN':'🇮🇳','PH':'🇵🇭','SG':'🇸🇬','JP':'🇯🇵','BR':'🇧🇷','MX':'🇲🇽','AE':'🇦🇪' };
-  if (directFlags[upper]) return directFlags[upper];
-  const found = COUNTRY_LIST.find(c => c.name.toUpperCase() === codeOrName.toUpperCase());
-  if (found) return directFlags[found.code] || '🌐';
-  return '🌐';
+  if (flags[upper]) return flags[upper];
+  const found = COUNTRY_LIST.find(c => c.name.toUpperCase() === upper);
+  return found ? (flags[found.code] || '🌐') : '🌐';
 }
 </script>
 </body>
