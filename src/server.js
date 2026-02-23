@@ -349,7 +349,28 @@ app.post('/api/email/send', async (req, res) => {
 
 // Bulk Scan Placeholders
 app.post('/api/bulk-scan/send-summary', async (req, res) => { res.json({ success: true }); });
-app.post('/api/bulk-scan/submit-leaderboard', async (req, res) => { res.json({ success: true }); });
+app.post('/api/bulk-scan/submit-leaderboard', async (req, res) => {
+    if (!pool) return res.json({ success: false, error: 'No DB' });
+    const { entries, submittedBy } = req.body;
+    if (!entries || !Array.isArray(entries)) return res.json({ success: false, error: 'No entries' });
+    let inserted = 0;
+    for (const e of entries) {
+        try {
+            await pool.query(
+                `INSERT INTO leaderboard (url, company_name, score, country, niche, admin_verified, is_verified)
+                 VALUES ($1, $2, $3, $4, $5, FALSE, FALSE)
+                 ON CONFLICT (url) DO UPDATE SET
+                   score = EXCLUDED.score,
+                   company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
+                   niche = COALESCE(EXCLUDED.niche, leaderboard.niche),
+                   admin_verified = FALSE`,
+                [e.url, e.company_name || e.name || null, e.score, e.country || 'NL', e.niche || null]
+            );
+            inserted++;
+        } catch (err) { console.warn('Leaderboard insert failed:', err.message); }
+    }
+    res.json({ success: true, inserted });
+});
 app.post('/api/bulk-scan/send-improvement-emails', async (req, res) => { res.json({ success: true }); });
 app.post('/api/bulk-scan/send-website-offers', async (req, res) => { res.json({ success: true }); });
 
@@ -726,6 +747,19 @@ app.post('/api/scan', async (req, res) => {
             };
         }, scanUrl);
         
+        // Extract emails from page HTML (mailto: links + regex)
+        let extractedEmails = [];
+        try {
+            const pageHtml = await page.content();
+            const mailtoMatches = [...pageHtml.matchAll(/mailto:([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/gi)].map(m => m[1].toLowerCase());
+            const textMatches  = [...pageHtml.matchAll(/\b([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})\b/gi)].map(m => m[1].toLowerCase());
+            const allEmails = [...new Set([...mailtoMatches, ...textMatches])].filter(e =>
+                !e.includes('example') && !e.includes('sentry') && !e.includes('wix') &&
+                !e.endsWith('.png') && !e.endsWith('.jpg') && !e.endsWith('.svg')
+            );
+            extractedEmails = allEmails.slice(0, 3);
+        } catch (e) {}
+
         // ⚠️ FIX: Close page ONLY after evaluation is complete
         await page.close();
         
@@ -956,6 +990,8 @@ app.post('/api/scan', async (req, res) => {
             },
             content_stats: {
                 wordCount: analysis.wordCount,
+                emails_found: extractedEmails,
+                extractedEmail: extractedEmails[0] || null,
                 h1Count: analysis.h1Count,
                 h1Text: analysis.h1Text,
                 h1Length: analysis.h1Length,
