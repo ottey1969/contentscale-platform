@@ -49,7 +49,7 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; }
 .btn-specialist i, .btn-specialist span { color: #5b21b6 !important; }
 
 /* Mode toggle */
-.mode-toggle { position: relative; padding: 1rem 2rem; border-radius: 0.75rem; font-weight: 600; background: #374151; color: white !important; border: 2px solid transparent; cursor: pointer; flex: 1; max-width: 280px; }
+.mode-toggle { position: relative; padding: 0.85rem 1.5rem; border-radius: 0.75rem; font-weight: 600; background: #374151; color: white !important; border: 2px solid transparent; cursor: pointer; flex: 1; min-width: 140px; max-width: 240px; text-align: center; }
 .mode-toggle.active { background: linear-gradient(135deg, #7e22ce, #be185d); border: 2px solid rgba(255,255,255,0.3); }
 .mode-toggle.active::after { content: '✓'; position: absolute; top: -8px; right: -8px; width: 28px; height: 28px; background: #0f7b3a; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2px solid white; }
 
@@ -146,7 +146,54 @@ footer p { color: #9ca3af !important; }
   .top3-grid { grid-template-columns: 1fr; }
 }
 
-/* Badge embed code textareas — high contrast readable mono */
+/* ── MOBILE FIXES ─────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* Page tabs — scrollable row, no wrapping */
+  .page-tabs { overflow-x:auto; -webkit-overflow-scrolling:touch; flex-wrap:nowrap !important; gap:4px !important; padding-bottom:4px; }
+  .page-tab { white-space:nowrap; font-size:0.8rem !important; padding:7px 12px !important; flex-shrink:0; }
+
+  /* Mode toggle buttons — full width, stacked */
+  .mode-toggle { max-width:100% !important; min-width:0 !important; width:100%; padding:0.7rem 1rem !important; font-size:0.88rem; text-align:center; }
+
+  /* Mode card headers */
+  .mode-card-header { flex-wrap:wrap; gap:6px; }
+  .mode-card-header .text-xl { font-size:0.95rem !important; }
+
+  /* Apify warning — code stays inside card */
+  #apifyKeyWarning { overflow:hidden; }
+  #apifyKeyWarning code { display:block !important; white-space:pre-wrap !important; word-break:break-all !important; max-width:100%; box-sizing:border-box; }
+
+  /* Find Me Leads pipeline steps — stack */
+  .discover-steps { flex-direction:column !important; align-items:flex-start !important; justify-content:flex-start !important; gap:4px !important; }
+  .discover-steps span { font-size:0.72rem; }
+
+  /* Available variables — single column */
+  .var-grid { grid-template-columns:1fr !important; }
+  .var-row { flex-wrap:wrap; word-break:break-word; }
+  .var-row code { font-size:0.72rem; word-break:break-all; max-width:100%; }
+  .var-row span { font-size:0.72rem; }
+
+  /* Leaderboard rank rows — compact */
+  .lb-rank-row { padding:10px 10px !important; }
+  .lb-rank-name { font-size:0.8rem !important; }
+  .lb-rank-tags { display:none !important; }
+  .lb-rank-score { font-size:0.88rem !important; }
+
+  /* SEO Specialists — single column */
+  .specialists-outer-grid { grid-template-columns:1fr !important; gap:16px !important; }
+  .specialists-standard-grid { grid-template-columns:1fr !important; }
+
+  /* Author section — center stacked */
+  .author-section-inner { flex-direction:column !important; align-items:center !important; text-align:center !important; }
+
+  /* General overflow protection */
+  .card, .rounded-xl, .rounded-lg { overflow:hidden; }
+  pre, code { max-width:100%; overflow-x:auto; }
+}
+
+/* Variable grid — responsive, collapses to 1 col on mobile */
+.var-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr)); gap:6px; }
+/* ─────────────────────────────────────────────────────── */
 .badge-code-ta {
   color: #f8fafc !important;
   background-color: #0d1117 !important;
@@ -257,7 +304,7 @@ footer p { color: #9ca3af !important; }
       </div>
 
       <!-- Mode toggle -->
-      <div class="flex flex-wrap justify-center gap-4 mb-8">
+      <div class="flex flex-wrap justify-center gap-3 mb-8" style="max-width:680px;margin-left:auto;margin-right:auto;">
         <button id="modeSingleBtn" onclick="switchMode('single')" class="mode-toggle active">
           <i class="fas fa-search mr-2"></i> Scan a Website
         </button>
@@ -309,7 +356,7 @@ footer p { color: #9ca3af !important; }
       <!-- BULK MODE -->
       <div id="bulkMode" class="hidden">
         <div class="card max-w-4xl mx-auto" style="border:2px solid #3b82f6;">
-          <div class="flex items-center gap-3 mb-2">
+          <div class="flex flex-wrap items-center gap-3 mb-2 mode-card-header">
             <span class="text-xl font-bold">📋 I Have a List</span>
             <span class="text-xs px-3 py-1 bg-blue-600 rounded-full" style="color:white!important;">Batch Scan + Email</span>
           </div>
@@ -433,7 +480,7 @@ footer p { color: #9ca3af !important; }
       <div id="discoverMode" class="hidden">
         <div class="card max-w-4xl mx-auto" style="border:2px solid #f59e0b;">
 
-          <div class="flex items-center gap-3 mb-2">
+          <div class="flex flex-wrap items-center gap-3 mb-2 mode-card-header">
             <span class="text-xl font-bold">🤖 Find Me Leads</span>
             <span class="text-xs px-3 py-1 rounded-full font-semibold" style="background:#92400e;color:#fde68a!important;">Powered by Apify</span>
           </div>
@@ -481,9 +528,10 @@ footer p { color: #9ca3af !important; }
             </a>
           </div>
 
-          <!-- Apify key warning (only shown when token missing but access granted) -->
           <div id="apifyKeyWarning" class="hidden mb-4 rounded-lg p-3" style="background:#451a03;border:1px solid #92400e;">
-            <p class="text-sm" style="color:#fde68a!important;">⚠️ Apify token not set. Add it via browser console: <code style="background:#1c0a00;padding:2px 6px;border-radius:4px;font-size:0.75rem;color:#fbbf24!important;">localStorage.setItem('apifyToken','your_token')</code> then refresh.</p>
+            <p class="text-sm" style="color:#fde68a!important;">⚠️ Apify token not set. Add it via browser console:</p>
+            <code style="display:block;margin-top:6px;background:#1c0a00;padding:8px 10px;border-radius:6px;font-size:0.75rem;color:#fbbf24!important;word-break:break-all;white-space:pre-wrap;line-height:1.6;">localStorage.setItem('apifyToken','your_token')</code>
+            <p class="text-xs mt-2" style="color:#92400e!important;">Then refresh the page.</p>
           </div>
 
           <!-- Discovery Form -->
@@ -605,7 +653,7 @@ footer p { color: #9ca3af !important; }
             <!-- Pipeline progress -->
             <div id="discoverProgress" class="hidden mt-5">
               <!-- Step indicators -->
-              <div class="flex justify-between mb-3" style="font-size:0.75rem;">
+              <div class="flex justify-between mb-3 discover-steps" style="font-size:0.75rem;flex-wrap:wrap;gap:4px;">
                 <span id="dStep1" style="color:#6b7280!important;">① Finding leads...</span>
                 <span id="dStep2" style="color:#6b7280!important;">② Extracting URLs</span>
                 <span id="dStep3" style="color:#6b7280!important;">③ Scanning scores</span>
@@ -885,7 +933,7 @@ footer p { color: #9ca3af !important; }
         <!-- Group: Business -->
         <div class="mb-4">
           <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">🏢 Business</p>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px;">
+          <div class="var-grid">
             <div class="var-row"><code style="color:#c084fc!important;">{{company_name}}</code><span>Business / domain name</span></div>
             <div class="var-row"><code style="color:#c084fc!important;">{{domain}}</code><span>Clean domain (no https://)</span></div>
             <div class="var-row"><code style="color:#c084fc!important;">{{website_url}}</code><span>Full scanned URL</span></div>
@@ -898,7 +946,7 @@ footer p { color: #9ca3af !important; }
         <!-- Group: Score & Analysis -->
         <div class="mb-4">
           <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">📊 Score &amp; Analysis</p>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px;">
+          <div class="var-grid">
             <div class="var-row"><code style="color:#38bdf8!important;">{{score}}</code><span>Total ContentScore (0–100)</span></div>
             <div class="var-row"><code style="color:#38bdf8!important;">{{score_label}}</code><span>Elite / Excellent / Good / Needs Work</span></div>
             <div class="var-row"><code style="color:#38bdf8!important;">{{score_bar}}</code><span>Visual HTML progress bar</span></div>
@@ -914,7 +962,7 @@ footer p { color: #9ca3af !important; }
         <!-- Group: Sender / You -->
         <div class="mb-4">
           <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">👤 Sender (You)</p>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px;">
+          <div class="var-grid">
             <div class="var-row"><code style="color:#fb923c!important;">{{sender_name}}</code><span>Your name (from form)</span></div>
             <div class="var-row"><code style="color:#fb923c!important;">{{sender_email}}</code><span>Your email (from form)</span></div>
             <div class="var-row"><code style="color:#fb923c!important;">{{sender_phone}}</code><span>+31 6 2807 3996</span></div>
@@ -926,7 +974,7 @@ footer p { color: #9ca3af !important; }
         <!-- Group: Links & Dates -->
         <div class="mb-4">
           <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">🔗 Links &amp; Dates</p>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px;">
+          <div class="var-grid">
             <div class="var-row"><code style="color:#a3e635!important;">{{leaderboard_url}}</code><span>Link to leaderboard page</span></div>
             <div class="var-row"><code style="color:#a3e635!important;">{{cta_url}}</code><span>Main CTA link (WhatsApp)</span></div>
             <div class="var-row"><code style="color:#a3e635!important;">{{date}}</code><span>Today's date (Feb 22, 2026)</span></div>
@@ -938,7 +986,7 @@ footer p { color: #9ca3af !important; }
         <!-- Group: Required -->
         <div>
           <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">⚠️ Required</p>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px;">
+          <div class="var-grid">
             <div class="var-row" style="border-color:#dc2626!important;"><code style="color:#f87171!important;">{{unsubscribe_url}}</code><span style="color:#fca5a5!important;">Must include in every email (GDPR)</span></div>
           </div>
         </div>
@@ -1170,7 +1218,7 @@ footer p { color: #9ca3af !important; }
      AUTHOR SECTION — above footer
      ============================================================ -->
 <section style="background:linear-gradient(135deg,#0f0a1e 0%,#1a1040 50%,#0f0a1e 100%);border-top:1px solid #2d1b69;border-bottom:1px solid #2d1b69;padding:60px 24px;">
-  <div style="max-width:900px;margin:0 auto;display:flex;gap:40px;align-items:center;flex-wrap:wrap;">
+  <div style="max-width:900px;margin:0 auto;display:flex;gap:40px;align-items:center;flex-wrap:wrap;" class="author-section-inner">
 
     <!-- Headshot -->
     <div style="flex-shrink:0;text-align:center;">
@@ -1300,7 +1348,7 @@ footer p { color: #9ca3af !important; }
         <span style="color:#374151!important;">|</span>
         <a href="https://contentscale.site/international-seo/" target="_blank" rel="noopener" style="color:#818cf8!important;">International SEO</a>
         <span style="color:#374151!important;">|</span>
-        <a href="https://contentscale.site/seo-contentscore/" target="_blank" rel="noopener" style="color:#818cf8!important;">SEO ContentScore Platform</a>
+        <a href="https://contentscale.site/seo-contentscore/" target="_blank" rel="noopener" style="color:#818cf8!important;">SEO ContentScore Tool</a>
         <span style="color:#374151!important;">|</span>
         <a href="https://contentscale.site/graaf-framework/" target="_blank" rel="noopener" style="color:#818cf8!important;">GRAAF Framework</a>
       </div>
@@ -1454,7 +1502,7 @@ const DEFAULT_TEMPLATES = {
   <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 32px;text-align:center;">
     <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.8;">
       {{sender_company}} · Amsterdam, Netherlands · {{year}}<br>
-      You received this because your website was scanned by our ContentScore Platform.<br>
+      You received this because your website was scanned by our ContentScore tool.<br>
       <a href="{{unsubscribe_url}}" style="color:#7e22ce;text-decoration:underline;">Unsubscribe</a>
     </p>
   </div>
@@ -1533,7 +1581,7 @@ const DEFAULT_TEMPLATES = {
   <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 32px;text-align:center;">
     <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.8;">
       {{sender_company}} · Amsterdam, Netherlands · {{year}}<br>
-      You received this because your website was scanned by our ContentScore Platform.<br>
+      You received this because your website was scanned by our ContentScore tool.<br>
       <a href="{{unsubscribe_url}}" style="color:#b45309;text-decoration:underline;">Unsubscribe</a>
     </p>
   </div>
@@ -1658,7 +1706,7 @@ const DEFAULT_TEMPLATES = {
   <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 32px;text-align:center;">
     <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.8;">
       {{sender_company}} · Amsterdam, Netherlands · {{year}}<br>
-      You received this because your website <strong>{{website_url}}</strong> was scanned by our free ContentScore Platform.<br>
+      You received this because your website <strong>{{website_url}}</strong> was scanned by our free ContentScore tool.<br>
       <a href="{{unsubscribe_url}}" style="color:#1d4ed8;text-decoration:underline;">Unsubscribe</a>
     </p>
   </div>
@@ -3330,14 +3378,18 @@ function buildRankRows(entries, startRank) {
     const name = e.company_name || (e.url.replace(/https?:\/\//,'').split('/')[0]);
     const rankColor = rank <= 10 ? '#c084fc' : rank <= 25 ? '#818cf8' : '#6b7280';
     const rowBg = rank % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent';
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:13px 20px;background:${rowBg};border-bottom:1px solid #1f2937;transition:background 0.15s;" onmouseover="this.style.background='rgba(126,34,206,0.1)'" onmouseout="this.style.background='${rowBg}'">
-      <div style="display:flex;align-items:center;gap:14px;min-width:0;">
-        <span style="font-size:0.85rem;font-weight:800;color:${rankColor}!important;width:28px;flex-shrink:0;text-align:right;">${rank}</span>
-        <div style="min-width:0;"><div style="font-weight:600;color:#f3f4f6!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div><div style="font-size:0.7rem;color:#9ca3af!important;margin-top:1px;">${[e.niche, e.business_type, e.country].filter(Boolean).join(' \u00b7 ')}</div></div>
+    const tags = [e.niche, e.business_type, e.country].filter(Boolean).join(' \u00b7 ');
+    return `<div class="lb-rank-row" style="display:flex;align-items:center;justify-content:space-between;padding:13px 20px;background:${rowBg};border-bottom:1px solid #1f2937;transition:background 0.15s;gap:8px;" onmouseover="this.style.background='rgba(126,34,206,0.1)'" onmouseout="this.style.background='${rowBg}'">
+      <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
+        <span style="font-size:0.85rem;font-weight:800;color:${rankColor}!important;width:24px;flex-shrink:0;text-align:right;">${rank}</span>
+        <div style="min-width:0;flex:1;">
+          <div class="lb-rank-name" style="font-weight:600;color:#f3f4f6!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;">${name}</div>
+          ${tags ? `<div class="lb-rank-tags" style="font-size:0.68rem;color:#9ca3af!important;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${tags}</div>` : ''}
+        </div>
       </div>
-      <div style="display:flex;align-items:center;gap:16px;flex-shrink:0;">
-        <span style="font-weight:800;font-size:1.05rem;color:#4ade80!important;">${e.score}<span style="font-size:0.7rem;font-weight:400;color:#9ca3af!important;">/100</span></span>
-        <a href="${e.url}" target="_blank" rel="noopener" style="font-size:0.75rem;color:#818cf8!important;text-decoration:none;font-weight:600;">Visit \u2192</a>
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+        <span class="lb-rank-score" style="font-weight:800;font-size:1rem;color:#4ade80!important;">${e.score}<span style="font-size:0.68rem;font-weight:400;color:#9ca3af!important;">/100</span></span>
+        <a href="${e.url}" target="_blank" rel="noopener" style="font-size:0.75rem;color:#818cf8!important;text-decoration:none;font-weight:600;white-space:nowrap;">Visit \u2192</a>
       </div>
     </div>`;
   }).join('');
@@ -3376,8 +3428,8 @@ async function loadFreelancers() {
       var standard = data.freelancers.filter(function(f){ return !f.is_featured; });
       if (featured.length === 0) { featured = data.freelancers.slice(0,4); standard = data.freelancers.slice(4); }
       var featuredHTML = featured.length > 0 ? '<div style="display:flex;flex-direction:column;gap:16px;"><div style="font-size:0.7rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;">\u2b50 Featured Specialists</div><div style="display:flex;flex-direction:column;gap:16px;flex:1;">' + featured.map(function(f){ return renderCard(f, true); }).join('') + '</div></div>' : '';
-      var standardHTML = standard.length > 0 ? '<div style="display:flex;flex-direction:column;gap:16px;"><div style="font-size:0.7rem;font-weight:700;color:#6b7280!important;letter-spacing:0.1em;text-transform:uppercase;">\ud83d\udd0d More Specialists</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;flex:1;">' + standard.map(function(f){ return renderCard(f, false); }).join('') + '</div></div>' : '';
-      grid.innerHTML = (featured.length > 0 && standard.length > 0) ? '<div style="display:grid;grid-template-columns:1fr 1.6fr;gap:24px;align-items:stretch;">' + featuredHTML + standardHTML + '</div>' : (featuredHTML || standardHTML);
+      var standardHTML = standard.length > 0 ? '<div style="display:flex;flex-direction:column;gap:16px;"><div style="font-size:0.7rem;font-weight:700;color:#6b7280!important;letter-spacing:0.1em;text-transform:uppercase;">\ud83d\udd0d More Specialists</div><div class="specialists-standard-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;flex:1;">' + standard.map(function(f){ return renderCard(f, false); }).join('') + '</div></div>' : '';
+      grid.innerHTML = (featured.length > 0 && standard.length > 0) ? '<div class="specialists-outer-grid" style="display:grid;grid-template-columns:1fr 1.6fr;gap:24px;align-items:stretch;">' + featuredHTML + standardHTML + '</div>' : (featuredHTML || standardHTML);
     } else {
       // Placeholder cards
       function makeCard(f, featured) {
@@ -3405,7 +3457,7 @@ async function loadFreelancers() {
         { name: 'Open Spot', title: 'SEO Copywriter', bio: 'GRAAF-optimized content \u2014 apply to become a verified ContentScale specialist.', country: '\ud83c\udf0d Any country', rate: 'Your rate', initial: '?', real: false },
         { name: 'Open Spot', title: 'Analytics & Reporting Expert', bio: 'GA4, Search Console \u2014 help businesses understand what the numbers mean.', country: '\ud83c\udf0d Any country', rate: 'Your rate', initial: '?', real: false }
       ];
-      grid.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1.6fr;gap:24px;align-items:stretch;"><div style="display:flex;flex-direction:column;gap:16px;"><div style="font-size:0.7rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;">\u2b50 Featured Specialists</div>' + featured.map(function(f){ return makeCard(f, true); }).join('') + '</div><div style="display:flex;flex-direction:column;gap:16px;"><div style="font-size:0.7rem;font-weight:700;color:#6b7280!important;letter-spacing:0.1em;text-transform:uppercase;">\ud83d\udd0d Available Spots</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">' + standard.map(function(f){ return makeCard(f, false); }).join('') + '</div></div></div>';
+      grid.innerHTML = '<div class="specialists-outer-grid" style="display:grid;grid-template-columns:1fr 1.6fr;gap:24px;align-items:stretch;"><div style="display:flex;flex-direction:column;gap:16px;"><div style="font-size:0.7rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;">\u2b50 Featured Specialists</div>' + featured.map(function(f){ return makeCard(f, true); }).join('') + '</div><div style="display:flex;flex-direction:column;gap:16px;"><div style="font-size:0.7rem;font-weight:700;color:#6b7280!important;letter-spacing:0.1em;text-transform:uppercase;">\ud83d\udd0d Available Spots</div><div class="specialists-standard-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">' + standard.map(function(f){ return makeCard(f, false); }).join('') + '</div></div></div>';
     }
   } catch (e) { console.error(e); }
 }
