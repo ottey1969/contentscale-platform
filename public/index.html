@@ -1505,6 +1505,30 @@ const DEFAULT_TEMPLATES = {
 // ============================================================
 // INIT
 // ============================================================
+// #1 — Rescan reminder: show banner if >30 days since last scan
+function checkRescanReminder() {
+  try {
+    const history = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
+    if (!history.length) return;
+    const last = history[0];
+    const daysSince = Math.floor((Date.now() - new Date(last.date)) / 86400000);
+    if (daysSince >= 30) {
+      const banner = document.getElementById('rescanBanner');
+      const text   = document.getElementById('rescanBannerText');
+      if (banner && text) {
+        const domain = last.url.replace(/https?:\/\//, '').replace(/\/.*$/, '');
+        text.textContent = 'Last scanned ' + domain + ' ' + daysSince + ' days ago — score was ' + last.score + '/100. Google has updated since then.';
+        document.getElementById('rescanBtn').onclick = () => {
+          document.getElementById('singleUrlInput').value = last.url;
+          banner.classList.add('hidden');
+          scanSingleURL();
+        };
+        banner.classList.remove('hidden');
+      }
+    }
+  } catch(e) {}
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   registerUser();
   loadLeaderboardData();
