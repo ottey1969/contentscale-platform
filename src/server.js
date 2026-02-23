@@ -171,7 +171,7 @@ async function createAllTables() {
         await client.query(`CREATE TABLE IF NOT EXISTS scans (id SERIAL PRIMARY KEY, url TEXT NOT NULL, score INTEGER, quality VARCHAR(50), graaf_score INTEGER, craft_score INTEGER, technical_score INTEGER, breakdown JSONB, recommendations JSONB DEFAULT '[]', scan_type VARCHAR(50) DEFAULT 'manual', created_at TIMESTAMP DEFAULT NOW())`);
 
         // 3. Leaderboard (WITH MIGRATION FIX)
-        await client.query(`CREATE TABLE IF NOT EXISTS leaderboard (id SERIAL PRIMARY KEY, url TEXT NOT NULL UNIQUE, company_name VARCHAR(255), score INTEGER NOT NULL, country VARCHAR(100) DEFAULT 'NL', city VARCHAR(255), type VARCHAR(100) DEFAULT 'seo_agency', location VARCHAR(255), is_verified BOOLEAN DEFAULT FALSE, is_opted_out BOOLEAN DEFAULT FALSE, submission_ip VARCHAR(50), admin_verified BOOLEAN DEFAULT FALSE, auto_detected_country VARCHAR(100), graaf_score INTEGER, craft_score INTEGER, technical_score INTEGER, niche VARCHAR(100), created_at TIMESTAMP DEFAULT NOW())`);
+        await client.query(`CREATE TABLE IF NOT EXISTS leaderboard (id SERIAL PRIMARY KEY, url TEXT NOT NULL UNIQUE, company_name VARCHAR(255), score INTEGER NOT NULL, country VARCHAR(100) DEFAULT 'NL', city VARCHAR(255), type VARCHAR(100) DEFAULT 'seo_agency', location VARCHAR(255), is_verified BOOLEAN DEFAULT FALSE, is_opted_out BOOLEAN DEFAULT FALSE, submission_ip VARCHAR(50), admin_verified BOOLEAN DEFAULT TRUE, auto_detected_country VARCHAR(100), graaf_score INTEGER, craft_score INTEGER, technical_score INTEGER, niche VARCHAR(100), created_at TIMESTAMP DEFAULT NOW())`);
         
         // 🛠️ MIGRATION: Ensure country column is wide enough (Fixes "value too long" error)
         try {
@@ -556,7 +556,27 @@ app.post('/api/scan', async (req, res) => {
             const rawHtml = document.documentElement.outerHTML;
             
             // Headings
-            const h1Count = document.querySelectorAll('h1').length;
+            const h1Els = document.querySelectorAll('h1');
+            const h1Count = h1Els.length;
+            // Capture first H1's visible text and check for hidden H1s
+            let h1Text = '';
+            let h1IsHidden = false;
+            let h1VisibleCount = 0;
+            h1Els.forEach(el => {
+                const style = window.getComputedStyle(el);
+                const isHidden = style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0' || el.hasAttribute('hidden');
+                if (!isHidden) {
+                    h1VisibleCount++;
+                    if (!h1Text) h1Text = el.textContent.trim();
+                } else {
+                    h1IsHidden = true;
+                }
+            });
+            const h1Length = h1Text.length;
+            const GENERIC_H1 = ['welcome', 'home', 'hello', 'untitled', 'page', 'index', 'main', 'default', 'test', 'new page', 'coming soon'];
+            const h1IsGeneric = h1Text.length > 0 && GENERIC_H1.some(g => h1Text.toLowerCase().trim() === g);
+            const h1IsTooShort = h1Text.length > 0 && h1Text.length < 10;
+            const h1IsTooLong  = h1Text.length > 70;
             const h2Count = document.querySelectorAll('h2').length;
             const h3Count = document.querySelectorAll('h3').length;
             const listItemCount = document.querySelectorAll('li').length;
@@ -696,7 +716,7 @@ app.post('/api/scan', async (req, res) => {
             ) && /years of experience|certified|specializ|founder|director|ceo/i.test(rawHtml);
             
             return {
-                wordCount, h1Count, h2Count, h3Count, listItemCount, avgParagraphLength,
+                wordCount, h1Count, h1Text, h1Length, h1IsHidden, h1VisibleCount, h1IsGeneric, h1IsTooShort, h1IsTooLong, h2Count, h3Count, listItemCount, avgParagraphLength,
                 metaTitleLength, metaDescriptionLength, hasMetaViewport, hasCanonical,
                 hasOpenGraph, hasTwitterCard,
                 hasArticleSchema, hasFAQPageSchema, hasOrganizationSchema,
@@ -741,8 +761,10 @@ app.post('/api/scan', async (req, res) => {
         
         // --- CRAFT FRAMEWORK (30 Points) ---
         let craftScore = 0;
-        if (analysis.h1Count === 1)         craftScore += 8;
-        else if (analysis.h1Count > 1)      craftScore += 2;
+        // H1 scoring: only award full points for 1 visible, non-generic, real H1
+        if (analysis.h1VisibleCount === 1 && !analysis.h1IsGeneric && !analysis.h1IsTooShort) craftScore += 8;
+        else if (analysis.h1VisibleCount === 1) craftScore += 3; // exists but weak
+        else if (analysis.h1VisibleCount > 1)   craftScore += 2; // multiple
         
         if (analysis.h2Count >= 5)          craftScore += 7;
         else if (analysis.h2Count >= 3)     craftScore += 5;
@@ -828,10 +850,19 @@ app.post('/api/scan', async (req, res) => {
             recommendations.push({ title: '📋 Add More Structured Lists', description: `${analysis.listItemCount} list items found. Reaching 15+ improves both scannability and GRAAF scoring.`, priority: 'low', action: "Look for sections with 3+ parallel ideas and convert them to bullet lists.", learning: "Structured lists signal scannable, user-friendly content.", target: '15+ list items' });
         }
         
+        // ── H1 checks — 5 distinct failure modes ──
         if (analysis.h1Count === 0) {
-            recommendations.push({ title: '⚠️ Critical: No H1 Heading Found', description: 'No H1 tag detected. This is a fundamental on-page SEO issue.', priority: 'high', action: "Add exactly one H1 tag containing your primary keyword.", learning: "The H1 is the strongest on-page keyword signal. Missing H1 means Google guesses.", target: 'Exactly 1 H1 containing the primary keyword' });
-        } else if (analysis.h1Count > 1) {
-            recommendations.push({ title: '⚠️ Multiple H1 Tags Detected', description: `Found ${analysis.h1Count} H1 tags. Multiple H1s dilute your topical signal.`, priority: 'medium', action: "Keep only one H1. Change others to H2 or H3.", learning: "Multiple H1s confuse Google about the page's primary topic.", target: 'Exactly 1 H1 tag' });
+            recommendations.push({ title: '🚨 Critical: No H1 Heading Found', description: 'No H1 tag detected. This is one of the most impactful on-page SEO issues you can fix.', priority: 'high', action: "Add exactly one H1 tag near the top of the page containing your primary keyword.", learning: "The H1 is Google's strongest on-page keyword signal. Without it, Google has to guess what your page is about — and it often guesses wrong.", target: 'Exactly 1 H1 tag with primary keyword in the first 30 characters' });
+        } else if (analysis.h1IsHidden && analysis.h1VisibleCount === 0) {
+            recommendations.push({ title: '🚨 Critical: H1 Is Hidden (display:none / visibility:hidden)', description: `An H1 exists in the HTML but is hidden with CSS. Google sees through this — it counts as no real H1.`, priority: 'high', action: "Remove the CSS hiding your H1. Make it visible. If you are hiding it for design reasons, rethink the design.", learning: "Hidden H1s are sometimes used as an SEO trick. Google ignores hidden content for ranking signals.", target: '1 fully visible H1 containing primary keyword' });
+        } else if (analysis.h1VisibleCount > 1) {
+            recommendations.push({ title: '⚠️ Multiple H1 Tags Detected', description: `Found ${analysis.h1VisibleCount} visible H1 tags. This dilutes your topical signal and confuses Google.`, priority: 'medium', action: "Keep only one H1. Demote the rest to H2 or H3.", learning: "Multiple H1s tell Google your page has multiple main topics — it then ranks you for none of them well.", target: 'Exactly 1 H1 tag per page' });
+        } else if (analysis.h1IsGeneric) {
+            recommendations.push({ title: '⚠️ H1 Is Too Generic — Add a Real Keyword', description: `Your H1 "${analysis.h1Text}" contains no specific keyword. Generic H1s waste the strongest on-page signal.`, priority: 'high', action: "Replace your H1 with a specific keyword phrase. Example: 'SEO Content Scanner for Dutch Businesses' not 'Welcome'.", learning: "Generic H1s like 'Home' or 'Welcome' provide zero keyword signal to Google. Your H1 should be your page's value proposition.", target: 'H1 with primary keyword + specific value in 30–70 characters' });
+        } else if (analysis.h1IsTooShort) {
+            recommendations.push({ title: '⚠️ H1 Too Short — Expand With Keywords', description: `Your H1 "${analysis.h1Text}" is only ${analysis.h1Length} characters. This is too thin to carry a keyword signal.`, priority: 'medium', action: "Expand your H1 to 30–70 characters. Include your primary keyword and a qualifier (year, location, benefit).", learning: "H1s under 10 characters provide minimal keyword signal. The sweet spot is 30–70 characters.", target: 'H1 of 30–70 characters with primary keyword' });
+        } else if (analysis.h1IsTooLong) {
+            recommendations.push({ title: '📝 H1 Too Long — Trim for Clarity', description: `Your H1 is ${analysis.h1Length} characters. Long H1s dilute keyword focus and look spammy.`, priority: 'low', action: "Trim your H1 to 70 characters or fewer. Move secondary information to your subtitle (H2) or intro paragraph.", learning: "H1s over 70 characters reduce keyword density and can trigger spam filters in quality reviews.", target: 'H1 under 70 characters' });
         }
         
         if (analysis.h2Count < 3) {
@@ -926,6 +957,12 @@ app.post('/api/scan', async (req, res) => {
             content_stats: {
                 wordCount: analysis.wordCount,
                 h1Count: analysis.h1Count,
+                h1Text: analysis.h1Text,
+                h1Length: analysis.h1Length,
+                h1VisibleCount: analysis.h1VisibleCount,
+                h1IsGeneric: analysis.h1IsGeneric,
+                h1IsTooShort: analysis.h1IsTooShort,
+                h1IsTooLong: analysis.h1IsTooLong,
                 h2Count: analysis.h2Count,
                 h3Count: analysis.h3Count,
                 listItemCount: analysis.listItemCount,
