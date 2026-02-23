@@ -233,7 +233,26 @@ footer p { color: #9ca3af !important; }
             <div class="progress-bar"><div id="singleProgressBar" class="progress-bar-fill" style="width:0%"></div></div>
             <p id="singleProgressText" class="text-sm text-center mt-2 text-gray-300"></p>
           </div>
-          <div id="singleResult" class="hidden mt-4"></div>
+          <!-- #1 — Rescan reminder banner (shown if >30 days since last scan) -->
+            <div id="rescanBanner" class="hidden mb-4 rounded-xl p-4" style="background:linear-gradient(135deg,#1e1b4b,#312e81);border:1px solid #4f46e5;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                <div>
+                  <div style="font-size:0.82rem;font-weight:700;color:#a5b4fc!important;margin-bottom:2px;">⏰ Time for a rescan?</div>
+                  <div id="rescanBannerText" style="font-size:0.78rem;color:#818cf8!important;"></div>
+                </div>
+                <div style="display:flex;gap:8px;flex-shrink:0;">
+                  <button id="rescanBtn" onclick="doRescan()"
+                    style="background:#4f46e5;color:white!important;border:none;border-radius:7px;padding:7px 14px;font-size:0.78rem;font-weight:700;cursor:pointer;">
+                    🔄 Rescan Now
+                  </button>
+                  <button onclick="document.getElementById('rescanBanner').classList.add('hidden')"
+                    style="background:#1e1b4b;color:#6366f1!important;border:1px solid #4338ca;border-radius:7px;padding:7px 10px;font-size:0.78rem;cursor:pointer;">
+                    ✕
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div id="singleResult" class="hidden mt-4"></div>
         </div>
       </div>
 
@@ -592,6 +611,18 @@ footer p { color: #9ca3af !important; }
           </div>
           <button onclick="saveTemplate('improvement')" class="btn btn-primary w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
         </div>
+        <!-- Almost Made It Template -->
+        <div class="card" style="border-color:#f59e0b!important;">
+          <h3 class="text-xl font-bold mb-2">🎯 Almost Made It</h3>
+          <p class="text-sm mb-4" style="color:#9ca3af!important;">Sent to businesses scoring 65–69 · {{gap}} points from leaderboard</p>
+          <div class="template-editor">
+            <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
+            <input type="text" id="template-almostMade-subject" class="w-full p-2 rounded mb-2">
+            <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
+            <textarea id="template-almostMade-body" class="w-full p-2 rounded" style="min-height:200px;"></textarea>
+          </div>
+          <button onclick="saveTemplate('almostMade')" class="btn btn-primary w-full mt-4" style="background:linear-gradient(135deg,#b45309,#d97706)!important;"><i class="fas fa-save mr-2"></i> Save Template</button>
+        </div>
         <!-- Website Template -->
         <div class="card">
           <h3 class="text-xl font-bold mb-2">🌐 Website Offer</h3>
@@ -688,6 +719,9 @@ footer p { color: #9ca3af !important; }
         <h2 class="text-4xl font-bold mb-2">🏆 Elite Leaderboard</h2>
         <p style="color:#e5e7eb!important;">Top performing websites · ContentScore 70–100</p>
       </div>
+
+      <!-- ── Niche context header (hidden by default) ── -->
+      <div id="leaderboardNicheHeader" class="hidden max-w-5xl mx-auto mb-2"></div>
 
       <!-- ── FILTERS ── -->
       <div class="max-w-5xl mx-auto mb-8 p-4 rounded-xl" style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);">
@@ -1083,6 +1117,16 @@ const DEFAULT_TEMPLATES = {
       </p>
     </div>
 
+    <!-- ContentScore Badge — Embed on your website -->
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px 24px;margin-bottom:28px;">
+      <p style="font-size:15px;color:#111827;font-weight:700;margin:0 0 6px;">🏅 Your Free ContentScore Badge</p>
+      <p style="font-size:14px;color:#374151;line-height:1.6;margin:0 0 14px;">
+        Copy and paste the code below to add your badge to your website — it shows visitors your content is verified and builds trust instantly.
+      </p>
+      {{badge_widget}}
+      <p style="font-size:13px;color:#6b7280;margin:12px 0 0;">Paste the HTML above anywhere on your website. It links back to your verified page.</p>
+    </div>
+
     <!-- Want to reach 100? -->
     <p style="font-size:16px;color:#374151;line-height:1.7;margin:0 0 12px;">
       You are already in the top {{score_label}} tier. But there is still room to reach a perfect <strong>100/100</strong> — and the websites that do get significantly more traffic from Google.
@@ -1122,7 +1166,86 @@ const DEFAULT_TEMPLATES = {
 </body></html>`
   },
 
-  // ── TEMPLATE 2: IMPROVEMENT PITCH (score < 85, has website) ─────────────
+  // ── TEMPLATE 4: ALMOST MADE IT (score 65–69) ───────────────────────────────
+  // Psychology: Specific gap + exact fix + "so close" urgency
+  almostMade: {
+    subject: "{{company_name}}: {{gap}} points from the Elite Leaderboard (score {{score}}/100)",
+    body: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f0f4f8;font-family:Arial,Helvetica,sans-serif;">
+<div style="max-width:600px;margin:32px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.12);">
+
+  <!-- HEADER -->
+  <div style="background:linear-gradient(135deg,#78350f 0%,#b45309 50%,#d97706 100%);padding:40px 32px;text-align:center;">
+    <div style="font-size:56px;line-height:1;margin-bottom:12px;">🎯</div>
+    <h1 style="color:#ffffff;margin:0;font-size:28px;font-weight:800;letter-spacing:-0.5px;">So Close.</h1>
+    <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-size:16px;">{{gap}} points from the Elite Leaderboard</p>
+  </div>
+
+  <!-- BODY -->
+  <div style="padding:36px 32px;">
+
+    <p style="font-size:17px;color:#111827;line-height:1.7;margin:0 0 16px;">Hi <strong>{{company_name}}</strong>,</p>
+
+    <p style="font-size:16px;color:#374151;line-height:1.7;margin:0 0 24px;">
+      My name is <strong>{{sender_name}}</strong> from <strong>{{sender_company}}</strong>.<br>
+      I scan websites for content quality — and yours almost made our Elite Leaderboard.
+    </p>
+
+    <!-- Score highlight box -->
+    <div style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:2px solid #f59e0b;border-radius:12px;padding:24px;margin:0 0 28px;text-align:center;">
+      <p style="margin:0 0 4px;font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;">Your ContentScore</p>
+      <div style="font-size:52px;font-weight:900;color:#b45309;line-height:1;">{{score}}</div>
+      <div style="font-size:14px;color:#6b7280;margin-bottom:8px;">out of 100 &nbsp;·&nbsp; <strong style="color:#b45309;">{{score_label}}</strong></div>
+      {{score_bar}}
+      <div style="margin-top:12px;background:#fef9c3;border-radius:8px;padding:10px 16px;display:inline-block;">
+        <span style="font-size:14px;color:#713f12;font-weight:700;">⚡ Just {{gap}} points from the Elite Leaderboard (70+)</span>
+      </div>
+    </div>
+
+    <!-- The one fix -->
+    <p style="font-size:15px;color:#374151;font-weight:700;margin:0 0 8px;">The #1 thing holding you back:</p>
+    <div style="background:#fff7ed;border-left:4px solid #f59e0b;border-radius:0 8px 8px 0;padding:16px 20px;margin-bottom:28px;">
+      <p style="margin:0;font-size:15px;color:#92400e;line-height:1.6;">{{top_issue}}</p>
+    </div>
+
+    <p style="font-size:16px;color:#374151;line-height:1.7;margin:0 0 24px;">
+      Fix that one issue and your site hits the leaderboard — which means free exposure to thousands of buyers who use ContentScale to find trusted suppliers. I can walk you through exactly what to change. Takes 15 minutes.
+    </p>
+
+    <!-- CTA -->
+    <div style="text-align:center;margin-bottom:32px;">
+      <a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#b45309,#d97706);color:#ffffff;font-size:16px;font-weight:700;padding:16px 40px;border-radius:10px;text-decoration:none;">
+        💬 Let's Fix It — WhatsApp
+      </a>
+      <p style="margin:10px 0 0;font-size:12px;color:#9ca3af;">Or reply directly · Mon–Fri 9:00–18:00 CET</p>
+    </div>
+
+    <!-- Signature -->
+    <div style="border-top:1px solid #f3f4f6;padding-top:24px;">
+      <p style="font-size:15px;color:#374151;margin:0;">Warm regards,</p>
+      <p style="font-size:15px;color:#111827;font-weight:700;margin:4px 0;">{{sender_name}}</p>
+      <p style="font-size:13px;color:#6b7280;margin:2px 0;">{{sender_company}} · Amsterdam, Netherlands</p>
+      <p style="font-size:13px;color:#6b7280;margin:2px 0;">📞 {{sender_phone}} · <a href="{{leaderboard_url}}" style="color:#b45309;">View Leaderboard</a></p>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 32px;text-align:center;">
+    <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.8;">
+      {{sender_company}} · Amsterdam, Netherlands · {{year}}<br>
+      You received this because your website was scanned by our ContentScore tool.<br>
+      <a href="{{unsubscribe_url}}" style="color:#b45309;text-decoration:underline;">Unsubscribe</a>
+    </p>
+  </div>
+
+</div>
+</body></html>\`
+  },
+
+  // ── TEMPLATE 2: IMPROVEMENT PITCH (score < 65, has website) ─────────────
   // Psychology: Specific diagnosis + urgency (competitors improving) + easy next step
   improvement: {
     subject: "I found 1 issue holding {{company_name}} back on Google (score: {{score}}/100)",
@@ -1388,6 +1511,7 @@ document.addEventListener('DOMContentLoaded', function () {
   loadFreelancers();
   updateDailyLimitUI();       // show today's send count immediately
   processEmailQueue();        // drain any queued emails from yesterday's overflow
+  checkRescanReminder();      // #1 — show rescan banner if >30 days since last scan
   // Show queue badge if overflow waiting
   const qc = getQueue().length;
   if (qc > 0) {
@@ -1420,6 +1544,7 @@ async function registerUser() {
     }
     loadApiStatus();
     loadUserTemplates();
+  checkRescanReminder(); // #1 — Show rescan banner if >30 days since last scan
   } catch (error) { console.error('Registration error:', error); }
 }
 
@@ -1657,7 +1782,7 @@ async function startAutoDiscover() {
     setDiscoverProgress(50, `Found ${urls.length} businesses. Starting ContentScore scan...`);
 
     // ── STEP 3: Run ContentScore on each URL ───────────────────
-    const results = { leaderboard: [], withWebsite: [], withoutWebsite: [], errors: [] };
+    const results = { leaderboard: [], almostMade: [], withWebsite: [], withoutWebsite: [], errors: [] };
     let scanned = 0;
 
     for (const place of urls) {
@@ -1676,7 +1801,8 @@ async function startAutoDiscover() {
         const score    = scanData.score || 0;
         const item = { url: place.url, score, data: { ...scanData, country, name: place.name, email: place.email, emails: place.emails, phone: place.phone, address: place.address } };
 
-        if (score >= 70)   results.leaderboard.push(item);
+        if (score >= 70)       results.leaderboard.push(item);
+        else if (score >= 65) results.almostMade.push(item);
         else               results.withWebsite.push(item);
       } catch (e) {
         results.errors.push({ url: place.url, error: e.message });
@@ -1763,7 +1889,7 @@ async function startAutoDiscover() {
 }
 // ============================================================
 async function loadUserTemplates() {
-  ['congrats', 'improvement', 'website'].forEach(t => {
+  ['congrats', 'almostMade', 'improvement', 'website'].forEach(t => {
     const subEl = document.getElementById('template-' + t + '-subject');
     const bodyEl = document.getElementById('template-' + t + '-body');
     if (subEl && DEFAULT_TEMPLATES[t]) subEl.value = DEFAULT_TEMPLATES[t].subject;
@@ -1775,7 +1901,7 @@ async function loadUserTemplates() {
     const data = await response.json();
     if (data.success && data.templates) {
       userTemplates = data.templates;
-      ['congrats', 'improvement', 'website'].forEach(t => {
+      ['congrats', 'almostMade', 'improvement', 'website'].forEach(t => {
         if (userTemplates[t] && userTemplates[t].subject) {
           const subEl = document.getElementById('template-' + t + '-subject');
           const bodyEl = document.getElementById('template-' + t + '-body');
@@ -1866,11 +1992,58 @@ async function scanSingleURL() {
     progressBar.style.width = '100%';
     progressText.textContent = 'Complete!';
     setTimeout(() => { progress.classList.add('hidden'); button.disabled = false; button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan'; }, 1000);
+    // #1 — Store this scan for rescan reminder
+    try {
+      const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
+      scanHistory.unshift({ url: data.url || url, score: data.score, date: new Date().toISOString() });
+      localStorage.setItem('cs_scanHistory', JSON.stringify(scanHistory.slice(0, 20)));
+    } catch(e) {}
+    // #6 — Fetch rank after scan to inject into badge
+    if (data.score >= 70) {
+      fetch('/api/leaderboard').then(r => r.json()).then(lb => {
+        const entries = lb.entries || [];
+        const idx = entries.findIndex(e => e.url === url || e.url === data.url);
+        const rank = idx !== -1 ? idx + 1 : null;
+        const total = entries.length;
+        if (rank) {
+          const rankEl = document.getElementById('badgeRankDisplay');
+          if (rankEl) {
+            rankEl.innerHTML = `<span style="font-size:0.78rem;font-weight:700;color:#a78bfa!important;">🏅 Ranked <strong style="color:#e9d5ff!important;">#${rank}</strong> of ${total} on ContentScale Leaderboard</span>`;
+            rankEl.classList.remove('hidden');
+          }
+        }
+      }).catch(() => {}); // rank is a bonus, never block on failure
+    }
   } catch (error) {
-    alert('❌ Scan failed: ' + error.message);
     progress.classList.add('hidden');
     button.disabled = false;
     button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
+    // Show inline error — no ugly alert
+    const errMsg = error.message || 'Unknown error';
+    const isBlocked = errMsg.toLowerCase().includes('block') || errMsg.toLowerCase().includes('403') || errMsg.toLowerCase().includes('forbidden');
+    const isTimeout = errMsg.toLowerCase().includes('timeout') || errMsg.toLowerCase().includes('timed out') || errMsg.toLowerCase().includes('econnreset');
+    const reason = isBlocked ? '🚫 This website is blocking automated scanners (403 / firewall).'
+                 : isTimeout ? '⏱️ The website took too long to respond (timeout).'
+                 : '⚠️ ' + errMsg;
+    const resultDiv = document.getElementById('singleResult');
+    resultDiv.innerHTML = `
+      <div style="background:#1a0a0a;border:2px solid #ef4444;border-radius:14px;padding:24px;margin-top:16px;text-align:center;">
+        <div style="font-size:2.5rem;margin-bottom:8px;">❌</div>
+        <div style="font-weight:800;font-size:1.1rem;color:#f87171!important;margin-bottom:8px;">Scan Failed</div>
+        <div style="font-size:0.9rem;color:#fca5a5!important;margin-bottom:16px;line-height:1.6;">${reason}</div>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+          <button onclick="document.getElementById('singleUrlInput').value='${url}';document.getElementById('singleResult').classList.add('hidden');scanSingleURL()"
+            style="background:#7f1d1d;color:white!important;border:1px solid #ef4444;border-radius:8px;padding:10px 20px;font-size:0.85rem;font-weight:700;cursor:pointer;">
+            🔄 Retry Scan
+          </button>
+          <button onclick="document.getElementById('singleResult').classList.add('hidden')"
+            style="background:#1e293b;color:#94a3b8!important;border:1px solid #334155;border-radius:8px;padding:10px 20px;font-size:0.85rem;cursor:pointer;">
+            Dismiss
+          </button>
+        </div>
+      </div>`;
+    resultDiv.classList.remove('hidden');
+    resultDiv.scrollIntoView({ behavior: 'smooth' });
   }
 }
 
@@ -2073,6 +2246,7 @@ function displayScanResult(data) {
                     <div style="display:inline-block;background:white;padding:5px 18px;border-radius:50px;margin-bottom:14px;border:1px solid ${tier.pillBorder};">
                       <span style="font-size:0.78rem;color:${tier.pillText}!important;font-weight:700;letter-spacing:0.06em;">✓ ${tier.pill}</span>
                     </div>
+                    <div id="badgeRankDisplay" class="hidden" style="margin-bottom:10px;padding:4px 14px;background:rgba(124,58,237,0.1);border-radius:50px;border:1px solid #7c3aed;display:inline-block;"></div>
                     <div style="font-size:0.95rem;color:${tier.headlineColor}!important;font-weight:700;margin-bottom:14px;">${tier.headline}</div>
                     <div style="margin-bottom:8px;">
                       <span style="font-size:4rem;font-weight:900;color:${tier.scoreColor}!important;display:inline-block;">${score}</span><span style="font-size:1.5rem;color:#6b7280!important;font-weight:400;">/100</span>
@@ -2220,7 +2394,7 @@ async function startBulkScan() {
   document.getElementById('bulkProgress').classList.remove('hidden');
   document.getElementById('bulkResults').classList.add('hidden');
 
-  let results = { leaderboard: [], withWebsite: [], withoutWebsite: [], errors: [] };
+  let results = { leaderboard: [], almostMade: [], withWebsite: [], withoutWebsite: [], errors: [] };
 
   for (let i = 0; i < urls.length; i++) {
     let url = urls[i];
@@ -2236,9 +2410,10 @@ async function startBulkScan() {
       const data = await response.json();
       if (data.success) {
         const score = data.score || 0;
-        if (score >= 70)    results.leaderboard.push({ url, score, data });
-        else if (score > 0) results.withWebsite.push({ url, score, data });
-        else                results.withoutWebsite.push({ url, score, data });
+        if (score >= 70)             results.leaderboard.push({ url, score, data });
+        else if (score >= 65)          results.almostMade.push({ url, score, data });
+        else if (score > 0)            results.withWebsite.push({ url, score, data });
+        else                           results.withoutWebsite.push({ url, score, data });
       } else {
         results.errors.push({ url, error: data.error });
       }
@@ -2283,12 +2458,47 @@ async function startBulkScan() {
   document.getElementById('bulkProgress').classList.add('hidden');
 }
 
+// Retry a single URL that failed during bulk scan
+function retryBulkUrl(url) {
+  const container = document.getElementById('bulkResultsContainer');
+  const retryDiv = document.createElement('div');
+  retryDiv.style.cssText = 'background:#0f172a;border:1px solid #334155;border-radius:8px;padding:12px;margin-bottom:8px;font-size:0.82rem;';
+  retryDiv.innerHTML = `<span style="color:#fbbf24!important;">⏳ Retrying ${url}...</span>`;
+  container.appendChild(retryDiv);
+  fetch('/api/scan', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ url }) })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        const s = data.score || 0;
+        const col = s >= 70 ? '#4ade80' : s >= 50 ? '#fbbf24' : '#f87171';
+        retryDiv.innerHTML = `<span style="color:${col}!important;">✅ ${url} — ${s}/100 (retry succeeded)</span>`;
+      } else {
+        retryDiv.innerHTML = `<span style="color:#f87171!important;">❌ ${url} — still failed: ${data.error||'unknown'}</span>`;
+      }
+    })
+    .catch(e => { retryDiv.innerHTML = `<span style="color:#f87171!important;">❌ ${url} — ${e.message}</span>`; });
+}
+
 function displayBulkResults(results) {
   let html = '';
   if (results.leaderboard.length > 0) html += `<div style="background:rgba(16,185,129,0.1);border:1px solid #10b981;border-radius:8px;padding:16px;margin-bottom:12px;"><h5 style="font-weight:700;color:#4ade80!important;margin-bottom:8px;">🏆 Leaderboard (${results.leaderboard.length})</h5><ul style="font-size:0.85rem;">${results.leaderboard.map(r => `<li>✅ ${r.url} — ${r.score}/100</li>`).join('')}</ul></div>`;
+  if (results.almostMade && results.almostMade.length > 0) html += `<div style="background:rgba(245,158,11,0.1);border:1px solid #f59e0b;border-radius:10px;padding:16px;margin-bottom:12px;"><h5 style="font-weight:800;color:#fbbf24!important;margin-bottom:8px;">🎯 Almost Made It — 65-69 (${results.almostMade.length})</h5><p style="font-size:0.75rem;color:#6b7280!important;margin-bottom:8px;">Warmest leads — {{gap}} points from leaderboard</p><ul style="font-size:0.85rem;">${results.almostMade.map(r => `<li>⚡ ${r.url} — ${r.score}/100 (${70-r.score} pts away)</li>`).join('')}</ul></div>`;
   if (results.withWebsite.length > 0) html += `<div style="background:rgba(59,130,246,0.1);border:1px solid #3b82f6;border-radius:8px;padding:16px;margin-bottom:12px;"><h5 style="font-weight:700;color:#60a5fa!important;margin-bottom:8px;">📧 Improvement Emails (${results.withWebsite.length})</h5><ul style="font-size:0.85rem;">${results.withWebsite.map(r => `<li>📨 ${r.url} — ${r.score}/100</li>`).join('')}</ul></div>`;
   if (results.withoutWebsite.length > 0) html += `<div style="background:rgba(126,34,206,0.1);border:1px solid #7e22ce;border-radius:8px;padding:16px;margin-bottom:12px;"><h5 style="font-weight:700;color:#c084fc!important;margin-bottom:8px;">🌐 Website Offers (${results.withoutWebsite.length})</h5><ul style="font-size:0.85rem;">${results.withoutWebsite.map(r => `<li>📬 ${r.url}</li>`).join('')}</ul></div>`;
-  if (results.errors.length > 0) html += `<div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:8px;padding:16px;margin-bottom:12px;"><h5 style="font-weight:700;color:#f87171!important;margin-bottom:8px;">❌ Errors (${results.errors.length})</h5><ul style="font-size:0.85rem;">${results.errors.map(r => `<li>${r.url}</li>`).join('')}</ul></div>`;
+  if (results.errors.length > 0) html += `<div style="background:rgba(239,68,68,0.08);border:1px solid #ef4444;border-radius:10px;padding:16px;margin-bottom:12px;">
+  <h5 style="font-weight:800;color:#f87171!important;margin-bottom:10px;">❌ Failed Scans (${results.errors.length})</h5>
+  ${results.errors.map(r => {
+    const msg = r.error || 'Unknown error';
+    const isBlocked = msg.toLowerCase().includes('block') || msg.includes('403') || msg.toLowerCase().includes('forbidden');
+    const isTimeout = msg.toLowerCase().includes('timeout') || msg.toLowerCase().includes('timed out');
+    const icon = isBlocked ? '🚫' : isTimeout ? '⏱️' : '⚠️';
+    const reason = isBlocked ? 'Site blocks scanners' : isTimeout ? 'Timeout' : msg.slice(0,60);
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;background:rgba(239,68,68,0.06);border-radius:6px;margin-bottom:6px;flex-wrap:wrap;">
+      <div><span style="font-size:0.8rem;color:#fca5a5!important;">${icon} ${r.url}</span><span style="font-size:0.72rem;color:#6b7280!important;margin-left:8px;">${reason}</span></div>
+      <button onclick="retryBulkUrl('${r.url}')" style="background:#7f1d1d;color:white!important;border:1px solid #ef4444;border-radius:5px;padding:3px 10px;font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap;">🔄 Retry</button>
+    </div>`;
+  }).join('')}
+</div>`;
   document.getElementById('bulkResultsContainer').innerHTML = html;
   document.getElementById('bulkResults').classList.remove('hidden');
 }
@@ -2399,6 +2609,61 @@ function applyVars(text, item, senderEmail, senderName) {
   const lbUrl     = 'https://contentscale.site#leaderboard';
   const ctaUrl    = 'https://wa.me/31628073996';
 
+  // ── Email-safe badge (static — no JS/CSS animations, works in all email clients) ──
+  const badgeBorderColor = score >= 85 ? '#84cc16' : score >= 70 ? '#3b82f6' : '#f59e0b';
+  const badgeBg          = score >= 85 ? 'linear-gradient(135deg,#f7fee7,#ecfccb)' : score >= 70 ? 'linear-gradient(135deg,#eff6ff,#dbeafe)' : 'linear-gradient(135deg,#fffbeb,#fef3c7)';
+  const badgeScoreColor  = score >= 85 ? '#4d7c0f' : score >= 70 ? '#1e3a8a' : '#78350f';
+  const badgePillBg      = score >= 85 ? '#f0fdf4' : score >= 70 ? '#eff6ff' : '#fefce8';
+  const badgePillText    = score >= 85 ? '#14532d' : score >= 70 ? '#1e3a8a' : '#713f12';
+  const badgePillLabel   = score >= 85 ? '✓ CONTENT OPTIMIZED' : score >= 70 ? '✓ CONTENT VERIFIED' : '✓ CONTENT ANALYZED';
+  const badgeResultBg    = score >= 85 ? '#dcfce7' : score >= 70 ? '#dbeafe' : '#fef3c7';
+  const badgeResultText  = score >= 85 ? '#166534' : score >= 70 ? '#1e40af' : '#92400e';
+  const badgeResultMsg   = score >= 85 ? '🎉 This content is ranking-ready!' : score >= 70 ? '💡 This content meets quality standards' : '🔧 Improvements identified';
+  const badgeTagline     = score >= 85 ? 'Optimized with GRAAF + CRAFT frameworks' : score >= 70 ? 'Scored with GRAAF + CRAFT frameworks' : 'Analyzed with GRAAF + CRAFT frameworks';
+  // Full URL for specificity — shows exact page that was scored
+  const badgeFullUrl     = url;
+  const badgeDisplayUrl  = url.replace(/https?:\/\//, '').replace(/\/$/, '');
+  const badgeDomain      = badgeDisplayUrl.split('/')[0];
+  const badgePath        = badgeDisplayUrl.includes('/') ? '/' + badgeDisplayUrl.split('/').slice(1).join('/') : '';
+
+  const badgeWidget = \`<!-- ============================================================
+   ContentScore Badge — Email Embed
+   Created by Ottmar Francisca · ContentScale SEO Platform
+   Score: \${score}/100 · Page: \${badgeDisplayUrl}
+   ============================================================ -->
+<table cellpadding="0" cellspacing="0" border="0" align="center" style="margin:28px auto;max-width:400px;width:100%;">
+  <tr>
+    <td style="background:\${score >= 85 ? '#f7fee7' : score >= 70 ? '#eff6ff' : '#fffbeb'};border:2px solid \${badgeBorderColor};border-radius:14px;padding:24px 28px;text-align:center;font-family:Arial,Helvetica,sans-serif;">
+      <!-- Pill -->
+      <div style="display:inline-block;background:\${badgePillBg};border:1px solid \${badgeBorderColor};border-radius:50px;padding:5px 18px;margin-bottom:14px;">
+        <span style="font-size:12px;color:\${badgePillText};font-weight:700;letter-spacing:1px;">\${badgePillLabel}</span>
+      </div>
+      <!-- Score -->
+      <div style="margin:0 0 8px;">
+        <span style="font-size:64px;font-weight:900;color:\${badgeBorderColor};line-height:1;">\${score}</span><span style="font-size:22px;color:#9ca3af;font-weight:400;">/100</span>
+      </div>
+      <!-- Label + tagline -->
+      <div style="font-size:17px;color:\${badgeScoreColor};font-weight:700;margin-bottom:4px;">\${scoreLabel}</div>
+      <div style="font-size:12px;color:\${badgeScoreColor};font-style:italic;margin-bottom:18px;opacity:0.8;">\${badgeTagline}</div>
+      <!-- URL box -->
+      <div style="background:#ffffff;border:1.5px solid \${badgeBorderColor};border-radius:8px;padding:8px 14px;display:inline-block;margin-bottom:14px;max-width:100%;word-break:break-all;">
+        <span style="font-size:13px;color:#374151;">📄 </span><a href="\${badgeFullUrl}" style="font-size:13px;color:\${badgeScoreColor};text-decoration:none;"><strong>\${badgeDomain}</strong><span style="font-weight:400;opacity:0.75;">\${badgePath}</span></a>
+      </div>
+      <!-- Result message -->
+      <div style="background:\${badgeResultBg};border-radius:8px;padding:10px 14px;margin-bottom:16px;">
+        <p style="font-size:13px;color:\${badgeResultText};margin:0;font-weight:600;">\${badgeResultMsg}</p>
+      </div>
+      <!-- Byline -->
+      <div style="font-size:11px;color:\${badgeScoreColor};opacity:0.7;">
+        Verified by <a href="https://app.contentscale.site" style="color:\${badgeScoreColor};text-decoration:none;font-weight:700;">ContentScale SEO Platform</a>
+      </div>
+    </td>
+  </tr>
+</table>
+<!-- ============================================================
+   End ContentScore Badge — Email Embed
+   ============================================================ -->\`;
+
   return text
     .replace(/{{company_name}}/g,    companyName)
     .replace(/{{domain}}/g,          domain)
@@ -2425,7 +2690,9 @@ function applyVars(text, item, senderEmail, senderName) {
     .replace(/{{date}}/g,            dateStr)
     .replace(/{{month}}/g,           monthStr)
     .replace(/{{year}}/g,            yearStr)
-    .replace(/{{unsubscribe_url}}/g, unsubUrl);
+    .replace(/{{unsubscribe_url}}/g, unsubUrl)
+    .replace(/{{badge_widget}}/g,    badgeWidget)
+    .replace(/{{gap}}/g,             String(Math.max(0, 70 - score)));
 }
 
 // ============================================================
@@ -2499,7 +2766,13 @@ async function sendBulkEmails(results, senderEmail, senderName) {
     totalSent += r.sent; totalQueued += r.queued; totalSkipped += r.skipped;
   }
 
-  // 2. Improvement pitch — <70 with website
+  // 2. Almost made it — 65-69 score (warmest lead)
+  if (results.almostMade && results.almostMade.length > 0) {
+    const r = await sendEmailToBusinesses(results.almostMade, 'almostMade', senderEmail, senderName);
+    totalSent += r.sent; totalQueued += r.queued; totalSkipped += r.skipped;
+  }
+
+  // 3. Improvement pitch — <65 with website
   if (results.withWebsite.length > 0) {
     const r = await sendEmailToBusinesses(results.withWebsite, 'improvement', senderEmail, senderName);
     totalSent += r.sent; totalQueued += r.queued; totalSkipped += r.skipped;
@@ -2626,6 +2899,24 @@ function resetLeaderboardFilters() {
 }
 
 function renderLeaderboard(entries) {
+  // #5 — Niche context header
+  const activeNiche   = document.getElementById('filterNiche')?.value || '';
+  const activeCountry = document.getElementById('filterCountry')?.value || '';
+  const nicheHeader   = document.getElementById('leaderboardNicheHeader');
+  if (nicheHeader) {
+    if (activeNiche || activeCountry) {
+      const label = [activeNiche, activeCountry].filter(Boolean).join(' · ');
+      nicheHeader.innerHTML = `
+        <div style="text-align:center;margin-bottom:20px;padding:14px 20px;background:rgba(124,58,237,0.15);border:1px solid #7c3aed;border-radius:12px;">
+          <div style="font-size:0.72rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Filtered View</div>
+          <div style="font-size:1.2rem;font-weight:800;color:#e9d5ff!important;">🏆 Top ${entries.length} · ${label}</div>
+          <div style="font-size:0.78rem;color:#7c3aed!important;margin-top:4px;">Showing ${entries.length} result${entries.length!==1?'s':''} · <button onclick="resetLeaderboardFilters()" style="background:none;border:none;color:#a78bfa!important;cursor:pointer;font-weight:700;font-size:0.78rem;text-decoration:underline;">Clear filters</button></div>
+        </div>`;
+      nicheHeader.classList.remove('hidden');
+    } else {
+      nicheHeader.classList.add('hidden');
+    }
+  }
   const top3Container   = document.getElementById('top3-container');
   const restContainer   = document.getElementById('rankings4to15Container');
   const emptyState      = document.getElementById('leaderboardEmpty');
