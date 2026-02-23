@@ -3109,18 +3109,49 @@ async function loadFreelancers() {
     const data = await response.json();
     const grid = document.getElementById('freelancersGrid');
     if (data.success && data.freelancers && data.freelancers.length > 0) {
-      grid.innerHTML = data.freelancers.map(f => `
-        <div class="card" style="border:1px solid #374151;transition:border-color 0.2s;display:flex;flex-direction:column;" onmouseover="this.style.borderColor='#7e22ce'" onmouseout="this.style.borderColor='#374151'">
-          <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
-            <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#7e22ce,#be185d);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.25rem;">${f.name.charAt(0)}</div>
-            <div>
-              <h3 style="font-weight:700;margin-bottom:2px;">${f.name}</h3>
-              <p style="font-size:0.85rem;color:#9ca3af!important;">${f.title || 'Specialist'}</p>
-            </div>
-          </div>
-          <p style="font-size:0.85rem;color:#d1d5db!important;margin-bottom:16px;flex:1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5;max-height:3.9rem;">${(f.bio || 'No bio available.').slice(0,120)}${(f.bio||'').length > 120 ? '…' : ''}</p>
-          <a href="https://wa.me/31628073996" target="_blank" rel="noopener" style="display:block;width:100%;background:#0f7b3a;color:white!important;text-align:center;padding:10px;border-radius:8px;font-weight:600;text-decoration:none;margin-top:auto;">Contact</a>
-        </div>`).join('');
+      function renderCard(f, featured) {
+        var borderColor = featured ? '#7e22ce' : '#374151';
+        var cardStyle = featured
+          ? 'border:2px solid #7e22ce;background:linear-gradient(135deg,#0f0a1e,#1a1040);'
+          : 'border:1px solid #374151;';
+        var avatarSize = featured ? '52' : '48';
+        var badge = f.is_featured ? '<span style="font-size:0.6rem;background:#7e22ce;color:white!important;padding:2px 7px;border-radius:99px;margin-left:6px;white-space:nowrap;">FEATURED</span>' : '';
+        var bio = (f.bio || 'No bio available.').slice(0, 120) + ((f.bio || '').length > 120 ? '…' : '');
+        return '<div class="card" style="' + cardStyle + 'transition:border-color 0.2s;display:flex;flex-direction:column;" onmouseover="this.style.borderColor=\'#a855f7\'" onmouseout="this.style.borderColor=\'' + borderColor + '\'">'
+          + '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">'
+          + '<div style="width:' + avatarSize + 'px;height:' + avatarSize + 'px;border-radius:50%;background:linear-gradient(135deg,#7e22ce,#be185d);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.25rem;border:' + (featured ? '2px solid #a855f7' : 'none') + ';">' + f.name.charAt(0) + '</div>'
+          + '<div style="flex:1;min-width:0;">'
+          + '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;"><h3 style="font-weight:700;margin-bottom:0;">' + f.name + '</h3>' + badge + '</div>'
+          + '<p style="font-size:0.82rem;color:#9ca3af!important;margin-top:2px;">' + (f.title || 'Specialist') + '</p>'
+          + '</div></div>'
+          + '<p style="font-size:0.85rem;color:#d1d5db!important;margin-bottom:16px;flex:1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5;max-height:3.9rem;">' + bio + '</p>'
+          + '<a href="https://wa.me/31628073996" target="_blank" rel="noopener" style="display:block;width:100%;background:#0f7b3a;color:white!important;text-align:center;padding:10px;border-radius:8px;font-weight:600;text-decoration:none;margin-top:auto;">Contact</a>'
+          + '</div>';
+      }
+
+      var featured = data.freelancers.filter(function(f){ return f.is_featured; });
+      var standard = data.freelancers.filter(function(f){ return !f.is_featured; });
+
+      // If no featured flags set, treat first 4 as featured, rest as standard
+      if (featured.length === 0) {
+        featured = data.freelancers.slice(0, 4);
+        standard = data.freelancers.slice(4);
+      }
+
+      var html = '';
+      if (featured.length > 0) {
+        html += '<div style="margin-bottom:20px;">'
+          + '<div style="font-size:0.7rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">⭐ Featured Specialists</div>'
+          + '<div class="cards-grid">' + featured.map(function(f){ return renderCard(f, true); }).join('') + '</div>'
+          + '</div>';
+      }
+      if (standard.length > 0) {
+        html += '<div>'
+          + '<div style="font-size:0.7rem;font-weight:700;color:#6b7280!important;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">🔍 More Specialists</div>'
+          + '<div class="cards-grid">' + standard.map(function(f){ return renderCard(f, false); }).join('') + '</div>'
+          + '</div>';
+      }
+      grid.innerHTML = html;
     } else {
       // 8 placeholder cards: top 4 featured, bottom 4 standard
       function makeCard(f, featured) {
