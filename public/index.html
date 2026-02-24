@@ -242,6 +242,150 @@ footer p { color: #9ca3af !important; }
   .page-tab { border-radius: 7px; font-size: 0.8rem; padding: 10px 6px; white-space: nowrap; min-width: 0; color: #e5e7eb !important; background: rgba(255,255,255,0.08); }
 }
 
+
+/* ── Voice Bot ── */
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0d1117; }
+
+  #vb-orb-wrap {
+    position: fixed;
+    bottom: 32px; right: 32px;
+    z-index: 99999;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    cursor: pointer; user-select: none;
+  }
+
+  #vb-orb {
+    width: 70px; height: 70px; border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid rgba(168,85,247,0.7);
+    box-shadow: 0 0 0 6px rgba(168,85,247,0.15), 0 8px 32px rgba(0,0,0,0.5);
+    transition: box-shadow 0.3s, border-color 0.3s;
+    position: relative;
+  }
+  #vb-orb img { width:100%;height:100%;object-fit:cover;display:block;pointer-events:none; }
+
+  #vb-orb::after {
+    content:''; position:absolute; inset:-8px; border-radius:50%;
+    border:2px solid rgba(168,85,247,0.35);
+    animation: idle-ring 2.4s ease-out infinite;
+    pointer-events:none;
+  }
+  @keyframes idle-ring {
+    0%   { transform:scale(1); opacity:1; }
+    100% { transform:scale(1.55); opacity:0; }
+  }
+
+  #vb-orb.listening {
+    border-color:#ef4444;
+    box-shadow:0 0 0 8px rgba(239,68,68,0.15), 0 8px 32px rgba(0,0,0,0.5);
+    animation: mic-pulse 0.7s ease-in-out infinite alternate;
+  }
+  #vb-orb.listening::after { border-color:rgba(239,68,68,0.4); }
+  @keyframes mic-pulse { from{transform:scale(1)} to{transform:scale(1.08)} }
+
+  #vb-orb.speaking {
+    border-color:#10b981;
+    box-shadow:0 0 0 8px rgba(16,185,129,0.15), 0 8px 32px rgba(0,0,0,0.5);
+  }
+  #vb-orb.speaking::after { border-color:rgba(16,185,129,0.4); }
+
+  #vb-label {
+    font-family:'Segoe UI',system-ui,sans-serif;
+    font-size:0.72rem; font-weight:600; letter-spacing:0.04em;
+    color:rgba(255,255,255,0.55); text-transform:uppercase;
+    text-align:center; transition:color 0.3s; white-space:nowrap;
+  }
+  #vb-label.listening { color:#ef4444; }
+  #vb-label.speaking  { color:#10b981; }
+
+
+  /* ── Text input fallback ── */
+  #vb-text-box {
+    position:fixed;
+    bottom:130px; right:32px;
+    z-index:99998;
+    display:none;
+    width:280px;
+    animation:slide-up 0.2s ease;
+  }
+  @keyframes slide-up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  #vb-text-box form {
+    display:flex; gap:8px;
+    background:#161b27;
+    border:1px solid rgba(168,85,247,0.35);
+    border-radius:50px;
+    padding:8px 8px 8px 18px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.5);
+  }
+  #vb-text-input {
+    flex:1; background:none; border:none; outline:none;
+    color:#e2e8f0; font-size:0.88rem;
+    font-family:'Segoe UI',system-ui,sans-serif;
+    caret-color:#a855f7;
+  }
+  #vb-text-input::placeholder { color:rgba(255,255,255,0.25); }
+  #vb-text-send {
+    width:34px; height:34px; border-radius:50%; flex-shrink:0;
+    background:linear-gradient(135deg,#7c3aed,#a855f7);
+    border:none; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:transform 0.15s;
+  }
+  #vb-text-send:hover { transform:scale(1.08); }
+  #vb-text-send svg { width:16px; height:16px; fill:white; pointer-events:none; }
+
+  /* ── Keyboard toggle ── */
+  #vb-keyboard-btn {
+    width:30px; height:30px; border-radius:50%;
+    background:rgba(255,255,255,0.07);
+    border:1px solid rgba(255,255,255,0.1);
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition:background 0.2s;
+    position:absolute;
+    top:-4px; left:-36px;
+  }
+  #vb-keyboard-btn:hover { background:rgba(255,255,255,0.14); }
+  #vb-keyboard-btn svg { width:14px; height:14px; fill:rgba(255,255,255,0.5); pointer-events:none; }
+
+  #vb-splash {
+    position:fixed; inset:0; z-index:999999;
+    background:rgba(13,17,23,0.92);
+    backdrop-filter:blur(12px);
+    display:flex; align-items:center; justify-content:center;
+  }
+  #vb-splash-inner {
+    display:flex; flex-direction:column; align-items:center; gap:20px;
+    text-align:center; padding:20px;
+  }
+  #vb-splash-photo {
+    width:92px; height:92px; border-radius:50%;
+    object-fit:cover;
+    border:3px solid rgba(168,85,247,0.65);
+    animation:splash-glow 2s ease-in-out infinite;
+  }
+  @keyframes splash-glow {
+    0%,100%{box-shadow:0 0 24px rgba(168,85,247,0.35)}
+    50%    {box-shadow:0 0 52px rgba(168,85,247,0.75)}
+  }
+  #vb-splash-btn {
+    padding:13px 36px;
+    background:linear-gradient(135deg,#7c3aed,#a855f7);
+    border:none; border-radius:50px;
+    color:#fff; font-size:1rem; font-weight:700;
+    cursor:pointer; letter-spacing:0.02em;
+    font-family:'Segoe UI',system-ui,sans-serif;
+    box-shadow:0 4px 20px rgba(168,85,247,0.5);
+    transition:transform 0.15s;
+  }
+  #vb-splash-btn:hover { transform:scale(1.04); }
+  #vb-splash-sub {
+    font-family:'Segoe UI',system-ui,sans-serif;
+    font-size:0.75rem; color:rgba(255,255,255,0.35);
+    text-transform:uppercase; letter-spacing:0.07em;
+  }
+
 </style>
 </head>
 <body class="bg-gray-900">
@@ -1542,6 +1686,177 @@ const DEFAULT_TEMPLATES = {
   </div>
 
 </div>
+
+<!-- ══ ContentScale Voice Bot ══ -->
+<div id="vb-splash">
+  <div id="vb-splash-inner">
+    <img id="vb-splash-photo" src="https://contentscale.site/wp-content/uploads/2025/11/ottmar-francisca-headshot.png" alt="Ottmar">
+    <div id="vb-splash-sub">AI Voice Assistant</div>
+    <button id="vb-splash-btn" onclick="splashClick()">🎤 Tap to speak</button>
+  </div>
+</div>
+
+<div id="vb-text-box">
+  <form onsubmit="submitText(event)">
+    <input id="vb-text-input" type="text" placeholder="Type your question…" autocomplete="off">
+    <button id="vb-text-send" type="submit">
+      <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+    </button>
+  </form>
+</div>
+
+<div id="vb-orb-wrap" style="position:relative" onclick="toggleMic()">
+  <button id="vb-keyboard-btn" onclick="toggleTextBox(event)" title="Type instead">
+    <svg viewBox="0 0 24 24"><path d="M20 5H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 5H5v-2h2v2zm10 0H9v-2h8v2zm0-3h-2v-2h2v2zm0-3h-2V8h2v2zm2 6h-2v-2h2v2z"/></svg>
+  </button>
+  <div id="vb-orb">
+    <img src="https://contentscale.site/wp-content/uploads/2025/11/ottmar-francisca-headshot.png" alt="Ottmar">
+  </div>
+  <div id="vb-label">Tap to speak</div>
+</div>
+<script>
+
+const ANTHROPIC_KEY  = 'YOUR_ANTHROPIC_KEY_HERE';
+const ELEVENLABS_KEY = 'YOUR_ELEVENLABS_KEY_HERE';
+const VOICE_ID       = '21m00Tcm4TlvDq8ikWAM';
+const ELEVEN_MODEL   = 'eleven_multilingual_v2';
+
+const SYSTEM_PROMPT = `You are the ContentScale AI voice assistant on app.contentscale.site.
+ContentScale is an elite SEO content recovery service by Ottmar JG Francisca, Amsterdam.
+Helps businesses recover Google traffic lost to algorithm updates and AI Overviews using the GRAAF Framework + CRAFT methodology + Technical SEO.
+Key facts: 78% recovery rate in 90 days, 200+ clients, 47+ countries, pricing EUR7-997, contact via WhatsApp, privacy-first, zero data collection. Free scanner at app.contentscale.site.
+Rules: always reply in the same language the visitor uses. Keep answers SHORT — max 2 sentences (this is voice). Be warm and expert. If outside your knowledge, invite them to WhatsApp Ottmar directly.`;
+
+let isListening=false, isSpeaking=false, recognition=null, currentAudio=null, history=[];
+
+function splashClick(){
+  document.getElementById('vb-splash').remove();
+  greet();
+}
+
+async function greet(){
+  await speak("Hi! I'm Ottmar's AI assistant. How can I help you with your SEO today?");
+}
+
+function toggleMic(){
+  if(isSpeaking){stopAudio();return;}
+  if(isListening){stopListen();return;}
+  startListen();
+}
+
+function startListen(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){setLabel('Use Chrome or Edge','');return;}
+  recognition=new SR();
+  recognition.continuous=false;
+  recognition.interimResults=false;
+  recognition.lang='en-US';
+  recognition.onresult=async(e)=>{
+    const text=e.results[0][0].transcript;
+    stopListen();
+    await handleInput(text);
+  };
+  recognition.onerror=()=>stopListen();
+  recognition.onend=()=>{if(isListening)stopListen();};
+  isListening=true;
+  setState('listening');
+  setLabel('Listening…','listening');
+  recognition.start();
+}
+
+function stopListen(){
+  isListening=false;
+  if(recognition){try{recognition.stop();}catch(e){}recognition=null;}
+  setState('');setLabel('Tap to speak','');
+}
+
+async function handleInput(text){
+  setLabel('Thinking…','speaking');
+  try{
+    history.push({role:'user',content:text});
+    const reply=await askClaude();
+    history.push({role:'assistant',content:reply});
+    await speak(reply);
+  }catch(err){
+    console.error(err);setState('');setLabel('Tap to speak','');
+  }
+}
+
+async function askClaude(){
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':ANTHROPIC_KEY,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:150,
+      system:SYSTEM_PROMPT,
+      messages:history.slice(-6)
+    })
+  });
+  if(!r.ok)throw new Error('Claude '+r.status);
+  const d=await r.json();
+  return d.content[0].text;
+}
+
+async function speak(text){
+  setState('speaking');setLabel('Speaking…','speaking');
+  try{
+    const r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+VOICE_ID,{
+      method:'POST',
+      headers:{'xi-api-key':ELEVENLABS_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({text,model_id:ELEVEN_MODEL,voice_settings:{stability:0.45,similarity_boost:0.75}})
+    });
+    if(!r.ok)throw new Error('ElevenLabs '+r.status);
+    const blob=await r.blob();
+    const url=URL.createObjectURL(blob);
+    currentAudio=new Audio(url);
+    isSpeaking=true;
+    currentAudio.onended=()=>{
+      isSpeaking=false;URL.revokeObjectURL(url);
+      setState('');setLabel('Tap to speak','');
+    };
+    await currentAudio.play();
+  }catch(err){
+    console.warn('TTS:',err);isSpeaking=false;
+    setState('');setLabel('Tap to speak','');
+  }
+}
+
+function stopAudio(){
+  if(currentAudio){currentAudio.pause();currentAudio=null;}
+  isSpeaking=false;setState('');setLabel('Tap to speak','');
+}
+
+
+function toggleTextBox(e){
+  e.stopPropagation();
+  const box=document.getElementById('vb-text-box');
+  const visible=box.style.display==='block';
+  box.style.display=visible?'none':'block';
+  if(!visible) setTimeout(()=>document.getElementById('vb-text-input').focus(),50);
+}
+
+async function submitText(e){
+  e.preventDefault();
+  const inp=document.getElementById('vb-text-input');
+  const text=inp.value.trim();
+  if(!text)return;
+  inp.value='';
+  document.getElementById('vb-text-box').style.display='none';
+  if(isListening)stopListen();
+  await handleInput(text);
+}
+
+function setState(s){document.getElementById('vb-orb').className=s;}
+function setLabel(t,c){const el=document.getElementById('vb-label');el.textContent=t;el.className=c||'';}
+
+</script>
+
 </body>
 </html>`
   },
@@ -1669,6 +1984,177 @@ const DEFAULT_TEMPLATES = {
   </div>
 
 </div>
+
+<!-- ══ ContentScale Voice Bot ══ -->
+<div id="vb-splash">
+  <div id="vb-splash-inner">
+    <img id="vb-splash-photo" src="https://contentscale.site/wp-content/uploads/2025/11/ottmar-francisca-headshot.png" alt="Ottmar">
+    <div id="vb-splash-sub">AI Voice Assistant</div>
+    <button id="vb-splash-btn" onclick="splashClick()">🎤 Tap to speak</button>
+  </div>
+</div>
+
+<div id="vb-text-box">
+  <form onsubmit="submitText(event)">
+    <input id="vb-text-input" type="text" placeholder="Type your question…" autocomplete="off">
+    <button id="vb-text-send" type="submit">
+      <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+    </button>
+  </form>
+</div>
+
+<div id="vb-orb-wrap" style="position:relative" onclick="toggleMic()">
+  <button id="vb-keyboard-btn" onclick="toggleTextBox(event)" title="Type instead">
+    <svg viewBox="0 0 24 24"><path d="M20 5H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 5H5v-2h2v2zm10 0H9v-2h8v2zm0-3h-2v-2h2v2zm0-3h-2V8h2v2zm2 6h-2v-2h2v2z"/></svg>
+  </button>
+  <div id="vb-orb">
+    <img src="https://contentscale.site/wp-content/uploads/2025/11/ottmar-francisca-headshot.png" alt="Ottmar">
+  </div>
+  <div id="vb-label">Tap to speak</div>
+</div>
+<script>
+
+const ANTHROPIC_KEY  = 'YOUR_ANTHROPIC_KEY_HERE';
+const ELEVENLABS_KEY = 'YOUR_ELEVENLABS_KEY_HERE';
+const VOICE_ID       = '21m00Tcm4TlvDq8ikWAM';
+const ELEVEN_MODEL   = 'eleven_multilingual_v2';
+
+const SYSTEM_PROMPT = `You are the ContentScale AI voice assistant on app.contentscale.site.
+ContentScale is an elite SEO content recovery service by Ottmar JG Francisca, Amsterdam.
+Helps businesses recover Google traffic lost to algorithm updates and AI Overviews using the GRAAF Framework + CRAFT methodology + Technical SEO.
+Key facts: 78% recovery rate in 90 days, 200+ clients, 47+ countries, pricing EUR7-997, contact via WhatsApp, privacy-first, zero data collection. Free scanner at app.contentscale.site.
+Rules: always reply in the same language the visitor uses. Keep answers SHORT — max 2 sentences (this is voice). Be warm and expert. If outside your knowledge, invite them to WhatsApp Ottmar directly.`;
+
+let isListening=false, isSpeaking=false, recognition=null, currentAudio=null, history=[];
+
+function splashClick(){
+  document.getElementById('vb-splash').remove();
+  greet();
+}
+
+async function greet(){
+  await speak("Hi! I'm Ottmar's AI assistant. How can I help you with your SEO today?");
+}
+
+function toggleMic(){
+  if(isSpeaking){stopAudio();return;}
+  if(isListening){stopListen();return;}
+  startListen();
+}
+
+function startListen(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){setLabel('Use Chrome or Edge','');return;}
+  recognition=new SR();
+  recognition.continuous=false;
+  recognition.interimResults=false;
+  recognition.lang='en-US';
+  recognition.onresult=async(e)=>{
+    const text=e.results[0][0].transcript;
+    stopListen();
+    await handleInput(text);
+  };
+  recognition.onerror=()=>stopListen();
+  recognition.onend=()=>{if(isListening)stopListen();};
+  isListening=true;
+  setState('listening');
+  setLabel('Listening…','listening');
+  recognition.start();
+}
+
+function stopListen(){
+  isListening=false;
+  if(recognition){try{recognition.stop();}catch(e){}recognition=null;}
+  setState('');setLabel('Tap to speak','');
+}
+
+async function handleInput(text){
+  setLabel('Thinking…','speaking');
+  try{
+    history.push({role:'user',content:text});
+    const reply=await askClaude();
+    history.push({role:'assistant',content:reply});
+    await speak(reply);
+  }catch(err){
+    console.error(err);setState('');setLabel('Tap to speak','');
+  }
+}
+
+async function askClaude(){
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':ANTHROPIC_KEY,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:150,
+      system:SYSTEM_PROMPT,
+      messages:history.slice(-6)
+    })
+  });
+  if(!r.ok)throw new Error('Claude '+r.status);
+  const d=await r.json();
+  return d.content[0].text;
+}
+
+async function speak(text){
+  setState('speaking');setLabel('Speaking…','speaking');
+  try{
+    const r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+VOICE_ID,{
+      method:'POST',
+      headers:{'xi-api-key':ELEVENLABS_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({text,model_id:ELEVEN_MODEL,voice_settings:{stability:0.45,similarity_boost:0.75}})
+    });
+    if(!r.ok)throw new Error('ElevenLabs '+r.status);
+    const blob=await r.blob();
+    const url=URL.createObjectURL(blob);
+    currentAudio=new Audio(url);
+    isSpeaking=true;
+    currentAudio.onended=()=>{
+      isSpeaking=false;URL.revokeObjectURL(url);
+      setState('');setLabel('Tap to speak','');
+    };
+    await currentAudio.play();
+  }catch(err){
+    console.warn('TTS:',err);isSpeaking=false;
+    setState('');setLabel('Tap to speak','');
+  }
+}
+
+function stopAudio(){
+  if(currentAudio){currentAudio.pause();currentAudio=null;}
+  isSpeaking=false;setState('');setLabel('Tap to speak','');
+}
+
+
+function toggleTextBox(e){
+  e.stopPropagation();
+  const box=document.getElementById('vb-text-box');
+  const visible=box.style.display==='block';
+  box.style.display=visible?'none':'block';
+  if(!visible) setTimeout(()=>document.getElementById('vb-text-input').focus(),50);
+}
+
+async function submitText(e){
+  e.preventDefault();
+  const inp=document.getElementById('vb-text-input');
+  const text=inp.value.trim();
+  if(!text)return;
+  inp.value='';
+  document.getElementById('vb-text-box').style.display='none';
+  if(isListening)stopListen();
+  await handleInput(text);
+}
+
+function setState(s){document.getElementById('vb-orb').className=s;}
+function setLabel(t,c){const el=document.getElementById('vb-label');el.textContent=t;el.className=c||'';}
+
+</script>
+
 </body>
 </html>`
   },
@@ -1771,6 +2257,177 @@ const DEFAULT_TEMPLATES = {
   </div>
 
 </div>
+
+<!-- ══ ContentScale Voice Bot ══ -->
+<div id="vb-splash">
+  <div id="vb-splash-inner">
+    <img id="vb-splash-photo" src="https://contentscale.site/wp-content/uploads/2025/11/ottmar-francisca-headshot.png" alt="Ottmar">
+    <div id="vb-splash-sub">AI Voice Assistant</div>
+    <button id="vb-splash-btn" onclick="splashClick()">🎤 Tap to speak</button>
+  </div>
+</div>
+
+<div id="vb-text-box">
+  <form onsubmit="submitText(event)">
+    <input id="vb-text-input" type="text" placeholder="Type your question…" autocomplete="off">
+    <button id="vb-text-send" type="submit">
+      <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+    </button>
+  </form>
+</div>
+
+<div id="vb-orb-wrap" style="position:relative" onclick="toggleMic()">
+  <button id="vb-keyboard-btn" onclick="toggleTextBox(event)" title="Type instead">
+    <svg viewBox="0 0 24 24"><path d="M20 5H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 5H5v-2h2v2zm10 0H9v-2h8v2zm0-3h-2v-2h2v2zm0-3h-2V8h2v2zm2 6h-2v-2h2v2z"/></svg>
+  </button>
+  <div id="vb-orb">
+    <img src="https://contentscale.site/wp-content/uploads/2025/11/ottmar-francisca-headshot.png" alt="Ottmar">
+  </div>
+  <div id="vb-label">Tap to speak</div>
+</div>
+<script>
+
+const ANTHROPIC_KEY  = 'YOUR_ANTHROPIC_KEY_HERE';
+const ELEVENLABS_KEY = 'YOUR_ELEVENLABS_KEY_HERE';
+const VOICE_ID       = '21m00Tcm4TlvDq8ikWAM';
+const ELEVEN_MODEL   = 'eleven_multilingual_v2';
+
+const SYSTEM_PROMPT = `You are the ContentScale AI voice assistant on app.contentscale.site.
+ContentScale is an elite SEO content recovery service by Ottmar JG Francisca, Amsterdam.
+Helps businesses recover Google traffic lost to algorithm updates and AI Overviews using the GRAAF Framework + CRAFT methodology + Technical SEO.
+Key facts: 78% recovery rate in 90 days, 200+ clients, 47+ countries, pricing EUR7-997, contact via WhatsApp, privacy-first, zero data collection. Free scanner at app.contentscale.site.
+Rules: always reply in the same language the visitor uses. Keep answers SHORT — max 2 sentences (this is voice). Be warm and expert. If outside your knowledge, invite them to WhatsApp Ottmar directly.`;
+
+let isListening=false, isSpeaking=false, recognition=null, currentAudio=null, history=[];
+
+function splashClick(){
+  document.getElementById('vb-splash').remove();
+  greet();
+}
+
+async function greet(){
+  await speak("Hi! I'm Ottmar's AI assistant. How can I help you with your SEO today?");
+}
+
+function toggleMic(){
+  if(isSpeaking){stopAudio();return;}
+  if(isListening){stopListen();return;}
+  startListen();
+}
+
+function startListen(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){setLabel('Use Chrome or Edge','');return;}
+  recognition=new SR();
+  recognition.continuous=false;
+  recognition.interimResults=false;
+  recognition.lang='en-US';
+  recognition.onresult=async(e)=>{
+    const text=e.results[0][0].transcript;
+    stopListen();
+    await handleInput(text);
+  };
+  recognition.onerror=()=>stopListen();
+  recognition.onend=()=>{if(isListening)stopListen();};
+  isListening=true;
+  setState('listening');
+  setLabel('Listening…','listening');
+  recognition.start();
+}
+
+function stopListen(){
+  isListening=false;
+  if(recognition){try{recognition.stop();}catch(e){}recognition=null;}
+  setState('');setLabel('Tap to speak','');
+}
+
+async function handleInput(text){
+  setLabel('Thinking…','speaking');
+  try{
+    history.push({role:'user',content:text});
+    const reply=await askClaude();
+    history.push({role:'assistant',content:reply});
+    await speak(reply);
+  }catch(err){
+    console.error(err);setState('');setLabel('Tap to speak','');
+  }
+}
+
+async function askClaude(){
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':ANTHROPIC_KEY,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:150,
+      system:SYSTEM_PROMPT,
+      messages:history.slice(-6)
+    })
+  });
+  if(!r.ok)throw new Error('Claude '+r.status);
+  const d=await r.json();
+  return d.content[0].text;
+}
+
+async function speak(text){
+  setState('speaking');setLabel('Speaking…','speaking');
+  try{
+    const r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+VOICE_ID,{
+      method:'POST',
+      headers:{'xi-api-key':ELEVENLABS_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({text,model_id:ELEVEN_MODEL,voice_settings:{stability:0.45,similarity_boost:0.75}})
+    });
+    if(!r.ok)throw new Error('ElevenLabs '+r.status);
+    const blob=await r.blob();
+    const url=URL.createObjectURL(blob);
+    currentAudio=new Audio(url);
+    isSpeaking=true;
+    currentAudio.onended=()=>{
+      isSpeaking=false;URL.revokeObjectURL(url);
+      setState('');setLabel('Tap to speak','');
+    };
+    await currentAudio.play();
+  }catch(err){
+    console.warn('TTS:',err);isSpeaking=false;
+    setState('');setLabel('Tap to speak','');
+  }
+}
+
+function stopAudio(){
+  if(currentAudio){currentAudio.pause();currentAudio=null;}
+  isSpeaking=false;setState('');setLabel('Tap to speak','');
+}
+
+
+function toggleTextBox(e){
+  e.stopPropagation();
+  const box=document.getElementById('vb-text-box');
+  const visible=box.style.display==='block';
+  box.style.display=visible?'none':'block';
+  if(!visible) setTimeout(()=>document.getElementById('vb-text-input').focus(),50);
+}
+
+async function submitText(e){
+  e.preventDefault();
+  const inp=document.getElementById('vb-text-input');
+  const text=inp.value.trim();
+  if(!text)return;
+  inp.value='';
+  document.getElementById('vb-text-box').style.display='none';
+  if(isListening)stopListen();
+  await handleInput(text);
+}
+
+function setState(s){document.getElementById('vb-orb').className=s;}
+function setLabel(t,c){const el=document.getElementById('vb-label');el.textContent=t;el.className=c||'';}
+
+</script>
+
 </body>
 </html>`
   },
@@ -1885,6 +2542,177 @@ const DEFAULT_TEMPLATES = {
   </div>
 
 </div>
+
+<!-- ══ ContentScale Voice Bot ══ -->
+<div id="vb-splash">
+  <div id="vb-splash-inner">
+    <img id="vb-splash-photo" src="https://contentscale.site/wp-content/uploads/2025/11/ottmar-francisca-headshot.png" alt="Ottmar">
+    <div id="vb-splash-sub">AI Voice Assistant</div>
+    <button id="vb-splash-btn" onclick="splashClick()">🎤 Tap to speak</button>
+  </div>
+</div>
+
+<div id="vb-text-box">
+  <form onsubmit="submitText(event)">
+    <input id="vb-text-input" type="text" placeholder="Type your question…" autocomplete="off">
+    <button id="vb-text-send" type="submit">
+      <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+    </button>
+  </form>
+</div>
+
+<div id="vb-orb-wrap" style="position:relative" onclick="toggleMic()">
+  <button id="vb-keyboard-btn" onclick="toggleTextBox(event)" title="Type instead">
+    <svg viewBox="0 0 24 24"><path d="M20 5H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 5H5v-2h2v2zm10 0H9v-2h8v2zm0-3h-2v-2h2v2zm0-3h-2V8h2v2zm2 6h-2v-2h2v2z"/></svg>
+  </button>
+  <div id="vb-orb">
+    <img src="https://contentscale.site/wp-content/uploads/2025/11/ottmar-francisca-headshot.png" alt="Ottmar">
+  </div>
+  <div id="vb-label">Tap to speak</div>
+</div>
+<script>
+
+const ANTHROPIC_KEY  = 'YOUR_ANTHROPIC_KEY_HERE';
+const ELEVENLABS_KEY = 'YOUR_ELEVENLABS_KEY_HERE';
+const VOICE_ID       = '21m00Tcm4TlvDq8ikWAM';
+const ELEVEN_MODEL   = 'eleven_multilingual_v2';
+
+const SYSTEM_PROMPT = `You are the ContentScale AI voice assistant on app.contentscale.site.
+ContentScale is an elite SEO content recovery service by Ottmar JG Francisca, Amsterdam.
+Helps businesses recover Google traffic lost to algorithm updates and AI Overviews using the GRAAF Framework + CRAFT methodology + Technical SEO.
+Key facts: 78% recovery rate in 90 days, 200+ clients, 47+ countries, pricing EUR7-997, contact via WhatsApp, privacy-first, zero data collection. Free scanner at app.contentscale.site.
+Rules: always reply in the same language the visitor uses. Keep answers SHORT — max 2 sentences (this is voice). Be warm and expert. If outside your knowledge, invite them to WhatsApp Ottmar directly.`;
+
+let isListening=false, isSpeaking=false, recognition=null, currentAudio=null, history=[];
+
+function splashClick(){
+  document.getElementById('vb-splash').remove();
+  greet();
+}
+
+async function greet(){
+  await speak("Hi! I'm Ottmar's AI assistant. How can I help you with your SEO today?");
+}
+
+function toggleMic(){
+  if(isSpeaking){stopAudio();return;}
+  if(isListening){stopListen();return;}
+  startListen();
+}
+
+function startListen(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){setLabel('Use Chrome or Edge','');return;}
+  recognition=new SR();
+  recognition.continuous=false;
+  recognition.interimResults=false;
+  recognition.lang='en-US';
+  recognition.onresult=async(e)=>{
+    const text=e.results[0][0].transcript;
+    stopListen();
+    await handleInput(text);
+  };
+  recognition.onerror=()=>stopListen();
+  recognition.onend=()=>{if(isListening)stopListen();};
+  isListening=true;
+  setState('listening');
+  setLabel('Listening…','listening');
+  recognition.start();
+}
+
+function stopListen(){
+  isListening=false;
+  if(recognition){try{recognition.stop();}catch(e){}recognition=null;}
+  setState('');setLabel('Tap to speak','');
+}
+
+async function handleInput(text){
+  setLabel('Thinking…','speaking');
+  try{
+    history.push({role:'user',content:text});
+    const reply=await askClaude();
+    history.push({role:'assistant',content:reply});
+    await speak(reply);
+  }catch(err){
+    console.error(err);setState('');setLabel('Tap to speak','');
+  }
+}
+
+async function askClaude(){
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':ANTHROPIC_KEY,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:150,
+      system:SYSTEM_PROMPT,
+      messages:history.slice(-6)
+    })
+  });
+  if(!r.ok)throw new Error('Claude '+r.status);
+  const d=await r.json();
+  return d.content[0].text;
+}
+
+async function speak(text){
+  setState('speaking');setLabel('Speaking…','speaking');
+  try{
+    const r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+VOICE_ID,{
+      method:'POST',
+      headers:{'xi-api-key':ELEVENLABS_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({text,model_id:ELEVEN_MODEL,voice_settings:{stability:0.45,similarity_boost:0.75}})
+    });
+    if(!r.ok)throw new Error('ElevenLabs '+r.status);
+    const blob=await r.blob();
+    const url=URL.createObjectURL(blob);
+    currentAudio=new Audio(url);
+    isSpeaking=true;
+    currentAudio.onended=()=>{
+      isSpeaking=false;URL.revokeObjectURL(url);
+      setState('');setLabel('Tap to speak','');
+    };
+    await currentAudio.play();
+  }catch(err){
+    console.warn('TTS:',err);isSpeaking=false;
+    setState('');setLabel('Tap to speak','');
+  }
+}
+
+function stopAudio(){
+  if(currentAudio){currentAudio.pause();currentAudio=null;}
+  isSpeaking=false;setState('');setLabel('Tap to speak','');
+}
+
+
+function toggleTextBox(e){
+  e.stopPropagation();
+  const box=document.getElementById('vb-text-box');
+  const visible=box.style.display==='block';
+  box.style.display=visible?'none':'block';
+  if(!visible) setTimeout(()=>document.getElementById('vb-text-input').focus(),50);
+}
+
+async function submitText(e){
+  e.preventDefault();
+  const inp=document.getElementById('vb-text-input');
+  const text=inp.value.trim();
+  if(!text)return;
+  inp.value='';
+  document.getElementById('vb-text-box').style.display='none';
+  if(isListening)stopListen();
+  await handleInput(text);
+}
+
+function setState(s){document.getElementById('vb-orb').className=s;}
+function setLabel(t,c){const el=document.getElementById('vb-label');el.textContent=t;el.className=c||'';}
+
+</script>
+
 </body>
 </html>`
   }
@@ -3065,6 +3893,177 @@ function exportScanPDF(data) {
     <p style="color:#9ca3af;font-size:12px;margin-top:10px;">Use your browser's Print → Save as PDF option</p>
   </div>
 
+
+<!-- ══ ContentScale Voice Bot ══ -->
+<div id="vb-splash">
+  <div id="vb-splash-inner">
+    <img id="vb-splash-photo" src="https://contentscale.site/wp-content/uploads/2025/11/ottmar-francisca-headshot.png" alt="Ottmar">
+    <div id="vb-splash-sub">AI Voice Assistant</div>
+    <button id="vb-splash-btn" onclick="splashClick()">🎤 Tap to speak</button>
+  </div>
+</div>
+
+<div id="vb-text-box">
+  <form onsubmit="submitText(event)">
+    <input id="vb-text-input" type="text" placeholder="Type your question…" autocomplete="off">
+    <button id="vb-text-send" type="submit">
+      <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+    </button>
+  </form>
+</div>
+
+<div id="vb-orb-wrap" style="position:relative" onclick="toggleMic()">
+  <button id="vb-keyboard-btn" onclick="toggleTextBox(event)" title="Type instead">
+    <svg viewBox="0 0 24 24"><path d="M20 5H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 5H5v-2h2v2zm10 0H9v-2h8v2zm0-3h-2v-2h2v2zm0-3h-2V8h2v2zm2 6h-2v-2h2v2z"/></svg>
+  </button>
+  <div id="vb-orb">
+    <img src="https://contentscale.site/wp-content/uploads/2025/11/ottmar-francisca-headshot.png" alt="Ottmar">
+  </div>
+  <div id="vb-label">Tap to speak</div>
+</div>
+<script>
+
+const ANTHROPIC_KEY  = 'YOUR_ANTHROPIC_KEY_HERE';
+const ELEVENLABS_KEY = 'YOUR_ELEVENLABS_KEY_HERE';
+const VOICE_ID       = '21m00Tcm4TlvDq8ikWAM';
+const ELEVEN_MODEL   = 'eleven_multilingual_v2';
+
+const SYSTEM_PROMPT = `You are the ContentScale AI voice assistant on app.contentscale.site.
+ContentScale is an elite SEO content recovery service by Ottmar JG Francisca, Amsterdam.
+Helps businesses recover Google traffic lost to algorithm updates and AI Overviews using the GRAAF Framework + CRAFT methodology + Technical SEO.
+Key facts: 78% recovery rate in 90 days, 200+ clients, 47+ countries, pricing EUR7-997, contact via WhatsApp, privacy-first, zero data collection. Free scanner at app.contentscale.site.
+Rules: always reply in the same language the visitor uses. Keep answers SHORT — max 2 sentences (this is voice). Be warm and expert. If outside your knowledge, invite them to WhatsApp Ottmar directly.`;
+
+let isListening=false, isSpeaking=false, recognition=null, currentAudio=null, history=[];
+
+function splashClick(){
+  document.getElementById('vb-splash').remove();
+  greet();
+}
+
+async function greet(){
+  await speak("Hi! I'm Ottmar's AI assistant. How can I help you with your SEO today?");
+}
+
+function toggleMic(){
+  if(isSpeaking){stopAudio();return;}
+  if(isListening){stopListen();return;}
+  startListen();
+}
+
+function startListen(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){setLabel('Use Chrome or Edge','');return;}
+  recognition=new SR();
+  recognition.continuous=false;
+  recognition.interimResults=false;
+  recognition.lang='en-US';
+  recognition.onresult=async(e)=>{
+    const text=e.results[0][0].transcript;
+    stopListen();
+    await handleInput(text);
+  };
+  recognition.onerror=()=>stopListen();
+  recognition.onend=()=>{if(isListening)stopListen();};
+  isListening=true;
+  setState('listening');
+  setLabel('Listening…','listening');
+  recognition.start();
+}
+
+function stopListen(){
+  isListening=false;
+  if(recognition){try{recognition.stop();}catch(e){}recognition=null;}
+  setState('');setLabel('Tap to speak','');
+}
+
+async function handleInput(text){
+  setLabel('Thinking…','speaking');
+  try{
+    history.push({role:'user',content:text});
+    const reply=await askClaude();
+    history.push({role:'assistant',content:reply});
+    await speak(reply);
+  }catch(err){
+    console.error(err);setState('');setLabel('Tap to speak','');
+  }
+}
+
+async function askClaude(){
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':ANTHROPIC_KEY,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:150,
+      system:SYSTEM_PROMPT,
+      messages:history.slice(-6)
+    })
+  });
+  if(!r.ok)throw new Error('Claude '+r.status);
+  const d=await r.json();
+  return d.content[0].text;
+}
+
+async function speak(text){
+  setState('speaking');setLabel('Speaking…','speaking');
+  try{
+    const r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+VOICE_ID,{
+      method:'POST',
+      headers:{'xi-api-key':ELEVENLABS_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({text,model_id:ELEVEN_MODEL,voice_settings:{stability:0.45,similarity_boost:0.75}})
+    });
+    if(!r.ok)throw new Error('ElevenLabs '+r.status);
+    const blob=await r.blob();
+    const url=URL.createObjectURL(blob);
+    currentAudio=new Audio(url);
+    isSpeaking=true;
+    currentAudio.onended=()=>{
+      isSpeaking=false;URL.revokeObjectURL(url);
+      setState('');setLabel('Tap to speak','');
+    };
+    await currentAudio.play();
+  }catch(err){
+    console.warn('TTS:',err);isSpeaking=false;
+    setState('');setLabel('Tap to speak','');
+  }
+}
+
+function stopAudio(){
+  if(currentAudio){currentAudio.pause();currentAudio=null;}
+  isSpeaking=false;setState('');setLabel('Tap to speak','');
+}
+
+
+function toggleTextBox(e){
+  e.stopPropagation();
+  const box=document.getElementById('vb-text-box');
+  const visible=box.style.display==='block';
+  box.style.display=visible?'none':'block';
+  if(!visible) setTimeout(()=>document.getElementById('vb-text-input').focus(),50);
+}
+
+async function submitText(e){
+  e.preventDefault();
+  const inp=document.getElementById('vb-text-input');
+  const text=inp.value.trim();
+  if(!text)return;
+  inp.value='';
+  document.getElementById('vb-text-box').style.display='none';
+  if(isListening)stopListen();
+  await handleInput(text);
+}
+
+function setState(s){document.getElementById('vb-orb').className=s;}
+function setLabel(t,c){const el=document.getElementById('vb-label');el.textContent=t;el.className=c||'';}
+
+</script>
+
 </body>
 </html>`;
 
@@ -3899,72 +4898,174 @@ function switchPageSection(section) {
 
 </script>
 
-<!-- ── Agent23 Chat Widget — bottom-left, avatar only, blinking ── -->
-<style>
-@keyframes cs-blink {
-  0%,100% { transform:scale(1);   box-shadow:0 0 0 0   rgba(168,85,247,0);    opacity:1;    }
-  50%      { transform:scale(1.1); box-shadow:0 0 0 12px rgba(168,85,247,0.22); opacity:0.88; }
-}
-[id*="agent23"],[class*="agent23"]{left:20px!important;right:auto!important;}
-</style>
-<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-<script>window.agent23Config={chatbotId:"f9ece5c54caf4ee2a8e94ca1d07109e1"};</script>
-<script src="https://app.agent23.ai/agent23chat.min.js" id="f9ece5c54caf4ee2a8e94ca1d07109e1" defer></script>
+<!-- ══ ContentScale Voice Bot ══ -->
+<div id="vb-splash">
+  <div id="vb-splash-inner">
+    <img id="vb-splash-photo" src="https://contentscale.site/wp-content/uploads/2025/11/ottmar-francisca-headshot.png" alt="Ottmar">
+    <div id="vb-splash-sub">AI Voice Assistant</div>
+    <button id="vb-splash-btn" onclick="splashClick()">🎤 Tap to speak</button>
+  </div>
+</div>
+
+<div id="vb-text-box">
+  <form onsubmit="submitText(event)">
+    <input id="vb-text-input" type="text" placeholder="Type your question…" autocomplete="off">
+    <button id="vb-text-send" type="submit">
+      <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+    </button>
+  </form>
+</div>
+
+<div id="vb-orb-wrap" style="position:relative" onclick="toggleMic()">
+  <button id="vb-keyboard-btn" onclick="toggleTextBox(event)" title="Type instead">
+    <svg viewBox="0 0 24 24"><path d="M20 5H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 5H5v-2h2v2zm10 0H9v-2h8v2zm0-3h-2v-2h2v2zm0-3h-2V8h2v2zm2 6h-2v-2h2v2z"/></svg>
+  </button>
+  <div id="vb-orb">
+    <img src="https://contentscale.site/wp-content/uploads/2025/11/ottmar-francisca-headshot.png" alt="Ottmar">
+  </div>
+  <div id="vb-label">Tap to speak</div>
+</div>
 <script>
-(function(){
-  function fixWidget(){
-    var all = document.querySelectorAll('[id*="agent23"],[class*="agent23"],[data-chatbot-id]');
-    if(!all.length) return false;
 
-    all.forEach(function(el){
-      var rect = el.getBoundingClientRect();
-      var tag  = el.tagName.toLowerCase();
+const ANTHROPIC_KEY  = 'YOUR_ANTHROPIC_KEY_HERE';
+const ELEVENLABS_KEY = 'YOUR_ELEVENLABS_KEY_HERE';
+const VOICE_ID       = '21m00Tcm4TlvDq8ikWAM';
+const ELEVEN_MODEL   = 'eleven_multilingual_v2';
 
-      // Force left position on every agent23 element
-      el.style.left  = '20px';
-      el.style.right = 'auto';
+const SYSTEM_PROMPT = `You are the ContentScale AI voice assistant on app.contentscale.site.
+ContentScale is an elite SEO content recovery service by Ottmar JG Francisca, Amsterdam.
+Helps businesses recover Google traffic lost to algorithm updates and AI Overviews using the GRAAF Framework + CRAFT methodology + Technical SEO.
+Key facts: 78% recovery rate in 90 days, 200+ clients, 47+ countries, pricing EUR7-997, contact via WhatsApp, privacy-first, zero data collection. Free scanner at app.contentscale.site.
+Rules: always reply in the same language the visitor uses. Keep answers SHORT — max 2 sentences (this is voice). Be warm and expert. If outside your knowledge, invite them to WhatsApp Ottmar directly.`;
 
-      // The white box is WIDE (>120px) and TALL (>50px) — hide it
-      // The avatar launcher is small and roughly square (<90px)
-      var isPanel = rect.width > 120 && rect.height > 50;
-      var isSmallSquare = rect.width > 0 && rect.width < 90 && Math.abs(rect.width - rect.height) < 20;
+let isListening=false, isSpeaking=false, recognition=null, currentAudio=null, history=[];
 
-      if(isPanel && !isSmallSquare){
-        el.style.setProperty('display','none','important');
-        el.style.setProperty('opacity','0','important');
-        el.style.setProperty('visibility','hidden','important');
-        return;
-      }
+function splashClick(){
+  document.getElementById('vb-splash').remove();
+  greet();
+}
 
-      // Also hide iframes (chat panel often renders inside one)
-      if(tag==='iframe'){
-        el.style.setProperty('display','none','important');
-        return;
-      }
+async function greet(){
+  await speak("Hi! I'm Ottmar's AI assistant. How can I help you with your SEO today?");
+}
 
-      // Apply blink + circular shape to the avatar image
-      el.querySelectorAll('img').forEach(function(img){
-        img.style.animation    = 'cs-blink 2s ease-in-out infinite';
-        img.style.borderRadius = '50%';
-      });
-      if(isSmallSquare){
-        el.style.animation    = 'cs-blink 2s ease-in-out infinite';
-        el.style.borderRadius = '50%';
-      }
-    });
-    return true;
+function toggleMic(){
+  if(isSpeaking){stopAudio();return;}
+  if(isListening){stopListen();return;}
+  startListen();
+}
+
+function startListen(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){setLabel('Use Chrome or Edge','');return;}
+  recognition=new SR();
+  recognition.continuous=false;
+  recognition.interimResults=false;
+  recognition.lang='en-US';
+  recognition.onresult=async(e)=>{
+    const text=e.results[0][0].transcript;
+    stopListen();
+    await handleInput(text);
+  };
+  recognition.onerror=()=>stopListen();
+  recognition.onend=()=>{if(isListening)stopListen();};
+  isListening=true;
+  setState('listening');
+  setLabel('Listening…','listening');
+  recognition.start();
+}
+
+function stopListen(){
+  isListening=false;
+  if(recognition){try{recognition.stop();}catch(e){}recognition=null;}
+  setState('');setLabel('Tap to speak','');
+}
+
+async function handleInput(text){
+  setLabel('Thinking…','speaking');
+  try{
+    history.push({role:'user',content:text});
+    const reply=await askClaude();
+    history.push({role:'assistant',content:reply});
+    await speak(reply);
+  }catch(err){
+    console.error(err);setState('');setLabel('Tap to speak','');
   }
+}
 
-  // Poll until widget loads
-  var tries = 0;
-  var poll = setInterval(function(){
-    if(fixWidget() || ++tries > 40) clearInterval(poll);
-  }, 250);
+async function askClaude(){
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':ANTHROPIC_KEY,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:150,
+      system:SYSTEM_PROMPT,
+      messages:history.slice(-6)
+    })
+  });
+  if(!r.ok)throw new Error('Claude '+r.status);
+  const d=await r.json();
+  return d.content[0].text;
+}
 
-  // Keep watching for widget self-updates
-  new MutationObserver(function(){ fixWidget(); })
-    .observe(document.documentElement, {childList:true, subtree:true, attributes:true});
-})();
+async function speak(text){
+  setState('speaking');setLabel('Speaking…','speaking');
+  try{
+    const r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+VOICE_ID,{
+      method:'POST',
+      headers:{'xi-api-key':ELEVENLABS_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({text,model_id:ELEVEN_MODEL,voice_settings:{stability:0.45,similarity_boost:0.75}})
+    });
+    if(!r.ok)throw new Error('ElevenLabs '+r.status);
+    const blob=await r.blob();
+    const url=URL.createObjectURL(blob);
+    currentAudio=new Audio(url);
+    isSpeaking=true;
+    currentAudio.onended=()=>{
+      isSpeaking=false;URL.revokeObjectURL(url);
+      setState('');setLabel('Tap to speak','');
+    };
+    await currentAudio.play();
+  }catch(err){
+    console.warn('TTS:',err);isSpeaking=false;
+    setState('');setLabel('Tap to speak','');
+  }
+}
+
+function stopAudio(){
+  if(currentAudio){currentAudio.pause();currentAudio=null;}
+  isSpeaking=false;setState('');setLabel('Tap to speak','');
+}
+
+
+function toggleTextBox(e){
+  e.stopPropagation();
+  const box=document.getElementById('vb-text-box');
+  const visible=box.style.display==='block';
+  box.style.display=visible?'none':'block';
+  if(!visible) setTimeout(()=>document.getElementById('vb-text-input').focus(),50);
+}
+
+async function submitText(e){
+  e.preventDefault();
+  const inp=document.getElementById('vb-text-input');
+  const text=inp.value.trim();
+  if(!text)return;
+  inp.value='';
+  document.getElementById('vb-text-box').style.display='none';
+  if(isListening)stopListen();
+  await handleInput(text);
+}
+
+function setState(s){document.getElementById('vb-orb').className=s;}
+function setLabel(t,c){const el=document.getElementById('vb-label');el.textContent=t;el.className=c||'';}
+
 </script>
 
 </body>
