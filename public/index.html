@@ -3901,38 +3901,71 @@ function switchPageSection(section) {
 
 <!-- ── Agent23 Chat Widget — bottom-left, avatar only, blinking ── -->
 <style>
-/* Force bottom-left */
-#agent23-chat-widget, .agent23-launcher, [id*="agent23"], [class*="agent23"] {
-  left: 20px !important;
-  right: auto !important;
-}
-/* Hide the white input/chat box — keep only the avatar bubble */
-#agent23-chat-widget > *:not(:last-child),
-.agent23-chat-box,
-.agent23-input-container,
-.agent23-message-container,
-.agent23-header,
-iframe[src*="agent23"]:not([class*="avatar"]) {
-  display: none !important;
-  opacity: 0 !important;
-  visibility: hidden !important;
-}
-/* Blinking animation on the avatar */
 @keyframes cs-blink {
-  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(168,85,247,0); }
-  50%       { opacity: 0.7; transform: scale(1.08); box-shadow: 0 0 0 8px rgba(168,85,247,0.25); }
+  0%,100% { transform:scale(1);   box-shadow:0 0 0 0   rgba(168,85,247,0);    opacity:1;    }
+  50%      { transform:scale(1.1); box-shadow:0 0 0 12px rgba(168,85,247,0.22); opacity:0.88; }
 }
-.agent23-launcher img,
-.agent23-avatar,
-[class*="agent23"] img,
-[class*="agent23"] [class*="avatar"] {
-  animation: cs-blink 2s ease-in-out infinite !important;
-  border-radius: 50% !important;
-}
+[id*="agent23"],[class*="agent23"]{left:20px!important;right:auto!important;}
 </style>
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script>window.agent23Config={chatbotId:"f9ece5c54caf4ee2a8e94ca1d07109e1"};</script>
 <script src="https://app.agent23.ai/agent23chat.min.js" id="f9ece5c54caf4ee2a8e94ca1d07109e1" defer></script>
+<script>
+(function(){
+  function fixWidget(){
+    var all = document.querySelectorAll('[id*="agent23"],[class*="agent23"],[data-chatbot-id]');
+    if(!all.length) return false;
+
+    all.forEach(function(el){
+      var rect = el.getBoundingClientRect();
+      var tag  = el.tagName.toLowerCase();
+
+      // Force left position on every agent23 element
+      el.style.left  = '20px';
+      el.style.right = 'auto';
+
+      // The white box is WIDE (>120px) and TALL (>50px) — hide it
+      // The avatar launcher is small and roughly square (<90px)
+      var isPanel = rect.width > 120 && rect.height > 50;
+      var isSmallSquare = rect.width > 0 && rect.width < 90 && Math.abs(rect.width - rect.height) < 20;
+
+      if(isPanel && !isSmallSquare){
+        el.style.setProperty('display','none','important');
+        el.style.setProperty('opacity','0','important');
+        el.style.setProperty('visibility','hidden','important');
+        return;
+      }
+
+      // Also hide iframes (chat panel often renders inside one)
+      if(tag==='iframe'){
+        el.style.setProperty('display','none','important');
+        return;
+      }
+
+      // Apply blink + circular shape to the avatar image
+      el.querySelectorAll('img').forEach(function(img){
+        img.style.animation    = 'cs-blink 2s ease-in-out infinite';
+        img.style.borderRadius = '50%';
+      });
+      if(isSmallSquare){
+        el.style.animation    = 'cs-blink 2s ease-in-out infinite';
+        el.style.borderRadius = '50%';
+      }
+    });
+    return true;
+  }
+
+  // Poll until widget loads
+  var tries = 0;
+  var poll = setInterval(function(){
+    if(fixWidget() || ++tries > 40) clearInterval(poll);
+  }, 250);
+
+  // Keep watching for widget self-updates
+  new MutationObserver(function(){ fixWidget(); })
+    .observe(document.documentElement, {childList:true, subtree:true, attributes:true});
+})();
+</script>
 
 </body>
 </html>
