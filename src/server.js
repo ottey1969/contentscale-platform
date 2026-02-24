@@ -889,6 +889,49 @@ app.get('/api/leaderboard', async (req, res) => {
         res.json({ success: true, entries, total, averageScore: avg, stats: { totalAgencies: total, avgScore: avg, countriesCount: countries, activeHelpers: parseInt(fr.rows[0].count) || 0, verifiedCount: verified } });
     } catch (e) { res.json({ success: true, entries: [], stats: {} }); }
 });
+
+// ✅ NEW: Public Leaderboard Submission (Fixes 404)
+app.post('/api/leaderboard/submit', async (req, res) => {
+    if (!pool) return res.json({ success: false, error: 'Database unavailable' });
+    const { url, company_name, score, country, niche, email } = req.body;
+    
+    // Validate required fields
+    if (!url || score === undefined) {
+        return res.status(400).json({ success: false, error: 'URL and Score are required' });
+    }
+
+    try {
+        // Ensure score is integer
+        const finalScore = parseInt(score);
+        
+        // Insert into leaderboard (requires admin verification by default)
+        const r = await pool.query(
+            `INSERT INTO leaderboard (url, company_name, score, country, niche, admin_verified, is_verified, submission_ip)
+            VALUES ($1, $2, $3, $4, $5, FALSE, FALSE, $6)
+            ON CONFLICT (url) DO UPDATE SET
+            score = EXCLUDED.score,
+            company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
+            niche = COALESCE(EXCLUDED.niche, leaderboard.niche),
+            admin_verified = FALSE,
+            is_verified = FALSE
+            RETURNING id`,
+            [
+                url, 
+                company_name || null, 
+                finalScore, 
+                country || 'NL', // Default to NL if missing
+                niche || null, 
+                req.ip || req.connection.remoteAddress
+            ]
+        );
+        
+        res.json({ success: true, id: r.rows[0]?.id, message: 'Submission received. Pending admin approval.' });
+    } catch (e) {
+        console.error('Leaderboard submit error:', e.message);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 app.get('/api/freelancers', async (req, res) => {
     if (!pool) return res.json({ success: true, freelancers: [] });
     try {
