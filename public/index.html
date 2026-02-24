@@ -11,13 +11,15 @@
 <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 
-<!-- Tailwind — still render-blocking but preconnect reduces latency -->
+<!-- Tailwind — still render-blocking but preconnect reduces latency. IMPORTANT: Replace CDN with PostCSS in production -->
 <script src="https://cdn.tailwindcss.com"></script>
 
 <!-- Font Awesome — deferred so it doesn't block initial render -->
 <!-- Loads as print stylesheet (non-blocking), swaps to all media once loaded -->
 <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
+<!-- REMOVED: The failing Cloudflare email decoder script which caused MIME type error -->
+<!-- <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script> -->
 <style>
 /* ============================================================
    BASE RESET — keep white on dark backgrounds
@@ -869,7 +871,7 @@ footer p { color: #9ca3af !important; }
               <p style="color:#fde68a;font-size:0.78rem;margin-bottom:8px;">Protects your domain from being spoofed. Tells receiving servers what to do if SPF/DKIM fail.</p>
               <div style="background:#0c0500;border-radius:6px;padding:8px 12px;font-family:monospace;font-size:0.75rem;color:#fbbf24;">
                 <div style="color:#6b7280;margin-bottom:2px;">Name: _dmarc (or _dmarc.yourdomain.com)</div>
-                v=DMARC1; p=none; rua=mailto:<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="e2868f839081a29b8d9790868d8f838b8ccc818d8f">[email&#160;protected]</a>
+                v=DMARC1; p=none; rua=mailto:<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="e6828b879487a69f89938492898b878f88c885898b">[email&#160;protected]</a>
               </div>
               <p style="color:#92400e;font-size:0.72rem;margin-top:6px;">Start with p=none (monitor only). Move to p=quarantine after 2 weeks of clean reports.</p>
             </div>
@@ -1421,7 +1423,7 @@ footer p { color: #9ca3af !important; }
   </div>
 </div>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+<script>
 // ============================================================
 // STATE & DEFAULT TEMPLATES (GRADE 3 LEVEL)
 // ============================================================
@@ -3844,7 +3846,7 @@ function doGeneratePDF() {
     doc.text(s.score !== null ? String(s.score) : '\u2014', x+2, y); x += colW[2];
     doc.setTextColor(30,30,30); doc.setFont('helvetica', 'normal');
     doc.text((s.email_found||'not found').substring(0,30), x+2, y); x += colW[3];
-    doc.setTextColor(s.email_status==='has_email'?5:107, s.email_status==='has_email'?150:114, s.email_status==='has_email'?105:128);
+    doc.setTextColor(s.email_status==='has_email'?5:107, s.email_status==='has_email'?5:150:114, s.email_status==='has_email'?5:105:128);
     doc.text(s.email_status==='has_email'?'Sent':'No email', x+2, y); x += colW[4];
     doc.setTextColor(100,100,100); doc.text(new Date(s.created_at).toLocaleDateString('nl-NL'), x+2, y);
   });
