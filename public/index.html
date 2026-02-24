@@ -1741,19 +1741,28 @@ document.getElementById('bulkUrlCount').textContent = Math.min(lines.length, 100
 // API HELPER - Safe fetch with error handling
 // ============================================================
 async function safeFetch(url, options = {}) {
-try {
-const response = await fetch(url, options);
-if (!response.ok) {
-// Return a safe fallback instead of throwing
-console.warn(`API call failed: ${url} - ${response.status}`);
-return { success: false, error: `Server returned ${response.status}` };
+  try {
+    const response = await fetch(url, options);
+    
+    if (!response.ok) {
+      console.warn(`API call failed: ${url} - ${response.status}`);
+      return { success: false, error: `Server returned ${response.status}` };
+    }
+    
+    // ✅ Safely parse JSON with fallback
+    try {
+      return await response.json();
+    } catch (jsonError) {
+      console.warn(`JSON parse error for ${url}: ${jsonError.message}`);
+      return { success: false, error: 'Invalid response format' };
+    }
+    
+  } catch (error) {
+    console.warn(`API call error: ${url} - ${error.message}`);
+    return { success: false, error: error.message };
+  }
 }
-return await response.json();
-} catch (error) {
-console.warn(`API call error: ${url} - ${error.message}`);
-return { success: false, error: error.message };
-}
-}
+  
 
 async function registerUser() {
 try {
