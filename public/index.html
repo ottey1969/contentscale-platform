@@ -321,7 +321,7 @@ footer p { color: #9ca3af !important; }
           <span style="color:#4b5563;font-size:0.7rem;">|</span>
           <span style="font-size:0.8rem;color:#d1d5db;white-space:nowrap;">📊 50+ E-E-A-T Signals</span>
           <span style="color:#4b5563;font-size:0.7rem;">|</span>
-          <span style="font-size:0.8rem;color:#d1d5db;white-space:nowrap;">⚡ Results in &lt; 5 - 20 sec</span>
+          <span style="font-size:0.8rem;color:#d1d5db;white-space:nowrap;">⚡ Results in &lt; 5 sec</span>
         </div>
 
         <!-- Feature tags row -->
@@ -339,7 +339,7 @@ footer p { color: #9ca3af !important; }
       <!-- Mode toggle -->
       <div class="mode-toggle-container flex flex-wrap justify-center gap-3 mb-8" style="max-width:680px;margin-left:auto;margin-right:auto;">
         <button id="modeSingleBtn" onclick="switchMode('single')" class="mode-toggle active">
-          <i class="fas fa-search mr-2"></i> Scan a Website Free
+          <i class="fas fa-search mr-2"></i> Scan a Website
         </button>
         <button id="modeBulkBtn" onclick="switchMode('bulk')" class="mode-toggle">
           <i class="fas fa-list mr-2"></i> I Have a List
@@ -3899,8 +3899,37 @@ function switchPageSection(section) {
 
 </script>
 
-<!-- ── Agent23 Chat Widget — bottom-left ── -->
-<style>#agent23-chat-widget,.agent23-launcher{left:20px!important;right:auto!important;}</style>
+<!-- ── Agent23 Chat Widget — bottom-left, avatar only, blinking ── -->
+<style>
+/* Force bottom-left */
+#agent23-chat-widget, .agent23-launcher, [id*="agent23"], [class*="agent23"] {
+  left: 20px !important;
+  right: auto !important;
+}
+/* Hide the white input/chat box — keep only the avatar bubble */
+#agent23-chat-widget > *:not(:last-child),
+.agent23-chat-box,
+.agent23-input-container,
+.agent23-message-container,
+.agent23-header,
+iframe[src*="agent23"]:not([class*="avatar"]) {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+/* Blinking animation on the avatar */
+@keyframes cs-blink {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(168,85,247,0); }
+  50%       { opacity: 0.7; transform: scale(1.08); box-shadow: 0 0 0 8px rgba(168,85,247,0.25); }
+}
+.agent23-launcher img,
+.agent23-avatar,
+[class*="agent23"] img,
+[class*="agent23"] [class*="avatar"] {
+  animation: cs-blink 2s ease-in-out infinite !important;
+  border-radius: 50% !important;
+}
+</style>
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script>window.agent23Config={chatbotId:"f9ece5c54caf4ee2a8e94ca1d07109e1"};</script>
 <script src="https://app.agent23.ai/agent23chat.min.js" id="f9ece5c54caf4ee2a8e94ca1d07109e1" defer></script>
