@@ -219,6 +219,20 @@ async function createAllTables() {
         await client.query(`CREATE TABLE IF NOT EXISTS email_suppression (id SERIAL PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, unsubscribed_at TIMESTAMP DEFAULT NOW(), reason VARCHAR(100) DEFAULT 'user_request')`);
         // 8. Warmup config — tracks when each user started their email warmup
         await client.query(`CREATE TABLE IF NOT EXISTS warmup_config (id SERIAL PRIMARY KEY, user_id VARCHAR(255) UNIQUE NOT NULL, warmup_start_date DATE NOT NULL DEFAULT CURRENT_DATE, is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW())`);
+        // Scan reports — hosted HTML report pages with unique URL per scan
+        await client.query(`CREATE TABLE IF NOT EXISTS scan_reports (
+            id VARCHAR(64) PRIMARY KEY,
+            scan_log_id INTEGER,
+            business_url TEXT,
+            business_name VARCHAR(255),
+            score INTEGER,
+            niche VARCHAR(100),
+            city VARCHAR(255),
+            country VARCHAR(100),
+            email_found VARCHAR(255),
+            recommendations TEXT,
+            created_at TIMESTAMP DEFAULT NOW()
+        )`);
         // Migrate: add columns if they don't exist yet
         await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS business_url TEXT`).catch(() => {});
         await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS business_name VARCHAR(255)`).catch(() => {});
@@ -1521,6 +1535,161 @@ app.get('/api/apify/dataset/:runId', async (req, res) => {
         const data = await r.json();
         res.status(r.status).json(data);
     } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ============================================
+// 📄 SCAN REPORTS — Generate & Host per-scan reports
+// POST /api/report/generate  → saves record, returns {id, url}
+// GET  /report/:id           → renders full HTML report (public, URL = key)
+// ============================================
+app.post('/api/report/generate', verifyAdmin, async (req, res) => {
+    if (!pool) return res.json({ success: false, error: 'No DB' });
+    const { scan_log_id, business_url, business_name, score, niche, city, country, email_found, recommendations } = req.body;
+    try {
+        const id = crypto.randomBytes(20).toString('hex');
+        await pool.query(
+            `INSERT INTO scan_reports (id, scan_log_id, business_url, business_name, score, niche, city, country, email_found, recommendations)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+            [id, scan_log_id || null, business_url || null, business_name || null, score || null,
+             niche || null, city || null, country || null, email_found || null,
+             JSON.stringify(recommendations || [])]
+        );
+        res.json({ success: true, id, url: `/report/${id}` });
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.get('/report/:id', async (req, res) => {
+    if (!pool) return res.status(503).send('<h1>Service unavailable</h1>');
+    try {
+        const r = await pool.query('SELECT * FROM scan_reports WHERE id = $1', [req.params.id]);
+        if (!r.rows.length) return res.status(404).send('<!DOCTYPE html><html><body style="font-family:system-ui;background:#030712;color:#e5e7eb;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;"><div style="text-align:center;"><div style="font-size:48px;">🔍</div><h2>Report not found</h2><p style="color:#6b7280;">This report link may have expired or is invalid.</p></div></body></html>');
+        const report = r.rows[0];
+        let recs = [];
+        try { recs = JSON.parse(report.recommendations || '[]'); } catch {}
+        const score = report.score || 0;
+        const scoreColor = score >= 70 ? '#4ade80' : score >= 50 ? '#fbbf24' : '#f87171';
+        const scoreLabel = score >= 70 ? 'Good' : score >= 50 ? 'Needs Work' : 'Critical Issues';
+        const graafScore = Math.round(score * 0.50);
+        const craftScore = Math.round(score * 0.30);
+        const techScore  = Math.round(score * 0.20);
+        const domain = (() => { try { return new URL(report.business_url || 'https://unknown').hostname.replace('www.', ''); } catch { return report.business_url || 'Unknown'; } })();
+        const dateStr = new Date(report.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+        const priorityColor = p => p === 'high' ? '#f87171' : p === 'medium' ? '#fbbf24' : p === 'none' ? '#4ade80' : '#94a3b8';
+        const priorityLabel = p => p === 'high' ? '🔴 High Priority' : p === 'medium' ? '🟡 Medium Priority' : p === 'none' ? '✅ Elite' : '🔵 Low Priority';
+        const recsHtml = recs.map((rec, i) => `
+          <div style="background:#0f172a;border:1px solid #1e293b;border-left:4px solid ${priorityColor(rec.priority)};border-radius:12px;padding:20px;margin-bottom:14px;page-break-inside:avoid;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:10px;">
+              <span style="font-size:1rem;font-weight:700;color:#f9fafb;flex:1;">${rec.title || 'Recommendation ' + (i + 1)}</span>
+              <span style="font-size:0.68rem;font-weight:600;border-radius:99px;padding:3px 10px;white-space:nowrap;background:${priorityColor(rec.priority)}20;color:${priorityColor(rec.priority)};border:1px solid ${priorityColor(rec.priority)}40;">${priorityLabel(rec.priority)}</span>
+            </div>
+            ${rec.description ? `<p style="color:#9ca3af;font-size:0.875rem;margin:0 0 12px;">${rec.description}</p>` : ''}
+            ${rec.action ? `<div style="margin-top:10px;padding:10px 14px;background:#111827;border-radius:8px;font-size:0.84rem;"><span style="display:block;font-weight:700;color:#a78bfa;font-size:0.72rem;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">✅ Action</span><p style="color:#d1d5db;margin:0;">${rec.action}</p></div>` : ''}
+            ${rec.learning ? `<div style="margin-top:10px;padding:10px 14px;background:#111827;border-radius:8px;font-size:0.84rem;"><span style="display:block;font-weight:700;color:#a78bfa;font-size:0.72rem;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">💡 Why It Matters</span><p style="color:#d1d5db;margin:0;">${rec.learning}</p></div>` : ''}
+            ${rec.target ? `<div style="margin-top:10px;padding:10px 14px;background:#111827;border-radius:8px;font-size:0.84rem;"><span style="display:block;font-weight:700;color:#a78bfa;font-size:0.72rem;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">🎯 Target</span><p style="color:#d1d5db;margin:0;">${rec.target}</p></div>` : ''}
+          </div>`).join('');
+        const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>SEO Report — ${report.business_name || domain}</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#030712;color:#e5e7eb;line-height:1.6;}
+  .container{max-width:860px;margin:0 auto;padding:32px 20px 100px;}
+  .header{background:linear-gradient(135deg,#1e1b4b 0%,#0f172a 100%);border:1px solid #4f46e5;border-radius:16px;padding:36px;margin-bottom:28px;}
+  .brand-logo{font-size:1.4rem;font-weight:900;background:linear-gradient(135deg,#7e22ce,#be185d);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .brand-sub{font-size:0.75rem;color:#6b7280;margin-bottom:20px;}
+  .biz-name{font-size:1.9rem;font-weight:800;color:#f9fafb;margin-bottom:6px;}
+  .biz-url{color:#60a5fa;font-size:0.9rem;margin-bottom:16px;word-break:break-all;}
+  .meta-row{display:flex;gap:10px;flex-wrap:wrap;font-size:0.78rem;}
+  .chip{background:#111827;border:1px solid #374151;border-radius:99px;padding:3px 12px;color:#9ca3af;}
+  .score-block{display:flex;align-items:center;gap:28px;margin-top:24px;padding-top:24px;border-top:1px solid #1e293b;flex-wrap:wrap;}
+  .score-circle{width:100px;height:100px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;border:4px solid ${scoreColor};background:${scoreColor}15;flex-shrink:0;}
+  .score-num{font-size:2.2rem;font-weight:900;color:${scoreColor};line-height:1;}
+  .score-max{font-size:0.75rem;color:#6b7280;}
+  .score-lbl{font-size:0.8rem;color:${scoreColor};font-weight:600;margin-top:2px;}
+  .breakdown{display:flex;gap:14px;flex-wrap:wrap;}
+  .pill{background:#111827;border:1px solid #374151;border-radius:10px;padding:10px 16px;text-align:center;min-width:90px;}
+  .pill-val{font-size:1.4rem;font-weight:800;}
+  .pill-lbl{font-size:0.7rem;color:#6b7280;margin-top:2px;}
+  .progress-wrap{margin-top:14px;}
+  .progress-lbl{display:flex;justify-content:space-between;font-size:0.75rem;color:#6b7280;margin-bottom:5px;}
+  .progress-bar{height:10px;background:#1f2937;border-radius:99px;overflow:hidden;}
+  .progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,${scoreColor},${scoreColor}aa);}
+  .section-title{font-size:1.2rem;font-weight:700;color:#f9fafb;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #1f2937;display:flex;align-items:center;gap:8px;}
+  .rec-count{font-size:0.75rem;background:#7e22ce30;color:#a78bfa;border:1px solid #7e22ce50;border-radius:99px;padding:2px 10px;}
+  .pdf-btn{position:fixed;bottom:28px;right:28px;background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:12px;padding:14px 24px;font-size:0.95rem;font-weight:700;cursor:pointer;box-shadow:0 8px 32px rgba(126,34,206,0.4);display:flex;align-items:center;gap:8px;z-index:999;}
+  .pdf-btn:hover{transform:translateY(-2px);}
+  .footer{margin-top:48px;text-align:center;color:#374151;font-size:0.78rem;padding-top:24px;border-top:1px solid #111827;}
+  @media print{
+    body{background:white;color:#111;}
+    .pdf-btn{display:none!important;}
+    .container{padding:20px;}
+    .header{background:white;border:2px solid #7e22ce;}
+    .brand-logo{-webkit-text-fill-color:#7e22ce;}
+    .biz-name{color:#111;}
+    .section-title{color:#111;}
+    div[style*="background:#0f172a"]{background:white!important;border:1px solid #e5e7eb!important;}
+    div[style*="background:#111827"]{background:#f9fafb!important;}
+    p[style*="color:#9ca3af"]{color:#374151!important;}
+    p[style*="color:#d1d5db"]{color:#374151!important;}
+    .score-circle{border-color:#7e22ce;}
+    .score-num{color:#7e22ce;}
+    .pill{background:#f9fafb;border-color:#e5e7eb;}
+    .chip{background:#f3f4f6;border-color:#e5e7eb;}
+    .progress-bar{background:#e5e7eb;}
+    @page{margin:15mm;}
+  }
+  @media(max-width:600px){.score-block{flex-direction:column;}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="brand-logo">ContentScale</div>
+    <div class="brand-sub">GRAAF + CRAFT + Technical SEO Framework</div>
+    <div class="biz-name">${report.business_name || domain}</div>
+    <div class="biz-url">🌐 ${report.business_url || 'N/A'}</div>
+    <div class="meta-row">
+      ${report.niche ? `<span class="chip">🏷 ${report.niche}</span>` : ''}
+      ${report.city ? `<span class="chip">📍 ${report.city}</span>` : ''}
+      ${report.country ? `<span class="chip">🌍 ${report.country}</span>` : ''}
+      ${report.email_found ? `<span class="chip">✉ ${report.email_found}</span>` : ''}
+      <span class="chip">📅 ${dateStr}</span>
+    </div>
+    <div class="score-block">
+      <div class="score-circle">
+        <div class="score-num">${score}</div>
+        <div class="score-max">/100</div>
+        <div class="score-lbl">${scoreLabel}</div>
+      </div>
+      <div>
+        <div class="breakdown">
+          <div class="pill"><div class="pill-val" style="color:#a78bfa;">${graafScore}<span style="font-size:0.85rem;color:#6b7280;">/50</span></div><div class="pill-lbl">GRAAF</div></div>
+          <div class="pill"><div class="pill-val" style="color:#60a5fa;">${craftScore}<span style="font-size:0.85rem;color:#6b7280;">/30</span></div><div class="pill-lbl">CRAFT</div></div>
+          <div class="pill"><div class="pill-val" style="color:#34d399;">${techScore}<span style="font-size:0.85rem;color:#6b7280;">/20</span></div><div class="pill-lbl">Technical</div></div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-lbl"><span>Overall Score</span><span>${score}/100</span></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${score}%;"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="section-title">📋 Recommendations <span class="rec-count">${recs.length} items</span></div>
+  ${recsHtml}
+  <div class="footer">Generated by ContentScale &nbsp;·&nbsp; app.contentscale.site &nbsp;·&nbsp; GRAAF + CRAFT Framework &nbsp;·&nbsp; By Ottmar Francisca</div>
+</div>
+<button class="pdf-btn" onclick="window.print()">⬇ Download PDF</button>
+</body>
+</html>`;
+        res.setHeader('Content-Type', 'text/html');
+        res.send(html);
+    } catch (e) {
+        console.error('Report error:', e.message);
+        res.status(500).send('Error loading report');
+    }
 });
 
 app.get('/api/health', async (req, res) => {
