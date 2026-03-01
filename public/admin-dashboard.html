@@ -1073,17 +1073,24 @@ function renderScanLog(scans) {
       + '<td class="py-2 pr-3" style="color:#d1d5db;font-size:0.78rem;">' + (s.city || '—') + '</td>'
       + '<td class="py-2 pr-3" style="color:#60a5fa;font-size:0.75rem;">' + (s.email_found || '—') + '</td>'
       + '<td class="py-2 pr-3">' + statusBadge + '</td>'
-      + '<td class="py-2"><button onclick=\'generateReport(' + JSON.stringify(s) + ')\' style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:6px;padding:4px 10px;font-size:0.72rem;font-weight:600;cursor:pointer;white-space:nowrap;">📄 Report</button></td>'
+      + '<td class="py-2">'
+      + (s.report_url
+          ? '<button onclick=\'openOrCopyReport("' + (s.report_url.startsWith("http") ? s.report_url : "https://app.contentscale.site" + s.report_url) + '",this)\' style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:6px;padding:4px 10px;font-size:0.72rem;font-weight:600;cursor:pointer;white-space:nowrap;">🔗 Report</button>'
+          : '<button onclick=\'generateReport(' + JSON.stringify(s).replace(/'/g, "\\'") + ')\' style="background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:6px;padding:4px 10px;font-size:0.72rem;font-weight:600;cursor:pointer;white-space:nowrap;">📄 Generate</button>')
+      + '</td>'
       + '</tr>';
   }).join('');
 }
 
 function exportScanLog() {
-  const rows = [['Date','Business','URL','Score','Niche','City','Country','Email','Status','Recommendations']];
+  const rows = [['Date','Business','URL','Score','Niche','City','Country','Email','Status','Report URL','Recommendations']];
   allScanLogs.forEach(s => {
     let recs = '';
     try { recs = JSON.parse(s.recommendations || '[]').join('; '); } catch {}
-    rows.push([new Date(s.created_at).toLocaleString('nl-NL'), s.business_name||'', s.business_url||'', s.score||'', s.niche||'', s.city||'', s.country||'', s.email_found||'', s.email_status||'', recs]);
+    const fullReportUrl = s.report_url
+      ? (s.report_url.startsWith('http') ? s.report_url : 'https://app.contentscale.site' + s.report_url)
+      : '';
+    rows.push([new Date(s.created_at).toLocaleString('nl-NL'), s.business_name||'', s.business_url||'', s.score||'', s.niche||'', s.city||'', s.country||'', s.email_found||'', s.email_status||'', fullReportUrl, recs]);
   });
   const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
   const a = document.createElement('a');
@@ -1461,6 +1468,18 @@ function adminRenderScanResults(data) {
   document.getElementById('adminScanResults').style.display = 'block';
 }
 
+function openOrCopyReport(fullUrl, btn) {
+  window.open(fullUrl, '_blank');
+  btn.textContent = '📋 Copy';
+  btn.style.background = '#0f2d1a';
+  btn.onclick = () => {
+    navigator.clipboard.writeText(fullUrl).then(() => {
+      btn.textContent = '✅ Copied!';
+      setTimeout(() => { btn.textContent = '📋 Copy'; }, 2000);
+    });
+  };
+}
+
 async function adminLogScan() {
   if (!adminLastScanResult) return;
   const btn = document.getElementById('adminLogBtn');
@@ -1487,7 +1506,16 @@ async function adminLogScan() {
       })
     });
     const result = await r.json();
-    if (result.success) { btn.textContent = '✅ Logged!'; }
+    if (result.success) {
+      btn.textContent = '✅ Logged!';
+      // If server returned a report_url, show it immediately
+      if (result.report_url) {
+        adminLastReportUrl = result.report_url.replace('https://app.contentscale.site', '');
+        const linkBlock = document.getElementById('adminReportLink');
+        document.getElementById('adminReportHref').href = result.report_url;
+        linkBlock.style.display = 'flex';
+      }
+    }
     else throw new Error(result.error);
   } catch (e) {
     btn.textContent = '❌ Failed'; btn.disabled = false;
