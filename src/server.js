@@ -214,6 +214,8 @@ async function createAllTables() {
         await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS recommendations TEXT`).catch(() => {});
         // ✅ FIX: Add source column to existing scan_log tables that pre-date this version
         await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'single'`).catch(() => {});
+        // ✅ Auto report_url — generated on every scan-log insert
+        await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS report_url TEXT`).catch(() => {});
 
         // 7. Email suppression list (unsubscribes — respected forever across all future scans)
         await client.query(`CREATE TABLE IF NOT EXISTS email_suppression (id SERIAL PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, unsubscribed_at TIMESTAMP DEFAULT NOW(), reason VARCHAR(100) DEFAULT 'user_request')`);
@@ -777,21 +779,27 @@ app.get('/api/scan-log', async (req, res) => {
     if (!userId) return res.json({ success: false, error: 'No user ID' });
     try {
         const r = await pool.query(
-            `SELECT id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations, created_at
+            `SELECT id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations, report_url, created_at
              FROM scan_log WHERE user_id = $1 ORDER BY created_at DESC LIMIT 200`, [userId]
         );
         res.json({ success: true, scans: r.rows });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// ✅ FIX: /api/scan-log POST — stores source field; removed broken ON CONFLICT DO NOTHING
+// ✅ FIX: /api/scan-log POST — stores source field; auto-generates report_url
 app.post('/api/scan-log', async (req, res) => {
     if (!pool) return res.json({ success: false });
     const { user_id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations } = req.body;
     try {
-        await pool.query(
-            `INSERT INTO scan_log (user_id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+        // Auto-generate unique report ID
+        const crypto = require('crypto');
+        const reportId = crypto.randomBytes(20).toString('hex');
+        const reportUrl = '/report/' + reportId;
+
+        // Insert scan log with report_url
+        const insertResult = await pool.query(
+            `INSERT INTO scan_log (user_id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations, report_url)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
             [
                 user_id || null,
                 business_url,
@@ -803,10 +811,31 @@ app.post('/api/scan-log', async (req, res) => {
                 email_found || null,
                 email_status || 'no_email',
                 source || 'single',
+                recommendations ? JSON.stringify(recommendations) : null,
+                reportUrl
+            ]
+        );
+        const scanLogId = insertResult.rows[0]?.id || null;
+
+        // Auto-generate hosted report in scan_reports
+        await pool.query(
+            `INSERT INTO scan_reports (id, scan_log_id, business_url, business_name, score, niche, city, country, email_found, recommendations)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+            [
+                reportId,
+                scanLogId,
+                business_url || null,
+                business_name || null,
+                score || null,
+                niche || null,
+                city || null,
+                country || null,
+                email_found || null,
                 recommendations ? JSON.stringify(recommendations) : null
             ]
         );
-        res.json({ success: true });
+
+        res.json({ success: true, report_url: 'https://app.contentscale.site' + reportUrl });
     } catch (e) { res.json({ success: false, error: e.message }); }
 });
 
@@ -816,7 +845,7 @@ app.get('/api/admin/scan-log', verifyAdmin, async (req, res) => {
     const limit = parseInt(req.query.limit) || 200;
     try {
         const r = await pool.query(
-            `SELECT id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations, created_at
+            `SELECT id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations, report_url, created_at
              FROM scan_log ORDER BY created_at DESC LIMIT $1`, [limit]
         );
         res.json({ success: true, scans: r.rows });
