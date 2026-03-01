@@ -571,63 +571,17 @@ footer p { color: #9ca3af !important; }
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 
-              <!-- Niche -->
+              <!-- Niches — multi line -->
               <div>
-                <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">🏷️ Business Niche *</label>
-                <select id="discoverNiche" aria-label="Business niche" class="w-full p-3 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
-                  <option value="">Select a niche...</option>
-                  <optgroup label="── Agencies">
-                    <option value="SEO agency">SEO Agency</option>
-                    <option value="digital marketing agency">Digital Marketing Agency</option>
-                    <option value="web design agency">Web Design Agency</option>
-                    <option value="content marketing agency">Content Marketing Agency</option>
-                  </optgroup>
-                  <optgroup label="── YMYL">
-                    <option value="law firm">Law Firm</option>
-                    <option value="dental clinic">Dental Clinic</option>
-                    <option value="medical clinic">Medical Clinic</option>
-                    <option value="financial advisor">Financial Advisor</option>
-                    <option value="accountant">Accountant</option>
-                    <option value="insurance broker">Insurance Broker</option>
-                    <option value="therapist">Therapist / Psychologist</option>
-                  </optgroup>
-                  <optgroup label="── High Competition">
-                    <option value="real estate agent">Real Estate Agent</option>
-                    <option value="hotel">Hotel</option>
-                    <option value="car dealership">Car Dealership</option>
-                    <option value="recruitment agency">Recruitment Agency</option>
-                    <option value="software company">Software Company</option>
-                  </optgroup>
-                  <optgroup label="── Local Services">
-                    <option value="plumber">Plumber</option>
-                    <option value="electrician">Electrician</option>
-                    <option value="cleaning company">Cleaning Company</option>
-                    <option value="personal trainer">Personal Trainer</option>
-                    <option value="hairdresser">Hairdresser / Salon</option>
-                    <option value="restaurant">Restaurant</option>
-                    <option value="architect">Architect</option>
-                    <option value="photographer">Photographer</option>
-                    <option value="catering">Catering Company</option>
-                  </optgroup>
-                  <optgroup label="── Other">
-                    <option value="online coach">Online Coach / Consultant</option>
-                    <option value="e-commerce store">E-Commerce Store</option>
-                    <option value="logistics company">Logistics Company</option>
-                    <option value="other business">Other</option>
-                  </optgroup>
-                </select>
+                <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">🏷️ Niches <span style="color:#9ca3af!important;font-weight:400;">(één per regel)</span></label>
+                <textarea id="discoverNicheCustom" rows="4" placeholder="dental clinic&#10;law firm&#10;cleaning company" class="w-full p-3 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;resize:vertical;" oninput="updateDiscoverCombos()"></textarea>
+                <div id="discoverComboCount" style="font-size:0.72rem;color:#9ca3af;margin-top:4px;"></div>
               </div>
 
-              <!-- Custom niche override -->
+              <!-- Cities — multi line -->
               <div>
-                <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">✏️ Or Type Custom Niche</label>
-                <input type="text" id="discoverNicheCustom" placeholder="e.g. orthodontist, yoga studio..." class="w-full p-3 rounded text-sm">
-              </div>
-
-              <!-- Location -->
-              <div>
-                <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">📍 City / Location *</label>
-                <input type="text" id="discoverLocation" placeholder="e.g. Amsterdam, London, New York..." class="w-full p-3 rounded text-sm">
+                <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">📍 Steden <span style="color:#9ca3af!important;font-weight:400;">(één per regel)</span></label>
+                <textarea id="discoverLocation" rows="4" placeholder="Amsterdam&#10;Rotterdam&#10;Utrecht&#10;Den Haag" class="w-full p-3 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;resize:vertical;" oninput="updateDiscoverCombos()"></textarea>
               </div>
 
               <!-- Country context -->
@@ -648,13 +602,13 @@ footer p { color: #9ca3af !important; }
                 </select>
               </div>
 
-              <!-- Max results -->
+              <!-- Max results per combo -->
               <div>
-                <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">🔢 Max Leads to Find</label>
+                <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">🔢 Max leads <span style="color:#9ca3af!important;font-weight:400;">per niche + stad</span></label>
                 <select id="discoverMaxResults" aria-label="Maximum leads to find" class="w-full p-3 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
-                  <option value="20">20 leads (fast · ~1 min)</option>
-                  <option value="50" selected>50 leads (recommended · ~2 min)</option>
-                  <option value="100">100 leads (thorough · ~4 min)</option>
+                  <option value="20">20 leads (snel · ~1 min)</option>
+                  <option value="50" selected>50 leads (aanbevolen · ~2 min)</option>
+                  <option value="100">100 leads (~4 min)</option>
                 </select>
               </div>
 
@@ -664,11 +618,6 @@ footer p { color: #9ca3af !important; }
                 <label for="discoverWebsiteOnly" class="text-sm" style="color:#e5e7eb!important;cursor:pointer;">Only scan businesses that have a website</label>
               </div>
 
-            </div>
-
-            <!-- Your details -->
-            <div class="grid grid-cols-2 gap-3 mb-4">
-              
             </div>
 
             <!-- Reply-To Email -->
@@ -2149,6 +2098,20 @@ function setDiscoverProgress(pct, text) {
 }
 
 // Main Auto-Discover pipeline
+function updateDiscoverCombos() {
+  const niches = (document.getElementById('discoverNicheCustom').value || '').split('\n').map(n => n.trim()).filter(n => n);
+  const cities = (document.getElementById('discoverLocation').value || '').split('\n').map(c => c.trim()).filter(c => c);
+  const el = document.getElementById('discoverComboCount');
+  if (!el) return;
+  if (niches.length > 0 && cities.length > 0) {
+    const total = niches.length * cities.length;
+    el.textContent = `${niches.length} niche${niches.length>1?'s':''} × ${cities.length} stad${cities.length>1?'en':''} = ${total} combo${total>1?'\'s':''}`;
+    el.style.color = '#a78bfa';
+  } else {
+    el.textContent = '';
+  }
+}
+
 async function startAutoDiscover() {
   const apifyToken = localStorage.getItem('apifyToken');
   if (!apifyToken) {
@@ -2157,18 +2120,25 @@ async function startAutoDiscover() {
     return;
   }
 
-  const nicheSelect = document.getElementById('discoverNiche').value;
-  const nicheCustom = document.getElementById('discoverNicheCustom').value.trim();
-  const niche       = nicheCustom || nicheSelect;
-  const location    = document.getElementById('discoverLocation').value.trim();
+  // ── Parse multi-line niches + cities ──────────────────────
+  const nicheRaw    = document.getElementById('discoverNicheCustom').value.trim();
+  const locationRaw = document.getElementById('discoverLocation').value.trim();
+  const niches      = nicheRaw.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+  const cities      = locationRaw.split('\n').map(c => c.trim()).filter(c => c.length > 0);
+
+  if (!niches.length)  { alert('❌ Voer minimaal één niche in.'); return; }
+  if (!cities.length)  { alert('❌ Voer minimaal één stad in.'); return; }
+
   const country     = document.getElementById('discoverCountry').value;
   const maxResults  = parseInt(document.getElementById('discoverMaxResults').value);
   const websiteOnly = document.getElementById('discoverWebsiteOnly').checked;
-  if (!niche)    { alert('❌ Please select or type a niche.'); return; }
-  if (!location) { alert('❌ Please enter a city or location.'); return; }
-  const replyTo = document.getElementById('discoverReplyTo').value.trim();
-  if (!replyTo)  { alert('❌ Please enter your Reply-To email so businesses can respond.'); return; }
+  const replyTo     = document.getElementById('discoverReplyTo').value.trim();
+  if (!replyTo) { alert('❌ Please enter your Reply-To email.'); return; }
   localStorage.setItem('discoverReplyTo', replyTo);
+
+  // Build all niche × city combos
+  const combos = [];
+  niches.forEach(niche => cities.forEach(city => combos.push({ niche, city })));
 
   const btn = document.getElementById('discoverBtn');
   btn.disabled = true;
@@ -2177,219 +2147,199 @@ async function startAutoDiscover() {
   const progress = document.getElementById('discoverProgress');
   progress.classList.remove('hidden');
   document.getElementById('discoverResults').classList.add('hidden');
-
-  // Reset step indicators
   [1,2,3,4].forEach(s => setDiscoverStep(s, 'idle'));
 
+  // Totals across all combos
+  const allResults = { leaderboard: [], almostMade: [], withWebsite: [], withoutWebsite: [], errors: [] };
+  let totalEmailStats = { sent: 0, queued: 0, skipped: 0 };
+
+  // ── Dedup: load already-scanned URLs once up front ────────
+  let alreadyScanned = new Set();
   try {
-    // ── STEP 1: Call Apify Google Maps Scraper ──────────────────
-    setDiscoverStep(1, 'active');
-    setDiscoverProgress(5, `Searching Google Maps for "${niche}" in ${location}...`);
+    const existingRes = await fetch('/api/scan-log', { headers: { 'x-user-id': userId || 'anonymous' } });
+    const existingData = await existingRes.json();
+    if (existingData.success && existingData.scans) {
+      existingData.scans.forEach(s => { if (s.business_url) alreadyScanned.add(s.business_url.trim()); });
+    }
+  } catch(e) { /* non-fatal */ }
 
-    const searchQuery = `${niche} in ${location}`;
+  try {
+    for (let ci = 0; ci < combos.length; ci++) {
+      const { niche, city } = combos[ci];
+      const comboLabel = `${niche} — ${city} (${ci+1}/${combos.length})`;
 
-    // Trigger Apify Google Maps Scraper Actor
-    const runRes = await fetch(
-      '/api/apify/start-run',
-      {
+      setDiscoverProgress(2, `🔍 Combo ${ci+1}/${combos.length}: ${comboLabel}`);
+      [1,2,3,4].forEach(s => setDiscoverStep(s, 'idle'));
+
+      // ── STEP 1: Apify ──────────────────────────────────────
+      setDiscoverStep(1, 'active');
+      setDiscoverProgress(5, `Searching Google Maps: "${niche}" in ${city}...`);
+
+      const runRes = await fetch('/api/apify/start-run', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-apify-token': apifyToken
-        },
+        headers: { 'Content-Type': 'application/json', 'x-apify-token': apifyToken },
         body: JSON.stringify({
           actorId: 'compass~crawler-google-places',
           input: {
-            searchStringsArray: [searchQuery],
+            searchStringsArray: [`${niche} in ${city}`],
             maxCrawledPlacesPerSearch: maxResults,
             language: 'en',
             exportPlaceUrls: true,
             includeWebResults: true,
-          skipClosedPlaces: false
+            skipClosedPlaces: false
           }
         })
+      });
+      if (!runRes.ok) { const err = await runRes.json(); throw new Error(err.error?.message || `Apify error ${runRes.status}`); }
+      const runData = await runRes.json();
+      const runId   = runData.data?.id;
+      if (!runId) throw new Error('Could not start Apify run. Check your token.');
+
+      setDiscoverProgress(15, `Apify run started. Waiting for results...`);
+
+      let attempts = 0, runStatus = 'RUNNING';
+      while (runStatus === 'RUNNING' || runStatus === 'READY') {
+        await new Promise(r => setTimeout(r, 4000));
+        attempts++;
+        const statusRes  = await fetch(`/api/apify/run-status/${runId}`, { headers: { 'x-apify-token': apifyToken } });
+        const statusData = await statusRes.json();
+        runStatus = statusData.data?.status;
+        const pct = Math.min(15 + attempts * 3, 40);
+        setDiscoverProgress(pct, `Scraping Google Maps... (${attempts * 4}s)`);
+        if (attempts > 45) throw new Error('Apify timed out after 3 minutes.');
       }
-    );
+      if (runStatus !== 'SUCCEEDED') throw new Error(`Apify run ${runStatus}.`);
 
-    if (!runRes.ok) {
-      const err = await runRes.json();
-      throw new Error(err.error?.message || `Apify error ${runRes.status}. Check your token.`);
-    }
+      setDiscoverStep(1, 'done');
+      setDiscoverStep(2, 'active');
+      setDiscoverProgress(42, 'Fetching business data from Apify...');
 
-    const runData = await runRes.json();
-    const runId   = runData.data?.id;
-    if (!runId) throw new Error('Could not start Apify run. Check your token and Apify account.');
+      // ── STEP 2: Fetch dataset ──────────────────────────────
+      const dataRes = await fetch(`/api/apify/dataset/${runId}`, { headers: { 'x-apify-token': apifyToken } });
+      const dataRaw = await dataRes.json();
+      const places  = Array.isArray(dataRaw) ? dataRaw : (dataRaw.items || dataRaw.data || []);
 
-    setDiscoverProgress(15, `Apify run started (ID: ${runId.slice(0,8)}...). Waiting for results...`);
-
-    // ── Poll until run finishes (max 3 min) ────────────────────
-    let attempts = 0;
-    let runStatus = 'RUNNING';
-    while (runStatus === 'RUNNING' || runStatus === 'READY') {
-      await new Promise(r => setTimeout(r, 4000));
-      attempts++;
-      const statusRes  = await fetch(
-        `/api/apify/run-status/${runId}`,
-        { headers: { 'x-apify-token': apifyToken } }
-      );
-      const statusData = await statusRes.json();
-      runStatus = statusData.data?.status;
-      const pct = Math.min(15 + attempts * 3, 40);
-      setDiscoverProgress(pct, `Scraping Google Maps... (${attempts * 4}s elapsed)`);
-      if (attempts > 45) throw new Error('Apify run timed out after 3 minutes. Try fewer leads.');
-    }
-
-    if (runStatus !== 'SUCCEEDED') throw new Error(`Apify run ${runStatus}. Check your Apify dashboard.`);
-
-    setDiscoverStep(1, 'done');
-    setDiscoverStep(2, 'active');
-    setDiscoverProgress(42, 'Fetching business data from Apify...');
-
-    // ── STEP 2: Fetch dataset items ────────────────────────────
-    const dataRes = await fetch(
-      `/api/apify/dataset/${runId}`,
-      { headers: { 'x-apify-token': apifyToken } }
-    );
-    const dataRaw = await dataRes.json();
-    // Apify returns array directly or wrapped in {items:[]}
-    const places = Array.isArray(dataRaw) ? dataRaw : (dataRaw.items || dataRaw.data || []);
-
-    // Extract usable URLs
-    let urls = places
-      .filter(p => p.website)
-      .map(p => ({
+      let urls = places.filter(p => p.website).map(p => ({
         url:     p.website.startsWith('http') ? p.website : 'https://' + p.website,
         name:    p.title || p.name || '',
         email:   p.email || (p.emails && p.emails[0]) || null,
         emails:  p.emails || [],
         phone:   p.phone || p.phoneUnformatted || '',
         address: p.address || '',
-        country: country
+        country
       }));
-
-    // If websiteOnly not checked, include places without websites (score will be 0)
-    if (!websiteOnly) {
-      const noSite = places
-        .filter(p => !p.website)
-        .map(p => ({
+      if (!websiteOnly) {
+        const noSite = places.filter(p => !p.website).map(p => ({
           url: '', name: p.title || p.name || '',
           email: p.email || (p.emails && p.emails[0]) || null,
-          emails: p.emails || [],
-          phone: p.phone || '', address: p.address || '', country
+          emails: p.emails || [], phone: p.phone || '', address: p.address || '', country
         }));
-      urls = [...urls, ...noSite];
-    }
-
-    if (urls.length === 0) throw new Error('No businesses found. Try a different niche or location.');
-
-    setDiscoverStep(2, 'done');
-    setDiscoverStep(3, 'active');
-    setDiscoverProgress(50, `Found ${urls.length} businesses. Starting ContentScore scan...`);
-
-    // ── STEP 3: Run ContentScore on each URL ───────────────────
-    const results = { leaderboard: [], almostMade: [], withWebsite: [], withoutWebsite: [], errors: [] };
-    let scanned = 0;
-
-    for (const place of urls) {
-      if (!place.url) {
-        results.withoutWebsite.push({ url: place.name, score: 0, data: { country, ...place } });
-        scanned++;
+        urls = [...urls, ...noSite];
+      }
+      if (urls.length === 0) {
+        setDiscoverProgress(100, `⚠️ No results for ${comboLabel} — skipping.`);
+        await new Promise(r => setTimeout(r, 1200));
         continue;
       }
-      try {
-        const scanRes  = await fetch('/api/scan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: place.url })
-        });
-        const scanData = await scanRes.json();
-        const score    = scanData.score || 0;
-        const item = { url: place.url, score, data: { ...scanData, country, name: place.name, email: place.email, emails: place.emails, phone: place.phone, address: place.address } };
 
-        if (score >= 70)       results.leaderboard.push(item);
-        else if (score >= 65) results.almostMade.push(item);
-        else               results.withWebsite.push(item);
+      setDiscoverStep(2, 'done');
+      setDiscoverStep(3, 'active');
 
-        // Log every scan — so admin can see all businesses including no-email ones
-        var emailFound = place.email || (place.emails && place.emails[0]) || null;
-        fetch('/api/scan-log', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: userId,
-            business_url: place.url,
-            business_name: place.name,
-            score: score,
-            niche: niche,
-            city: location,
-            country: country,
-            email_found: emailFound,
-            email_status: emailFound ? 'has_email' : 'no_email',
-            recommendations: scanData.recommendations ? scanData.recommendations.slice(0, 5).map(function(r){ return r.title || r; }) : []
-          })
-        }).catch(function(){});
-      } catch (e) {
-        results.errors.push({ url: place.url, error: e.message });
+      // ── Dedup within this combo ────────────────────────────
+      const urlsToScan = urls.filter(p => !p.url || !alreadyScanned.has(p.url.trim()));
+      const skippedCount = urls.length - urlsToScan.length;
+      setDiscoverProgress(50, `${urlsToScan.length} new to scan${skippedCount > 0 ? ` · ${skippedCount} skipped (already scanned)` : ''}`);
+
+      // ── STEP 3: Scan ───────────────────────────────────────
+      let scanned = 0;
+      for (const place of urlsToScan) {
+        if (!place.url) {
+          allResults.withoutWebsite.push({ url: place.name, score: 0, data: { country, ...place } });
+          scanned++; continue;
+        }
+        try {
+          const scanRes  = await fetch('/api/scan', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: place.url })
+          });
+          const scanData = await scanRes.json();
+          const score    = scanData.score || 0;
+          const item = { url: place.url, score, data: { ...scanData, country, name: place.name, email: place.email, emails: place.emails, phone: place.phone, address: place.address } };
+          if (score >= 70) allResults.leaderboard.push(item);
+          else if (score >= 65) allResults.almostMade.push(item);
+          else allResults.withWebsite.push(item);
+
+          var emailFound = place.email || (place.emails && place.emails[0]) || null;
+          fetch('/api/scan-log', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_id: userId, business_url: place.url, business_name: place.name,
+              score, niche, city, country,
+              email_found: emailFound, email_status: emailFound ? 'has_email' : 'no_email',
+              source: 'discover',
+              recommendations: scanData.recommendations ? (scanData.recommendations.all || scanData.recommendations).slice(0,5).map(r => r.title || r) : []
+            })
+          }).catch(() => {});
+          // Add to dedup set so next combos skip this URL too
+          alreadyScanned.add(place.url.trim());
+        } catch(e) { allResults.errors.push({ url: place.url, error: e.message }); }
+        scanned++;
+        const pct = 52 + Math.round((scanned / urlsToScan.length) * 33);
+        setDiscoverProgress(pct, `Combo ${ci+1}/${combos.length} · Scanning ${scanned}/${urlsToScan.length}: ${place.name || place.url}`);
       }
-      scanned++;
-      const pct = 50 + Math.round((scanned / urls.length) * 35);
-      setDiscoverProgress(pct, `Scanning ${scanned}/${urls.length}: ${place.name || place.url}`);
+
+      setDiscoverStep(3, 'done');
+      setDiscoverStep(4, 'active');
+      setDiscoverProgress(88, 'Sending emails...');
+
+      // ── STEP 4: Email ──────────────────────────────────────
+      if (sendgridConfigured) {
+        const comboResults = { leaderboard: allResults.leaderboard, almostMade: allResults.almostMade, withWebsite: allResults.withWebsite, withoutWebsite: allResults.withoutWebsite, errors: [] };
+        const stats = await sendBulkEmails(comboResults, replyTo, replyTo.split('@')[0]);
+        totalEmailStats.sent   += stats.sent   || 0;
+        totalEmailStats.queued += stats.queued || 0;
+        totalEmailStats.skipped += stats.skipped || 0;
+      }
+      setDiscoverStep(4, 'done');
+      setDiscoverProgress(100, `✅ Combo ${ci+1}/${combos.length} done!`);
+      await new Promise(r => setTimeout(r, 600));
     }
 
-    setDiscoverStep(3, 'done');
-    setDiscoverStep(4, 'active');
-    setDiscoverProgress(88, 'Sending emails via SendGrid...');
-
-    // ── STEP 4: Send emails ────────────────────────────────────
-    let emailStats = { sent: 0, queued: 0, skipped: 0 };
-    if (sendgridConfigured) {
-      emailStats = await sendBulkEmails(results, replyTo, replyTo.split('@')[0]);
-    }
-
-    setDiscoverStep(4, 'done');
-    setDiscoverProgress(100, '✅ Pipeline complete!');
-
-    // ── Show summary ───────────────────────────────────────────
-    const total = urls.length;
-    const errCount = results.errors.length;
+    // ── Final summary ──────────────────────────────────────────
+    const totalScanned = allResults.leaderboard.length + allResults.almostMade.length + allResults.withWebsite.length + allResults.withoutWebsite.length;
     document.getElementById('discoverResultsContainer').innerHTML = `
       <div style="background:#111827;border:1px solid #374151;border-radius:12px;padding:24px;margin-top:8px;">
-        <h4 style="font-weight:800;font-size:1.1rem;margin-bottom:16px;color:#f9fafb!important;">
-          🎯 Auto-Discover Complete — <em style="color:#fbbf24!important;">${niche}</em> in ${location}
+        <h4 style="font-weight:800;font-size:1.1rem;margin-bottom:4px;color:#f9fafb!important;">
+          🎯 Batch Complete — ${combos.length} combo${combos.length > 1 ? "'s" : ''}
         </h4>
+        <p style="font-size:0.82rem;color:#9ca3af!important;margin-bottom:16px;">
+          ${niches.join(', ')} · ${cities.join(', ')}
+        </p>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;">
           <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:16px;text-align:center;">
-            <div style="font-size:2rem;font-weight:900;color:#4ade80!important;">${results.leaderboard.length}</div>
-            <div style="font-size:0.75rem;color:#6b7280!important;">🏆 Leaderboard (70+)</div>
+            <div style="font-size:2rem;font-weight:900;color:#4ade80!important;">${totalScanned}</div>
+            <div style="font-size:0.75rem;color:#6b7280!important;">✅ Gescand</div>
           </div>
           <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:16px;text-align:center;">
-            <div style="font-size:2rem;font-weight:900;color:#60a5fa!important;">${results.withWebsite.length}</div>
-            <div style="font-size:0.75rem;color:#6b7280!important;">📈 Improvement emails</div>
+            <div style="font-size:2rem;font-weight:900;color:#a3e635!important;">${allResults.leaderboard.length}</div>
+            <div style="font-size:0.75rem;color:#6b7280!important;">🏆 Score 70+</div>
           </div>
           <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:16px;text-align:center;">
-            <div style="font-size:2rem;font-weight:900;color:#a78bfa!important;">${results.withoutWebsite.length}</div>
-            <div style="font-size:0.75rem;color:#6b7280!important;">🌐 No-website offers</div>
+            <div style="font-size:2rem;font-weight:900;color:#60a5fa!important;">${allResults.withWebsite.length}</div>
+            <div style="font-size:0.75rem;color:#6b7280!important;">📈 Improvement</div>
           </div>
           <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:16px;text-align:center;">
-            <div style="font-size:2rem;font-weight:900;color:#f87171!important;">${errCount}</div>
-            <div style="font-size:0.75rem;color:#6b7280!important;">❌ Errors</div>
+            <div style="font-size:2rem;font-weight:900;color:#a78bfa!important;">${allResults.withoutWebsite.length}</div>
+            <div style="font-size:0.75rem;color:#6b7280!important;">🌐 Geen website</div>
           </div>
         </div>
-        ${results.leaderboard.length > 0 ? `
-        <div style="background:rgba(74,222,128,0.05);border:1px solid #166534;border-radius:8px;padding:12px 16px;margin-bottom:12px;">
-          <p style="font-size:0.85rem;color:#4ade80!important;font-weight:700;margin-bottom:6px;">🏆 Top Performers (added to leaderboard):</p>
-          ${results.leaderboard.slice(0,5).map(r =>
-            `<div style="display:flex;justify-content:space-between;font-size:0.8rem;padding:3px 0;border-bottom:1px solid #1f2937;">
-               <span style="color:#d1d5db!important;">${r.data?.name || r.url}</span>
-               <span style="color:#4ade80!important;font-weight:700;">${r.score}/100</span>
-             </div>`
-          ).join('')}
-          ${results.leaderboard.length > 5 ? `<p style="font-size:0.75rem;color:#6b7280!important;margin-top:4px;">+${results.leaderboard.length - 5} more</p>` : ''}
-        </div>` : ''}
         <p style="font-size:0.85rem;color:#9ca3af!important;text-align:center;margin:0;">
           ${sendgridConfigured
-            ? `📧 Sent: <strong style="color:#4ade80!important;">${emailStats.sent}</strong> &nbsp;·&nbsp; Queued: <strong style="color:#fbbf24!important;">${emailStats.queued}</strong> &nbsp;·&nbsp; No email found: <strong style="color:#9ca3af!important;">${emailStats.skipped}</strong>`
+            ? `📧 Sent: <strong style="color:#4ade80!important;">${totalEmailStats.sent}</strong> &nbsp;·&nbsp; Queued: <strong style="color:#fbbf24!important;">${totalEmailStats.queued}</strong> &nbsp;·&nbsp; No email: <strong style="color:#9ca3af!important;">${totalEmailStats.skipped}</strong>`
             : '⚠️ SendGrid not configured — no emails sent.'}
+        </p>
+        <p style="font-size:0.8rem;color:#6b7280!important;text-align:center;margin-top:8px;">
+          Ga naar <strong style="color:#a78bfa!important;">My Activity</strong> → export CSV → importeer in Mailgo
         </p>
       </div>`;
 
@@ -2403,7 +2353,7 @@ async function startAutoDiscover() {
       <div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:8px;padding:16px;margin-top:8px;">
         <p style="color:#f87171!important;font-weight:700;">❌ Pipeline Error</p>
         <p style="color:#fca5a5!important;font-size:0.85rem;">${err.message}</p>
-        <p style="color:#9ca3af!important;font-size:0.8rem;margin-top:8px;">Common fixes: Check your Apify token · Make sure you have credits in your Apify account · Try fewer leads</p>
+        <p style="color:#9ca3af!important;font-size:0.8rem;margin-top:8px;">Check je Apify token · Probeer minder leads</p>
       </div>`;
     document.getElementById('discoverResults').classList.remove('hidden');
   } finally {
@@ -3163,11 +3113,27 @@ async function startBulkScan() {
 
   let results = { leaderboard: [], almostMade: [], withWebsite: [], withoutWebsite: [], errors: [] };
 
-  for (let i = 0; i < urls.length; i++) {
-    let url = urls[i];
+  // ── Dedup: skip already-scanned URLs ──────────────────────
+  let alreadyScannedBulk = new Set();
+  try {
+    const existingRes = await fetch('/api/scan-log', { headers: { 'x-user-id': userId || 'anonymous' } });
+    const existingData = await existingRes.json();
+    if (existingData.success && existingData.scans) {
+      existingData.scans.forEach(s => { if (s.business_url) alreadyScannedBulk.add(s.business_url.trim()); });
+    }
+  } catch(e) { /* non-fatal */ }
+  const urlsToProcess = urls.filter(u => !alreadyScannedBulk.has(u.trim()));
+  const skippedBulk = urls.length - urlsToProcess.length;
+  if (skippedBulk > 0) {
+    document.getElementById('bulkProgressText').textContent = `${skippedBulk} URL(s) already scanned — skipping. Scanning ${urlsToProcess.length} new...`;
+    await new Promise(r => setTimeout(r, 1200));
+  }
+
+  for (let i = 0; i < urlsToProcess.length; i++) {
+    let url = urlsToProcess[i];
     if (!url.startsWith('http')) url = 'https://' + url;
-    document.getElementById('bulkProgressText').textContent = `Scanning ${i + 1} of ${urls.length} — ${url}`;
-    document.getElementById('bulkProgressBar').style.width = `${((i + 1) / urls.length) * 100}%`;
+    document.getElementById('bulkProgressText').textContent = `Scanning ${i + 1} of ${urlsToProcess.length} — ${url}`;
+    document.getElementById('bulkProgressBar').style.width = `${((i + 1) / urlsToProcess.length) * 100}%`;
     try {
       const response = await fetch('/api/scan', {
         method: 'POST',
