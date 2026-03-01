@@ -780,18 +780,31 @@ app.get('/api/scan-log', async (req, res) => {
     try {
         const r = await pool.query(
             `SELECT id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations, report_url, created_at
-             FROM scan_log WHERE user_id = $1 ORDER BY created_at DESC LIMIT 200`, [userId]
+             FROM scan_log WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1000`, [userId]
         );
         res.json({ success: true, scans: r.rows });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// ✅ FIX: /api/scan-log POST — stores source field; auto-generates report_url
+// ✅ FIX: /api/scan-log POST — stores source field; auto-generates report_url; dedup by business_url
 app.post('/api/scan-log', async (req, res) => {
     if (!pool) return res.json({ success: false });
     const { user_id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations } = req.body;
     try {
-        // Auto-generate unique report ID
+        // ── Dedup: skip if this URL was already scanned ──────────
+        if (business_url) {
+            const existing = await pool.query(
+                `SELECT id, report_url FROM scan_log WHERE business_url = $1 LIMIT 1`,
+                [business_url]
+            );
+            if (existing.rows.length > 0) {
+                const row = existing.rows[0];
+                const existingReportUrl = row.report_url
+                    ? (row.report_url.startsWith('http') ? row.report_url : 'https://app.contentscale.site' + row.report_url)
+                    : null;
+                return res.json({ success: true, skipped: true, reason: 'duplicate', report_url: existingReportUrl });
+            }
+        }
         const crypto = require('crypto');
         const reportId = crypto.randomBytes(20).toString('hex');
         const reportUrl = '/report/' + reportId;
@@ -842,7 +855,7 @@ app.post('/api/scan-log', async (req, res) => {
 // ✅ FIX: /api/admin/scan-log GET — now returns source column
 app.get('/api/admin/scan-log', verifyAdmin, async (req, res) => {
     if (!pool) return res.json({ success: false, error: 'No DB' });
-    const limit = parseInt(req.query.limit) || 200;
+    const limit = parseInt(req.query.limit) || 1000;
     try {
         const r = await pool.query(
             `SELECT id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations, report_url, created_at
