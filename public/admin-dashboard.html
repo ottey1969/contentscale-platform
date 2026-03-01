@@ -1402,32 +1402,45 @@ async function generateReport(scan) {
 <!-- SCANNER TAB -->
 <div id="tab-scanner" class="tab-content hidden">
   <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 border border-gray-700">
-    <h3 class="text-xl font-bold text-white mb-6">🔍 SEO Scanner</h3>
-
-    <!-- Input row -->
-    <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;">
-      <input type="text" id="adminScanUrl" placeholder="https://example.com"
-        style="flex:1;min-width:280px;padding:12px 16px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;font-size:0.95rem;"
-        onkeydown="if(event.key==='Enter')adminRunScan()">
-      <button onclick="adminRunScan()" id="adminScanBtn"
-        style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:8px;padding:12px 28px;font-size:0.95rem;font-weight:700;cursor:pointer;white-space:nowrap;">
-        🔍 Scan
-      </button>
-    </div>
-
-    <!-- Progress -->
-    <div id="adminScanProgress" style="display:none;margin-bottom:24px;">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
-        <div style="width:18px;height:18px;border:3px solid #7e22ce;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0;"></div>
-        <span id="adminScanProgressText" style="color:#a78bfa;font-size:0.9rem;">Scanning — loading page...</span>
-      </div>
-      <div style="height:6px;background:#1f2937;border-radius:99px;overflow:hidden;">
-        <div id="adminScanBar" style="height:100%;background:linear-gradient(90deg,#7e22ce,#be185d);border-radius:99px;width:0%;transition:width 0.4s;"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+      <h3 class="text-xl font-bold text-white">🔍 SEO Scanner</h3>
+      <div style="display:flex;gap:8px;">
+        <button id="adminScanModeBtn_single" onclick="adminSetScanMode('single')"
+          style="padding:7px 18px;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;">
+          🔗 Single URL
+        </button>
+        <button id="adminScanModeBtn_batch" onclick="adminSetScanMode('batch')"
+          style="padding:7px 18px;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;background:#1f2937;color:#9ca3af;border:1px solid #374151;">
+          🚀 Batch Find Leads
+        </button>
       </div>
     </div>
 
-    <!-- Results -->
-    <div id="adminScanResults" style="display:none;">
+    <!-- ── SINGLE URL MODE ── -->
+    <div id="adminModeSingle">
+      <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;">
+        <input type="text" id="adminScanUrl" placeholder="https://example.com"
+          style="flex:1;min-width:280px;padding:12px 16px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;font-size:0.95rem;"
+          onkeydown="if(event.key==='Enter')adminRunScan()">
+        <button onclick="adminRunScan()" id="adminScanBtn"
+          style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:8px;padding:12px 28px;font-size:0.95rem;font-weight:700;cursor:pointer;white-space:nowrap;">
+          🔍 Scan
+        </button>
+      </div>
+
+      <!-- Progress -->
+      <div id="adminScanProgress" style="display:none;margin-bottom:24px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+          <div style="width:18px;height:18px;border:3px solid #7e22ce;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0;"></div>
+          <span id="adminScanProgressText" style="color:#a78bfa;font-size:0.9rem;">Scanning — loading page...</span>
+        </div>
+        <div style="height:6px;background:#1f2937;border-radius:99px;overflow:hidden;">
+          <div id="adminScanBar" style="height:100%;background:linear-gradient(90deg,#7e22ce,#be185d);border-radius:99px;width:0%;transition:width 0.4s;"></div>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div id="adminScanResults" style="display:none;">
 
       <!-- Score header -->
       <div id="adminScoreHeader" style="background:linear-gradient(135deg,#1e1b4b,#0f172a);border:1px solid #4f46e5;border-radius:14px;padding:28px;margin-bottom:20px;">
@@ -1497,6 +1510,92 @@ async function generateReport(scan) {
       </div>
       <div id="adminRecsList"></div>
     </div>
+    </div><!-- end adminModeSingle -->
+
+    <!-- ── BATCH FIND LEADS MODE ── -->
+    <div id="adminModeBatch" style="display:none;">
+      <!-- Apify token -->
+      <div style="background:#1c1917;border:1px solid #92400e;border-radius:10px;padding:14px 18px;margin-bottom:20px;">
+        <div style="font-size:0.78rem;font-weight:700;color:#fbbf24;margin-bottom:6px;">🔑 Apify Token</div>
+        <input type="text" id="adminApifyToken" placeholder="apify_api_xxxx..."
+          style="width:100%;padding:8px 12px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;font-size:0.85rem;"
+          oninput="localStorage.setItem('apifyToken', this.value)">
+        <div style="font-size:0.72rem;color:#9ca3af;margin-top:4px;">Wordt opgeslagen in browser. Zelfde token als in de scanner app.</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+        <!-- Niches -->
+        <div>
+          <label style="display:block;font-size:0.82rem;font-weight:700;color:#e5e7eb;margin-bottom:6px;">🏷️ Niches <span style="color:#9ca3af;font-weight:400;">(één per regel)</span></label>
+          <textarea id="adminBatchNiches" rows="5" placeholder="dental clinic&#10;law firm&#10;cleaning company"
+            style="width:100%;padding:10px 12px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;font-size:0.85rem;resize:vertical;"
+            oninput="adminUpdateBatchCombos()"></textarea>
+        </div>
+        <!-- Steden -->
+        <div>
+          <label style="display:block;font-size:0.82rem;font-weight:700;color:#e5e7eb;margin-bottom:6px;">📍 Steden <span style="color:#9ca3af;font-weight:400;">(één per regel)</span></label>
+          <textarea id="adminBatchCities" rows="5" placeholder="Amsterdam&#10;Rotterdam&#10;Utrecht&#10;Den Haag"
+            style="width:100%;padding:10px 12px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;font-size:0.85rem;resize:vertical;"
+            oninput="adminUpdateBatchCombos()"></textarea>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap;align-items:flex-end;">
+        <div style="flex:1;min-width:160px;">
+          <label style="display:block;font-size:0.82rem;font-weight:700;color:#e5e7eb;margin-bottom:6px;">🌍 Land</label>
+          <select id="adminBatchCountry" style="width:100%;padding:9px 12px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;font-size:0.85rem;">
+            <option value="Netherlands">🇳🇱 Netherlands</option>
+            <option value="Germany">🇩🇪 Germany</option>
+            <option value="United Kingdom">🇬🇧 United Kingdom</option>
+            <option value="United States">🇺🇸 United States</option>
+            <option value="Belgium">🇧🇪 Belgium</option>
+            <option value="France">🇫🇷 France</option>
+            <option value="Spain">🇪🇸 Spain</option>
+            <option value="Australia">🇦🇺 Australia</option>
+            <option value="Canada">🇨🇦 Canada</option>
+            <option value="Other">🌐 Other</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:160px;">
+          <label style="display:block;font-size:0.82rem;font-weight:700;color:#e5e7eb;margin-bottom:6px;">🔢 Max leads per combo</label>
+          <select id="adminBatchMaxResults" style="width:100%;padding:9px 12px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;font-size:0.85rem;">
+            <option value="20">20 (snel)</option>
+            <option value="50" selected>50 (aanbevolen)</option>
+            <option value="100">100 (uitgebreid)</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:160px;display:flex;align-items:flex-end;padding-bottom:2px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.82rem;color:#e5e7eb;">
+            <input type="checkbox" id="adminBatchWebsiteOnly" checked style="width:16px;height:16px;">
+            Alleen met website
+          </label>
+        </div>
+      </div>
+
+      <!-- Combo counter -->
+      <div id="adminBatchComboCount" style="font-size:0.82rem;color:#a78bfa;margin-bottom:16px;"></div>
+
+      <!-- Run button -->
+      <button onclick="adminRunBatch()" id="adminBatchBtn"
+        style="background:linear-gradient(135deg,#b45309,#f59e0b);color:white;border:none;border-radius:10px;padding:14px 32px;font-size:1rem;font-weight:700;cursor:pointer;width:100%;">
+        🚀 Start Batch Find Leads
+      </button>
+
+      <!-- Batch progress -->
+      <div id="adminBatchProgress" style="display:none;margin-top:20px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+          <div style="width:18px;height:18px;border:3px solid #f59e0b;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0;"></div>
+          <span id="adminBatchProgressText" style="color:#fbbf24;font-size:0.9rem;">Starting...</span>
+        </div>
+        <div style="height:6px;background:#1f2937;border-radius:99px;overflow:hidden;">
+          <div id="adminBatchBar" style="height:100%;background:linear-gradient(90deg,#b45309,#f59e0b);border-radius:99px;width:0%;transition:width 0.4s;"></div>
+        </div>
+      </div>
+
+      <!-- Batch results summary -->
+      <div id="adminBatchResults" style="display:none;margin-top:20px;"></div>
+    </div><!-- end adminModeBatch -->
+
   </div>
 </div>
 <style>@keyframes spin{to{transform:rotate(360deg);}}
@@ -1505,6 +1604,210 @@ async function generateReport(scan) {
 <script>
 let adminLastScanResult = null;
 let adminLastReportUrl  = null;
+
+// ── Scanner mode toggle ────────────────────────────────────────
+function adminSetScanMode(mode) {
+  document.getElementById('adminModeSingle').style.display = mode === 'single' ? 'block' : 'none';
+  document.getElementById('adminModeBatch').style.display  = mode === 'batch'  ? 'block' : 'none';
+  const sBtn = document.getElementById('adminScanModeBtn_single');
+  const bBtn = document.getElementById('adminScanModeBtn_batch');
+  if (mode === 'single') {
+    sBtn.style.background = 'linear-gradient(135deg,#7e22ce,#be185d)'; sBtn.style.color = 'white'; sBtn.style.border = 'none';
+    bBtn.style.background = '#1f2937'; bBtn.style.color = '#9ca3af'; bBtn.style.border = '1px solid #374151';
+  } else {
+    bBtn.style.background = 'linear-gradient(135deg,#b45309,#f59e0b)'; bBtn.style.color = 'white'; bBtn.style.border = 'none';
+    sBtn.style.background = '#1f2937'; sBtn.style.color = '#9ca3af'; sBtn.style.border = '1px solid #374151';
+    // Pre-fill apify token from localStorage
+    const tok = localStorage.getItem('apifyToken') || '';
+    document.getElementById('adminApifyToken').value = tok;
+  }
+}
+
+function adminUpdateBatchCombos() {
+  const niches = (document.getElementById('adminBatchNiches').value || '').split('\n').map(n => n.trim()).filter(n => n);
+  const cities = (document.getElementById('adminBatchCities').value || '').split('\n').map(c => c.trim()).filter(c => c);
+  const el = document.getElementById('adminBatchComboCount');
+  if (!el) return;
+  if (niches.length > 0 && cities.length > 0) {
+    const total = niches.length * cities.length;
+    const maxLeads = parseInt(document.getElementById('adminBatchMaxResults')?.value || 50);
+    el.textContent = `${niches.length} niche${niches.length>1?"'s":''} × ${cities.length} stad${cities.length>1?'en':''} = ${total} combo's · max ${total * maxLeads} leads te scannen`;
+  } else {
+    el.textContent = '';
+  }
+}
+
+async function adminRunBatch() {
+  const apifyToken = document.getElementById('adminApifyToken').value.trim() || localStorage.getItem('apifyToken');
+  if (!apifyToken) { alert('❌ Voer je Apify token in.'); return; }
+  localStorage.setItem('apifyToken', apifyToken);
+
+  const niches      = document.getElementById('adminBatchNiches').value.split('\n').map(n => n.trim()).filter(n => n);
+  const cities      = document.getElementById('adminBatchCities').value.split('\n').map(c => c.trim()).filter(c => c);
+  const country     = document.getElementById('adminBatchCountry').value;
+  const maxResults  = parseInt(document.getElementById('adminBatchMaxResults').value);
+  const websiteOnly = document.getElementById('adminBatchWebsiteOnly').checked;
+
+  if (!niches.length) { alert('❌ Voer minimaal één niche in.'); return; }
+  if (!cities.length) { alert('❌ Voer minimaal één stad in.'); return; }
+
+  const combos = [];
+  niches.forEach(niche => cities.forEach(city => combos.push({ niche, city })));
+
+  const btn = document.getElementById('adminBatchBtn');
+  btn.disabled = true; btn.textContent = '⏳ Running...';
+  document.getElementById('adminBatchProgress').style.display = 'block';
+  document.getElementById('adminBatchResults').style.display = 'none';
+
+  const bar = document.getElementById('adminBatchBar');
+  const txt = document.getElementById('adminBatchProgressText');
+  const setProgress = (pct, msg) => { bar.style.width = pct + '%'; txt.textContent = msg; };
+
+  // ── Dedup: load already-scanned URLs ──────────────────────
+  let alreadyScanned = new Set();
+  try {
+    const r = await apiCall('/api/admin/scan-log?limit=2000');
+    if (r.success && r.scans) r.scans.forEach(s => { if (s.business_url) alreadyScanned.add(s.business_url.trim()); });
+  } catch(e) { /* non-fatal */ }
+
+  let totalScanned = 0, totalSkipped = 0, totalErrors = 0;
+  let scoreHigh = 0, scoreGood = 0, scoreLow = 0;
+
+  try {
+    for (let ci = 0; ci < combos.length; ci++) {
+      const { niche, city } = combos[ci];
+      setProgress(Math.round((ci / combos.length) * 90), `Combo ${ci+1}/${combos.length}: ${niche} — ${city}`);
+
+      // ── Apify ──────────────────────────────────────────────
+      const runRes = await fetch('/api/apify/start-run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-apify-token': apifyToken },
+        body: JSON.stringify({
+          actorId: 'compass~crawler-google-places',
+          input: {
+            searchStringsArray: [`${niche} in ${city}`],
+            maxCrawledPlacesPerSearch: maxResults,
+            language: 'en', exportPlaceUrls: true,
+            includeWebResults: true, skipClosedPlaces: false
+          }
+        })
+      });
+      if (!runRes.ok) { const err = await runRes.json(); throw new Error(err.error?.message || 'Apify error'); }
+      const runData = await runRes.json();
+      const runId   = runData.data?.id;
+      if (!runId) throw new Error('Apify run niet gestart. Check je token.');
+
+      let attempts = 0, runStatus = 'RUNNING';
+      while (runStatus === 'RUNNING' || runStatus === 'READY') {
+        await new Promise(r => setTimeout(r, 4000));
+        attempts++;
+        const statusData = await (await fetch(`/api/apify/run-status/${runId}`, { headers: { 'x-apify-token': apifyToken } })).json();
+        runStatus = statusData.data?.status;
+        setProgress(Math.round((ci / combos.length) * 90) + 5, `${niche} — ${city}: scraping... (${attempts*4}s)`);
+        if (attempts > 45) throw new Error('Apify timeout. Probeer minder leads.');
+      }
+      if (runStatus !== 'SUCCEEDED') throw new Error(`Apify run: ${runStatus}`);
+
+      const dataRaw = await (await fetch(`/api/apify/dataset/${runId}`, { headers: { 'x-apify-token': apifyToken } })).json();
+      const places  = Array.isArray(dataRaw) ? dataRaw : (dataRaw.items || dataRaw.data || []);
+
+      let urls = places.filter(p => p.website).map(p => ({
+        url: p.website.startsWith('http') ? p.website : 'https://' + p.website,
+        name: p.title || p.name || '',
+        email: p.email || (p.emails && p.emails[0]) || null,
+        emails: p.emails || [], phone: p.phone || '', address: p.address || '', country
+      }));
+      if (!websiteOnly) {
+        places.filter(p => !p.website).forEach(p => urls.push({
+          url: '', name: p.title || p.name || '',
+          email: p.email || (p.emails && p.emails[0]) || null,
+          emails: p.emails || [], phone: p.phone || '', address: p.address || '', country
+        }));
+      }
+
+      // ── Dedup & Scan ───────────────────────────────────────
+      const urlsToScan = urls.filter(p => !p.url || !alreadyScanned.has(p.url.trim()));
+      totalSkipped += urls.length - urlsToScan.length;
+
+      let comboScanned = 0;
+      for (const place of urlsToScan) {
+        if (!place.url) { comboScanned++; continue; }
+        try {
+          const scanRes  = await fetch('/api/scan', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: place.url })
+          });
+          const scanData = await scanRes.json();
+          const score    = scanData.score || 0;
+          if (score >= 85) scoreHigh++;
+          else if (score >= 70) scoreGood++;
+          else scoreLow++;
+
+          const emailFound = place.email || (place.emails && place.emails[0]) || null;
+          await fetch('/api/scan-log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-admin-key': currentAdminId },
+            body: JSON.stringify({
+              user_id: currentAdminId,
+              business_url: place.url, business_name: place.name,
+              score, niche, city, country,
+              email_found: emailFound, email_status: emailFound ? 'has_email' : 'no_email',
+              source: 'discover',
+              recommendations: scanData.recommendations
+                ? (scanData.recommendations.all || scanData.recommendations).slice(0,5).map(r => r.title || r)
+                : []
+            })
+          });
+          alreadyScanned.add(place.url.trim());
+          totalScanned++;
+        } catch(e) { totalErrors++; }
+        comboScanned++;
+        const pct = Math.round((ci / combos.length) * 90) + Math.round((comboScanned / urlsToScan.length) * 8);
+        setProgress(Math.min(pct, 95), `Combo ${ci+1}/${combos.length} · ${comboScanned}/${urlsToScan.length}: ${place.name || place.url}`);
+      }
+    }
+
+    setProgress(100, '✅ Batch complete!');
+
+    document.getElementById('adminBatchResults').style.display = 'block';
+    document.getElementById('adminBatchResults').innerHTML = `
+      <div style="background:#111827;border:1px solid #374151;border-radius:12px;padding:24px;">
+        <h4 style="font-weight:800;font-size:1rem;color:#f9fafb;margin-bottom:16px;">✅ Batch klaar — ${combos.length} combo's</h4>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px;">
+          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:14px;text-align:center;">
+            <div style="font-size:1.8rem;font-weight:900;color:#4ade80;">${totalScanned}</div>
+            <div style="font-size:0.72rem;color:#6b7280;">✅ Gescand & gelogd</div>
+          </div>
+          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:14px;text-align:center;">
+            <div style="font-size:1.8rem;font-weight:900;color:#a3e635;">${scoreHigh}</div>
+            <div style="font-size:0.72rem;color:#6b7280;">🏆 Score 85+</div>
+          </div>
+          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:14px;text-align:center;">
+            <div style="font-size:1.8rem;font-weight:900;color:#60a5fa;">${scoreGood}</div>
+            <div style="font-size:0.72rem;color:#6b7280;">👍 Score 70–84</div>
+          </div>
+          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:14px;text-align:center;">
+            <div style="font-size:1.8rem;font-weight:900;color:#9ca3af;">${totalSkipped}</div>
+            <div style="font-size:0.72rem;color:#6b7280;">⏭ Duplicaten skip</div>
+          </div>
+        </div>
+        <p style="font-size:0.82rem;color:#a78bfa;text-align:center;">
+          Ga naar <strong>Scan Log</strong> → filter → selecteer → Export CSV → Mailgo
+        </p>
+      </div>`;
+
+  } catch(e) {
+    setProgress(0, '');
+    document.getElementById('adminBatchResults').style.display = 'block';
+    document.getElementById('adminBatchResults').innerHTML = `
+      <div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:8px;padding:16px;">
+        <p style="color:#f87171;font-weight:700;">❌ Batch fout</p>
+        <p style="color:#fca5a5;font-size:0.85rem;">${e.message}</p>
+      </div>`;
+  } finally {
+    btn.disabled = false; btn.textContent = '🚀 Start Batch Find Leads';
+  }
+}
 
 async function adminRunScan() {
   const url = document.getElementById('adminScanUrl').value.trim();
