@@ -13,6 +13,10 @@
 // ✅ SendGrid + Admin + Leaderboard + Freelancers preserved
 // ✅ UPDATE: /api/user/keys/status returns hasSendgrid:true when SENDGRID_API_KEY env var is set
 // ✅ UPDATE: /api/email/send falls back to server SENDGRID_API_KEY env var (no user key required)
+// ✅ FIX: scan_log.source column added — stores 'bulk'/'single'/'discover' per row
+// ✅ FIX: ON CONFLICT DO NOTHING removed from scan_log INSERT (no unique constraint)
+// ✅ FIX: /api/scan-log POST now stores + returns source field
+// ✅ FIX: DOCX export Status column shows template type (Congrats/Pitch/Almost/Website)
 // ============================================
 process.env.PGSSLMODE = 'verify-full';
 process.env.NODE_NO_WARNINGS = '1';
@@ -189,13 +193,33 @@ async function createAllTables() {
         
         // 5. Email Queue
         await client.query(`CREATE TABLE IF NOT EXISTS email_queue (id SERIAL PRIMARY KEY, user_id VARCHAR(255), to_email VARCHAR(255) NOT NULL, to_name VARCHAR(255), subject TEXT NOT NULL, body TEXT NOT NULL, status VARCHAR(50) DEFAULT 'pending', sent_at TIMESTAMP, error_message TEXT, created_at TIMESTAMP DEFAULT NOW(), business_url TEXT, business_name VARCHAR(255), score INTEGER, template_type VARCHAR(50))`);
-        // 6. Scan Log (tracks every auto-discover scan — including no-email businesses)
-        await client.query(`CREATE TABLE IF NOT EXISTS scan_log (id SERIAL PRIMARY KEY, user_id VARCHAR(255), business_url TEXT, business_name VARCHAR(255), score INTEGER, niche VARCHAR(100), city VARCHAR(255), country VARCHAR(100), email_found VARCHAR(255), email_status VARCHAR(50) DEFAULT 'no_email', recommendations TEXT, created_at TIMESTAMP DEFAULT NOW())`);
+
+        // 6. Scan Log — ✅ FIX: source column added to track bulk/single/discover origin
+        await client.query(`CREATE TABLE IF NOT EXISTS scan_log (
+            id SERIAL PRIMARY KEY,
+            user_id VARCHAR(255),
+            business_url TEXT,
+            business_name VARCHAR(255),
+            score INTEGER,
+            niche VARCHAR(100),
+            city VARCHAR(255),
+            country VARCHAR(100),
+            email_found VARCHAR(255),
+            email_status VARCHAR(50) DEFAULT 'no_email',
+            source VARCHAR(50) DEFAULT 'single',
+            recommendations TEXT,
+            created_at TIMESTAMP DEFAULT NOW()
+        )`);
+        // Migrations for existing deployments
         await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS recommendations TEXT`).catch(() => {});
+        // ✅ FIX: Add source column to existing scan_log tables that pre-date this version
+        await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'single'`).catch(() => {});
+
         // 7. Email suppression list (unsubscribes — respected forever across all future scans)
         await client.query(`CREATE TABLE IF NOT EXISTS email_suppression (id SERIAL PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, unsubscribed_at TIMESTAMP DEFAULT NOW(), reason VARCHAR(100) DEFAULT 'user_request')`);
         // 8. Warmup config — tracks when each user started their email warmup
-        await client.query(`CREATE TABLE IF NOT EXISTS warmup_config (id SERIAL PRIMARY KEY, user_id VARCHAR(255) UNIQUE NOT NULL, warmup_start_date DATE NOT NULL DEFAULT CURRENT_DATE, is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW())`);        // Migrate: add columns if they don't exist yet
+        await client.query(`CREATE TABLE IF NOT EXISTS warmup_config (id SERIAL PRIMARY KEY, user_id VARCHAR(255) UNIQUE NOT NULL, warmup_start_date DATE NOT NULL DEFAULT CURRENT_DATE, is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW())`);
+        // Migrate: add columns if they don't exist yet
         await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS business_url TEXT`).catch(() => {});
         await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS business_name VARCHAR(255)`).catch(() => {});
         await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS score INTEGER`).catch(() => {});
@@ -541,6 +565,7 @@ app.post('/api/export/scan-report-docx', async (req, res) => {
 
     fs.writeFileSync(tmpJson, JSON.stringify(scans));
 
+    // ✅ FIX: Status column now shows template type (Congrats/Pitch/Almost/Website) instead of generic Sent/No email
     const pyScript = `
 import sys, json
 from docx import Document
@@ -591,9 +616,32 @@ stats_p.add_run(f'Total scanned: {total}   |   Emails sent: {emailed}   |   No e
 
 doc.add_paragraph()
 
-# Table
-headers = ['Business', 'URL', 'Score', 'Email Found', 'Status', 'Top Issue', 'Scanned']
-widths  = [Cm(4.5), Cm(5.5), Cm(1.5), Cm(5), Cm(2.2), Cm(5), Cm(2.8)]
+def get_template_label(s):
+    """Return human-readable template type label for the DOCX Status column."""
+    tt = s.get('template_type') or ''
+    status = s.get('email_status') or 'no_email'
+    if status != 'has_email':
+        return 'No email'
+    if tt == 'congrats':
+        return 'Congrats'
+    if tt == 'almost':
+        return 'Almost Made It'
+    if tt == 'improvement':
+        return 'Pitch Sent'
+    if tt == 'website':
+        return 'Website Offer'
+    return 'Sent'
+
+def get_source_label(s):
+    """Return human-readable source label."""
+    src = s.get('source') or 'single'
+    if src == 'bulk':     return 'Bulk'
+    if src == 'discover': return 'Find Leads'
+    return 'Single'
+
+# Table — 8 columns now includes Source
+headers = ['Business', 'URL', 'Score', 'Email Found', 'Template', 'Source', 'Top Issue', 'Scanned']
+widths  = [Cm(3.8), Cm(4.5), Cm(1.5), Cm(4.2), Cm(2.2), Cm(1.8), Cm(4.5), Cm(2.5)]
 
 table = doc.add_table(rows=1, cols=len(headers))
 table.style = 'Table Grid'
@@ -634,12 +682,16 @@ for idx, s in enumerate(scans):
         dt_str = datetime.fromisoformat(s.get('created_at','').replace('Z','+00:00')).strftime('%d/%m/%Y')
     except: dt_str = str(s.get('created_at',''))[:10]
 
+    template_label = get_template_label(s)
+    source_label   = get_source_label(s)
+
     row_data = [
         (s.get('business_name') or '—')[:40],
         (s.get('business_url') or '—').replace('https://','').replace('http://','').replace('www.','')[:40],
         score_str,
         (s.get('email_found') or 'not found')[:35],
-        'Sent' if s.get('email_status') == 'has_email' else 'No email',
+        template_label,
+        source_label,
         rec[:50],
         dt_str
     ]
@@ -656,9 +708,13 @@ for idx, s in enumerate(scans):
             elif score >= 50: run.font.color.rgb = RGBColor(180, 83, 9)
             else:             run.font.color.rgb = RGBColor(185, 28, 28)
             run.bold = True
-        # Status color
+        # Template/Status color
         if i == 4:
-            run.font.color.rgb = RGBColor(5, 150, 105) if val == 'Sent' else RGBColor(107, 114, 128)
+            if val == 'Congrats':         run.font.color.rgb = RGBColor(5, 150, 105)
+            elif val == 'Almost Made It': run.font.color.rgb = RGBColor(180, 83, 9)
+            elif val == 'Pitch Sent':     run.font.color.rgb = RGBColor(29, 78, 216)
+            elif val == 'Website Offer':  run.font.color.rgb = RGBColor(126, 34, 206)
+            else:                         run.font.color.rgb = RGBColor(107, 114, 128)
         # Row shading
         tc = cell._tc
         tcPr = tc.get_or_add_tcPr()
@@ -700,39 +756,53 @@ print('OK')
     });
 });
 
+// ✅ FIX: /api/scan-log GET — now returns source column
 app.get('/api/scan-log', async (req, res) => {
     if (!pool) return res.json({ success: false, error: 'No DB' });
     const userId = req.headers['x-user-id'];
     if (!userId) return res.json({ success: false, error: 'No user ID' });
     try {
         const r = await pool.query(
-            `SELECT id, business_url, business_name, score, niche, city, country, email_found, email_status, recommendations, created_at
+            `SELECT id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations, created_at
              FROM scan_log WHERE user_id = $1 ORDER BY created_at DESC LIMIT 200`, [userId]
         );
         res.json({ success: true, scans: r.rows });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// ✅ FIX: /api/scan-log POST — stores source field; removed broken ON CONFLICT DO NOTHING
 app.post('/api/scan-log', async (req, res) => {
     if (!pool) return res.json({ success: false });
-    const { user_id, business_url, business_name, score, niche, city, country, email_found, email_status, recommendations } = req.body;
+    const { user_id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations } = req.body;
     try {
         await pool.query(
-            `INSERT INTO scan_log (user_id, business_url, business_name, score, niche, city, country, email_found, email_status, recommendations)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-             ON CONFLICT DO NOTHING`,
-            [user_id || null, business_url, business_name || null, score || null, niche || null, city || null, country || null, email_found || null, email_status || 'no_email', recommendations ? JSON.stringify(recommendations) : null]
+            `INSERT INTO scan_log (user_id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+            [
+                user_id || null,
+                business_url,
+                business_name || null,
+                score || null,
+                niche || null,
+                city || null,
+                country || null,
+                email_found || null,
+                email_status || 'no_email',
+                source || 'single',
+                recommendations ? JSON.stringify(recommendations) : null
+            ]
         );
         res.json({ success: true });
     } catch (e) { res.json({ success: false, error: e.message }); }
 });
 
+// ✅ FIX: /api/admin/scan-log GET — now returns source column
 app.get('/api/admin/scan-log', verifyAdmin, async (req, res) => {
     if (!pool) return res.json({ success: false, error: 'No DB' });
     const limit = parseInt(req.query.limit) || 200;
     try {
         const r = await pool.query(
-            `SELECT id, business_url, business_name, score, niche, city, country, email_found, email_status, recommendations, created_at
+            `SELECT id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations, created_at
              FROM scan_log ORDER BY created_at DESC LIMIT $1`, [limit]
         );
         res.json({ success: true, scans: r.rows });
@@ -895,16 +965,12 @@ app.post('/api/leaderboard/submit', async (req, res) => {
     if (!pool) return res.json({ success: false, error: 'Database unavailable' });
     const { url, company_name, score, country, niche, email } = req.body;
     
-    // Validate required fields
     if (!url || score === undefined) {
         return res.status(400).json({ success: false, error: 'URL and Score are required' });
     }
 
     try {
-        // Ensure score is integer
         const finalScore = parseInt(score);
-        
-        // Insert into leaderboard (requires admin verification by default)
         const r = await pool.query(
             `INSERT INTO leaderboard (url, company_name, score, country, niche, admin_verified, is_verified, submission_ip)
             VALUES ($1, $2, $3, $4, $5, FALSE, FALSE, $6)
@@ -915,14 +981,7 @@ app.post('/api/leaderboard/submit', async (req, res) => {
             admin_verified = FALSE,
             is_verified = FALSE
             RETURNING id`,
-            [
-                url, 
-                company_name || null, 
-                finalScore, 
-                country || 'NL', // Default to NL if missing
-                niche || null, 
-                req.ip || req.connection.remoteAddress
-            ]
+            [url, company_name || null, finalScore, country || 'NL', niche || null, req.ip || req.connection.remoteAddress]
         );
         
         res.json({ success: true, id: r.rows[0]?.id, message: 'Submission received. Pending admin approval.' });
@@ -978,7 +1037,6 @@ app.post('/api/scan', async (req, res) => {
             // Headings
             const h1Els = document.querySelectorAll('h1');
             const h1Count = h1Els.length;
-            // Capture first H1's visible text and check for hidden H1s
             let h1Text = '';
             let h1IsHidden = false;
             let h1VisibleCount = 0;
@@ -1001,13 +1059,11 @@ app.post('/api/scan', async (req, res) => {
             const h3Count = document.querySelectorAll('h3').length;
             const listItemCount = document.querySelectorAll('li').length;
             
-            // Paragraphs avg length
             const paragraphs = Array.from(document.querySelectorAll('p'));
             const avgParagraphLength = paragraphs.length > 0
                 ? paragraphs.map(p => p.textContent.trim().split(/\s+/).length).reduce((a, b) => a + b, 0) / paragraphs.length
                 : 0;
             
-            // Meta
             const metaTitle = (document.querySelector('title') || {}).textContent || '';
             const metaTitleLength = metaTitle.length;
             const metaDescEl = document.querySelector('meta[name="description"]');
@@ -1016,11 +1072,9 @@ app.post('/api/scan', async (req, res) => {
             const hasMetaViewport = !!document.querySelector('meta[name="viewport"]');
             const hasCanonical = !!document.querySelector('link[rel="canonical"]');
             
-            // Social
             const hasOpenGraph = !!document.querySelector('meta[property="og:title"]');
             const hasTwitterCard = !!document.querySelector('meta[name="twitter:card"]');
             
-            // Schema — handles @type string, @type array, @graph arrays
             const schemaScripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
             let hasArticleSchema = false;
             let hasFAQPageSchema = false;
@@ -1046,18 +1100,15 @@ app.post('/api/scan', async (req, res) => {
                 } catch (e) {}
             });
             
-            // FAQ content
             const hasFAQContent = Array.from(document.querySelectorAll('h2, h3, h4')).some(h =>
                 h.textContent.toLowerCase().includes('faq') ||
                 h.textContent.toLowerCase().includes('frequently asked') ||
                 h.textContent.toLowerCase().includes('common question')
             );
             
-            // Images
             const images = document.querySelectorAll('img');
             const imagesWithAlt = Array.from(images).filter(img => img.hasAttribute('alt') && img.getAttribute('alt').trim().length > 5).length;
             
-            // Links
             let baseHostname = '';
             try { baseHostname = new URL(scanUrlParam).hostname.replace('www.', ''); } catch (e) {}
             const allLinks = Array.from(document.querySelectorAll('a[href]'));
@@ -1071,7 +1122,6 @@ app.post('/api/scan', async (req, res) => {
                 } catch (e) { return false; }
             }).length;
             
-            // Expert Quotes — blockquote+cite AND testimonial CSS classes
             let expertQuoteCount = 0;
             document.querySelectorAll('blockquote').forEach(bq => {
                 const cite = bq.querySelector('cite');
@@ -1086,7 +1136,6 @@ app.post('/api/scan', async (req, res) => {
                 } catch (e) {}
             });
             
-            // Case Studies — must contain % or €/$ with a section keyword, and be a focused element
             let caseStudyCount = 0;
             const caseStudyKeywords = ['case study', 'challenge', 'solution', 'results', 'roi', 'recovered', 'recovery', 'success rate'];
             const seen = new Set();
@@ -1101,15 +1150,12 @@ app.post('/api/scan', async (req, res) => {
                 }
             });
             
-            // Statistics — numbers with %, currency, or large round figures
             const statsPattern = /\d+%|\$[\d,.]+|€[\d,.]+|\d{1,3}(,\d{3})+|\d+x\s/g;
             const statsFound = (cleanText.match(statsPattern) || []).length;
             
-            // Direct Answer Box detection
             const first300Words = cleanText.split(/\s+/).slice(0, 300).join(' ');
             const hasDirectAnswer = /\d/.test(first300Words) && first300Words.length > 150;
             
-            // TL;DR / Key Takeaways detection
             const hasTLDR = /tl;dr|key takeaways|quick summary|at a glance|in this article|what you('ll| will) get|why choose|key benefits|what we do|highlights|our approach|how it works/i.test(rawHtml) ||
                 (() => {
                     const earlyLists = Array.from(document.querySelectorAll('ul, ol'));
@@ -1125,11 +1171,9 @@ app.post('/api/scan', async (req, res) => {
                     return false;
                 })();
             
-            // Table of Contents
             const hasTOC = /table of contents|on this page|jump to section|contents/i.test(rawHtml) ||
                 !!document.querySelector('[class*="toc"], [id*="toc"], [class*="table-of-contents"]');
             
-            // Author Bio
             const hasAuthorBio = (
                 !!document.querySelector('[class*="author"], [class*="bio"], .vcard, [rel="author"]') ||
                 /about the author|written by/i.test(rawHtml)
@@ -1165,7 +1209,6 @@ app.post('/api/scan', async (req, res) => {
         // ============================================
         // 📊 SCORING — GRAAF 50 + CRAFT 30 + TECH 20
         // ============================================
-        // --- GRAAF FRAMEWORK (50 Points) ---
         let graafScore = 0;
         if (analysis.wordCount >= 2500)      graafScore += 10;
         else if (analysis.wordCount >= 1500) graafScore += 7;
@@ -1192,12 +1235,10 @@ app.post('/api/scan', async (req, res) => {
         
         graafScore = Math.min(50, graafScore);
         
-        // --- CRAFT FRAMEWORK (30 Points) ---
         let craftScore = 0;
-        // H1 scoring: only award full points for 1 visible, non-generic, real H1
         if (analysis.h1VisibleCount === 1 && !analysis.h1IsGeneric && !analysis.h1IsTooShort) craftScore += 8;
-        else if (analysis.h1VisibleCount === 1) craftScore += 3; // exists but weak
-        else if (analysis.h1VisibleCount > 1)   craftScore += 2; // multiple
+        else if (analysis.h1VisibleCount === 1) craftScore += 3;
+        else if (analysis.h1VisibleCount > 1)   craftScore += 2;
         
         if (analysis.h2Count >= 5)          craftScore += 7;
         else if (analysis.h2Count >= 3)     craftScore += 5;
@@ -1212,7 +1253,6 @@ app.post('/api/scan', async (req, res) => {
         
         craftScore = Math.min(30, craftScore);
         
-        // --- TECHNICAL SEO (20 Points) ---
         let technicalScore = 0;
         if (analysis.metaTitleLength >= 50 && analysis.metaTitleLength <= 60) technicalScore += 3;
         else if (analysis.metaTitleLength > 0) technicalScore += 1;
@@ -1283,7 +1323,6 @@ app.post('/api/scan', async (req, res) => {
             recommendations.push({ title: '📋 Add More Structured Lists', description: `${analysis.listItemCount} list items found. Reaching 15+ improves both scannability and GRAAF scoring.`, priority: 'low', action: "Look for sections with 3+ parallel ideas and convert them to bullet lists.", learning: "Structured lists signal scannable, user-friendly content.", target: '15+ list items' });
         }
         
-        // ── H1 checks — 5 distinct failure modes ──
         if (analysis.h1Count === 0) {
             recommendations.push({ title: '🚨 Critical: No H1 Heading Found', description: 'No H1 tag detected. This is one of the most impactful on-page SEO issues you can fix.', priority: 'high', action: "Add exactly one H1 tag near the top of the page containing your primary keyword.", learning: "The H1 is Google's strongest on-page keyword signal. Without it, Google has to guess what your page is about — and it often guesses wrong.", target: 'Exactly 1 H1 tag with primary keyword in the first 30 characters' });
         } else if (analysis.h1IsHidden && analysis.h1VisibleCount === 0) {
@@ -1476,7 +1515,6 @@ app.get('/api/apify/dataset/:runId', async (req, res) => {
     const token = req.headers['x-apify-token'];
     if (!token) return res.status(401).json({ error: 'No Apify token' });
     try {
-        // Apify dataset items endpoint — works via run ID directly
         const r = await fetch(`${APIFY_BASE}/actor-runs/${req.params.runId}/dataset/items?format=json&clean=true`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -1484,7 +1522,6 @@ app.get('/api/apify/dataset/:runId', async (req, res) => {
         res.status(r.status).json(data);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
-// ───────────────────────────────────────────────────────────────────────────
 
 app.get('/api/health', async (req, res) => {
     let db = 'disconnected';
@@ -1501,7 +1538,7 @@ app.get('/api/health', async (req, res) => {
             freelancerTotal = parseInt(flAll.rows[0].count) || 0;
         } catch (e) {}
     }
-    res.json({ status: 'running', database: db, puppeteer: browserInstance ? 'ready' : 'not started', version: 'elite-v4-fixed', sendgrid: process.env.SENDGRID_API_KEY ? 'configured' : 'not configured', counts: { leaderboardTotal, leaderboardApproved, freelancerTotal } });
+    res.json({ status: 'running', database: db, puppeteer: browserInstance ? 'ready' : 'not started', version: 'elite-v4-fixed-v2', sendgrid: process.env.SENDGRID_API_KEY ? 'configured' : 'not configured', counts: { leaderboardTotal, leaderboardApproved, freelancerTotal } });
 });
 
 app.use((err, req, res, next) => {
@@ -1511,8 +1548,11 @@ app.use((err, req, res, next) => {
 
 async function startServer() {
     console.log('\n🚀 =====================================');
-    console.log('🚀  CONTENTSCALE ELITE SERVER v4 (FIXED)');
+    console.log('🚀  CONTENTSCALE ELITE SERVER v4 (FIXED v2)');
     console.log('🚀  DB Migration: country VARCHAR(100)');
+    console.log('🚀  scan_log.source column added');
+    console.log('🚀  ON CONFLICT bug fixed in scan_log INSERT');
+    console.log('🚀  DOCX export: template type column added');
     console.log('🚀  Bulk Delete Routes Added');
     console.log('🚀  34 Recommendation Checks');
     console.log('🚀  GRAAF 50 + CRAFT 30 + Technical 20');
