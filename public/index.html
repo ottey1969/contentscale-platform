@@ -2857,7 +2857,7 @@ function displayScanResult(data, targetEl) {
             style="flex:1;min-width:130px;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#25d366,#128c7e);color:white!important;padding:12px 14px;border-radius:10px;font-weight:700;text-decoration:none;font-size:0.85rem;">
             <i class="fab fa-whatsapp"></i> Get Help
           </a>
-          <button onclick="if(window._lastScanData){copyScanShareLink(window._lastScanData.url,window._lastScanData.score,window._lastScanData._scoreLabel||'');}return false;"
+          <button onclick="copyScanShareLink();return false;"
             style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
             🔗 Share Link
           </button>
@@ -2888,18 +2888,29 @@ function displayScanResult(data, targetEl) {
 // ============================================================
 // SHARE LINK
 // ============================================================
-function copyScanShareLink(url, score, label) {
-  const params = new URLSearchParams({ url, score, label });
-  const shareUrl = 'https://app.contentscale.site/?' + params.toString();
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      showToast('🔗 Share link copied to clipboard!', '#0ea5e9');
-    }).catch(() => {
-      fallbackCopy(shareUrl);
-    });
-  } else {
-    fallbackCopy(shareUrl);
+function copyScanShareLink() {
+  const data = window._lastScanData;
+  if (!data) { showToast('❌ Run a scan first', '#ef4444'); return; }
+
+  // Use server-hosted report URL if available (looks like the PDF report)
+  const reportUrl = data.report_url
+    ? (data.report_url.startsWith('http') ? data.report_url : 'https://app.contentscale.site' + data.report_url)
+    : null;
+
+  if (reportUrl) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(reportUrl).then(() => {
+        showToast('🔗 Report link copied!', '#0ea5e9');
+      }).catch(() => fallbackCopy(reportUrl));
+    } else {
+      fallbackCopy(reportUrl);
+    }
+    return;
   }
+
+  // Fallback: open the full PDF-style report in a new window
+  exportScanPDF(data);
+  showToast('📄 Report opened — share via Print → Save as PDF', '#7e22ce');
 }
 function fallbackCopy(text) {
   const ta = document.createElement('textarea');
