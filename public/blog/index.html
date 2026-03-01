@@ -9,114 +9,234 @@
   <link rel="canonical" href="https://app.contentscale.site/blog/">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    .nav-bar { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-bottom: 2px solid #374151; position: sticky; top: 0; z-index: 1000; }
-    .nav-link { color: #9ca3af; padding: 12px 20px; font-weight: 600; transition: all 0.3s; border-bottom: 3px solid transparent; cursor: pointer; text-decoration: none; }
+    /* ── Navigation ── */
+    .nav-bar {
+      background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+      border-bottom: 2px solid #374151;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    .nav-link {
+      color: #9ca3af;
+      padding: 12px 20px;
+      font-weight: 600;
+      transition: all 0.3s;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+    }
     .nav-link:hover { color: white; border-bottom-color: #8b5cf6; }
     .nav-link.active { color: white; border-bottom-color: #8b5cf6; }
-    
-    .blog-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid #334155; border-radius: 16px; padding: 24px; transition: all 0.3s; cursor: pointer; }
-    .blog-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(139, 92, 246, 0.3); border-color: #8b5cf6; }
-    .blog-card.featured { border-color: #f59e0b; background: linear-gradient(135deg, #1e293b 0%, #2d1f08 100%); }
-    .blog-card.featured::before { content: '⭐ FEATURED'; position: absolute; top: -12px; right: 24px; background: linear-gradient(135deg, #f59e0b 0%, #eab308 100%); color: #1e293b; padding: 6px 16px; border-radius: 20px; font-size: 11px; font-weight: 800; }
-    
-    .category-badge { display: inline-block; padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; margin-right: 8px; }
-    .cat-guide { background: #8b5cf6; color: white; }
+
+    /* ── Blog cards ── */
+    .blog-card {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 2px solid #334155;
+      border-radius: 16px;
+      padding: 24px;
+      transition: all 0.3s;
+      cursor: pointer;
+      position: relative; /* FIX: needed for ::before pseudo on featured */
+    }
+    .blog-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(139, 92, 246, 0.3);
+      border-color: #8b5cf6;
+    }
+    .blog-card.featured {
+      border-color: #f59e0b;
+      background: linear-gradient(135deg, #1e293b 0%, #2d1f08 100%);
+    }
+    /* FIX: position:absolute works because blog-card now has position:relative */
+    .blog-card.featured::before {
+      content: '⭐ FEATURED';
+      position: absolute;
+      top: -13px;
+      right: 24px;
+      background: linear-gradient(135deg, #f59e0b 0%, #eab308 100%);
+      color: #1e293b;
+      padding: 5px 16px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    /* ── Category badges ── */
+    .category-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-right: 6px;
+      margin-bottom: 4px;
+    }
+    .cat-guide      { background: #8b5cf6; color: white; }
     .cat-case-study { background: #10b981; color: white; }
-    .cat-tips { background: #3b82f6; color: white; }
-    .cat-news { background: #f59e0b; color: white; }
-    .cat-agency { background: #ec4899; color: white; }
-    
-    .search-box { background: #1f2937; border: 2px solid #374151; border-radius: 12px; padding: 12px 20px; color: white; width: 100%; }
+    .cat-tips       { background: #3b82f6; color: white; }
+    .cat-news       { background: #f59e0b; color: #1e293b; }
+    .cat-agency     { background: #ec4899; color: white; }
+
+    /* ── Search & filter ── */
+    .search-box {
+      background: #1f2937;
+      border: 2px solid #374151;
+      border-radius: 12px;
+      padding: 12px 20px;
+      color: white;
+      width: 100%;
+      font-size: 15px;
+    }
+    .search-box::placeholder { color: #6b7280; }
     .search-box:focus { outline: none; border-color: #8b5cf6; }
-    
-    .filter-btn { background: #374151; color: #9ca3af; padding: 8px 16px; border-radius: 8px; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; font-size: 14px; font-weight: 600; margin: 4px; }
-    .filter-btn:hover { background: #4b5563; color: white; }
+
+    .filter-btn {
+      background: #374151;
+      color: #9ca3af;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 14px;
+      font-weight: 600;
+      margin: 4px;
+    }
+    .filter-btn:hover  { background: #4b5563; color: white; }
     .filter-btn.active { background: #8b5cf6; color: white; border-color: #a78bfa; }
 
-    .line-clamp-2 {
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+    /* ── Share toast ── */
+    #share-toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #8b5cf6;
+      color: white;
+      padding: 10px 28px;
+      border-radius: 99px;
+      font-weight: 700;
+      font-size: 14px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s, transform 0.3s;
+      z-index: 9999;
+      white-space: nowrap;
     }
-    .line-clamp-3 {
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+    #share-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── Read more button ── */
+    .read-more-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 14px;
+      background: rgba(139,92,246,0.15);
+      color: #a78bfa;
+      border: 1px solid #4c1d95;
+      border-radius: 8px;
+      padding: 7px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      transition: background 0.2s;
+    }
+    .read-more-btn:hover { background: rgba(139,92,246,0.3); }
+
+    /* ── Share button on card ── */
+    .share-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid #374151;
+      color: #9ca3af;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .share-btn:hover { background: rgba(139,92,246,0.2); color: #c4b5fd; border-color: #6d28d9; }
+
+    @media (max-width: 640px) {
+      .nav-link { padding: 10px 10px; font-size: 0.8rem; }
     }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100">
 
+  <!-- Share toast notification -->
+  <div id="share-toast">🔗 Link copied to clipboard!</div>
+
   <!-- NAVIGATION -->
   <nav class="nav-bar">
     <div class="max-w-6xl mx-auto px-6">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">ContentScale</div>
-        </div>
-        <div class="flex items-center gap-1">
-          <a href="/" class="nav-link">🏠 Home</a>
-          <a href="/#scanner" class="nav-link">🔍 Scanner</a>
-          <a href="/#leaderboard" class="nav-link">🏆 Leaderboard</a>
-          <a href="/#pricing" class="nav-link">💰 Pricing</a>
-          <a href="/blog/index.html" class="nav-link active">📝 Blog</a>
-          <a href="/contact-form" class="nav-link">📞 Contact</a>
+      <div class="flex items-center justify-between flex-wrap gap-2 py-2">
+        <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">ContentScale</div>
+        <div class="flex flex-wrap items-center gap-1">
+          <a href="/"                  class="nav-link">🏠 Home</a>
+          <a href="/#scanner"          class="nav-link">🔍 Scanner</a>
+          <a href="/#leaderboard"      class="nav-link">🏆 Leaderboard</a>
+          <a href="/blog/index.html"   class="nav-link active">📝 Blog</a>
+          <a href="/contact-form"      class="nav-link">📞 Contact</a>
         </div>
       </div>
     </div>
   </nav>
 
   <div class="max-w-6xl mx-auto px-6 py-12">
-    
+
     <!-- HEADER -->
     <div class="text-center mb-12">
       <h1 class="text-5xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
         ContentScale Blog
       </h1>
       <p class="text-xl text-gray-400 mb-6">
-        AI-Era SEO Strategies, Case Studies & Expert Tips
+        AI-Era SEO Strategies, Case Studies &amp; Expert Tips
       </p>
       <div class="max-w-xl mx-auto">
-        <input 
-          type="text" 
-          id="searchBox" 
-          class="search-box" 
-          placeholder="🔍 Search articles..."
-          onkeyup="filterBlogs()">
+        <input
+          type="text"
+          id="searchBox"
+          class="search-box"
+          placeholder="🔍 Search articles…"
+          oninput="filterBlogs()">
       </div>
     </div>
 
     <!-- CATEGORIES FILTER -->
     <div class="mb-8 text-center">
       <div class="mb-3">
-        <span class="text-sm text-gray-500 uppercase font-bold">Filter by Category:</span>
+        <span class="text-sm text-gray-500 uppercase font-bold tracking-widest">Filter by Category</span>
       </div>
+      <!-- FIX: data-cat attribute used for precise matching, no substring false-positives -->
       <div class="flex flex-wrap justify-center">
-        <button class="filter-btn active" onclick="filterCategory('all')">All Posts</button>
-        <button class="filter-btn" onclick="filterCategory('guide')">📚 Guides</button>
-        <button class="filter-btn" onclick="filterCategory('case-study')">📊 Case Studies</button>
-        <button class="filter-btn" onclick="filterCategory('agency')">🏢 Agency Spotlights</button>
-        <button class="filter-btn" onclick="filterCategory('tips')">💡 Tips & Tricks</button>
-        <button class="filter-btn" onclick="filterCategory('news')">📰 News & Updates</button>
+        <button class="filter-btn active" data-cat="all"        onclick="filterCategory(this)">All Posts</button>
+        <button class="filter-btn"        data-cat="guide"      onclick="filterCategory(this)">📚 Guides</button>
+        <button class="filter-btn"        data-cat="case-study" onclick="filterCategory(this)">📊 Case Studies</button>
+        <button class="filter-btn"        data-cat="agency"     onclick="filterCategory(this)">🏢 Agency Spotlights</button>
+        <button class="filter-btn"        data-cat="tips"       onclick="filterCategory(this)">💡 Tips &amp; Tricks</button>
+        <button class="filter-btn"        data-cat="news"       onclick="filterCategory(this)">📰 News &amp; Updates</button>
       </div>
     </div>
 
-    <!-- FEATURED POST (dynamisch geladen) -->
+    <!-- FEATURED POST -->
     <div id="featured-section" class="mb-12">
       <h2 class="text-2xl font-bold mb-6 text-yellow-400">⭐ Featured Article</h2>
-      <div id="featured-post-container">
-        <!-- JavaScript laadt featured post hier -->
-      </div>
+      <div id="featured-post-container"></div>
     </div>
 
-    <!-- BLOG POSTS GRID (dynamisch geladen) -->
+    <!-- BLOG POSTS GRID -->
     <div id="blog-grid">
       <h2 class="text-2xl font-bold mb-6">Latest Articles</h2>
-      <div class="grid md:grid-cols-2 gap-6" id="posts-container">
-        <!-- JavaScript laadt posts hier -->
-      </div>
+      <div class="grid md:grid-cols-2 gap-6" id="posts-container"></div>
     </div>
 
     <!-- NO RESULTS -->
@@ -124,7 +244,9 @@
       <div class="text-6xl mb-4">🔍</div>
       <h3 class="text-2xl font-bold mb-2">No Articles Found</h3>
       <p class="text-gray-400 mb-6">Try different keywords or browse all posts</p>
-      <button onclick="filterCategory('all'); document.getElementById('searchBox').value=''" class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-bold transition">
+      <button
+        onclick="resetAll()"
+        class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-bold transition">
         Show All Posts
       </button>
     </div>
@@ -136,10 +258,13 @@
         Get your free AI-powered content analysis in 30 seconds, or talk to Ot directly for expert guidance.
       </p>
       <div class="flex flex-col md:flex-row gap-4 justify-center">
-        <a href="/#scanner" class="inline-block bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-8 py-4 rounded-lg font-bold text-lg transition">
+        <a href="https://app.contentscale.site"
+           class="inline-block bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-8 py-4 rounded-lg font-bold text-lg transition">
           🚀 Scan Your Website Free
         </a>
-        <a href="https://wa.me/31628073996?text=Hi%20Ot!%20I%20read%20your%20blog%20and%20want%20to%20improve%20my%20content%20score.%20Can%20we%20talk?" target="_blank" class="inline-block bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-8 py-4 rounded-lg font-bold text-lg transition">
+        <a href="https://wa.me/31628073996?text=Hi%20Ot!%20I%20read%20your%20blog%20and%20want%20to%20improve%20my%20content%20score.%20Can%20we%20talk?"
+           target="_blank" rel="noopener"
+           class="inline-block bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-8 py-4 rounded-lg font-bold text-lg transition">
           💬 WhatsApp Ot
         </a>
       </div>
@@ -147,635 +272,293 @@
 
     <!-- FOOTER -->
     <div class="text-center text-gray-500 text-sm mt-12 pt-8 border-t border-gray-800">
-      <p class="mb-2">ContentScale Blog © 2025 • AI-Powered SEO Recovery</p>
+      <p class="mb-2">ContentScale Blog &copy; 2026 &bull; AI-Powered SEO Recovery</p>
       <p>
-        <a href="https://app.contentscale.site" class="text-purple-400 hover:text-purple-300">Scanner</a> • 
-        <a href="https://wa.me/31628073996" class="text-green-400 hover:text-green-300">WhatsApp</a> •
-        <a href="mailto:info@contentscale.site" class="text-blue-400 hover:text-blue-300">Email</a>
+        <a href="https://app.contentscale.site" class="text-purple-400 hover:text-purple-300">Scanner</a> &bull;
+        <a href="https://wa.me/31628073996"      class="text-green-400  hover:text-green-300">WhatsApp</a> &bull;
+        <a href="mailto:info@contentscale.site"  class="text-blue-400   hover:text-blue-300">Email</a>
       </p>
     </div>
 
-  </div>
+  </div><!-- end .max-w-6xl -->
 
   <script>
-    // Embedded blog-posts.json data — no external fetch, no decode error
-    const BLOG_DATA = {
-      "posts": [
-        {
-          "slug": "graaf-framework-ai-content-optimization",
-          "title": "GRAAF Framework: The Blueprint for AI Content Optimization",
-          "description": "Discover the 5-step GRAAF framework that helped 127 sites recover 90% of AI-driven traffic loss. Goal, Relevance, Authority, Accuracy, Format.",
-          "date": "2025-05-10",
-          "readTime": "8 min read",
-          "author": "Ottmar Francisca",
-          "featured": true,
-          "category": ["guide", "case-study"],
-          "metrics": {
-            "score": "91% avg",
-            "traffic": "+214%",
-            "sites": "127"
-          }
-        },
-        {
-          "slug": "seo-recovery-after-helpful-content-update",
-          "title": "From -67% to +189%: Ecommerce SEO Recovery After HCU",
-          "description": "Full case study: How a Dutch fashion retailer bounced back from the September 2024 Helpful Content Update using CRAFT and GRAAF.",
-          "date": "2025-04-28",
-          "readTime": "12 min read",
-          "author": "Ottmar Francisca",
-          "featured": false,
-          "category": ["case-study", "tips"],
-          "metrics": {
-            "traffic": "+189%",
-            "revenue": "€2.1M",
-            "months": "4"
-          }
-        },
-        {
-          "slug": "craft-methodology-content-optimization",
-          "title": "CRAFT: The 5-Step Content Optimization Routine We Use Daily",
-          "description": "Internal methodology: Context, Relevance, Authority, Format, Trust. Actionable checklist for editors and content managers.",
-          "date": "2025-04-15",
-          "readTime": "10 min read",
-          "author": "Ottmar Francisca",
-          "featured": false,
-          "category": ["guide", "agency"],
-          "metrics": {
-            "points": "5 pillars",
-            "examples": "14 fixes"
-          }
-        },
-        {
-          "slug": "agency-spotlight-seo-recovery-specialists",
-          "title": "Agency Spotlight: How Recovery Specialists Use ContentScale",
-          "description": "Interview with 3 agencies that scaled content optimization using the GRAAF framework. Workflow tips and client reporting.",
-          "date": "2025-04-02",
-          "readTime": "9 min read",
-          "author": "Ottmar Francisca",
-          "featured": false,
-          "category": ["agency", "case-study"],
-          "metrics": {
-            "businesses": "3 agencies",
-            "clients": "87"
-          }
-        },
-        {
-          "slug": "news-google-march-2025-core-update",
-          "title": "March 2025 Core Update: What We Observed (Live Data)",
-          "description": "Real-time analysis of volatility, winners vs losers, and why E-E-A-T signals matter more than ever. Exclusive insights.",
-          "date": "2025-03-20",
-          "readTime": "7 min read",
-          "author": "Ottmar Francisca",
-          "featured": false,
-          "category": ["news", "tips"],
-          "metrics": {
-            "type": "Breaking News",
-            "visitors": "10M+",
-            "framework": "GRAAF"
-          }
-        },
-        {
-          "slug": "quick-wins-ai-content-audit",
-          "title": "7 Quick Wins From an AI Content Audit (Under 30 Minutes)",
-          "description": "Practical fixes: thin content, entity optimization, internal linking, outdated stats. Screenshots and before/after.",
-          "date": "2025-03-05",
-          "readTime": "6 min read",
-          "author": "Ottmar Francisca",
-          "featured": false,
-          "category": ["tips", "guide"],
-          "metrics": {
-            "type": "Quick Wins",
-            "score": "+22 pts"
-          }
-        }
-      ]
-    };
-
-    let currentCategory = 'all';
-    let allPosts = [];
-
-    // Load from embedded data
-    function loadBlogPosts() {
-      allPosts = BLOG_DATA.posts.sort((a, b) => new Date(b.date) - new Date(a.date));
-      const featuredPost = allPosts.find(p => p.featured === true);
-
-      if (featuredPost) {
-        renderFeaturedPost(featuredPost);
+  // ============================================================
+  // EMBEDDED DATA — no external fetch, no decode errors
+  // ============================================================
+  const BLOG_DATA = {
+    posts: [
+      {
+        slug: "graaf-framework-ai-content-optimization",
+        title: "GRAAF Framework: The Blueprint for AI Content Optimization",
+        description: "Discover the 5-step GRAAF framework that helped 127 sites recover 90% of AI-driven traffic loss. Goal, Relevance, Authority, Accuracy, Format.",
+        date: "2025-05-10",
+        readTime: "8 min read",
+        author: "Ottmar Francisca",
+        featured: true,
+        category: ["guide","case-study"],
+        metrics: { score: "91% avg", traffic: "+214%", sites: "127" }
+      },
+      {
+        slug: "seo-recovery-after-helpful-content-update",
+        title: "From -67% to +189%: Ecommerce SEO Recovery After HCU",
+        description: "Full case study: How a Dutch fashion retailer bounced back from the September 2024 Helpful Content Update using CRAFT and GRAAF.",
+        date: "2025-04-28",
+        readTime: "12 min read",
+        author: "Ottmar Francisca",
+        featured: false,
+        category: ["case-study","tips"],
+        metrics: { traffic: "+189%", revenue: "€2.1M", months: "4" }
+      },
+      {
+        slug: "craft-methodology-content-optimization",
+        title: "CRAFT: The 5-Step Content Optimization Routine We Use Daily",
+        description: "Internal methodology: Context, Relevance, Authority, Format, Trust. Actionable checklist for editors and content managers.",
+        date: "2025-04-15",
+        readTime: "10 min read",
+        author: "Ottmar Francisca",
+        featured: false,
+        category: ["guide","agency"],
+        metrics: { points: "5 pillars", examples: "14 fixes" }
+      },
+      {
+        slug: "agency-spotlight-seo-recovery-specialists",
+        title: "Agency Spotlight: How Recovery Specialists Use ContentScale",
+        description: "Interview with 3 agencies that scaled content optimization using the GRAAF framework. Workflow tips and client reporting.",
+        date: "2025-04-02",
+        readTime: "9 min read",
+        author: "Ottmar Francisca",
+        featured: false,
+        category: ["agency","case-study"],
+        metrics: { businesses: "3 agencies", clients: "87" }
+      },
+      {
+        slug: "news-google-march-2025-core-update",
+        title: "March 2025 Core Update: What We Observed (Live Data)",
+        description: "Real-time analysis of volatility, winners vs losers, and why E-E-A-T signals matter more than ever. Exclusive insights.",
+        date: "2025-03-20",
+        readTime: "7 min read",
+        author: "Ottmar Francisca",
+        featured: false,
+        category: ["news","tips"],
+        metrics: { type: "Breaking News", visitors: "10M+", framework: "GRAAF" }
+      },
+      {
+        slug: "quick-wins-ai-content-audit",
+        title: "7 Quick Wins From an AI Content Audit (Under 30 Minutes)",
+        description: "Practical fixes: thin content, entity optimization, internal linking, outdated stats. Screenshots and before/after.",
+        date: "2025-03-05",
+        readTime: "6 min read",
+        author: "Ottmar Francisca",
+        featured: false,
+        category: ["tips","guide"],
+        metrics: { type: "Quick Wins", score: "+22 pts" }
       }
+    ]
+  };
 
-      const otherPosts = allPosts.filter(p => p.featured !== true);
-      renderOtherPosts(otherPosts);
-    }
+  // ============================================================
+  // STATE
+  // ============================================================
+  let currentCategory = 'all';
+  let allPosts        = [];
 
-    function renderFeaturedPost(post) {
-      const container = document.getElementById('featured-post-container');
+  // ============================================================
+  // HELPERS
+  // ============================================================
+  function formatDate(dateString) {
+    return new Date(dateString).toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+  }
 
-      const categoryBadges = post.category.map(cat => {
-        const catClass = cat === 'guide' ? 'cat-guide' : 
-                         cat === 'case-study' ? 'cat-case-study' :
-                         cat === 'tips' ? 'cat-tips' :
-                         cat === 'news' ? 'cat-news' :
-                         cat === 'agency' ? 'cat-agency' : 'cat-guide';
-        const catLabel = cat.replace('-', ' ').toUpperCase();
-        return `<span class="category-badge ${catClass}">${catLabel}</span>`;
-      }).join(' ');
+  // FIX: exact matching using data-cat, not substring of textContent
+  function filterCategory(btn) {
+    currentCategory = btn.dataset.cat;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filterBlogs();
+  }
 
-      // ----- UPDATED HEADSHOT: real Ottmar Francisca image from GitHub -----
-      container.innerHTML = `
-        <div class="blog-card featured relative" onclick="window.location.href='/blog/${post.slug}'">
-          <div class="mb-4">
-            ${categoryBadges}
-            <span class="text-sm text-gray-500">📅 ${formatDate(post.date)} • ⏱️ ${post.readTime}</span>
-          </div>
-          <h3 class="text-3xl font-bold mb-3">${post.title}</h3>
-          <p class="text-gray-400 mb-4 leading-relaxed">
-            ${post.description}
-          </p>
-          <div class="flex items-center gap-3">
-            <img src="https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca-headshot.png" 
-                 alt="Ottmar Francisca headshot" 
-                 class="w-10 h-10 rounded-full object-cover border-2 border-purple-400"
-                 onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'40\\' height=\\'40\\'%3E%3Ccircle cx=\\'20\\' cy=\\'20\\' r=\\'20\\' fill=\\'%238b5cf6\\'/%3E%3Ctext x=\\'20\\' y=\\'26\\' text-anchor=\\'middle\\' fill=\\'white\\' font-size=\\'16\\' font-weight=\\'bold\\'%3EO%3C/text%3E%3C/svg%3E';">
-            <div>
-              <div class="font-bold text-sm">${post.author}</div>
-              <div class="text-xs text-gray-500">Founder & SEO Recovery Expert</div>
-            </div>
-          </div>
-        </div>
-      `;
-    }
+  function resetAll() {
+    document.getElementById('searchBox').value = '';
+    const allBtn = document.querySelector('[data-cat="all"]');
+    if (allBtn) filterCategory(allBtn);
+  }
 
-    function renderOtherPosts(posts) {
-      const container = document.getElementById('posts-container');
+  function filterBlogs() {
+    const q = document.getElementById('searchBox').value.toLowerCase();
+    const cards = document.querySelectorAll('#posts-container .blog-card');
+    let visible = 0;
 
-      container.innerHTML = posts.map(post => {
-        const categoryBadges = post.category.map(cat => {
-          const catClass = cat === 'guide' ? 'cat-guide' : 
-                           cat === 'case-study' ? 'cat-case-study' :
-                           cat === 'tips' ? 'cat-tips' :
-                           cat === 'news' ? 'cat-news' :
-                           cat === 'agency' ? 'cat-agency' : 'cat-guide';
-          const catLabel = cat.replace('-', ' ').toUpperCase();
-          return `<span class="category-badge ${catClass}">${catLabel}</span>`;
-        }).join(' ');
-
-        const metricsHTML = Object.entries(post.metrics || {}).map(([key, value]) => {
-          const icon = key === 'score' ? '✅' : 
-                       key === 'traffic' ? '📈' : 
-                       key === 'revenue' ? '💰' :
-                       key === 'days' ? '⏱️' :
-                       key === 'points' ? '📚' :
-                       key === 'examples' ? '💡' :
-                       key === 'visitors' ? '📈' :
-                       key === 'months' ? '⏱️' :
-                       key === 'sites' ? '📊' :
-                       key === 'businesses' ? '🏢' :
-                       key === 'framework' ? '🎯' :
-                       key === 'type' ? '⚡' : '🎯';
-          const colorClass = key === 'score' ? 'text-green-400' : 
-                             key === 'traffic' || key === 'revenue' || key === 'visitors' ? 'text-blue-400' : 
-                             key === 'type' && (value === 'Quick Wins' || value === 'Breaking News') ? 'text-red-400' :
-                             'text-purple-400';
-          return `<span class="${colorClass}">${icon} ${value}</span>`;
-        }).join(' ');
-
-        return `
-          <div class="blog-card" data-category="${post.category.join(' ')}" onclick="window.location.href='/blog/${post.slug}'">
-            <div class="mb-3">
-              ${categoryBadges}
-              <div class="text-sm text-gray-500 mt-2">📅 ${formatDate(post.date)} • ⏱️ ${post.readTime}</div>
-            </div>
-            <h3 class="text-2xl font-bold mb-3">${post.title}</h3>
-            <p class="text-gray-400 mb-4">
-              ${post.description}
-            </p>
-            <div class="flex items-center gap-2 text-sm flex-wrap">
-              ${metricsHTML}
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function formatDate(dateString) {
-      const date = new Date(dateString);
-      const options = { month: 'long', day: 'numeric', year: 'numeric' };
-      return date.toLocaleDateString('en-US', options);
-    }
-
-    function filterCategory(category) {
-      currentCategory = category;
-
-      document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.textContent.toLowerCase().includes(category) || (category === 'all' && btn.textContent === 'All Posts')) {
-          btn.classList.add('active');
-        }
-      });
-
-      filterBlogs();
-    }
-
-    function filterBlogs() {
-      const searchTerm = document.getElementById('searchBox').value.toLowerCase();
-      const posts = document.querySelectorAll('#posts-container .blog-card');
-      let visibleCount = 0;
-
-      posts.forEach(post => {
-        const categories = post.dataset.category || '';
-        const title = post.querySelector('h3')?.textContent.toLowerCase() || '';
-        const description = post.querySelector('p')?.textContent.toLowerCase() || '';
-
-        const matchesCategory = currentCategory === 'all' || categories.includes(currentCategory);
-        const matchesSearch = !searchTerm || title.includes(searchTerm) || description.includes(searchTerm);
-
-        if (matchesCategory && matchesSearch) {
-          post.style.display = 'block';
-          visibleCount++;
-        } else {
-          post.style.display = 'none';
-        }
-      });
-
-      const noResults = document.getElementById('no-results');
-      const blogGrid = document.getElementById('blog-grid');
-
-      if (visibleCount === 0) {
-        noResults.classList.remove('hidden');
-        blogGrid.classList.add('hidden');
-      } else {
-        noResults.classList.add('hidden');
-        blogGrid.classList.remove('hidden');
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-      loadBlogPosts();
+    cards.forEach(card => {
+      const cats   = card.dataset.category || '';
+      const title  = (card.querySelector('h3')?.textContent || '').toLowerCase();
+      const desc   = (card.querySelector('.card-desc')?.textContent || '').toLowerCase();
+      const catOk  = currentCategory === 'all' || cats.split(' ').includes(currentCategory);
+      const termOk = !q || title.includes(q) || desc.includes(q);
+      card.style.display = (catOk && termOk) ? '' : 'none';
+      if (catOk && termOk) visible++;
     });
-  </script>
 
-  <!-- NO external decode script – error removed -->
-</body>
-</html>
+    document.getElementById('no-results').classList.toggle('hidden', visible > 0);
+    document.getElementById('blog-grid').classList.toggle('hidden', visible === 0);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ContentScale Blog - AI SEO & Content Optimization Tips</title>
-  <meta name="description" content="Learn how to optimize your content for AI-era SEO. Case studies, guides, and tips from ContentScale experts. GRAAF Framework, CRAFT methodology, and more.">
-  <meta name="keywords" content="SEO blog, content optimization, AI SEO, GRAAF framework, content marketing, SEO case studies">
-  <link rel="canonical" href="https://app.contentscale.site/blog/">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    .nav-bar { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-bottom: 2px solid #374151; position: sticky; top: 0; z-index: 1000; }
-    .nav-link { color: #9ca3af; padding: 12px 20px; font-weight: 600; transition: all 0.3s; border-bottom: 3px solid transparent; cursor: pointer; text-decoration: none; }
-    .nav-link:hover { color: white; border-bottom-color: #8b5cf6; }
-    .nav-link.active { color: white; border-bottom-color: #8b5cf6; }
-    
-    .blog-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid #334155; border-radius: 16px; padding: 24px; transition: all 0.3s; cursor: pointer; }
-    .blog-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(139, 92, 246, 0.3); border-color: #8b5cf6; }
-    .blog-card.featured { border-color: #f59e0b; background: linear-gradient(135deg, #1e293b 0%, #2d1f08 100%); }
-    .blog-card.featured::before { content: '⭐ FEATURED'; position: absolute; top: -12px; right: 24px; background: linear-gradient(135deg, #f59e0b 0%, #eab308 100%); color: #1e293b; padding: 6px 16px; border-radius: 20px; font-size: 11px; font-weight: 800; }
-    
-    .category-badge { display: inline-block; padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; margin-right: 8px; }
-    .cat-guide { background: #8b5cf6; color: white; }
-    .cat-case-study { background: #10b981; color: white; }
-    .cat-tips { background: #3b82f6; color: white; }
-    .cat-news { background: #f59e0b; color: white; }
-    .cat-agency { background: #ec4899; color: white; }
-    
-    .search-box { background: #1f2937; border: 2px solid #374151; border-radius: 12px; padding: 12px 20px; color: white; width: 100%; }
-    .search-box:focus { outline: none; border-color: #8b5cf6; }
-    
-    .filter-btn { background: #374151; color: #9ca3af; padding: 8px 16px; border-radius: 8px; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; font-size: 14px; font-weight: 600; margin: 4px; }
-    .filter-btn:hover { background: #4b5563; color: white; }
-    .filter-btn.active { background: #8b5cf6; color: white; border-color: #a78bfa; }
-
-    .line-clamp-2 {
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+  // ============================================================
+  // SHARE LINK  (FIX: was completely missing)
+  // ============================================================
+  function sharePost(slug, event) {
+    event.stopPropagation(); // prevent card navigation
+    const url = 'https://app.contentscale.site/blog/' + slug;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(showShareToast).catch(() => fallbackCopy(url));
+    } else {
+      fallbackCopy(url);
     }
-    .line-clamp-3 {
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-  </style>
-</head>
-<body class="bg-gray-900 text-gray-100">
+  }
 
-  <!-- NAVIGATION -->
-  <nav class="nav-bar">
-    <div class="max-w-6xl mx-auto px-6">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">ContentScale</div>
-        </div>
-        <div class="flex items-center gap-1">
-          <a href="/" class="nav-link">🏠 Home</a>
-          <a href="/#scanner" class="nav-link">🔍 Scanner</a>
-          <a href="/#leaderboard" class="nav-link">🏆 Leaderboard</a>
-          <a href="/#pricing" class="nav-link">💰 Pricing</a>
-          <a href="/blog/index.html" class="nav-link active">📝 Blog</a>
-          <a href="/contact-form" class="nav-link">📞 Contact</a>
-        </div>
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); showShareToast(); } catch(e) {}
+    document.body.removeChild(ta);
+  }
+
+  function showShareToast() {
+    const t = document.getElementById('share-toast');
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // ============================================================
+  // CATEGORY BADGE HTML
+  // ============================================================
+  function makeBadges(cats) {
+    const MAP = { guide:'cat-guide', 'case-study':'cat-case-study', tips:'cat-tips', news:'cat-news', agency:'cat-agency' };
+    return cats.map(c => {
+      const cls   = MAP[c] || 'cat-guide';
+      const label = c.replace('-',' ').toUpperCase();
+      return `<span class="category-badge ${cls}">${label}</span>`;
+    }).join('');
+  }
+
+  // ============================================================
+  // METRICS HTML
+  // ============================================================
+  function makeMetrics(metrics) {
+    const ICON = { score:'✅', traffic:'📈', revenue:'💰', days:'⏱️', points:'📚',
+                   examples:'💡', visitors:'📈', months:'⏱️', sites:'📊',
+                   businesses:'🏢', framework:'🎯', type:'⚡', clients:'👥' };
+    return Object.entries(metrics || {}).map(([k,v]) => {
+      const icon  = ICON[k] || '🎯';
+      const color = k==='score' ? 'text-green-400' :
+                    ['traffic','revenue','visitors'].includes(k) ? 'text-blue-400' :
+                    k==='type' ? 'text-red-400' : 'text-purple-400';
+      return `<span class="${color} text-sm">${icon} ${v}</span>`;
+    }).join(' ');
+  }
+
+  // ============================================================
+  // HEADSHOT — stored as safe JS var, no escaping issues in templates
+  // ============================================================
+  const AVATAR_SRC = 'https://contentscale.site/wp-content/uploads/2025/11/ottmar-francisca-headshot.png';
+  const AVATAR_FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%238b5cf6'/%3E%3Ctext x='20' y='26' text-anchor='middle' fill='white' font-size='16' font-weight='bold'%3EO%3C/text%3E%3C/svg%3E";
+
+  // ============================================================
+  // RENDER FEATURED
+  // ============================================================
+  function renderFeaturedPost(post) {
+    const el = document.getElementById('featured-post-container');
+    const img = new Image();
+    img.src = AVATAR_SRC;
+    img.className = 'w-10 h-10 rounded-full object-cover border-2 border-purple-400 flex-shrink-0';
+    img.alt = 'Ottmar Francisca';
+    img.onerror = function() { this.src = AVATAR_FALLBACK; };
+
+    const card = document.createElement('div');
+    card.className = 'blog-card featured relative';
+    card.innerHTML = `
+      <div class="mb-4">
+        ${makeBadges(post.category)}
+        <span class="text-sm text-gray-500 ml-1">📅 ${formatDate(post.date)} &bull; ⏱️ ${post.readTime}</span>
       </div>
-    </div>
-  </nav>
+      <h3 class="text-3xl font-bold mb-3">${post.title}</h3>
+      <p class="text-gray-400 mb-5 leading-relaxed card-desc">${post.description}</p>
 
-  <div class="max-w-6xl mx-auto px-6 py-12">
-    
-    <!-- HEADER -->
-    <div class="text-center mb-12">
-      <h1 class="text-5xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-        ContentScale Blog
-      </h1>
-      <p class="text-xl text-gray-400 mb-6">
-        AI-Era SEO Strategies, Case Studies & Expert Tips
-      </p>
-      <div class="max-w-xl mx-auto">
-        <input 
-          type="text" 
-          id="searchBox" 
-          class="search-box" 
-          placeholder="🔍 Search articles..."
-          onkeyup="filterBlogs()">
-      </div>
-    </div>
-
-    <!-- CATEGORIES FILTER -->
-    <div class="mb-8 text-center">
-      <div class="mb-3">
-        <span class="text-sm text-gray-500 uppercase font-bold">Filter by Category:</span>
-      </div>
-      <div class="flex flex-wrap justify-center">
-        <button class="filter-btn active" onclick="filterCategory('all')">All Posts</button>
-        <button class="filter-btn" onclick="filterCategory('guide')">📚 Guides</button>
-        <button class="filter-btn" onclick="filterCategory('case-study')">📊 Case Studies</button>
-        <button class="filter-btn" onclick="filterCategory('agency')">🏢 Agency Spotlights</button>
-        <button class="filter-btn" onclick="filterCategory('tips')">💡 Tips & Tricks</button>
-        <button class="filter-btn" onclick="filterCategory('news')">📰 News & Updates</button>
-      </div>
-    </div>
-
-    <!-- FEATURED POST (dynamisch geladen) -->
-    <div id="featured-section" class="mb-12">
-      <h2 class="text-2xl font-bold mb-6 text-yellow-400">⭐ Featured Article</h2>
-      <div id="featured-post-container">
-        <!-- JavaScript laadt featured post hier -->
-      </div>
-    </div>
-
-    <!-- BLOG POSTS GRID (dynamisch geladen) -->
-    <div id="blog-grid">
-      <h2 class="text-2xl font-bold mb-6">Latest Articles</h2>
-      <div class="grid md:grid-cols-2 gap-6" id="posts-container">
-        <!-- JavaScript laadt posts hier -->
-      </div>
-    </div>
-
-    <!-- NO RESULTS -->
-    <div id="no-results" class="hidden text-center py-12">
-      <div class="text-6xl mb-4">🔍</div>
-      <h3 class="text-2xl font-bold mb-2">No Articles Found</h3>
-      <p class="text-gray-400 mb-6">Try different keywords or browse all posts</p>
-      <button onclick="filterCategory('all'); document.getElementById('searchBox').value=''" class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-bold transition">
-        Show All Posts
-      </button>
-    </div>
-
-    <!-- CTA SECTION -->
-    <div class="mt-16 bg-gradient-to-r from-purple-900 to-blue-900 rounded-lg p-8 text-center border border-purple-700">
-      <h3 class="text-3xl font-bold mb-3">Want to Improve Your Content Score?</h3>
-      <p class="text-lg text-gray-300 mb-6">
-        Get your free AI-powered content analysis in 30 seconds, or talk to Ot directly for expert guidance.
-      </p>
-      <div class="flex flex-col md:flex-row gap-4 justify-center">
-        <a href="/#scanner" class="inline-block bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-8 py-4 rounded-lg font-bold text-lg transition">
-          🚀 Scan Your Website Free
-        </a>
-        <a href="https://wa.me/31628073996?text=Hi%20Ot!%20I%20read%20your%20blog%20and%20want%20to%20improve%20my%20content%20score.%20Can%20we%20talk?" target="_blank" class="inline-block bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-8 py-4 rounded-lg font-bold text-lg transition">
-          💬 WhatsApp Ot
-        </a>
-      </div>
-    </div>
-
-    <!-- FOOTER -->
-    <div class="text-center text-gray-500 text-sm mt-12 pt-8 border-t border-gray-800">
-      <p class="mb-2">ContentScale Blog © 2025 • AI-Powered SEO Recovery</p>
-      <p>
-        <a href="https://app.contentscale.site" class="text-purple-400 hover:text-purple-300">Scanner</a> • 
-        <a href="https://wa.me/31628073996" class="text-green-400 hover:text-green-300">WhatsApp</a> •
-        <a href="mailto:info@contentscale.site" class="text-blue-400 hover:text-blue-300">Email</a>
-      </p>
-    </div>
-
-  </div>
-
-  <script>
-    let currentCategory = 'all';
-    let allPosts = [];
-    
-    async function loadBlogPosts() {
-      try {
-        const response = await fetch('/blog/blog-posts.json');
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        allPosts = data.posts.sort((a, b) => new Date(b.date) - new Date(a.date));
-        const featuredPost = allPosts.find(p => p.featured === true);
-        
-        if (featuredPost) {
-          renderFeaturedPost(featuredPost);
-        }
-        
-        const otherPosts = allPosts.filter(p => p.featured !== true);
-        renderOtherPosts(otherPosts);
-        
-      } catch (error) {
-        console.error('Error loading blog posts:', error);
-        document.getElementById('featured-post-container').innerHTML = '<p class="text-red-400">Error loading posts. Please refresh the page.</p>';
-      }
-    }
-
-    function renderFeaturedPost(post) {
-      const container = document.getElementById('featured-post-container');
-      
-      const categoryBadges = post.category.map(cat => {
-        const catClass = cat === 'guide' ? 'cat-guide' : 
-                         cat === 'case-study' ? 'cat-case-study' :
-                         cat === 'tips' ? 'cat-tips' :
-                         cat === 'news' ? 'cat-news' :
-                         cat === 'agency' ? 'cat-agency' : 'cat-guide';
-        const catLabel = cat.replace('-', ' ').toUpperCase();
-        return `<span class="category-badge ${catClass}">${catLabel}</span>`;
-      }).join(' ');
-      
-      container.innerHTML = `
-        <div class="blog-card featured relative" onclick="window.location.href='/blog/${post.slug}'">
-          <div class="mb-4">
-            ${categoryBadges}
-            <span class="text-sm text-gray-500">📅 ${formatDate(post.date)} • ⏱️ ${post.readTime}</span>
-          </div>
-          <h3 class="text-3xl font-bold mb-3">${post.title}</h3>
-          <p class="text-gray-400 mb-4 leading-relaxed">
-            ${post.description}
-          </p>
-          <div class="flex items-center gap-3">
-            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%238b5cf6'/%3E%3Ctext x='20' y='26' text-anchor='middle' fill='white' font-size='16' font-weight='bold'%3EO%3C/text%3E%3C/svg%3E" class="w-10 h-10 rounded-full">
-            <div>
-              <div class="font-bold text-sm">${post.author}</div>
-              <div class="text-xs text-gray-500">Founder & SEO Recovery Expert</div>
-            </div>
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <div class="flex items-center gap-3">
+          <div id="featured-avatar-wrap" class="flex-shrink-0"></div>
+          <div>
+            <div class="font-bold text-sm">${post.author}</div>
+            <div class="text-xs text-gray-500">Founder &amp; SEO Recovery Expert</div>
           </div>
         </div>
-      `;
-    }
+        <div class="flex gap-2">
+          <button class="share-btn" onclick="sharePost('${post.slug}', event)">
+            🔗 Share
+          </button>
+          <a href="/blog/${post.slug}"
+             class="read-more-btn"
+             onclick="event.stopPropagation()">
+            Read Article →
+          </a>
+        </div>
+      </div>
+    `;
+    card.addEventListener('click', () => { window.location.href = '/blog/' + post.slug; });
+    el.innerHTML = '';
+    el.appendChild(card);
 
-    function renderOtherPosts(posts) {
-      const container = document.getElementById('posts-container');
-      
-      container.innerHTML = posts.map(post => {
-        const categoryBadges = post.category.map(cat => {
-          const catClass = cat === 'guide' ? 'cat-guide' : 
-                           cat === 'case-study' ? 'cat-case-study' :
-                           cat === 'tips' ? 'cat-tips' :
-                           cat === 'news' ? 'cat-news' :
-                           cat === 'agency' ? 'cat-agency' : 'cat-guide';
-          const catLabel = cat.replace('-', ' ').toUpperCase();
-          return `<span class="category-badge ${catClass}">${catLabel}</span>`;
-        }).join(' ');
-        
-        const metricsHTML = Object.entries(post.metrics || {}).map(([key, value]) => {
-          const icon = key === 'score' ? '✅' : 
-                       key === 'traffic' ? '📈' : 
-                       key === 'revenue' ? '💰' :
-                       key === 'days' ? '⏱️' :
-                       key === 'points' ? '📚' :
-                       key === 'examples' ? '💡' :
-                       key === 'visitors' ? '📈' :
-                       key === 'months' ? '⏱️' :
-                       key === 'sites' ? '📊' :
-                       key === 'businesses' ? '🏢' :
-                       key === 'framework' ? '🎯' :
-                       key === 'type' ? '⚡' : '🎯';
-          const colorClass = key === 'score' ? 'text-green-400' : 
-                             key === 'traffic' || key === 'revenue' || key === 'visitors' ? 'text-blue-400' : 
-                             key === 'type' && (value === 'Quick Wins' || value === 'Breaking News') ? 'text-red-400' :
-                             'text-purple-400';
-          return `<span class="${colorClass}">${icon} ${value}</span>`;
-        }).join(' ');
-        
-        return `
-          <div class="blog-card" data-category="${post.category.join(' ')}" onclick="window.location.href='/blog/${post.slug}'">
-            <div class="mb-3">
-              ${categoryBadges}
-              <div class="text-sm text-gray-500 mt-2">📅 ${formatDate(post.date)} • ⏱️ ${post.readTime}</div>
-            </div>
-            <h3 class="text-2xl font-bold mb-3">${post.title}</h3>
-            <p class="text-gray-400 mb-4">
-              ${post.description}
-            </p>
-            <div class="flex items-center gap-2 text-sm flex-wrap">
-              ${metricsHTML}
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
+    // Inject headshot after DOM is ready (avoids template literal escaping issues)
+    const avatarWrap = card.querySelector('#featured-avatar-wrap');
+    if (avatarWrap) avatarWrap.appendChild(img);
+  }
 
-    function formatDate(dateString) {
-      const date = new Date(dateString);
-      const options = { month: 'long', day: 'numeric', year: 'numeric' };
-      return date.toLocaleDateString('en-US', options);
-    }
-    
-    function filterCategory(category) {
-      currentCategory = category;
-      
-      document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.textContent.toLowerCase().includes(category) || (category === 'all' && btn.textContent === 'All Posts')) {
-          btn.classList.add('active');
-        }
-      });
-      
-      filterBlogs();
-    }
-    
-    function filterBlogs() {
-      const searchTerm = document.getElementById('searchBox').value.toLowerCase();
-      const posts = document.querySelectorAll('#posts-container .blog-card');
-      let visibleCount = 0;
-      
-      posts.forEach(post => {
-        const categories = post.dataset.category || '';
-        const title = post.querySelector('h3').textContent.toLowerCase();
-        const description = post.querySelector('p').textContent.toLowerCase();
-        
-        const matchesCategory = currentCategory === 'all' || categories.includes(currentCategory);
-        const matchesSearch = !searchTerm || title.includes(searchTerm) || description.includes(searchTerm);
-        
-        if (matchesCategory && matchesSearch) {
-          post.style.display = 'block';
-          visibleCount++;
-        } else {
-          post.style.display = 'none';
-        }
-      });
-      
-      const noResults = document.getElementById('no-results');
-      const blogGrid = document.getElementById('blog-grid');
-      
-      if (visibleCount === 0) {
-        noResults.classList.remove('hidden');
-        blogGrid.classList.add('hidden');
-      } else {
-        noResults.classList.add('hidden');
-        blogGrid.classList.remove('hidden');
-      }
-    }
-    
-    document.addEventListener('DOMContentLoaded', function() {
-      loadBlogPosts();
-    });
-    
-    document.addEventListener('click', function(e) {
-      const card = e.target.closest('.blog-card');
-      if (card) {
-        const title = card.querySelector('h3')?.textContent;
-        console.log('Blog card clicked:', title);
-      }
-    });
+  // ============================================================
+  // RENDER OTHER POSTS
+  // ============================================================
+  function renderOtherPosts(posts) {
+    const container = document.getElementById('posts-container');
+    container.innerHTML = posts.map(post => `
+      <div class="blog-card"
+           data-category="${post.category.join(' ')}"
+           onclick="window.location.href='/blog/${post.slug}'">
+        <div class="mb-3">
+          ${makeBadges(post.category)}
+          <div class="text-sm text-gray-500 mt-2">📅 ${formatDate(post.date)} &bull; ⏱️ ${post.readTime}</div>
+        </div>
+        <h3 class="text-2xl font-bold mb-3">${post.title}</h3>
+        <p class="text-gray-400 mb-3 card-desc">${post.description}</p>
+        <div class="flex items-center gap-2 text-sm flex-wrap mb-3">
+          ${makeMetrics(post.metrics)}
+        </div>
+        <div class="flex items-center justify-between flex-wrap gap-2 pt-3 border-t border-gray-700">
+          <a href="/blog/${post.slug}"
+             class="read-more-btn"
+             onclick="event.stopPropagation()">
+            Read Article →
+          </a>
+          <button class="share-btn" onclick="sharePost('${post.slug}', event)">
+            🔗 Share
+          </button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ============================================================
+  // INIT — uses embedded BLOG_DATA, no fetch, no 404 risk
+  // ============================================================
+  function loadBlogPosts() {
+    allPosts = [...BLOG_DATA.posts].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const featured = allPosts.find(p => p.featured);
+    if (featured) renderFeaturedPost(featured);
+    renderOtherPosts(allPosts.filter(p => !p.featured));
+  }
+
+  document.addEventListener('DOMContentLoaded', loadBlogPosts);
   </script>
 
 </body>
