@@ -1309,6 +1309,10 @@ async function generateReport(scan) {
             style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:8px;padding:8px 18px;font-size:0.85rem;font-weight:600;cursor:pointer;">
             📄 Generate Report
           </button>
+          <button onclick="adminExportPDF()"
+            style="background:linear-gradient(135deg,#4f46e5,#7e22ce);color:white;border:none;border-radius:8px;padding:8px 18px;font-size:0.85rem;font-weight:600;cursor:pointer;">
+            ⬇ Export PDF
+          </button>
           <div id="adminReportLink" style="display:none;align-items:center;gap:8px;">
             <a id="adminReportHref" href="#" target="_blank"
               style="background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:8px;padding:8px 18px;font-size:0.85rem;font-weight:600;text-decoration:none;">
@@ -1489,6 +1493,161 @@ async function adminLogScan() {
     btn.textContent = '❌ Failed'; btn.disabled = false;
     alert('Log failed: ' + e.message);
   }
+}
+
+// ── Admin Export PDF — same layout as index.html exportScanPDF ──────────────
+function adminExportPDF() {
+  const data = adminLastScanResult;
+  if (!data) { alert('No scan data. Run a scan first.'); return; }
+  const score    = data.score || 0;
+  const url      = data.url || '';
+  const metrics  = data.metrics || {};
+  const stats    = data.content_stats || {};
+  const recs     = (data.recommendations?.all || data.recommendations || []);
+  const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
+  const scoreColor = score >= 85 ? '#16a34a' : score >= 70 ? '#b45309' : '#dc2626';
+  const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+  const priorityLabel = { high: '🔴 High Priority', medium: '🟡 Medium', low: '🔵 Quick Win' };
+  const priorityColor = { high: '#dc2626', medium: '#b45309', low: '#2563eb' };
+  const recRows = recs.map((r, i) => {
+    const pc = priorityColor[r.priority] || '#6b7280';
+    const pl = priorityLabel[r.priority] || 'Info';
+    return `
+<div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px 18px;margin-bottom:14px;page-break-inside:avoid;">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;">
+    <div style="font-weight:700;font-size:14px;color:#111827;line-height:1.4;flex:1;">${i+1}. ${r.title}</div>
+    <span style="font-size:11px;color:${pc};font-weight:700;white-space:nowrap;padding:3px 10px;border:1px solid ${pc};border-radius:99px;flex-shrink:0;">${pl}</span>
+  </div>
+  <p style="font-size:13px;color:#374151;margin:0 0 10px;line-height:1.6;">${r.description || ''}</p>
+  <div style="background:#f8fafc;border-radius:8px;padding:10px 14px;margin-bottom:${r.learning?'8':'0'}px;">
+    <div style="font-size:11px;font-weight:700;color:#7e22ce;margin-bottom:4px;">⚡ ACTION</div>
+    <p style="font-size:13px;color:#1e293b;margin:0;line-height:1.5;">${r.action || ''}</p>
+  </div>
+  ${r.learning ? `<div style="background:#f0f9ff;border-radius:8px;padding:10px 14px;">
+    <div style="font-size:11px;font-weight:700;color:#0369a1;margin-bottom:4px;">📚 WHY IT MATTERS</div>
+    <p style="font-size:12px;color:#374151;margin:0;line-height:1.5;">${r.learning}</p>
+  </div>` : ''}
+  ${r.target ? `<p style="font-size:12px;color:#16a34a;margin:8px 0 0;font-weight:600;">🎯 Target: ${r.target}</p>` : ''}
+</div>`;
+  }).join('');
+  const highCount = recs.filter(r=>r.priority==='high').length;
+  const medCount  = recs.filter(r=>r.priority==='medium').length;
+  const lowCount  = recs.filter(r=>r.priority==='low').length;
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>ContentScale Report — ${url}</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:Arial,Helvetica,sans-serif; background:#fff; color:#111827; }
+@media print {
+.no-print { display:none !important; }
+body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+.page-break { page-break-before:always; }
+}
+</style>
+</head>
+<body style="max-width:800px;margin:0 auto;padding:0;">
+<div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:40px 40px 36px;color:white;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
+    <div>
+      <div style="font-size:22px;font-weight:900;letter-spacing:-0.5px;">ContentScale</div>
+      <div style="font-size:12px;opacity:0.75;margin-top:2px;">SEO Recovery Platform · Amsterdam</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:12px;opacity:0.75;">Generated</div>
+      <div style="font-size:13px;font-weight:700;">${today}</div>
+    </div>
+  </div>
+  <div style="font-size:13px;opacity:0.7;word-break:break-all;margin-bottom:6px;">${url}</div>
+  <h1 style="font-size:28px;font-weight:900;margin-bottom:6px;line-height:1.2;">Website SEO Report</h1>
+  <p style="font-size:14px;opacity:0.85;">Full GRAAF + CRAFT analysis with ${recs.length} actionable recommendations</p>
+</div>
+<div style="padding:32px 40px;background:#f9fafb;border-bottom:2px solid #e5e7eb;">
+  <div style="display:flex;align-items:center;gap:40px;flex-wrap:wrap;">
+    <div style="text-align:center;">
+      <div style="font-size:72px;font-weight:900;color:${scoreColor};line-height:1;">${score}</div>
+      <div style="font-size:14px;color:#6b7280;margin-top:2px;">out of 100</div>
+      <div style="display:inline-block;background:${scoreColor};color:white;font-size:12px;font-weight:700;padding:4px 16px;border-radius:99px;margin-top:8px;">${scoreLabel}</div>
+    </div>
+    <div style="flex:1;min-width:200px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 6px;">
+        <tr>
+          <td style="background:#f5f3ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">GRAAF <span style="font-weight:400;color:#9ca3af;font-size:12px;">Credibility &amp; Relevance</span></td>
+          <td style="background:#f5f3ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#7e22ce;text-align:right;white-space:nowrap;">${metrics.graaf||0} / 50</td>
+        </tr>
+        <tr>
+          <td style="background:#eff6ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">CRAFT <span style="font-weight:400;color:#9ca3af;font-size:12px;">Content Quality</span></td>
+          <td style="background:#eff6ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#1d4ed8;text-align:right;white-space:nowrap;">${metrics.craft||0} / 30</td>
+        </tr>
+        <tr>
+          <td style="background:#fefce8;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">Technical <span style="font-weight:400;color:#9ca3af;font-size:12px;">Speed &amp; Structure</span></td>
+          <td style="background:#fefce8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#b45309;text-align:right;white-space:nowrap;">${metrics.technical||0} / 20</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+${stats.wordCount ? `
+<div style="padding:24px 40px;border-bottom:1px solid #e5e7eb;">
+  <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;">Page Statistics</div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+    <div style="background:#f8fafc;border-radius:10px;padding:14px;text-align:center;border:1px solid #e2e8f0;">
+      <div style="font-size:24px;font-weight:900;color:#111827;">${(stats.wordCount||0).toLocaleString()}</div>
+      <div style="font-size:11px;color:#6b7280;margin-top:2px;">Word Count</div>
+    </div>
+    <div style="background:#f8fafc;border-radius:10px;padding:14px;text-align:center;border:1px solid #e2e8f0;">
+      <div style="font-size:24px;font-weight:900;color:${(stats.h1Count||0)===1?'#16a34a':'#dc2626'};">${stats.h1Count||0}</div>
+      <div style="font-size:11px;color:#6b7280;margin-top:2px;">H1 Tag ${(stats.h1Count||0)===1?'✅':'⚠️'}</div>
+    </div>
+    <div style="background:#f8fafc;border-radius:10px;padding:14px;text-align:center;border:1px solid #e2e8f0;">
+      <div style="font-size:24px;font-weight:900;color:${stats.hasArticleSchema?'#16a34a':'#dc2626'};">${stats.hasArticleSchema?'✅':'❌'}</div>
+      <div style="font-size:11px;color:#6b7280;margin-top:2px;">Schema Markup</div>
+    </div>
+    <div style="background:#f8fafc;border-radius:10px;padding:14px;text-align:center;border:1px solid #e2e8f0;">
+      <div style="font-size:24px;font-weight:900;color:${stats.hasCanonical?'#16a34a':'#dc2626'};">${stats.hasCanonical?'✅':'❌'}</div>
+      <div style="font-size:11px;color:#6b7280;margin-top:2px;">Canonical Tag</div>
+    </div>
+  </div>
+</div>` : ''}
+<div style="padding:32px 40px 40px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:8px;">
+    <div>
+      <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">Action Plan</div>
+      <h2 style="font-size:20px;font-weight:900;color:#111827;">${recs.length} Recommendations</h2>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      ${highCount>0?`<span style="font-size:11px;color:#dc2626;font-weight:700;padding:3px 12px;border:1px solid #dc2626;border-radius:99px;">${highCount} High</span>`:''}
+      ${medCount>0?`<span style="font-size:11px;color:#b45309;font-weight:700;padding:3px 12px;border:1px solid #b45309;border-radius:99px;">${medCount} Medium</span>`:''}
+      ${lowCount>0?`<span style="font-size:11px;color:#2563eb;font-weight:700;padding:3px 12px;border:1px solid #2563eb;border-radius:99px;">${lowCount} Quick Wins</span>`:''}
+    </div>
+  </div>
+  ${recRows}
+</div>
+<div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+  <div>
+    <div style="color:white;font-weight:700;font-size:14px;">ContentScale SEO Platform</div>
+    <div style="color:#9ca3af;font-size:12px;margin-top:2px;">Ottmar JG Francisca · Amsterdam, Netherlands</div>
+  </div>
+  <div style="text-align:right;">
+    <div style="color:#9ca3af;font-size:12px;">app.contentscale.site</div>
+    <div style="color:#9ca3af;font-size:12px;">+31 6 2807 3996</div>
+  </div>
+</div>
+<div class="no-print" style="text-align:center;padding:24px;">
+  <button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:14px 40px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;">
+    🖨️ Print / Save as PDF
+  </button>
+  <p style="color:#9ca3af;font-size:12px;margin-top:10px;">Use your browser's Print → Save as PDF option</p>
+</div>
+</body>
+</html>`;
+  const win = window.open('', '_blank');
+  if (!win) { alert('Please allow popups to export the PDF report.'); return; }
+  win.document.write(html);
+  win.document.close();
+  setTimeout(() => { win.focus(); win.print(); }, 600);
 }
 
 async function adminGenerateReport() {
