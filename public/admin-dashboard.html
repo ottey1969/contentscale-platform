@@ -108,6 +108,7 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
 <button onclick="switchTab('pending')" id="tabPendingBtn" class="mode-toggle"><i class="fas fa-clock mr-2"></i> Pending</button>
 <button onclick="switchTab('emaillog')" id="tabEmaillogBtn" class="mode-toggle"><i class="fas fa-paper-plane mr-2"></i> Email Log</button>
 <button onclick="switchTab('scanlog')" id="tabScanlogBtn" class="mode-toggle"><i class="fas fa-list mr-2"></i> Scan Log</button>
+<button onclick="switchTab('scanner')" id="tabScannerBtn" class="mode-toggle"><i class="fas fa-search mr-2"></i> Scanner</button>
 </div>
 <div id="tab-leaderboard" class="tab-content">
 <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
@@ -455,6 +456,7 @@ function switchTab(tab) {
   if (tab === 'pending') loadPendingData();
   if (tab === 'emaillog') loadEmailLog();
   if (tab === 'scanlog')  loadScanLog();
+  if (tab === 'scanner')  { /* nothing to preload */ }
 }
 
 function loadAllData() {
@@ -1235,6 +1237,307 @@ async function generateReport(scan) {
     </div>
   </div>
 </div>
+
+<!-- SCANNER TAB -->
+<div id="tab-scanner" class="tab-content hidden">
+  <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 border border-gray-700">
+    <h3 class="text-xl font-bold text-white mb-6">🔍 SEO Scanner</h3>
+
+    <!-- Input row -->
+    <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;">
+      <input type="text" id="adminScanUrl" placeholder="https://example.com"
+        style="flex:1;min-width:280px;padding:12px 16px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;font-size:0.95rem;"
+        onkeydown="if(event.key==='Enter')adminRunScan()">
+      <button onclick="adminRunScan()" id="adminScanBtn"
+        style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:8px;padding:12px 28px;font-size:0.95rem;font-weight:700;cursor:pointer;white-space:nowrap;">
+        🔍 Scan
+      </button>
+    </div>
+
+    <!-- Progress -->
+    <div id="adminScanProgress" style="display:none;margin-bottom:24px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+        <div style="width:18px;height:18px;border:3px solid #7e22ce;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0;"></div>
+        <span id="adminScanProgressText" style="color:#a78bfa;font-size:0.9rem;">Scanning — loading page...</span>
+      </div>
+      <div style="height:6px;background:#1f2937;border-radius:99px;overflow:hidden;">
+        <div id="adminScanBar" style="height:100%;background:linear-gradient(90deg,#7e22ce,#be185d);border-radius:99px;width:0%;transition:width 0.4s;"></div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="adminScanResults" style="display:none;">
+
+      <!-- Score header -->
+      <div id="adminScoreHeader" style="background:linear-gradient(135deg,#1e1b4b,#0f172a);border:1px solid #4f46e5;border-radius:14px;padding:28px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
+          <div id="adminScoreCircle" style="width:90px;height:90px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;">
+            <div id="adminScoreNum" style="font-size:2rem;font-weight:900;line-height:1;"></div>
+            <div style="font-size:0.7rem;color:#6b7280;">/100</div>
+            <div id="adminScoreLabel" style="font-size:0.72rem;font-weight:600;margin-top:2px;"></div>
+          </div>
+          <div style="flex:1;min-width:200px;">
+            <div id="adminScanUrl2" style="color:#60a5fa;font-size:0.85rem;word-break:break-all;margin-bottom:10px;"></div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+              <div style="background:#111827;border:1px solid #374151;border-radius:10px;padding:8px 14px;text-align:center;">
+                <div id="adminGraafScore" style="font-size:1.3rem;font-weight:800;color:#a78bfa;"></div>
+                <div style="font-size:0.65rem;color:#6b7280;">GRAAF /50</div>
+              </div>
+              <div style="background:#111827;border:1px solid #374151;border-radius:10px;padding:8px 14px;text-align:center;">
+                <div id="adminCraftScore" style="font-size:1.3rem;font-weight:800;color:#60a5fa;"></div>
+                <div style="font-size:0.65rem;color:#6b7280;">CRAFT /30</div>
+              </div>
+              <div style="background:#111827;border:1px solid #374151;border-radius:10px;padding:8px 14px;text-align:center;">
+                <div id="adminTechScore" style="font-size:1.3rem;font-weight:800;color:#34d399;"></div>
+                <div style="font-size:0.65rem;color:#6b7280;">Tech /20</div>
+              </div>
+            </div>
+          </div>
+          <!-- Email found -->
+          <div id="adminEmailBlock" style="background:#111827;border:1px solid #374151;border-radius:10px;padding:12px 16px;min-width:180px;">
+            <div style="font-size:0.7rem;color:#6b7280;margin-bottom:4px;">✉ EMAIL FOUND</div>
+            <div id="adminEmailFound" style="font-size:0.9rem;font-weight:600;color:#4ade80;word-break:break-all;">—</div>
+          </div>
+        </div>
+
+        <!-- Actions row -->
+        <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">
+          <button onclick="adminLogScan()" id="adminLogBtn"
+            style="background:#0f2d1a;color:#4ade80;border:1px solid #166534;border-radius:8px;padding:8px 18px;font-size:0.85rem;font-weight:600;cursor:pointer;">
+            📋 Log to Scan Log
+          </button>
+          <button onclick="adminGenerateReport()" id="adminReportBtn"
+            style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:8px;padding:8px 18px;font-size:0.85rem;font-weight:600;cursor:pointer;">
+            📄 Generate Report
+          </button>
+          <div id="adminReportLink" style="display:none;align-items:center;gap:8px;">
+            <a id="adminReportHref" href="#" target="_blank"
+              style="background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:8px;padding:8px 18px;font-size:0.85rem;font-weight:600;text-decoration:none;">
+              🔗 Open Report
+            </a>
+            <button onclick="adminCopyReportLink()" id="adminCopyBtn"
+              style="background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:8px;padding:8px 14px;font-size:0.85rem;cursor:pointer;">
+              📋 Copy URL
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats grid -->
+      <div id="adminStatsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:20px;"></div>
+
+      <!-- Recommendations -->
+      <div style="font-size:1.1rem;font-weight:700;color:#f9fafb;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #1f2937;">
+        📋 Recommendations <span id="adminRecCount" style="font-size:0.75rem;background:#7e22ce30;color:#a78bfa;border:1px solid #7e22ce50;border-radius:99px;padding:2px 10px;"></span>
+      </div>
+      <div id="adminRecsList"></div>
+    </div>
+  </div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg);}}</style>
+
+<script>
+let adminLastScanResult = null;
+let adminLastReportUrl  = null;
+
+async function adminRunScan() {
+  const url = document.getElementById('adminScanUrl').value.trim();
+  if (!url) return;
+  const btn  = document.getElementById('adminScanBtn');
+  const prog = document.getElementById('adminScanProgress');
+  const res  = document.getElementById('adminScanResults');
+  btn.disabled = true; btn.textContent = '⏳ Scanning...';
+  prog.style.display = 'block';
+  res.style.display  = 'none';
+  adminLastScanResult = null;
+  adminLastReportUrl  = null;
+  document.getElementById('adminReportLink').style.display = 'none';
+  document.getElementById('adminLogBtn').textContent = '📋 Log to Scan Log';
+  document.getElementById('adminLogBtn').disabled = false;
+  document.getElementById('adminReportBtn').textContent = '📄 Generate Report';
+  document.getElementById('adminReportBtn').disabled = false;
+
+  // Fake progress
+  let pct = 0;
+  const steps = ['Loading page...','Extracting content...','Analysing headings...','Checking schema...','Computing GRAAF score...','Building recommendations...'];
+  let si = 0;
+  const bar = document.getElementById('adminScanBar');
+  const txt = document.getElementById('adminScanProgressText');
+  const interval = setInterval(() => {
+    pct = Math.min(pct + Math.random() * 12, 90);
+    bar.style.width = pct + '%';
+    if (si < steps.length) { txt.textContent = 'Scanning — ' + steps[si++]; }
+  }, 600);
+
+  try {
+    const r = await fetch('/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    const data = await r.json();
+    clearInterval(interval);
+    bar.style.width = '100%';
+    if (!data.success) throw new Error(data.error || 'Scan failed');
+    adminLastScanResult = data;
+    setTimeout(() => {
+      prog.style.display = 'none';
+      btn.disabled = false; btn.textContent = '🔍 Scan';
+      adminRenderScanResults(data);
+    }, 400);
+  } catch (e) {
+    clearInterval(interval);
+    prog.style.display = 'none';
+    btn.disabled = false; btn.textContent = '🔍 Scan';
+    alert('Scan failed: ' + e.message);
+  }
+}
+
+function adminRenderScanResults(data) {
+  const score = data.score || 0;
+  const scoreColor = score >= 70 ? '#4ade80' : score >= 50 ? '#fbbf24' : '#f87171';
+  const scoreLabel = score >= 70 ? 'Good' : score >= 50 ? 'Needs Work' : 'Critical';
+  const recs = data.recommendations?.all || [];
+  const cs   = data.content_stats || {};
+
+  document.getElementById('adminScoreCircle').style.border = '4px solid ' + scoreColor;
+  document.getElementById('adminScoreCircle').style.background = scoreColor + '15';
+  document.getElementById('adminScoreNum').style.color = scoreColor;
+  document.getElementById('adminScoreNum').textContent = score;
+  document.getElementById('adminScoreLabel').style.color = scoreColor;
+  document.getElementById('adminScoreLabel').textContent = scoreLabel;
+  document.getElementById('adminScanUrl2').textContent = data.url;
+  document.getElementById('adminGraafScore').textContent = data.metrics?.graaf ?? '—';
+  document.getElementById('adminCraftScore').textContent = data.metrics?.craft ?? '—';
+  document.getElementById('adminTechScore').textContent  = data.metrics?.technical ?? '—';
+  const email = cs.extractedEmail || (cs.emails_found && cs.emails_found[0]) || null;
+  document.getElementById('adminEmailFound').textContent = email || 'Not found';
+  document.getElementById('adminEmailFound').style.color = email ? '#4ade80' : '#6b7280';
+
+  // Stats grid
+  const stats = [
+    ['📝 Words', cs.wordCount],
+    ['📊 Stats found', cs.statsFound],
+    ['💬 Expert quotes', cs.expertQuoteCount],
+    ['📁 Case studies', cs.caseStudyCount],
+    ['H1 visible', cs.h1VisibleCount],
+    ['H2 count', cs.h2Count],
+    ['🖼 Images', cs.images],
+    ['🔗 Internal links', cs.internalLinks],
+    ['📄 Meta title len', cs.metaTitleLength],
+    ['📝 Meta desc len', cs.metaDescriptionLength],
+    ['✅ Canonical', cs.hasCanonical ? 'Yes' : 'No'],
+    ['📱 Viewport', cs.hasMetaViewport ? 'Yes' : 'No'],
+    ['🗂 Article schema', cs.hasArticleSchema ? 'Yes' : 'No'],
+    ['❓ FAQ schema', cs.hasFAQPageSchema ? 'Yes' : 'No'],
+    ['🎯 Direct answer', cs.hasDirectAnswer ? 'Yes' : 'No'],
+    ['📌 TL;DR', cs.hasTLDR ? 'Yes' : 'No'],
+  ];
+  document.getElementById('adminStatsGrid').innerHTML = stats.map(([label, val]) => `
+    <div style="background:#111827;border:1px solid #1f2937;border-radius:8px;padding:10px 12px;">
+      <div style="font-size:0.7rem;color:#6b7280;margin-bottom:2px;">${label}</div>
+      <div style="font-size:1rem;font-weight:700;color:#e5e7eb;">${val ?? '—'}</div>
+    </div>`).join('');
+
+  // Recommendations
+  const pColor = p => p === 'high' ? '#f87171' : p === 'medium' ? '#fbbf24' : p === 'none' ? '#4ade80' : '#94a3b8';
+  const pLabel = p => p === 'high' ? '🔴 High' : p === 'medium' ? '🟡 Medium' : p === 'none' ? '✅ Elite' : '🔵 Low';
+  document.getElementById('adminRecCount').textContent = recs.length + ' items';
+  document.getElementById('adminRecsList').innerHTML = recs.map(rec => `
+    <div style="background:#0f172a;border:1px solid #1e293b;border-left:4px solid ${pColor(rec.priority)};border-radius:10px;padding:16px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+        <span style="font-weight:700;color:#f9fafb;">${rec.title}</span>
+        <span style="font-size:0.68rem;font-weight:600;padding:2px 9px;border-radius:99px;background:${pColor(rec.priority)}20;color:${pColor(rec.priority)};border:1px solid ${pColor(rec.priority)}40;">${pLabel(rec.priority)}</span>
+      </div>
+      ${rec.description ? `<p style="color:#9ca3af;font-size:0.85rem;margin:0 0 8px;">${rec.description}</p>` : ''}
+      ${rec.action ? `<div style="margin-top:8px;padding:8px 12px;background:#111827;border-radius:7px;font-size:0.82rem;"><span style="display:block;font-weight:700;color:#a78bfa;font-size:0.7rem;text-transform:uppercase;margin-bottom:3px;">✅ Action</span><span style="color:#d1d5db;">${rec.action}</span></div>` : ''}
+      ${rec.learning ? `<div style="margin-top:8px;padding:8px 12px;background:#111827;border-radius:7px;font-size:0.82rem;"><span style="display:block;font-weight:700;color:#a78bfa;font-size:0.7rem;text-transform:uppercase;margin-bottom:3px;">💡 Why it matters</span><span style="color:#d1d5db;">${rec.learning}</span></div>` : ''}
+      ${rec.target ? `<div style="margin-top:8px;padding:8px 12px;background:#111827;border-radius:7px;font-size:0.82rem;"><span style="display:block;font-weight:700;color:#a78bfa;font-size:0.7rem;text-transform:uppercase;margin-bottom:3px;">🎯 Target</span><span style="color:#d1d5db;">${rec.target}</span></div>` : ''}
+    </div>`).join('');
+
+  document.getElementById('adminScanResults').style.display = 'block';
+}
+
+async function adminLogScan() {
+  if (!adminLastScanResult) return;
+  const btn = document.getElementById('adminLogBtn');
+  btn.textContent = '⏳ Logging...'; btn.disabled = true;
+  const d = adminLastScanResult;
+  const cs = d.content_stats || {};
+  const email = cs.extractedEmail || (cs.emails_found && cs.emails_found[0]) || null;
+  try {
+    const r = await fetch('/api/scan-log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-user-id': currentAdminId },
+      body: JSON.stringify({
+        user_id: currentAdminId,
+        business_url: d.url,
+        business_name: null,
+        score: d.score,
+        niche: null,
+        city: null,
+        country: null,
+        email_found: email,
+        email_status: email ? 'has_email' : 'no_email',
+        source: 'single',
+        recommendations: (d.recommendations?.all || []).map(r => r.title)
+      })
+    });
+    const result = await r.json();
+    if (result.success) { btn.textContent = '✅ Logged!'; }
+    else throw new Error(result.error);
+  } catch (e) {
+    btn.textContent = '❌ Failed'; btn.disabled = false;
+    alert('Log failed: ' + e.message);
+  }
+}
+
+async function adminGenerateReport() {
+  if (!adminLastScanResult) return;
+  const btn = document.getElementById('adminReportBtn');
+  btn.textContent = '⏳ Generating...'; btn.disabled = true;
+  const d  = adminLastScanResult;
+  const cs = d.content_stats || {};
+  const email = cs.extractedEmail || (cs.emails_found && cs.emails_found[0]) || null;
+  try {
+    const r = await fetch('/api/report/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-key': currentAdminId },
+      body: JSON.stringify({
+        business_url: d.url,
+        business_name: null,
+        score: d.score,
+        niche: null,
+        city: null,
+        country: null,
+        email_found: email,
+        recommendations: d.recommendations?.all || []
+      })
+    });
+    const result = await r.json();
+    if (!result.success) throw new Error(result.error);
+    adminLastReportUrl = result.url;
+    btn.textContent = '✅ Report Ready';
+    const linkBlock = document.getElementById('adminReportLink');
+    document.getElementById('adminReportHref').href = result.url;
+    linkBlock.style.display = 'flex';
+    window.open(result.url, '_blank');
+  } catch (e) {
+    btn.textContent = '❌ Failed'; btn.disabled = false;
+    alert('Report failed: ' + e.message);
+  }
+}
+
+function adminCopyReportLink() {
+  if (!adminLastReportUrl) return;
+  const fullUrl = location.origin + adminLastReportUrl;
+  navigator.clipboard.writeText(fullUrl).then(() => {
+    const btn = document.getElementById('adminCopyBtn');
+    btn.textContent = '✅ Copied!';
+    setTimeout(() => { btn.textContent = '📋 Copy URL'; }, 2000);
+  });
+}
+</script>
 
 </body>
 </html>
