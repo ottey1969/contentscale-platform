@@ -1049,7 +1049,7 @@ function filterScanLog() {
 function renderScanLog(scans) {
   const tbody = document.getElementById('scanLogBody');
   if (!scans.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center" style="color:#6b7280;">No scans yet.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center" style="color:#6b7280;">No scans yet.</td></tr>';
     return;
   }
   tbody.innerHTML = scans.map(s => {
@@ -1071,6 +1071,7 @@ function renderScanLog(scans) {
       + '<td class="py-2 pr-3" style="color:#60a5fa;font-size:0.75rem;">' + (s.email_found || '—') + '</td>'
       + '<td class="py-2 pr-3">' + statusBadge + '</td>'
       + '<td class="py-2" style="color:#6b7280;font-size:0.72rem;max-width:280px;">' + (recs || '—') + '</td>'
+      + '<td class="py-2"><button onclick=\'generateReport(' + JSON.stringify(s) + ')\' style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:6px;padding:4px 10px;font-size:0.72rem;font-weight:600;cursor:pointer;white-space:nowrap;">📄 Report</button></td>'
       + '</tr>';
   }).join('');
 }
@@ -1087,6 +1088,47 @@ function exportScanLog() {
   a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
   a.download = 'scan-log-' + new Date().toISOString().split('T')[0] + '.csv';
   a.click();
+}
+async function generateReport(scan) {
+  const btn = event && event.target ? event.target : null;
+  if (btn) { btn.textContent = '⏳...'; btn.disabled = true; }
+  try {
+    let recommendations = [];
+    try { recommendations = JSON.parse(scan.recommendations || '[]'); } catch {}
+    const payload = {
+      scan_log_id:   scan.id || null,
+      business_url:  scan.business_url || null,
+      business_name: scan.business_name || null,
+      score:         scan.score || null,
+      niche:         scan.niche || null,
+      city:          scan.city || null,
+      country:       scan.country || null,
+      email_found:   scan.email_found || null,
+      recommendations
+    };
+    const res = await fetch('/api/report/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-key': currentAdminId },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Server error ' + res.status);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Failed');
+    window.open(data.url, '_blank');
+    if (btn) {
+      btn.textContent = '🔗 Copy Link';
+      btn.disabled = false;
+      btn.style.background = '#0f2d1a';
+      btn.onclick = () => {
+        navigator.clipboard.writeText(location.origin + data.url)
+          .then(() => { btn.textContent = '✅ Copied!'; setTimeout(() => { btn.textContent = '🔗 Copy Link'; }, 2000); });
+      };
+    }
+  } catch (e) {
+    console.error('Report error:', e);
+    if (btn) { btn.textContent = '❌ Error'; btn.disabled = false; setTimeout(() => { btn.textContent = '📄 Report'; }, 3000); }
+    alert('Report generation failed: ' + e.message);
+  }
 }
 </script>
 <!-- EMAIL LOG TAB -->
@@ -1182,11 +1224,12 @@ function exportScanLog() {
             <th class="pb-2 pr-3">City</th>
             <th class="pb-2 pr-3">Email</th>
             <th class="pb-2 pr-3">Status</th>
-            <th class="pb-2">Top Recommendations</th>
+            <th class="pb-2 pr-3">Top Recommendations</th>
+            <th class="pb-2">Report</th>
           </tr>
         </thead>
         <tbody id="scanLogBody">
-          <tr><td colspan="8" class="py-8 text-center" style="color:#6b7280;">Click Refresh to load.</td></tr>
+          <tr><td colspan="9" class="py-8 text-center" style="color:#6b7280;">Click Refresh to load.</td></tr>
         </tbody>
       </table>
     </div>
