@@ -523,7 +523,22 @@ app.post('/api/setup/verify-admin', async (req, res) => {
     } catch (e) { res.status(500).json({ success: false, error: 'Server error' }); }
 });
 app.get('/api/admin/users', verifyAdmin, async (req, res) => {
-    try { const r = await pool.query('SELECT * FROM users ORDER BY created_at DESC'); res.json({ success: true, users: r.rows }); }
+    try {
+        // Join with scan_log to get scan count + last scanned URL per user
+        const r = await pool.query(`
+            SELECT 
+                u.*,
+                COUNT(s.id) AS scan_count,
+                MAX(s.created_at) AS last_scan_at,
+                (SELECT s2.business_url FROM scan_log s2 WHERE s2.user_id = u.id ORDER BY s2.created_at DESC LIMIT 1) AS last_scanned_url,
+                (SELECT s3.score FROM scan_log s3 WHERE s3.user_id = u.id ORDER BY s3.created_at DESC LIMIT 1) AS last_scan_score
+            FROM users u
+            LEFT JOIN scan_log s ON s.user_id = u.id
+            GROUP BY u.id
+            ORDER BY u.created_at DESC
+        `);
+        res.json({ success: true, users: r.rows });
+    }
     catch (e) { res.json({ success: false, error: e.message }); }
 });
 app.post('/api/admin/users/:id/activate', verifyAdmin, async (req, res) => {
