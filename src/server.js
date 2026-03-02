@@ -235,6 +235,33 @@ async function createAllTables() {
             recommendations TEXT,
             created_at TIMESTAMP DEFAULT NOW()
         )`);
+        // Batch jobs — server-side background scan jobs (survive browser close / PC off)
+        await client.query(`CREATE TABLE IF NOT EXISTS batch_jobs (
+            id VARCHAR(64) PRIMARY KEY,
+            admin_id VARCHAR(255),
+            niches TEXT NOT NULL,
+            cities TEXT NOT NULL,
+            country VARCHAR(100) DEFAULT 'Netherlands',
+            max_results INTEGER DEFAULT 50,
+            website_only BOOLEAN DEFAULT TRUE,
+            status VARCHAR(50) DEFAULT 'queued',
+            progress INTEGER DEFAULT 0,
+            progress_text TEXT DEFAULT 'Queued...',
+            total_combos INTEGER DEFAULT 0,
+            current_combo INTEGER DEFAULT 0,
+            scanned INTEGER DEFAULT 0,
+            skipped INTEGER DEFAULT 0,
+            score_high INTEGER DEFAULT 0,
+            score_good INTEGER DEFAULT 0,
+            score_low INTEGER DEFAULT 0,
+            error_message TEXT,
+            apify_token TEXT,
+            started_at TIMESTAMP,
+            completed_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT NOW()
+        )`);
+        await client.query(`ALTER TABLE batch_jobs ADD COLUMN IF NOT EXISTS score_low INTEGER DEFAULT 0`).catch(() => {});
+
         // Migrate: add columns if they don't exist yet
         await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS business_url TEXT`).catch(() => {});
         await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS business_name VARCHAR(255)`).catch(() => {});
@@ -1799,6 +1826,291 @@ async function startServer() {
         console.log('\n✅ Elite scanner ready\n');
     });
 }
+// ============================================
+// BACKGROUND BATCH JOB SYSTEM
+// Jobs run on Railway server — survive browser close / PC off
+// ============================================
+
+// Active job runners (in-memory map so only 1 per job runs)
+const activeJobs = new Map();
+
+// POST /api/admin/batch-job/start — submit a new batch job
+app.post('/api/admin/batch-job/start', verifyAdmin, async (req, res) => {
+    if (!pool) return res.json({ success: false, error: 'No DB' });
+    const { niches, cities, country, max_results, website_only, apify_token } = req.body;
+    if (!niches || !cities || !apify_token) return res.status(400).json({ success: false, error: 'Missing niches, cities or apify_token' });
+    const nicheArr = niches.split('\n').map(n => n.trim()).filter(n => n);
+    const cityArr  = cities.split('\n').map(c => c.trim()).filter(c => c);
+    if (!nicheArr.length || !cityArr.length) return res.status(400).json({ success: false, error: 'No valid niches or cities' });
+    const jobId = crypto.randomBytes(16).toString('hex');
+    const totalCombos = nicheArr.length * cityArr.length;
+    try {
+        await pool.query(
+            `INSERT INTO batch_jobs (id, admin_id, niches, cities, country, max_results, website_only, status, total_combos, apify_token, created_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,'queued',$8,$9,NOW())`,
+            [jobId, req.admin.id, niches, cities, country || 'Netherlands', max_results || 50, website_only !== false, totalCombos, apify_token]
+        );
+        // Start running in background (non-blocking)
+        runBatchJobInBackground(jobId);
+        res.json({ success: true, job_id: jobId, total_combos: totalCombos });
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/admin/batch-jobs — list recent jobs
+app.get('/api/admin/batch-jobs', verifyAdmin, async (req, res) => {
+    if (!pool) return res.json({ success: false, jobs: [] });
+    try {
+        const r = await pool.query(
+            `SELECT id, status, progress, progress_text, total_combos, current_combo,
+                    scanned, skipped, score_high, score_good, score_low,
+                    niches, cities, country, max_results, error_message,
+                    started_at, completed_at, created_at
+             FROM batch_jobs ORDER BY created_at DESC LIMIT 20`
+        );
+        res.json({ success: true, jobs: r.rows });
+    } catch (e) { res.status(500).json({ success: false, jobs: [] }); }
+});
+
+// GET /api/admin/batch-job/:id — single job status
+app.get('/api/admin/batch-job/:id', verifyAdmin, async (req, res) => {
+    if (!pool) return res.json({ success: false, error: 'No DB' });
+    try {
+        const r = await pool.query('SELECT * FROM batch_jobs WHERE id = $1', [req.params.id]);
+        if (!r.rows.length) return res.status(404).json({ success: false, error: 'Job not found' });
+        res.json({ success: true, job: r.rows[0] });
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// DELETE /api/admin/batch-job/:id — cancel a running job
+app.delete('/api/admin/batch-job/:id', verifyAdmin, async (req, res) => {
+    if (!pool) return res.json({ success: false, error: 'No DB' });
+    try {
+        activeJobs.set(req.params.id, { cancelled: true });
+        await pool.query(`UPDATE batch_jobs SET status='cancelled', completed_at=NOW() WHERE id=$1`, [req.params.id]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// Background runner — called async, does not block the HTTP response
+async function runBatchJobInBackground(jobId) {
+    if (!pool) return;
+    const jobRef = { cancelled: false };
+    activeJobs.set(jobId, jobRef);
+
+    const updateJob = async (fields) => {
+        if (!pool) return;
+        const keys = Object.keys(fields);
+        const vals = Object.values(fields);
+        const sets = keys.map((k, i) => `${k}=$${i+1}`).join(',');
+        await pool.query(`UPDATE batch_jobs SET ${sets} WHERE id=$${keys.length+1}`, [...vals, jobId]).catch(() => {});
+    };
+
+    try {
+        const jr = await pool.query('SELECT * FROM batch_jobs WHERE id=$1', [jobId]);
+        if (!jr.rows.length) return;
+        const job = jr.rows[0];
+        const nicheArr = job.niches.split('\n').map(n => n.trim()).filter(n => n);
+        const cityArr  = job.cities.split('\n').map(c => c.trim()).filter(c => c);
+        const combos   = [];
+        nicheArr.forEach(niche => cityArr.forEach(city => combos.push({ niche, city })));
+        const maxResults  = parseInt(job.max_results) || 50;
+        const maxResultsActual = maxResults === 0 ? 9999 : maxResults;
+        const websiteOnly = job.website_only;
+        const country     = job.country;
+        const apifyToken  = job.apify_token;
+        const APIFY_BASE  = 'https://api.apify.com/v2';
+
+        await updateJob({ status: 'running', started_at: new Date(), progress: 1, progress_text: 'Loading existing scans for dedup...' });
+
+        // Load already-scanned URLs for dedup
+        let alreadyScanned = new Set();
+        try {
+            const existing = await pool.query('SELECT business_url FROM scan_log WHERE business_url IS NOT NULL');
+            existing.rows.forEach(r => alreadyScanned.add(r.business_url.trim()));
+        } catch(e) { /* non-fatal */ }
+
+        let totalScanned = 0, totalSkipped = 0;
+        let scoreHigh = 0, scoreGood = 0, scoreLow = 0;
+
+        for (let ci = 0; ci < combos.length; ci++) {
+            // Check for cancellation
+            if (activeJobs.get(jobId)?.cancelled) {
+                await updateJob({ status: 'cancelled', completed_at: new Date(), progress_text: 'Cancelled by user' });
+                return;
+            }
+
+            const { niche, city } = combos[ci];
+            const pct = Math.round((ci / combos.length) * 85);
+            await updateJob({
+                current_combo: ci + 1,
+                progress: pct,
+                progress_text: `Combo ${ci+1}/${combos.length}: ${niche} — ${city}`
+            });
+
+            // Start Apify run
+            let runId;
+            try {
+                const runRes = await fetch(`${APIFY_BASE}/acts/compass~crawler-google-places/runs`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apifyToken}` },
+                    body: JSON.stringify({
+                        searchStringsArray: [`${niche} in ${city}`],
+                        maxCrawledPlacesPerSearch: maxResultsActual,
+                        language: 'en', exportPlaceUrls: true,
+                        includeWebResults: true, skipClosedPlaces: false
+                    })
+                });
+                const runData = await runRes.json();
+                runId = runData.data?.id;
+                if (!runId) throw new Error('Apify run not started');
+            } catch (e) {
+                await updateJob({ progress_text: `Combo ${ci+1}: Apify error — ${e.message}` });
+                continue;
+            }
+
+            // Poll for completion
+            let attempts = 0, runStatus = 'RUNNING';
+            while (runStatus === 'RUNNING' || runStatus === 'READY') {
+                await new Promise(r => setTimeout(r, 5000));
+                attempts++;
+                try {
+                    const statusData = await (await fetch(`${APIFY_BASE}/actor-runs/${runId}`, {
+                        headers: { 'Authorization': `Bearer ${apifyToken}` }
+                    })).json();
+                    runStatus = statusData.data?.status || 'FAILED';
+                } catch(e) { runStatus = 'FAILED'; }
+                await updateJob({ progress_text: `${niche} — ${city}: scraping... (${attempts*5}s)` });
+                if (attempts > 60) { runStatus = 'TIMEOUT'; break; }
+                if (activeJobs.get(jobId)?.cancelled) break;
+            }
+
+            if (runStatus !== 'SUCCEEDED') {
+                await updateJob({ progress_text: `${niche} — ${city}: ${runStatus}, continuing...` });
+                continue;
+            }
+
+            // Fetch dataset
+            let places = [];
+            try {
+                const dataRaw = await (await fetch(`${APIFY_BASE}/actor-runs/${runId}/dataset/items?format=json&clean=true`, {
+                    headers: { 'Authorization': `Bearer ${apifyToken}` }
+                })).json();
+                places = Array.isArray(dataRaw) ? dataRaw : (dataRaw.items || dataRaw.data || []);
+            } catch(e) { continue; }
+
+            let urls = places.filter(p => p.website).map(p => ({
+                url: p.website.startsWith('http') ? p.website : 'https://' + p.website,
+                name: p.title || p.name || '',
+                email: p.email || (p.emails && p.emails[0]) || null,
+                country
+            }));
+            if (!websiteOnly) {
+                places.filter(p => !p.website).forEach(p => urls.push({
+                    url: '', name: p.title || p.name || '',
+                    email: p.email || (p.emails && p.emails[0]) || null,
+                    country
+                }));
+            }
+
+            const urlsToScan = urls.filter(p => !p.url || !alreadyScanned.has(p.url.trim()));
+            totalSkipped += urls.length - urlsToScan.length;
+
+            let comboScanned = 0;
+            for (const place of urlsToScan) {
+                if (activeJobs.get(jobId)?.cancelled) break;
+                if (!place.url) { comboScanned++; continue; }
+                try {
+                    // Use internal scan endpoint
+                    const scanRes = await fetch(`http://localhost:${process.env.PORT || 3000}/api/scan`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: place.url })
+                    });
+                    const scanData = await scanRes.json();
+                    const score = scanData.score || 0;
+                    if (score >= 85) scoreHigh++;
+                    else if (score >= 70) scoreGood++;
+                    else scoreLow++;
+
+                    // Save to scan_log
+                    const reportId = crypto.randomBytes(20).toString('hex');
+                    const reportUrl = '/report/' + reportId;
+                    const insertResult = await pool.query(
+                        `INSERT INTO scan_log (user_id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations, report_url)
+                         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'discover',$10,$11) RETURNING id`,
+                        [
+                            'batch_job_' + jobId,
+                            place.url, place.name, score, niche, city, country,
+                            place.email || null,
+                            place.email ? 'has_email' : 'no_email',
+                            scanData.recommendations ? JSON.stringify((scanData.recommendations.all || scanData.recommendations).slice(0,5).map(r => r.title || r)) : null,
+                            reportUrl
+                        ]
+                    ).catch(() => null);
+
+                    // Auto-create report
+                    if (insertResult) {
+                        await pool.query(
+                            `INSERT INTO scan_reports (id, scan_log_id, business_url, business_name, score, niche, city, country, email_found, recommendations)
+                             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+                            [reportId, insertResult.rows[0]?.id, place.url, place.name, score, niche, city, country, place.email || null,
+                             scanData.recommendations ? JSON.stringify((scanData.recommendations.all || scanData.recommendations).slice(0,5)) : null]
+                        ).catch(() => {});
+                    }
+
+                    alreadyScanned.add(place.url.trim());
+                    totalScanned++;
+                } catch(e) { /* non-fatal, continue */ }
+
+                comboScanned++;
+                const innerPct = Math.round((ci / combos.length) * 85) + Math.round((comboScanned / Math.max(urlsToScan.length, 1)) * 10);
+                await updateJob({
+                    progress: Math.min(innerPct, 95),
+                    progress_text: `Combo ${ci+1}/${combos.length} · ${comboScanned}/${urlsToScan.length}: ${place.name || place.url}`,
+                    scanned: totalScanned,
+                    skipped: totalSkipped,
+                    score_high: scoreHigh,
+                    score_good: scoreGood,
+                    score_low: scoreLow
+                });
+            }
+        }
+
+        await updateJob({
+            status: 'completed',
+            progress: 100,
+            progress_text: `✅ Done — ${totalScanned} scanned, ${totalSkipped} skipped`,
+            scanned: totalScanned,
+            skipped: totalSkipped,
+            score_high: scoreHigh,
+            score_good: scoreGood,
+            score_low: scoreLow,
+            completed_at: new Date()
+        });
+        console.log(`✅ Batch job ${jobId} complete: ${totalScanned} scanned`);
+
+    } catch (e) {
+        console.error(`❌ Batch job ${jobId} error:`, e.message);
+        await updateJob({ status: 'failed', error_message: e.message, completed_at: new Date() }).catch(() => {});
+    } finally {
+        activeJobs.delete(jobId);
+    }
+}
+
+// On server restart: resume any 'running' jobs that were interrupted
+setTimeout(async () => {
+    if (!pool) return;
+    try {
+        const r = await pool.query(`SELECT id FROM batch_jobs WHERE status='running' OR status='queued'`);
+        for (const row of r.rows) {
+            console.log(`🔄 Resuming interrupted batch job: ${row.id}`);
+            await pool.query(`UPDATE batch_jobs SET status='running', progress_text='Resuming after server restart...' WHERE id=$1`, [row.id]);
+            runBatchJobInBackground(row.id);
+        }
+    } catch(e) { /* non-fatal */ }
+}, 5000);
+
+
 // ============================================
 // INSTANTLY.AI PROXY ENDPOINTS
 // Browser cannot call api.instantly.ai directly (CORS)
