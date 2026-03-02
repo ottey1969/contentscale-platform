@@ -855,7 +855,7 @@ footer p { color: #9ca3af !important; }
         <h2 class="text-4xl font-bold mb-3">✏️ Email Templates</h2>
         <p class="text-xl" style="color:#e5e7eb!important;">Customize your bulk scan email templates (Grade 3 Level)</p>
       </div>
-      <div class="cards-grid">
+      <div class="cards-grid" style="grid-template-columns:repeat(2,1fr)!important;">
         <!-- Congrats Template -->
         <div class="card">
           <h3 class="text-xl font-bold mb-2">🏆 Leaderboard Congratulations</h3>
@@ -864,7 +864,7 @@ footer p { color: #9ca3af !important; }
             <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
             <input type="text" id="template-congrats-subject" class="w-full p-2 rounded mb-2" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:0.85rem;">
             <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
-            <textarea id="template-congrats-body" class="w-full p-2 rounded badge-code-ta" style="min-height:300px;font-size:0.72rem;"></textarea>
+            <textarea id="template-congrats-body" class="w-full p-2 rounded badge-code-ta" style="min-height:420px;font-size:0.72rem;"></textarea>
           </div>
           <button onclick="saveTemplate('congrats')" class="btn btn-primary w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
         </div>
@@ -876,7 +876,7 @@ footer p { color: #9ca3af !important; }
             <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
             <input type="text" id="template-improvement-subject" class="w-full p-2 rounded mb-2" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:0.85rem;">
             <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
-            <textarea id="template-improvement-body" class="w-full p-2 rounded badge-code-ta" style="min-height:300px;font-size:0.72rem;"></textarea>
+            <textarea id="template-improvement-body" class="w-full p-2 rounded badge-code-ta" style="min-height:420px;font-size:0.72rem;"></textarea>
           </div>
           <button onclick="saveTemplate('improvement')" class="btn btn-primary w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
         </div>
@@ -888,7 +888,7 @@ footer p { color: #9ca3af !important; }
             <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
             <input type="text" id="template-almostMade-subject" class="w-full p-2 rounded mb-2" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:0.85rem;">
             <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
-            <textarea id="template-almostMade-body" class="w-full p-2 rounded badge-code-ta" style="min-height:300px;font-size:0.72rem;"></textarea>
+            <textarea id="template-almostMade-body" class="w-full p-2 rounded badge-code-ta" style="min-height:420px;font-size:0.72rem;"></textarea>
           </div>
           <button onclick="saveTemplate('almostMade')" class="btn btn-primary w-full mt-4" style="background:linear-gradient(135deg,#b45309,#d97706)!important;"><i class="fas fa-save mr-2"></i> Save Template</button>
         </div>
@@ -900,7 +900,7 @@ footer p { color: #9ca3af !important; }
             <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
             <input type="text" id="template-website-subject" class="w-full p-2 rounded mb-2" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:0.85rem;">
             <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
-            <textarea id="template-website-body" class="w-full p-2 rounded badge-code-ta" style="min-height:300px;font-size:0.72rem;"></textarea>
+            <textarea id="template-website-body" class="w-full p-2 rounded badge-code-ta" style="min-height:420px;font-size:0.72rem;"></textarea>
           </div>
           <button onclick="saveTemplate('website')" class="btn btn-primary w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
         </div>
@@ -2378,7 +2378,7 @@ async function loadUserTemplates() {
       userTemplates = data.templates;
       ['congrats', 'almostMade', 'improvement', 'website'].forEach(t => {
         // Only overwrite if server has a non-empty saved version
-        if (userTemplates[t] && userTemplates[t].subject && userTemplates[t].body && userTemplates[t].body.trim().length > 50) {
+        if (userTemplates[t] && userTemplates[t].subject && userTemplates[t].body && userTemplates[t].body.trim().length > 500) {
           const subEl  = document.getElementById('template-' + t + '-subject');
           const bodyEl = document.getElementById('template-' + t + '-body');
           if (subEl)  subEl.value  = userTemplates[t].subject;
