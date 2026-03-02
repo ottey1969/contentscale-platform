@@ -2424,24 +2424,21 @@ function switchMode(mode) {
   [singleMode, bulkMode, discoverMode, activityMode].forEach(el => el && el.classList.add('hidden'));
   [singleBtn, bulkBtn, discoverBtn, activityBtn].forEach(el => el && el.classList.remove('active'));
 
+  // Hide warmup panel by default; only show in activity
+  document.getElementById('warmupPanel').classList.add('hidden');
+
   if (mode === 'single') {
     singleMode.classList.remove('hidden');
     singleBtn.classList.add('active');
     if (templates) templates.classList.add('hidden');
-    document.getElementById('warmupPanel').classList.remove('hidden');
-    loadWarmupStatus();
   } else if (mode === 'bulk') {
     bulkMode.classList.remove('hidden');
     bulkBtn.classList.add('active');
     if (templates) templates.classList.remove('hidden');
-    document.getElementById('warmupPanel').classList.remove('hidden');
-    loadWarmupStatus();
   } else if (mode === 'discover') {
     discoverMode.classList.remove('hidden');
     discoverBtn.classList.add('active');
     if (templates) templates.classList.remove('hidden');
-    document.getElementById('warmupPanel').classList.remove('hidden');
-    loadWarmupStatus();
     // show warning if Apify token missing
     const hasToken = !!localStorage.getItem('apifyToken');
     const warn = document.getElementById('apifyKeyWarning');
@@ -2450,6 +2447,8 @@ function switchMode(mode) {
     if (activityMode) activityMode.classList.remove('hidden');
     if (activityBtn) activityBtn.classList.add('active');
     if (templates) templates.classList.add('hidden');
+    document.getElementById('warmupPanel').classList.remove('hidden');
+    loadWarmupStatus();
     loadUserActivity();
   }
 }
