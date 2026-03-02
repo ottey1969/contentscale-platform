@@ -580,11 +580,351 @@ footer p { color: #9ca3af !important; }
   <div id="freelancers" class="mb-16 main-section" data-section="experts">
     <div class="text-center mb-8">
       <h2 class="text-4xl font-bold mb-3">🎯 ContentScale Partners</h2>
-      <button onclick="openFreelancerModal()" class="btn btn-primary mt-2"><i class="fas fa-handshake mr-2"></i> Werk Met Ons</button>
+      <button onclick="openFreelancerModal()" class="btn btn-primary mt-2"><i class="fas fa-handshake mr-2"></i> Work With Us</button>
     </div>
     <!-- FIX: was grid-3, now proper grid class -->
     <div class="cards-grid" id="freelancersGrid"></div>
   </div>
+
+  <div id="templates" class="mb-16 main-section" data-section="templates">
+    <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+      <div class="text-center mb-8">
+        <h2 class="text-4xl font-bold mb-3">✏️ Email Templates</h2>
+        <p class="text-xl" style="color:#e5e7eb!important;">Customize your bulk scan email templates (Grade 3 Level)</p>
+      </div>
+      <div class="cards-grid">
+        <!-- Congrats Template -->
+        <div class="card">
+          <h3 class="text-xl font-bold mb-2">🏆 Leaderboard Congratulations</h3>
+          <p class="text-sm mb-4" style="color:#9ca3af!important;">Sent to businesses with 85+ score</p>
+          <div class="template-editor">
+            <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
+            <input type="text" id="template-congrats-subject" class="w-full p-2 rounded mb-2" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:0.85rem;">
+            <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
+            <textarea id="template-congrats-body" class="w-full p-2 rounded badge-code-ta" style="min-height:300px;font-size:0.72rem;"></textarea>
+          </div>
+          <button onclick="saveTemplate('congrats')" class="btn btn-primary w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
+        </div>
+        <!-- Improvement Template -->
+        <div class="card">
+          <h3 class="text-xl font-bold mb-2">📈 Improvement Pitch</h3>
+          <p class="text-sm mb-4" style="color:#9ca3af!important;">Sent to businesses with website &lt;85 score</p>
+          <div class="template-editor">
+            <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
+            <input type="text" id="template-improvement-subject" class="w-full p-2 rounded mb-2" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:0.85rem;">
+            <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
+            <textarea id="template-improvement-body" class="w-full p-2 rounded badge-code-ta" style="min-height:300px;font-size:0.72rem;"></textarea>
+          </div>
+          <button onclick="saveTemplate('improvement')" class="btn btn-primary w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
+        </div>
+        <!-- Almost Made It Template -->
+        <div class="card" style="border-color:#f59e0b!important;">
+          <h3 class="text-xl font-bold mb-2">🎯 Almost Made It</h3>
+          <p class="text-sm mb-4" style="color:#9ca3af!important;">Sent to businesses scoring 65–69 · {{gap}} points from leaderboard</p>
+          <div class="template-editor">
+            <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
+            <input type="text" id="template-almostMade-subject" class="w-full p-2 rounded mb-2" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:0.85rem;">
+            <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
+            <textarea id="template-almostMade-body" class="w-full p-2 rounded badge-code-ta" style="min-height:300px;font-size:0.72rem;"></textarea>
+          </div>
+          <button onclick="saveTemplate('almostMade')" class="btn btn-primary w-full mt-4" style="background:linear-gradient(135deg,#b45309,#d97706)!important;"><i class="fas fa-save mr-2"></i> Save Template</button>
+        </div>
+        <!-- Website Template -->
+        <div class="card">
+          <h3 class="text-xl font-bold mb-2">🌐 Website Offer</h3>
+          <p class="text-sm mb-4" style="color:#9ca3af!important;">Sent to businesses without website</p>
+          <div class="template-editor">
+            <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
+            <input type="text" id="template-website-subject" class="w-full p-2 rounded mb-2" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:0.85rem;">
+            <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
+            <textarea id="template-website-body" class="w-full p-2 rounded badge-code-ta" style="min-height:300px;font-size:0.72rem;"></textarea>
+          </div>
+          <button onclick="saveTemplate('website')" class="btn btn-primary w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
+        </div>
+      </div>
+      <div class="mt-8 rounded-lg p-5" style="background:#0f172a;border:1px solid #334155;">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="text-lg">📎</span>
+          <h4 class="font-bold text-base">Available Variables</h4>
+          <span class="text-xs px-2 py-0.5 rounded-full" style="background:#1e293b;color:#94a3b8!important;">Use in both Subject &amp; Body</span>
+        </div>
+
+        <!-- Group: Business -->
+        <div class="mb-4">
+          <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">🏢 Business</p>
+          <div class="var-grid">
+            <div class="var-row"><code style="color:#c084fc!important;">{{company_name}}</code><span>Business / domain name</span></div>
+            <div class="var-row"><code style="color:#c084fc!important;">{{domain}}</code><span>Clean domain (no https://)</span></div>
+            <div class="var-row"><code style="color:#c084fc!important;">{{website_url}}</code><span>Full scanned URL</span></div>
+            <div class="var-row"><code style="color:#c084fc!important;">{{industry}}</code><span>Detected industry / niche</span></div>
+            <div class="var-row"><code style="color:#c084fc!important;">{{city}}</code><span>Detected city (if found)</span></div>
+            <div class="var-row"><code style="color:#c084fc!important;">{{country}}</code><span>Detected country</span></div>
+          </div>
+        </div>
+
+        <!-- Group: Score & Analysis -->
+        <div class="mb-4">
+          <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">📊 Score &amp; Analysis</p>
+          <div class="var-grid">
+            <div class="var-row"><code style="color:#38bdf8!important;">{{score}}</code><span>Total ContentScore (0–100)</span></div>
+            <div class="var-row"><code style="color:#38bdf8!important;">{{score_label}}</code><span>Elite / Excellent / Good / Needs Work</span></div>
+            <div class="var-row"><code style="color:#38bdf8!important;">{{score_bar}}</code><span>Visual HTML progress bar</span></div>
+            <div class="var-row"><code style="color:#38bdf8!important;">{{graaf_score}}</code><span>GRAAF sub-score (/50)</span></div>
+            <div class="var-row"><code style="color:#38bdf8!important;">{{craft_score}}</code><span>CRAFT sub-score (/30)</span></div>
+            <div class="var-row"><code style="color:#38bdf8!important;">{{tech_score}}</code><span>Technical sub-score (/20)</span></div>
+            <div class="var-row"><code style="color:#38bdf8!important;">{{word_count}}</code><span>Detected word count</span></div>
+            <div class="var-row"><code style="color:#38bdf8!important;">{{top_issue}}</code><span>Top recommended fix</span></div>
+            <div class="var-row"><code style="color:#38bdf8!important;">{{page_title}}</code><span>Scanned page &lt;title&gt;</span></div>
+          </div>
+        </div>
+
+        <!-- Group: Sender / You -->
+        <div class="mb-4">
+          <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">👤 Sender (You)</p>
+          <div class="var-grid">
+            <div class="var-row"><code style="color:#fb923c!important;">{{sender_name}}</code><span>Your name (from form)</span></div>
+            <div class="var-row"><code style="color:#fb923c!important;">{{sender_email}}</code><span>Your email (from form)</span></div>
+            <div class="var-row"><code style="color:#fb923c!important;">{{sender_phone}}</code><span>+31 6 2807 3996</span></div>
+            <div class="var-row"><code style="color:#fb923c!important;">{{sender_whatsapp}}</code><span>WhatsApp chat link</span></div>
+            <div class="var-row"><code style="color:#fb923c!important;">{{sender_company}}</code><span>ContentScale</span></div>
+          </div>
+        </div>
+
+        <!-- Group: Links & Dates -->
+        <div class="mb-4">
+          <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">🔗 Links &amp; Dates</p>
+          <div class="var-grid">
+            <div class="var-row"><code style="color:#a3e635!important;">{{leaderboard_url}}</code><span>Link to leaderboard (app.contentscale.site)</span></div>
+            <div class="var-row"><code style="color:#a3e635!important;">{{scanner_url}}</code><span>Link to scanner app (app.contentscale.site)</span></div>
+            <div class="var-row"><code style="color:#a3e635!important;">{{main_site_url}}</code><span>Main website (contentscale.site)</span></div>
+            <div class="var-row"><code style="color:#a3e635!important;">{{cta_url}}</code><span>Main CTA link (WhatsApp wa.me/31628073996)</span></div>
+            <div class="var-row"><code style="color:#a3e635!important;">{{date}}</code><span>Today's date (Feb 22, 2026)</span></div>
+            <div class="var-row"><code style="color:#a3e635!important;">{{month}}</code><span>Current month (February)</span></div>
+            <div class="var-row"><code style="color:#a3e635!important;">{{year}}</code><span>Current year (2026)</span></div>
+          </div>
+        </div>
+
+        <!-- Group: Required -->
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">⚠️ Required</p>
+          <div class="var-grid">
+            <div class="var-row" style="border-color:#dc2626!important;"><code style="color:#f87171!important;">{{unsubscribe_url}}</code><span style="color:#fca5a5!important;">Must include in every email (GDPR)</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       LEADERBOARD SECTION
+       ============================================================ -->
+
+  <div id="leaderboard" class="mb-16 main-section" data-section="leaderboard">
+    <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+
+      <!-- Header -->
+      <div class="text-center mb-6">
+        <h2 class="text-4xl font-bold mb-2">🏆 Elite Leaderboard</h2>
+        <p style="color:#e5e7eb!important;">Top performing websites · ContentScore 70–100</p>
+      </div>
+
+      <!-- ── Niche context header (hidden by default) ── -->
+      <div id="leaderboardNicheHeader" class="hidden max-w-5xl mx-auto mb-2"></div>
+
+      <!-- ── FILTERS ── -->
+      <div class="max-w-5xl mx-auto mb-8 p-4 rounded-xl" style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+
+          <!-- Niche -->
+          <div>
+            <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">🏷️ Niche</label>
+            <select id="filterNiche" aria-label="Filter by niche" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+              <option value="">All Niches</option>
+              <!-- Agencies & Services — sell content quality to clients -->
+              <optgroup label="── Agencies & Services">
+                <option value="seoagency">SEO Agency</option>
+                <option value="contentmarketing">Content Marketing Agency</option>
+                <option value="digitalmarketing">Digital Marketing Agency</option>
+                <option value="webdesign">Web Design & Dev Agency</option>
+                <option value="prагентство">PR Agency</option>
+              </optgroup>
+              <!-- YMYL — Google scrutinises hardest, content errors = lost trust -->
+              <optgroup label="── YMYL (High Stakes)">
+                <option value="legal">Legal / Law Firm</option>
+                <option value="healthcare">Healthcare / Medical</option>
+                <option value="finance">Finance / Fintech</option>
+                <option value="insurance">Insurance</option>
+                <option value="tax">Accounting / Tax</option>
+                <option value="mentalhealth">Mental Health / Therapy</option>
+              </optgroup>
+              <!-- High competition — ranking matters enormously -->
+              <optgroup label="── High Competition">
+                <option value="saas">SaaS / Software</option>
+                <option value="ecommerce">E-Commerce / Retail</option>
+                <option value="realestate">Real Estate</option>
+                <option value="travel">Travel & Tourism</option>
+                <option value="recruitment">Recruitment / HR</option>
+                <option value="insurance">Insurance</option>
+              </optgroup>
+              <!-- Service businesses — content IS the pitch -->
+              <optgroup label="── Service Businesses">
+                <option value="coaching">Coaching / Consulting</option>
+                <option value="local">Local Business</option>
+                <option value="homeservices">Home Services (Plumber, Builder…)</option>
+                <option value="restaurant">Restaurant / Food</option>
+                <option value="beautywellness">Beauty & Wellness</option>
+                <option value="automotive">Automotive</option>
+              </optgroup>
+              <!-- Content-driven — live and die by organic traffic -->
+              <optgroup label="── Content-Driven">
+                <option value="blog">Blog / News / Media</option>
+                <option value="education">Education / eLearning</option>
+                <option value="nonprofit">Non-Profit</option>
+                <option value="other">Other</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <!-- Country -->
+          <div>
+            <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">🌍 Country</label>
+            <select id="filterCountry" aria-label="Filter by country" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+              <option value="">All Countries</option>
+              <!-- Europe -->
+              <optgroup label="── Europe">
+                <option value="Netherlands">🇳🇱 Netherlands</option>
+                <option value="Germany">🇩🇪 Germany</option>
+                <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                <option value="France">🇫🇷 France</option>
+                <option value="Spain">🇪🇸 Spain</option>
+                <option value="Italy">🇮🇹 Italy</option>
+                <option value="Belgium">🇧🇪 Belgium</option>
+                <option value="Sweden">🇸🇪 Sweden</option>
+                <option value="Norway">🇳🇴 Norway</option>
+                <option value="Denmark">🇩🇰 Denmark</option>
+                <option value="Finland">🇫🇮 Finland</option>
+                <option value="Switzerland">🇨🇭 Switzerland</option>
+                <option value="Austria">🇦🇹 Austria</option>
+                <option value="Poland">🇵🇱 Poland</option>
+                <option value="Portugal">🇵🇹 Portugal</option>
+                <option value="Ireland">🇮🇪 Ireland</option>
+                <option value="Czech Republic">🇨🇿 Czech Republic</option>
+                <option value="Hungary">🇭🇺 Hungary</option>
+                <option value="Romania">🇷🇴 Romania</option>
+                <option value="Greece">🇬🇷 Greece</option>
+                <option value="Ukraine">🇺🇦 Ukraine</option>
+              </optgroup>
+              <!-- North America -->
+              <optgroup label="── North America">
+                <option value="United States">🇺🇸 United States</option>
+                <option value="Canada">🇨🇦 Canada</option>
+                <option value="Mexico">🇲🇽 Mexico</option>
+              </optgroup>
+              <!-- Latin America -->
+              <optgroup label="── Latin America">
+                <option value="Brazil">🇧🇷 Brazil</option>
+                <option value="Argentina">🇦🇷 Argentina</option>
+                <option value="Colombia">🇨🇴 Colombia</option>
+                <option value="Chile">🇨🇱 Chile</option>
+                <option value="Peru">🇵🇪 Peru</option>
+              </optgroup>
+              <!-- Asia Pacific -->
+              <optgroup label="── Asia Pacific">
+                <option value="Australia">🇦🇺 Australia</option>
+                <option value="New Zealand">🇳🇿 New Zealand</option>
+                <option value="India">🇮🇳 India</option>
+                <option value="Japan">🇯🇵 Japan</option>
+                <option value="China">🇨🇳 China</option>
+                <option value="South Korea">🇰🇷 South Korea</option>
+                <option value="Singapore">🇸🇬 Singapore</option>
+                <option value="Indonesia">🇮🇩 Indonesia</option>
+                <option value="Malaysia">🇲🇾 Malaysia</option>
+                <option value="Philippines">🇵🇭 Philippines</option>
+                <option value="Thailand">🇹🇭 Thailand</option>
+                <option value="Vietnam">🇻🇳 Vietnam</option>
+                <option value="Pakistan">🇵🇰 Pakistan</option>
+                <option value="Bangladesh">🇧🇩 Bangladesh</option>
+              </optgroup>
+              <!-- Middle East -->
+              <optgroup label="── Middle East">
+                <option value="United Arab Emirates">🇦🇪 United Arab Emirates</option>
+                <option value="Saudi Arabia">🇸🇦 Saudi Arabia</option>
+                <option value="Israel">🇮🇱 Israel</option>
+                <option value="Turkey">🇹🇷 Turkey</option>
+                <option value="Egypt">🇪🇬 Egypt</option>
+              </optgroup>
+              <!-- Africa -->
+              <optgroup label="── Africa">
+                <option value="South Africa">🇿🇦 South Africa</option>
+                <option value="Nigeria">🇳🇬 Nigeria</option>
+                <option value="Kenya">🇰🇪 Kenya</option>
+                <option value="Ghana">🇬🇭 Ghana</option>
+                <option value="Morocco">🇲🇦 Morocco</option>
+              </optgroup>
+              <!-- Other -->
+              <optgroup label="──">
+                <option value="Other">🌐 Other</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <!-- Business Type -->
+          <div>
+            <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">🏢 Business Type</label>
+            <select id="filterBizType" aria-label="Filter by business type" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+              <option value="">All Types</option>
+              <option value="b2b">B2B</option>
+              <option value="b2c">B2C</option>
+              <option value="local">Local</option>
+              <option value="enterprise">Enterprise</option>
+              <option value="startup">Startup</option>
+              <option value="nonprofit">Non-Profit</option>
+            </select>
+          </div>
+
+          <!-- Score Range -->
+          <div>
+            <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">📊 Score Range</label>
+            <select id="filterScore" aria-label="Filter by score range" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+              <option value="">All Scores (70–100)</option>
+              <option value="95">🏅 Elite · 95–100</option>
+              <option value="90">⭐ Excellent · 90–94</option>
+              <option value="85">💪 Strong · 85–89</option>
+              <option value="80">✅ Good · 80–84</option>
+              <option value="75">📈 Solid · 75–79</option>
+              <option value="70">🎯 Qualified · 70–74</option>
+            </select>
+          </div>
+
+        </div>
+
+        <!-- Active filter count + reset -->
+        <div class="flex items-center justify-between mt-3">
+          <span id="filterCount" class="text-xs" style="color:#9ca3af!important;"></span>
+          <button onclick="resetLeaderboardFilters()" class="text-xs px-3 py-1 rounded" style="background:rgba(139,92,246,0.2);color:#c084fc!important;border:1px solid #7c3aed;cursor:pointer;">Reset Filters</button>
+        </div>
+      </div>
+      <!-- ── END FILTERS ── -->
+
+      <!-- Top 3 podium -->
+      <div id="top3-container" class="top3-grid"></div>
+
+      <!-- Ranks 4–15 -->
+      <div id="rankings4to15Container" class="mt-8"></div>
+
+      <!-- Empty state for filters -->
+      <div id="leaderboardEmpty" class="hidden text-center py-8" style="color:#6b7280!important;">
+        <div class="text-4xl mb-3">🔍</div>
+        <p>No entries match your filters. Try a different combination.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================
+       FREELANCERS SECTION — data from server, no changes
+       ============================================================ -->
 
 </main><!-- end #main-content -->
 
@@ -3088,7 +3428,7 @@ function switchPageSection(section) {
       if (el) el.classList.remove('active');
     });
     if (scanner) {
-      ['singleMode','bulkMode'].forEach(id => {
+      ['singleMode','bulkMode','discoverMode'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
       });
