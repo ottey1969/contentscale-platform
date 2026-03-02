@@ -1324,7 +1324,8 @@ async function generateReport(scan) {
       </div>
       <div class="flex gap-2 flex-wrap">
         <button onclick="loadScanLog()" class="btn btn-warning text-sm px-4 py-2"><i class="fas fa-sync-alt mr-1"></i> Refresh</button>
-        <button id="exportScanBtn" onclick="exportScanLog()" class="btn btn-success text-sm px-4 py-2">⬇ Export selected</button>
+        <button id="exportScanBtn" onclick="exportScanLog()" class="btn btn-success text-sm px-4 py-2">⬇ Export CSV</button>
+        <button onclick="bulkDeleteScans()" class="btn btn-danger text-sm px-4 py-2"><i class="fas fa-trash mr-1"></i> Delete selected</button>
       </div>
     </div>
 
@@ -1543,7 +1544,7 @@ async function generateReport(scan) {
       <div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap;align-items:flex-end;">
         <div style="flex:1;min-width:160px;">
           <label style="display:block;font-size:0.82rem;font-weight:700;color:#e5e7eb;margin-bottom:6px;">🌍 Land</label>
-          <select id="adminBatchCountry" style="width:100%;padding:9px 12px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;font-size:0.85rem;">
+          <select id="adminBatchCountrySelect" onchange="adminHandleCountrySelect(this.value)" style="width:100%;padding:9px 12px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;font-size:0.85rem;margin-bottom:5px;">
             <option value="Netherlands">🇳🇱 Netherlands</option>
             <option value="Germany">🇩🇪 Germany</option>
             <option value="United Kingdom">🇬🇧 United Kingdom</option>
@@ -1553,8 +1554,10 @@ async function generateReport(scan) {
             <option value="Spain">🇪🇸 Spain</option>
             <option value="Australia">🇦🇺 Australia</option>
             <option value="Canada">🇨🇦 Canada</option>
-            <option value="Other">🌐 Other</option>
+            <option value="Other">🌐 Other (manual)</option>
           </select>
+          <input type="text" id="adminBatchCountry" value="Netherlands" placeholder="Type country name..."
+            style="width:100%;padding:7px 12px;background:#0f172a;border:1px solid #7e22ce;border-radius:8px;color:#e5e7eb;font-size:0.82rem;display:none;" />
         </div>
         <div style="flex:1;min-width:160px;">
           <label style="display:block;font-size:0.82rem;font-weight:700;color:#e5e7eb;margin-bottom:6px;">🔢 Max leads per combo</label>
@@ -1562,6 +1565,9 @@ async function generateReport(scan) {
             <option value="20">20 (snel)</option>
             <option value="50" selected>50 (aanbevolen)</option>
             <option value="100">100 (uitgebreid)</option>
+            <option value="200">200 (intensief)</option>
+            <option value="500">500 (max)</option>
+            <option value="0">♾️ All (scan everything)</option>
           </select>
         </div>
         <div style="flex:1;min-width:160px;display:flex;align-items:flex-end;padding-bottom:2px;">
@@ -1630,8 +1636,9 @@ function adminUpdateBatchCombos() {
   if (!el) return;
   if (niches.length > 0 && cities.length > 0) {
     const total = niches.length * cities.length;
-    const maxLeads = parseInt(document.getElementById('adminBatchMaxResults')?.value || 50);
-    el.textContent = `${niches.length} niche${niches.length>1?"'s":''} × ${cities.length} stad${cities.length>1?'en':''} = ${total} combo's · max ${total * maxLeads} leads te scannen`;
+    const maxLeadsRaw = parseInt(document.getElementById('adminBatchMaxResults')?.value || 50);
+    const maxLeadsStr = (!maxLeadsRaw || maxLeadsRaw === 0) ? '♾️ unlimited' : (total * maxLeadsRaw) + ' max';
+    el.textContent = `${niches.length} niche${niches.length>1?"'s":''} × ${cities.length} stad${cities.length>1?'en':''} = ${total} combo\'s · ${maxLeadsStr} leads te scannen`;
   } else {
     el.textContent = '';
   }
@@ -1644,8 +1651,9 @@ async function adminRunBatch() {
 
   const niches      = document.getElementById('adminBatchNiches').value.split('\n').map(n => n.trim()).filter(n => n);
   const cities      = document.getElementById('adminBatchCities').value.split('\n').map(c => c.trim()).filter(c => c);
-  const country     = document.getElementById('adminBatchCountry').value;
-  const maxResults  = parseInt(document.getElementById('adminBatchMaxResults').value);
+  const country     = (document.getElementById('adminBatchCountrySelect').value === 'Other' ? document.getElementById('adminBatchCountry').value.trim() : document.getElementById('adminBatchCountrySelect').value) || 'Unknown';
+  const maxResultsRaw = parseInt(document.getElementById('adminBatchMaxResults').value);
+  const maxResults  = isNaN(maxResultsRaw) || maxResultsRaw === 0 ? 9999 : maxResultsRaw;
   const websiteOnly = document.getElementById('adminBatchWebsiteOnly').checked;
 
   if (!niches.length) { alert('❌ Voer minimaal één niche in.'); return; }
@@ -2182,6 +2190,38 @@ function adminCopyReportLink() {
     setTimeout(() => { btn.textContent = '📋 Copy URL'; }, 2000);
   });
 }
+
+function adminHandleCountrySelect(val) {
+  const manualInput = document.getElementById('adminBatchCountry');
+  if (val === 'Other') {
+    manualInput.style.display = 'block';
+    manualInput.value = '';
+    manualInput.focus();
+  } else {
+    manualInput.style.display = 'none';
+    manualInput.value = val;
+  }
+}
+
+async function bulkDeleteScans() {
+  const ids = Array.from(selectedScanIds);
+  if (ids.length === 0) { alert('Select scans first using the checkboxes.'); return; }
+  if (!confirm('Permanently delete ' + ids.length + ' scan(s)?')) return;
+  try {
+    const r = await fetch('/api/admin/scan-log/bulk-delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-key': currentAdminId },
+      body: JSON.stringify({ ids })
+    });
+    const data = await r.json();
+    if (!data.success) throw new Error(data.error || 'Delete failed');
+    alert('✅ Deleted ' + ids.length + ' scans.');
+    selectedScanIds.clear();
+    updateScanExportBtn();
+    loadScanLog();
+  } catch(e) { alert('❌ ' + e.message); }
+}
+
 </script>
 
 </body>
