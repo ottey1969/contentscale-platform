@@ -242,6 +242,7 @@ footer p { color: #9ca3af !important; }
   .page-tab { border-radius: 7px; font-size: 0.8rem; padding: 10px 6px; white-space: nowrap; min-width: 0; color: #e5e7eb !important; background: rgba(255,255,255,0.08); }
 }
 
+
 </style>
 </head>
 <body class="bg-gray-900">
@@ -570,63 +571,17 @@ footer p { color: #9ca3af !important; }
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 
-              <!-- Niche -->
+              <!-- Niches — multi line -->
               <div>
-                <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">🏷️ Business Niche *</label>
-                <select id="discoverNiche" aria-label="Business niche" class="w-full p-3 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
-                  <option value="">Select a niche...</option>
-                  <optgroup label="── Agencies">
-                    <option value="SEO agency">SEO Agency</option>
-                    <option value="digital marketing agency">Digital Marketing Agency</option>
-                    <option value="web design agency">Web Design Agency</option>
-                    <option value="content marketing agency">Content Marketing Agency</option>
-                  </optgroup>
-                  <optgroup label="── YMYL">
-                    <option value="law firm">Law Firm</option>
-                    <option value="dental clinic">Dental Clinic</option>
-                    <option value="medical clinic">Medical Clinic</option>
-                    <option value="financial advisor">Financial Advisor</option>
-                    <option value="accountant">Accountant</option>
-                    <option value="insurance broker">Insurance Broker</option>
-                    <option value="therapist">Therapist / Psychologist</option>
-                  </optgroup>
-                  <optgroup label="── High Competition">
-                    <option value="real estate agent">Real Estate Agent</option>
-                    <option value="hotel">Hotel</option>
-                    <option value="car dealership">Car Dealership</option>
-                    <option value="recruitment agency">Recruitment Agency</option>
-                    <option value="software company">Software Company</option>
-                  </optgroup>
-                  <optgroup label="── Local Services">
-                    <option value="plumber">Plumber</option>
-                    <option value="electrician">Electrician</option>
-                    <option value="cleaning company">Cleaning Company</option>
-                    <option value="personal trainer">Personal Trainer</option>
-                    <option value="hairdresser">Hairdresser / Salon</option>
-                    <option value="restaurant">Restaurant</option>
-                    <option value="architect">Architect</option>
-                    <option value="photographer">Photographer</option>
-                    <option value="catering">Catering Company</option>
-                  </optgroup>
-                  <optgroup label="── Other">
-                    <option value="online coach">Online Coach / Consultant</option>
-                    <option value="e-commerce store">E-Commerce Store</option>
-                    <option value="logistics company">Logistics Company</option>
-                    <option value="other business">Other</option>
-                  </optgroup>
-                </select>
+                <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">🏷️ Niches <span style="color:#9ca3af!important;font-weight:400;">(één per regel)</span></label>
+                <textarea id="discoverNicheCustom" rows="4" placeholder="dental clinic&#10;law firm&#10;cleaning company" class="w-full p-3 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;resize:vertical;" oninput="updateDiscoverCombos()"></textarea>
+                <div id="discoverComboCount" style="font-size:0.72rem;color:#9ca3af;margin-top:4px;"></div>
               </div>
 
-              <!-- Custom niche override -->
+              <!-- Cities — multi line -->
               <div>
-                <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">✏️ Or Type Custom Niche</label>
-                <input type="text" id="discoverNicheCustom" placeholder="e.g. orthodontist, yoga studio..." class="w-full p-3 rounded text-sm">
-              </div>
-
-              <!-- Location -->
-              <div>
-                <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">📍 City / Location *</label>
-                <input type="text" id="discoverLocation" placeholder="e.g. Amsterdam, London, New York..." class="w-full p-3 rounded text-sm">
+                <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">📍 Steden <span style="color:#9ca3af!important;font-weight:400;">(één per regel)</span></label>
+                <textarea id="discoverLocation" rows="4" placeholder="Amsterdam&#10;Rotterdam&#10;Utrecht&#10;Den Haag" class="w-full p-3 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;resize:vertical;" oninput="updateDiscoverCombos()"></textarea>
               </div>
 
               <!-- Country context -->
@@ -647,13 +602,13 @@ footer p { color: #9ca3af !important; }
                 </select>
               </div>
 
-              <!-- Max results -->
+              <!-- Max results per combo -->
               <div>
-                <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">🔢 Max Leads to Find</label>
+                <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">🔢 Max leads <span style="color:#9ca3af!important;font-weight:400;">per niche + stad</span></label>
                 <select id="discoverMaxResults" aria-label="Maximum leads to find" class="w-full p-3 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
-                  <option value="20">20 leads (fast · ~1 min)</option>
-                  <option value="50" selected>50 leads (recommended · ~2 min)</option>
-                  <option value="100">100 leads (thorough · ~4 min)</option>
+                  <option value="20">20 leads (snel · ~1 min)</option>
+                  <option value="50" selected>50 leads (aanbevolen · ~2 min)</option>
+                  <option value="100">100 leads (~4 min)</option>
                 </select>
               </div>
 
@@ -663,11 +618,6 @@ footer p { color: #9ca3af !important; }
                 <label for="discoverWebsiteOnly" class="text-sm" style="color:#e5e7eb!important;cursor:pointer;">Only scan businesses that have a website</label>
               </div>
 
-            </div>
-
-            <!-- Your details -->
-            <div class="grid grid-cols-2 gap-3 mb-4">
-              
             </div>
 
             <!-- Reply-To Email -->
@@ -760,17 +710,18 @@ footer p { color: #9ca3af !important; }
       <div style="overflow-x:auto;">
         <table class="w-full text-sm" style="border-collapse:collapse;">
           <thead>
-            <tr style="border-bottom:1px solid #374151;color:#6b7280;text-align:left;">
-              <th class="pb-2 pr-4">Business</th>
-              <th class="pb-2 pr-4">Score</th>
-              <th class="pb-2 pr-4">Email</th>
-              <th class="pb-2 pr-4">Status</th>
-              <th class="pb-2 pr-4">Top Issue</th>
-              <th class="pb-2">Scanned</th>
+            <tr style="border-bottom:1px solid #1f2937;background:#0f172a;text-align:left;">
+              <th class="pb-2 pt-2 pr-3 pl-2" style="color:#6b7280;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Business</th>
+              <th class="pb-2 pt-2 pr-3" style="color:#6b7280;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Score</th>
+              <th class="pb-2 pt-2 pr-3" style="color:#6b7280;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Email Found</th>
+              <th class="pb-2 pt-2 pr-3" style="color:#6b7280;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Email Sent</th>
+              <th class="pb-2 pt-2 pr-3" style="color:#6b7280;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Source</th>
+              <th class="pb-2 pt-2 pr-3" style="color:#6b7280;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Top Issue</th>
+              <th class="pb-2 pt-2" style="color:#6b7280;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Scanned</th>
             </tr>
           </thead>
           <tbody id="activityTableBody">
-            <tr><td colspan="6" class="py-6 text-center" style="color:#6b7280;">Loading...</td></tr>
+            <tr><td colspan="7" class="py-6 text-center" style="color:#6b7280;">Loading...</td></tr>
           </tbody>
         </table>
       </div>
@@ -904,7 +855,7 @@ footer p { color: #9ca3af !important; }
         <h2 class="text-4xl font-bold mb-3">✏️ Email Templates</h2>
         <p class="text-xl" style="color:#e5e7eb!important;">Customize your bulk scan email templates (Grade 3 Level)</p>
       </div>
-      <div class="cards-grid">
+      <div class="cards-grid" style="grid-template-columns:repeat(2,1fr)!important;">
         <!-- Congrats Template -->
         <div class="card">
           <h3 class="text-xl font-bold mb-2">🏆 Leaderboard Congratulations</h3>
@@ -913,7 +864,7 @@ footer p { color: #9ca3af !important; }
             <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
             <input type="text" id="template-congrats-subject" class="w-full p-2 rounded mb-2" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:0.85rem;">
             <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
-            <textarea id="template-congrats-body" class="w-full p-2 rounded badge-code-ta" style="min-height:300px;font-size:0.72rem;"></textarea>
+            <textarea id="template-congrats-body" class="w-full p-2 rounded badge-code-ta" style="min-height:420px;font-size:0.72rem;"></textarea>
           </div>
           <button onclick="saveTemplate('congrats')" class="btn btn-primary w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
         </div>
@@ -925,7 +876,7 @@ footer p { color: #9ca3af !important; }
             <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
             <input type="text" id="template-improvement-subject" class="w-full p-2 rounded mb-2" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:0.85rem;">
             <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
-            <textarea id="template-improvement-body" class="w-full p-2 rounded badge-code-ta" style="min-height:300px;font-size:0.72rem;"></textarea>
+            <textarea id="template-improvement-body" class="w-full p-2 rounded badge-code-ta" style="min-height:420px;font-size:0.72rem;"></textarea>
           </div>
           <button onclick="saveTemplate('improvement')" class="btn btn-primary w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
         </div>
@@ -937,7 +888,7 @@ footer p { color: #9ca3af !important; }
             <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
             <input type="text" id="template-almostMade-subject" class="w-full p-2 rounded mb-2" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:0.85rem;">
             <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
-            <textarea id="template-almostMade-body" class="w-full p-2 rounded badge-code-ta" style="min-height:300px;font-size:0.72rem;"></textarea>
+            <textarea id="template-almostMade-body" class="w-full p-2 rounded badge-code-ta" style="min-height:420px;font-size:0.72rem;"></textarea>
           </div>
           <button onclick="saveTemplate('almostMade')" class="btn btn-primary w-full mt-4" style="background:linear-gradient(135deg,#b45309,#d97706)!important;"><i class="fas fa-save mr-2"></i> Save Template</button>
         </div>
@@ -949,7 +900,7 @@ footer p { color: #9ca3af !important; }
             <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
             <input type="text" id="template-website-subject" class="w-full p-2 rounded mb-2" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:0.85rem;">
             <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
-            <textarea id="template-website-body" class="w-full p-2 rounded badge-code-ta" style="min-height:300px;font-size:0.72rem;"></textarea>
+            <textarea id="template-website-body" class="w-full p-2 rounded badge-code-ta" style="min-height:420px;font-size:0.72rem;"></textarea>
           </div>
           <button onclick="saveTemplate('website')" class="btn btn-primary w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
         </div>
@@ -1006,8 +957,10 @@ footer p { color: #9ca3af !important; }
         <div class="mb-4">
           <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">🔗 Links &amp; Dates</p>
           <div class="var-grid">
-            <div class="var-row"><code style="color:#a3e635!important;">{{leaderboard_url}}</code><span>Link to leaderboard page</span></div>
-            <div class="var-row"><code style="color:#a3e635!important;">{{cta_url}}</code><span>Main CTA link (WhatsApp)</span></div>
+            <div class="var-row"><code style="color:#a3e635!important;">{{leaderboard_url}}</code><span>Link to leaderboard (app.contentscale.site)</span></div>
+            <div class="var-row"><code style="color:#a3e635!important;">{{scanner_url}}</code><span>Link to scanner app (app.contentscale.site)</span></div>
+            <div class="var-row"><code style="color:#a3e635!important;">{{main_site_url}}</code><span>Main website (contentscale.site)</span></div>
+            <div class="var-row"><code style="color:#a3e635!important;">{{cta_url}}</code><span>Main CTA link (WhatsApp wa.me/31628073996)</span></div>
             <div class="var-row"><code style="color:#a3e635!important;">{{date}}</code><span>Today's date (Feb 22, 2026)</span></div>
             <div class="var-row"><code style="color:#a3e635!important;">{{month}}</code><span>Current month (February)</span></div>
             <div class="var-row"><code style="color:#a3e635!important;">{{year}}</code><span>Current year (2026)</span></div>
@@ -1542,6 +1495,8 @@ const DEFAULT_TEMPLATES = {
   </div>
 
 </div>
+
+
 </body>
 </html>`
   },
@@ -1669,6 +1624,8 @@ const DEFAULT_TEMPLATES = {
   </div>
 
 </div>
+
+
 </body>
 </html>`
   },
@@ -1771,6 +1728,8 @@ const DEFAULT_TEMPLATES = {
   </div>
 
 </div>
+
+
 </body>
 </html>`
   },
@@ -1885,6 +1844,8 @@ const DEFAULT_TEMPLATES = {
   </div>
 
 </div>
+
+
 </body>
 </html>`
   }
@@ -1922,18 +1883,72 @@ document.addEventListener('DOMContentLoaded', function () {
   registerUser();
   loadLeaderboardData();
   loadFreelancers();
-  updateDailyLimitUI();       // show today's send count immediately
-  processEmailQueue();        // drain any queued emails from yesterday's overflow
+  updateDailyLimitUI();
+  processEmailQueue();
   checkRescanReminder();
-  // Restore saved reply-to email
   const savedReplyTo = localStorage.getItem('discoverReplyTo');
-  if (savedReplyTo) { const el = document.getElementById('discoverReplyTo'); if (el) el.value = savedReplyTo; }      // #1 — show rescan banner if >30 days since last scan
-  // Show queue badge if overflow waiting
+  if (savedReplyTo) { const el = document.getElementById('discoverReplyTo'); if (el) el.value = savedReplyTo; }
   const qc = getQueue().length;
   if (qc > 0) {
     const qb = document.getElementById('queueBadge');
     if (qb) { qb.textContent = `⏳ ${qc} emails queued from previous runs — sending now...`; qb.classList.remove('hidden'); }
   }
+  // ── SHARE LINK READER ─────────────────────────────────────────────────────
+  // Handles URLs like: ?url=https://example.com&score=85&label=Strong
+  // Generated by copyScanShareLink() — makes shared links actually display results
+  (function readShareParams() {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      const sharedUrl   = sp.get('url');
+      const sharedScore = parseInt(sp.get('score') || '0', 10);
+      const sharedLabel = sp.get('label') || '';
+      if (!sharedUrl || !sharedScore) return;
+      // Pre-fill scanner input
+      const inp = document.getElementById('singleUrlInput');
+      if (inp) inp.value = sharedUrl;
+      // Info banner above scanner
+      const banner = document.createElement('div');
+      banner.id = 'shareLinkBanner';
+      banner.style.cssText = 'background:linear-gradient(135deg,#0ea5e9,#0284c7);padding:14px 20px;border-radius:12px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;';
+      const safeDomain = sharedUrl.replace(/^https?:\/\//,'').split('/')[0];
+      banner.innerHTML =
+        '<div>' +
+          '<div style="font-weight:800;font-size:0.95rem;color:white!important;">🔗 Shared Scan Result</div>' +
+          '<div style="font-size:0.78rem;color:rgba(255,255,255,0.85)!important;margin-top:2px;">' +
+            safeDomain + ' &nbsp;·&nbsp; Score: <strong style="color:white!important;">' + sharedScore + '/100</strong>' +
+            (sharedLabel ? ' &nbsp;·&nbsp; ' + sharedLabel : '') +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+          '<button id="shareFreshScanBtn" style="background:white;color:#0284c7!important;border:none;padding:8px 16px;border-radius:8px;font-weight:700;font-size:0.8rem;cursor:pointer;">🔄 Run Fresh Scan</button>' +
+          '<button onclick="document.getElementById(\'shareLinkBanner\').remove();history.replaceState(null,\'\',location.pathname);" style="background:rgba(255,255,255,0.2);color:white!important;border:1px solid rgba(255,255,255,0.4);padding:8px 12px;border-radius:8px;font-size:0.8rem;cursor:pointer;">✕</button>' +
+        '</div>';
+      const scannerDiv = document.getElementById('singleMode');
+      if (scannerDiv) scannerDiv.prepend(banner);
+      // Wire up "Run Fresh Scan" after DOM insert
+      const freshBtn = document.getElementById('shareFreshScanBtn');
+      if (freshBtn) freshBtn.addEventListener('click', function() {
+        document.getElementById('singleUrlInput').value = sharedUrl;
+        const b = document.getElementById('shareLinkBanner');
+        if (b) b.remove();
+        history.replaceState(null, '', location.pathname);
+        scanSingleURL();
+      });
+      // Show minimal result card with the shared score
+      const fakeData = {
+        url: sharedUrl, score: sharedScore,
+        quality: sharedLabel.toLowerCase().replace(/\s+/g,'_') || 'shared_result',
+        metrics: { graaf: 0, craft: 0, technical: 0 },
+        content_stats: {}, recommendations: [],
+        _isSharedView: true
+      };
+      const resultDiv = document.getElementById('singleResult');
+      if (resultDiv) { displayScanResult(fakeData); }
+      // Clean the URL params so it doesn't loop on refresh
+      history.replaceState(null, '', location.pathname);
+    } catch(e) { console.warn('Share link reader error:', e); }
+  })();
+  // ── END SHARE LINK READER ──────────────────────────────────────────────────
   setTimeout(() => {
     const l = document.getElementById('loading-screen');
     if (l) { l.style.opacity = '0'; l.style.transition = 'opacity 0.4s'; setTimeout(() => l.style.display = 'none', 400); }
@@ -2083,6 +2098,20 @@ function setDiscoverProgress(pct, text) {
 }
 
 // Main Auto-Discover pipeline
+function updateDiscoverCombos() {
+  const niches = (document.getElementById('discoverNicheCustom').value || '').split('\n').map(n => n.trim()).filter(n => n);
+  const cities = (document.getElementById('discoverLocation').value || '').split('\n').map(c => c.trim()).filter(c => c);
+  const el = document.getElementById('discoverComboCount');
+  if (!el) return;
+  if (niches.length > 0 && cities.length > 0) {
+    const total = niches.length * cities.length;
+    el.textContent = `${niches.length} niche${niches.length>1?'s':''} × ${cities.length} stad${cities.length>1?'en':''} = ${total} combo${total>1?'\'s':''}`;
+    el.style.color = '#a78bfa';
+  } else {
+    el.textContent = '';
+  }
+}
+
 async function startAutoDiscover() {
   const apifyToken = localStorage.getItem('apifyToken');
   if (!apifyToken) {
@@ -2091,18 +2120,25 @@ async function startAutoDiscover() {
     return;
   }
 
-  const nicheSelect = document.getElementById('discoverNiche').value;
-  const nicheCustom = document.getElementById('discoverNicheCustom').value.trim();
-  const niche       = nicheCustom || nicheSelect;
-  const location    = document.getElementById('discoverLocation').value.trim();
+  // ── Parse multi-line niches + cities ──────────────────────
+  const nicheRaw    = document.getElementById('discoverNicheCustom').value.trim();
+  const locationRaw = document.getElementById('discoverLocation').value.trim();
+  const niches      = nicheRaw.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+  const cities      = locationRaw.split('\n').map(c => c.trim()).filter(c => c.length > 0);
+
+  if (!niches.length)  { alert('❌ Voer minimaal één niche in.'); return; }
+  if (!cities.length)  { alert('❌ Voer minimaal één stad in.'); return; }
+
   const country     = document.getElementById('discoverCountry').value;
   const maxResults  = parseInt(document.getElementById('discoverMaxResults').value);
   const websiteOnly = document.getElementById('discoverWebsiteOnly').checked;
-  if (!niche)    { alert('❌ Please select or type a niche.'); return; }
-  if (!location) { alert('❌ Please enter a city or location.'); return; }
-  const replyTo = document.getElementById('discoverReplyTo').value.trim();
-  if (!replyTo)  { alert('❌ Please enter your Reply-To email so businesses can respond.'); return; }
+  const replyTo     = document.getElementById('discoverReplyTo').value.trim();
+  if (!replyTo) { alert('❌ Please enter your Reply-To email.'); return; }
   localStorage.setItem('discoverReplyTo', replyTo);
+
+  // Build all niche × city combos
+  const combos = [];
+  niches.forEach(niche => cities.forEach(city => combos.push({ niche, city })));
 
   const btn = document.getElementById('discoverBtn');
   btn.disabled = true;
@@ -2111,219 +2147,199 @@ async function startAutoDiscover() {
   const progress = document.getElementById('discoverProgress');
   progress.classList.remove('hidden');
   document.getElementById('discoverResults').classList.add('hidden');
-
-  // Reset step indicators
   [1,2,3,4].forEach(s => setDiscoverStep(s, 'idle'));
 
+  // Totals across all combos
+  const allResults = { leaderboard: [], almostMade: [], withWebsite: [], withoutWebsite: [], errors: [] };
+  let totalEmailStats = { sent: 0, queued: 0, skipped: 0 };
+
+  // ── Dedup: load already-scanned URLs once up front ────────
+  let alreadyScanned = new Set();
   try {
-    // ── STEP 1: Call Apify Google Maps Scraper ──────────────────
-    setDiscoverStep(1, 'active');
-    setDiscoverProgress(5, `Searching Google Maps for "${niche}" in ${location}...`);
+    const existingRes = await fetch('/api/scan-log', { headers: { 'x-user-id': userId || 'anonymous' } });
+    const existingData = await existingRes.json();
+    if (existingData.success && existingData.scans) {
+      existingData.scans.forEach(s => { if (s.business_url) alreadyScanned.add(s.business_url.trim()); });
+    }
+  } catch(e) { /* non-fatal */ }
 
-    const searchQuery = `${niche} in ${location}`;
+  try {
+    for (let ci = 0; ci < combos.length; ci++) {
+      const { niche, city } = combos[ci];
+      const comboLabel = `${niche} — ${city} (${ci+1}/${combos.length})`;
 
-    // Trigger Apify Google Maps Scraper Actor
-    const runRes = await fetch(
-      '/api/apify/start-run',
-      {
+      setDiscoverProgress(2, `🔍 Combo ${ci+1}/${combos.length}: ${comboLabel}`);
+      [1,2,3,4].forEach(s => setDiscoverStep(s, 'idle'));
+
+      // ── STEP 1: Apify ──────────────────────────────────────
+      setDiscoverStep(1, 'active');
+      setDiscoverProgress(5, `Searching Google Maps: "${niche}" in ${city}...`);
+
+      const runRes = await fetch('/api/apify/start-run', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-apify-token': apifyToken
-        },
+        headers: { 'Content-Type': 'application/json', 'x-apify-token': apifyToken },
         body: JSON.stringify({
           actorId: 'compass~crawler-google-places',
           input: {
-            searchStringsArray: [searchQuery],
+            searchStringsArray: [`${niche} in ${city}`],
             maxCrawledPlacesPerSearch: maxResults,
             language: 'en',
             exportPlaceUrls: true,
             includeWebResults: true,
-          skipClosedPlaces: false
+            skipClosedPlaces: false
           }
         })
+      });
+      if (!runRes.ok) { const err = await runRes.json(); throw new Error(err.error?.message || `Apify error ${runRes.status}`); }
+      const runData = await runRes.json();
+      const runId   = runData.data?.id;
+      if (!runId) throw new Error('Could not start Apify run. Check your token.');
+
+      setDiscoverProgress(15, `Apify run started. Waiting for results...`);
+
+      let attempts = 0, runStatus = 'RUNNING';
+      while (runStatus === 'RUNNING' || runStatus === 'READY') {
+        await new Promise(r => setTimeout(r, 4000));
+        attempts++;
+        const statusRes  = await fetch(`/api/apify/run-status/${runId}`, { headers: { 'x-apify-token': apifyToken } });
+        const statusData = await statusRes.json();
+        runStatus = statusData.data?.status;
+        const pct = Math.min(15 + attempts * 3, 40);
+        setDiscoverProgress(pct, `Scraping Google Maps... (${attempts * 4}s)`);
+        if (attempts > 45) throw new Error('Apify timed out after 3 minutes.');
       }
-    );
+      if (runStatus !== 'SUCCEEDED') throw new Error(`Apify run ${runStatus}.`);
 
-    if (!runRes.ok) {
-      const err = await runRes.json();
-      throw new Error(err.error?.message || `Apify error ${runRes.status}. Check your token.`);
-    }
+      setDiscoverStep(1, 'done');
+      setDiscoverStep(2, 'active');
+      setDiscoverProgress(42, 'Fetching business data from Apify...');
 
-    const runData = await runRes.json();
-    const runId   = runData.data?.id;
-    if (!runId) throw new Error('Could not start Apify run. Check your token and Apify account.');
+      // ── STEP 2: Fetch dataset ──────────────────────────────
+      const dataRes = await fetch(`/api/apify/dataset/${runId}`, { headers: { 'x-apify-token': apifyToken } });
+      const dataRaw = await dataRes.json();
+      const places  = Array.isArray(dataRaw) ? dataRaw : (dataRaw.items || dataRaw.data || []);
 
-    setDiscoverProgress(15, `Apify run started (ID: ${runId.slice(0,8)}...). Waiting for results...`);
-
-    // ── Poll until run finishes (max 3 min) ────────────────────
-    let attempts = 0;
-    let runStatus = 'RUNNING';
-    while (runStatus === 'RUNNING' || runStatus === 'READY') {
-      await new Promise(r => setTimeout(r, 4000));
-      attempts++;
-      const statusRes  = await fetch(
-        `/api/apify/run-status/${runId}`,
-        { headers: { 'x-apify-token': apifyToken } }
-      );
-      const statusData = await statusRes.json();
-      runStatus = statusData.data?.status;
-      const pct = Math.min(15 + attempts * 3, 40);
-      setDiscoverProgress(pct, `Scraping Google Maps... (${attempts * 4}s elapsed)`);
-      if (attempts > 45) throw new Error('Apify run timed out after 3 minutes. Try fewer leads.');
-    }
-
-    if (runStatus !== 'SUCCEEDED') throw new Error(`Apify run ${runStatus}. Check your Apify dashboard.`);
-
-    setDiscoverStep(1, 'done');
-    setDiscoverStep(2, 'active');
-    setDiscoverProgress(42, 'Fetching business data from Apify...');
-
-    // ── STEP 2: Fetch dataset items ────────────────────────────
-    const dataRes = await fetch(
-      `/api/apify/dataset/${runId}`,
-      { headers: { 'x-apify-token': apifyToken } }
-    );
-    const dataRaw = await dataRes.json();
-    // Apify returns array directly or wrapped in {items:[]}
-    const places = Array.isArray(dataRaw) ? dataRaw : (dataRaw.items || dataRaw.data || []);
-
-    // Extract usable URLs
-    let urls = places
-      .filter(p => p.website)
-      .map(p => ({
+      let urls = places.filter(p => p.website).map(p => ({
         url:     p.website.startsWith('http') ? p.website : 'https://' + p.website,
         name:    p.title || p.name || '',
         email:   p.email || (p.emails && p.emails[0]) || null,
         emails:  p.emails || [],
         phone:   p.phone || p.phoneUnformatted || '',
         address: p.address || '',
-        country: country
+        country
       }));
-
-    // If websiteOnly not checked, include places without websites (score will be 0)
-    if (!websiteOnly) {
-      const noSite = places
-        .filter(p => !p.website)
-        .map(p => ({
+      if (!websiteOnly) {
+        const noSite = places.filter(p => !p.website).map(p => ({
           url: '', name: p.title || p.name || '',
           email: p.email || (p.emails && p.emails[0]) || null,
-          emails: p.emails || [],
-          phone: p.phone || '', address: p.address || '', country
+          emails: p.emails || [], phone: p.phone || '', address: p.address || '', country
         }));
-      urls = [...urls, ...noSite];
-    }
-
-    if (urls.length === 0) throw new Error('No businesses found. Try a different niche or location.');
-
-    setDiscoverStep(2, 'done');
-    setDiscoverStep(3, 'active');
-    setDiscoverProgress(50, `Found ${urls.length} businesses. Starting ContentScore scan...`);
-
-    // ── STEP 3: Run ContentScore on each URL ───────────────────
-    const results = { leaderboard: [], almostMade: [], withWebsite: [], withoutWebsite: [], errors: [] };
-    let scanned = 0;
-
-    for (const place of urls) {
-      if (!place.url) {
-        results.withoutWebsite.push({ url: place.name, score: 0, data: { country, ...place } });
-        scanned++;
+        urls = [...urls, ...noSite];
+      }
+      if (urls.length === 0) {
+        setDiscoverProgress(100, `⚠️ No results for ${comboLabel} — skipping.`);
+        await new Promise(r => setTimeout(r, 1200));
         continue;
       }
-      try {
-        const scanRes  = await fetch('/api/scan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: place.url })
-        });
-        const scanData = await scanRes.json();
-        const score    = scanData.score || 0;
-        const item = { url: place.url, score, data: { ...scanData, country, name: place.name, email: place.email, emails: place.emails, phone: place.phone, address: place.address } };
 
-        if (score >= 70)       results.leaderboard.push(item);
-        else if (score >= 65) results.almostMade.push(item);
-        else               results.withWebsite.push(item);
+      setDiscoverStep(2, 'done');
+      setDiscoverStep(3, 'active');
 
-        // Log every scan — so admin can see all businesses including no-email ones
-        var emailFound = place.email || (place.emails && place.emails[0]) || null;
-        fetch('/api/scan-log', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: userId,
-            business_url: place.url,
-            business_name: place.name,
-            score: score,
-            niche: niche,
-            city: location,
-            country: country,
-            email_found: emailFound,
-            email_status: emailFound ? 'has_email' : 'no_email',
-            recommendations: scanData.recommendations ? scanData.recommendations.slice(0, 5).map(function(r){ return r.title || r; }) : []
-          })
-        }).catch(function(){});
-      } catch (e) {
-        results.errors.push({ url: place.url, error: e.message });
+      // ── Dedup within this combo ────────────────────────────
+      const urlsToScan = urls.filter(p => !p.url || !alreadyScanned.has(p.url.trim()));
+      const skippedCount = urls.length - urlsToScan.length;
+      setDiscoverProgress(50, `${urlsToScan.length} new to scan${skippedCount > 0 ? ` · ${skippedCount} skipped (already scanned)` : ''}`);
+
+      // ── STEP 3: Scan ───────────────────────────────────────
+      let scanned = 0;
+      for (const place of urlsToScan) {
+        if (!place.url) {
+          allResults.withoutWebsite.push({ url: place.name, score: 0, data: { country, ...place } });
+          scanned++; continue;
+        }
+        try {
+          const scanRes  = await fetch('/api/scan', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: place.url })
+          });
+          const scanData = await scanRes.json();
+          const score    = scanData.score || 0;
+          const item = { url: place.url, score, data: { ...scanData, country, name: place.name, email: place.email, emails: place.emails, phone: place.phone, address: place.address } };
+          if (score >= 70) allResults.leaderboard.push(item);
+          else if (score >= 65) allResults.almostMade.push(item);
+          else allResults.withWebsite.push(item);
+
+          var emailFound = place.email || (place.emails && place.emails[0]) || null;
+          fetch('/api/scan-log', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_id: userId, business_url: place.url, business_name: place.name,
+              score, niche, city, country,
+              email_found: emailFound, email_status: emailFound ? 'has_email' : 'no_email',
+              source: 'discover',
+              recommendations: scanData.recommendations ? (scanData.recommendations.all || scanData.recommendations).slice(0,5).map(r => r.title || r) : []
+            })
+          }).catch(() => {});
+          // Add to dedup set so next combos skip this URL too
+          alreadyScanned.add(place.url.trim());
+        } catch(e) { allResults.errors.push({ url: place.url, error: e.message }); }
+        scanned++;
+        const pct = 52 + Math.round((scanned / urlsToScan.length) * 33);
+        setDiscoverProgress(pct, `Combo ${ci+1}/${combos.length} · Scanning ${scanned}/${urlsToScan.length}: ${place.name || place.url}`);
       }
-      scanned++;
-      const pct = 50 + Math.round((scanned / urls.length) * 35);
-      setDiscoverProgress(pct, `Scanning ${scanned}/${urls.length}: ${place.name || place.url}`);
+
+      setDiscoverStep(3, 'done');
+      setDiscoverStep(4, 'active');
+      setDiscoverProgress(88, 'Sending emails...');
+
+      // ── STEP 4: Email ──────────────────────────────────────
+      if (sendgridConfigured) {
+        const comboResults = { leaderboard: allResults.leaderboard, almostMade: allResults.almostMade, withWebsite: allResults.withWebsite, withoutWebsite: allResults.withoutWebsite, errors: [] };
+        const stats = await sendBulkEmails(comboResults, replyTo, replyTo.split('@')[0]);
+        totalEmailStats.sent   += stats.sent   || 0;
+        totalEmailStats.queued += stats.queued || 0;
+        totalEmailStats.skipped += stats.skipped || 0;
+      }
+      setDiscoverStep(4, 'done');
+      setDiscoverProgress(100, `✅ Combo ${ci+1}/${combos.length} done!`);
+      await new Promise(r => setTimeout(r, 600));
     }
 
-    setDiscoverStep(3, 'done');
-    setDiscoverStep(4, 'active');
-    setDiscoverProgress(88, 'Sending emails via SendGrid...');
-
-    // ── STEP 4: Send emails ────────────────────────────────────
-    let emailStats = { sent: 0, queued: 0, skipped: 0 };
-    if (sendgridConfigured) {
-      emailStats = await sendBulkEmails(results, replyTo, replyTo.split('@')[0]);
-    }
-
-    setDiscoverStep(4, 'done');
-    setDiscoverProgress(100, '✅ Pipeline complete!');
-
-    // ── Show summary ───────────────────────────────────────────
-    const total = urls.length;
-    const errCount = results.errors.length;
+    // ── Final summary ──────────────────────────────────────────
+    const totalScanned = allResults.leaderboard.length + allResults.almostMade.length + allResults.withWebsite.length + allResults.withoutWebsite.length;
     document.getElementById('discoverResultsContainer').innerHTML = `
       <div style="background:#111827;border:1px solid #374151;border-radius:12px;padding:24px;margin-top:8px;">
-        <h4 style="font-weight:800;font-size:1.1rem;margin-bottom:16px;color:#f9fafb!important;">
-          🎯 Auto-Discover Complete — <em style="color:#fbbf24!important;">${niche}</em> in ${location}
+        <h4 style="font-weight:800;font-size:1.1rem;margin-bottom:4px;color:#f9fafb!important;">
+          🎯 Batch Complete — ${combos.length} combo${combos.length > 1 ? "'s" : ''}
         </h4>
+        <p style="font-size:0.82rem;color:#9ca3af!important;margin-bottom:16px;">
+          ${niches.join(', ')} · ${cities.join(', ')}
+        </p>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;">
           <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:16px;text-align:center;">
-            <div style="font-size:2rem;font-weight:900;color:#4ade80!important;">${results.leaderboard.length}</div>
-            <div style="font-size:0.75rem;color:#6b7280!important;">🏆 Leaderboard (70+)</div>
+            <div style="font-size:2rem;font-weight:900;color:#4ade80!important;">${totalScanned}</div>
+            <div style="font-size:0.75rem;color:#6b7280!important;">✅ Gescand</div>
           </div>
           <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:16px;text-align:center;">
-            <div style="font-size:2rem;font-weight:900;color:#60a5fa!important;">${results.withWebsite.length}</div>
-            <div style="font-size:0.75rem;color:#6b7280!important;">📈 Improvement emails</div>
+            <div style="font-size:2rem;font-weight:900;color:#a3e635!important;">${allResults.leaderboard.length}</div>
+            <div style="font-size:0.75rem;color:#6b7280!important;">🏆 Score 70+</div>
           </div>
           <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:16px;text-align:center;">
-            <div style="font-size:2rem;font-weight:900;color:#a78bfa!important;">${results.withoutWebsite.length}</div>
-            <div style="font-size:0.75rem;color:#6b7280!important;">🌐 No-website offers</div>
+            <div style="font-size:2rem;font-weight:900;color:#60a5fa!important;">${allResults.withWebsite.length}</div>
+            <div style="font-size:0.75rem;color:#6b7280!important;">📈 Improvement</div>
           </div>
           <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:16px;text-align:center;">
-            <div style="font-size:2rem;font-weight:900;color:#f87171!important;">${errCount}</div>
-            <div style="font-size:0.75rem;color:#6b7280!important;">❌ Errors</div>
+            <div style="font-size:2rem;font-weight:900;color:#a78bfa!important;">${allResults.withoutWebsite.length}</div>
+            <div style="font-size:0.75rem;color:#6b7280!important;">🌐 Geen website</div>
           </div>
         </div>
-        ${results.leaderboard.length > 0 ? `
-        <div style="background:rgba(74,222,128,0.05);border:1px solid #166534;border-radius:8px;padding:12px 16px;margin-bottom:12px;">
-          <p style="font-size:0.85rem;color:#4ade80!important;font-weight:700;margin-bottom:6px;">🏆 Top Performers (added to leaderboard):</p>
-          ${results.leaderboard.slice(0,5).map(r =>
-            `<div style="display:flex;justify-content:space-between;font-size:0.8rem;padding:3px 0;border-bottom:1px solid #1f2937;">
-               <span style="color:#d1d5db!important;">${r.data?.name || r.url}</span>
-               <span style="color:#4ade80!important;font-weight:700;">${r.score}/100</span>
-             </div>`
-          ).join('')}
-          ${results.leaderboard.length > 5 ? `<p style="font-size:0.75rem;color:#6b7280!important;margin-top:4px;">+${results.leaderboard.length - 5} more</p>` : ''}
-        </div>` : ''}
         <p style="font-size:0.85rem;color:#9ca3af!important;text-align:center;margin:0;">
           ${sendgridConfigured
-            ? `📧 Sent: <strong style="color:#4ade80!important;">${emailStats.sent}</strong> &nbsp;·&nbsp; Queued: <strong style="color:#fbbf24!important;">${emailStats.queued}</strong> &nbsp;·&nbsp; No email found: <strong style="color:#9ca3af!important;">${emailStats.skipped}</strong>`
+            ? `📧 Sent: <strong style="color:#4ade80!important;">${totalEmailStats.sent}</strong> &nbsp;·&nbsp; Queued: <strong style="color:#fbbf24!important;">${totalEmailStats.queued}</strong> &nbsp;·&nbsp; No email: <strong style="color:#9ca3af!important;">${totalEmailStats.skipped}</strong>`
             : '⚠️ SendGrid not configured — no emails sent.'}
+        </p>
+        <p style="font-size:0.8rem;color:#6b7280!important;text-align:center;margin-top:8px;">
+          Ga naar <strong style="color:#a78bfa!important;">My Activity</strong> → export CSV → importeer in Mailgo
         </p>
       </div>`;
 
@@ -2337,7 +2353,7 @@ async function startAutoDiscover() {
       <div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:8px;padding:16px;margin-top:8px;">
         <p style="color:#f87171!important;font-weight:700;">❌ Pipeline Error</p>
         <p style="color:#fca5a5!important;font-size:0.85rem;">${err.message}</p>
-        <p style="color:#9ca3af!important;font-size:0.8rem;margin-top:8px;">Common fixes: Check your Apify token · Make sure you have credits in your Apify account · Try fewer leads</p>
+        <p style="color:#9ca3af!important;font-size:0.8rem;margin-top:8px;">Check je Apify token · Probeer minder leads</p>
       </div>`;
     document.getElementById('discoverResults').classList.remove('hidden');
   } finally {
@@ -2362,7 +2378,7 @@ async function loadUserTemplates() {
       userTemplates = data.templates;
       ['congrats', 'almostMade', 'improvement', 'website'].forEach(t => {
         // Only overwrite if server has a non-empty saved version
-        if (userTemplates[t] && userTemplates[t].subject && userTemplates[t].body && userTemplates[t].body.trim().length > 50) {
+        if (userTemplates[t] && userTemplates[t].subject && userTemplates[t].body && userTemplates[t].body.trim().length > 500) {
           const subEl  = document.getElementById('template-' + t + '-subject');
           const bodyEl = document.getElementById('template-' + t + '-body');
           if (subEl)  subEl.value  = userTemplates[t].subject;
@@ -2408,24 +2424,21 @@ function switchMode(mode) {
   [singleMode, bulkMode, discoverMode, activityMode].forEach(el => el && el.classList.add('hidden'));
   [singleBtn, bulkBtn, discoverBtn, activityBtn].forEach(el => el && el.classList.remove('active'));
 
+  // Hide warmup panel by default; only show in activity
+  document.getElementById('warmupPanel').classList.add('hidden');
+
   if (mode === 'single') {
     singleMode.classList.remove('hidden');
     singleBtn.classList.add('active');
     if (templates) templates.classList.add('hidden');
-    document.getElementById('warmupPanel').classList.remove('hidden');
-    loadWarmupStatus();
   } else if (mode === 'bulk') {
     bulkMode.classList.remove('hidden');
     bulkBtn.classList.add('active');
     if (templates) templates.classList.remove('hidden');
-    document.getElementById('warmupPanel').classList.remove('hidden');
-    loadWarmupStatus();
   } else if (mode === 'discover') {
     discoverMode.classList.remove('hidden');
     discoverBtn.classList.add('active');
     if (templates) templates.classList.remove('hidden');
-    document.getElementById('warmupPanel').classList.remove('hidden');
-    loadWarmupStatus();
     // show warning if Apify token missing
     const hasToken = !!localStorage.getItem('apifyToken');
     const warn = document.getElementById('apifyKeyWarning');
@@ -2434,6 +2447,8 @@ function switchMode(mode) {
     if (activityMode) activityMode.classList.remove('hidden');
     if (activityBtn) activityBtn.classList.add('active');
     if (templates) templates.classList.add('hidden');
+    document.getElementById('warmupPanel').classList.remove('hidden');
+    loadWarmupStatus();
     loadUserActivity();
   }
 }
@@ -2841,7 +2856,7 @@ function displayScanResult(data, targetEl) {
             style="flex:1;min-width:130px;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#25d366,#128c7e);color:white!important;padding:12px 14px;border-radius:10px;font-weight:700;text-decoration:none;font-size:0.85rem;">
             <i class="fab fa-whatsapp"></i> Get Help
           </a>
-          <button onclick="copyScanShareLink(${JSON.stringify(data.url)},${score},${JSON.stringify(scoreLabel)})"
+          <button onclick="copyScanShareLink();return false;"
             style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
             🔗 Share Link
           </button>
@@ -2864,24 +2879,37 @@ function displayScanResult(data, targetEl) {
 
   resultDiv.classList.remove('hidden');
   window._lastScanData = data;
+  // Store scoreLabel for the share button (avoids JSON.stringify in onclick attr)
+  window._lastScanData._scoreLabel = scoreLabel;
   if (!targetEl) resultDiv.scrollIntoView({ behavior: 'smooth' });
 }
 
 // ============================================================
 // SHARE LINK
 // ============================================================
-function copyScanShareLink(url, score, label) {
-  const params = new URLSearchParams({ url, score, label });
-  const shareUrl = window.location.origin + window.location.pathname + '?' + params.toString();
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      showToast('🔗 Share link copied to clipboard!', '#0ea5e9');
-    }).catch(() => {
-      fallbackCopy(shareUrl);
-    });
-  } else {
-    fallbackCopy(shareUrl);
+function copyScanShareLink() {
+  const data = window._lastScanData;
+  if (!data) { showToast('❌ Run a scan first', '#ef4444'); return; }
+
+  // Use server-hosted report URL if available (looks like the PDF report)
+  const reportUrl = data.report_url
+    ? (data.report_url.startsWith('http') ? data.report_url : 'https://app.contentscale.site' + data.report_url)
+    : null;
+
+  if (reportUrl) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(reportUrl).then(() => {
+        showToast('🔗 Report link copied!', '#0ea5e9');
+      }).catch(() => fallbackCopy(reportUrl));
+    } else {
+      fallbackCopy(reportUrl);
+    }
+    return;
   }
+
+  // Fallback: open the full PDF-style report in a new window
+  exportScanPDF(data);
+  showToast('📄 Report opened — share via Print → Save as PDF', '#7e22ce');
 }
 function fallbackCopy(text) {
   const ta = document.createElement('textarea');
@@ -3065,6 +3093,8 @@ function exportScanPDF(data) {
     <p style="color:#9ca3af;font-size:12px;margin-top:10px;">Use your browser's Print → Save as PDF option</p>
   </div>
 
+
+
 </body>
 </html>`;
 
@@ -3093,11 +3123,27 @@ async function startBulkScan() {
 
   let results = { leaderboard: [], almostMade: [], withWebsite: [], withoutWebsite: [], errors: [] };
 
-  for (let i = 0; i < urls.length; i++) {
-    let url = urls[i];
+  // ── Dedup: skip already-scanned URLs ──────────────────────
+  let alreadyScannedBulk = new Set();
+  try {
+    const existingRes = await fetch('/api/scan-log', { headers: { 'x-user-id': userId || 'anonymous' } });
+    const existingData = await existingRes.json();
+    if (existingData.success && existingData.scans) {
+      existingData.scans.forEach(s => { if (s.business_url) alreadyScannedBulk.add(s.business_url.trim()); });
+    }
+  } catch(e) { /* non-fatal */ }
+  const urlsToProcess = urls.filter(u => !alreadyScannedBulk.has(u.trim()));
+  const skippedBulk = urls.length - urlsToProcess.length;
+  if (skippedBulk > 0) {
+    document.getElementById('bulkProgressText').textContent = `${skippedBulk} URL(s) already scanned — skipping. Scanning ${urlsToProcess.length} new...`;
+    await new Promise(r => setTimeout(r, 1200));
+  }
+
+  for (let i = 0; i < urlsToProcess.length; i++) {
+    let url = urlsToProcess[i];
     if (!url.startsWith('http')) url = 'https://' + url;
-    document.getElementById('bulkProgressText').textContent = `Scanning ${i + 1} of ${urls.length} — ${url}`;
-    document.getElementById('bulkProgressBar').style.width = `${((i + 1) / urls.length) * 100}%`;
+    document.getElementById('bulkProgressText').textContent = `Scanning ${i + 1} of ${urlsToProcess.length} — ${url}`;
+    document.getElementById('bulkProgressBar').style.width = `${((i + 1) / urlsToProcess.length) * 100}%`;
     try {
       const response = await fetch('/api/scan', {
         method: 'POST',
@@ -3111,6 +3157,22 @@ async function startBulkScan() {
         else if (score >= 65)          results.almostMade.push({ url, score, data });
         else if (score > 0)            results.withWebsite.push({ url, score, data });
         else                           results.withoutWebsite.push({ url, score, data });
+        // Log to My Activity
+        const _email = data.extractedEmail || (data.content_stats && data.content_stats.extractedEmail) || null;
+        fetch('/api/scan-log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: userId,
+            business_url: url,
+            business_name: data.title || url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0],
+            score: score,
+            email_found: _email,
+            email_status: _email ? 'has_email' : 'no_email',
+            source: 'bulk',
+            recommendations: data.recommendations ? (data.recommendations.all || data.recommendations).slice(0,5).map(r => r.title || r) : []
+          })
+        }).catch(() => {});
       } else {
         results.errors.push({ url, error: data.error });
       }
@@ -3119,6 +3181,7 @@ async function startBulkScan() {
   }
 
   displayBulkResults(results);
+  showActivityReminder(urls.length, results);
 
   button.disabled = false;
   button.innerHTML = '<i class="fas fa-rocket mr-2"></i> Scan All URLs';
@@ -3163,88 +3226,168 @@ function displayBulkResults(results) {
     return;
   }
 
-  // Sort best → lowest
   all.sort((a, b) => (b.score || 0) - (a.score || 0));
 
-  const total = all.length;
-  const lb    = results.leaderboard.length;
-  const errs  = results.errors.length;
+  const total   = all.length;
+  const lb      = results.leaderboard.length;
+  const almMade = (results.almostMade || []).length;
+  const errs    = results.errors.length;
 
-  container.innerHTML = `
-    <div style="background:#111827;border:1px solid #374151;border-radius:12px;padding:16px;margin-bottom:16px;display:flex;gap:20px;flex-wrap:wrap;align-items:center;">
-      <div style="text-align:center;"><div style="font-size:1.6rem;font-weight:900;color:#e5e7eb;">${total}</div><div style="font-size:0.72rem;color:#6b7280;">Scanned</div></div>
-      <div style="text-align:center;"><div style="font-size:1.6rem;font-weight:900;color:#4ade80;">${lb}</div><div style="font-size:0.72rem;color:#6b7280;">Score 70+</div></div>
-      <div style="text-align:center;"><div style="font-size:1.6rem;font-weight:900;color:#f87171;">${errs}</div><div style="font-size:0.72rem;color:#6b7280;">Errors</div></div>
-      <div style="flex:1;text-align:right;font-size:0.78rem;color:#6b7280;">Sorted best → lowest</div>
-    </div>
-    ${lb > 0 ? `<div style="background:linear-gradient(135deg,#1e1b4b,#312e81);border:1px solid #4c1d95;border-radius:12px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+  const lbPanel = lb > 0 ? `<div style="background:linear-gradient(135deg,#1e1b4b,#312e81);border:1px solid #4c1d95;border-radius:12px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
       <div>
-        <div style="color:#e9d5ff;font-weight:700;font-size:0.9rem;">🏆 Submit to Leaderboard</div>
-        <div style="color:#a78bfa;font-size:0.75rem;margin-top:2px;">Select sites scoring 70+ — submitted ones appear in your Activity</div>
+        <div style="color:#e9d5ff;font-weight:700;font-size:0.85rem;">Submit to Leaderboard</div>
+        <div style="color:#a78bfa;font-size:0.72rem;margin-top:1px;">Select sites scoring 70+ to submit</div>
       </div>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
         <span id="bulkLbCounter" style="color:#c4b5fd;font-size:0.78rem;font-weight:600;">0 selected</span>
-        <button onclick="document.querySelectorAll(\'.bulk-lb-check:not(:disabled)\').forEach(c=>c.checked=true);updateBulkLbCount();"
-          style="background:#2e1065;color:#c4b5fd;border:1px solid #4c1d95;border-radius:8px;padding:6px 12px;font-size:0.75rem;cursor:pointer;">Select All</button>
+        <button onclick="document.querySelectorAll('.bulk-lb-check:not(:disabled)').forEach(c=>c.checked=true);updateBulkLbCount();"
+          style="background:#2e1065;color:#c4b5fd;border:1px solid #4c1d95;border-radius:6px;padding:5px 10px;font-size:0.72rem;cursor:pointer;">Select All</button>
         <button id="bulkLbSubmitBtn" onclick="submitBulkToLeaderboard()" disabled
-          style="background:#7e22ce;color:white;border:none;border-radius:8px;padding:8px 18px;font-size:0.82rem;font-weight:700;cursor:pointer;opacity:0.5;">
-          🏆 Submit to Leaderboard
+          style="background:#7e22ce;color:white;border:none;border-radius:6px;padding:7px 14px;font-size:0.78rem;font-weight:700;cursor:pointer;opacity:0.5;">
+          Submit Selected
         </button>
       </div>
-    </div>` : ''}`;
+    </div>` : '';
 
+  container.innerHTML = `
+    <div style="background:#111827;border:1px solid #374151;border-radius:12px;padding:12px 16px;margin-bottom:12px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+      <div style="text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#e5e7eb;">${total}</div><div style="font-size:0.68rem;color:#6b7280;">Scanned</div></div>
+      <div style="text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#4ade80;">${lb}</div><div style="font-size:0.68rem;color:#6b7280;">Elite 70+</div></div>
+      ${almMade ? `<div style="text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#fbbf24;">${almMade}</div><div style="font-size:0.68rem;color:#6b7280;">Almost 65-69</div></div>` : ''}
+      <div style="text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#f87171;">${errs}</div><div style="font-size:0.68rem;color:#6b7280;">Errors</div></div>
+      <div style="flex:1;text-align:right;font-size:0.72rem;color:#6b7280;">Click any row to expand details</div>
+    </div>
+    ${lbPanel}`;
+
+  const tableWrap = document.createElement('div');
+  tableWrap.style.cssText = 'background:#111827;border:1px solid #374151;border-radius:12px;overflow:hidden;margin-bottom:12px;';
+  tableWrap.innerHTML = `<div style="display:grid;grid-template-columns:30px 1fr 60px 76px 110px 28px;padding:8px 14px;background:#0f172a;border-bottom:1px solid #1f2937;">
+    <div style="font-size:0.66rem;font-weight:700;color:#4b5563;">#</div>
+    <div style="font-size:0.66rem;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:0.05em;">Website</div>
+    <div style="font-size:0.66rem;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:0.05em;">Score</div>
+    <div style="font-size:0.66rem;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:0.05em;">Email</div>
+    <div style="font-size:0.66rem;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:0.05em;">Top Issue</div>
+    <div></div>
+  </div>`;
+
+  const medals = ['#1','#2','#3'];
   all.forEach((item, i) => {
-    const score = item.score || 0;
-    const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'margin-bottom:16px;position:relative;';
+    const score      = item.score || 0;
+    const d          = item.data || {};
+    const domain     = (item.url||'').replace(/^https?:\/\/(www\.)?/,'').split('/')[0];
+    const name       = d.title || d.name || domain;
+    const email      = d.extractedEmail || (d.content_stats && d.content_stats.extractedEmail) || d.email || null;
+    const recs       = d.recommendations ? (d.recommendations.all || d.recommendations) : [];
+    const topIssue   = recs[0] ? (recs[0].title || recs[0] || '') : '-';
+    const scoreColor = score >= 85 ? '#4ade80' : score >= 70 ? '#a3e635' : score >= 50 ? '#fbbf24' : '#f87171';
+    const emailBadge = email
+      ? `<span style="background:#0f2d1a;color:#4ade80;padding:2px 6px;border-radius:99px;font-size:0.66rem;">found</span>`
+      : `<span style="color:#4b5563;font-size:0.66rem;">none</span>`;
+    const rankLabel  = i < 3 ? ['1st','2nd','3rd'][i] : '#'+(i+1);
+    const cbHtml     = score >= 70
+      ? `<input type="checkbox" class="bulk-lb-check" data-url="${item.url}" data-score="${score}" data-name="${(d.title||'').replace(/"/g,'&quot;')}" onchange="updateBulkLbCount()" style="width:14px;height:14px;accent-color:#7e22ce;cursor:pointer;">`
+      : '';
+    const detailId   = 'bdetail_' + i;
+    const rowBg      = i % 2 === 0 ? '' : 'background:rgba(255,255,255,0.012)';
 
-    if (i < 3) {
-      const medals = ['🥇','🥈','🥉'];
-      const label = document.createElement('div');
-      label.style.cssText = 'font-size:0.75rem;font-weight:700;color:#a78bfa;margin-bottom:4px;padding-left:4px;';
-      label.textContent = medals[i] + ' #' + (i+1) + ' of ' + total;
-      wrapper.appendChild(label);
-    }
+    const row = document.createElement('div');
+    row.style.cssText = 'border-bottom:1px solid #1f2937;';
+    row.innerHTML = `
+      <div onclick="toggleBulkRow('${detailId}')"
+        style="display:grid;grid-template-columns:30px 1fr 60px 76px 110px 28px;padding:9px 14px;cursor:pointer;${rowBg};transition:background 0.12s;align-items:center;"
+        onmouseover="this.style.background='rgba(126,34,206,0.09)'" onmouseout="this.style.background='${rowBg.replace('background:','')}'">
+        <div style="font-size:0.76rem;color:#6b7280;">${rankLabel}</div>
+        <div style="min-width:0;">
+          <div style="font-size:0.82rem;font-weight:600;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</div>
+          <div style="font-size:0.68rem;color:#6b7280;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${domain}</div>
+        </div>
+        <div style="font-size:0.95rem;font-weight:900;color:${scoreColor};">${score}<span style="font-size:0.62rem;color:#6b7280;">/100</span></div>
+        <div>${emailBadge}</div>
+        <div style="font-size:0.68rem;color:#9ca3af;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${topIssue}">${topIssue.length > 20 ? topIssue.slice(0,20)+'...' : topIssue}</div>
+        <div style="text-align:center;display:flex;align-items:center;justify-content:center;gap:3px;">${cbHtml}<span style="font-size:0.6rem;color:#4b5563;">v</span></div>
+      </div>
+      <div id="${detailId}" style="display:none;border-top:1px solid #1f2937;background:#080d18;"></div>`;
 
-    if (score >= 70) {
-      const cbWrap = document.createElement('div');
-      cbWrap.style.cssText = 'position:absolute;top:12px;right:12px;z-index:10;display:flex;align-items:center;gap:6px;background:rgba(30,27,75,0.92);border:1px solid #4c1d95;border-radius:8px;padding:6px 10px;cursor:pointer;';
-      const safeName = (item.data && item.data.title || '').replace(/"/g,'&quot;');
-      cbWrap.innerHTML = '<input type="checkbox" class="bulk-lb-check"'
-        + ' data-url="' + item.url + '" data-score="' + score + '" data-name="' + safeName + '"'
-        + ' onchange="updateBulkLbCount()"'
-        + ' style="width:16px;height:16px;accent-color:#7e22ce;cursor:pointer;">'
-        + '<label style="color:#c4b5fd;font-size:0.72rem;font-weight:600;cursor:pointer;white-space:nowrap;">Add to leaderboard</label>';
-      cbWrap.addEventListener('click', function(e) {
-        if (e.target.tagName !== 'INPUT') this.querySelector('input').click();
-      });
-      wrapper.appendChild(cbWrap);
-    }
-
-    const cardDiv = document.createElement('div');
-    wrapper.appendChild(cardDiv);
-    container.appendChild(wrapper);
-    displayScanResult(item.data, cardDiv);
+    row.querySelector('#'+detailId)._itemData = item;
+    tableWrap.appendChild(row);
   });
+
+  container.appendChild(tableWrap);
 
   if (results.errors.length > 0) {
     const errDiv = document.createElement('div');
-    errDiv.style.cssText = 'background:rgba(239,68,68,0.08);border:1px solid #7f1d1d;border-radius:10px;padding:14px 16px;margin-top:8px;';
-    errDiv.innerHTML = '<p style="font-weight:700;color:#f87171;margin-bottom:8px;">\u274C Failed to scan (' + results.errors.length + ')</p>'
-      + results.errors.map(r => {
-        const msg = r.error || 'Unknown error';
-        const isBlocked = msg.toLowerCase().includes('block') || msg.includes('403');
-        const icon = isBlocked ? '\ud83d\udeab' : '\u26a0\ufe0f';
-        return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #1f2937;flex-wrap:wrap;">'
-          + '<span style="font-size:0.8rem;color:#fca5a5;">' + icon + ' ' + r.url + '</span>'
-          + '<button onclick="retryBulkUrl(\'' + r.url + '\')" style="background:#7f1d1d;color:white;border:1px solid #ef4444;border-radius:5px;padding:3px 10px;font-size:0.72rem;cursor:pointer;">\ud83d\udd04 Retry</button>'
-          + '</div>';
-      }).join('');
+    errDiv.style.cssText = 'background:rgba(239,68,68,0.08);border:1px solid #7f1d1d;border-radius:10px;padding:12px 14px;margin-top:8px;';
+    errDiv.innerHTML = '<p style="font-weight:700;color:#f87171;margin-bottom:6px;font-size:0.85rem;">Failed to scan (' + results.errors.length + ')</p>'
+      + results.errors.map(r => '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #1f2937;flex-wrap:wrap;">'
+        + '<span style="font-size:0.78rem;color:#fca5a5;">' + r.url + '</span>'
+        + '<button onclick="retryBulkUrl(\'' + r.url + '\')" style="background:#7f1d1d;color:white;border:1px solid #ef4444;border-radius:5px;padding:3px 9px;font-size:0.7rem;cursor:pointer;">Retry</button>'
+        + '</div>').join('');
     container.appendChild(errDiv);
   }
 
   document.getElementById('bulkResults').classList.remove('hidden');
 }
+
+function toggleBulkRow(detailId) {
+  const detail = document.getElementById(detailId);
+  if (!detail) return;
+  if (detail.style.display === 'none') {
+    detail.style.display = 'block';
+    if (!detail._rendered) {
+      detail._rendered = true;
+      const item = detail._itemData;
+      if (item && item.data) {
+        const inner = document.createElement('div');
+        inner.style.cssText = 'padding:12px 14px;';
+        displayScanResult(item.data, inner);
+        detail.appendChild(inner);
+      }
+    }
+  } else {
+    detail.style.display = 'none';
+  }
+}
+
+function showActivityReminder(totalScanned, results) {
+  const container = document.getElementById('bulkResultsContainer');
+  if (!container) return;
+  const lb       = results.leaderboard.length;
+  const almMade  = (results.almostMade || []).length;
+  const withSite = results.withWebsite.length;
+  const noSite   = results.withoutWebsite.length;
+  const errors   = results.errors.length;
+  const withEmail = lb + almMade + withSite;
+  const remind = document.createElement('div');
+  remind.id = 'activityReminderBanner';
+  remind.style.cssText = 'background:linear-gradient(135deg,#1e1b4b,#312e81);border:2px solid #6d28d9;border-radius:16px;padding:20px 22px;margin-bottom:16px;';
+  remind.innerHTML =
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:14px;">' +
+      '<div style="flex:1;min-width:200px;">' +
+        '<div style="font-size:1rem;font-weight:900;color:#e9d5ff;margin-bottom:8px;">' + totalScanned + ' URLs scanned - results saved to My Activity</div>' +
+        '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">' +
+          '<span style="font-size:0.78rem;color:#4ade80;">' + lb + ' leaderboard</span>' +
+          (almMade ? '<span style="font-size:0.78rem;color:#fbbf24;">' + almMade + ' almost made it</span>' : '') +
+          '<span style="font-size:0.78rem;color:#60a5fa;">' + withSite + ' pitched</span>' +
+          (noSite ? '<span style="font-size:0.78rem;color:#a78bfa;">' + noSite + ' no website</span>' : '') +
+          (errors ? '<span style="font-size:0.78rem;color:#f87171;">' + errors + ' errors</span>' : '') +
+        '</div>' +
+        '<div style="font-size:0.78rem;color:#a78bfa;line-height:1.6;">' +
+          'View full details, email status &amp; top issues in <strong style="color:#c4b5fd;">My Activity</strong>.' +
+          (withEmail ? '<br><strong style="color:#c4b5fd;">' + withEmail + ' businesses</strong> were queued for email outreach.' : '') +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0;">' +
+        '<button onclick="switchMode(\'activity\');document.getElementById(\'activityReminderBanner\')&&document.getElementById(\'activityReminderBanner\').remove();" ' +
+          'style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:12px 22px;border-radius:10px;font-weight:800;font-size:0.88rem;cursor:pointer;white-space:nowrap;">' +
+          'View My Activity' +
+        '</button>' +
+        '<button onclick="document.getElementById(\'activityReminderBanner\').remove();" ' +
+          'style="background:rgba(255,255,255,0.05);color:#9ca3af;border:1px solid #374151;padding:7px 14px;border-radius:8px;font-size:0.78rem;cursor:pointer;">Dismiss</button>' +
+      '</div>' +
+    '</div>';
+  container.prepend(remind);
+}
+
 
 
 // ── Bulk leaderboard selection counter ──────────────────────────
@@ -3459,7 +3602,9 @@ function applyVars(text, item, senderEmail, senderName) {
   const yearStr = now.getFullYear().toString();
   const recipientEmail = extractBusinessEmail(item) || '';
   const unsubUrl = 'https://app.contentscale.site/unsubscribe?email=' + encodeURIComponent(recipientEmail);
-  const lbUrl = 'https://contentscale.site#leaderboard';
+  const lbUrl       = 'https://app.contentscale.site';       // {{leaderboard_url}}
+  const scannerUrl  = 'https://app.contentscale.site';       // {{scanner_url}}
+  const mainSiteUrl = 'https://contentscale.site';            // {{main_site_url}}
   const ctaUrl = 'https://wa.me/31628073996';
   const badgeWidget = `<table cellpadding="0" cellspacing="0" border="0" align="center"><tr><td style="background:#f7fee7;border:2px solid #84cc16;border-radius:14px;padding:16px;text-align:center;"><div style="font-size:40px;font-weight:900;color:#84cc16;">${score}</div><div style="color:#4d7c0f;font-size:12px;font-weight:700;">${scoreLabel} \u00b7 ContentScale Verified</div></td></tr></table>`;
   return text
@@ -3473,7 +3618,7 @@ function applyVars(text, item, senderEmail, senderName) {
     .replace(/{{sender_company}}/g, 'ContentScale').replace(/{{leaderboard_url}}/g, lbUrl)
     .replace(/{{cta_url}}/g, ctaUrl).replace(/{{date}}/g, dateStr).replace(/{{month}}/g, monthStr)
     .replace(/{{year}}/g, yearStr).replace(/{{unsubscribe_url}}/g, unsubUrl)
-    .replace(/{{badge_widget}}/g, badgeWidget).replace(/{{gap}}/g, String(Math.max(0, 70 - score)));
+    .replace(/{{badge_widget}}/g, badgeWidget).replace(/{{gap}}/g, String(Math.max(0, 70 - score))).replace(/{{scanner_url}}/g, scannerUrl).replace(/{{main_site_url}}/g, mainSiteUrl);
 }
 
 // ============================================================
@@ -3767,24 +3912,73 @@ function filterActivity() {
 
 function renderActivityTable(scans) {
   const tbody = document.getElementById('activityTableBody');
-  if (!scans.length) { tbody.innerHTML = '<tr><td colspan="6" class="py-6 text-center" style="color:#6b7280;">No scans yet \u2014 run a scan to get started.</td></tr>'; return; }
-  tbody.innerHTML = scans.map(s => {
-    const score = s.score !== null ? '<span style="font-weight:700;color:' + (s.score>=70?'#4ade80':s.score>=50?'#fbbf24':'#f87171') + ';">' + s.score + '/100</span>' : '\u2014';
-    const statusBadge = s.email_status === 'has_email' ? '<span style="background:#0f2d1a;color:#4ade80;padding:2px 8px;border-radius:99px;font-size:0.72rem;">\u2709 Sent</span>' : '<span style="background:#1c1917;color:#9ca3af;padding:2px 8px;border-radius:99px;font-size:0.72rem;">\u2717 No email</span>';
-    let rec = '\u2014'; try { const r = JSON.parse(s.recommendations || '[]'); rec = r[0] || '\u2014'; } catch {}
-    const dt = new Date(s.created_at);
-    const dateStr = dt.toLocaleDateString('nl-NL', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
-    const urlDisplay = s.business_url ? '<a href="' + s.business_url + '" target="_blank" style="color:#60a5fa;">' + (s.business_name || s.business_url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]) + '</a>' : '\u2014';
-    const emailCell = s.email_found ? '<span style="color:#d1d5db;font-size:0.78rem;">' + s.email_found + '</span>' : '<span style="color:#6b7280;font-size:0.78rem;">not found</span>';
-    return '<tr style="border-bottom:1px solid #1f2937;"><td class="py-3 pr-4">' + urlDisplay + '</td><td class="py-3 pr-4">' + score + '</td><td class="py-3 pr-4">' + emailCell + '</td><td class="py-3 pr-4">' + statusBadge + '</td><td class="py-3 pr-4" style="color:#9ca3af;font-size:0.78rem;max-width:240px;">' + rec + '</td><td class="py-3" style="color:#6b7280;font-size:0.72rem;white-space:nowrap;">' + dateStr + '</td></tr>';
+  if (!scans.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center" style="color:#6b7280;">No scans yet - run a bulk scan or Find Me Leads to get started.</td></tr>';
+    return;
+  }
+  const tplLabel = {
+    congrats:    { t: 'Congrats',        bg: '#0f2d1a', c: '#4ade80' },
+    almostMade:  { t: 'Almost Made It',  bg: '#1c1a00', c: '#fbbf24' },
+    improvement: { t: 'Pitch Sent',      bg: '#0c1a2e', c: '#60a5fa' },
+    website:     { t: 'Website Offer',   bg: '#1a0a30', c: '#a78bfa' }
+  };
+  tbody.innerHTML = scans.map((s, idx) => {
+    const rowBg = idx % 2 === 0 ? '' : 'rgba(255,255,255,0.015)';
+    const score = s.score !== null
+      ? '<span style="font-weight:800;font-size:0.88rem;color:' + (s.score>=70?'#4ade80':s.score>=50?'#fbbf24':'#f87171') + ';">' + s.score + '<span style="font-size:0.62rem;color:#6b7280;">/100</span></span>'
+      : '-';
+
+    const emailShort = s.email_found ? s.email_found.replace(/^(.{18}).*(@.*)$/, '$1...$2') : null;
+    const emailCell  = emailShort
+      ? '<span style="font-size:0.72rem;color:#d1d5db;" title="' + s.email_found + '">' + emailShort + '</span>'
+      : '<span style="color:#4b5563;font-size:0.7rem;">not found</span>';
+
+    let tplBadge = '<span style="background:#1c1917;color:#6b7280;padding:2px 7px;border-radius:99px;font-size:0.68rem;">not sent</span>';
+    if (s.template_type && tplLabel[s.template_type]) {
+      const tl = tplLabel[s.template_type];
+      tplBadge = '<span style="background:' + tl.bg + ';color:' + tl.c + ';padding:2px 7px;border-radius:99px;font-size:0.68rem;white-space:nowrap;">' + tl.t + '</span>';
+    } else if (s.email_status === 'has_email') {
+      tplBadge = '<span style="background:#0f2d1a;color:#4ade80;padding:2px 7px;border-radius:99px;font-size:0.68rem;">sent</span>';
+    }
+
+    const src = s.source || 'bulk';
+    const srcBadge = src === 'discover'
+      ? '<span style="background:#1c0a00;color:#f59e0b;padding:2px 7px;border-radius:99px;font-size:0.66rem;">Find Leads</span>'
+      : src === 'single'
+        ? '<span style="background:#0f172a;color:#818cf8;padding:2px 7px;border-radius:99px;font-size:0.66rem;">Single</span>'
+        : '<span style="background:#0f172a;color:#94a3b8;padding:2px 7px;border-radius:99px;font-size:0.66rem;">Bulk</span>';
+
+    let rec = '-';
+    try { const r = JSON.parse(s.recommendations || '[]'); rec = r[0] || '-'; } catch {}
+
+    const dt      = new Date(s.created_at);
+    const dateStr = dt.toLocaleDateString('nl-NL', { day:'2-digit', month:'short' }) + ' ' + dt.toLocaleTimeString('nl-NL', { hour:'2-digit', minute:'2-digit' });
+    const domain  = s.business_url ? s.business_url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0] : '';
+    const urlCell = s.business_url
+      ? '<div><a href="' + s.business_url + '" target="_blank" style="color:#60a5fa;font-size:0.8rem;font-weight:600;">' + (s.business_name || domain) + '</a><div style="font-size:0.66rem;color:#6b7280;">' + domain + '</div></div>'
+      : '-';
+
+    return '<tr style="border-bottom:1px solid #1f2937;background:' + rowBg + ';transition:background 0.1s;" onmouseover="this.style.background=\'rgba(126,34,206,0.06)\'" onmouseout="this.style.background=\'' + rowBg + '\'">' +
+      '<td class="py-3 pr-3 pl-2">' + urlCell + '</td>' +
+      '<td class="py-3 pr-3">' + score + '</td>' +
+      '<td class="py-3 pr-3">' + emailCell + '</td>' +
+      '<td class="py-3 pr-3">' + tplBadge + '</td>' +
+      '<td class="py-3 pr-3">' + srcBadge + '</td>' +
+      '<td class="py-3 pr-3" style="color:#9ca3af;font-size:0.72rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + rec + '">' + rec + '</td>' +
+      '<td class="py-3" style="color:#6b7280;font-size:0.68rem;white-space:nowrap;">' + dateStr + '</td>' +
+    '</tr>';
   }).join('');
 }
 
+
 function exportActivityCSV() {
-  const rows = [['Business','URL','Score','Email Found','Status','Top Issue','Scanned']];
+  const rows = [['Business','URL','Score','Email Found','Status','Top Issue','Report URL','Scanned']];
   allActivityScans.forEach(s => {
     let rec = ''; try { rec = JSON.parse(s.recommendations || '[]')[0] || ''; } catch {}
-    rows.push([s.business_name || '', s.business_url || '', s.score || '', s.email_found || '', s.email_status || '', rec, new Date(s.created_at).toLocaleString('nl-NL')]);
+    const fullReportUrl = s.report_url
+      ? (s.report_url.startsWith('http') ? s.report_url : 'https://app.contentscale.site' + s.report_url)
+      : '';
+    rows.push([s.business_name || '', s.business_url || '', s.score || '', s.email_found || '', s.email_status || '', rec, fullReportUrl, new Date(s.created_at).toLocaleString('nl-NL')]);
   });
   const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
   const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv); a.download = 'contentscale-activity-' + new Date().toISOString().split('T')[0] + '.csv'; a.click();
@@ -3897,74 +4091,6 @@ function switchPageSection(section) {
 }
 
 
-</script>
-
-<!-- ── Agent23 Chat Widget — bottom-left, avatar only, blinking ── -->
-<style>
-@keyframes cs-blink {
-  0%,100% { transform:scale(1);   box-shadow:0 0 0 0   rgba(168,85,247,0);    opacity:1;    }
-  50%      { transform:scale(1.1); box-shadow:0 0 0 12px rgba(168,85,247,0.22); opacity:0.88; }
-}
-[id*="agent23"],[class*="agent23"]{left:20px!important;right:auto!important;}
-</style>
-<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-<script>window.agent23Config={chatbotId:"f9ece5c54caf4ee2a8e94ca1d07109e1"};</script>
-<script src="https://app.agent23.ai/agent23chat.min.js" id="f9ece5c54caf4ee2a8e94ca1d07109e1" defer></script>
-<script>
-(function(){
-  function fixWidget(){
-    var all = document.querySelectorAll('[id*="agent23"],[class*="agent23"],[data-chatbot-id]');
-    if(!all.length) return false;
-
-    all.forEach(function(el){
-      var rect = el.getBoundingClientRect();
-      var tag  = el.tagName.toLowerCase();
-
-      // Force left position on every agent23 element
-      el.style.left  = '20px';
-      el.style.right = 'auto';
-
-      // The white box is WIDE (>120px) and TALL (>50px) — hide it
-      // The avatar launcher is small and roughly square (<90px)
-      var isPanel = rect.width > 120 && rect.height > 50;
-      var isSmallSquare = rect.width > 0 && rect.width < 90 && Math.abs(rect.width - rect.height) < 20;
-
-      if(isPanel && !isSmallSquare){
-        el.style.setProperty('display','none','important');
-        el.style.setProperty('opacity','0','important');
-        el.style.setProperty('visibility','hidden','important');
-        return;
-      }
-
-      // Also hide iframes (chat panel often renders inside one)
-      if(tag==='iframe'){
-        el.style.setProperty('display','none','important');
-        return;
-      }
-
-      // Apply blink + circular shape to the avatar image
-      el.querySelectorAll('img').forEach(function(img){
-        img.style.animation    = 'cs-blink 2s ease-in-out infinite';
-        img.style.borderRadius = '50%';
-      });
-      if(isSmallSquare){
-        el.style.animation    = 'cs-blink 2s ease-in-out infinite';
-        el.style.borderRadius = '50%';
-      }
-    });
-    return true;
-  }
-
-  // Poll until widget loads
-  var tries = 0;
-  var poll = setInterval(function(){
-    if(fixWidget() || ++tries > 40) clearInterval(poll);
-  }, 250);
-
-  // Keep watching for widget self-updates
-  new MutationObserver(function(){ fixWidget(); })
-    .observe(document.documentElement, {childList:true, subtree:true, attributes:true});
-})();
 </script>
 
 </body>
