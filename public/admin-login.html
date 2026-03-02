@@ -465,6 +465,30 @@ function loadAllData() {
   loadUsers();
 }
 
+// Cache for IP geo lookups so we don't re-fetch on every render
+const ipGeoCache = {};
+
+async function lookupIpGeo(ip) {
+  if (!ip || ip === 'Unknown IP') return null;
+  if (ipGeoCache[ip]) return ipGeoCache[ip];
+  try {
+    const r = await fetch(`https://ip-api.com/json/${ip}?fields=country,countryCode,city,isp,query`);
+    const d = await r.json();
+    if (d.status === 'success' || d.countryCode) {
+      ipGeoCache[ip] = d;
+      return d;
+    }
+  } catch (e) {}
+  return null;
+}
+
+function countryCodeToFlag(cc) {
+  if (!cc || cc.length !== 2) return '🌐';
+  try {
+    return String.fromCodePoint(...[...cc.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+  } catch { return '🌐'; }
+}
+
 async function loadUsers() {
   try {
     const data = await apiCall('/api/admin/users');
@@ -488,50 +512,80 @@ async function loadUsers() {
       container.innerHTML = '<p class="text-center text-gray-400">No users found.</p>';
       return;
     }
-    container.innerHTML = allUsers.map(u => {
-      const isSelected = selectedIds.users.has(u.id);
-      let statusBadge = '<span class="badge-inactive">Inactive</span>';
-      let daysLeftHtml = '';
-      if (u.is_activated) {
-        if (u.activated_until) {
-          const expDate = new Date(u.activated_until);
-          const diffDays = Math.ceil((expDate - new Date()) / (1000 * 60 * 60 * 24));
-          if (diffDays <= 0) {
-            statusBadge = '<span class="badge-inactive">Expired</span>';
-            daysLeftHtml = `<div class="text-xs text-orange-400 font-bold">${diffDays} days left</div>`;
-          } else if (diffDays <= 7) {
-            statusBadge = '<span class="badge-expiring">Expiring Soon</span>';
-            daysLeftHtml = `<div class="text-xs text-orange-400 font-bold">${diffDays} days left</div>`;
-          } else {
-            statusBadge = '<span class="badge-active">Active</span>';
-            daysLeftHtml = `<div class="text-xs text-green-400">${diffDays} days left</div>`;
-          }
-        } else {
-          statusBadge = '<span class="badge-active">Active (Indefinite)</span>';
-        }
-      }
-      return `
-      <div class="user-card">
-        <div class="flex items-center gap-3">
-          <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleSelection('users', '${u.id}')">
-          <div>
-            <div class="font-bold">${u.ip_address || 'Unknown IP'}</div>
-            <div class="text-xs text-gray-400">ID: ${u.id.substring(0,8)}... | Created: ${new Date(u.created_at).toLocaleDateString()}</div>
-            ${daysLeftHtml}
-            ${u.activated_until ? `<div class="text-xs text-gray-500">Expires: ${new Date(u.activated_until).toLocaleDateString()}</div>` : ''}
-          </div>
-        </div>
-        <div class="flex items-center gap-2">
-          ${statusBadge}
-          ${u.is_activated ?
-            `<button onclick="extendUserAccess('${u.id}')" class="text-blue-400 hover:text-blue-300 text-xs" title="Extend Access"><i class="fas fa-clock"></i> Extend</button>` :
-            `<button onclick="activateSingleUser('${u.id}')" class="text-green-400 hover:text-green-300 text-xs" title="Activate"><i class="fas fa-check"></i> Activate</button>`
-          }
-          <button onclick="openMessageModal('single', '${u.id}')" class="text-blue-400 hover:text-blue-300" title="Message"><i class="fas fa-envelope"></i></button>
-        </div>
-      </div>`;
-    }).join('');
+
+    // Render immediately with IPs, then enrich with geo
+    renderUsers(allUsers, {});
+
+    // Batch geo lookups (max 45/min free tier — stagger slightly)
+    const ipsToLookup = [...new Set(allUsers.map(u => u.ip_address).filter(ip => ip && !ipGeoCache[ip]))];
+    let delay = 0;
+    for (const ip of ipsToLookup) {
+      setTimeout(async () => {
+        await lookupIpGeo(ip);
+        // Re-render after each batch of lookups to show flags progressively
+        renderUsers(allUsers, ipGeoCache);
+      }, delay);
+      delay += 50; // 50ms between requests
+    }
+
   } catch (e) { console.error(e); alert('Failed to load users: ' + e.message); }
+}
+
+function renderUsers(users, geoCache) {
+  const container = document.getElementById('usersContainer');
+  container.innerHTML = users.map(u => {
+    const isSelected = selectedIds.users.has(u.id);
+    let statusBadge = '<span class="badge-inactive">Inactive</span>';
+    let daysLeftHtml = '';
+    if (u.is_activated) {
+      if (u.activated_until) {
+        const expDate = new Date(u.activated_until);
+        const diffDays = Math.ceil((expDate - new Date()) / (1000 * 60 * 60 * 24));
+        if (diffDays <= 0) {
+          statusBadge = '<span class="badge-inactive">Expired</span>';
+          daysLeftHtml = `<div class="text-xs text-orange-400 font-bold">${diffDays} days left</div>`;
+        } else if (diffDays <= 7) {
+          statusBadge = '<span class="badge-expiring">Expiring Soon</span>';
+          daysLeftHtml = `<div class="text-xs text-orange-400 font-bold">${diffDays} days left</div>`;
+        } else {
+          statusBadge = '<span class="badge-active">Active</span>';
+          daysLeftHtml = `<div class="text-xs text-green-400">${diffDays} days left</div>`;
+        }
+      } else {
+        statusBadge = '<span class="badge-active">Active (Indefinite)</span>';
+      }
+    }
+
+    const geo = geoCache[u.ip_address];
+    const flag = geo ? countryCodeToFlag(geo.countryCode) : '⏳';
+    const location = geo ? `${geo.city ? geo.city + ', ' : ''}${geo.country || ''}` : (u.ip_address ? 'Looking up...' : '');
+    const isp = geo?.isp ? `<div class="text-xs" style="color:#6b7280;">${geo.isp}</div>` : '';
+    const locationHtml = location ? `<div class="text-xs" style="color:#9ca3af;">${flag} ${location}</div>` : '';
+
+    return `
+    <div class="user-card">
+      <div class="flex items-center gap-3">
+        <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleSelection('users', '${u.id}')">
+        <div style="font-size:2rem;line-height:1;min-width:36px;text-align:center;">${flag}</div>
+        <div>
+          <div class="font-bold" style="font-family:monospace;font-size:0.9rem;">${u.ip_address || 'Unknown IP'}</div>
+          ${locationHtml}
+          ${isp}
+          <div class="text-xs text-gray-400">ID: ${u.id.substring(0,8)}... | Created: ${new Date(u.created_at).toLocaleDateString()}</div>
+          ${daysLeftHtml}
+          ${u.activated_until ? `<div class="text-xs text-gray-500">Expires: ${new Date(u.activated_until).toLocaleDateString()}</div>` : ''}
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        ${statusBadge}
+        ${u.is_activated ?
+          `<button onclick="extendUserAccess('${u.id}')" class="text-blue-400 hover:text-blue-300 text-xs" title="Extend Access"><i class="fas fa-clock"></i> Extend</button>` :
+          `<button onclick="activateSingleUser('${u.id}')" class="text-green-400 hover:text-green-300 text-xs" title="Activate"><i class="fas fa-check"></i> Activate</button>`
+        }
+        <button onclick="openMessageModal('single', '${u.id}')" class="text-blue-400 hover:text-blue-300" title="Message"><i class="fas fa-envelope"></i></button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 async function activateSingleUser(id) {
