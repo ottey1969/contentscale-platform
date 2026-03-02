@@ -1784,4 +1784,57 @@ async function startServer() {
         console.log('\n✅ Elite scanner ready\n');
     });
 }
+// ============================================
+// INSTANTLY.AI PROXY ENDPOINTS
+// Browser cannot call api.instantly.ai directly (CORS)
+// These server-side proxies solve that
+// ============================================
+
+// GET /api/instantly/campaigns
+app.get('/api/instantly/campaigns', verifyAdmin, async (req, res) => {
+    const apiKey = req.headers['x-instantly-key'];
+    if (!apiKey) return res.status(400).json({ success: false, error: 'No Instantly API key' });
+    try {
+        const r = await fetch('https://api.instantly.ai/api/v2/campaign/list?limit=100&status=all', {
+            headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' }
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || data.message || ('HTTP ' + r.status));
+        res.json({ success: true, campaigns: data.items || data || [] });
+    } catch (e) {
+        console.error('Instantly campaigns error:', e.message);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+// POST /api/instantly/push
+app.post('/api/instantly/push', verifyAdmin, async (req, res) => {
+    const apiKey = req.headers['x-instantly-key'];
+    if (!apiKey) return res.status(400).json({ success: false, error: 'No Instantly API key' });
+    const { campaign_id, leads, skip_if_in_workspace, verify_leads } = req.body;
+    if (!campaign_id || !leads || !leads.length) {
+        return res.status(400).json({ success: false, error: 'Missing campaign_id or leads' });
+    }
+    try {
+        const r = await fetch('https://api.instantly.ai/api/v2/lead/add', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                campaign_id,
+                leads,
+                skip_if_in_workspace: skip_if_in_workspace !== false,
+                skip_if_in_campaign: false,
+                verify_leads: verify_leads || false
+            })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || data.message || ('HTTP ' + r.status));
+        res.json({ success: true, added: data.added || leads.length, duplicates: data.duplicates || 0 });
+    } catch (e) {
+        console.error('Instantly push error:', e.message);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+
 startServer();
