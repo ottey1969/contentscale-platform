@@ -1840,28 +1840,28 @@ function switchMode(mode) {
   const singleMode   = document.getElementById('singleMode');
   const bulkMode     = document.getElementById('bulkMode');
   const discoverMode = document.getElementById('discoverMode');
-  const templates    = document.getElementById('templates');
   const singleBtn    = document.getElementById('modeSingleBtn');
   const bulkBtn      = document.getElementById('modeBulkBtn');
   const discoverBtn  = document.getElementById('modeDiscoverBtn');
 
-  // Hide all, deactivate all buttons
+  // hide all mode panels, deactivate all buttons
   [singleMode, bulkMode, discoverMode].forEach(el => el && el.classList.add('hidden'));
   [singleBtn, bulkBtn, discoverBtn].forEach(el => el && el.classList.remove('active'));
 
   if (mode === 'single') {
-    singleMode.classList.remove('hidden');
-    singleBtn.classList.add('active');
-    if (templates) templates.classList.add('hidden');
+    if (singleMode) singleMode.classList.remove('hidden');
+    if (singleBtn)  singleBtn.classList.add('active');
   } else if (mode === 'bulk') {
-    bulkMode.classList.remove('hidden');
-    bulkBtn.classList.add('active');
-    if (templates) templates.classList.remove('hidden');
+    if (bulkMode) bulkMode.classList.remove('hidden');
+    if (bulkBtn)  bulkBtn.classList.add('active');
   } else if (mode === 'discover') {
-    discoverMode.classList.remove('hidden');
-    discoverBtn.classList.add('active');
-    if (templates) templates.classList.add('hidden');
+    if (discoverMode) discoverMode.classList.remove('hidden');
+    if (discoverBtn)  discoverBtn.classList.add('active');
+    const hasToken = !!localStorage.getItem('apifyToken');
+    const warn = document.getElementById('apifyKeyWarning');
+    if (warn) warn.classList.toggle('hidden', hasToken);
   }
+  // NOTE: templates / leaderboard / experts are main-sections — managed by switchPageSection only
 }
 
 // ============================================================
