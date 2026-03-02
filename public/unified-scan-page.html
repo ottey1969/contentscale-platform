@@ -557,12 +557,17 @@ footer p { color: #9ca3af !important; }
       </div>
 
       <div class="mt-8 max-w-3xl mx-auto rounded-xl p-6 text-center border border-purple-400" style="background:linear-gradient(135deg,#5b21b6,#9d174d,#5b21b6);">
-        <h3 class="text-2xl font-bold mb-2">💼 Are You an SEO Specialist?</h3>
-        <p class="text-lg mb-4" style="color:#e9d5ff!important;">Work few hours, earn full-time income. We train you in Modern SEO.</p>
-        <!-- FIX: uses .btn-specialist class for correct dark text on white background -->
+        <div style="font-size:2rem;margin-bottom:8px;">🤝</div>
+        <h3 class="text-2xl font-bold mb-2">Work With Us — Find Leads Together</h3>
+        <p class="text-lg mb-2" style="color:#e9d5ff!important;">
+          Are you in SEO, sales, or outreach? Partner with ContentScale to find and convert leads — we provide the tools, you bring the hustle.
+        </p>
+        <p class="text-sm mb-5" style="color:#c4b5fd!important;">
+          Use our scanner · Share results with clients · Earn per closed deal
+        </p>
         <button onclick="openFreelancerModal()" class="btn-specialist">
-          <i class="fas fa-user-plus"></i>
-          <span>Become a Specialist</span>
+          <i class="fas fa-handshake mr-2"></i>
+          <span>Become a Partner</span>
         </button>
       </div>
 
@@ -574,8 +579,8 @@ footer p { color: #9ca3af !important; }
        ============================================================ -->
   <div id="freelancers" class="mb-16 main-section" data-section="experts">
     <div class="text-center mb-8">
-      <h2 class="text-4xl font-bold mb-3">🎯 Verified SEO Specialists</h2>
-      <button onclick="openFreelancerModal()" class="btn btn-primary mt-2"><i class="fas fa-user-plus mr-2"></i> Become a Specialist</button>
+      <h2 class="text-4xl font-bold mb-3">🎯 ContentScale Partners</h2>
+      <button onclick="openFreelancerModal()" class="btn btn-primary mt-2"><i class="fas fa-handshake mr-2"></i> Werk Met Ons</button>
     </div>
     <!-- FIX: was grid-3, now proper grid class -->
     <div class="cards-grid" id="freelancersGrid"></div>
@@ -738,19 +743,24 @@ footer p { color: #9ca3af !important; }
      ============================================================ -->
 <div id="freelancerModal" class="modal">
   <div class="modal-content">
-    <h2 class="text-2xl font-bold mb-4" style="color:#111827!important;">Register as Specialist</h2>
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-size:2rem;margin-bottom:6px;">🤝</div>
+      <h2 class="text-2xl font-bold" style="color:#111827!important;">Work With Us</h2>
+      <p style="color:#6b7280;font-size:0.88rem;margin-top:4px;">Find leads together with ContentScale. You bring the drive, we provide the tools.</p>
+    </div>
     <div class="space-y-4">
       <input type="text" id="freelancerName" placeholder="Full Name *" class="w-full p-3 rounded">
-      <input type="email" id="freelancerEmail" placeholder="Email *" class="w-full p-3 rounded">
-      <input type="text" id="freelancerTitle" placeholder="Professional Title *" class="w-full p-3 rounded">
-      <textarea id="freelancerBio" rows="3" placeholder="Bio (max 120 chars)" maxlength="120" class="w-full p-3 rounded"></textarea>
-      <select id="freelancerRate" aria-label="Hourly rate" class="w-full p-3 rounded">
-        <option value="">Select Rate...</option>
-        <option value="€50 - €75 / hour">€50 - €75 / hour</option>
-        <option value="€75 - €100 / hour">€75 - €100 / hour</option>
+      <input type="email" id="freelancerEmail" placeholder="Email Address *" class="w-full p-3 rounded">
+      <input type="text" id="freelancerTitle" placeholder="Your role / expertise (e.g. SEO, Sales, Outreach)" class="w-full p-3 rounded">
+      <textarea id="freelancerBio" rows="3" placeholder="Tell us briefly about yourself and what you'd like to contribute (max 120 chars)" maxlength="120" class="w-full p-3 rounded"></textarea>
+      <select id="freelancerRate" aria-label="Collaboration preference" class="w-full p-3 rounded">
+        <option value="">How would you like to work together?</option>
+        <option value="Commission per deal">Commission per closed deal</option>
+        <option value="Freelance hourly">Freelance hourly rate</option>
+        <option value="Long-term partnership">Long-term partnership</option>
         <option value="Project-based">Project-based</option>
       </select>
-      <button onclick="submitFreelancer()" class="btn btn-primary w-full">Submit Application</button>
+      <button onclick="submitFreelancer()" class="btn btn-primary w-full">✅ Submit Application</button>
       <button onclick="closeModal()" class="btn btn-cancel w-full">Cancel</button>
     </div>
   </div>
